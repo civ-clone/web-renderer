@@ -1,11 +1,12 @@
-import { ITransport, PlayerTradeRates } from '../../types';
 import Action from './Action';
 import LockedSlider from '../LockedSlider';
 import LockedSliderGroup from '../LockedSliderGroup';
+import { PlayerTradeRates } from '../../types';
+import Transport from '../../../../client/Transport';
 import Window from '../Window';
 import { e } from '../../lib/html';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class AdjustTradeRates extends Action {
   #sliderGroup: LockedSliderGroup | undefined;

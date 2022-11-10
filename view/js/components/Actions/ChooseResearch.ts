@@ -1,9 +1,10 @@
 import Action from './Action';
-import { e } from '../../lib/html';
+import { PlayerResearch } from '../../types';
 import SelectionWindow from '../SelectionWindow';
-import { ITransport, PlayerResearch } from '../../types';
+import Transport from '../../../../client/Transport';
+import { e } from '../../lib/html';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class ChooseResearch extends Action {
   public activate(): void {

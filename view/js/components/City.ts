@@ -2,7 +2,6 @@ import {
   City as CityData,
   CityGrowth,
   CityImprovementMaintenanceGold,
-  ITransport,
   MilitaryUnhappiness,
   PlainObject,
   Unit as UnitData,
@@ -11,6 +10,7 @@ import {
   Yield,
 } from '../types';
 import { e, h, t } from '../lib/html';
+import { knownGroupLookup, knownGroups, knownIcons } from './lib/yieldMap';
 import Cities from './Map/Cities';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import ConfirmationWindow from './ConfirmationWindow';
@@ -23,13 +23,13 @@ import Irrigation from './Map/Irrigation';
 import Land from './Map/Land';
 import Portal from './Portal';
 import Terrain from './Map/Terrain';
+import Transport from '../../../client/Transport';
 import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
 import Unit from './Unit';
-import { knownGroupLookup, knownGroups, knownIcons } from './lib/yieldMap';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 const buildTurns = (city: CityData) =>
     Math.max(
@@ -105,7 +105,7 @@ const buildTurns = (city: CityData) =>
         e(
           'span.citizen',
           e(
-            `img[src="../assets/city/people_${
+            `img[src="view/assets/city/people_${
               ['unhappy', 'content', 'happy'][status]
             }_${['f', 'm'][parseInt(mask[index % mask.length], 10)]}.png"]`
           )
@@ -151,7 +151,7 @@ const buildTurns = (city: CityData) =>
                   //   .map(() =>
                   //     e(
                   //       'span.yield-icon',
-                  //       e(`img[src="../assets/${knownIcons[cityYieldName]}"]`)
+                  //       e(`img[src="view/assets/${knownIcons[cityYieldName]}"]`)
                   //     )
                   //   )
                 )
@@ -225,7 +225,7 @@ const buildTurns = (city: CityData) =>
       .map(() =>
         e(
           'span.yield-icon',
-          e(`img[src="../assets/${knownIcons[knownGroups[cityYield._]]}"]`)
+          e(`img[src="view/assets/${knownIcons[knownGroups[cityYield._]]}"]`)
         )
       ),
   renderBuildDetails = (

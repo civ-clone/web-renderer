@@ -12,7 +12,7 @@
   },
   "include": [
     "client/*",
-    "Game.ts",
+    "view/js/Game.ts",
     "main.ts",
     "view/js/preload.ts"
   ]

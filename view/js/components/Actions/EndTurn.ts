@@ -1,8 +1,8 @@
-import { e } from '../../lib/html';
 import Action from './Action';
-import { ITransport } from '../../types';
+import Transport from '../../../../client/Transport';
+import { e } from '../../lib/html';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class EndTurn extends Action {
   activate(): void {

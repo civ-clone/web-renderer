@@ -1,9 +1,10 @@
 import Action from './Action';
-import { e } from '../../lib/html';
+import { PlayerGovernment } from '../../types';
 import SelectionWindow from '../SelectionWindow';
-import { ITransport, PlayerGovernment } from '../../types';
+import Transport from '../../../../client/Transport';
+import { e } from '../../lib/html';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class Revolution extends Action {
   public activate(): void {

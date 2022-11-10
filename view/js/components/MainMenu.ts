@@ -1,9 +1,9 @@
 import { e, h, t } from '../lib/html';
 import Element from './Element';
-import { ITransport } from '../types';
 import MandatorySelection from './MandatorySelection';
+import Transport from '../../../client/Transport';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class MainMenu extends Element {
   constructor(element: HTMLElement) {
@@ -24,7 +24,7 @@ export class MainMenu extends Element {
     }
   }
 
-  build() {
+  build(showQuit = false) {
     this.element().append(
       e(
         'nav',
@@ -83,12 +83,16 @@ export class MainMenu extends Element {
               });
           },
         }),
+        // h(e('button', t('Earth')), {
+        //   click: () => {
+        //   },
+        // }),
         // h(e('button', t('Customise World')), {
         //   click: () => {
         //     // TODO: show options panel
         //   },
         // }),
-        h(e('button', t('Quit')), {
+        h(e('button' + (showQuit ? '' : '[hidden]'), t('Quit')), {
           click: () => {
             this.remove();
 

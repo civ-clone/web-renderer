@@ -10,28 +10,30 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
-var _ElectronClient_dataFilter, _ElectronClient_dataQueue, _ElectronClient_eventEmitter, _ElectronClient_receiver, _ElectronClient_sender, _ElectronClient_sentInitialData;
+var _DataTransferClient_dataFilter, _DataTransferClient_dataQueue, _DataTransferClient_eventEmitter, _DataTransferClient_receiver, _DataTransferClient_sender, _DataTransferClient_sentInitialData;
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ElectronClient = void 0;
+exports.DataTransferClient = void 0;
 const PlayerActions_1 = require("@civ-clone/civ1-unit/PlayerActions");
 const GoodyHuts_1 = require("@civ-clone/civ1-goody-hut/GoodyHuts");
 const PlayerActions_2 = require("@civ-clone/core-city-build/PlayerActions");
 const Client_1 = require("@civ-clone/core-civ-client/Client");
+const PlayerActions_3 = require("@civ-clone/civ1-trade-rate/PlayerActions");
+const Busy_1 = require("@civ-clone/core-unit/Rules/Busy");
 const ChooseResearch_1 = require("@civ-clone/civ1-science/PlayerActions/ChooseResearch");
 const City_1 = require("@civ-clone/core-city/City");
 const CityGrowth_1 = require("@civ-clone/core-city-growth/CityGrowth");
+const CityImprovement_1 = require("@civ-clone/core-city-improvement/CityImprovement");
 const Civilization_1 = require("@civ-clone/core-civilization/Civilization");
-const CompleteProduction_1 = require("@civ-clone/civ1-treasury/PlayerActions/CompleteProduction");
+const PlayerActions_4 = require("@civ-clone/civ1-treasury/PlayerActions");
 const DataObject_1 = require("@civ-clone/core-data-object/DataObject");
 const DataQueue_1 = require("./DataQueue");
-const PlayerActions_3 = require("@civ-clone/civ1-player/PlayerActions");
+const PlayerActions_5 = require("@civ-clone/civ1-player/PlayerActions");
 const MandatoryPlayerAction_1 = require("@civ-clone/core-player/MandatoryPlayerAction");
 const Player_1 = require("@civ-clone/core-player/Player");
 const PlayerTile_1 = require("@civ-clone/core-player-world/PlayerTile");
 const PlayerWorld_1 = require("@civ-clone/core-player-world/PlayerWorld");
 const Retryable_1 = require("./Retryable");
-const PlayerActions_4 = require("@civ-clone/civ1-government/PlayerActions");
-const PlayerActions_5 = require("@civ-clone/civ1-trade-rate/PlayerActions");
+const PlayerActions_6 = require("@civ-clone/civ1-government/PlayerActions");
 const TransferObject_1 = require("./TransferObject");
 const Tile_1 = require("@civ-clone/core-world/Tile");
 const Unit_1 = require("@civ-clone/core-unit/Unit");
@@ -51,10 +53,8 @@ const PlayerWorldRegistry_1 = require("@civ-clone/core-player-world/PlayerWorldR
 const Turn_1 = require("@civ-clone/core-turn-based-game/Turn");
 const UnitRegistry_1 = require("@civ-clone/core-unit/UnitRegistry");
 const Year_1 = require("@civ-clone/core-game-year/Year");
-const EventEmitter = require("events");
-const Busy_1 = require("@civ-clone/core-unit/Rules/Busy");
 const assignWorkers_1 = require("@civ-clone/civ1-city/lib/assignWorkers");
-const CityImprovement_1 = require("@civ-clone/core-city-improvement/CityImprovement");
+const EventEmitter_1 = require("@dom111/typed-event-emitter/EventEmitter");
 const referenceObject = (object) => object instanceof DataObject_1.default
     ? {
         '#ref': object.id(),
@@ -65,10 +65,10 @@ const referenceObject = (object) => object instanceof DataObject_1.default
     ? object
     : referenceObject(object);
 const unknownPlayers = new Map(), unknownUnits = new Map(), unknownCities = new Map();
-class ElectronClient extends Client_1.Client {
+class DataTransferClient extends Client_1.Client {
     constructor(player, sender, receiver) {
         super(player);
-        _ElectronClient_dataFilter.set(this, (localFilter = (object) => object) => (object) => {
+        _DataTransferClient_dataFilter.set(this, (localFilter = (object) => object) => (object) => {
             if (object instanceof Player_1.default && object !== this.player()) {
                 if (!unknownPlayers.has(object)) {
                     unknownPlayers.set(object, Player_2.default.fromPlayer(object));
@@ -98,19 +98,19 @@ class ElectronClient extends Client_1.Client {
             }
             return localFilter(object);
         });
-        _ElectronClient_dataQueue.set(this, new DataQueue_1.default());
-        _ElectronClient_eventEmitter.set(this, void 0);
-        _ElectronClient_receiver.set(this, void 0);
-        _ElectronClient_sender.set(this, void 0);
-        _ElectronClient_sentInitialData.set(this, false);
-        __classPrivateFieldSet(this, _ElectronClient_eventEmitter, new EventEmitter(), "f");
-        __classPrivateFieldSet(this, _ElectronClient_sender, sender, "f");
-        __classPrivateFieldSet(this, _ElectronClient_receiver, receiver, "f");
-        __classPrivateFieldGet(this, _ElectronClient_receiver, "f").call(this, 'action', (...args) => {
-            __classPrivateFieldGet(this, _ElectronClient_eventEmitter, "f").emit('action', ...args);
+        _DataTransferClient_dataQueue.set(this, new DataQueue_1.default());
+        _DataTransferClient_eventEmitter.set(this, void 0);
+        _DataTransferClient_receiver.set(this, void 0);
+        _DataTransferClient_sender.set(this, void 0);
+        _DataTransferClient_sentInitialData.set(this, false);
+        __classPrivateFieldSet(this, _DataTransferClient_eventEmitter, new EventEmitter_1.default(), "f");
+        __classPrivateFieldSet(this, _DataTransferClient_sender, sender, "f");
+        __classPrivateFieldSet(this, _DataTransferClient_receiver, receiver, "f");
+        __classPrivateFieldGet(this, _DataTransferClient_receiver, "f").call(this, 'action', (...args) => {
+            __classPrivateFieldGet(this, _DataTransferClient_eventEmitter, "f").emit('action', ...args);
         });
         // TODO: These could be `HiddenAction`s. Need to add a `perform` method to actions too...
-        __classPrivateFieldGet(this, _ElectronClient_receiver, "f").call(this, 'cheat', ({ name, value }) => {
+        __classPrivateFieldGet(this, _DataTransferClient_receiver, "f").call(this, 'cheat', ({ name, value }) => {
             if (name === 'RevealMap') {
                 const playerWorld = PlayerWorldRegistry_1.instance.getByPlayer(this.player());
                 // A bit nasty... I wonder how slow this data transfer will be...
@@ -125,7 +125,7 @@ class ElectronClient extends Client_1.Client {
                     }
                     playerWorld.register(tile);
                     const playerTile = playerWorld.getByTile(tile);
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerWorld.id(), () => tile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this)), `entries[${playerWorld.entries().indexOf(playerTile)}]`);
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerWorld.id(), () => tile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this)), `entries[${playerWorld.entries().indexOf(playerTile)}]`);
                 });
             }
             if (name === 'GrantAdvance') {
@@ -137,12 +137,12 @@ class ElectronClient extends Client_1.Client {
                     return;
                 }
                 playerResearch.addAdvance(Advance);
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerResearch.id(), playerResearch.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerResearch.id(), playerResearch.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             }
             if (name === 'GrantGold') {
                 const playerTreasury = PlayerTreasuryRegistry_1.instance.getByPlayer(this.player());
                 playerTreasury.add(value);
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerTreasury.id(), playerTreasury.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerTreasury.id(), playerTreasury.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             }
             if (name === 'ModifyUnit') {
                 const { unitId, properties } = value;
@@ -155,7 +155,7 @@ class ElectronClient extends Client_1.Client {
                         unit[property]().set(properties[property]);
                     }
                 });
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(unit.id(), unit.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(unit.id(), unit.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             }
             this.sendPatchData();
         });
@@ -175,12 +175,12 @@ class ElectronClient extends Client_1.Client {
                     if (playerTile === null) {
                         return false;
                     }
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerWorld.id(), () => tile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))), `tiles[${playerWorld.entries().indexOf(playerTile)}]`);
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerWorld.id(), () => tile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))), `tiles[${playerWorld.entries().indexOf(playerTile)}]`);
                     return true;
                 }, 2, 20);
                 return;
             }
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerWorld.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))), `tiles[${playerWorld.entries().indexOf(playerTile)}]`);
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerWorld.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))), `tiles[${playerWorld.entries().indexOf(playerTile)}]`);
         });
         ['unit:created', 'unit:defeated'].forEach((event) => {
             Engine_1.instance.on(event, (unit) => {
@@ -190,7 +190,7 @@ class ElectronClient extends Client_1.Client {
                 }
                 // TODO: check if this is another player first and if there's already another unit there, use an unknown unit
                 //  Need to update Units renderer if this happens
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, 
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, 
                 // filterToReferenceAllExcept(Tile, Unit, UnknownPlayer, Yield)
                 filterToReference(Player_1.default))));
                 if (unit.player() !== this.player()) {
@@ -198,22 +198,22 @@ class ElectronClient extends Client_1.Client {
                 }
                 if (event === 'unit:created') {
                     const playerUnits = UnitRegistry_1.instance.getByPlayer(this.player()), playerIndex = playerUnits.indexOf(unit), cityUnits = UnitRegistry_1.instance.getByCity(unit.city()), cityIndex = cityUnits.indexOf(unit), tileUnits = UnitRegistry_1.instance.getByTile(unit.tile()), tileIndex = tileUnits.indexOf(unit);
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(player.id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Player_1.default, PlayerTile_1.default, City_1.default))), `units[${playerIndex}]`);
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(playerTile.id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Unit_1.default))), `units[${tileIndex}]`);
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(player.id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Player_1.default, PlayerTile_1.default, City_1.default))), `units[${playerIndex}]`);
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(playerTile.id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Unit_1.default))), `units[${tileIndex}]`);
                     if (unit.city() !== null) {
-                        __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(unit.city().id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Unit_1.default))), `units[${cityIndex}]`);
+                        __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(unit.city().id(), () => unit.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Unit_1.default))), `units[${cityIndex}]`);
                     }
                     return;
                 }
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReferenceAllExcept(Player_1.default, Unit_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReferenceAllExcept(Player_1.default, Unit_1.default))));
             });
         });
         ['unit:destroyed'].forEach((event) => {
             Engine_1.instance.on(event, (unit, action) => {
                 if (unit.player() === this.player() && unit.city() !== null) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(unit.city().id(), () => unit
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(unit.city().id(), () => unit
                         .city()
-                        .toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(PlayerActions_2.CityBuild, CityGrowth_1.default, CityImprovement_1.default, Player_1.default, PlayerTile_1.default, Tile_1.default, Unit_1.default))));
+                        .toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(PlayerActions_2.CityBuild, CityGrowth_1.default, CityImprovement_1.default, Player_1.default, PlayerTile_1.default, Tile_1.default, Unit_1.default))));
                 }
             });
         });
@@ -224,15 +224,15 @@ class ElectronClient extends Client_1.Client {
                     return;
                 }
                 if (fromTile) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(fromTile.id(), () => fromTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(fromTile.id(), () => fromTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
                 }
                 if (toTile) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(toTile.id(), () => toTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(toTile.id(), () => toTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
                 }
                 if (unit.player() === this.player() && unit.city() !== null) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(unit.city().id(), () => unit
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(unit.city().id(), () => unit
                         .city()
-                        .toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(PlayerActions_2.CityBuild, CityGrowth_1.default, CityImprovement_1.default, Player_1.default, PlayerTile_1.default, Tile_1.default, Unit_1.default))));
+                        .toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(PlayerActions_2.CityBuild, CityGrowth_1.default, CityImprovement_1.default, Player_1.default, PlayerTile_1.default, Tile_1.default, Unit_1.default))));
                 }
             });
         });
@@ -240,7 +240,7 @@ class ElectronClient extends Client_1.Client {
             Engine_1.instance.on(event, (tile) => {
                 const playerWorld = PlayerWorldRegistry_1.instance.getByPlayer(this.player()), playerTile = playerWorld.getByTile(tile);
                 if (playerTile) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, City_1.default))));
                 }
             });
         });
@@ -248,7 +248,7 @@ class ElectronClient extends Client_1.Client {
             if (originalPlayer === this.player()) {
                 const playerCities = CityRegistry_1.instance.getByPlayer(this.player()), cityIndex = playerCities.indexOf(city);
                 if (cityIndex !== -1) {
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReferenceAllExcept(Player_1.default))));
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReferenceAllExcept(Player_1.default))));
                     // this.#dataQueue.remove(this.player().id(), `cities[${cityIndex}]`);
                 }
                 this.sendNotification(`${capturingPlayer
@@ -275,7 +275,7 @@ class ElectronClient extends Client_1.Client {
                 if (!playerTile) {
                     return;
                 }
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerTile.id(), () => playerTile.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             });
         });
         Engine_1.instance.on('city:shrink', (city) => {
@@ -315,14 +315,14 @@ class ElectronClient extends Client_1.Client {
                 !(build instanceof Wonder_1.default)) {
                 return;
             }
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(cityBuild.id(), () => cityBuild.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Unit_1.default, Player_1.default))));
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(cityBuild.id(), () => cityBuild.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Unit_1.default, Player_1.default))));
             this.sendNotification(`${cityBuild.city().name()} has completed work on ${build.constructor.name}!`);
         });
         Engine_1.instance.on('player:research-complete', (playerResearch, advance) => {
             if (playerResearch.player() !== this.player()) {
                 return;
             }
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerResearch.id(), () => playerResearch.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerResearch.id(), () => playerResearch.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             this.sendNotification(`You have discovered the secrets of ${advance.constructor.name}!`);
         });
         Engine_1.instance.on('goody-hut:action-performed', (goodyHut, action) => {
@@ -353,13 +353,9 @@ class ElectronClient extends Client_1.Client {
                 PlayerRegistry_1.instance.unregister(...PlayerRegistry_1.instance.entries());
                 CurrentPlayerRegistry_1.instance.unregister(...CurrentPlayerRegistry_1.instance.entries());
                 // TODO: summary and quit
-                __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'restart', null);
+                __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'restart', null);
             }
-            this.sendNotification(player
-                ? `${defeatedPlayer.civilization().name()} defeated by ${player
-                    .civilization()
-                    .name()}.`
-                : `${defeatedPlayer.civilization().name()} defeated.`);
+            this.sendNotification(`${defeatedPlayer.civilization().name()} defeated${player ? ` by ${player.civilization().name()}` : ''}.`);
         });
         Engine_1.instance.on('city:civil-disorder', (city) => {
             if (city.player() === this.player()) {
@@ -378,8 +374,8 @@ class ElectronClient extends Client_1.Client {
                 makeChoice(Civilization).then(() => resolve());
                 return;
             }
-            __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'chooseCivilization', new TransferObject_1.default({ choices: Civilizations }).toPlainObject());
-            __classPrivateFieldGet(this, _ElectronClient_receiver, "f").call(this, 'chooseCivilization', (choice) => {
+            __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'chooseCivilization', new TransferObject_1.default({ choices: Civilizations }).toPlainObject());
+            __classPrivateFieldGet(this, _DataTransferClient_receiver, "f").call(this, 'chooseCivilization', (choice) => {
                 const [Civilization] = Civilizations.filter((Civilization) => Civilization.name === choice);
                 if (!Civilization) {
                     reject(`Invalid civilization ${choice} (options: ${Civilizations.map((Civilization) => Civilization.name).join(', ')})`);
@@ -398,8 +394,8 @@ class ElectronClient extends Client_1.Client {
                 resolve();
                 return;
             }
-            __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'chooseLeader', new TransferObject_1.default({ choices: Leaders }).toPlainObject());
-            __classPrivateFieldGet(this, _ElectronClient_receiver, "f").call(this, 'chooseLeader', (choice) => {
+            __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'chooseLeader', new TransferObject_1.default({ choices: Leaders }).toPlainObject());
+            __classPrivateFieldGet(this, _DataTransferClient_receiver, "f").call(this, 'chooseLeader', (choice) => {
                 const [Leader] = Leaders.filter((Leader) => Leader.name === choice);
                 if (!Leader) {
                     reject(`Invalid civilization ${choice} (options: ${Leaders.map((Leader) => Leader.name).join(', ')})`);
@@ -420,12 +416,12 @@ class ElectronClient extends Client_1.Client {
                 return false;
             }
             (0, assignWorkers_1.reassignWorkers)(city);
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default))));
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default))));
             return false;
         }
         if (name === 'EndTurn') {
             return (mandatoryActions.length === 1 &&
-                mandatoryActions.every((action) => action instanceof PlayerActions_3.EndTurn));
+                mandatoryActions.every((action) => action instanceof PlayerActions_5.EndTurn));
         }
         if (!name) {
             console.log('action not specified');
@@ -472,7 +468,7 @@ class ElectronClient extends Client_1.Client {
         if (playerAction instanceof PlayerActions_1.InactiveUnit) {
             const unit = playerAction.value();
             if (unit.moves().value() > 0) {
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(unit.id(), unit.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(unit.id(), unit.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default))));
             }
             unit.activate();
             return false;
@@ -510,14 +506,14 @@ class ElectronClient extends Client_1.Client {
             playerResearch.research(ChosenAdvance);
             return false;
         }
-        if (playerAction instanceof CompleteProduction_1.default) {
+        if (playerAction instanceof PlayerActions_4.CompleteProduction) {
             const city = playerAction.value(), playerTreasury = PlayerTreasuryRegistry_1.instance.getByPlayer(this.player());
             playerTreasury.buy(city);
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerTreasury.id(), playerTreasury.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerTreasury.id(), playerTreasury.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             return false;
         }
         // TODO: DelayedPlayerAction -> Revolution --> SelectGovernment
-        if (playerAction instanceof PlayerActions_4.Revolution) {
+        if (playerAction instanceof PlayerActions_6.Revolution) {
             const playerGovernment = playerAction.value(), { chosen } = action, [GovernmentType] = playerGovernment
                 .available()
                 .filter((GovernmentType) => GovernmentType.name === chosen);
@@ -527,13 +523,13 @@ class ElectronClient extends Client_1.Client {
             }
             playerGovernment.set(new GovernmentType());
             const playerWorld = PlayerWorldRegistry_1.instance.getByPlayer(this.player());
-            __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(playerWorld.id(), playerWorld.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
+            __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(playerWorld.id(), playerWorld.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default))));
             CityRegistry_1.instance
                 .getByPlayer(this.player())
-                .forEach((city) => __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default, Unit_1.default)))));
+                .forEach((city) => __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default, Unit_1.default)))));
             return false;
         }
-        if (playerAction instanceof PlayerActions_5.AdjustTradeRates) {
+        if (playerAction instanceof PlayerActions_3.AdjustTradeRates) {
             const playerTradeRates = playerAction.value(), { value } = action;
             playerTradeRates.setAll(value.map(([name, value]) => {
                 const [rate] = playerTradeRates
@@ -543,7 +539,7 @@ class ElectronClient extends Client_1.Client {
             }));
             CityRegistry_1.instance
                 .getByPlayer(this.player())
-                .forEach((city) => __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default, Unit_1.default)))));
+                .forEach((city) => __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(city.id(), city.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Player_1.default, Tile_1.default, Unit_1.default)))));
             return false;
         }
         console.log(`unhandled action: ${JSON.stringify(action)}`);
@@ -556,49 +552,50 @@ class ElectronClient extends Client_1.Client {
             year: Year_1.instance,
         };
         const dataObject = new TransferObject_1.default(rawData);
-        __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'gameData', dataObject.toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this)));
-        __classPrivateFieldSet(this, _ElectronClient_sentInitialData, true, "f");
+        __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'gameData', dataObject.toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this)));
+        __classPrivateFieldSet(this, _DataTransferClient_sentInitialData, true, "f");
     }
     sendPatchData() {
-        __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'gameDataPatch', __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").transferData());
-        __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").clear();
+        __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'gameDataPatch', __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").transferData());
+        __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").clear();
     }
     sendNotification(message) {
-        __classPrivateFieldGet(this, _ElectronClient_sender, "f").call(this, 'gameNotification', {
+        __classPrivateFieldGet(this, _DataTransferClient_sender, "f").call(this, 'gameNotification', {
             message: message,
         });
     }
     takeTurn() {
+        console.log('turn start');
         return new Promise((resolve, reject) => {
-            if (!__classPrivateFieldGet(this, _ElectronClient_sentInitialData, "f")) {
+            if (!__classPrivateFieldGet(this, _DataTransferClient_sentInitialData, "f")) {
                 this.sendInitialData();
             }
             setTimeout(() => {
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(Turn_1.instance.id(), () => Turn_1.instance.toPlainObject());
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(Year_1.instance.id(), () => Year_1.instance.toPlainObject());
-                __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").add(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Civilization_1.default))));
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(Turn_1.instance.id(), () => Turn_1.instance.toPlainObject());
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(Year_1.instance.id(), () => Year_1.instance.toPlainObject());
+                __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").add(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(Tile_1.default, Civilization_1.default))));
                 this.sendPatchData();
             }, 1);
             const listener = (...args) => {
                 try {
                     if (this.handleAction(...args)) {
-                        __classPrivateFieldGet(this, _ElectronClient_eventEmitter, "f").off('action', listener);
+                        __classPrivateFieldGet(this, _DataTransferClient_eventEmitter, "f").off('action', listener);
                         this.sendPatchData();
                         setTimeout(() => resolve(), 100);
                         return;
                     }
-                    __classPrivateFieldGet(this, _ElectronClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _ElectronClient_dataFilter, "f").call(this, filterToReference(PlayerWorld_1.default, Tile_1.default, City_1.default))));
+                    __classPrivateFieldGet(this, _DataTransferClient_dataQueue, "f").update(this.player().id(), () => this.player().toPlainObject(__classPrivateFieldGet(this, _DataTransferClient_dataFilter, "f").call(this, filterToReference(PlayerWorld_1.default, Tile_1.default, City_1.default))));
                     this.sendPatchData();
                 }
                 catch (e) {
                     reject(e);
                 }
             };
-            __classPrivateFieldGet(this, _ElectronClient_eventEmitter, "f").on('action', listener);
+            __classPrivateFieldGet(this, _DataTransferClient_eventEmitter, "f").on('action', listener);
         });
     }
 }
-exports.ElectronClient = ElectronClient;
-_ElectronClient_dataFilter = new WeakMap(), _ElectronClient_dataQueue = new WeakMap(), _ElectronClient_eventEmitter = new WeakMap(), _ElectronClient_receiver = new WeakMap(), _ElectronClient_sender = new WeakMap(), _ElectronClient_sentInitialData = new WeakMap();
-exports.default = ElectronClient;
-//# sourceMappingURL=ElectronClient.js.map
+exports.DataTransferClient = DataTransferClient;
+_DataTransferClient_dataFilter = new WeakMap(), _DataTransferClient_dataQueue = new WeakMap(), _DataTransferClient_eventEmitter = new WeakMap(), _DataTransferClient_receiver = new WeakMap(), _DataTransferClient_sender = new WeakMap(), _DataTransferClient_sentInitialData = new WeakMap();
+exports.default = DataTransferClient;
+//# sourceMappingURL=DataTransferClient.js.map

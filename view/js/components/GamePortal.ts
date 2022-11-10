@@ -1,10 +1,10 @@
-import { ITransport, Unit } from '../types';
 import City from './City';
-import Portal from './Portal';
-import SelectionWindow from './SelectionWindow';
 import InactiveUnitSelectionWindow from './InactiveUnitSelectionWindow';
+import Portal from './Portal';
+import Transport from '../../../client/Transport';
+import { Unit } from '../types';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class GamePortal extends Portal {
   protected bindEvents(): void {

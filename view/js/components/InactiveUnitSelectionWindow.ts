@@ -1,7 +1,8 @@
-import { ITransport, Unit } from '../types';
 import SelectionWindow from './SelectionWindow';
+import Transport from '../../../client/Transport';
+import { Unit } from '../types';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 export class InactiveUnitSelectionWindow extends SelectionWindow {
   constructor(units: Unit[], onComplete: (unit: Unit) => void = () => {}) {

@@ -1,8 +1,7 @@
 {
-  "name": "@civ-clone/electron-renderer",
+  "name": "@civ-clone/web-renderer",
   "version": "0.1.0",
-  "main": "main.js",
-  "repository": "git@github.com:civ-clone/electron-renderer.git",
+  "repository": "git@github.com:civ-clone/web-renderer.git",
   "keywords": [
     "typescript",
     "civilization"
@@ -12,13 +11,12 @@
   "private": false,
   "scripts": {
     "build": "npm run ts:compile && npm run prettier:format && npm run esbuild:bundle && npm run scss:compile",
-    "esbuild:bundle": "esbuild view/js/renderer.ts --bundle --minify --sourcemap --outfile=view/js/renderer.js",
+    "esbuild:bundle": "esbuild --keep-names --bundle --minify --sourcemap --outdir=view/js view/js/frontend.ts view/js/backend.ts",
     "prettier:check": "prettier --config .prettierrc '**/*.ts'",
     "prettier:format": "prettier --config .prettierrc '**/*.ts' --write",
     "scss:compile": "sass view/css/app.scss view/css/app.css",
-    "start": "electron .",
-    "start:debug": "electron . --inspect",
-    "ts:compile": "tsc --build tsconfig.json"
+    "ts:compile": "tsc --build tsconfig.json",
+    "watch": "esbuild --watch --keep-names --bundle --minify --sourcemap --outdir=view/js view/js/frontend.ts view/js/backend.ts"
   },
   "devDependencies": {
     "@types/node": "^14.0.0",
@@ -63,7 +61,7 @@
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
-    "electron": "^17.0.0",
+    "@dom111/typed-event-emitter": "^0.1.2",
     "eventemitter3": "^4.0.7",
     "feather-icons": "^4.28.0",
     "sass": "^1.49.8"

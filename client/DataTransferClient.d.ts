@@ -1,7 +1,7 @@
 import { Client, IClient } from '@civ-clone/core-civ-client/Client';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import Player from '@civ-clone/core-player/Player';
-export declare class ElectronClient extends Client implements IClient {
+export declare class DataTransferClient extends Client implements IClient {
   #private;
   constructor(
     player: Player,
@@ -16,4 +16,4 @@ export declare class ElectronClient extends Client implements IClient {
   private sendNotification;
   takeTurn(): Promise<void>;
 }
-export default ElectronClient;
+export default DataTransferClient;

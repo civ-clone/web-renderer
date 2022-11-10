@@ -1,9 +1,10 @@
-import { BuildItem, City as CityData, CityBuild, ITransport } from '../types';
+import { BuildItem, City as CityData, CityBuild } from '../types';
 import { SelectionWindow, SelectionWindowActions } from './SelectionWindow';
 import City from './City';
 import Portal from './Portal';
+import Transport from '../../../client/Transport';
 
-declare var transport: ITransport;
+declare var transport: Transport;
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 

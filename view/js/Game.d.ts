@@ -1,14 +1,12 @@
+import Transport from '../../client/Transport';
 export interface IGame {
   start(): void;
 }
 export declare class Game implements IGame {
   #private;
-  constructor();
-  private createWindow;
+  constructor(transport: Transport);
   private bindEvents;
   private configure;
-  private receiveData;
-  private sendData;
   start(): void;
 }
 export default Game;

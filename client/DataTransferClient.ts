@@ -10,14 +10,17 @@ import {
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
 import { Client, IClient } from '@civ-clone/core-civ-client/Client';
+import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
+import Busy from '@civ-clone/core-unit/Rules/Busy';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
 import CityGrowth from '@civ-clone/core-city-growth/CityGrowth';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
+import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
-import CompleteProduction from '@civ-clone/civ1-treasury/PlayerActions/CompleteProduction';
+import { CompleteProduction } from '@civ-clone/civ1-treasury/PlayerActions';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
@@ -33,7 +36,6 @@ import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Retryable from './Retryable';
 import { Revolution } from '@civ-clone/civ1-government/PlayerActions';
-import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
@@ -57,10 +59,8 @@ import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
-import * as EventEmitter from 'events';
-import Busy from '@civ-clone/core-unit/Rules/Busy';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
-import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
+import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -85,7 +85,7 @@ const unknownPlayers: Map<Player, UnknownPlayer> = new Map(),
   unknownUnits: Map<Unit, UnknownUnit> = new Map(),
   unknownCities: Map<City, UnknownCity> = new Map();
 
-export class ElectronClient extends Client implements IClient {
+export class DataTransferClient extends Client implements IClient {
   #dataFilter =
     (localFilter = (object: any) => object) =>
     (object: DataObject) => {
@@ -681,11 +681,9 @@ export class ElectronClient extends Client implements IClient {
         }
 
         this.sendNotification(
-          player
-            ? `${defeatedPlayer.civilization().name()} defeated by ${player
-                .civilization()
-                .name()}.`
-            : `${defeatedPlayer.civilization().name()} defeated.`
+          `${defeatedPlayer.civilization().name()} defeated${
+            player ? ` by ${player.civilization().name()}` : ''
+          }.`
         );
       }
     );
@@ -1074,7 +1072,9 @@ export class ElectronClient extends Client implements IClient {
   }
 
   takeTurn(): Promise<void> {
+    console.log('turn start');
     return new Promise<void>((resolve, reject): void => {
+      console.log('sentInitialData', this.#sentInitialData);
       if (!this.#sentInitialData) {
         this.sendInitialData();
       }
@@ -1124,4 +1124,4 @@ export class ElectronClient extends Client implements IClient {
   }
 }
 
-export default ElectronClient;
+export default DataTransferClient;
