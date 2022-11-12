@@ -1,5 +1,5 @@
-import Transport from './Transport';
-export declare class WorkerTransport implements Transport {
+import AbstractTransport from './AbstractTransport';
+export declare class WorkerTransport extends AbstractTransport {
   #private;
   constructor(worker: Worker);
   receive(receivingChannel: string, handler: (...args: any[]) => void): void;

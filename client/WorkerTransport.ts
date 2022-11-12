@@ -1,14 +1,13 @@
-import Transport, {TransportMessage} from './Transport';
+import AbstractTransport from './AbstractTransport';
+import { TransportMessage } from './Transport';
 
-export class WorkerTransport implements Transport {
+export class WorkerTransport extends AbstractTransport {
   #worker;
 
   constructor(worker: Worker) {
-    this.#worker = worker;
+    super();
 
-    worker.addEventListener('message', ({ data: { channel, data } }) =>
-      console.log('receiving from backend: ' + channel, data)
-    );
+    this.#worker = worker;
   }
 
   receive(receivingChannel: string, handler: (...args: any[]) => void): void {
@@ -23,7 +22,9 @@ export class WorkerTransport implements Transport {
     receivingChannel: string,
     handler: (...args: any[]) => void
   ): void {
-    const onceHandler = ({ data: { channel, data } }: MessageEvent<TransportMessage>) => {
+    const onceHandler = ({
+      data: { channel, data },
+    }: MessageEvent<TransportMessage>) => {
       if (channel === receivingChannel) {
         handler(data);
 
@@ -31,14 +32,10 @@ export class WorkerTransport implements Transport {
       }
     };
 
-    this.#worker.addEventListener(
-      'message',
-      onceHandler
-    );
+    this.#worker.addEventListener('message', onceHandler);
   }
 
   send(channel: string, data: any): void {
-    console.log('sending to backend: ' + channel, data);
     this.#worker.postMessage({
       channel,
       data,

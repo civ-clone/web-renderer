@@ -25,12 +25,19 @@ class Game {
         __classPrivateFieldSet(this, _Game_transport, transport, "f");
         transport.receive('start', () => {
             this.bindEvents();
-            this.configure();
             this.start();
         });
         transport.receive('setOption', ({ name, value }) => {
             __classPrivateFieldGet(this, _Game_transport, "f").send('notification', `setting ${name} to ${value}`);
             Engine_1.instance.setOption(name, value);
+        });
+        transport.receive('getOptions', (values) => transport.send('getOptions', values.reduce((options, optionName) => {
+            options[optionName] = Engine_1.instance.option(optionName);
+            return options;
+        }, {})));
+        transport.receive('setOptions', (values) => {
+            Object.entries(values).forEach(([option, value]) => Engine_1.instance.setOption(option, value));
+            transport.send('setOptions');
         });
     }
     bindEvents() {
@@ -44,11 +51,6 @@ class Game {
         Engine_1.instance.on('game:start', () => __classPrivateFieldGet(this, _Game_transport, "f").send('notification', `game start`));
         Engine_1.instance.on('turn:start', (turn) => __classPrivateFieldGet(this, _Game_transport, "f").send('notification', `turn start ${turn}`));
         Engine_1.instance.on('player:turn-start', (player) => __classPrivateFieldGet(this, _Game_transport, "f").send('notification', `player turn-start: ${player.civilization().constructor.name}`));
-    }
-    configure() {
-        // engine.setOption('debug', true);
-        Engine_1.instance.setOption('height', 60);
-        Engine_1.instance.setOption('width', 80);
     }
     start() {
         Engine_1.instance.on('engine:start', () => {

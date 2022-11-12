@@ -273,7 +273,6 @@ export class DataTransferClient extends Client implements IClient {
         playerTile = playerWorld.getByTile(tile);
 
       if (playerTile === null) {
-        console.log('using a Retryable');
         new Retryable(
           () => {
             const playerTile = playerWorld.getByTile(tile);
@@ -1072,9 +1071,7 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   takeTurn(): Promise<void> {
-    console.log('turn start');
     return new Promise<void>((resolve, reject): void => {
-      console.log('sentInitialData', this.#sentInitialData);
       if (!this.#sentInitialData) {
         this.sendInitialData();
       }

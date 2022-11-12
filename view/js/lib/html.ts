@@ -60,7 +60,10 @@ export const parseSelector = (
 
 export const t = (string: string): Text => document.createTextNode(string);
 
-export const e = (selector: string, ...nodes: Node[]): HTMLElement => {
+export const e = <Element extends HTMLElement = HTMLElement>(
+  selector: string,
+  ...nodes: Node[]
+): Element => {
   const [element, classes, attributes] = parseSelector(selector),
     e = document.createElement(element);
 
@@ -74,7 +77,7 @@ export const e = (selector: string, ...nodes: Node[]): HTMLElement => {
     e.append(...nodes);
   }
 
-  return e;
+  return e as Element;
 };
 
 export const s = (html: string, ...nodes: Node[]): Node => {

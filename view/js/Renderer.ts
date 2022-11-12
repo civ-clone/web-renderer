@@ -158,9 +158,7 @@ export class Renderer {
         })
       );
 
-      console.log('binding once gameData');
       transport.receiveOnce('gameData', (objectMap: ObjectMap) => {
-        console.log('receiveOnce - gameData');
         try {
           const data: GameData = reconstituteData(objectMap) as GameData,
             // @ts-ignore
@@ -404,11 +402,7 @@ export class Renderer {
 
           handler(objectMap);
 
-          transport.receive('gameData', (data) => {
-            console.log('gameData called again');
-
-            handler(data);
-          });
+          transport.receive('gameData', (data) => handler(data));
 
           const pathToParts = (path: string) =>
               path.replace(/]/g, '').split(/[.[]/),

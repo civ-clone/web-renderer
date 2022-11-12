@@ -281,6 +281,16 @@ body {
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
   width: 100%;
 }
+#mainmenu nav button:focus {
+  background: rgba(255, 255, 255, 0.4);
+  color: #000;
+}
+
+.customise-world .option {
+  display: flex;
+  justify-content: space-between;
+  margin: 0.5rem 0.5rem 0;
+}
 
 #map {
   display: flex;

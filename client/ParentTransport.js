@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ParentTransport = void 0;
-addEventListener('message', ({ data: { channel, data } }) => console.log('receiving: ' + channel, data));
-class ParentTransport {
+const AbstractTransport_1 = require("./AbstractTransport");
+class ParentTransport extends AbstractTransport_1.default {
     receive(receivingChannel, handler) {
         addEventListener('message', ({ data: { channel, data } }) => {
             if (channel === receivingChannel) {
@@ -13,14 +13,13 @@ class ParentTransport {
     receiveOnce(receivingChannel, handler) {
         addEventListener('message', ({ data: { channel, data } }) => {
             if (channel === receivingChannel) {
-                handler(data.data);
+                handler(data);
             }
         }, {
             once: true,
         });
     }
     send(channel, data) {
-        console.log('sending: ' + channel, data);
         postMessage({
             channel,
             data,

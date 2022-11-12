@@ -13,11 +13,12 @@ var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (
 var _WorkerTransport_worker;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WorkerTransport = void 0;
-class WorkerTransport {
+const AbstractTransport_1 = require("./AbstractTransport");
+class WorkerTransport extends AbstractTransport_1.default {
     constructor(worker) {
+        super();
         _WorkerTransport_worker.set(this, void 0);
         __classPrivateFieldSet(this, _WorkerTransport_worker, worker, "f");
-        worker.addEventListener('message', ({ data: { channel, data } }) => console.log('receiving: ' + channel, data));
     }
     receive(receivingChannel, handler) {
         __classPrivateFieldGet(this, _WorkerTransport_worker, "f").addEventListener('message', ({ data: { channel, data } }) => {
@@ -27,16 +28,15 @@ class WorkerTransport {
         });
     }
     receiveOnce(receivingChannel, handler) {
-        __classPrivateFieldGet(this, _WorkerTransport_worker, "f").addEventListener('message', ({ data: { channel, data } }) => {
+        const onceHandler = ({ data: { channel, data }, }) => {
             if (channel === receivingChannel) {
-                handler(data.data);
+                handler(data);
+                __classPrivateFieldGet(this, _WorkerTransport_worker, "f").removeEventListener('message', onceHandler);
             }
-        }, {
-            once: true,
-        });
+        };
+        __classPrivateFieldGet(this, _WorkerTransport_worker, "f").addEventListener('message', onceHandler);
     }
     send(channel, data) {
-        console.log('sending: ' + channel, data);
         __classPrivateFieldGet(this, _WorkerTransport_worker, "f").postMessage({
             channel,
             data,

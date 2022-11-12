@@ -169,7 +169,6 @@ class DataTransferClient extends Client_1.Client {
             }
             const playerWorld = PlayerWorldRegistry_1.instance.getByPlayer(this.player()), playerTile = playerWorld.getByTile(tile);
             if (playerTile === null) {
-                console.log('using a Retryable');
                 new Retryable_1.default(() => {
                     const playerTile = playerWorld.getByTile(tile);
                     if (playerTile === null) {
@@ -565,7 +564,6 @@ class DataTransferClient extends Client_1.Client {
         });
     }
     takeTurn() {
-        console.log('turn start');
         return new Promise((resolve, reject) => {
             if (!__classPrivateFieldGet(this, _DataTransferClient_sentInitialData, "f")) {
                 this.sendInitialData();

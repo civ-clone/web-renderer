@@ -107,17 +107,29 @@ export class Portal
   }
 
   public isVisible(x: number, y: number): boolean {
+    const visibleHorizontal = Math.floor(this.#canvas.width / this.#tileSize),
+      visibleVertical = Math.floor(this.#canvas.height / this.#tileSize);
+
+    if (
+      visibleHorizontal >= this.#world.width() &&
+      visibleVertical >= this.#world.height()
+    ) {
+      return true;
+    }
+
     const [xLowerBound, xUpperBound, yLowerBound, yUpperBound] =
       this.visibleBounds();
 
     // I _think_ this logic is correct now...
     return (
-      (xLowerBound > xUpperBound
-        ? x < xUpperBound || x > xLowerBound
-        : x < xUpperBound && x > xLowerBound) &&
-      (yLowerBound > yUpperBound
-        ? y < yUpperBound || y > yLowerBound
-        : y < yUpperBound && y > yLowerBound)
+      (visibleHorizontal >= this.#world.width() ||
+        (xLowerBound > xUpperBound
+          ? x < xUpperBound || x > xLowerBound
+          : x < xUpperBound && x > xLowerBound)) &&
+      (visibleVertical >= this.#world.height() ||
+        (yLowerBound > yUpperBound
+          ? y < yUpperBound || y > yLowerBound
+          : y < yUpperBound && y > yLowerBound))
     );
   }
 
@@ -159,8 +171,8 @@ export class Portal
     this.#context.fillRect(
       0,
       0,
-      this.#world.width() * tileSize,
-      this.#world.height() * tileSize
+      Math.max(this.#world.width() * tileSize, this.#canvas.width),
+      Math.max(this.#world.height() * tileSize, this.#canvas.height)
     );
 
     for (let x = startX; x < endX; x += layerWidth) {

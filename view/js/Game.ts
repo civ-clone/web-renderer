@@ -19,13 +19,31 @@ export class Game implements IGame {
 
     transport.receive('start', () => {
       this.bindEvents();
-      this.configure();
       this.start();
     });
 
     transport.receive('setOption', ({ name, value }) => {
       this.#transport.send('notification', `setting ${name} to ${value}`);
       engine.setOption(name, value);
+    });
+
+    transport.receive('getOptions', (values: string[]) =>
+      transport.send(
+        'getOptions',
+        values.reduce((options, optionName) => {
+          options[optionName] = engine.option(optionName);
+
+          return options;
+        }, {} as { [key: string]: any })
+      )
+    );
+
+    transport.receive('setOptions', (values: { [key: string]: any }) => {
+      Object.entries(values).forEach(([option, value]) =>
+        engine.setOption(option, value)
+      );
+
+      transport.send('setOptions');
     });
   }
 
@@ -70,13 +88,6 @@ export class Game implements IGame {
         `player turn-start: ${player.civilization().constructor.name}`
       )
     );
-  }
-
-  private configure(): void {
-    // engine.setOption('debug', true);
-
-    engine.setOption('height', 60);
-    engine.setOption('width', 80);
   }
 
   start(): void {
