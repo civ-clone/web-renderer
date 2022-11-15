@@ -28,6 +28,7 @@ import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
 import Unit from './Unit';
+import { assetStore } from '../AssetStore';
 
 const buildTurns = (city: CityData) =>
     Math.max(
@@ -97,19 +98,24 @@ const buildTurns = (city: CityData) =>
       }
     }
 
-    return e(
-      'div.population',
-      ...state.map((status, index) =>
-        e(
-          'span.citizen',
-          e(
-            `img[src="view/assets/city/people_${
-              ['unhappy', 'content', 'happy'][status]
-            }_${['f', 'm'][parseInt(mask[index % mask.length], 10)]}.png"]`
+    const population = e('div.population');
+
+    state.forEach((status, index) =>
+      assetStore
+        .getScaled(
+          `./assets/city/people_${['unhappy', 'content', 'happy'][status]}_${
+            ['f', 'm'][parseInt(mask[index % mask.length], 10)]
+          }.png`,
+          2
+        )
+        .then((image) =>
+          population.append(
+            e('span.citizen', e(`img[src="${image.toDataURL('image/png')}"]`))
           )
         )
-      )
     );
+
+    return population;
   },
   reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityYields
@@ -144,14 +150,6 @@ const buildTurns = (city: CityData) =>
                     value: n,
                     values: [],
                   })
-                  // ...new Array(n)
-                  //   .fill(1)
-                  //   .map(() =>
-                  //     e(
-                  //       'span.yield-icon',
-                  //       e(`img[src="view/assets/${knownIcons[cityYieldName]}"]`)
-                  //     )
-                  //   )
                 )
               )
             )
@@ -219,14 +217,17 @@ const buildTurns = (city: CityData) =>
     });
   },
   yieldImages = (cityYield: Yield): Node[] =>
-    new Array(Math.abs(cityYield.value))
-      .fill(0)
-      .map(() =>
-        e(
-          'span.yield-icon',
-          e(`img[src="view/assets/${knownIcons[knownGroups[cityYield._]]}"]`)
-        )
-      ),
+    new Array(Math.abs(cityYield.value)).fill(0).map(() => {
+      const icon = e('span.yield-icon');
+
+      assetStore
+        .getScaled(`./assets/${knownIcons[knownGroups[cityYield._]]}`, 2)
+        .then((image) => {
+          icon.append(e(`img[src="${image.toDataURL('image/png')}"]`));
+        });
+
+      return icon;
+    }),
   renderBuildDetails = (
     city: CityData,
     chooseProduction: () => void,

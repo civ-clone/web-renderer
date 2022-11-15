@@ -1,8 +1,6 @@
 (async () => {
   const { build } = require('esbuild'),
     { sassPlugin } = require('esbuild-sass-plugin'),
-    pluginSvg = (await import('esbuild-plugin-svg')).default,
-    { copy } = require('esbuild-plugin-copy'),
     buildOptions = {
       entryPoints: [
         'src/css/app.scss',
