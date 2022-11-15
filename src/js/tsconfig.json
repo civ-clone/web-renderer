@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "noEmit": true,
+    "esModuleInterop": true,
+    "lib": [
+      "dom",
+      "es2019"
+    ],
+    "moduleResolution": "node",
+    "module": "esnext",
+    "resolveJsonModule": true,
+    "strict": true,
+    "target": "ES2018"
+  }
+}

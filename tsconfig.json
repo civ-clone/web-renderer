@@ -1,19 +1,18 @@
 {
   "compilerOptions": {
-    "declaration": true,
+    "noEmit": true,
     "lib": [
       "dom",
       "es2019"
     ],
     "module": "commonjs",
-    "sourceMap": true,
     "strict": true,
     "target": "ES2018"
   },
   "include": [
-    "client/*",
-    "view/js/Game.ts",
+    "src/js/Engine/*",
+    "src/js/Engine/Game.ts",
     "main.ts",
-    "view/js/preload.ts"
+    "src/js/preload.ts"
   ]
 }

@@ -208,3 +208,6 @@ GitHub.sublime-settings
 
 # Local History for Visual Studio Code
 .history
+
+src/js/plugins.ts
+.dist/*

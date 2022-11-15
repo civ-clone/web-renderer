@@ -10,21 +10,28 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "build": "npm run ts:compile && npm run prettier:format && npm run esbuild:bundle && npm run scss:compile",
-    "esbuild:bundle": "esbuild --keep-names --bundle --minify --sourcemap --outdir=view/js view/js/frontend.ts view/js/backend.ts",
+    "build": "npm run build:generate-plugins-ts && npm run ts:compile && npm run prettier:format && npm run esbuild:bundle",
+    "build:generate-plugins-ts": "node buildPluginList.js",
+    "esbuild:bundle": "node esbuild.js",
     "prettier:check": "prettier --config .prettierrc '**/*.ts'",
     "prettier:format": "prettier --config .prettierrc '**/*.ts' --write",
-    "scss:compile": "sass view/css/app.scss view/css/app.css",
     "ts:compile": "tsc --build tsconfig.json",
-    "watch": "esbuild --watch --keep-names --bundle --minify --sourcemap --outdir=view/js view/js/frontend.ts view/js/backend.ts"
+    "watch": "node esbuild.js watch"
+  },
+  "civ-clone": {
+    "excludes": [
+      "civ1-asset-extractor"
+    ]
   },
   "devDependencies": {
     "@types/node": "^14.0.0",
     "esbuild": "^0.14.32",
+    "esbuild-sass-plugin": "^2.4.0",
     "prettier": "^2.0.0",
     "typescript": "^4.0.0"
   },
   "dependencies": {
+    "@civ-clone/civ1-asset-extractor": "github:civ-clone/civ1-asset-extractor",
     "@civ-clone/civ1-city": "github:civ-clone/civ1-city",
     "@civ-clone/civ1-city-happiness": "github:civ-clone/civ1-city-happiness",
     "@civ-clone/civ1-city-improvement": "github:civ-clone/civ1-city-improvement",
@@ -62,8 +69,7 @@
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
     "@dom111/typed-event-emitter": "^0.1.2",
-    "eventemitter3": "^4.0.7",
     "feather-icons": "^4.28.0",
-    "sass": "^1.49.8"
+    "idb": "^7.1.1"
   }
 }

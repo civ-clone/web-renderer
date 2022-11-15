@@ -1,0 +1,30 @@
+body {
+  background: #000;
+  color: #edc;
+  font-family: sans-serif;
+  margin: 0;
+  user-select: none;
+}
+
+input {
+  user-select: all;
+}
+
+#preload {
+  height: 0;
+  position: absolute;
+  width: 0;
+  overflow: hidden;
+}
+
+@import "components/actions";
+@import "components/city";
+@import "components/game";
+@import "components/icons";
+@import "components/mainmenu";
+@import "components/map";
+@import "components/notification-area";
+@import "components/notification-window";
+@import "components/selection-window";
+@import "components/sidebar";
+@import "components/window";

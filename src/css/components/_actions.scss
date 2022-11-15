@@ -1,0 +1,106 @@
+.action {
+  margin: 0 1em 1em;
+  text-align: right;
+
+  button {
+    appearance: none;
+    border-radius: 50%;
+    background: #ccc none no-repeat center / 14px;
+    box-shadow: 2px 2px 2px rgba(0, 0, 0, .4);
+    box-sizing: content-box;
+    cursor: pointer;
+    font-size: 12px;
+    height: 3.1em;
+    image-rendering: pixelated;
+    outline: none;
+    padding: 0;
+    width: 3.1em;
+
+    &:active {
+      background-color: #aaa;
+      position: relative;
+      top: 2px;
+      left: 2px;
+    }
+
+    &:hover {
+      background-color: #eee;
+    }
+
+    &.chooseResearch {
+      &:focus,
+      &:focus-visible {
+        border-color: #25e0e8;
+      }
+    }
+
+    &.cityBuild {
+      &:focus,
+      &:focus-visible {
+        border-color: #e8e8e8;
+      }
+    }
+
+    &.endTurn {
+      background-image: url('feather-icons/dist/icons/check-circle.svg');
+      background-size: 50%;
+      border-width: 3px;
+      font-size: 18px;
+
+      &:focus,
+      &:focus-visible {
+        border-color: #daa520;
+      }
+    }
+
+    &.adjustTradeRates {
+      &:focus,
+      &:focus-visible {
+        border-color: #fcfc94;
+      }
+    }
+
+    &.chooseGovernment {
+      &:focus,
+      &:focus-visible {
+        border-color: #000;
+      }
+    }
+  }
+}
+
+#actions {
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 100vh;
+  position: absolute;
+  right: 0;
+
+  .action {
+    margin: 0 1em 1em;
+
+    button {
+      font-size: 12px;
+      height: 3.1em;
+      width: 3.1em;
+    }
+  }
+}
+
+#other-actions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  flex-direction: row;
+  padding: 1em;
+
+  .action {
+    margin: 0 0 0 .5em;
+
+    button {
+      height: 2em;
+      width: 2em;
+    }
+  }
+}
