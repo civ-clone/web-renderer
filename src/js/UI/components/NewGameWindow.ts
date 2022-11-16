@@ -2,7 +2,7 @@ import MandatorySelection from './MandatorySelection';
 import Transport from '../../Engine/Transport';
 import Request from '../../Engine/Request';
 
-type FinishedHandler = () => void;
+export type FinishedHandler = () => void;
 
 export class NewGameWindow extends MandatorySelection {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
@@ -42,11 +42,11 @@ export class NewGameWindow extends MandatorySelection {
           })
         );
 
-        transport.send('start');
-
         if (onFinished) {
-          onFinished();
+          await onFinished();
         }
+
+        transport.send('start');
       }
     );
   }

@@ -5,6 +5,7 @@ import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
 import Transport from '../../Engine/Transport';
 import { assetStore } from '../AssetStore';
+import EarthWindow from './EarthWindow';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -41,10 +42,9 @@ export class MainMenu extends Element {
                 new NewGameWindow(this.#transport, () => this.remove()),
             }
           ),
-          // h(e('button', t('Earth')), {
-          //   click: () => {
-          //   },
-          // }),
+          h(e('button', t('Earth')), {
+            click: () => new EarthWindow(this.#transport, () => this.remove()),
+          }),
           h(e('button' + (hasAssets ? '' : '[hidden]'), t('Customise World')), {
             click: async () =>
               new CustomiseWorldWindow(this.#transport, () => this.remove()),

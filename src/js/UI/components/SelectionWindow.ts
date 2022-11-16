@@ -85,7 +85,7 @@ export class SelectionWindow extends NotificationWindow {
       selectionList.setAttribute('size', optionList.length.toString());
     }
 
-    if (options.autoFocus) {
+    if (options.autoFocus && optionList.length > 1) {
       selectionList.setAttribute('autofocus', '');
     }
 

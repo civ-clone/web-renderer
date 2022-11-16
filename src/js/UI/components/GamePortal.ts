@@ -41,7 +41,7 @@ export class GamePortal extends Portal {
           (unit: Unit) => unit.player.id === this.playerId()
         );
 
-      if (tile.city) {
+      if (tile.city && tile.city.player.id === this.playerId()) {
         new City(tile.city, this, this.transport());
       } else if (playerTileUnits.length) {
         new InactiveUnitSelectionWindow(

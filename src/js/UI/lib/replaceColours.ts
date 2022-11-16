@@ -6,7 +6,7 @@ export const replaceColours = (
   replacement: string[]
 ) => {
   const canvas = e('canvas') as HTMLCanvasElement,
-    context = canvas.getContext('2d') as CanvasRenderingContext2D;
+    context = canvas.getContext('2d')!;
 
   canvas.width = image.width as number;
   canvas.height = image.height as number;

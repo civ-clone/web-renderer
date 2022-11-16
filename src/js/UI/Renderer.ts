@@ -51,14 +51,20 @@ export class Renderer {
   init() {
     const transport = this.#transport;
 
-    assetStore
-      .getScaled('./assets/cursor/torch.png', 2)
-      .then(
-        (scaledCursor) =>
-          (document.body.style.cursor = `url('${scaledCursor.toDataURL(
-            'image/png'
-          )}'), default`)
-      );
+    assetStore.hasAllAssets().then((hasAllAssets) => {
+      if (!hasAllAssets) {
+        return;
+      }
+
+      assetStore
+        .getScaled('./assets/cursor/torch.png', 2)
+        .then(
+          (scaledCursor) =>
+            (document.body.style.cursor = `url('${scaledCursor.toDataURL(
+              'image/png'
+            )}'), default`)
+        );
+    });
 
     const options = {
       autoEndOfTurn: true,

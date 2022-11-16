@@ -9,7 +9,7 @@ export const knownGroups: { [key: string]: string } = {
   Happiness: 'Happiness',
   LuxuryHappiness: 'Happiness',
   Unhappiness: 'Unhappiness',
-  MartialLawContent: 'Unhappiness',
+  MartialLaw: 'Unhappiness',
   MilitaryUnhappiness: 'Unhappiness',
   PopulationUnhappiness: 'Unhappiness',
   CityImprovementContent: 'Unhappiness',
