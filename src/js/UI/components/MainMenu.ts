@@ -42,7 +42,7 @@ export class MainMenu extends Element {
                 new NewGameWindow(this.#transport, () => this.remove()),
             }
           ),
-          h(e('button', t('Earth')), {
+          h(e('button' + (hasAssets ? '' : '[hidden]'), t('Earth')), {
             click: () => new EarthWindow(this.#transport, () => this.remove()),
           }),
           h(e('button' + (hasAssets ? '' : '[hidden]'), t('Customise World')), {

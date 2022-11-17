@@ -20,6 +20,11 @@ I'm looking at adding the ability to add asset-packs and a mechanism for managin
 and I'd like to collate some open-source/royalty free image to make a default pack that doesn't necessitate the original
 game.
 
+__NOTE__: If generating the assets on Brave,
+[be aware that the data might get "farbled"](https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good)
+and not look quite correct. Ensure you put shields down for importing the assets and when playing, or at least disable
+the fingerprinting protection.
+
 ## Known issues
 
 - Some `Civilization`'s colours are terrible.

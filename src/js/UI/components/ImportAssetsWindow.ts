@@ -28,6 +28,30 @@ export class ImportAssetsWindow extends Window {
           )
         ),
         e(
+          // @ts-ignore
+          'div.brave' + (navigator?.brave ? '' : '[hidden]'),
+          e(
+            'p',
+            t(`It looks like you're using Brave and due to the use of `),
+            e('code', t('HTMLCanvasElement')),
+            t(`\'s `),
+            e('code', t('getImageData')),
+            t(' and '),
+            e('code', t('toDataURL')),
+            t(
+              ` functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won't look correct. `
+            ),
+            e('strong', t('Remember to put them back up after!'))
+          ),
+          e(
+            'p',
+            e(
+              'a[href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good"][target="_blank"]',
+              t('Read more about "farbling".')
+            )
+          )
+        ),
+        e(
           'p',
           h(fileInput, {
             change: (event) => this.handleFileUpload(event),
