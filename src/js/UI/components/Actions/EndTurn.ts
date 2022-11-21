@@ -1,5 +1,5 @@
 import Action from './Action';
-import { e } from '../../lib/html';
+import { s } from '@dom111/element';
 
 export class EndTurn extends Action {
   activate(): void {
@@ -9,7 +9,7 @@ export class EndTurn extends Action {
   }
 
   build(): void {
-    this.element().append(e(`button.endTurn[title="End turn"]`));
+    this.append(s(`<button class="endTurn" title="End turn"></button>`));
   }
 }
 

@@ -18,19 +18,19 @@ export class Unit extends DataObject {
     this.addKey('_', 'tile', 'player');
   }
 
-  public static fromUnit(unit: CoreUnit): Unit {
+  static fromUnit(unit: CoreUnit): Unit {
     return new Unit(unit.constructor.name, unit.tile(), unit.player());
   }
 
-  public _(): string {
+  _(): string {
     return this.#_;
   }
 
-  public player(): Player {
+  player(): Player {
     return this.#player;
   }
 
-  public tile(): Tile {
+  tile(): Tile {
     return this.#tile;
   }
 }

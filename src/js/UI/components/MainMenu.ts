@@ -1,11 +1,12 @@
-import { e, h, t } from '../lib/html';
+import { Element, s } from '@dom111/element';
 import CustomiseWorldWindow from './CustomiseWorldWindow';
-import Element from './Element';
+import EarthWindow from './EarthWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
 import Transport from '../../Engine/Transport';
 import { assetStore } from '../AssetStore';
-import EarthWindow from './EarthWindow';
+import { version } from '../../../../build.json';
+import { h } from '../lib/html';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -17,7 +18,7 @@ export class MainMenu extends Element {
 
     this.build();
 
-    element.classList.add('active');
+    this.addClass('active');
   }
 
   async build(showQuit = false) {
@@ -28,31 +29,36 @@ export class MainMenu extends Element {
       console.log(await assetStore.missingAssets());
     }
 
-    this.element().append(
+    this.append(
       h(
-        e(
-          'nav',
+        s(
+          '<nav></nav>',
           h(
-            e(
-              'button[autofocus]' + (hasAssets ? '' : '[hidden]'),
-              t('Start a New Game')
+            s(
+              `<button autofocus${
+                hasAssets ? '' : ' hidden'
+              }>Start a New Game</button>`
             ),
             {
-              click: () =>
-                new NewGameWindow(this.#transport, () => this.remove()),
+              click: () => {
+                new NewGameWindow(this.#transport, () => this.remove());
+              },
             }
           ),
-          h(e('button' + (hasAssets ? '' : '[hidden]'), t('Earth')), {
+          h(s(`<button${hasAssets ? '' : ' hidden'}>Earth</button>`), {
             click: () => new EarthWindow(this.#transport, () => this.remove()),
           }),
-          h(e('button' + (hasAssets ? '' : '[hidden]'), t('Customise World')), {
-            click: async () =>
-              new CustomiseWorldWindow(this.#transport, () => this.remove()),
-          }),
-          h(e('button', t(hasAssets ? 'Update assets' : 'Import assets')), {
+          h(
+            s(`<button${hasAssets ? '' : ' hidden'}>Customise World</button>`),
+            {
+              click: async () =>
+                new CustomiseWorldWindow(this.#transport, () => this.remove()),
+            }
+          ),
+          h(s(`<button${hasAssets ? '' : ' hidden'}>Import Assets</button>`), {
             click: () => new ImportAssetsWindow(),
           }),
-          h(e('button' + (showQuit ? '' : '[hidden]'), t('Quit')), {
+          h(s(`<button${showQuit ? '' : ' hidden'}>Quit</button>`), {
             click: () => {
               this.remove();
 
@@ -83,22 +89,15 @@ export class MainMenu extends Element {
             }
           },
         }
-      )
+      ),
+      s(`<footer>version: ${version}</footer>`)
     );
   }
 
-  disableButtons(): void {
-    this.element()
-      .querySelectorAll('button')
-      .forEach((button): void => button.setAttribute('disabled', ''));
-  }
-
   remove(): void {
-    this.element().classList.remove('active');
+    this.removeClass('active');
 
-    setTimeout((): void => {
-      this.element().remove();
-    }, 2000);
+    setTimeout((): void => super.remove(), 2000);
   }
 }
 

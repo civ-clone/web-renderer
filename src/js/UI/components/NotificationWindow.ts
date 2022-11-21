@@ -29,9 +29,9 @@ export class NotificationWindow extends Window implements INotificationWindow {
 
     this.#options = options;
 
-    this.element().classList.add('notificationWindow');
+    this.addClass('notificationWindow');
 
-    this.element().addEventListener('keydown', (event) => {
+    this.on('keydown', (event) => {
       if (event.key === 'Enter') {
         this.close();
 
@@ -78,7 +78,7 @@ export class NotificationWindow extends Window implements INotificationWindow {
     });
   }
 
-  public static hasOpenWindow(): boolean {
+  static hasOpenWindow(): boolean {
     return !!document.querySelector('div.notificationWindow');
   }
 }

@@ -1,11 +1,11 @@
 import Action from './Action';
 import { PlayerResearch } from '../../types';
 import SelectionWindow from '../SelectionWindow';
-import { e } from '../../lib/html';
 import { assetStore } from '../../AssetStore';
+import { s } from '@dom111/element';
 
 export class ChooseResearch extends Action {
-  public activate(): void {
+  activate(): void {
     const chooseWindow = new SelectionWindow(
       'Choose research',
       this.value().available.map((advance) => ({
@@ -37,11 +37,11 @@ export class ChooseResearch extends Action {
     assetStore
       .get('./assets/city/bulb.png')
       .then((asset) =>
-        this.element().append(
-          e(
-            `button.chooseResearch[title="Choose research"][style="background-image:url('${
+        this.append(
+          s(
+            `<button class="chooseResearch" title="Choose research" style="background-image:url('${
               asset!.uri
-            }')"]`
+            }')">`
           )
         )
       );

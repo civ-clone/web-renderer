@@ -1,11 +1,11 @@
-import { e } from './html';
+import { s } from '@dom111/element';
 
 export const replaceColours = (
   image: CanvasImageSource,
   source: string[],
   replacement: string[]
 ) => {
-  const canvas = e('canvas') as HTMLCanvasElement,
+  const canvas = s<HTMLCanvasElement>('<canvas></canvas>'),
     context = canvas.getContext('2d')!;
 
   canvas.width = image.width as number;

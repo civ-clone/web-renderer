@@ -1,6 +1,6 @@
 import TerrainAbstract from './TerrainAbstract';
 import { Tile } from '../../types';
-import { e } from '../../lib/html';
+import { s } from '@dom111/element';
 
 export class Land extends TerrainAbstract {
   renderTile(tile: Tile): void {
@@ -51,9 +51,9 @@ export class Land extends TerrainAbstract {
             bottomLeftSubtileOffset =
               ((bitmask >> 6) & 7) | ((bitmask & 1) << 2);
 
-          const image = e(
-              'canvas[height="16"][width="16"]'
-            ) as HTMLCanvasElement,
+          const image = s<HTMLCanvasElement>(
+              '<canvas height="16" width="16"></canvas>'
+            ),
             imageContext = image.getContext('2d') as CanvasRenderingContext2D;
 
           imageContext.drawImage(

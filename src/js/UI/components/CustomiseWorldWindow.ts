@@ -1,8 +1,9 @@
-import { e, h, t } from '../lib/html';
 import Options from '../../Engine/Requests/Options';
 import Request from '../../Engine/Request';
 import Transport from '../../Engine/Transport';
 import Window from './Window';
+import { h } from '../lib/html';
+import { s } from '@dom111/element';
 
 type FinishedHandler = () => void;
 
@@ -11,7 +12,7 @@ export class CustomiseWorldWindow extends Window {
   #transport: Transport;
 
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    super('Customise world', e('div.customise-world'));
+    super('Customise world', s('<div class="customise-world"></div>'));
 
     this.#onFinished = onFinished;
     this.#transport = transport;
@@ -36,35 +37,35 @@ export class CustomiseWorldWindow extends Window {
           'maxIterations',
         ])
       ),
-      playersInput = e<HTMLInputElement>(
-        `input[name="players"][type="number"][value="${
+      playersInput = s<HTMLInputElement>(
+        `<input name="players" type="number" value="${
           existingValues.players ?? 7
-        }"][step="1"][min="1"][max="20"]`
+        }" step="1" min="1" max="20">`
       ),
-      heightInput = e<HTMLInputElement>(
-        `input[name="height"][type="number"][value="${
+      heightInput = s<HTMLInputElement>(
+        `<input name="height" type="number" value="${
           existingValues.height ?? 60
-        }"][step="1"][min="1"]`
+        }" step="1" min="1">`
       ),
-      widthInput = e<HTMLInputElement>(
-        `input[name="width"][type="number"][value="${
+      widthInput = s<HTMLInputElement>(
+        `<input name="width" type="number" value="${
           existingValues.width ?? 80
-        }"][step="1"][min="1"]`
+        }" step="1" min="1">`
       ),
-      landCoverageInput = e<HTMLInputElement>(
-        `input[name="landCoverage"][type="number"][value="${
+      landCoverageInput = s<HTMLInputElement>(
+        `<input name="landCoverage" type="number" value="${
           existingValues.landCoverage ?? 0.4
-        }"][step="0.01"][min="0"]`
+        }" step="0.01" min="0">`
       ),
-      landSizeInput = e<HTMLInputElement>(
-        `input[name="landSize"][type="number"][value="${
+      landSizeInput = s<HTMLInputElement>(
+        `<input name="landSize" type="number" value="${
           existingValues.landSize ?? 0.2
-        }"][step="0.01"][min="0"]`
+        }" step="0.01" min="0">`
       ),
-      maxIterationsInput = e<HTMLInputElement>(
-        `input[name="maxIterations"][type="number"][value="${
+      maxIterationsInput = s<HTMLInputElement>(
+        `<input name="maxIterations" type="number" value="${
           existingValues.maxIterations ?? 20
-        }"][step="1"][min="1"]`
+        }" step="1" min="1">`
       ),
       submit = async () => {
         this.close();
@@ -88,21 +89,27 @@ export class CustomiseWorldWindow extends Window {
       };
 
     this.update(
-      e(
-        'div.customise-world',
-        e('div.option', e('label', t('Players')), playersInput),
-        e('div.option', e('label', t('Height')), heightInput),
-        e('div.option', e('label', t('Width')), widthInput),
-        e('div.option', e('label', t('Land coverage')), landCoverageInput),
-        e('div.option', e('label', t('Land size')), landSizeInput),
-        e('div.option', e('label', t('Max iterations')), maxIterationsInput),
-        h(e('button', t('Build')), {
+      s(
+        '<div class="customise-world"></div>',
+        s('<div class="option"><label>Players</label></div>', playersInput),
+        s('<div class="option"><label>Height</label></div>', heightInput),
+        s('<div class="option"><label>Width</label></div>', widthInput),
+        s(
+          '<div class="option"><label>Land coverage</label></div>',
+          landCoverageInput
+        ),
+        s('<div class="option"><label>Land size</label></div>', landSizeInput),
+        s(
+          '<div class="option"><label>Max iterations</label></div>',
+          maxIterationsInput
+        ),
+        h(s('<button>Build</button>'), {
           click: () => submit(),
         })
       )
     );
 
-    this.element().addEventListener('keydown', (event) => {
+    this.on('keydown', (event) => {
       if (event.key === 'Enter') {
         submit();
       }

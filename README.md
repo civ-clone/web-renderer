@@ -37,6 +37,7 @@ the fingerprinting protection.
 - Split out the UI functions into separate packages
 - Add the concept of asset-packs so that open source tilesets can be used
 - i18n + l10n
+- Fix the mimimap highlight render position (and have it wrap around)
 
 See also the wider `TODO`s:
 

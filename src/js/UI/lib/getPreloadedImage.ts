@@ -1,4 +1,4 @@
-import { e } from './html';
+import { s } from '@dom111/element';
 
 export let preloadContainer: HTMLElement;
 
@@ -11,7 +11,7 @@ export const getPreloadedImage = (path: string): CanvasImageSource => {
   if (image === null) {
     console.error(`Missing image: ${path}.`);
 
-    return e('canvas') as HTMLCanvasElement;
+    return s<HTMLCanvasElement>('<canvas></canvas>');
   }
 
   return image as HTMLImageElement;

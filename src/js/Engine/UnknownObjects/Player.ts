@@ -13,15 +13,15 @@ export class Player extends DataObject {
     this.addKey('_', 'civilization');
   }
 
-  public static fromPlayer(player: CorePlayer): Player {
+  static fromPlayer(player: CorePlayer): Player {
     return new Player(player.civilization());
   }
 
-  public _(): string {
+  _(): string {
     return 'Player';
   }
 
-  public civilization(): Civilization {
+  civilization(): Civilization {
     return this.#civilization;
   }
 }

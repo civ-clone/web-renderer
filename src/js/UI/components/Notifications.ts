@@ -40,7 +40,7 @@ export class Notifications {
       }
     );
 
-    notificationWindow.element().addEventListener('close', () => this.check());
+    notificationWindow.on('close', () => this.check());
   }
 }
 

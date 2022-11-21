@@ -1,6 +1,7 @@
 import Map from './Map';
 import Portal from './Portal';
 import World from './World';
+import { on } from '@dom111/element';
 
 export class Minimap {
   #context: CanvasRenderingContext2D;
@@ -22,7 +23,7 @@ export class Minimap {
 
     this.#context = this.#element.getContext('2d')!;
 
-    this.#element.addEventListener('click', (event) => {
+    on(this.#element, 'click', (event) => {
       const x = event.offsetX - this.#element.offsetLeft,
         y = event.offsetY - this.#element.offsetTop,
         tileX = Math.ceil(
@@ -48,7 +49,7 @@ export class Minimap {
       this.#context.drawImage(layer.canvas(), 0, 0, 190, targetHeight)
     );
 
-    const [start, end] = this.#portal.visibleRange();
+    const [start, end] = this.#portal.rawVisibleRange();
 
     // TODO: draw the rectangle replicated when close to the sides
     this.#context.lineWidth = 1;

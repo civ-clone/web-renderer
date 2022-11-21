@@ -1,19 +1,25 @@
-import { e } from '../lib/html';
-import { Element, IElement } from './Element';
+import { Element, s } from '@dom111/element';
+import { CustomEventMap } from '@dom111/element/src/Element';
 
-export interface ITransientElement extends IElement {
+export interface ITransientElement {
   display(): void;
   parent(): HTMLElement;
 }
 
-export class TransientElement extends Element implements ITransientElement {
+export class TransientElement<
+    T extends HTMLElement = HTMLElement,
+    M extends CustomEventMap = CustomEventMap
+  >
+  extends Element<T, M>
+  implements ITransientElement
+{
   #parent: HTMLElement;
 
-  constructor(parent: HTMLElement, element: HTMLElement = e('div')) {
+  constructor(parent: HTMLElement, element: T = s('<div></div>')) {
     super(element);
 
     // capture keys in the notification window
-    this.element().addEventListener('keydown', (event: KeyboardEvent) => {
+    this.on('keydown', (event: KeyboardEvent) => {
       event.stopPropagation();
     });
 
@@ -22,13 +28,15 @@ export class TransientElement extends Element implements ITransientElement {
     this.#parent = parent;
   }
 
-  public display(): void {
+  build(): void {}
+
+  display(): void {
     this.build();
 
     this.#parent.append(this.element());
   }
 
-  public parent(): HTMLElement {
+  parent(): HTMLElement {
     return this.#parent;
   }
 }

@@ -2,7 +2,7 @@ import SelectionWindow from './SelectionWindow';
 import Transport from '../../Engine/Transport';
 import { Unit } from '../types';
 
-export class InactiveUnitSelectionWindow extends SelectionWindow {
+export class UnitSelectionWindow extends SelectionWindow {
   constructor(
     units: Unit[],
     transport: Transport,
@@ -43,4 +43,4 @@ export class InactiveUnitSelectionWindow extends SelectionWindow {
   }
 }
 
-export default InactiveUnitSelectionWindow;
+export default UnitSelectionWindow;

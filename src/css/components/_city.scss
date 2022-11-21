@@ -18,7 +18,7 @@
   .city-map {
     min-width: 160px;
     text-align: center;
-    width: 20vw;
+    width: 20%;
   }
 
   .bottom-row {
@@ -42,7 +42,7 @@
 
     .yield-details,
     .improvements {
-      max-width: 40vw;
+      max-width: 40%;
     }
   }
 
@@ -60,6 +60,17 @@
         width: 16px;
         image-rendering: pixelated;
       }
+    }
+  }
+
+  .yield-icon {
+    min-width: 0;
+    padding-right: 2px;
+
+    img {
+      // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
+      width: 14px;
+      image-rendering: pixelated;
     }
   }
 
@@ -83,18 +94,13 @@
     .used:not(:empty) {
       margin-right: .5em;
     }
-  }
 
-  .yield-icon {
-    // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
-    max-width: 8px;
-    min-width: 0;
-    padding-right: 2px;
-
-    img {
-      // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
-      width: 14px;
-      image-rendering: pixelated;
+    @for $i from 0 through 14 {
+      &[data-max-width="#{$i}"] {
+        .yield-icon {
+          max-width: #{$i}px;
+        }
+      }
     }
   }
 

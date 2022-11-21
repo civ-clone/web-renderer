@@ -1,5 +1,7 @@
-import { e, h, t } from '../lib/html';
-import TransientElement, { ITransientElement } from './TransientElement';
+import { TransientElement, ITransientElement } from './TransientElement';
+import { off, on, s } from '@dom111/element';
+import { Coordinate } from '../types';
+import { h } from '../lib/html';
 
 export interface IWindow extends ITransientElement {
   close(): void;
@@ -38,13 +40,24 @@ const defaultOptions: WindowSettings = {
   size: 'auto',
 };
 
-export class Window extends TransientElement implements IWindow {
+export class Window
+  extends TransientElement<
+    HTMLDivElement,
+    {
+      close: [];
+    }
+  >
+  implements IWindow
+{
   private options: WindowSettings;
   #body: string | Node;
   #title: string;
 
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
-    super(options.parent ?? defaultOptions.parent, e('div.window'));
+    super(
+      options.parent ?? defaultOptions.parent,
+      s<HTMLDivElement>('<div class="window"></div>')
+    );
 
     this.options = {
       ...defaultOptions,
@@ -55,11 +68,11 @@ export class Window extends TransientElement implements IWindow {
     this.#title = title;
 
     if (this.options.size === 'auto') {
-      this.element().classList.add('size-auto');
+      this.addClass('size-auto');
     }
 
     if (this.options.size === 'maximised') {
-      this.element().classList.add('maximised');
+      this.addClass('maximised');
     }
 
     if (this.options.size !== 'auto') {
@@ -77,7 +90,7 @@ export class Window extends TransientElement implements IWindow {
     }
 
     if (this.options.position === 'auto') {
-      this.element().classList.add('position-auto');
+      this.addClass('position-auto');
     }
 
     if (this.options.position !== 'auto') {
@@ -107,7 +120,7 @@ export class Window extends TransientElement implements IWindow {
     this.build();
   }
 
-  public build(): void {
+  build(): void {
     this.empty();
 
     const headerActions: HTMLElement[] = (
@@ -115,15 +128,8 @@ export class Window extends TransientElement implements IWindow {
         [
           this.options.canMaximise,
           h(
-            e(
-              'button.maximise[aria-label="Maximise"]',
-              t('Maximise'),
-              e(
-                'img.maximise[src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJmZWF0aGVyIGZlYXRoZXItbWF4aW1pemUiPjxwYXRoIGQ9Ik04IDNINWEyIDIgMCAwIDAtMiAydjNtMTggMFY1YTIgMiAwIDAgMC0yLTJoLTNtMCAxOGgzYTIgMiAwIDAgMCAyLTJ2LTNNMyAxNnYzYTIgMiAwIDAgMCAyIDJoMyI+PC9wYXRoPjwvc3ZnPg=="][alt="Maximise"]'
-              ),
-              e(
-                'img.restore[src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJmZWF0aGVyIGZlYXRoZXItbWluaW1pemUiPjxwYXRoIGQ9Ik04IDN2M2EyIDIgMCAwIDEtMiAySDNtMTggMGgtM2EyIDIgMCAwIDEtMi0yVjNtMCAxOHYtM2EyIDIgMCAwIDEgMi0yaDNNMyAxNmgzYTIgMiAwIDAgMSAyIDJ2MyI+PC9wYXRoPjwvc3ZnPg=="][alt="Restore"]'
-              )
+            s(
+              `<button class="maximise" aria-label="Maximise">Maximise</button>`
             ),
             {
               click: () => this.maximise(),
@@ -132,18 +138,9 @@ export class Window extends TransientElement implements IWindow {
         ],
         [
           this.options.canClose,
-          h(
-            e(
-              'button.close[aria-label="Close"]',
-              t('Close'),
-              e(
-                'img[src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJmZWF0aGVyIGZlYXRoZXIteCI+PGxpbmUgeDE9IjE4IiB5MT0iNiIgeDI9IjYiIHkyPSIxOCI+PC9saW5lPjxsaW5lIHgxPSI2IiB5MT0iNiIgeDI9IjE4IiB5Mj0iMTgiPjwvbGluZT48L3N2Zz4="][alt="Close"]'
-              )
-            ),
-            {
-              click: () => this.close(),
-            }
-          ),
+          h(s(`<button class="close" aria-label="Close">Maximise</button>`), {
+            click: () => this.close(),
+          }),
         ],
       ] as [boolean, HTMLElement][]
     )
@@ -152,8 +149,8 @@ export class Window extends TransientElement implements IWindow {
 
     let isDragging = false;
 
-    this.element().append(
-      h(e('header', e('h3', t(this.#title)), ...headerActions), {
+    this.append(
+      h(s(`<header><h3>${this.#title}</h3></header>`, ...headerActions), {
         dblclick: () => this.maximise(),
         mousedown: (event) => {
           if (event.target.matches('button, button img')) {
@@ -167,32 +164,19 @@ export class Window extends TransientElement implements IWindow {
               return;
             }
 
-            const elementComputedStyle = getComputedStyle(this.element()),
-              currentTop = parseInt(
-                elementComputedStyle.getPropertyValue('top'),
-                10
-              ),
-              currentLeft = parseInt(
-                elementComputedStyle.getPropertyValue('left'),
-                10
-              );
-
-            this.element().style.setProperty(
-              'top',
-              currentTop + event.movementY + 'px'
-            );
-            this.element().style.setProperty(
-              'left',
-              currentLeft + event.movementX + 'px'
-            );
+            this.move({
+              x: event.movementX,
+              y: event.movementY,
+            });
           };
 
-          document.addEventListener('mousemove', moveHandler);
+          on(document, 'mousemove', moveHandler);
 
-          document.addEventListener(
+          on(
+            document,
             'mouseup',
             () => {
-              document.removeEventListener('mousemove', moveHandler);
+              off(document, 'mousemove', moveHandler);
 
               isDragging = false;
             },
@@ -202,13 +186,13 @@ export class Window extends TransientElement implements IWindow {
           );
         },
       }),
-      e(
-        'div.body',
-        this.#body instanceof Node ? this.#body : e('p', t(this.#body))
+      s(
+        '<div class="body"></div>',
+        this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
       )
     );
 
-    this.element().addEventListener('keydown', (event: KeyboardEvent) => {
+    this.on('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape' && this.options.canClose) {
         this.close();
       }
@@ -218,13 +202,13 @@ export class Window extends TransientElement implements IWindow {
     });
   }
 
-  public close(): void {
-    this.element().remove();
+  close(): void {
+    this.remove();
 
-    this.element().dispatchEvent(new CustomEvent('close'));
+    this.emit(new CustomEvent('close'));
   }
 
-  public display(focus = true): void {
+  display(focus = true): void {
     super.display();
 
     if (!focus) {
@@ -234,20 +218,46 @@ export class Window extends TransientElement implements IWindow {
     this.element().focus();
   }
 
-  public maximise(): void {
+  maximise(): void {
     if (!this.options.canMaximise) {
       return;
     }
 
     this.element().classList.toggle('maximised');
+
+    this.emit(
+      new CustomEvent('resize', {
+        bubbles: false,
+      })
+    );
   }
 
-  public update(content: string | Node): void {
+  move({ x, y }: Coordinate): void {
+    if (this.hasClass('position-auto')) {
+      // Ensure the auto position is accounted for
+      x += this.element().offsetLeft;
+      y += this.element().offsetTop;
+
+      this.removeClass('position-auto');
+
+      this.element().style.setProperty('top', y + 'px');
+      this.element().style.setProperty('left', x + 'px');
+
+      return;
+    }
+
+    const elementComputedStyle = getComputedStyle(this.element()),
+      currentTop = parseInt(elementComputedStyle.getPropertyValue('top'), 10),
+      currentLeft = parseInt(elementComputedStyle.getPropertyValue('left'), 10);
+
+    this.element().style.setProperty('top', currentTop + y + 'px');
+    this.element().style.setProperty('left', currentLeft + x + 'px');
+  }
+
+  update(content: string | Node): void {
     this.element().lastElementChild!.remove();
 
-    this.element().append(
-      content instanceof Node ? content : e('p', t(content))
-    );
+    this.append(content instanceof Node ? content : s(`<p>${content}</p>`));
   }
 }
 

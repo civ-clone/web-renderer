@@ -15,7 +15,7 @@ export type DataPatch = {
 export class DataQueue {
   #queue: DataPatch[] = [];
 
-  public add(
+  add(
     targetId: string,
     value: DataPatchContents['value'],
     index: DataPatchContents['index'] = null
@@ -29,14 +29,11 @@ export class DataQueue {
     });
   }
 
-  public clear(): void {
+  clear(): void {
     this.#queue.splice(0);
   }
 
-  public remove(
-    targetId: string,
-    index: DataPatchContents['index'] = null
-  ): void {
+  remove(targetId: string, index: DataPatchContents['index'] = null): void {
     this.#queue.push({
       [targetId]: {
         type: 'remove',
@@ -46,7 +43,7 @@ export class DataQueue {
   }
 
   // TODO: look at chunking the data transfer
-  public transferData(): DataPatch[] {
+  transferData(): DataPatch[] {
     return this.#queue.slice(0).map((patch) => {
       const patchData: DataPatch = {};
 
@@ -62,7 +59,7 @@ export class DataQueue {
     });
   }
 
-  public update(
+  update(
     targetId: string,
     value: DataPatchContents['value'],
     index: DataPatchContents['index'] = null

@@ -3,7 +3,7 @@ import { EventEmitter } from '@dom111/typed-event-emitter';
 import Map from './Map';
 import Transport from '../../Engine/Transport';
 import World from './World';
-import { e } from '../lib/html';
+import { s } from '@dom111/element';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -59,7 +59,7 @@ export class Portal
   constructor(
     world: World,
     transport: Transport,
-    canvas: HTMLCanvasElement = e('canvas') as HTMLCanvasElement,
+    canvas: HTMLCanvasElement = s<HTMLCanvasElement>('<canvas></canvas>'),
     options: PortalOptions = {
       playerId: null,
       scale: 2,
@@ -81,7 +81,7 @@ export class Portal
     this.#transport = transport;
 
     layers.forEach((MapType) =>
-      this.#layers.push(new MapType(this.#world, this.scale(), this.tileSize()))
+      this.#layers.push(new MapType(this.#world, this.scale(), this.#tileSize))
     );
 
     this.#context = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -91,29 +91,29 @@ export class Portal
 
   protected bindEvents(): void {}
 
-  public build(updatedTiles: Tile[]): void {
+  build(updatedTiles: Tile[]): void {
     this.#layers.forEach((layer: Map) => layer.update(updatedTiles));
   }
 
-  public canvas(): HTMLCanvasElement {
+  canvas(): HTMLCanvasElement {
     return this.#canvas;
   }
 
-  public center(): Coordinate {
+  center(): Coordinate {
     return this.#center;
   }
 
-  public getLayer(LayerType: typeof Map): Map | null {
+  getLayer(LayerType: typeof Map): Map | null {
     return this.getLayers(LayerType).shift() ?? null;
   }
 
-  public getLayers(LayerType: typeof Map): Map[] {
+  getLayers(LayerType: typeof Map): Map[] {
     return this.#layers.filter((layer) => layer instanceof LayerType);
   }
 
-  public isVisible(x: number, y: number): boolean {
-    const visibleHorizontal = Math.floor(this.#canvas.width / this.#tileSize),
-      visibleVertical = Math.floor(this.#canvas.height / this.#tileSize);
+  isVisible(x: number, y: number): boolean {
+    const visibleHorizontal = Math.floor(this.#canvas.width / this.tileSize()),
+      visibleVertical = Math.floor(this.#canvas.height / this.tileSize());
 
     if (
       visibleHorizontal >= this.#world.width() &&
@@ -138,12 +138,12 @@ export class Portal
     );
   }
 
-  public playerId(): string | null {
+  playerId(): string | null {
     return this.#playerId;
   }
 
-  public render(): void {
-    const tileSize = this.#layers[0].tileSize(),
+  render(): void {
+    const tileSize = this.tileSize(),
       layerWidth = this.#world.width() * tileSize,
       centerX = this.#center.x * tileSize + Math.trunc(tileSize / this.scale()),
       portalCenterX = Math.trunc(this.#canvas.width / 2),
@@ -195,11 +195,11 @@ export class Portal
     }
   }
 
-  public scale(): number {
+  scale(): number {
     return this.#scale;
   }
 
-  public setCenter(x: number, y: number): void {
+  setCenter(x: number, y: number): void {
     this.#center.x = x;
     this.#center.y = y;
 
@@ -208,46 +208,68 @@ export class Portal
     this.emit('focus-changed', x, y);
   }
 
-  public tileSize(): number {
-    return this.#tileSize;
+  tileSize(): number {
+    return this.#tileSize * this.#scale;
   }
 
   transport(): Transport {
     return this.#transport;
   }
 
-  public visibleBounds(): [number, number, number, number] {
-    const xRange = Math.floor(
-        this.#canvas.width / this.#layers[0].tileSize() / this.#scale
-      ),
-      yRange = Math.floor(
-        this.#canvas.height / this.#layers[0].tileSize() / this.#scale
-      ),
-      xLowerBound =
-        (this.#center.x - xRange + this.#world.width()) % this.#world.width(),
-      xUpperBound = (this.#center.x + xRange) % this.#world.width(),
-      yLowerBound =
-        (this.#center.y - yRange + this.#world.height()) % this.#world.height(),
-      yUpperBound = (this.#center.y + yRange) % this.#world.height();
+  visibleBounds(): [number, number, number, number] {
+    const [
+      { x: xLowerBound, y: yLowerBound },
+      { x: xUpperBound, y: yUpperBound },
+    ] = this.visibleRange();
 
     return [xLowerBound, xUpperBound, yLowerBound, yUpperBound];
   }
 
-  public visibleRange(): [Coordinate, Coordinate] {
-    const xRange = Math.floor(
-        this.#canvas.width / this.#layers[0].tileSize() / this.#scale
+  visibleRange(): [Coordinate, Coordinate] {
+    const tileRangeX = Math.floor(
+        Math.floor(this.#canvas.width / this.tileSize()) / 2
       ),
-      yRange = Math.floor(
-        this.#canvas.height / this.#layers[0].tileSize() / this.#scale
+      tileRangeY = Math.floor(
+        Math.floor(this.#canvas.height / this.tileSize()) / 2
       );
 
     return [
-      { x: this.#center.x - xRange, y: this.#center.y - yRange },
-      { x: this.#center.x + xRange, y: this.#center.y + yRange },
+      {
+        x:
+          (this.#center.x - tileRangeX + this.#world.width()) %
+          this.#world.width(),
+        y:
+          (this.#center.y - tileRangeY + this.#world.height()) %
+          this.#world.height(),
+      },
+      {
+        x: (this.#center.x + tileRangeX) % this.#world.width(),
+        y: (this.#center.y + tileRangeY) % this.#world.height(),
+      },
     ];
   }
 
-  public world(): World {
+  rawVisibleRange(): [Coordinate, Coordinate] {
+    const tileRangeX = Math.floor(
+        Math.floor(this.#canvas.width / this.tileSize()) / 2
+      ),
+      tileRangeY = Math.floor(
+        Math.floor(this.#canvas.height / this.tileSize()) / 2
+      );
+
+    return [
+      {
+        x: this.#center.x - tileRangeX,
+        y: this.#center.y - tileRangeY,
+      },
+      {
+        x: this.#center.x + tileRangeX,
+        y: this.#center.y + tileRangeY,
+      },
+    ];
+  }
+
+  world(): World {
     return this.#world;
   }
 }

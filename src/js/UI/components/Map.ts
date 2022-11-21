@@ -1,12 +1,11 @@
 import { NeighbourDirection, Tile } from '../types';
 import {
   getPreloadedImage,
-  preloadContainer,
   setPreloadContainer,
 } from '../lib/getPreloadedImage';
 import World from './World';
-import { e } from '../lib/html';
 import replaceColours from '../lib/replaceColours';
+import { s } from '@dom111/element';
 
 export interface IMap {
   context(): CanvasRenderingContext2D;
@@ -34,7 +33,7 @@ export class Map implements IMap {
     world: World,
     scale: number = 2,
     tileSize: number = 16,
-    canvas: HTMLCanvasElement = e('canvas') as HTMLCanvasElement
+    canvas: HTMLCanvasElement = s<HTMLCanvasElement>('<canvas></canvas>')
   ) {
     this.#canvas = canvas;
     this.#world = world;

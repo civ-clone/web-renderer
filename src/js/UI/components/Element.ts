@@ -1,27 +1,11 @@
-import { e } from '../lib/html';
+import { Element as BaseElement, CustomEventMap } from '@dom111/element';
 
-export interface IElement {
-  build(...args: any[]): void;
-  element(): HTMLElement;
-}
-
-export class Element implements IElement {
-  #element: HTMLElement;
-
-  constructor(element: HTMLElement = e('div')) {
-    this.#element = element;
-  }
-
-  build(...args: any[]): void {}
-
-  element(): HTMLElement {
-    return this.#element;
-  }
-
-  protected empty(): void {
-    while (this.#element.firstChild !== null) {
-      this.#element.firstChild.remove();
-    }
+export class Element<
+  T extends HTMLElement = HTMLElement,
+  M extends CustomEventMap = CustomEventMap
+> extends BaseElement<T, M> {
+  constructor(element: T) {
+    super(element);
   }
 }
 

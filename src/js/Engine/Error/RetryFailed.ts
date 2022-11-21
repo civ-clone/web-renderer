@@ -1,8 +1,8 @@
 export class RetryFailed extends Error {
   constructor(
     message: string,
-    public handler: (...args: any[]) => void,
-    public attempts: number
+    handler: (...args: any[]) => void,
+    attempts: number
   ) {
     super(message);
   }

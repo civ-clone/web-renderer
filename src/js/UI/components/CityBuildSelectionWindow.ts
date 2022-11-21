@@ -3,6 +3,7 @@ import { SelectionWindow, SelectionWindowActions } from './SelectionWindow';
 import City from './City';
 import Portal from './Portal';
 import Transport from '../../Engine/Transport';
+import { reduceKnownYield } from '../lib/yieldMap';
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 
@@ -10,7 +11,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
   #onComplete: onCompleteHandler;
   #transport: Transport;
 
-  public static showCityAction = (
+  static showCityAction = (
     city: CityData,
     portal: Portal,
     transport: Transport
@@ -22,7 +23,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       new City(city, portal, transport);
     },
   });
-  public static showCityOnMapAction = (city: CityData, portal: Portal) => ({
+  static showCityOnMapAction = (city: CityData, portal: Portal) => ({
     label: 'Show on map',
     action(selectionWindow: SelectionWindow) {
       selectionWindow.close();
@@ -37,13 +38,14 @@ export class CityBuildSelectionWindow extends SelectionWindow {
     onComplete: onCompleteHandler = () => {},
     additionalActions: SelectionWindowActions = {}
   ) {
-    const production = cityBuild.city.yields
-        .filter((cityYield) => cityYield._ === 'Production')
-        .reduce((total, cityYield) => total + cityYield.value, 0),
-      turns = (buildItem: BuildItem) =>
+    const turns = (buildItem: BuildItem) =>
+      Math.max(
+        1,
         Math.ceil(
-          (buildItem.cost.value - cityBuild.progress.value) / production
-        );
+          (buildItem.cost.value - cityBuild.progress.value) /
+            reduceKnownYield(cityBuild.city, 'Production')
+        )
+      );
 
     super(
       `What would you like to build in ${cityBuild.city.name}?`,

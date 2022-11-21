@@ -6,7 +6,7 @@ import {
   PlayerTradeRates,
   Unit,
 } from '../../types';
-import { e } from '../../lib/html';
+import { Element, s } from '@dom111/element';
 import Transport from '../../../Engine/Transport';
 
 declare global {
@@ -28,17 +28,17 @@ export interface IAction {
     | PlayerTradeRates;
 }
 
-export class Action implements IAction {
+export class Action extends Element implements IAction {
   #action: PlayerAction;
-  #element: HTMLElement;
   #transport: Transport;
 
   constructor(action: PlayerAction, transport: Transport) {
+    super(s('<div class="action"></div>'));
+
     this.#action = action;
     this.#transport = transport;
-    this.#element = e('div.action');
 
-    this.#element.addEventListener('keydown', (event) => {
+    this.on('keydown', (event) => {
       if (event.key === 'Escape') {
         return;
       }
@@ -49,21 +49,17 @@ export class Action implements IAction {
     this.build();
   }
 
-  public activate(): void {}
+  activate(): void {}
 
   build(): void {}
 
   complete(): void {
-    const event = new CustomEvent('actioned', {
-      bubbles: true,
-      detail: this,
-    });
-
-    this.#element.dispatchEvent(event);
-  }
-
-  element(): HTMLElement {
-    return this.#element;
+    this.emit(
+      new CustomEvent('actioned', {
+        bubbles: true,
+        detail: this,
+      })
+    );
   }
 
   transport(): Transport {

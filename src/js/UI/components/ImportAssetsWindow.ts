@@ -2,57 +2,35 @@ import {
   ExtractData,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
-import { e, h, t } from '../lib/html';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
+import { h } from '../lib/html';
+import { s } from '@dom111/element';
 
 export class ImportAssetsWindow extends Window {
   #fileInput: HTMLInputElement;
   #progressInformation: HTMLParagraphElement;
 
   constructor() {
-    const fileInput = e<HTMLInputElement>('input[type="file"][multiple]'),
-      progressInformation = e<HTMLParagraphElement>('p.loading[hidden]');
+    const fileInput = s<HTMLInputElement>('<input type="file" multiple>'),
+      progressInformation = s<HTMLParagraphElement>(
+        '<p class="loading" hidden></p>'
+      );
 
     super(
       'Import assets',
-      e(
-        'div.import-assets',
-        e(
-          'p',
-          t(
-            `Upload ${Object.keys(extractData.files).join(
-              ', '
-            )} from the original Civilization files to extract assets (these will be stored locally). This process can take at least a few minutes.`
-          )
-        ),
-        e(
+      s(
+        `<div class="import-assets"><p>Upload ${Object.keys(
+          extractData.files
+        ).join(
+          ', '
           // @ts-ignore
-          'div.brave' + (navigator?.brave ? '' : '[hidden]'),
-          e(
-            'p',
-            t(`It looks like you're using Brave and due to the use of `),
-            e('code', t('HTMLCanvasElement')),
-            t(`\'s `),
-            e('code', t('getImageData')),
-            t(' and '),
-            e('code', t('toDataURL')),
-            t(
-              ` functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won't look correct. `
-            ),
-            e('strong', t('Remember to put them back up after!'))
-          ),
-          e(
-            'p',
-            e(
-              'a[href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good"][target="_blank"]',
-              t('Read more about "farbling".')
-            )
-          )
-        ),
-        e(
-          'p',
+        )} from the original Civilization files to extract assets (these will be stored locally). This process can take at least a few minutes.</p><div class="brave" ${
+          navigator?.brave ? '' : ' hidden'
+        }><p>It looks like you're using Brave and due to the use of <code>HTMLCanvasElement</code>'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won't look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p></div></div>`,
+        s(
+          '<p></p>',
           h(fileInput, {
             change: (event) => this.handleFileUpload(event),
           })

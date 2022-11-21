@@ -211,3 +211,4 @@ GitHub.sublime-settings
 
 src/js/plugins.ts
 .dist/*
+build.json

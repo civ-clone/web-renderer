@@ -25,31 +25,31 @@ export class City extends DataObject {
     this.addKey('_', 'growth', 'name', 'player', 'tile');
   }
 
-  public static fromCity(city: CoreCity): City {
+  static fromCity(city: CoreCity): City {
     const cityGrowth = cityGrowthRegistryInstance.getByCity(city);
 
     return new City(city.name(), city.tile(), city.player(), cityGrowth.size());
   }
 
-  public _(): string {
+  _(): string {
     return 'City';
   }
 
-  public name(): string {
+  name(): string {
     return this.#name;
   }
 
-  public player(): Player {
+  player(): Player {
     return this.#player;
   }
 
-  public growth(): {
+  growth(): {
     size: number;
   } {
     return this.#growth;
   }
 
-  public tile(): Tile {
+  tile(): Tile {
     return this.#tile;
   }
 }

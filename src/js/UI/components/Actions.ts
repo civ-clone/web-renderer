@@ -1,5 +1,4 @@
-import { Element, IElement } from './Element';
-import { e, h } from '../lib/html';
+import { Element, s } from '@dom111/element';
 import Action from './Actions/Action';
 import AdjustTradeRates from './Actions/AdjustTradeRates';
 import ChooseResearch from './Actions/ChooseResearch';
@@ -9,6 +8,7 @@ import { PlayerAction } from '../types';
 import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Transport from '../../Engine/Transport';
+import { h } from '../lib/html';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -16,7 +16,7 @@ declare global {
   }
 }
 
-export interface IActions extends IElement {
+export interface IActions {
   build(mandatoryActions: PlayerAction[], actions: PlayerAction[]): void;
 }
 
@@ -25,7 +25,7 @@ export class Actions extends Element implements IActions {
   #transport: Transport;
 
   constructor(
-    container: HTMLElement = e('div.actions'),
+    container: HTMLElement = s('<div class="actions"></div>'),
     portal: Portal,
     transport: Transport
   ) {
@@ -34,11 +34,9 @@ export class Actions extends Element implements IActions {
     this.#portal = portal;
     this.#transport = transport;
 
-    this.element().addEventListener('actioned', (event) =>
-      event.detail.element().remove()
-    );
+    this.on('actioned', (event) => event.detail.remove());
 
-    this.element().addEventListener(
+    this.on(
       'keydown',
       (event) => {
         const currentChild = document.activeElement;

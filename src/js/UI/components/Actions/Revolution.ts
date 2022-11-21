@@ -1,11 +1,11 @@
 import Action from './Action';
 import { PlayerGovernment } from '../../types';
 import SelectionWindow from '../SelectionWindow';
-import { e } from '../../lib/html';
 import { assetStore } from '../../AssetStore';
+import { s } from '@dom111/element';
 
 export class Revolution extends Action {
-  public activate(): void {
+  activate(): void {
     const chooseWindow = new SelectionWindow(
       'Choose government',
       this.value().available.map((government) => ({
@@ -37,11 +37,11 @@ export class Revolution extends Action {
     assetStore
       .get('./assets/city/sad.png')
       .then((asset) =>
-        this.element().append(
-          e(
-            `button.chooseGovernment[title="Choose government"][style="background-image:url('${
+        this.append(
+          s(
+            `<button class="chooseGovernment" title="Choose government" style="background-image:url('${
               asset!.uri
-            }')"]`
+            }')"></button>`
           )
         )
       );

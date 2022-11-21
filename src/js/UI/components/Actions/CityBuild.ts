@@ -1,10 +1,10 @@
 import { CityBuild as CityBuildObject, PlayerAction } from '../../types';
-import { e, h } from '../../lib/html';
 import Action from './Action';
 import CityBuildSelectionWindow from '../CityBuildSelectionWindow';
 import Portal from '../Portal';
 import Transport from '../../../Engine/Transport';
 import { assetStore } from '../../AssetStore';
+import { s } from '@dom111/element';
 
 export class CityBuild extends Action {
   #portal: Portal;
@@ -15,7 +15,7 @@ export class CityBuild extends Action {
     this.#portal = portal;
   }
 
-  public activate(): void {
+  activate(): void {
     new CityBuildSelectionWindow(
       this.value(),
       this.transport(),
@@ -40,11 +40,11 @@ export class CityBuild extends Action {
     assetStore
       .get('./assets/city/production.png')
       .then((asset) =>
-        this.element().append(
-          e(
-            `button.cityBuild[title="What would you like to build in ${
+        this.append(
+          s(
+            `<button class="cityBuild" title="What would you like to build in ${
               cityBuild.city.name
-            }?"][style="background-image:url('${asset!.uri}')"]`
+            }?" style="background-image:url('${asset!.uri}')">`
           )
         )
       );

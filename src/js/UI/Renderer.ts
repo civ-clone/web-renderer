@@ -7,7 +7,7 @@ import {
   Tile,
   Unit,
 } from './types';
-import { e, h, t } from './lib/html';
+import { h } from './lib/html';
 import { reconstituteData, ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import ActiveUnit from './components/Map/ActiveUnit';
@@ -36,6 +36,8 @@ import World from './components/World';
 import Yields from './components/Map/Yields';
 import Transport from '../Engine/Transport';
 import { assetStore } from './AssetStore';
+import { on, s } from '@dom111/element';
+import ConfirmationWindow from './components/ConfirmationWindow';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -64,6 +66,21 @@ export class Renderer {
               'image/png'
             )}'), default`)
         );
+    });
+
+    on(document, 'keypress', (event) => {
+      if (
+        event.key === 'F5' ||
+        (['R', 'r'].includes(event.key) && event.ctrlKey)
+      ) {
+        event.preventDefault();
+
+        new ConfirmationWindow('Quit', 'Are you sure you want to reload?', () =>
+          window.location.reload()
+        );
+
+        return;
+      }
     });
 
     const options = {
@@ -132,7 +149,7 @@ export class Renderer {
       assetStore.getAll().then((records) =>
         records.forEach((record) =>
           preloadContainer.append(
-            h(e(`img[src="${record.uri}"][data-path="${record.name}"]`), {
+            h(s(`<img src="${record.uri}" data-path="${record.name}">`), {
               error: () =>
                 console.error(
                   `There was a problem preloading '${record.name}', you may have some missing details.`
@@ -192,27 +209,20 @@ export class Renderer {
 
           new NotificationWindow(
             'Welcome',
-            e(
-              'div.welcome',
-              e(
-                'p',
-                t(
-                  `${data.player.civilization.leader.name}, you have risen to become leader of the ${data.player.civilization._}.`
-                )
-              ),
-              e(
-                'p',
-                t(
-                  `Your people have knowledge of ${formatter.format([
-                    'Irrigation',
-                    'Mining',
-                    'Roads',
-                    ...data.player.research.complete.map(
-                      (advance) => advance._
-                    ),
-                  ])}`
-                )
-              )
+            s(
+              `<div class="welcome">
+<p>${
+                data.player.civilization.leader.name
+              }, you have risen to become leader of the ${
+                data.player.civilization._
+              }.</p>
+<p>Your people have knowledge of ${formatter.format([
+                'Irrigation',
+                'Mining',
+                'Roads',
+                ...data.player.research.complete.map((advance) => advance._),
+              ])}.</p>
+</div>`
             )
           );
 
@@ -265,7 +275,8 @@ export class Renderer {
               world,
               portal,
               landMap,
-              citiesMap
+              citiesMap,
+              activeUnitsMap
             ),
             primaryActions = new Actions(actionArea, portal, this.#transport),
             secondaryActions = new Actions(
@@ -288,7 +299,7 @@ export class Renderer {
             portal.render();
           });
 
-          window.addEventListener('resize', () => {
+          on(window, 'resize', () => {
             mapPortal.width = (
               mapPortal.parentElement as HTMLElement
             ).offsetWidth;
@@ -298,42 +309,44 @@ export class Renderer {
           });
 
           // This needs wrapping.
-          let lastTurn = 1,
-            clearNextTurn = false;
+          // let lastTurn = 1,
+          //   clearNextTurn = false;
 
           const handler = (objectMap: ObjectMap): void => {
-            let orphanIds: string[] | null = clearNextTurn ? [] : null;
+            // TODO: this causes a massive slowdown when its processed. Maybe we just leak for now...
+            // let orphanIds: string[] | null = clearNextTurn ? [] : null;
+            // let orphanIds: string[] | null = null;
 
             // TODO: look into if it's possible to have data reconstituted in a worker thread
             const data: GameData = reconstituteData(
-              objectMap,
-              orphanIds
+              objectMap
+              // orphanIds
             ) as GameData;
 
             // A bit crude, I'd like to run this as as background job too
-            if (orphanIds) {
-              // clean up orphan data - late game there can be tens of thousands of these to clean up
-              ((orphanIds) => {
-                const maxCount = 1000,
-                  delay = 200;
-
-                for (
-                  let i = 0, max = Math.ceil(orphanIds.length / maxCount);
-                  i < max;
-                  i++
-                ) {
-                  setTimeout(
-                    () =>
-                      orphanIds
-                        .slice(i * maxCount, (i + 1) * maxCount - 1)
-                        .forEach((id) => delete objectMap.objects[id]),
-                    (i + 1) * delay
-                  );
-                }
-              })(orphanIds);
-
-              clearNextTurn = false;
-            }
+            // if (orphanIds) {
+            //   // clean up orphan data - late game there can be tens of thousands of these to clean up
+            //   ((orphanIds) => {
+            //     const maxCount = 1000,
+            //       delay = 200;
+            //
+            //     for (
+            //       let i = 0, max = Math.ceil(orphanIds.length / maxCount);
+            //       i < max;
+            //       i++
+            //     ) {
+            //       setTimeout(
+            //         () =>
+            //           orphanIds
+            //             .slice(i * maxCount, (i + 1) * maxCount - 1)
+            //             .forEach((id) => delete objectMap.objects[id]),
+            //         (i + 1) * delay
+            //       );
+            //     }
+            //   })(orphanIds);
+            //
+            //   clearNextTurn = false;
+            // }
 
             document.dispatchEvent(
               new CustomEvent('dataupdated', {
@@ -343,10 +356,10 @@ export class Renderer {
               })
             );
 
-            if (lastTurn !== data.turn.value) {
-              clearNextTurn = true;
-              lastTurn = data.turn.value;
-            }
+            // if (lastTurn !== data.turn.value) {
+            //   clearNextTurn = true;
+            //   lastTurn = data.turn.value;
+            // }
 
             primaryActions.build(data.player.mandatoryActions);
             secondaryActions.build(
@@ -588,7 +601,7 @@ export class Renderer {
 
           let lastKey = '';
 
-          document.addEventListener('keydown', (event) => {
+          on(document, 'keydown', (event) => {
             if (activeUnit) {
               if (event.key in keyToActionsMap) {
                 const actions = [...keyToActionsMap[event.key]];

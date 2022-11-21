@@ -11,4 +11,16 @@
   #minimap {
     background: #000;
   }
+
+  .turn {
+    font-size: 0.8em;
+
+    &:before {
+      content: ' (turn ';
+    }
+
+    &:after {
+      content: ')';
+    }
+  }
 }

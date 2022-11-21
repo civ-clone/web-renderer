@@ -18,36 +18,7 @@
     width: 40em;
   }
 
-  button.maximise {
-    .maximise {
-      display: block;
-    }
-
-    .restore {
-      display: none;
-    }
-  }
-
-  &.maximised {
-    border: 0;
-    height: 100%;
-    left: 0;
-    max-height: none;
-    top: 0;
-    width: 100%;
-
-    button.maximise {
-      .maximise {
-        display: none;
-      }
-
-      .restore {
-        display: block;
-      }
-    }
-  }
-
-  header {
+  > header {
     background: #38e;
     color: #edc;
     display: flex;
@@ -60,14 +31,43 @@
       margin: 0;
     }
 
-    button {
+    > button {
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: 95%;
+      border: 1px solid #444;
+      border-radius: 3px;
       font-size: 0;
+      height: 1.3rem;
+      margin-right: 0.33rem;
       padding: 0;
+      width: 1.3rem;
 
-      img {
-        height: 1rem;
-        width: 1.125rem;
+      &:last-child {
+        margin-right: 0;
       }
+
+      &.close {
+        background-image: url('feather-icons/dist/icons/x.svg');
+      }
+
+      &.maximise {
+        background-image: url('feather-icons/dist/icons/maximize.svg');
+      }
+    }
+  }
+
+  &.maximised {
+    border: 0;
+    border-radius: 0;
+    height: 100%;
+    left: 0 !important;
+    max-height: none;
+    top: 0 !important;
+    width: 100%;
+
+    > header > button.maximise {
+      background-image: url('feather-icons/dist/icons/minimize.svg');
     }
   }
 

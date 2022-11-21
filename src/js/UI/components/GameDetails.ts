@@ -1,6 +1,5 @@
-import { e, t } from '../lib/html';
+import { Element, s } from '@dom111/element';
 import { Yield } from '../types';
-import Element from './Element';
 
 export class GameDetails extends Element {
   #turn: Yield;
@@ -16,11 +15,9 @@ export class GameDetails extends Element {
   build(): void {
     this.empty();
 
-    this.element().append(
-      e(
-        'h3',
-        e('span#year', t(this.year())),
-        e('span#turn', t(`(${this.#turn.value.toString()})`))
+    this.append(
+      s(
+        `<h3><span class="year">${this.year()}</span><span class="turn">${this.#turn.value.toString()}</span></h3>`
       )
     );
   }

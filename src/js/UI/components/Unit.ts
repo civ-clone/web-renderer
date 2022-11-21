@@ -1,13 +1,12 @@
-import Element from './Element';
+import { Element, s } from '@dom111/element';
 import { Unit as UnitData } from '../types';
-import { e } from '../lib/html';
 import renderUnit from '../lib/renderUnit';
 
 export class Unit extends Element {
   #scale: number = 2;
 
   constructor(unit: UnitData, scale: number = 2) {
-    super(e('canvas[width="32"][height="32"]'));
+    super(s<HTMLCanvasElement>('<canvas width="32" height="32"></canvas>'));
 
     this.#scale = scale;
 

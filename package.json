@@ -10,9 +10,13 @@
   "license": "MIT",
   "private": false,
   "scripts": {
-    "build": "npm run build:generate-plugins-ts && npm run ts:compile && npm run prettier:format && npm run esbuild:bundle",
+    "build": "npm run esbuild:bundle",
+    "build:dev": "npm run prebuild && npm run esbuild:bundle:dev",
     "build:generate-plugins-ts": "node buildPluginList.js",
+    "build:generate-version-text": "echo '{\"version\": \"'$npm_package_version\\@$(git rev-parse --short HEAD)'\"}' > build.json",
     "esbuild:bundle": "node esbuild.js",
+    "esbuild:bundle:dev": "node esbuild.js dev",
+    "prebuild": "npm run build:generate-plugins-ts && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
     "prettier:check": "prettier --config .prettierrc '**/*.ts'",
     "prettier:format": "prettier --config .prettierrc '**/*.ts' --write",
     "ts:compile": "tsc --build tsconfig.json",
@@ -68,6 +72,7 @@
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
+    "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2",
     "feather-icons": "^4.28.0",
     "idb": "^7.1.1"

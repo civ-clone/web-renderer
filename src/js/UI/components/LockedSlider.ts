@@ -1,16 +1,11 @@
-import Element from './Element';
-import { e, t } from '../lib/html';
+import { Element, s } from '@dom111/element';
 
 const template: (label: string, value: number) => HTMLFieldSetElement = (
   label: string,
   value: number
 ) =>
-  e(
-    'fieldset',
-    e('legend', t(label)),
-    e(`input[type="range"][max="100"][min="0"][step="1"][value="${value}"]`),
-    e('input[type="number"]'),
-    e('label', e('input[type="checkbox"]'), t('Lock'))
+  s(
+    `<fieldset><legend>${label}</legend><input type="range" max="100" min="0" step="1" value="${value}"><input type="number"><label><input type="checkbox">Lock</label></fieldset>`
   ) as HTMLFieldSetElement;
 
 export type onInputHandler = () => void;

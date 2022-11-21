@@ -29,9 +29,7 @@ export class MandatorySelection extends SelectionWindow {
 
   display(): Promise<string> {
     return new Promise<string>((resolve) => {
-      this.element().addEventListener('selection', ({ detail }) =>
-        resolve(detail)
-      );
+      this.on('selection', ({ detail }) => resolve(detail));
 
       super.display();
     });

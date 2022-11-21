@@ -1,8 +1,9 @@
-import { e, h, t } from '../lib/html';
 import {
   NotificationWindow,
   NotificationWindowOptions,
 } from './NotificationWindow';
+import { off, on, s } from '@dom111/element';
+import { h } from '../lib/html';
 
 export interface SelectionWindowOption {
   label?: string;
@@ -51,7 +52,7 @@ export class SelectionWindow extends NotificationWindow {
     };
 
     const chooseHandler = (selection: string): void => {
-        this.element().dispatchEvent(
+        this.emit(
           new CustomEvent<string>('selection', {
             detail: selection,
           })
@@ -62,15 +63,16 @@ export class SelectionWindow extends NotificationWindow {
         onChoose(selection);
       },
       selectionList: HTMLSelectElement = h(
-        e(
-          'select',
-          ...optionList.map((option) =>
-            e(
-              `option[value="${option.value}"]`,
-              t(option.label || option.value)
+        s(
+          `<select>${optionList
+            .map(
+              (option) =>
+                `<option value="${option.value}">${
+                  option.label || option.value
+                }</option>`
             )
-          )
-        ) as HTMLSelectElement,
+            .join('')}</select>`
+        ),
         {
           keydown: (event: KeyboardEvent) => {
             if (event.key === 'Enter') {
@@ -91,18 +93,18 @@ export class SelectionWindow extends NotificationWindow {
 
     super(
       title,
-      e(
-        'div',
+      s(
+        '<div></div>',
         ...(body instanceof Node
           ? [body]
           : body === null
           ? []
-          : [e('p', t(body))]),
+          : [s(`<p>${body}</p>`)]),
         selectionList,
-        e(
-          'footer',
+        s(
+          '<footer></footer>',
           ...Object.entries(options.actions!).map(([, { label, action }]) =>
-            h(e('button', t(label)), {
+            h(s(`<button>${label}</button>`), {
               click: () => action(this),
               keydown: (event) => {
                 if (event.key === 'Enter') {
@@ -116,23 +118,23 @@ export class SelectionWindow extends NotificationWindow {
       options
     );
 
-    this.element().classList.add('selectionWindow');
+    this.addClass('selectionWindow');
     this.#selectionList = selectionList;
 
     this.resize();
 
-    window.addEventListener('resize', this.#resizeHandler);
+    on(window, 'resize', this.#resizeHandler);
   }
 
   close() {
-    window.removeEventListener('resize', this.#resizeHandler);
+    off(window, 'resize', this.#resizeHandler);
 
     super.close();
   }
 
   display(): Promise<any> {
     return super.display(false).then(() => {
-      const select = this.element().querySelector('select');
+      const select = this.query('select');
 
       if (select && select.hasAttribute('autofocus')) {
         select.focus();
@@ -151,7 +153,7 @@ export class SelectionWindow extends NotificationWindow {
         ((this.selectionList().previousElementSibling as HTMLElement)
           ?.offsetHeight ?? 0) -
         (this.selectionList().nextElementSibling as HTMLElement).offsetHeight
-      }px - 2em)`;
+      }px - 2.1em)`;
     } catch (e) {
       console.warn(e);
     }

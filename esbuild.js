@@ -17,6 +17,7 @@
         sassPlugin(),
       ],
       loader: {
+        '.build': 'text',
         '.jpg': 'file',
         '.png': 'dataurl',
         '.svg': 'dataurl'
@@ -38,6 +39,10 @@
           console.log('\x1b[32mRebuilt.\x1b[0m');
         },
       };
+    }
+
+    if (arg === 'dev') {
+      buildOptions.minify = false;
     }
   });
 

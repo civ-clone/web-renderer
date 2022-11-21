@@ -2,7 +2,8 @@ import {
   NotificationWindow,
   NotificationWindowOptions,
 } from './NotificationWindow';
-import { e, h, t } from '../lib/html';
+import { h } from '../lib/html';
+import { s } from '@dom111/element';
 
 export interface ConfirmationWindowOptions extends NotificationWindowOptions {
   okLabel?: string;
@@ -16,33 +17,35 @@ export class ConfirmationWindow extends NotificationWindow {
     onOK: () => void,
     options: ConfirmationWindowOptions = {}
   ) {
-    const confirmationButton = h(e('button', t(options.okLabel ?? 'OK')), {
-      click: () => {
-        onOK();
-
-        this.close();
-      },
-      keydown: (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          event.stopPropagation();
-
+    const confirmationButton = h(
+      s(`<button>${options.okLabel ?? 'OK'}</button>`),
+      {
+        click: () => {
           onOK();
 
           this.close();
-        }
-      },
-    });
+        },
+        keydown: (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            event.stopPropagation();
+
+            onOK();
+
+            this.close();
+          }
+        },
+      }
+    );
 
     super(
       title,
-      e(
-        'div.content',
-        e('p', t(details)),
-        e(
-          'footer',
+      s(
+        `<div class="content"><p>${details}</p></div>`,
+        s(
+          '<footer></footer>',
           confirmationButton,
-          h(e('button', t(options.cancelLabel ?? 'Cancel')), {
+          h(s(`<button>${options.cancelLabel ?? 'Cancel'}</button>`), {
             click: () => this.close(),
             keydown: (event) => {
               if (event.key === 'Enter' || event.key === ' ') {
