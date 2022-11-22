@@ -1,4 +1,4 @@
-import { City } from '../types';
+import { City, Yield } from '../types';
 
 export const knownGroups: { [key: string]: string } = {
   Food: 'Food',
@@ -40,10 +40,10 @@ export const knownGroupLookup = Object.entries(knownGroups).reduce(
 );
 
 export const reduceKnownYields = (
-  city: City,
+  yields: Yield[],
   ...yieldNames: string[]
 ): number[] =>
-  city.yields.reduce(
+  yields.reduce(
     (yields, cityYield, index) => {
       yieldNames.forEach((yieldName, index) => {
         if (knownGroupLookup[yieldName]?.includes(cityYield._)) {
@@ -56,8 +56,8 @@ export const reduceKnownYields = (
     yieldNames.map(() => 0)
   );
 
-export const reduceKnownYield = (city: City, yieldName: string): number =>
-  reduceKnownYields(city, yieldName)[0];
+export const reduceKnownYield = (yields: Yield[], yieldName: string): number =>
+  reduceKnownYields(yields, yieldName)[0];
 
 export const knownIcons: { [key: string]: string } = {
   Food: 'city/food.png',

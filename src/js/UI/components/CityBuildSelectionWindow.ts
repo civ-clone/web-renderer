@@ -43,7 +43,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
         1,
         Math.ceil(
           (buildItem.cost.value - cityBuild.progress.value) /
-            reduceKnownYield(cityBuild.city, 'Production')
+            reduceKnownYield(cityBuild.city.yields, 'Production')
         )
       );
 

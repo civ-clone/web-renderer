@@ -1,0 +1,21 @@
+.supported-unit {
+  position: relative;
+
+  .yield-icon {
+    position: absolute;
+    left: 2px;
+    bottom: 2px;
+
+    &:nth-child(3) {
+      left: 8px;
+    }
+
+    &:nth-child(4) {
+      left: 14px;
+    }
+
+    &:nth-child(5) {
+      left: 20px;
+    }
+  }
+}

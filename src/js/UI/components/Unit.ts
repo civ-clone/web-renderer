@@ -14,15 +14,14 @@ export class Unit extends Element {
   }
 
   build(unit: UnitData) {
-    const unitCanvas = renderUnit(unit);
-    const context = this.element().getContext('2d')!;
-    context.imageSmoothingEnabled = false;
-
-    const sizeX = this.size(unitCanvas.width as number),
-      sizeY = this.size(unitCanvas.height as number);
-
-    const offsetX = Math.floor((this.size(16) - sizeX) / 2),
+    const unitCanvas = renderUnit(unit),
+      context = this.element().getContext('2d')!,
+      sizeX = this.size(unitCanvas.width as number),
+      sizeY = this.size(unitCanvas.height as number),
+      offsetX = Math.floor((this.size(16) - sizeX) / 2),
       offsetY = Math.floor((this.size(16) - sizeY) / 2);
+
+    context.imageSmoothingEnabled = false;
 
     context.drawImage(unitCanvas, offsetX, offsetY, sizeX, sizeY);
   }
@@ -31,7 +30,7 @@ export class Unit extends Element {
     return super.element() as HTMLCanvasElement;
   }
 
-  size(size: number = 16): number {
+  size(size: number): number {
     return size * this.#scale;
   }
 }

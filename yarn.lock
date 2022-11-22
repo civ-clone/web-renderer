@@ -150,9 +150,9 @@
     "@civ-clone/core-city-improvement" "^0.1.0"
 
 "@civ-clone/base-city-yield-city-improvement-content@^0.1.0":
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/@civ-clone/base-city-yield-city-improvement-content/-/base-city-yield-city-improvement-content-0.1.0.tgz#e7a951eb6dd56e1960220f42b7dfafd105c2c738"
-  integrity sha512-nsNpGzCu6kL0CTvRdvNv9rrcep4FacatBj1GVDnlxjtSARimMkV+gYrVwJeGAB4YE3rz7EXVK5WuungNsurkOg==
+  version "0.1.1"
+  resolved "https://registry.yarnpkg.com/@civ-clone/base-city-yield-city-improvement-content/-/base-city-yield-city-improvement-content-0.1.1.tgz#edc60e4b01e8012b2c40c4cfb6785da8b4a0c15f"
+  integrity sha512-4xX5auzgxRgs7+3DtfsDEe2YaiA7wqqlxjun+lBKWOnkWLRoXkAuwRz7NboACee4aAW64zQklj73WbFu4VI4Lw==
   dependencies:
     "@civ-clone/base-city-yield-unhappiness" "^0.1.1"
     "@civ-clone/core-city-improvement" "^0.1.2"

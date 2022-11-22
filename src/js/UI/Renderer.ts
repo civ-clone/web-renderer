@@ -7,17 +7,20 @@ import {
   Tile,
   Unit,
 } from './types';
-import { h } from './lib/html';
+import { on, s } from '@dom111/element';
 import { reconstituteData, ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import ActiveUnit from './components/Map/ActiveUnit';
 import Cities from './components/Map/Cities';
 import CityNames from './components/Map/CityNames';
+import CityStatus from './components/CityStatus';
+import ConfirmationWindow from './components/ConfirmationWindow';
 import Feature from './components/Map/Feature';
 import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
 import GamePortal from './components/GamePortal';
 import GoodyHuts from './components/Map/GoodyHuts';
+import HappinessReport from './components/HappinessReport';
 import Improvements from './components/Map/Improvements';
 import IntervalHandler from './lib/IntervalHandler';
 import Irrigation from './components/Map/Irrigation';
@@ -28,16 +31,16 @@ import NotificationWindow from './components/NotificationWindow';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import Portal from './components/Portal';
+import ScienceReport from './components/ScienceReport';
 import SelectionWindow from './components/SelectionWindow';
 import Terrain from './components/Map/Terrain';
+import Transport from '../Engine/Transport';
 import UnitDetails from './components/UnitDetails';
 import Units from './components/Map/Units';
 import World from './components/World';
 import Yields from './components/Map/Yields';
-import Transport from '../Engine/Transport';
 import { assetStore } from './AssetStore';
-import { on, s } from '@dom111/element';
-import ConfirmationWindow from './components/ConfirmationWindow';
+import { h } from './lib/html';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -201,11 +204,14 @@ export class Renderer {
         })
       );
 
+      let data: GameData;
+
       transport.receiveOnce('gameData', (objectMap: ObjectMap) => {
         try {
-          const data: GameData = reconstituteData(objectMap) as GameData,
-            // @ts-ignore
-            formatter = new Intl.ListFormat();
+          // @ts-ignore
+          const formatter = new Intl.ListFormat();
+
+          data = reconstituteData(objectMap) as GameData;
 
           new NotificationWindow(
             'Welcome',
@@ -318,7 +324,7 @@ export class Renderer {
             // let orphanIds: string[] | null = null;
 
             // TODO: look into if it's possible to have data reconstituted in a worker thread
-            const data: GameData = reconstituteData(
+            data = reconstituteData(
               objectMap
               // orphanIds
             ) as GameData;
@@ -597,11 +603,22 @@ export class Renderer {
               {
                 [KeyboardEvent.DOM_KEY_LOCATION_STANDARD]: directionKeyMap,
                 [KeyboardEvent.DOM_KEY_LOCATION_NUMPAD]: directionKeyMapNumpad,
-              };
+              },
+            leaderScreensMap: { [key: string]: () => any } = {
+              F1: () => new CityStatus(data.player, portal, transport),
+              F4: () => new HappinessReport(data.player),
+              F6: () => new ScienceReport(data.player),
+            };
 
           let lastKey = '';
 
           on(document, 'keydown', (event) => {
+            if (event.key in leaderScreensMap) {
+              leaderScreensMap[event.key]();
+
+              event.preventDefault();
+            }
+
             if (activeUnit) {
               if (event.key in keyToActionsMap) {
                 const actions = [...keyToActionsMap[event.key]];

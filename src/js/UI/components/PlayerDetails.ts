@@ -20,7 +20,7 @@ export class PlayerDetails extends Element {
         ([totalGold, totalResearch], city: City): [number, number] => {
           // TODO: There must be a way to specify that the return array has the same number of elements as the arguments...
           const [cityGold, cityResearch] = reduceKnownYields(
-            city,
+            city.yields,
             'Gold',
             'Research'
           );

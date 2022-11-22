@@ -25,8 +25,8 @@ export class ImportAssetsWindow extends Window {
           extractData.files
         ).join(
           ', '
-          // @ts-ignore
         )} from the original Civilization files to extract assets (these will be stored locally). This process can take at least a few minutes.</p><div class="brave" ${
+          // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }><p>It looks like you're using Brave and due to the use of <code>HTMLCanvasElement</code>'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won't look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p></div></div>`,
         s(

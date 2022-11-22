@@ -191,13 +191,18 @@ export interface Yield extends EntityInstance {
   values: [number, string][];
 }
 
+export interface CityImprovementContent extends Yield {
+  _: 'CityImprovementContent';
+  cityImprovement: EntityInstance;
+}
+
 export interface CityImprovementMaintenanceGold extends Yield {
   _: 'CityImprovementMaintenanceGold';
   cityImprovement: EntityInstance;
 }
 
-export interface MartialLawContent extends Yield {
-  _: 'MartialLawContent';
+export interface MartialLaw extends Yield {
+  _: 'MartialLaw';
   unit: Unit;
 }
 

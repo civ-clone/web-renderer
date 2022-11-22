@@ -1,21 +1,16 @@
 import {
   City as CityData,
-  CityGrowth,
   CityImprovementMaintenanceGold,
-  MilitaryUnhappiness,
   PlainObject,
   Unit as UnitData,
-  UnitSupportFood,
-  UnitSupportProduction,
   Yield,
 } from '../types';
+import { knownGroupLookup, knownGroups } from '../lib/yieldMap';
 import {
-  knownGroupLookup,
-  knownGroups,
-  knownIcons,
-  reduceKnownYield,
-  reduceKnownYields,
-} from '../lib/yieldMap';
+  renderPopulation,
+  renderProgress,
+  yieldImages,
+} from './lib/cityYields';
 import Cities from './Map/Cities';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import ConfirmationWindow from './ConfirmationWindow';
@@ -33,83 +28,11 @@ import UnitSelectionWindow from './UnitSelectionWindow';
 import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
-import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { SupportedUnit } from './SupportedUnit';
 
-const buildTurns = (city: CityData) =>
-    Math.max(
-      1,
-      Math.ceil(
-        (city.build.cost.value - city.build.progress.value) /
-          reduceKnownYield(city, 'Production')
-      )
-    ),
-  growthTurns = (city: CityData) =>
-    Math.max(
-      1,
-      Math.ceil(
-        (city.growth.cost.value - city.growth.progress.value) /
-          reduceKnownYield(city, 'Food')
-      )
-    ),
-  renderPopulation = (city: CityData): Node => {
-    const growth = city.growth,
-      mask = parseInt(city.name.replace(/[^a-z]/gi, ''), 36).toString(2),
-      state = new Array(growth.size).fill(1),
-      population = s('<div class="population"></div>');
-
-    let [happiness, unhappiness] = reduceKnownYields(
-        city,
-        'Happiness',
-        'Unhappiness'
-      ),
-      currentIndex = state.length - 1;
-
-    while (unhappiness > 0 && currentIndex > -1) {
-      state[currentIndex--] = 0;
-      unhappiness--;
-    }
-
-    currentIndex = 0;
-
-    while (happiness > 0 && currentIndex < state.length) {
-      if (state[currentIndex] === 0) {
-        state[currentIndex]++;
-        happiness--;
-      }
-
-      if (state[currentIndex] === 1) {
-        state[currentIndex++]++;
-        happiness--;
-      }
-
-      if (state[currentIndex] === 2) {
-        currentIndex++;
-      }
-    }
-
-    state.forEach((status, index) =>
-      assetStore
-        .getScaled(
-          `./assets/city/people_${['unhappy', 'content', 'happy'][status]}_${
-            ['f', 'm'][parseInt(mask[index % mask.length], 10)]
-          }.png`,
-          2
-        )
-        .then((image) =>
-          population.append(
-            s(
-              '<span class="citizen"></span>',
-              s(`<img src="${image.toDataURL('image/png')}">`)
-            )
-          )
-        )
-    );
-
-    return population;
-  },
-  reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
+const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityYields
       .filter((cityYield) => knownGroupLookup[type].includes(cityYield._))
       .reduce(
@@ -139,10 +62,8 @@ const buildTurns = (city: CityData) =>
                 s(
                   `<span class="${['used', 'free'][i]}"></span>`,
                   ...yieldImages({
-                    id: '',
                     _: cityYieldName,
                     value: n,
-                    values: [],
                   })
                 )
               )
@@ -233,26 +154,12 @@ const buildTurns = (city: CityData) =>
         }),
     });
   },
-  yieldImages = (cityYield: Yield): Node[] =>
-    new Array(Math.abs(cityYield.value)).fill(0).map(() => {
-      const icon = s('<span class="yield-icon"></span>');
-
-      assetStore
-        .getScaled(`./assets/${knownIcons[knownGroups[cityYield._]]}`, 2)
-        .then((image) =>
-          icon.append(s(`<img src="${image.toDataURL('image/png')}">`))
-        );
-
-      return icon;
-    }),
-  renderBuildDetails = (
+  renderBuild = (
     city: CityData,
     chooseProduction: () => void,
     completeProduction: () => void
-  ): HTMLElement => {
-    const turnsLeft = buildTurns(city);
-
-    return s(
+  ): HTMLElement =>
+    s(
       `<div class="build"><header>Building ${
         city.build.building ? city.build.building.item._ : 'nothing'
       }</header></div>`,
@@ -267,26 +174,17 @@ const buildTurns = (city: CityData) =>
         },
       }),
       city.build.building
-        ? s(
-            `<p>Progress ${city.build.progress.value} / ${
-              city.build.cost.value
-            } (${turnsLeft} turn${turnsLeft === 1 ? '' : 's'})</p>`
-          )
+        ? s(`<p>${renderProgress(city.build, city.yields, 'Production')}</p>`)
         : ''
-    );
-  },
-  renderGrowth = (city: CityData): Node => {
-    const growth: CityGrowth = city.growth,
-      turnsLeft = growthTurns(city);
-
-    return s(
-      `<div class="growth"><header>Growth</header><p>Size ${growth.size.toString()}</p><p>Progress ${
-        city.growth.progress.value
-      } / ${city.growth.cost.value} (${turnsLeft} turn${
-        turnsLeft === 1 ? '' : 's'
-      })</p></div>`
-    );
-  },
+    ),
+  renderGrowth = (city: CityData): Node =>
+    s(
+      `<div class="growth"><header>Growth</header><p>Size ${city.growth.size.toString()}</p><p>${renderProgress(
+        city.growth,
+        city.yields,
+        'Food'
+      )}</p></div>`
+    ),
   renderImprovements = (city: CityData): Node => {
     return s(
       `<div class="improvements"></div>`,
@@ -335,35 +233,14 @@ const buildTurns = (city: CityData) =>
   },
   renderSupportedUnits = (city: CityData): Node => {
     return s(
-      `<div class="supported-units"><header>Supported Units</header></div>`,
+      `<div class="supported-units"><header>Supported units</header></div>`,
       s(
         '<div class="units"></div>',
-        ...city.units.map((unit) =>
-          s(
-            '<span class="unit"></span>',
-            new Unit(unit),
-            ...city.yields
-              .filter(
-                (
-                  cityYield
-                ): cityYield is
-                  | UnitSupportFood
-                  | UnitSupportProduction
-                  | MilitaryUnhappiness =>
-                  [
-                    'UnitSupportFood',
-                    'UnitSupportProduction',
-                    'MilitaryUnhappiness',
-                  ].includes(cityYield._)
-              )
-              .filter((cityYield) => cityYield.unit.id === unit.id)
-              .flatMap((cityYield) => yieldImages(cityYield))
-          )
-        )
+        ...city.units.map((unit) => new SupportedUnit(city, unit))
       )
     );
   },
-  buildDetails = (
+  cityDetails = (
     city: CityData,
     portal: Portal,
     transport: Transport,
@@ -391,7 +268,7 @@ const buildTurns = (city: CityData) =>
           // TODO: add a tab bar
           s('<div class="info"></div>', renderGarrisonedUnits(city, transport))
         ),
-        renderBuildDetails(city, chooseProduction, completeProduction)
+        renderBuild(city, chooseProduction, completeProduction)
       )
     );
   };
@@ -405,7 +282,7 @@ export class City extends Window {
   constructor(city: CityData, portal: Portal, transport: Transport) {
     super(
       city.name,
-      buildDetails(
+      cityDetails(
         city,
         portal,
         transport,
@@ -455,7 +332,7 @@ export class City extends Window {
         ]);
 
         this.update(
-          buildDetails(
+          cityDetails(
             updatedCity,
             this.#portal,
             transport,
