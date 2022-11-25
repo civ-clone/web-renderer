@@ -55,7 +55,7 @@ export class MainMenu extends Element {
                 new CustomiseWorldWindow(this.#transport, () => this.remove()),
             }
           ),
-          h(s(`<button${hasAssets ? '' : ' hidden'}>Import Assets</button>`), {
+          h(s(`<button>Import Assets</button>`), {
             click: () => new ImportAssetsWindow(),
           }),
           h(s(`<button${showQuit ? '' : ' hidden'}>Quit</button>`), {
