@@ -44,29 +44,31 @@ export class ImportAssetsWindow extends Window {
   }
 
   async handleFileUpload(event: InputEvent) {
-    this.#fileInput.setAttribute('disabled', '');
     this.#progressInformation.removeAttribute('hidden');
-    this.#progressInformation.innerText = 'Building image assets...';
+    this.#progressInformation.style.color = 'inherit';
 
     const files = Array.from(
         (event.target as HTMLInputElement).files ?? []
       ) as File[],
       filenames: string[] = files.map((file: File) => file.name),
-      expectedMatches = Object.keys(extractData.files).map(
-        (key) => new RegExp(key, 'i')
-      );
+      expectedFilenames = Object.keys(extractData.files),
+      expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i'));
 
     if (
       !expectedMatches.every((expectedMatch) =>
         filenames.some((filename) => filename.match(expectedMatch))
       )
     ) {
-      console.error(
-        `Please provide ${filenames.join(', ')} to process the assets.`
-      );
+      this.#progressInformation.style.color = '#f00';
+      this.#progressInformation.innerText = `Please provide all files to generate assets: ${expectedFilenames.join(
+        ', '
+      )}.`;
 
       return;
     }
+
+    this.#fileInput.setAttribute('disabled', '');
+    this.#progressInformation.innerText = 'Building image assets...';
 
     const results: { name: string; uri: string }[] = [];
 
