@@ -4,6 +4,7 @@ import {
 } from './NotificationWindow';
 import { off, on, s } from '@dom111/element';
 import { h } from '../lib/html';
+import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 export interface SelectionWindowOption {
   label?: string;
@@ -75,8 +76,44 @@ export class SelectionWindow extends NotificationWindow {
         ),
         {
           keydown: (event: KeyboardEvent) => {
-            if (event.key === 'Enter') {
+            const key = mappedKeyFromEvent(event);
+
+            if (key === 'Enter') {
               chooseHandler(selectionList.value);
+
+              event.preventDefault();
+            }
+
+            if (
+              [
+                'ArrowDown',
+                'ArrowUp',
+                'End',
+                'Home',
+                'PageDown',
+                'PageUp',
+              ].includes(key) &&
+              ![
+                'ArrowDown',
+                'ArrowUp',
+                'End',
+                'Home',
+                'PageDown',
+                'PageUp',
+              ].includes(event.key)
+            ) {
+              const currentIndex = selectionList.selectedIndex,
+                targetIndex = ['Home', 'PageUp'].includes(key)
+                  ? 0
+                  : ['End', 'PageDown'].includes(key)
+                  ? selectionList.length - 1
+                  : currentIndex + (key === 'ArrowUp' ? -1 : 1);
+
+              if (targetIndex > -1 && targetIndex < selectionList.length) {
+                selectionList.selectedIndex = targetIndex;
+              }
+
+              event.preventDefault();
             }
           },
           dblclick: () => chooseHandler(selectionList.value),

@@ -9,6 +9,7 @@ import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Transport from '../../Engine/Transport';
 import { h } from '../lib/html';
+import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -45,7 +46,7 @@ export class Actions extends Element implements IActions {
           return;
         }
 
-        const { key } = event,
+        const key = mappedKeyFromEvent(event),
           children = Array.from(this.element().children) as HTMLElement[];
 
         if (

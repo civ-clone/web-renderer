@@ -41,6 +41,7 @@ import World from './components/World';
 import Yields from './components/Map/Yields';
 import { assetStore } from './AssetStore';
 import { h } from './lib/html';
+import { mappedKeyFromEvent } from './lib/mappedKey';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -589,21 +590,6 @@ export class Renderer {
               ArrowLeft: 'w',
               Home: 'nw',
             },
-            directionKeyMapNumpad: { [key: string]: NeighbourDirection } = {
-              8: 'n',
-              9: 'ne',
-              6: 'e',
-              3: 'se',
-              2: 's',
-              1: 'sw',
-              4: 'w',
-              7: 'nw',
-            },
-            directionKeyTypeMap: { [key: string]: { [key: string]: string } } =
-              {
-                [KeyboardEvent.DOM_KEY_LOCATION_STANDARD]: directionKeyMap,
-                [KeyboardEvent.DOM_KEY_LOCATION_NUMPAD]: directionKeyMapNumpad,
-              },
             leaderScreensMap: { [key: string]: () => any } = {
               F1: () => new CityStatus(data.player, portal, transport),
               F4: () => new HappinessReport(data.player),
@@ -613,15 +599,17 @@ export class Renderer {
           let lastKey = '';
 
           on(document, 'keydown', (event) => {
-            if (event.key in leaderScreensMap) {
+            const key = mappedKeyFromEvent(event);
+
+            if (key in leaderScreensMap) {
               leaderScreensMap[event.key]();
 
               event.preventDefault();
             }
 
             if (activeUnit) {
-              if (event.key in keyToActionsMap) {
-                const actions = [...keyToActionsMap[event.key]];
+              if (key in keyToActionsMap) {
+                const actions = [...keyToActionsMap[key]];
 
                 while (actions.length) {
                   const actionName = actions.shift(),
@@ -645,10 +633,9 @@ export class Renderer {
                 }
               }
 
-              // if (event.key in directionKeyTypeMap[event.location]) {
-              if (event.key in directionKeyMap) {
+              if (key in directionKeyMap) {
                 const [unitAction] =
-                  activeUnit.actionsForNeighbours[directionKeyMap[event.key]];
+                  activeUnit.actionsForNeighbours[directionKeyMap[key]];
 
                 if (unitAction) {
                   transport.send('action', {
@@ -666,14 +653,14 @@ export class Renderer {
               }
             }
 
-            if (event.key === 'Escape' && document.activeElement !== null) {
+            if (key === 'Escape' && document.activeElement !== null) {
               (document.activeElement as HTMLElement).blur();
 
               return;
             }
 
             if (
-              event.key === 'Enter' &&
+              key === 'Enter' &&
               data.player.mandatoryActions.some(
                 (action) => action._ === 'EndOfTurn'
               )
@@ -688,7 +675,7 @@ export class Renderer {
               return;
             }
 
-            if (event.key === 'Tab') {
+            if (key === 'Tab') {
               const topAction = actionArea.querySelector(
                 'div.action:first-child button'
               ) as HTMLButtonElement | null;
@@ -703,7 +690,7 @@ export class Renderer {
               }
             }
 
-            if (event.key === 'c' && activeUnit) {
+            if (key === 'c' && activeUnit) {
               portal.setCenter(activeUnit.tile.x, activeUnit.tile.y);
 
               portal.render();
@@ -712,7 +699,7 @@ export class Renderer {
               return;
             }
 
-            if (event.key === 'w' && activeUnit && activeUnits.length > 1) {
+            if (key === 'w' && activeUnit && activeUnits.length > 1) {
               const units = activeUnits.map(
                   (unitAction) => unitAction.value as Unit
                 ),
@@ -722,7 +709,7 @@ export class Renderer {
               setActiveUnit(unit, portal, unitsMap, activeUnitsMap);
             }
 
-            if (event.key === 't') {
+            if (key === 't') {
               unitsMap.setVisible(!unitsMap.isVisible());
               citiesMap.setVisible(!citiesMap.isVisible());
               cityNamesMap.setVisible(!cityNamesMap.isVisible());
@@ -732,7 +719,7 @@ export class Renderer {
               return;
             }
 
-            if (event.key === 'y') {
+            if (key === 'y') {
               yieldsMap.setVisible(!yieldsMap.isVisible());
 
               portal.render();
@@ -740,13 +727,13 @@ export class Renderer {
               return;
             }
 
-            if (lastKey === '%' && event.key === '^') {
+            if (lastKey === '%' && key === '^') {
               transport.send('cheat', { name: 'RevealMap' });
 
               return;
             }
 
-            lastKey = event.key;
+            lastKey = key;
           });
         } catch (e) {
           console.error(e);

@@ -8,9 +8,8 @@
   ],
   "author": "dom111 <dom111@users.noreply.github.com>",
   "license": "MIT",
-  "private": false,
   "scripts": {
-    "build": "npm run esbuild:bundle",
+    "build": "npm run prebuild && npm run esbuild:bundle",
     "build:dev": "npm run prebuild && npm run esbuild:bundle:dev",
     "build:generate-plugins-ts": "node buildPluginList.js",
     "build:generate-version-text": "echo '{\"version\": \"'$npm_package_version\\@$(git rev-parse --short HEAD)'\"}' > build.json",

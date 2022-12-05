@@ -7,6 +7,7 @@ import Transport from '../../Engine/Transport';
 import { assetStore } from '../AssetStore';
 import { version } from '../../../../build.json';
 import { h } from '../lib/html';
+import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -68,7 +69,8 @@ export class MainMenu extends Element {
         ),
         {
           keydown(event: KeyboardEvent) {
-            const currentTarget = document.activeElement;
+            const currentTarget = document.activeElement,
+              key = mappedKeyFromEvent(event);
 
             if (
               currentTarget === null ||
@@ -77,14 +79,11 @@ export class MainMenu extends Element {
               return;
             }
 
-            if (event.key === 'ArrowDown' && currentTarget.nextElementSibling) {
+            if (key === 'ArrowDown' && currentTarget.nextElementSibling) {
               (currentTarget.nextElementSibling as HTMLElement).focus();
             }
 
-            if (
-              event.key === 'ArrowUp' &&
-              currentTarget.previousElementSibling
-            ) {
+            if (key === 'ArrowUp' && currentTarget.previousElementSibling) {
               (currentTarget.previousElementSibling as HTMLElement).focus();
             }
           },
