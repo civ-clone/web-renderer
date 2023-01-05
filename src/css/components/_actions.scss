@@ -53,6 +53,15 @@
       }
     }
 
+    &.spaceship {
+      background-image: url('feather-icons/dist/icons/globe.svg');
+
+      &:focus,
+      &:focus-visible {
+        border-color: #2099da;
+      }
+    }
+
     &.adjustTradeRates {
       &:focus,
       &:focus-visible {

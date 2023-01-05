@@ -1,0 +1,24 @@
+.spaceship.window {
+  dl {
+    display: flex;
+    flex-wrap: wrap;
+
+    dd {
+      box-sizing: border-box;
+      font-weight: bold;
+      margin: 0;
+      padding-right: 0.5rem;
+      text-align: right;
+      width: 33%;
+    }
+
+    dt {
+      width: 66%;
+
+      span.inactive {
+        color: #932;
+        font-weight: bold;
+      }
+    }
+  }
+}

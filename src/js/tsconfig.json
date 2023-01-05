@@ -4,7 +4,9 @@
     "esModuleInterop": true,
     "lib": [
       "dom",
-      "es2019"
+      "es2019",
+      "es2021.intl"
+
     ],
     "moduleResolution": "node",
     "module": "esnext",

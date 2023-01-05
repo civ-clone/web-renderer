@@ -127,7 +127,7 @@ export const yieldData = (city: CityData, yieldName: string) =>
   );
 
 export const yieldImages = (cityYield: { _: string; value: number }): Node[] =>
-  new Array(Math.abs(cityYield.value)).fill(0).map(() => {
+  new Array(Math.trunc(Math.abs(cityYield.value))).fill(0).map(() => {
     const icon = s('<span class="yield-icon"></span>');
 
     assetStore

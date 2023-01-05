@@ -10,6 +10,7 @@ import Revolution from './Actions/Revolution';
 import Transport from '../../Engine/Transport';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
+import { Spaceship } from './Actions/Spaceship';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -131,10 +132,20 @@ export class Actions extends Element implements IActions {
 
           break;
 
+        case 'LaunchSpaceship':
+          action = new Spaceship(playerAction, this.#transport);
+
+          break;
+
         case 'Revolution':
           action = new Revolution(playerAction, this.#transport);
 
           break;
+
+        case 'ChangeProduction':
+        case 'CompleteProduction':
+        case 'InactiveUnit':
+          return;
 
         default:
           console.log('need to handle ' + playerAction._);

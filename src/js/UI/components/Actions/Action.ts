@@ -4,6 +4,7 @@ import {
   PlayerGovernment,
   PlayerResearch,
   PlayerTradeRates,
+  Spaceship,
   Unit,
 } from '../../types';
 import { Element, s } from '@dom111/element';
@@ -25,7 +26,8 @@ export interface IAction {
     | PlayerResearch
     | Unit
     | PlayerGovernment
-    | PlayerTradeRates;
+    | PlayerTradeRates
+    | Spaceship;
 }
 
 export class Action extends Element implements IAction {
@@ -71,7 +73,8 @@ export class Action extends Element implements IAction {
     | PlayerResearch
     | Unit
     | PlayerGovernment
-    | PlayerTradeRates {
+    | PlayerTradeRates
+    | Spaceship {
     return this.#action.value;
   }
 }

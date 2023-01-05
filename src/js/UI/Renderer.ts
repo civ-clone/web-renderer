@@ -1,5 +1,6 @@
 import {
   DataPatch,
+  DataPatchContents,
   GameData,
   NeighbourDirection,
   PlainObject,
@@ -41,7 +42,9 @@ import World from './components/World';
 import Yields from './components/Map/Yields';
 import { assetStore } from './AssetStore';
 import { h } from './lib/html';
+import { instance as localeProviderInstance } from './LocaleProvider';
 import { mappedKeyFromEvent } from './lib/mappedKey';
+import civilizationAttribute from './components/lib/civilizationAttribute';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -153,12 +156,17 @@ export class Renderer {
       assetStore.getAll().then((records) =>
         records.forEach((record) =>
           preloadContainer.append(
-            h(s(`<img src="${record.uri}" data-path="${record.name}">`), {
-              error: () =>
-                console.error(
-                  `There was a problem preloading '${record.name}', you may have some missing details.`
-                ),
-            })
+            h(
+              s<HTMLImageElement>(
+                `<img src="${record.uri}" data-path="${record.name}">`
+              ),
+              {
+                error: () =>
+                  console.error(
+                    `There was a problem preloading '${record.name}', you may have some missing details.`
+                  ),
+              }
+            )
           )
         )
       );
@@ -209,9 +217,6 @@ export class Renderer {
 
       transport.receiveOnce('gameData', (objectMap: ObjectMap) => {
         try {
-          // @ts-ignore
-          const formatter = new Intl.ListFormat();
-
           data = reconstituteData(objectMap) as GameData;
 
           new NotificationWindow(
@@ -220,10 +225,11 @@ export class Renderer {
               `<div class="welcome">
 <p>${
                 data.player.civilization.leader.name
-              }, you have risen to become leader of the ${
-                data.player.civilization._
-              }.</p>
-<p>Your people have knowledge of ${formatter.format([
+              }, you have risen to become leader of the ${civilizationAttribute(
+                data.player.civilization,
+                'people'
+              )}.</p>
+<p>Your people have knowledge of ${localeProviderInstance.list([
                 'Irrigation',
                 'Mining',
                 'Roads',
@@ -369,9 +375,20 @@ export class Renderer {
             // }
 
             primaryActions.build(data.player.mandatoryActions);
+
             secondaryActions.build(
-              data.player.actions.filter((action: PlayerAction) =>
-                ['AdjustTradeRates', 'Revolution'].includes(action._)
+              data.player.actions.filter(
+                (action) =>
+                  ![
+                    // Filter out any unneeded `PlayerAction`s and any `MandatoryAction`s.
+                    'ActiveUnit',
+                    'ChangeProduction',
+                    'ChooseProduction',
+                    'ChooseResearch',
+                    'CityBuild',
+                    'CompleteProduction',
+                    'InactiveUnit',
+                  ].includes(action._)
               )
             );
 
@@ -502,55 +519,60 @@ export class Renderer {
 
           transport.receive('gameDataPatch', (data: DataPatch[]) => {
             data.forEach((patch) =>
-              Object.entries(patch).forEach(([key, { type, index, value }]) => {
-                if (type === 'add' || type === 'update') {
-                  if (!value!.hierarchy) {
-                    console.error('No hierarchy');
-                    console.error(value);
+              Object.entries(patch).forEach(
+                ([key, { type, index, value }]: [
+                  string,
+                  DataPatchContents
+                ]) => {
+                  if (type === 'add' || type === 'update') {
+                    if (!value!.hierarchy) {
+                      console.error('No hierarchy');
+                      console.error(value);
 
-                    return;
-                  }
-
-                  if (index) {
-                    setObjectPath(
-                      objectMap.objects[key],
-                      index,
-                      value!.hierarchy
-                    );
-                  } else {
-                    objectMap.objects[key] = value!.hierarchy;
-                  }
-
-                  document.dispatchEvent(
-                    new CustomEvent('patchdatareceived', {
-                      detail: {
-                        value,
-                      },
-                    })
-                  );
-
-                  Object.entries(value!.objects as PlainObject).forEach(
-                    ([key, value]) => {
-                      objectMap.objects[key] = value;
-
-                      if (value._ === 'PlayerTile') {
-                        // Since we only use tilesToRender for x and y this should be fine...
-                        tilesToRender.push(value);
-                      }
+                      return;
                     }
-                  );
-                }
 
-                if (type === 'remove') {
-                  if (index) {
-                    removeObjectPath(objectMap.objects[key], index);
+                    if (index) {
+                      setObjectPath(
+                        objectMap.objects[key],
+                        index,
+                        value!.hierarchy
+                      );
+                    } else {
+                      objectMap.objects[key] = value!.hierarchy;
+                    }
 
-                    return;
+                    document.dispatchEvent(
+                      new CustomEvent('patchdatareceived', {
+                        detail: {
+                          value,
+                        },
+                      })
+                    );
+
+                    Object.entries(value!.objects as PlainObject).forEach(
+                      ([key, value]) => {
+                        objectMap.objects[key] = value;
+
+                        if (value._ === 'PlayerTile') {
+                          // Since we only use tilesToRender for x and y this should be fine...
+                          tilesToRender.push(value);
+                        }
+                      }
+                    );
                   }
 
-                  delete objectMap.objects[key];
+                  if (type === 'remove') {
+                    if (index) {
+                      removeObjectPath(objectMap.objects[key], index);
+
+                      return;
+                    }
+
+                    delete objectMap.objects[key];
+                  }
                 }
-              })
+              )
             );
 
             handler(objectMap);

@@ -1,6 +1,7 @@
 import { City, Player } from '../types';
 import { Element, s } from '@dom111/element';
 import { reduceKnownYields } from '../lib/yieldMap';
+import civilizationAttribute from './lib/civilizationAttribute';
 
 export class PlayerDetails extends Element {
   #player: Player;
@@ -34,18 +35,25 @@ export class PlayerDetails extends Element {
       );
 
     this.append(
-      s(`<h3>${civilization.leader.name} of the ${civilization._} empire</h3>`),
+      s(
+        `<h3>${civilization.leader.name} of the ${civilizationAttribute(
+          civilization,
+          'people'
+        )} empire</h3>`
+      ),
       s(
         `<p><strong>Researching</strong><br/>${
           research.researching
             ? `${research.researching._} ${research.progress.value} / ${
                 research.cost.value
-              } (${researchTurns} turn${researchTurns === 1 ? '' : 's'})`
-            : 'Nothing'
+              } (${totalResearch} / turn - ${researchTurns} turn${
+                researchTurns === 1 ? '' : 's'
+              })`
+            : `Nothing (${totalResearch} / turn)`
         }</p>`
       ),
       s(
-        `<p><strong>Treasury</strong><br/>${treasury.value} (${totalGold} / turn}</p>`
+        `<p><strong>Treasury</strong><br/>${treasury.value} (${totalGold} / turn)</p>`
       )
     );
   }

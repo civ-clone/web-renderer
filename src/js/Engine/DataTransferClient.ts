@@ -24,8 +24,10 @@ import { CompleteProduction } from '@civ-clone/civ1-treasury/PlayerActions';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
+import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
+import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
@@ -60,7 +62,6 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
-import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -693,6 +694,32 @@ export class DataTransferClient extends Client implements IClient {
         this.sendNotification(`Civil disorder in ${city.name()}!`);
       }
     });
+
+    engineInstance.on('player:spaceship:part-built', (player: Player) => {
+      if (this.player() === player) {
+        return;
+      }
+
+      this.sendNotification(
+        `Component added to ${player.civilization().name()} spaceship.`
+      );
+    });
+
+    engineInstance.on('player:spaceship:lost', (player: Player) => {
+      if (this.player() !== player) {
+        return;
+      }
+
+      this.sendNotification(`Our spaceship was lost in space.`);
+    });
+
+    engineInstance.on('player:spaceship:landed', (player: Player) => {
+      if (this.player() !== player) {
+        return;
+      }
+
+      this.sendNotification(`Our spaceship has landed on Alpha Centauri!`);
+    });
   }
 
   chooseCivilization(Civilizations: typeof Civilization[]): Promise<void> {
@@ -1033,6 +1060,12 @@ export class DataTransferClient extends Client implements IClient {
             )
           )
         );
+
+      return false;
+    }
+
+    if (playerAction instanceof LaunchSpaceship) {
+      playerAction.value().launch();
 
       return false;
     }

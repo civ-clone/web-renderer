@@ -87,6 +87,7 @@ export interface Player extends EntityInstance {
   government: PlayerGovernment;
   mandatoryActions: PlayerAction[];
   research: PlayerResearch;
+  spaceship: Spaceship | null;
   treasury: Yield;
   units: Unit[];
   world: World;
@@ -98,7 +99,8 @@ export interface PlayerAction extends EntityInstance {
     | PlayerResearch
     | CityBuild
     | PlayerTradeRates
-    | PlayerGovernment;
+    | PlayerGovernment
+    | Spaceship;
 }
 
 export interface PlayerGovernment extends EntityInstance {
@@ -242,3 +244,34 @@ type DataPatchContents = {
 export type DataPatch = {
   [id: string]: DataPatchContents;
 };
+
+export interface SpaceshipPart extends EntityInstance {
+  city: City;
+  yields: Yield[];
+}
+
+export interface SpaceshipLayoutSlot extends EntityInstance {
+  height: number;
+  part: SpaceshipPart | null;
+  width: number;
+  x: number;
+  y: number;
+}
+
+export interface SpaceshipLayout extends EntityInstance {
+  height: number;
+  slots: SpaceshipLayoutSlot[];
+  width: number;
+}
+
+export interface Spaceship extends EntityInstance {
+  activeParts: SpaceshipPart[];
+  chanceOfSuccess: number;
+  flightTime: number;
+  inactiveParts: SpaceshipPart[];
+  launched: boolean;
+  layout: SpaceshipLayout;
+  player: Player;
+  successful: boolean;
+  yields: Yield[];
+}

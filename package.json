@@ -45,6 +45,7 @@
     "@civ-clone/civ1-government": "github:civ-clone/civ1-government",
     "@civ-clone/civ1-player": "github:civ-clone/civ1-player",
     "@civ-clone/civ1-science": "github:civ-clone/civ1-science",
+    "@civ-clone/civ1-spaceship": "github:civ-clone/civ1-spaceship",
     "@civ-clone/civ1-trade-rate": "github:civ-clone/civ1-trade-rate",
     "@civ-clone/civ1-treasury": "github:civ-clone/civ1-treasury",
     "@civ-clone/civ1-unit": "github:civ-clone/civ1-unit",
@@ -75,5 +76,6 @@
     "@dom111/typed-event-emitter": "^0.1.2",
     "feather-icons": "^4.28.0",
     "idb": "^7.1.1"
-  }
+  },
+  "packageManager": "yarn@1.22.19"
 }
