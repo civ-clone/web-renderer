@@ -79,9 +79,9 @@ export class CityStatus extends Window {
   #transport: Transport;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
-    super('City details', s('<div class="loading"></div>'));
-
-    this.addClass('city-status');
+    super('City details', s('<div class="loading"></div>'), {
+      classes: 'city-status',
+    });
 
     this.#cities = player.cities;
     this.#dataObserver = new DataObserver(

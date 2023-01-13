@@ -23,6 +23,7 @@ export type WindowSettings = {
   canClose: boolean;
   canMaximise: boolean;
   canResize: boolean;
+  classes: string | string[];
   parent: HTMLElement;
   position: WindowPosition | 'auto';
   size: WindowSize | 'auto' | 'maximised';
@@ -35,6 +36,7 @@ const defaultOptions: WindowSettings = {
   canClose: true,
   canMaximise: false,
   canResize: false,
+  classes: '',
   parent: document.body,
   position: 'auto',
   size: 'auto',
@@ -109,6 +111,14 @@ export class Window
             )
           ) + 'px';
       });
+    }
+
+    if (this.options.classes) {
+      this.addClass(
+        ...(Array.isArray(this.options.classes)
+          ? this.options.classes
+          : [this.options.classes])
+      );
     }
 
     if (this.options.autoDisplay) {

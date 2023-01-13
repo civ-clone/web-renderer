@@ -1,0 +1,48 @@
+.window.releases {
+  display: flex;
+  flex-direction: column;
+
+  .body {
+    max-height: 100%;
+    overflow: auto;
+    padding: 1rem;
+  }
+
+  dd,
+  h2 {
+    &:has(+ [aria-expanded]) {
+      background: url('feather-icons/dist/icons/arrow-right.svg') no-repeat center left;
+      padding-left: 2rem;
+
+      &[aria-expanded="false"] {
+        background-image: url('feather-icons/dist/icons/arrow-up.svg');
+      }
+    }
+  }
+
+  .release > div > ul {
+    margin: 0;
+  }
+
+  ul p {
+    margin: 0;
+  }
+
+  [aria-expanded] {
+    height: auto;
+    overflow: hidden;
+
+    &[aria-expanded="false"] {
+      height: 0;
+    }
+  }
+
+  dd {
+    margin: 0;
+  }
+
+  dd,
+  h2 {
+    cursor: pointer;
+  }
+}

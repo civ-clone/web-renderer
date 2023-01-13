@@ -1,0 +1,1 @@
+{"version":"0.1.0@5fc5bee","date":"2021-02-27T20:52:12.000Z","localChanges":["Continuing to break `renderer.ts` into components.","Add reusable `Element` and `TransientElement` which other components extend from.","Add `PlayerDetails` to show current research and treasury."],"externalChanges":{}}

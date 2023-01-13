@@ -64,7 +64,7 @@ export class Portal
       playerId: null,
       scale: 2,
     },
-    ...layers: typeof Map[]
+    ...layers: (typeof Map)[]
   ) {
     const settings: PortalSettings = {
       ...defaultPortalOptions,

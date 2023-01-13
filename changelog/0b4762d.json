@@ -1,0 +1,1 @@
+{"version":"0.1.0@0b4762d","date":"2022-02-27T22:04:31.000Z","localChanges":["Break `Terrain` `Map` into components.","Handle `EndTurn` `PlayerAction`.","Handle patch driven data transfer (major speedup!).","Add `Minimap` component.","Keep only 1 notification window open at a time.","Selectively update `Map` `Tile`s to speed up renderer."],"externalChanges":{}}

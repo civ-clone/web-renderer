@@ -292,13 +292,12 @@ export class City extends Window {
       {
         canResize: true,
         canMaximise: true,
+        classes: 'city-screen-window',
         size: 'maximised',
       }
     );
 
     setTimeout(() => resizeYields(this.element()), 200);
-
-    this.addClass('city-screen-window');
 
     this.#city = city;
     this.#portal = portal;

@@ -54,6 +54,41 @@ export class LocaleProvider {
       ...options,
     });
   }
+
+  timeSince(date: Date, options?: Intl.RelativeTimeFormatOptions): string {
+    const timeFormatter = new Intl.RelativeTimeFormat(this.locales(), options),
+      secondsDifference = Math.trunc((date.getTime() - Date.now()) / 1000);
+
+    if (Math.abs(secondsDifference) < 10) {
+      return 'just now';
+    }
+
+    const [value, unit] = (
+      [
+        [60, 'seconds'],
+        [60, 'minutes'],
+        [24, 'hours'],
+        [28, 'days'],
+        [12, 'months'],
+        [Infinity, 'years'],
+      ] as [number, Intl.RelativeTimeFormatUnit][]
+    ).reduce(
+      ([value, unit, resolved], [limit, currentUnit]) => {
+        if (resolved) {
+          return [value, unit, resolved];
+        }
+
+        if (Math.abs(value) <= limit) {
+          return [value, currentUnit, true];
+        }
+
+        return [Math.trunc(value / limit), currentUnit, false];
+      },
+      [secondsDifference, 'seconds' as Intl.RelativeTimeFormatUnit, false]
+    );
+
+    return timeFormatter.format(value, unit);
+  }
 }
 
 export const instance = new LocaleProvider();

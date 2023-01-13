@@ -49,9 +49,9 @@ export class HappinessReport extends Window {
   #player: Player;
 
   constructor(player: Player) {
-    super('Happiness report', s('<div></div>'));
-
-    this.addClass('happiness-report');
+    super('Happiness report', s('<div></div>'), {
+      classes: 'happiness-report',
+    });
 
     this.#dataObserver = new DataObserver(
       [player.id, ...player.cities.map((city) => city.id)],

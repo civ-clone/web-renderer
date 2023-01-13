@@ -722,7 +722,7 @@ export class DataTransferClient extends Client implements IClient {
     });
   }
 
-  chooseCivilization(Civilizations: typeof Civilization[]): Promise<void> {
+  chooseCivilization(Civilizations: (typeof Civilization)[]): Promise<void> {
     const makeChoice = (ChosenCivilization: typeof Civilization) => {
       this.player().setCivilization(new ChosenCivilization());
 

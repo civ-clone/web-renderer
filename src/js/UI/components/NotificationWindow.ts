@@ -21,6 +21,7 @@ export class NotificationWindow extends Window implements INotificationWindow {
     passedOptions: NotificationWindowOptions = {}
   ) {
     const options = {
+      classes: 'notificationWindow',
       queue: true,
       ...passedOptions,
     };
@@ -28,8 +29,6 @@ export class NotificationWindow extends Window implements INotificationWindow {
     super(title, body, options);
 
     this.#options = options;
-
-    this.addClass('notificationWindow');
 
     this.on('keydown', (event) => {
       if (event.key === 'Enter') {

@@ -27,6 +27,7 @@
     ]
   },
   "devDependencies": {
+    "@types/marked": "^4.0.8",
     "@types/node": "^14.0.0",
     "esbuild": "^0.14.32",
     "esbuild-sass-plugin": "^2.4.0",
@@ -75,7 +76,8 @@
     "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2",
     "feather-icons": "^4.28.0",
-    "idb": "^7.1.1"
+    "idb": "^7.1.1",
+    "marked": "^4.2.5"
   },
   "packageManager": "yarn@1.22.19"
 }

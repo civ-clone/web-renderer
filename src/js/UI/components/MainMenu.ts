@@ -5,9 +5,10 @@ import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
 import Transport from '../../Engine/Transport';
 import { assetStore } from '../AssetStore';
-import { version } from '../../../../build.json';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
+import { version } from '../../../../build.json';
+import ReleaseWindow from './ReleaseWindow';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -89,7 +90,16 @@ export class MainMenu extends Element {
           },
         }
       ),
-      s(`<footer>version: ${version}</footer>`)
+      s(
+        `<footer></footer>`,
+        h(s(`<a href="#releases">version: ${version}</a>`), {
+          click(event) {
+            event.preventDefault();
+
+            new ReleaseWindow();
+          },
+        })
+      )
     );
   }
 

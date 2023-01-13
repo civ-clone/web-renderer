@@ -1,0 +1,1 @@
+{"version":"0.1.0@bc6a38f","date":"2022-03-01T07:21:32.000Z","localChanges":["Add cheats (`GrantAdvance` and `GrantGold`) and `CompleteProduction` action.","Make `Actions` component long-lived, instead of a new instance each time an action is performed.","Update `City` component on relevant patch data."],"externalChanges":{}}

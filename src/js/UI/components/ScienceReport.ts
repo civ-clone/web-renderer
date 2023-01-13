@@ -33,11 +33,11 @@ export class ScienceReport extends Window {
   #player: Player;
 
   constructor(player: Player) {
-    super('Player research', s('<div></div>'));
+    super('Player research', s('<div></div>'), {
+      classes: 'science-report',
+    });
 
     this.#player = player;
-
-    this.addClass('science-report');
 
     this.update();
 

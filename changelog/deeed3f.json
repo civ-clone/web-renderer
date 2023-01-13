@@ -1,0 +1,1 @@
+{"version":"0.1.0@deeed3f","date":"2022-04-06T20:36:41.000Z","localChanges":["Implement `GamePortal` to begin to remove the inline code from `renderer.ts`.","Replace TypeScript generated modules with an ESBuild bundle.","Beginnings of work to separate the view code from the `ElectronClient` package."],"externalChanges":{}}
