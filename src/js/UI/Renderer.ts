@@ -45,6 +45,7 @@ import { h } from './lib/html';
 import { instance as localeProviderInstance } from './LocaleProvider';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import civilizationAttribute from './components/lib/civilizationAttribute';
+import gamePortal from './components/GamePortal';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -115,7 +116,7 @@ export class Renderer {
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
         setActiveUnit = (
           unit: Unit | null,
-          portal: Portal,
+          portal: GamePortal,
           unitsMap: Units,
           activeUnitsMap: ActiveUnit
         ) => {
@@ -125,6 +126,7 @@ export class Renderer {
 
           unitDetails.build();
 
+          portal.setActiveUnit(unit);
           unitsMap.setActiveUnit(unit);
           unitsMap.render();
           unitsMap.setVisible(true);

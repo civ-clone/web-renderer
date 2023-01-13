@@ -14,7 +14,7 @@ import {
   reduceKnownYields,
 } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
-import { s } from '@dom111/element/src/Element';
+import { s } from '@dom111/element';
 
 export const buildTurns = (city: City) =>
   turnsLeft(city.build, city.yields, 'Production');

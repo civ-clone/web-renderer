@@ -1,5 +1,4 @@
-import { Element, s } from '@dom111/element';
-import { CustomEventMap } from '@dom111/element/src/Element';
+import { CustomEventMap, Element, s } from '@dom111/element';
 
 export interface ITransientElement {
   display(): void;

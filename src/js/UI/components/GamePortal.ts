@@ -1,33 +1,32 @@
 import City from './City';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import Portal from './Portal';
-import { Unit } from '../types';
-import { on } from '@dom111/element';
+import { Tile, Unit } from '../types';
+import { on, onEach } from '@dom111/element';
+import UnitActionMenu from './UnitActionMenu';
 
 export class GamePortal extends Portal {
-  protected bindEvents(): void {
-    on(this.canvas(), 'click', (event) => {
-      const centerTile = this.center(),
-        canvasCenterOffset = {
-          x: Math.floor(this.canvas().width / 2 - this.tileSize() / 2),
-          y: Math.floor(this.canvas().height / 2 - this.tileSize() / 2),
-        },
-        x =
-          centerTile.x +
-          Math.trunc(
-            ((event.offsetX - canvasCenterOffset.x) / this.tileSize() +
-              this.world().width()) %
-              this.world().width()
-          ),
-        y =
-          centerTile.y +
-          Math.trunc(
-            ((event.offsetY - canvasCenterOffset.y) / this.tileSize() +
-              this.world().height()) %
-              this.world().height()
-          );
+  #activeUnit: Unit | null = null;
+  #showActionMenuTimeout: number | null = null;
+  #unitActionMenu: UnitActionMenu | null = null;
 
-      const tile = this.world().get(x, y),
+  protected bindEvents(): void {
+    on(this.canvas(), 'pointerup', (event) => {
+      const realTarget = document.elementFromPoint(event.pageX, event.pageY);
+
+      if (realTarget?.matches('.unit-actions *')) {
+        return;
+      }
+
+      this.clearTimeout();
+
+      if (this.#unitActionMenu !== null) {
+        this.#unitActionMenu.remove();
+
+        this.#unitActionMenu = null;
+      }
+
+      const tile = this.tileFromOffsets(event.offsetX, event.offsetY),
         playerTileUnits = tile.units.filter(
           (unit: Unit) => unit.player.id === this.playerId()
         );
@@ -46,6 +45,94 @@ export class GamePortal extends Portal {
 
       this.setCenter(tile.x, tile.y);
     });
+
+    const showActionMenu = (tile: Tile, x: number, y: number) => {
+      this.clearTimeout();
+
+      if (this.#activeUnit === null) {
+        return;
+      }
+
+      if (this.#unitActionMenu !== null) {
+        this.#unitActionMenu.element().remove();
+      }
+
+      this.#showActionMenuTimeout = window.setTimeout(() => {
+        this.#unitActionMenu = new UnitActionMenu(
+          x,
+          y,
+          this.#activeUnit as Unit,
+          tile,
+          this.transport()
+        );
+
+        document.body.append(this.#unitActionMenu.element());
+      }, 350);
+    };
+
+    // Prevent dragging address bar down by accident
+    on(this.canvas(), 'touchstart', (event) => {
+      event.preventDefault();
+      //
+      // const touch = event.touches[0];
+      //
+      // showActionMenu(
+      //   this.tileFromOffsets(
+      //     touch.pageX - this.canvas().offsetLeft,
+      //     touch.pageY - this.canvas().offsetTop
+      //   ),
+      //   touch.pageX,
+      //   touch.pageY
+      // );
+    });
+
+    on(this.canvas(), 'pointerdown', (event) => {
+      event.preventDefault();
+
+      showActionMenu(
+        this.tileFromOffsets(event.offsetX, event.offsetY),
+        event.x,
+        event.y
+      );
+    });
+  }
+
+  private clearTimeout() {
+    if (this.#showActionMenuTimeout === null) {
+      return;
+    }
+
+    window.clearTimeout(this.#showActionMenuTimeout);
+
+    this.#showActionMenuTimeout = null;
+  }
+
+  setActiveUnit(unit: Unit | null = null) {
+    this.#activeUnit = unit;
+  }
+
+  private tileFromOffsets(offsetX: number, offsetY: number): Tile {
+    const centerTile = this.center(),
+      canvasCenterOffset = {
+        x: Math.floor(this.canvas().width / 2 - this.tileSize() / 2),
+        y: Math.floor(this.canvas().height / 2 - this.tileSize() / 2),
+      },
+      x =
+        centerTile.x +
+        Math.trunc(
+          ((offsetX - canvasCenterOffset.x) / this.tileSize() +
+            this.world().width()) %
+            this.world().width()
+        ),
+      y =
+        centerTile.y +
+        Math.trunc(
+          ((offsetY - canvasCenterOffset.y) / this.tileSize() +
+            this.world().height()) %
+            this.world().height()
+        );
+
+    return this.world().get(x, y);
   }
 }
 
