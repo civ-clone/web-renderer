@@ -15,7 +15,10 @@ export class PlayerDetails extends Element {
   build(): void {
     this.empty();
 
-    const { civilization, treasury, research, cities } = this.#player;
+    const { civilization, treasuries, research, cities } = this.#player,
+      [goldTreasury] = treasuries.filter(
+        (treasury) => treasury.yield._ === 'Gold'
+      );
 
     const [totalGold, totalResearch] = cities.reduce(
         ([totalGold, totalResearch], city: City): [number, number] => {
@@ -53,7 +56,7 @@ export class PlayerDetails extends Element {
         }</p>`
       ),
       s(
-        `<p><strong>Treasury</strong><br/>${treasury.value} (${totalGold} / turn)</p>`
+        `<p><strong>Treasury</strong><br/>${goldTreasury.value} (${totalGold} / turn)</p>`
       )
     );
   }

@@ -29,6 +29,7 @@ import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
 import { h } from '../lib/html';
+import { instance as localeProvider } from '../LocaleProvider';
 import { s } from '@dom111/element';
 import { SupportedUnit } from './SupportedUnit';
 
@@ -391,17 +392,24 @@ export class City extends Window {
   }
 
   completeProduction(): void {
-    if (!this.#city.build.building) {
+    const cityBuild = this.#city.build;
+
+    if (!cityBuild.building) {
       return;
     }
 
+    // TODO: handle this better for alternative spend mechanisms.
+    const [spendCost] = cityBuild.spendCost;
+
     new ConfirmationWindow(
       'Are you sure?',
-      `Do you want to rush building of ${this.#city.build.building.item._}`,
+      `Do you want to rush building of ${
+        cityBuild.building.item._
+      } for ${localeProvider.number(spendCost.value)} ${spendCost.resource._}?`,
       () =>
         this.#transport.send('action', {
           name: 'CompleteProduction',
-          id: this.#city.id,
+          id: this.#city.build.id,
         })
     );
   }

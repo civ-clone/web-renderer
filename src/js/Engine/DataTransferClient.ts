@@ -62,6 +62,7 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
+import { Gold } from '@civ-clone/civ1-city/Yields';
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -211,9 +212,11 @@ export class DataTransferClient extends Client implements IClient {
         }
 
         if (name === 'GrantGold') {
-          const playerTreasury = playerTreasuryRegistryInstance.getByPlayer(
-            this.player()
-          );
+          const playerTreasury =
+            playerTreasuryRegistryInstance.getByPlayerAndType(
+              this.player(),
+              Gold
+            );
 
           playerTreasury.add(value);
 
@@ -695,6 +698,28 @@ export class DataTransferClient extends Client implements IClient {
       }
     });
 
+    engineInstance.on('city:order-restored', (city: City) => {
+      if (city.player() === this.player()) {
+        this.sendNotification(`Order restored in ${city.name()}!`);
+      }
+    });
+
+    engineInstance.on('city:leader-celebration', (city: City) => {
+      if (city.player() === this.player()) {
+        this.sendNotification(
+          `We love the leader celebrations in ${city.name()}!`
+        );
+      }
+    });
+
+    engineInstance.on('city:leader-celebration-ended', (city: City) => {
+      if (city.player() === this.player()) {
+        this.sendNotification(
+          `We love the leader celebrations cancelled in ${city.name()}!`
+        );
+      }
+    });
+
     engineInstance.on('player:spaceship:part-built', (player: Player) => {
       if (this.player() === player) {
         return;
@@ -980,12 +1005,13 @@ export class DataTransferClient extends Client implements IClient {
     }
 
     if (playerAction instanceof CompleteProduction) {
-      const city = playerAction.value(),
-        playerTreasury = playerTreasuryRegistryInstance.getByPlayer(
-          this.player()
+      const cityBuild = playerAction.value(),
+        playerTreasury = playerTreasuryRegistryInstance.getByPlayerAndType(
+          this.player(),
+          Gold
         );
 
-      playerTreasury.buy(city);
+      playerTreasury.buy(cityBuild.city());
 
       this.#dataQueue.update(
         playerTreasury.id(),

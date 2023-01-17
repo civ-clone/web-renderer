@@ -1,32 +1,14 @@
 import { ObjectMap } from './lib/reconstituteData';
 
-export interface ITransport {
-  receive(channel: string, handler: (...args: any[]) => void): void;
-  receive(channel: 'gameData', handler: (data: ObjectMap) => void): void;
-  receive(channel: 'notification', handler: (data: string) => void): void;
-  receive(
-    channel: 'gameNotification',
-    handler: (data: Notification) => void
-  ): void;
-  receiveOnce(channel: string, handler: (...args: any[]) => void): void;
-  receiveOnce(channel: 'gameData', handler: (data: ObjectMap) => void): void;
-  receiveOnce(channel: 'notification', handler: (data: string) => void): void;
-  receiveOnce(
-    channel: 'gameNotification',
-    handler: (data: Notification) => void
-  ): void;
-  send(channel: string, payload?: any): void;
-}
-
 export type PlainObject = {
   [key: string]: any;
 };
 
-export interface Entity {
-  _: string;
+export interface Entity<Types = string> {
+  _: Types;
 }
 
-export interface EntityInstance extends Entity {
+export interface EntityInstance<Types = string> extends Entity<Types> {
   id: string;
 }
 
@@ -64,6 +46,12 @@ export interface CityBuild extends EntityInstance {
   city: City;
   cost: Yield;
   progress: Yield;
+  spendCost: SpendCost[];
+}
+
+export interface SpendCost extends EntityInstance {
+  resource: Entity<'Gold'>;
+  value: number;
 }
 
 export interface Attribute extends EntityInstance {
@@ -88,9 +76,14 @@ export interface Player extends EntityInstance {
   mandatoryActions: PlayerAction[];
   research: PlayerResearch;
   spaceship: Spaceship | null;
-  treasury: Yield;
+  treasuries: PlayerTreasury[];
   units: Unit[];
   world: World;
+}
+
+export interface PlayerTreasury extends EntityInstance<'Gold'> {
+  value: number;
+  yield: Entity;
 }
 
 export interface PlayerAction extends EntityInstance {
