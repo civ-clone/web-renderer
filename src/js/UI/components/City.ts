@@ -21,6 +21,7 @@ import Improvements from './Map/Improvements';
 import Irrigation from './Map/Irrigation';
 import Land from './Map/Land';
 import Portal from './Portal';
+import SupportedUnit from './SupportedUnit';
 import Terrain from './Map/Terrain';
 import Transport from '../../Engine/Transport';
 import Unit from './Unit';
@@ -31,7 +32,8 @@ import Yields from './Map/Yields';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import { s } from '@dom111/element';
-import { SupportedUnit } from './SupportedUnit';
+import Unworkable from './Map/Unworkable';
+import Units from './Map/Units';
 
 const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityYields
@@ -118,7 +120,10 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
   renderMap = (portal: Portal, city: CityData, transport: Transport): Node => {
     const portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
       cityPortal = new Portal(
-        new World(city.player.world),
+        new World({
+          ...city.player.world,
+          tiles: city.tiles,
+        }),
         transport,
         portalCanvas,
         {
@@ -133,7 +138,9 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
         Feature,
         Fog,
         Cities,
-        Yields
+        Units,
+        Yields,
+        Unworkable
       );
 
     portalCanvas.height = portal.tileSize() * 5;
@@ -142,8 +149,19 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityPortal.setCenter(city.tile.x, city.tile.y);
     cityPortal.build(city.tiles);
 
-    const yieldMap = cityPortal.getLayer(Yields) as Yields;
+    const unitMap = cityPortal.getLayer(Units)!;
+    unitMap.render(
+      city.tiles.filter((tile) =>
+        tile.units.some((unit) => unit.player.id !== city.player.id)
+      )
+    );
+
+    const yieldMap = cityPortal.getLayer(Yields)!;
     yieldMap.render(city.tilesWorked);
+
+    const unworkable = cityPortal.getLayer(Unworkable)!;
+    unworkable.setCity(city);
+    unworkable.render(city.tiles);
 
     cityPortal.render();
 

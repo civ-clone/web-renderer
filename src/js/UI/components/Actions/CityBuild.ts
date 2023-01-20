@@ -5,6 +5,8 @@ import Portal from '../Portal';
 import Transport from '../../../Engine/Transport';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
+import showCityAction from '../lib/showCityAction';
+import showCityOnMapAction from '../lib/showCityOnMap';
 
 export class CityBuild extends Action {
   #portal: Portal;
@@ -21,15 +23,12 @@ export class CityBuild extends Action {
       this.transport(),
       () => this.complete(),
       {
-        showCity: CityBuildSelectionWindow.showCityAction(
+        showCity: showCityAction(
           this.value().city,
           this.#portal,
           this.transport()
         ),
-        showCityOnMap: CityBuildSelectionWindow.showCityOnMapAction(
-          this.value().city,
-          this.#portal
-        ),
+        showCityOnMap: showCityOnMapAction(this.value().city, this.#portal),
       }
     );
   }
@@ -42,9 +41,9 @@ export class CityBuild extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="cityBuild" title="What would you like to build in ${
+            `<button class="large gradient cityBuild" title="What would you like to build in ${
               cityBuild.city.name
-            }?" style="background-image:url('${asset!.uri}')">`
+            }?"><img src="${asset!.uri}"></button>`
           )
         )
       );

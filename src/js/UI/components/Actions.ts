@@ -11,6 +11,7 @@ import Transport from '../../Engine/Transport';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { Spaceship } from './Actions/Spaceship';
+import CivilDisorder from './Actions/CivilDisorder';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -124,6 +125,15 @@ export class Actions extends Element implements IActions {
 
         case 'CityBuild':
           action = new CityBuild(playerAction, this.#portal, this.#transport);
+
+          break;
+
+        case 'CivilDisorder':
+          action = new CivilDisorder(
+            playerAction,
+            this.#portal,
+            this.#transport
+          );
 
           break;
 

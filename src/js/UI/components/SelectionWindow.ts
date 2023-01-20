@@ -1,32 +1,25 @@
-import {
-  NotificationWindow,
-  NotificationWindowOptions,
-} from './NotificationWindow';
+import { ActionWindow, ActionWindowOptions } from './ActionWindow';
 import { off, on, s } from '@dom111/element';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
+import { INotificationWindow } from './NotificationWindow';
+
+export interface ISelectionWindow extends INotificationWindow {
+  resize(): void;
+  selectionList(): HTMLSelectElement;
+}
 
 export interface SelectionWindowOption {
   label?: string;
   value: any;
 }
 
-export interface SelectionWindowAction {
-  label: string;
-  action: (select: SelectionWindow) => void;
-}
-
-export interface SelectionWindowActions {
-  [key: string]: SelectionWindowAction;
-}
-
-export interface SelectionWindowOptions extends NotificationWindowOptions {
-  actions?: SelectionWindowActions;
+export interface SelectionWindowOptions extends ActionWindowOptions {
   autoFocus?: boolean;
   displayAll?: boolean;
 }
 
-export class SelectionWindow extends NotificationWindow {
+export class SelectionWindow extends ActionWindow implements ISelectionWindow {
   #resizeHandler = () => this.resize();
   #selectionList: HTMLSelectElement;
 
@@ -44,8 +37,7 @@ export class SelectionWindow extends NotificationWindow {
       actions: {
         primary: {
           label: 'OK',
-          action: (selectionWindow) =>
-            chooseHandler(selectionWindow.selectionList().value),
+          action: () => chooseHandler(this.selectionList().value),
           ...(options.actions?.primary ?? {}),
         },
         ...options.actions,
@@ -137,20 +129,7 @@ export class SelectionWindow extends NotificationWindow {
           : body === null
           ? []
           : [s(`<p>${body}</p>`)]),
-        selectionList,
-        s(
-          '<footer></footer>',
-          ...Object.entries(options.actions!).map(([, { label, action }]) =>
-            h(s(`<button>${label}</button>`), {
-              click: () => action(this),
-              keydown: (event) => {
-                if (event.key === 'Enter') {
-                  action(this);
-                }
-              },
-            })
-          )
-        )
+        selectionList
       ),
       options
     );
@@ -189,7 +168,8 @@ export class SelectionWindow extends NotificationWindow {
         (this.element().firstElementChild! as HTMLElement).offsetHeight -
         ((this.selectionList().previousElementSibling as HTMLElement)
           ?.offsetHeight ?? 0) -
-        (this.selectionList().nextElementSibling as HTMLElement).offsetHeight
+        ((this.selectionList().parentElement?.nextElementSibling as HTMLElement)
+          ?.offsetHeight ?? 0)
       }px - 2.1em)`;
     } catch (e) {
       console.warn(e);

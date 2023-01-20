@@ -1941,7 +1941,7 @@
 
 "@civ-clone/civ1-city-happiness@github:civ-clone/civ1-city-happiness":
   version "0.1.0"
-  resolved "https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/00913783fa147613d755860a9c6bde6c7883c818"
+  resolved "https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/1732a612522f349e141ffa779e05e5a28ddd55aa"
   dependencies:
     "@civ-clone/base-city-yield-city-improvement-content" "^0.1.0"
     "@civ-clone/base-city-yield-happiness" "^0.1.0"
@@ -2014,7 +2014,7 @@
 
 "@civ-clone/civ1-city@github:civ-clone/civ1-city":
   version "0.1.0"
-  resolved "https://codeload.github.com/civ-clone/civ1-city/tar.gz/0f0879abaa413a9b86fe70cf47841f0f1b04d332"
+  resolved "https://codeload.github.com/civ-clone/civ1-city/tar.gz/969945f1eb8ed196eed84ad29062038c7299a223"
   dependencies:
     "@civ-clone/base-city-improvement-courthouse" "^0.1.0"
     "@civ-clone/base-city-improvement-palace" "^0.1.0"
@@ -2032,7 +2032,7 @@
     "@civ-clone/civ1-government" "github:civ-clone/civ1-government"
     "@civ-clone/civ1-unit" "github:civ-clone/civ1-unit"
     "@civ-clone/civ1-world" "github:civ-clone/civ1-world"
-    "@civ-clone/core-city" "^0.1.0"
+    "@civ-clone/core-city" "^0.1.10"
     "@civ-clone/core-city-build" "^0.1.0"
     "@civ-clone/core-city-growth" "^0.1.0"
     "@civ-clone/core-city-happiness" "^0.1.0"
@@ -2339,7 +2339,7 @@
 
 "@civ-clone/civ1-unit@github:civ-clone/civ1-unit":
   version "0.1.0"
-  resolved "https://codeload.github.com/civ-clone/civ1-unit/tar.gz/394e6852bf0474a7a2a5e23ef57521584629dcad"
+  resolved "https://codeload.github.com/civ-clone/civ1-unit/tar.gz/1c23143f3cb2ca74625fdd24aca91bf978652026"
   dependencies:
     "@civ-clone/base-player-action-active-unit" "^0.1.0"
     "@civ-clone/base-player-action-inactive-unit" "^0.1.0"
@@ -2590,10 +2590,10 @@
     "@civ-clone/core-registry" "^0.1.0"
     "@civ-clone/core-rule" "^0.1.0"
 
-"@civ-clone/core-city@^0.1.0", "@civ-clone/core-city@^0.1.9":
-  version "0.1.9"
-  resolved "https://registry.yarnpkg.com/@civ-clone/core-city/-/core-city-0.1.9.tgz#76054a2abfa2c48f7612f919a01edd0d4f134354"
-  integrity sha512-Nj3D7VfRBx2m1TUAQ0TvizXVDxBglypfMOYmUp9kn8pgufqjPliE2Ke/kVtU0Fxx3N5FSP5pvQmI386X9F6nAg==
+"@civ-clone/core-city@^0.1.0", "@civ-clone/core-city@^0.1.10", "@civ-clone/core-city@^0.1.9":
+  version "0.1.10"
+  resolved "https://registry.yarnpkg.com/@civ-clone/core-city/-/core-city-0.1.10.tgz#f464ad53c0b08f8653498f7f8c9a6d20b82ff1e7"
+  integrity sha512-pui1Ryo/sAizoeYWW5SKvRIIkRIoBEEmlC3x74gx3e7BVViAIFo/d4gkN8JUzJxY/3eHFJ/hHiJcWKdRNYDg7w==
   dependencies:
     "@civ-clone/core-data-object" "^0.1.0"
     "@civ-clone/core-player" "^0.1.0"
@@ -3110,9 +3110,9 @@ console-control-strings@^1.0.0, console-control-strings@^1.1.0:
   integrity sha512-ty/fTekppD2fIwRvnZAVdeOiGd1c7YXEixbgJTNzqcxJWKQnjJ/V1bNEEE6hygpM3WjwHFUVK6HTjWSzV4a8sQ==
 
 core-js@^3.1.3:
-  version "3.27.1"
-  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.27.1.tgz#23cc909b315a6bb4e418bf40a52758af2103ba46"
-  integrity sha512-GutwJLBChfGCpwwhbYoqfv03LAfmiz7e7D/BNxzeMxwQf10GRSzqiOjx7AmtEk+heiD/JWmBuyBPgFtx0Sg1ww==
+  version "3.27.2"
+  resolved "https://registry.yarnpkg.com/core-js/-/core-js-3.27.2.tgz#85b35453a424abdcacb97474797815f4d62ebbf7"
+  integrity sha512-9ashVQskuh5AZEZ1JdQWp1GqSoC1e1G87MzRqg2gIfVAQ7Qn9K+uFj8EcniUFA4P2NLZfV+TOlX1SzoKfo+s7w==
 
 debug@4:
   version "4.3.4"

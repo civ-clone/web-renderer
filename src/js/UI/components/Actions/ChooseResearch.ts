@@ -39,9 +39,9 @@ export class ChooseResearch extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="chooseResearch" title="Choose research" style="background-image:url('${
+            `<button class="large gradient chooseResearch" title="Choose research"><img src="${
               asset!.uri
-            }')">`
+            }"></button>`
           )
         )
       );

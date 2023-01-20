@@ -4,6 +4,7 @@ import Map from './Map';
 import Transport from '../../Engine/Transport';
 import World from './World';
 import { s } from '@dom111/element';
+import { IConstructor } from '@civ-clone/core-registry/Registry';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -103,8 +104,8 @@ export class Portal
     return this.#center;
   }
 
-  getLayer(LayerType: typeof Map): Map | null {
-    return this.getLayers(LayerType).shift() ?? null;
+  getLayer<T extends Map>(LayerType: IConstructor<T>): T | null {
+    return (this.getLayers(LayerType).shift() as T) ?? null;
   }
 
   getLayers(LayerType: typeof Map): Map[] {

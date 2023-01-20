@@ -90,6 +90,7 @@ export interface PlayerAction extends EntityInstance {
   value:
     | Unit
     | PlayerResearch
+    | City
     | CityBuild
     | PlayerTradeRates
     | PlayerGovernment
@@ -155,6 +156,7 @@ export interface Tile extends EntityInstance, Coordinate {
   isLand: boolean;
   isWater: boolean;
   terrain: Terrain;
+  workedBy: City | null;
   units: Unit[];
   yields: Yield[];
 }

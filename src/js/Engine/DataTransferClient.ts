@@ -691,13 +691,6 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
-    engineInstance.on('city:civil-disorder', (city: City) => {
-      if (city.player() === this.player()) {
-        // TODO: make this an optional action
-        this.sendNotification(`Civil disorder in ${city.name()}!`);
-      }
-    });
-
     engineInstance.on('city:order-restored', (city: City) => {
       if (city.player() === this.player()) {
         this.sendNotification(`Order restored in ${city.name()}!`);
@@ -866,7 +859,7 @@ export class DataTransferClient extends Client implements IClient {
     }
 
     if (!name) {
-      console.log('action not specified');
+      console.log(`action not specified: `, action);
 
       return false;
     }

@@ -104,6 +104,7 @@ export class Renderer {
         secondaryActionArea = document.getElementById(
           'other-actions'
         ) as HTMLElement,
+        gameMenu = document.getElementById('game-menu') as HTMLElement,
         gameArea = document.getElementById('game') as HTMLElement,
         mapWrapper = document.getElementById('map') as HTMLElement,
         mapPortal = mapWrapper.querySelector('canvas') as HTMLCanvasElement,
@@ -376,21 +377,31 @@ export class Renderer {
             //   lastTurn = data.turn.value;
             // }
 
-            primaryActions.build(data.player.mandatoryActions);
+            const primaryActionList = [
+                'ChooseResearch',
+                'CityBuild',
+                'CivilDisorder',
+                'EndTurn',
+              ],
+              ignoredActionList = [
+                'ActiveUnit',
+                'ChangeProduction',
+                'CompleteProduction',
+                'InactiveUnit',
+              ];
+
+            primaryActions.build([
+              ...data.player.actions.filter((action) =>
+                primaryActionList.includes(action._)
+              ),
+            ]);
 
             secondaryActions.build(
               data.player.actions.filter(
                 (action) =>
-                  ![
-                    // Filter out any unneeded `PlayerAction`s and any `MandatoryAction`s.
-                    'ActiveUnit',
-                    'ChangeProduction',
-                    'ChooseProduction',
-                    'ChooseResearch',
-                    'CityBuild',
-                    'CompleteProduction',
-                    'InactiveUnit',
-                  ].includes(action._)
+                  ![...primaryActionList, ...ignoredActionList].includes(
+                    action._
+                  )
               )
             );
 

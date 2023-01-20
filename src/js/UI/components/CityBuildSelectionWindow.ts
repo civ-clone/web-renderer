@@ -1,9 +1,11 @@
 import { BuildItem, City as CityData, CityBuild } from '../types';
-import { SelectionWindow, SelectionWindowActions } from './SelectionWindow';
+import { ActionWindowActions } from './ActionWindow';
 import City from './City';
 import Portal from './Portal';
+import SelectionWindow, { ISelectionWindow } from './SelectionWindow';
 import Transport from '../../Engine/Transport';
 import { reduceKnownYield } from '../lib/yieldMap';
+import { INotificationWindow } from './NotificationWindow';
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 
@@ -11,32 +13,11 @@ export class CityBuildSelectionWindow extends SelectionWindow {
   #onComplete: onCompleteHandler;
   #transport: Transport;
 
-  static showCityAction = (
-    city: CityData,
-    portal: Portal,
-    transport: Transport
-  ) => ({
-    label: 'View city',
-    action(selectionWindow: SelectionWindow) {
-      selectionWindow.close();
-
-      new City(city, portal, transport);
-    },
-  });
-  static showCityOnMapAction = (city: CityData, portal: Portal) => ({
-    label: 'Show on map',
-    action(selectionWindow: SelectionWindow) {
-      selectionWindow.close();
-
-      portal.setCenter(city.tile.x, city.tile.y);
-    },
-  });
-
   constructor(
     cityBuild: CityBuild,
     transport: Transport,
     onComplete: onCompleteHandler = () => {},
-    additionalActions: SelectionWindowActions = {}
+    additionalActions: ActionWindowActions = {}
   ) {
     const turns = (buildItem: BuildItem) =>
       Math.max(

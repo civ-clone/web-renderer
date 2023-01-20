@@ -16,11 +16,40 @@
     padding: 0;
     width: 3.1em;
 
+    &.gradient {
+      border: none;
+      box-sizing: border-box;
+
+      &:hover,
+      &:focus,
+      &:focus-visible {
+        filter: brightness(120%);
+      }
+
+      &:active {
+        filter: brightness(80%);
+      }
+
+      img {
+        /* TODO: use the scale etc */
+        width: 16px;
+      }
+    }
+
+    &.large {
+      font-size: 2.75rem;
+      height: 4rem !important;
+      width: 4rem !important;
+
+      img {
+        /* TODO: use the scale etc */
+        width: 28px;
+      }
+    }
+
     &:active {
       background-color: #aaa;
-      position: relative;
-      top: 2px;
-      left: 2px;
+      transform: translate(2px, 2px);
     }
 
     &:hover {
@@ -28,17 +57,21 @@
     }
 
     &.chooseResearch {
-      &:focus,
-      &:focus-visible {
-        border-color: #25e0e8;
-      }
+      background:
+              radial-gradient(circle at 50% 15%,#b1e6ef 0%,transparent 50%),
+              radial-gradient(circle,#297ea8 0%,#27627e 64%,#6a6c6e 64%,#0d0d0d 67%,#bcb2c2 67%,#898bc4 69%,#4c4194 69%,#7f7f7d 70%);
     }
 
     &.cityBuild {
-      &:focus,
-      &:focus-visible {
-        border-color: #e8e8e8;
-      }
+      background:
+              radial-gradient(circle at 50% 15%, #ffedb6 0%, transparent 50%),
+              radial-gradient(circle, #ffc709 0%, #c08000 64%, #8a6c1e 64%, #300d00 67%, #fce2b2 67%, #c9ab84 69%, #9c8144 69%, #cfaf7d 70%);
+    }
+
+    &.civilDisorder {
+      background:
+              radial-gradient(circle at 50% 15%, #ffb6b6 0%, transparent 50%),
+              radial-gradient(circle, #ff0909 0%, #c00000 60%, #300000 60%, #300000 64%, #fcb2b2 64%, #fcb2b2 68%, #9c4444 68%, #9c4444 70%);
     }
 
     &.endTurn {
@@ -87,12 +120,11 @@
   right: 0;
 
   .action {
-    margin: 0 1em 1em;
+    margin: 0 1rem 1rem;
 
     button {
-      font-size: 12px;
-      height: 3.1em;
-      width: 3.1em;
+      height: 3rem;
+      width: 3rem;
     }
   }
 }
@@ -108,8 +140,8 @@
     margin: 0 0 0 .5em;
 
     button {
-      height: 2em;
-      width: 2em;
+      height: 2rem;
+      width: 2rem;
     }
   }
 }
