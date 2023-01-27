@@ -1,3 +1,7 @@
+:root {
+  --scale: 2;
+}
+
 body {
   background: #000;
   color: #edc;
@@ -17,21 +21,25 @@ input {
   overflow: hidden;
 }
 
-@import "components/actions";
-@import "components/city";
-@import "components/city-status";
-@import "components/game";
-@import "components/happiness-report";
-@import "components/icons";
-@import "components/mainmenu";
-@import "components/map";
-@import "components/notification-area";
-@import "components/notification-window";
-@import "components/releases";
-@import "components/science-report";
-@import "components/selection-window";
-@import "components/sidebar";
-@import "components/spaceship-window";
-@import "components/supported-unit";
-@import "components/unit-actions";
-@import "components/window";
+@import 'buttons';
+@import 'components/actions';
+@import 'components/city';
+@import 'components/city-status';
+@import 'components/game';
+@import 'components/game-menu';
+@import 'components/game-options';
+@import 'components/happiness-report';
+@import 'components/icons';
+@import 'components/mainmenu';
+@import 'components/map';
+@import 'components/notification-area';
+@import 'components/notification-window';
+@import 'components/popup-menu';
+@import 'components/releases';
+@import 'components/science-report';
+@import 'components/selection-window';
+@import 'components/sidebar';
+@import 'components/spaceship-window';
+@import 'components/supported-unit';
+@import 'components/trade-report';
+@import 'components/window';

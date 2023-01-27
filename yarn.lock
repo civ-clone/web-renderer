@@ -1941,7 +1941,7 @@
 
 "@civ-clone/civ1-city-happiness@github:civ-clone/civ1-city-happiness":
   version "0.1.0"
-  resolved "https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/1732a612522f349e141ffa779e05e5a28ddd55aa"
+  resolved "https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/81de021c867b3eb379935edf0b45802d2c4e6332"
   dependencies:
     "@civ-clone/base-city-yield-city-improvement-content" "^0.1.0"
     "@civ-clone/base-city-yield-happiness" "^0.1.0"
@@ -2304,7 +2304,7 @@
 
 "@civ-clone/civ1-trade-rate@github:civ-clone/civ1-trade-rate":
   version "0.1.0"
-  resolved "https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/e05d1878b7126745e08dad22fdc9893d6100b16a"
+  resolved "https://codeload.github.com/civ-clone/civ1-trade-rate/tar.gz/24f5e144b4aa2e64e221330075e63f8cdcfce31f"
   dependencies:
     "@civ-clone/base-city-yield-corruption" "^0.1.0"
     "@civ-clone/base-player-action-adjust-trade-rates" "^0.1.0"
@@ -2316,7 +2316,7 @@
     "@civ-clone/core-player" "^0.1.0"
     "@civ-clone/core-registry" "^0.1.0"
     "@civ-clone/core-rule" "^0.1.0"
-    "@civ-clone/core-trade-rate" "^0.1.0"
+    "@civ-clone/core-trade-rate" "^0.1.3"
     "@civ-clone/core-yield" "^0.1.0"
 
 "@civ-clone/civ1-treasury@github:civ-clone/civ1-treasury":
@@ -2630,9 +2630,9 @@
     "@civ-clone/core-registry" "^0.1.0"
 
 "@civ-clone/core-data-object@^0.1.0", "@civ-clone/core-data-object@^0.1.11", "@civ-clone/core-data-object@^0.1.9":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@civ-clone/core-data-object/-/core-data-object-0.1.11.tgz#babb09beab258724466b0fb442cfde7460ce1113"
-  integrity sha512-ffAwt6Tg04ax0YQXc2G3peOAX+GdkR3ExxGWoewvXA6Dgv9J8bQo7SJHjABld70MwEtqL5wWWvWkPllI/hXBMw==
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@civ-clone/core-data-object/-/core-data-object-0.1.12.tgz#3f4d40fd88aef34b29767488bccbde5d8c5ecd44"
+  integrity sha512-hvDWU9QGNnejrcmJAzoKROMtRumpGKF7fxDMDaEK+qiBiLcHsEWvHpATzGeuah6AFqVuWtzbbxn5zDw0Aq+bOQ==
   dependencies:
     "@civ-clone/core-registry" "^0.1.0"
 
@@ -2774,10 +2774,10 @@
     "@civ-clone/core-terrain" "^0.1.0"
     "@civ-clone/core-world" "^0.1.0"
 
-"@civ-clone/core-trade-rate@^0.1.0", "@civ-clone/core-trade-rate@^0.1.2":
-  version "0.1.2"
-  resolved "https://registry.yarnpkg.com/@civ-clone/core-trade-rate/-/core-trade-rate-0.1.2.tgz#a550e60bc853ad87cfd21893f457a713a65cc41d"
-  integrity sha512-4/IbHZhY6KjhjaXbaeuoXI/Pj0hamLTFkzJcj1u6B9BdPoUV+iSDvGIE7Csyj2zb5hGE88tgqUdWLyE1RCcFBA==
+"@civ-clone/core-trade-rate@^0.1.0", "@civ-clone/core-trade-rate@^0.1.2", "@civ-clone/core-trade-rate@^0.1.3":
+  version "0.1.3"
+  resolved "https://registry.yarnpkg.com/@civ-clone/core-trade-rate/-/core-trade-rate-0.1.3.tgz#f6e4cb64d0dc2442881a02ef07e71c0a2b0c4b02"
+  integrity sha512-m0eMEYH/9fLfvT3adcPvHS8Elbzq1vdhuvljb1Xq8c+2VgBlTCUqU2FeTNVCp4eEbgXLJwuZuA39V69BdvFpAg==
   dependencies:
     "@civ-clone/core-data-object" "^0.1.0"
     "@civ-clone/core-player" "^0.1.0"
@@ -2986,6 +2986,11 @@
     rimraf "^3.0.2"
     semver "^7.3.5"
     tar "^6.1.11"
+
+"@types/feather-icons@^4.29.1":
+  version "4.29.1"
+  resolved "https://registry.yarnpkg.com/@types/feather-icons/-/feather-icons-4.29.1.tgz#6feec838a628fe3cf93582b71f4809e9753c38f7"
+  integrity sha512-8+PdenCN8UWTfyIHNaJdmk/oPg6zyw7S9kHtT8PdkmHEwfTHSrSWEHpNZJzbuWmZBXQKA/+dLVXjrloX9XixPg==
 
 "@types/marked@^4.0.8":
   version "4.0.8"

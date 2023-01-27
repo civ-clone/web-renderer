@@ -1,10 +1,11 @@
 import Action from './Action';
 import { Spaceship as SpaceshipData } from '../../types';
 import Window from '../Window';
+import civilizationAttribute from '../lib/civilizationAttribute';
+import globeIcon from 'feather-icons/dist/icons/globe.svg';
 import { h } from '../../lib/html';
 import { instance as localeProviderInstance } from '../../LocaleProvider';
 import { s } from '@dom111/element';
-import civilizationAttribute from '../lib/civilizationAttribute';
 
 type SpaceshipYieldMap = {
   [key: string]: [number, number];
@@ -174,7 +175,9 @@ export class Spaceship extends Action {
 
   build(): void {
     this.append(
-      s(`<button class="spaceship" title="View spaceship"></button>`)
+      s(
+        `<button class="spaceship" title="View spaceship"><img src="${globeIcon}"/></button>`
+      )
     );
   }
 

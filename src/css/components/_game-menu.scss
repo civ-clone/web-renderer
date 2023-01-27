@@ -1,0 +1,14 @@
+@use 'action-button';
+
+#game-menu {
+  padding: 1rem;
+  position: absolute;
+  right: 0;
+  top: 0;
+
+  button {
+    @include action-button.main();
+    @include action-button.background-gradient-silver-ring();
+    @include action-button.white-child-svg();
+  }
+}

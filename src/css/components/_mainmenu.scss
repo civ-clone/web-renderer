@@ -21,7 +21,7 @@
     max-width: 20em;
     opacity: 0;
     position: absolute;
-    transition: opacity 1.5s .5s;
+    transition: opacity 1.5s 0.5s;
 
     button {
       appearance: none;
@@ -31,7 +31,7 @@
       cursor: pointer;
       font-weight: bold;
       outline: 0;
-      padding: .5em;
+      padding: 0.5em;
       text-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
       width: 100%;
 
@@ -60,5 +60,5 @@
 .customise-world .option {
   display: flex;
   justify-content: space-between;
-  margin: .5rem .5rem 0;
+  margin: 0.5rem 0.5rem 0;
 }

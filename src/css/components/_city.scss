@@ -92,11 +92,11 @@
 
     &:not(:last-child),
     .used:not(:empty) {
-      margin-right: .5em;
+      margin-right: 0.5em;
     }
 
     @for $i from 0 through 14 {
-      &[data-max-width="#{$i}"] {
+      &[data-max-width='#{$i}'] {
         .yield-icon {
           max-width: #{$i}px;
         }

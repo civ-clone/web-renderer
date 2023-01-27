@@ -14,7 +14,7 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
 
   return s(
     `<div><p><strong>Researching ${
-      playerResearch.researching ? playerResearch.researching._ : 'Nothing'
+      playerResearch.researching ? playerResearch.researching._ : 'nothing'
     }</strong>${
       playerResearch.researching
         ? ` ${renderProgress(playerResearch, yields, 'Research')}`

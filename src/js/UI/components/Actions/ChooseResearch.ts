@@ -39,7 +39,7 @@ export class ChooseResearch extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="large gradient chooseResearch" title="Choose research"><img src="${
+            `<button class="large chooseResearch" title="Choose research"><img src="${
               asset!.uri
             }"></button>`
           )

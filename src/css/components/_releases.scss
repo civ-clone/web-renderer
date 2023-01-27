@@ -11,10 +11,11 @@
   dd,
   h2 {
     &:has(+ [aria-expanded]) {
-      background: url('feather-icons/dist/icons/arrow-right.svg') no-repeat center left;
+      background: url('feather-icons/dist/icons/arrow-right.svg') no-repeat
+        center left;
       padding-left: 2rem;
 
-      &[aria-expanded="false"] {
+      &[aria-expanded='false'] {
         background-image: url('feather-icons/dist/icons/arrow-up.svg');
       }
     }
@@ -32,7 +33,7 @@
     height: auto;
     overflow: hidden;
 
-    &[aria-expanded="false"] {
+    &[aria-expanded='false'] {
       height: 0;
     }
   }

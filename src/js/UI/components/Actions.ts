@@ -3,15 +3,15 @@ import Action from './Actions/Action';
 import AdjustTradeRates from './Actions/AdjustTradeRates';
 import ChooseResearch from './Actions/ChooseResearch';
 import CityBuild from './Actions/CityBuild';
+import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
 import { PlayerAction } from '../types';
 import Portal from './Portal';
 import Revolution from './Actions/Revolution';
+import Spaceship from './Actions/Spaceship';
 import Transport from '../../Engine/Transport';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
-import { Spaceship } from './Actions/Spaceship';
-import CivilDisorder from './Actions/CivilDisorder';
 
 declare global {
   interface GlobalEventHandlersEventMap {

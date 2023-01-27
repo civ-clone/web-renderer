@@ -1,0 +1,25 @@
+.trade-report .two-column-wrapper {
+  display: flex;
+
+  > div {
+    width: 50%;
+  }
+
+  .totals {
+    display: flex;
+    flex-wrap: wrap;
+
+    dt {
+      font-weight: bold;
+      width: 50%;
+    }
+
+    dd {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0 1rem 0 0;
+      text-align: right;
+      width: 50%;
+    }
+  }
+}

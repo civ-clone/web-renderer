@@ -1,5 +1,15 @@
 import { City, Yield } from '../types';
+import instanceOf from './instanceOf';
 
+export const knownGroupParents: string[] = [
+  'Food',
+  'Production',
+  'Trade',
+  'Gold',
+  'Research',
+  'Happiness',
+  'Unhappiness',
+];
 export const knownGroups: { [key: string]: string } = {
   Food: 'Food',
   UnitSupportFood: 'Food',
@@ -44,9 +54,9 @@ export const reduceKnownYields = (
   ...yieldNames: string[]
 ): number[] =>
   yields.reduce(
-    (yields, cityYield, index) => {
+    (yields, cityYield) => {
       yieldNames.forEach((yieldName, index) => {
-        if (knownGroupLookup[yieldName]?.includes(cityYield._)) {
+        if (instanceOf(cityYield, yieldName)) {
           yields[index] += cityYield.value;
         }
       });

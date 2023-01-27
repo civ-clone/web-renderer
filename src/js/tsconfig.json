@@ -2,16 +2,12 @@
   "compilerOptions": {
     "noEmit": true,
     "esModuleInterop": true,
-    "lib": [
-      "dom",
-      "es2019",
-      "es2021.intl"
-
-    ],
+    "lib": ["dom", "es2019", "es2021.intl"],
     "moduleResolution": "node",
     "module": "esnext",
     "resolveJsonModule": true,
     "strict": true,
     "target": "ES2018"
-  }
+  },
+  "include": ["src/js/types.d.ts"]
 }

@@ -17,7 +17,7 @@ export class AdjustTradeRates extends Action {
       s(
         '<div></div>',
         ...this.value().all.map((tradeRate) => {
-          const slider = new LockedSlider(tradeRate._, tradeRate.value * 100);
+          const slider = new LockedSlider(tradeRate._, tradeRate.value);
 
           sliders.push(slider);
 
@@ -29,10 +29,8 @@ export class AdjustTradeRates extends Action {
     window.on('close', () => {
       const value = this.#sliderGroup!.sliders().map((slider) => [
         slider.label(),
-        parseFloat((slider.value() / 100).toFixed(2)),
+        slider.value(),
       ]);
-
-      console.info('AdjustTradeRates: ', value);
 
       this.transport().send('action', {
         name: 'AdjustTradeRates',
@@ -50,9 +48,9 @@ export class AdjustTradeRates extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="adjustTradeRates" title="Adjust trade rates" style="background-image:url('${
+            `<button class="adjustTradeRates small" title="Adjust trade rates"><img src="${
               asset!.uri
-            }')"></button>`
+            }"></button>`
           )
         )
       );

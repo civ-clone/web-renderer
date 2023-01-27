@@ -41,7 +41,7 @@ export class CityBuild extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="large gradient cityBuild" title="What would you like to build in ${
+            `<button class="large cityBuild" title="What would you like to build in ${
               cityBuild.city.name
             }?"><img src="${asset!.uri}"></button>`
           )

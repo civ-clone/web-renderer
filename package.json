@@ -16,8 +16,8 @@
     "esbuild:bundle": "node esbuild.js",
     "esbuild:bundle:dev": "node esbuild.js dev",
     "prebuild": "npm run build:generate-plugins-ts && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
-    "prettier:check": "prettier --config .prettierrc '**/*.ts'",
-    "prettier:format": "prettier --config .prettierrc '**/*.ts' --write",
+    "prettier:check": "prettier --config .prettierrc 'src/**/*.{ts,scss}'",
+    "prettier:format": "prettier --config .prettierrc 'src/**/*.{ts,scss}' --write",
     "ts:compile": "tsc --build tsconfig.json",
     "watch": "node esbuild.js watch"
   },
@@ -27,6 +27,7 @@
     ]
   },
   "devDependencies": {
+    "@types/feather-icons": "^4.29.1",
     "@types/marked": "^4.0.8",
     "@types/node": "^14.0.0",
     "esbuild": "^0.14.32",

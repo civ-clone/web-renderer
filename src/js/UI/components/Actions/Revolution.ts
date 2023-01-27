@@ -39,9 +39,9 @@ export class Revolution extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="chooseGovernment" title="Choose government" style="background-image:url('${
+            `<button class="chooseGovernment small" title="Choose government"><img src="${
               asset!.uri
-            }')"></button>`
+            }"></button>`
           )
         )
       );

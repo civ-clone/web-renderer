@@ -1,4 +1,5 @@
 import Action from './Action';
+import checkIcon from 'feather-icons/dist/icons/check-circle.svg';
 import { s } from '@dom111/element';
 
 export class EndTurn extends Action {
@@ -9,7 +10,11 @@ export class EndTurn extends Action {
   }
 
   build(): void {
-    this.append(s(`<button class="endTurn" title="End turn"></button>`));
+    this.append(
+      s(
+        `<button class="large gradient endTurn" title="End turn"><img src="${checkIcon}"</button>`
+      )
+    );
   }
 }
 

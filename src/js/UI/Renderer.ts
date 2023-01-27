@@ -19,6 +19,7 @@ import ConfirmationWindow from './components/ConfirmationWindow';
 import Feature from './components/Map/Feature';
 import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
+import GameMenu from './components/GameMenu';
 import GamePortal from './components/GamePortal';
 import GoodyHuts from './components/Map/GoodyHuts';
 import HappinessReport from './components/HappinessReport';
@@ -31,21 +32,21 @@ import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
-import Portal from './components/Portal';
 import ScienceReport from './components/ScienceReport';
 import SelectionWindow from './components/SelectionWindow';
 import Terrain from './components/Map/Terrain';
+import TradeReport from './components/TradeReport';
 import Transport from '../Engine/Transport';
 import UnitDetails from './components/UnitDetails';
 import Units from './components/Map/Units';
 import World from './components/World';
 import Yields from './components/Map/Yields';
 import { assetStore } from './AssetStore';
+import civilizationAttribute from './components/lib/civilizationAttribute';
 import { h } from './lib/html';
 import { instance as localeProviderInstance } from './LocaleProvider';
+import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
-import civilizationAttribute from './components/lib/civilizationAttribute';
-import gamePortal from './components/GamePortal';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -91,9 +92,7 @@ export class Renderer {
       }
     });
 
-    const options = {
-      autoEndOfTurn: true,
-    };
+    options.set('autoEndOfTurn', true);
 
     try {
       const notificationArea = document.getElementById(
@@ -299,7 +298,15 @@ export class Renderer {
               secondaryActionArea,
               portal,
               this.#transport
+            ),
+            gameMenuItem = new GameMenu(
+              gameMenu,
+              data.player,
+              portal,
+              transport
             );
+
+          gameMenuItem.build();
 
           yieldsMap.setVisible(false);
 
@@ -388,13 +395,25 @@ export class Renderer {
                 'ChangeProduction',
                 'CompleteProduction',
                 'InactiveUnit',
-              ];
+              ],
+              primaryActionPriority: {
+                [key: string]: number;
+              } = {
+                EndTurn: 100,
+                ChooseResearch: 80,
+                CityBuild: 60,
+                CivilDisorder: 10,
+              };
 
-            primaryActions.build([
-              ...data.player.actions.filter((action) =>
-                primaryActionList.includes(action._)
-              ),
-            ]);
+            primaryActions.build(
+              data.player.actions
+                .filter((action) => primaryActionList.includes(action._))
+                .sort(
+                  (a, b) =>
+                    (primaryActionPriority[b._] ?? 0) -
+                    (primaryActionPriority[a._] ?? 0)
+                )
+            );
 
             secondaryActions.build(
               data.player.actions.filter(
@@ -464,7 +483,7 @@ export class Renderer {
             minimap.update();
 
             if (
-              options.autoEndOfTurn &&
+              options.get('autoEndOfTurn') &&
               data.player.mandatoryActions.length === 1 &&
               data.player.mandatoryActions.every(
                 (action) => action._ === 'EndTurn'
@@ -627,7 +646,8 @@ export class Renderer {
             },
             leaderScreensMap: { [key: string]: () => any } = {
               F1: () => new CityStatus(data.player, portal, transport),
-              F4: () => new HappinessReport(data.player),
+              F4: () => new HappinessReport(data.player, portal, transport),
+              F5: () => new TradeReport(data.player, portal, transport),
               F6: () => new ScienceReport(data.player),
             };
 
@@ -697,7 +717,7 @@ export class Renderer {
             if (
               key === 'Enter' &&
               data.player.mandatoryActions.some(
-                (action) => action._ === 'EndOfTurn'
+                (action) => action._ === 'EndTurn'
               )
             ) {
               transport.send('action', {

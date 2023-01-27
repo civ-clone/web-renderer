@@ -3,7 +3,7 @@
   border: 1px solid #ccc;
   border-radius: 3px;
   color: #123;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, .6);
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
   outline: 0;
   overflow: auto;
   position: fixed;
@@ -24,8 +24,8 @@
     color: #edc;
     display: flex;
     font-weight: bold;
-    padding: .5em;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, .6);
+    padding: 0.5em;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
 
     h3 {
       flex-grow: 1;
@@ -81,6 +81,6 @@
   }
 
   :not(header) button {
-    margin: 1em .5em;
+    margin: 1em 0.5em;
   }
 }

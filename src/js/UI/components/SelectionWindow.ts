@@ -120,6 +120,10 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
       selectionList.setAttribute('autofocus', '');
     }
 
+    if (options.autoFocus && optionList.length === 1) {
+      selectionList.setAttribute('autofocus', '');
+    }
+
     super(
       title,
       s(

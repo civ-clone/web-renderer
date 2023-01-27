@@ -1,0 +1,34 @@
+.popup-menu {
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  opacity: 1;
+  padding: 0.5rem;
+  position: absolute;
+  transition: all 0.2s;
+
+  &.center {
+    transform: translate(-50%, -1rem);
+  }
+
+  &.right {
+    transform: translate(-100%, 0);
+  }
+
+  &.hide {
+    opacity: 0;
+  }
+
+  button {
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+
+    &:last-child {
+      margin: 0;
+    }
+  }
+
+  &.full-width {
+    white-space: nowrap;
+  }
+}

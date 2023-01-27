@@ -691,6 +691,12 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
+    engineInstance.on('city:civil-disorder', (city: City) => {
+      if (city.player() === this.player()) {
+        this.sendNotification(`Civil disorder in ${city.name()}!`);
+      }
+    });
+
     engineInstance.on('city:order-restored', (city: City) => {
       if (city.player() === this.player()) {
         this.sendNotification(`Order restored in ${city.name()}!`);

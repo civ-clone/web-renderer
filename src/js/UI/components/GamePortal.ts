@@ -8,7 +8,6 @@ import UnitActionMenu from './UnitActionMenu';
 export class GamePortal extends Portal {
   #activeUnit: Unit | null = null;
   #showActionMenuTimeout: number | null = null;
-  #unitActionMenu: UnitActionMenu | null = null;
 
   protected bindEvents(): void {
     on(this.canvas(), 'pointerup', (event) => {
@@ -19,12 +18,6 @@ export class GamePortal extends Portal {
       }
 
       this.clearTimeout();
-
-      if (this.#unitActionMenu !== null) {
-        this.#unitActionMenu.remove();
-
-        this.#unitActionMenu = null;
-      }
 
       const tile = this.tileFromOffsets(event.offsetX, event.offsetY),
         playerTileUnits = tile.units.filter(
@@ -53,21 +46,18 @@ export class GamePortal extends Portal {
         return;
       }
 
-      if (this.#unitActionMenu !== null) {
-        this.#unitActionMenu.element().remove();
-      }
-
-      this.#showActionMenuTimeout = window.setTimeout(() => {
-        this.#unitActionMenu = new UnitActionMenu(
-          x,
-          y,
-          this.#activeUnit as Unit,
-          tile,
-          this.transport()
-        );
-
-        document.body.append(this.#unitActionMenu.element());
-      }, 350);
+      this.#showActionMenuTimeout = window.setTimeout(
+        () =>
+          new UnitActionMenu(
+            this,
+            x,
+            y,
+            this.#activeUnit as Unit,
+            tile,
+            this.transport()
+          ),
+        350
+      );
     };
 
     // Prevent dragging address bar down by accident

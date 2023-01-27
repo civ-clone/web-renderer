@@ -6,6 +6,7 @@ export type PlainObject = {
 
 export interface Entity<Types = string> {
   _: Types;
+  __: Types[];
 }
 
 export interface EntityInstance<Types = string> extends Entity<Types> {
@@ -15,6 +16,8 @@ export interface EntityInstance<Types = string> extends Entity<Types> {
 export interface City extends EntityInstance {
   name: string;
   build: CityBuild;
+  celebrateLeader: boolean;
+  civilDisorder: boolean;
   growth: CityGrowth;
   improvements: EntityInstance[];
   player: Player;
@@ -269,4 +272,10 @@ export interface Spaceship extends EntityInstance {
   player: Player;
   successful: boolean;
   yields: Yield[];
+}
+
+declare module '**/*.svg' {
+  const content: string;
+
+  export default content;
 }

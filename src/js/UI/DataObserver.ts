@@ -1,8 +1,8 @@
-import { PlainObject } from './types';
+import { GameData, PlainObject } from './types';
 import { ObjectMap } from './lib/reconstituteData';
 
 export type dataUpdatedEvent = CustomEvent<{ data: PlainObject }>;
-export type dataUpdatedHandler = (data: PlainObject) => void;
+export type dataUpdatedHandler = (data: GameData) => void;
 export type patchDataReceivedEvent = CustomEvent<{ value: ObjectMap }>;
 
 declare global {

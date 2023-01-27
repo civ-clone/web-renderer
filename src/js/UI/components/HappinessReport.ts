@@ -1,5 +1,5 @@
 import {
-  City,
+  City as CityData,
   CityImprovementContent,
   GameData,
   MartialLaw,
@@ -7,15 +7,27 @@ import {
   Player,
   Yield,
 } from '../types';
-import Window from './Window';
-import { s } from '@dom111/element';
-import { renderPopulation } from './lib/cityYields';
-import Unit from './Unit';
-import { SupportedUnit } from './SupportedUnit';
-import Element from '@dom111/element';
 import DataObserver from '../DataObserver';
+import Element from '@dom111/element';
+import SupportedUnit from './SupportedUnit';
+import Unit from './Unit';
+import Window from './Window';
+import { assetStore } from '../AssetStore';
+import { h } from '../lib/html';
+import { instance as localeProvider } from '../LocaleProvider';
+import instanceOf from '../lib/instanceOf';
+import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
+import { renderPopulation } from './lib/cityYields';
+import { s } from '@dom111/element';
+import City from './City';
+import Portal from './Portal';
+import Transport from '../../Engine/Transport';
 
-const buildCityRow = async (city: City) => {
+const buildCityRow = async (
+  city: CityData,
+  portal: Portal,
+  transport: Transport
+) => {
   const happinessReasons: {
     [key: string]: (cityYield: any) => string | HTMLElement | Element;
   } = {
@@ -24,31 +36,76 @@ const buildCityRow = async (city: City) => {
     MartialLaw: (cityYield: MartialLaw) => new Unit(cityYield.unit),
     MilitaryUnhappiness: (cityYield: MilitaryUnhappiness) =>
       new SupportedUnit(city, cityYield.unit, ['MilitaryUnhappiness']),
+    LuxuryHappiness: () => {
+      const luxuriesElement = s(`<span></span>`);
+
+      assetStore
+        .getScaled(`./assets/${knownIcons.Luxuries}`, 2)
+        .then((image) =>
+          luxuriesElement.append(
+            s(`<img src="${image.toDataURL('image/png')}">`),
+            localeProvider.number(reduceKnownYield(city.yields, 'Luxuries'))
+          )
+        );
+
+      return luxuriesElement;
+    },
   };
 
-  const reasons = city.yields.reduce(
-    (reasons: (string | HTMLElement | Element)[], cityYield) => {
-      if (cityYield._ in happinessReasons) {
-        reasons.push(happinessReasons[cityYield._](cityYield));
-      }
+  const happinessYields = city.yields.filter(
+      (cityYield) =>
+        instanceOf(cityYield, 'Happiness', 'Unhappiness') &&
+        cityYield.value !== 0
+    ),
+    reasons = happinessYields.map((cityYield, index) =>
+      s(
+        `<div class="reason"></div>`,
+        renderPopulation(city, happinessYields.slice(0, index + 1)),
+        s(
+          `<div class="detail"></div>`,
+          happinessReasons[cityYield._]
+            ? happinessReasons[cityYield._](cityYield)
+            : cityYield._
+        )
+      )
+    );
 
-      return reasons;
-    },
-    []
-  );
+  const reasonWrapper = s('<div class="reasons hidden"></div>', ...reasons);
 
-  return s(
-    `<div class="city"><div class="name">${city.name}</div></div>`,
-    renderPopulation(city),
-    s('<div class="reasons"></div>', ...reasons)
+  return h(
+    s(
+      `<div class="city${city.celebrateLeader ? ' celebrateLeader' : ''}${
+        city.civilDisorder ? ' civilDisorder' : ''
+      }"><div class="name">${city.name}</div></div>`,
+      renderPopulation(city),
+      h(s('<button>View city</button>'), {
+        click(event: MouseEvent) {
+          event.stopPropagation();
+
+          new City(city, portal, transport);
+        },
+      }),
+      reasonWrapper
+    ),
+    {
+      click() {
+        if (reasons.length === 0) {
+          return;
+        }
+
+        reasonWrapper.classList.toggle('hidden');
+      },
+    }
   );
 };
 
 export class HappinessReport extends Window {
   #dataObserver: DataObserver;
   #player: Player;
+  #portal: Portal;
+  #transport: Transport;
 
-  constructor(player: Player) {
+  constructor(player: Player, portal: Portal, transport: Transport) {
     super('Happiness report', s('<div></div>'), {
       classes: 'happiness-report',
     });
@@ -68,6 +125,8 @@ export class HappinessReport extends Window {
     );
 
     this.#player = player;
+    this.#portal = portal;
+    this.#transport = transport;
 
     this.update();
   }
@@ -79,9 +138,11 @@ export class HappinessReport extends Window {
   }
 
   update() {
-    Promise.all(this.#player.cities.map((city) => buildCityRow(city))).then(
-      (rows) => super.update(s('<div></div>', ...rows))
-    );
+    Promise.all(
+      this.#player.cities.map((city) =>
+        buildCityRow(city, this.#portal, this.#transport)
+      )
+    ).then((rows) => super.update(s('<div></div>', ...rows)));
   }
 }
 

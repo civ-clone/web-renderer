@@ -22,14 +22,17 @@ export const buildTurns = (city: City) =>
 export const growthTurns = (city: City) =>
   turnsLeft(city.growth, city.yields, 'Food');
 
-export const renderPopulation = (city: CityData): Node => {
+export const renderPopulation = (
+  city: CityData,
+  yields: Yield[] = city.yields
+): Node => {
   const growth = city.growth,
     mask = parseInt(city.name.replace(/[^a-z]/gi, ''), 36).toString(2),
     state = new Array(growth.size).fill(1),
     population = s('<div class="population"></div>');
 
   let [happiness, unhappiness] = reduceKnownYields(
-      city.yields,
+      yields,
       'Happiness',
       'Unhappiness'
     ),

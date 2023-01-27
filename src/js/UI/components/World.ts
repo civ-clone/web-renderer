@@ -3,6 +3,7 @@ import { NeighbourDirection, Tile, World as WorldData } from '../types';
 export class World {
   #unknown = (x: number, y: number): Tile => ({
     _: 'Tile',
+    __: ['Tile', 'DataObject'],
     id: `Tile-${x}--${y}`,
     city: null,
     goodyHut: null,
@@ -12,10 +13,12 @@ export class World {
     isWater: false,
     terrain: {
       _: 'Unknown',
+      __: ['Unknown', 'Terrain', 'DataObject'],
       id: `UnknownTerrain-${x}--${y}`,
       features: [],
     },
     units: [],
+    workedBy: null,
     x,
     y,
     yields: [],

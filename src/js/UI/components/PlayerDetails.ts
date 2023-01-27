@@ -2,7 +2,7 @@ import { City, Player } from '../types';
 import { Element, s } from '@dom111/element';
 import { reduceKnownYields } from '../lib/yieldMap';
 import civilizationAttribute from './lib/civilizationAttribute';
-import { instance as localeProvider } from "../LocaleProvider";
+import { instance as localeProvider } from '../LocaleProvider';
 
 export class PlayerDetails extends Element {
   #player: Player;
@@ -48,16 +48,22 @@ export class PlayerDetails extends Element {
       s(
         `<p><strong>Researching</strong><br/>${
           research.researching
-            ? `${research.researching._} ${localeProvider.number(research.progress.value)} / ${
-                localeProvider.number(research.cost.value)
-              } (${localeProvider.number(totalResearch)} / turn - ${localeProvider.number(researchTurns)} turn${
+            ? `${research.researching._} ${localeProvider.number(
+                research.progress.value
+              )} / ${localeProvider.number(
+                research.cost.value
+              )} (${localeProvider.number(
+                totalResearch
+              )} / turn - ${localeProvider.number(researchTurns)} turn${
                 researchTurns === 1 ? '' : 's'
               })`
             : `Nothing (${localeProvider.number(totalResearch)} / turn)`
         }</p>`
       ),
       s(
-        `<p><strong>Treasury</strong><br/>${localeProvider.number(goldTreasury.value)} (${localeProvider.number(totalGold)} / turn)</p>`
+        `<p><strong>Treasury</strong><br/>${localeProvider.number(
+          goldTreasury.value
+        )} (${localeProvider.number(totalGold)} / turn)</p>`
       )
     );
   }

@@ -1,112 +1,36 @@
+@use 'action-button';
+
 .action {
   margin: 0 1em 1em;
   text-align: right;
 
   button {
-    appearance: none;
-    border-radius: 50%;
-    background: #ccc none no-repeat center / 14px;
-    box-shadow: 2px 2px 2px rgba(0, 0, 0, .4);
-    box-sizing: content-box;
-    cursor: pointer;
-    font-size: 12px;
-    height: 3.1em;
-    image-rendering: pixelated;
-    outline: none;
-    padding: 0;
-    width: 3.1em;
-
-    &.gradient {
-      border: none;
-      box-sizing: border-box;
-
-      &:hover,
-      &:focus,
-      &:focus-visible {
-        filter: brightness(120%);
-      }
-
-      &:active {
-        filter: brightness(80%);
-      }
-
-      img {
-        /* TODO: use the scale etc */
-        width: 16px;
-      }
-    }
-
-    &.large {
-      font-size: 2.75rem;
-      height: 4rem !important;
-      width: 4rem !important;
-
-      img {
-        /* TODO: use the scale etc */
-        width: 28px;
-      }
-    }
-
-    &:active {
-      background-color: #aaa;
-      transform: translate(2px, 2px);
-    }
-
-    &:hover {
-      background-color: #eee;
-    }
+    @include action-button.main();
+    @include action-button.background-gradient-silver-ring();
 
     &.chooseResearch {
-      background:
-              radial-gradient(circle at 50% 15%,#b1e6ef 0%,transparent 50%),
-              radial-gradient(circle,#297ea8 0%,#27627e 64%,#6a6c6e 64%,#0d0d0d 67%,#bcb2c2 67%,#898bc4 69%,#4c4194 69%,#7f7f7d 70%);
+      @include action-button.background-gradient-silver-ring(#2966a8);
     }
 
     &.cityBuild {
-      background:
-              radial-gradient(circle at 50% 15%, #ffedb6 0%, transparent 50%),
-              radial-gradient(circle, #ffc709 0%, #c08000 64%, #8a6c1e 64%, #300d00 67%, #fce2b2 67%, #c9ab84 69%, #9c8144 69%, #cfaf7d 70%);
+      @include action-button.background-gradient-tinted(#ffa109);
     }
 
     &.civilDisorder {
-      background:
-              radial-gradient(circle at 50% 15%, #ffb6b6 0%, transparent 50%),
-              radial-gradient(circle, #ff0909 0%, #c00000 60%, #300000 60%, #300000 64%, #fcb2b2 64%, #fcb2b2 68%, #9c4444 68%, #9c4444 70%);
+      @include action-button.background-gradient-silver-ring(#a82929);
+
+      img {
+        width: calc(8px * var(--scale));
+      }
     }
 
     &.endTurn {
-      background-image: url('feather-icons/dist/icons/check-circle.svg');
-      background-size: 50%;
-      border-width: 3px;
-      font-size: 18px;
-
-      &:focus,
-      &:focus-visible {
-        border-color: #daa520;
-      }
+      @include action-button.background-gradient-silver-ring(#25b906);
+      @include action-button.white-child-svg();
     }
 
     &.spaceship {
-      background-image: url('feather-icons/dist/icons/globe.svg');
-
-      &:focus,
-      &:focus-visible {
-        border-color: #2099da;
-      }
-    }
-
-    &.adjustTradeRates {
-      &:focus,
-      &:focus-visible {
-        border-color: #fcfc94;
-      }
-    }
-
-    &.chooseGovernment {
-      &:focus,
-      &:focus-visible {
-        border-color: #000;
-      }
+      @include action-button.white-child-svg();
     }
   }
 }
@@ -121,23 +45,18 @@
 
   .action {
     margin: 0 1rem 1rem;
-
-    button {
-      height: 3rem;
-      width: 3rem;
-    }
   }
 }
 
 #other-actions {
   position: absolute;
-  right: 0;
+  right: 4rem;
   display: flex;
   flex-direction: row;
   padding: 1em;
 
   .action {
-    margin: 0 0 0 .5em;
+    margin: 0 0 0 0.5em;
 
     button {
       height: 2rem;

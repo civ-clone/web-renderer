@@ -40,7 +40,7 @@ export class CivilDisorder extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="gradient civilDisorder" title="Civil disorder in ${
+            `<button class="civilDisorder" title="Civil disorder in ${
               city.name
             }!"><img src="${asset!.uri}"></button>`
           )

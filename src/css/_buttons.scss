@@ -1,0 +1,15 @@
+button {
+  &:hover {
+    box-shadow: 0 0 2px #fff;
+  }
+
+  &:focus,
+  &:focus-visible {
+    filter: brightness(120%);
+  }
+
+  &:active {
+    filter: brightness(80%);
+    transform: translate(2px, 2px);
+  }
+}
