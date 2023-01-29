@@ -70,8 +70,6 @@ export class UnitActionMenu extends PopupMenu {
   }
 
   build() {
-    super.build();
-
     bodyListener = (event: PointerEvent) => {
       const target = document.elementFromPoint(event.pageX, event.pageY);
 
@@ -85,6 +83,8 @@ export class UnitActionMenu extends PopupMenu {
     };
 
     on(document.body, 'pointerup', bodyListener);
+
+    super.build();
   }
 
   remove() {
