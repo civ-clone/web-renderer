@@ -1,5 +1,5 @@
 import { FinishedHandler, NewGameWindow } from './NewGameWindow';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Request from '../../Engine/Request';
 
 export class EarthWindow extends NewGameWindow {

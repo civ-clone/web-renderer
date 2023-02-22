@@ -1,4 +1,5 @@
 import {
+  City,
   CityBuild,
   PlayerAction,
   PlayerGovernment,
@@ -8,7 +9,7 @@ import {
   Unit,
 } from '../../types';
 import { Element, s } from '@dom111/element';
-import Transport from '../../../Engine/Transport';
+import Transport from '../../Transport';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -22,6 +23,7 @@ export interface IAction {
   complete(): void;
   element(): HTMLElement;
   value():
+    | City
     | CityBuild
     | PlayerResearch
     | Unit
@@ -69,6 +71,7 @@ export class Action extends Element implements IAction {
   }
 
   value():
+    | City
     | CityBuild
     | PlayerResearch
     | Unit

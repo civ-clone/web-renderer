@@ -6,15 +6,16 @@ import Transport from './Transport';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
+import transport from './Transport';
 
 export interface IGame {
   start(): void;
 }
 
 export class Game implements IGame {
-  #transport: Transport;
+  #transport: Transport<TransportDataMap>;
 
-  constructor(transport: Transport) {
+  constructor(transport: Transport<TransportDataMap>) {
     this.#transport = transport;
 
     transport.receive('start', () => {
@@ -27,7 +28,7 @@ export class Game implements IGame {
       engine.setOption(name, value);
     });
 
-    transport.receive('getOptions', (values: string[]) =>
+    transport.receive('getOptions', (values) =>
       transport.send(
         'getOptions',
         values.reduce((options, optionName) => {
@@ -38,12 +39,12 @@ export class Game implements IGame {
       )
     );
 
-    transport.receive('setOptions', (values: { [key: string]: any }) => {
+    transport.receive('setOptions', (values) => {
       Object.entries(values).forEach(([option, value]) =>
         engine.setOption(option, value)
       );
 
-      transport.send('setOptions');
+      transport.send('setOptions', null);
     });
   }
 
@@ -101,6 +102,7 @@ export class Game implements IGame {
               i === 0
                 ? new DataTransferClient(
                     player,
+                    this.#transport,
                     (channel: string, payload: TransferObject) =>
                       this.#transport.send(channel, payload),
                     (

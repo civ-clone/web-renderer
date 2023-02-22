@@ -2,7 +2,7 @@ import { CityBuild as CityBuildObject, PlayerAction } from '../../types';
 import Action from './Action';
 import CityBuildSelectionWindow from '../CityBuildSelectionWindow';
 import Portal from '../Portal';
-import Transport from '../../../Engine/Transport';
+import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';

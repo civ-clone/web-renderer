@@ -1,5 +1,5 @@
 import SelectionWindow from './SelectionWindow';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import { Unit } from '../types';
 
 export class UnitSelectionWindow extends SelectionWindow {

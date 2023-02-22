@@ -9,5 +9,5 @@
     "strict": true,
     "target": "ES2018"
   },
-  "include": ["src/js/types.d.ts"]
+  "files": ["./UI/types.d.ts", "./UI/modules.d.ts"]
 }

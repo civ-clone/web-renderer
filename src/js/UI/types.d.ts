@@ -89,16 +89,20 @@ export interface PlayerTreasury extends EntityInstance<'Gold'> {
   yield: Entity;
 }
 
-export interface PlayerAction extends EntityInstance {
-  value:
+export interface PlayerAction<
+  Value =
     | Unit
     | PlayerResearch
     | City
     | CityBuild
     | PlayerTradeRates
     | PlayerGovernment
-    | Spaceship;
+    | Spaceship
+> extends EntityInstance {
+  value: Value;
 }
+
+export type Revolution = PlayerAction<PlayerGovernment>;
 
 export interface PlayerGovernment extends EntityInstance {
   available: Entity[];
@@ -272,10 +276,4 @@ export interface Spaceship extends EntityInstance {
   player: Player;
   successful: boolean;
   yields: Yield[];
-}
-
-declare module '**/*.svg' {
-  const content: string;
-
-  export default content;
 }

@@ -1,5 +1,5 @@
 import MandatorySelection from './MandatorySelection';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Request from '../../Engine/Request';
 
 export type FinishedHandler = () => void;
@@ -46,7 +46,7 @@ export class NewGameWindow extends MandatorySelection {
           await onFinished();
         }
 
-        transport.send('start');
+        transport.send('start', null);
       }
     );
   }

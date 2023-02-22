@@ -1,7 +1,7 @@
 import { Coordinate, Tile, Unit } from '../types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
 import Map from './Map';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';

@@ -9,7 +9,11 @@ import {
   ChangeProduction,
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
-import { Client, IClient } from '@civ-clone/core-civ-client/Client';
+import {
+  ChoiceMeta,
+  DataForChoiceMeta,
+} from '@civ-clone/core-client/ChoiceMeta';
+import { Client, IClient } from '@civ-clone/core-client/Client';
 import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
@@ -25,8 +29,8 @@ import DataObject from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
+import { Gold } from '@civ-clone/civ1-city/Yields';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
-import { IConstructor } from '@civ-clone/core-registry/Registry';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Player from '@civ-clone/core-player/Player';
@@ -41,19 +45,17 @@ import { Revolution } from '@civ-clone/civ1-government/PlayerActions';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
-import Turn from '@civ-clone/core-turn-based-game/Turn';
+import Transport from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
 import UnknownPlayer from './UnknownObjects/Player';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
-import Year from '@civ-clone/core-game-year/Year';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
-import { instance as leaderRegistryInstance } from '@civ-clone/core-civilization/LeaderRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
@@ -62,7 +64,6 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
-import { Gold } from '@civ-clone/civ1-city/Yields';
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -136,130 +137,130 @@ export class DataTransferClient extends Client implements IClient {
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
+  #transport: Transport<TransportDataMap>;
 
   constructor(
     player: Player,
+    transport: Transport<TransportDataMap>,
     sender: (channel: string, payload: any) => void,
     receiver: (channel: string, handler: (...args: any[]) => void) => void
   ) {
     super(player);
 
     this.#eventEmitter = new EventEmitter();
+    this.#transport = transport;
     this.#sender = sender;
     this.#receiver = receiver;
 
-    this.#receiver('action', (...args): void => {
-      this.#eventEmitter.emit('action', ...args);
-    });
+    this.#transport.receive('action', (...args): void =>
+      this.#eventEmitter.emit('action', ...args)
+    );
 
     // TODO: These could be `HiddenAction`s. Need to add a `perform` method to actions too...
-    this.#receiver(
-      'cheat',
-      ({ name, value }: { name: string; value: any }): void => {
-        if (name === 'RevealMap') {
-          const playerWorld = playerWorldRegistryInstance.getByPlayer(
+    this.#transport.receive('cheat', ({ name, value }): void => {
+      if (name === 'RevealMap') {
+        const playerWorld = playerWorldRegistryInstance.getByPlayer(
+          this.player()
+        );
+
+        // A bit nasty... I wonder how slow this data transfer will be...
+        const [tile] = playerWorld.entries();
+
+        tile
+          .tile()
+          .map()
+          .entries()
+          .forEach((tile) => {
+            if (playerWorld.includes(tile)) {
+              return;
+            }
+
+            playerWorld.register(tile);
+
+            const playerTile = playerWorld.getByTile(tile)!;
+
+            this.#dataQueue.add(
+              playerWorld.id(),
+              () => tile.toPlainObject(this.#dataFilter()),
+              `entries[${playerWorld.entries().indexOf(playerTile)}]`
+            );
+          });
+      }
+
+      if (name === 'GrantAdvance') {
+        const [Advance] = advanceRegistryInstance.filter(
+            (Advance) => Advance.name === value
+          ),
+          playerResearch = playerResearchRegistryInstance.getByPlayer(
             this.player()
           );
 
-          // A bit nasty... I wonder how slow this data transfer will be...
-          const [tile] = playerWorld.entries();
-
-          tile
-            .tile()
-            .map()
-            .entries()
-            .forEach((tile) => {
-              if (playerWorld.includes(tile)) {
-                return;
-              }
-
-              playerWorld.register(tile);
-
-              const playerTile = playerWorld.getByTile(tile)!;
-
-              this.#dataQueue.add(
-                playerWorld.id(),
-                () => tile.toPlainObject(this.#dataFilter()),
-                `entries[${playerWorld.entries().indexOf(playerTile)}]`
-              );
-            });
+        if (!Advance) {
+          return;
         }
 
-        if (name === 'GrantAdvance') {
-          const [Advance] = advanceRegistryInstance.filter(
-              (Advance) => Advance.name === value
-            ),
-            playerResearch = playerResearchRegistryInstance.getByPlayer(
-              this.player()
-            );
-
-          if (!Advance) {
-            return;
-          }
-
-          if (playerResearch.completed(Advance)) {
-            return;
-          }
-
-          playerResearch.addAdvance(Advance);
-
-          this.#dataQueue.add(
-            playerResearch.id(),
-            playerResearch.toPlainObject(
-              this.#dataFilter(filterToReference(Player))
-            )
-          );
+        if (playerResearch.completed(Advance)) {
+          return;
         }
 
-        if (name === 'GrantGold') {
-          const playerTreasury =
-            playerTreasuryRegistryInstance.getByPlayerAndType(
-              this.player(),
-              Gold
-            );
+        playerResearch.addAdvance(Advance);
 
-          playerTreasury.add(value);
-
-          this.#dataQueue.add(
-            playerTreasury.id(),
-            playerTreasury.toPlainObject(
-              this.#dataFilter(filterToReference(Player))
-            )
-          );
-        }
-
-        if (name === 'ModifyUnit') {
-          const { unitId, properties } = value;
-
-          const [unit] = unitRegistryInstance.getBy('id', unitId);
-
-          if (!unit) {
-            return;
-          }
-
-          (
-            ['attack', 'defence', 'moves', 'movement', 'visibility'] as (
-              | 'attack'
-              | 'defence'
-              | 'moves'
-              | 'movement'
-              | 'visibility'
-            )[]
-          ).forEach((property) => {
-            if (property in properties) {
-              unit[property]().set(properties[property]);
-            }
-          });
-
-          this.#dataQueue.add(
-            unit.id(),
-            unit.toPlainObject(this.#dataFilter(filterToReference(Player)))
-          );
-        }
-
-        this.sendPatchData();
+        this.#dataQueue.add(
+          playerResearch.id(),
+          playerResearch.toPlainObject(
+            this.#dataFilter(filterToReference(Player))
+          )
+        );
       }
-    );
+
+      if (name === 'GrantGold') {
+        const playerTreasury =
+          playerTreasuryRegistryInstance.getByPlayerAndType(
+            this.player(),
+            Gold
+          );
+
+        playerTreasury.add(value);
+
+        this.#dataQueue.add(
+          playerTreasury.id(),
+          playerTreasury.toPlainObject(
+            this.#dataFilter(filterToReference(Player))
+          )
+        );
+      }
+
+      if (name === 'ModifyUnit') {
+        const { unitId, properties } = value;
+
+        const [unit] = unitRegistryInstance.getBy('id', unitId);
+
+        if (!unit) {
+          return;
+        }
+
+        (
+          ['attack', 'defence', 'moves', 'movement', 'visibility'] as (
+            | 'attack'
+            | 'defence'
+            | 'moves'
+            | 'movement'
+            | 'visibility'
+          )[]
+        ).forEach((property) => {
+          if (property in properties) {
+            unit[property]().set(properties[property]!);
+          }
+        });
+
+        this.#dataQueue.add(
+          unit.id(),
+          unit.toPlainObject(this.#dataFilter(filterToReference(Player)))
+        );
+      }
+
+      this.sendPatchData();
+    });
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
@@ -680,7 +681,7 @@ export class DataTransferClient extends Client implements IClient {
 
           // TODO: summary and quit
 
-          this.#sender('restart', null);
+          this.#transport.send('restart', null);
         }
 
         this.sendNotification(
@@ -746,84 +747,26 @@ export class DataTransferClient extends Client implements IClient {
     });
   }
 
-  chooseCivilization(Civilizations: (typeof Civilization)[]): Promise<void> {
-    const makeChoice = (ChosenCivilization: typeof Civilization) => {
-      this.player().setCivilization(new ChosenCivilization());
+  async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
+    meta: ChoiceMeta<Name>
+  ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
+    return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) => {
+      if (meta.choices().length === 1) {
+        const [choice] = meta.choices();
 
-      return this.chooseLeader(this.player().civilization());
-    };
-
-    return new Promise((resolve, reject) => {
-      if (Civilizations.length === 1) {
-        const [Civilization] = Civilizations;
-
-        makeChoice(Civilization).then(() => resolve());
+        resolve(choice.value());
 
         return;
       }
 
-      this.#sender(
-        'chooseCivilization',
-        new TransferObject({ choices: Civilizations }).toPlainObject()
-      );
+      this.#transport.send('chooseFromList', meta);
 
-      this.#receiver('chooseCivilization', (choice) => {
-        const [Civilization] = Civilizations.filter(
-          (Civilization) => Civilization.name === choice
-        );
+      this.#transport.receiveOnce('chooseFromList', (chosenId) => {
+        const [choice] = meta
+          .choices()
+          .filter((choice) => choice.id() === chosenId);
 
-        if (!Civilization) {
-          reject(
-            `Invalid civilization ${choice} (options: ${Civilizations.map(
-              (Civilization) => Civilization.name
-            ).join(', ')})`
-          );
-
-          return;
-        }
-
-        makeChoice(Civilization).then(() => resolve());
-      });
-    });
-  }
-
-  chooseLeader(civilization: Civilization): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const Leaders = leaderRegistryInstance.getByCivilization(
-        civilization.constructor as IConstructor<Civilization>
-      );
-
-      if (Leaders.length === 1) {
-        const [Leader] = Leaders;
-
-        civilization.setLeader(new Leader());
-
-        resolve();
-
-        return;
-      }
-
-      this.#sender(
-        'chooseLeader',
-        new TransferObject({ choices: Leaders }).toPlainObject()
-      );
-
-      this.#receiver('chooseLeader', (choice) => {
-        const [Leader] = Leaders.filter((Leader) => Leader.name === choice);
-
-        if (!Leader) {
-          reject(
-            `Invalid civilization ${choice} (options: ${Leaders.map(
-              (Leader) => Leader.name
-            ).join(', ')})`
-          );
-
-          return;
-        }
-
-        civilization.setLeader(new Leader());
-
-        resolve();
+        resolve(choice.value());
       });
     });
   }
@@ -1100,31 +1043,22 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   private sendInitialData(): void {
-    const rawData: {
-      player: Player;
-      turn: Turn;
-      year: Year;
-    } = {
-      player: this.player(),
-      turn: turnInstance,
-      year: yearInstance,
-    };
-
-    const dataObject = new TransferObject(rawData);
-
-    this.#sender('gameData', dataObject.toPlainObject(this.#dataFilter()));
+    this.#transport.send(
+      'gameData',
+      new TransferObject(this.player(), turnInstance, yearInstance)
+    );
 
     this.#sentInitialData = true;
   }
 
   private sendPatchData(): void {
-    this.#sender('gameDataPatch', this.#dataQueue.transferData());
+    this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
 
     this.#dataQueue.clear();
   }
 
   private sendNotification(message: string): void {
-    this.#sender('gameNotification', {
+    this.#transport.send('gameNotification', {
       message: message,
     });
   }

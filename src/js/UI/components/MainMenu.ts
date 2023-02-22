@@ -3,7 +3,7 @@ import CustomiseWorldWindow from './CustomiseWorldWindow';
 import EarthWindow from './EarthWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';

@@ -2,7 +2,7 @@ import City from '../City';
 import { City as CityData } from '../../types';
 import { INotificationWindow } from '../NotificationWindow';
 import Portal from '../Portal';
-import Transport from '../../../Engine/Transport';
+import Transport from '../../Transport';
 
 export const showCityAction = (
   city: CityData,

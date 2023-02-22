@@ -4,7 +4,7 @@ type DataPatchType = 'add' | 'remove' | 'update';
 
 type DataPatchContents = {
   type: DataPatchType;
-  index?: string | null;
+  index: string | null;
   value?: (() => ObjectMap) | ObjectMap;
 };
 
@@ -22,7 +22,7 @@ export class DataQueue {
   ): void {
     this.#queue.push({
       [targetId]: {
-        type: 'add',
+        type: 'add' as DataPatchType,
         index,
         value,
       },
@@ -36,7 +36,7 @@ export class DataQueue {
   remove(targetId: string, index: DataPatchContents['index'] = null): void {
     this.#queue.push({
       [targetId]: {
-        type: 'remove',
+        type: 'remove' as DataPatchType,
         index,
       },
     });
@@ -47,13 +47,15 @@ export class DataQueue {
     return this.#queue.slice(0).map((patch) => {
       const patchData: DataPatch = {};
 
-      Object.entries(patch).forEach(([key, { type, index, value }]) => {
-        patchData[key] = {
-          type,
-          index,
-          value: typeof value === 'function' ? value() : value,
-        } as DataPatchContents;
-      });
+      Object.entries(patch).forEach(
+        ([key, { type, index, value }]: [string, DataPatchContents]) => {
+          patchData[key] = {
+            type,
+            index,
+            value: typeof value === 'function' ? value() : value,
+          };
+        }
+      );
 
       return patchData;
     });
@@ -66,7 +68,7 @@ export class DataQueue {
   ): void {
     this.#queue.push({
       [targetId]: {
-        type: 'update',
+        type: 'update' as DataPatchType,
         index,
         value,
       },

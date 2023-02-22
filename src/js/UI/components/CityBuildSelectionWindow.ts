@@ -3,7 +3,7 @@ import { ActionWindowActions } from './ActionWindow';
 import City from './City';
 import Portal from './Portal';
 import SelectionWindow, { ISelectionWindow } from './SelectionWindow';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import { reduceKnownYield } from '../lib/yieldMap';
 import { INotificationWindow } from './NotificationWindow';
 

@@ -1,6 +1,6 @@
 import Options from '../../Engine/Requests/Options';
 import Request from '../../Engine/Request';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Window from './Window';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';

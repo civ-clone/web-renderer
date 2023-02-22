@@ -9,7 +9,7 @@ import { PlayerAction } from '../types';
 import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 

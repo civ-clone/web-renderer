@@ -1,7 +1,19 @@
+import {
+  TransportData,
+  TransportMessage,
+  TransportReceiveArgs,
+  TransportReceiveHandler,
+  TransportSendArgs,
+} from './Transport';
 import AbstractTransport from './AbstractTransport';
-import { TransportMessage } from './Transport';
+import DataObject from '@civ-clone/core-data-object/DataObject';
+import reconstituteData from '../UI/lib/reconstituteData';
 
-export class WorkerTransport extends AbstractTransport {
+export class WorkerTransport<
+  DataMap extends {
+    [key: string]: TransportData;
+  }
+> extends AbstractTransport<DataMap> {
   #worker;
 
   constructor(worker: Worker) {
@@ -10,23 +22,37 @@ export class WorkerTransport extends AbstractTransport {
     this.#worker = worker;
   }
 
-  receive(receivingChannel: string, handler: (...args: any[]) => void): void {
-    this.#worker.addEventListener('message', ({ data: { channel, data } }) => {
-      if (channel === receivingChannel) {
-        handler(data);
+  receive<Channel extends keyof DataMap>(
+    channel: Channel,
+    handler: TransportReceiveHandler<DataMap[Channel]>
+  ): void {
+    this.#worker.addEventListener(
+      'message',
+      ({ data: { channel: receivingChannel, data } }) => {
+        const handlerData = data?.hierarchy
+          ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
+          : data;
+
+        if (channel === receivingChannel) {
+          handler(handlerData, data);
+        }
       }
-    });
+    );
   }
 
-  receiveOnce(
-    receivingChannel: string,
-    handler: (...args: any[]) => void
+  receiveOnce<Channel extends keyof DataMap>(
+    channel: Channel,
+    handler: TransportReceiveHandler<DataMap[Channel]>
   ): void {
     const onceHandler = ({
-      data: { channel, data },
+      data: { channel: receivingChannel, data },
     }: MessageEvent<TransportMessage>) => {
+      const handlerData = data?.hierarchy
+        ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
+        : data;
+
       if (channel === receivingChannel) {
-        handler(data);
+        handler(handlerData, data);
 
         this.#worker.removeEventListener('message', onceHandler);
       }
@@ -35,7 +61,14 @@ export class WorkerTransport extends AbstractTransport {
     this.#worker.addEventListener('message', onceHandler);
   }
 
-  send(channel: string, data: any): void {
+  send<Channel extends keyof DataMap>(
+    channel: Channel,
+    data: TransportSendArgs<DataMap[Channel]>
+  ): void {
+    if ((data as any) instanceof DataObject) {
+      data = data.toPlainObject();
+    }
+
     this.#worker.postMessage({
       channel,
       data,

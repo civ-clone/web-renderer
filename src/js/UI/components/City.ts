@@ -23,7 +23,7 @@ import Land from './Map/Land';
 import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
 import Terrain from './Map/Terrain';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Unit from './Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import Window from './Window';

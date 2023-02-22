@@ -30,7 +30,7 @@ export class DataObserver {
       if (this.#ids.some((id) => id in objects)) {
         document.addEventListener(
           'dataupdated',
-          (event) => handler(event.detail.data),
+          (event) => handler(event.detail.data as GameData),
           {
             once: true,
           }

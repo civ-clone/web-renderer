@@ -10,7 +10,7 @@ import { turnsLeft, turnsText, yieldData } from './lib/cityYields';
 import City from './City';
 import DataObserver from '../DataObserver';
 import Portal from './Portal';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';

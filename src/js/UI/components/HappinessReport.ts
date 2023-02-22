@@ -21,7 +21,7 @@ import { renderPopulation } from './lib/cityYields';
 import { s } from '@dom111/element';
 import City from './City';
 import Portal from './Portal';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 
 const buildCityRow = async (
   city: CityData,

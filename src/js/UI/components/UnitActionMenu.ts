@@ -1,6 +1,6 @@
 import { PopupMenu, PopupMenuAction } from './PopupMenu';
 import { Tile, Unit as UnitData, UnitAction } from '../types';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import { off, on } from '@dom111/element';
 
 const buildActions = (

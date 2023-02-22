@@ -7,7 +7,7 @@ import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
 import TradeReport from './TradeReport';
-import Transport from '../../Engine/Transport';
+import Transport from '../Transport';
 import Window from './Window';
 import { h } from '../lib/html';
 // @ts-ignore
