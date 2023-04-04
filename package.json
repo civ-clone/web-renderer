@@ -33,6 +33,7 @@
     "esbuild": "^0.14.32",
     "esbuild-sass-plugin": "^2.4.0",
     "prettier": "^2.0.0",
+    "sass": "^1.59.2",
     "typescript": "^4.0.0"
   },
   "dependencies": {
@@ -56,21 +57,23 @@
     "@civ-clone/core-city": "^0.1.0",
     "@civ-clone/core-city-build": "^0.1.0",
     "@civ-clone/core-city-improvement": "^0.1.0",
-    "@civ-clone/core-civ-client": "^0.1.0",
     "@civ-clone/core-civilization": "^0.1.0",
     "@civ-clone/core-client": "^0.1.0",
     "@civ-clone/core-data-object": "^0.1.0",
+    "@civ-clone/core-diplomacy": "^0.1.0",
     "@civ-clone/core-engine": "^0.1.0",
     "@civ-clone/core-game-year": "^0.1.0",
     "@civ-clone/core-goody-hut": "^0.1.0",
     "@civ-clone/core-player": "^0.1.0",
     "@civ-clone/core-player-world": "^0.1.0",
     "@civ-clone/core-registry": "^0.1.0",
+    "@civ-clone/core-rule": "^0.1.0",
     "@civ-clone/core-science": "^0.1.0",
     "@civ-clone/core-treasury": "^0.1.0",
     "@civ-clone/core-turn-based-game": "^0.1.0",
     "@civ-clone/core-unit": "^0.1.0",
     "@civ-clone/core-world": "^0.1.0",
+    "@civ-clone/library-unit": "^0.1.1",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
@@ -79,6 +82,5 @@
     "feather-icons": "^4.28.0",
     "idb": "^7.1.1",
     "marked": "^4.2.5"
-  },
-  "packageManager": "yarn@1.22.19"
+  }
 }

@@ -47,7 +47,7 @@ declare global {
     action: TransportData<never, TransportPlayerAction>;
     cheat: TransportData<never, TransportCheatData>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
-    gameData: TransportData<TransferObject, ObjectMap>;
+    gameData: TransportData<GameData, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
     getOptions: TransportData<
       {

@@ -6,14 +6,14 @@ export type PlainObject = {
 
 export interface Entity<Types = string> {
   _: Types;
-  __: Types[];
+  __: string[];
 }
 
 export interface EntityInstance<Types = string> extends Entity<Types> {
   id: string;
 }
 
-export interface City extends EntityInstance {
+export interface City extends EntityInstance<'City'> {
   name: string;
   build: CityBuild;
   celebrateLeader: boolean;
@@ -28,22 +28,22 @@ export interface City extends EntityInstance {
   yields: Yield[];
 }
 
-export interface CityGrowth extends EntityInstance {
+export interface CityGrowth extends EntityInstance<'CityGrowth'> {
   cost: Yield;
   progress: Yield;
   size: number;
 }
 
-export interface ItemCost extends EntityInstance {
+export interface ItemCost extends EntityInstance<'ItemCost'> {
   value: number;
 }
 
-export interface BuildItem extends EntityInstance {
+export interface BuildItem extends EntityInstance<'BuildItem'> {
   item: Entity;
   cost: ItemCost;
 }
 
-export interface CityBuild extends EntityInstance {
+export interface CityBuild extends EntityInstance<'CityBuild'> {
   available: BuildItem[];
   building: BuildItem | null;
   city: City;
@@ -52,12 +52,12 @@ export interface CityBuild extends EntityInstance {
   spendCost: SpendCost[];
 }
 
-export interface SpendCost extends EntityInstance {
+export interface SpendCost extends EntityInstance<'SpendCost'> {
   resource: Entity<'Gold'>;
   value: number;
 }
 
-export interface Attribute extends EntityInstance {
+export interface Attribute extends EntityInstance<'Attribute'> {
   name: string;
   value: any;
 }
@@ -184,44 +184,40 @@ export interface PlayerTile extends Tile {
 export type AdjacentNeighbour = 'n' | 'e' | 's' | 'w';
 export type NeighbourDirection = AdjacentNeighbour | 'ne' | 'se' | 'sw' | 'nw';
 
-export interface World extends EntityInstance {
+export interface World extends EntityInstance<'World'> {
   height: number;
   tiles: PlayerTile[];
   width: number;
 }
 
-export interface Yield extends EntityInstance {
+export interface Yield<Types = 'Yield'> extends EntityInstance<Types> {
   value: number;
   values: [number, string][];
 }
 
-export interface CityImprovementContent extends Yield {
-  _: 'CityImprovementContent';
+export interface CityImprovementContent
+  extends Yield<'CityImprovementContent'> {
   cityImprovement: EntityInstance;
 }
 
-export interface CityImprovementMaintenanceGold extends Yield {
-  _: 'CityImprovementMaintenanceGold';
+export interface CityImprovementMaintenanceGold
+  extends Yield<'CityImprovementMaintenanceGold'> {
   cityImprovement: EntityInstance;
 }
 
-export interface MartialLaw extends Yield {
-  _: 'MartialLaw';
+export interface MartialLaw extends Yield<'MartialLaw'> {
   unit: Unit;
 }
 
-export interface MilitaryUnhappiness extends Yield {
-  _: 'MilitaryUnhappiness';
+export interface MilitaryUnhappiness extends Yield<'MilitaryUnhappiness'> {
   unit: Unit;
 }
 
-export interface UnitSupportFood extends Yield {
-  _: 'UnitSupportFood';
+export interface UnitSupportFood extends Yield<'UnitSupportFood'> {
   unit: Unit;
 }
 
-export interface UnitSupportProduction extends Yield {
-  _: 'UnitSupportProduction';
+export interface UnitSupportProduction extends Yield<'UnitSupportProduction'> {
   unit: Unit;
 }
 
@@ -247,12 +243,12 @@ export type DataPatch = {
   [id: string]: DataPatchContents;
 };
 
-export interface SpaceshipPart extends EntityInstance {
+export interface SpaceshipPart extends EntityInstance<'Part'> {
   city: City;
   yields: Yield[];
 }
 
-export interface SpaceshipLayoutSlot extends EntityInstance {
+export interface SpaceshipLayoutSlot extends EntityInstance<'Slot'> {
   height: number;
   part: SpaceshipPart | null;
   width: number;
@@ -260,13 +256,13 @@ export interface SpaceshipLayoutSlot extends EntityInstance {
   y: number;
 }
 
-export interface SpaceshipLayout extends EntityInstance {
+export interface SpaceshipLayout extends EntityInstance<'Layout'> {
   height: number;
   slots: SpaceshipLayoutSlot[];
   width: number;
 }
 
-export interface Spaceship extends EntityInstance {
+export interface Spaceship extends EntityInstance<'Spaceship'> {
   activeParts: SpaceshipPart[];
   chanceOfSuccess: number;
   flightTime: number;
@@ -276,4 +272,60 @@ export interface Spaceship extends EntityInstance {
   player: Player;
   successful: boolean;
   yields: Yield[];
+}
+
+export interface Interaction<Types = 'Interaction'>
+  extends EntityInstance<Types> {
+  players: Player[];
+  when: number;
+}
+
+export interface Expiry extends EntityInstance<'Expiry'> {
+  expired: boolean;
+  expiry: number;
+}
+
+export interface Declaration<Types = 'Declaration'> extends Interaction<Types> {
+  active: boolean;
+  expired: boolean;
+  expiry: Expiry;
+}
+
+export interface DiplomacyAction<Types = 'Action' | 'Terminate'>
+  extends Interaction<Types> {
+  by: Player;
+  for: Player[];
+  negotiation: Negotiation;
+}
+
+export interface Resolution<
+  Types = 'Abstain' | 'Accept' | 'Acknowledge' | 'Decline' | 'Resolution'
+> extends Interaction<Types> {
+  proposal: Proposal;
+}
+
+export interface Dialogue<Types = 'Dialogue'> extends Proposal<Types> {
+  key: string;
+}
+
+export interface Proposal<
+  Types = 'ExchangeKnowledge' | 'Initiate' | 'OfferPeace' | 'Proposal'
+> extends DiplomacyAction<Types> {
+  resolution: Resolution;
+  resolved: boolean;
+}
+
+export type Interactions =
+  | Interaction
+  | Declaration
+  | DiplomacyAction
+  | Resolution
+  | Dialogue
+  | Proposal
+  | Negotiation;
+
+export interface Negotiation extends Interaction<'Negotiation'> {
+  interactions: Interactions[];
+  lastInteraction: Interactions;
+  terminated: boolean;
 }

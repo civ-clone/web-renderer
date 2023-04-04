@@ -2,6 +2,7 @@ import { PopupMenu, PopupMenuAction } from './PopupMenu';
 import { Tile, Unit as UnitData, UnitAction } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
+import ConfirmationWindow from './ConfirmationWindow';
 
 const buildActions = (
   tile: Tile,
@@ -37,17 +38,32 @@ const buildActions = (
   //   actions = [];
   // }
 
-  return actions.map((action) => ({
-    label: action._,
-    action: () => {
+  return actions.map((action) => {
+    const perform = () =>
       transport.send('action', {
         name: 'ActiveUnit',
         id: unit.id,
         unitAction: action._,
         target: action.to.id,
       });
-    },
-  }));
+
+    if (['SneakAttack', 'SneakCaptureCity'].includes(action._)) {
+      return {
+        label: action._,
+        action: () =>
+          new ConfirmationWindow(
+            'Sneak attack!',
+            `Are you sure you want to perform a ${action._}?`,
+            () => perform()
+          ),
+      };
+    }
+
+    return {
+      label: action._,
+      action: () => perform(),
+    };
+  });
 };
 
 // TODO: This won't work as a private property of UnitActionMenu... Why?

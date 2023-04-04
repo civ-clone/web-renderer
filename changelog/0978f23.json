@@ -1,0 +1,1 @@
+{"version":"0.1.0@0978f23","date":"2023-02-22T19:25:40.000Z","localChanges":["Refactor `Transport` class to make it easier to prefill and type the arguments to send/receive and reduce errors."],"externalChanges":{}}

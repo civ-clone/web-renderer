@@ -1,8 +1,10 @@
 import {
   DataPatch,
   DataPatchContents,
+  Dialogue,
   EntityInstance,
   GameData,
+  Negotiation,
   NeighbourDirection,
   PlainObject,
   PlayerAction,
@@ -180,7 +182,7 @@ export class Renderer {
         lastUnit: Unit | null = null,
         activeUnit: Unit | null = null;
 
-      transport.receive('notification', (data): void => {
+      transport.receive('notification', (data: string): void => {
         notificationArea.innerHTML = data;
 
         if (globalNotificationTimer) {
@@ -194,20 +196,51 @@ export class Renderer {
         }, 4000);
       });
 
-      transport.receive('chooseFromList', ({ choices, key }) => {
+      const negotiationLabel = (negotiation: Negotiation) => {
+        const currentInteraction = negotiation.lastInteraction;
+
+        if (currentInteraction === null) {
+          return 'negotiation.missing-label';
+        }
+
+        if (currentInteraction._ === 'Initiate') {
+          return `${
+            currentInteraction.players[0].civilization.leader._
+          } of ${civilizationAttribute(
+            currentInteraction.players[0].civilization,
+            'nation'
+          )} would like to grant you an audience, will you meet with them?`;
+        }
+
+        if (currentInteraction._ === 'Dialogue') {
+          return currentInteraction.key;
+        }
+
+        return currentInteraction._;
+      };
+
+      transport.receive('chooseFromList', ({ choices, key, data }) => {
         // TODO: i18m for these
-        const label =
+        const body =
           key === 'choose-civilization'
             ? 'Choose your civilization'
             : key === 'choose-leader'
             ? 'Choose your leader'
+            : key === 'negotiation.next-step'
+            ? negotiationLabel(data as Negotiation)
             : 'Choose an option';
 
+        const title = key === 'negotiation.next-step' ? 'Negotiation' : body;
+
         new SelectionWindow(
-          label,
+          title,
           choices.map(({ id, value }) => {
             // TODO: i18n
-            const label = ['choose-civilization', 'choose-leader'].includes(key)
+            const label = [
+              'choose-civilization',
+              'choose-leader',
+              'negotiation.next-step',
+            ].includes(key)
               ? value._
               : value.toString();
 
@@ -217,7 +250,7 @@ export class Renderer {
             };
           }),
           (choice) => transport.send('chooseFromList', choice),
-          label,
+          body,
           {
             displayAll: true,
           }
@@ -236,7 +269,7 @@ export class Renderer {
               s(
                 `<div class="welcome">
 <p>${
-                  data.player.civilization.leader.name
+                  data.player.civilization.leader!.name
                 }, you have risen to become leader of the ${civilizationAttribute(
                   data.player.civilization,
                   'people'
@@ -513,7 +546,9 @@ export class Renderer {
 
             handler(objectMap);
 
-            transport.receive('gameData', (data, rawData) => handler(rawData));
+            transport.receive('gameData', (data, rawData) =>
+              handler(rawData as ObjectMap)
+            );
 
             const pathToParts = (path: string) =>
                 path.replace(/]/g, '').split(/[.[]/),
@@ -704,18 +739,33 @@ export class Renderer {
 
                 if (key in directionKeyMap) {
                   const [unitAction] =
-                    activeUnit.actionsForNeighbours[directionKeyMap[key]];
+                      activeUnit.actionsForNeighbours[directionKeyMap[key]],
+                    perform = () => {
+                      transport.send('action', {
+                        name: 'ActiveUnit',
+                        id: activeUnit!.id,
+                        unitAction: unitAction._,
+                        target: unitAction.to.id,
+                      });
+
+                      event.stopPropagation();
+                      event.preventDefault();
+                    };
 
                   if (unitAction) {
-                    transport.send('action', {
-                      name: 'ActiveUnit',
-                      id: activeUnit.id,
-                      unitAction: unitAction._,
-                      target: unitAction.to.id,
-                    });
+                    if (
+                      ['SneakAttack', 'SneakCaptureCity'].includes(unitAction._)
+                    ) {
+                      new ConfirmationWindow(
+                        'Sneak attack!',
+                        `Are you sure you want to perform a ${unitAction._}?`,
+                        () => perform()
+                      );
 
-                    event.stopPropagation();
-                    event.preventDefault();
+                      return;
+                    }
+
+                    perform();
 
                     return;
                   }

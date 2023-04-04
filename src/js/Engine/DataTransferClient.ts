@@ -33,6 +33,7 @@ import { Gold } from '@civ-clone/civ1-city/Yields';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
+import { Move } from '@civ-clone/civ1-unit/Actions';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
@@ -54,16 +55,25 @@ import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
+import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
+import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
+import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
+import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
+import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
+import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
+import { GameData } from '../UI/types';
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -82,7 +92,8 @@ const referenceObject = (object: any) =>
     (object: any) =>
       types.some((Type) => object instanceof Type)
         ? object
-        : referenceObject(object);
+        : referenceObject(object),
+  MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
 const unknownPlayers: Map<Player, UnknownPlayer> = new Map(),
   unknownUnits: Map<Unit, UnknownUnit> = new Map(),
@@ -374,7 +385,9 @@ export class DataTransferClient extends Client implements IClient {
 
         this.#dataQueue.update(this.player().id(), () =>
           this.player().toPlainObject(
-            this.#dataFilter(filterToReferenceAllExcept(Player, Unit))
+            this.#dataFilter(
+              filterToReferenceAllExcept(Player, Unit, Civilization)
+            )
           )
         );
       });
@@ -451,6 +464,8 @@ export class DataTransferClient extends Client implements IClient {
               )
           );
         }
+
+        this.sendPatchData();
       });
     });
 
@@ -481,7 +496,9 @@ export class DataTransferClient extends Client implements IClient {
           if (cityIndex !== -1) {
             this.#dataQueue.update(this.player().id(), () =>
               this.player().toPlainObject(
-                this.#dataFilter(filterToReferenceAllExcept(Player))
+                this.#dataFilter(
+                  filterToReferenceAllExcept(Player, Civilization)
+                )
               )
             );
             // this.#dataQueue.remove(this.player().id(), `cities[${cityIndex}]`);
@@ -751,7 +768,10 @@ export class DataTransferClient extends Client implements IClient {
     meta: ChoiceMeta<Name>
   ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
     return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) => {
-      if (meta.choices().length === 1) {
+      if (
+        meta.choices().length === 1 &&
+        meta.key() !== ('negotiation.next-step' as Name)
+      ) {
         const [choice] = meta.choices();
 
         resolve(choice.value());
@@ -766,12 +786,20 @@ export class DataTransferClient extends Client implements IClient {
           .choices()
           .filter((choice) => choice.id() === chosenId);
 
+        if (!choice) {
+          console.warn(
+            `No choice found for '${chosenId}' against '${meta.id()}'.`
+          );
+
+          return;
+        }
+
         resolve(choice.value());
       });
     });
   }
 
-  handleAction(...args: any[]): boolean {
+  async handleAction(...args: any[]): Promise<boolean> {
     const [action] = args,
       player = this.player(),
       actions = player.actions(),
@@ -874,6 +902,10 @@ export class DataTransferClient extends Client implements IClient {
       const [actionToPerform] = actions;
 
       actionToPerform.perform();
+
+      if (actionToPerform instanceof Move) {
+        await this.canNegotiate(unit);
+      }
 
       return false;
     }
@@ -1045,7 +1077,11 @@ export class DataTransferClient extends Client implements IClient {
   private sendInitialData(): void {
     this.#transport.send(
       'gameData',
-      new TransferObject(this.player(), turnInstance, yearInstance)
+      new TransferObject(
+        this.player(),
+        turnInstance,
+        yearInstance
+      ) as unknown as GameData
     );
 
     this.#sentInitialData = true;
@@ -1077,17 +1113,15 @@ export class DataTransferClient extends Client implements IClient {
           yearInstance.toPlainObject()
         );
         this.#dataQueue.add(this.player().id(), () =>
-          this.player().toPlainObject(
-            this.#dataFilter(filterToReference(Tile, Civilization))
-          )
+          this.player().toPlainObject(this.#dataFilter(filterToReference(Tile)))
         );
 
         this.sendPatchData();
       }, 1);
 
-      const listener = (...args: any[]): void => {
+      const listener = async (...args: any[]): Promise<void> => {
         try {
-          if (this.handleAction(...args)) {
+          if (await this.handleAction(...args)) {
             this.#eventEmitter.off('action', listener);
 
             this.sendPatchData();
@@ -1111,6 +1145,99 @@ export class DataTransferClient extends Client implements IClient {
 
       this.#eventEmitter.on('action', listener);
     });
+  }
+
+  // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
+  private async canNegotiate(unit: Unit): Promise<void> {
+    // TODO: This could be a `Rule`.
+    const surroundingPlayers = Array.from(
+      new Set(
+        unit
+          .tile()
+          .getNeighbours()
+          .flatMap((tile) =>
+            unitRegistryInstance
+              .getByTile(tile)
+              .map((tileUnit) => tileUnit.player())
+              .filter((player) => player !== this.player())
+          )
+      )
+    );
+
+    if (surroundingPlayers.length === 0) {
+      return;
+    }
+
+    await surroundingPlayers
+      .filter((player) =>
+        interactionRegistryInstance
+          .getByPlayer(player)
+          .filter(
+            (interaction) =>
+              interaction instanceof Negotiation &&
+              interaction.isBetween(player, this.player())
+          )
+          .every(
+            (interaction) =>
+              turnInstance.value() - interaction.when() >
+              MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION
+          )
+      )
+      .reduce(
+        (promise, player): Promise<any> =>
+          promise.then(() => this.handleNegotiation(player)),
+        Promise.resolve()
+      );
+  }
+
+  private async handleNegotiation(player: Player): Promise<Negotiation> {
+    const negotiation = new Negotiation(
+      player,
+      this.player(),
+      ruleRegistryInstance
+    );
+
+    negotiation.proceed(
+      new Initiate(player, negotiation, ruleRegistryInstance) as IAction
+    );
+
+    while (!negotiation.terminated()) {
+      const lastInteraction = negotiation.lastInteraction(),
+        players =
+          lastInteraction !== null
+            ? lastInteraction.for()
+            : negotiation.players().slice(1);
+
+      await players.reduce(
+        (promise: Promise<void>, player: Player) =>
+          promise.then(async () => {
+            const client = clientRegistryInstance.getByPlayer(player);
+
+            const interaction = await client.chooseFromList(
+              new ChoiceMeta(
+                negotiation.nextSteps(),
+                'negotiation.next-step',
+                negotiation
+              )
+            );
+
+            negotiation.proceed(interaction);
+
+            if (interaction instanceof Resolution) {
+              interaction.proposal().resolve(interaction);
+            }
+          }),
+        Promise.resolve()
+      );
+
+      if (negotiation.terminated()) {
+        break;
+      }
+    }
+
+    interactionRegistryInstance.register(negotiation as IInteraction);
+
+    return negotiation;
   }
 }
 
