@@ -1,8 +1,9 @@
 import { ActionWindow, ActionWindowOptions } from './ActionWindow';
 import { off, on, s } from '@dom111/element';
+import { INotificationWindow } from './NotificationWindow';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
-import { INotificationWindow } from './NotificationWindow';
+import { t } from 'i18next';
 
 export interface ISelectionWindow extends INotificationWindow {
   resize(): void;
@@ -27,7 +28,7 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     title: string,
     optionList: SelectionWindowOption[],
     onChoose: (selection: string) => void,
-    body: string | Node | null = 'Please choose one of the following:',
+    body: string | Node | null = t('SelectionWindow.default-body'),
     options: SelectionWindowOptions = {}
   ) {
     options = {
@@ -36,7 +37,7 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
       ...options,
       actions: {
         primary: {
-          label: 'OK',
+          label: t('Generic.ok'),
           action: () => chooseHandler(this.selectionList().value),
           ...(options.actions?.primary ?? {}),
         },
@@ -60,9 +61,9 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
           `<select>${optionList
             .map(
               (option) =>
-                `<option value="${option.value}">${
+                `<option value="${option.value}">${t(
                   option.label || option.value
-                }</option>`
+                )}</option>`
             )
             .join('')}</select>`
         ),
@@ -144,6 +145,8 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     this.resize();
 
     on(window, 'resize', this.#resizeHandler);
+
+    this.on('focus', () => this.selectionList().focus());
   }
 
   close() {
@@ -153,7 +156,7 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
   }
 
   display(): Promise<any> {
-    return super.display(false).then(() => {
+    return super.display().then(() => {
       const select = this.query('select');
 
       if (select && select.hasAttribute('autofocus')) {

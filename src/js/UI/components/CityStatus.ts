@@ -9,6 +9,9 @@ import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
+import { getLabelForBuildable } from './lib/cityBuild';
+import { cityName } from './lib/city';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   const [food, production, trade, research, gold, luxuries] = [
@@ -36,22 +39,29 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
     );
 
   return [
-    s(`<header>${city.name}</header>`),
+    s(`<header>${cityName(city)}</header>`),
     s(
-      `<div class="growth"><strong>${city.growth.size}</strong> ${foodIcon} ${
-        food[2]
-      } [${food[0]}] (${turnsText(
-        turnsLeft(city.growth, city.yields, 'Food')
-      )})</div>`
+      `<div class="growth"><strong>${t(
+        'City.size',
+        city.growth
+      )}</strong> ${foodIcon} ${t('CityStatus.growth', {
+        free: food[2],
+        total: food[0],
+        totals_context: food[0] === food[2] ? 'equal' : 'unequal',
+        turns: turnsLeft(city.growth, city.yields, 'Food'),
+      })}</div>`
     ),
     s(
-      `<div class="build">${productionIcon} ${production[2]} [${
-        production[0]
-      }] ${city.build.building ? city.build.building.item._ : 'Nothing'}${
-        city.build.building
-          ? ` (${turnsText(turnsLeft(city.build, city.yields, 'Production'))})`
-          : ''
-      }</div>`
+      `<div class="build">${productionIcon}  ${t('CityStatus.build', {
+        free: production[2],
+        total: production[0],
+        context: city.build.building ? 'nonempty' : 'empty',
+        totals_context: production[0] === production[2] ? 'equal' : 'unequal',
+        buildable: getLabelForBuildable(city.build.building),
+        turns: city.build.building
+          ? turnsLeft(city.build, city.yields, 'Production')
+          : Infinity,
+      })}</div>`
     ),
     s(
       `<div class="yields">${(
@@ -65,7 +75,11 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
         .filter(([[total]]) => total !== 0)
         .map(
           ([[total, , free], icon]) =>
-            `${icon} ${free}${free !== total ? ` [${total}]` : ''}`
+            `${icon} ${t('CityStatus.totals', {
+              free,
+              total,
+              context: free === total ? 'equal' : 'unequal',
+            })}`
         )
         .join(', ')}</div>`
     ),
@@ -79,7 +93,7 @@ export class CityStatus extends Window {
   #transport: Transport;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
-    super('City details', s('<div class="loading"></div>'), {
+    super(t('CityStatus.title'), s('<div class="loading"></div>'), {
       classes: 'city-status',
     });
 

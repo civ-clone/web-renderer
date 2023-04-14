@@ -1,22 +1,10 @@
-import { Unit } from '../types';
+import { Unit as UnitData } from '../types';
 import getPreloadedImage from './getPreloadedImage';
 import replaceColours from './replaceColours';
-
-const busyLookup: { [key: string]: string } = {
-  BuildingIrrigation: 'I',
-  BuildingMine: 'M',
-  BuildingRoad: 'R',
-  BuildingRailroad: 'RR',
-  // 'ClearingForest': 'CF',
-  // 'ClearingJungle': 'CJ',
-  // 'ClearingSwamp': 'CS',
-  // 'Fortifying': 'F',
-  // 'Sleeping': 'S',
-  // 'PlantingForest': 'PF',
-};
+import { entityName } from '../components/lib/entity';
 
 export const renderUnit = (
-  unit: Unit,
+  unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>,
   // scale: number = 2,
   tileSize: number = 16
 ): CanvasImageSource => {
@@ -43,8 +31,13 @@ export const renderUnit = (
     // if (unit.busy._ === 'Sleeping') {} // TODO: fade the unit like in Civ 1
     const sizeOffsetX = tileSize / 2,
       sizeOffsetY = tileSize * 0.75,
-      identifier =
-        busyLookup[unit.busy._] ?? unit.busy._.replace(/[a-z]+/g, '');
+      identifier = entityName(
+        unit.busy,
+        'unit',
+        'Busy',
+        'icon',
+        entityName(unit.busy, 'unit', 'Busy').replace(/[a-z]+/g, '')
+      );
 
     context.font = `bold 8px sans-serif`;
     context.fillStyle = 'black';

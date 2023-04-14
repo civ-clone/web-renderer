@@ -149,8 +149,6 @@ export class Map implements IMap {
   protected setCanvasSize(): void {
     this.#canvas.height = this.#world.height() * this.tileSize();
     this.#canvas.width = this.#world.width() * this.tileSize();
-    // this.#canvas.setAttribute('height', this.#canvas.height.toString());
-    // this.#canvas.setAttribute('width',this.#canvas.width.toString());
   }
 
   isVisible(): boolean {

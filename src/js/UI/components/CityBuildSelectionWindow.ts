@@ -1,11 +1,12 @@
-import { BuildItem, City as CityData, CityBuild } from '../types';
+import { BuildItem, CityBuild } from '../types';
 import { ActionWindowActions } from './ActionWindow';
-import City from './City';
-import Portal from './Portal';
-import SelectionWindow, { ISelectionWindow } from './SelectionWindow';
+import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
+import { cityName } from './lib/city';
+import { getLabelForBuildable } from './lib/cityBuild';
 import { reduceKnownYield } from '../lib/yieldMap';
-import { INotificationWindow } from './NotificationWindow';
+import { t } from 'i18next';
+import { turnsLeft } from './lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 
@@ -19,21 +20,20 @@ export class CityBuildSelectionWindow extends SelectionWindow {
     onComplete: onCompleteHandler = () => {},
     additionalActions: ActionWindowActions = {}
   ) {
-    const turns = (buildItem: BuildItem) =>
-      Math.max(
-        1,
-        Math.ceil(
-          (buildItem.cost.value - cityBuild.progress.value) /
-            reduceKnownYield(cityBuild.city.yields, 'Production')
-        )
-      );
-
     super(
-      `What would you like to build in ${cityBuild.city.name}?`,
+      t('Actions.CityBuildSelectionWindow.title', {
+        cityName: cityName(cityBuild.city),
+      }),
       cityBuild.available.map((buildItem) => ({
-        label: `${buildItem.item._} (Cost: ${buildItem.cost.value} / ${turns(
-          buildItem
-        )} turn${turns(buildItem) === 1 ? '' : 's'})`,
+        label: t('City.Build.build-item', {
+          item: getLabelForBuildable(buildItem),
+          cost: buildItem.cost.value,
+          turns: turnsLeft(
+            { ...cityBuild, ...buildItem } as unknown as CityBuild,
+            cityBuild.city.yields,
+            'Production'
+          ),
+        }) as string,
         value: buildItem.item._,
       })),
       (selection) => {

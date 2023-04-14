@@ -2,16 +2,19 @@ import {
   DataPatch,
   DataPatchContents,
   Dialogue,
-  EntityInstance,
   GameData,
+  Interactions,
   Negotiation,
   NeighbourDirection,
   PlainObject,
   PlayerAction,
+  Resolution,
+  SneakAttack,
   Tile,
   Unit,
 } from './types';
-import { on, s } from '@dom111/element';
+import { emit, on, s } from '@dom111/element';
+import i18next, { t } from 'i18next';
 import { reconstituteData, ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import ActiveUnit from './components/Map/ActiveUnit';
@@ -30,6 +33,7 @@ import Improvements from './components/Map/Improvements';
 import IntervalHandler from './lib/IntervalHandler';
 import Irrigation from './components/Map/Irrigation';
 import Land from './components/Map/Land';
+import LanguageDetector from 'i18next-browser-languagedetector';
 import MainMenu from './components/MainMenu';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
@@ -42,14 +46,15 @@ import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
 import Units from './components/Map/Units';
+import Window from './components/Window';
 import World from './components/World';
 import Yields from './components/Map/Yields';
 import { assetStore } from './AssetStore';
-import civilizationAttribute from './components/lib/civilizationAttribute';
 import { h } from './lib/html';
-import { instance as localeProviderInstance } from './LocaleProvider';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
+import instanceOf from './lib/instanceOf';
+import ActionWindow from './components/ActionWindow';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -62,28 +67,38 @@ export class Renderer {
     this.#transport = transport;
   }
 
-  init() {
+  async init() {
     const transport = this.#transport;
 
-    assetStore.hasAllAssets().then((hasAllAssets) => {
-      if (!hasAllAssets) {
-        return;
-      }
+    const hasAllAssets = await assetStore.hasAllAssets();
+    if (!hasAllAssets) {
+      return;
+    }
 
-      assetStore
-        .getScaled('./assets/cursor/torch.png', 2)
-        .then(
-          (scaledCursor) =>
-            (document.body.style.cursor = `url('${scaledCursor.toDataURL(
-              'image/png'
-            )}'), default`)
-        );
+    const scaledCursor = await assetStore.getScaled(
+      './assets/cursor/torch.png',
+      2
+    );
+
+    document.body.style.cursor = `url('${scaledCursor.toDataURL(
+      'image/png'
+    )}'), default`;
+
+    // Load translations
+    i18next.use(LanguageDetector);
+
+    await i18next.init({
+      ns: ['default'],
     });
+    await import('../translations');
 
-    on(document, 'keypress', (event) => {
+    on(document, 'keydown', (event) => {
       if (
         event.key === 'F5' ||
-        (['R', 'r'].includes(event.key) && event.ctrlKey)
+        (['R', 'r'].includes(event.key) &&
+          (/Mac OS X/.test(navigator.userAgent)
+            ? event.metaKey
+            : event.ctrlKey))
       ) {
         event.preventDefault();
 
@@ -196,53 +211,106 @@ export class Renderer {
         }, 4000);
       });
 
-      const negotiationLabel = (negotiation: Negotiation) => {
-        const currentInteraction = negotiation.lastInteraction;
+      const interactionLabel = (interaction: Interactions) => {
+          if (instanceOf(interaction, 'Dialogue')) {
+            return t(`${interaction._}.${(interaction as Dialogue).key}`, {
+              interaction,
+              defaultValue: interaction._,
+              ns: 'diplomacy',
+            });
+          }
 
-        if (currentInteraction === null) {
-          return 'negotiation.missing-label';
-        }
+          if (instanceOf(interaction, 'Proposal')) {
+            return t(interaction._, {
+              interaction,
+              defaultValue: interaction._,
+              ns: 'diplomacy',
+            });
+          }
 
-        if (currentInteraction._ === 'Initiate') {
-          return `${
-            currentInteraction.players[0].civilization.leader._
-          } of ${civilizationAttribute(
-            currentInteraction.players[0].civilization,
-            'nation'
-          )} would like to grant you an audience, will you meet with them?`;
-        }
+          if (instanceOf(interaction, 'Resolution')) {
+            const { proposal } = interaction as Resolution;
 
-        if (currentInteraction._ === 'Dialogue') {
-          return currentInteraction.key;
-        }
+            return t(`Resolution.${proposal._}.${interaction._}`, {
+              interaction,
+              defaultValue: interaction._,
+              ns: 'diplomacy',
+            });
+          }
 
-        return currentInteraction._;
-      };
+          return t(`Action.${interaction._}`, {
+            interaction,
+            defaultValue: interaction._,
+            ns: 'diplomacy',
+          });
+        },
+        negotiationLabel = (negotiation: Negotiation) => {
+          const currentInteraction = negotiation.lastInteraction;
+
+          if (currentInteraction === null) {
+            return 'negotiation.missing-label';
+          }
+
+          return interactionLabel(currentInteraction);
+        };
 
       transport.receive('chooseFromList', ({ choices, key, data }) => {
-        // TODO: i18m for these
-        const body =
-          key === 'choose-civilization'
-            ? 'Choose your civilization'
-            : key === 'choose-leader'
-            ? 'Choose your leader'
-            : key === 'negotiation.next-step'
-            ? negotiationLabel(data as Negotiation)
-            : 'Choose an option';
+        const title = t(`ChooseFromList.${key}.title`, {
+          data,
+          defaultValue: t('ChooseFromList.default.body'),
+        });
 
-        const title = key === 'negotiation.next-step' ? 'Negotiation' : body;
+        if (key === 'negotiation.next-step' && choices.length === 1) {
+          const window = new ActionWindow(
+            title,
+            negotiationLabel(data as Negotiation),
+            {
+              canClose: false,
+              actions: {
+                primary: {
+                  label: interactionLabel(choices[0].value as Interactions),
+                  action: (actionWindow) => actionWindow.close(),
+                },
+              },
+            }
+          );
+
+          window.on('keydown', (event) => {
+            if (event.key !== 'Enter') {
+              return;
+            }
+
+            window.close();
+
+            event.preventDefault();
+            event.stopPropagation();
+          });
+
+          window.once('close', () =>
+            transport.send('chooseFromList', choices[0].id)
+          );
+
+          return;
+        }
+
+        const body =
+          key === 'negotiation.next-step'
+            ? negotiationLabel(data as Negotiation)
+            : t(`ChooseFromList.${key}.body`, {
+                data,
+                defaultValue: t('ChooseFromList.default.body'),
+              });
 
         new SelectionWindow(
           title,
           choices.map(({ id, value }) => {
-            // TODO: i18n
-            const label = [
-              'choose-civilization',
-              'choose-leader',
-              'negotiation.next-step',
-            ].includes(key)
-              ? value._
-              : value.toString();
+            const label =
+              key === 'negotiation.next-step'
+                ? interactionLabel(value as Interactions)
+                : t(`ChooseFromList.${key}.choice`, {
+                    value,
+                    defaultValue: value?._,
+                  });
 
             return {
               label,
@@ -252,6 +320,7 @@ export class Renderer {
           (choice) => transport.send('chooseFromList', choice),
           body,
           {
+            canClose: false,
             displayAll: true,
           }
         );
@@ -268,18 +337,32 @@ export class Renderer {
               'Welcome',
               s(
                 `<div class="welcome">
-<p>${
-                  data.player.civilization.leader!.name
-                }, you have risen to become leader of the ${civilizationAttribute(
-                  data.player.civilization,
-                  'people'
-                )}.</p>
-<p>Your people have knowledge of ${localeProviderInstance.list([
-                  'Irrigation',
-                  'Mining',
-                  'Roads',
-                  ...data.player.research.complete.map((advance) => advance._),
-                ])}.</p>
+<p>${t('Welcome.you-have-risen', {
+                  leader: t(
+                    `Leader.${data.player.civilization.leader._}.name`,
+                    {
+                      defaultValue: data.player.civilization.leader._,
+                      ns: 'civilization',
+                    }
+                  ),
+                  nation: t(`${data.player.civilization._}.plural`, {
+                    defaultValue: data.player.civilization._,
+                    ns: 'civilization',
+                  }),
+                })}</p>
+<p>${t('Welcome.your-people-have-knowledge-of', {
+                  advances: [
+                    'Irrigation',
+                    'Mining',
+                    'Roads',
+                    ...data.player.research.complete.map((advance) =>
+                      t(`${advance._}.name`, {
+                        defaultValue: advance._,
+                        ns: 'science',
+                      })
+                    ),
+                  ],
+                })}</p>
 </div>`
               )
             );
@@ -361,7 +444,10 @@ export class Renderer {
             intervalHandler.on(() => {
               activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
 
-              portal.build(tilesToRender.splice(0));
+              if (tilesToRender.length > 0) {
+                portal.build(tilesToRender.splice(0));
+              }
+
               portal.render();
             });
 
@@ -711,6 +797,21 @@ export class Renderer {
                 event.preventDefault();
               }
 
+              const modalWindow = document.querySelector('dialog.window.modal');
+
+              if (document.activeElement === document.body && modalWindow) {
+                event.preventDefault();
+
+                emit(
+                  modalWindow,
+                  new KeyboardEvent('keydown', {
+                    key: event.key,
+                  })
+                );
+
+                return;
+              }
+
               if (activeUnit) {
                 if (key in keyToActionsMap) {
                   const actions = [...keyToActionsMap[key]];
@@ -757,8 +858,19 @@ export class Renderer {
                       ['SneakAttack', 'SneakCaptureCity'].includes(unitAction._)
                     ) {
                       new ConfirmationWindow(
-                        'Sneak attack!',
-                        `Are you sure you want to perform a ${unitAction._}?`,
+                        t('SneakAttack.title'),
+                        t('SneakAttack.body', {
+                          nation: t(
+                            `${
+                              (unitAction as SneakAttack).enemy.civilization._
+                            }.nation`,
+                            {
+                              defaultValue: (unitAction as SneakAttack).enemy
+                                .civilization._,
+                              ns: 'civilization',
+                            }
+                          ),
+                        }),
                         () => perform()
                       );
 

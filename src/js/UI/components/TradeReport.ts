@@ -2,20 +2,21 @@ import {
   City as CityData,
   CityImprovementMaintenanceGold,
   GameData,
-  PlainObject,
   Player,
+  Yield,
 } from '../types';
-import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
-import { turnsLeft, turnsText, yieldData } from './lib/cityYields';
 import City from './City';
 import DataObserver from '../DataObserver';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
+import { cityName } from './lib/city';
 import { h } from '../lib/html';
+import { knownIcons } from '../lib/yieldMap';
 import { s } from '@dom111/element';
-import { instance as localeProvider } from '../LocaleProvider';
+import { t } from 'i18next';
+import { yieldData } from './lib/cityYields';
 
 export class TradeReport extends Window {
   #cities: CityData[];
@@ -24,7 +25,7 @@ export class TradeReport extends Window {
   #transport: Transport;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
-    super('Trade report', s('<div class="loading"></div>'), {
+    super(t('TradeReport.title'), s('<div class="loading"></div>'), {
       classes: 'trade-report',
     });
 
@@ -81,21 +82,24 @@ export class TradeReport extends Window {
       } = {},
       [totalIncome, totalSpend, totalGold] = this.#cities.reduce(
         ([totalIncome, totalSpend, totalGold], city: CityData) => {
-          city.yields.forEach((cityYield) => {
-            if (cityYield._ === 'CityImprovementMaintenanceGold') {
-              const improvement = (cityYield as CityImprovementMaintenanceGold)
-                .cityImprovement;
+          city.yields.forEach(
+            (cityYield: Yield | CityImprovementMaintenanceGold) => {
+              if (cityYield._ === 'CityImprovementMaintenanceGold') {
+                const improvement = (
+                  cityYield as CityImprovementMaintenanceGold
+                ).cityImprovement;
 
-              if (!(improvement._ in improvements)) {
-                improvements[improvement._] = {
-                  count: 0,
-                  cost: cityYield.value,
-                };
+                if (!(improvement._ in improvements)) {
+                  improvements[improvement._] = {
+                    count: 0,
+                    cost: cityYield.value,
+                  };
+                }
+
+                improvements[improvement._].count++;
               }
-
-              improvements[improvement._].count++;
             }
-          });
+          );
 
           const [cityGold, used, free] = yieldData(city, 'Gold'),
             row = document.createElement('tr');
@@ -106,8 +110,12 @@ export class TradeReport extends Window {
 
           row.append(
             ...[
-              city.name,
-              `${goldIcon} ${free}${free !== cityGold ? ` [${cityGold}]` : ''}`,
+              cityName(city),
+              `${goldIcon} ${t('CityStatus.totals', {
+                total: cityGold,
+                free,
+                context: free === cityGold ? 'equal' : 'unequal',
+              })}`,
             ].map((content) => {
               const element = document.createElement('td');
 
@@ -129,15 +137,22 @@ export class TradeReport extends Window {
         const row = document.createElement('tr');
 
         row.append(
-          ...[`${count} &times; ${name}`, `${goldIcon} ${count * -cost}`].map(
-            (content) => {
-              const element = document.createElement('td');
+          ...[
+            t('TradeReport.ImprovementList.item', {
+              count,
+              name,
+            }) as string,
+            t('TradeReport.ImprovementList.cost', {
+              icon: goldIcon,
+              total: Math.abs(count * -cost),
+            }) as string,
+          ].map((content) => {
+            const element = document.createElement('td');
 
-              element.innerHTML = content;
+            element.innerHTML = content;
 
-              return element;
-            }
-          )
+            return element;
+          })
         );
 
         return row;
@@ -154,12 +169,21 @@ export class TradeReport extends Window {
             '<div></div>',
             improvementList,
             s(`    <dl class="totals">
-      <dt>Total income</dt>
-      <dd>${goldIcon} ${localeProvider.number(totalIncome)} / turn</dd>
-      <dt>Total cost</dt>
-      <dd>${goldIcon} ${localeProvider.number(Math.abs(totalSpend))} / turn</dd>
-      <dt>Total surplus</dt>
-      <dd>${goldIcon} ${localeProvider.number(totalGold)} / turn</dd>
+      <dt>${t('TradeReport.ImprovementList.income-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: totalIncome,
+      })}</dd>
+      <dt>${t('TradeReport.ImprovementList.cost-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: Math.abs(totalSpend),
+      })}</dd>
+      <dt>${t('TradeReport.ImprovementList.surplus-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: totalGold,
+      })}</dd>
     </dl>
 `)
           )

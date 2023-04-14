@@ -2,10 +2,11 @@ import { GameData, Player, PlayerResearch, Yield } from '../types';
 import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
 import DataObserver from '../DataObserver';
 import Window from './Window';
-import { combinedYields } from './lib/playerYields';
-import { renderProgress } from './lib/cityYields';
-import { s } from '@dom111/element';
 import { assetStore } from '../AssetStore';
+import { combinedYields } from './lib/playerYields';
+import { renderProgress, turnsLeft } from './lib/cityYields';
+import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
@@ -13,17 +14,24 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
     .then((image) => `<img src="${image.toDataURL('image/png')}">`);
 
   return s(
-    `<div><p><strong>Researching ${
-      playerResearch.researching ? playerResearch.researching._ : 'nothing'
-    }</strong>${
-      playerResearch.researching
-        ? ` ${renderProgress(playerResearch, yields, 'Research')}`
-        : ''
-    }</p><p>${researchIcon} ${reduceKnownYield(
-      yields,
-      'Research'
-    )} / turn</p><div class="discovered">${playerResearch.complete
-      .map((advance) => `<div>${advance._}</div>`)
+    `<div><p><strong>${t('ScienceReport.researching', {
+      researching: playerResearch.researching?._,
+      context: playerResearch.researching ? 'researching' : 'notresearching',
+    })}</strong></p><p>${t('ScienceReport.progress', {
+      progress: playerResearch.progress.value,
+      total: playerResearch.cost.value,
+      turns: turnsLeft(playerResearch, yields, 'Research'),
+      context: playerResearch.researching ? 'researching' : 'notresearching',
+    })}</p><p>${researchIcon} ${t('Progress.per-turn', {
+      count: reduceKnownYield(yields, 'Research'),
+    })}</p><div class="discovered">${playerResearch.complete
+      .map(
+        (advance) =>
+          `<div>${t(`${advance._}.name`, {
+            defaultValue: advance._,
+            ns: 'science',
+          })}</div>`
+      )
       .join('')}</div></div>`
   );
 };
@@ -33,7 +41,7 @@ export class ScienceReport extends Window {
   #player: Player;
 
   constructor(player: Player) {
-    super('Player research', s('<div></div>'), {
+    super(t('ScienceReport.title'), s('<div></div>'), {
       classes: 'science-report',
     });
 

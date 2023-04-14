@@ -3,13 +3,17 @@ import { City as CityData } from '../../types';
 import { INotificationWindow } from '../NotificationWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
+import { cityName } from './city';
+import { t } from 'i18next';
 
 export const showCityAction = (
   city: CityData,
   portal: Portal,
   transport: Transport
 ) => ({
-  label: 'View city',
+  label: t('Actions.ShowCity.label', {
+    cityName: cityName(city),
+  }),
   action(selectionWindow: INotificationWindow) {
     selectionWindow.close();
 

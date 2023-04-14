@@ -3,11 +3,12 @@ import { PlayerGovernment } from '../../types';
 import SelectionWindow from '../SelectionWindow';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export class Revolution extends Action {
   activate(): void {
     const chooseWindow = new SelectionWindow(
-      'Choose government',
+      t('Actions.Revolution.title'),
       this.value().available.map((government) => ({
         value: government._,
       })),
@@ -26,7 +27,7 @@ export class Revolution extends Action {
 
         chooseWindow.close();
       },
-      'Which government would you like to convert to?',
+      t('Actions.Revolution.body'),
       {
         displayAll: true,
       }
@@ -39,9 +40,9 @@ export class Revolution extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="chooseGovernment small" title="Choose government"><img src="${
-              asset!.uri
-            }"></button>`
+            `<button class="chooseGovernment small" title="${t(
+              'Actions.Revolution.title'
+            )}"><img src="${asset!.uri}"></button>`
           )
         )
       );

@@ -5,23 +5,24 @@ import {
   MartialLaw,
   MilitaryUnhappiness,
   Player,
-  Yield,
 } from '../types';
+import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
+import City from './City';
 import DataObserver from '../DataObserver';
 import Element from '@dom111/element';
+import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
+import Transport from '../Transport';
 import Unit from './Unit';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
+import { cityName } from './lib/city';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
-import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
 import { renderPopulation } from './lib/cityYields';
 import { s } from '@dom111/element';
-import City from './City';
-import Portal from './Portal';
-import Transport from '../Transport';
+import { t } from 'i18next';
 
 const buildCityRow = async (
   city: CityData,
@@ -76,15 +77,22 @@ const buildCityRow = async (
     s(
       `<div class="city${city.celebrateLeader ? ' celebrateLeader' : ''}${
         city.civilDisorder ? ' civilDisorder' : ''
-      }"><div class="name">${city.name}</div></div>`,
+      }"><div class="name">${cityName(city)}</div></div>`,
       renderPopulation(city),
-      h(s('<button>View city</button>'), {
-        click(event: MouseEvent) {
-          event.stopPropagation();
+      h(
+        s(
+          `<button>${t('HappinessReport.view-city', {
+            cityName: cityName(city),
+          })}</button>`
+        ),
+        {
+          click(event: MouseEvent) {
+            event.stopPropagation();
 
-          new City(city, portal, transport);
-        },
-      }),
+            new City(city, portal, transport);
+          },
+        }
+      ),
       reasonWrapper
     ),
     {
@@ -109,6 +117,11 @@ export class HappinessReport extends Window {
     super('Happiness report', s('<div></div>'), {
       classes: 'happiness-report',
     });
+
+    this.element().setAttribute(
+      'data-i18n-breakdown',
+      t('HappinessReport.breakdown')
+    );
 
     this.#dataObserver = new DataObserver(
       [player.id, ...player.cities.map((city) => city.id)],

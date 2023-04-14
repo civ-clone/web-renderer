@@ -1,8 +1,7 @@
 import { City, Player } from '../types';
 import { Element, s } from '@dom111/element';
 import { reduceKnownYields } from '../lib/yieldMap';
-import civilizationAttribute from './lib/civilizationAttribute';
-import { instance as localeProvider } from '../LocaleProvider';
+import { t } from 'i18next';
 
 export class PlayerDetails extends Element {
   #player: Player;
@@ -40,30 +39,41 @@ export class PlayerDetails extends Element {
 
     this.append(
       s(
-        `<h3>${civilization.leader.name} of the ${civilizationAttribute(
-          civilization,
-          'people'
-        )} empire</h3>`
+        `<h3>${t('PlayerDetails.header', {
+          leader: t(`Leader.${civilization.leader._}.name`, {
+            defaultValue: civilization.leader._,
+            ns: 'civilization',
+          }),
+          nation: t(`${civilization._}.plural`, {
+            defaultValue: civilization._,
+            ns: 'civilization',
+          }),
+        })}</h3>`
       ),
       s(
-        `<p><strong>Researching</strong><br/>${
-          research.researching
-            ? `${research.researching._} ${localeProvider.number(
-                research.progress.value
-              )} / ${localeProvider.number(
-                research.cost.value
-              )} (${localeProvider.number(
-                totalResearch
-              )} / turn - ${localeProvider.number(researchTurns)} turn${
-                researchTurns === 1 ? '' : 's'
-              })`
-            : `Nothing (${localeProvider.number(totalResearch)} / turn)`
-        }</p>`
+        `<p><strong>${t('PlayerDetails.Researching.title')}</strong><br/>${t(
+          'PlayerDetails.Researching.body',
+          {
+            progress: research.progress.value,
+            cost: research.cost.value,
+            perTurn: totalResearch,
+            researching: t(`${research.researching?._}.name`, {
+              defaultValue: research.researching?._,
+              ns: 'science',
+            }),
+            turns: Number.isFinite(researchTurns) ? researchTurns : 0,
+            context: research.researching ? 'researching' : 'notresearching',
+          }
+        )}</p>`
       ),
       s(
-        `<p><strong>Treasury</strong><br/>${localeProvider.number(
-          goldTreasury.value
-        )} (${localeProvider.number(totalGold)} / turn)</p>`
+        `<p><strong>${t('PlayerDetails.Treasury.title')}</strong><br/>${t(
+          'PlayerDetails.Treasury.body',
+          {
+            value: goldTreasury.value,
+            perTurn: totalGold,
+          }
+        )}</p>`
       )
     );
   }

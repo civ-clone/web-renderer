@@ -3,7 +3,6 @@ import { s } from '@dom111/element';
 import releases from '../../../../changelog/releases.json';
 import { instance as localeProvider } from '../LocaleProvider';
 import { marked } from 'marked';
-import exp from 'constants';
 
 interface Release {
   version: string;
@@ -90,7 +89,7 @@ export class ReleaseWindow extends Window {
           ([module, { status, log: changes }]) => `<dd>${status} ${module}</dd>
       <dt aria-expanded="false">
         <ul>
-          ${changes
+          ${(changes ?? [])
             .map(
               (change) =>
                 `<li>${marked(change.replace(/^\s*-\s*/, '').trim(), {

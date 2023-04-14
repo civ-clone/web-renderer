@@ -2,6 +2,7 @@ import { TransientElement, ITransientElement } from './TransientElement';
 import { off, on, s } from '@dom111/element';
 import { Coordinate } from '../types';
 import { h } from '../lib/html';
+import { t } from 'i18next';
 
 export interface IWindow extends ITransientElement {
   close(): void;
@@ -20,10 +21,12 @@ type WindowPosition = {
 
 export type WindowSettings = {
   autoDisplay: boolean;
+  autofocus: boolean;
   canClose: boolean;
   canMaximise: boolean;
   canResize: boolean;
   classes: string | string[];
+  modal: boolean;
   parent: HTMLElement;
   position: WindowPosition | 'auto';
   size: WindowSize | 'auto' | 'maximised';
@@ -33,10 +36,12 @@ export type WindowOptions = { [K in keyof WindowSettings]?: WindowSettings[K] };
 
 const defaultOptions: WindowSettings = {
   autoDisplay: true,
+  autofocus: true,
   canClose: true,
   canMaximise: false,
   canResize: false,
   classes: '',
+  modal: false,
   parent: document.body,
   position: 'auto',
   size: 'auto',
@@ -44,7 +49,7 @@ const defaultOptions: WindowSettings = {
 
 export class Window
   extends TransientElement<
-    HTMLDivElement,
+    HTMLDialogElement,
     {
       close: [];
     }
@@ -58,8 +63,14 @@ export class Window
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
     super(
       options.parent ?? defaultOptions.parent,
-      s<HTMLDivElement>('<div class="window"></div>')
+      s<HTMLDialogElement>(
+        `<dialog class="window"${
+          options.autofocus ? ' autofocus' : ''
+        }></dialog>`
+      )
     );
+
+    this.on('cancel', (event) => event.preventDefault());
 
     this.options = {
       ...defaultOptions,
@@ -68,6 +79,10 @@ export class Window
 
     this.#body = body;
     this.#title = title;
+
+    if (this.options.modal) {
+      this.addClass('modal');
+    }
 
     if (this.options.size === 'auto') {
       this.addClass('size-auto');
@@ -139,7 +154,9 @@ export class Window
           this.options.canMaximise,
           h(
             s(
-              `<button class="maximise" aria-label="Maximise">Maximise</button>`
+              `<button class="maximise" aria-label="${t(
+                'Window.maximize'
+              )}">${t('Window.maximize')}</button>`
             ),
             {
               click: () => this.maximise(),
@@ -148,9 +165,16 @@ export class Window
         ],
         [
           this.options.canClose,
-          h(s(`<button class="close" aria-label="Close">Maximise</button>`), {
-            click: () => this.close(),
-          }),
+          h(
+            s(
+              `<button class="close" aria-label="${t('Window.close')}">${t(
+                'Window.close'
+              )}</button>`
+            ),
+            {
+              click: () => this.close(),
+            }
+          ),
         ],
       ] as [boolean, HTMLElement][]
     )
@@ -201,7 +225,9 @@ export class Window
         this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
       )
     );
+  }
 
+  bindClose(): void {
     this.on('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape' && this.options.canClose) {
         this.close();
@@ -213,13 +239,30 @@ export class Window
   }
 
   close(): void {
+    this.element().close();
     this.remove();
 
     this.emit(new CustomEvent('close'));
+
+    const windows = document.querySelectorAll('dialog.window');
+
+    if (!windows.length) {
+      return;
+    }
+
+    (windows[windows.length - 1] as HTMLDialogElement).focus();
   }
 
-  display(focus = true): void {
+  display(focus = this.options.autofocus): void {
     super.display();
+
+    this.bindClose();
+
+    if (this.options.modal) {
+      this.element().showModal();
+    } else {
+      this.element().show();
+    }
 
     if (!focus) {
       return;

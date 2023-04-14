@@ -1,45 +1,68 @@
-import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
-import { Unit } from '../types';
+import Unit from './Unit';
+import { City as CityData, PlainObject, Unit as UnitData } from '../types';
+import Window from './Window';
+import { h } from '../lib/html';
+import { s } from '@dom111/element';
+import { t } from 'i18next';
+import DataObserver from '../DataObserver';
 
-export class UnitSelectionWindow extends SelectionWindow {
+type OnComplete = (unit: UnitData) => void;
+
+const build = (
+  units: UnitData[],
+  transport: Transport,
+  onComplete: OnComplete
+): HTMLDivElement =>
+  s(
+    '<div></div>',
+    ...units.map((unit: UnitData) => {
+      const icon = new Unit(unit);
+
+      h(icon.element(), {
+        click: () => {
+          if (!unit.active) {
+            transport.send('action', {
+              name: 'InactiveUnit',
+              id: unit.id,
+            });
+
+            onComplete(unit);
+          }
+        },
+      });
+
+      return icon;
+    })
+  );
+
+export class UnitSelectionWindow extends Window {
+  #dataObserver: DataObserver;
+
   constructor(
-    units: Unit[],
+    units: UnitData[],
     transport: Transport,
-    onComplete: (unit: Unit) => void = () => {}
+    onComplete: OnComplete = () => {}
   ) {
-    super(
-      // TODO: i18n
-      'Activate unit',
-      units.map((unit: Unit) => ({
-        label:
-          unit._ +
-          ' [' +
-          (unit.city?.name ?? 'NONE') +
-          ']' +
-          (unit.busy ? ` (${unit.busy!._})` : ''),
-        value: unit.id,
-      })),
-      (selection: string) => {
-        const [unit] = units.filter((tileUnit) => tileUnit.id === selection);
+    super(t('UnitSelectionWindow.title'), s('<div></div>'));
 
-        if (!unit) {
-          return;
-        }
+    const unitIds = units.map((unit) => unit.id);
 
-        if (!unit.active) {
-          transport.send('action', {
-            name: 'InactiveUnit',
-            id: selection,
-          });
+    this.#dataObserver = new DataObserver(unitIds, (data: PlainObject) => {
+      const updatedUnits = ((data.player?.units ?? []) as UnitData[]).filter(
+        (unit: UnitData) => unitIds.includes(unit.id)
+      );
 
-          return;
-        }
+      if (!updatedUnits.length) {
+        this.close();
 
-        onComplete(unit);
-      },
-      null
-    );
+        return;
+      }
+
+      this.update(build(updatedUnits, transport, onComplete));
+    });
+
+    this.update(build(units, transport, onComplete));
   }
 }
 

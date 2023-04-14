@@ -1,36 +1,20 @@
 import MandatorySelection from './MandatorySelection';
 import Transport from '../Transport';
 import Request from '../../Engine/Request';
+import { t } from 'i18next';
 
 export type FinishedHandler = () => void;
 
 export class NewGameWindow extends MandatorySelection {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    // TODO: take the number from Engine options.
     super(
-      'How many players?',
-      [
-        {
-          label: '7 civilizations',
-          value: 7,
-        },
-        {
-          label: '6 civilizations',
-          value: 6,
-        },
-        {
-          label: '5 civilizations',
-          value: 5,
-        },
-        {
-          label: '4 civilizations',
-          value: 4,
-        },
-        {
-          label: '3 civilizations',
-          value: 3,
-        },
-      ],
+      t('NewGameWindow.number-of-players'),
+      [7, 6, 5, 4, 3].map((value) => ({
+        label: t('NewGameWindow.civilizations', {
+          count: value,
+        }) as string,
+        value,
+      })),
       async (selection) => {
         this.close();
 
@@ -47,6 +31,10 @@ export class NewGameWindow extends MandatorySelection {
         }
 
         transport.send('start', null);
+      },
+      undefined,
+      {
+        modal: true,
       }
     );
   }

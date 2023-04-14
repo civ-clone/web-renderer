@@ -3,6 +3,7 @@ import {
   SelectionWindowOption,
   SelectionWindowOptions,
 } from './SelectionWindow';
+import { t } from 'i18next';
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -15,15 +16,15 @@ export class MandatorySelection extends SelectionWindow {
     title: string,
     optionList: SelectionWindowOption[],
     onChoose: (selection: string) => void,
-    body: string | Node | null = 'Please choose one of the following:',
+    body: string | Node | null = t('MandatorySelection.default-body'),
     options: SelectionWindowOptions = {
       canClose: false,
-      displayAll: false,
     }
   ) {
     super(title, optionList, onChoose, body, {
       ...options,
       displayAll: true,
+      modal: true,
     });
   }
 

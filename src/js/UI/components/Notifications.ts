@@ -1,13 +1,16 @@
 import NotificationWindow from './NotificationWindow';
+import { t } from 'i18next';
 
+// TODO: add in key specifically
 export interface Notification {
-  message: string;
-  title?: string;
+  data: any;
+  key: string;
 }
 
 export class Notifications {
   #container: HTMLElement;
   #notifications: Notification[] = [];
+  #interval: number | null = null;
 
   constructor(container: HTMLElement = document.body) {
     this.#container = container;
@@ -31,16 +34,46 @@ export class Notifications {
     this.publish(notification);
   }
 
-  private publish(notification: Notification): void {
-    const notificationWindow = new NotificationWindow(
-      notification.title ?? 'Notification',
-      notification.message,
-      {
-        parent: this.#container,
-      }
-    );
+  private periodicChecker(remove: boolean = false): void {
+    this.check();
 
-    notificationWindow.on('close', () => this.check());
+    if (remove) {
+      if (this.#interval === null) {
+        return;
+      }
+
+      window.clearInterval(this.#interval);
+
+      this.#interval = null;
+
+      return;
+    }
+
+    if (this.#interval !== null || this.#notifications.length === 0) {
+      return;
+    }
+
+    this.#interval = window.setInterval(() => this.check(), 500);
+  }
+
+  private publish(notification: Notification): void {
+    const message = t(`${notification.key}.body`, {
+        ...notification.data,
+        ns: 'notification',
+        skipOnVariables: false,
+      }) as unknown as string,
+      title = t(`${notification.key}.title`, {
+        ...notification.data,
+        defaultValue: t('Notification.title'),
+        ns: 'notification',
+        skipOnVariables: false,
+      }) as unknown as string,
+      notificationWindow = new NotificationWindow(title, message, {
+        modal: true,
+        parent: this.#container,
+      });
+
+    notificationWindow.on('close', () => this.periodicChecker());
   }
 }
 

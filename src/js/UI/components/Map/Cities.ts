@@ -1,5 +1,5 @@
-import { Tile, Unit } from '../../types';
-import { Map, IMap } from '../Map';
+import { Map } from '../Map';
+import { Tile } from '../../types';
 
 export class Cities extends Map {
   renderTile(tile: Tile): void {

@@ -3,12 +3,17 @@ import { PlayerResearch } from '../../types';
 import SelectionWindow from '../SelectionWindow';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export class ChooseResearch extends Action {
   activate(): void {
     const chooseWindow = new SelectionWindow(
-      'Choose research',
+      t('Actions.ChooseResearch.title'),
       this.value().available.map((advance) => ({
+        label: `${t(`${advance._}.name`, {
+          defaultValue: advance._,
+          ns: 'science',
+        })}`,
         value: advance._,
       })),
       (selection) => {
@@ -26,7 +31,7 @@ export class ChooseResearch extends Action {
 
         chooseWindow.close();
       },
-      'Which advance would you like to research next?',
+      t('Actions.ChooseResearch.body'),
       {
         displayAll: true,
       }
@@ -39,9 +44,9 @@ export class ChooseResearch extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="large chooseResearch" title="Choose research"><img src="${
-              asset!.uri
-            }"></button>`
+            `<button class="large chooseResearch" title="${t(
+              'Actions.ChooseResearch.title'
+            )}"><img src="${asset!.uri}"></button>`
           )
         )
       );

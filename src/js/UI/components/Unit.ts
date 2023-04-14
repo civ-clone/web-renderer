@@ -5,7 +5,11 @@ import renderUnit from '../lib/renderUnit';
 export class Unit extends Element {
   #scale: number = 2;
 
-  constructor(unit: UnitData, scale: number = 2) {
+  constructor(
+    unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>,
+    scale: number = 2
+  ) {
+    // TODO: use scale here for the <canvas/> size
     super(s<HTMLCanvasElement>('<canvas width="32" height="32"></canvas>'));
 
     this.#scale = scale;
@@ -13,7 +17,7 @@ export class Unit extends Element {
     this.build(unit);
   }
 
-  build(unit: UnitData) {
+  build(unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>) {
     const unitCanvas = renderUnit(unit),
       context = this.element().getContext('2d')!,
       sizeX = this.size(unitCanvas.width as number),

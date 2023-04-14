@@ -4,9 +4,11 @@ import ActionWindow from '../ActionWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
+import { cityName } from '../lib/city';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
+import { t } from 'i18next';
 
 export class CivilDisorder extends Action {
   #portal: Portal;
@@ -18,11 +20,15 @@ export class CivilDisorder extends Action {
   }
 
   activate() {
-    const city = this.value() as unknown as City;
+    const city = this.value() as City;
 
     new ActionWindow(
-      `Civil disorder in ${city.name}!`,
-      `Civil disorder in ${city.name}, mayor flees in panic!`,
+      t('Actions.CivilDisorder.title', {
+        cityName: cityName(city),
+      }),
+      t('Actions.CivilDisorder.body', {
+        cityName: cityName(city),
+      })!,
       {
         actions: {
           showCity: showCityAction(city, this.#portal, this.transport()),
@@ -33,19 +39,20 @@ export class CivilDisorder extends Action {
   }
 
   build() {
-    const city = this.value() as unknown as City;
+    const city = this.value() as City;
 
-    assetStore
-      .get('./assets/city/people_unhappy_m.png')
-      .then((asset) =>
-        this.append(
-          s(
-            `<button class="civilDisorder" title="Civil disorder in ${
-              city.name
-            }!"><img src="${asset!.uri}"></button>`
-          )
+    assetStore.get('./assets/city/people_unhappy_m.png').then((asset) =>
+      this.append(
+        s(
+          `<button class="civilDisorder" title="${t(
+            'Actions.CivilDisorder.title',
+            {
+              cityName: cityName(city),
+            }
+          )}"><img src="${asset!.uri}"></button>`
         )
-      );
+      )
+    );
   }
 }
 

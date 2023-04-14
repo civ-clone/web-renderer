@@ -53,7 +53,7 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
 }
 
 export interface SpendCost extends EntityInstance<'SpendCost'> {
-  resource: Entity<'Gold'>;
+  resource: Yield;
   value: number;
 }
 
@@ -141,9 +141,14 @@ export interface Unit extends EntityInstance {
   yields: Yield[];
 }
 
-export interface UnitAction extends EntityInstance {
+export interface UnitAction<Types = string> extends EntityInstance<Types> {
   from: Tile;
   to: Tile;
+}
+
+export interface SneakAttack
+  extends UnitAction<'SneakAttack' | 'SneakCaptureCity'> {
+  enemy: Player;
 }
 
 export interface Terrain extends EntityInstance {

@@ -7,6 +7,7 @@ import { assetStore } from '../AssetStore';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export class ImportAssetsWindow extends Window {
   #fileInput: HTMLInputElement;
@@ -19,16 +20,14 @@ export class ImportAssetsWindow extends Window {
       );
 
     super(
-      'Import assets',
+      t('ImportAssetsWindow.title'),
       s(
-        `<div class="import-assets"><p>Upload ${Object.keys(
-          extractData.files
-        ).join(
-          ', '
-        )} from the original Civilization files to extract assets (these will be stored locally). This process can take at least a few minutes.</p><div class="brave" ${
+        `<div class="import-assets"><p>${t('ImportAssetsWindow.instructions', {
+          files: Object.keys(extractData.files),
+        })}</p><div class="brave" ${
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
-        }><p>It looks like you're using Brave and due to the use of <code>HTMLCanvasElement</code>'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won't look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p></div></div>`,
+        }>${t('ImportAssetsWindow.brave')}</div></div>`,
         s(
           '<p></p>',
           h(fileInput, {
@@ -60,15 +59,20 @@ export class ImportAssetsWindow extends Window {
       )
     ) {
       this.#progressInformation.style.color = '#f00';
-      this.#progressInformation.innerText = `Please provide all files to generate assets: ${expectedFilenames.join(
-        ', '
-      )}.`;
+      this.#progressInformation.innerText = t(
+        'ImportAssetsWindow.missing-files',
+        {
+          files: expectedFilenames,
+        }
+      );
 
       return;
     }
 
     this.#fileInput.setAttribute('disabled', '');
-    this.#progressInformation.innerText = 'Building image assets...';
+    this.#progressInformation.innerText = t(
+      'ImportAssetsWindow.progress-building'
+    );
 
     const results: { name: string; uri: string }[] = [];
 
@@ -121,25 +125,30 @@ export class ImportAssetsWindow extends Window {
       )
     );
 
-    this.#progressInformation.innerText = 'Writing to database...';
+    this.#progressInformation.innerText = t(
+      'ImportAssetsWindow.progress-writing'
+    );
 
     // ...and all results stored in IDB.
     await Promise.all(results.map((record) => assetStore.set(record)));
 
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');
+
       this.#progressInformation.style.color = '#f00';
-      this.#progressInformation.innerText =
-        'Not all expected data was written. Might need to try again... Missing: ' +
-        (await assetStore.missingAssets()).join(', ');
+      this.#progressInformation.innerText = t(
+        'ImportAssetsWindow.missing-data',
+        {
+          files: await assetStore.missingAssets(),
+        }
+      );
 
       this.#fileInput.removeAttribute('disabled');
 
       return;
     }
 
-    this.#progressInformation.innerText =
-      'Done! Please reload the page to utilise the fresh assets.';
+    this.#progressInformation.innerText = t('ImportAssetsWindow.done');
 
     // We need to reprocess everything and this is the lazy way...
     location.reload();

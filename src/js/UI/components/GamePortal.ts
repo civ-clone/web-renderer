@@ -1,9 +1,9 @@
+import { Tile, Unit } from '../types';
 import City from './City';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import Portal from './Portal';
-import { Tile, Unit } from '../types';
-import { on, onEach } from '@dom111/element';
 import UnitActionMenu from './UnitActionMenu';
+import { on } from '@dom111/element';
 
 export class GamePortal extends Portal {
   #activeUnit: Unit | null = null;
@@ -61,20 +61,7 @@ export class GamePortal extends Portal {
     };
 
     // Prevent dragging address bar down by accident
-    on(this.canvas(), 'touchstart', (event) => {
-      event.preventDefault();
-      //
-      // const touch = event.touches[0];
-      //
-      // showActionMenu(
-      //   this.tileFromOffsets(
-      //     touch.pageX - this.canvas().offsetLeft,
-      //     touch.pageY - this.canvas().offsetTop
-      //   ),
-      //   touch.pageX,
-      //   touch.pageY
-      // );
-    });
+    on(this.canvas(), 'touchstart', (event) => event.preventDefault());
 
     on(this.canvas(), 'pointerdown', (event) => {
       event.preventDefault();

@@ -1,5 +1,8 @@
 import { Tile } from '../../types';
 import { Map } from '../Map';
+import { instance as localeProvider } from '../../LocaleProvider';
+import { t } from 'i18next';
+import { cityName } from '../lib/city';
 
 export class CityNames extends Map {
   renderTile(tile: Tile): void {
@@ -23,23 +26,23 @@ export class CityNames extends Map {
     this.context().fillStyle = 'black';
     this.context().textAlign = 'center';
     this.context().fillText(
-      city.growth.size.toString(),
+      localeProvider.number(city.growth.size),
       offsetX + sizeOffsetX + this.scale(),
       offsetY + sizeOffsetY
     );
     this.context().fillText(
-      city.name,
+      cityName(city),
       offsetX + textOffsetX + this.scale(),
       offsetY + textOffsetY
     );
     this.context().fillStyle = 'white';
     this.context().fillText(
-      city.growth.size.toString(),
+      localeProvider.number(city.growth.size),
       offsetX + sizeOffsetX,
       offsetY + sizeOffsetY - this.scale()
     );
     this.context().fillText(
-      city.name,
+      cityName(city),
       offsetX + textOffsetX,
       offsetY + textOffsetY - this.scale()
     );

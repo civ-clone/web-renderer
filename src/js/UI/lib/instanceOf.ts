@@ -8,12 +8,12 @@ type ClassNameStatus = {
  * Ensures the `__` property contains at least one of the passed in  `classNames`.
  */
 export const instanceOf = (
-  object: Entity | EntityInstance,
+  object: Entity | EntityInstance | null,
   ...classNames: string[]
-) =>
-  object.__.some((entityClassName: string) =>
+): boolean =>
+  object?.__.some((entityClassName: string) =>
     classNames.includes(entityClassName)
-  );
+  ) ?? false;
 
 /**
  * Ensures the `__` property contains each of the passed in `classNames`.

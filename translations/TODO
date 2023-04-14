@@ -1,0 +1,5 @@
+I'd like to break out most of the re-usable components into their own packages, that would mean that translations that
+are specific to these components should be moved out there too. Additionally, data-based backend components (like the
+ones that provide the `Unit`s, `Advance`s, `CityImprovement`s`, etc) might want to include translations (or have
+separate `-translation-en`, `-translation-pt-BR`, etc - packages perhaps?), for now, since this is still a monorepo for
+the frontend, I'll subpackage here.

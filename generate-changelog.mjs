@@ -23,22 +23,14 @@ const [, , targetCommit] = process.argv,
 
         return stdout.trim().split(/\n/)
             .reduce((modules, line) => {
-                if (!/^[-+]/.test(line) || !/resolved/.test(line) || !/civ-clone/.test(line)) {
+                if (!/^[-+]/.test(line) || !/resolved|resolution/.test(line) || !/civ-clone/.test(line)) {
                     return modules;
                 }
 
-                const resultHash = line.match(/([-+])  "?resolved"? ".+?civ-clone\/([^/]+)(?:\.git|.*)[/#]([0-9a-f]{40})"/),
-                    resultVersion = line.match(/[-+]  "?resolved"? ".+?@civ-clone\/([^/]+)\/-\/\1-(\d+\.\d+\.\d+)\..+"/);
-
-                if (resultHash === null && resultVersion === null) {
-                    console.warn('no match: ' + line);
-
-                    return modules;
-                }
-
-                const [, status, hashModule, hash] = resultHash ?? [],
-                    [, versionModule, version] = resultVersion ?? [],
-                    module = (hashModule ?? versionModule ?? '').replace(/\.git?$/, '');
+                const [, status] = line.match(/^([-+])/),
+                    [, module] = line.match(/civ-clone\/([a-z\d-]+)/i),
+                    [, hash] = line.match(/\b([0-9a-f]{40})\b/i) || [],
+                    [, version] = line.match(/\b(\d+\.\d+\.\d+)\b/) || [];
 
                 if (!module) {
                     console.warn('no module??: ' + line);
@@ -164,6 +156,7 @@ const [, , targetCommit] = process.argv,
         localChanges: await getLocalChanges(),
         externalChanges: await Object.entries(await getExternalChanges())
             .reduce((modules, [module, { fromHash = null, toHash, fromVersion = null, toVersion }]) =>
+                console.warn([fromVersion, toVersion]) ||
                     modules.then(async (modules) => {
                         if (fromVersion && toVersion && fromVersion === toVersion) {
                             return modules;

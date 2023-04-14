@@ -5,6 +5,7 @@ import { PlayerTradeRates } from '../../types';
 import Window from '../Window';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export class AdjustTradeRates extends Action {
   #sliderGroup: LockedSliderGroup | undefined;
@@ -13,11 +14,18 @@ export class AdjustTradeRates extends Action {
     const sliders: LockedSlider[] = [];
 
     const window = new Window(
-      'Adjust trade rates',
+      t('Actions.AdjustTradeRates.title'),
       s(
         '<div></div>',
         ...this.value().all.map((tradeRate) => {
-          const slider = new LockedSlider(tradeRate._, tradeRate.value);
+          const slider = new LockedSlider(
+            tradeRate._,
+            tradeRate.value,
+            t(`${tradeRate._}.name`, {
+              defaultValue: tradeRate._,
+              ns: 'trade',
+            })
+          );
 
           sliders.push(slider);
 
@@ -27,10 +35,9 @@ export class AdjustTradeRates extends Action {
     );
 
     window.on('close', () => {
-      const value = this.#sliderGroup!.sliders().map((slider) => [
-        slider.label(),
-        slider.value(),
-      ]);
+      const value = this.#sliderGroup!.sliders().map(
+        (slider): [string, number] => [slider.key(), slider.value()]
+      );
 
       this.transport().send('action', {
         name: 'AdjustTradeRates',
@@ -48,9 +55,9 @@ export class AdjustTradeRates extends Action {
       .then((asset) =>
         this.append(
           s(
-            `<button class="adjustTradeRates small" title="Adjust trade rates"><img src="${
-              asset!.uri
-            }"></button>`
+            `<button class="adjustTradeRates small" title="${t(
+              'Actions.AdjustTradeRates.title'
+            )}"><img src="${asset!.uri}"></button>`
           )
         )
       );

@@ -1,5 +1,6 @@
 import { Element, off, on, s } from '@dom111/element';
 import { h } from '../lib/html';
+import { t } from 'i18next';
 
 const menuMap = new Map<any, PopupMenu>();
 
@@ -79,9 +80,16 @@ export class PopupMenu extends Element {
 
         return button;
       }),
-      h(s(`<button class="close" aria-label="Close">&times;</button>`), {
-        pointerup: () => this.remove(),
-      })
+      h(
+        s(
+          `<button class="close" aria-label="${t(
+            'Generic.close'
+          )}">&times;</button>`
+        ),
+        {
+          pointerup: () => this.remove(),
+        }
+      )
     );
 
     this.addClass(this.#options.align);

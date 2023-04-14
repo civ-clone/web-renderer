@@ -15,6 +15,7 @@ import {
 } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export const buildTurns = (city: City) =>
   turnsLeft(city.build, city.yields, 'Production');
@@ -87,25 +88,30 @@ export const renderProgress = (
   yields: Yield[],
   yieldName: string
 ) =>
-  `Progress ${cityData.progress.value} / ${cityData.cost.value} (${turnsText(
-    turnsLeft(cityData, yields, yieldName)
-  )})`;
+  t('Progress.body', {
+    progress: cityData.progress.value,
+    total: cityData.cost.value,
+    turns: turnsLeft(cityData, yields, yieldName),
+  });
 
 export const turnsLeft = (
   data: CityGrowth | CityBuild | PlayerResearch,
   yields: Yield[],
   yieldName: string
-) =>
-  Math.max(
+) => {
+  const remainingTurns = Math.max(
     1,
     Math.ceil(
       (data.cost.value - data.progress.value) /
-        reduceKnownYield(yields, yieldName)
+        Math.abs(reduceKnownYield(yields, yieldName))
     )
   );
 
+  // Return 0 so that it can be handled as a plural in the translations as `Never`, rather than `Infinity turns`.
+  return Number.isFinite(remainingTurns) ? remainingTurns : 0;
+};
 export const turnsText = (turns: number) =>
-  turns + ' turn' + (turns === 1 ? '' : 's');
+  t('Progress.turns', { count: turns });
 
 export const yieldData = (city: CityData, yieldName: string) =>
   city.yields.reduce(
@@ -140,4 +146,10 @@ export const yieldImages = (cityYield: { _: string; value: number }): Node[] =>
       );
 
     return icon;
+  });
+
+export const yieldLabel = (cityYield: Yield) =>
+  t(`${cityYield._}.name`, {
+    defaultValue: cityYield._,
+    ns: 'yield',
   });

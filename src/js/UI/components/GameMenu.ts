@@ -2,17 +2,16 @@ import { Element, s } from '@dom111/element';
 import { GameData, Player } from '../types';
 import CityStatus from './CityStatus';
 import DataObserver from '../DataObserver';
+import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
 import TradeReport from './TradeReport';
 import Transport from '../Transport';
-import Window from './Window';
 import { h } from '../lib/html';
-// @ts-ignore
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
-import GameOptions from './GameOptions';
+import { t } from 'i18next';
 
 export class GameMenu extends Element {
   #dataObserver: DataObserver;
@@ -43,8 +42,8 @@ export class GameMenu extends Element {
     this.append(
       h(button, {
         click: () => {
-          const { offsetLeft: parentX, offsetTop: parentY } = this.element();
-          const { offsetLeft: x, offsetTop: y } = button;
+          const { offsetLeft: parentX, offsetTop: parentY } = this.element(),
+            { offsetLeft: x, offsetTop: y } = button;
 
           new PopupMenu(
             this,
@@ -52,19 +51,19 @@ export class GameMenu extends Element {
             parentY + y,
             [
               {
-                label: 'Options',
+                label: t('GameMenu.options'),
                 action() {
                   new GameOptions();
                 },
               },
               {
-                label: 'City Status',
+                label: t('GameMenu.city-status'),
                 action: () => {
                   new CityStatus(this.#player, this.#portal, this.#transport);
                 },
               },
               {
-                label: 'Happiness Report',
+                label: t('GameMenu.happiness-report'),
                 action: () => {
                   new HappinessReport(
                     this.#player,
@@ -74,13 +73,13 @@ export class GameMenu extends Element {
                 },
               },
               {
-                label: 'Trade Report',
+                label: t('GameMenu.trade-report'),
                 action: () => {
                   new TradeReport(this.#player, this.#portal, this.#transport);
                 },
               },
               {
-                label: 'Science Report',
+                label: t('GameMenu.science-report'),
                 action: () => {
                   new ScienceReport(this.#player);
                 },

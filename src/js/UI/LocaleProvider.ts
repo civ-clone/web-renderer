@@ -55,6 +55,10 @@ export class LocaleProvider {
     });
   }
 
+  setLocale(locale: string): void {
+    this.#locale = locale;
+  }
+
   timeSince(date: Date, options?: Intl.RelativeTimeFormatOptions): string {
     const timeFormatter = new Intl.RelativeTimeFormat(this.locales(), options),
       secondsDifference = Math.trunc((date.getTime() - Date.now()) / 1000);

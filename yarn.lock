@@ -5,6 +5,15 @@ __metadata:
   version: 6
   cacheKey: 8
 
+"@babel/runtime@npm:^7.19.4, @babel/runtime@npm:^7.20.6":
+  version: 7.21.0
+  resolution: "@babel/runtime@npm:7.21.0"
+  dependencies:
+    regenerator-runtime: ^0.13.11
+  checksum: 7b33e25bfa9e0e1b9e8828bb61b2d32bdd46b41b07ba7cb43319ad08efc6fda8eb89445193e67d6541814627df0ca59122c0ea795e412b99c5183a0540d338ab
+  languageName: node
+  linkType: hard
+
 "@civ-clone/base-city-improvement-aqueduct@npm:^0.1.0":
   version: 0.1.0
   resolution: "@civ-clone/base-city-improvement-aqueduct@npm:0.1.0"
@@ -344,11 +353,11 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-civilization-american@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-civilization-american@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-civilization-american@npm:0.1.2"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: a24d5f8ed9c8d7c298e54c5710973b7c5dda7c02608de4c13a17b72e8826c5ee0aa1f2352f5419d1b0253c66d1a5e3763e3e473f03bd42720044c3f7231a2dde
+  checksum: 4c7fc98f4e1595b25a28e951fee9af14b76b6888cc6b32a95f85a0d509186a541f41e0d7e4cf83ebc943b237222d234f772a0239c488581f50633b04366a52ce
   languageName: node
   linkType: hard
 
@@ -371,11 +380,11 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-civilization-chinese@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-civilization-chinese@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-civilization-chinese@npm:0.1.2"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: 80145d38803d2dbc03a21adb7aaae27fa8efb98aad6e26ee93ad4688b1b5d42c7378405a53f09c72339c586517270136062dcbe6bdb911633e73d1dcd3e52c60
+  checksum: 8f0e2fda4a72162c557280717e8d41ce2a9a8a7b05c5a92d63f5f301c6e34b39363f5383f67f656668324ce19b58faa1accccb240b95431c4b03ae73b9ad6cef
   languageName: node
   linkType: hard
 
@@ -398,11 +407,11 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-civilization-french@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-civilization-french@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-civilization-french@npm:0.1.2"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: 4678a53debe6f389e4a689948c69a0d7809733624a4baa6dc03c480de99916e7bcd0aa146385e9f577f373e3f4e401963ed186e1abab394942216c14617ca58b
+  checksum: eab37cb82df2e8995d8997f2334a2653ff1a9cca417ebcb97564e4626b5e9b9ec4afab67f959d43eb38357e13d1b8c3625e268e5a1a6cfdb5030b089cf8919e4
   languageName: node
   linkType: hard
 
@@ -416,20 +425,20 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-civilization-greek@npm:^0.1.0":
-  version: 0.1.2
-  resolution: "@civ-clone/base-civilization-greek@npm:0.1.2"
+  version: 0.1.3
+  resolution: "@civ-clone/base-civilization-greek@npm:0.1.3"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: 0aba278c89c7b4e0178af621754717af361ad2d5f3bffc1810dae28f5f52b1a3a3a21192d7402c296202fce2283162041a5e3918eb963df3cc1203516da1dc50
+  checksum: 3ea5e3bb1d4592dcf6d19c26d0a9158135da9655a299d88ac6994866a3f816dce01ba6db4c21f7c7ec59c8e875cce73dc030d45b5b6dbcde27b63d68a14fc047
   languageName: node
   linkType: hard
 
 "@civ-clone/base-civilization-indian@npm:^0.1.0":
-  version: 0.1.2
-  resolution: "@civ-clone/base-civilization-indian@npm:0.1.2"
+  version: 0.1.3
+  resolution: "@civ-clone/base-civilization-indian@npm:0.1.3"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: 6a640c4eed2badc7507ad60413428535d505521aa8177bc783652f9847115f0f674c6b43157ecad8a9603da13d119c518eb9feaea7c340890eced3580a45450b
+  checksum: dbe34daeb29ecfed7f2672736e796b39a3f6cbed06cf4c0a3e277c7469bfad6f8b0a332d560607fb5077ec9138c6f0392757ab8fb5f9a90c998a9e86ba368258
   languageName: node
   linkType: hard
 
@@ -443,11 +452,11 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-civilization-roman@npm:^0.1.0":
-  version: 0.1.2
-  resolution: "@civ-clone/base-civilization-roman@npm:0.1.2"
+  version: 0.1.3
+  resolution: "@civ-clone/base-civilization-roman@npm:0.1.3"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
-  checksum: a4d38d31110041624b3d0343d258ba118e4663451bc4149c7b328d62c5220fd19311a27c3999cb5c4564f105599063e756e88adc993b358ff6825db4a310536f
+  checksum: 0a87ab714639faca2a385684774a1a19886d7093e6b0e80f0d5baa1dd6597634725786f231a8098ebb0bd0d39c3e9d50fc10f29db9a03869de7e81e7913108b2
   languageName: node
   linkType: hard
 
@@ -1687,13 +1696,13 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-unit-action-attack@npm:^0.1.0":
-  version: 0.1.4
-  resolution: "@civ-clone/base-unit-action-attack@npm:0.1.4"
+  version: 0.1.5
+  resolution: "@civ-clone/base-unit-action-attack@npm:0.1.5"
   dependencies:
     "@civ-clone/core-rule": ^0.1.2
     "@civ-clone/core-unit": ^0.1.0
     "@civ-clone/core-world": ^0.1.9
-  checksum: c59f6a9b05efb405857884d209636201e491b87d4eb7bb788f7f62c43911478c3f74a2a1721183bd750b4d52bc70a150bdc682a27debb2a0732b16a63891a879
+  checksum: 51f279e53947145157b85ef3d486cdf96a7dab58bf76ea4ceceed6e9dcbc9fd03ab57185b8c00e11fbe28276058593fa108ab5084d54a384a721f559e2320ab6
   languageName: node
   linkType: hard
 
@@ -1800,11 +1809,11 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-unit-action-disband@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-unit-action-disband@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-unit-action-disband@npm:0.1.2"
   dependencies:
     "@civ-clone/core-unit": ^0.1.15
-  checksum: 2d9a8577c37ec45749448665923280c2883a10e7d9a561a67a4f8d0f45ffa07968888d1a4df41a1a7e16a405b754d7e126b545ab80e37adc6f3a893610fb3c8c
+  checksum: 206c2f865ad776e726cb07a0bdd7d37deaefea95c493cb85ab07fe654ce59c0e4111238314fdd88752a35c62b484e97df4909143abac18afbc1147216d4af71c
   languageName: node
   linkType: hard
 
@@ -1920,12 +1929,12 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-unit-action-unload@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-unit-action-unload@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-unit-action-unload@npm:0.1.2"
   dependencies:
-    "@civ-clone/base-unit-type-naval-transport": ^0.1.0
     "@civ-clone/core-unit": ^0.1.0
-  checksum: 94bcbc1ce2a6b41cd017d859fc7ae2d3877542f0dd4f614a9011a09932df7dfc0183c7b1516cee60d17c46adeab9b88b6e22c4e1d031e83650889e418fc1a1a3
+    "@civ-clone/core-unit-transport": ^0.1.0
+  checksum: c8a88698761cf07c200b8b8677c389272e0247aa4bb68335a80a0229115a5309b89f0615ff6ffa96c01b08b8d45229eb28a2d5f5048893fd91c875d677076635
   languageName: node
   linkType: hard
 
@@ -2544,7 +2553,7 @@ __metadata:
 
 "@civ-clone/civ1-city@github:civ-clone/civ1-city":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-city@https://github.com/civ-clone/civ1-city.git#commit=969945f1eb8ed196eed84ad29062038c7299a223"
+  resolution: "@civ-clone/civ1-city@https://github.com/civ-clone/civ1-city.git#commit=56dc87d0ace4a7268b36adaebad822a9f9e910ca"
   dependencies:
     "@civ-clone/base-city-improvement-courthouse": ^0.1.0
     "@civ-clone/base-city-improvement-palace": ^0.1.0
@@ -2575,7 +2584,7 @@ __metadata:
     "@civ-clone/core-unit": ^0.1.0
     "@civ-clone/core-world": ^0.1.0
     "@civ-clone/core-yield": ^0.1.0
-  checksum: a3928adf36ef0ca9b830230b08bfbfbe5603ce3571abf98e730ff5e6d3df1816a933f8f7cc2db03268761559da26740f6f4ec9386267400b7cc9532133f3011b
+  checksum: f9ba51489bb82003b890454531318c6591d819ba90bbdd3e8a9bcf2c61f1f77f71cc94db0d73033e95cb9fcd3f88f78817d2d195e50b9738c3e9d288a1180832
   languageName: node
   linkType: hard
 
@@ -2622,11 +2631,13 @@ __metadata:
 
 "@civ-clone/civ1-diplomacy@github:civ-clone/civ1-diplomacy":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-diplomacy@https://github.com/civ-clone/civ1-diplomacy.git#commit=300e5d42335abf1a9ecbdf7d2281b98e1a4cb656"
+  resolution: "@civ-clone/civ1-diplomacy@https://github.com/civ-clone/civ1-diplomacy.git#commit=671afb7bda67502d10a2cd353c2db47b0ba66b2c"
   dependencies:
+    "@civ-clone/base-city-yield-gold": ^0.1.0
     "@civ-clone/base-diplomacy-declaration-peace": ^0.1.0
     "@civ-clone/base-diplomacy-declaration-war": ^0.1.0
     "@civ-clone/base-diplomacy-interaction-contact": ^0.1.0
+    "@civ-clone/core-client": ^0.1.2
     "@civ-clone/core-diplomacy": ^0.1.0
     "@civ-clone/core-player": ^0.1.7
     "@civ-clone/core-registry": ^0.1.1
@@ -2635,7 +2646,7 @@ __metadata:
     "@civ-clone/core-unit": ^0.1.0
     "@civ-clone/core-world": ^0.1.0
     "@civ-clone/library-diplomacy": ^0.1.0
-  checksum: 0ac2e41b6a26224d0df914f1c2997067445663151fb42474eab01e9bd52ef78e9a62835e1fcd242f77f3829adc668fe265235fe1ad499b03c63d33a3425f206a
+  checksum: 2971a67158243d9795a4e6f836ef4af87c14da70dc8c6ac5ec3c832e500dc148caa434bcd5e49cc453ebcd2f51dfee483576f5b7ca242fae97e517814d6a08f4
   languageName: node
   linkType: hard
 
@@ -2678,7 +2689,7 @@ __metadata:
 
 "@civ-clone/civ1-goody-hut@github:civ-clone/civ1-goody-hut":
   version: 0.1.1
-  resolution: "@civ-clone/civ1-goody-hut@https://github.com/civ-clone/civ1-goody-hut.git#commit=c4e52dd4d33ed16c5bb2f3e661c3f0f7915b3153"
+  resolution: "@civ-clone/civ1-goody-hut@https://github.com/civ-clone/civ1-goody-hut.git#commit=d3156d9b5335651f722104b0fbda0102310c060f"
   dependencies:
     "@civ-clone/base-goody-hut-advance": ^0.1.0
     "@civ-clone/base-goody-hut-city": ^0.1.0
@@ -2697,7 +2708,7 @@ __metadata:
     "@civ-clone/core-science": ^0.1.0
     "@civ-clone/core-terrain": ^0.1.0
     "@civ-clone/core-unit": ^0.1.0
-  checksum: 6164fb1ed8ed1921e513f939c2144f1f755113e84e8da4c0095e37b202c7b3175586890ddea9796207750c624d32b70597a83815ff22719420a1dd23d984af95
+  checksum: 7bee74f5aeb2c106be7c47bb822f87058c577576dab0bd80bd10bd2abc5900e7058b093d35d6035e71aecc0762c650cf7b509cbb0e5175e96dbe1b1144aa7c0f
   languageName: node
   linkType: hard
 
@@ -2726,7 +2737,7 @@ __metadata:
 
 "@civ-clone/civ1-player@github:civ-clone/civ1-player":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-player@https://github.com/civ-clone/civ1-player.git#commit=172a027b0ca84c9adf088a5f4ba55ba9c337ea44"
+  resolution: "@civ-clone/civ1-player@https://github.com/civ-clone/civ1-player.git#commit=14324cbe869f9503cb40ad7ba8a7252ae4f5ae20"
   dependencies:
     "@civ-clone/base-player-action-end-turn": ^0.1.0
     "@civ-clone/base-terrain-grassland": ^0.1.0
@@ -2749,7 +2760,7 @@ __metadata:
     "@civ-clone/core-world": ^0.1.10
     "@civ-clone/core-world-generator": ^0.1.0
     "@civ-clone/core-yield": ^0.1.0
-  checksum: 83aee0739b22bf855fc730a2ff89039f1bc08180561a8203c1fbcc1f65c7e19b559394c84df9ee0f908f1656a01d62adf59c92eead4ec5ecc38c4c104f8d53cd
+  checksum: 913b84ceb721df4329458719160cf41098b8fa33d2a66592dcb36f1c9a1b8b0c47589cbdb42ca5117e551182e70a1a8723d4ef1028c129ae1878e6001b07f628
   languageName: node
   linkType: hard
 
@@ -2892,7 +2903,7 @@ __metadata:
 
 "@civ-clone/civ1-treasury@github:civ-clone/civ1-treasury":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-treasury@https://github.com/civ-clone/civ1-treasury.git#commit=8a3f682ee196b2d783d816e43b5dfb1888d55cba"
+  resolution: "@civ-clone/civ1-treasury@https://github.com/civ-clone/civ1-treasury.git#commit=2397254aa491086384158507c455c51a1946723b"
   dependencies:
     "@civ-clone/base-city-yield-city-improvement-maintenance-gold": ^0.1.0
     "@civ-clone/base-city-yield-gold": ^0.1.0
@@ -2907,13 +2918,13 @@ __metadata:
     "@civ-clone/core-treasury": ^0.1.0
     "@civ-clone/core-unit": ^0.1.0
     "@civ-clone/core-yield": ^0.1.0
-  checksum: d90e316865c5e32354f442e4bd48ffbfda0061165aa557fe7ff42e092bc5ef01fed5de5591d8eb8de9754a76b88e91a2384ff367e997f6ce097b082388145722
+  checksum: 069c6cd5d6120f7c0db9399f1d150861fa6b832b66875dd8499cd839a6b8410b7906fe09e9b30f74e2d59a35795721448d84cff26b70bc9103605524e566168e
   languageName: node
   linkType: hard
 
 "@civ-clone/civ1-unit@github:civ-clone/civ1-unit":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-unit@https://github.com/civ-clone/civ1-unit.git#commit=f6659d5e93490b66cad54731d8b9dcfae6e122e5"
+  resolution: "@civ-clone/civ1-unit@https://github.com/civ-clone/civ1-unit.git#commit=13534c6419a6fcd5af72ed91e5dee34146eb030f"
   dependencies:
     "@civ-clone/base-player-action-active-unit": ^0.1.0
     "@civ-clone/base-player-action-inactive-unit": ^0.1.0
@@ -3019,7 +3030,7 @@ __metadata:
     "@civ-clone/core-yield": ^0.1.0
     "@civ-clone/library-diplomacy": ^0.1.0
     "@civ-clone/library-unit": ^0.1.0
-  checksum: da80339b37dbb90c7451e7862dc4a5e612faa33ffc1ede09b9587f7c63801747cb6365cfe4e8aea2e116f2e45c35f7ccf6b775c4ab67d2e388e3dd165cf983a4
+  checksum: 340de98d1b83f6f9599f2cf65a1857b5146a9bf9cd22f8035fc27cf299d2a4b2c37a524b40b864aa4a5a4bf5eea2178e8b08ac88177bc08c6ef4d6b32d4dd5de
   languageName: node
   linkType: hard
 
@@ -3121,7 +3132,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@civ-clone/core-ai-client@npm:^0.1.0":
+"@civ-clone/core-ai-client@npm:^0.1.0, @civ-clone/core-ai-client@npm:^0.1.3":
   version: 0.1.3
   resolution: "@civ-clone/core-ai-client@npm:0.1.3"
   dependencies:
@@ -3220,7 +3231,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@civ-clone/core-client@npm:^0.1.0, @civ-clone/core-client@npm:^0.1.1":
+"@civ-clone/core-client@npm:^0.1.0, @civ-clone/core-client@npm:^0.1.1, @civ-clone/core-client@npm:^0.1.2":
   version: 0.1.2
   resolution: "@civ-clone/core-client@npm:0.1.2"
   dependencies:
@@ -3242,8 +3253,8 @@ __metadata:
   linkType: hard
 
 "@civ-clone/core-diplomacy@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/core-diplomacy@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/core-diplomacy@npm:0.1.2"
   dependencies:
     "@civ-clone/core-client": ^0.1.1
     "@civ-clone/core-data-object": ^0.1.0
@@ -3251,7 +3262,7 @@ __metadata:
     "@civ-clone/core-registry": ^0.1.0
     "@civ-clone/core-rule": ^0.1.3
     "@civ-clone/core-turn-based-game": ^0.1.5
-  checksum: 543bbb9acf3610d91c485e242f11616b884b0da0bf5d64f9e1ce2c4ca463932c9d52c575d050a38b659ac9e492d1d8944225c21eb2773344eda2cb736ab5ef0c
+  checksum: 9ce78bf3573768926809e84b759b33c2398551ba44a37c010bc8baf80f5861aea4a41e2406421cf21c10310cb16c3c611cd6004a661bcbcbe0ceafbf339c20ff
   languageName: node
   linkType: hard
 
@@ -3277,15 +3288,15 @@ __metadata:
   linkType: hard
 
 "@civ-clone/core-goody-hut@npm:^0.1.0":
-  version: 0.1.4
-  resolution: "@civ-clone/core-goody-hut@npm:0.1.4"
+  version: 0.1.5
+  resolution: "@civ-clone/core-goody-hut@npm:0.1.5"
   dependencies:
     "@civ-clone/core-data-object": ^0.1.0
     "@civ-clone/core-registry": ^0.1.0
     "@civ-clone/core-rule": ^0.1.0
     "@civ-clone/core-unit": ^0.1.0
     "@civ-clone/core-world": ^0.1.0
-  checksum: 624f7bfe3526e4b0048d4033585f25709c2a0e3bb9335b3b2ef90de15d1d94e21d0e33f293228ae5cc853501759fe3e0b9482a0cfa89462c83dd280621c9484e
+  checksum: 57f6fdeeac2745aec698359d2600f34e3de5afbe9fcef8e67d259130d33912abe8e2e7fb4dbff2c27795f7701845f6c27787b822d2c521fd39925d949b546e58
   languageName: node
   linkType: hard
 
@@ -3358,7 +3369,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@civ-clone/core-spaceship@npm:^0.1.0, @civ-clone/core-spaceship@npm:^0.1.1":
+"@civ-clone/core-spaceship@npm:^0.1.0, @civ-clone/core-spaceship@npm:^0.1.1, @civ-clone/core-spaceship@npm:^0.1.5":
   version: 0.1.5
   resolution: "@civ-clone/core-spaceship@npm:0.1.5"
   dependencies:
@@ -3553,8 +3564,8 @@ __metadata:
   linkType: hard
 
 "@civ-clone/library-diplomacy@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@civ-clone/library-diplomacy@npm:0.1.0"
+  version: 0.1.1
+  resolution: "@civ-clone/library-diplomacy@npm:0.1.1"
   dependencies:
     "@civ-clone/base-city-yield-gold": ^0.1.0
     "@civ-clone/base-diplomacy-declaration-peace": ^0.1.0
@@ -3565,7 +3576,7 @@ __metadata:
     "@civ-clone/core-rule": ^0.1.3
     "@civ-clone/core-science": ^0.1.4
     "@civ-clone/core-treasury": ^0.1.4
-  checksum: d249185a05010cf6a99a38aaffac976801356cde77b0bd884b0c53e9bfeeaf0fff4dca52570de8f42a145ef9817035d421bf7e7bab609b867cc7b53a5ca09563
+  checksum: ce83964527c2dd856d5656e0fc8d758fbb8f697de9ff03c341bcbff9a9d66b6f8f2dc8b899e6a1af2f7e66919c8a5914390c861bf36bedee7a1363045b0ac1a9
   languageName: node
   linkType: hard
 
@@ -3638,7 +3649,7 @@ __metadata:
 
 "@civ-clone/simple-ai-client@github:civ-clone/simple-ai-client":
   version: 0.1.2
-  resolution: "@civ-clone/simple-ai-client@https://github.com/civ-clone/simple-ai-client.git#commit=a6c52f7a0baa0bb26bffb4d0be876b67c9cc3bd3"
+  resolution: "@civ-clone/simple-ai-client@https://github.com/civ-clone/simple-ai-client.git#commit=2353c279af1e4689440fe46ec04be194c428c5e1"
   dependencies:
     "@civ-clone/base-city-yield-gold": ^0.1.0
     "@civ-clone/base-player-action-end-turn": ^0.1.0
@@ -3674,7 +3685,7 @@ __metadata:
     "@civ-clone/core-yield": ^0.1.0
     "@civ-clone/library-diplomacy": ^0.1.0
     "@civ-clone/library-unit": ^0.1.0
-  checksum: bb8a8b845a28ebe41d20a8b4bbcda39987e91239dbb5c4a07438d179b2e684a73184c2d5db0f55a1a6eea1ed72f5f1bbf69b933573f80b72e77f135c8c1d2291
+  checksum: 990f6da418b4eda345d89a16e022cef6f5410a215a030276769a5a903ead2bda70cc429952ab8b1c787d108538d5b1183c0f47bb274f5b42b37812558a1e700b
   languageName: node
   linkType: hard
 
@@ -3722,6 +3733,7 @@ __metadata:
     "@civ-clone/civ1-unit": "github:civ-clone/civ1-unit"
     "@civ-clone/civ1-wonder": "github:civ-clone/civ1-wonder"
     "@civ-clone/civ1-world": "github:civ-clone/civ1-world"
+    "@civ-clone/core-ai-client": ^0.1.3
     "@civ-clone/core-city": ^0.1.0
     "@civ-clone/core-city-build": ^0.1.0
     "@civ-clone/core-city-improvement": ^0.1.0
@@ -3737,6 +3749,7 @@ __metadata:
     "@civ-clone/core-registry": ^0.1.0
     "@civ-clone/core-rule": ^0.1.0
     "@civ-clone/core-science": ^0.1.0
+    "@civ-clone/core-spaceship": ^0.1.5
     "@civ-clone/core-treasury": ^0.1.0
     "@civ-clone/core-turn-based-game": ^0.1.0
     "@civ-clone/core-unit": ^0.1.0
@@ -3753,6 +3766,8 @@ __metadata:
     esbuild: ^0.14.32
     esbuild-sass-plugin: ^2.4.0
     feather-icons: ^4.28.0
+    i18next: ^22.4.14
+    i18next-browser-languagedetector: ^7.0.1
     idb: ^7.1.1
     marked: ^4.2.5
     prettier: ^2.0.0
@@ -4575,6 +4590,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"i18next-browser-languagedetector@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "i18next-browser-languagedetector@npm:7.0.1"
+  dependencies:
+    "@babel/runtime": ^7.19.4
+  checksum: 03129614be8761988df59b630359ded4f7c989eec4553781b5968139fd898de1eb09128c4c69c1365b547649ad829ff9abe1f60161658f8789668bcc623adcf0
+  languageName: node
+  linkType: hard
+
+"i18next@npm:^22.4.14":
+  version: 22.4.14
+  resolution: "i18next@npm:22.4.14"
+  dependencies:
+    "@babel/runtime": ^7.20.6
+  checksum: 963b70c7e1fee9666ef4d9ea87a63d0c9483007e2a0ea9520356e43a2cd550f3eb1cab24c57a102f3e84fd737fdff41bafc953dafc3bd6589dc9ea52ddb49905
+  languageName: node
+  linkType: hard
+
 "iconv-lite@npm:^0.6.2":
   version: 0.6.3
   resolution: "iconv-lite@npm:0.6.3"
@@ -5080,6 +5113,13 @@ __metadata:
   dependencies:
     picomatch: ^2.2.1
   checksum: 1ced032e6e45670b6d7352d71d21ce7edf7b9b928494dcaba6f11fba63180d9da6cd7061ebc34175ffda6ff529f481818c962952004d273178acd70f7059b320
+  languageName: node
+  linkType: hard
+
+"regenerator-runtime@npm:^0.13.11":
+  version: 0.13.11
+  resolution: "regenerator-runtime@npm:0.13.11"
+  checksum: 27481628d22a1c4e3ff551096a683b424242a216fee44685467307f14d58020af1e19660bf2e26064de946bad7eff28950eae9f8209d55723e2d9351e632bbb4
   languageName: node
   linkType: hard
 

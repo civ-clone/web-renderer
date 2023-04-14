@@ -1,10 +1,29 @@
 import { s } from '@dom111/element';
 
+const recolouredImageCache = new Map<string, HTMLCanvasElement>();
+
 export const replaceColours = (
   image: CanvasImageSource,
   source: string[],
   replacement: string[]
 ) => {
+  const key =
+    (image instanceof HTMLImageElement ? image.src : Math.random()) +
+    replacement.toString();
+
+  if (recolouredImageCache.has(key)) {
+    const canvas = recolouredImageCache.get(key)!,
+      clone = s<HTMLCanvasElement>('<canvas></canvas>'),
+      context = clone.getContext('2d')!;
+
+    clone.height = canvas.height;
+    clone.width = canvas.width;
+
+    context.drawImage(canvas, 0, 0);
+
+    return clone;
+  }
+
   const canvas = s<HTMLCanvasElement>('<canvas></canvas>'),
     context = canvas.getContext('2d')!;
 
@@ -103,6 +122,8 @@ export const replaceColours = (
   }
 
   context.putImageData(imageData, 0, 0);
+
+  recolouredImageCache.set(key, canvas);
 
   return canvas;
 };

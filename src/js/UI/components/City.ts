@@ -2,9 +2,17 @@ import {
   City as CityData,
   CityImprovementMaintenanceGold,
   PlainObject,
+  Player,
+  PlayerTreasury,
+  SpendCost,
   Unit as UnitData,
   Yield,
 } from '../types';
+import { emit, s } from '@dom111/element';
+import {
+  getLabelForBuildable,
+  getLabelForBuildableEntity,
+} from './lib/cityBuild';
 import { knownGroupLookup, knownGroups } from '../lib/yieldMap';
 import {
   renderPopulation,
@@ -26,14 +34,16 @@ import Terrain from './Map/Terrain';
 import Transport from '../Transport';
 import Unit from './Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
+import Units from './Map/Units';
+import Unworkable from './Map/Unworkable';
 import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
+import { cityName } from './lib/city';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
-import { s } from '@dom111/element';
-import Unworkable from './Map/Unworkable';
-import Units from './Map/Units';
+import instanceOf from '../lib/instanceOf';
+import { t } from 'i18next';
 
 const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityYields
@@ -89,8 +99,13 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
 
             return yieldObject;
           }, {} as PlainObject)
-      ).map(([label, value]) =>
-        s(`<div><div>${label}</div><div>${value}</div></div>`)
+      ).map(([key, value]) =>
+        s(
+          `<div><div>${t(`${key}.name`, {
+            defaultValue: key,
+            ns: 'yield',
+          })}</div><div>${value}</div></div>`
+        )
       )
     );
   },
@@ -176,33 +191,64 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
   renderBuild = (
     city: CityData,
     chooseProduction: () => void,
-    completeProduction: () => void
+    completeProduction: (spendCost: SpendCost) => void
   ): HTMLElement =>
     s(
-      `<div class="build"><header>Building ${
-        city.build.building ? city.build.building.item._ : 'nothing'
-      }</header></div>`,
-      h(s(`<button>${city.build.building ? 'Change' : 'Choose'}</button>`), {
-        click() {
-          chooseProduction();
-        },
-      }),
-      h(s('<button>Buy</button>'), {
-        click() {
-          completeProduction();
-        },
-      }),
+      `<div class="build"></div>`,
+      s(
+        `<header></header>`,
+        city.build.building && instanceOf(city.build.building.item, 'Unit')
+          ? new Unit({
+              ...city.build.building.item,
+              player: city.player,
+              improvements: [],
+              busy: null,
+            })
+          : (t('City.Build.title', {
+              item: getLabelForBuildable(city.build.building),
+            }) as string)
+      ),
+      h(
+        s(
+          `<button>${t(
+            city.build.building ? 'City.Build.change' : 'City.Build.choose'
+          )}</button>`
+        ),
+        {
+          click() {
+            chooseProduction();
+          },
+        }
+      ),
+      ...city.build.spendCost.map((spendCost) =>
+        h(
+          s(
+            `<button class="buy" data-resource="${spendCost.resource._}">${t(
+              'City.Build.buy-with',
+              {
+                spendCost,
+              }
+            )}</button>`
+          ),
+          {
+            click() {
+              completeProduction(spendCost);
+            },
+          }
+        )
+      ),
       city.build.building
         ? s(`<p>${renderProgress(city.build, city.yields, 'Production')}</p>`)
         : ''
     ),
   renderGrowth = (city: CityData): Node =>
     s(
-      `<div class="growth"><header>Growth</header><p>Size ${city.growth.size.toString()}</p><p>${renderProgress(
-        city.growth,
-        city.yields,
-        'Food'
-      )}</p></div>`
+      `<div class="growth"><header>${t('City.Growth.title')}</header><p>${t(
+        'City.Growth.size',
+        {
+          size: localeProvider.number(city.growth.size),
+        }
+      )}</p><p>${renderProgress(city.growth, city.yields, 'Food')}</p></div>`
     ),
   renderImprovements = (city: CityData): Node => {
     return s(
@@ -211,14 +257,17 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
         `<div></div>`,
         ...city.improvements.map((improvement) =>
           s(
-            `<div>${improvement._}</div>`,
+            `<div>${t(`Improvement.${improvement._}.name`, {
+              defaultValue: improvement._,
+              ns: 'city',
+            })}</div>`,
             ...city.yields
               .filter(
-                (cityYield): cityYield is CityImprovementMaintenanceGold =>
-                  cityYield._ === 'CityImprovementMaintenanceGold'
-              )
-              .filter(
-                (cityYield) => cityYield.cityImprovement.id === improvement.id
+                (
+                  cityYield: Yield | CityImprovementMaintenanceGold
+                ): cityYield is CityImprovementMaintenanceGold =>
+                  cityYield._ === 'CityImprovementMaintenanceGold' &&
+                  cityYield.cityImprovement.id === improvement.id
               )
               .flatMap((cityYield) => yieldImages(cityYield))
           )
@@ -229,7 +278,9 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
   renderGarrisonedUnits = (city: CityData, transport: Transport): Node => {
     return h(
       s(
-        `<div class="garrisoned-units"><header>Garrisoned Units</header></div>`,
+        `<div class="garrisoned-units"><header>${t(
+          'City.GarrisonedUnits.title'
+        )}</header></div>`,
         s(
           '<div class="units"></div>',
           ...city.tile.units.map((unit) => new Unit(unit).element())
@@ -252,7 +303,9 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
   },
   renderSupportedUnits = (city: CityData): Node => {
     return s(
-      `<div class="supported-units"><header>Supported units</header></div>`,
+      `<div class="supported-units"><header>${t(
+        'City.SupportedUnits.title'
+      )}</header></div>`,
       s(
         '<div class="units"></div>',
         ...city.units.map((unit) => new SupportedUnit(city, unit))
@@ -264,7 +317,7 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     portal: Portal,
     transport: Transport,
     chooseProduction: () => void,
-    completeProduction: () => void
+    completeProduction: (spendCost: SpendCost) => void
   ) => {
     return s(
       '<div class="city-screen"></div>',
@@ -290,23 +343,26 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
         renderBuild(city, chooseProduction, completeProduction)
       )
     );
-  };
+  },
+  getTreasuryForYield = (player: Player, yieldName: string) =>
+    player.treasuries.filter((treasury) => treasury.yield._ === yieldName)[0];
 
 export class City extends Window {
   #city: CityData;
   #dataObserver: DataObserver;
   #portal: Portal;
   #transport: Transport;
+  #treasury: PlayerTreasury;
 
   constructor(city: CityData, portal: Portal, transport: Transport) {
     super(
-      city.name,
+      cityName(city),
       cityDetails(
         city,
         portal,
         transport,
         () => this.changeProduction(),
-        () => this.completeProduction()
+        (spendCost: SpendCost) => this.completeProduction(spendCost)
       ),
       {
         canResize: true,
@@ -321,17 +377,21 @@ export class City extends Window {
     this.#city = city;
     this.#portal = portal;
     this.#transport = transport;
+    this.#treasury = getTreasuryForYield(city.player, 'Gold');
     this.#dataObserver = new DataObserver(
       [
         city.id,
         city.build.id,
         city.growth.id,
         ...city.units.map((unit) => unit.id),
+        getTreasuryForYield(city.player, 'Gold').id,
       ],
       (data: PlainObject) => {
         const [updatedCity] = (
           (data.player?.cities ?? []) as CityData[]
         ).filter((cityData: CityData) => city.id === cityData.id);
+
+        this.#treasury = getTreasuryForYield(data.player, 'Gold');
 
         // City must have been captured or destroyed
         if (!updatedCity) {
@@ -355,7 +415,7 @@ export class City extends Window {
             this.#portal,
             transport,
             () => this.changeProduction(),
-            () => this.completeProduction()
+            (spendCost: SpendCost) => this.completeProduction(spendCost)
           )
         );
 
@@ -374,7 +434,14 @@ export class City extends Window {
       }
 
       if (['b', 'B'].includes(event.key)) {
-        this.completeProduction();
+        const buyButtons = this.queryAll('button.buy');
+
+        // TODO: handle this scenario properly
+        // if (buyButtons.length > 1) {
+        //
+        // }
+
+        emit(buyButtons[0], new MouseEvent('click'));
 
         event.preventDefault();
         event.stopPropagation();
@@ -409,25 +476,30 @@ export class City extends Window {
     super.close();
   }
 
-  completeProduction(): void {
+  completeProduction(spendCost: SpendCost): void {
     const cityBuild = this.#city.build;
 
     if (!cityBuild.building) {
       return;
     }
 
-    // TODO: handle this better for alternative spend mechanisms.
-    const [spendCost] = cityBuild.spendCost;
+    const treasury = getTreasuryForYield(
+      this.#city.player,
+      spendCost.resource._
+    );
 
     new ConfirmationWindow(
-      'Are you sure?',
-      `Do you want to rush building of ${
-        cityBuild.building.item._
-      } for ${localeProvider.number(spendCost.value)} ${spendCost.resource._}?`,
+      t('ConfirmationWindow.Generic.title'),
+      t('City.CompleteProduction.body', {
+        item: getLabelForBuildableEntity(cityBuild.building.item),
+        spendCost,
+        treasury,
+      }),
       () =>
         this.#transport.send('action', {
           name: 'CompleteProduction',
           id: this.#city.build.id,
+          treasury: treasury.id,
         })
     );
   }

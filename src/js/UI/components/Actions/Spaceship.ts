@@ -6,6 +6,7 @@ import globeIcon from 'feather-icons/dist/icons/globe.svg';
 import { h } from '../../lib/html';
 import { instance as localeProviderInstance } from '../../LocaleProvider';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 type SpaceshipYieldMap = {
   [key: string]: [number, number];
@@ -77,34 +78,40 @@ export class Spaceship extends Action {
       ),
       values = [
         [
-          'Chance of success',
+          t('Actions.Spaceship.chance-of-success'),
           localeProviderInstance.percent(spaceship.chanceOfSuccess),
         ],
         [
-          'Flight time',
+          t('Actions.Spaceship.flight-time'),
           localeProviderInstance.number(spaceship.flightTime, {
             style: 'unit',
             unit: 'year',
             unitDisplay: 'long',
           }),
         ],
-        ['Launched?', spaceship.launched ? 'Yes' : 'No'],
         [
-          'Mass',
+          t('Actions.Spaceship.has-launched'),
+          t(spaceship.launched ? 'Generic.yes' : 'Generic.no'),
+        ],
+        [
+          t('Actions.Spaceship.mass'),
           localeProviderInstance.number(yields.Mass[0] * 1000, {
             style: 'unit',
             unit: 'kilogram',
           }),
         ],
-        ['Population', localeProviderInstance.number(yields.Population[0])],
         [
-          'Energy',
+          t('Actions.Spaceship.population'),
+          localeProviderInstance.number(yields.Population[0]),
+        ],
+        [
+          t('Actions.Spaceship.energy'),
           localeProviderInstance.percent(
             yields.Energy[1] > 0 ? yields.Energy[0] / yields.Energy[1] : 0
           ),
         ],
         [
-          'Life Support',
+          t('Actions.Spaceship.life-support'),
           localeProviderInstance.percent(
             yields.LifeSupport[1] > 0
               ? yields.LifeSupport[0] / yields.LifeSupport[1]
@@ -122,20 +129,30 @@ export class Spaceship extends Action {
         window.close();
       },
       window = new Window(
-        `${civilizationAttribute(
-          spaceship.player.civilization,
-          'people'
-        )} spaceship`,
+        t('Actions.Spaceship.spaceship-name', {
+          nation: t(`${spaceship.player.civilization._}.name`, {
+            defaultValue: spaceship.player.civilization._,
+            ns: 'civilization',
+          }),
+        }),
         s(
           '<div></div>',
           s(
             `<dl>${Object.entries(activeParts)
               .map(
                 ([key, value]) =>
-                  `<dd>${key}</dd><dt>${localeProviderInstance.number(value)}${
+                  `<dd>${t(`${key}.name`, {
+                    defaultValue: key,
+                    ns: 'spaceship',
+                  })}</dd><dt>${localeProviderInstance.number(value)}${
                     inactiveParts[key] === 0
                       ? ''
-                      : ` <span class="inactive">(${inactiveParts[key]} inactive)</span>`
+                      : ` <span class="inactive">${t(
+                          'Actions.Spaceship.inactive-part',
+                          {
+                            inactiveParts: inactiveParts[key],
+                          }
+                        )}</span>`
                   }</dt>`
               )
               .join('')}</dl>`
@@ -153,7 +170,11 @@ export class Spaceship extends Action {
                   spaceship.launched || spaceship.chanceOfSuccess === 0
                     ? ' disabled'
                     : ''
-                }>${spaceship.launched ? 'Launched' : 'Launch'}</button>`
+                }>${t(
+                  spaceship.launched
+                    ? 'Actions.Spaceship.launched'
+                    : 'Actions.Spaceship.launch'
+                )}</button>`
               ),
               {
                 keydown(event: KeyboardEvent) {
@@ -176,7 +197,9 @@ export class Spaceship extends Action {
   build(): void {
     this.append(
       s(
-        `<button class="spaceship" title="View spaceship"><img src="${globeIcon}"/></button>`
+        `<button class="spaceship" title="${t(
+          'Actions.Spaceship.title'
+        )}"><img src="${globeIcon}"/></button>`
       )
     );
   }

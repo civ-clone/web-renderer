@@ -1,5 +1,6 @@
 import { Element, s } from '@dom111/element';
 import { Yield } from '../types';
+import { t } from 'i18next';
 
 export class GameDetails extends Element {
   #turn: Yield;
@@ -17,21 +18,21 @@ export class GameDetails extends Element {
 
     this.append(
       s(
-        `<h3><span class="year">${this.year()}</span><span class="turn">${this.#turn.value.toString()}</span></h3>`
+        `<h3><span class="year">${this.year()}</span><span class="turn">${t(
+          'GameDetails.turn',
+          {
+            turn: this.#turn.value,
+          }
+        )}</span></h3>`
       )
     );
   }
 
   year(year = this.#year.value): string {
-    if (year < 0) {
-      return Math.abs(year) + ' BCE';
-    }
-
-    if (year === 0) {
-      return '1 CE';
-    }
-
-    return year + ' CE';
+    return t('GameDetails.year', {
+      year: Math.abs(year) || 1, // This ensures we show 1 CE, instead of 0 CE
+      context: year < 0 ? 'bce' : 'ce',
+    });
   }
 }
 

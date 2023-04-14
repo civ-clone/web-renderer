@@ -2,15 +2,26 @@
   background: #edc;
   border: 1px solid #ccc;
   border-radius: 3px;
-  color: #123;
   box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
+  color: #123;
+  margin: 0;
   outline: 0;
   overflow: auto;
+  padding: 0;
   position: fixed;
 
+  &.modal {
+    z-index: 10;
+
+    &::backdrop {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+
   &.position-auto {
-    left: calc(50% - 20em);
-    top: 20%;
+    align-self: center;
+    justify-self: center;
+    margin: auto;
   }
 
   &.size-auto {

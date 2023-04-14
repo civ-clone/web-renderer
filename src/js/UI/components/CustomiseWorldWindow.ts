@@ -4,6 +4,7 @@ import Transport from '../Transport';
 import Window from './Window';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 type FinishedHandler = () => void;
 
@@ -12,7 +13,7 @@ export class CustomiseWorldWindow extends Window {
   #transport: Transport;
 
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    super('Customise world', s('<div class="customise-world"></div>'));
+    super(t('CustomizeWorld.title'), s('<div class="customise-world"></div>'));
 
     this.#onFinished = onFinished;
     this.#transport = transport;
@@ -81,7 +82,7 @@ export class CustomiseWorldWindow extends Window {
           })
         );
 
-        this.#transport.send('start');
+        this.#transport.send('start', null);
 
         if (this.#onFinished) {
           this.#onFinished();
@@ -91,19 +92,43 @@ export class CustomiseWorldWindow extends Window {
     this.update(
       s(
         '<div class="customise-world"></div>',
-        s('<div class="option"><label>Players</label></div>', playersInput),
-        s('<div class="option"><label>Height</label></div>', heightInput),
-        s('<div class="option"><label>Width</label></div>', widthInput),
         s(
-          '<div class="option"><label>Land coverage</label></div>',
+          `<div class="option"><label>${t(
+            'CustomizeWorld.players'
+          )}</label></div>`,
+          playersInput
+        ),
+        s(
+          `<div class="option"><label>${t(
+            'CustomizeWorld.height'
+          )}</label></div>`,
+          heightInput
+        ),
+        s(
+          `<div class="option"><label>${t(
+            'CustomizeWorld.width'
+          )}</label></div>`,
+          widthInput
+        ),
+        s(
+          `<div class="option"><label>${t(
+            'CustomizeWorld.land-coverage'
+          )}</label></div>`,
           landCoverageInput
         ),
-        s('<div class="option"><label>Land size</label></div>', landSizeInput),
         s(
-          '<div class="option"><label>Max iterations</label></div>',
+          `<div class="option"><label>${t(
+            'CustomizeWorld.land-size'
+          )}</label></div>`,
+          landSizeInput
+        ),
+        s(
+          `<div class="option"><label>${t(
+            'CustomizeWorld.max-iterations'
+          )}</label></div>`,
           maxIterationsInput
         ),
-        h(s('<button>Build</button>'), {
+        h(s(`<button>${t('CustomizeWorld.build')}</button>`), {
           click: () => submit(),
         })
       )

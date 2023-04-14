@@ -52,6 +52,14 @@ export class City extends DataObject {
   tile(): Tile {
     return this.#tile;
   }
+
+  update(city: CoreCity): void {
+    const cityGrowth = cityGrowthRegistryInstance.getByCity(city);
+
+    this.#name = city.name();
+    this.#player = city.player();
+    this.#growth.size = cityGrowth.size();
+  }
 }
 
 export default City;

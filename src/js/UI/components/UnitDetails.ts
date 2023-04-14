@@ -1,10 +1,13 @@
 import { Element, s } from '@dom111/element';
-import { Unit } from '../types';
+import { t } from 'i18next';
+import { Unit as UnitData } from '../types';
+import { cityName } from './lib/city';
+import Unit from './Unit';
 
 export class UnitDetails extends Element {
-  #activeUnit: Unit | null;
+  #activeUnit: UnitData | null;
 
-  constructor(element: HTMLElement, activeUnit: Unit | null) {
+  constructor(element: HTMLElement, activeUnit: UnitData | null) {
     super(element);
 
     this.#activeUnit = activeUnit;
@@ -21,51 +24,65 @@ export class UnitDetails extends Element {
 
     this.append(
       s(
-        `<p>${this.#activeUnit._} (${this.#activeUnit.tile.x}, ${
-          this.#activeUnit.tile.y
-        })</p>`
+        `<p>${t('UnitDetails.header', {
+          unitName: t(`${this.#activeUnit._}.name`, {
+            defaultValue: this.#activeUnit._,
+            ns: 'unit',
+          }),
+          x: this.#activeUnit.tile.x,
+          y: this.#activeUnit.tile.y,
+        })}</p>`
       ),
-      s(`<p>${this.#activeUnit.city?.name ?? 'NONE'}</p>`),
+      s(`<p>${cityName(this.#activeUnit.city)}</p>`),
       s(
-        `<p>${
-          Number.isInteger(this.#activeUnit.moves.value)
-            ? this.#activeUnit.moves.value
-            : this.#activeUnit.moves.value.toFixed(2)
-        } / ${this.#activeUnit.movement.value} moves</p>`
-      ),
-      s(
-        `<p>A: ${this.#activeUnit.attack.value} / D: ${
-          this.#activeUnit.defence.value
-        } / V: ${this.#activeUnit.visibility.value}</p>`
-      ),
-      s(
-        `<p>${this.#activeUnit.improvements
-          .map((improvement) => improvement._)
-          .join(', ')}</p>`
+        `<p>${t('UnitDetails.moves', {
+          remaining: this.#activeUnit.moves.value,
+          total: this.#activeUnit.movement.value,
+        })}</p>`
       ),
       s(
-        `<p>${this.#activeUnit.tile.terrain._}${
-          this.#activeUnit.tile.terrain.features
-            ? ' ' +
-              this.#activeUnit.tile.terrain.features
-                .map((feature) => feature._)
-                .join(', ')
-            : ''
-        }${
-          this.#activeUnit.tile.improvements.length
-            ? ' (' +
-              this.#activeUnit.tile.improvements
-                .map((improvement) => improvement._)
-                .join(', ') +
-              ')'
-            : ''
-        }</p>`
+        `<p>${t('UnitDetails.stats', {
+          attack: this.#activeUnit.attack.value,
+          defence: this.#activeUnit.defence.value,
+          visibility: this.#activeUnit.visibility.value,
+        })}</p>`
       ),
       s(
-        `<p>${this.#activeUnit.tile.units
+        `<p>${t('UnitDetails.improvements', {
+          improvements: this.#activeUnit.improvements.map((improvement) =>
+            t(`Improvement.${improvement._}.name`, {
+              defaultValue: improvement._,
+              ns: 'unit',
+            })
+          ),
+        })}</p>`
+      ),
+      s(
+        `<p>${t('UnitDetails.terrain', {
+          terrain: t(`${this.#activeUnit.tile.terrain._}.name`, {
+            defaultValue: this.#activeUnit.tile.terrain._,
+            ns: 'world',
+          }),
+          features: this.#activeUnit.tile.terrain.features.map((feature) =>
+            t(`Feature.${feature._}.name`, {
+              defaultValue: feature._,
+              ns: 'world',
+            })
+          ),
+          improvements: this.#activeUnit.tile.improvements.map((improvement) =>
+            t(`Improvement.${improvement._}.name`, {
+              defaultValue: improvement._,
+              ns: 'world',
+            })
+          ),
+        })}</p>`
+      ),
+      // TODO: These could be clickable?
+      s(
+        `<p></p>`,
+        ...this.#activeUnit.tile.units
           .filter((unit) => unit !== this.#activeUnit)
-          .map((unit) => unit._)
-          .join(', ')}</p>`
+          .map((unit) => new Unit(unit))
       )
     );
   }

@@ -4,6 +4,7 @@ import {
 } from './NotificationWindow';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export interface ConfirmationWindowOptions extends NotificationWindowOptions {
   okLabel?: string;
@@ -18,7 +19,7 @@ export class ConfirmationWindow extends NotificationWindow {
     options: ConfirmationWindowOptions = {}
   ) {
     const confirmationButton = h(
-      s(`<button>${options.okLabel ?? 'OK'}</button>`),
+      s(`<button>${t(options.okLabel ?? 'Generic.ok')}</button>`),
       {
         click: () => {
           onOK();
@@ -45,20 +46,24 @@ export class ConfirmationWindow extends NotificationWindow {
         s(
           '<footer></footer>',
           confirmationButton,
-          h(s(`<button>${options.cancelLabel ?? 'Cancel'}</button>`), {
-            click: () => this.close(),
-            keydown: (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                event.stopPropagation();
+          h(
+            s(`<button>${t(options.cancelLabel ?? 'Generic.cancel')}</button>`),
+            {
+              click: () => this.close(),
+              keydown: (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  event.stopPropagation();
 
-                this.close();
-              }
-            },
-          })
+                  this.close();
+                }
+              },
+            }
+          )
         )
       ),
       {
+        classes: 'confirmationWindow',
         ...options,
         queue: false,
       }

@@ -27,6 +27,20 @@
     &.endTurn {
       @include action-button.background-gradient-silver-ring(#25b906);
       @include action-button.white-child-svg();
+      position: relative;
+
+      &::before {
+        animation: glow 2s infinite;
+        background: #fff;
+        border-radius: 50%;
+        content: '';
+        display: block;
+        height: 100%;
+        opacity: 0;
+        position: absolute;
+        top: 0;
+        width: 100%;
+      }
     }
 
     &.spaceship {
@@ -62,5 +76,19 @@
       height: 2rem;
       width: 2rem;
     }
+  }
+}
+
+@keyframes glow {
+  10% {
+    opacity: 0;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+
+  90% {
+    opacity: 0;
   }
 }

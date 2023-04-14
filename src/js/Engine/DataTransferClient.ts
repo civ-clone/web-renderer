@@ -1,11 +1,5 @@
 import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
 import {
-  Advance as FreeAdvance,
-  City as FreeCity,
-  Gold as FreeGold,
-  Unit as FreeUnit,
-} from '@civ-clone/civ1-goody-hut/GoodyHuts';
-import {
   ChangeProduction,
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
@@ -14,6 +8,7 @@ import {
   DataForChoiceMeta,
 } from '@civ-clone/core-client/ChoiceMeta';
 import { Client, IClient } from '@civ-clone/core-client/Client';
+import AIClient from '@civ-clone/core-ai-client/AIClient';
 import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
@@ -29,11 +24,18 @@ import DataObject from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
+import { GameData } from '../UI/types';
 import { Gold } from '@civ-clone/civ1-city/Yields';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
+import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
+import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
+import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import { Move } from '@civ-clone/civ1-unit/Actions';
+import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
+import Notification from './Notification';
+import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
@@ -42,9 +44,11 @@ import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Retryable from './Retryable';
+import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
 import { Revolution } from '@civ-clone/civ1-government/PlayerActions';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
+import Timeout from './Error/Timeout';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
 import Transport from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
@@ -68,12 +72,11 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
-import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
-import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
-import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
-import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
-import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
-import { GameData } from '../UI/types';
+
+const awaitTimeout = (delay: number, reason?: any) =>
+  new Promise<void>((resolve, reject) =>
+    setTimeout(() => (reason === undefined ? resolve() : reject(reason)), delay)
+  );
 
 const referenceObject = (object: any) =>
     object instanceof DataObject
@@ -505,9 +508,11 @@ export class DataTransferClient extends Client implements IClient {
           }
 
           this.sendNotification(
-            `${capturingPlayer
-              .civilization()
-              .name()} have captured our city ${city.name()}!`
+            new Notification('City.captured-from-us', {
+              city,
+              capturingPlayer,
+              originalPlayer,
+            })
           );
 
           return;
@@ -515,9 +520,11 @@ export class DataTransferClient extends Client implements IClient {
 
         if (capturingPlayer === this.player()) {
           this.sendNotification(
-            `We have captured ${city.name()} from ${originalPlayer
-              .civilization()
-              .name()}!`
+            new Notification('City.captured-by-us', {
+              city,
+              capturingPlayer,
+              originalPlayer,
+            })
           );
 
           return;
@@ -542,6 +549,18 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
+        if (unknownCities.has(city)) {
+          const unknownCity = unknownCities.get(city)!;
+
+          unknownCity.update(city);
+
+          this.#dataQueue.update(unknownCity.id(), () =>
+            unknownCity.toPlainObject(
+              this.#dataFilter(filterToReference(Tile, Unit, Player))
+            )
+          );
+        }
+
         this.#dataQueue.update(playerTile.id(), () =>
           playerTile.toPlainObject(this.#dataFilter(filterToReference(Player)))
         );
@@ -553,16 +572,23 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(`Population decrease in ${city.name()}.`);
+      this.sendNotification(
+        new Notification('City.shrink', {
+          city,
+        })
+      );
     });
 
-    engineInstance.on('city:unit-unsupported', (city: City, unit: Unit) => {
+    engineInstance.on('unit:unsupported', (city: City, unit: Unit) => {
       if (city.player() !== this.player()) {
         return;
       }
 
       this.sendNotification(
-        `${city.name()} cannot support ${unit.constructor.name}.`
+        new Notification('City.unit-unsupported', {
+          city,
+          unit,
+        })
       );
     });
 
@@ -574,7 +600,10 @@ export class DataTransferClient extends Client implements IClient {
         }
 
         this.sendNotification(
-          `${city.name()} cannot support ${cityImprovement.constructor.name}.`
+          new Notification('City.improvement-unsupported', {
+            city,
+            cityImprovement,
+          })
         );
       }
     );
@@ -584,7 +613,11 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(`Food storage exhausted in ${city.name()}!`);
+      this.sendNotification(
+        new Notification('City.food-storage-exhausted', {
+          city,
+        })
+      );
     });
 
     engineInstance.on('city:building-complete', (cityBuild, build) => {
@@ -597,20 +630,21 @@ export class DataTransferClient extends Client implements IClient {
         build instanceof Wonder
       ) {
         this.sendNotification(
-          `${
+          new Notification(
             playerWorld.getByTile(cityBuild.city().tile())
-              ? cityBuild.city().name()
-              : 'A faraway city'
-          } has completed work on ${build.constructor.name}!`
+              ? 'Wonder.building-complete.other-player.known'
+              : 'Wonder.building-complete.other-player.unknown',
+            {
+              cityBuild,
+              build,
+            }
+          )
         );
 
         return;
       }
 
-      if (
-        cityBuild.city().player() !== this.player() &&
-        !(build instanceof Wonder)
-      ) {
+      if (cityBuild.city().player() !== this.player()) {
         return;
       }
 
@@ -620,10 +654,22 @@ export class DataTransferClient extends Client implements IClient {
         )
       );
 
+      const suffix =
+        build instanceof Unit
+          ? 'unit'
+          : build instanceof Wonder
+          ? 'wonder'
+          : build instanceof CityImprovement
+          ? 'city-improvement'
+          : build instanceof Part
+          ? 'spaceship-part'
+          : 'other';
+
       this.sendNotification(
-        `${cityBuild.city().name()} has completed work on ${
-          build.constructor.name
-        }!`
+        new Notification('City.building-complete.' + suffix, {
+          cityBuild,
+          build,
+        })
       );
     });
 
@@ -639,7 +685,10 @@ export class DataTransferClient extends Client implements IClient {
       );
 
       this.sendNotification(
-        `You have discovered the secrets of ${advance.constructor.name}!`
+        new Notification('Player.research-complete', {
+          playerResearch,
+          advance,
+        })
       );
     });
 
@@ -653,33 +702,15 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        if (action instanceof FreeAdvance) {
-          this.sendNotification(
-            'You have discovered scrolls of ancient wisdom...'
-          );
-
-          return;
-        }
-
-        if (action instanceof FreeCity) {
-          this.sendNotification('You have discovered an advanced tribe...');
-
-          return;
-        }
-
-        if (action instanceof FreeGold) {
-          this.sendNotification('You have discovered valuable treasure...');
-
-          return;
-        }
-
-        if (action instanceof FreeUnit) {
-          this.sendNotification(
-            'You have discovered a friendly tribe of skilled mercenaries...'
-          );
-
-          return;
-        }
+        this.sendNotification(
+          new Notification(
+            `GoodyHut.action-performed.${action.constructor.name}`,
+            {
+              goodyHut,
+              action,
+            }
+          )
+        );
       }
     );
 
@@ -687,7 +718,12 @@ export class DataTransferClient extends Client implements IClient {
       'player:defeated',
       (defeatedPlayer: Player, player: Player | null) => {
         if (defeatedPlayer === this.player()) {
-          this.sendNotification(`You have been defeated!`);
+          this.sendNotification(
+            new Notification(`Player.defeated.local`, {
+              defeatedPlayer,
+              player,
+            })
+          );
 
           playerRegistryInstance.unregister(
             ...playerRegistryInstance.entries()
@@ -699,32 +735,48 @@ export class DataTransferClient extends Client implements IClient {
           // TODO: summary and quit
 
           this.#transport.send('restart', null);
+
+          return;
         }
 
         this.sendNotification(
-          `${defeatedPlayer.civilization().name()} defeated${
-            player ? ` by ${player.civilization().name()}` : ''
-          }.`
+          new Notification(
+            player === null ? `Player.defeated.unknown` : 'Player.defeated.by',
+            {
+              defeatedPlayer,
+              player,
+            }
+          )
         );
       }
     );
 
     engineInstance.on('city:civil-disorder', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(`Civil disorder in ${city.name()}!`);
+        this.sendNotification(
+          new Notification('City.civil-disorder', {
+            city,
+          })
+        );
       }
     });
 
     engineInstance.on('city:order-restored', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(`Order restored in ${city.name()}!`);
+        this.sendNotification(
+          new Notification('City.order-restored', {
+            city,
+          })
+        );
       }
     });
 
     engineInstance.on('city:leader-celebration', (city: City) => {
       if (city.player() === this.player()) {
         this.sendNotification(
-          `We love the leader celebrations in ${city.name()}!`
+          new Notification('City.leader-celebration', {
+            city,
+          })
         );
       }
     });
@@ -732,7 +784,9 @@ export class DataTransferClient extends Client implements IClient {
     engineInstance.on('city:leader-celebration-ended', (city: City) => {
       if (city.player() === this.player()) {
         this.sendNotification(
-          `We love the leader celebrations cancelled in ${city.name()}!`
+          new Notification('City.leader-celebration-ended', {
+            city,
+          })
         );
       }
     });
@@ -743,7 +797,9 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       this.sendNotification(
-        `Component added to ${player.civilization().name()} spaceship.`
+        new Notification('Spaceship.part-built', {
+          player,
+        })
       );
     });
 
@@ -752,7 +808,11 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(`Our spaceship was lost in space.`);
+      this.sendNotification(
+        new Notification('Player.spaceship-lost', {
+          player,
+        })
+      );
     });
 
     engineInstance.on('player:spaceship:landed', (player: Player) => {
@@ -760,7 +820,11 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(`Our spaceship has landed on Alpha Centauri!`);
+      this.sendNotification(
+        new Notification('Player.spaceship-landed', {
+          player,
+        })
+      );
     });
   }
 
@@ -770,7 +834,7 @@ export class DataTransferClient extends Client implements IClient {
     return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) => {
       if (
         meta.choices().length === 1 &&
-        meta.key() !== ('negotiation.next-step' as Name)
+        'negotiation.next-step' !== meta.key()
       ) {
         const [choice] = meta.choices();
 
@@ -781,15 +845,17 @@ export class DataTransferClient extends Client implements IClient {
 
       this.#transport.send('chooseFromList', meta);
 
-      this.#transport.receiveOnce('chooseFromList', (chosenId) => {
+      this.#transport.receiveOnce('chooseFromList', async (chosenId) => {
         const [choice] = meta
           .choices()
           .filter((choice) => choice.id() === chosenId);
 
         if (!choice) {
           console.warn(
-            `No choice found for '${chosenId}' against '${meta.id()}'.`
+            `No choice found for '${chosenId}' against '${meta.id()}', using super.`
           );
+
+          resolve(await super.chooseFromList(meta));
 
           return;
         }
@@ -933,7 +999,7 @@ export class DataTransferClient extends Client implements IClient {
         { chosen } = action;
 
       if (!chosen) {
-        console.log(`no build item specified`);
+        console.warn(`no build item specified`);
 
         return false;
       }
@@ -958,7 +1024,7 @@ export class DataTransferClient extends Client implements IClient {
         { chosen } = action;
 
       if (!chosen) {
-        this.sendNotification(`no build item specified`);
+        console.warn(`no advance specified`);
 
         return false;
       }
@@ -980,10 +1046,16 @@ export class DataTransferClient extends Client implements IClient {
 
     if (playerAction instanceof CompleteProduction) {
       const cityBuild = playerAction.value(),
-        playerTreasury = playerTreasuryRegistryInstance.getByPlayerAndType(
-          this.player(),
-          Gold
+        [playerTreasury] = playerTreasuryRegistryInstance.getBy(
+          'id',
+          action.treasury
         );
+
+      if (!playerTreasury) {
+        console.warn(`No playerTreasury found for id: ${action.treasury}.`);
+
+        return false;
+      }
 
       playerTreasury.buy(cityBuild.city());
 
@@ -1093,10 +1165,8 @@ export class DataTransferClient extends Client implements IClient {
     this.#dataQueue.clear();
   }
 
-  private sendNotification(message: string): void {
-    this.#transport.send('gameNotification', {
-      message: message,
-    });
+  private sendNotification(notification: Notification): void {
+    this.#transport.send('gameNotification', notification);
   }
 
   takeTurn(): Promise<void> {
@@ -1210,23 +1280,43 @@ export class DataTransferClient extends Client implements IClient {
 
       await players.reduce(
         (promise: Promise<void>, player: Player) =>
-          promise.then(async () => {
-            const client = clientRegistryInstance.getByPlayer(player);
+          promise
+            .then(async () => {
+              const client = clientRegistryInstance.getByPlayer(player),
+                nextSteps = negotiation.nextSteps(),
+                resultPromise = Promise.race([
+                  client.chooseFromList(
+                    new ChoiceMeta(
+                      nextSteps,
+                      'negotiation.next-step',
+                      negotiation
+                    )
+                  ),
+                  client instanceof AIClient
+                    ? awaitTimeout(
+                        500,
+                        new Timeout(
+                          `Timeout waiting for ${client.player().id()} (${
+                            client.player().civilization().sourceClass().name
+                          }) - sent ${nextSteps.length} options`
+                        )
+                      )
+                    : new Promise<void>(() => {}),
+                ]);
 
-            const interaction = await client.chooseFromList(
-              new ChoiceMeta(
-                negotiation.nextSteps(),
-                'negotiation.next-step',
-                negotiation
-              )
-            );
+              const interaction = await resultPromise;
 
-            negotiation.proceed(interaction);
+              if (!interaction) {
+                return;
+              }
 
-            if (interaction instanceof Resolution) {
-              interaction.proposal().resolve(interaction);
-            }
-          }),
+              negotiation.proceed(interaction);
+
+              if (interaction instanceof Resolution) {
+                await interaction.proposal().resolve(interaction);
+              }
+            })
+            .catch((reason) => console.error(reason)),
         Promise.resolve()
       );
 

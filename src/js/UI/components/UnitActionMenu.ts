@@ -1,8 +1,9 @@
 import { PopupMenu, PopupMenuAction } from './PopupMenu';
-import { Tile, Unit as UnitData, UnitAction } from '../types';
+import { SneakAttack, Tile, Unit as UnitData, UnitAction } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
 import ConfirmationWindow from './ConfirmationWindow';
+import { t } from 'i18next';
 
 const buildActions = (
   tile: Tile,
@@ -49,18 +50,32 @@ const buildActions = (
 
     if (['SneakAttack', 'SneakCaptureCity'].includes(action._)) {
       return {
-        label: action._,
+        label: t(`Action.${action._}.name`, {
+          defaultValue: action._,
+          ns: 'unit',
+        }),
         action: () =>
           new ConfirmationWindow(
-            'Sneak attack!',
-            `Are you sure you want to perform a ${action._}?`,
+            t('SneakAttack.title'),
+            t('SneakAttack.body', {
+              nation: t(
+                `${(action as SneakAttack).enemy.civilization._}.nation`,
+                {
+                  defaultValue: (action as SneakAttack).enemy.civilization._,
+                  ns: 'civilization',
+                }
+              ),
+            }),
             () => perform()
           ),
       };
     }
 
     return {
-      label: action._,
+      label: t(`Action.${action._}.name`, {
+        defaultValue: action._,
+        ns: 'unit',
+      }),
       action: () => perform(),
     };
   });

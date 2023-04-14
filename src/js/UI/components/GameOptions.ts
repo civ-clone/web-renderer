@@ -2,6 +2,7 @@ import Window from './Window';
 import { h } from '../lib/html';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export class GameOptions extends Window {
   constructor() {
@@ -10,7 +11,7 @@ export class GameOptions extends Window {
       s(
         `<div></div>`,
         s(
-          `<label>Auto End of Turn?</label>`,
+          `<label>${t('GameOptions.auto-end-turn')}</label>`,
           (() => {
             const input = s<HTMLInputElement>(
               `<input type="checkbox"${

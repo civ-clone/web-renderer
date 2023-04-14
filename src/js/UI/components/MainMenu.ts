@@ -3,12 +3,13 @@ import CustomiseWorldWindow from './CustomiseWorldWindow';
 import EarthWindow from './EarthWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
+import ReleaseWindow from './ReleaseWindow';
 import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { version } from '../../../../build.json';
-import ReleaseWindow from './ReleaseWindow';
+import { t } from 'i18next';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -37,9 +38,9 @@ export class MainMenu extends Element {
           '<nav></nav>',
           h(
             s(
-              `<button autofocus${
-                hasAssets ? '' : ' hidden'
-              }>Start a New Game</button>`
+              `<button autofocus${hasAssets ? '' : ' hidden'}>${t(
+                'MainMenu.new-game'
+              )}</button>`
             ),
             {
               click: () => {
@@ -47,11 +48,23 @@ export class MainMenu extends Element {
               },
             }
           ),
-          h(s(`<button${hasAssets ? '' : ' hidden'}>Earth</button>`), {
-            click: () => new EarthWindow(this.#transport, () => this.remove()),
-          }),
           h(
-            s(`<button${hasAssets ? '' : ' hidden'}>Customise World</button>`),
+            s(
+              `<button${hasAssets ? '' : ' hidden'}>${t(
+                'MainMenu.earth'
+              )}</button>`
+            ),
+            {
+              click: () =>
+                new EarthWindow(this.#transport, () => this.remove()),
+            }
+          ),
+          h(
+            s(
+              `<button${hasAssets ? '' : ' hidden'}>${t(
+                'MainMenu.customize-world'
+              )}</button>`
+            ),
             {
               click: async () =>
                 new CustomiseWorldWindow(this.#transport, () => this.remove()),
@@ -60,13 +73,20 @@ export class MainMenu extends Element {
           h(s(`<button>Import Assets</button>`), {
             click: () => new ImportAssetsWindow(),
           }),
-          h(s(`<button${showQuit ? '' : ' hidden'}>Quit</button>`), {
-            click: () => {
-              this.remove();
+          h(
+            s(
+              `<button${showQuit ? '' : ' hidden'}>${t(
+                'MainMenu.quit'
+              )}</button>`
+            ),
+            {
+              click: () => {
+                this.remove();
 
-              this.#transport.send('quit');
-            },
-          })
+                this.#transport.send('quit', null);
+              },
+            }
+          )
         ),
         {
           keydown(event: KeyboardEvent) {
@@ -92,18 +112,29 @@ export class MainMenu extends Element {
       ),
       s(
         `<footer></footer>`,
-        h(s(`<a href="#releases">version: ${version}</a>`), {
-          click(event) {
-            event.preventDefault();
+        h(
+          s(
+            `<a href="#releases">${t('MainMenu.version', {
+              version,
+            })}</a>`
+          ),
+          {
+            click(event) {
+              event.preventDefault();
 
-            new ReleaseWindow();
-          },
-        })
+              new ReleaseWindow();
+            },
+          }
+        )
       )
     );
   }
 
   remove(): void {
+    this.queryAll('button').forEach((button) =>
+      button.setAttribute('disabled', '')
+    );
+
     this.removeClass('active');
 
     setTimeout((): void => super.remove(), 2000);

@@ -1,25 +1,30 @@
 import { Element, s } from '@dom111/element';
+import { t } from 'i18next';
 
 const template: (label: string, value: number) => HTMLFieldSetElement = (
   label: string,
   value: number
 ) =>
   s(
-    `<fieldset><legend>${label}</legend><input type="range" max="100" min="0" step="1" value="${value}"><input type="number"><label><input type="checkbox">Lock</label></fieldset>`
+    `<fieldset><legend>${label}</legend><input type="range" max="100" min="0" step="1" value="${value}"><input type="number"><label><input type="checkbox">${t(
+      'LockedSlider.lock'
+    )}</label></fieldset>`
   ) as HTMLFieldSetElement;
 
 export type onInputHandler = () => void;
 
 export class LockedSlider extends Element {
+  #key: string;
   #label: string;
   #range: HTMLInputElement;
   #number: HTMLInputElement;
   #lock: HTMLInputElement;
   #listeners: onInputHandler[] = [];
 
-  constructor(label: string, currentValue: number) {
+  constructor(key: string, currentValue: number, label: string) {
     super(template(label, currentValue));
 
+    this.#key = key;
     this.#label = label;
     this.#range = this.element().querySelector(
       'input[type="range"]'
@@ -44,6 +49,10 @@ export class LockedSlider extends Element {
     this.#lock.addEventListener('input', () => this.lock());
 
     this.lock();
+  }
+
+  key(): string {
+    return this.#key;
   }
 
   label(): string {

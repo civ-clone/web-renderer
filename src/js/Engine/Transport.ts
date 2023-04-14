@@ -1,9 +1,9 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
-import ChoiceMeta, { ChoiceMetaData } from '@civ-clone/core-client/ChoiceMeta';
-import { ObjectMap } from '../UI/lib/reconstituteData';
-import TransferObject from './TransferObject';
+import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
-import { GameData } from '../UI/types';
+import { GameData, PlayerTreasury } from '../UI/types';
+import Notification from './Notification';
+import { ObjectMap } from '../UI/lib/reconstituteData';
 
 export type TransportMessage<
   Channel extends keyof TransportDataMap = keyof TransportDataMap
@@ -49,6 +49,7 @@ declare global {
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     gameData: TransportData<GameData, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
+    gameNotification: TransportData<Notification, Notification>;
     getOptions: TransportData<
       {
         [key: string]: any;
@@ -96,8 +97,12 @@ declare global {
     };
     CompleteProduction: {
       id: string;
+      treasury: string;
     };
     EndTurn: {};
+    InactiveUnit: {
+      id: string;
+    };
     LaunchSpaceship: {
       id: string;
     };

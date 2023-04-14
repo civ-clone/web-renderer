@@ -26,6 +26,7 @@ export class ActionWindow extends NotificationWindow {
     options: ActionWindowOptions = {}
   ) {
     options = {
+      classes: 'actionWindow',
       ...options,
       actions: {
         primary: {
@@ -62,8 +63,6 @@ export class ActionWindow extends NotificationWindow {
       ),
       options
     );
-
-    this.addClass('actionWindow');
   }
 }
 
