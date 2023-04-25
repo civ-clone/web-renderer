@@ -71,19 +71,17 @@ export class Renderer {
     const transport = this.#transport;
 
     const hasAllAssets = await assetStore.hasAllAssets();
-    if (!hasAllAssets) {
-      return;
+
+    if (hasAllAssets) {
+      const scaledCursor = await assetStore.getScaled(
+        './assets/cursor/torch.png',
+        2
+      );
+
+      document.body.style.cursor = `url('${scaledCursor.toDataURL(
+        'image/png'
+      )}'), default`;
     }
-
-    const scaledCursor = await assetStore.getScaled(
-      './assets/cursor/torch.png',
-      2
-    );
-
-    document.body.style.cursor = `url('${scaledCursor.toDataURL(
-      'image/png'
-    )}'), default`;
-
     // Load translations
     i18next.use(LanguageDetector);
 
