@@ -72,6 +72,7 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
+import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
 const awaitTimeout = (delay: number, reason?: any) =>
   new Promise<void>((resolve, reject) =>
@@ -826,6 +827,27 @@ export class DataTransferClient extends Client implements IClient {
         })
       );
     });
+
+    engineInstance.on(
+      'player:declaration-expired',
+      (player: Player, declaration: Declaration) => {
+        if (!declaration.players().includes(this.player())) {
+          return;
+        }
+
+        this.sendNotification(
+          new Notification('Player.declaration-expired', {
+            player: this.player(),
+            declaration,
+            enemy: declaration
+              .players()
+              .filter(
+                (declarationPlayer) => declarationPlayer !== this.player()
+              )[0],
+          })
+        );
+      }
+    );
   }
 
   async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
@@ -924,48 +946,29 @@ export class DataTransferClient extends Client implements IClient {
     if (playerAction instanceof ActiveUnit) {
       const { unitAction, target } = action,
         unit: Unit = playerAction.value(),
-        allActions = [
-          ...unit.actions(),
-          ...Object.values(unit.actionsForNeighbours()),
-        ].flat();
-
-      let actions = allActions.filter(
-        (action: UnitAction): boolean => action.constructor.name === unitAction
-      );
-
-      while (actions.length !== 1) {
-        if (actions.length === 0) {
-          console.log(`action not found: ${unitAction}`);
-
-          return false;
-        }
-
-        const [playerTile] = playerWorldRegistryInstance
+        [playerTile] = playerWorldRegistryInstance
           .getByPlayer(this.player())
           .filter((tile) => tile.id() === target);
 
-        if (!playerTile) {
-          console.log(`tile not found: ${target}`);
+      if (!playerTile) {
+        console.log(`tile not found: ${target}`);
 
-          return false;
-        }
-
-        actions = actions.filter(
-          (action: UnitAction): boolean => action.to() === playerTile.tile()
-        );
-
-        if (actions.length > 1) {
-          if (!target) {
-            console.log(
-              `too many actions found: ${unitAction} (${actions.length})`
-            );
-
-            return false;
-          }
-        }
+        return false;
       }
 
-      const [actionToPerform] = actions;
+      const actions = unit.actions(playerTile.tile()),
+        filteredActions = actions.filter(
+          (action: UnitAction): boolean =>
+            action.sourceClass().name === unitAction
+        );
+
+      if (filteredActions.length === 0) {
+        console.log(`action not found: ${unitAction}`);
+
+        return false;
+      }
+
+      const [actionToPerform] = filteredActions;
 
       actionToPerform.perform();
 
@@ -1183,7 +1186,9 @@ export class DataTransferClient extends Client implements IClient {
           yearInstance.toPlainObject()
         );
         this.#dataQueue.add(this.player().id(), () =>
-          this.player().toPlainObject(this.#dataFilter(filterToReference(Tile)))
+          this.player().toPlainObject(
+            this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
+          )
         );
 
         this.sendPatchData();
@@ -1196,14 +1201,16 @@ export class DataTransferClient extends Client implements IClient {
 
             this.sendPatchData();
 
-            setTimeout(() => resolve(), 100);
+            setTimeout(() => resolve(), 10);
 
             return;
           }
 
           this.#dataQueue.update(this.player().id(), () =>
             this.player().toPlainObject(
-              this.#dataFilter(filterToReference(PlayerWorld, Tile, City))
+              this.#dataFilter(
+                filterToReference(PlayerWorld, PlayerTile, Tile, City)
+              )
             )
           );
 

@@ -130,10 +130,7 @@ export class Spaceship extends Action {
       },
       window = new Window(
         t('Actions.Spaceship.spaceship-name', {
-          nation: t(`${spaceship.player.civilization._}.name`, {
-            defaultValue: spaceship.player.civilization._,
-            ns: 'civilization',
-          }),
+          player: spaceship.player,
         }),
         s(
           '<div></div>',

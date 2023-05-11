@@ -1,4 +1,5 @@
 import {
+  Definition,
   ExtractData,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
@@ -6,15 +7,25 @@ import Window from './Window';
 import { assetStore } from '../AssetStore';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
-import { s } from '@dom111/element';
+import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
+
+type ImportAssetsOptions = {
+  replaceExisting: boolean;
+};
 
 export class ImportAssetsWindow extends Window {
   #fileInput: HTMLInputElement;
+  #options: ImportAssetsOptions = {
+    replaceExisting: false,
+  };
   #progressInformation: HTMLParagraphElement;
 
   constructor() {
     const fileInput = s<HTMLInputElement>('<input type="file" multiple>'),
+      replaceExistingInput = s<HTMLInputElement>(
+        '<input type="checkbox" checked>'
+      ),
       progressInformation = s<HTMLParagraphElement>(
         '<p class="loading" hidden></p>'
       );
@@ -28,6 +39,17 @@ export class ImportAssetsWindow extends Window {
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }>${t('ImportAssetsWindow.brave')}</div></div>`,
+        s(
+          '<p></p>',
+          s(
+            '<label></label>',
+            h(replaceExistingInput, {
+              change: () =>
+                (this.#options.replaceExisting = replaceExistingInput.checked),
+            }),
+            textNode(t('ImportAssetsWindow.replace-existing'))
+          )
+        ),
         s(
           '<p></p>',
           h(fileInput, {
@@ -82,25 +104,56 @@ export class ImportAssetsWindow extends Window {
       files.map(
         async (file: File) =>
           // ...to have been...
-          new Promise<void>((resolve) => {
-            const definitions = (extractData as ExtractData).files[
+          new Promise<void>(async (resolve) => {
+            const allDefinitions = (extractData as ExtractData).files[
               file.name.toUpperCase()
             ];
 
-            if (!definitions) {
+            if (!allDefinitions) {
               console.warn(`No definitions found for ${file.name}, skipping.`);
 
               return;
             }
 
-            const reader = new FileReader();
+            const existingKeys = await assetStore.keys(),
+              definitions = Object.keys(allDefinitions).reduce(
+                (object, key) => {
+                  const filenamesForObject = Object.keys(object).reduce(
+                    (paths, path) => {
+                      object[path].forEach((child) =>
+                        child.contents.forEach((entry) =>
+                          paths.push(`./assets/${path + entry.name}.png`)
+                        )
+                      );
+
+                      return paths;
+                    },
+                    [] as string[]
+                  );
+
+                  if (
+                    filenamesForObject.every((path) =>
+                      existingKeys.includes(path)
+                    ) &&
+                    !this.#options.replaceExisting
+                  ) {
+                    return object;
+                  }
+
+                  object[key] = allDefinitions[key];
+
+                  return object;
+                },
+                {} as Definition
+              ),
+              reader = new FileReader();
 
             // ...loaded...
             reader.addEventListener('load', async (event) => {
-              // ...the sprites extracted...
+              // ...and the sprites extracted.
               extractSprites(
                 event.target!.result as string,
-                definitions,
+                definitions as Definition,
                 extractData.defaults,
                 (width, height) => {
                   const canvas = document.createElement(

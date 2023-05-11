@@ -269,7 +269,7 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
                   cityYield._ === 'CityImprovementMaintenanceGold' &&
                   cityYield.cityImprovement.id === improvement.id
               )
-              .flatMap((cityYield) => yieldImages(cityYield))
+              .flatMap((cityYield) => yieldImages(cityYield, true))
           )
         )
       )
@@ -435,6 +435,10 @@ export class City extends Window {
 
       if (['b', 'B'].includes(event.key)) {
         const buyButtons = this.queryAll('button.buy');
+
+        if (!buyButtons.length) {
+          return;
+        }
 
         // TODO: handle this scenario properly
         // if (buyButtons.length > 1) {

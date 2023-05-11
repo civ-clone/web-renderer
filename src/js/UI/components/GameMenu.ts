@@ -1,9 +1,8 @@
 import { Element, s } from '@dom111/element';
-import { GameData, Player } from '../types';
 import CityStatus from './CityStatus';
-import DataObserver from '../DataObserver';
 import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
+import { Player } from '../types';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
@@ -14,7 +13,6 @@ import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
 
 export class GameMenu extends Element {
-  #dataObserver: DataObserver;
   #player: Player;
   #portal: Portal;
   #transport: Transport;
@@ -30,11 +28,6 @@ export class GameMenu extends Element {
     this.#player = player;
     this.#portal = portal;
     this.#transport = transport;
-
-    this.#dataObserver = new DataObserver(
-      [player.id],
-      (data: GameData) => (this.#player = data.player)
-    );
   }
   build(): void {
     const button = s(`<button><img src="${menuIcon}"></button>`);

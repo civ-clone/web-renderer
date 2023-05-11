@@ -6,7 +6,7 @@ export const cityName = (city: City | null): string =>
     ? t('None', {
         ns: 'city',
       })
-    : t(`${city.name}.name`, {
+    : t(`${city.player.civilization._}.${city.name}.name`, {
         defaultValue: city.name,
         ns: 'city',
       });

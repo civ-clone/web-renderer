@@ -22,7 +22,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
   ) {
     super(
       t('Actions.CityBuildSelectionWindow.title', {
-        cityName: cityName(cityBuild.city),
+        city: cityBuild.city,
       }),
       cityBuild.available.map((buildItem) => ({
         label: t('City.Build.build-item', {

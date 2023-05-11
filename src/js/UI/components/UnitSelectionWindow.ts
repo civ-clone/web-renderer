@@ -64,6 +64,12 @@ export class UnitSelectionWindow extends Window {
 
     this.update(build(units, transport, onComplete));
   }
+
+  close() {
+    this.#dataObserver.dispose();
+
+    super.close();
+  }
 }
 
 export default UnitSelectionWindow;

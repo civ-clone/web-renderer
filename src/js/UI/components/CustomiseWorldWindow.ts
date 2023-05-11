@@ -2,7 +2,7 @@ import Options from '../../Engine/Requests/Options';
 import Request from '../../Engine/Request';
 import Transport from '../Transport';
 import Window from './Window';
-import { h } from '../lib/html';
+import { elementId, h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -17,12 +17,6 @@ export class CustomiseWorldWindow extends Window {
 
     this.#onFinished = onFinished;
     this.#transport = transport;
-
-    this.init();
-  }
-
-  build(): void {
-    super.build();
 
     this.init();
   }
@@ -92,41 +86,22 @@ export class CustomiseWorldWindow extends Window {
     this.update(
       s(
         '<div class="customise-world"></div>',
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.players'
-          )}</label></div>`,
-          playersInput
-        ),
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.height'
-          )}</label></div>`,
-          heightInput
-        ),
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.width'
-          )}</label></div>`,
-          widthInput
-        ),
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.land-coverage'
-          )}</label></div>`,
-          landCoverageInput
-        ),
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.land-size'
-          )}</label></div>`,
-          landSizeInput
-        ),
-        s(
-          `<div class="option"><label>${t(
-            'CustomizeWorld.max-iterations'
-          )}</label></div>`,
-          maxIterationsInput
+        ...(
+          [
+            [playersInput, 'CustomizeWorld.players'],
+            [heightInput, 'CustomizeWorld.height'],
+            [widthInput, 'CustomizeWorld.width'],
+            [landCoverageInput, 'CustomizeWorld.land-coverage'],
+            [landSizeInput, 'CustomizeWorld.land-size'],
+            [maxIterationsInput, 'CustomizeWorld.max-iterations'],
+          ] as [HTMLInputElement, string][]
+        ).map(([input, label]) =>
+          s(
+            `<div class="option"><label for="${elementId(input)}">${t(
+              label
+            )}</label></div>`,
+            input
+          )
         ),
         h(s(`<button>${t('CustomizeWorld.build')}</button>`), {
           click: () => submit(),
@@ -137,6 +112,9 @@ export class CustomiseWorldWindow extends Window {
     this.on('keydown', (event) => {
       if (event.key === 'Enter') {
         submit();
+
+        event.preventDefault();
+        event.stopPropagation();
       }
     });
   }

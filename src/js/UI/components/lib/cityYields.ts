@@ -135,18 +135,27 @@ export const yieldData = (city: CityData, yieldName: string) =>
     [0, 0, 0]
   );
 
-export const yieldImages = (cityYield: { _: string; value: number }): Node[] =>
-  new Array(Math.trunc(Math.abs(cityYield.value))).fill(0).map(() => {
-    const icon = s('<span class="yield-icon"></span>');
+export const yieldImages = (
+  cityYield: { _: string; value: number },
+  absolute: boolean = false
+): Node[] =>
+  new Array(
+    Math.trunc(
+      absolute ? Math.abs(cityYield.value) : Math.max(0, cityYield.value)
+    )
+  )
+    .fill(0)
+    .map(() => {
+      const icon = s('<span class="yield-icon"></span>');
 
-    assetStore
-      .getScaled(`./assets/${knownIcons[knownGroups[cityYield._]]}`, 2)
-      .then((image) =>
-        icon.append(s(`<img src="${image.toDataURL('image/png')}">`))
-      );
+      assetStore
+        .getScaled(`./assets/${knownIcons[knownGroups[cityYield._]]}`, 2)
+        .then((image) =>
+          icon.append(s(`<img src="${image.toDataURL('image/png')}">`))
+        );
 
-    return icon;
-  });
+      return icon;
+    });
 
 export const yieldLabel = (cityYield: Yield) =>
   t(`${cityYield._}.name`, {

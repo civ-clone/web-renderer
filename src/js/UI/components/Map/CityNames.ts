@@ -14,8 +14,8 @@ export class CityNames extends Map {
 
     const { x, y } = tile,
       size = this.tileSize(),
-      offsetX = x * size,
-      offsetY = y * size,
+      offsetX = (x * size) % this.canvas().width,
+      offsetY = (y * size) % this.canvas().height,
       city = tile.city,
       sizeOffsetX = this.tileSize() / 2,
       sizeOffsetY = this.tileSize() * 0.75,

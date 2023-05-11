@@ -58,6 +58,7 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
         context: city.build.building ? 'nonempty' : 'empty',
         totals_context: production[0] === production[2] ? 'equal' : 'unequal',
         buildable: getLabelForBuildable(city.build.building),
+        build: city.build,
         turns: city.build.building
           ? turnsLeft(city.build, city.yields, 'Production')
           : Infinity,

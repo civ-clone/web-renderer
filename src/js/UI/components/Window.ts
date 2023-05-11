@@ -308,7 +308,7 @@ export class Window
   }
 
   update(content: string | Node): void {
-    this.element().lastElementChild!.remove();
+    this.element().lastElementChild?.remove();
 
     this.append(content instanceof Node ? content : s(`<p>${content}</p>`));
   }

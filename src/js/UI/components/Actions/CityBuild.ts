@@ -44,7 +44,7 @@ export class CityBuild extends Action {
           `<button class="large cityBuild" title="${t(
             'Actions.CityBuildSelectionWindow.title',
             {
-              cityName: cityName(cityBuild.city),
+              city: cityBuild.city,
             }
           )}"><img src="${asset!.uri}"></button>`
         )

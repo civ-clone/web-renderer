@@ -31,7 +31,7 @@ export class SupportedUnit extends Element {
             yieldsToInclude.includes(cityYield._)
           )
           .filter((cityYield) => cityYield.unit.id === unit.id)
-          .flatMap((cityYield) => yieldImages(cityYield))
+          .flatMap((cityYield) => yieldImages(cityYield, true))
       )
     );
   }

@@ -67,6 +67,8 @@ export const reconstituteData = (
     return value;
   };
 
+  seenObjects.clear();
+
   return getReferences(hierarchy);
 };
 

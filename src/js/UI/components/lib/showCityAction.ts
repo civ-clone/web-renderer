@@ -12,7 +12,7 @@ export const showCityAction = (
   transport: Transport
 ) => ({
   label: t('Actions.ShowCity.label', {
-    cityName: cityName(city),
+    city,
   }),
   action(selectionWindow: INotificationWindow) {
     selectionWindow.close();

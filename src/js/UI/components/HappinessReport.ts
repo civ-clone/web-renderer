@@ -82,7 +82,7 @@ const buildCityRow = async (
       h(
         s(
           `<button>${t('HappinessReport.view-city', {
-            cityName: cityName(city),
+            city,
           })}</button>`
         ),
         {

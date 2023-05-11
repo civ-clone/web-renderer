@@ -34,10 +34,17 @@ const buildActions = (
     actions = neighbouringTileActions;
   }
 
-  // TODO: when GoTo is a thing, set that here
-  // if (actions.length === 0) {
-  //   actions = [];
-  // }
+  if (tile !== unit.tile && !neighbouringTileActions?.length) {
+    actions = [
+      {
+        _: 'GoTo',
+        __: [],
+        id: '',
+        from: unit.tile,
+        to: tile,
+      },
+    ];
+  }
 
   return actions.map((action) => {
     const perform = () =>

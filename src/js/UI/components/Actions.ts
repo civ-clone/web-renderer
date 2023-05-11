@@ -10,7 +10,7 @@ import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
 import Transport from '../Transport';
-import { h } from '../lib/html';
+import { getClosestAncestorMatching, h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 declare global {
@@ -24,8 +24,104 @@ export interface IActions {
 }
 
 export class Actions extends Element implements IActions {
+  #actions = new Map<Node, Action>();
   #portal: Portal;
   #transport: Transport;
+
+  #actionedHandler = (event: CustomEvent<Action>) => event.detail.remove();
+  #clickHandler = (event: MouseEvent) => {
+    const target = getClosestAncestorMatching(
+      event.target instanceof HTMLElement ? event.target : null,
+      '.action'
+    );
+
+    if (!target) {
+      return;
+    }
+
+    const actionElement = this.#actions.get(target) ?? null;
+
+    if (!actionElement) {
+      return;
+    }
+
+    actionElement.activate();
+  };
+  #keyDownHandler = (event: KeyboardEvent) => {
+    const currentChild = document.activeElement;
+
+    if (!this.element().contains(currentChild)) {
+      return;
+    }
+
+    const key = mappedKeyFromEvent(event),
+      children = Array.from(this.element().children) as HTMLElement[];
+
+    if (
+      ![
+        'ArrowDown',
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        ' ',
+        'Enter',
+      ].includes(key) ||
+      children.length === 0
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if ([' ', 'Enter'].includes(key)) {
+      const actionElement = currentChild
+          ? getClosestAncestorMatching(currentChild ?? null, '.action')
+          : null,
+        action = actionElement && this.#actions.get(actionElement);
+
+      action?.activate();
+
+      return;
+    }
+
+    let currentAction =
+      currentChild === this.element()
+        ? ['ArrowLeft', 'ArrowUp'].includes(key)
+          ? (currentChild.firstElementChild as HTMLElement)
+          : (currentChild.lastElementChild as HTMLElement)
+        : (currentChild as HTMLElement);
+
+    while (currentAction.parentElement !== this.element()) {
+      currentAction = currentAction.parentElement as HTMLElement;
+    }
+
+    const currentIndex = children.indexOf(currentAction);
+
+    if (['ArrowUp', 'ArrowLeft'].includes(key)) {
+      if (currentIndex > 0) {
+        children[currentIndex - 1].querySelector('button')?.focus();
+
+        return;
+      }
+
+      children.pop()!.querySelector('button')!.focus();
+
+      return;
+    }
+
+    if (['ArrowDown', 'ArrowRight'].includes(key)) {
+      if (currentIndex < children.length - 1) {
+        children[currentIndex + 1]!.querySelector('button')!.focus();
+
+        return;
+      }
+
+      children.shift()!.querySelector('button')!.focus();
+
+      return;
+    }
+  };
 
   constructor(
     container: HTMLElement = s('<div class="actions"></div>'),
@@ -37,82 +133,26 @@ export class Actions extends Element implements IActions {
     this.#portal = portal;
     this.#transport = transport;
 
-    this.on('actioned', (event) => event.detail.remove());
+    this.bindEvents();
+  }
 
-    this.on(
-      'keydown',
-      (event) => {
-        const currentChild = document.activeElement;
+  protected bindEvents(): void {
+    this.on('actioned', this.#actionedHandler);
 
-        if (!this.element().contains(currentChild)) {
-          return;
-        }
+    this.on('keydown', this.#keyDownHandler, true);
 
-        const key = mappedKeyFromEvent(event),
-          children = Array.from(this.element().children) as HTMLElement[];
-
-        if (
-          !['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'].includes(key) ||
-          children.length === 0
-        ) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        let currentAction =
-          currentChild === this.element()
-            ? ['ArrowLeft', 'ArrowUp'].includes(key)
-              ? (currentChild.firstElementChild as HTMLElement)
-              : (currentChild.lastElementChild as HTMLElement)
-            : (currentChild as HTMLElement);
-
-        while (currentAction.parentElement !== this.element()) {
-          currentAction = currentAction.parentElement as HTMLElement;
-        }
-
-        const currentIndex = children.indexOf(currentAction);
-
-        if (['ArrowUp', 'ArrowLeft'].includes(key)) {
-          if (currentIndex > 0) {
-            children[currentIndex - 1].querySelector('button')?.focus();
-
-            return;
-          }
-
-          children.pop()!.querySelector('button')!.focus();
-
-          return;
-        }
-
-        if (['ArrowDown', 'ArrowRight'].includes(key)) {
-          if (currentIndex < children.length - 1) {
-            children[currentIndex + 1]!.querySelector('button')!.focus();
-
-            return;
-          }
-
-          children.shift()!.querySelector('button')!.focus();
-
-          return;
-        }
-      },
-      true
-    );
+    this.on('click', this.#clickHandler);
   }
 
   build(actions: PlayerAction[]): void {
+    this.unbindEvents();
+
     this.empty();
 
     actions.forEach((playerAction) => {
       let action: Action;
 
       switch (playerAction._) {
-        // This is handled separately so no need to worry.
-        case 'ActiveUnit':
-          return;
-
         case 'AdjustTradeRates':
           action = new AdjustTradeRates(playerAction, this.#transport);
 
@@ -152,6 +192,7 @@ export class Actions extends Element implements IActions {
 
           break;
 
+        case 'ActiveUnit':
         case 'ChangeProduction':
         case 'CompleteProduction':
         case 'InactiveUnit':
@@ -159,21 +200,23 @@ export class Actions extends Element implements IActions {
 
         default:
           console.log('need to handle ' + playerAction._);
+
           return;
-        // throw new TypeError(`Unknown action type '${action._}'.`);
       }
 
-      this.element().prepend(
-        h(action.element(), {
-          click: () => action.activate(),
-          keydown: ({ key }) => {
-            if (key === ' ' || key === 'Enter') {
-              action.activate();
-            }
-          },
-        })
-      );
+      this.append(action);
+      this.#actions.set(action.element(), action);
     });
+
+    this.bindEvents();
+  }
+
+  protected unbindEvents(): void {
+    this.off('actioned', this.#actionedHandler);
+
+    this.off('keydown', this.#keyDownHandler, true);
+
+    this.off('click', this.#clickHandler);
   }
 }
 

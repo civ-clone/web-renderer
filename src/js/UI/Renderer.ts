@@ -86,6 +86,7 @@ export class Renderer {
     i18next.use(LanguageDetector);
 
     await i18next.init({
+      defaultNS: 'default',
       ns: ['default'],
     });
     await import('../translations');
@@ -108,7 +109,9 @@ export class Renderer {
       }
     });
 
+    // These should be stored in localStorage or something...
     options.set('autoEndOfTurn', true);
+    options.set('autoEndOfTurnExceptions', ['CivilDisorder']);
 
     try {
       const notificationArea = document.getElementById(
@@ -336,17 +339,7 @@ export class Renderer {
               s(
                 `<div class="welcome">
 <p>${t('Welcome.you-have-risen', {
-                  leader: t(
-                    `Leader.${data.player.civilization.leader._}.name`,
-                    {
-                      defaultValue: data.player.civilization.leader._,
-                      ns: 'civilization',
-                    }
-                  ),
-                  nation: t(`${data.player.civilization._}.plural`, {
-                    defaultValue: data.player.civilization._,
-                    ns: 'civilization',
-                  }),
+                  player: data.player,
                 })}</p>
 <p>${t('Welcome.your-people-have-knowledge-of', {
                   advances: [
@@ -534,12 +527,12 @@ export class Renderer {
 
               primaryActions.build(
                 data.player.actions
-                  .filter((action) => primaryActionList.includes(action._))
                   .sort(
                     (a, b) =>
-                      (primaryActionPriority[b._] ?? 0) -
-                      (primaryActionPriority[a._] ?? 0)
+                      (primaryActionPriority[a._] ?? 0) -
+                      (primaryActionPriority[b._] ?? 0)
                   )
+                  .filter((action) => primaryActionList.includes(action._))
               );
 
               secondaryActions.build(
@@ -613,11 +606,19 @@ export class Renderer {
 
               minimap.update();
 
+              const autoEndOfTurnExceptions = options.get(
+                'autoEndOfTurnExceptions',
+                []
+              );
+
               if (
                 options.get('autoEndOfTurn') &&
                 data.player.mandatoryActions.length === 1 &&
                 data.player.mandatoryActions.every(
                   (action) => action._ === 'EndTurn'
+                ) &&
+                !data.player.actions.some((action) =>
+                  autoEndOfTurnExceptions.includes(action._)
                 )
               ) {
                 transport.send('action', {

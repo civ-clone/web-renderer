@@ -24,10 +24,10 @@ export class CivilDisorder extends Action {
 
     new ActionWindow(
       t('Actions.CivilDisorder.title', {
-        cityName: cityName(city),
+        city,
       }),
       t('Actions.CivilDisorder.body', {
-        cityName: cityName(city),
+        city,
       })!,
       {
         actions: {

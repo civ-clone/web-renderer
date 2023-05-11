@@ -6,11 +6,11 @@ export class GameOptionsRegistry extends EntityRegistry<GameOption> {
     super(GameOption);
   }
 
-  get(key: string): any {
+  get(key: string, defaultValue: any = null): any {
     const [option] = this.getBy('key', key);
 
     if (!option) {
-      return null;
+      return defaultValue;
     }
 
     return option.value();
