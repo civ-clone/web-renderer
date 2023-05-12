@@ -102,7 +102,7 @@ export class ImportAssetsWindow extends Window {
     await Promise.all(
       // ...all files...
       files.map(
-        async (file: File) =>
+        (file: File) =>
           // ...to have been...
           new Promise<void>(async (resolve) => {
             const allDefinitions = (extractData as ExtractData).files[
@@ -112,24 +112,23 @@ export class ImportAssetsWindow extends Window {
             if (!allDefinitions) {
               console.warn(`No definitions found for ${file.name}, skipping.`);
 
+              resolve();
+
               return;
             }
 
             const existingKeys = await assetStore.keys(),
               definitions = Object.keys(allDefinitions).reduce(
                 (object, key) => {
-                  const filenamesForObject = Object.keys(object).reduce(
-                    (paths, path) => {
-                      object[path].forEach((child) =>
-                        child.contents.forEach((entry) =>
-                          paths.push(`./assets/${path + entry.name}.png`)
-                        )
-                      );
+                  const filenamesForObject = Object.entries(
+                    allDefinitions[key]
+                  ).reduce((paths, [path, definition]) => {
+                    definition.contents.forEach((entry) =>
+                      paths.push(`./assets/${path + entry.name}.png`)
+                    );
 
-                      return paths;
-                    },
-                    [] as string[]
-                  );
+                    return paths;
+                  }, [] as string[]);
 
                   if (
                     filenamesForObject.every((path) =>

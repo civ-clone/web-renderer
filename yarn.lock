@@ -1871,8 +1871,8 @@ __metadata:
   linkType: hard
 
 "@civ-clone/base-unit-action-goto@npm:^0.1.0":
-  version: 0.1.1
-  resolution: "@civ-clone/base-unit-action-goto@npm:0.1.1"
+  version: 0.1.2
+  resolution: "@civ-clone/base-unit-action-goto@npm:0.1.2"
   dependencies:
     "@civ-clone/base-unit-action-move": ^0.1.1
     "@civ-clone/base-unit-action-no-orders": ^0.1.0
@@ -1882,7 +1882,7 @@ __metadata:
     "@civ-clone/core-unit": ^0.1.13
     "@civ-clone/core-world": ^0.1.9
     "@civ-clone/core-world-path": ^0.1.0
-  checksum: 6cc09846a730f03246b336b66471b641640e83dbb307407663a7169e6824058a7d13bf90dff8e3b258f12d471b20fd6dc9c42bb5612716a784f1b9f4ab9aeafc
+  checksum: 56c49805be31f64bb39e37909842c8b5d596008945b3fe2945b96f69106ddb0983c28f41ba16c51f31faf876699bbd8c20123b602793279aaa9d8c92b74ead49
   languageName: node
   linkType: hard
 
@@ -2695,7 +2695,7 @@ __metadata:
 
 "@civ-clone/civ1-player@github:civ-clone/civ1-player":
   version: 0.1.0
-  resolution: "@civ-clone/civ1-player@https://github.com/civ-clone/civ1-player.git#commit=aecc1846e099dba38040297d1e81c40765608761"
+  resolution: "@civ-clone/civ1-player@https://github.com/civ-clone/civ1-player.git#commit=053a56e16183a289b08ae75c1ec606b09171cab0"
   dependencies:
     "@civ-clone/base-player-action-end-turn": ^0.1.0
     "@civ-clone/base-terrain-grassland": ^0.1.0
@@ -2718,7 +2718,7 @@ __metadata:
     "@civ-clone/core-world": ^0.1.10
     "@civ-clone/core-world-generator": ^0.1.0
     "@civ-clone/core-yield": ^0.1.0
-  checksum: 5d6cf61da18a2b770fc90b57a8cf596aeb0a57fb778b7665be73741cf61f00dc1ded926806aefe9d5b676aac7910aef4bb871049b399c4e0b3667ccd18cf2974
+  checksum: 5386f95bd1c775be2685c9ca336142f1b437d7b17a148bda7afe49565667780c28dcc523b0a8d7b01fd045bba87119533ac797debb4df481fa42ab308f04e86e
   languageName: node
   linkType: hard
 
@@ -3251,15 +3251,15 @@ __metadata:
   linkType: hard
 
 "@civ-clone/core-strategy@npm:^0.1.0":
-  version: 0.1.0
-  resolution: "@civ-clone/core-strategy@npm:0.1.0"
+  version: 0.1.1
+  resolution: "@civ-clone/core-strategy@npm:0.1.1"
   dependencies:
     "@civ-clone/core-civilization": ^0.1.0
     "@civ-clone/core-data-object": ^0.1.0
     "@civ-clone/core-player": ^0.1.2
     "@civ-clone/core-registry": ^0.1.0
     "@civ-clone/core-rule": ^0.1.1
-  checksum: dc85eaba15cbb27d6247da4ab3b7353a55da921958e90c1d2fec3f3de909e2a377ccf083d369063c3013df943f427fbe0c30274d67e0d0ab0a9af8aa6ea3aeec
+  checksum: bc9beb420b21916b61e50070a2fb7d9fafb5a78ac4c4bd0eb06ff6f3451f2818c051a9aabad4ca55f113026d23623285b87e9300bad1bb191facfbb6a6ad4f87
   languageName: node
   linkType: hard
 

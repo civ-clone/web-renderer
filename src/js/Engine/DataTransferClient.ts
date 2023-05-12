@@ -831,19 +831,17 @@ export class DataTransferClient extends Client implements IClient {
     engineInstance.on(
       'player:declaration-expired',
       (player: Player, declaration: Declaration) => {
-        if (!declaration.players().includes(this.player())) {
+        if (player !== this.player()) {
           return;
         }
 
         this.sendNotification(
           new Notification('Player.declaration-expired', {
-            player: this.player(),
+            player,
             declaration,
             enemy: declaration
               .players()
-              .filter(
-                (declarationPlayer) => declarationPlayer !== this.player()
-              )[0],
+              .filter((declarationPlayer) => declarationPlayer !== player)[0],
           })
         );
       }
