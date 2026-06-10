@@ -1,5 +1,9 @@
 # web-renderer
 
+## Project documentation
+
+Detailed repository documentation for rewrite planning is available in [`docs/README.md`](./docs/README.md).
+
 ## Current state
 
 The game is currently reasonably playable. You can perform almost all actions available in the game engine.
@@ -58,4 +62,3 @@ See also the wider `TODO`s:
 
 - [Icons courtesy of feather icons](https://github.com/feathericons/feather)
 - [Main menu background photo created by kjpargeter - www.freepik.com](https://www.pexels.com/photo/galaxy-digital-wallpaper-957085/)
-
