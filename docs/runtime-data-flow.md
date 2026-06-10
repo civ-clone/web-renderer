@@ -34,11 +34,10 @@ Both transport implementations normalize `DataObject` instances by converting to
 ### Incremental patching (`gameDataPatch`)
 
 `DataQueue` patch shape (each entry in the `gameDataPatch` array):
-- `targetId`: object ID key of the patched root object.
-- `type`: `add | update | remove`
-- `index`: nested object path string (`foo.bar[3]` style) or `null`
-- `value`: payload with `{ hierarchy, objects }` (functions are resolved before send)
-
+- An object keyed by `targetId` (object ID of the patched root object), whose value contains:
+  - `type`: `add | update | remove`
+  - `index`: nested object path string (`foo.bar[3]` style) or `null`
+  - `value`: payload with `{ hierarchy, objects }` (functions are resolved before send)
 Frontend patch handling in `Renderer`:
 
 - `add/update`
@@ -72,5 +71,5 @@ When backend needs user choice (`chooseFromList`):
 
 - `Renderer` notes expensive reconstitution in late game and TODOs around worker-thread offload.
 - Patch application relies on manual string-path mutation logic.
-- Cleanup of orphaned objects is commented out due performance concerns.
+- Cleanup of orphaned objects is commented out due to performance concerns.
 
