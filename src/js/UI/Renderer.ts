@@ -171,7 +171,27 @@ export class Renderer {
         preloadContainer = document.getElementById('preload') as HTMLDivElement,
         notifications = new Notifications(),
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
-        setActiveUnit = (
+        // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
+        // layers' active-unit pointers current synchronously, so consecutive
+        // moves of a multi-move unit always read the post-move tile. No render.
+        applyActiveUnit = (
+          unit: Unit | null,
+          portal: GamePortal,
+          unitsMap: Units,
+          activeUnitsMap: ActiveUnit
+        ) => {
+          activeUnit = unit;
+
+          portal.setActiveUnit(unit);
+          unitsMap.setActiveUnit(unit);
+          activeUnitsMap.setActiveUnit(unit);
+
+          if (unit !== null) {
+            lastUnit = unit;
+          }
+        },
+        // Display half: safe to defer/coalesce (canvas composites + unit info).
+        renderActiveUnit = (
           unit: Unit | null,
           portal: GamePortal,
           unitsMap: Units,
@@ -179,15 +199,10 @@ export class Renderer {
         ) => {
           const unitDetails = new UnitDetails(unitInfo, unit);
 
-          activeUnit = unit;
-
           unitDetails.build();
 
-          portal.setActiveUnit(unit);
-          unitsMap.setActiveUnit(unit);
           unitsMap.render();
           unitsMap.setVisible(true);
-          activeUnitsMap.setActiveUnit(unit);
           activeUnitsMap.render();
           activeUnitsMap.setVisible(true);
 
@@ -196,8 +211,6 @@ export class Renderer {
 
             return;
           }
-
-          lastUnit = unit;
 
           unitsMap.update([
             ...(lastUnit?.tile ? [lastUnit.tile] : []),
@@ -209,6 +222,17 @@ export class Renderer {
           }
 
           portal.render();
+        },
+        // For input call sites (unit selection/cycling), where immediate visual
+        // feedback is wanted: apply state then render synchronously.
+        setActiveUnit = (
+          unit: Unit | null,
+          portal: GamePortal,
+          unitsMap: Units,
+          activeUnitsMap: ActiveUnit
+        ) => {
+          applyActiveUnit(unit, portal, unitsMap, activeUnitsMap);
+          renderActiveUnit(unit, portal, unitsMap, activeUnitsMap);
         };
 
       // preloaded the images as they could be remote
@@ -964,63 +988,13 @@ export class Renderer {
               }
             );
 
-            const handler = (objectMap: ObjectMap): void => {
-              // TODO: this causes a massive slowdown when its processed. Maybe we just leak for now...
-              // let orphanIds: string[] | null = clearNextTurn ? [] : null;
-              // let orphanIds: string[] | null = null;
+            let renderFrame: number | null = null;
 
-              // TODO: look into if it's possible to have data reconstituted in a worker thread
-              data = reconstituteData(
-                objectMap
-                // orphanIds
-              ) as GameData;
-
-              const turnValue = Number(data?.turn?.value ?? 0),
-                objectCount = Object.keys(objectMap.objects).length;
-
-              currentTurn = turnValue;
-              currentObjectCount = objectCount;
-
-              const scheduledPrune =
-                  Number.isFinite(turnValue) &&
-                  turnValue > 0 &&
-                  turnValue % 5 === 0 &&
-                  turnValue !== lastPrunedTurn,
-                // Also prune on unexpected growth so the map can't balloon
-                // within the 5-turn window between scheduled prunes.
-                growthPrune = objectCount > lastPrunedObjectCount * 1.5;
-
-              if (objectCount > 5000 && (scheduledPrune || growthPrune)) {
-                lastPrunedTurn = turnValue;
-                pruneObjectMap(objectMap);
-                lastPrunedObjectCount = Object.keys(objectMap.objects).length;
-              }
-
-              // A bit crude, I'd like to run this as as background job too
-              // if (orphanIds) {
-              //   // clean up orphan data - late game there can be tens of thousands of these to clean up
-              //   ((orphanIds) => {
-              //     const maxCount = 1000,
-              //       delay = 200;
-              //
-              //     for (
-              //       let i = 0, max = Math.ceil(orphanIds.length / maxCount);
-              //       i < max;
-              //       i++
-              //     ) {
-              //       setTimeout(
-              //         () =>
-              //           orphanIds
-              //             .slice(i * maxCount, (i + 1) * maxCount - 1)
-              //             .forEach((id) => delete objectMap.objects[id]),
-              //         (i + 1) * delay
-              //       );
-              //     }
-              //   })(orphanIds);
-              //
-              //   clearNextTurn = false;
-              // }
-
+            // The display work — both `Actions` panels, detail panels, the
+            // `dataupdated` window rebuilds, and the full `portal` composite —
+            // reads only the latest `data`/`activeUnit`, so it is safe to run at
+            // most once per animation frame however many patch flushes arrive.
+            const render = (): void => {
               document.dispatchEvent(
                 new CustomEvent('dataupdated', {
                   detail: {
@@ -1028,11 +1002,6 @@ export class Renderer {
                   },
                 })
               );
-
-              // if (lastTurn !== data.turn.value) {
-              //   clearNextTurn = true;
-              //   lastTurn = data.turn.value;
-              // }
 
               const primaryActionList = [
                   'ChooseResearch',
@@ -1079,8 +1048,6 @@ export class Renderer {
 
               gameArea.append(primaryActions.element());
 
-              world.setTiles(data.player.world.tiles);
-
               const gameDetails = new GameDetails(
                 gameInfo,
                 data.turn,
@@ -1092,6 +1059,73 @@ export class Renderer {
               const playerDetails = new PlayerDetails(playerInfo, data.player);
 
               playerDetails.build();
+
+              renderActiveUnit(activeUnit, portal, unitsMap, activeUnitsMap);
+
+              // ensure UI looks responsive
+              portal.build(tilesToRender.splice(0));
+              portal.render();
+
+              minimap.update();
+            };
+
+            const scheduleRender = (): void => {
+              if (renderFrame !== null) {
+                return;
+              }
+
+              renderFrame = requestAnimationFrame(() => {
+                renderFrame = null;
+
+                render();
+              });
+            };
+
+            transportDisposers.push(() => {
+              if (renderFrame !== null) {
+                cancelAnimationFrame(renderFrame);
+
+                renderFrame = null;
+              }
+            });
+
+            // Runs synchronously on every patch. Reconstitution and all state
+            // the input handlers read synchronously (`data`, `world` tiles,
+            // `activeUnit`/`activeUnits`/`lastUnit`, the map layers' active-unit
+            // pointers) must stay here — deferring any of it (tried 2026-07-02)
+            // left `activeUnit` stale for ~1 frame and broke consecutive moves
+            // of multi-move units. Only `render()` is coalesced to one run per
+            // frame.
+            const updateState = (objectMap: ObjectMap): void => {
+              // TODO: look into if it's possible to have data reconstituted in a worker thread
+              data = reconstituteData(objectMap) as GameData;
+
+              const turnValue = Number(data?.turn?.value ?? 0),
+                objectCount = Object.keys(objectMap.objects).length;
+
+              currentTurn = turnValue;
+              currentObjectCount = objectCount;
+
+              const scheduledPrune =
+                  Number.isFinite(turnValue) &&
+                  turnValue > 0 &&
+                  turnValue % 5 === 0 &&
+                  turnValue !== lastPrunedTurn,
+                // Also prune on unexpected growth so the map can't balloon
+                // within the 5-turn window between scheduled prunes.
+                growthPrune = objectCount > lastPrunedObjectCount * 1.5;
+
+              if (objectCount > 5000 && (scheduledPrune || growthPrune)) {
+                lastPrunedTurn = turnValue;
+                pruneObjectMap(objectMap);
+                lastPrunedObjectCount = Object.keys(objectMap.objects).length;
+              }
+
+              world.setTiles(data.player.world.tiles);
+
+              const playerActions = data.player.actions.filter(
+                (action): action is PlayerAction => !!action
+              );
 
               activeUnits = playerActions.filter(
                 (action: PlayerAction): boolean => action._ === 'ActiveUnit'
@@ -1128,7 +1162,7 @@ export class Renderer {
                 lastUnit = null;
               }
 
-              setActiveUnit(
+              applyActiveUnit(
                 lastUnit?.active
                   ? lastUnit
                   : activeUnitAction
@@ -1139,11 +1173,7 @@ export class Renderer {
                 activeUnitsMap
               );
 
-              // ensure UI looks responsive
-              portal.build(tilesToRender.splice(0));
-              portal.render();
-
-              minimap.update();
+              scheduleRender();
 
               const autoEndOfTurnExceptions = options.get(
                 'autoEndOfTurnExceptions',
@@ -1163,16 +1193,14 @@ export class Renderer {
                 transport.send('action', {
                   name: 'EndTurn',
                 });
-
-                return;
               }
             };
 
-            handler(objectMap);
+            updateState(objectMap);
 
             transportDisposers.push(
               transport.receive('gameData', (data, rawData) =>
-                handler(rawData as ObjectMap)
+                updateState(rawData as ObjectMap)
               )
             );
 
@@ -1289,7 +1317,7 @@ export class Renderer {
                   )
                 );
 
-                handler(objectMap);
+                updateState(objectMap);
               })
             );
 
