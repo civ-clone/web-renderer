@@ -7,11 +7,15 @@ export const replaceColours = (
   source: string[],
   replacement: string[]
 ) => {
+  // Only image elements have a stable identity (`src`) to key the cache by;
+  // caching canvas sources under a random key would insert a new entry on
+  // every call without ever hitting, growing the cache unboundedly.
   const key =
-    (image instanceof HTMLImageElement ? image.src : Math.random()) +
-    replacement.toString();
+    image instanceof HTMLImageElement
+      ? image.src + replacement.toString()
+      : null;
 
-  if (recolouredImageCache.has(key)) {
+  if (key !== null && recolouredImageCache.has(key)) {
     const canvas = recolouredImageCache.get(key)!,
       clone = s<HTMLCanvasElement>('<canvas></canvas>'),
       context = clone.getContext('2d')!;
@@ -123,7 +127,9 @@ export const replaceColours = (
 
   context.putImageData(imageData, 0, 0);
 
-  recolouredImageCache.set(key, canvas);
+  if (key !== null) {
+    recolouredImageCache.set(key, canvas);
+  }
 
   return canvas;
 };

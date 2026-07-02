@@ -149,6 +149,11 @@ export class Actions extends Element implements IActions {
 
     this.empty();
 
+    // `empty()` only detaches the DOM nodes; without clearing, this registry
+    // retains every `Action` (and its `PlayerAction` slice of the data graph)
+    // ever built, growing on each rebuild for the lifetime of the page.
+    this.#actions.clear();
+
     actions.forEach((playerAction) => {
       let action: Action;
 

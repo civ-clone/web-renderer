@@ -56,4 +56,3 @@ Without imported assets, gameplay options are hidden and import is the primary o
 - Version the asset schema (to support future tilesets/asset packs).
 - Move required-asset manifest to declarative data file instead of hardcoded class field.
 - Preserve IndexedDB caching, but add migration strategy for asset format changes.
-

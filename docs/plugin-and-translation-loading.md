@@ -53,4 +53,3 @@ In frontend `Renderer.init()`:
 - Consider generating workspace-relative imports or JSON manifests consumed by bundler.
 - Treat plugin registration as an explicit contract (metadata + capabilities), not only side effects.
 - Add validation for missing plugin entrypoints and duplicate registrations.
-

@@ -2,6 +2,7 @@ import { Request, RequestArgs, RequestReturn } from './Request';
 import {
   Transport,
   TransportData,
+  TransportDisposer,
   TransportReceiveHandler,
   TransportSendArgs,
 } from './Transport';
@@ -15,12 +16,12 @@ export abstract class AbstractTransport<
   abstract receive<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void;
+  ): TransportDisposer;
 
   abstract receiveOnce<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void;
+  ): TransportDisposer;
 
   async request<
     RequestType extends Request,

@@ -1,5 +1,6 @@
 import {
   TransportData,
+  TransportDisposer,
   TransportMessage,
   TransportReceiveArgs,
   TransportReceiveHandler,
@@ -25,40 +26,56 @@ export class WorkerTransport<
   receive<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void {
-    this.#worker.addEventListener(
-      'message',
-      ({ data: { channel: receivingChannel, data } }) => {
-        const handlerData = data?.hierarchy
-          ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
-          : data;
-
-        if (channel === receivingChannel) {
-          handler(handlerData, data);
-        }
+  ): TransportDisposer {
+    const listener = ({
+      data: { channel: receivingChannel, data },
+    }: MessageEvent<TransportMessage>) => {
+      // Only reconstitute payloads for the channel this listener cares about;
+      // reconstituting first meant every listener rebuilt the full object
+      // graph for every hierarchy-shaped message on any channel.
+      if (channel !== receivingChannel) {
+        return;
       }
-    );
+
+      const handlerData = data?.hierarchy
+        ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
+        : data;
+
+      handler(handlerData, data);
+    };
+
+    this.#worker.addEventListener('message', listener);
+
+    return () => {
+      this.#worker.removeEventListener('message', listener);
+    };
   }
 
   receiveOnce<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void {
+  ): TransportDisposer {
     const onceHandler = ({
       data: { channel: receivingChannel, data },
     }: MessageEvent<TransportMessage>) => {
+      if (channel !== receivingChannel) {
+        return;
+      }
+
       const handlerData = data?.hierarchy
         ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
         : data;
 
-      if (channel === receivingChannel) {
-        handler(handlerData, data);
+      handler(handlerData, data);
 
-        this.#worker.removeEventListener('message', onceHandler);
-      }
+      this.#worker.removeEventListener('message', onceHandler);
     };
 
     this.#worker.addEventListener('message', onceHandler);
+
+    return () => {
+      this.#worker.removeEventListener('message', onceHandler);
+    };
   }
 
   send<Channel extends keyof DataMap>(

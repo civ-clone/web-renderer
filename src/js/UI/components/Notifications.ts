@@ -19,13 +19,16 @@ export class Notifications {
   receive(notification: Notification): void {
     this.#notifications.push(notification);
 
-    this.check();
+    this.periodicChecker();
   }
 
   private check(): void {
     const active = document.querySelector('.notificationWindow');
 
     if (!this.#notifications.length || active) {
+      // Stop polling when there is no work left.
+      this.periodicChecker(true);
+
       return;
     }
 
@@ -35,8 +38,6 @@ export class Notifications {
   }
 
   private periodicChecker(remove: boolean = false): void {
-    this.check();
-
     if (remove) {
       if (this.#interval === null) {
         return;
@@ -49,11 +50,14 @@ export class Notifications {
       return;
     }
 
-    if (this.#interval !== null || this.#notifications.length === 0) {
+    if (this.#interval !== null) {
       return;
     }
 
     this.#interval = window.setInterval(() => this.check(), 500);
+
+    // Flush immediately so the first notification is not delayed by polling.
+    this.check();
   }
 
   private publish(notification: Notification): void {

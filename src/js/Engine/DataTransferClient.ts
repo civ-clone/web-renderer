@@ -46,11 +46,12 @@ import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Retryable from './Retryable';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
 import { Revolution } from '@civ-clone/civ1-government/PlayerActions';
+import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import Timeout from './Error/Timeout';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
-import Transport from './Transport';
+import Transport, { TransportDisposer } from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
@@ -99,11 +100,13 @@ const referenceObject = (object: any) =>
         : referenceObject(object),
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
-const unknownPlayers: Map<Player, UnknownPlayer> = new Map(),
-  unknownUnits: Map<Unit, UnknownUnit> = new Map(),
-  unknownCities: Map<City, UnknownCity> = new Map();
+const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
+  unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
+  unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
 
 export class DataTransferClient extends Client implements IClient {
+  #automationClient: AIClient;
+  #automationEnabled: boolean;
   #dataFilter =
     (localFilter = (object: any) => object) =>
     (object: DataObject) => {
@@ -149,6 +152,7 @@ export class DataTransferClient extends Client implements IClient {
     };
   #dataQueue: DataQueue = new DataQueue();
   #eventEmitter: EventEmitter;
+  #pendingChoiceDisposer: TransportDisposer | null = null;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
@@ -158,10 +162,17 @@ export class DataTransferClient extends Client implements IClient {
     player: Player,
     transport: Transport<TransportDataMap>,
     sender: (channel: string, payload: any) => void,
-    receiver: (channel: string, handler: (...args: any[]) => void) => void
+    receiver: (channel: string, handler: (...args: any[]) => void) => void,
+    {
+      automationEnabled = false,
+    }: {
+      automationEnabled?: boolean;
+    } = {}
   ) {
     super(player);
 
+    this.#automationClient = new SimpleAIClient(player);
+    this.#automationEnabled = automationEnabled;
     this.#eventEmitter = new EventEmitter();
     this.#transport = transport;
     this.#sender = sender;
@@ -848,9 +859,19 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
+  setAutomationEnabled(enabled: boolean): void {
+    this.#automationEnabled = !!enabled;
+  }
+
   async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
     meta: ChoiceMeta<Name>
   ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
+    if (this.#automationEnabled) {
+      return this.#automationClient.chooseFromList(meta) as Promise<
+        DataForChoiceMeta<ChoiceMeta<Name>>
+      >;
+    }
+
     return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) => {
       if (
         meta.choices().length === 1 &&
@@ -863,25 +884,35 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
+      // A listener stranded by an abandoned prompt would consume this
+      // prompt's response (and retain its ChoiceMeta closure), so dispose it
+      // before registering the next one.
+      this.#pendingChoiceDisposer?.();
+
       this.#transport.send('chooseFromList', meta);
 
-      this.#transport.receiveOnce('chooseFromList', async (chosenId) => {
-        const [choice] = meta
-          .choices()
-          .filter((choice) => choice.id() === chosenId);
+      this.#pendingChoiceDisposer = this.#transport.receiveOnce(
+        'chooseFromList',
+        async (chosenId) => {
+          this.#pendingChoiceDisposer = null;
 
-        if (!choice) {
-          console.warn(
-            `No choice found for '${chosenId}' against '${meta.id()}', using super.`
-          );
+          const [choice] = meta
+            .choices()
+            .filter((choice) => choice.id() === chosenId);
 
-          resolve(await super.chooseFromList(meta));
+          if (!choice) {
+            console.warn(
+              `No choice found for '${chosenId}' against '${meta.id()}', using super.`
+            );
 
-          return;
+            resolve(await super.chooseFromList(meta));
+
+            return;
+          }
+
+          resolve(choice.value());
         }
-
-        resolve(choice.value());
-      });
+      );
     });
   }
 
@@ -1167,13 +1198,45 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   private sendNotification(notification: Notification): void {
-    this.#transport.send('gameNotification', notification);
+    // Serialize with the visibility filter so notification data referencing
+    // other players/cities/units is bounded to their Unknown* wrappers rather
+    // than dragging (and leaking) their full object graphs over the transport.
+    this.#transport.send(
+      'gameNotification',
+      notification.toPlainObject(this.#dataFilter()) as unknown as Notification
+    );
   }
 
   takeTurn(): Promise<void> {
     return new Promise<void>((resolve, reject): void => {
       if (!this.#sentInitialData) {
         this.sendInitialData();
+      }
+
+      if (this.#automationEnabled) {
+        this.#automationClient
+          .takeTurn()
+          .then(() => {
+            this.#dataQueue.update(turnInstance.id(), () =>
+              turnInstance.toPlainObject()
+            );
+            this.#dataQueue.update(yearInstance.id(), () =>
+              yearInstance.toPlainObject()
+            );
+            this.#dataQueue.update(this.player().id(), () =>
+              this.player().toPlainObject(
+                this.#dataFilter(
+                  filterToReference(PlayerWorld, PlayerTile, Tile)
+                )
+              )
+            );
+
+            this.sendPatchData();
+            resolve();
+          })
+          .catch(reject);
+
+        return;
       }
 
       setTimeout(() => {
@@ -1214,6 +1277,10 @@ export class DataTransferClient extends Client implements IClient {
 
           this.sendPatchData();
         } catch (e) {
+          // Without this, a throwing action strands the listener on the
+          // long-lived emitter and every later action gets double-processed.
+          this.#eventEmitter.off('action', listener);
+
           reject(e);
         }
       };

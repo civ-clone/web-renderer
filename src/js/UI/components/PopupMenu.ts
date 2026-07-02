@@ -2,7 +2,9 @@ import { Element, off, on, s } from '@dom111/element';
 import { h } from '../lib/html';
 import { t } from 'i18next';
 
-const menuMap = new Map<any, PopupMenu>();
+// WeakMap so a menu whose launcher is dropped without an explicit `remove()`
+// doesn't stay pinned in this module-level registry for the page lifetime.
+const menuMap = new WeakMap<object, PopupMenu>();
 
 export interface PopupMenuAction {
   label: string;
@@ -17,6 +19,7 @@ export interface PopupMenuOptions {
 
 export class PopupMenu extends Element {
   #actions: PopupMenuAction[] = [];
+  #launcher: object;
   #targetPointerUpListener: (event: PointerEvent) => void = () => {};
   #centerX: number;
   #centerY: number;
@@ -43,6 +46,7 @@ export class PopupMenu extends Element {
 
     menuMap.set(launcher, this);
 
+    this.#launcher = launcher;
     this.#actions = actions;
     this.#centerX = centerX;
     this.#centerY = centerY;
@@ -113,6 +117,10 @@ export class PopupMenu extends Element {
     }, 250);
 
     off(this.#options.target, 'pointerup', this.#targetPointerUpListener);
+
+    if (menuMap.get(this.#launcher) === this) {
+      menuMap.delete(this.#launcher);
+    }
   }
 }
 

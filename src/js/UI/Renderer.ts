@@ -13,7 +13,7 @@ import {
   Tile,
   Unit,
 } from './types';
-import { emit, on, s } from '@dom111/element';
+import { emit, off, on, s } from '@dom111/element';
 import i18next, { t } from 'i18next';
 import { reconstituteData, ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
@@ -54,6 +54,9 @@ import { h } from './lib/html';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
+import pruneObjectMap from './lib/pruneObjectMap';
+import createMemoryTestbed from './lib/memoryTestbed';
+import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -69,6 +72,34 @@ export class Renderer {
 
   async init() {
     const transport = this.#transport;
+    const queryParams = new URLSearchParams(window.location.search);
+
+    const parseBooleanParam = (
+      value: string | null,
+      defaultValue: boolean
+    ): boolean => {
+      if (value === null) {
+        return defaultValue;
+      }
+
+      const normalised = value.trim().toLowerCase();
+
+      if (['1', 'true', 'yes', 'on'].includes(normalised)) {
+        return true;
+      }
+
+      if (['0', 'false', 'no', 'off'].includes(normalised)) {
+        return false;
+      }
+
+      return defaultValue;
+    };
+
+    const debugMode = parseBooleanParam(queryParams.get('debug'), false);
+
+    let automatePlayerEnabled = debugMode,
+      stressUiEnabled = debugMode,
+      stressUiWindowsEnabled = !debugMode;
 
     const hasAllAssets = await assetStore.hasAllAssets();
 
@@ -112,6 +143,13 @@ export class Renderer {
     // These should be stored in localStorage or something...
     options.set('autoEndOfTurn', true);
     options.set('autoEndOfTurnExceptions', ['CivilDisorder']);
+
+    if (debugMode) {
+      transport.send('setOption', {
+        name: 'automateLocalPlayer',
+        value: automatePlayerEnabled,
+      });
+    }
 
     try {
       const notificationArea = document.getElementById(
@@ -196,21 +234,26 @@ export class Renderer {
 
       let globalNotificationTimer: number | undefined,
         lastUnit: Unit | null = null,
-        activeUnit: Unit | null = null;
+        activeUnit: Unit | null = null,
+        uiStressRunner: UIStressRunner | null = null;
 
-      transport.receive('notification', (data: string): void => {
-        notificationArea.innerHTML = data;
+      const transportDisposers: Array<() => void> = [];
 
-        if (globalNotificationTimer) {
-          window.clearTimeout(globalNotificationTimer);
-        }
+      transportDisposers.push(
+        transport.receive('notification', (data: string): void => {
+          notificationArea.innerHTML = data;
 
-        globalNotificationTimer = window.setTimeout((): void => {
-          globalNotificationTimer = undefined;
+          if (globalNotificationTimer) {
+            window.clearTimeout(globalNotificationTimer);
+          }
 
-          notificationArea.innerText = '';
-        }, 4000);
-      });
+          globalNotificationTimer = window.setTimeout((): void => {
+            globalNotificationTimer = undefined;
+
+            notificationArea.innerText = '';
+          }, 4000);
+        })
+      );
 
       const interactionLabel = (interaction: Interactions) => {
           if (instanceOf(interaction, 'Dialogue')) {
@@ -255,77 +298,105 @@ export class Renderer {
           return interactionLabel(currentInteraction);
         };
 
-      transport.receive('chooseFromList', ({ choices, key, data }) => {
-        const title = t(`ChooseFromList.${key}.title`, {
-          data,
-          defaultValue: t('ChooseFromList.default.body'),
-        });
+      transportDisposers.push(
+        transport.receive('chooseFromList', ({ choices, key, data }) => {
+          if (
+            uiStressRunner &&
+            !stressUiWindowsEnabled &&
+            choices.length > 0 &&
+            uiStressRunner.isAutomatingChoice(choices[0].id)
+          ) {
+            transport.send('chooseFromList', choices[0].id);
 
-        if (key === 'negotiation.next-step' && choices.length === 1) {
-          const window = new ActionWindow(
-            title,
-            negotiationLabel(data as Negotiation),
-            {
-              canClose: false,
-              actions: {
-                primary: {
-                  label: interactionLabel(choices[0].value as Interactions),
-                  action: (actionWindow) => actionWindow.close(),
-                },
-              },
-            }
-          );
+            return;
+          }
 
-          window.on('keydown', (event) => {
-            if (event.key !== 'Enter') {
-              return;
-            }
-
-            window.close();
-
-            event.preventDefault();
-            event.stopPropagation();
+          const title = t(`ChooseFromList.${key}.title`, {
+            data,
+            defaultValue: t('ChooseFromList.default.body'),
           });
 
-          window.once('close', () =>
-            transport.send('chooseFromList', choices[0].id)
+          if (key === 'negotiation.next-step' && choices.length === 1) {
+            const window = new ActionWindow(
+              title,
+              negotiationLabel(data as Negotiation),
+              {
+                canClose: false,
+                actions: {
+                  primary: {
+                    label: interactionLabel(choices[0].value as Interactions),
+                    action: (actionWindow) => actionWindow.close(),
+                  },
+                },
+              }
+            );
+
+            window.on('keydown', (event) => {
+              if (event.key !== 'Enter') {
+                return;
+              }
+
+              window.close();
+
+              event.preventDefault();
+              event.stopPropagation();
+            });
+
+            if (uiStressRunner) {
+              uiStressRunner.automateChoice(window, choices[0].id, (choiceId) =>
+                transport.send('chooseFromList', choiceId)
+              );
+            } else {
+              window.once('close', () =>
+                transport.send('chooseFromList', choices[0].id)
+              );
+            }
+
+            return;
+          }
+
+          const body =
+            key === 'negotiation.next-step'
+              ? negotiationLabel(data as Negotiation)
+              : t(`ChooseFromList.${key}.body`, {
+                  data,
+                  defaultValue: t('ChooseFromList.default.body'),
+                });
+
+          const selectionWindow = new SelectionWindow(
+            title,
+            choices.map(({ id, value }) => {
+              const label =
+                key === 'negotiation.next-step'
+                  ? interactionLabel(value as Interactions)
+                  : t(`ChooseFromList.${key}.choice`, {
+                      value,
+                      defaultValue: value?._,
+                    });
+
+              return {
+                label,
+                value: id,
+              };
+            }),
+            (choice) => transport.send('chooseFromList', choice),
+            body,
+            {
+              canClose: false,
+              displayAll: true,
+            }
           );
 
-          return;
-        }
-
-        const body =
-          key === 'negotiation.next-step'
-            ? negotiationLabel(data as Negotiation)
-            : t(`ChooseFromList.${key}.body`, {
-                data,
-                defaultValue: t('ChooseFromList.default.body'),
-              });
-
-        new SelectionWindow(
-          title,
-          choices.map(({ id, value }) => {
-            const label =
-              key === 'negotiation.next-step'
-                ? interactionLabel(value as Interactions)
-                : t(`ChooseFromList.${key}.choice`, {
-                    value,
-                    defaultValue: value?._,
-                  });
-
-            return {
-              label,
-              value: id,
-            };
-          }),
-          (choice) => transport.send('chooseFromList', choice),
-          body,
-          {
-            canClose: false,
-            displayAll: true,
+          if (uiStressRunner) {
+            selectionWindow.selectionList().value = choices[0].id;
+            uiStressRunner.automateChoice(
+              selectionWindow,
+              choices[0].id,
+              (choiceId) => transport.send('chooseFromList', choiceId)
+            );
           }
-        );
-      });
+        })
+      );
 
       transport.receiveOnce(
         'gameData',
@@ -418,10 +489,20 @@ export class Renderer {
               ),
               gameMenuItem = new GameMenu(
                 gameMenu,
-                data.player,
+                // `data` is reassigned on every patch, so this always resolves
+                // to the current player rather than the turn-0 snapshot.
+                () => data.player,
                 portal,
                 transport
-              );
+              ),
+              resizeHandler = () => {
+                mapPortal.width = (
+                  mapPortal.parentElement as HTMLElement
+                ).offsetWidth;
+                mapPortal.height = (
+                  mapPortal.parentElement as HTMLElement
+                ).offsetHeight;
+              };
 
             gameMenuItem.build();
 
@@ -442,18 +523,446 @@ export class Renderer {
               portal.render();
             });
 
-            on(window, 'resize', () => {
-              mapPortal.width = (
-                mapPortal.parentElement as HTMLElement
-              ).offsetWidth;
-              mapPortal.height = (
-                mapPortal.parentElement as HTMLElement
-              ).offsetHeight;
-            });
+            on(window, 'resize', resizeHandler);
 
             // This needs wrapping.
             // let lastTurn = 1,
             //   clearNextTurn = false;
+
+            let lastPrunedTurn = -1,
+              lastPrunedObjectCount = Object.keys(objectMap.objects).length,
+              currentTurn = Number(data?.turn?.value ?? 0),
+              currentObjectCount = Object.keys(objectMap.objects).length;
+
+            const profileMemory = debugMode,
+              memoryMaxSamples = debugMode ? 5000 : null,
+              memoryTestbed = profileMemory
+                ? createMemoryTestbed(
+                    () => ({
+                      turn: currentTurn,
+                      objectCount: currentObjectCount,
+                    }),
+                    {
+                      maxSamples: memoryMaxSamples,
+                    }
+                  )
+                : null;
+
+            if (memoryTestbed) {
+              window.__civMemoryTestbed = memoryTestbed;
+            }
+
+            let debugControls: HTMLDivElement | null = null,
+              debugKeyListener: ((event: KeyboardEvent) => void) | null = null;
+
+            const closeOpenDialogs = (): void => {
+                document
+                  .querySelectorAll('dialog.window, dialog.window.modal')
+                  .forEach((dialogElement) => {
+                    const dialog = dialogElement as HTMLDialogElement;
+
+                    if (!dialog.open || typeof dialog.close !== 'function') {
+                      return;
+                    }
+
+                    try {
+                      dialog.close();
+                    } catch (error) {
+                      console.warn('Failed to close dialog', error);
+                    }
+                  });
+              },
+              downloadDebugFile = (
+                fileName: string,
+                content: string,
+                mimeType: string
+              ): void => {
+                const blob = new Blob([content], { type: mimeType }),
+                  url = URL.createObjectURL(blob),
+                  anchor = document.createElement('a');
+
+                anchor.href = url;
+                anchor.download = fileName;
+                document.body.append(anchor);
+                anchor.click();
+                anchor.remove();
+                URL.revokeObjectURL(url);
+              },
+              exportDebugJson = (): void => {
+                const dialogs = Array.from(
+                    document.querySelectorAll(
+                      'dialog.window, dialog.window.modal'
+                    )
+                  ).map((dialogElement) => {
+                    const dialog = dialogElement as HTMLDialogElement,
+                      titleElement = dialog.querySelector(
+                        '.title, h1, h2, h3, legend'
+                      ) as HTMLElement | null;
+
+                    return {
+                      className: dialog.className,
+                      id: dialog.id || null,
+                      open: !!dialog.open,
+                      title: titleElement?.innerText?.trim() || null,
+                    };
+                  }),
+                  memory = (performance as any).memory,
+                  samples = memoryTestbed?.samples ?? [],
+                  sampleCount = samples.length,
+                  heapValues = samples
+                    .map((sample) => sample.usedJSHeapSize)
+                    .filter(
+                      (value): value is number => typeof value === 'number'
+                    ),
+                  firstSample = sampleCount > 0 ? samples[0] : null,
+                  lastSample =
+                    sampleCount > 0 ? samples[sampleCount - 1] : null;
+
+                const payload = {
+                    exportedAt: Date.now(),
+                    debug: {
+                      automatePlayerEnabled,
+                      stressUiEnabled,
+                      stressUiWindowsEnabled,
+                    },
+                    stressRunner: uiStressRunner?.getDebugState() ?? null,
+                    runtime: {
+                      canvasCount: document.querySelectorAll('canvas').length,
+                      dialogCount: dialogs.length,
+                      dialogs,
+                      domNodeCount: document.querySelectorAll('*').length,
+                      imageCount: document.querySelectorAll('img').length,
+                      objectCount: currentObjectCount,
+                      tilesPendingRender: tilesToRender.length,
+                      turn: currentTurn,
+                    },
+                    heap: {
+                      currentUsedJSHeapSize:
+                        memory && typeof memory.usedJSHeapSize === 'number'
+                          ? memory.usedJSHeapSize
+                          : null,
+                      jsHeapSizeLimit:
+                        memory && typeof memory.jsHeapSizeLimit === 'number'
+                          ? memory.jsHeapSizeLimit
+                          : null,
+                      totalJSHeapSize:
+                        memory && typeof memory.totalJSHeapSize === 'number'
+                          ? memory.totalJSHeapSize
+                          : null,
+                    },
+                    memory: memoryTestbed
+                      ? {
+                          firstSample,
+                          heapMax:
+                            heapValues.length > 0
+                              ? Math.max(...heapValues)
+                              : null,
+                          heapMin:
+                            heapValues.length > 0
+                              ? Math.min(...heapValues)
+                              : null,
+                          lastSample,
+                          sampleCount,
+                          samples,
+                        }
+                      : null,
+                  },
+                  json = JSON.stringify(payload, null, 2);
+
+                downloadDebugFile(
+                  `civ-debug-${Date.now()}.json`,
+                  json,
+                  'application/json'
+                );
+              },
+              exportDebugCsv = (): void => {
+                if (!memoryTestbed) {
+                  transport.send(
+                    'notification',
+                    'No memory sampler active for CSV export.'
+                  );
+
+                  return;
+                }
+
+                downloadDebugFile(
+                  `civ-memory-${Date.now()}.csv`,
+                  memoryTestbed.exportCsv(),
+                  'text/csv'
+                );
+              },
+              startStressRunner = (): void => {
+                if (uiStressRunner) {
+                  return;
+                }
+
+                transport.send(
+                  'notification',
+                  `Stress harness: windows ${
+                    stressUiWindowsEnabled ? 'enabled' : 'disabled'
+                  }`
+                );
+
+                uiStressRunner = new UIStressRunner({
+                  enableWindows: stressUiWindowsEnabled,
+                  getData: () => data,
+                  portal,
+                  setActiveUnit: (unit) =>
+                    setActiveUnit(unit, portal, unitsMap, activeUnitsMap),
+                  toggleViewModes: [
+                    () => {
+                      yieldsMap.setVisible(!yieldsMap.isVisible());
+                      portal.render();
+                      minimap.update();
+                    },
+                    () => {
+                      unitsMap.setVisible(!unitsMap.isVisible());
+                      citiesMap.setVisible(!citiesMap.isVisible());
+                      cityNamesMap.setVisible(!cityNamesMap.isVisible());
+                      portal.render();
+                      minimap.update();
+                    },
+                  ],
+                  transport,
+                });
+              },
+              stopStressRunner = (): void => {
+                uiStressRunner?.stop();
+                uiStressRunner = null;
+              },
+              setAutomatePlayer = (enabled: boolean): void => {
+                automatePlayerEnabled = enabled;
+
+                transport.send('setOption', {
+                  name: 'automateLocalPlayer',
+                  value: automatePlayerEnabled,
+                });
+              },
+              setStressUi = (enabled: boolean): void => {
+                stressUiEnabled = enabled;
+
+                if (stressUiEnabled) {
+                  startStressRunner();
+
+                  return;
+                }
+
+                stopStressRunner();
+              },
+              setStressUiWindows = (enabled: boolean): void => {
+                stressUiWindowsEnabled = enabled;
+                uiStressRunner?.setWindowsEnabled(stressUiWindowsEnabled);
+              },
+              renderDebugControls = (): void => {
+                if (!debugControls) {
+                  return;
+                }
+
+                debugControls.innerHTML = '';
+
+                const title = document.createElement('div');
+                title.innerText = 'Debug Controls';
+                title.style.fontWeight = 'bold';
+                title.style.marginBottom = '0.5rem';
+
+                const makeToggle = (
+                  label: string,
+                  enabled: boolean,
+                  handler: () => void
+                ): HTMLButtonElement => {
+                  const button = document.createElement('button');
+
+                  button.type = 'button';
+                  button.innerText = `${label}: ${enabled ? 'ON' : 'OFF'}`;
+                  button.style.display = 'block';
+                  button.style.width = '100%';
+                  button.style.marginBottom = '0.375rem';
+                  button.style.padding = '0.375rem 0.5rem';
+                  button.style.border = '1px solid #666';
+                  button.style.background = enabled ? '#063' : '#444';
+                  button.style.color = '#fff';
+                  button.style.cursor = 'pointer';
+                  button.addEventListener('click', handler);
+
+                  return button;
+                };
+
+                debugControls.append(
+                  title,
+                  makeToggle('Stress', stressUiEnabled, () => {
+                    setStressUi(!stressUiEnabled);
+                    renderDebugControls();
+                  }),
+                  makeToggle('Automate Player', automatePlayerEnabled, () => {
+                    setAutomatePlayer(!automatePlayerEnabled);
+                    renderDebugControls();
+                  }),
+                  makeToggle('Stress Windows', stressUiWindowsEnabled, () => {
+                    setStressUiWindows(!stressUiWindowsEnabled);
+                    renderDebugControls();
+                  })
+                );
+
+                const closeDialogsButton = document.createElement('button');
+                closeDialogsButton.type = 'button';
+                closeDialogsButton.innerText = 'Close open dialogs';
+                closeDialogsButton.style.display = 'block';
+                closeDialogsButton.style.width = '100%';
+                closeDialogsButton.style.marginBottom = '0.375rem';
+                closeDialogsButton.style.padding = '0.375rem 0.5rem';
+                closeDialogsButton.style.border = '1px solid #666';
+                closeDialogsButton.style.background = '#333';
+                closeDialogsButton.style.color = '#fff';
+                closeDialogsButton.style.cursor = 'pointer';
+                closeDialogsButton.addEventListener('click', closeOpenDialogs);
+
+                const exportJsonButton = document.createElement('button');
+                exportJsonButton.type = 'button';
+                exportJsonButton.innerText = 'Export debug JSON';
+                exportJsonButton.style.display = 'block';
+                exportJsonButton.style.width = '100%';
+                exportJsonButton.style.marginBottom = '0.375rem';
+                exportJsonButton.style.padding = '0.375rem 0.5rem';
+                exportJsonButton.style.border = '1px solid #666';
+                exportJsonButton.style.background = '#224';
+                exportJsonButton.style.color = '#fff';
+                exportJsonButton.style.cursor = 'pointer';
+                exportJsonButton.addEventListener('click', exportDebugJson);
+
+                const exportCsvButton = document.createElement('button');
+                exportCsvButton.type = 'button';
+                exportCsvButton.innerText = 'Export memory CSV';
+                exportCsvButton.style.display = 'block';
+                exportCsvButton.style.width = '100%';
+                exportCsvButton.style.marginBottom = '0.375rem';
+                exportCsvButton.style.padding = '0.375rem 0.5rem';
+                exportCsvButton.style.border = '1px solid #666';
+                exportCsvButton.style.background = '#224';
+                exportCsvButton.style.color = '#fff';
+                exportCsvButton.style.cursor = 'pointer';
+                exportCsvButton.addEventListener('click', exportDebugCsv);
+
+                const stopAllButton = document.createElement('button');
+                stopAllButton.type = 'button';
+                stopAllButton.innerText = 'Stop all automation';
+                stopAllButton.style.display = 'block';
+                stopAllButton.style.width = '100%';
+                stopAllButton.style.padding = '0.375rem 0.5rem';
+                stopAllButton.style.border = '1px solid #666';
+                stopAllButton.style.background = '#700';
+                stopAllButton.style.color = '#fff';
+                stopAllButton.style.cursor = 'pointer';
+                stopAllButton.addEventListener('click', () => {
+                  setStressUi(false);
+                  setAutomatePlayer(false);
+                  closeOpenDialogs();
+                  renderDebugControls();
+                });
+
+                const hint = document.createElement('div');
+                hint.innerText = 'Hotkeys: Alt+Shift+S/A/W/C/J/X';
+                hint.style.marginTop = '0.5rem';
+                hint.style.fontSize = '11px';
+                hint.style.opacity = '0.85';
+
+                debugControls.append(
+                  closeDialogsButton,
+                  exportJsonButton,
+                  exportCsvButton,
+                  stopAllButton,
+                  hint
+                );
+              };
+
+            if (stressUiEnabled) {
+              startStressRunner();
+            }
+
+            if (debugMode) {
+              debugControls = document.createElement('div');
+              debugControls.style.position = 'fixed';
+              debugControls.style.top = '0.5rem';
+              debugControls.style.right = '0.5rem';
+              debugControls.style.zIndex = '2147483647';
+              debugControls.style.width = '220px';
+              debugControls.style.padding = '0.5rem';
+              debugControls.style.background = 'rgba(0, 0, 0, 0.85)';
+              debugControls.style.color = '#fff';
+              debugControls.style.border = '1px solid #888';
+              debugControls.style.fontFamily = 'monospace';
+              debugControls.style.fontSize = '12px';
+
+              renderDebugControls();
+              document.body.append(debugControls);
+
+              debugKeyListener = (event: KeyboardEvent) => {
+                if (!(event.altKey && event.shiftKey)) {
+                  return;
+                }
+
+                const key = event.key.toLowerCase();
+
+                if (!['s', 'a', 'w', 'c', 'j', 'x'].includes(key)) {
+                  return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (key === 's') {
+                  setStressUi(!stressUiEnabled);
+                }
+
+                if (key === 'a') {
+                  setAutomatePlayer(!automatePlayerEnabled);
+                }
+
+                if (key === 'w') {
+                  setStressUiWindows(!stressUiWindowsEnabled);
+                }
+
+                if (key === 'c') {
+                  closeOpenDialogs();
+                }
+
+                if (key === 'j') {
+                  exportDebugJson();
+                }
+
+                if (key === 'x') {
+                  exportDebugCsv();
+                }
+
+                renderDebugControls();
+              };
+
+              document.addEventListener('keydown', debugKeyListener, true);
+            }
+
+            on(
+              window,
+              'beforeunload',
+              () => {
+                off(window, 'resize', resizeHandler);
+                intervalHandler.dispose();
+                memoryTestbed?.stop();
+                stopStressRunner();
+                debugControls?.remove();
+
+                if (debugKeyListener) {
+                  document.removeEventListener(
+                    'keydown',
+                    debugKeyListener,
+                    true
+                  );
+                }
+
+                transportDisposers.forEach((dispose) => dispose());
+              },
+              {
+                once: true,
+              }
+            );
 
             const handler = (objectMap: ObjectMap): void => {
               // TODO: this causes a massive slowdown when its processed. Maybe we just leak for now...
@@ -465,6 +974,27 @@ export class Renderer {
                 objectMap
                 // orphanIds
               ) as GameData;
+
+              const turnValue = Number(data?.turn?.value ?? 0),
+                objectCount = Object.keys(objectMap.objects).length;
+
+              currentTurn = turnValue;
+              currentObjectCount = objectCount;
+
+              const scheduledPrune =
+                  Number.isFinite(turnValue) &&
+                  turnValue > 0 &&
+                  turnValue % 5 === 0 &&
+                  turnValue !== lastPrunedTurn,
+                // Also prune on unexpected growth so the map can't balloon
+                // within the 5-turn window between scheduled prunes.
+                growthPrune = objectCount > lastPrunedObjectCount * 1.5;
+
+              if (objectCount > 5000 && (scheduledPrune || growthPrune)) {
+                lastPrunedTurn = turnValue;
+                pruneObjectMap(objectMap);
+                lastPrunedObjectCount = Object.keys(objectMap.objects).length;
+              }
 
               // A bit crude, I'd like to run this as as background job too
               // if (orphanIds) {
@@ -516,6 +1046,10 @@ export class Renderer {
                   'CompleteProduction',
                   'InactiveUnit',
                 ],
+                allExcludedActions = new Set([
+                  ...primaryActionList,
+                  ...ignoredActionList,
+                ]),
                 primaryActionPriority: {
                   [key: string]: number;
                 } = {
@@ -523,24 +1057,23 @@ export class Renderer {
                   ChooseResearch: 80,
                   CityBuild: 60,
                   CivilDisorder: 10,
-                };
-
-              primaryActions.build(
-                data.player.actions
+                },
+                playerActions = data.player.actions.filter(
+                  (action): action is PlayerAction => !!action
+                ),
+                primaryActionCandidates = [...playerActions]
                   .sort(
                     (a, b) =>
                       (primaryActionPriority[a._] ?? 0) -
                       (primaryActionPriority[b._] ?? 0)
                   )
-                  .filter((action) => primaryActionList.includes(action._))
-              );
+                  .filter((action) => primaryActionList.includes(action._));
+
+              primaryActions.build(primaryActionCandidates);
 
               secondaryActions.build(
-                data.player.actions.filter(
-                  (action) =>
-                    ![...primaryActionList, ...ignoredActionList].includes(
-                      action._
-                    )
+                playerActions.filter(
+                  (action) => !allExcludedActions.has(action._)
                 )
               );
 
@@ -560,29 +1093,35 @@ export class Renderer {
 
               playerDetails.build();
 
-              activeUnits = data.player.actions.filter(
+              activeUnits = playerActions.filter(
                 (action: PlayerAction): boolean => action._ === 'ActiveUnit'
               );
 
-              // This prioritises units that are already on screen
-              const [activeUnitAction] = activeUnits.sort(
-                ({ value: unitA }, { value: unitB }): number =>
-                  unitB === lastUnit
-                    ? 1
-                    : unitA === lastUnit
-                    ? -1
-                    : (portal.isVisible(
-                        (unitB as Unit).tile.x,
-                        (unitB as Unit).tile.y
-                      )
-                        ? 1
-                        : 0) -
-                      (portal.isVisible(
-                        (unitA as Unit).tile.x,
-                        (unitA as Unit).tile.y
-                      )
-                        ? 1
-                        : 0)
+              const activeUnitAction = activeUnits.reduce(
+                (bestAction: PlayerAction | null, action: PlayerAction) => {
+                  const unit = action.value as Unit;
+                  const unitScore =
+                    unit === lastUnit
+                      ? 2
+                      : portal.isVisible(unit.tile.x, unit.tile.y)
+                      ? 1
+                      : 0;
+
+                  if (bestAction === null) {
+                    return action;
+                  }
+
+                  const bestUnit = bestAction.value as Unit;
+                  const bestScore =
+                    bestUnit === lastUnit
+                      ? 2
+                      : portal.isVisible(bestUnit.tile.x, bestUnit.tile.y)
+                      ? 1
+                      : 0;
+
+                  return unitScore > bestScore ? action : bestAction;
+                },
+                null
               );
 
               if (lastUnit !== activeUnitAction?.value) {
@@ -631,8 +1170,10 @@ export class Renderer {
 
             handler(objectMap);
 
-            transport.receive('gameData', (data, rawData) =>
-              handler(rawData as ObjectMap)
+            transportDisposers.push(
+              transport.receive('gameData', (data, rawData) =>
+                handler(rawData as ObjectMap)
+              )
             );
 
             const pathToParts = (path: string) =>
@@ -680,72 +1221,82 @@ export class Renderer {
                   return;
                 }
 
+                if (Array.isArray(tmpObj) && /^\d+$/.test(lastPart)) {
+                  tmpObj.splice(parseInt(lastPart, 10), 1);
+
+                  return;
+                }
+
                 delete tmpObj[lastPart];
               };
 
-            transport.receive('gameDataPatch', (data: DataPatch[]) => {
-              data.forEach((patch) =>
-                Object.entries(patch).forEach(
-                  ([key, { type, index, value }]: [
-                    string,
-                    DataPatchContents
-                  ]) => {
-                    if (type === 'add' || type === 'update') {
-                      if (!value!.hierarchy) {
-                        console.error('No hierarchy');
-                        console.error(value);
+            transportDisposers.push(
+              transport.receive('gameDataPatch', (data: DataPatch[]) => {
+                data.forEach((patch) =>
+                  Object.entries(patch).forEach(
+                    ([key, { type, index, value }]: [
+                      string,
+                      DataPatchContents
+                    ]) => {
+                      if (type === 'add' || type === 'update') {
+                        if (!value!.hierarchy) {
+                          console.error('No hierarchy');
+                          console.error(value);
 
-                        return;
-                      }
-
-                      if (index) {
-                        setObjectPath(
-                          objectMap.objects[key],
-                          index,
-                          value!.hierarchy
-                        );
-                      } else {
-                        objectMap.objects[key] = value!.hierarchy;
-                      }
-
-                      document.dispatchEvent(
-                        new CustomEvent('patchdatareceived', {
-                          detail: {
-                            value,
-                          },
-                        })
-                      );
-
-                      Object.entries(value!.objects as PlainObject).forEach(
-                        ([key, value]) => {
-                          objectMap.objects[key] = value;
-
-                          if (value._ === 'PlayerTile') {
-                            // Since we only use tilesToRender for x and y this should be fine...
-                            tilesToRender.push(value);
-                          }
+                          return;
                         }
-                      );
-                    }
 
-                    if (type === 'remove') {
-                      if (index) {
-                        removeObjectPath(objectMap.objects[key], index);
+                        if (index) {
+                          setObjectPath(
+                            objectMap.objects[key],
+                            index,
+                            value!.hierarchy
+                          );
+                        } else {
+                          objectMap.objects[key] = value!.hierarchy;
+                        }
 
-                        return;
+                        document.dispatchEvent(
+                          new CustomEvent('patchdatareceived', {
+                            detail: {
+                              value,
+                            },
+                          })
+                        );
+
+                        Object.entries(value!.objects as PlainObject).forEach(
+                          ([key, value]) => {
+                            objectMap.objects[key] = value;
+
+                            if (value._ === 'PlayerTile') {
+                              // Since we only use tilesToRender for x and y this should be fine...
+                              tilesToRender.push(value);
+                            }
+                          }
+                        );
                       }
 
-                      delete objectMap.objects[key];
+                      if (type === 'remove') {
+                        if (index) {
+                          removeObjectPath(objectMap.objects[key], index);
+
+                          return;
+                        }
+
+                        delete objectMap.objects[key];
+                      }
                     }
-                  }
-                )
-              );
+                  )
+                );
 
-              handler(objectMap);
-            });
+                handler(objectMap);
+              })
+            );
 
-            transport.receive('gameNotification', (data): void =>
-              notifications.receive(data)
+            transportDisposers.push(
+              transport.receive('gameNotification', (data): void =>
+                notifications.receive(data)
+              )
             );
 
             const keyToActionsMap: {

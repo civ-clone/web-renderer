@@ -30,7 +30,9 @@ Quick reference map of key code areas.
 - `GameOptionsRegistry.ts`: in-memory UI options.
 - `components/*`: windows, panels, menus, reports, details.
 - `components/Map/*`: map canvas layers.
-- `lib/*`: utility helpers (reconstitution, key mapping, image scaling, etc.).
+- `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, etc.).
+- `lib/memoryTestbed.ts`: opt-in heap/object-count sampler (debug mode).
+- `lib/UIStressRunner.ts`: opt-in automated UI stress harness (debug mode).
 
 ## Styling and assets
 
@@ -48,4 +50,3 @@ Quick reference map of key code areas.
 - `changelog/*.json`: release snapshots.
 - `changelog/releases.json`: aggregate release feed.
 - `src/js/UI/components/ReleaseWindow.ts`: in-app release viewer.
-

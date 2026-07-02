@@ -52,6 +52,7 @@ export class Minimap {
     const [start, end] = this.#portal.rawVisibleRange();
 
     // TODO: draw the rectangle replicated when close to the sides
+    this.#context.beginPath();
     this.#context.lineWidth = 1;
     this.#context.strokeStyle = '#fff';
     this.#context.fillStyle = 'rgba(255, 255, 255, .2)';
@@ -63,6 +64,7 @@ export class Minimap {
     );
     this.#context.stroke();
     this.#context.fill();
+    this.#context.closePath();
   }
 }
 

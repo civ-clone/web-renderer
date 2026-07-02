@@ -32,7 +32,7 @@ The application is split into two JavaScript runtimes:
   - Handles player actions and cheats from frontend.
   - Emits `gameData` (initial full snapshot) and `gameDataPatch` (incremental updates).
 - `src/js/UI/Renderer.ts`
-  - Frontend orchestrator; currently monolithic (~980 LOC).
+  - Frontend orchestrator; currently monolithic (~1,500 LOC).
   - Reconstitutes plain-object graph into rich UI state.
   - Coordinates map layers, action panels, menu windows, notifications, hotkeys.
 - `src/js/UI/components/*`
@@ -56,11 +56,10 @@ Core channels are defined in `src/js/Engine/Transport.ts`:
 - State sync: `gameData`, `gameDataPatch`
 - Debug/cheat: `cheat`
 
-Additional ad-hoc channels are used (`quit`, `restart`) from UI/backend paths but are not part of the strongly typed transport map.
+`quit` and `restart` are now declared in `TransportDataMap`, but each is currently one-directional: the backend sends `restart` on local-player defeat with no frontend receiver, and the main menu sends `quit` with no backend receiver.
 
 ## Rewrite implications
 
 - Current architecture already isolates engine logic from UI logic via worker transport.
 - The largest complexity concentration is the frontend orchestration in `Renderer`.
 - A reactive store-based rewrite can preserve worker boundary while replacing in-place patch application + custom event plumbing with derived state/selectors.
-

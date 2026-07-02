@@ -1,6 +1,7 @@
 export interface IIntervalHandler {
   check(): void;
   clear(): void;
+  dispose(): void;
   off(handler: () => void): void;
   on(handler: () => void): void;
   pause(): void;
@@ -10,10 +11,11 @@ export interface IIntervalHandler {
 
 export class IntervalHandler implements IIntervalHandler {
   #paused: boolean = false;
+  #reference: number;
   #stack: (() => void)[] = [];
 
   constructor(tick: number = 500) {
-    setInterval(() => this.check(), tick);
+    this.#reference = window.setInterval(() => this.check(), tick);
   }
 
   check(): void {
@@ -46,6 +48,12 @@ export class IntervalHandler implements IIntervalHandler {
 
   resume(): void {
     this.#paused = false;
+  }
+
+  dispose(): void {
+    window.clearInterval(this.#reference);
+
+    this.clear();
   }
 }
 

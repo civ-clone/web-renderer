@@ -61,4 +61,3 @@ From repository context:
 - Replace absolute import generation with relative manifest generation.
 - Add a dedicated dev server workflow (if moving to a framework bundler).
 - Keep changelog format if in-app release window remains a feature.
-

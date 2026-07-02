@@ -13,19 +13,23 @@ import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
 
 export class GameMenu extends Element {
-  #player: Player;
+  #getPlayer: () => Player;
   #portal: Portal;
   #transport: Transport;
 
   constructor(
     element: HTMLElement,
-    player: Player,
+    // A getter (rather than a captured `Player`) so reports opened from the
+    // menu always read the current player. The menu is built once at game
+    // start, so a snapshot here would stay pinned to the turn-0 player (no
+    // cities, initial research) for the rest of the session.
+    getPlayer: () => Player,
     portal: Portal,
     transport: Transport
   ) {
     super(element);
 
-    this.#player = player;
+    this.#getPlayer = getPlayer;
     this.#portal = portal;
     this.#transport = transport;
   }
@@ -52,14 +56,18 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.city-status'),
                 action: () => {
-                  new CityStatus(this.#player, this.#portal, this.#transport);
+                  new CityStatus(
+                    this.#getPlayer(),
+                    this.#portal,
+                    this.#transport
+                  );
                 },
               },
               {
                 label: t('GameMenu.happiness-report'),
                 action: () => {
                   new HappinessReport(
-                    this.#player,
+                    this.#getPlayer(),
                     this.#portal,
                     this.#transport
                   );
@@ -68,13 +76,17 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.trade-report'),
                 action: () => {
-                  new TradeReport(this.#player, this.#portal, this.#transport);
+                  new TradeReport(
+                    this.#getPlayer(),
+                    this.#portal,
+                    this.#transport
+                  );
                 },
               },
               {
                 label: t('GameMenu.science-report'),
                 action: () => {
-                  new ScienceReport(this.#player);
+                  new ScienceReport(this.#getPlayer());
                 },
               },
             ],

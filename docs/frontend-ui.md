@@ -79,4 +79,3 @@ Primary files:
 - Move from mutable object map + custom events to a reactive store and selectors.
 - Keep map canvas layers, but feed them from derived state snapshots.
 - Convert keyboard bindings into a command map with explicit action resolution rules.
-

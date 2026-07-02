@@ -17,7 +17,7 @@ export class Units extends Map implements IMap {
       tile.units.length > 0 &&
       (this.#activeUnit !== null ? this.#activeUnit.tile.id !== tile.id : true)
     ) {
-      const [unit] = tile.units.sort(
+      const [unit] = [...tile.units].sort(
           (a: Unit, b: Unit): number => b.defence?.value - a.defence?.value
         ),
         image = this.renderUnit(unit);

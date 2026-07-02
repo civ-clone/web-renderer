@@ -23,7 +23,7 @@ export class World {
     y,
     yields: [],
   });
-  #lookupCache: { [key: string]: number } = {};
+  #lookup = new Map<string, Tile>();
   #tiles: Tile[];
   #height: number;
   #width: number;
@@ -32,6 +32,8 @@ export class World {
     this.#height = world.height;
     this.#width = world.width;
     this.#tiles = world.tiles || [];
+
+    this.rebuildLookup();
   }
 
   get(x: number, y: number): Tile {
@@ -53,19 +55,11 @@ export class World {
 
     const key = [x, y].toString();
 
-    if (!(key in this.#lookupCache)) {
-      const index = this.#tiles.findIndex(
-        (tile) => tile.x === x && tile.y === y
-      );
-
-      if (index === -1) {
-        return this.#unknown(x, y);
-      }
-
-      this.#lookupCache[key] = index;
+    if (!this.#lookup.has(key)) {
+      return this.#unknown(x, y);
     }
 
-    return this.#tiles[this.#lookupCache[key]];
+    return this.#lookup.get(key)!;
   }
 
   getNeighbour(tile: Tile, direction: NeighbourDirection): Tile {
@@ -118,6 +112,16 @@ export class World {
 
   setTiles(tiles: Tile[]): void {
     this.#tiles = tiles;
+
+    this.rebuildLookup();
+  }
+
+  private rebuildLookup(): void {
+    this.#lookup.clear();
+
+    this.#tiles.forEach((tile) => {
+      this.#lookup.set([tile.x, tile.y].toString(), tile);
+    });
   }
 }
 

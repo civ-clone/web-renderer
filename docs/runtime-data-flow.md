@@ -33,11 +33,12 @@ Both transport implementations normalize `DataObject` instances by converting to
 
 ### Incremental patching (`gameDataPatch`)
 
-`DataQueue` patch shape (each entry in the `gameDataPatch` array):
-- An object keyed by `targetId` (object ID of the patched root object), whose value contains:
-  - `type`: `add | update | remove`
-  - `index`: nested object path string (`foo.bar[3]` style) or `null`
-  - `value`: payload with `{ hierarchy, objects }` (functions are resolved before send)
+`DataQueue` patch shape:
+
+- `type`: `add | update | remove`
+- `index`: optional object path string (`foo.bar[3]` style)
+- `value`: object payload (or function on backend converted to payload)
+
 Frontend patch handling in `Renderer`:
 
 - `add/update`
@@ -70,6 +71,8 @@ When backend needs user choice (`chooseFromList`):
 ## Known data-flow pain points
 
 - `Renderer` notes expensive reconstitution in late game and TODOs around worker-thread offload.
+- `WorkerTransport.receive`/`receiveOnce` listeners reconstitute hierarchy payloads only for their matching channel (fixed 2026-07-01; previously every listener reconstituted every hierarchy-shaped message).
 - Patch application relies on manual string-path mutation logic.
-- Cleanup of orphaned objects is commented out due to performance concerns.
+- The backend never emits `remove` patches (the only `DataQueue.remove` call is commented out), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The older inline orphan-cleanup remains commented out for performance reasons.
 
+See [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md) for a detailed analysis of these paths.

@@ -14,7 +14,7 @@ export class Yields extends Map {
         0
       ),
       // TODO: use a more effective sort than this, this only works by luck (Food -> Production -> Trade)
-      yields = tile.yields.sort(
+      yields = [...tile.yields].sort(
         (a, b) => a._.charCodeAt(0) - b._.charCodeAt(0)
       );
 

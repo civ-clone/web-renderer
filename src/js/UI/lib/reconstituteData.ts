@@ -42,7 +42,7 @@ export const reconstituteData = (
       }
 
       if (!(value['#ref'] in objects)) {
-        throw new TypeError(`missing ${value['#ref']}`);
+        console.error(new TypeError(`missing ${value['#ref']}`));
       }
 
       const updated = getReferences(objects[value['#ref']]);

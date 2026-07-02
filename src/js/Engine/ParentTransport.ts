@@ -1,5 +1,6 @@
 import {
   TransportData,
+  TransportDisposer,
   TransportMessage,
   TransportReceiveHandler,
   TransportSendArgs,
@@ -19,23 +20,26 @@ export class ParentTransport<
   receive<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void {
-    addEventListener(
-      'message',
-      ({
-        data: { channel: receivingChannel, data },
-      }: TransportEventListenerArg) => {
-        if (channel === receivingChannel) {
-          handler(data);
-        }
+  ): TransportDisposer {
+    const listener = ({
+      data: { channel: receivingChannel, data },
+    }: TransportEventListenerArg) => {
+      if (channel === receivingChannel) {
+        handler(data);
       }
-    );
+    };
+
+    addEventListener('message', listener);
+
+    return () => {
+      removeEventListener('message', listener);
+    };
   }
 
   receiveOnce<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void {
+  ): TransportDisposer {
     const fullHandler = ({
       data: { channel: receivingChannel, data },
     }: MessageEvent<TransportMessage>) => {
@@ -47,6 +51,10 @@ export class ParentTransport<
     };
 
     addEventListener('message', fullHandler);
+
+    return () => {
+      removeEventListener('message', fullHandler);
+    };
   }
 
   send<Channel extends keyof DataMap>(

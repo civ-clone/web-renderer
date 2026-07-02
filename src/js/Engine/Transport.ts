@@ -28,6 +28,8 @@ export type TransportReceiveHandler<Data extends TransportData> = (
   rawData?: ObjectMap
 ) => void;
 
+export type TransportDisposer = () => void;
+
 type TransportPlayerAction = {
   [Name in keyof TransportPlayerActionMap]: {
     name: Name;
@@ -57,6 +59,8 @@ declare global {
       string[]
     >;
     notification: TransportData<string, never>;
+    quit: TransportData<null, null>;
+    restart: TransportData<null, null>;
     setOption: TransportData<
       null,
       {
@@ -140,12 +144,12 @@ export interface Transport<
   receive<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void;
+  ): TransportDisposer;
 
   receiveOnce<Channel extends keyof DataMap>(
     channel: Channel,
     handler: TransportReceiveHandler<DataMap[Channel]>
-  ): void;
+  ): TransportDisposer;
 
   request<
     RequestType extends Request,

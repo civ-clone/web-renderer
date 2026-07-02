@@ -12,8 +12,8 @@ This document consolidates known problems from source comments, README notes, an
   - `Renderer` has TODOs calling out expensive reconstitution and orphan cleanup concerns.
   - `DataQueue` includes TODO to chunk data transfer but currently sends full queue each flush.
 - **Protocol drift risk in transport channels**
-  - `quit` and `restart` are used in code paths but not declared in `TransportDataMap`.
-  - Suggests protocol contract is only partially enforced.
+  - `quit` and `restart` are now declared in `TransportDataMap`, but neither channel has a receiver on the opposite side (`restart` from backend → no frontend handler; `quit` from frontend → no backend handler).
+  - Suggests protocol contract is typed but only partially wired end to end.
 
 ## Medium priority
 
@@ -63,4 +63,3 @@ Suggested targets for a full rewrite to de-risk migration:
 2. Patch/reconstitution performance profiling under late-game saves.
 3. Input handling redesign (hotkeys, modal routing, action dispatch).
 4. Asset manifest and extraction format versioning plan.
-

@@ -72,7 +72,7 @@ AI clients are timeout-protected for negotiation responses.
 
 - Heavy class-based mutation makes selective diffs difficult.
 - Patch queue currently unchunked (`DataQueue` TODO).
-- Some channels used in practice are not in typed transport declaration (`restart`, `quit`).
+- `restart` and `quit` are declared in the typed transport map but have no receiver on the other side (`restart` sent by the backend has no frontend handler; `quit` sent by the frontend has no backend handler).
 - `Game` currently hardcodes only player index 0 as human.
 
 ## Rewrite carry-forward suggestions
@@ -81,4 +81,3 @@ AI clients are timeout-protected for negotiation responses.
 - Introduce explicit protocol schema versioning for transport payloads.
 - Normalize action payloads behind a declarative dispatcher map.
 - Replace manual patch path strings with operation objects or JSON Patch-like structure.
-

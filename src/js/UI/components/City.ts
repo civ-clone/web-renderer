@@ -5,6 +5,7 @@ import {
   Player,
   PlayerTreasury,
   SpendCost,
+  Tile,
   Unit as UnitData,
   Yield,
 } from '../types';
@@ -133,11 +134,35 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     });
   },
   renderMap = (portal: Portal, city: CityData, transport: Transport): Node => {
-    const portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
+    // Remap the city's tiles into a small local coordinate space so each layer
+    // canvas is sized to the city radius rather than the full world (a full
+    // `World` here allocated ~10 world-sized canvases per open/update). A
+    // one-tile empty border around the block keeps neighbour lookups (coast,
+    // fog, terrain transitions) resolving to unknown tiles exactly as
+    // out-of-radius lookups did against the full-world lookup map.
+    const cityRadius = 2,
+      localSize = cityRadius * 2 + 3,
+      localCenter = cityRadius + 1,
+      wrapDelta = (delta: number, max: number): number =>
+        delta > max / 2 ? delta - max : delta < -max / 2 ? delta + max : delta,
+      toLocal = (tile: Tile): Tile => ({
+        ...tile,
+        x:
+          localCenter +
+          wrapDelta(tile.x - city.tile.x, city.player.world.width),
+        y:
+          localCenter +
+          wrapDelta(tile.y - city.tile.y, city.player.world.height),
+      }),
+      localTiles = city.tiles.map(toLocal),
+      localTilesWorked = city.tilesWorked.map(toLocal),
+      portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
       cityPortal = new Portal(
         new World({
           ...city.player.world,
-          tiles: city.tiles,
+          width: localSize,
+          height: localSize,
+          tiles: localTiles,
         }),
         transport,
         portalCanvas,
@@ -161,22 +186,22 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     portalCanvas.height = portal.tileSize() * 5;
     portalCanvas.width = portal.tileSize() * 5;
 
-    cityPortal.setCenter(city.tile.x, city.tile.y);
-    cityPortal.build(city.tiles);
+    cityPortal.setCenter(localCenter, localCenter);
+    cityPortal.build(localTiles);
 
     const unitMap = cityPortal.getLayer(Units)!;
     unitMap.render(
-      city.tiles.filter((tile) =>
+      localTiles.filter((tile) =>
         tile.units.some((unit) => unit.player.id !== city.player.id)
       )
     );
 
     const yieldMap = cityPortal.getLayer(Yields)!;
-    yieldMap.render(city.tilesWorked);
+    yieldMap.render(localTilesWorked);
 
     const unworkable = cityPortal.getLayer(Unworkable)!;
     unworkable.setCity(city);
-    unworkable.render(city.tiles);
+    unworkable.render(localTiles);
 
     cityPortal.render();
 

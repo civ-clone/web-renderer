@@ -6,13 +6,14 @@ import Transport from './Transport';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
-import transport from './Transport';
 
 export interface IGame {
   start(): void;
 }
 
 export class Game implements IGame {
+  #automateLocalPlayer: boolean = false;
+  #localPlayerClient: DataTransferClient | null = null;
   #transport: Transport<TransportDataMap>;
 
   constructor(transport: Transport<TransportDataMap>) {
@@ -24,6 +25,22 @@ export class Game implements IGame {
     });
 
     transport.receive('setOption', ({ name, value }) => {
+      if (name === 'automateLocalPlayer') {
+        this.#automateLocalPlayer = !!value;
+        this.#localPlayerClient?.setAutomationEnabled(
+          this.#automateLocalPlayer
+        );
+
+        this.#transport.send(
+          'notification',
+          `local player automation ${
+            this.#automateLocalPlayer ? 'enabled' : 'disabled'
+          }`
+        );
+
+        return;
+      }
+
       this.#transport.send('notification', `setting ${name} to ${value}`);
       engine.setOption(name, value);
     });
@@ -40,9 +57,18 @@ export class Game implements IGame {
     );
 
     transport.receive('setOptions', (values) => {
-      Object.entries(values).forEach(([option, value]) =>
-        engine.setOption(option, value)
-      );
+      Object.entries(values).forEach(([option, value]) => {
+        if (option === 'automateLocalPlayer') {
+          this.#automateLocalPlayer = !!value;
+          this.#localPlayerClient?.setAutomationEnabled(
+            this.#automateLocalPlayer
+          );
+
+          return;
+        }
+
+        engine.setOption(option, value);
+      });
 
       transport.send('setOptions', null);
     });
@@ -83,12 +109,18 @@ export class Game implements IGame {
       this.#transport.send('notification', `turn start ${turn}`)
     );
 
-    engine.on('player:turn-start', (player): void =>
+    engine.on('player:turn-start', (player): void => {
+      if (!player) {
+        console.warn('Empty player object returned.');
+
+        return;
+      }
+
       this.#transport.send(
         'notification',
         `player turn-start: ${player.civilization().constructor.name}`
-      )
-    );
+      );
+    });
   }
 
   start(): void {
@@ -108,9 +140,18 @@ export class Game implements IGame {
                     (
                       channel: string,
                       handler: (...args: any[]) => void
-                    ): void => this.#transport.receive(channel, handler)
+                    ): void => {
+                      this.#transport.receive(channel, handler);
+                    },
+                    {
+                      automationEnabled: this.#automateLocalPlayer,
+                    }
                   )
                 : new SimpleAIClient(player);
+
+          if (i === 0) {
+            this.#localPlayerClient = client as DataTransferClient;
+          }
 
           playerRegistryInstance.register(player);
           clientRegistryInstance.register(client);

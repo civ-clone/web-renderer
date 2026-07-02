@@ -13,6 +13,10 @@ This folder documents the current implementation of `@civ-clone/web-renderer` to
 7. [`asset-system.md`](./asset-system.md)
 8. [`build-and-release.md`](./build-and-release.md)
 9. [`known-issues-and-rewrite-notes.md`](./known-issues-and-rewrite-notes.md)
+10. [`memory-testbed.md`](./memory-testbed.md)
+11. [`ui-stress-harness.md`](./ui-stress-harness.md)
+12. [`performance-review-2026-06.md`](./performance-review-2026-06.md)
+13. [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md)
 
 ## Scope and intent
 
