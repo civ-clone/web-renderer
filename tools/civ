@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+
+// Multi-package workflow tool for the engine work in
+// docs/engine-serialisation/. See 04-package-workflow.md for what each
+// subcommand is for and why it behaves the way it does.
+
+const COMMANDS = {
+  audit: () => require('./lib/audit'),
+  clone: () => require('./lib/clone'),
+  sync: () => require('./lib/sync'),
+  watch: () => require('./lib/watch'),
+  publish: () => require('./lib/publish'),
+  'check-dts': () => require('./lib/checkDts'),
+  collisions: () => require('./lib/collisions'),
+};
+
+const USAGE = `civ <command> [options]
+
+  audit [--write]              Recompute tools/packages.json from node_modules:
+                               dependency graph, cycles, publish waves, per-stage
+                               surface. Without --write, prints the drift.
+
+  clone [--stage N] [--dry-run]
+                               Clone every manifest package missing from the
+                               workspace root. Reports dirty checkouts.
+
+  sync [package...]            Copy .ts source from each checkout into
+                               web-renderer/node_modules. No argument syncs every
+                               checked-out manifest package.
+
+  watch [package...]           Run sync on change. Pair with \`npm run watch\`.
+
+  publish --wave N [--stage N] [--dry-run]
+                               Verify, version, publish and push a wave.
+                               Refuses a partial cycle group.
+
+  collisions                   Find classes that declare a private field also
+                               declared by an ancestor. Legal while both sides
+                               use hash-private fields (separate slots); a TS2415
+                               error once both are 'private _x', and invisible to
+                               the compiler until the base package publishes.
+
+  check-dts [--baseline] [package...]
+                               --baseline snapshots the installed .d.ts files;
+                               without it, diffs the checkouts' compiled .d.ts
+                               against that snapshot and fails on any change
+                               beyond an added \`private _x;\`.
+`;
+
+const [, , command, ...args] = process.argv;
+
+if (!command || command === '--help' || command === '-h') {
+  process.stdout.write(USAGE);
+  process.exit(command ? 0 : 1);
+}
+
+if (!COMMANDS[command]) {
+  process.stderr.write(`Unknown command: ${command}\n\n${USAGE}`);
+  process.exit(1);
+}
+
+Promise.resolve()
+  .then(() => COMMANDS[command]().run(args))
+  .catch((error) => {
+    process.stderr.write(`${error.message}\n`);
+    process.exit(1);
+  });

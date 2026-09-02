@@ -1,0 +1,32 @@
+# The workspace overlay for Stage 3 of docs/engine-serialisation/05-engine-plan.md.
+#
+# It is NOT active. Copy it to the workspace root to switch:
+#
+#   cp tools/pnpm-workspace.stage3.yaml ~/Code/civ-clone/pnpm-workspace.yaml
+#   cd ~/Code/civ-clone && pnpm install
+#
+# It is kept here rather than at the root on purpose: pnpm walks up the tree
+# looking for a workspace root, so a file sitting at ~/Code/civ-clone/ would
+# silently make `web-renderer` a workspace member the next time anyone ran
+# `pnpm install` there — before anyone had decided to switch.
+#
+# Once it is active, `civ sync` and `civ watch` become redundant (pnpm symlinks
+# the checkouts, so an edit is visible with no copy step). `civ audit`,
+# `civ clone`, `civ collisions` and `civ publish` are needed either way.
+#
+# 04-package-workflow.md §"The trap": pnpm 10 changed `linkWorkspacePackages` to
+# default `false`. Without the line below, pnpm ignores the local checkouts and
+# goes to the registry — with a 404 rather than a useful message.
+packages:
+  - 'web-renderer'
+  - 'base-*'
+  - 'civ1-*'
+  - 'core-*'
+  - 'library-*'
+  - 'simple-*'
+linkWorkspacePackages: true
+
+# Carried over from web-renderer/pnpm-workspace.yaml, which stops being the
+# workspace root once this file exists.
+publicHoistPattern:
+  - '*@civ-clone/*'

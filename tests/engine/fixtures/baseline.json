@@ -1,0 +1,591 @@
+{
+  "config": {
+    "checkpoints": [
+      1,
+      10,
+      50
+    ],
+    "height": 40,
+    "players": 4,
+    "seed": 1,
+    "turns": 50,
+    "width": 60
+  },
+  "note": "Stage 0 checksum: a deliberately narrow subset — entity id, type and hand-listed scalars only. It is NOT a complete state hash. Widen it in Stage 4 of docs/engine-serialisation/05-engine-plan.md, once toState() exists, and regenerate these fixtures.",
+  "checksums": {
+    "1": "7d6b6b04",
+    "10": "73a0cc05",
+    "50": "3431063b"
+  },
+  "snapshots": {
+    "1": {
+      "turn": 1,
+      "dto": {
+        "objects": 788,
+        "bytes": 135383,
+        "hash": "67d92604"
+      },
+      "registries": {
+        "cities": 0,
+        "cityImprovements": 0,
+        "goodyHuts": 34,
+        "playerGovernments": 4,
+        "playerResearch": 4,
+        "playerTreasuries": 4,
+        "playerWorlds": 4,
+        "players": 4,
+        "tileImprovements": 0,
+        "units": 4
+      },
+      "world": {
+        "width": 60,
+        "height": 40,
+        "terrain": "6090f552"
+      },
+      "players": [
+        [
+          "Player-1",
+          "Babylonian",
+          "Hammurabi"
+        ],
+        [
+          "Player-2",
+          "Aztec",
+          "MoctezumaII"
+        ],
+        [
+          "Player-3",
+          "Zulu",
+          "Shaka"
+        ],
+        [
+          "Player-4",
+          "Egyptian",
+          "RamessesII"
+        ]
+      ],
+      "cities": [],
+      "units": [
+        [
+          "Settlers-1",
+          "Settlers",
+          "Player-1",
+          "32",
+          "19",
+          "true",
+          "false"
+        ],
+        [
+          "Settlers-2",
+          "Settlers",
+          "Player-2",
+          "46",
+          "26",
+          "true",
+          "false"
+        ],
+        [
+          "Settlers-3",
+          "Settlers",
+          "Player-3",
+          "2",
+          "15",
+          "true",
+          "false"
+        ],
+        [
+          "Settlers-4",
+          "Settlers",
+          "Player-4",
+          "10",
+          "34",
+          "true",
+          "false"
+        ]
+      ],
+      "randomCalls": 8600
+    },
+    "10": {
+      "turn": 10,
+      "dto": {
+        "objects": 3245,
+        "bytes": 552837,
+        "hash": "c27f4b32"
+      },
+      "registries": {
+        "cities": 3,
+        "cityImprovements": 3,
+        "goodyHuts": 32,
+        "playerGovernments": 4,
+        "playerResearch": 4,
+        "playerTreasuries": 4,
+        "playerWorlds": 4,
+        "players": 4,
+        "tileImprovements": 6,
+        "units": 8
+      },
+      "world": {
+        "width": 60,
+        "height": 40,
+        "terrain": "6090f552"
+      },
+      "players": [
+        [
+          "Player-1",
+          "Babylonian",
+          "Hammurabi"
+        ],
+        [
+          "Player-2",
+          "Aztec",
+          "MoctezumaII"
+        ],
+        [
+          "Player-3",
+          "Zulu",
+          "Shaka"
+        ],
+        [
+          "Player-4",
+          "Egyptian",
+          "RamessesII"
+        ]
+      ],
+      "cities": [
+        [
+          "City-1",
+          "City",
+          "Player-1",
+          "Babilim",
+          "32",
+          "19"
+        ],
+        [
+          "City-2",
+          "City",
+          "Player-4",
+          "Cairo",
+          "10",
+          "34"
+        ],
+        [
+          "City-3",
+          "City",
+          "Player-3",
+          "uMgungundlovu",
+          "1",
+          "17"
+        ]
+      ],
+      "units": [
+        [
+          "Horseman-1",
+          "Horseman",
+          "Player-3",
+          "2",
+          "16",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-2",
+          "Horseman",
+          "Player-4",
+          "10",
+          "34",
+          "false",
+          "false"
+        ],
+        [
+          "Settlers-1",
+          "Settlers",
+          "Player-1",
+          "32",
+          "19",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-2",
+          "Settlers",
+          "Player-2",
+          "46",
+          "21",
+          "false",
+          "false"
+        ],
+        [
+          "Settlers-3",
+          "Settlers",
+          "Player-3",
+          "1",
+          "17",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-4",
+          "Settlers",
+          "Player-4",
+          "10",
+          "34",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-1",
+          "Warrior",
+          "Player-1",
+          "32",
+          "19",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-2",
+          "Warrior",
+          "Player-1",
+          "31",
+          "19",
+          "false",
+          "false"
+        ]
+      ],
+      "randomCalls": 9050
+    },
+    "50": {
+      "turn": 50,
+      "dto": {
+        "objects": 53120,
+        "bytes": 8900253,
+        "hash": "40a7e611"
+      },
+      "registries": {
+        "cities": 6,
+        "cityImprovements": 4,
+        "goodyHuts": 21,
+        "playerGovernments": 4,
+        "playerResearch": 4,
+        "playerTreasuries": 4,
+        "playerWorlds": 4,
+        "players": 4,
+        "tileImprovements": 12,
+        "units": 26
+      },
+      "world": {
+        "width": 60,
+        "height": 40,
+        "terrain": "6090f552"
+      },
+      "players": [
+        [
+          "Player-1",
+          "Babylonian",
+          "Hammurabi"
+        ],
+        [
+          "Player-2",
+          "Aztec",
+          "MoctezumaII"
+        ],
+        [
+          "Player-3",
+          "Zulu",
+          "Shaka"
+        ],
+        [
+          "Player-4",
+          "Egyptian",
+          "RamessesII"
+        ]
+      ],
+      "cities": [
+        [
+          "City-1",
+          "City",
+          "Player-1",
+          "Babilim",
+          "32",
+          "19"
+        ],
+        [
+          "City-2",
+          "City",
+          "Player-4",
+          "Cairo",
+          "10",
+          "34"
+        ],
+        [
+          "City-3",
+          "City",
+          "Player-3",
+          "uMgungundlovu",
+          "1",
+          "17"
+        ],
+        [
+          "City-4",
+          "City",
+          "Player-2",
+          "Tenochtitlan",
+          "43",
+          "24"
+        ],
+        [
+          "City-5",
+          "City",
+          "Player-4",
+          "Fayyum",
+          "5",
+          "37"
+        ],
+        [
+          "City-6",
+          "City",
+          "Player-3",
+          "Nobamba",
+          "5",
+          "29"
+        ]
+      ],
+      "units": [
+        [
+          "Chariot-1",
+          "Chariot",
+          "Player-3",
+          "1",
+          "17",
+          "false",
+          "false"
+        ],
+        [
+          "Chariot-2",
+          "Chariot",
+          "Player-3",
+          "7",
+          "26",
+          "false",
+          "false"
+        ],
+        [
+          "Chariot-3",
+          "Chariot",
+          "Player-1",
+          "49",
+          "9",
+          "false",
+          "false"
+        ],
+        [
+          "Chariot-4",
+          "Chariot",
+          "Player-3",
+          "1",
+          "15",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-1",
+          "Horseman",
+          "Player-3",
+          "5",
+          "29",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-2",
+          "Horseman",
+          "Player-4",
+          "10",
+          "34",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-3",
+          "Horseman",
+          "Player-4",
+          "9",
+          "5",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-4",
+          "Horseman",
+          "Player-4",
+          "5",
+          "37",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-5",
+          "Horseman",
+          "Player-4",
+          "22",
+          "33",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-6",
+          "Horseman",
+          "Player-1",
+          "47",
+          "10",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-7",
+          "Horseman",
+          "Player-4",
+          "2",
+          "2",
+          "false",
+          "false"
+        ],
+        [
+          "Settlers-1",
+          "Settlers",
+          "Player-1",
+          "32",
+          "19",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-2",
+          "Settlers",
+          "Player-2",
+          "43",
+          "24",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-3",
+          "Settlers",
+          "Player-3",
+          "1",
+          "17",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-4",
+          "Settlers",
+          "Player-4",
+          "10",
+          "34",
+          "false",
+          "true"
+        ],
+        [
+          "Spearman-1",
+          "Spearman",
+          "Player-2",
+          "43",
+          "24",
+          "false",
+          "false"
+        ],
+        [
+          "Spearman-2",
+          "Spearman",
+          "Player-2",
+          "41",
+          "32",
+          "false",
+          "false"
+        ],
+        [
+          "Spearman-3",
+          "Spearman",
+          "Player-2",
+          "40",
+          "25",
+          "false",
+          "true"
+        ],
+        [
+          "Spearman-4",
+          "Spearman",
+          "Player-4",
+          "2",
+          "39",
+          "false",
+          "false"
+        ],
+        [
+          "Spearman-5",
+          "Spearman",
+          "Player-2",
+          "42",
+          "24",
+          "false",
+          "true"
+        ],
+        [
+          "Swordman-1",
+          "Swordman",
+          "Player-1",
+          "47",
+          "10",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-1",
+          "Warrior",
+          "Player-1",
+          "32",
+          "19",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-2",
+          "Warrior",
+          "Player-1",
+          "44",
+          "10",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-3",
+          "Warrior",
+          "Player-1",
+          "41",
+          "12",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-4",
+          "Warrior",
+          "Player-1",
+          "40",
+          "24",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-5",
+          "Warrior",
+          "Player-1",
+          "42",
+          "25",
+          "true",
+          "false"
+        ]
+      ],
+      "randomCalls": 10115
+    }
+  }
+}

@@ -209,6 +209,7 @@ GitHub.sublime-settings
 # Local History for Visual Studio Code
 .history
 
+tools/.dts-baseline
 src/js/plugins.ts
 .dist/*
 build.json

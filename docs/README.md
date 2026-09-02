@@ -2,6 +2,13 @@
 
 This folder documents the current implementation of `@civ-clone/web-renderer` to support a full rewrite.
 
+## The rewrite plan
+
+The plan for converting the renderer to a state-based architecture lives in
+[`state-rewrite/`](./state-rewrite/README.md). Start there if you are picking up
+that work; the documents below are the description of the *current* system that
+it builds on.
+
 ## Recommended reading order
 
 1. [`architecture-overview.md`](./architecture-overview.md)

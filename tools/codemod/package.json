@@ -1,0 +1,9 @@
+{
+  "name": "civ-clone-codemods",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Self-contained so it does not disturb web-renderer's dependency tree, which the conformance baseline is pinned to.",
+  "dependencies": {
+    "ts-morph": "^24.0.0"
+  }
+}

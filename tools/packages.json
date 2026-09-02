@@ -1,0 +1,1146 @@
+{
+  "generatedBy": "tools/civ audit --write",
+  "root": "~/Code/civ-clone",
+  "org": "civ-clone",
+  "totals": {
+    "installed": 325,
+    "stage1Packages": 62,
+    "stage1Declarations": 282,
+    "stage1Waves": 12,
+    "stage2Packages": 19,
+    "stage3Packages": 17,
+    "fromGitHub": 22
+  },
+  "cycles": [
+    [
+      "core-player",
+      "core-world",
+      "core-world-generator"
+    ]
+  ],
+  "packages": {
+    "base-city-yield-city-improvement-content": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "CityImprovementContent.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-city-yield-city-improvement-maintenance-gold": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "CityImprovementMaintenanceGold.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-city-yield-martial-law-content": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "MartialLaw.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-city-yield-military-unhappiness": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "MilitaryUnhappiness.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-city-yield-unit-support-food": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "UnitSupportFood.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-city-yield-unit-support-production": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "UnitSupportProduction.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-goody-hut-advance": {
+      "wave": 9,
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Advance.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "base-goody-hut-city": {
+      "wave": 9,
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "City.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-goody-hut-gold": {
+      "wave": 9,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Gold.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-goody-hut-unit": {
+      "wave": 9,
+      "version": "0.1.5",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Unit.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "base-unit-action-attack": {
+      "wave": 8,
+      "version": "0.1.5",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Attack.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "base-unit-action-capture-city": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "CaptureCity.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-clear-forest": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "ClearForest.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-clear-jungle": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "ClearJungle.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-clear-swamp": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "ClearSwamp.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-disembark": {
+      "wave": 9,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Disembark.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-embark": {
+      "wave": 9,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Embark.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-fortify": {
+      "wave": 9,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Fortify.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-found-city": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "FoundCity.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-goto": {
+      "wave": 9,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "GoTo.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        1,
+        3
+      ]
+    },
+    "base-unit-action-pillage": {
+      "wave": 8,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Pillage.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-plant-forest": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "PlantForest.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "base-unit-action-sleep": {
+      "wave": 8,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Sleep.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "civ1-asset-extractor": {
+      "wave": null,
+      "version": "0.1.1",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 3,
+      "registerRules": false,
+      "stages": [
+        2
+      ]
+    },
+    "civ1-city": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-city-happiness": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-city-improvement": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 1,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "civ1-diplomacy": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-earth-generator": {
+      "wave": 5,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "CivilizationStartTile.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "civ1-game-year": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-goody-hut": {
+      "wave": null,
+      "version": "0.1.1",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 3,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "civ1-government": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-player": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-science": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 2,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "civ1-spaceship": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 2,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "civ1-trade-rate": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-treasury": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-unit": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 2,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "civ1-wonder": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-world": {
+      "wave": null,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 2,
+      "registerRules": true,
+      "stages": [
+        2,
+        3
+      ]
+    },
+    "core-city": {
+      "wave": 5,
+      "version": "0.1.10",
+      "resolution": "npm",
+      "privateFields": 11,
+      "privateFieldFiles": [
+        "City.ts",
+        "WorkedTile.ts",
+        "WorkedTileRegistry.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-city-build": {
+      "wave": 6,
+      "version": "0.1.7",
+      "resolution": "npm",
+      "privateFields": 11,
+      "privateFieldFiles": [
+        "BuildCost.ts",
+        "BuildItem.ts",
+        "CityBuild.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-city-growth": {
+      "wave": 6,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 5,
+      "privateFieldFiles": [
+        "CityGrowth.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-city-improvement": {
+      "wave": 7,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "CityImprovement.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-civ-client": {
+      "wave": 6,
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Client.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-civilization": {
+      "wave": 3,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 13,
+      "privateFieldFiles": [
+        "Attribute.ts",
+        "CityName.ts",
+        "CityNameRegistry.ts",
+        "Civilization.ts",
+        "Leader.ts",
+        "Trait.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-client": {
+      "wave": 5,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 6,
+      "privateFieldFiles": [
+        "Choice.ts",
+        "ChoiceMeta.ts",
+        "Client.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-data-object": {
+      "wave": 1,
+      "version": "0.1.12",
+      "resolution": "npm",
+      "privateFields": 5,
+      "privateFieldFiles": [
+        "AdditionalData.ts",
+        "DataObject.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-diplomacy": {
+      "wave": 6,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 14,
+      "privateFieldFiles": [
+        "Declaration.ts",
+        "Expiry.ts",
+        "Interaction.ts",
+        "Negotiation.ts",
+        "Negotiation/Action.ts",
+        "Negotiation/Dialogue.ts",
+        "Negotiation/Proposal.ts",
+        "Proposal/Resolution.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-engine": {
+      "wave": 2,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Engine.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-game-year": {
+      "wave": 4,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "Year.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-goody-hut": {
+      "wave": 8,
+      "version": "0.1.5",
+      "resolution": "npm",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "Action.ts",
+        "GoodyHut.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-government": {
+      "wave": 5,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "PlayerGovernment.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-player": {
+      "wave": 4,
+      "version": "0.1.7",
+      "resolution": "npm",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "Player.ts",
+        "PlayerAction.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-player-world": {
+      "wave": 5,
+      "version": "0.1.9",
+      "resolution": "npm",
+      "privateFields": 8,
+      "privateFieldFiles": [
+        "PlayerTile.ts",
+        "PlayerWorld.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-registry": {
+      "wave": 0,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "ConstructorRegistry.ts",
+        "EntityRegistry.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-rule": {
+      "wave": 1,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 10,
+      "privateFieldFiles": [
+        "Criteria.ts",
+        "Criterion.ts",
+        "Effect.ts",
+        "Priority.ts",
+        "Rule.ts",
+        "RuleRegistry.ts",
+        "Ruleset.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-science": {
+      "wave": 5,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 7,
+      "privateFieldFiles": [
+        "PlayerResearch.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-spaceship": {
+      "wave": 7,
+      "version": "0.1.6",
+      "resolution": "npm",
+      "privateFields": 22,
+      "privateFieldFiles": [
+        "Layout.ts",
+        "Part.ts",
+        "Slot.ts",
+        "Spaceship.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-strategy": {
+      "wave": 5,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "Strategy.ts",
+        "StrategyNote.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-terrain": {
+      "wave": 2,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Terrain.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-terrain-feature": {
+      "wave": 3,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "TerrainFeature.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-tile-improvement": {
+      "wave": 5,
+      "version": "0.1.2",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "TileImprovement.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-trade-rate": {
+      "wave": 5,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "PlayerTradeRates.ts"
+      ],
+      "mathRandom": 2,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "core-treasury": {
+      "wave": 7,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 7,
+      "privateFieldFiles": [
+        "PlayerTreasury.ts",
+        "SpendCost.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-turn-based-game": {
+      "wave": 3,
+      "version": "0.1.5",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "Turn.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-unit": {
+      "wave": 7,
+      "version": "0.1.17",
+      "resolution": "npm",
+      "privateFields": 15,
+      "privateFieldFiles": [
+        "Action.ts",
+        "DelayedAction.ts",
+        "Unit.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-unit-improvement": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 1,
+      "privateFieldFiles": [
+        "UnitImprovement.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-unit-transport": {
+      "wave": 8,
+      "version": "0.1.6",
+      "resolution": "npm",
+      "privateFields": 5,
+      "privateFieldFiles": [
+        "Transport.ts",
+        "TransportManifest.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-world": {
+      "wave": 4,
+      "version": "0.1.13",
+      "resolution": "npm",
+      "privateFields": 14,
+      "privateFieldFiles": [
+        "LandMass.ts",
+        "Tile.ts",
+        "World.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-world-generator": {
+      "wave": 4,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "Generator.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-world-path": {
+      "wave": 8,
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "Path.ts",
+        "PathFinder.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "core-yield": {
+      "wave": 2,
+      "version": "0.1.4",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Yield.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "library-diplomacy": {
+      "wave": 8,
+      "version": "0.1.1",
+      "resolution": "npm",
+      "privateFields": 2,
+      "privateFieldFiles": [
+        "Proposals/DemandTribute.ts",
+        "Proposals/ExchangeKnowledge.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "library-unit": {
+      "wave": 10,
+      "version": "0.1.3",
+      "resolution": "npm",
+      "privateFields": 3,
+      "privateFieldFiles": [
+        "Actions/SetHomeCity.ts",
+        "Actions/SneakAttack.ts",
+        "Actions/SneakCaptureCity.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    },
+    "simple-ai-client": {
+      "wave": 11,
+      "version": "0.1.2",
+      "resolution": "github",
+      "privateFields": 34,
+      "privateFieldFiles": [
+        "SimpleAIClient.ts"
+      ],
+      "mathRandom": 1,
+      "registerRules": true,
+      "stages": [
+        1,
+        2,
+        3
+      ]
+    },
+    "simple-world-generator": {
+      "wave": 5,
+      "version": "0.1.2",
+      "resolution": "github",
+      "privateFields": 10,
+      "privateFieldFiles": [
+        "BaseGenerator.ts"
+      ],
+      "mathRandom": 5,
+      "registerRules": false,
+      "stages": [
+        1,
+        2
+      ]
+    },
+    "simple-world-path": {
+      "wave": 11,
+      "version": "0.1.0",
+      "resolution": "github",
+      "privateFields": 4,
+      "privateFieldFiles": [
+        "BasePathFinder.ts"
+      ],
+      "mathRandom": 0,
+      "registerRules": false,
+      "stages": [
+        1
+      ]
+    }
+  }
+}
