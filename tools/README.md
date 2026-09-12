@@ -35,12 +35,24 @@ npm test                                  # conformance + hydration, after each 
 node tools/verify-stage1.js               # no package left with stale compiled output
 ```
 
+Then publish, wave by wave:
+
+```
+./tools/civ publish --wave 0        # …through --wave 11
+pnpm install && npm test            # once, after the last wave
+```
+
 `stage1.js` runs the per-package procedure: install if needed, record what was
 already failing, run `codemod/private-fields.js`, compile, format, test, sync.
 It stops at the first genuine failure and commits only what passed every step.
 A package that could not build **before** the change is reported and carried
 past — a pre-existing breakage is not this stage's to fix — but it then holds
 stale compiled output, which is what `verify-stage1.js` is for.
+
+One gap worth knowing: `stage1.js` reports "already converted" and returns
+early, which skips the compile and test checks. A package converted in a run
+that later aborted therefore never got verified. `verify-stage1.js` and
+`civ publish --dry-run` are what caught those.
 
 ## Tests
 

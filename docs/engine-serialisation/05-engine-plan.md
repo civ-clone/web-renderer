@@ -285,6 +285,22 @@ priority ties with `Math.floor(Math.random() * 3 - 1)` and
 on an unmodified tree. Not this stage's to fix; Stage 2 makes it deterministic,
 though still arbitrary. The real fix is for the test to stop assuming.
 
+**5a. `core-city`'s suite was failing deterministically, and had been since
+2022.** `should be possible to get yields via `tilesWorked`` asserted that a
+city built with a bare `RuleRegistry` works one tile — but nothing in
+`core-city` creates a `WorkedTile`; the rules that do live in
+`core-city-growth` and the `civ1-*` plugins. So `tilesWorked()` read the shared
+`WorkedTileRegistry` singleton and found whatever happened to be in it, which in
+a clean run is nothing. Fixed in its own `test:` commit: the test now takes its
+own registry, passes it to the city, and registers the centre tile.
+
+Finding it took longer than it should have, for an instructive reason. The first
+fix appeared not to work, because `tests/lib/setUpCity.js` — compiled, committed
+— sat beside the edited `.ts`, and ts-node resolves the `.js`. That is the same
+trap as §1 of [`04-package-workflow.md`](./04-package-workflow.md), one level
+down: **a compiled file beside edited source is the default explanation when an
+edit seems to have no effect.**
+
 **6. One published version is missing from the registry.**
 `base-unit-action-sleep`'s lockfile pins
 `@civ-clone/base-unit-action-build-railroad@0.1.0`, which is not on npm — only
@@ -292,22 +308,56 @@ though still arbitrary. The real fix is for the test to stop assuming.
 the failure mode `04-package-workflow.md` §Rollback warns about, already in the
 tree.
 
-### Before publishing
+### Publishing
 
-Publishing has not happened; `npm whoami` reports no login. Two things must be
-true first, and `tools/verify-stage1.js` checks both:
+All twelve waves pass `civ publish --wave N --dry-run`, and
+`tools/verify-stage1.js` reports 0 of 62 needing attention. Nothing has been
+published or pushed yet.
 
-- No package still holds compiled output built from the old source. A package
-  whose `ts:compile` failed got its `.ts` committed beside a stale `.js`, which
-  would ship a package whose entrypoint still uses WeakMap private fields.
-- `civ collisions` is clean.
+Run the waves in order:
 
-Then `civ publish --wave N --dry-run` per wave. Note that `civ publish` asks the
-remote for the default branch rather than assuming `main`: every civ-clone repo
-is on `master`.
+```
+./tools/civ publish --wave 0        # …through --wave 11
+```
 
-The 22 GitHub-resolved packages have no npm release — for those, pushing the
-branch *is* the publish, and `civ publish` skips `npm publish` accordingly.
+`civ publish` asks the remote for the default branch rather than assuming
+`main`: every civ-clone repo is on `master`. The 22 GitHub-resolved packages
+have no npm release — for those, pushing the branch *is* the publish, and
+`civ publish` skips `npm publish` accordingly.
+
+#### What the gate checks, and what it deliberately does not
+
+Getting all twelve waves green needed six corrections to the gate itself, each
+of which had been refusing a package that was in fact fine. They are recorded
+because the same mistakes are available to anyone writing the equivalent check:
+
+| Refused because | Why that was wrong |
+| --------------- | ------------------ |
+| `git status --porcelain` reported untracked files | Every untracked file here is a lockfile. npm never packs `package-lock.json`, and the packages carrying a stray `pnpm-lock.yaml` are all GitHub-resolved, so no tarball is affected. Reported beside the result now. |
+| A forced rebuild always changed the tree | The committed `.js` are single-quoted, current `tsc` emits double, and `prettier:format` globs only `**/*.ts` so it never reformats them. "Did the tree change" cannot tell that from real staleness. |
+| The compile was not forced | `tsc --build` skips when outputs are newer than inputs, and a skipped compile is indistinguishable from a successful one. This is how five packages came to hold compiled output that had never matched their source. |
+| `core-strategy`'s suite failed | Flaky by construction — see finding 5 above. It retries now. |
+| Five packages' tests "failed" | They declare a `ts-mocha` test script without listing `ts-mocha` in devDependencies, so their suites have never been runnable. A missing runner is detected by looking for the binary and reported as a **skip** — never as a pass. |
+| `simple-ai-client` could not compile | It cannot be installed at all: ~20 `github:` dependencies, each spawning a nested install, recursively. Its `node_modules` is symlinked to the renderer's and it falls back to the renderer's tsc and prettier. |
+
+Staleness is now tested for directly: a compiled file still containing
+TypeScript's private-field WeakMap helpers was built before the conversion,
+whatever its formatting says. The checks also restore the checkout when they
+finish, so `npm publish` packs what the commit and the tag hold rather than the
+output of the check that just ran.
+
+#### Verification after publishing
+
+The docs' per-wave `pnpm update '@civ-clone/*'` cannot run: pnpm wants store v11
+while `web-renderer/node_modules` is linked from v10, so it demands a full
+reinstall — which re-resolves every `^0.1.0` range and can move the ~263
+packages this stage never touched, shifting the RNG draw sequence and with it
+the conformance checksums.
+
+So the per-package gate *is* the per-wave check, and the end-to-end check is one
+`pnpm install` after the last wave, followed by the conformance suite run
+against the genuinely published artifacts. If the checksums move, report which
+packages changed version and why rather than quietly regenerating the fixture.
 
 ---
 
