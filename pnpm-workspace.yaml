@@ -1,0 +1,31 @@
+publicHoistPattern:
+  - '*@civ-clone/*'
+
+# Restored to match the overrides recorded in pnpm-lock.yaml. pnpm 11 reads
+# `overrides` from here; without them the lockfile and the config disagree and
+# a frozen install refuses to proceed.
+overrides:
+  semver: 7.7.3
+  detect-libc: 2.1.2
+  minipass: 5.0.0
+
+# 22 of the @civ-clone packages are declared as `github:civ-clone/<name>` and
+# several depend on each other that way, so they appear as git-resolved
+# subdependencies. pnpm 11 blocks those by default (ERR_PNPM_EXOTIC_SUBDEP);
+# pnpm 10, which built the previous node_modules, did not.
+blockExoticSubdeps: false
+
+# pnpm 11 wrote this block with placeholder values on first install. esbuild
+# needs its postinstall to fetch a platform binary; canvas cannot build here at
+# all (it wants pixman and friends) and nothing in this project uses it.
+allowBuilds:
+  '@parcel/watcher': false
+  canvas: false
+  core-js: false
+  esbuild: true
+
+# pnpm 11 defaults to refusing versions published very recently as a
+# supply-chain measure. That is a sensible default and a problem here: this
+# project's own 62 packages were published minutes ago, and resolution silently
+# picked the previous version instead.
+minimumReleaseAge: 0

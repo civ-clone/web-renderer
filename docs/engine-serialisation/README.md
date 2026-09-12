@@ -45,7 +45,7 @@ eight others against the goal of keeping every mechanic tweakable.
 | Stage | Status | Notes |
 | ----- | ------ | ----- |
 | 0 Foundations | **Done** | `web-renderer/tools/` — `civ`, the codemod, the Stage 1 driver, the conformance suite and the hydration spike. See [`../../tools/README.md`](../../tools/README.md). |
-| 1 `#private` → `private` | **Converted and verified, awaiting publish** | All 62 packages committed on `master` in their own checkouts; 69 commits. Engine state checksums unchanged, generic hydration proven, no shadowed private fields, no stale compiled output. All twelve waves pass `civ publish --wave N --dry-run`. Nothing pushed, nothing published. |
+| 1 `#private` → `private` | **Done** | All 62 packages published and pushed across twelve waves. Verified end to end: `web-renderer` reinstalled from the registry resolves all 62 at their new versions, and the conformance checksums are unchanged against the published artifacts. |
 | 2–7 | Not started | |
 
 The renderer plan follows once `05` is agreed; it consumes Stage 4's `toState()`

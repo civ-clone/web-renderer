@@ -212,8 +212,9 @@ Regenerate with `civ audit` rather than trusting this list.
 
 - [x] `grep -Rn "^\s*#[a-zA-Z]" ~/Code/civ-clone/*/[A-Z]*.ts` finds nothing
       outside `tests/` fixtures
-- [ ] All 62 published; `pnpm update` resolves cleanly — **not done; see
-      "Before publishing" below**
+- [x] All 62 published; a clean reinstall resolves all 62 at their new
+      versions and the conformance checksums are unchanged against the
+      published artifacts
 - [x] Conformance suite passes with unchanged checksums at turns 1, 10 and 50
 - [x] `civ check-dts` reports no consumer-visible break beyond added `private`
       and `protected` members
@@ -348,16 +349,36 @@ output of the check that just ran.
 
 #### Verification after publishing
 
-The docs' per-wave `pnpm update '@civ-clone/*'` cannot run: pnpm wants store v11
-while `web-renderer/node_modules` is linked from v10, so it demands a full
-reinstall — which re-resolves every `^0.1.0` range and can move the ~263
-packages this stage never touched, shifting the RNG draw sequence and with it
-the conformance checksums.
+The per-package gate *is* the per-wave check. The end-to-end check was one
+`pnpm install` after the last wave, then the conformance suite against the
+genuinely published artifacts: all 62 resolve at their new versions, **zero**
+drift in the 263 packages this stage never touched, and the checksums are
+unchanged.
 
-So the per-package gate *is* the per-wave check, and the end-to-end check is one
-`pnpm install` after the last wave, followed by the conformance suite run
-against the genuinely published artifacts. If the checksums move, report which
-packages changed version and why rather than quietly regenerating the fixture.
+Getting that install to happen took four corrections, all from pnpm 10 → 11.
+Worth recording, because three of them fail *silently* or misleadingly:
+
+| Symptom | Cause |
+| ------- | ----- |
+| `ERR_PNPM_UNEXPECTED_STORE`, then a purge of `node_modules` that aborted half-way and left it empty | The tree was linked from store v10; pnpm 11 wants v11 and requires a full reinstall. It purges before it checks everything else, so a later failure leaves nothing installed. |
+| `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` on `overrides` | The lockfile recorded `semver`/`detect-libc`/`minipass` pins that no current config declared. pnpm 11 reads `overrides` from `pnpm-workspace.yaml`; they are restored there. |
+| `ERR_PNPM_EXOTIC_SUBDEP` | 22 of these packages are `github:`-declared and several depend on each other that way, so they appear as git-resolved subdependencies. pnpm 11 blocks those by default; pnpm 10 did not. `blockExoticSubdeps: false`. |
+| **Resolution silently picked the previous version of all 62** | pnpm 11 refuses versions published very recently as a supply-chain measure. Ours were minutes old. No warning, no error — `core-registry@0.1.2` was on the registry and the install quietly chose `0.1.1`. Clearing every cache and deleting both lockfiles changed nothing; `minimumReleaseAge: 0` fixed it instantly. |
+
+That last one is the dangerous one: without noticing it, the "verified against
+published artifacts" run would have tested the *old* code and passed, proving
+nothing. The check that caught it was comparing each installed version against
+the version in its checkout — 62/62 — rather than trusting that an install of
+`^0.1.0` gets the newest thing on the registry.
+
+Two smaller things the clean reinstall exposed, both pre-existing:
+
+- `buildPluginList.js` requires `glob`, which was never a declared dependency —
+  it had been resolving through hoisting. Now in `devDependencies`.
+- `npm view` and the registry's package document are served from a cache that
+  lagged minutes behind each publish, so three packages looked unpublished when
+  they were not. The versioned endpoint `/<pkg>/<version>` is the least stale
+  answer; the publish conflict is the only definitive one.
 
 ---
 
