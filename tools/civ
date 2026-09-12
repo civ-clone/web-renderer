@@ -30,9 +30,14 @@ const USAGE = `civ <command> [options]
 
   watch [package...]           Run sync on change. Pair with \`npm run watch\`.
 
-  publish --wave N [--stage N] [--dry-run]
+  publish --wave N [--stage N] [--dry-run] [--otp CODE]
                                Verify, version, publish and push a wave.
-                               Refuses a partial cycle group.
+                               Refuses a partial cycle group. Safe to re-run: a
+                               version already bumped is not bumped again, and a
+                               version already on the registry is not republished.
+                               --otp passes a 2FA code, which covers one publish
+                               before its window closes - use an automation token
+                               for a whole wave.
 
   collisions                   Find classes that declare a private field also
                                declared by an ancestor. Legal while both sides

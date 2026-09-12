@@ -211,22 +211,55 @@ const verify = (name, skipped = [], notes = []) => {
   return problems;
 };
 
-const release = (name, resolution) => {
+const localVersion = (dir) =>
+  JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).version;
+
+// `npm version patch` commits and tags. If a later step fails — an OTP prompt,
+// a dropped connection — a retry must not bump again: that would skip a version
+// number and leave the previous tag pointing at something never published.
+// The tag npm just wrote is the record that the bump has happened.
+const alreadyBumped = (dir) =>
+  git(dir, 'tag', '--points-at', 'HEAD')
+    .split('\n')
+    .filter(Boolean)
+    .includes(`v${localVersion(dir)}`);
+
+const onRegistry = (name, version) => {
+  try {
+    return (
+      JSON.parse(
+        execFileSync(
+          'npm',
+          ['view', `@civ-clone/${name}`, 'versions', '--json'],
+          { encoding: 'utf8', stdio: 'pipe' }
+        )
+      ) || []
+    ).includes(version);
+  } catch (e) {
+    return false;
+  }
+};
+
+const release = (name, resolution, otp) => {
   const dir = checkoutPath(name);
 
-  npm(dir, 'version', 'patch');
+  if (!alreadyBumped(dir)) {
+    npm(dir, 'version', 'patch');
+  }
+
+  const version = localVersion(dir);
 
   // The 22 GitHub-resolved packages are consumed straight from the default
   // branch, so pushing is the publish. Attempting `npm publish` on them would
   // fail on a name that was never registered.
-  if (resolution !== 'github') {
-    npm(dir, 'publish');
+  if (resolution !== 'github' && !onRegistry(name, version)) {
+    npm(dir, 'publish', ...(otp ? [`--otp=${otp}`] : []));
   }
 
   git(dir, 'push');
   git(dir, 'push', '--tags');
 
-  return JSON.parse(fs.readFileSync(dir + '/package.json', 'utf8')).version;
+  return version;
 };
 
 const run = (args) => {
@@ -241,6 +274,8 @@ const run = (args) => {
   const stageIndex = args.indexOf('--stage');
   const stage = stageIndex === -1 ? 1 : Number(args[stageIndex + 1]);
   const dryRun = args.includes('--dry-run');
+  const otpIndex = args.indexOf('--otp');
+  const otp = otpIndex === -1 ? null : args[otpIndex + 1];
   const packages = Object.entries(manifest.packages)
     .filter(
       ([, details]) => details.wave === wave && details.stages.includes(stage)
@@ -302,18 +337,49 @@ const run = (args) => {
   }
 
   if (dryRun) {
-    console.log('\n--dry-run: would bump and publish');
-    packages.forEach((entry) =>
+    console.log('\n--dry-run: what a real run would do');
+    packages.forEach((entry) => {
+      // The live checkout, not the manifest: a previous attempt may have
+      // already bumped, and reporting the recorded version would say a package
+      // is about to move to a version it is already on.
+      const dir = checkoutPath(entry.name);
+      const version = localVersion(dir);
+      const bumped = alreadyBumped(dir);
+      const published =
+        entry.resolution !== 'github' && onRegistry(entry.name, version);
+
       console.log(
-        `  ${entry.name.padEnd(42)} ${entry.version} → patch  (${entry.resolution === 'github' ? 'git push only' : 'npm publish'})`
-      )
-    );
+        `  ${entry.name.padEnd(42)} ${
+          bumped ? `${version} already bumped` : `${version} → patch`
+        }, ${
+          published
+            ? 'already on the registry'
+            : entry.resolution === 'github'
+              ? 'git push only'
+              : 'npm publish'
+        }`
+      );
+    });
 
     return;
   }
 
+  const npmPackages = packages.filter(
+    (entry) => entry.resolution !== 'github'
+  ).length;
+
+  // An npm one-time password is a 30-second TOTP window. It cannot cover a wave
+  // of twenty publishes, so say so rather than failing halfway through.
+  if (npmPackages > 1 && otp) {
+    console.log(
+      `\nnote: one OTP for ${npmPackages} npm publishes will expire part-way. An\n` +
+        '      automation token (npm token create) or 2FA set to authorisation-only\n' +
+        '      is what lets a wave run unattended.\n'
+    );
+  }
+
   packages.forEach((entry) => {
-    const version = release(entry.name, entry.resolution);
+    const version = release(entry.name, entry.resolution, otp);
 
     console.log(`  ${entry.name.padEnd(42)} published ${version}`);
   });
