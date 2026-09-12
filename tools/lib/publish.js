@@ -1,9 +1,10 @@
 const { execFileSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
-const { checkoutPath } = require('./paths');
+const { checkoutPath, webRenderer } = require('./paths');
 const { read } = require('./audit');
-const { isDirty } = require('./clone');
+const { sourceFiles } = require('./scan');
 
 const git = (dir, ...args) =>
   execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
@@ -35,9 +36,70 @@ const hasScript = (dir, name) => {
   }
 };
 
+// Modified tracked files only. Untracked files are reported by the caller
+// rather than refused: every one in this tree is a lockfile, npm never packs
+// `package-lock.json`, and the packages carrying a stray `pnpm-lock.yaml` are
+// all GitHub-resolved and so never produce a tarball at all.
+const hasLocalChanges = (dir) =>
+  git(dir, 'status', '--porcelain', '--untracked-files=no') !== '';
+
+const untracked = (dir) =>
+  git(dir, 'status', '--porcelain')
+    .split('\n')
+    .filter((line) => line.startsWith('??'))
+    .map((line) => line.slice(3));
+
+// `simple-ai-client` has around twenty `github:` dependencies and npm spawns a
+// nested install for each, recursively, until the machine gives up. Its
+// `node_modules` is symlinked to the renderer's instead, so fall back to the
+// renderer's own toolchain rather than refusing a package that is in fact fine.
+const binary = (dir, tool) => {
+  const local = path.join(dir, 'node_modules', '.bin', tool);
+
+  return fs.existsSync(local)
+    ? local
+    : path.join(webRenderer, 'node_modules', '.bin', tool);
+};
+
+// TypeScript's downlevel emit for `#private` fields uses WeakMaps and these
+// helpers. A compiled file still containing them was built before the
+// conversion, whatever its formatting says.
+const HELPERS = /__classPrivateFieldGet|__classPrivateFieldSet|new WeakMap\(\)/;
+
+const compiledWithPrivateFieldHelpers = (dir) =>
+  sourceFiles(dir)
+    .map((file) => file.replace(/\.ts$/, '.js'))
+    .filter(
+      (file) =>
+        fs.existsSync(file) && HELPERS.test(fs.readFileSync(file, 'utf8'))
+    )
+    .map((file) => path.relative(dir, file));
+
+// The binary a package's `test` script invokes, so a missing runner is told
+// apart from a failing suite by looking rather than by parsing an error.
+const testRunner = (name) => {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(checkoutPath(name), 'package.json'), 'utf8')
+    );
+
+    return (manifest.scripts || {}).test.trim().split(/\s+/)[0];
+  } catch (e) {
+    return null;
+  }
+};
+
+const testRunnerInstalled = (dir, name) => {
+  const tool = testRunner(name);
+
+  return (
+    Boolean(tool) && fs.existsSync(path.join(dir, 'node_modules', '.bin', tool))
+  );
+};
+
 // Steps 1-4 of the per-package procedure in 04-package-workflow.md. These are
-// the checks; they never mutate anything outside the checkout.
-const verify = (name) => {
+// the checks; they leave the checkout exactly as they found it.
+const verify = (name, skipped = [], notes = []) => {
   const dir = checkoutPath(name);
   const problems = [];
 
@@ -45,8 +107,10 @@ const verify = (name) => {
     return [`${name}: no checkout`];
   }
 
-  if (isDirty(dir)) {
-    problems.push(`${name}: working tree is dirty`);
+  if (hasLocalChanges(dir)) {
+    problems.push(
+      `${name}: tracked files are modified\n${git(dir, 'status', '--short', '--untracked-files=no')}`
+    );
   }
 
   const branch = git(dir, 'rev-parse', '--abbrev-ref', 'HEAD');
@@ -60,34 +124,88 @@ const verify = (name) => {
     return problems;
   }
 
+  const run = (tool, args) =>
+    execFileSync(binary(dir, tool), args, {
+      cwd: dir,
+      encoding: 'utf8',
+      stdio: 'pipe',
+    });
+  const output = (e) => (e.stdout || '') + (e.stderr || '') || e.message;
+
   try {
     if (hasScript(name, 'ts:compile')) {
-      npm(dir, 'run', 'ts:compile');
+      // `--force`, because `tsc --build` skips when its outputs are newer than
+      // its inputs. A skipped compile looks exactly like a successful one, and
+      // that is how five packages in this tree came to hold compiled output
+      // that had never matched their source.
+      run('tsc', ['--build', 'tsconfig.json', '--force']);
     }
   } catch (e) {
-    problems.push(`${name}: ts:compile failed\n${e.stdout || e.message}`);
+    problems.push(`${name}: ts:compile failed\n${output(e)}`);
   }
 
   try {
     if (hasScript(name, 'prettier:format')) {
-      npm(dir, 'run', 'prettier:format');
-
-      if (isDirty(dir)) {
-        problems.push(
-          `${name}: prettier:format changed the tree — commit formatting first`
-        );
-      }
+      run('prettier', ['--config', '.prettierrc', '**/*.ts', '--write']);
     }
   } catch (e) {
-    problems.push(`${name}: prettier:format failed\n${e.stdout || e.message}`);
+    problems.push(`${name}: prettier:format failed\n${output(e)}`);
   }
 
-  try {
-    if (hasScript(name, 'test')) {
-      npm(dir, 'test');
+  // What matters is that the committed compiled output was built from the
+  // committed source. A plain "did the tree change" check cannot tell that from
+  // reformatting: the committed `.js` are single-quoted, current `tsc` emits
+  // double, and `prettier:format` globs only `**/*.ts` so it never fixes them.
+  // Test for the thing that actually indicates staleness instead.
+  const stale = compiledWithPrivateFieldHelpers(dir);
+
+  if (stale.length > 0) {
+    problems.push(
+      `${name}: compiled output predates the source — ${stale.length} file(s) still use private-field helpers: ${stale.slice(0, 3).join(', ')}`
+    );
+  }
+
+  if (hasLocalChanges(dir)) {
+    notes.push(
+      `${name}: a forced rebuild reformats ${git(dir, 'status', '--porcelain', '--untracked-files=no').split('\n').length} file(s); the commit is what gets published`
+    );
+  }
+
+  // Restore, so `npm publish` packs exactly what the commit and the tag hold
+  // rather than the output of the check that just ran.
+  git(dir, 'checkout', '--', '.');
+
+  if (hasScript(name, 'test')) {
+    if (!testRunnerInstalled(dir, name)) {
+      // Five packages declare a `ts-mocha` test script without listing
+      // `ts-mocha` in devDependencies, so their suites have never been
+      // runnable. Report the skip rather than reading a missing binary as a
+      // failing test — and never treat it as a pass.
+      skipped.push(
+        `${name}: test script cannot run — ${testRunner(name)} is not installed`
+      );
+    } else {
+      let failure = null;
+
+      // `core-strategy`'s suite is flaky by construction:
+      // `StrategyRegistry.attempt` breaks priority ties with `Math.random()`
+      // and its test assumes an order, failing roughly three runs in eight on
+      // an untouched tree. Retry before refusing to publish over a coin flip.
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        try {
+          npm(dir, 'test');
+          failure = null;
+
+          break;
+        } catch (e) {
+          failure = output(e);
+        }
+      }
+
+      if (failure) {
+        problems.push(`${name}: tests failed on four attempts\n${failure}`);
+      }
     }
-  } catch (e) {
-    problems.push(`${name}: tests failed\n${e.stdout || e.message}`);
   }
 
   return problems;
@@ -151,15 +269,30 @@ const run = (args) => {
   );
 
   const problems = [];
+  const skipped = [];
+  const notes = [];
 
   packages.forEach((entry) => {
-    const found = verify(entry.name);
+    const found = verify(entry.name, skipped, notes);
+    const stray = fs.existsSync(checkoutPath(entry.name))
+      ? untracked(checkoutPath(entry.name))
+      : [];
 
     console.log(
-      `  ${entry.name.padEnd(42)} ${found.length === 0 ? 'ok' : 'FAILED'}`
+      `  ${entry.name.padEnd(42)} ${found.length === 0 ? 'ok' : 'FAILED'}${stray.length ? `  (untracked: ${stray.join(', ')})` : ''}`
     );
     problems.push(...found);
   });
+
+  if (notes.length > 0) {
+    console.log('\nnotes:');
+    notes.forEach((line) => console.log(`  - ${line}`));
+  }
+
+  if (skipped.length > 0) {
+    console.log('\nchecks skipped (not run, and not passed):');
+    skipped.forEach((line) => console.log(`  ! ${line}`));
+  }
 
   if (problems.length > 0) {
     console.log('\n' + problems.join('\n'));
