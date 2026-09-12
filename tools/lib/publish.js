@@ -224,21 +224,28 @@ const alreadyBumped = (dir) =>
     .filter(Boolean)
     .includes(`v${localVersion(dir)}`);
 
+// `npm view` and the registry's package document are both served from a cache
+// that can lag minutes behind a publish, so this is a hint and never proof.
+// Asking for the exact version rather than the version list is the least stale
+// of the available answers.
 const onRegistry = (name, version) => {
   try {
     return (
-      JSON.parse(
-        execFileSync(
-          'npm',
-          ['view', `@civ-clone/${name}`, 'versions', '--json'],
-          { encoding: 'utf8', stdio: 'pipe' }
-        )
-      ) || []
-    ).includes(version);
+      execFileSync(
+        'npm',
+        ['view', `@civ-clone/${name}@${version}`, 'version'],
+        { encoding: 'utf8', stdio: 'pipe' }
+      ).trim() === version
+    );
   } catch (e) {
     return false;
   }
 };
+
+// Which is why the conflict itself has to be read as success: the check above
+// can say a version is absent when it is already published, and letting that
+// abort a wave of twenty would leave the wave half done.
+const ALREADY_PUBLISHED = /cannot publish over|EPUBLISHCONFLICT/i;
 
 const release = (name, resolution, otp) => {
   const dir = checkoutPath(name);
@@ -253,7 +260,13 @@ const release = (name, resolution, otp) => {
   // branch, so pushing is the publish. Attempting `npm publish` on them would
   // fail on a name that was never registered.
   if (resolution !== 'github' && !onRegistry(name, version)) {
-    npm(dir, 'publish', ...(otp ? [`--otp=${otp}`] : []));
+    try {
+      npm(dir, 'publish', ...(otp ? [`--otp=${otp}`] : []));
+    } catch (e) {
+      if (!ALREADY_PUBLISHED.test((e.stdout || '') + (e.stderr || ''))) {
+        throw e;
+      }
+    }
   }
 
   git(dir, 'push');
