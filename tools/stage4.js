@@ -145,6 +145,24 @@ const process1 = (name, { commit = false } = {}) => {
   }
 
   const dependency = requireMechanism(dir);
+
+  const format = () =>
+    run(dir, 'prettier', ['--config', '.prettierrc', '**/*.ts', '--write']);
+
+  // Format, compile, format — the order matters in both directions. The
+  // trailing pass is for the generated `.d.ts`, whose committed copies are
+  // prettier-formatted. The leading pass is for the emitted `.js` and its map:
+  // ts-morph writes `static readonly transient = ['_a', '_b', '_c'];` on one
+  // line, prettier wraps it past 80 columns, and compiling in between produced
+  // a `World.js` holding the one-line form against a `World.ts` holding the
+  // wrapped one. Harmless — same array — and exactly the drift that survives
+  // every gate, which is why `lib/procedure.js` was changed the same way.
+  const beforeFailure = format();
+
+  if (beforeFailure) {
+    return [`${name}: prettier failed\n${beforeFailure}`];
+  }
+
   const config = mappedConfig(dir);
   const failure = run(dir, 'tsc', ['--build', config, '--force']);
 
@@ -154,12 +172,7 @@ const process1 = (name, { commit = false } = {}) => {
     return [`${name}: ts:compile failed\n${failure}`];
   }
 
-  const formatFailure = run(dir, 'prettier', [
-    '--config',
-    '.prettierrc',
-    '**/*.ts',
-    '--write',
-  ]);
+  const formatFailure = format();
 
   if (formatFailure) {
     return [`${name}: prettier failed\n${formatFailure}`];
