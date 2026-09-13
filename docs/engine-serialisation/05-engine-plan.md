@@ -709,15 +709,35 @@ The right fix is for `busy` to serialise as a rule identity, which needs the
 named rules from Stage 6. Either pull that part of Stage 6 forward, or accept
 the bytes and fix it there.
 
-### Before starting
+### Before starting: the two failing suites, and why they are harder than they look
 
-Two test suites fail for the reason Stage 3 just made fixable, and both are on
-`civ publish`'s known-failing list so they will not block anything until someone
-looks: `civ1-city` (8 failures) and `civ1-city-improvement` (2–3, varying).
-Both are shared registry state leaking between tests — a `beforeEach` reset
-problem that a per-test `Game` removes entirely. Fixing them first gives Stage 4
-real per-package coverage instead of a list of exemptions, and is the smallest
-possible demonstration that the `Game` context was worth building.
+`civ1-city` (8 failures) and `civ1-city-improvement` (2–3, varying) are on
+`civ publish`'s known-failing list. Both look like shared registry state that a
+per-test `Game` removes. An attempt got partway and is worth reading before the
+next one starts.
+
+**What is actually wrong.** `civ1-city`'s tests construct *some* registries and
+pass them to the rule factories positionally, leaving the rest to default to the
+module singletons — which are shared with every other test file in the process.
+`city:captured` failed with "Wrong number of player worlds exist for player" for
+exactly that reason: the player worlds came from whatever ran before it.
+
+**Why passing a `Game` for all of them is not sufficient.** Doing that removes
+the leakage and produces a *different* failure: the `Created` rules register but
+never fire — 7 rules in `game.rules`, a `City` constructed against that same
+registry, and `game.cities` still empty afterwards.
+
+The reason is that the tests depended on the split they were accidentally
+creating. Previously the rule factory's own `ruleRegistry` parameter defaulted
+to the singleton while `setUpCity` processed `Created` against the test's
+registry — two different registries, and the tests were written against that
+behaviour. Making them one, which is the correct thing, changes what the rules
+do.
+
+So this is not a mechanical fix. It needs the tests' intent re-established rule
+by rule. `tests/lib/setUpCity.ts` gaining a `game?: Game` option that supplies
+every registry is the right shape for it — that part was straightforward — but
+the assertions need revisiting alongside.
 
 ### Widening the checksum, carefully
 
