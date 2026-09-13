@@ -732,17 +732,24 @@ The right fix is for `busy` to serialise as a rule identity, which needs the
 named rules from Stage 6. Either pull that part of Stage 6 forward, or accept
 the bytes and fix it there.
 
-### Before starting: the two failing suites
+### The two failing suites, resolved
 
-`civ1-city` (8 failures) and `civ1-city-improvement` (2-3, varying) are on
-`civ publish`'s `KNOWN_FAILING_TESTS` list. Both fail for the same reason and
-the fix has a shape, established on `city:captured`.
+`civ1-city` (8 failures) and `civ1-city-improvement` (2-3, varying) sat on
+`civ publish`'s `KNOWN_FAILING_TESTS` list through Stages 1-3, described there
+as one problem: shared registry state between tests. They were **three**
+problems, and the list's single guess was wrong about the largest one. That is
+the lesson worth keeping: an entry on a known-failing list should name a cause
+someone has found, not a plausible one, because the guess outlives the defect
+and sends the next person down the wrong path. Both suites now pass — 29/29 and
+98/98, five consecutive runs each — and the list is empty.
 
-**The diagnosis.** These tests construct *some* registries and pass them to the
-rule factories positionally, leaving the rest to default to the module
-singletons — which are shared with every other test file in the process. So
-`city:captured` failed with "Wrong number of player worlds exist for player":
-the player worlds came from whatever ran before it.
+#### 1. Singleton registry state (the cause that was real)
+
+These tests construct *some* registries and pass them to the rule factories
+positionally, leaving the rest to default to the module singletons — which are
+shared with every other test file in the process. `city:captured` failed with
+"Wrong number of player worlds exist for player": the player worlds came from
+whatever ran before it.
 
 **The fix, in three parts.** Not a `Game` — that is the wrong tool here,
 because it changes which registry the rules and `setUpCity` each use and the
@@ -773,30 +780,110 @@ option and otherwise reaches for the singleton.
 The isolation is the easy half; the state the test never set up is the real
 work, and it differs per rule.
 
-That took `city:captured` from 8 suite failures to 5. The remaining five, in
-`cost.test.ts` and `process-yield.test.ts`, **need a decision rather than a
-pattern**, and it is a game-rules decision rather than a testing one.
+**A registry can carry a singleton inside it.** Threading a local
+`WorkedTileRegistry` through is not sufficient on its own, and this is the trap
+worth remembering:
 
-`cost.test.ts`'s three failures are a missing `PopulationSupportFood` yield,
-and the yield appears once `workedTileRegistry` is threaded into `cityCreated`
-so that worker assignment lands in the test's own registry. But that **breaks
-twelve currently-passing corruption tests in the same file**, because their
-expected values were established while worker assignment was going to the
-singleton — that is, while the city under test effectively had no workers
-assigned.
+```ts
+constructor(ruleRegistry: RuleRegistry = ruleRegistryInstance) { … }
+```
 
-So one of two things is true, and only someone who knows civ1's corruption
-numbers can say which:
+`new WorkedTileRegistry()` captures the singleton `RuleRegistry`, so
+`tileCanBeWorkedBy` processes `CanBeWorked` against a registry where the
+fixture never registered that rule. No rules match, and **`[].every(…)` is
+`true`** — so every tile reads as workable, including tiles already worked, and
+`register` throws "Tile 0, 0 is already worked!". `civ1-city-improvement`'s
+`created` and `grow` suites failed *in isolation* for this reason, which is how
+it was caught: cross-file pollution does not survive running one file alone.
+Always `new WorkedTileRegistry(ruleRegistry)`.
 
-- the corruption expectations are correct for a city with no assigned workers,
-  and the fixture should not assign any; or
-- they were silently wrong, and threading the registry through is the fix that
-  exposes it.
+#### 2. A duplicated dependency, giving two copies of one class
 
-`process-yield.test.ts`'s two failures are the same shape — "expected 3 to
-equal 2" on a unit count, where unit support depends on the same yields.
+`cost.test.ts`'s three failures had nothing to do with registries, and no
+amount of threading would have fixed them. `civ1-city` declared three
+dependencies as `github:` specs:
 
-Until that is settled, both suites stay on `KNOWN_FAILING_TESTS`.
+```json
+"@civ-clone/base-city-yield-population-support-food": "github:civ-clone/…",
+"@civ-clone/base-city-yield-unit-support-food":       "github:civ-clone/…",
+"@civ-clone/base-city-yield-unit-support-production": "github:civ-clone/…",
+```
+
+while `library-city` — which re-exports all three through its `Yields` barrel —
+depends on them by version range. pnpm honoured both specs, so the tree held
+two copies of each package: **same 0.1.1 content, two module instances, two
+distinct class objects.**
+
+`Rules/City/cost.ts` builds its yields from the npm copy; the tests compared
+them with `instanceof` against the copy re-exported through `../Yields`.
+Nothing matched. The symptoms did not look like a resolution problem at all:
+
+| symptom | actual cause |
+| --- | --- |
+| `Cannot read properties of undefined (reading 'value')` | `filter(y => y instanceof PopulationSupportFood)` matched nothing, so the destructured `[cityFood]` was `undefined` |
+| `expected -0 to equal -1` | the same filter matched nothing, and `reduce` over an empty array returned the `new Yield()` seed |
+| `expected 3 to equal 2` on a unit count | units were not disbanded, because the support cost the rule looked for was never recognised |
+
+**How to find this quickly.** Two checks, both cheap, and worth reaching for
+whenever an `instanceof` or `===` on a class fails against a value that is
+visibly the right shape:
+
+```sh
+# 1. Does the tree hold two copies of any @civ-clone package?
+ls node_modules/.pnpm | sed -E 's/@(https\+\+\+|[0-9]).*$//' | sort | uniq -d
+
+# 2. Are the two import paths the same class object?
+node -e "…" # or a throwaway test: expect(ViaBarrel === ViaPackage).to.be.true
+```
+
+The first printed exactly the three packages the failing assertions named.
+`web-renderer` has a single copy of each — which is why conformance,
+hydration and isolation were never affected, and why this was invisible until
+the per-package suites were run.
+
+**The rule:** a package must not declare a `github:` spec for anything a
+published dependency also ranges on. Pointing the three at `^0.1.0`, like every
+other dependency, leaves one copy and all 29 tests pass.
+
+#### 3. An undeclared random input
+
+`civ1-city-improvement`'s `build.test.ts` was flaky before any of this work,
+and flaky *in isolation* — a different set of tests failed on each run, which
+is why it was recorded as "2-3, varying". civ1-science's `Player/added` rule
+hands each new player up to three random starting advances:
+
+```ts
+randomNumberGenerator: () => number = () => Math.random()
+```
+
+Every `to.not.include` assertion in the file assumes a player who has
+discovered nothing, so each one was a coin toss on whether the player happened
+to start with the advance the test was about to add. Passing `() => 0` states
+that input. The convention already existed one repo over —
+`civ1-science/tests/Player.action.test.ts` passes `() => 0.5` — it had simply
+not been applied here.
+
+Note that a `Math.random` trace is the fast way to find this, but **print every
+call site, not the top few**: the first trace of this suite was dominated by
+`source-map`'s quicksort and mocha's `nanoid`, and the 73 engine calls that
+mattered were below the cut.
+
+#### On rewriting these tests
+
+The question was asked whether these suites test too much at once and should be
+rebuilt from narrow, mock-driven tests upward. Worth recording that all three
+causes above were **defects in the tests' declared inputs, not in their
+breadth** — and one was a defect in the package's dependencies that a narrower
+test would have hit just as hard. The suites are now green and stable, so
+nothing here forces a rewrite.
+
+What the exercise does argue for is the narrower principle: **a test should
+declare every input it depends on.** All three fixes are that principle applied
+— a registry instead of a singleton, a rule registry inside that registry, a
+fixed number instead of `Math.random`. `cost.test.ts` already does the mocking
+half well (`new YieldRule(new Priority(0), new Effect(() => new Trade(8)))`
+pins the trade its corruption expectations are built on), which is why those
+twelve tests were never the problem they appeared to be.
 
 ### Widening the checksum, carefully
 

@@ -8,13 +8,22 @@ const path = require('path');
 
 const { checkoutPath, webRenderer } = require('./paths');
 
-// Compile before formatting: `prettier:format` globs `**/*.ts`, which includes
-// the generated `.d.ts`, and the committed ones are prettier-formatted. The
-// reverse order leaves every declaration file reformatted in the diff.
+// Format, compile, format. The second pass is for the generated `.d.ts`:
+// `prettier:format` globs `**/*.ts`, which includes them, and the committed
+// ones are prettier-formatted, so skipping it leaves every declaration file
+// reformatted in the diff.
+//
+// The first pass is for the source maps. Compiling before formatting emits a
+// `.js.map` whose line and column numbers describe the *unformatted* source,
+// and then formatting rewrites that source out from under it. Stage 3 published
+// `registerRules.js.map` files in that state across 17 packages: the emitted
+// `.js` was identical, so nothing failed, and the maps simply pointed at the
+// wrong lines.
 //
 // `--force` because `tsc --build` skips when its outputs are newer than its
 // inputs, and a skipped compile is indistinguishable from a successful one.
 const SCRIPTS = [
+  ['prettier:format (sources)', ['run', 'prettier:format'], 'prettier:format'],
   ['ts:compile', ['run', 'ts:compile', '--', '--force']],
   ['prettier:format', ['run', 'prettier:format']],
   ['test', ['run', 'test']],
@@ -114,8 +123,11 @@ const binary = (dir, tool) => {
 };
 
 const runScripts = (dir, { retryTests = true } = {}) =>
-  SCRIPTS.map(([label, argv]) => {
-    if (!hasScript(dir, label)) {
+  // `script` defaults to `label`; they differ only where the same script runs
+  // twice, because `hasScript` looks the name up in `package.json` and a label
+  // that is not a script name silently reports 'no script' and skips the step.
+  SCRIPTS.map(([label, argv, script = label]) => {
+    if (!hasScript(dir, script)) {
       return { label, skipped: 'no script' };
     }
 

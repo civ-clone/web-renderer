@@ -34,7 +34,7 @@ not have, a version the registry does not have, or no upstream at all — and
 orders them from the live dependency graph. A package a stage introduces
 publishes before its dependents without anyone maintaining a list.
 
-### Three rules the tools encode, learned the hard way
+### Four rules the tools encode, learned the hard way
 
 **A tool that deliberately preserves a file must also keep it up to date.**
 `civ sync` excluded each package's `main` entrypoint from its stale-file
@@ -57,6 +57,17 @@ reason on every run, never silently skipped. `civ publish` keeps two explicit
 lists for this — see `KNOWN_FAILING_TESTS` and `KNOWN_UNINSTALLABLE` — and
 nothing goes on either without first confirming it fails identically at the
 commit before the change.
+
+**An entry on a known-failing list must name a cause someone found, not a
+plausible one.** `KNOWN_FAILING_TESTS` carried `civ1-city` and
+`civ1-city-improvement` through three stages as "shared registry state between
+tests, which Stage 3 per-Game registries make properly fixable". Two of the
+three actual causes were that. The third — the one behind five of the eight
+failures — was a package installed twice, so `instanceof` compared two copies
+of the same class; no amount of registry threading would have touched it. The
+guess read as a diagnosis and cost a detour. The list is now empty, and the
+causes are written up in
+[`../docs/engine-serialisation/05-engine-plan.md`](../docs/engine-serialisation/05-engine-plan.md#the-two-failing-suites-resolved).
 
 ## Stage 1
 

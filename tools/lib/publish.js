@@ -95,18 +95,13 @@ const KNOWN_UNINSTALLABLE = {
     'GitHub-resolved, so releasing it is a push and no tarball is built.',
 };
 
-const KNOWN_FAILING_TESTS = {
-  'civ1-city':
-    '8 failures, identical before and after the Stage 3 change (21 passing / ' +
-    '8 failing either side). Same shape as civ1-city-improvement: shared ' +
-    'registry state between tests, which Stage 3 per-Game registries make ' +
-    'properly fixable.',
-  'civ1-city-improvement':
-    'RNG-dependent build-availability assertions, and WorkedTileRegistry ' +
-    'singleton state leaking between tests. 6 failures before Stage 2, 2-3 ' +
-    'after, varying per run. Stage 3 per-Game registries make the second ' +
-    'properly fixable.',
-};
+// Empty, and worth keeping that way. `civ1-city` and `civ1-city-improvement`
+// sat here through Stages 1-3 as 'shared registry state between tests'. Two of
+// the three causes turned out to be that; the third was a duplicated dependency
+// producing two copies of one class, which no amount of registry threading
+// would have fixed. An entry here should name a cause someone has actually
+// found, not a guess at one, or it outlives the defect.
+const KNOWN_FAILING_TESTS = {};
 
 // The binary a package's `test` script invokes, so a missing runner is told
 // apart from a failing suite by looking rather than by parsing an error.

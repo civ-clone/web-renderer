@@ -414,6 +414,52 @@ publish gate reports untracked files rather than refusing on them: npm never
 packs `package-lock.json`, and the packages carrying a stray `pnpm-lock.yaml`
 are all GitHub-resolved, so no tarball is affected.
 
+### A `github:` spec beside a published range installs the package twice
+
+`civ1-city` declared three `base-city-yield-*` packages as
+`github:civ-clone/…` while `library-city`, which re-exports all three,
+depends on them by version range. pnpm satisfies both specs, so the tree held
+two copies of each — identical 0.1.1 content, two module instances, **two
+distinct class objects**. Every `instanceof` across that boundary was `false`,
+and the failures read as missing yields and wrong arithmetic rather than as a
+resolution problem. See
+[`05-engine-plan.md`](05-engine-plan.md#2-a-duplicated-dependency-giving-two-copies-of-one-class).
+
+One command finds it, and it is worth running whenever an `instanceof` fails
+against a value that is visibly the right shape:
+
+```sh
+ls node_modules/.pnpm | sed -E 's/@(https\+\+\+|[0-9]).*$//' | sort | uniq -d
+```
+
+`web-renderer`'s tree dedupes, which is why the conformance suite never saw
+this. **Per-package suites see a different dependency graph from the renderer's,
+and that difference is itself a source of failures.**
+
+### A stale lockfile pins transitive deps below the range
+
+`^0.1.0` resolves to whatever the lockfile already recorded. Both `civ1-city`
+and `civ1-city-improvement` had lockfiles predating Stage 2, so `core-game@0.1.1`
+was installed against `core-strategy@0.1.1` while it is written against
+`0.1.4` — surfacing as `TS2554: Expected 0 arguments, but got 1` *inside
+`node_modules`*, from a rebuild of code neither repo owns.
+
+`pnpm update` does not fix this: it updates direct dependencies and leaves
+transitive resolutions alone, ending with both 0.1.1 and 0.1.4 in the tree.
+`rm -rf node_modules pnpm-lock.yaml` and reinstall does. Back the lockfile up
+first — it is untracked, and it is not yours.
+
+### Compile after formatting, as well as before
+
+The per-package procedure now runs `prettier:format`, `ts:compile --force`,
+`prettier:format`. The trailing pass is for the generated `.d.ts`, whose
+committed copies are prettier-formatted. **The leading pass is for the source
+maps**: compiling first emits a `.js.map` describing the *unformatted* source,
+and formatting then rewrites that source out from under it. Stage 3 published
+17 `registerRules.js.map` files in that state. Nothing failed — the emitted
+`.js` is byte-identical either way — the maps simply pointed at the wrong
+lines, which is exactly the kind of defect that survives every gate.
+
 ## What this does not solve
 
 Being honest about the residual cost:
