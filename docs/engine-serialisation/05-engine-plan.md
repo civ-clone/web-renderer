@@ -773,6 +773,31 @@ option and otherwise reaches for the singleton.
 The isolation is the easy half; the state the test never set up is the real
 work, and it differs per rule.
 
+That took `city:captured` from 8 suite failures to 5. The remaining five, in
+`cost.test.ts` and `process-yield.test.ts`, **need a decision rather than a
+pattern**, and it is a game-rules decision rather than a testing one.
+
+`cost.test.ts`'s three failures are a missing `PopulationSupportFood` yield,
+and the yield appears once `workedTileRegistry` is threaded into `cityCreated`
+so that worker assignment lands in the test's own registry. But that **breaks
+twelve currently-passing corruption tests in the same file**, because their
+expected values were established while worker assignment was going to the
+singleton — that is, while the city under test effectively had no workers
+assigned.
+
+So one of two things is true, and only someone who knows civ1's corruption
+numbers can say which:
+
+- the corruption expectations are correct for a city with no assigned workers,
+  and the fixture should not assign any; or
+- they were silently wrong, and threading the registry through is the fix that
+  exposes it.
+
+`process-yield.test.ts`'s two failures are the same shape — "expected 3 to
+equal 2" on a unit count, where unit support depends on the same yields.
+
+Until that is settled, both suites stay on `KNOWN_FAILING_TESTS`.
+
 ### Widening the checksum, carefully
 
 The plan says to widen the conformance checksum to all non-transient fields.
