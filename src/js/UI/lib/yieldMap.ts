@@ -1,4 +1,4 @@
-import { City, Yield } from '../types';
+import { Yield } from '../types';
 import instanceOf from './instanceOf';
 
 export const knownGroupParents: string[] = [

@@ -4,7 +4,7 @@ import DataObserver from '../DataObserver';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { combinedYields } from './lib/playerYields';
-import { renderProgress, turnsLeft } from './lib/cityYields';
+import { turnsLeft } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

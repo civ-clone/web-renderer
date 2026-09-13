@@ -1,7 +1,6 @@
 import { Tile } from '../../types';
 import { Map } from '../Map';
 import { instance as localeProvider } from '../../LocaleProvider';
-import { t } from 'i18next';
 import { cityName } from '../lib/city';
 
 export class CityNames extends Map {

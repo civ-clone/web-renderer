@@ -1,6 +1,6 @@
-import { City as CityData, GameData, PlainObject, Player } from '../types';
+import { City as CityData, GameData, Player } from '../types';
 import { knownIcons } from '../lib/yieldMap';
-import { turnsLeft, turnsText, yieldData } from './lib/cityYields';
+import { turnsLeft, yieldData } from './lib/cityYields';
 import City from './City';
 import DataObserver from '../DataObserver';
 import Portal from './Portal';

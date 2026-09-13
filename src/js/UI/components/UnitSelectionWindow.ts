@@ -1,6 +1,6 @@
 import Transport from '../Transport';
 import Unit from './Unit';
-import { City as CityData, PlainObject, Unit as UnitData } from '../types';
+import { PlainObject, Unit as UnitData } from '../types';
 import Window from './Window';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';

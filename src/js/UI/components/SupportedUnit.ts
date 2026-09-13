@@ -1,11 +1,4 @@
-import {
-  City,
-  MilitaryUnhappiness,
-  Unit as UnitData,
-  UnitSupportFood,
-  UnitSupportProduction,
-  Yield,
-} from '../types';
+import { City, Unit as UnitData, Yield } from '../types';
 import { Element, s } from '@dom111/element';
 import Unit from './Unit';
 import { yieldImages } from './lib/cityYields';

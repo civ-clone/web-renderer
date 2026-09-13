@@ -1,10 +1,8 @@
-import { BuildItem, CityBuild } from '../types';
+import { CityBuild } from '../types';
 import { ActionWindowActions } from './ActionWindow';
 import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
-import { cityName } from './lib/city';
 import { getLabelForBuildable } from './lib/cityBuild';
-import { reduceKnownYield } from '../lib/yieldMap';
 import { t } from 'i18next';
 import { turnsLeft } from './lib/cityYields';
 

@@ -1,4 +1,4 @@
-import { EntityInstance, NeighbourDirection, Tile } from '../../types';
+import { EntityInstance, Tile } from '../../types';
 import TerrainAbstract from './TerrainAbstract';
 
 export class Terrain extends TerrainAbstract {

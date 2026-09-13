@@ -3,7 +3,6 @@ import { City as CityData } from '../../types';
 import { INotificationWindow } from '../NotificationWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
-import { cityName } from './city';
 import { t } from 'i18next';
 
 export const showCityAction = (

@@ -10,7 +10,7 @@ import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
 import Transport from '../Transport';
-import { getClosestAncestorMatching, h } from '../lib/html';
+import { getClosestAncestorMatching } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 declare global {

@@ -1,7 +1,7 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
-import { GameData, PlayerTreasury } from '../UI/types';
+import { GameData } from '../UI/types';
 import Notification from './Notification';
 import { ObjectMap } from '../UI/lib/reconstituteData';
 

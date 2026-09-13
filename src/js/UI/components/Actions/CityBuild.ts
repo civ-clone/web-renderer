@@ -4,7 +4,6 @@ import CityBuildSelectionWindow from '../CityBuildSelectionWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
-import { cityName } from '../lib/city';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
