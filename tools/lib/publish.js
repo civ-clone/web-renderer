@@ -799,4 +799,15 @@ const runPending = (manifest, args) => {
   }
 };
 
-module.exports = { defaultBranch, pending, run, verify };
+// `mappedConfig`/`cleanMappedConfig`/`binary` are exported for the stage
+// drivers. `stage3.js` predates this and carries its own copy; `stage4.js`
+// onwards should use these, so there are two rather than one per stage.
+module.exports = {
+  binary,
+  cleanMappedConfig,
+  defaultBranch,
+  mappedConfig,
+  pending,
+  run,
+  verify,
+};

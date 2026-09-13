@@ -18,13 +18,7 @@ const path = require('path');
 
 const { Project, Scope, SyntaxKind } = require('ts-morph');
 
-const scope = path.resolve(
-  __dirname,
-  '..',
-  '..',
-  'node_modules',
-  '@civ-clone'
-);
+const scope = path.resolve(__dirname, '..', '..', 'node_modules', '@civ-clone');
 
 // Anything a `Game` holds. Read from `core-game`'s own slots so the two cannot
 // drift — the same source the Stage 3 codemod used.
@@ -58,7 +52,32 @@ const gameTypes = () => {
 
 // Derived values, which must not be restored because restoring one restores a
 // stale answer. Matched by name because a cache has no distinguishing type.
-const CACHE_NAMES = /^_(.*Cache|cached.*|neighbours)$/;
+//
+// `_cache` needs the `?`: the first spelling of this pattern was
+// `_(.*Cache|cached.*|neighbours)`, which wants a character before a capital
+// `Cache` and so matched `_yieldCache` and `_valueCache` but not a bare
+// `_cache`. `core-game-year`'s `Year._cache` — a `Map<number, number>` filled
+// by `if (!this._cache.has(turn))` — was therefore classified as state, and a
+// restored memo of turn-to-year is wrong the moment the rules that computed it
+// differ.
+const CACHE_NAMES = /^_(.*cache|cached.*|neighbours)$/i;
+
+// Types the loading `Game` supplies that are *not* `DataObject`s, so they can
+// be neither saved as an entity reference nor rebuilt from one.
+//
+// This cannot come from the type alone, and the obvious generalisation is
+// wrong. `Generator` is a member of `GeneratorRegistry`, which is a `Game`
+// slot — but so is `City` a member of `CityRegistry`, and `CityGrowth._city`
+// must certainly be saved. The difference is that `City` is a `DataObject` and
+// `Generator` only `implements IGenerator`, so "member of a Game registry" is
+// not the test; "supplied by the Game and not itself saveable" is, and that is
+// a judgement per type rather than a rule.
+//
+// `Rule` descendants are deliberately absent. `Unit._busy` holds a `Busy` rule
+// and is equally unsaveable, but it is real state — a fortified unit must load
+// fortified — so it wants a rule *identity*, which is Stage 6's named rules.
+// Listing it here would silently drop it instead.
+const GAME_SUPPLIED = new Set(['Generator']);
 
 // A generator arrives as a bare function rather than a class.
 const FUNCTION_TYPE = /^\(\s*\)\s*=>\s*number$/;
@@ -106,7 +125,9 @@ const dataObjectDescendants = (scope) => {
         [
           ...fs
             .readFileSync(full, 'utf8')
-            .matchAll(/^export (?:abstract )?class (\w+)[\s\S]{0,80}?extends\s+(\w+)/gm),
+            .matchAll(
+              /^export (?:abstract )?class (\w+)[\s\S]{0,80}?extends\s+(\w+)/gm
+            ),
         ].forEach(([, name, base]) => bases.set(name, base));
       });
     };
@@ -133,6 +154,7 @@ const dataObjectDescendants = (scope) => {
 
 const isTransient = (name, type, types) =>
   types.has(type) ||
+  GAME_SUPPLIED.has(type) ||
   /Registry$/.test(type) ||
   /^I\w+Registry$/.test(type) ||
   FUNCTION_TYPE.test(type) ||
@@ -188,7 +210,9 @@ const apply = (dir, { dryRun = false } = {}) => {
       }
 
       if (declaration.getStaticProperty('transient')) {
-        report.skipped.push(`${relative}: ${declaration.getName()} already declares`);
+        report.skipped.push(
+          `${relative}: ${declaration.getName()} already declares`
+        );
 
         return;
       }
@@ -217,7 +241,9 @@ const apply = (dir, { dryRun = false } = {}) => {
           .trim();
         const initializer = property.getInitializer();
         const constructed =
-          !annotated && initializer && initializer.getKind() === SyntaxKind.NewExpression
+          !annotated &&
+          initializer &&
+          initializer.getKind() === SyntaxKind.NewExpression
             ? initializer.getExpression().getText()
             : '';
         const type = annotated || constructed;
@@ -272,7 +298,9 @@ const main = () => {
     const report = apply(resolved, { dryRun });
 
     console.log(
-      `${path.basename(resolved).padEnd(26)} ${String(report.classes.length).padStart(2)} class(es)${dryRun ? ' (dry run)' : ''}`
+      `${path.basename(resolved).padEnd(26)} ${String(
+        report.classes.length
+      ).padStart(2)} class(es)${dryRun ? ' (dry run)' : ''}`
     );
 
     if (process.env.VERBOSE) {
