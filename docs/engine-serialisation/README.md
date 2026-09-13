@@ -47,7 +47,8 @@ eight others against the goal of keeping every mechanic tweakable.
 | 0 Foundations | **Done** | `web-renderer/tools/` — `civ`, the codemod, the Stage 1 driver, the conformance suite and the hydration spike. See [`../../tools/README.md`](../../tools/README.md). |
 | 1 `#private` → `private` | **Done** | All 62 packages published and pushed across twelve waves. Verified end to end: `web-renderer` reinstalled from the registry resolves all 62 at their new versions, and the conformance checksums are unchanged against the published artifacts. |
 | 2 Seeded, injectable RNG | **Done** | New `core-random` package plus 18 converted; all published. The engine no longer reaches `Math.random` — proven at runtime, not by grep: the conformance suite counts calls to it and reads 0. Checksums unchanged. |
-| 3–7 | Not started | |
+| 3 `Game` context | **In progress** | `core-game` built and proven: two `Game`s in one process share nothing, and `defaultGame` adopts the existing singletons so packages can migrate one at a time. The 17 `registerRules.ts` migrations are the remaining bulk. Not published. |
+| 4–7 | Not started | |
 
 The renderer plan follows once `05` is agreed; it consumes Stage 4's `toState()`
 and Stage 5's save format, so it is not independent of these.
