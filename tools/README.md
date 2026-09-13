@@ -54,6 +54,29 @@ early, which skips the compile and test checks. A package converted in a run
 that later aborted therefore never got verified. `verify-stage1.js` and
 `civ publish --dry-run` are what caught those.
 
+## Never symlink a scope directory into a checkout
+
+`simple-ai-client` cannot be installed — around twenty `github:` dependencies,
+each of which npm resolves with a nested install, recursively, until the
+machine gives up. The tempting workaround is to point its `node_modules`
+at the renderer's:
+
+```
+ln -s ../../web-renderer/node_modules/@civ-clone node_modules/@civ-clone   # DON'T
+```
+
+npm treats that as its own directory and prunes through it. A killed
+`npm install` in that checkout deleted 106 packages from **web-renderer's**
+`node_modules`, including three direct dependencies, and pnpm would not repair
+it — `pnpm install` reports "Already up to date" because its state file says
+so and it does not check that the hoisted links still exist. Recovery is
+`rm -rf node_modules && pnpm install`.
+
+`civ sync --into` copies rather than links precisely so this cannot happen.
+Where a package's own toolchain is unavailable, the stage drivers and the
+publish gate fall back to the renderer's `tsc` and `prettier` by path, which
+needs no symlink at all.
+
 ## Tests
 
 | Command | What it proves |
