@@ -732,35 +732,46 @@ The right fix is for `busy` to serialise as a rule identity, which needs the
 named rules from Stage 6. Either pull that part of Stage 6 forward, or accept
 the bytes and fix it there.
 
-### Before starting: the two failing suites, and why they are harder than they look
+### Before starting: the two failing suites
 
-`civ1-city` (8 failures) and `civ1-city-improvement` (2–3, varying) are on
-`civ publish`'s known-failing list. Both look like shared registry state that a
-per-test `Game` removes. An attempt got partway and is worth reading before the
-next one starts.
+`civ1-city` (8 failures) and `civ1-city-improvement` (2-3, varying) are on
+`civ publish`'s `KNOWN_FAILING_TESTS` list. Both fail for the same reason and
+the fix has a shape, established on `city:captured`.
 
-**What is actually wrong.** `civ1-city`'s tests construct *some* registries and
-pass them to the rule factories positionally, leaving the rest to default to the
-module singletons — which are shared with every other test file in the process.
-`city:captured` failed with "Wrong number of player worlds exist for player" for
-exactly that reason: the player worlds came from whatever ran before it.
+**The diagnosis.** These tests construct *some* registries and pass them to the
+rule factories positionally, leaving the rest to default to the module
+singletons — which are shared with every other test file in the process. So
+`city:captured` failed with "Wrong number of player worlds exist for player":
+the player worlds came from whatever ran before it.
 
-**Why passing a `Game` for all of them is not sufficient.** Doing that removes
-the leakage and produces a *different* failure: the `Created` rules register but
-never fire — 7 rules in `game.rules`, a `City` constructed against that same
-registry, and `game.cities` still empty afterwards.
+**The fix, in three parts.** Not a `Game` — that is the wrong tool here,
+because it changes which registry the rules and `setUpCity` each use and the
+assertions depend on that. Instead:
 
-The reason is that the tests depended on the split they were accidentally
-creating. Previously the rule factory's own `ruleRegistry` parameter defaulted
-to the singleton while `setUpCity` processed `Created` against the test's
-registry — two different registries, and the tests were written against that
-behaviour. Making them one, which is the correct thing, changes what the rules
-do.
+1. **Construct every registry the factories take**, including the ones that
+   were defaulting — `playerWorldRegistry`, `workedTileRegistry`.
+2. **Pass them positionally, using `undefined` for the slots the test does not
+   care about** (`engine`, `availableBuildItemsRegistry`), so the later
+   arguments line up. Verbose, and it keeps each test's existing shape.
+3. **Set up the state the rules actually require.** This is the part that is
+   not mechanical. `captured` looks up a `PlayerWorld` for the capturing
+   player, and previously found one only because another test file had leaked
+   it into the singleton. The test now registers it:
 
-So this is not a mechanical fix. It needs the tests' intent re-established rule
-by rule. `tests/lib/setUpCity.ts` gaining a `game?: Game` option that supplies
-every registry is the right shape for it — that part was straightforward — but
-the assertions need revisiting alongside.
+```ts
+const enemy = new Player(),
+  world = city.tile().map(),
+  enemyWorld = new PlayerWorld(enemy, world, ruleRegistry);
+
+playerWorldRegistry.register(enemyWorld);
+```
+
+Also pass the new registries through to `setUpCity`, which takes each as an
+option and otherwise reaches for the singleton.
+
+**So read each failure as "what state was this rule finding by accident?"**
+The isolation is the easy half; the state the test never set up is the real
+work, and it differs per rule.
 
 ### Widening the checksum, carefully
 
