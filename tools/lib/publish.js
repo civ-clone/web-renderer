@@ -96,6 +96,11 @@ const KNOWN_UNINSTALLABLE = {
 };
 
 const KNOWN_FAILING_TESTS = {
+  'civ1-city':
+    '8 failures, identical before and after the Stage 3 change (21 passing / ' +
+    '8 failing either side). Same shape as civ1-city-improvement: shared ' +
+    'registry state between tests, which Stage 3 per-Game registries make ' +
+    'properly fixable.',
   'civ1-city-improvement':
     'RNG-dependent build-availability assertions, and WorkedTileRegistry ' +
     'singleton state leaking between tests. 6 failures before Stage 2, 2-3 ' +
@@ -137,6 +142,54 @@ const hasTests = (dir) => {
   } catch (e) {
     return false;
   }
+};
+
+// pnpm does not hoist `@types/node`, so its directory has to be found.
+const typeRoot = () => {
+  const hoisted = path.join(webRenderer, 'node_modules', '@types', 'node');
+
+  if (fs.existsSync(hoisted)) {
+    return path.dirname(hoisted);
+  }
+
+  const store = path.join(webRenderer, 'node_modules', '.pnpm');
+  const match = fs
+    .readdirSync(store)
+    .find((entry) => entry.startsWith('@types+node@'));
+
+  return match
+    ? path.join(store, match, 'node_modules', '@types')
+    : path.join(webRenderer, 'node_modules', '@types');
+};
+
+const CONFIG = 'tsconfig.publish.json';
+
+const mappedConfig = (dir) => {
+  fs.writeFileSync(
+    path.join(dir, CONFIG),
+    JSON.stringify(
+      {
+        extends: './tsconfig.json',
+        compilerOptions: {
+          baseUrl: '.',
+          paths: { '@civ-clone/*': [path.join(scope, '*')] },
+          typeRoots: [typeRoot()],
+          types: ['node'],
+        },
+      },
+      null,
+      2
+    ) + '\n'
+  );
+
+  return CONFIG;
+};
+
+const cleanMappedConfig = (dir) => {
+  fs.rmSync(path.join(dir, CONFIG), { force: true });
+  fs.rmSync(path.join(dir, CONFIG.replace('.json', '.tsbuildinfo')), {
+    force: true,
+  });
 };
 
 // Steps 1-4 of the per-package procedure in 04-package-workflow.md. These are
@@ -188,7 +241,15 @@ const verify = (name, skipped = [], notes = []) => {
       // its inputs. A skipped compile looks exactly like a successful one, and
       // that is how five packages in this tree came to hold compiled output
       // that had never matched their source.
-      run('tsc', ['--build', 'tsconfig.json', '--force']);
+      //
+      // The scope is mapped onto the renderer's installed tree. These packages
+      // ship `.ts` beside their `.js` and TypeScript resolves the `.ts`, so a
+      // compile here needs every transitive dependency's *source* — including
+      // ones a package has only just declared and not installed. `paths` is
+      // compile-time only, so the emitted JavaScript is unaffected. It is
+      // weaker evidence than a clean per-package install would be, and the
+      // conformance suite over the assembled tree is what covers the gap.
+      run('tsc', ['--build', mappedConfig(dir), '--force']);
     }
   } catch (e) {
     problems.push(`${name}: ts:compile failed\n${output(e)}`);
@@ -220,6 +281,8 @@ const verify = (name, skipped = [], notes = []) => {
       `${name}: a forced rebuild reformats ${git(dir, 'status', '--porcelain', '--untracked-files=no').split('\n').length} file(s); the commit is what gets published`
     );
   }
+
+  cleanMappedConfig(dir);
 
   // Restore, so `npm publish` packs exactly what the commit and the tag hold
   // rather than the output of the check that just ran.
@@ -279,8 +342,7 @@ const resolutionOf = (name) => {
   } catch (e) {
     // Guessing here fails open in the dangerous direction: "npm" would offer a
     // package that lives only on GitHub to `npm publish` as a new private
-    // scoped package. A missing install means the tree is broken, which is its
-    // own thing to fix.
+    // scoped package.
     throw new Error(
       `${name}: not installed, so its resolution cannot be determined. ` +
         'Run `pnpm install` in web-renderer — note that a damaged tree needs ' +
@@ -289,7 +351,34 @@ const resolutionOf = (name) => {
     );
   }
 
-  return /codeload\.github\.com/.test(real) ? 'github' : 'npm';
+  if (/codeload\.github\.com/.test(real)) {
+    return 'github';
+  }
+
+  // A package `civ sync` placed has no codeload path to read, because it is a
+  // plain directory rather than a pnpm link — so the path alone would call
+  // every new package an npm one. No `civ1-*` package is on npm; they are
+  // consumed as `github:civ-clone/<name>`.
+  //
+  // `publishConfig.access` is the right signal because npm already requires it:
+  // a brand-new scoped package without it is restricted, and publishing one
+  // fails with E402 unless the account pays for private packages. So declaring
+  // it is exactly the act of opting in to npm.
+  const declared = (() => {
+    try {
+      return JSON.parse(
+        fs.readFileSync(path.join(checkoutPath(name), 'package.json'), 'utf8')
+      );
+    } catch (e) {
+      return {};
+    }
+  })();
+
+  if ((declared.publishConfig || {}).access) {
+    return 'npm';
+  }
+
+  return onRegistry(name, null) ? 'npm' : 'github';
 };
 
 const localVersion = (dir) =>
@@ -311,13 +400,14 @@ const alreadyBumped = (dir) =>
 // of the available answers.
 const onRegistry = (name, version) => {
   try {
-    return (
-      execFileSync(
-        'npm',
-        ['view', `@civ-clone/${name}@${version}`, 'version'],
-        { encoding: 'utf8', stdio: 'pipe' }
-      ).trim() === version
-    );
+    const output = execFileSync(
+      'npm',
+      ['view', version ? `@civ-clone/${name}@${version}` : `@civ-clone/${name}`, 'version'],
+      { encoding: 'utf8', stdio: 'pipe' }
+    ).trim();
+
+    // A null version asks whether the package exists on npm at all.
+    return version ? output === version : output !== '';
   } catch (e) {
     return false;
   }

@@ -579,12 +579,59 @@ hazards:
 
 ### Acceptance
 
-- [ ] `new Game()` twice in one process; two independent games run 20 turns each
-      with different seeds and neither affects the other's checksum
-- [ ] Conformance suite constructs a fresh `Game` per test — no `beforeEach`
-      reset needed
-- [ ] Rule-count assertion passes for all 17 packages
-- [ ] `web-renderer` still works via `defaultGame`
+- [x] `new Game()` twice in one process shares no registry, turn, year, engine
+      or random stream — 8 tests in `core-game`, 4 more in `civ1-game`
+- [ ] Conformance suite constructs a fresh `Game` per test — not yet; the suite
+      still drives `defaultGame`, which is what proves the migration changed
+      nothing. Switching it is the natural first step of the next stage.
+- [ ] Rule-count assertion for all 17 packages — not built. What stood in for it
+      here was the conformance suite going silent, which caught the one real
+      failure (below) immediately.
+- [x] `web-renderer` still works via `defaultGame`; checksums unchanged
+
+### How it was done
+
+`core-game` holds the 43 registries plus turn, year, engine and rng.
+`civ1-game` subclasses it for the ruleset's two, because `core-` packages
+depend only on other `core-` packages and baking one ruleset into the shared
+context would break that as well as dragging in a native `canvas` dependency.
+
+`defaultGame` **adopts** the existing singletons rather than constructing its
+own. The plan sketched the opposite — `core-city` re-exporting
+`defaultGame.cities` as its `instance` — which would make every registry
+package depend on `core-game`, a cycle. Adoption runs the dependency the other
+way and needs no change to the registry packages at all.
+
+The migration itself is mechanical for a reason worth stating: the 133 rule
+factories across the seventeen packages are *already fully typed* with the
+registry classes they take, so which `Game` slot each parameter wants is a
+lookup, not a judgement. The codemod reads the signatures. Adding `Engine` as a
+slot was what made the mapping total.
+
+Importing a package still registers into `defaultGame`, because the plugin
+loader works by importing each package for that side effect.
+
+### The failure the stage predicts, arriving sideways
+
+This document warns that a missed registration produces "a game with silently
+absent rules — no error, just wrong behaviour". That happened, and not from a
+missed call.
+
+`civ sync` preserved each package's `main` entrypoint — `buildPluginList` needs
+it to exist — but never refreshed it. Excluding a file from deletion is not the
+same as keeping it current. `node_modules` served a `core-game/index.js` from
+before `defaultSlots` was exported, so `defaultSlots` came back `undefined`,
+`civ1-game`'s `defaultGame` silently built its own registries instead of
+adopting the singletons, and `civ1-world`'s rules — including the one that
+builds the world — registered into a registry nothing would ever read.
+
+The symptom was the conformance run ending after `engine:start` with no output,
+no error and exit code 0. `EngineStart` rules registered: 0.
+
+Two lessons, both cheap and both learned the hard way: a codemod that a rollout
+will re-run must detect its own output (this one emitted
+`export const register = export const register = ...` on the second pass), and
+**a tool that deliberately preserves a file must also keep it up to date.**
 
 ---
 
