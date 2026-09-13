@@ -933,12 +933,82 @@ doing it wrong.
 
 ### Acceptance
 
-- [ ] Every class with private fields declares `transient` or provably needs none
-- [ ] A test asserts every `transient` name exists on the class — a typo'd
-      exclusion silently saves a registry and corrupts the file
-- [ ] Widened checksum stable across runs
-- [ ] `_additionalData` gone; conformance unchanged
-- [ ] `civ1-city` and `civ1-city-improvement` off the known-failing list
+- [x] Every class with private fields declares `transient` or provably needs
+      none — 29 classes across 24 packages, nothing the codemod could not
+      classify. The 245 installed packages *without* a checkout were checked
+      too: none holds a `DataObject` descendant with a registry field.
+- [x] A test asserts every `transient` name exists on the class —
+      `tests/engine/transient.ts`, 27 checks, wired into `npm test`. Verified
+      by spelling `_neighbours` the American way and watching it fail with the
+      offending name.
+- [x] Widened checksum stable across runs — `aebaf5c2 / af0ade7e / f6e495ff`,
+      identical across runs and across processes.
+- [x] `_additionalData` gone; conformance unchanged.
+- [x] `civ1-city` and `civ1-city-improvement` off the known-failing list, which
+      is now empty.
+
+### What it cost
+
+**A breaking change, published, found one stage later.**
+`core-data-object@0.1.14` declared `static readonly transient: readonly
+string[]` — *required*. `IConstructor<T>` is `new (...args: any[]) => T` and
+carries no statics, so it satisfies `typeof T` only while `T` has no required
+ones. `ConstructorRegistry<T>` hands out `IConstructor<T>` and the codebase
+annotates what it gets back as `typeof X`;
+`core-science/PlayerResearch.available()` and
+`core-government/PlayerGovernment.available()` both do, and both stopped
+compiling — taking **22 of the 83 checkouts** with them, since a package
+typechecks its dependencies' source.
+
+Nothing in `core-data-object` failed. Its own tests passed before and after, the
+publish gate ran them, the renderer's suites stayed green — esbuild does not
+typecheck — and the conformance checksums did not move. The whole defect lived
+in code the package does not contain. So the guard is a compile-time assertion
+in `DataObject.ts` rather than a test:
+
+```ts
+type Assert<T extends true> = T;
+
+type ConstructorStaysAssignable = Assert<
+  IConstructor<DataObject> extends typeof DataObject ? true : false
+>;
+```
+
+Restoring the required declaration makes that `TS2344: Type 'false' does not
+satisfy the constraint 'true'`, which was verified rather than assumed. Fixed in
+0.1.15 by making the static optional — `allTransient()` already read it as
+`transient?` behind an `Array.isArray` check, so it costs nothing at runtime.
+
+**The lesson is about what a package can verify about itself.** Every gate here
+is per-package, and this defect was only visible from outside. Compiling all 83
+checkouts is now the check that finds this class of problem, and it is cheap —
+about a minute.
+
+**Two codemod gaps, found by reviewing the derivation against the source rather
+than against itself.** Both were classified as state and should have been
+transient:
+
+- `CACHE_NAMES` was `_(.*Cache|cached.*|neighbours)`, which needs a character
+  before a capital `Cache`. It matched `_yieldCache` and `_valueCache` but not a
+  bare `_cache`, so `core-game-year`'s `Year._cache` — a turn-to-year memo —
+  would have been saved and restored stale.
+- `World._generator` is a `Generator`: supplied by the `Game` through
+  `generators`, but only `implements IGenerator`, so it can be neither saved as
+  an entity reference nor rebuilt from one. **The obvious generalisation is
+  wrong** — `City` is also a member of a `Game` registry and `CityGrowth._city`
+  must certainly be saved. The difference is that `City` is a `DataObject`. So
+  it is a judgement per type, and there is an explicit list of one. `Rule`
+  descendants are deliberately not on it: `Unit._busy` is equally unsaveable but
+  is real state, and wants Stage 6's rule identities rather than being dropped.
+
+**The source-map ordering defect, reintroduced.** `stage4.js` compiled and then
+formatted, so 23 of the 24 commits held a `.js` with ts-morph's one-line
+`transient` array against a `.ts` with prettier's wrapped one. Identical
+behaviour, mismatched artifact — the same thing that had just been fixed in
+`lib/procedure.js` and written up in
+[`04-package-workflow.md`](04-package-workflow.md). Rebuilt and amended; a
+second format/compile/format pass over all 24 now changes nothing. **A finding
+recorded in one place does not protect the next thing written.**
 
 ---
 

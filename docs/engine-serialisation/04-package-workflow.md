@@ -247,6 +247,7 @@ pnpm install --config.confirmModulesPurge=false \
   --config.minimumReleaseAge=0 --config.blockExoticSubdeps=false
 civ duplicates        # must report one copy each before you trust the suite
 civ stale             # every installed copy must match its checkout
+civ typecheck         # every checkout still compiles against the new tree
 npm test
 npm run build:dev     # then the smoke checklist
 ```
@@ -531,6 +532,41 @@ done
 It landed in about fifteen seconds. Note that `release()` pipes npm's stdio, so
 none of that reaches the wave log — read `~/.npm/_logs/` when a publish needs
 explaining, not the tool's own output.
+
+### A package cannot verify a change it is the base class of
+
+`core-data-object@0.1.14` added one required static to `DataObject` and stopped
+22 of the 83 checkouts typechecking. Nothing in `core-data-object` failed: its
+own tests passed either side, the publish gate ran them, the renderer's suites
+stayed green because esbuild does not typecheck, and the conformance checksums
+did not move. The defect lived entirely in code the package does not contain —
+two call sites that annotate `typeof X` where a `ConstructorRegistry` hands out
+`IConstructor<X>`.
+
+Every gate in this workflow is per-package, so none of them could see it. The
+check that does is `civ typecheck`, which compiles every checkout against the
+renderer's installed tree in about a minute:
+
+```
+83 checkout(s) compiled, 0 unexpected failure(s)
+
+known failing, and pre-existing:
+  ! base-unit-action-capture-city — TS1023 on core-data-object's `PlainObject`…
+  ! core-civ-client — Same TS1023…
+  ! core-unit-transport — TS2742…
+```
+
+It rebuilds each checkout with `--force` and then restores it, so it refuses to
+run against a tree with modified tracked files rather than reverting someone's
+work. The three known failures all predate this project and were each verified
+against `core-data-object@0.1.13`; a package that comes off that list is
+reported, so a stale entry cannot hide the next real failure.
+
+**Run it after changing anything in `core-data-object`, `core-registry` or
+`core-rule`** — the packages whose types everything else's source is checked
+against. And prefer a compile-time assertion in the changed package over a test:
+`type Assert<T extends true> = T` with the invariant written out fails at
+`tsc --build` in the one place a reviewer is looking.
 
 ## What this does not solve
 

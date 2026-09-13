@@ -14,6 +14,7 @@ const COMMANDS = {
   collisions: () => require('./lib/collisions'),
   duplicates: () => require('./lib/duplicates'),
   stale: () => require('./lib/stale'),
+  typecheck: () => require('./lib/typecheck'),
 };
 
 const USAGE = `civ <command> [options]
@@ -52,6 +53,16 @@ const USAGE = `civ <command> [options]
                                in the tree, and a partial \`pnpm update\` leaves
                                old copies linked. Run it after any install, before
                                believing a stage is verified.
+
+  typecheck [package...]       Compile every checkout against the renderer's
+                               installed tree. A package cannot verify a change
+                               it is the base class of: core-data-object@0.1.14
+                               added one required static and stopped 22 of the
+                               83 checkouts typechecking, with every
+                               per-package gate green. Run it after touching
+                               core-data-object, core-registry or core-rule.
+                               Rebuilds and then restores each checkout, so it
+                               refuses to run against a modified tree.
 
   collisions                   Find classes that declare a private field also
                                declared by an ancestor. Legal while both sides

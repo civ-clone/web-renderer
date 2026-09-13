@@ -147,6 +147,9 @@ is identical either way.
 | `npm run test:conformance` | A seeded 4-player game to turn 50 produces the same state checksums at turns 1, 10 and 50. This is the regression net for all 62 packages at once. |
 | `npm run test:conformance -- --twice` | The run is deterministic. |
 | `civ duplicates` | No `@civ-clone` package is installed twice. Two copies are two classes, so `instanceof` across them is false and nothing reports it. Run it after any install, before trusting a conformance result. |
+| `node tools/stage4.js --all` | Re-run is a no-op: an already-declared class is skipped, so a package with nothing left to say drops out of `--all` on its own. |
+| `npm run test:transient` | The `transient` declarations take effect — names are real fields, `allTransient()` stays additive across the prototype chain, state survives, and `stateKeys()` is narrower than `Object.keys()` at all. |
+| `civ typecheck` | Every checkout still compiles. The only gate here that is not per-package, and the only one that could have caught core-data-object@0.1.14 breaking 22 of them. |
 | `civ stale` | Every installed copy matches its checkout. A suite cannot exercise code that is not in the tree — this is what a false "Stage 3 verified" looked like. |
 | `npm run test:hydration` | `Object.assign(Object.create(City.prototype), state).name()` returns a value — the entire point of Stage 1. |
 
