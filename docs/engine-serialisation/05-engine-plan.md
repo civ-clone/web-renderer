@@ -581,12 +581,13 @@ hazards:
 
 - [x] `new Game()` twice in one process shares no registry, turn, year, engine
       or random stream — 8 tests in `core-game`, 4 more in `civ1-game`
-- [ ] Conformance suite constructs a fresh `Game` per test — not yet; the suite
-      still drives `defaultGame`, which is what proves the migration changed
-      nothing. Switching it is the natural first step of the next stage.
-- [ ] Rule-count assertion for all 17 packages — not built. What stood in for it
-      here was the conformance suite going silent, which caught the one real
-      failure (below) immediately.
+- [x] A fresh `Game` per test — `npm run test:isolation` builds two and checks
+      13 ways that they share nothing. The conformance suite still drives
+      `defaultGame` deliberately: running on the adopted singletons is what
+      proves the migration changed nothing.
+- [x] Rule-count assertion — the conformance snapshot records every registered
+      rule counted by type, 1055 across 65. A missed registration changes the
+      fixture and names the rule; `Start` would have read 0 instead of 2.
 - [x] `web-renderer` still works via `defaultGame`; checksums unchanged
 
 ### How it was done
@@ -610,6 +611,20 @@ slot was what made the mapping total.
 
 Importing a package still registers into `defaultGame`, because the plugin
 loader works by importing each package for that side effect.
+
+### The two `registerEvents.ts` files
+
+`registerRules.ts` is only half of it. Two packages —
+`core-turn-based-game` and `civ1-player` — bound their handlers to the
+singleton `Engine`, so a fresh `Game` had no handlers and its turn loop would
+never start. Both now take a game.
+
+`core-turn-based-game` takes a structural `{engine, rules, turn}` rather than
+importing `Game`: `Game` imports `Turn` from there, so depending on it would
+make a package cycle. The structural type also says more precisely what the
+package touches. **Any `core-` package that `core-game` itself imports must do
+it this way**; the seventeen plugins can import `Game` directly, because
+nothing `core-game` imports imports them.
 
 ### The failure the stage predicts, arriving sideways
 
@@ -667,6 +682,56 @@ default, so the failure mode is wasted bytes rather than silent data loss.
 - **Widen the conformance checksum** to cover all non-transient fields, and
   regenerate the fixtures.
 
+### What Stages 1–3 changed about this stage
+
+Written after those landed, because two of them move the ground under it.
+
+**The surface, measured.** 53 classes carry private fields: 36 of those fields
+are typed with a registry class or `Engine`, and 133 are state. So the
+`transient` list is, almost exactly, "the registry-typed fields" — and after
+Stage 1 they all have `_`-prefixed names and explicit types.
+
+**That makes it type-directed, like Stages 2 and 3.** Both of those were
+mechanical for the same reason: the types already said what the answer was, so
+the codemod read signatures instead of guessing. `transient` is the same shape
+of problem. Do not hand-write 24 lists; derive them and review the diff.
+
+**Stage 3 makes most of it moot at load time.** A registry field no longer needs
+saving *or* generic rehydration — the loading `Game` has the registry, and every
+constructor already takes it. `transient` stops being "fields we cannot
+serialise" and becomes "fields the `Game` supplies". That is a smaller and much
+better-defined idea, and it means the hydrator wants a `Game` as an argument.
+
+**One thing genuinely got worse.** `toPlainObject` now emits `Rule` internals at
+one site — `Unit.busy`, measured in
+[`../state-rewrite/09-phase-4-backend-deltas.md`](../state-rewrite/09-phase-4-backend-deltas.md).
+The right fix is for `busy` to serialise as a rule identity, which needs the
+named rules from Stage 6. Either pull that part of Stage 6 forward, or accept
+the bytes and fix it there.
+
+### Before starting
+
+Two test suites fail for the reason Stage 3 just made fixable, and both are on
+`civ publish`'s known-failing list so they will not block anything until someone
+looks: `civ1-city` (8 failures) and `civ1-city-improvement` (2–3, varying).
+Both are shared registry state leaking between tests — a `beforeEach` reset
+problem that a per-test `Game` removes entirely. Fixing them first gives Stage 4
+real per-package coverage instead of a list of exemptions, and is the smallest
+possible demonstration that the `Game` context was worth building.
+
+### Widening the checksum, carefully
+
+The plan says to widen the conformance checksum to all non-transient fields.
+Note what that costs: the current checksums have been identical through three
+stages, which is exactly why each stage could claim it changed nothing.
+Widening ends that comparability.
+
+So widen in a commit that does nothing else, regenerate, and say so in the
+fixture. And keep instruments out of the hashed snapshot — the DTO digest,
+`mathRandomCalls` and the rule counts all sit outside it, because adding an
+instrument should not move the number it exists to watch. That was learned by
+doing it wrong.
+
 ### Acceptance
 
 - [ ] Every class with private fields declares `transient` or provably needs none
@@ -674,6 +739,7 @@ default, so the failure mode is wasted bytes rather than silent data loss.
       exclusion silently saves a registry and corrupts the file
 - [ ] Widened checksum stable across runs
 - [ ] `_additionalData` gone; conformance unchanged
+- [ ] `civ1-city` and `civ1-city-improvement` off the known-failing list
 
 ---
 
