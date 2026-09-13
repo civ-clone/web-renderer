@@ -249,7 +249,7 @@ const main = () => {
           .filter(
             ([, details]) =>
               details.stages.includes(1) &&
-              details.wave === Number(args[waveIndex + 1])
+              (details.waves || {})[1] === Number(args[waveIndex + 1])
           )
           .map(([name]) => name)
           .sort();

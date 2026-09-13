@@ -37,7 +37,7 @@ const installedPath = (name, root = scope) => {
 // otherwise compiles against the published (still `#private`) dependency.
 const syncPackage = (name, { quiet = false, into = scope } = {}) => {
   const from = checkoutPath(name);
-  const to = installedPath(name, into);
+  let to = installedPath(name, into);
   // The renderer's esbuild resolves `.ts` ahead of `.js`, so a compiled sibling
   // there is stale weight. A package checkout is different: its `ts-mocha` suite
   // resolves dependencies through plain node, which picks the `.js` — and Node
@@ -52,10 +52,24 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
     return result;
   }
 
+  // A package introduced by a stage — `core-random` in Stage 2 — has no
+  // installed copy to write over until it is published and depended upon. Place
+  // it as a plain directory so the rest of the tree can resolve it in the
+  // meantime. pnpm will replace this with a symlink at the next install.
   if (!to) {
-    result.skipped = 'not installed';
+    to = path.join(into, name);
+    fs.mkdirSync(to, { recursive: true });
+    result.created = true;
+  }
 
-    return result;
+  // A bare specifier resolves through `package.json`'s `main`, so a placed
+  // package needs it and its compiled entrypoint as well as the sources.
+  if (result.created) {
+    ['package.json', 'index.js', 'index.d.ts'].forEach((file) => {
+      if (fs.existsSync(path.join(from, file))) {
+        fs.copyFileSync(path.join(from, file), path.join(to, file));
+      }
+    });
   }
 
   const main = entrypoint(to);
@@ -128,7 +142,7 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
 
   if (!quiet) {
     console.log(
-      `  ${name.padEnd(42)} ${String(result.files).padStart(4)} files → node_modules  (${result.changed.length} changed${result.removed ? `, ${result.removed} stale compiled removed` : ''})`
+      `  ${name.padEnd(42)} ${String(result.files).padStart(4)} files → node_modules  (${result.changed.length} changed${result.removed ? `, ${result.removed} stale compiled removed` : ''}${result.created ? ', directory created' : ''})`
     );
   }
 

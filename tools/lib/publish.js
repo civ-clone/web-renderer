@@ -291,7 +291,8 @@ const run = (args) => {
   const otp = otpIndex === -1 ? null : args[otpIndex + 1];
   const packages = Object.entries(manifest.packages)
     .filter(
-      ([, details]) => details.wave === wave && details.stages.includes(stage)
+      ([, details]) =>
+        details.stages.includes(stage) && (details.waves || {})[stage] === wave
     )
     .map(([name, details]) => ({ name, ...details }));
 

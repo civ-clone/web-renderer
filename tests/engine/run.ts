@@ -6,7 +6,7 @@
 // Emits one JSON document on stdout, between the markers below.
 
 // Must stay first: it seeds `Math.random` before any engine module evaluates.
-import { config, random } from './lib/seed';
+import { config, mathRandomCalls, random } from './lib/seed';
 
 import Built from '@civ-clone/core-world/Rules/Built';
 import Effect from '@civ-clone/core-rule/Effect';
@@ -123,7 +123,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   if (config.checkpoints.includes(turn)) {
-    const taken = snapshot(turn, random.calls(), world!);
+    const taken = snapshot(turn, random.calls(), world!, mathRandomCalls());
 
     snapshots[turn] = taken;
     checksums[turn] = checksum(taken);

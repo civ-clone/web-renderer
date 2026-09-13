@@ -12,6 +12,7 @@ import World from '@civ-clone/core-world/World';
 
 export type Snapshot = {
   turn: number;
+  mathRandomCalls: number;
   dto: { objects: number; bytes: number; hash: string };
   registries: { [name: string]: number };
   world: { width: number; height: number; terrain: string };
@@ -64,7 +65,8 @@ const dtoDigest = (
 export const snapshot = (
   turn: number,
   randomCalls: number,
-  world: World
+  world: World,
+  mathRandomCalls: number
 ): Snapshot => ({
     turn,
     dto: dtoDigest([
@@ -129,13 +131,19 @@ export const snapshot = (
       ])
       .sort((a, b) => a[0].localeCompare(b[0])),
     randomCalls,
+    mathRandomCalls,
 });
 
-// The DTO digest is deliberately outside the checksum. Stage 1's acceptance is
-// "unchanged checksums", meaning unchanged engine state; a change in what
-// `toPlainObject` emits is a separate question with a separate answer, and
-// folding the two together would make neither legible.
-export const checksum = ({ dto, ...state }: Snapshot): string =>
-  hash(JSON.stringify(state));
+// The DTO digest and the stray-`Math.random` count are deliberately outside the
+// checksum. The checksum answers "is the engine state the same"; whether
+// `toPlainObject` emits the same bytes, and whether anything still reaches the
+// global generator, are separate questions with separate answers. Folding them
+// together would make none of the three legible — and would mean adding an
+// instrument changed the number it was meant to be watching.
+export const checksum = ({
+  dto,
+  mathRandomCalls,
+  ...state
+}: Snapshot): string => hash(JSON.stringify(state));
 
 export default snapshot;

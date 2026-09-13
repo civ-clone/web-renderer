@@ -103,7 +103,8 @@
           "false"
         ]
       ],
-      "randomCalls": 8600
+      "randomCalls": 8600,
+      "mathRandomCalls": 0
     },
     "10": {
       "turn": 10,
@@ -251,7 +252,8 @@
           "false"
         ]
       ],
-      "randomCalls": 9050
+      "randomCalls": 9050,
+      "mathRandomCalls": 0
     },
     "50": {
       "turn": 50,
@@ -585,7 +587,8 @@
           "false"
         ]
       ],
-      "randomCalls": 10115
+      "randomCalls": 10115,
+      "mathRandomCalls": 0
     }
   }
 }
