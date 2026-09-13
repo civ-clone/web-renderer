@@ -8,6 +8,7 @@ import Portal from './Portal';
 import ScienceReport from './ScienceReport';
 import TradeReport from './TradeReport';
 import Transport from '../Transport';
+import Window from './Window';
 import { h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
@@ -16,6 +17,7 @@ export class GameMenu extends Element {
   #getPlayer: () => Player;
   #portal: Portal;
   #transport: Transport;
+  #debugMode: boolean;
 
   constructor(
     element: HTMLElement,
@@ -25,14 +27,17 @@ export class GameMenu extends Element {
     // cities, initial research) for the rest of the session.
     getPlayer: () => Player,
     portal: Portal,
-    transport: Transport
+    transport: Transport,
+    debugMode: boolean = false
   ) {
     super(element);
 
     this.#getPlayer = getPlayer;
     this.#portal = portal;
     this.#transport = transport;
+    this.#debugMode = debugMode;
   }
+
   build(): void {
     const button = s(`<button><img src="${menuIcon}"></button>`);
 
@@ -89,6 +94,80 @@ export class GameMenu extends Element {
                   new ScienceReport(this.#getPlayer());
                 },
               },
+              ...(this.#debugMode
+                ? [
+                    {
+                      label: t('GameMenu.cheat.reveal-map'),
+                      action: () => {
+                        this.#transport.send('cheat', {
+                          name: 'RevealMap',
+                          value: null,
+                        });
+                      },
+                    },
+                    {
+                      label: t('GameMenu.cheat.grant-advance'),
+                      action: () => {
+                        const window = new Window(
+                          t('GameMenu.cheat.grant-advance'),
+                          s(
+                            '<div></div>',
+                            s(
+                              `<p>${t('GameMenu.cheat.enter-advance-name')}</p>`
+                            ),
+                            h(
+                              s('<input type="text" style="display: block"/>'),
+                              {
+                                keydown: (event: KeyboardEvent) => {
+                                  if (event.key === 'Enter') {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+
+                                    this.#transport.send('cheat', {
+                                      name: 'GrantAdvance',
+                                      value: event.target!.value,
+                                    });
+
+                                    window.close();
+                                  }
+                                },
+                              }
+                            )
+                          )
+                        );
+                      },
+                    },
+                    {
+                      label: t('GameMenu.cheat.grant-gold'),
+                      action: () => {
+                        const window = new Window(
+                          t('GameMenu.cheat.grant-gold'),
+                          s(
+                            '<div></div>',
+                            s(
+                              `<p>${t('GameMenu.cheat.enter-gold-amount')}</p>`
+                            ),
+                            h(s('<input type="text" style="display: block">'), {
+                              keydown: (event: KeyboardEvent) => {
+                                if (event.key === 'Enter') {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+
+                                  this.#transport.send('cheat', {
+                                    name: 'GrantGold',
+                                    value: parseInt(event.target!.value, 10),
+                                  });
+
+                                  window.close();
+                                }
+                              },
+                            })
+                          )
+                        );
+                      },
+                    },
+                  ]
+                : []),
             ],
             {
               align: 'right',

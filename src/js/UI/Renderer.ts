@@ -517,7 +517,8 @@ export class Renderer {
                 // to the current player rather than the turn-0 snapshot.
                 () => data.player,
                 portal,
-                transport
+                transport,
+                parseBooleanParam(queryParams.get('cheat'), false)
               ),
               resizeHandler = () => {
                 mapPortal.width = (
@@ -601,6 +602,11 @@ export class Renderer {
                 content: string,
                 mimeType: string
               ): void => {
+                // Direct creation rather than `s`: the `href` is an object
+                // URL that has to be assigned as a property, and putting one
+                // through `s` would mean interpolating it into markup for no
+                // gain. The anchor never enters the tree for longer than the
+                // click.
                 const blob = new Blob([content], { type: mimeType }),
                   url = URL.createObjectURL(blob),
                   anchor = document.createElement('a');
@@ -784,32 +790,47 @@ export class Renderer {
 
                 debugControls.innerHTML = '';
 
-                const title = document.createElement('div');
-                title.innerText = 'Debug Controls';
-                title.style.fontWeight = 'bold';
-                title.style.marginBottom = '0.5rem';
+                const title = s(
+                  '<div style="font-weight: bold; margin-bottom: .5rem">Debug Controls</div>'
+                );
+
+                // One button shape, five buttons. The styling was repeated
+                // inline nine times per button before; the only things that
+                // actually differ are the label, the background and whether
+                // the last one carries a bottom margin.
+                const debugButton = (
+                  label: string,
+                  background: string,
+                  handler: () => void,
+                  extraStyle: string = ''
+                ): HTMLButtonElement =>
+                  h(
+                    s<HTMLButtonElement>(
+                      `<button type="button" style="
+                        display: block;
+                        width: 100%;
+                        margin-bottom: .375rem;
+                        padding: .375rem .5rem;
+                        border: 1px solid #666;
+                        background: ${background};
+                        color: #fff;
+                        cursor: pointer;
+                        ${extraStyle}
+                      ">${label}</button>`
+                    ),
+                    { click: handler }
+                  );
 
                 const makeToggle = (
                   label: string,
                   enabled: boolean,
                   handler: () => void
-                ): HTMLButtonElement => {
-                  const button = document.createElement('button');
-
-                  button.type = 'button';
-                  button.innerText = `${label}: ${enabled ? 'ON' : 'OFF'}`;
-                  button.style.display = 'block';
-                  button.style.width = '100%';
-                  button.style.marginBottom = '0.375rem';
-                  button.style.padding = '0.375rem 0.5rem';
-                  button.style.border = '1px solid #666';
-                  button.style.background = enabled ? '#063' : '#444';
-                  button.style.color = '#fff';
-                  button.style.cursor = 'pointer';
-                  button.addEventListener('click', handler);
-
-                  return button;
-                };
+                ): HTMLButtonElement =>
+                  debugButton(
+                    `${label}: ${enabled ? 'ON' : 'OFF'}`,
+                    enabled ? '#063' : '#444',
+                    handler
+                  );
 
                 debugControls.append(
                   title,
@@ -827,67 +848,42 @@ export class Renderer {
                   })
                 );
 
-                const closeDialogsButton = document.createElement('button');
-                closeDialogsButton.type = 'button';
-                closeDialogsButton.innerText = 'Close open dialogs';
-                closeDialogsButton.style.display = 'block';
-                closeDialogsButton.style.width = '100%';
-                closeDialogsButton.style.marginBottom = '0.375rem';
-                closeDialogsButton.style.padding = '0.375rem 0.5rem';
-                closeDialogsButton.style.border = '1px solid #666';
-                closeDialogsButton.style.background = '#333';
-                closeDialogsButton.style.color = '#fff';
-                closeDialogsButton.style.cursor = 'pointer';
-                closeDialogsButton.addEventListener('click', closeOpenDialogs);
+                const closeDialogsButton = debugButton(
+                  'Close open dialogs',
+                  '#333',
+                  closeOpenDialogs
+                );
 
-                const exportJsonButton = document.createElement('button');
-                exportJsonButton.type = 'button';
-                exportJsonButton.innerText = 'Export debug JSON';
-                exportJsonButton.style.display = 'block';
-                exportJsonButton.style.width = '100%';
-                exportJsonButton.style.marginBottom = '0.375rem';
-                exportJsonButton.style.padding = '0.375rem 0.5rem';
-                exportJsonButton.style.border = '1px solid #666';
-                exportJsonButton.style.background = '#224';
-                exportJsonButton.style.color = '#fff';
-                exportJsonButton.style.cursor = 'pointer';
-                exportJsonButton.addEventListener('click', exportDebugJson);
+                const exportJsonButton = debugButton(
+                  'Export debug JSON',
+                  '#224',
+                  exportDebugJson
+                );
 
-                const exportCsvButton = document.createElement('button');
-                exportCsvButton.type = 'button';
-                exportCsvButton.innerText = 'Export memory CSV';
-                exportCsvButton.style.display = 'block';
-                exportCsvButton.style.width = '100%';
-                exportCsvButton.style.marginBottom = '0.375rem';
-                exportCsvButton.style.padding = '0.375rem 0.5rem';
-                exportCsvButton.style.border = '1px solid #666';
-                exportCsvButton.style.background = '#224';
-                exportCsvButton.style.color = '#fff';
-                exportCsvButton.style.cursor = 'pointer';
-                exportCsvButton.addEventListener('click', exportDebugCsv);
+                const exportCsvButton = debugButton(
+                  'Export memory CSV',
+                  '#224',
+                  exportDebugCsv
+                );
 
-                const stopAllButton = document.createElement('button');
-                stopAllButton.type = 'button';
-                stopAllButton.innerText = 'Stop all automation';
-                stopAllButton.style.display = 'block';
-                stopAllButton.style.width = '100%';
-                stopAllButton.style.padding = '0.375rem 0.5rem';
-                stopAllButton.style.border = '1px solid #666';
-                stopAllButton.style.background = '#700';
-                stopAllButton.style.color = '#fff';
-                stopAllButton.style.cursor = 'pointer';
-                stopAllButton.addEventListener('click', () => {
-                  setStressUi(false);
-                  setAutomatePlayer(false);
-                  closeOpenDialogs();
-                  renderDebugControls();
-                });
+                // The last button in the panel, so no bottom margin.
+                const stopAllButton = debugButton(
+                  'Stop all automation',
+                  '#700',
+                  () => {
+                    setStressUi(false);
+                    setAutomatePlayer(false);
+                    closeOpenDialogs();
+                    renderDebugControls();
+                  },
+                  'margin-bottom: 0;'
+                );
 
-                const hint = document.createElement('div');
-                hint.innerText = 'Hotkeys: Alt+Shift+S/A/W/C/J/X';
-                hint.style.marginTop = '0.5rem';
-                hint.style.fontSize = '11px';
-                hint.style.opacity = '0.85';
+                const hint = s(
+                  '<div style="margin-top: .5rem; font-size: 11px; opacity: .85">' +
+                    'Hotkeys: Alt+Shift+S/A/W/C/J/X' +
+                    '</div>'
+                );
 
                 debugControls.append(
                   closeDialogsButton,
@@ -903,18 +899,21 @@ export class Renderer {
             }
 
             if (debugMode) {
-              debugControls = document.createElement('div');
-              debugControls.style.position = 'fixed';
-              debugControls.style.top = '0.5rem';
-              debugControls.style.right = '0.5rem';
-              debugControls.style.zIndex = '2147483647';
-              debugControls.style.width = '220px';
-              debugControls.style.padding = '0.5rem';
-              debugControls.style.background = 'rgba(0, 0, 0, 0.85)';
-              debugControls.style.color = '#fff';
-              debugControls.style.border = '1px solid #888';
-              debugControls.style.fontFamily = 'monospace';
-              debugControls.style.fontSize = '12px';
+              debugControls = s<HTMLDivElement>(
+                `<div style="
+                  position: fixed;
+                  top: .5rem;
+                  right: .5rem;
+                  z-index: 2147483647;
+                  width: 220px;
+                  padding: .5rem;
+                  background: rgba(0, 0, 0, .85);
+                  color: #fff;
+                  border: 1px solid #888;
+                  font-family: monospace;
+                  font-size: 12px;
+                "></div>`
+              );
 
               renderDebugControls();
               document.body.append(debugControls);
@@ -960,6 +959,10 @@ export class Renderer {
                 renderDebugControls();
               };
 
+              // Not `h`: this listens on `document` rather than on an
+              // element built here, and it needs the capture phase so the
+              // debug hotkeys fire before a focused dialog swallows them —
+              // neither of which `h(element, handlers)` expresses.
               document.addEventListener('keydown', debugKeyListener, true);
             }
 
