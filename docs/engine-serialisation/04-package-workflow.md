@@ -195,6 +195,32 @@ Requirements, each earned from a way this goes wrong:
   source is exactly the sort of thing that costs an afternoon later.
 - **Idempotent and fast.** It will run dozens of times per session.
 
+### `civ duplicates [package…]`
+
+Reports any `@civ-clone` package with more than one live copy in a tree — by
+store entry, not by `package.json` version, because the duplicated copies are
+often the *same* version. No argument checks `web-renderer`; named packages
+check their checkouts. `civ publish` runs it first and refuses on a hit, since
+`resolutionOf` reads that tree to decide npm-versus-git-push.
+
+Two copies of a package are two modules, so a class from one is never
+`instanceof` the same class from the other, and nothing reports it. This cost
+five `civ1-city` test failures that read as missing yields and wrong
+arithmetic — see
+[`05-engine-plan.md`](05-engine-plan.md#2-a-duplicated-dependency-giving-two-copies-of-one-class).
+
+### `civ stale [package…]`
+
+Compares each installed copy's `version` against its checkout's. No argument
+compares every checkout in the workspace — deliberately **not** the manifest,
+which records work *remaining* per stage and so shrinks as stages land; it
+currently lists 18 of 84, and defaulting to it would check a fifth of the tree
+while reporting success.
+
+This exists because a green suite proves nothing about code that is not in the
+tree, and that produced a false "verified" for half of Stage 3 — see
+[`05-engine-plan.md`](05-engine-plan.md#the-two-registereventsts-files).
+
 ### `civ watch [package…]`
 
 `civ sync` on file-change. Pair with `npm run watch` in `web-renderer` for a
@@ -213,8 +239,27 @@ For each package in the wave, in manifest order:
 6. `npm publish`.
 7. `git push && git push --tags`.
 
-Then, once the whole wave is published: `pnpm update '@civ-clone/*'` in
-`web-renderer`, `npm test`, `npm run build:dev`, and the smoke checklist.
+Then, once the whole wave is published, in `web-renderer`:
+
+```sh
+rm -rf node_modules pnpm-lock.yaml
+pnpm install --config.confirmModulesPurge=false \
+  --config.minimumReleaseAge=0 --config.blockExoticSubdeps=false
+civ duplicates        # must report one copy each before you trust the suite
+civ stale             # every installed copy must match its checkout
+npm test
+npm run build:dev     # then the smoke checklist
+```
+
+**Not `pnpm update '@civ-clone/*'`**, which this document recommended for three
+stages. A partial update re-resolves only what it names and leaves every other
+parent pinned to whatever the lockfile already held. Each publish of a
+GitHub-resolved package changes its tarball hash, so the renderer accumulated
+**three `civ1-city` tarballs — one per stage that published it** — alongside two
+`core-strategy` versions and two `core-data-object` versions, each with live
+links. `civ duplicates` exists because of this, `civ publish` refuses to run
+against such a tree, and the checksums were re-confirmed against a fully
+re-resolved one.
 
 `--dry-run` performs 1–4 and prints the version bumps.
 
@@ -459,6 +504,33 @@ and formatting then rewrites that source out from under it. Stage 3 published
 17 `registerRules.js.map` files in that state. Nothing failed — the emitted
 `.js` is byte-identical either way — the maps simply pointed at the wrong
 lines, which is exactly the kind of defect that survives every gate.
+
+### `npm publish` returns 202, and "published" is not the same as available
+
+The wave reported `core-data-object published 0.1.14` and the registry served
+`404 version not found: 0.1.14` for the next minute. Neither was lying. npm's
+debug log has the real answer:
+
+```
+notice Your package is being processed and may take a few minutes to become available.
+http fetch PUT 202 https://registry.npmjs.org/@civ-clone%2fcore-data-object
+```
+
+**202 Accepted**, exit 0. The publish is genuine and asynchronous. This is a
+third state, distinct from the two the gate already knows about — "previously
+published versions" (a real success, seen as a conflict) and "previously staged
+version" (E409, began and did not finish) — and the only way to tell it from a
+silent failure is to poll the versioned endpoint until it answers:
+
+```sh
+until curl -sf -o /dev/null https://registry.npmjs.org/@civ-clone%2f<name>/<version>; do
+  sleep 15
+done
+```
+
+It landed in about fifteen seconds. Note that `release()` pipes npm's stdio, so
+none of that reaches the wave log — read `~/.npm/_logs/` when a publish needs
+explaining, not the tool's own output.
 
 ## What this does not solve
 

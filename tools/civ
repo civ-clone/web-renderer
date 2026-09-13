@@ -12,6 +12,8 @@ const COMMANDS = {
   publish: () => require('./lib/publish'),
   'check-dts': () => require('./lib/checkDts'),
   collisions: () => require('./lib/collisions'),
+  duplicates: () => require('./lib/duplicates'),
+  stale: () => require('./lib/stale'),
 };
 
 const USAGE = `civ <command> [options]
@@ -38,6 +40,18 @@ const USAGE = `civ <command> [options]
                                --otp passes a 2FA code, which covers one publish
                                before its window closes - use an automation token
                                for a whole wave.
+
+  duplicates [package...]      Find @civ-clone packages installed more than once
+                               in a tree. Two copies are two distinct classes, so
+                               \`instanceof\` across them is false — silently. No
+                               argument checks web-renderer; named packages check
+                               their checkouts. Run it after any install.
+
+  stale [package...]           Compare each installed copy's version against its
+                               checkout. A suite cannot exercise code that is not
+                               in the tree, and a partial \`pnpm update\` leaves
+                               old copies linked. Run it after any install, before
+                               believing a stage is verified.
 
   collisions                   Find classes that declare a private field also
                                declared by an ancestor. Legal while both sides

@@ -69,7 +69,7 @@
     "@civ-clone/core-city-improvement": "^0.1.5",
     "@civ-clone/core-civilization": "^0.1.5",
     "@civ-clone/core-client": "^0.1.4",
-    "@civ-clone/core-data-object": "^0.1.13",
+    "@civ-clone/core-data-object": "^0.1.14",
     "@civ-clone/core-diplomacy": "^0.1.4",
     "@civ-clone/core-engine": "^0.1.4",
     "@civ-clone/core-game": "^0.1.1",

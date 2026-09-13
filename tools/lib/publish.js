@@ -6,6 +6,7 @@ const { checkoutPath, scope, webRenderer } = require('./paths');
 const { read } = require('./audit');
 const { sourceFiles } = require('./scan');
 const { waves } = require('./graph');
+const { report: duplicateReport } = require('./duplicates');
 
 const git = (dir, ...args) =>
   execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
@@ -199,7 +200,12 @@ const verify = (name, skipped = [], notes = []) => {
 
   if (hasLocalChanges(dir)) {
     problems.push(
-      `${name}: tracked files are modified\n${git(dir, 'status', '--short', '--untracked-files=no')}`
+      `${name}: tracked files are modified\n${git(
+        dir,
+        'status',
+        '--short',
+        '--untracked-files=no'
+      )}`
     );
   }
 
@@ -267,13 +273,20 @@ const verify = (name, skipped = [], notes = []) => {
 
   if (stale.length > 0) {
     problems.push(
-      `${name}: compiled output predates the source — ${stale.length} file(s) still use private-field helpers: ${stale.slice(0, 3).join(', ')}`
+      `${name}: compiled output predates the source — ${
+        stale.length
+      } file(s) still use private-field helpers: ${stale
+        .slice(0, 3)
+        .join(', ')}`
     );
   }
 
   if (hasLocalChanges(dir)) {
     notes.push(
-      `${name}: a forced rebuild reformats ${git(dir, 'status', '--porcelain', '--untracked-files=no').split('\n').length} file(s); the commit is what gets published`
+      `${name}: a forced rebuild reformats ${
+        git(dir, 'status', '--porcelain', '--untracked-files=no').split('\n')
+          .length
+      } file(s); the commit is what gets published`
     );
   }
 
@@ -397,7 +410,11 @@ const onRegistry = (name, version) => {
   try {
     const output = execFileSync(
       'npm',
-      ['view', version ? `@civ-clone/${name}@${version}` : `@civ-clone/${name}`, 'version'],
+      [
+        'view',
+        version ? `@civ-clone/${name}@${version}` : `@civ-clone/${name}`,
+        'version',
+      ],
       { encoding: 'utf8', stdio: 'pipe' }
     ).trim();
 
@@ -442,7 +459,7 @@ const release = (name, resolution, otp) => {
       if (STAGED.test(text)) {
         throw new Error(
           `${name}@${version} is staged but not published. npm began the publish ` +
-            'and did not finish it; the version exists in the registry\'s staging ' +
+            "and did not finish it; the version exists in the registry's staging " +
             'area only. It usually clears within a few minutes — re-run then, and ' +
             'the idempotent bump means the same version is retried rather than ' +
             `skipped.\n${text}`
@@ -556,7 +573,9 @@ const run = (args) => {
   }
 
   console.log(
-    `wave ${wave}, stage ${stage}: ${packages.map((entry) => entry.name).join(', ')}\n`
+    `wave ${wave}, stage ${stage}: ${packages
+      .map((entry) => entry.name)
+      .join(', ')}\n`
   );
 
   const problems = [];
@@ -570,7 +589,9 @@ const run = (args) => {
       : [];
 
     console.log(
-      `  ${entry.name.padEnd(42)} ${found.length === 0 ? 'ok' : 'FAILED'}${stray.length ? `  (untracked: ${stray.join(', ')})` : ''}`
+      `  ${entry.name.padEnd(42)} ${found.length === 0 ? 'ok' : 'FAILED'}${
+        stray.length ? `  (untracked: ${stray.join(', ')})` : ''
+      }`
     );
     problems.push(...found);
   });
@@ -611,8 +632,8 @@ const run = (args) => {
           published
             ? 'already on the registry'
             : entry.resolution === 'github'
-              ? 'git push only'
-              : 'npm publish'
+            ? 'git push only'
+            : 'npm publish'
         }`
       );
     });
@@ -652,6 +673,36 @@ const runPending = (manifest, args) => {
   const dryRun = args.includes('--dry-run');
   const otpIndex = args.indexOf('--otp');
   const otp = otpIndex === -1 ? null : args[otpIndex + 1];
+
+  // Before anything else, because `resolutionOf` reads this tree to decide
+  // whether a package goes to npm or to a git push, and two copies of one
+  // package means it may read the wrong one. A duplicated tree also invalidates
+  // the conformance run this wave is verified against: `instanceof` across two
+  // copies of a class is false, so the suite can pass or fail for reasons that
+  // have nothing to do with the change.
+  const duplicates = duplicateReport('web-renderer', webRenderer);
+
+  if (duplicates.duplicated.length > 0) {
+    console.log(
+      `refusing to publish: ${duplicates.duplicated.length} package(s) are ` +
+        'installed more than once in web-renderer.\n' +
+        duplicates.duplicated
+          .map(
+            ({ name, copies }) =>
+              `  ${name}\n` +
+              copies
+                .map(({ entry, links }) => `    ${links} link(s)  ${entry}`)
+                .join('\n')
+          )
+          .join('\n') +
+        '\n\nRun `civ duplicates` for what causes this and how to clear it.'
+    );
+
+    process.exitCode = 1;
+
+    return;
+  }
+
   const names = pending(manifest);
 
   if (names.length === 0) {
@@ -681,7 +732,9 @@ const runPending = (manifest, args) => {
   });
 
   console.log(
-    `${names.length} package(s) pending across ${Object.keys(byWave).length} wave(s)\n`
+    `${names.length} package(s) pending across ${
+      Object.keys(byWave).length
+    } wave(s)\n`
   );
 
   const problems = [];
@@ -714,7 +767,11 @@ const runPending = (manifest, args) => {
           const dir = checkoutPath(name);
 
           console.log(
-            `  ${name.padEnd(38)} ${localVersion(dir)}${alreadyBumped(dir) ? ' already bumped' : ' → patch'}, ${resolutionOf(name) === 'github' ? 'git push only' : 'npm publish'}`
+            `  ${name.padEnd(38)} ${localVersion(dir)}${
+              alreadyBumped(dir) ? ' already bumped' : ' → patch'
+            }, ${
+              resolutionOf(name) === 'github' ? 'git push only' : 'npm publish'
+            }`
           );
 
           return;

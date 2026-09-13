@@ -626,6 +626,31 @@ package touches. **Any `core-` package that `core-game` itself imports must do
 it this way**; the seventeen plugins can import `Game` directly, because
 nothing `core-game` imports imports them.
 
+**This half was not actually verified when Stage 3 was declared done.** The
+renderer's committed lockfile pinned `core-turn-based-game@0.1.6` and
+`civ1-player@f1a9cb81` — the commits immediately *before* each
+`registerEvents` change — because the documented post-wave step was
+`pnpm update '@civ-clone/*'`, which re-resolves only what it names. So every
+conformance, hydration and isolation run cited as Stage 3 evidence used the
+pre-change copies of exactly these two packages, and the "verified" claim
+covered the seventeen `registerRules.ts` files but not the two
+`registerEvents.ts` ones.
+
+It was found later, while clearing duplicate installs, and the outcome is good:
+with `core-turn-based-game@0.1.7` and `civ1-player` at its current HEAD
+installed, the checksums are still `7d6b6b04 / 73a0cc05 / 3431063b` and
+isolation is 13/13, including the three turn-advance checks that exercise
+precisely these handlers. The change is behaviour-preserving — but that is now
+measured rather than assumed.
+
+The general lesson is worth more than the specific one: **a green suite proves
+nothing about code that is not in the tree.** `civ duplicates` catches a tree
+holding two copies of a package; it does not catch a tree holding an *old* copy
+and no new one. For that, compare each installed version against its checkout
+before believing a stage is done — which is what caught `minimumReleaseAge`
+silently resolving past fresh publishes in Stage 1, and should have been re-run
+every stage since.
+
 ### The failure the stage predicts, arriving sideways
 
 This document warns that a missed registration produces "a game with silently
@@ -844,6 +869,14 @@ the per-package suites were run.
 **The rule:** a package must not declare a `github:` spec for anything a
 published dependency also ranges on. Pointing the three at `^0.1.0`, like every
 other dependency, leaves one copy and all 29 tests pass.
+
+This is now `civ duplicates`, and `civ publish` refuses to run against a tree
+that fails it. Which mattered immediately: the renderer's own tree turned out to
+hold three `civ1-city` tarballs, two `core-strategy` versions and two
+`core-data-object` versions, all with live links, because the documented
+post-wave step was `pnpm update '@civ-clone/*'` — a partial update that leaves
+every unnamed parent pinned. The checksums were re-confirmed against a fully
+re-resolved tree and are unchanged.
 
 #### 3. An undeclared random input
 
