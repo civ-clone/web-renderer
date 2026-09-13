@@ -1,4 +1,5 @@
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
+import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as goodyHutRegistryInstance } from '@civ-clone/core-goody-hut/GoodyHutRegistry';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
@@ -13,6 +14,7 @@ import World from '@civ-clone/core-world/World';
 export type Snapshot = {
   turn: number;
   mathRandomCalls: number;
+  rules: { total: number; byType: { [name: string]: number } };
   dto: { objects: number; bytes: number; hash: string };
   registries: { [name: string]: number };
   world: { width: number; height: number; terrain: string };
@@ -54,6 +56,33 @@ const dtoDigest = (
     ),
     bytes: parts.reduce((total, part) => total + part.length, 0),
     hash: hash(parts.join('\u0000')),
+  };
+};
+
+// Every registered rule, counted by type.
+//
+// Stage 3 moved rule registration from module singletons to `register(game)`,
+// where a missed call — or one registering into a registry nothing reads —
+// gives wrong behaviour and no error at all. That happened: `EngineStart` rules
+// registered: 0, and the only symptom was a run that ended silently.
+//
+// Counting by type turns that into a changed fixture naming the rule that went
+// missing. It sits outside the checksum, like the other instruments, so that
+// adding it does not perturb the state comparison it exists to protect.
+const ruleCounts = (): { total: number; byType: { [name: string]: number } } => {
+  const byType: { [name: string]: number } = {};
+
+  ruleRegistryInstance.entries().forEach((rule: object): void => {
+    const name = rule.constructor.name;
+
+    byType[name] = (byType[name] || 0) + 1;
+  });
+
+  return {
+    total: ruleRegistryInstance.entries().length,
+    byType: Object.fromEntries(
+      Object.entries(byType).sort(([a], [b]) => a.localeCompare(b))
+    ),
   };
 };
 
@@ -132,6 +161,7 @@ export const snapshot = (
       .sort((a, b) => a[0].localeCompare(b[0])),
     randomCalls,
     mathRandomCalls,
+    rules: ruleCounts(),
 });
 
 // The DTO digest and the stray-`Math.random` count are deliberately outside the
@@ -143,6 +173,7 @@ export const snapshot = (
 export const checksum = ({
   dto,
   mathRandomCalls,
+  rules,
   ...state
 }: Snapshot): string => hash(JSON.stringify(state));
 
