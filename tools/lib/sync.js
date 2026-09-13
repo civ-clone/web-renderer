@@ -62,15 +62,39 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
     result.created = true;
   }
 
-  // A bare specifier resolves through `package.json`'s `main`, so a placed
-  // package needs it and its compiled entrypoint as well as the sources.
-  if (result.created) {
-    ['package.json', 'index.js', 'index.d.ts'].forEach((file) => {
-      if (fs.existsSync(path.join(from, file))) {
-        fs.copyFileSync(path.join(from, file), path.join(to, file));
-      }
-    });
-  }
+  // A bare specifier resolves through `package.json`'s `main`, so the compiled
+  // entrypoint has to be here and has to be current.
+  //
+  // It is excluded from the stale-file deletion below, because `buildPluginList`
+  // needs it to exist — but excluding it from deletion is not the same as
+  // keeping it up to date. It was left behind on every sync after the first,
+  // and served a `core-game/index.js` that predated an export added later:
+  // `defaultSlots` came back `undefined`, so the game that was supposed to
+  // adopt the singletons quietly built its own registries instead.
+  ['package.json', 'index.js', 'index.d.ts', 'index.js.map'].forEach((file) => {
+    const source = path.join(from, file);
+
+    if (!fs.existsSync(source)) {
+      return;
+    }
+
+    const target = path.join(to, file);
+    const contents = fs.readFileSync(source);
+
+    let existing = null;
+
+    try {
+      existing = fs.readFileSync(target);
+    } catch (e) {}
+
+    if (existing && existing.equals(contents)) {
+      return;
+    }
+
+    fs.rmSync(target, { force: true });
+    fs.writeFileSync(target, contents);
+    result.changed.push(file);
+  });
 
   const main = entrypoint(to);
 
