@@ -5,6 +5,7 @@ const path = require('path');
 const { checkoutPath, webRenderer } = require('./paths');
 const { read } = require('./audit');
 const { sourceFiles } = require('./scan');
+const { waves } = require('./graph');
 
 const git = (dir, ...args) =>
   execFileSync('git', args, { cwd: dir, encoding: 'utf8' }).trim();
@@ -275,12 +276,63 @@ const release = (name, resolution, otp) => {
   return version;
 };
 
+// A checkout with commits its remote does not have, or a version the registry
+// does not have, has something to publish.
+//
+// This exists because the manifest reports work *remaining*: once a stage's
+// codemod lands, its packages drop out of that stage's set, taking the wave
+// mapping with them and leaving nothing to publish against. Asking the
+// checkouts what is unpublished cannot go stale that way.
+const pending = (manifest) =>
+  Object.keys(manifest.packages)
+    .concat(
+      fs
+        .readdirSync(path.dirname(checkoutPath('x')))
+        .filter((name) => fs.existsSync(path.join(checkoutPath(name), '.git')))
+    )
+    .filter((name, i, all) => all.indexOf(name) === i)
+    .filter((name) => {
+      const dir = checkoutPath(name);
+
+      if (!fs.existsSync(path.join(dir, '.git')) || name === 'web-renderer') {
+        return false;
+      }
+
+      try {
+        // No upstream at all means it has never been pushed — a package a stage
+        // introduced. `stdio` is piped so git's "no upstream configured" does
+        // not print as if it were an error.
+        execFileSync(
+          'git',
+          ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'],
+          { cwd: dir, encoding: 'utf8', stdio: 'pipe' }
+        );
+      } catch (e) {
+        return true;
+      }
+
+      if (git(dir, 'log', '--oneline', '@{u}..HEAD') !== '') {
+        return true;
+      }
+
+      const details = manifest.packages[name];
+
+      return details && details.resolution !== 'github'
+        ? !onRegistry(name, localVersion(dir))
+        : false;
+    })
+    .sort();
+
 const run = (args) => {
   const manifest = read();
   const waveIndex = args.indexOf('--wave');
 
+  if (args.includes('--pending')) {
+    return runPending(manifest, args);
+  }
+
   if (waveIndex === -1) {
-    throw new Error('civ publish requires --wave N');
+    throw new Error('civ publish requires --wave N or --pending');
   }
 
   const wave = Number(args[waveIndex + 1]);
@@ -404,4 +456,105 @@ const run = (args) => {
   );
 };
 
-module.exports = { defaultBranch, run, verify };
+// Publish everything outstanding, in dependency order, without needing a stage
+// or a wave number.
+const runPending = (manifest, args) => {
+  const dryRun = args.includes('--dry-run');
+  const otpIndex = args.indexOf('--otp');
+  const otp = otpIndex === -1 ? null : args[otpIndex + 1];
+  const names = pending(manifest);
+
+  if (names.length === 0) {
+    console.log('Nothing pending.');
+
+    return;
+  }
+
+  const dependenciesOf = (name) => {
+    try {
+      return Object.keys(
+        JSON.parse(
+          fs.readFileSync(path.join(checkoutPath(name), 'package.json'), 'utf8')
+        ).dependencies || {}
+      )
+        .filter((key) => key.startsWith('@civ-clone/'))
+        .map((key) => key.slice('@civ-clone/'.length));
+    } catch (e) {
+      return [];
+    }
+  };
+  const { wave } = waves(names, dependenciesOf);
+  const byWave = {};
+
+  names.forEach((name) => {
+    (byWave[wave.get(name)] = byWave[wave.get(name)] || []).push(name);
+  });
+
+  console.log(
+    `${names.length} package(s) pending across ${Object.keys(byWave).length} wave(s)\n`
+  );
+
+  const problems = [];
+  const skipped = [];
+  const notes = [];
+
+  Object.keys(byWave)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .forEach((index) => {
+      console.log(`wave ${index}: ${byWave[index].join(', ')}`);
+
+      byWave[index].forEach((name) => {
+        if (problems.length > 0) {
+          console.log(`  ${name.padEnd(38)} skipped`);
+
+          return;
+        }
+
+        const found = verify(name, skipped, notes);
+
+        if (found.length > 0) {
+          console.log(`  ${name.padEnd(38)} FAILED`);
+          problems.push(...found);
+
+          return;
+        }
+
+        if (dryRun) {
+          const dir = checkoutPath(name);
+          const details = manifest.packages[name] || {};
+
+          console.log(
+            `  ${name.padEnd(38)} ${localVersion(dir)}${alreadyBumped(dir) ? ' already bumped' : ' → patch'}, ${details.resolution === 'github' ? 'git push only' : 'npm publish'}`
+          );
+
+          return;
+        }
+
+        const version = release(
+          name,
+          (manifest.packages[name] || {}).resolution,
+          otp
+        );
+
+        console.log(`  ${name.padEnd(38)} published ${version}`);
+      });
+    });
+
+  if (notes.length > 0) {
+    console.log('\nnotes:');
+    notes.forEach((line) => console.log(`  - ${line}`));
+  }
+
+  if (skipped.length > 0) {
+    console.log('\nchecks skipped (not run, and not passed):');
+    skipped.forEach((line) => console.log(`  ! ${line}`));
+  }
+
+  if (problems.length > 0) {
+    console.log(`\n${problems.join('\n')}`);
+    process.exitCode = 1;
+  }
+};
+
+module.exports = { defaultBranch, pending, run, verify };
