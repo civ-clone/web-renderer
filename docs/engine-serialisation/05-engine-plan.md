@@ -1037,6 +1037,49 @@ Two small upstream changes: `core-data-object` exports id-counter read/restore,
 and `core-engine` exposes the loaded plugin manifest for
 `save.engine.plugins`.
 
+### What the upstream changes actually cost — and where §7 went
+
+**Both landed, and they were small.** `core-data-object` gained `typeNameOf`,
+`idCounters()`, `restoreIdCounters()` and `ClassRegistry`; `core-engine` gained
+`plugins()` / `registerPlugins()`. Conformance unchanged, and `civ typecheck`
+clean across all 83 checkouts.
+
+**`ClassRegistry` lives in `core-data-object`, not `core-save-game`.** The
+layout above puts it in `core-save-game` while `hydrate` reads it as
+`game.classes` — which would make `core-game` depend on `core-save-game`, and
+`core-save-game` already depends on `core-game`. A registry of `DataObject`
+constructors belongs with `DataObject` anyway; `core-game` already depends on
+that package, and `core-data-object` depends on nothing but `core-registry`.
+
+**§7 is not a prerequisite, and doing it as one would have been a mistake.**
+Measured: **303 concrete `DataObject` classes across 243 packages, 210 of which
+are not even cloned** — every city improvement, unit, terrain, civilisation and
+leader trait is its own package. That is an order of magnitude larger than Stage
+4 and it would have gated the save work behind a 243-package publish.
+
+What §7 actually protects against is `keepNames: false` silently turning every
+type into `t`, `n`, `e` — and saves written under that being unreadable
+anywhere else. `ClassRegistry` addresses *that* directly by refusing to register
+a name of one character, and refusing two classes that claim one name. A startup
+error rather than a corrupt file, for one method's worth of code. The tags
+remain worth rolling out for the renderer's translation keys and `instanceOf`,
+but as their own piece of work: `typeNameOf` already prefers a tag wherever one
+appears, and `idProvider` already keys on it, so the rollout can be incremental
+and needs no further changes here.
+
+**`typeNameOf` reads an *own* tag, not an inherited one.** `static` members are
+inherited, so `Class.type` on a subclass of a tagged class returns the parent's
+— every descendant of one tagged class would save, load and take ids as that
+parent. Found by the test written for it, and the same trap `allTransient()`
+walks the prototype chain to avoid. Worth knowing before §7 tags 303 classes,
+because it would have been invisible until the first subclass was tagged.
+
+**The guard from Stage 4 earned its place within the hour.** `typeNameOf` was
+first written as `static typeName()` on `DataObject`, and
+`ConstructorStaysAssignable` rejected it immediately: a required static —
+method or property — stops `IConstructor<T>` satisfying `typeof T`, which is
+exactly what 0.1.14 shipped. A free function has no such problem.
+
 ### Acceptance
 
 The three tests from [`03-save-format.md`](./03-save-format.md) §Testing:

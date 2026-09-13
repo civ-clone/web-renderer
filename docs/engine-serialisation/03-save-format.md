@@ -219,6 +219,83 @@ inject(entity: DataObject): void {
 Blunt, but explicit and greppable. A registry map keyed by field name would be
 cleverer and harder to follow; there are about a dozen.
 
+### What `inject` has to do that this design missed
+
+Measured against a real game after Stage 4 landed, by rebuilding live entities
+from `stateKeys()` alone — exactly what passes 1 and 2 above produce — and
+calling their accessors. **Three of the four categories of transient field are
+not collaborators**, and one of the three fails silently.
+
+| Rebuilt | Result |
+| --- | --- |
+| `City.name()`, `City.player().id()` | correct — the collaborator case works |
+| `City.keys()` | `undefined` |
+| `City.toPlainObject()` | throws `Cannot read properties of undefined (reading 'forEach')` |
+| `Tile.getNeighbours()` | throws `Cannot read properties of undefined (reading 'length')` |
+| `Yield.value()` — the real value is `3` | **`undefined`, no error** |
+
+**1. Caches need their empty value, not a collaborator.** They are lazily
+populated behind a guard, and the guard is written against the field's
+*initialiser*, not against `undefined`:
+
+```ts
+if (this._valueCache === null) { /* compute */ }   // `undefined === null` is false
+```
+
+So `Yield.value()` skips the compute branch and returns the uninitialised cache.
+Every yield in a loaded game reads `undefined`, nothing throws, and the renderer
+draws a city with no food. `Tile._neighbours` and `Year._cache` fail the same
+way but throw, because their guards call `.length` and `.has`.
+
+Five fields across the 29 declaring classes — `_neighbours` (`[]`),
+`_yieldCache` and `_cache` and `_cachedSearch` (`new Map()`), `_valueCache`
+(`null`). Few enough for the same explicit table as the collaborators.
+
+**`inject` must therefore assert that no transient field is left `undefined`**,
+and that assertion matters more than the table: it is what turns "someone added
+a cache field and did not tell the hydrator" from a silent wrong answer into a
+load-time failure.
+
+**2. `_keys` cannot be injected, and must be saved.** It is `DataObject`
+bookkeeping — `['id', 'destroyed', 'name', 'player', 'tile', …]` for a `City` —
+built by `addKey()` calls inside constructors. No `Game` can supply it, it is
+per-class rather than per-instance for every class but one, and without it
+`toPlainObject()` throws, which means a loaded game sends nothing to the
+renderer.
+
+It belongs beside `id` in `SerialisedEntity` rather than inside `state`:
+
+```ts
+export type SerialisedEntity = {
+  id: string;
+  type: string;
+  keys: string[];
+  state: Record<string, unknown>;
+};
+```
+
+Putting it in `state` would mean removing `_keys` from `DataObject.transient`,
+which moves `stateKeys()` and so moves the conformance checksum — a real cost
+for something that is bookkeeping rather than state. `_id` is already handled
+this way; `_keys` is the same kind of thing.
+
+**3. Exactly one class builds per-instance structure in its constructor.**
+`PlayerTile` is the only class in all 328 packages that calls
+`Object.defineProperty(this, …)` or `addKey()` with a non-literal argument — it
+installs an accessor per registered `AdditionalData`. Those accessors are
+non-enumerable, so `stateKeys()` never sees them and hydration never restores
+them, leaving `_keys` naming methods that do not exist.
+
+One class, so one hook rather than a convention: an optional
+`onHydrated()` that `inject` calls last. `PlayerTile` re-runs its
+additional-data setup; nothing else implements it.
+
+The general shape of the finding is worth more than the three fixes: **the
+design assumed every transient field is "a registry the `Game` holds", and the
+`transient` declarations disagree.** They also contain caches, bookkeeping and
+one class's derived accessors. `transient` means "not saved", which is a wider
+category than "supplied by the `Game`".
+
 ## Registry membership
 
 Saved as `registryName → [ids]`, filtered to ids present in `save.entities`.
