@@ -253,13 +253,24 @@ const verify = (name, skipped = [], notes = []) => {
 // npm was offered to `npm publish` as a new private scoped package. npm refused
 // with E402; had the account carried a paid plan it would have succeeded.
 const resolutionOf = (name) => {
-  try {
-    const real = fs.realpathSync(path.join(scope, name));
+  let real;
 
-    return /codeload\.github\.com/.test(real) ? 'github' : 'npm';
+  try {
+    real = fs.realpathSync(path.join(scope, name));
   } catch (e) {
-    return 'npm';
+    // Guessing here fails open in the dangerous direction: "npm" would offer a
+    // package that lives only on GitHub to `npm publish` as a new private
+    // scoped package. A missing install means the tree is broken, which is its
+    // own thing to fix.
+    throw new Error(
+      `${name}: not installed, so its resolution cannot be determined. ` +
+        'Run `pnpm install` in web-renderer — note that a damaged tree needs ' +
+        '`rm -rf node_modules` first, as pnpm reports "Already up to date" ' +
+        'from its state file without checking the links exist.'
+    );
   }
+
+  return /codeload\.github\.com/.test(real) ? 'github' : 'npm';
 };
 
 const localVersion = (dir) =>
@@ -387,9 +398,14 @@ const pending = (manifest) =>
 
       const details = manifest.packages[name];
 
-      return resolutionOf(name) !== 'github'
-        ? !onRegistry(name, localVersion(dir))
-        : false;
+      try {
+        return resolutionOf(name) !== 'github'
+          ? !onRegistry(name, localVersion(dir))
+          : false;
+      } catch (e) {
+        // Not installed: nothing this stage published, so nothing to publish.
+        return false;
+      }
     })
     .sort();
 
