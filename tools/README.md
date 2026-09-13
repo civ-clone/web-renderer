@@ -15,11 +15,48 @@ shaped this way; this file is what to type.
 | `civ watch [package…]` | `civ sync` on change. Pair with `npm run watch`. |
 | `civ collisions` | Find classes declaring a private field an ancestor also declares. |
 | `civ check-dts [package…]` | Diff each package's `.d.ts` against the commit before its refactor. |
-| `civ publish --wave N [--dry-run]` | Verify, version, publish and push a wave. |
+| `civ publish --pending [--dry-run] [--otp CODE]` | Verify, version, publish and push everything outstanding, in dependency order. |
+| `civ publish --wave N [--dry-run]` | The same for one wave of one stage. |
 
 `civ sync` never edits a file in place — it checks the hard-link count first and
 refuses if the pnpm store is shared, then writes through a replacement. See
 `04-package-workflow.md` §3 for the failure it is guarding against.
+
+### Prefer `--pending` over `--wave`
+
+`packages.json` reports work **remaining**: when a stage's codemod lands, its
+packages drop out of that stage's set and take the wave mapping with them. That
+is correct as a description and useless as a publish plan, and it caught me out
+once per stage.
+
+`--pending` asks the checkouts instead — anything with commits its remote does
+not have, a version the registry does not have, or no upstream at all — and
+orders them from the live dependency graph. A package a stage introduces
+publishes before its dependents without anyone maintaining a list.
+
+### Three rules the tools encode, learned the hard way
+
+**A tool that deliberately preserves a file must also keep it up to date.**
+`civ sync` excluded each package's `main` entrypoint from its stale-file
+deletion, because `buildPluginList` needs it to exist — and then never
+refreshed it. `node_modules` served a `core-game/index.js` from before an
+export was added, so the export read `undefined`, a `Game` silently built its
+own registries instead of adopting the singletons, and the rule that builds the
+world registered where nothing would read it. The game stopped after
+`engine:start` with no error and exit code 0.
+
+**A codemod a rollout will re-run must recognise its own output.** Re-run over
+an already-migrated file, `register-game.js` found the new
+`game.rules.register(...)` call and rewrote its parent again, emitting
+`export const register = export const register = ...`. A rollout across
+seventeen packages gets re-run after any one of them fails.
+
+**A check that cannot run is not a check that passed.** Missing test runners,
+uninstallable packages and known-failing suites are reported by name with a
+reason on every run, never silently skipped. `civ publish` keeps two explicit
+lists for this — see `KNOWN_FAILING_TESTS` and `KNOWN_UNINSTALLABLE` — and
+nothing goes on either without first confirming it fails identically at the
+commit before the change.
 
 ## Stage 1
 
@@ -76,6 +113,21 @@ so and it does not check that the hoisted links still exist. Recovery is
 Where a package's own toolchain is unavailable, the stage drivers and the
 publish gate fall back to the renderer's `tsc` and `prettier` by path, which
 needs no symlink at all.
+
+## Stages 2 and 3
+
+```
+node tools/stage2.js --wave N --commit     # Math.random → injected seeded rng
+node tools/stage3.js --all --commit        # registerRules → register(game)
+```
+
+`stage3.js` compiles against a throwaway `tsconfig` that maps the whole
+`@civ-clone` scope onto the renderer's installed tree. These packages ship
+`.ts` beside their `.js` and TypeScript resolves the `.ts` first, so a compile
+needs every transitive dependency's *source* — including one a package has only
+just declared and not installed. Copying 300 packages into each checkout also
+works and is enormous. `paths` is compile-time only, so the emitted JavaScript
+is identical either way.
 
 ## Tests
 

@@ -291,6 +291,129 @@ The lockfile commit per wave is what makes this tractable — `git checkout` the
 previous `pnpm-lock.yaml` and `pnpm install --frozen-lockfile` restores a known
 tree exactly.
 
+## What actually goes wrong
+
+Three stages have been published through this workflow. Everything below cost
+real time to diagnose, and none of it is guessable from the outside. The
+ordering is roughly how likely you are to hit it.
+
+### The registry lies to you, twice
+
+**A publish takes minutes to become visible, and `npm view` is the last thing to
+know.** Right after publishing `core-registry@0.1.2`, `npm view` said `0.1.1`
+and the package document at `registry.npmjs.org/@civ-clone/core-registry`
+agreed — `time.modified` still read 2022. The only straight answer came from
+trying to publish again, which said "cannot publish over the previously
+published versions".
+
+The versioned endpoint `registry.npmjs.org/<pkg>/<version>` is the least stale
+answer available. Treat any "not published" as a hint, never as proof, and read
+the publish conflict as success.
+
+**But only *that* conflict.** npm has a second, near-identically worded one:
+
+```
+Cannot publish over the previously published versions   — already done
+Cannot publish over previously staged version           — did NOT finish
+```
+
+The second (E409) means the publish began and stopped, leaving the version in
+the registry's staging area and nowhere else. Matching loosely on "cannot
+publish over" read it as success: `core-civ-client@0.1.2` was reported
+published, tagged and pushed while the registry still had `0.1.1`. It finalised
+on its own some minutes later, but nothing would have retried it.
+
+**So verify against the registry, not against the tool's output.** Every stage
+here was checked by comparing each installed version against the version in its
+checkout, and that check is what caught the failures.
+
+### pnpm 10 → 11 needs four settings, and one of them fails silently
+
+| Symptom | Cause and fix |
+| ------- | ------------- |
+| `ERR_PNPM_UNEXPECTED_STORE`, then an empty `node_modules` | The tree is linked from store v10 and pnpm 11 wants v11. It purges *before* checking anything else, so a later failure leaves nothing installed. |
+| `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` on `overrides` | pnpm 11 reads `overrides` from `pnpm-workspace.yaml`. The lockfile recorded pins no current config declared. |
+| `ERR_PNPM_EXOTIC_SUBDEP` | 22 of these packages are `github:`-declared and several depend on each other that way. pnpm 11 blocks git-resolved subdependencies by default; pnpm 10 did not. `blockExoticSubdeps: false`. |
+| **Resolution silently picks the previous version** | pnpm 11 refuses versions published very recently, as a supply-chain measure. Ours were minutes old. **No warning, no error.** `minimumReleaseAge: 0`. |
+
+That last one is the dangerous one. `core-registry@0.1.2` was on the registry
+and `pnpm install` quietly chose `0.1.1`. Clearing every cache and deleting both
+lockfiles changed nothing. Without noticing it, a "verified against published
+artifacts" run tests the *old* code and passes, proving nothing.
+
+Two more pnpm behaviours worth knowing:
+
+- `pnpm install` reports "Already up to date" from `node_modules/.modules.yaml`
+  without checking the tree still exists. `--force` does not help. A damaged
+  `node_modules` needs `rm -rf node_modules && pnpm install`.
+- Deleting `pnpm-lock.yaml` is not enough to force re-resolution; pnpm keeps a
+  copy at `node_modules/.pnpm/lock.yaml`.
+
+### `tsc --build` skips, and a skipped compile looks like a successful one
+
+`tsc --build` does nothing when its outputs are newer than its inputs, and exits
+0. Five packages in this tree had never compiled from a clean checkout — missing
+`@types/node`, or `lib: es2019` against `core-data-object`'s `BigInt` — and
+nobody had noticed, because the stale success looked like a real one.
+
+**Always pass `--force` when the point of the compile is to prove something.**
+
+### Publishing a *new* scoped package needs `publishConfig.access`
+
+npm defaults a new scoped package to restricted, so the first publish fails with
+`E402 Payment Required — You must sign up for private packages`. On an account
+with a paid plan it would instead have quietly created a private package.
+
+That requirement makes `publishConfig.access` a reliable signal for *which*
+packages belong on npm at all. No `civ1-*` or `simple-*` package is on npm —
+they are consumed as `github:civ-clone/<name>`, and pushing is the release.
+
+### Two-factor authentication stops a wave dead
+
+With 2FA on writes, `npm publish` fails `EOTP`. A one-time password covers one
+publish before its thirty-second window closes, and a stage is dozens of
+publishes, so codes cannot be fed in by hand. Use an automation token, or set
+2FA to authorisation-only for the run.
+
+Because `npm version patch` has already committed and tagged by the time the
+publish fails, **the release step must be idempotent**: a version already bumped
+must not be bumped again, or it skips a number and leaves a tag pointing at
+something never published.
+
+### `simple-ai-client` cannot be installed
+
+It has around twenty `github:` dependencies and npm resolves each with a nested
+install, recursively — 124 concurrent `npm install` processes before the machine
+gives up. There is no flag that avoids it; `--no-save` with explicit package
+names still resolves the whole tree from `package.json`.
+
+**Do not work around it by symlinking a scope directory.** npm prunes through
+such a symlink: a killed install in that checkout deleted 106 packages from
+web-renderer's `node_modules`, three of them direct dependencies. Copy instead,
+or fall back to the renderer's `tsc` and `prettier` by path, which needs no
+link at all.
+
+### Tests that were never runnable, and tests that never asserted
+
+Four packages carry a `ts-mocha ./tests/*.test.ts` script from a template and
+have no `tests/` directory. Report that as "no tests", not as "the runner is
+missing" — the second reads like lost coverage and there is none.
+
+Worse, `expect(spy).called` and `expect(spy).not.called` are property accesses,
+not assertions. An entire file of spy expectations in `core-strategy` asserted
+nothing, which is how a test that registered two *identical* strategies and
+asserted a specific one ran could never fail. The correct form is
+`expect(spy).to.have.been.called()`. **After fixing an assertion, invert it once
+and watch it fail.**
+
+### A checkout carries untracked files that are not yours
+
+Several have an untracked `pnpm-lock.yaml`. Use `git commit -am`, never
+`git add -A`, or they end up in a refactor commit. For the same reason the
+publish gate reports untracked files rather than refusing on them: npm never
+packs `package-lock.json`, and the packages carrying a stray `pnpm-lock.yaml`
+are all GitHub-resolved, so no tarball is affected.
+
 ## What this does not solve
 
 Being honest about the residual cost:

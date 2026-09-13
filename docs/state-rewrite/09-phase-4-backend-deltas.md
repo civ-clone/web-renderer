@@ -337,3 +337,31 @@ larger delta beats a smaller wrong one.
   not skipping the comparison.
 - Keep the shadow audit in the shipped bundle behind the debug option. It costs
   nothing when off and it is the only tool that finds this class of bug.
+
+---
+
+## Note from the engine work
+
+Two findings from [`../engine-serialisation/`](../engine-serialisation/) bear
+directly on this phase.
+
+**`toState()` is a better basis for diffing than `toPlainObject`**, which
+[`../engine-serialisation/02-design-review.md`](../engine-serialisation/02-design-review.md) §5
+argues at length. It is Stage 4 there.
+
+**`toPlainObject` already emits more than it used to, at one site.**
+`Unit.busy` returns a `Rule`, which is not a `DataObject`, so `toPlainObject`
+walks it through its plain-object branch. Every field of `Rule` was `#private`
+and therefore invisible to `Object.entries`, so that branch emitted `{}`; after
+the `#private` → `private` migration it emits `{_enabled, _priority,
+_criteria}`. Truthiness is unchanged, so nothing reading it behaves
+differently, but a differ will see it.
+
+Measured on a seeded 4-player game: +1.1 KB at turn 10, +8.9 KB at turn 50, on
+a payload of 8.9 MB. The object count does not move. The proper fix is for
+`Unit.busy` to serialise as a rule identity rather than the rule object, which
+is both smaller and meaningful — and which needs the rule identity that
+Stage 6 of the engine plan introduces.
+
+The renderer's own measurement of that payload lives in
+[`../../tests/engine/fixtures/NOTES.md`](../../tests/engine/fixtures/NOTES.md).
