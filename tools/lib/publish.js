@@ -114,6 +114,20 @@ const testRunnerInstalled = (dir, name) => {
   );
 };
 
+// Several packages carry a `ts-mocha ./tests/*.test.ts` script from a template
+// without ever having had a `tests/` directory. Reporting those as "the runner
+// is not installed" reads like lost coverage; there is none to lose, and saying
+// so is the difference between a problem and a fact.
+const hasTests = (dir) => {
+  try {
+    return fs
+      .readdirSync(path.join(dir, 'tests'))
+      .some((file) => file.endsWith('.test.ts'));
+  } catch (e) {
+    return false;
+  }
+};
+
 // Steps 1-4 of the per-package procedure in 04-package-workflow.md. These are
 // the checks; they leave the checkout exactly as they found it.
 const verify = (name, skipped = [], notes = []) => {
@@ -193,11 +207,11 @@ const verify = (name, skipped = [], notes = []) => {
   git(dir, 'checkout', '--', '.');
 
   if (hasScript(name, 'test')) {
-    if (!testRunnerInstalled(dir, name)) {
-      // Five packages declare a `ts-mocha` test script without listing
-      // `ts-mocha` in devDependencies, so their suites have never been
-      // runnable. Report the skip rather than reading a missing binary as a
-      // failing test — and never treat it as a pass.
+    if (!hasTests(dir)) {
+      skipped.push(`${name}: has a test script but no tests/*.test.ts`);
+    } else if (!testRunnerInstalled(dir, name)) {
+      // A missing runner is detected by looking for the binary rather than by
+      // reading an error, and reported as a skip — never as a pass.
       skipped.push(
         `${name}: test script cannot run — ${testRunner(name)} is not installed`
       );
