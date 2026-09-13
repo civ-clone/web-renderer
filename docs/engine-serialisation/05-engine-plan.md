@@ -691,6 +691,29 @@ are typed with a registry class or `Engine`, and 133 are state. So the
 `transient` list is, almost exactly, "the registry-typed fields" — and after
 Stage 1 they all have `_`-prefixed names and explicit types.
 
+Narrowed to what is actually saved — `DataObject` descendants, excluding the
+registries, whose membership is saved as id lists rather than as fields —
+`tools/codemod/transient-fields.js` derives declarations for **29 classes
+across 24 packages, with nothing it cannot classify**. That the package count
+lands on 24 alongside [`01-constraints.md`](./01-constraints.md)'s
+independently-counted 24 stateful classes is a good sign.
+
+It agrees with this document's worked examples exactly, which is the check that
+matters: `Tile` gets `_neighbours, _ruleRegistry, _yieldCache` and `City` gets
+`_ruleRegistry, _workedTileRegistry`.
+
+Three things the derivation needs, each found by it getting one wrong:
+
+- **Follow the inheritance chain across packages.** `Unit extends Buildable
+  extends DataObject` spans three of them, and without closing over the whole
+  tree `SimpleAIClient` — a client, not an entity — was handed a declaration
+  for its arrow-function fields.
+- **Read the initialiser when there is no annotation.**
+  `private _attributes = new AttributeRegistry()` says what it holds as clearly
+  as a type would.
+- **Match caches by name.** A cache has no distinguishing type, and
+  `Layout._cachedSearch` has no annotation either.
+
 **That makes it type-directed, like Stages 2 and 3.** Both of those were
 mechanical for the same reason: the types already said what the answer was, so
 the codemod read signatures instead of guessing. `transient` is the same shape
