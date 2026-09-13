@@ -443,11 +443,63 @@ the next combat result — the exact bug that makes replay testing untrustworthy
 
 ### Acceptance
 
-- [ ] `grep -Rn "Math.random" ~/Code/civ-clone/*/` finds nothing outside
+- [x] `grep -Rn "Math.random"` finds nothing in shipped source outside
       `core-random` and the asset extractor
-- [ ] Two runs with the same seed produce identical checksums at turns 1/10/50
-- [ ] Two `Rng` instances with different seeds do not interfere
-- [ ] `restore(seed, calls)` reproduces the stream from mid-game
+- [x] Two runs with the same seed produce identical checksums at turns 1/10/50
+- [x] Two `Rng` instances with different seeds do not interfere
+- [x] `restore(seed, calls)` reproduces the stream from mid-game
+- [x] **The conformance suite counts calls to `Math.random` and reads 0** at all
+      three checkpoints. This is the criterion the grep above is a proxy for, and
+      unlike the grep it can see what a dependency resolves to at runtime.
+
+### What it cost
+
+**The checksums did not move.** 7d6b6b04 / 73a0cc05 / 3431063b, exactly as
+before Stage 1 — and seed 2 still produces the three checksums it produced
+before any of this work started. Every call site drew from one seeded stream
+before (a global `Math.random` override in the harness) and draws from one
+seeded stream now, in the same order.
+
+**Nineteen packages, not eighteen.** The list in this document missed
+`civ1-player` and included it nowhere; in fact `civ1-player`'s only
+`Math.random` is in a test, so eighteen production packages was right by
+accident. `core-random` makes nineteen.
+
+**Seventeen of the twenty call sites were already injectable** — the pattern
+`core-spaceship` established, a `() => number` parameter defaulting to
+`() => Math.random()`. For those the change is the default and an import. The
+parameter type stays `() => number` rather than becoming `Rng`: it is wider,
+every existing caller keeps working, and an `Rng` satisfies it.
+
+Three sites had no parameter to redirect:
+
+| Site | Resolution |
+| ---- | ---------- |
+| `core-strategy` `StrategyRegistry.attempt` | Constructor took no arguments, so it simply gains one. |
+| `core-trade-rate` `PlayerTradeRates.balance` | Constructor ends in a rest parameter, so nothing can follow it and inserting one ahead would break every caller. The generator arrives among the variadic arguments discriminated by type — `core-diplomacy`'s `Interaction` already does this. |
+| `simple-world-generator` `BaseGenerator` | Two hardcoded calls sitting beside an already-injectable generator; they now use it. The commented-out variants were updated too, so the grep stays clean and the dead code stays honest if revived. |
+
+### Pre-existing defects this surfaced
+
+None caused by this stage, all blocking its publish gate, all verified to fail
+identically at the commit before the change:
+
+- **`core-strategy`'s suite is still flaky.** Stage 2 makes the tie-break
+  *injectable*, not seeded — the default instance takes its seed from the clock.
+  Passing a fixed generator makes it consistent but not correct: it passes for
+  seeds 1–5 and 11 and fails for 7, so a fixed seed would only freeze a lucky
+  one. The test asserts a call order that a random tie-break decides; it needs
+  distinct priorities so the tie never arises.
+- **`civ1-city-improvement`'s suite fails 2–3 per run** (6 before this stage),
+  from two unrelated causes: RNG-dependent build-availability assertions, and
+  `WorkedTileRegistry` singleton state leaking between tests — the same
+  singleton problem behind the `core-city` test fixed in Stage 1. Stage 3's
+  per-`Game` registries make the second properly fixable. Recorded in
+  `civ publish`'s gate as a known failure so it reports rather than blocks.
+- **`civ1-unit`'s suite could not run at all.** `tests/Trireme.test.ts` used
+  `<Unit>expr` type assertions, which Node 24's type stripper rejects outright,
+  aborting the suite before a single test. Fixed in its own `test:` commit; 206
+  tests now pass.
 
 ---
 
