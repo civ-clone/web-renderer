@@ -2,7 +2,7 @@ const { execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const { checkoutPath, webRenderer } = require('./paths');
+const { checkoutPath, scope, webRenderer } = require('./paths');
 const { read } = require('./audit');
 const { sourceFiles } = require('./scan');
 const { waves } = require('./graph');
@@ -232,6 +232,22 @@ const verify = (name, skipped = [], notes = []) => {
   return problems;
 };
 
+// Read the resolution from the installed tree, not the manifest. `--pending`
+// deliberately operates on packages the manifest no longer lists (a stage drops
+// them once its work is done), and an absent entry meant `resolution` came back
+// `undefined` — which read as "not github", so a package that has never been on
+// npm was offered to `npm publish` as a new private scoped package. npm refused
+// with E402; had the account carried a paid plan it would have succeeded.
+const resolutionOf = (name) => {
+  try {
+    const real = fs.realpathSync(path.join(scope, name));
+
+    return /codeload\.github\.com/.test(real) ? 'github' : 'npm';
+  } catch (e) {
+    return 'npm';
+  }
+};
+
 const localVersion = (dir) =>
   JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8')).version;
 
@@ -266,7 +282,15 @@ const onRegistry = (name, version) => {
 // Which is why the conflict itself has to be read as success: the check above
 // can say a version is absent when it is already published, and letting that
 // abort a wave of twenty would leave the wave half done.
-const ALREADY_PUBLISHED = /cannot publish over|EPUBLISHCONFLICT/i;
+//
+// But only *this* conflict. npm has a second, near-identically worded one —
+// "Cannot publish over previously staged version" (E409) — which means the
+// publish began and did not finish, so the version exists in the registry's
+// staging area and nowhere else. Matching loosely on "cannot publish over"
+// read that as success and moved on, leaving `core-civ-client@0.1.2` tagged and
+// pushed but absent from npm.
+const ALREADY_PUBLISHED = /previously published versions|EPUBLISHCONFLICT/i;
+const STAGED = /previously staged version/i;
 
 const release = (name, resolution, otp) => {
   const dir = checkoutPath(name);
@@ -284,7 +308,19 @@ const release = (name, resolution, otp) => {
     try {
       npm(dir, 'publish', ...(otp ? [`--otp=${otp}`] : []));
     } catch (e) {
-      if (!ALREADY_PUBLISHED.test((e.stdout || '') + (e.stderr || ''))) {
+      const text = (e.stdout || '') + (e.stderr || '');
+
+      if (STAGED.test(text)) {
+        throw new Error(
+          `${name}@${version} is staged but not published. npm began the publish ` +
+            'and did not finish it; the version exists in the registry\'s staging ' +
+            'area only. It usually clears within a few minutes — re-run then, and ' +
+            'the idempotent bump means the same version is retried rather than ' +
+            `skipped.\n${text}`
+        );
+      }
+
+      if (!ALREADY_PUBLISHED.test(text)) {
         throw e;
       }
     }
@@ -337,7 +373,7 @@ const pending = (manifest) =>
 
       const details = manifest.packages[name];
 
-      return details && details.resolution !== 'github'
+      return resolutionOf(name) !== 'github'
         ? !onRegistry(name, localVersion(dir))
         : false;
     })
@@ -542,20 +578,15 @@ const runPending = (manifest, args) => {
 
         if (dryRun) {
           const dir = checkoutPath(name);
-          const details = manifest.packages[name] || {};
 
           console.log(
-            `  ${name.padEnd(38)} ${localVersion(dir)}${alreadyBumped(dir) ? ' already bumped' : ' → patch'}, ${details.resolution === 'github' ? 'git push only' : 'npm publish'}`
+            `  ${name.padEnd(38)} ${localVersion(dir)}${alreadyBumped(dir) ? ' already bumped' : ' → patch'}, ${resolutionOf(name) === 'github' ? 'git push only' : 'npm publish'}`
           );
 
           return;
         }
 
-        const version = release(
-          name,
-          (manifest.packages[name] || {}).resolution,
-          otp
-        );
+        const version = release(name, resolutionOf(name), otp);
 
         console.log(`  ${name.padEnd(38)} published ${version}`);
       });
