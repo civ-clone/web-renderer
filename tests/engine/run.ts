@@ -70,10 +70,14 @@ const finish = (): void => {
       {
         config,
         note:
-          'Stage 0 checksum: a deliberately narrow subset — entity id, type ' +
-          'and hand-listed scalars only. It is NOT a complete state hash. ' +
-          'Widen it in Stage 4 of docs/engine-serialisation/05-engine-plan.md, ' +
-          'once toState() exists, and regenerate these fixtures.',
+          'Stage 4 checksum: every non-transient field of every saveable ' +
+          'entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 ' +
+          '/ 3431063b) held unchanged through Stages 1-3 and are NOT ' +
+          'comparable with these — the widening is what ended that ' +
+          'comparability, and it was done in a commit of its own so the ' +
+          'discontinuity has exactly one cause. snapshots.*.state carries the ' +
+          'entity and field counts beside the hash, so a drift says how much ' +
+          'moved as well as that something did.',
         checksums,
         snapshots,
       },

@@ -12,10 +12,35 @@ game on a 60×40 world:
 They are separate on purpose. "The engine behaves identically" and "the wire
 format is unchanged" are different questions.
 
-The checksum is the deliberately narrow Stage 0 subset described in
-[`../../../docs/engine-serialisation/05-engine-plan.md`](../../../docs/engine-serialisation/05-engine-plan.md):
-entity id, type, and a hand-listed set of scalars. It is **not** a complete
-state hash. Widen it in Stage 4, once `toState()` exists, and regenerate.
+## The checksum was widened in Stage 4
+
+It used to be a deliberately narrow subset: entity id, type, and a hand-listed
+set of scalars. It now covers **every non-transient field of every saveable
+entity**, through `DataObject.stateKeys()` — 2,459 entities and 9,729 fields at
+turn 1, rising to 2,490 and 9,970 by turn 50.
+
+**The old numbers are not comparable with the new ones.** `7d6b6b04 /
+73a0cc05 / 3431063b` held unchanged through Stages 1, 2 and 3, which is exactly
+what let each of those stages claim it changed nothing. Widening ends that, so
+it was done in a commit that does nothing else: the discontinuity has one cause
+and the commit that caused it says so.
+
+`snapshots.*.state` records the entity and field counts beside the hash, which
+makes a drift diagnosable rather than merely detectable. Removing
+`_ruleRegistry` from `City`'s `transient` declaration — the whole failure mode
+Stage 4 exists to prevent — moves turn 10 from 9,793 fields to 9,796 and turn
+50 from 9,970 to 9,976: one per city, and turn 1 unaffected because no city
+exists yet. Every other part of the snapshot is identical under that change,
+which is why the narrow subset could not have caught it.
+
+References inside the digest are by id. `City._player` holds a `Player` whose
+`_civilization` holds a `Civilization`, and `City._tile` reaches the `World` and
+through it every tile — inlining any of that either never terminates or hashes
+the same data hundreds of times. Anything that is neither a primitive nor a
+`DataObject` is reduced to its class name, which is honest rather than
+complete: `Unit._busy`, `Unit._status` and `PlayerTreasury._yield` are exactly
+the fields with no save representation yet, and they are waiting on Stage 6's
+named rules.
 
 Nothing rule-computed is included. `city.yields()` and `unit.actions()`
 reallocate their `Yield` objects on every call, so including them would make the
