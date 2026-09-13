@@ -84,6 +84,17 @@ const compiledWithPrivateFieldHelpers = (dir) =>
 //
 // Nothing goes in here without first checking the suite fails identically at
 // the commit before the change.
+// Packages whose dependencies cannot be installed on this machine, so their
+// compile and test steps cannot run at all. Listed with the reason, and
+// reported every time — a package here is published on strictly less evidence
+// than the others, and that should be visible rather than assumed.
+const KNOWN_UNINSTALLABLE = {
+  'simple-ai-client':
+    'around twenty `github:` dependencies, each of which npm resolves with a ' +
+    'nested install, recursively, until the machine gives up. It is also ' +
+    'GitHub-resolved, so releasing it is a push and no tarball is built.',
+};
+
 const KNOWN_FAILING_TESTS = {
   'civ1-city-improvement':
     'RNG-dependent build-availability assertions, and WorkedTileRegistry ' +
@@ -162,6 +173,14 @@ const verify = (name, skipped = [], notes = []) => {
       stdio: 'pipe',
     });
   const output = (e) => (e.stdout || '') + (e.stderr || '') || e.message;
+
+  if (KNOWN_UNINSTALLABLE[name]) {
+    skipped.push(
+      `${name}: compile and tests not run — ${KNOWN_UNINSTALLABLE[name]}`
+    );
+
+    return problems;
+  }
 
   try {
     if (hasScript(name, 'ts:compile')) {
