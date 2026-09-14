@@ -354,7 +354,8 @@ published versions".
 
 The versioned endpoint `registry.npmjs.org/<pkg>/<version>` is the least stale
 answer available. Treat any "not published" as a hint, never as proof, and read
-the publish conflict as success.
+the publish conflict as success — but do **not** gate an install on it; see
+"the freshest answer is the wrong one to wait for" below.
 
 **But only *that* conflict.** npm has a second, near-identically worded one:
 
@@ -372,6 +373,34 @@ on its own some minutes later, but nothing would have retried it.
 **So verify against the registry, not against the tool's output.** Every stage
 here was checked by comparing each installed version against the version in its
 checkout, and that check is what caught the failures.
+
+### The freshest answer is the wrong one to wait for
+
+The two endpoints disagree, and which one to believe depends on the question.
+
+| Endpoint | Answers | Freshness |
+| -------- | ------- | --------- |
+| `registry.npmjs.org/<pkg>/<version>` | "did my publish land?" | first to update |
+| `registry.npmjs.org/<pkg>` (the packument) | "can anything install it?" | lags, sometimes by minutes |
+
+**pnpm resolves via the packument.** So the versioned endpoint returning `200`
+means the publish succeeded and nothing more: `core-pending-effect@0.1.1` was
+`200` there while the packument still listed *no versions at all*, and
+`pnpm install` failed with
+
+```
+@civ-clone/core-pending-effect is not in the npm registry
+```
+
+against a version that demonstrably existed. Worse, an install attempted in
+that window does not just fail — it writes a lockfile and a resolution that
+have to be cleared before the retry works.
+
+Polling the packument's `versions` keys instead resolved it in about 140
+seconds. The rule: **verify a publish against the versioned endpoint, but wait
+on the packument before installing.** It is the difference between "is it
+published" and "is it installable", and only the second one unblocks the next
+package in a wave.
 
 ### pnpm 10 → 11 needs four settings, and one of them fails silently
 
@@ -444,6 +473,23 @@ link at all.
 Four packages carry a `ts-mocha ./tests/*.test.ts` script from a template and
 have no `tests/` directory. Report that as "no tests", not as "the runner is
 missing" — the second reads like lost coverage and there is none.
+
+The inverse also happens, and matters more. `civ1-wonder` has nine test files
+and no installed `ts-mocha`, so its suite had **never once run**. Installing
+the package to check a change produced a failure — `City.yield` wants 6 trade
+from Colossus and gets 4 — that predates all of this work, and it was only
+found because the gate distinguishes *"the test script cannot run"* from
+*"the tests failed"* by looking up the runner binary rather than by parsing an
+error string. Collapse those two into one green tick and a package with no
+working test runner reports the same as a package that passes.
+
+**A check that cannot run is not a check that passed.** When a
+previously-unrun suite does fail, establish whether it is pre-existing by
+running it at the parent commit in a throwaway worktree — and run it the *same*
+way, whole suite for whole suite. The same `civ1-wonder` test fails with
+`expected 4 to equal 6` under `npm test` and `TypeError: Tile 0, 0 is already
+worked!` when run as the only file, because these suites share singleton
+registries. Comparing one against the other looks like a regression and is not.
 
 Worse, `expect(spy).called` and `expect(spy).not.called` are property accesses,
 not assertions. An entire file of spy expectations in `core-strategy` asserted
