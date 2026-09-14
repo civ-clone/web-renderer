@@ -29,6 +29,11 @@ const TURNS = 12;
 const checks: [string, () => unknown, unknown][] = [];
 const notes: string[] = [];
 
+// Collected rather than thrown, so one ambiguous name does not hide the rest.
+// A collected name is simply absent from the registry, so a save that uses one
+// fails to load rather than loading the wrong class.
+const collisions: string[] = [];
+
 const push = (
   label: string,
   actual: () => unknown,
@@ -55,16 +60,8 @@ const report = (): void => {
   // manifest means "cannot check", not "nothing loaded".
   engine.registerPlugins({ '@civ-clone/core-game': '0.1.2' });
 
-  // Collect rather than throw: there are 21 ambiguous class names in the
-  // engine, so throwing on the first makes the rest invisible. A collected
-  // name is simply absent from the registry, so a save that uses one fails to
-  // load rather than loading the wrong class.
-  const collisions: string[] = [];
-
-  registerClasses(defaultGame, { collisions });
-
   notes.push(
-    `${defaultGame.classes.length} classes registered; ` +
+    `${defaultGame.classes.length} classes registered at boot; ` +
       `${collisions.length} ambiguous name(s) refused` +
       (collisions.length
         ? `: ${[...new Set(collisions)].sort().join(', ')}`
@@ -356,6 +353,14 @@ engine.on('turn:start', (turn: number): void => {
     stopped = true;
     report();
   }
+});
+
+// Registered before the handler that creates players, because `civ1-player`
+// *unregisters* a civilisation and leader when a player takes one. Registering
+// classes after a game has been played therefore misses every claimed
+// civilisation — which is a property of when you look, not of the save.
+engine.on('engine:start', (): void => {
+  registerClasses(defaultGame, { collisions });
 });
 
 engine.on('engine:start', (): void => {
