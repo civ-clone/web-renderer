@@ -82,7 +82,12 @@ const finish = (): void => {
           'that entity`s id prefix, since ids key on the tag. Verified to be ' +
           'the only difference by normalising ids out of both DTO dumps and ' +
           'comparing — `_` still reports `Research`, so nothing the renderer ' +
-          'reads moved.',
+          'reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` ' +
+          'field, and a rule is reachable through `Unit._busy`, so `_id: null` ' +
+          'now appears in the DTO for every fortified unit. Turn 1 is ' +
+          'unchanged because nothing is fortified yet. That leak is what ' +
+          'fixing `_busy` removes, which will move these numbers once more ' +
+          'and shrink them.',
         checksums,
         snapshots,
       },
