@@ -82,9 +82,9 @@ const report = (): void => {
       const result = actual();
 
       process.stdout.write(
-        `  FAIL ${label.padEnd(52)} ${JSON.stringify(result)} (expected ${JSON.stringify(
-          expected
-        )})\n`
+        `  FAIL ${label.padEnd(52)} ${JSON.stringify(
+          result
+        )} (expected ${JSON.stringify(expected)})\n`
       );
     });
 
@@ -98,7 +98,9 @@ const report = (): void => {
   const gzipped = require('zlib').gzipSync(json).length;
 
   notes.push(
-    `${first.entities.length} entities, ${Object.keys(first.registries).length} ` +
+    `${first.entities.length} entities, ${
+      Object.keys(first.registries).length
+    } ` +
       `registries, ${(json.length / 1024).toFixed(0)}KB JSON, ` +
       `${(gzipped / 1024).toFixed(0)}KB gzipped`
   );
@@ -138,11 +140,7 @@ const report = (): void => {
 
   // A 150-turn save must be under 1MB gzipped. This is turn 12 on the
   // conformance world, so it is an early read rather than the answer.
-  push(
-    `under 1MB gzipped at turn ${TURNS}`,
-    () => gzipped < 1024 * 1024,
-    true
-  );
+  push(`under 1MB gzipped at turn ${TURNS}`, () => gzipped < 1024 * 1024, true);
 
   const loadTarget = (): Game => {
     const game = gameForLoad(defaultSlots);
@@ -186,16 +184,8 @@ const report = (): void => {
     loadError = error as Error;
   }
 
-  push(
-    'hydrate succeeds',
-    () => loadError?.message ?? 'ok',
-    'ok'
-  );
-  push(
-    'loading emits no creation events',
-    () => [...new Set(emitted)],
-    []
-  );
+  push('hydrate succeeds', () => loadError?.message ?? 'ok', 'ok');
+  push('loading emits no creation events', () => [...new Set(emitted)], []);
 
   // --- round-trip identity ------------------------------------------------
   // Save, load, save again: the two must be identical. This is the check that
@@ -210,10 +200,20 @@ const report = (): void => {
       () => second.entities.length,
       first.entities.length
     );
+    // Compared by hash: the membership lists run to several thousand ids, and
+    // printing them on every run buries everything else in the output.
+    const membership = (file: typeof first): string =>
+      `${Object.keys(file.registries).length} registries, ${Object.values(
+        file.registries
+      ).reduce((total, ids) => total + ids.length, 0)} members`;
+
     push(
       'round-trip: same registry membership',
-      () => JSON.stringify(second.registries),
-      JSON.stringify(first.registries)
+      () =>
+        JSON.stringify(second.registries) === JSON.stringify(first.registries)
+          ? membership(second)
+          : `differs: ${membership(second)} vs ${membership(first)}`,
+      membership(first)
     );
     push(
       'round-trip: byte-identical',
@@ -227,7 +227,8 @@ const report = (): void => {
       const b = new Map(second.entities.map((entity) => [entity.id, entity]));
       const differing = a
         .filter(
-          (entity) => JSON.stringify(b.get(entity.id)) !== JSON.stringify(entity)
+          (entity) =>
+            JSON.stringify(b.get(entity.id)) !== JSON.stringify(entity)
         )
         .slice(0, 3);
 
@@ -246,8 +247,10 @@ const report = (): void => {
               JSON.stringify(other.state[field])
             ) {
               notes.push(
-                `    .${field}: ${JSON.stringify(entity.state[field])?.slice(0, 70)}` +
-                  ` -> ${JSON.stringify(other.state[field])?.slice(0, 70)}`
+                `    .${field}: ${JSON.stringify(entity.state[field])?.slice(
+                  0,
+                  70
+                )}` + ` -> ${JSON.stringify(other.state[field])?.slice(0, 70)}`
               );
             }
           });
@@ -278,7 +281,10 @@ const report = (): void => {
         ...first,
         engine: {
           ...first.engine,
-          plugins: { ...first.engine.plugins, '@civ-clone/not-loaded': '1.0.0' },
+          plugins: {
+            ...first.engine.plugins,
+            '@civ-clone/not-loaded': '1.0.0',
+          },
         },
       };
 
