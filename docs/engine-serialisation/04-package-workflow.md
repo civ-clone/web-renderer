@@ -195,6 +195,42 @@ Requirements, each earned from a way this goes wrong:
   source is exactly the sort of thing that costs an afternoon later.
 - **Idempotent and fast.** It will run dozens of times per session.
 
+### `civ busy [package…]`
+
+Every `Busy` subclass with no way to be rebuilt after a load. A save records a
+busy state's *identity* — `Unit._busy` holds a `Rule`, and a rule is a closure —
+so the ruleset has to say how to rebuild each one. A subclass nobody registered
+loads as `UnknownBusyError`, which is the right answer and a terrible way to
+find out: it needs a save that happens to contain that state.
+
+Three were missed before this existed. `Fortifying`, found by a runtime error
+naming a stringified closure. `Pillaging`, found by `civ typecheck` reporting
+four consumers that no longer compiled. `Sleeping` and `Stowed`, found by
+reading `BusyRegistry`'s doc comment and checking its claims — it listed both
+as covered and neither was.
+
+All of them were meant to be caught by one grep, and **the grep is why they
+were not**: `node_modules/@civ-clone/*` are symlinks into pnpm's store and
+`grep -r` does not follow symlinks, so searching there for `extends Busy`
+returns nothing at all — which reads exactly like "none left to fix". Use
+`grep -R`; this walks the checkouts, where there is nothing to follow.
+
+Two things it has to get right to be worth running, both learned by getting
+them wrong:
+
+- **Resolve import aliases.** `Fortified` is both a `Busy` rule and a
+  `UnitImprovement`, so its package imports the rule as `BusyFortified` and
+  registers it under that name. Matching the local name alone reported it
+  missing, and a gate with a false positive is a gate that gets ignored.
+- **Strip comments first.** `registerDelayedAction`'s doc comment contains
+  `BusyRule: BuildingIrrigation` as an example, which would satisfy the check
+  from prose. The same flaw made the first inversion test pass: commenting the
+  registration out left the gate green.
+
+`GoTo` is listed as known-missing rather than as a failure, with the reason, so
+the gate is green when nothing is wrong. A permanently red gate gets ignored
+the same way a false positive does.
+
 ### `civ duplicates [package…]`
 
 Reports any `@civ-clone` package with more than one live copy in a tree — by

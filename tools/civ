@@ -11,6 +11,7 @@ const COMMANDS = {
   watch: () => require('./lib/watch'),
   publish: () => require('./lib/publish'),
   'check-dts': () => require('./lib/checkDts'),
+  busy: () => require('./lib/busy'),
   collisions: () => require('./lib/collisions'),
   duplicates: () => require('./lib/duplicates'),
   stale: () => require('./lib/stale'),
@@ -63,6 +64,14 @@ const USAGE = `civ <command> [options]
                                core-data-object, core-registry or core-rule.
                                Rebuilds and then restores each checkout, so it
                                refuses to run against a modified tree.
+
+  busy [package...]            Find \`Busy\` subclasses with no way to be rebuilt
+                               after a load. A unit saved in an unregistered busy
+                               state fails to load, and nothing at runtime says
+                               which states those are until one does. Three were
+                               missed by a \`grep -r\` over node_modules, whose
+                               @civ-clone entries are symlinks \`-r\` will not
+                               follow; this walks the checkouts.
 
   collisions                   Find classes that declare a private field also
                                declared by an ancestor. Legal while both sides
