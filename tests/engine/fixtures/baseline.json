@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1055,
+        "total": 1056,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -163,7 +163,7 @@
           "Spawn": 1,
           "Spend": 6,
           "Start": 2,
-          "Started": 1,
+          "Started": 2,
           "Step": 33,
           "Stowed": 1,
           "TileReassigned": 1,
@@ -335,7 +335,7 @@
       "randomCalls": 9050,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1055,
+        "total": 1056,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -387,7 +387,7 @@
           "Spawn": 1,
           "Spend": 6,
           "Start": 2,
-          "Started": 1,
+          "Started": 2,
           "Step": 33,
           "Stowed": 1,
           "TileReassigned": 1,
@@ -745,7 +745,7 @@
       "randomCalls": 10115,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1055,
+        "total": 1056,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -797,7 +797,7 @@
           "Spawn": 1,
           "Spend": 6,
           "Start": 2,
-          "Started": 1,
+          "Started": 2,
           "Step": 33,
           "Stowed": 1,
           "TileReassigned": 1,
