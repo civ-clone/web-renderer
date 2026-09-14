@@ -69,7 +69,31 @@ const report = (): void => {
   );
 
   // --- what a save of a real game actually contains -----------------------
-  const first = save(defaultGame, { name: 'acceptance', createdAt: 0 });
+  // `save` refuses rather than writing something unloadable, so a refusal is
+  // the measurement — report it and stop, instead of crashing the run.
+  let first: ReturnType<typeof save>;
+
+  try {
+    first = save(defaultGame, { name: 'acceptance', createdAt: 0 });
+  } catch (error) {
+    push('save succeeds', () => (error as Error).message, 'ok');
+
+    checks.forEach(([label, actual, expected]) => {
+      const result = actual();
+
+      process.stdout.write(
+        `  FAIL ${label.padEnd(52)} ${JSON.stringify(result)} (expected ${JSON.stringify(
+          expected
+        )})\n`
+      );
+    });
+
+    process.stdout.write(
+      `\n  ${notes.join('\n  ')}\n\n0/${checks.length} — save and load\n`
+    );
+    process.exit(1);
+  }
+
   const json = JSON.stringify(first);
   const gzipped = require('zlib').gzipSync(json).length;
 
@@ -81,6 +105,25 @@ const report = (): void => {
 
   const types = [...new Set(first.entities.map(({ type }) => type))].sort();
   const unresolvable = types.filter((type) => !defaultGame.classes.get(type));
+
+  // A `$class` with no name can never be decoded, so find out whose it is.
+  const anonymous = first.entities
+    .flatMap((entity) =>
+      Object.entries(entity.state)
+        .filter(([, value]) => JSON.stringify(value)?.includes('"$class":""'))
+        .map(([field]) => `${entity.type}.${field}`)
+    )
+    .filter((x, i, all) => all.indexOf(x) === i);
+
+  if (anonymous.length > 0) {
+    notes.push(`unnameable classes in: ${anonymous.slice(0, 8).join(', ')}`);
+  }
+
+  if (process.env.SAVE_DUMP_TYPES) {
+    // A debugging aid, like the conformance suite's `CONFORMANCE_DUMP`: the
+    // type list is what says whether a class is reached at all.
+    notes.push(`types: ${types.join(', ')}`);
+  }
 
   notes.push(
     `${types.length} distinct entity types; ${unresolvable.length} not ` +
