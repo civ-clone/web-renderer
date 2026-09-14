@@ -1217,11 +1217,22 @@ pattern cannot silently return.
 ### Acceptance
 
 - [ ] Named rules in the four `civ1-*` packages
-- [ ] `replace`, `disable`, `before`, `after` tested
-- [ ] Darwin's Voyage survives a save/load taken between building it and the next
+- [x] `replace`, `disable`, `before`, `after` tested — `core-rule/tests`
+- [x] Darwin's Voyage survives a save/load taken between building it and the next
       research — the specific bug this fixes
+
+      The test lives in **`civ1-wonder/tests/darwins-voyage-save.test.ts`**, not
+      here. It was written in the renderer first because `core-pending-effect`
+      was not published yet and `civ1-wonder` could not install; it belongs with
+      the wonder whose bug it is, and it needs no world, no plugin loader and no
+      seeded game to make its point — four `chai` assertions over a hand-built
+      `Game` say what the renderer's 9-check harness said, in 12ms.
+
+      Worth remembering for the checks still open: a suite only needs the
+      renderer when it needs a *whole loaded game*. This one did not.
 - [ ] Lint rule in place
-- [ ] Stage 5's `pendingEffects` refusal removed
+- [ ] Stage 5's `pendingEffects` refusal removed — `tests/engine/save.ts:339`
+      still asserts it, so that assertion goes with it
 
 ---
 
