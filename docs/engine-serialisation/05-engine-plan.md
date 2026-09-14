@@ -1128,6 +1128,83 @@ numbers (`new Priority(9001)` with the comment *"just to make sure, it's over
 Start with the packages a variant is most likely to override: `civ1-city`,
 `civ1-unit`, `civ1-science`, `civ1-player`.
 
+### Rule identity: strings, and why not subclasses
+
+Both were on the table. The numbers settle it: a real game registers **1,055
+rule instances across 163 classes**, and what `replace`/`disable`/`before`/
+`after` need is a name for *one instance*. Subclassing cannot give that — you
+would need 1,055 subclasses, and the second instance of any class stays
+unaddressable either way. Subclasses answer "what kind of rule is this", which
+the engine already has and already uses well: `City.yields()` collecting every
+`Yield`, `YieldModifier` and `Cost` is that design working as intended.
+
+`before`/`after` **reposition after the priority sort** rather than computing a
+priority. `target.priority() - 1` looks simpler and is wrong twice over:
+`Normal` is 2000 for nearly everything, so "one less" collides with whatever
+already sits there, and it breaks silently when the target's priority later
+changes. Position is what `before` means, so position is what gets set.
+`Array.prototype.sort` is stable, so equal priorities keep registration order
+and only constrained rules move. Rules with no constraint take an early return,
+so the hot path over 1,055 rules is unchanged.
+
+Every id-taking method **throws on an unknown id**. A plugin that means to
+replace `civ1-city:city/grow` and mistypes it should fail at load, not run a
+game in which its override silently never applied — that is the failure mode
+strings invite, and the reason to guard it. Two rules claiming one id is
+refused at registration, for the same reason `ClassRegistry` refuses two
+classes: the loser would be unaddressable.
+
+### `Unit._busy`, and the eight delayed actions
+
+`Unit._busy` is **the only field in the engine that holds a `Rule`**. Measured
+against a real game: 1,055 registered rules, 4,007 reachable entities, two
+fields, both `<Unit>._busy`. That single field is what blocks saving, because a
+rule is a closure.
+
+Five of the thirteen `Busy` subclasses need nothing more than an identity and a
+factory — `Fortified`, `Fortifying`, `Stowed`, `Sleeping`, `GoTo`. Their
+criteria are pure functions of the world and the unit ("is an enemy visible",
+"have I reached the end of my path", "never"), and their durable facts are
+saved separately: `Fortify` registers a `Fortified` *`UnitImprovement`*
+alongside the busy rule, and that is ordinary state. `core-unit/BusyRegistry`
+covers these.
+
+**The other eight cannot be rebuilt by a factory, and this is the stage's main
+finding.** They come from `DelayedAction.perform`:
+
+```ts
+const endTurn = this._turn.value() + turns;
+
+this.unit().setBusy(
+  new BusyRule(
+    new Criterion(() => this._turn.value() === endTurn),
+    new Effect(() => { …; action(…); … })    // `action` builds the irrigation
+  )
+);
+```
+
+`endTurn` says *when* the work finishes and `action` says *what it does*.
+Neither is recorded anywhere, and neither is derivable from the unit. A factory
+would have to invent a completion turn, so a unit three turns into building a
+road would load either finished or never finishing.
+
+That is not a shortcoming of the registry — it is precisely what
+`PendingEffect` is for. A delayed action **is** "at turn N, do X", which is the
+handler-plus-data shape [`03-save-format.md`](./03-save-format.md) already
+defines. So:
+
+- `DelayedAction.perform` should register a `PendingEffect` carrying
+  `{ unit, endTurn }` against a handler the action's package registers at
+  import, and derive the `Busy` rule from it rather than from a closure.
+- Every `base-unit-action-*` package with a delayed action gains one handler
+  registration: build irrigation, mine, road, railroad; clear forest, jungle,
+  swamp; plant forest.
+
+**`01-constraints.md` §4 concluded Darwin's Voyage was the one unserialisable
+continuation in the engine. It is one of nine**, and the other eight are the
+common case rather than the exotic one — which makes `PendingEffect` load-
+bearing infrastructure rather than a special case for a single wonder.
+
 ### `PendingEffect`
 
 Convert Darwin's Voyage ([`01-constraints.md`](./01-constraints.md) §4) from a
