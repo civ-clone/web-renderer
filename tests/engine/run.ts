@@ -77,7 +77,12 @@ const finish = (): void => {
           'comparability, and it was done in a commit of its own so the ' +
           'discontinuity has exactly one cause. snapshots.*.state carries the ' +
           'entity and field counts beside the hash, so a drift says how much ' +
-          'moved as well as that something did.',
+          'moved as well as that something did. Regenerated once in Stage 5: ' +
+          'tagging `base-trade-rate-research` as `ResearchTradeRate` changed ' +
+          'that entity`s id prefix, since ids key on the tag. Verified to be ' +
+          'the only difference by normalising ids out of both DTO dumps and ' +
+          'comparing — `_` still reports `Research`, so nothing the renderer ' +
+          'reads moved.',
         checksums,
         snapshots,
       },
