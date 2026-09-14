@@ -81,6 +81,7 @@
     "@civ-clone/core-player-world": "^0.1.10",
     "@civ-clone/core-registry": "^0.1.2",
     "@civ-clone/core-rule": "^0.1.4",
+    "@civ-clone/core-save-game": "^0.1.1",
     "@civ-clone/core-science": "^0.1.5",
     "@civ-clone/core-spaceship": "^0.1.8",
     "@civ-clone/core-treasury": "^0.1.5",
