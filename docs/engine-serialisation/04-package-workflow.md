@@ -227,9 +227,28 @@ them wrong:
   from prose. The same flaw made the first inversion test pass: commenting the
   registration out left the gate green.
 
-`GoTo` is listed as known-missing rather than as a failure, with the reason, so
-the gate is green when nothing is wrong. A permanently red gate gets ignored
-the same way a false positive does.
+`KNOWN_MISSING` exists for the case where a state holds something a save does
+not carry: listed with the reason rather than reported as a failure, so the
+gate is green when nothing is wrong. A permanently red gate gets ignored the
+same way a false positive does. It is currently empty — `GoTo` was its one
+entry and has since been fixed, which is the outcome the list is meant to
+drive rather than a place to leave things.
+
+### A note on what a gate is worth
+
+Three of these — `duplicates`, `stale`, `busy` — exist because the same shape
+of mistake kept recurring: **a check that cannot see the problem reads exactly
+like a check that passed.** Two copies of a package make `instanceof` false and
+nothing says so. A stale install runs a suite against code that is not the code
+under test. A `grep -r` over symlinks returns zero hits, which is
+indistinguishable from "nothing to fix". A package with no test runner installed
+reports the same as one whose tests pass.
+
+So the useful question when adding a gate is not "does this pass" but "what
+would this say if the thing I care about were broken, and would I be able to
+tell that from what it says now". Inverting an assertion once and watching it
+fail is the cheapest way to answer it, and it caught `civ busy` matching
+commented-out code on the first attempt.
 
 ### `civ duplicates [package…]`
 

@@ -1230,6 +1230,35 @@ pattern cannot silently return.
 
       Worth remembering for the checks still open: a suite only needs the
       renderer when it needs a *whole loaded game*. This one did not.
+- [x] Every `Busy` state can be rebuilt after a load — 14 identities, gated by
+      `civ busy`
+
+      Not on the original list, and it should have been. Three were missed:
+      `Pillage` was an eleventh `DelayedAction` subclass that never got
+      converted (caught by `civ typecheck`, after `core-unit@0.1.20` had
+      already shipped and broken four consumers), and `Sleeping`/`Stowed` were
+      named in `BusyRegistry`'s doc as covered with no factory registered
+      anywhere.
+
+      All three hid behind one thing: `node_modules/@civ-clone/*` are symlinks
+      into pnpm's store and `grep -r` does not follow symlinks, so the search
+      for `extends DelayedAction` returned *nothing at all*. Use `grep -R`.
+
+- [x] `GoTo` survives a save — which needed `StrategyNote` to become a
+      `DataObject`
+
+      The one state that could not be rebuilt from a lookup, and the reason was
+      two steps back: its criterion compares against a `Path` held in a
+      `StrategyNote`, and `StrategyNote` was not a `DataObject`, so despite
+      `strategyNotes` being dispositioned `'state'` the slot wrote nothing.
+
+      The note now holds the remaining `Tile`s rather than the `Path`, because
+      `encode` writes a registry held as a field as an array of its members and
+      cannot record the class around it. That is the general rule for a note's
+      value: entities, scalars and arrays of them survive; a class wrapped
+      around a collection does not. Worth knowing before the AI starts keeping
+      goals in there.
+
 - [ ] Lint rule in place
 - [ ] Stage 5's `pendingEffects` refusal removed — `tests/engine/save.ts:339`
       still asserts it, so that assertion goes with it

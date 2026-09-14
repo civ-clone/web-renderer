@@ -21,6 +21,12 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import StrategyNote from '@civ-clone/core-strategy/StrategyNote';
+import Tile from '@civ-clone/core-world/Tile';
+import Unit from '@civ-clone/core-unit/Unit';
+import BusyGoTo from '@civ-clone/base-unit-action-goto/Busy/GoTo';
+import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 
@@ -67,6 +73,45 @@ const report = (): void => {
         ? `: ${[...new Set(collisions)].sort().join(', ')}`
         : '')
   );
+
+  // --- a unit mid-journey -------------------------------------------------
+  // `GoTo` was the last `Busy` state that could not be saved, and the reason
+  // was two steps back: its criterion compares against a `Path` held in a
+  // `StrategyNote`, and `StrategyNote` was not a `DataObject`, so nothing in
+  // `strategyNotes` ever reached the file despite the slot being dispositioned
+  // as runtime state.
+  //
+  // Built here rather than by issuing a real `GoTo`, so the check does not
+  // depend on the AI happening to order one — but with the same pieces
+  // `GoTo.perform` uses, including the exported factory.
+  let journeying: Unit | undefined;
+  let destination: Tile | undefined;
+
+  const journeyStarted = ((): string => {
+    try {
+      [journeying] = unitRegistryInstance.entries();
+
+      if (!journeying) {
+        return 'no units in the game';
+      }
+
+      const here = journeying.tile();
+      const [next] = here.getNeighbours();
+
+      destination = next ?? here;
+
+      defaultGame.strategyNotes.replace(
+        new StrategyNote(generateKey(journeying), [here, destination])
+      );
+      journeying.setBusy(goToBusy(journeying, defaultGame.strategyNotes));
+
+      return 'ok';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  })();
+
+  push('a unit can be put on a journey', () => journeyStarted, 'ok');
 
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
@@ -186,6 +231,43 @@ const report = (): void => {
 
   push('hydrate succeeds', () => loadError?.message ?? 'ok', 'ok');
   push('loading emits no creation events', () => [...new Set(emitted)], []);
+
+  // The journey, after the round trip. `_busy` holds a rule, so the save
+  // carries only the identity and `BusyRegistry` rebuilds it — and the rule is
+  // only rebuildable because the path it reads now survives as saved state.
+  const restored = journeying
+    ? target.units.entries().find((unit) => unit.id() === journeying?.id())
+    : undefined;
+
+  push('the journeying unit comes back', () => restored !== undefined, true);
+  push(
+    'and is still following its path',
+    () => restored?.busy() instanceof BusyGoTo,
+    true
+  );
+
+  const restoredNote = journeying
+    ? target.strategyNotes.getByKey<Tile[]>(generateKey(journeying))
+    : undefined;
+
+  push('the path comes back as a note', () => restoredNote !== undefined, true);
+  push(
+    'as real `Tile`s and not `$ref` strings',
+    () => restoredNote?.value().every((tile) => tile instanceof Tile),
+    true
+  );
+  push(
+    'ending where it ended before',
+    () => restoredNote?.value().at(-1)?.id(),
+    destination?.id()
+  );
+  // The point of the whole exercise: the rebuilt rule reads the restored note,
+  // so it knows the journey is unfinished.
+  push(
+    'and the rebuilt rule still says the unit is going somewhere',
+    () => restored?.busy()?.validate(restored as never) === false,
+    true
+  );
 
   // --- round-trip identity ------------------------------------------------
   // Save, load, save again: the two must be identical. This is the check that

@@ -28,14 +28,7 @@ const BUSY_SUBCLASS = /^\s*export class (\w+) extends Busy\b/m;
 
 // Known and not a mistake, listed separately so the gate can be green. A gate
 // that is permanently red gets ignored exactly like one with a false positive.
-const KNOWN_MISSING = {
-  GoTo:
-    'its criterion is `unit.tile() === path.end()` and the path lives in a ' +
-    '`StrategyNote`, which does not extend `DataObject` — so despite ' +
-    "`core-save-game` dispositioning `strategyNotes` as 'state', no path " +
-    'reaches the file. Needs `StrategyNote` to become saveable, or `GoTo` to ' +
-    'keep its path somewhere that already is.',
-};
+const KNOWN_MISSING = {};
 
 // `import BusyFortified from './Rules/Fortified'` — the local name at the
 // registration is not always the class name, and cannot be. `Fortified` is
