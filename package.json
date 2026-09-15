@@ -20,6 +20,7 @@
     "prebuild": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
     "prettier:check": "prettier --config .prettierrc 'src/**/*.{ts,scss}'",
     "prettier:format": "prettier --config .prettierrc 'src/**/*.{ts,scss}' --write",
+    "release:changelog": "node generate-changelog.mjs --release",
     "test": "npm run test:conformance && npm run test:hydration && npm run test:isolation && npm run test:transient && npm run test:inject && npm run test:save",
     "test:conformance": "npm run build:generate-plugins-ts && node tools/conformance.js",
     "test:conformance:update": "npm run build:generate-plugins-ts && node tools/conformance.js --update",
