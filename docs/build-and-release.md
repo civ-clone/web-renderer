@@ -88,7 +88,10 @@ npm run civ -- lint
 npm test                    # typechecks src/ first — see below
 ```
 
-`npm test` starts with `ts:compile` because nothing else typechecks the
+`npm test` starts by generating `src/js/plugins.ts` and `translations.ts` —
+git-ignored, so a clean checkout has neither, and the first deploy run failed
+typechecking because only this machine had them — then runs `ts:compile`,
+because nothing else typechecks the
 renderer's own source: the suites are bundled with esbuild, which strips types
 without checking them, and `civ typecheck` compiles the engine checkouts. A
 type error there surfaced only when `npm run build` ran `prebuild` — as
