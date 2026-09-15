@@ -109,7 +109,13 @@ export class DataTransferClient extends Client implements IClient {
   #automationEnabled: boolean;
   #dataFilter =
     (localFilter = (object: any) => object) =>
-    (object: DataObject) => {
+    // `Busy` as well as `DataObject`, because that is what `toPlainObject`
+    // actually hands a filter: it walks every field, and `Unit._busy` holds a
+    // rule. Typed as `DataObject` alone, the `instanceof Busy` branch below
+    // narrows to `DataObject & Busy` — and since `core-rule@0.1.5` gave `Rule`
+    // a `private _id` for rule identity, alongside `DataObject`'s own, that
+    // intersection is `never` and the renderer stops compiling.
+    (object: DataObject | Busy) => {
       if (object instanceof Player && object !== this.player()) {
         if (!unknownPlayers.has(object)) {
           unknownPlayers.set(object, UnknownPlayer.fromPlayer(object));

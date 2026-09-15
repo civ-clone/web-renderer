@@ -84,8 +84,15 @@ npm run civ -- stale        # every installed copy matches its checkout
 npm run civ -- typecheck
 npm run civ -- busy
 npm run civ -- lint
-npm test
+npm test                    # typechecks src/ first — see below
 ```
+
+`npm test` starts with `ts:compile` because nothing else typechecks the
+renderer's own source: the suites are bundled with esbuild, which strips types
+without checking them, and `civ typecheck` compiles the engine checkouts. A
+type error there surfaced only when `npm run build` ran `prebuild` — as
+`core-rule@0.1.5`'s `Rule._id` did, colliding with `DataObject._id` in
+`DataTransferClient`.
 
 Commit the lockfile. A release built against unpublished checkouts synced into
 `node_modules` would work locally and be impossible to reproduce.
