@@ -1,0 +1,87 @@
+# Build web-renderer and publish it to civ.one on every push to `main`.
+#
+# civ.one is GitHub Pages serving `civ-clone/civ-clone.github.io`, which holds
+# nothing but a built copy of this repository: `index.html` and `dist/`. This
+# does what that repository's `update.sh` did by hand from a sibling checkout —
+# see docs/build-and-release.md — and commits the result the same way, naming
+# the build it came from.
+#
+# The release notes are not generated here. `ReleaseWindow` bundles
+# `changelog/releases.json`, so they are committed before pushing
+# (`npm run release:changelog`); a pipeline that wrote them would have to push
+# a commit back to `main` and trigger itself.
+
+name: Deploy to civ.one
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# One deploy at a time, and never cancel one part-way through a push to the
+# site repository. A newer push waits and then deploys its own build.
+concurrency:
+  group: deploy-civ-one
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same pnpm the lockfile was written with. Its settings — overrides,
+      # `blockExoticSubdeps`, `minimumReleaseAge`, `allowBuilds` — live in
+      # pnpm-workspace.yaml, so a frozen install here matches a local one.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Typechecks src/, then the conformance, hydration, isolation, transient,
+      # inject and save suites. A deploy that skipped these would be the only
+      # place the renderer ships without them.
+      - run: npm test
+
+      - run: npm run build
+
+      - uses: actions/checkout@v7
+        with:
+          repository: civ-clone/civ-clone.github.io
+          ssh-key: ${{ secrets.CIV_ONE_DEPLOY_KEY }}
+          path: site
+
+      # `rsync --delete` rather than update.sh's `cp -R`: esbuild names assets by
+      # content hash, and copying over the old directory left every superseded
+      # one behind. `CNAME` and `favicon.ico` live only in the site repository
+      # and are not touched.
+      - name: Publish the build
+        env:
+          BUILD: ${{ github.sha }}
+        run: |
+          rsync -a --delete dist/ site/dist/
+          cp index.html site/index.html
+
+          cd site
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "The site already serves this build; nothing to publish."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m "Updates from build ${BUILD::7} of web-renderer."
+          git push

@@ -53,15 +53,16 @@ From repository context:
 ## Releasing
 
 A release is: the engine packages it needs are published, the changelog is
-brought up to date, the bundle is built from that commit, and the bundle is
-copied into [`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io),
+brought up to date and committed, and `main` is pushed. GitHub Actions builds
+that commit and publishes it to
+[`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io),
 which GitHub Pages serves at **https://civ.one**.
 
 The order matters in two places. `ReleaseWindow` *imports*
 `changelog/releases.json`, so the notes are bundled into `frontend.js` — they
-have to be committed before the build. And `build.json` records
-`<version>@<HEAD>`, so the build has to run on the commit that is being
-released.
+have to be committed before `main` is pushed. And `build.json` records
+`<version>@<HEAD>`, so a build is only ever of the commit being released — which
+the pipeline guarantees.
 
 ### 1. The engine it depends on is published and resolved
 
@@ -133,7 +134,30 @@ its parent**; its own entry arrives with the next release.
 `generate-changelog-combined.sh` is retired — it rebuilt `releases.json` from
 scratch, which would delete the `0.0.0` entry.
 
-### 3. Build and look at it
+### 3. Push `main`
+
+```sh
+git push origin main
+```
+
+That is the deploy. [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
+runs on every push to `main`: a frozen `pnpm install`, `npm test`, `npm run
+build`, then it mirrors `dist/` and `index.html` into
+[`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io)
+and commits "Updates from build `<sha>` of web-renderer." GitHub Pages serves
+that repository's `master` at the root, with `CNAME` pointing at `civ.one`.
+Watch it with `gh run watch`; it can also be re-run by hand from the Actions tab
+(`workflow_dispatch`).
+
+It pushes with a deploy key: the public half is on `civ-clone.github.io` with
+write access ("web-renderer GitHub Actions deploy"), the private half is the
+`CIV_ONE_DEPLOY_KEY` secret on this repository. To rotate it, generate a new
+ed25519 key, replace both, and delete the old deploy key.
+
+It mirrors `dist/` with `rsync --delete`, so superseded hashed assets are
+removed rather than accumulating as they did with `update.sh`'s `cp -R`.
+
+To look at a build before pushing:
 
 ```sh
 npm run build
@@ -143,13 +167,11 @@ docker compose up    # http://localhost:8080
 `build` runs `prebuild` first: plugin and translation imports, a TypeScript
 check, `prettier:format` over `src/`, and `build.json`. Every generated file is
 git-ignored, so `git status` should still be clean afterwards; if prettier
-changed tracked source, commit that and build again, or `build.json` will name
-a commit the bundle was not built from.
+changed tracked source, commit that before pushing.
 
-Before deploying, start a game and open the release window: it is the one place
-the new notes are rendered, and a malformed entry shows up there first.
+### Deploying by hand
 
-### 4. Deploy
+If Actions is unavailable, the old route still works from a sibling checkout:
 
 ```sh
 git clone git@github.com:civ-clone/civ-clone.github.io.git ../civ-clone.github.io   # once
@@ -161,22 +183,8 @@ git commit -m "Updates from build $(git -C ../web-renderer rev-parse --short HEA
 git push
 ```
 
-GitHub Pages publishes `master` at the root, with `CNAME` pointing at
-`civ.one`. The commit message names the renderer commit the bundle was built
-from, as every deploy so far has.
-
-`update.sh` copies `dist/` over the old one without deleting anything, so
-assets that are no longer referenced — esbuild names images by content hash —
-accumulate in the site repo. Harmless, but worth clearing occasionally.
-
-### Automating it
-
-Every step above is manual, and the deploy in particular depends on a sibling
-checkout and a hand-typed commit message. A GitHub Actions workflow in this
-repository could run steps 2–4 on demand: install, test, generate the
-changelog, build, and push `dist/` and `index.html` to the site repository with
-a deploy key. Step 1 stays manual while publishing needs an npm token with
-two-factor authentication.
+Build first, on the commit being released. `update.sh` copies over the old
+`dist/` without deleting anything.
 
 ## Rewrite recommendations
 
