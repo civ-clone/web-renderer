@@ -195,6 +195,39 @@ Requirements, each earned from a way this goes wrong:
   source is exactly the sort of thing that costs an afternoon later.
 - **Idempotent and fast.** It will run dozens of times per session.
 
+### `civ compile <package…>`
+
+Builds a checkout's committed `.js`, `.d.ts` and `.js.map` for a change made
+outside a publish wave: format, compile against the renderer's tree, format
+again — the publish procedure's order, because compiling first bakes
+pre-prettier positions into the source maps.
+
+It exists because the output matters more than it looks. **Node resolves `.js`
+before `.ts`**, so a package's own tests run the compiled output, and until it
+is rebuilt they run the *old* code: every `civ1-*` suite went green with named
+rules in the source and none in what the tests loaded.
+
+It refuses a checkout with no local `prettier` or `tsc` rather than borrowing
+the renderer's. A package is formatted by the version it pins, and borrowing
+another rewrote the trailing commas in 58 files on its first run. That run did
+find real drift — Stage 3's `civ1-player` commit had been formatted with
+prettier 3 against a package that pins 2 — and drift like that belongs in a
+commit of its own.
+
+Sync a dependency changed in the same batch first: a checkout compiles against
+the renderer's installed copy, not its neighbour.
+
+### `civ lint [package… | file.ts…]`
+
+Engine checks a general linter cannot express. So far one: **no rule registered
+inside an `Effect`**. A rule is a closure, so one registered while the game runs
+exists only in memory, a save cannot carry it, and a loaded game silently lacks
+it — how Darwin's Voyage lost its free advances. `civ publish` runs it over the
+packages it is about to publish and refuses on a hit.
+
+File arguments let it be inverted against code that exists only in history:
+`git show <rev>:<file> > old.ts && civ lint old.ts`.
+
 ### `civ busy [package…]`
 
 Every `Busy` subclass with no way to be rebuilt after a load. A save records a

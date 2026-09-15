@@ -21,6 +21,7 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import { PendingEffect } from '@civ-clone/core-pending-effect';
 import StrategyNote from '@civ-clone/core-strategy/StrategyNote';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
@@ -104,6 +105,13 @@ const report = (): void => {
         new StrategyNote(generateKey(journeying), [here, destination])
       );
       journeying.setBusy(goToBusy(journeying, defaultGame.strategyNotes));
+
+      // And a debt owed to it. Stage 5 refused any save carrying one, because
+      // effects had no saveable shape yet; they are ordinary entities now, so
+      // what was a refusal check is a round trip.
+      defaultGame.pendingEffects.register(
+        new PendingEffect('save-suite:owed', journeying, { endTurn: '41' })
+      );
 
       return 'ok';
     } catch (error) {
@@ -249,6 +257,28 @@ const report = (): void => {
   const restoredNote = journeying
     ? target.strategyNotes.getByKey<Tile[]>(generateKey(journeying))
     : undefined;
+
+  const restoredEffect = journeying
+    ? target.pendingEffects
+        .entries()
+        .find((effect) => effect.handler() === 'save-suite:owed')
+    : undefined;
+
+  push(
+    'a pending effect comes back as an entity',
+    () => restoredEffect !== undefined,
+    true
+  );
+  push(
+    'owed to the same unit, with its data',
+    () => [restoredEffect?.target()?.id(), restoredEffect?.data().endTurn],
+    [journeying?.id(), '41']
+  );
+  push(
+    'and the legacy top-level field is no longer written',
+    () => 'pendingEffects' in first,
+    false
+  );
 
   push('the path comes back as a note', () => restoredNote !== undefined, true);
   push(
@@ -411,27 +441,6 @@ const report = (): void => {
       return warnings.length > 0 ? 'warned' : 'silent';
     },
     'warned'
-  );
-
-  push(
-    'refuses pending effects rather than dropping them',
-    () => {
-      const withEffects = {
-        ...first,
-        pendingEffects: [{ handler: 'DarwinsVoyage', data: {} }],
-      };
-
-      try {
-        hydrate(withEffects, loadTarget());
-
-        return 'accepted';
-      } catch (error) {
-        return (error as Error).message.includes('pending effect')
-          ? 'refused'
-          : `refused, unhelpfully: ${(error as Error).message}`;
-      }
-    },
-    'refused'
   );
 
   notes.push(

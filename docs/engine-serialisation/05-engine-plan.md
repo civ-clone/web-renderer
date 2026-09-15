@@ -1216,7 +1216,21 @@ pattern cannot silently return.
 
 ### Acceptance
 
-- [ ] Named rules in the four `civ1-*` packages
+- [x] Named rules in the four `civ1-*` packages — 135 rules, plus the 28 unit
+      build costs through `core-city-build`'s new id prefix
+
+      `<package>:<dir>/<file>/<what it does>`, e.g.
+      `civ1-unit:unit/action/fortify`, named for behaviour rather than position
+      because a position id breaks the moment a rule is inserted above it.
+      Loop-built rules take the loop's class names — both levels where loops
+      nest; the first attempt registered `movement-cost/action/Arctic` eleven
+      times and `RuleRegistry`'s duplicate refusal caught it at once.
+
+      Two things this surfaced. The packages ranged `core-rule` on `^0.1.0`, but
+      0.1.4 reads a leading string as a priority, so named rules *require*
+      0.1.5 — ranges now say so. And every green test run before `civ compile`
+      was a lie: Node resolves `.js` before `.ts`, and the stale compiled output
+      had no ids in it at all.
 - [x] `replace`, `disable`, `before`, `after` tested — `core-rule/tests`
 - [x] Darwin's Voyage survives a save/load taken between building it and the next
       research — the specific bug this fixes
@@ -1259,9 +1273,39 @@ pattern cannot silently return.
       around a collection does not. Worth knowing before the AI starts keeping
       goals in there.
 
-- [ ] Lint rule in place
-- [ ] Stage 5's `pendingEffects` refusal removed — `tests/engine/save.ts:339`
-      still asserts it, so that assertion goes with it
+- [x] Lint rule in place — `civ lint`, and `civ publish` refuses on a hit
+
+      No ESLint in the estate, so it is an AST check alongside the other `civ`
+      gates. It flags a `.register()` inside an `Effect` when the receiver is a
+      rule registry or the argument is a rule — inline, or bound to a variable
+      first, which is the spelling Darwin's Voyage used. Inverted against the
+      pre-conversion Darwin's source from git: caught at line 96.
+- [x] Stage 5's `pendingEffects` refusal removed — and the placeholder field
+      with it. Effects travel as entities; format-1 files still carrying
+      `"pendingEffects": []` load unchanged. The save suite's refusal check is
+      now a round trip.
+
+### A regression Stage 6 introduced, found finishing it
+
+Converting delayed actions to `PendingEffect` handlers moved each completion
+from a closure bound to `this` to module scope — and six of the ten swapped the
+registries the action was constructed with for `…Instance` singletons. The
+game never noticed, because `defaultGame` *is* the singletons; `civ1-unit`'s
+"should clear Fortified when activated" did, once its install picked up the
+published conversion.
+
+`delayedBusy` now passes the performed action through `discharge`, and
+`registerDelayedAction` hands it to `complete` as a third argument — third, so
+packages written against the two-argument form keep working. Each of the six
+has a static `complete(action)` holding the original closure body verbatim.
+Static because an instance member makes the class unassignable to `Action`
+(`DataObject._keys: (keyof this)[]`) — the same trap as `PathNote`.
+
+`tests/engine/isolation.ts` now checks that a delayed action completes into its
+own game's registry and not the singleton, inverted once to confirm it fails.
+The limit is loading: a restored completion has no performed action and
+rebuilds one with defaults, which is all it can do until plugins register
+against a game rather than at import.
 
 ---
 

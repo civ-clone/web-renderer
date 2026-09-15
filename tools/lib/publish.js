@@ -723,6 +723,37 @@ const runPending = (manifest, args) => {
     return;
   }
 
+  // Scoped to what is about to be published, and before any of it is. A rule
+  // registered inside an `Effect` is a closure no save can carry, and once
+  // published it reaches every consumer on the next patch — see `civ lint`.
+  const lintHits = names
+    .filter((name) => fs.existsSync(checkoutPath(name)))
+    .flatMap((name) => {
+      const { findings, sourcesIn } = require('./lint');
+
+      return sourcesIn(checkoutPath(name)).flatMap((file) =>
+        findings(file).map(
+          ({ line, text }) =>
+            `  ${name}/${path.relative(
+              checkoutPath(name),
+              file
+            )}:${line}  ${text}`
+        )
+      );
+    });
+
+  if (lintHits.length > 0) {
+    console.log(
+      `refusing to publish: ${lintHits.length} rule(s) registered inside an ` +
+        `Effect.\n${lintHits.join('\n')}\n\n` +
+        'Run `civ lint` for why.'
+    );
+
+    process.exitCode = 1;
+
+    return;
+  }
+
   const dependenciesOf = (name) => {
     try {
       return Object.keys(

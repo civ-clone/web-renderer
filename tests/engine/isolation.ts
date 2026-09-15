@@ -13,6 +13,14 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { createRng } from '@civ-clone/core-random';
 import registerCiv1PlayerEvents from '@civ-clone/civ1-player/registerEvents';
 import registerTurnEvents from '@civ-clone/core-turn-based-game/registerEvents';
+import Busy from '@civ-clone/core-unit/Rules/Busy';
+import Fortified from '@civ-clone/base-unit-improvement-fortified/UnitImprovements/Fortified';
+import Fortify from '@civ-clone/base-unit-action-fortify/Fortify';
+import Grassland from '@civ-clone/base-terrain-grassland/Grassland';
+import Tile from '@civ-clone/core-world/Tile';
+import Warrior from '@civ-clone/base-unit-warrior/Warrior';
+import World from '@civ-clone/core-world/World';
+import { instance as unitImprovementRegistryInstance } from '@civ-clone/core-unit-improvement/UnitImprovementRegistry';
 
 const checks: [string, () => boolean][] = [];
 
@@ -83,6 +91,62 @@ const bDraws = b.rng.calls();
 checks.push(['a drew once', () => aDraws === 1]);
 checks.push(['b drew none', () => bDraws === 0]);
 
+// A delayed action completes against the registries it was constructed with.
+//
+// Its completion used to be a closure bound to `this`, so it wrote to the
+// action's own registries. Converting it to a `PendingEffect` handler moved it
+// to module scope and six conversions swapped those registries for
+// `…Instance` singletons. Nothing in the game noticed — `defaultGame` *is* the
+// singletons — and every test with its own registries did: `civ1-unit`'s
+// "should clear Fortified when activated" watched `Fortified` land in a
+// registry it was not looking at. Game `a` has its own `unitImprovements`, so
+// this is the shape that catches it.
+const fortifying = ((): { mine: number; singleton: number; error?: string } => {
+  const before = unitImprovementRegistryInstance.entries().length;
+
+  try {
+    const player = a.players.entries()[0];
+    const tile = new Tile(
+      0,
+      0,
+      new Grassland(),
+      null as unknown as World,
+      a.rules
+    );
+    const unit = new Warrior(null, player, tile, a.rules);
+
+    new Fortify(
+      tile,
+      tile,
+      unit,
+      a.rules,
+      a.turn,
+      a.unitImprovements
+    ).perform();
+    (unit.busy() as Busy).process();
+
+    return {
+      mine: a.unitImprovements
+        .getByUnit(unit)
+        .filter((improvement) => improvement instanceof Fortified).length,
+      singleton: unitImprovementRegistryInstance.entries().length - before,
+    };
+  } catch (error) {
+    return { mine: 0, singleton: 0, error: (error as Error).message };
+  }
+})();
+
+checks.push([
+  `a delayed action completes into its own registry${
+    fortifying.error ? ` (threw: ${fortifying.error})` : ''
+  }`,
+  () => fortifying.mine === 1,
+]);
+checks.push([
+  'and not into the singleton',
+  () => !fortifying.error && fortifying.singleton === 0,
+]);
+
 let failed = 0;
 
 checks.forEach(([label, check]) => {
@@ -102,7 +166,9 @@ checks.forEach(([label, check]) => {
 });
 
 console.log(
-  `\n${checks.length - failed}/${checks.length} — two games in one process share nothing`
+  `\n${checks.length - failed}/${
+    checks.length
+  } — two games in one process share nothing`
 );
 
 process.exit(failed === 0 ? 0 : 1);

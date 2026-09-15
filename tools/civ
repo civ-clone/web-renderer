@@ -7,6 +7,7 @@
 const COMMANDS = {
   audit: () => require('./lib/audit'),
   clone: () => require('./lib/clone'),
+  compile: () => require('./lib/compile'),
   sync: () => require('./lib/sync'),
   watch: () => require('./lib/watch'),
   publish: () => require('./lib/publish'),
@@ -14,6 +15,7 @@ const COMMANDS = {
   busy: () => require('./lib/busy'),
   collisions: () => require('./lib/collisions'),
   duplicates: () => require('./lib/duplicates'),
+  lint: () => require('./lib/lint'),
   stale: () => require('./lib/stale'),
   typecheck: () => require('./lib/typecheck'),
 };
@@ -27,6 +29,11 @@ const USAGE = `civ <command> [options]
   clone [--stage N] [--dry-run]
                                Clone every manifest package missing from the
                                workspace root. Reports dirty checkouts.
+
+  compile <package...>         Format, compile and format a checkout's committed
+                               output, against the renderer's tree. For changes
+                               made outside a publish wave; \`civ sync\` any
+                               dependency changed alongside it first.
 
   sync [package...]            Copy .ts source from each checkout into
                                web-renderer/node_modules. No argument syncs every
@@ -72,6 +79,12 @@ const USAGE = `civ <command> [options]
                                missed by a \`grep -r\` over node_modules, whose
                                @civ-clone entries are symlinks \`-r\` will not
                                follow; this walks the checkouts.
+
+  lint [package... | file.ts...]
+                               Engine checks a general linter cannot express. So
+                               far: no rule registered inside an \`Effect\`, which
+                               is a closure no save can carry — how Darwin's
+                               Voyage lost its free advances across a save.
 
   collisions                   Find classes that declare a private field also
                                declared by an ancestor. Legal while both sides
