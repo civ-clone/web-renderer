@@ -1,0 +1,1 @@
+{"version":"0.1.0@c7d95fd","date":"2026-07-02T18:24:13.000Z","localChanges":["Add and update documentation for finding the memory leak. Fixed the memory leak (thanks to Claude Fable 5). Lots of other minor bugs resolved too."],"externalChanges":{}}

@@ -1,0 +1,1 @@
+{"version":"0.1.0@3d860bb","date":"2026-09-13T06:33:47.000Z","localChanges":["Four packages carry a `ts-mocha ./tests/*.test.ts` script from a template and have never had a `tests/` directory. The gate reported them as \"ts-mocha is not installed\", which reads like lost coverage; there is none to lose."],"externalChanges":{}}

@@ -1,0 +1,1 @@
+{"version":"0.1.0@a4ac9ad","date":"2026-09-13T06:47:07.000Z","localChanges":["`core-game` exists and its acceptance criterion holds: two `Game`s in one process share no registries, turn, year or random stream. The 17 `registerRules.ts` migrations remain."],"externalChanges":{}}
