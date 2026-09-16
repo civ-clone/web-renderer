@@ -1084,13 +1084,28 @@ exactly what 0.1.14 shipped. A free function has no such problem.
 
 The three tests from [`03-save-format.md`](./03-save-format.md) §Testing:
 
-- [ ] **Round-trip identity** — save, load, save again; byte-identical
+- [x] **Round-trip identity** — save, load, save again; byte-identical
+      (`tests/engine/save.ts`, 6,500 entities at turn 12; and in
+      `core-save-game`'s own tests on a two-entity cycle)
 - [ ] **Replay equivalence** — N turns vs N/2 + save/load + N/2; matching
       checksums
-- [ ] **No-op suppression** — loading emits no `city:created`, `unit:created` etc.
-- [ ] Missing plugin refuses; extra plugin allows; version drift warns
-- [ ] Non-empty `pendingEffects` **refuses to load** until Stage 6
-- [ ] A 150-turn save is under 1 MB gzipped
+
+      **Still blocked, and the only Stage 5 criterion that is.** Plugins
+      register their rules into `defaultGame` at *import*, so a game built by
+      `gameForLoad` has no rules and cannot be played on. Stage 3 built
+      `register(game)` for exactly this; `buildPluginList.js` emits bare
+      side-effect imports and never exposes it. The same root cause limits
+      delayed actions after a load: a restored completion rebuilds its action
+      with default registries, because nothing per-game is reachable from a
+      handler registered at import.
+- [x] **No-op suppression** — loading emits no `city:created`, `unit:created` etc.
+- [x] Missing plugin refuses; extra plugin allows; version drift warns
+- [x] ~~Non-empty `pendingEffects` **refuses to load** until Stage 6~~ —
+      superseded. Effects are entities now; the placeholder field and its
+      refusal are gone, and the check is a round trip.
+- [ ] A 150-turn save is under 1 MB gzipped — **measured at turn 12 only**: 837KB
+      of JSON, 57KB gzipped. The suite asserts the budget against that, which is
+      an extrapolation, not the measurement the criterion asks for.
 
 ---
 
