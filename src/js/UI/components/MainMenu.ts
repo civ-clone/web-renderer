@@ -6,6 +6,7 @@ import NewGameWindow from './NewGameWindow';
 import ReleaseWindow from './ReleaseWindow';
 import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
+import { chooseSaveFile } from '../lib/savedGame';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { version } from '../../../../build.json';
@@ -68,6 +69,16 @@ export class MainMenu extends Element {
             {
               click: async () =>
                 new CustomiseWorldWindow(this.#transport, () => this.remove()),
+            }
+          ),
+          h(
+            s(
+              `<button${hasAssets ? '' : ' hidden'}>${t(
+                'MainMenu.load-game'
+              )}</button>`
+            ),
+            {
+              click: () => chooseSaveFile(),
             }
           ),
           h(s(`<button>Import Assets</button>`), {

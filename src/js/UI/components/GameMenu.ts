@@ -1,5 +1,6 @@
 import { Element, s } from '@dom111/element';
 import CityStatus from './CityStatus';
+import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
 import { Player } from '../types';
@@ -9,6 +10,7 @@ import ScienceReport from './ScienceReport';
 import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
+import { chooseSaveFile } from '../lib/savedGame';
 import { h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
@@ -52,6 +54,31 @@ export class GameMenu extends Element {
             parentX + x,
             parentY + y,
             [
+              {
+                label: t('GameMenu.save-game'),
+                action: (menu) => {
+                  menu.remove();
+
+                  this.#transport.send('save', {
+                    name: t('GameMenu.save-name', {
+                      date: new Date(),
+                      player: this.#getPlayer().civilization._,
+                    }),
+                  });
+                },
+              },
+              {
+                label: t('GameMenu.load-game'),
+                action: (menu) => {
+                  menu.remove();
+
+                  new ConfirmationWindow(
+                    t('GameMenu.load-game'),
+                    t('GameMenu.load-game-confirm'),
+                    () => chooseSaveFile()
+                  );
+                },
+              },
               {
                 label: t('GameMenu.options'),
                 action() {

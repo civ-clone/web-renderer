@@ -58,7 +58,12 @@ declare global {
       },
       string[]
     >;
+    // The UI asks for a save and gets the file back to hand to the player;
+    // `load` goes the other way, into a worker that has not started a game.
+    load: TransportData<null, { data: string }>;
     notification: TransportData<string, never>;
+    save: TransportData<null, { name: string }>;
+    saveGame: TransportData<{ name: string; data: string }, never>;
     quit: TransportData<null, null>;
     restart: TransportData<null, null>;
     setOption: TransportData<

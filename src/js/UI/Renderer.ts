@@ -35,6 +35,7 @@ import Irrigation from './components/Map/Irrigation';
 import Land from './components/Map/Land';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import MainMenu from './components/MainMenu';
+import { downloadSave, takePendingSave } from './lib/savedGame';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notifications from './components/Notifications';
@@ -170,6 +171,9 @@ export class Renderer {
         unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
         preloadContainer = document.getElementById('preload') as HTMLDivElement,
         notifications = new Notifications(),
+        // Taken, not read: one reload loads one save. Read here so the welcome
+        // window can be skipped — a loaded game is not a new one.
+        pendingSave = takePendingSave(),
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
         // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
         // layers' active-unit pointers current synchronously, so consecutive
@@ -262,6 +266,12 @@ export class Renderer {
         uiStressRunner: UIStressRunner | null = null;
 
       const transportDisposers: Array<() => void> = [];
+
+      transportDisposers.push(
+        transport.receive('saveGame', ({ name, data }): void =>
+          downloadSave(name, data)
+        )
+      );
 
       transportDisposers.push(
         transport.receive('notification', (data: string): void => {
@@ -429,29 +439,33 @@ export class Renderer {
           objectMap: ObjectMap = { objects: {}, hierarchy: {} }
         ) => {
           try {
-            new NotificationWindow(
-              'Welcome',
-              s(
-                `<div class="welcome">
+            // Only for a new game: "you have risen" is an introduction, and a
+            // loaded game has already had one.
+            if (pendingSave === null) {
+              new NotificationWindow(
+                'Welcome',
+                s(
+                  `<div class="welcome">
 <p>${t('Welcome.you-have-risen', {
-                  player: data.player,
-                })}</p>
+                    player: data.player,
+                  })}</p>
 <p>${t('Welcome.your-people-have-knowledge-of', {
-                  advances: [
-                    'Irrigation',
-                    'Mining',
-                    'Roads',
-                    ...data.player.research.complete.map((advance) =>
-                      t(`${advance._}.name`, {
-                        defaultValue: advance._,
-                        ns: 'science',
-                      })
-                    ),
-                  ],
-                })}</p>
+                    advances: [
+                      'Irrigation',
+                      'Mining',
+                      'Roads',
+                      ...data.player.research.complete.map((advance) =>
+                        t(`${advance._}.name`, {
+                          defaultValue: advance._,
+                          ns: 'science',
+                        })
+                      ),
+                    ],
+                  })}</p>
 </div>`
-              )
-            );
+                )
+              );
+            }
 
             gameArea.classList.add('active');
 
@@ -1552,6 +1566,16 @@ export class Renderer {
           }
         }
       );
+
+      // Last, because the worker starts hydrating the moment it is told to and
+      // the first `gameData` follows immediately: every handler above has to be
+      // listening before that. There is no `start` for a loaded game — that is
+      // what generates a world.
+      if (pendingSave !== null) {
+        mainMenu.remove();
+
+        transport.send('load', { data: pendingSave });
+      }
     } catch (e) {
       console.error(e);
     }
