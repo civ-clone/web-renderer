@@ -141,7 +141,7 @@ i18next.addResources('en', 'default', {
     'Loading a saved game will end the game in progress. Any unsaved progress will be lost.',
   'GameMenu.options': 'Options',
   'GameMenu.save-game': 'Save Game',
-  'GameMenu.save-name': 'The {{player}}, {{date, datetime}}',
+  'GameMenu.save-name': 'The {{player}}, turn {{turn}}, {{date}}',
   'GameMenu.science-report': 'Science Report',
   'GameMenu.trade-report': 'Trade Report',
 
@@ -184,6 +184,10 @@ i18next.addResources('en', 'default', {
   'Notification.title': 'Notification',
 
   'SavedGame.could-not-read': 'That save could not be read: {{error}}',
+
+  'SavedGame.could-not-write': 'That save could not be written: {{error}}',
+  'SavedGame.no-decompression':
+    'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
 
   'PlayerDetails.header': '{{leader}} of the {{nation}}',

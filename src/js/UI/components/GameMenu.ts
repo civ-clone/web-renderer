@@ -17,6 +17,7 @@ import { t } from 'i18next';
 
 export class GameMenu extends Element {
   #getPlayer: () => Player;
+  #getTurn: () => number;
   #portal: Portal;
   #transport: Transport;
   #debugMode: boolean;
@@ -28,6 +29,7 @@ export class GameMenu extends Element {
     // start, so a snapshot here would stay pinned to the turn-0 player (no
     // cities, initial research) for the rest of the session.
     getPlayer: () => Player,
+    getTurn: () => number,
     portal: Portal,
     transport: Transport,
     debugMode: boolean = false
@@ -35,6 +37,7 @@ export class GameMenu extends Element {
     super(element);
 
     this.#getPlayer = getPlayer;
+    this.#getTurn = getTurn;
     this.#portal = portal;
     this.#transport = transport;
     this.#debugMode = debugMode;
@@ -61,8 +64,13 @@ export class GameMenu extends Element {
 
                   this.#transport.send('save', {
                     name: t('GameMenu.save-name', {
-                      date: new Date(),
+                      // Plain parts: i18next escapes interpolated values for
+                      // HTML, so a localised date came through as
+                      // `16&#x2F;09&#x2F;2026` and left `16x2F09x2F2026` in the
+                      // file name once the punctuation was stripped.
+                      date: new Date().toISOString().slice(0, 10),
                       player: this.#getPlayer().civilization._,
+                      turn: this.#getTurn(),
                     }),
                   });
                 },

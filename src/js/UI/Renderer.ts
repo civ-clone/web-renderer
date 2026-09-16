@@ -268,9 +268,13 @@ export class Renderer {
       const transportDisposers: Array<() => void> = [];
 
       transportDisposers.push(
-        transport.receive('saveGame', ({ name, data }): void =>
-          downloadSave(name, data)
-        )
+        transport.receive('saveGame', ({ name, data }): void => {
+          downloadSave(name, data).catch((error: Error): void =>
+            window.alert(
+              t('SavedGame.could-not-write', { error: error.message })
+            )
+          );
+        })
       );
 
       transportDisposers.push(
@@ -530,6 +534,9 @@ export class Renderer {
                 // `data` is reassigned on every patch, so this always resolves
                 // to the current player rather than the turn-0 snapshot.
                 () => data.player,
+                // Same reason: the turn a save is named after is the turn it
+                // was taken on.
+                () => Number(data?.turn?.value ?? 0),
                 portal,
                 transport,
                 parseBooleanParam(queryParams.get('cheat'), false)
