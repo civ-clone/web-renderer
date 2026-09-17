@@ -53,6 +53,21 @@ const digest = (): string =>
 
 const report: Record<string, string> = {};
 
+// Total build progress across every city, which is the cheapest question that
+// catches a loaded game quietly not working. `PlayerTreasury._yield` was
+// written as `{ $class: 'Gold' }`, three packages declare a class called
+// `Gold`, and the reference came back as a terrain feature — so the treasury
+// lookup threw inside `ProcessYield` and a loaded game applied no production,
+// food or trade. The state round-tripped perfectly; only playing showed it.
+const production = (): number =>
+  defaultGame.cityBuilds
+    .entries()
+    .reduce(
+      (total: number, cityBuild): number =>
+        total + cityBuild.progress().value(),
+      0
+    );
+
 // The same loop-stopper the other suites use: once stopped, the turn events
 // that would drive the game on are dropped rather than the process being
 // killed mid-turn.
@@ -94,10 +109,12 @@ engine.on('turn:start', (turn: number): void => {
     );
 
     report.atSave = digest();
+    report.productionAtSave = String(production());
   }
 
   if (turn >= then) {
     report.atThen = digest();
+    report.productionAtThen = String(production());
 
     finish();
   }
@@ -118,6 +135,7 @@ if (mode === 'load') {
       // Before resuming: the comparison is with the state that was saved, and
       // resuming hands the turn straight back to a client, which starts moving.
       report.atLoad = digest();
+      report.productionAtLoad = String(production());
 
       resumeGame();
 

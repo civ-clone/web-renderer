@@ -61,6 +61,12 @@ checks.push([
   loaded.atLoad,
   played.atSave,
 ]);
+checks.push([
+  'and it still applies production',
+  Number(loaded.productionAtThen) > Number(loaded.productionAtLoad) ||
+    `${loaded.productionAtLoad} -> ${loaded.productionAtThen}`,
+  true,
+]);
 
 let failed = 0;
 
