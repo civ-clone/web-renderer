@@ -1346,12 +1346,48 @@ Also fix `PlayerWorld.get(x, y)` and `getByTile(tile)`
 ([`01-constraints.md`](./01-constraints.md) §9), which reimplement the linear
 scan by hand and are called on every `unit:moved`.
 
+### What the profile said, which was not what this section predicted
+
+`node tools/bench.js --turns 150 --profile`, 60×40, four players:
+
+| | 150 turns | self time |
+| --- | --- | --- |
+| before | **91.5s** (84.4s user) | `TransportRegistry.getByUnit` **23%** |
+| after transport index + `hasUnit` | **72.3s** (66.7s user) | rule criteria |
+| after `PlayerWorld` maps | **71.1s** (65.7s user) | rule criteria |
+
+The predicted `getByPlayer`/`getByTile` were not the cost. Nearly a quarter of
+the game was `TransportRegistry.getByUnit`, because
+`civ1-unit:unit/movement-cost/transported` asked "is this unit aboard
+anything?" inside a `try`/`catch` — and `getByUnit` answers no by scanning
+every manifest and throwing a `TypeError`. Every land unit, every move.
+
+So the fix was an index *and* a question worth asking: `hasUnit` is a map read
+that returns `false`.
+
+What is hot now is rule dispatch: `RuleRegistry.process` validates every rule
+of a type, and `civ1-unit` registers 121 `movement-cost/action/…` rules whose
+first criterion is an `instanceof`. That is a different problem from a registry
+scan — indexing rules by their criteria is not generally possible — and it
+belongs in its own piece of work rather than being smuggled into this one.
+
 ### Acceptance
 
-- [ ] `getByPlayer`, `getByTile`, `PlayerWorld.get`/`getByTile` are O(1)
-- [ ] Reindex on `setTile`, city capture, unit destruction
-- [ ] Conformance checksums unchanged
-- [ ] A 150-turn headless run is measurably faster; record the numbers
+- [x] `PlayerWorld.get`/`getByTile` are O(1) — a `Map` by position and by tile,
+      transient and rebuilt in `onHydrated`. `register` asked `includes`, which
+      asked `getByTile`, so a player who had explored more paid more to move.
+- [x] `TransportRegistry.getByUnit`/`getByTransport` are O(1), which is where
+      the time actually was
+- [ ] `UnitRegistry.getByPlayer`/`getByTile`, `CityRegistry` — `byPlayer` is
+      safe (a unit's player never changes), but **a unit's tile does**, and
+      nothing in `Unit.setTile` can reach the registry to re-file it. That is a
+      design decision, not an oversight: either `Unit` takes an injected
+      `UnitRegistry` like its other collaborators, or the registries stay
+      scans. Left for dom111 to weigh, since it changes a core constructor.
+- [ ] Reindex on `setTile`, city capture, unit destruction — same decision
+- [x] Conformance checksums unchanged — `5fa259b4 / f220ec27 / fee4678d`
+      throughout
+- [x] A 150-turn headless run is measurably faster: **91.5s → 71.1s, 22%**
 
 ---
 
