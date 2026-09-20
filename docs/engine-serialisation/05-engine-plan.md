@@ -1374,6 +1374,15 @@ first criterion is an `instanceof`. That is a different problem from a registry
 scan — indexing rules by their criteria is not generally possible — and it
 belongs in its own piece of work rather than being smuggled into this one.
 
+**It got one**, as [issue #16](https://github.com/civ-clone/web-renderer/issues/16),
+and it was worth more than this whole stage: **61.7s → 24.6s**. The suspect was
+right this time, but only because it was counted rather than profiled — a
+criterion is an arrow function, so every frame under `Rule.validate` is
+`(anonymous)` and a CPU profile cannot say whose rules they are.
+`tools/rule-profile.js` counts instead, and put 98.5% of all 21.5M validations
+in a thirty-turn game on `MovementCost`. The fix was to stop expressing a
+product of two tables as 132 rules.
+
 ### Acceptance
 
 - [x] `PlayerWorld.get`/`getByTile` are O(1) — a `Map` by position and by tile,
