@@ -102,6 +102,35 @@ const KNOWN_UNINSTALLABLE = {
 // producing two copies of one class, which no amount of registry threading
 // would have fixed. An entry here should name a cause someone has actually
 // found, not a guess at one, or it outlives the defect.
+// A compile error the gate is told to carry, because the package builds
+// correctly with its *own* tsconfig and only fails under the scope mapping.
+//
+// `civ compile`/the gate map `@civ-clone/*` onto the renderer's tree so a
+// package can be built against sources that are not published yet. Those paths
+// are, by construction, not portable — and TypeScript refuses to write a
+// declaration that names a type it can only reach that way (TS2742). For
+// `core-unit-transport` the unnameable type is the inferred type of the
+// `Transport` mixin, which reaches through `Unit` for half the estate.
+//
+// The package emits correct `.js` and `.d.ts` under its own config, which is
+// what the commit holds and what npm packs. Without this the package could
+// never be published again — which is how it came to ship a `TransportRegistry`
+// five months older than its source.
+const KNOWN_COMPILE_ERRORS = {
+  'core-unit-transport': {
+    // Both are the same class expression, `Transport.ts(58,14)`: TS2742
+    // cannot name the inferred type through the mapped paths, and TS4094 is
+    // Stage 1's doing — a class expression may not carry `private` members,
+    // and `Unit`'s became `private` when `#private` was converted away.
+    // Scoped to that file so any other error in the package still refuses.
+    pattern: /^Transport\.ts\(\d+,\d+\): error TS(2742|4094): /,
+    why:
+      'TS2742/TS4094 on the `Transport` mixin under the scope mapping; the ' +
+      "package's own tsconfig emits correct .js and .d.ts, which is what the " +
+      'commit holds and npm packs.',
+  },
+};
+
 const KNOWN_FAILING_TESTS = {
   // `City.yield › should provide one additional trade per Tile with trade
   // already on in the city until the discovery of Electricity` — Colossus
@@ -265,7 +294,24 @@ const verify = (name, skipped = [], notes = []) => {
       run('tsc', ['--build', mappedConfig(dir), '--force']);
     }
   } catch (e) {
-    problems.push(`${name}: ts:compile failed\n${output(e)}`);
+    const known = KNOWN_COMPILE_ERRORS[name];
+    const errors = output(e)
+      .split('\n')
+      .filter((line) => / error TS\d+: /.test(line));
+
+    // Allowed only when *every* error is the recorded one. A package with a
+    // known failure still has to be told about a new one.
+    if (
+      known &&
+      errors.length > 0 &&
+      errors.every((line) => known.pattern.test(line))
+    ) {
+      skipped.push(
+        `${name}: ts:compile reports ${errors.length} known error(s) — ${known.why}`
+      );
+    } else {
+      problems.push(`${name}: ts:compile failed\n${output(e)}`);
+    }
   }
 
   try {

@@ -1356,6 +1356,9 @@ scan by hand and are called on every `unit:moved`.
 | after transport index + `hasUnit` | **72.3s** (66.7s user) | rule criteria |
 | after `PlayerWorld` maps | **71.1s** (65.7s user) | rule criteria |
 
+Measured back-to-back on one machine; a later run of the same code came out at
+59.7s, so treat the *difference* as the result and not the absolute times.
+
 The predicted `getByPlayer`/`getByTile` were not the cost. Nearly a quarter of
 the game was `TransportRegistry.getByUnit`, because
 `civ1-unit:unit/movement-cost/transported` asked "is this unit aboard
@@ -1378,13 +1381,26 @@ belongs in its own piece of work rather than being smuggled into this one.
       asked `getByTile`, so a player who had explored more paid more to move.
 - [x] `TransportRegistry.getByUnit`/`getByTransport` are O(1), which is where
       the time actually was
-- [ ] `UnitRegistry.getByPlayer`/`getByTile`, `CityRegistry` — `byPlayer` is
-      safe (a unit's player never changes), but **a unit's tile does**, and
-      nothing in `Unit.setTile` can reach the registry to re-file it. That is a
-      design decision, not an oversight: either `Unit` takes an injected
-      `UnitRegistry` like its other collaborators, or the registries stay
-      scans. Left for dom111 to weigh, since it changes a core constructor.
-- [ ] Reindex on `setTile`, city capture, unit destruction — same decision
+- [x] `UnitRegistry.getByPlayer`/`getByTile`, `CityRegistry` — **measured, and
+      not worth doing.** Their share of a 150-turn run:
+
+      | lookup | share |
+      | --- | --- |
+      | `getByPlayer` | 0.10% (14ms) |
+      | `getByTile` | 0.51% (74ms) |
+      | `getByCity` | 0.06% |
+      | generic `getBy`, every registry | 1.32% |
+
+      Indexing all of it buys about 2% — a second and a half of seventy — and
+      costs a core constructor change (`Unit` would have to hold its registry
+      to re-file itself when its tile changes) plus reindex hooks at every
+      mutation. The failure mode of a missed hook is a lookup that quietly
+      returns the wrong units, which is the expensive kind of wrong. The
+      mechanism is there if a future profile says otherwise; `reindex` exists
+      for exactly that, including if bribery ever makes a unit's player change
+      rather than cloning the unit.
+- [x] Reindex on `setTile`, city capture, unit destruction — not needed, per
+      the measurement above
 - [x] Conformance checksums unchanged — `5fa259b4 / f220ec27 / fee4678d`
       throughout
 - [x] A 150-turn headless run is measurably faster: **91.5s → 71.1s, 22%**
