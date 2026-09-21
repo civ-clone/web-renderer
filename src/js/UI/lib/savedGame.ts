@@ -1,3 +1,4 @@
+import { Store } from '../Store';
 import { t } from 'i18next';
 
 /**
@@ -7,14 +8,59 @@ import { t } from 'i18next';
  * cleared cache, and it can be moved between machines — none of which is true
  * of anything kept in browser storage.
  *
- * Loading reloads the page, and the save is handed over in `sessionStorage`
- * on the way through. That is not a detail of the storage; it is how the
- * engine gets a clean start. Plugins register their rules when they are
- * imported, and those rules close over the singleton registries the running
- * game is already using, so a game cannot be loaded over the top of one that
- * is in progress. A reload gives a new worker, with nothing in it.
+ * Loading reloads the page, and the save is handed over in browser storage on
+ * the way through. That is not a detail of the storage; it is how the engine
+ * gets a clean start. Plugins register their rules when they are imported, and
+ * those rules close over the singleton registries the running game is already
+ * using, so a game cannot be loaded over the top of one that is in progress. A
+ * reload gives a new worker, with nothing in it.
  */
 const PENDING = 'civ-clone:pending-save';
+
+/**
+ * The hand-over: a marker in `sessionStorage`, the save itself in IndexedDB.
+ *
+ * Both used to be `sessionStorage`, which browsers cap at around 5M characters
+ * per origin. The file on disk is gzipped and small — 108KB, 244KB — but what
+ * is handed over is the JSON inside it: 1.6MB on turn 1, 7.7MB on turn 130,
+ * 11.5MB on a turn-110 game with more of a world in it. So loading worked for
+ * a save made in the first few turns and threw `QuotaExceededError` for every
+ * real one, after which the page did not reload and nothing was said (#5).
+ * IndexedDB has no such cap, and takes the string whether or not the browser
+ * can compress.
+ *
+ * The marker stays behind because the two are scoped differently:
+ * `sessionStorage` belongs to the tab, IndexedDB to the origin. It is what
+ * keeps a save waiting mid-reload from being picked up by a different tab, or
+ * by this origin's next visit if the reload never happens.
+ */
+type PendingSave = {
+  'pending-save': {
+    key: string;
+    value: string;
+  };
+};
+
+let store: Store<PendingSave> | null = null;
+
+const pendingSaveStore = (): Store<PendingSave> => {
+  if (store === null) {
+    store = new Store<PendingSave>('civ-clone-saved-game', 'pending-save');
+  }
+
+  return store;
+};
+
+/** Best-effort, and called from paths that are already reporting a failure. */
+const discardPendingSave = async (): Promise<void> => {
+  try {
+    sessionStorage.removeItem(PENDING);
+
+    await pendingSaveStore().clear();
+  } catch {
+    // Nothing useful to do about a failure to clean up after a failure.
+  }
+};
 
 const GZIP_MAGIC = [0x1f, 0x8b];
 
@@ -116,17 +162,50 @@ export const loadSaveFromFile = async (file: File): Promise<void> => {
     throw error;
   }
 
-  sessionStorage.setItem(PENDING, data);
+  try {
+    await pendingSaveStore().set(data, PENDING);
+
+    sessionStorage.setItem(PENDING, 'waiting');
+  } catch (error) {
+    // The reload *is* the load: with nothing handed over there would be
+    // nothing on the other side of it, so say so and stay where we are rather
+    // than blink and carry on with the game that is already running.
+    await discardPendingSave();
+
+    window.alert(
+      t('SavedGame.could-not-hand-over', { error: (error as Error).message })
+    );
+
+    throw error;
+  }
+
   window.location.reload();
 };
 
 /** The save waiting to be loaded, taken rather than read: one reload, one go. */
-export const takePendingSave = (): string | null => {
-  const data = sessionStorage.getItem(PENDING);
+export const takePendingSave = async (): Promise<string | null> => {
+  // The marker first, and only then the store: it is what says the save
+  // waiting on this origin is this tab's, and it means a page load that is not
+  // a hand-over never opens the database at all.
+  if (sessionStorage.getItem(PENDING) === null) {
+    return null;
+  }
 
-  sessionStorage.removeItem(PENDING);
+  try {
+    const data = (await pendingSaveStore().get(PENDING)) ?? null;
 
-  return data;
+    await discardPendingSave();
+
+    return data;
+  } catch (error) {
+    await discardPendingSave();
+
+    window.alert(
+      t('SavedGame.could-not-read', { error: (error as Error).message })
+    );
+
+    return null;
+  }
 };
 
 /** A file picker, for a menu item to hang off. */
@@ -139,7 +218,9 @@ export const chooseSaveFile = (): void => {
     const [file] = input.files ?? [];
 
     if (file) {
-      loadSaveFromFile(file);
+      // The player has already been told by the time this rejects; it is
+      // rethrown for callers that want it, and there is no caller here.
+      loadSaveFromFile(file).catch((): void => {});
     }
   });
 

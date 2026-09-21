@@ -173,7 +173,7 @@ export class Renderer {
         notifications = new Notifications(),
         // Taken, not read: one reload loads one save. Read here so the welcome
         // window can be skipped — a loaded game is not a new one.
-        pendingSave = takePendingSave(),
+        pendingSave = await takePendingSave(),
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
         // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
         // layers' active-unit pointers current synchronously, so consecutive

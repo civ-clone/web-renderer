@@ -183,6 +183,8 @@ i18next.addResources('en', 'default', {
 
   'Notification.title': 'Notification',
 
+  'SavedGame.could-not-hand-over':
+    'That save could not be handed to the reloading page, so the game has not been loaded: {{error}}',
   'SavedGame.could-not-read': 'That save could not be read: {{error}}',
 
   'SavedGame.could-not-write': 'That save could not be written: {{error}}',
