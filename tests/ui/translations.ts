@@ -9,7 +9,8 @@
 // Another player's city must still carry its founder through serialisation
 // (#2): `Generic.city-name` looks the name up by `city.originalPlayer`, and the
 // `UnknownCity` sent in its place used to leave it out, so "City captured!"
-// read `our city {{city.originalPlayer.civilization._}}.Asansol.name`.
+// read `our city {{city.originalPlayer.civilization._}}.Asansol.name`. The
+// same goes for another player's wonder (#43).
 
 import { Babylonian, Indian } from '@civ-clone/civ1-civilization/Civilizations';
 import i18next, { t } from 'i18next';
@@ -40,6 +41,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-civilization/en');
+  await import('../../translations/civ1-wonder/en');
 
   names.forEach((item) => {
     expect('City.Build.title', t('City.Build.title', { item }), item);
@@ -75,20 +77,37 @@ const expect = (description: string, actual: string, expected: string) => {
       india
     );
 
-  (
-    [
-      ['City.captured-from-us', 'Babylon have captured our city Asansol!'],
-      ['City.captured-by-us', 'We have captured Asansol from India'],
-    ] as const
-  ).forEach(([key, expected]) => {
+  const colossus = { _: 'Colossus' },
+    notifications: [string, any, string][] = [
+      [
+        'City.captured-from-us',
+        { city: asansol, capturingPlayer: babylon, originalPlayer: india },
+        'Babylon have captured our city Asansol!',
+      ],
+      [
+        'City.captured-by-us',
+        { city: asansol, capturingPlayer: babylon, originalPlayer: india },
+        'We have captured Asansol from India',
+      ],
+      // #43: this passed `"city": {{city}}`, which `Generic.city-name` does not
+      //  take and the notification never sent.
+      [
+        'Wonder.building-complete.other-player.known',
+        { city: asansol, build: colossus },
+        'Asansol has completed work on Colossus!',
+      ],
+      [
+        'Wonder.building-complete.other-player.unknown',
+        { build: colossus },
+        'A far away city has completed work on Colossus!',
+      ],
+    ];
+
+  notifications.forEach(([key, data, expected]) => {
     // What the UI receives: serialised by `sendNotification`, rebuilt by the
     //  transport, then translated as `Notifications.publish` does.
     const notification = reconstituteData(
-      new Notification(key, {
-        city: asansol,
-        capturingPlayer: babylon,
-        originalPlayer: india,
-      }).toPlainObject()
+      new Notification(key, data).toPlainObject()
     );
 
     expect(
@@ -109,6 +128,6 @@ const expect = (description: string, actual: string, expected: string) => {
   }
 
   console.log(
-    `PASS translations (${names.length} names, 3 keys; city captured, 2 keys)`
+    `PASS translations (${names.length} names, 3 keys; ${notifications.length} notifications)`
   );
 })();

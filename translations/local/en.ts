@@ -333,7 +333,7 @@ i18next.addResources('en', 'notification', {
   'Spaceship.part-built.title': 'Spaceship built',
 
   'Wonder.building-complete.other-player.known.body':
-    '$t(Generic.city-name, { "city": {{city}} }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.known.title': 'Wonder completed',
   'Wonder.building-complete.other-player.unknown.body':
     'A far away city has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',

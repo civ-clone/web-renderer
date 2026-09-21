@@ -647,16 +647,20 @@ export class DataTransferClient extends Client implements IClient {
         cityBuild.city().player() !== this.player() &&
         build instanceof Wonder
       ) {
+        // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
+        //  a city we have never seen is not named at all (#43).
         this.sendNotification(
-          new Notification(
-            playerWorld.getByTile(cityBuild.city().tile())
-              ? 'Wonder.building-complete.other-player.known'
-              : 'Wonder.building-complete.other-player.unknown',
-            {
-              cityBuild,
-              build,
-            }
-          )
+          playerWorld.getByTile(cityBuild.city().tile())
+            ? new Notification('Wonder.building-complete.other-player.known', {
+                city: cityBuild.city(),
+                build,
+              })
+            : new Notification(
+                'Wonder.building-complete.other-player.unknown',
+                {
+                  build,
+                }
+              )
         );
 
         return;
