@@ -6,6 +6,7 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 
 export class City extends DataObject {
   #name: string;
+  #originalPlayer: Player;
   #player: Player;
   #growth: {
     size: number;
@@ -14,21 +15,36 @@ export class City extends DataObject {
   };
   #tile: Tile;
 
-  constructor(name: string, tile: Tile, player: Player, size: number) {
+  constructor(
+    name: string,
+    tile: Tile,
+    player: Player,
+    size: number,
+    originalPlayer: Player = player
+  ) {
     super();
 
     this.#name = name;
+    this.#originalPlayer = originalPlayer;
     this.#player = player;
     this.#growth.size = size;
     this.#tile = tile;
 
-    this.addKey('_', 'growth', 'name', 'player', 'tile');
+    // `originalPlayer` is the founder, which is whose list the city's name comes from (`Generic.city-name`). Without
+    //  it, any string naming another player's city showed the raw `{{city.originalPlayer.civilization._}}` (#2).
+    this.addKey('_', 'growth', 'name', 'originalPlayer', 'player', 'tile');
   }
 
   static fromCity(city: CoreCity): City {
     const cityGrowth = cityGrowthRegistryInstance.getByCity(city);
 
-    return new City(city.name(), city.tile(), city.player(), cityGrowth.size());
+    return new City(
+      city.name(),
+      city.tile(),
+      city.player(),
+      cityGrowth.size(),
+      city.originalPlayer()
+    );
   }
 
   _(): string {
@@ -37,6 +53,10 @@ export class City extends DataObject {
 
   name(): string {
     return this.#name;
+  }
+
+  originalPlayer(): Player {
+    return this.#originalPlayer;
   }
 
   player(): Player {

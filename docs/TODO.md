@@ -13,7 +13,7 @@ Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingCon
     at Renderer.ts:1292:17
 ```
 
-- [ ] When a `City` is captured from the `HumanPlayer` the `PopupWindow` has translation labels visible.
+- [x] When a `City` is captured from the `HumanPlayer` the `PopupWindow` has translation labels visible.
 - [x] There's a `Wonder` that has no label when displayed in the `CityBuild` `Window`. (`JsBachsCathedral`, probably a quoting problem)
 - [ ] When a `City` is destroyed, its `WorkedTile`s aren't cleared.
 - [ ] In the `CityScreen` `Window` the worked `Tile`s cannot be manually selected.

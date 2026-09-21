@@ -20,6 +20,7 @@ export interface City extends EntityInstance<'City'> {
   civilDisorder: boolean;
   growth: CityGrowth;
   improvements: EntityInstance[];
+  originalPlayer: Player;
   player: Player;
   tile: PlayerTile;
   tiles: PlayerTile[];
