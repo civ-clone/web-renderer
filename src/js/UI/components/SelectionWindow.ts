@@ -58,14 +58,18 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
       },
       selectionList: HTMLSelectElement = h(
         s(
-          `<select>${optionList
-            .map(
-              (option) =>
-                `<option value="${option.value}">${t(
-                  option.label || option.value
-                )}</option>`
-            )
-            .join('')}</select>`
+          '<select></select>',
+          // Labels are already translated by the caller, so they're used as-is: passing them through `t()` again
+          //  lets i18next read any `:` as a namespace separator (#3). Only an unlabelled value is translated here.
+          // Set as text rather than markup, so names containing `'`, `<` or `&` display literally.
+          ...optionList.map((option) => {
+            const optionElement = document.createElement('option');
+
+            optionElement.value = String(option.value);
+            optionElement.textContent = option.label ?? t(option.value);
+
+            return optionElement;
+          })
         ),
         {
           keydown: (event: KeyboardEvent) => {

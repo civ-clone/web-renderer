@@ -86,7 +86,7 @@ i18next.addResources('en', 'default', {
     'Negotiation between $t(Generic.civilization-name.nation, { "civilization": "{{data.players.0.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.nation, { "civilization": "{{data.players.1.civilization._}}", "ns": "default" })',
 
   'City.Build.build-item':
-    '{{item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+    '{{- item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.buy': 'Buy',
   // This can include the resource being using to buy with via {{spendCost}} which allows support for `Faith`, etc used in later games.
   // 'City.Build.buy-with': 'Buy with $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })',
@@ -94,10 +94,10 @@ i18next.addResources('en', 'default', {
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
   'City.Build.nothing': 'Nothing',
-  'City.Build.title': '{{item}}',
+  'City.Build.title': '{{- item}}',
 
   'City.CompleteProduction.body':
-    'Do you want to rush building of {{item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available.',
+    'Do you want to rush building of {{- item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available.',
 
   'City.GarrisonedUnits.title': 'Garrisoned units',
   'City.Growth.size': 'Size {{size, number}}',
