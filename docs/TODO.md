@@ -15,7 +15,7 @@ Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingCon
 
 - [x] When a `City` is captured from the `HumanPlayer` the `PopupWindow` has translation labels visible.
 - [x] There's a `Wonder` that has no label when displayed in the `CityBuild` `Window`. (`JsBachsCathedral`, probably a quoting problem)
-- [ ] When a `City` is destroyed, its `WorkedTile`s aren't cleared.
+- [x] When a `City` is destroyed, its `WorkedTile`s aren't cleared.
 - [ ] In the `CityScreen` `Window` the worked `Tile`s cannot be manually selected.
 - [ ] In the main window, pressing `F5` should show the `Trade Report` but it also triggers a page reload.
 - [ ] Hide (or at least my disabled) the `EndTurn` `Action` button once pressed.

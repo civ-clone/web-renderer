@@ -21,6 +21,21 @@ import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 export const HUMAN_CLIENT = 'DataTransferClient';
 
 /**
+ * Release any tile still worked by a destroyed city.
+ *
+ * `civ1-city` used to leave one behind: capturing a size 1 city destroys it,
+ * and `reassign-workers` then handed it its centre back; a city later founded
+ * on the site took the centre and gave the dead city the best tile left
+ * instead (#4). The rules no longer do either, but saves made before that
+ * still hold the tile — marked as worked by another city, and unworkable by
+ * the city that is actually there — so loading one puts it right.
+ */
+export const releaseTilesOfDestroyedCities = (game = defaultGame): void =>
+  game.workedTiles
+    .filter((workedTile) => workedTile.city().destroyed())
+    .forEach((workedTile) => game.workedTiles.unregister(workedTile));
+
+/**
  * Put a saved game back into a freshly started engine.
  *
  * **Into `defaultGame`, not a new `Game`.** Rules are registered when a plugin
@@ -61,6 +76,8 @@ export const restoreGame = (
   engine.registerPlugins(plugins);
 
   hydrate(file, defaultGame);
+
+  releaseTilesOfDestroyedCities(defaultGame);
 
   const humanPlayerIds = new Set(
     file.clients
