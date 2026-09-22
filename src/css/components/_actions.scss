@@ -46,6 +46,18 @@
     &.spaceship {
       @include action-button.white-child-svg();
     }
+
+    // An action that has been taken and is waiting on the engine: dimmed, and
+    // it no longer invites a second press (#11).
+    &:disabled {
+      cursor: default;
+      filter: grayscale(0.7) brightness(0.6);
+
+      &::before {
+        animation: none;
+        opacity: 0;
+      }
+    }
   }
 }
 

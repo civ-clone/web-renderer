@@ -5,7 +5,18 @@ import { t } from 'i18next';
 
 export class EndTurn extends Action {
   activate(): void {
-    this.element().setAttribute('disabled', '');
+    // `element()` is the wrapping `.action` div, and `disabled` means nothing
+    // on a `div`: it has to go on the `button` (#11). Both the click handler
+    // and the keyboard handler in `Actions` route here, and the turn ends
+    // once, so a second press must not reach the transport — the panel is
+    // rebuilt with a fresh `EndTurn` when the next turn's actions arrive.
+    const button = this.element().querySelector('button');
+
+    if (!button || button.disabled) {
+      return;
+    }
+
+    button.disabled = true;
 
     this.transport().send('action', {
       name: 'EndTurn',
@@ -17,7 +28,7 @@ export class EndTurn extends Action {
       s(
         `<button class="large gradient endTurn" title="${t(
           'Actions.EndTurn.title'
-        )}"><img src="${checkIcon}"</button>`
+        )}"><img src="${checkIcon}"></button>`
       )
     );
   }
