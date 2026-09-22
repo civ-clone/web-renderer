@@ -1,4 +1,4 @@
-- [ ] First image load has an `image.width` of 0, breaking (#8):
+- [x] First image load has an `image.width` of 0, breaking (#8):
 ```
 Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
     at replaceColours (replaceColours.ts:39:29)
@@ -60,9 +60,12 @@ sections B2/C5.
       replace it: `applyActiveUnit` has already pointed `lastUnit` at the
       incoming unit, so it passed the same tile twice. The vacated tile is now
       collected in `applyActiveUnit` instead.
-- [ ] `CityNames.update()` ignores its tiles, clears the whole layer canvas and
-      rescans `world().tiles()` on every patch (#48) — the last full-world
-      re-render left in the render path.
+- [x] `CityNames.update()` ignores its tiles, clears the whole layer canvas and
+      rescans `world().tiles()` on every patch (#48). It tracks where each
+      label was drawn now, and clears only the boxes an update invalidated.
+      Fixed the labels being clipped at the map edges with it (#49): the
+      overhang is drawn again offset by the canvas size, since the portal tiles
+      it. No layer performs a full-canvas clear any more.
 - [ ] Merge the static map layers (Land / Terrain / Irrigation / Improvements)
       into a single canvas (B2, #7).
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
