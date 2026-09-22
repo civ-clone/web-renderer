@@ -95,10 +95,31 @@ sections B2/C5.
       (#54): `event.offsetX` is already canvas-relative but the handler also
       subtracted `offsetLeft`, and `Math.ceil` should have been `Math.floor`.
       Fixed alongside #53, whose flashing marker exists to be clicked.
-- [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
-      of full-world canvases (~19 MB each at 80×60 scale 2; B2, rewrite track,
-      #7). No longer blocked: nothing outside `Portal` reads a layer's
-      `canvas()` any more. Restricting the blink tick to the active unit's
-      region needs this: `ActiveUnit` is the topmost layer, so un-drawing it
-      means restoring the pixels beneath, i.e. a partial portal composite — it
-      is not the cheap standalone win it was previously filed as.
+- [x] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
+      of full-world canvases (B2, rewrite track, #7). A layer's canvas is the
+      size of the portal now and `#originX`/`#originY` say which world pixel
+      sits at its top left, so a bigger world costs nothing extra. Measured on
+      an 80×60 world at scale 2 in a 1712×873 portal: 7 × 2560×1920 = 137.4 MB
+      of layer canvas before, 7 × 1712×873 = 40.0 MB after.
+      A tile no longer has one fixed place on the canvas and the world wraps, so
+      it can have several places or none: layers are handed the places to draw
+      in (`drawTile(tile, offsetX, offsetY)`) rather than working them out from
+      the tile's co-ordinates, and `Portal` no longer composites wrap offsets at
+      all. Moving the window blits the overlap across and draws only the strips
+      it uncovers.
+      Layers record what they changed, and `Portal.render()` composites those
+      regions rather than the whole canvas — which is what restricting the blink
+      tick to the active unit's region needed, since `ActiveUnit` is the topmost
+      layer and un-drawing it means restoring the pixels beneath. A blink
+      composite is 0.006 megapixels and 5.5 `drawImage` calls against 10.5 and 7
+      for a full one. Regions are unioned until none overlap, because
+      compositing a pixel twice doubles up anything drawn with alpha, and past
+      half the canvas or eight regions it composites the lot instead.
+      Verified in the browser: after panning, city windows, overlay toggles and
+      blinks, the incrementally composited portal is pixel-identical to a full
+      composite (0 of 1,494,576 pixels differ), and a viewport reached by short
+      scrolling hops is pixel-identical to the same viewport drawn from nothing.
+      Fixed with it: the resize handler assigned `mapPortal.width`/`height`
+      unconditionally, which clears a canvas even when the value has not
+      changed, so a resize that resized nothing wiped the map and — now that the
+      portal composites only what changed — put nothing back.

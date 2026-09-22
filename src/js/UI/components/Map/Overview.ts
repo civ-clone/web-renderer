@@ -42,8 +42,25 @@ export class Overview extends Map {
   constructor(...args: ConstructorParameters<typeof Map>) {
     super(...args);
 
-    this.setVisible(false);
+    this.setCanvasSize();
   }
+
+  // The portal never draws this layer; it rides in the layer list only so that
+  // `build()` feeds it tile updates alongside every other layer.
+  composited(): boolean {
+    return false;
+  }
+
+  // Every tile is drawn as a flat square of exactly its own size, and the
+  // canvas is exactly a world across, so nothing reaches past a tile and
+  // nothing wraps.
+  protected overhang(): number {
+    return 0;
+  }
+
+  // The whole world is the point, so this layer keeps a canvas of its own size
+  // rather than taking the portal's window on the world.
+  setViewport(): void {}
 
   // Deliberately ignores the portal's scale and tile size: the minimap is an
   // overview at its own fixed size, not a scaled view of the map.
@@ -51,13 +68,9 @@ export class Overview extends Map {
     return Math.max(1, Math.trunc(OVERVIEW_WIDTH / this.world().width()));
   }
 
-  renderTile(tile: Tile): void {
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
     const size = this.tileSize(),
-      offsetX = tile.x * size,
-      offsetY = tile.y * size,
       context = this.context();
-
-    context.clearRect(offsetX, offsetY, size, size);
 
     // Unexplored draws nothing rather than a default colour, so how much of the
     // world is still dark reads at a glance — which is most of what a minimap

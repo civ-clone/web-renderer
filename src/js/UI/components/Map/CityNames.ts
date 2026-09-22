@@ -1,29 +1,17 @@
 import { Tile } from '../../types';
 import { Map } from '../Map';
+import { Rect, rectsIntersect } from '../../lib/viewport';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { cityName } from '../lib/city';
-
-type Box = {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-};
-
-const intersects = (a: Box, b: Box): boolean =>
-  a.left < b.left + b.width &&
-  b.left < a.left + a.width &&
-  a.top < b.top + b.height &&
-  b.top < a.top + a.height;
 
 export class CityNames extends Map {
   // What is currently on the canvas and where, keyed by `x,y`. Keeping it lets
   // an update clear only the boxes it invalidated instead of the whole canvas,
   // and find the labels to redraw without walking every tile in the world.
   // Plain objects because `Map` in this file is the layer base class.
-  #drawn: { [key: string]: Box[] } = {};
+  #drawn: { [key: string]: Rect[] } = {};
 
-  render(tiles: Tile[] = this.world().tiles()): void {
+  render(tiles: Tile[] = this.visibleTiles()): void {
     this.clear();
 
     this.#drawn = {};
@@ -39,13 +27,19 @@ export class CityNames extends Map {
     // Clearing is the caller's job here — `render` clears the canvas and
     // `update` clears the boxes — because a label is wider than its tile, so
     // clearing just the tile would leave most of the old label behind.
-    this.#drawn[`${tile.x},${tile.y}`] = this.#offsets(tile).map(([dx, dy]) =>
-      this.#drawLabel(tile, dx, dy)
+    this.#drawn[`${tile.x},${tile.y}`] = this.placements(tile).map(
+      ([offsetX, offsetY]) => {
+        const box = this.#drawLabel(tile, offsetX, offsetY);
+
+        this.markDirty(box.x, box.y, box.width, box.height);
+
+        return box;
+      }
     );
   }
 
   update(tilesToUpdate: Tile[]): void {
-    const dirty: Box[] = [];
+    const dirty: Rect[] = [];
 
     tilesToUpdate.forEach(({ x, y }: Tile) => {
       const key = `${x},${y}`,
@@ -60,8 +54,8 @@ export class CityNames extends Map {
       const tile = this.world().get(x, y);
 
       if (tile.city) {
-        this.#offsets(tile).forEach(([dx, dy]) =>
-          dirty.push(this.#boxFor(tile, dx, dy))
+        this.placements(tile).forEach(([offsetX, offsetY]) =>
+          dirty.push(this.#boxFor(tile, offsetX, offsetY))
         );
       }
     });
@@ -70,9 +64,11 @@ export class CityNames extends Map {
       return;
     }
 
-    dirty.forEach(({ left, top, width, height }) =>
-      this.context().clearRect(left, top, width, height)
-    );
+    dirty.forEach(({ x, y, width, height }) => {
+      this.context().clearRect(x, y, width, height);
+
+      this.markDirty(x, y, width, height);
+    });
 
     // A label overhangs its neighbours, so clearing one box can bite into
     // another city's; redraw every label still standing that overlapped what
@@ -80,7 +76,7 @@ export class CityNames extends Map {
     const toRedraw = new Set<string>(
       Object.keys(this.#drawn).filter((key) =>
         this.#drawn[key].some((box) =>
-          dirty.some((cleared) => intersects(box, cleared))
+          dirty.some((cleared) => rectsIntersect(box, cleared))
         )
       )
     );
@@ -98,47 +94,29 @@ export class CityNames extends Map {
     });
   }
 
-  // The label is centred on its tile and wider than it, so where it crosses an
-  // edge it also has to be drawn offset by the canvas size: `Portal.render()`
-  // tiles this canvas, so that is where the overflow belongs. Without it the
-  // overflow is clipped and appears nowhere, which loses most of a long name
-  // on the first and last columns and all of any name on the last row.
-  #offsets(tile: Tile): [number, number][] {
-    const { left, top, width, height } = this.#boxFor(tile, 0, 0),
-      canvasWidth = this.canvas().width,
-      canvasHeight = this.canvas().height,
-      columns = [0],
-      rows = [0],
-      offsets: [number, number][] = [];
-
-    if (left < 0) {
-      columns.push(canvasWidth);
-    }
-
-    if (left + width > canvasWidth) {
-      columns.push(-canvasWidth);
-    }
-
-    if (top < 0) {
-      rows.push(canvasHeight);
-    }
-
-    if (top + height > canvasHeight) {
-      rows.push(-canvasHeight);
-    }
-
-    columns.forEach((dx) => rows.forEach((dy) => offsets.push([dx, dy])));
-
-    return offsets;
+  // A label is centred on its tile and much wider than it, so a city several
+  // tiles off the canvas can still have its name reach on to it. Three tiles
+  // either side is comfortably more than the longest name in the locale files.
+  protected overhang(): number {
+    return this.tileSize() * 3;
   }
 
-  #boxFor(tile: Tile, dx: number, dy: number): Box {
+  // The boxes are recorded in canvas co-ordinates, so moving the window
+  // invalidates every one of them. Only tiles with cities are drawn at all, so
+  // starting again is cheaper than moving the record along with the canvas.
+  protected scrollTo(originX: number, originY: number): void {
+    this.setOrigin(originX, originY);
+
+    this.render();
+  }
+
+  #boxFor(tile: Tile, offsetX: number, offsetY: number): Rect {
     const size = this.tileSize(),
       scale = this.scale(),
       city = tile.city!,
-      centreX = tile.x * size + size / 2 + dx,
-      digitBaseline = tile.y * size + size * 0.75 + dy,
-      nameBaseline = tile.y * size + size * 1.6 + dy;
+      centreX = offsetX + size / 2,
+      digitBaseline = offsetY + size * 0.75,
+      nameBaseline = offsetY + size * 1.6;
 
     this.#applyFont();
 
@@ -152,20 +130,20 @@ export class CityNames extends Map {
       ascent = 8 * scale + scale;
 
     return {
-      left: Math.floor(centreX - widest / 2 - scale * 2),
-      top: Math.floor(digitBaseline - ascent - scale * 2),
+      x: Math.floor(centreX - widest / 2 - scale * 2),
+      y: Math.floor(digitBaseline - ascent - scale * 2),
       width: Math.ceil(widest + scale * 4),
       height: Math.ceil(nameBaseline - digitBaseline + ascent + scale * 4),
     };
   }
 
-  #drawLabel(tile: Tile, dx: number, dy: number): Box {
+  #drawLabel(tile: Tile, offsetX: number, offsetY: number): Rect {
     const size = this.tileSize(),
       scale = this.scale(),
       city = tile.city!,
-      centreX = tile.x * size + size / 2 + dx,
-      digitBaseline = tile.y * size + size * 0.75 + dy,
-      nameBaseline = tile.y * size + size * 1.6 + dy,
+      centreX = offsetX + size / 2,
+      digitBaseline = offsetY + size * 0.75,
+      nameBaseline = offsetY + size * 1.6,
       sizeText = localeProvider.number(city.growth.size),
       name = cityName(city);
 
@@ -178,7 +156,7 @@ export class CityNames extends Map {
     this.context().fillText(sizeText, centreX, digitBaseline - scale);
     this.context().fillText(name, centreX, nameBaseline - scale);
 
-    return this.#boxFor(tile, dx, dy);
+    return this.#boxFor(tile, offsetX, offsetY);
   }
 
   #applyFont(): void {

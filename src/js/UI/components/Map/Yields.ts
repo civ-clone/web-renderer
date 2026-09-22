@@ -2,13 +2,8 @@ import Map from '../Map';
 import { Tile } from '../../types';
 
 export class Yields extends Map {
-  renderTile(tile: Tile): void {
-    super.renderTile(tile);
-
-    const { x, y } = tile,
-      size = this.tileSize(),
-      offsetX = x * size,
-      offsetY = y * size,
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+    const size = this.tileSize(),
       total = tile.yields.reduce(
         (total, tileYield) => total + tileYield.value,
         0

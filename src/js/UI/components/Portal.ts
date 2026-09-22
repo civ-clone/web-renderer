@@ -1,5 +1,6 @@
 import { Coordinate, Tile, Unit } from '../types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
+import { Rect, mergeRects, rectArea } from '../lib/viewport';
 import Map from './Map';
 import Transport from '../Transport';
 import World from './World';
@@ -40,41 +41,12 @@ const defaultPortalOptions: PortalSettings = {
   tileSize: 16,
 };
 
-/**
- * Where a wrapping layer of `length` px, whose untiled origin sits at `origin`,
- * meets a viewport of `viewportLength` px.
- *
- * Returns `[source, destination, length]` triples in layer/viewport
- * co-ordinates, one per repeat that is actually on screen.
- */
-const visibleSegments = (
-  origin: number,
-  length: number,
-  viewportLength: number
-): [number, number, number][] => {
-  const segments: [number, number, number][] = [];
-
-  if (length <= 0) {
-    return segments;
-  }
-
-  // The first repeat that can reach the viewport is the last one starting at or
-  // before 0.
-  for (
-    let start = origin - Math.ceil(origin / length) * length;
-    start < viewportLength;
-    start += length
-  ) {
-    const from = Math.max(start, 0),
-      to = Math.min(start + length, viewportLength);
-
-    if (to > from) {
-      segments.push([from - start, from, to - from]);
-    }
-  }
-
-  return segments;
-};
+// Past this share of the canvas, working out what changed and compositing it
+// piece by piece costs more than compositing the lot.
+const MAX_PARTIAL_COVERAGE = 0.5,
+  // Likewise: a handful of regions is cheaper than the whole canvas, a hundred
+  // of them is not.
+  MAX_PARTIAL_REGIONS = 8;
 
 export class Portal
   extends EventEmitter<{
@@ -86,11 +58,15 @@ export class Portal
   #canvas: HTMLCanvasElement;
   #center: Coordinate = { x: 0, y: 0 };
   #context: CanvasRenderingContext2D;
+  // Nothing has been composited yet, so the first render cannot be a partial
+  // one however little the layers claim to have changed.
+  #fullRender: boolean = true;
   #layers: Map[] = [];
   #playerId: string | null = null;
   #scale: number;
   #tileSize: number;
   #transport: Transport;
+  #viewport: Rect = { x: 0, y: 0, width: -1, height: -1 };
   #world: World;
 
   constructor(
@@ -129,6 +105,8 @@ export class Portal
   protected bindEvents(): void {}
 
   build(updatedTiles: Tile[]): void {
+    this.syncViewport();
+
     this.#layers.forEach((layer: Map) => layer.update(updatedTiles));
   }
 
@@ -180,54 +158,125 @@ export class Portal
   }
 
   render(): void {
-    const tileSize = this.tileSize(),
-      layerWidth = this.#world.width() * tileSize,
-      centerX = this.#center.x * tileSize + Math.trunc(tileSize / this.scale()),
-      portalCenterX = Math.trunc(this.#canvas.width / 2),
-      layerHeight = this.#world.height() * tileSize,
-      centerY = this.#center.y * tileSize + Math.trunc(tileSize / this.scale()),
-      portalCenterY = Math.trunc(this.#canvas.height / 2),
-      // The world wraps, so a layer can need drawing at more than one offset,
-      // but only the offsets that land on the canvas are worth drawing and only
-      // the part of each that lands on it. Both are the same for every layer,
-      // so they are worked out once rather than per layer.
-      columns = visibleSegments(
-        portalCenterX - centerX,
-        layerWidth,
-        this.#canvas.width
-      ),
-      rows = visibleSegments(
-        portalCenterY - centerY,
-        layerHeight,
-        this.#canvas.height
-      );
+    this.syncViewport();
 
-    this.#context.fillStyle = '#000';
-    this.#context.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
+    // Every layer is a window on the world the same size and shape as this
+    // canvas now, so compositing one is a straight copy — and copying only the
+    // parts that changed is all that a blinking unit or a moved one needs.
+    const regions = this.#fullRender
+      ? [{ x: 0, y: 0, width: this.#canvas.width, height: this.#canvas.height }]
+      : this.dirtyRegions();
 
-    this.#layers.forEach((layer) => {
-      if (!layer.isVisible()) {
+    this.#layers.forEach((layer) => layer.clearDirty());
+
+    this.#fullRender = false;
+
+    regions.forEach(({ x, y, width, height }: Rect) => {
+      // A portal whose element has no size yet has nothing to composite, and
+      // `drawImage` throws on a zero-sized rectangle.
+      if (width <= 0 || height <= 0) {
         return;
       }
 
-      const canvas = layer.canvas();
+      this.#context.fillStyle = '#000';
+      this.#context.fillRect(x, y, width, height);
 
-      columns.forEach(([sourceX, destinationX, width]) =>
-        rows.forEach(([sourceY, destinationY, height]) =>
-          this.#context.drawImage(
-            canvas,
-            sourceX,
-            sourceY,
-            width,
-            height,
-            destinationX,
-            destinationY,
-            width,
-            height
-          )
-        )
-      );
+      this.#layers.forEach((layer) => {
+        if (!layer.composited() || !layer.isVisible()) {
+          return;
+        }
+
+        this.#context.drawImage(
+          layer.canvas(),
+          x,
+          y,
+          width,
+          height,
+          x,
+          y,
+          width,
+          height
+        );
+      });
     });
+  }
+
+  /**
+   * What the layers have changed since the last composite, as disjoint
+   * rectangles — or the whole canvas, when there is enough of it that finding
+   * out was the only saving left.
+   */
+  protected dirtyRegions(): Rect[] {
+    const whole = [
+        { x: 0, y: 0, width: this.#canvas.width, height: this.#canvas.height },
+      ],
+      // A hidden layer still reports what it changed: it is hidden by being
+      // left out of the composite, and the pixels it used to contribute have to
+      // be composited over by the layers below it.
+      dirty = this.#layers
+        .filter((layer) => layer.composited())
+        .flatMap((layer) => layer.dirtyRects());
+
+    if (dirty.length === 0) {
+      return [];
+    }
+
+    const regions = mergeRects(dirty);
+
+    if (regions.length > MAX_PARTIAL_REGIONS) {
+      return whole;
+    }
+
+    return regions.reduce((total, rect) => total + rectArea(rect), 0) >
+      this.#canvas.width * this.#canvas.height * MAX_PARTIAL_COVERAGE
+      ? whole
+      : regions;
+  }
+
+  /**
+   * Point every layer at the window this portal is showing, so each of them
+   * holds the viewport rather than the world.
+   */
+  protected syncViewport(): void {
+    const tileSize = this.tileSize(),
+      // Where the world pixel at the canvas's top left corner is. The half-tile
+      // step is what centres the middle tile rather than its corner.
+      originX =
+        this.#center.x * tileSize +
+        Math.trunc(tileSize / this.scale()) -
+        Math.trunc(this.#canvas.width / 2),
+      originY =
+        this.#center.y * tileSize +
+        Math.trunc(tileSize / this.scale()) -
+        Math.trunc(this.#canvas.height / 2);
+
+    if (
+      originX === this.#viewport.x &&
+      originY === this.#viewport.y &&
+      this.#canvas.width === this.#viewport.width &&
+      this.#canvas.height === this.#viewport.height
+    ) {
+      return;
+    }
+
+    this.#viewport = {
+      x: originX,
+      y: originY,
+      width: this.#canvas.width,
+      height: this.#canvas.height,
+    };
+
+    this.#layers.forEach((layer) =>
+      layer.setViewport(
+        originX,
+        originY,
+        this.#canvas.width,
+        this.#canvas.height
+      )
+    );
+
+    // The window moved, so everything on it is new.
+    this.#fullRender = true;
   }
 
   scale(): number {

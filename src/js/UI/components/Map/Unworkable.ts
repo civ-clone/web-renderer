@@ -8,11 +8,8 @@ export class Unworkable extends Map {
     this.#city = city;
   }
 
-  renderTile(tile: Tile): void {
-    const { x, y } = tile,
-      size = this.tileSize(),
-      offsetX = x * size,
-      offsetY = y * size;
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+    const size = this.tileSize();
 
     if (
       tile.workedBy !== null &&

@@ -559,12 +559,26 @@ export class Renderer {
                 parseBooleanParam(queryParams.get('cheat'), false)
               ),
               resizeHandler = () => {
-                mapPortal.width = (
-                  mapPortal.parentElement as HTMLElement
-                ).offsetWidth;
-                mapPortal.height = (
-                  mapPortal.parentElement as HTMLElement
-                ).offsetHeight;
+                const width = (mapPortal.parentElement as HTMLElement)
+                    .offsetWidth,
+                  height = (mapPortal.parentElement as HTMLElement)
+                    .offsetHeight;
+
+                // Assigning either of these clears the canvas even when the
+                // value has not changed, and the portal composites what changed
+                // rather than everything, so a resize that resizes nothing
+                // would wipe the map and put nothing back.
+                if (mapPortal.width === width && mapPortal.height === height) {
+                  return;
+                }
+
+                mapPortal.width = width;
+                mapPortal.height = height;
+
+                // The layers are the size of the portal, so resizing them is
+                // part of rendering now.
+                portal.render();
+                minimap.update();
               };
 
             gameMenuItem.build();

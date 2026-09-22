@@ -100,29 +100,22 @@ const buildCoastTile = (
  * sixth of the compositing.
  */
 export class Landscape extends TerrainAbstract {
-  renderTile(tile: Tile): void {
-    super.renderTile(tile);
-
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
     if (tile.terrain._ === 'Unknown') {
       return;
     }
 
-    this.renderLand(tile);
-    this.renderIrrigation(tile);
-    this.renderTerrain(tile);
-    this.renderImprovements(tile);
-    this.renderFeatures(tile);
-    this.renderGoodyHut(tile);
+    this.renderLand(tile, offsetX, offsetY);
+    this.renderIrrigation(tile, offsetX, offsetY);
+    this.renderTerrain(tile, offsetX, offsetY);
+    this.renderImprovements(tile, offsetX, offsetY);
+    this.renderFeatures(tile, offsetX, offsetY);
+    this.renderGoodyHut(tile, offsetX, offsetY);
   }
 
-  protected renderLand(tile: Tile): void {
-    const { x, y } = tile,
-      size = this.tileSize(),
-      offsetX = x * size,
-      offsetY = y * size;
-
+  protected renderLand(tile: Tile, offsetX: number, offsetY: number): void {
     if (tile.isLand) {
-      this.drawImage('terrain/land', x, y);
+      this.drawImage('terrain/land', offsetX, offsetY);
 
       return;
     }
@@ -131,7 +124,7 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    this.drawImage('terrain/ocean', x, y);
+    this.drawImage('terrain/ocean', offsetX, offsetY);
 
     if (!tile.isCoast) {
       return;
@@ -166,11 +159,15 @@ export class Landscape extends TerrainAbstract {
       tile,
       (tile: Tile): boolean => tile.terrain._ === 'River'
     ).forEach((direction) =>
-      this.drawImage(`terrain/river_mouth_${direction}`, x, y)
+      this.drawImage(`terrain/river_mouth_${direction}`, offsetX, offsetY)
     );
   }
 
-  protected renderIrrigation(tile: Tile): void {
+  protected renderIrrigation(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     const hasIrrigation = tile.improvements.some(
       (improvement: EntityInstance): boolean => improvement._ === 'Irrigation'
     );
@@ -179,65 +176,71 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    this.drawImage(`improvements/irrigation`, tile.x, tile.y);
+    this.drawImage(`improvements/irrigation`, offsetX, offsetY);
   }
 
-  protected renderTerrain(tile: Tile): void {
+  protected renderTerrain(tile: Tile, offsetX: number, offsetY: number): void {
     // Ocean is covered with the land/ocean stuff above and if we re-do here, we lose the coastline
     if (tile.terrain._ === 'Ocean') {
       return;
     }
 
-    const { x, y } = tile,
-      adjoining = this.filterNeighbours(
-        tile,
-        (adjoiningTile: Tile): boolean =>
-          (tile.terrain._ === 'River' && adjoiningTile.isWater) ||
-          tile.terrain._ === adjoiningTile.terrain._
-      ).join('');
+    const adjoining = this.filterNeighbours(
+      tile,
+      (adjoiningTile: Tile): boolean =>
+        (tile.terrain._ === 'River' && adjoiningTile.isWater) ||
+        tile.terrain._ === adjoiningTile.terrain._
+    ).join('');
 
     if (adjoining) {
       this.drawImage(
         `terrain/${tile.terrain._.toLowerCase()}_${adjoining}`,
-        x,
-        y
+        offsetX,
+        offsetY
       );
 
       return;
     }
 
-    this.drawImage(`terrain/${tile.terrain._.toLowerCase()}`, x, y);
+    this.drawImage(`terrain/${tile.terrain._.toLowerCase()}`, offsetX, offsetY);
   }
 
-  protected renderImprovements(tile: Tile): void {
-    const { x, y } = tile,
-      improvements = tile.improvements.reduce(
-        (
-          state: ImprovementLookup,
-          improvement: EntityInstance
-        ): ImprovementLookup => {
-          const improvementType = improvement._ as Improvement;
+  protected renderImprovements(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const improvements = tile.improvements.reduce(
+      (
+        state: ImprovementLookup,
+        improvement: EntityInstance
+      ): ImprovementLookup => {
+        const improvementType = improvement._ as Improvement;
 
-          if (!(improvementType in state)) {
-            return state;
-          }
-
-          state[improvementType] = true;
-
+        if (!(improvementType in state)) {
           return state;
-        },
-        {
-          Mine: false,
-          Road: false,
-          Railroad: false,
-          Pollution: false,
         }
-      );
+
+        state[improvementType] = true;
+
+        return state;
+      },
+      {
+        Mine: false,
+        Road: false,
+        Railroad: false,
+        Pollution: false,
+      }
+    );
 
     (['Mine', 'Pollution'] as (keyof ImprovementLookup)[]).forEach(
       (improvementName: keyof ImprovementLookup) => {
         if (improvements[improvementName]) {
-          this.drawImage(`improvements/${improvementName.toLowerCase()}`, x, y);
+          this.drawImage(
+            `improvements/${improvementName.toLowerCase()}`,
+            offsetX,
+            offsetY
+          );
         }
       }
     );
@@ -268,21 +271,18 @@ export class Landscape extends TerrainAbstract {
 
     neighbouringRoad.forEach((direction: NeighbourDirection): void => {
       if (!improvements.Railroad || !neighbouringRailroad.includes(direction)) {
-        this.drawImage(`improvements/road_${direction}`, x, y);
+        this.drawImage(`improvements/road_${direction}`, offsetX, offsetY);
       }
     });
 
     if (improvements.Railroad) {
       neighbouringRailroad.forEach((direction: NeighbourDirection): void =>
-        this.drawImage(`improvements/railroad_${direction}`, x, y)
+        this.drawImage(`improvements/railroad_${direction}`, offsetX, offsetY)
       );
     }
 
     if (neighbouringRoad.length === 0 && neighbouringRailroad.length === 0) {
-      const size = this.tileSize(),
-        offsetX = x * size,
-        offsetY = y * size,
-        center = Math.floor(size / 2) - this.scale();
+      const center = Math.floor(this.tileSize() / 2) - this.scale();
 
       this.context().fillStyle = improvements.Railroad ? '#000' : '#8c5828';
       // `rect()` without a `beginPath()` appends to the path the last tile
@@ -299,25 +299,28 @@ export class Landscape extends TerrainAbstract {
     }
   }
 
-  protected renderFeatures(tile: Tile): void {
-    const { x, y } = tile;
-
+  protected renderFeatures(tile: Tile, offsetX: number, offsetY: number): void {
     tile.terrain.features.forEach((feature) =>
       feature._ === 'Shield'
-        ? this.drawImage(`terrain/${feature._.toLowerCase()}`, x, y, {
-            offsetX: 4 * this.scale(),
-            offsetY: 4 * this.scale(),
-          })
-        : this.drawImage(`terrain/${feature._.toLowerCase()}`, x, y)
+        ? this.drawImage(
+            `terrain/${feature._.toLowerCase()}`,
+            offsetX,
+            offsetY,
+            {
+              offsetX: 4 * this.scale(),
+              offsetY: 4 * this.scale(),
+            }
+          )
+        : this.drawImage(`terrain/${feature._.toLowerCase()}`, offsetX, offsetY)
     );
   }
 
-  protected renderGoodyHut(tile: Tile): void {
+  protected renderGoodyHut(tile: Tile, offsetX: number, offsetY: number): void {
     if (tile.goodyHut === null) {
       return;
     }
 
-    this.drawImage('map/hut', tile.x, tile.y);
+    this.drawImage('map/hut', offsetX, offsetY);
   }
 }
 

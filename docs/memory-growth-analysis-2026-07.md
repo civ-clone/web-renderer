@@ -189,6 +189,13 @@ reduction (C5).
   renderer's largest source-pixel consumer — 14.7 MP discarded into a 190×142
   target on every patch and every recentre, 383.4 MP over 15s of stress play
   against the portal's 310.9, now 0.79 MP over the same window.
+- **Status: fixed 2026-09-22** — the layers are windows on the world the size
+  of the portal rather than the whole of it, so the baseline no longer scales
+  with the map. Measured on an 80×60 world at scale 2 in a 1712×873 portal:
+  137.4 MB of layer canvas before (7 × 2560×1920), 40.0 MB after
+  (7 × 1712×873 plus the minimap's 160×120). Dirty-rect compositing came with
+  it: a blink composite is 0.006 MP and 5.5 `drawImage` calls against 10.5 and
+  7 for a full one.
 
 ---
 
@@ -309,7 +316,7 @@ heap high-water marks elevated, and make the leaks above bite sooner.
 | 7 | A4 `receiveOnce` disposers + `takeTurn` cleanup | Medium | Medium | Prevents listener stranding/double-processing | ✅ 2026-07-01 |
 | 8 | A3 backend `remove` patches + adaptive prune | Medium | Medium | Keeps object map bounded without cliff-edge prunes | ◐ prune part done |
 | 9 | C2 coalesced reconstitution | Medium–large | Medium | Cuts steady-state allocation rate substantially | Open |
-| 10 | B2 viewport-sized layers | Large | High | Lowers baseline; part of rewrite track | Open |
+| 10 | B2 viewport-sized layers | Large | High | Lowers baseline; part of rewrite track | Fixed 2026-09-22 |
 
 Items 1–4 are each a few lines and independently verifiable; they were landed
 first and can be measured individually against the larger items.

@@ -1,18 +1,21 @@
 import { IMap } from '../Map';
+import { Rect } from '../../lib/viewport';
 import Units from './Units';
 
 export class ActiveUnit extends Units implements IMap {
   // This layer only ever holds the one unit, so it can clear just what it drew
-  // last rather than the whole world canvas — 2560x1600 at 80x50 scale 2, wiped
-  // twice a second by the blink tick to redraw a single tile.
-  #lastDrawn: [number, number, number, number] | null = null;
+  // last rather than the whole viewport, and tell the portal to recomposite
+  // only that much when the blink turns it on and off.
+  #drawn: Rect[] = [];
 
   render(): void {
-    if (this.#lastDrawn !== null) {
-      this.context().clearRect(...this.#lastDrawn);
+    this.#drawn.forEach(({ x, y, width, height }) => {
+      this.context().clearRect(x, y, width, height);
 
-      this.#lastDrawn = null;
-    }
+      this.markDirty(x, y, width, height);
+    });
+
+    this.#drawn = [];
 
     const activeUnit = this.activeUnit();
 
@@ -20,30 +23,54 @@ export class ActiveUnit extends Units implements IMap {
       return;
     }
 
-    const { x, y } = activeUnit.tile,
-      tile = this.world().get(x, y),
+    const tile = this.world().get(activeUnit.tile.x, activeUnit.tile.y),
       size = this.tileSize(),
-      offsetX = x * size,
-      offsetY = y * size,
+      scale = this.scale(),
       image = this.renderUnit(activeUnit);
 
-    if (tile.units.length > 1) {
-      this.putImage(image, offsetX - this.scale(), offsetY - this.scale());
-    }
+    this.placements(tile).forEach(([offsetX, offsetY]) => {
+      if (tile.units.length > 1) {
+        this.putImage(image, offsetX - scale, offsetY - scale);
+      }
 
-    this.putImage(image, offsetX, offsetY);
+      this.putImage(image, offsetX, offsetY);
 
-    // The stacked copy sits one scale step up and left of the tile, and a unit
-    // sprite is never wider than a tile, so this covers both draws.
-    this.#lastDrawn = [
-      offsetX - this.scale(),
-      offsetY - this.scale(),
-      size + this.scale(),
-      size + this.scale(),
-    ];
+      // The stacked copy sits one scale step up and left of the tile, and a
+      // unit sprite is never wider than a tile, so this covers both draws.
+      const drawn = {
+        x: offsetX - scale,
+        y: offsetY - scale,
+        width: size + scale,
+        height: size + scale,
+      };
+
+      this.#drawn.push(drawn);
+
+      this.markDirty(drawn.x, drawn.y, drawn.width, drawn.height);
+    });
   }
 
   update(): void {
+    this.render();
+  }
+
+  // The blink flips this layer on and off twice a second; all the portal has to
+  // put back is the tile the unit is on.
+  protected markContentDirty(): void {
+    this.#drawn.forEach(({ x, y, width, height }) =>
+      this.markDirty(x, y, width, height)
+    );
+  }
+
+  // One tile is cheaper to draw again than to blit and patch up, and it saves
+  // having to move `#drawn` along with the rest of the canvas.
+  protected scrollTo(originX: number, originY: number): void {
+    this.setOrigin(originX, originY);
+
+    this.clear();
+
+    this.#drawn = [];
+
     this.render();
   }
 }

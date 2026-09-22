@@ -48,11 +48,27 @@ Primary files:
 
 ### Map rendering
 
-`GamePortal` composes layer renderers from `src/js/UI/components/Map/*`:
+`GamePortal` composes layer renderers from `src/js/UI/components/Map/*`, in
+compositing order:
 
-- Terrain/base: `Land`, `Terrain`, `Fog`
-- Entities: `Units`, `Cities`, `CityNames`, `GoodyHuts`
-- Overlays: `Improvements`, `Irrigation`, `Yields`, `ActiveUnit`
+- Scenery: `Landscape` (land and coast, irrigation, terrain, improvements,
+  terrain features and goody huts on one canvas), `Fog`
+- Overlays: `Yields`
+- Entities: `Units`, `Cities`, `CityNames`, `ActiveUnit`
+- `Overview` rides in the same list but is never composited onto the map: it is
+  the whole world at a few pixels a tile, for `Minimap`.
+
+Each layer's canvas is a window on the world the size of the portal, not the
+whole world, and the layer knows which world pixel sits at its top left. So a
+tile has no fixed place on a canvas, and because the world wraps it can have
+several places or none. Layers therefore implement
+`drawTile(tile, offsetX, offsetY)` and are handed the places to draw in;
+`Map.renderTile()` works those out and calls it once per place.
+
+Moving the view blits the overlap across and draws only the strips it uncovers.
+Layers record which parts of themselves changed, and `Portal.render()`
+composites those regions rather than the whole canvas, so a blinking unit or a
+moved one costs a tile rather than a viewport.
 
 ## Input model
 
