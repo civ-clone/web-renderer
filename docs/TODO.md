@@ -55,10 +55,14 @@ sections B2/C5.
       tile (#45). Note the tick never re-rendered that layer, it only flipped
       `isVisible()`, so the full-canvas clear was per activate/move rather than
       twice a second.
-- [ ] Drop the full-world `unitsMap.render()` in `renderActiveUnit` in favour of
-      the two-tile `update` that follows it (#47) — 1,207 per-tile clears plus a
-      full-canvas clear on every unit selection and move, and a bigger win than
-      the blink tick was.
+- [x] Drop the full-world `unitsMap.render()` in `renderActiveUnit` (#47). Note
+      the `update([lastUnit.tile, unit.tile])` that followed it could not
+      replace it: `applyActiveUnit` has already pointed `lastUnit` at the
+      incoming unit, so it passed the same tile twice. The vacated tile is now
+      collected in `applyActiveUnit` instead.
+- [ ] `CityNames.update()` ignores its tiles, clears the whole layer canvas and
+      rescans `world().tiles()` on every patch (#48) — the last full-world
+      re-render left in the render path.
 - [ ] Merge the static map layers (Land / Terrain / Irrigation / Improvements)
       into a single canvas (B2, #7).
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
