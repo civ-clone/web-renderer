@@ -1,4 +1,5 @@
 import { Record, Store } from './Store';
+import { isDrawable } from './lib/imageSize';
 import scaleImage from './lib/scaleImage';
 
 interface Asset extends Record {
@@ -325,6 +326,31 @@ export class AssetStore extends Store<{
 
       image.src = asset.uri;
 
+      // This element is never appended, so it is never rendered and its
+      // intrinsic size only arrives once it has loaded — and callers size
+      // canvases from it. Without the wait, `scaleImage` reads a width of 0.
+      //
+      // Deliberately the `load` event rather than `decode()`: for an element
+      // that is not in the document, `decode()` never settles while the page
+      // is hidden, and this is awaited during `Renderer.init`, so using it
+      // stops the app starting at all in a background tab.
+      const loaded = await new Promise<boolean>((resolve) => {
+        if (image.complete) {
+          resolve(image.naturalWidth > 0);
+
+          return;
+        }
+
+        image.addEventListener('load', () => resolve(true), { once: true });
+        image.addEventListener('error', () => resolve(false), { once: true });
+      });
+
+      if (!loaded) {
+        // Leave a broken image uncached so a later import can replace it,
+        // rather than serving the failure for the rest of the session.
+        return image;
+      }
+
       this.#cachedImages.set(path, image);
     }
 
@@ -332,14 +358,24 @@ export class AssetStore extends Store<{
   }
 
   async getScaled(path: string, scale: number): Promise<HTMLCanvasElement> {
-    if (!this.#cachedScaledImages.has(path)) {
-      this.#cachedScaledImages.set(
-        path,
-        scaleImage(await this.getImage(path), scale)
-      );
+    // Keyed on the scale as well as the path: the same asset at a different
+    // scale is a different canvas, and keying on the path alone silently
+    // served the first scale asked for to every later caller.
+    const key = `${path}@${scale}`;
+
+    if (!this.#cachedScaledImages.has(key)) {
+      const image = await this.getImage(path);
+
+      if (!isDrawable(image)) {
+        // Scaling an undecoded image gives a blank canvas; caching that would
+        // serve it for the rest of the session instead of retrying.
+        return scaleImage(image, scale);
+      }
+
+      this.#cachedScaledImages.set(key, scaleImage(image, scale));
     }
 
-    return this.#cachedScaledImages.get(path)!;
+    return this.#cachedScaledImages.get(key)!;
   }
 
   async hasAllAssets(): Promise<boolean> {
