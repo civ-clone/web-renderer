@@ -45,6 +45,18 @@ export class Store<Types extends DBSchema> {
     return (await this.#connection).put(this.#store, record, key);
   }
 
+  async setAll(records: StoreValue<Types, StoreNames<Types>>[]) {
+    const transaction = (await this.#connection).transaction(
+      this.#store,
+      'readwrite'
+    );
+
+    await Promise.all([
+      ...records.map((record) => transaction.store.put(record)),
+      transaction.done,
+    ]);
+  }
+
   async clear() {
     return (await this.#connection).clear(this.#store);
   }

@@ -96,7 +96,8 @@ export class ImportAssetsWindow extends Window {
       'ImportAssetsWindow.progress-building'
     );
 
-    const results: { name: string; uri: string }[] = [];
+    const results: { name: string; uri: string }[] = [],
+      existingKeys = await assetStore.keys();
 
     // Wait for...
     await Promise.all(
@@ -117,8 +118,7 @@ export class ImportAssetsWindow extends Window {
               return;
             }
 
-            const existingKeys = await assetStore.keys(),
-              definitions = Object.keys(allDefinitions).reduce(
+            const definitions = Object.keys(allDefinitions).reduce(
                 (object, key) => {
                   const filenamesForObject = Object.entries(
                     allDefinitions[key]
@@ -181,8 +181,8 @@ export class ImportAssetsWindow extends Window {
       'ImportAssetsWindow.progress-writing'
     );
 
-    // ...and all results stored in IDB.
-    await Promise.all(results.map((record) => assetStore.set(record)));
+    // ...and all results stored in IDB, in a single transaction.
+    await assetStore.setAll(results);
 
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');

@@ -156,7 +156,7 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.done':
     'Done! Please reload the page to utilise the fresh assets.',
   'ImportAssetsWindow.instructions':
-    'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This process can take at least a few minutes.',
+    'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
