@@ -40,6 +40,42 @@ const defaultPortalOptions: PortalSettings = {
   tileSize: 16,
 };
 
+/**
+ * Where a wrapping layer of `length` px, whose untiled origin sits at `origin`,
+ * meets a viewport of `viewportLength` px.
+ *
+ * Returns `[source, destination, length]` triples in layer/viewport
+ * co-ordinates, one per repeat that is actually on screen.
+ */
+const visibleSegments = (
+  origin: number,
+  length: number,
+  viewportLength: number
+): [number, number, number][] => {
+  const segments: [number, number, number][] = [];
+
+  if (length <= 0) {
+    return segments;
+  }
+
+  // The first repeat that can reach the viewport is the last one starting at or
+  // before 0.
+  for (
+    let start = origin - Math.ceil(origin / length) * length;
+    start < viewportLength;
+    start += length
+  ) {
+    const from = Math.max(start, 0),
+      to = Math.min(start + length, viewportLength);
+
+    if (to > from) {
+      segments.push([from - start, from, to - from]);
+    }
+  }
+
+  return segments;
+};
+
 export class Portal
   extends EventEmitter<{
     ['activate-unit']: [Unit];
@@ -150,50 +186,48 @@ export class Portal
       portalCenterX = Math.trunc(this.#canvas.width / 2),
       layerHeight = this.#world.height() * tileSize,
       centerY = this.#center.y * tileSize + Math.trunc(tileSize / this.scale()),
-      portalCenterY = Math.trunc(this.#canvas.height / 2);
-
-    let startX = portalCenterX - centerX,
-      endX = portalCenterX + layerWidth,
-      startY = portalCenterY - centerY,
-      endY = portalCenterY + layerHeight;
-
-    while (startX > 0) {
-      startX -= layerWidth;
-    }
-
-    while (startY > 0) {
-      startY -= layerHeight;
-    }
-
-    while (endX < this.#canvas.width) {
-      endX += layerWidth;
-    }
-
-    while (endY < this.#canvas.height) {
-      endY += layerHeight;
-    }
+      portalCenterY = Math.trunc(this.#canvas.height / 2),
+      // The world wraps, so a layer can need drawing at more than one offset,
+      // but only the offsets that land on the canvas are worth drawing and only
+      // the part of each that lands on it. Both are the same for every layer,
+      // so they are worked out once rather than per layer.
+      columns = visibleSegments(
+        portalCenterX - centerX,
+        layerWidth,
+        this.#canvas.width
+      ),
+      rows = visibleSegments(
+        portalCenterY - centerY,
+        layerHeight,
+        this.#canvas.height
+      );
 
     this.#context.fillStyle = '#000';
-    this.#context.fillRect(
-      0,
-      0,
-      Math.max(this.#world.width() * tileSize, this.#canvas.width),
-      Math.max(this.#world.height() * tileSize, this.#canvas.height)
-    );
+    this.#context.fillRect(0, 0, this.#canvas.width, this.#canvas.height);
 
-    for (let x = startX; x < endX; x += layerWidth) {
-      for (let y = startY; y < endY; y += layerHeight) {
-        this.#layers.forEach((layer) => {
-          if (!layer.isVisible()) {
-            return;
-          }
-
-          const canvas = layer.canvas();
-
-          this.#context.drawImage(canvas, x, y, canvas.width, canvas.height);
-        });
+    this.#layers.forEach((layer) => {
+      if (!layer.isVisible()) {
+        return;
       }
-    }
+
+      const canvas = layer.canvas();
+
+      columns.forEach(([sourceX, destinationX, width]) =>
+        rows.forEach(([sourceY, destinationY, height]) =>
+          this.#context.drawImage(
+            canvas,
+            sourceX,
+            sourceY,
+            width,
+            height,
+            destinationX,
+            destinationY,
+            width,
+            height
+          )
+        )
+      );
+    });
   }
 
   scale(): number {

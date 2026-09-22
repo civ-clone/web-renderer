@@ -24,14 +24,10 @@ import Cities from './Map/Cities';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import ConfirmationWindow from './ConfirmationWindow';
 import DataObserver from '../DataObserver';
-import Feature from './Map/Feature';
 import Fog from './Map/Fog';
-import Improvements from './Map/Improvements';
-import Irrigation from './Map/Irrigation';
-import Land from './Map/Land';
+import Landscape from './Map/Landscape';
 import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
-import Terrain from './Map/Terrain';
 import Transport from '../Transport';
 import Unit from './Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
@@ -171,11 +167,7 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
           scale: portal.scale(),
           tileSize: portal.tileSize() / portal.scale(),
         },
-        Land,
-        Irrigation,
-        Terrain,
-        Improvements,
-        Feature,
+        Landscape,
         Fog,
         Cities,
         Units,

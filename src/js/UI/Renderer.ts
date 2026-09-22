@@ -22,17 +22,13 @@ import Cities from './components/Map/Cities';
 import CityNames from './components/Map/CityNames';
 import CityStatus from './components/CityStatus';
 import ConfirmationWindow from './components/ConfirmationWindow';
-import Feature from './components/Map/Feature';
 import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
 import GameMenu from './components/GameMenu';
 import GamePortal from './components/GamePortal';
-import GoodyHuts from './components/Map/GoodyHuts';
 import HappinessReport from './components/HappinessReport';
-import Improvements from './components/Map/Improvements';
 import IntervalHandler from './lib/IntervalHandler';
-import Irrigation from './components/Map/Irrigation';
-import Land from './components/Map/Land';
+import Landscape from './components/Map/Landscape';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
@@ -42,7 +38,6 @@ import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
 import SelectionWindow from './components/SelectionWindow';
-import Terrain from './components/Map/Terrain';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
@@ -514,12 +509,7 @@ export class Renderer {
                   // TODO: this needs to come from the theme
                   tileSize: 16,
                 },
-                Land,
-                Irrigation,
-                Terrain,
-                Improvements,
-                Feature,
-                GoodyHuts,
+                Landscape,
                 Fog,
                 Yields,
                 Units,
@@ -527,7 +517,7 @@ export class Renderer {
                 CityNames,
                 ActiveUnit
               ),
-              landMap = portal.getLayer(Land) as Land,
+              landscapeMap = portal.getLayer(Landscape) as Landscape,
               yieldsMap = portal.getLayer(Yields) as Yields,
               unitsMap = portal.getLayer(Units) as Units,
               citiesMap = portal.getLayer(Cities) as Cities,
@@ -537,7 +527,7 @@ export class Renderer {
                 minimapCanvas,
                 world,
                 portal,
-                landMap,
+                landscapeMap,
                 citiesMap,
                 activeUnitsMap
               ),

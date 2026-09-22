@@ -66,11 +66,24 @@ sections B2/C5.
       Fixed the labels being clipped at the map edges with it (#49): the
       overhang is drawn again offset by the canvas size, since the portal tiles
       it. No layer performs a full-canvas clear any more.
-- [ ] Merge the static map layers (Land / Terrain / Irrigation / Improvements)
-      into a single canvas (B2, #7).
+- [x] Merge the static map layers into a single `Landscape` canvas (B2, #7).
+      Feature and GoodyHuts went in alongside the four the issue named: they sit
+      in the same contiguous block of the stack and nothing toggles any of the
+      six independently, so it is six world canvases down to one. Fixed the
+      missing `beginPath()` in the isolated-road fill with it, which made every
+      `fill()` re-fill every isolated road drawn so far.
+- [x] Composite only the wrap offsets that land on the portal canvas, and only
+      the part of each that lands on it (#7). `Portal.render()` drew every
+      layer at every wrap offset, including offsets entirely off screen, as a
+      full-layer blit. Measured on an 80×60 world at scale 2 in a 1712×873
+      portal: 60.5 `drawImage` calls and 297 megapixels of source per render
+      before, 15.0 calls and 7.5 megapixels after.
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
-      of full-world canvases (~16 MB each at 80×50 scale 2; B2, rewrite track,
+      of full-world canvases (~19 MB each at 80×60 scale 2; B2, rewrite track,
       #7). Restricting the blink tick to the active unit's region needs this:
       `ActiveUnit` is the topmost layer, so un-drawing it means restoring the
       pixels beneath, i.e. a partial portal composite — it is not the cheap
-      standalone win it was previously filed as.
+      standalone win it was previously filed as. Note `Minimap.update()` blits
+      `Landscape`, `Cities` and `ActiveUnit` scaled to 190px wide, so those
+      three cannot become viewport-sized until the minimap has a layer of its
+      own to draw from.

@@ -177,6 +177,14 @@ reduction (C5).
 - Fixes (larger, listed in 2026-06 review): viewport-sized buffers with
   dirty-rect rendering, chunked tile caches, or merging static layers (Land/
   Terrain/Irrigation/Improvements) into one canvas.
+- **Status: partly fixed 2026-09-22** — the six scenery layers (Land,
+  Irrigation, Terrain, Improvements, Feature, GoodyHuts) are one `Landscape`
+  canvas, so the main portal is 7 world canvases rather than 12 and the city
+  portal 6 rather than 10 (it never carried a goody-hut layer). `Portal.render()` also composites only the wrap
+  offsets that land on the canvas, and only the part of each that does.
+  Viewport-sized buffers are still open (#7): `Minimap.update()` blits
+  `Landscape`, `Cities` and `ActiveUnit` scaled down, so those three need the
+  whole world until the minimap draws from a layer of its own.
 
 ---
 
