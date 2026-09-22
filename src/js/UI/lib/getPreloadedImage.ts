@@ -4,7 +4,23 @@ export let preloadContainer: HTMLElement;
 const preloadedImageMap = new Map<string, HTMLImageElement>();
 let missingImagePlaceholder: HTMLCanvasElement | null = null;
 
+// Anything caching a canvas *derived* from a preloaded image has to drop it when
+// the underlying images change, or it would keep serving the previous theme's
+// sprites. Registered here rather than exported as a list of caches so the
+// derived modules stay leaves of the import graph.
+const invalidationHandlers = new Set<() => void>();
+
+export const onPreloadedImagesChanged = (handler: () => void): void => {
+  invalidationHandlers.add(handler);
+};
+
 export const setPreloadContainer = (preloadContainerElement: HTMLElement) => {
+  // `Map`'s constructor calls this, so it runs once per layer with the same
+  // element; only a genuine change should invalidate the derived caches.
+  if (preloadContainer !== preloadContainerElement) {
+    invalidationHandlers.forEach((handler) => handler());
+  }
+
   preloadContainer = preloadContainerElement;
   preloadedImageMap.clear();
 
@@ -44,8 +60,12 @@ export const getPreloadedImage = (path: string): CanvasImageSource => {
     return missingImagePlaceholder;
   }
 
-  // return a clone so it can be modified by consumers
-  return image.cloneNode() as CanvasImageSource;
+  // Returned as-is, *not* as a clone. `cloneNode()` gives a detached element,
+  // which is neither rendered nor decoded, so its `width` reads 0 on first use
+  // and `getImageData` in `replaceColours` throws on the zero-sized rect. No
+  // caller mutates the element either — they all draw from it — so a clone per
+  // lookup was pure allocation on the render hot path.
+  return image;
 };
 
 export default getPreloadedImage;

@@ -4,6 +4,7 @@ import {
   setPreloadContainer,
 } from '../lib/getPreloadedImage';
 import World from './World';
+import { imageSize } from '../lib/imageSize';
 import replaceColours from '../lib/replaceColours';
 import { s } from '@dom111/element';
 
@@ -127,14 +128,22 @@ export class Map implements IMap {
     offsetX: number,
     offsetY: number
   ): void {
+    const [width, height] = imageSize(image);
+
+    // The preload is asynchronous, so an early render can reach an image that
+    // has not decoded; `drawImage` throws on a zero-sized source.
+    if (width === 0 || height === 0) {
+      return;
+    }
+
     this.#context.imageSmoothingEnabled = false;
 
     this.#context.drawImage(
       image,
       offsetX,
       offsetY,
-      (image.width as number) * this.#scale,
-      (image.height as number) * this.#scale
+      width * this.#scale,
+      height * this.#scale
     );
   }
 

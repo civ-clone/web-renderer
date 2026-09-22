@@ -1,7 +1,18 @@
+import { imageSize, isDrawable } from './imageSize';
+import { onPreloadedImagesChanged } from './getPreloadedImage';
 import { s } from '@dom111/element';
 
 const recolouredImageCache = new Map<string, HTMLCanvasElement>();
 
+onPreloadedImagesChanged(() => recolouredImageCache.clear());
+
+/**
+ * Recolours `image`, mapping each colour in `source` to the one at the same
+ * index in `replacement`.
+ *
+ * The result may be a shared cache entry, so callers must treat it as
+ * immutable and composite onto their own canvas if they need to draw on top.
+ */
 export const replaceColours = (
   image: CanvasImageSource,
   source: string[],
@@ -10,31 +21,36 @@ export const replaceColours = (
   // Only image elements have a stable identity (`src`) to key the cache by;
   // caching canvas sources under a random key would insert a new entry on
   // every call without ever hitting, growing the cache unboundedly.
+  // `source` is part of the key too: the same image recoloured with the same
+  // replacement but a different set of source colours is a different result.
   const key =
     image instanceof HTMLImageElement
-      ? image.src + replacement.toString()
+      ? [image.src, source.toString(), replacement.toString()].join('|')
       : null;
 
   if (key !== null && recolouredImageCache.has(key)) {
-    const canvas = recolouredImageCache.get(key)!,
-      clone = s<HTMLCanvasElement>('<canvas></canvas>'),
-      context = clone.getContext('2d')!;
-
-    clone.height = canvas.height;
-    clone.width = canvas.width;
-
-    context.drawImage(canvas, 0, 0);
-
-    return clone;
+    return recolouredImageCache.get(key)!;
   }
 
   const canvas = s<HTMLCanvasElement>('<canvas></canvas>'),
     context = canvas.getContext('2d')!;
 
-  canvas.width = image.width as number;
-  canvas.height = image.height as number;
+  // The preload is asynchronous, so a render can reach here before the image has
+  // decoded. Hand back something drawable rather than throwing on the zero-sized
+  // `getImageData`, and don't cache it — the next render has the decoded image.
+  if (!isDrawable(image)) {
+    canvas.width = 1;
+    canvas.height = 1;
 
-  context.drawImage(image, 0, 0, image.width as number, image.height as number);
+    return canvas;
+  }
+
+  const [width, height] = imageSize(image);
+
+  canvas.width = width;
+  canvas.height = height;
+
+  context.drawImage(image, 0, 0, width, height);
 
   const imageData = context.getImageData(0, 0, canvas.width, canvas.height),
     getColor = (input: string | number[]) => {
