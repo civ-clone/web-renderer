@@ -120,8 +120,11 @@ What an entry contains:
   each line is a bullet. Written as a subject, a blank line and a body, the
   subject is dropped and each body paragraph becomes a bullet, with wrapped
   lines joined and `- ` items kept separate. Trailers such as `Co-Authored-By:`
-  are dropped. So a commit message *is* its release note, and is worth writing
-  for a player as well as a reviewer.
+  are dropped — but only below the first line, because `release:` and every
+  other conventional-commit subject is shaped exactly like a trailer, and a
+  commit with no body would otherwise contribute nothing at all. So a commit
+  message *is* its release note, and is worth writing for a player as well as a
+  reviewer. `npm run test:changelog` covers the shapes.
 - **External changes** compare the `@civ-clone` packages resolved in the
   lockfile at the commit and its parent — `pnpm-lock.yaml`, or `yarn.lock` for
   commits from before the switch — and list each one added, updated or removed,

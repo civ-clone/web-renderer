@@ -1,1 +1,1 @@
-{"version":"0.1.0@59a54a1","date":"2026-09-22T08:54:52.000Z","localChanges":[],"externalChanges":{}}
+{"version":"0.1.0@59a54a1","date":"2026-09-22T08:54:52.000Z","localChanges":["docs: mark the render hot-path caching item done"],"externalChanges":{}}

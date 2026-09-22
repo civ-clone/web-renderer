@@ -36,6 +36,11 @@ const git = (...args) =>
 // hard-wrapped lines joined back up and `- ` items kept as their own. Trailers
 // (`Co-Authored-By:` and the like) are not changes and are dropped. A message
 // that is a subject and nothing else keeps its subject.
+//
+// A trailer is only a trailer below the first line: `release: …`, `docs: …` and
+// every other conventional-commit subject matches `TRAILER` exactly as
+// `Co-Authored-By: …` does, and dropping those left a body-less commit with
+// nothing at all to show.
 const TRAILER = /^[A-Za-z][\w-]*: \S/;
 
 export const toBullets = (message) => {
@@ -48,7 +53,9 @@ export const toBullets = (message) => {
     }
 
     if (paragraphs.length === 1) {
-        return paragraphs[0].map((line) => line.trim()).filter((line) => line !== '' && !TRAILER.test(line));
+        const lines = paragraphs[0].map((line) => line.trim()).filter((line) => line !== '');
+
+        return lines.filter((line, index) => index === 0 || !TRAILER.test(line));
     }
 
     const bullets = paragraphs.slice(1).flatMap((lines) => lines
@@ -320,14 +327,15 @@ const release = async () => {
 };
 
 // Only when run, not when imported — a script importing `toBullets` should not
-// generate an entry for whatever its own first argument happens to be.
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-if (process.argv.includes('--release')) {
-    await release();
-}
-else {
-    const [, , targetCommit] = process.argv;
+// generate an entry for whatever its own first argument happens to be. There is
+// no `argv[1]` under `node -e`, or `node --import`, so guard that too.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    if (process.argv.includes('--release')) {
+        await release();
+    }
+    else {
+        const [, , targetCommit] = process.argv;
 
-    console.log(JSON.stringify(await entryFor(targetCommit ?? 'HEAD')));
-}
+        console.log(JSON.stringify(await entryFor(targetCommit ?? 'HEAD')));
+    }
 }

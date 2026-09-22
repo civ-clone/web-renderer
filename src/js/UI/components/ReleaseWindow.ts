@@ -49,16 +49,24 @@ export class ReleaseWindow extends Window {
         `<section></section>`,
         s(
           `<div class="release-list"></div>`,
-          ...(releases as Release[]).map((release, i) => {
-            const releaseDate = new Date(release.date);
+          // An entry with nothing on either side is nothing to show: it would
+          // render as a heading above an empty block.
+          ...(releases as Release[])
+            .filter(
+              (release) =>
+                release.localChanges.length > 0 ||
+                Object.keys(release.externalChanges).length > 0
+            )
+            .map((release, i) => {
+              const releaseDate = new Date(release.date);
 
-            return s(
-              `<div class="release">
+              return s(
+                `<div class="release">
   <h2>${
     release.version
   } - <time title="${releaseDate.toLocaleString()}">${localeProvider.timeSince(
-                releaseDate
-              )}</time></h2>
+                  releaseDate
+                )}</time></h2>
   
   <div aria-expanded="${i === 0 ? 'true' : 'false'}">
     ${
@@ -107,8 +115,8 @@ export class ReleaseWindow extends Window {
         : ''
     }
 </div>`
-            );
-          })
+              );
+            })
         )
       ),
       {
