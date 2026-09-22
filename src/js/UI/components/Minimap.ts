@@ -49,22 +49,52 @@ export class Minimap {
       this.#context.drawImage(layer.canvas(), 0, 0, 190, targetHeight)
     );
 
-    const [start, end] = this.#portal.rawVisibleRange();
+    const worldWidth = this.#world.width(),
+      worldHeight = this.#world.height(),
+      tileWidth = 190 / worldWidth,
+      tileHeight = targetHeight / worldHeight,
+      [start, end] = this.#portal.rawVisibleRange(),
+      // `rawVisibleRange()` is deliberately unwrapped, so the box can start off
+      // the left or top edge and can run past the right or bottom one. The
+      // world wraps, so whatever runs off one side has to come back on the
+      // other: the box is drawn once from its wrapped origin and again a world
+      // earlier on whichever axis overflows. The copies' outer edges fall off
+      // the canvas, leaving the two halves to meet without a seam.
+      tilesWide = Math.min(end.x - start.x, worldWidth),
+      tilesHigh = Math.min(end.y - start.y, worldHeight),
+      originX = ((start.x % worldWidth) + worldWidth) % worldWidth,
+      originY = ((start.y % worldHeight) + worldHeight) % worldHeight,
+      columns =
+        originX + tilesWide > worldWidth
+          ? [originX, originX - worldWidth]
+          : [originX],
+      rows =
+        originY + tilesHigh > worldHeight
+          ? [originY, originY - worldHeight]
+          : [originY];
 
-    // TODO: draw the rectangle replicated when close to the sides
-    this.#context.beginPath();
     this.#context.lineWidth = 1;
     this.#context.strokeStyle = '#fff';
     this.#context.fillStyle = 'rgba(255, 255, 255, .2)';
-    this.#context.rect(
-      Math.floor((190 / this.#world.width()) * start.x),
-      Math.floor((targetHeight / this.#world.height()) * start.y),
-      Math.floor((190 / this.#world.width()) * (end.x - start.x)),
-      Math.floor((targetHeight / this.#world.height()) * (end.y - start.y))
+
+    columns.forEach((x) =>
+      rows.forEach((y) => {
+        // Both edges are floored rather than the width being floored on its
+        // own, so a box keeps the tiles it covers however it is split.
+        const left = Math.floor(x * tileWidth),
+          top = Math.floor(y * tileHeight);
+
+        this.#context.beginPath();
+        this.#context.rect(
+          left,
+          top,
+          Math.floor((x + tilesWide) * tileWidth) - left,
+          Math.floor((y + tilesHigh) * tileHeight) - top
+        );
+        this.#context.stroke();
+        this.#context.fill();
+      })
     );
-    this.#context.stroke();
-    this.#context.fill();
-    this.#context.closePath();
   }
 }
 
