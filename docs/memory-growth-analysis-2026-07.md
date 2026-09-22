@@ -182,9 +182,12 @@ reduction (C5).
   canvas, so the main portal is 7 world canvases rather than 12 and the city
   portal 6 rather than 10 (it never carried a goody-hut layer). `Portal.render()` also composites only the wrap
   offsets that land on the canvas, and only the part of each that does.
-  Viewport-sized buffers are still open (#7): `Minimap.update()` blits
-  `Landscape`, `Cities` and `ActiveUnit` scaled down, so those three need the
-  whole world until the minimap draws from a layer of its own.
+  Viewport-sized buffers are still open (#7), blocked on the minimap (#53):
+  `Minimap.update()` blits `Landscape`, `Cities` and `ActiveUnit` scaled down,
+  so those three need the whole world until the minimap draws from a layer of
+  its own. That minimap blit is itself now the renderer's largest source-pixel
+  consumer — 14.7 MP discarded into a 190×142 target on every patch and every
+  recentre, 383.4 MP over 15s of stress play against the portal's 310.9.
 
 ---
 
