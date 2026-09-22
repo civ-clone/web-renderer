@@ -50,9 +50,15 @@ sections B2/C5.
       scaled asset measured before it loaded — the torch cursor had never
       worked. The caches now hand out shared entries, so callers must treat
       them as immutable and composite onto their own canvas to draw on top.
-- [ ] Skip the 500 ms blink tick's `portal.render()` when there is no active unit,
+- [x] Skip the 500 ms blink tick's `portal.render()` when there is no active unit,
       and stop `ActiveUnit.render()` clearing the whole world canvas to draw one
-      tile (#45). Independent of the items below.
+      tile (#45). Note the tick never re-rendered that layer, it only flipped
+      `isVisible()`, so the full-canvas clear was per activate/move rather than
+      twice a second.
+- [ ] Drop the full-world `unitsMap.render()` in `renderActiveUnit` in favour of
+      the two-tile `update` that follows it (#47) — 1,207 per-tile clears plus a
+      full-canvas clear on every unit selection and move, and a bigger win than
+      the blink tick was.
 - [ ] Merge the static map layers (Land / Terrain / Irrigation / Improvements)
       into a single canvas (B2, #7).
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
