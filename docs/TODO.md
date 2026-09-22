@@ -1,4 +1,4 @@
-- [ ] First image load has an `image.width` of 0, breaking:
+- [ ] First image load has an `image.width` of 0, breaking (#8):
 ```
 Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingContext2D': The source width is 0.
     at replaceColours (replaceColours.ts:39:29)
@@ -19,10 +19,12 @@ Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingCon
 - [ ] In the `CityScreen` `Window` the worked `Tile`s cannot be manually selected.
 - [ ] In the main window, pressing `F5` should show the `Trade Report` but it also triggers a page reload.
 - [ ] Hide (or at least my disabled) the `EndTurn` `Action` button once pressed.
-- [ ] Add map scaling factors to the options.
+- [ ] Add map scaling factors to the options, and an option to lock the map so the
+      top edge stays >= 0 and the bottom edge <= the map height (#13).
 - [ ] Check the image slice for the `Cruiser` `Unit`.
 - [ ] Maybe add a draggable map (with inertia) instead of click to centre.
-- [ ] Add random to `Civilization` selection.
+- [ ] Add random to `Civilization` selection, and a turns count to the science
+      selection window (#15).
 - [ ] Pressing `W` to make a unit wait, doesn't work properly.
 - [ ] Map re-centering should occur more liberally, currently `Unit`s on the very edge of the viewport, whilst still visible, can be hard to see.
 
@@ -40,12 +42,21 @@ sections B2/C5.
       detail panels, `dataupdated` dispatch, `portal.build`/`render`, `minimap`).
       Verify: multi-move units can move consecutively; reports open current;
       `autoEndOfTurn` still advances; map recenters on active unit.
-- [ ] Restrict the 500 ms blink tick to the active-unit layer instead of a full
-      12-layer `portal.render()` composite (biggest cheap win; C5).
 - [ ] Return cached images/canvases directly in the render hot path instead of
       cloning per call (`getPreloadedImage`, `replaceColours`, `renderUnit`,
-      `Map/Land` per-coast-tile canvas; C5).
+      `Map/Land` per-coast-tile canvas; C5, #6). `renderUnit` mutates what
+      `replaceColours` returns, so cache the fully rendered unit (keyed on type +
+      colours + fortified + busy) rather than handing out the recolour cache.
+      Also fixes the zero-width `getImageData` crash (#8): a detached
+      `cloneNode()` is not decoded, so its `width` is 0 on first use.
+- [ ] Skip the 500 ms blink tick's `portal.render()` when there is no active unit,
+      and stop `ActiveUnit.render()` clearing the whole world canvas to draw one
+      tile (#45). Independent of the items below.
 - [ ] Merge the static map layers (Land / Terrain / Irrigation / Improvements)
-      into a single canvas (B2).
+      into a single canvas (B2, #7).
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
-      of full-world canvases (~16 MB each at 80×50 scale 2; B2, rewrite track).
+      of full-world canvases (~16 MB each at 80×50 scale 2; B2, rewrite track,
+      #7). Restricting the blink tick to the active unit's region needs this:
+      `ActiveUnit` is the topmost layer, so un-drawing it means restoring the
+      pixels beneath, i.e. a partial portal composite — it is not the cheap
+      standalone win it was previously filed as.
