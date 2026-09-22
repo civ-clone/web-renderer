@@ -184,6 +184,14 @@ export class Renderer {
           unitsMap: Units,
           activeUnitsMap: ActiveUnit
         ) => {
+          // `activeUnit` still holds the outgoing unit, and it came from the
+          // previous reconstitution, so its tile is the one being left behind.
+          [activeUnit?.tile, unit?.tile].forEach((tile) => {
+            if (tile) {
+              activeUnitTilesToRefresh.set(`${tile.x},${tile.y}`, tile);
+            }
+          });
+
           activeUnit = unit;
 
           portal.setActiveUnit(unit);
@@ -205,7 +213,13 @@ export class Renderer {
 
           unitDetails.build();
 
-          unitsMap.render();
+          // Only the tiles an active-unit change actually invalidated, rather
+          // than a full-world re-render of the layer on every unit selection
+          // and move. Every other tile reaches this layer the same way it
+          // reaches the others, through `portal.build(tilesToRender)`.
+          unitsMap.update([...activeUnitTilesToRefresh.values()]);
+          activeUnitTilesToRefresh.clear();
+
           unitsMap.setVisible(true);
           activeUnitsMap.render();
           activeUnitsMap.setVisible(true);
@@ -215,11 +229,6 @@ export class Renderer {
 
             return;
           }
-
-          unitsMap.update([
-            ...(lastUnit?.tile ? [lastUnit.tile] : []),
-            unit.tile,
-          ]);
 
           if (!portal.isVisible(unit.tile.x, unit.tile.y)) {
             portal.setCenter(unit.tile.x, unit.tile.y);
@@ -258,7 +267,16 @@ export class Renderer {
         )
       );
 
-      const tilesToRender: Tile[] = [];
+      const tilesToRender: Tile[] = [],
+        // `Units` skips whichever tile holds the active unit, so a change of
+        // active unit leaves two tiles stale on that layer: the one being
+        // vacated, which has to draw its unit again, and the one taking over,
+        // which has to stop drawing it. Collected in `applyActiveUnit`, which
+        // is the only point that still knows the outgoing unit — by the time
+        // the coalesced `renderActiveUnit` runs, `lastUnit` has already been
+        // pointed at the incoming one. Keyed by coordinate to dedupe, since
+        // several changes can land in a single frame.
+        activeUnitTilesToRefresh = new Map<string, Tile>();
 
       let globalNotificationTimer: number | undefined,
         lastUnit: Unit | null = null,
