@@ -42,13 +42,14 @@ sections B2/C5.
       detail panels, `dataupdated` dispatch, `portal.build`/`render`, `minimap`).
       Verify: multi-move units can move consecutively; reports open current;
       `autoEndOfTurn` still advances; map recenters on active unit.
-- [ ] Return cached images/canvases directly in the render hot path instead of
+- [x] Return cached images/canvases directly in the render hot path instead of
       cloning per call (`getPreloadedImage`, `replaceColours`, `renderUnit`,
-      `Map/Land` per-coast-tile canvas; C5, #6). `renderUnit` mutates what
-      `replaceColours` returns, so cache the fully rendered unit (keyed on type +
-      colours + fortified + busy) rather than handing out the recolour cache.
-      Also fixes the zero-width `getImageData` crash (#8): a detached
-      `cloneNode()` is not decoded, so its `width` is 0 on first use.
+      `Map/Land` per-coast-tile canvas; C5, #6). Fixed the zero-width
+      `getImageData` crash (#8) with it, and the same root cause in
+      `AssetStore.getImage`/`scaleImage`, which cached a 0x0 canvas for any
+      scaled asset measured before it loaded — the torch cursor had never
+      worked. The caches now hand out shared entries, so callers must treat
+      them as immutable and composite onto their own canvas to draw on top.
 - [ ] Skip the 500 ms blink tick's `portal.render()` when there is no active unit,
       and stop `ActiveUnit.render()` clearing the whole world canvas to draw one
       tile (#45). Independent of the items below.
