@@ -15,7 +15,7 @@ importers:
     dependencies:
       '@civ-clone/civ1-asset-extractor':
         specifier: github:civ-clone/civ1-asset-extractor
-        version: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/ee19340aed544d902d25710e6f77542ff22169e3
+        version: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/4860507f2a1c7500d6dd0b91517692b5caee3627
       '@civ-clone/civ1-city':
         specifier: github:civ-clone/civ1-city
         version: https://codeload.github.com/civ-clone/civ1-city/tar.gz/9f504879c498c4e9f60a0093f622edb0da5a9577
@@ -984,8 +984,8 @@ packages:
   '@civ-clone/base-wonder-womenssuffrage@0.1.1':
     resolution: {integrity: sha512-WY8jRe19QMifSizBSegok25VK2v6lYIXuPnsBpGCVxgLThKlNF90UQqLLrCVysBFSVDA2j0o1ihbN7cECgbpEA==}
 
-  '@civ-clone/civ1-asset-extractor@https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/ee19340aed544d902d25710e6f77542ff22169e3':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/ee19340aed544d902d25710e6f77542ff22169e3}
+  '@civ-clone/civ1-asset-extractor@https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/4860507f2a1c7500d6dd0b91517692b5caee3627':
+    resolution: {gitHosted: true, integrity: sha512-u92RMtGUAkyA5MwnyQWWRxNaxHytiWQECiDIP+IcIaaqk5q9WrpdEtLYLXGbto3qzabourbIpsqGkLaF/1LVXg==, tarball: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/4860507f2a1c7500d6dd0b91517692b5caee3627}
     version: 0.1.1
 
   '@civ-clone/civ1-city-happiness@https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/0e3ac819757f0b61f5d90713728da37090e906c0':
@@ -2987,7 +2987,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-wonder': 0.1.5
 
-  '@civ-clone/civ1-asset-extractor@https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/ee19340aed544d902d25710e6f77542ff22169e3':
+  '@civ-clone/civ1-asset-extractor@https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/4860507f2a1c7500d6dd0b91517692b5caee3627':
     dependencies:
       canvas: 2.11.2
     transitivePeerDependencies:
@@ -3120,7 +3120,7 @@ snapshots:
       '@civ-clone/base-terrain-river': 0.1.0
       '@civ-clone/base-terrain-swamp': 0.1.0
       '@civ-clone/base-terrain-tundra': 0.1.0
-      '@civ-clone/civ1-asset-extractor': https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/ee19340aed544d902d25710e6f77542ff22169e3
+      '@civ-clone/civ1-asset-extractor': https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/4860507f2a1c7500d6dd0b91517692b5caee3627
       '@civ-clone/civ1-civilization': https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273
       '@civ-clone/core-civilization': 0.1.6
       '@civ-clone/core-registry': 0.1.4
