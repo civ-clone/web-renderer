@@ -34,6 +34,7 @@ import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
+import Overview from './components/Map/Overview';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
@@ -510,6 +511,9 @@ export class Renderer {
                   tileSize: 16,
                 },
                 Landscape,
+                // Never composited onto the map; it rides in the layer list so
+                // `portal.build()` feeds it tile updates like any other layer.
+                Overview,
                 Fog,
                 Yields,
                 Units,
@@ -517,7 +521,7 @@ export class Renderer {
                 CityNames,
                 ActiveUnit
               ),
-              landscapeMap = portal.getLayer(Landscape) as Landscape,
+              overviewMap = portal.getLayer(Overview) as Overview,
               yieldsMap = portal.getLayer(Yields) as Yields,
               unitsMap = portal.getLayer(Units) as Units,
               citiesMap = portal.getLayer(Cities) as Cities,
@@ -527,9 +531,14 @@ export class Renderer {
                 minimapCanvas,
                 world,
                 portal,
-                landscapeMap,
-                citiesMap,
-                activeUnitsMap
+                overviewMap,
+                // The marker shares the main map's blink phase, so the active
+                // unit can be found on the minimap and clicked to centre
+                // without reaching for the keyboard.
+                () =>
+                  activeUnit && activeUnitsMap.isVisible()
+                    ? activeUnit.tile
+                    : null
               ),
               primaryActions = new Actions(actionArea, portal, this.#transport),
               secondaryActions = new Actions(
@@ -586,6 +595,7 @@ export class Renderer {
 
               if (blinking || hasTilesToRender) {
                 portal.render();
+                minimap.update();
               }
             });
 

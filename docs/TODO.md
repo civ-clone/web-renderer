@@ -78,24 +78,27 @@ sections B2/C5.
       full-layer blit. Measured on an 80×60 world at scale 2 in a 1712×873
       portal: 60.5 `drawImage` calls and 297 megapixels of source per render
       before, 15.0 calls and 7.5 megapixels after.
-- [ ] Give the minimap its own layer at minimap scale instead of downscaling
-      three world canvases (#53). Each `Minimap.update()` throws 14.7 megapixels
-      (3 × 2560×1920) into a 190×142 target, on every patch and every recentre
-      — measured over 15s of stress play that is 383.4 megapixels against the
-      portal's 310.9, so the minimap is now the larger consumer of the two.
-      `Minimap` is the only thing outside `Portal` that reads a layer's
-      `canvas()`, so this is the whole of the blocker below. Decisions are
-      recorded on #53: terrain colour per type with land/ocean as the fallback
-      for registry terrains the table does not know, unexplored draws nothing,
-      cities in the civilisation's colour, the active unit a flashing white
-      tile (mouse-driven centring, hence the flash — affordable only once the
-      layer is cheap), and an integer px/tile so it stops looking like mush.
-- [ ] Fix the minimap click landing two tiles up and left of the tile clicked
+- [x] Give the minimap its own `Overview` layer at minimap scale instead of
+      downscaling three world canvases (#53). Each `Minimap.update()` threw
+      14.7 megapixels (3 × 2560×1920) into a 190×142 target, on every patch and
+      every recentre — 383.4 megapixels over 15s of stress play against the
+      portal's 310.9, so the minimap was the larger consumer of the two. Now
+      0.79 megapixels over the same window, and one blit an update rather than
+      three. It draws terrain as one flat colour per type (land/ocean as the
+      fallback for registry terrains the table does not know), cities in the
+      owner's colour, the active unit as a flashing white tile, and nothing at
+      all for unexplored. Rendered at a whole number of pixels a tile and
+      upscaled by CSS, so it is no longer a fractional downscale of sprite art.
+      Note it deliberately ignores the layers' `isVisible()`: hiding yields or
+      units is a view mode for the map, not for an overview.
+- [x] Fix the minimap click landing two tiles up and left of the tile clicked
       (#54): `event.offsetX` is already canvas-relative but the handler also
-      subtracts `offsetLeft`, and `Math.ceil` should be `Math.floor`.
+      subtracted `offsetLeft`, and `Math.ceil` should have been `Math.floor`.
+      Fixed alongside #53, whose flashing marker exists to be clicked.
 - [ ] Viewport-sized main-portal layer buffers with dirty-rect rendering instead
       of full-world canvases (~19 MB each at 80×60 scale 2; B2, rewrite track,
-      #7), blocked on #53. Restricting the blink tick to the active unit's
+      #7). No longer blocked: nothing outside `Portal` reads a layer's
+      `canvas()` any more. Restricting the blink tick to the active unit's
       region needs this: `ActiveUnit` is the topmost layer, so un-drawing it
       means restoring the pixels beneath, i.e. a partial portal composite — it
       is not the cheap standalone win it was previously filed as.

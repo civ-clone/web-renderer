@@ -1,12 +1,16 @@
-import Map from './Map';
+import Overview from './Map/Overview';
 import Portal from './Portal';
 import World from './World';
+import { Coordinate } from '../types';
 import { on } from '@dom111/element';
 
+export type ActiveUnitMarker = () => Coordinate | null;
+
 export class Minimap {
+  #activeUnitMarker: ActiveUnitMarker;
   #context: CanvasRenderingContext2D;
   #element: HTMLCanvasElement;
-  #layers: Map[];
+  #layer: Overview;
   #portal: Portal;
   #world: World;
 
@@ -14,23 +18,25 @@ export class Minimap {
     element: HTMLCanvasElement,
     world: World,
     portal: Portal,
-    ...layers: Map[]
+    layer: Overview,
+    activeUnitMarker: ActiveUnitMarker = () => null
   ) {
     this.#element = element;
     this.#world = world;
     this.#portal = portal;
-    this.#layers = layers;
+    this.#layer = layer;
+    this.#activeUnitMarker = activeUnitMarker;
 
     this.#context = this.#element.getContext('2d')!;
 
     on(this.#element, 'click', (event) => {
-      const x = event.offsetX - this.#element.offsetLeft,
-        y = event.offsetY - this.#element.offsetTop,
-        tileX = Math.ceil(
-          (x / this.#element.offsetWidth) * this.#world.width()
+      // `offsetX`/`offsetY` are already relative to the canvas, and the CSS
+      // size is what was clicked, which is not the backing store's size.
+      const tileX = Math.floor(
+          (event.offsetX / this.#element.offsetWidth) * this.#world.width()
         ),
-        tileY = Math.ceil(
-          (y / this.#element.offsetHeight) * this.#world.height()
+        tileY = Math.floor(
+          (event.offsetY / this.#element.offsetHeight) * this.#world.height()
         );
 
       this.#portal.setCenter(tileX, tileY);
@@ -39,20 +45,54 @@ export class Minimap {
   }
 
   update(): void {
-    const targetHeight =
-      this.#layers[0].canvas().height * (190 / this.#layers[0].canvas().width);
+    const canvas = this.#layer.canvas(),
+      tileWidth = canvas.width / this.#world.width(),
+      tileHeight = canvas.height / this.#world.height();
 
-    this.#element.height = targetHeight;
-    this.#context.clearRect(0, 0, 190, targetHeight);
+    // The layer is drawn one to one and the element is scaled by CSS, so the
+    // minimap fills its slot without a fractional downscale of the tiles.
+    if (
+      this.#element.width !== canvas.width ||
+      this.#element.height !== canvas.height
+    ) {
+      this.#element.width = canvas.width;
+      this.#element.height = canvas.height;
+    }
 
-    this.#layers.forEach((layer) =>
-      this.#context.drawImage(layer.canvas(), 0, 0, 190, targetHeight)
+    this.#context.clearRect(0, 0, canvas.width, canvas.height);
+    this.#context.drawImage(canvas, 0, 0);
+
+    // Note the minimap deliberately ignores the layers' `isVisible()`: showing
+    // or hiding yields, units or city names is a view mode for the map, and the
+    // minimap is an overview that should always show what is there.
+
+    this.drawActiveUnit(tileWidth, tileHeight);
+    this.drawViewport(tileWidth, tileHeight);
+  }
+
+  protected drawActiveUnit(tileWidth: number, tileHeight: number): void {
+    const marker = this.#activeUnitMarker();
+
+    if (marker === null) {
+      return;
+    }
+
+    // Drawn here rather than into the layer because it flashes: the layer is a
+    // per-tile cache of things that change when a tile changes, and this
+    // changes twice a second. The caller decides which phase of the flash this
+    // is by returning `null` for the off phase.
+    this.#context.fillStyle = '#fff';
+    this.#context.fillRect(
+      Math.floor(marker.x * tileWidth),
+      Math.floor(marker.y * tileHeight),
+      Math.max(1, Math.round(tileWidth)),
+      Math.max(1, Math.round(tileHeight))
     );
+  }
 
+  protected drawViewport(tileWidth: number, tileHeight: number): void {
     const worldWidth = this.#world.width(),
       worldHeight = this.#world.height(),
-      tileWidth = 190 / worldWidth,
-      tileHeight = targetHeight / worldHeight,
       [start, end] = this.#portal.rawVisibleRange(),
       // `rawVisibleRange()` is deliberately unwrapped, so the box can start off
       // the left or top edge and can run past the right or bottom one. The

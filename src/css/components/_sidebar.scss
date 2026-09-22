@@ -10,6 +10,12 @@
 
   #minimap {
     background: #000;
+    // The overview layer is drawn at a whole number of pixels per tile, so it
+    // is upscaled to fill the sidebar rather than drawn at a fractional size.
+    // `pixelated` keeps the tiles as tiles instead of smearing them.
+    height: auto;
+    image-rendering: pixelated;
+    width: 100%;
   }
 
   .turn {
