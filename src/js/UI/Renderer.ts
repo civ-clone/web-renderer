@@ -560,13 +560,25 @@ export class Renderer {
             );
 
             intervalHandler.on(() => {
-              activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
+              // With no active unit the layer draws nothing, so toggling it is
+              // invisible and there is no reason to composite every layer for
+              // it. `renderActiveUnit` sets the layer visible again whenever a
+              // unit becomes active, so leaving the flag alone here is safe.
+              const blinking = activeUnitsMap.hasActiveUnit();
 
-              if (tilesToRender.length > 0) {
+              if (blinking) {
+                activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
+              }
+
+              const hasTilesToRender = tilesToRender.length > 0;
+
+              if (hasTilesToRender) {
                 portal.build(tilesToRender.splice(0));
               }
 
-              portal.render();
+              if (blinking || hasTilesToRender) {
+                portal.render();
+              }
             });
 
             on(window, 'resize', resizeHandler);

@@ -34,6 +34,10 @@ export class Units extends Map implements IMap {
     return renderUnit(unit);
   }
 
+  hasActiveUnit(): boolean {
+    return this.#activeUnit !== null;
+  }
+
   setActiveUnit(unit: Unit | null): void {
     this.#activeUnit = unit;
   }
