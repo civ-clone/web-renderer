@@ -58,6 +58,7 @@ import UnknownCity from './UnknownObjects/City';
 import UnknownPlayer from './UnknownObjects/Player';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
+import Yield from '@civ-clone/core-yield/Yield';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -408,10 +409,19 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
+        // Actions and yields are serialised inline, not as refs: `actions()`, `attack()` and the rest build fresh
+        //  ones, with fresh ids, on every call, so the frontend never holds them already (#46).
         this.#dataQueue.update(this.player().id(), () =>
           this.player().toPlainObject(
             this.#dataFilter(
-              filterToReferenceAllExcept(Player, Unit, Civilization)
+              filterToReferenceAllExcept(
+                Player,
+                PlayerAction,
+                Unit,
+                UnitAction,
+                Yield,
+                Civilization
+              )
             )
           )
         );
@@ -522,7 +532,7 @@ export class DataTransferClient extends Client implements IClient {
             this.#dataQueue.update(this.player().id(), () =>
               this.player().toPlainObject(
                 this.#dataFilter(
-                  filterToReferenceAllExcept(Player, Civilization)
+                  filterToReferenceAllExcept(Player, PlayerAction, Civilization)
                 )
               )
             );

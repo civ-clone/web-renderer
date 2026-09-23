@@ -98,6 +98,10 @@ reduction (C5).
 - **Status: partially fixed 2026-07-01** — prune now also triggers when the map
   grows 1.5× beyond its last post-prune size (still gated on >5,000 objects).
   Backend `remove` patches and idle-chunked sweeping remain open.
+- The `missing <Ref>` errors once put down to this (#46) were not the prune:
+  player patches sent the player's and units' actions and yields as bare refs,
+  and those are rebuilt with fresh ids on every call, so the frontend had never
+  been sent them. Fixed 2026-09-23; `npm run test:patch-refs` guards it.
 
 ### A4. Stranded `receiveOnce`/event-emitter listeners on the backend
 

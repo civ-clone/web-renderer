@@ -31,7 +31,17 @@ export const reconstituteData = (
 
       seenObjects.set(value, updated);
 
-      value.forEach((value) => updated.push(getReferences(value)));
+      value.forEach((value) => {
+        // A ref the frontend no longer holds is left out, rather than leaving an `undefined` hole for every consumer
+        //  of the list to trip over (#46).
+        if (value && value['#ref'] && !(value['#ref'] in objects)) {
+          console.error(new TypeError(`missing ${value['#ref']}`));
+
+          return;
+        }
+
+        updated.push(getReferences(value));
+      });
 
       return updated;
     }
