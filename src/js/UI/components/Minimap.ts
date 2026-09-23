@@ -100,10 +100,17 @@ export class Minimap {
       // other: the box is drawn once from its wrapped origin and again a world
       // earlier on whichever axis overflows. The copies' outer edges fall off
       // the canvas, leaving the two halves to meet without a seam.
+      //
+      // With the poles locked the map never shows past them, so neither does
+      // the box: it is cut to the world's rows instead of wrapping.
+      locked = this.#portal.lockVerticalEdges(),
+      top = locked ? Math.max(0, start.y) : start.y,
       tilesWide = Math.min(end.x - start.x, worldWidth),
-      tilesHigh = Math.min(end.y - start.y, worldHeight),
+      tilesHigh = locked
+        ? Math.min(end.y, worldHeight) - top
+        : Math.min(end.y - start.y, worldHeight),
       originX = ((start.x % worldWidth) + worldWidth) % worldWidth,
-      originY = ((start.y % worldHeight) + worldHeight) % worldHeight,
+      originY = ((top % worldHeight) + worldHeight) % worldHeight,
       columns =
         originX + tilesWide > worldWidth
           ? [originX, originX - worldWidth]

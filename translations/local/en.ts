@@ -146,6 +146,8 @@ i18next.addResources('en', 'default', {
   'GameMenu.trade-report': 'Trade Report',
 
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
+  'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
+  'GameOptions.map-scale': 'Map scale',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 

@@ -1,8 +1,13 @@
 // The maths behind moving around the map (#14): whether a tile is far enough
 // inside the view that selecting a unit on it leaves the map where it is, and
-// how fast a drag was going when it was let go.
+// how fast a drag was going when it was let go. And where the view stops when
+// it is locked to the poles (#13).
 
-import { isWithinView, wrappedDelta } from '../../src/js/UI/lib/viewport';
+import {
+  clampOrigin,
+  isWithinView,
+  wrappedDelta,
+} from '../../src/js/UI/lib/viewport';
 import { releaseVelocity } from '../../src/js/UI/lib/drag';
 
 const failures: string[] = [];
@@ -83,6 +88,16 @@ expect(
     210
   ),
   { x: 1, y: 0 }
+);
+
+// A 60-row world of 32px tiles is 1920px tall; a 963px canvas on it.
+expect('a view in the middle is left alone', clampOrigin(500, 963, 1920), 500);
+expect('a view past the top stops at it', clampOrigin(-40, 963, 1920), 0);
+expect('a view past the bottom stops at it', clampOrigin(1500, 963, 1920), 957);
+expect(
+  'a world shorter than the view is centred',
+  clampOrigin(0, 963, 640),
+  -161
 );
 
 if (failures.length) {

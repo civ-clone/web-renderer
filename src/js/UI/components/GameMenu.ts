@@ -89,8 +89,8 @@ export class GameMenu extends Element {
               },
               {
                 label: t('GameMenu.options'),
-                action() {
-                  new GameOptions();
+                action: () => {
+                  new GameOptions(this.#portal);
                 },
               },
               {
