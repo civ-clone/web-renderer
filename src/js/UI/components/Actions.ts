@@ -6,7 +6,7 @@ import CityBuild from './Actions/CityBuild';
 import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
 import Notice from './Actions/Notice';
-import { PlayerAction } from '../types';
+import { Player, PlayerAction } from '../types';
 import Portal from './Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
@@ -21,7 +21,7 @@ declare global {
 }
 
 export interface IActions {
-  build(mandatoryActions: PlayerAction[], actions: PlayerAction[]): void;
+  build(actions: PlayerAction[], player?: Player): void;
 }
 
 export class Actions extends Element implements IActions {
@@ -145,7 +145,7 @@ export class Actions extends Element implements IActions {
     this.on('click', this.#clickHandler);
   }
 
-  build(actions: PlayerAction[]): void {
+  build(actions: PlayerAction[], player?: Player): void {
     this.unbindEvents();
 
     this.empty();
@@ -165,7 +165,7 @@ export class Actions extends Element implements IActions {
           break;
 
         case 'ChooseResearch':
-          action = new ChooseResearch(playerAction, this.#transport);
+          action = new ChooseResearch(playerAction, this.#transport, player);
 
           break;
 

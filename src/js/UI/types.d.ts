@@ -114,6 +114,8 @@ export interface PlayerResearch extends EntityInstance {
   available: Entity[];
   complete: EntityInstance[];
   cost: Yield;
+  // Keyed on advance name, only while choosing what to research next.
+  costs: { [advance: string]: number };
   progress: Yield;
   researching: Entity | null;
 }

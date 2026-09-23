@@ -58,6 +58,7 @@ import UnknownCity from './UnknownObjects/City';
 import UnknownPlayer from './UnknownObjects/Player';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
+import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -73,6 +74,7 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
+import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
 const awaitTimeout = (delay: number, reason?: any) =>
@@ -99,6 +101,8 @@ const referenceObject = (object: any) =>
         ? object
         : referenceObject(object),
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
+
+additionalDataRegistryInstance.register(researchCosts());
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),

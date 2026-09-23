@@ -438,23 +438,43 @@ export class Renderer {
                   defaultValue: t('ChooseFromList.default.body'),
                 });
 
+          // Picked client-side, among the choices offered (#15). Not a valid choice id, so it can't collide with one.
+          const randomChoice = '@random',
+            offerRandom = key === 'choose-civilization' && choices.length > 1;
+
           const selectionWindow = new SelectionWindow(
             title,
-            choices.map(({ id, value }) => {
-              const label =
-                key === 'negotiation.next-step'
-                  ? interactionLabel(value as Interactions)
-                  : t(`ChooseFromList.${key}.choice`, {
-                      value,
-                      defaultValue: value?._,
-                    });
+            [
+              ...(offerRandom
+                ? [
+                    {
+                      label: t(`ChooseFromList.${key}.random`),
+                      value: randomChoice,
+                    },
+                  ]
+                : []),
+              ...choices.map(({ id, value }) => {
+                const label =
+                  key === 'negotiation.next-step'
+                    ? interactionLabel(value as Interactions)
+                    : t(`ChooseFromList.${key}.choice`, {
+                        value,
+                        defaultValue: value?._,
+                      });
 
-              return {
-                label,
-                value: id,
-              };
-            }),
-            (choice) => transport.send('chooseFromList', choice),
+                return {
+                  label,
+                  value: id,
+                };
+              }),
+            ],
+            (choice) =>
+              transport.send(
+                'chooseFromList',
+                offerRandom && choice === randomChoice
+                  ? choices[Math.floor(Math.random() * choices.length)].id
+                  : choice
+              ),
             body,
             {
               canClose: false,
@@ -1135,7 +1155,7 @@ export class Renderer {
                   )
                   .filter((action) => primaryActionList.includes(action._));
 
-              primaryActions.build(primaryActionCandidates);
+              primaryActions.build(primaryActionCandidates, data.player);
 
               secondaryActions.build(
                 playerActions.filter(

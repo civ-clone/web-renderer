@@ -32,6 +32,8 @@ i18next.addResources('en', 'default', {
 
   'Actions.ChooseResearch.body':
     'Which advance would you like to research next?',
+  'Actions.ChooseResearch.choice':
+    '{{- advance}} ($t(Progress.turns, { "count": {{turns}} }))',
   'Actions.ChooseResearch.title': 'Choose research',
 
   'Actions.CityBuildSelectionWindow.title':
@@ -71,6 +73,7 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
+  'ChooseFromList.choose-civilization.random': 'Random',
   'ChooseFromList.choose-civilization.title': 'Choose your civilization',
   'ChooseFromList.choose-leader.body': '',
   'ChooseFromList.choose-leader.choice':
