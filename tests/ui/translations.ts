@@ -101,6 +101,39 @@ const expect = (description: string, actual: string, expected: string) => {
         { build: colossus },
         'A far away city has completed work on Colossus!',
       ],
+      // #59: a civilization the human has not met is sent as `null` and not
+      //  named.
+      [
+        'Player.defeated.by',
+        { defeatedPlayer: india, player: babylon },
+        'Babylon has defeated India!',
+      ],
+      [
+        'Player.defeated.unknown',
+        { defeatedPlayer: india, player: null },
+        'India defeated!',
+      ],
+      [
+        'Player.defeated.unmet-by',
+        { player: babylon },
+        'Babylon has defeated an unknown civilization!',
+      ],
+      [
+        'Player.defeated.unmet',
+        { player: null },
+        'News reaches us that an unknown civilization has been defeated!',
+      ],
+      [
+        'Spaceship.part-built.unmet',
+        {},
+        'Component added to the spaceship of an unknown civilization.',
+      ],
+      // #60
+      [
+        'Wonder.obsolete',
+        { city: asansol, wonder: colossus },
+        'Colossus in Asansol is now obsolete.',
+      ],
     ];
 
   notifications.forEach(([key, data, expected]) => {

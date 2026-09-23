@@ -24,6 +24,7 @@ i18next.addResources('en', 'default', {
     '$t(Leader.{{- leader}}.name, { "defaultValue": "{{player.civilization.leader._}}", "ns": "civilization" })',
   'Generic.view-city':
     'View $t(Generic.city-name, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
+  'Generic.unknown-civilization': 'an unknown civilization',
   'Generic.width': 'Width',
   'Generic.yes': 'Yes',
 
@@ -326,6 +327,12 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.unknown.body':
     '$t({{defeatedPlayer.civilization._}}.nation, { "defaultValue": "{{defeatedPlayer.civilization._}}", "ns": "civilization" }) defeated!',
   'Player.defeated.unknown.title': 'Defeated!',
+  'Player.defeated.unmet.body':
+    'News reaches us that $t(Generic.unknown-civilization, { "ns": "default" }) has been defeated!',
+  'Player.defeated.unmet.title': 'Defeated!',
+  'Player.defeated.unmet-by.body':
+    '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
+  'Player.defeated.unmet-by.title': 'Defeated!',
   'Player.research-complete.body':
     'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" })!',
   'Player.research-complete.title': 'Advance discovered!',
@@ -337,6 +344,9 @@ i18next.addResources('en', 'notification', {
   'Spaceship.part-built.body':
     'Component added to $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship.',
   'Spaceship.part-built.title': 'Spaceship built',
+  'Spaceship.part-built.unmet.body':
+    'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
+  'Spaceship.part-built.unmet.title': 'Spaceship built',
 
   'Wonder.building-complete.other-player.known.body':
     '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
@@ -344,4 +354,7 @@ i18next.addResources('en', 'notification', {
   'Wonder.building-complete.other-player.unknown.body':
     'A far away city has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.unknown.title': 'Wonder completed',
+  'Wonder.obsolete.body':
+    '$t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) is now obsolete.',
+  'Wonder.obsolete.title': 'Wonder obsolete',
 });

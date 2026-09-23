@@ -101,6 +101,8 @@ const referenceObject = (object: any) =>
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
+  // `civ1-wonder` processes `Obsolete` each time another player discovers the obsoleting advance, not just the first.
+  obsoleteWonders: WeakSet<Wonder> = new WeakSet(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
   unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
 
@@ -714,6 +716,21 @@ export class DataTransferClient extends Client implements IClient {
       );
     });
 
+    engineInstance.on('wonder:obsolete', (wonder: Wonder, city: City) => {
+      if (city.player() !== this.player() || obsoleteWonders.has(wonder)) {
+        return;
+      }
+
+      obsoleteWonders.add(wonder);
+
+      this.sendNotification(
+        new Notification('Wonder.obsolete', {
+          city,
+          wonder,
+        })
+      );
+    });
+
     engineInstance.on(
       'goody-hut:action-performed',
       (goodyHut: GoodyHut, action) => {
@@ -761,14 +778,28 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
+        // A civilization we have not met is neither named nor sent (#59).
+        const victor = player !== null && this.hasMet(player) ? player : null;
+
         this.sendNotification(
-          new Notification(
-            player === null ? `Player.defeated.unknown` : 'Player.defeated.by',
-            {
-              defeatedPlayer,
-              player,
-            }
-          )
+          this.hasMet(defeatedPlayer)
+            ? new Notification(
+                victor === null
+                  ? 'Player.defeated.unknown'
+                  : 'Player.defeated.by',
+                {
+                  defeatedPlayer,
+                  player: victor,
+                }
+              )
+            : new Notification(
+                victor === null
+                  ? 'Player.defeated.unmet'
+                  : 'Player.defeated.unmet-by',
+                {
+                  player: victor,
+                }
+              )
         );
       }
     );
@@ -819,9 +850,11 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       this.sendNotification(
-        new Notification('Spaceship.part-built', {
-          player,
-        })
+        this.hasMet(player)
+          ? new Notification('Spaceship.part-built', {
+              player,
+            })
+          : new Notification('Spaceship.part-built.unmet', {})
       );
     });
 
@@ -1205,6 +1238,31 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
 
     this.#dataQueue.clear();
+  }
+
+  // Whether this player has met `player`, for naming them in a notification (#59). There is no formal first-contact
+  //  record, so this stands in: any interaction between us (a negotiation or a declaration), or having seen a city
+  //  they hold or founded. The founder counts because a defeated player holds no cities by the time we are told.
+  private hasMet(player: Player): boolean {
+    if (player === this.player()) {
+      return true;
+    }
+
+    if (
+      interactionRegistryInstance.getByPlayers(this.player(), player).length > 0
+    ) {
+      return true;
+    }
+
+    const playerWorld = playerWorldRegistryInstance.getByPlayer(this.player());
+
+    return cityRegistryInstance
+      .entries()
+      .some(
+        (city: City) =>
+          (city.player() === player || city.originalPlayer() === player) &&
+          playerWorld.getByTile(city.tile()) !== null
+      );
   }
 
   private sendNotification(notification: Notification): void {
