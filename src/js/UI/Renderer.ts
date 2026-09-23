@@ -32,6 +32,7 @@ import Landscape from './components/Map/Landscape';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
+import { allowLeaving, guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
@@ -134,8 +135,14 @@ export class Renderer {
       ) {
         event.preventDefault();
 
-        new ConfirmationWindow('Quit', 'Are you sure you want to reload?', () =>
-          window.location.reload()
+        new ConfirmationWindow(
+          'Quit',
+          'Are you sure you want to reload?',
+          () => {
+            allowLeaving();
+
+            window.location.reload();
+          }
         );
 
         return;
@@ -501,6 +508,8 @@ export class Renderer {
         ) => {
           try {
             gameStarted = true;
+
+            guardLeaving();
 
             // Only for a new game: "you have risen" is an introduction, and a
             // loaded game has already had one.
@@ -1075,30 +1084,26 @@ export class Renderer {
               document.addEventListener('keydown', debugKeyListener, true);
             }
 
-            on(
-              window,
-              'beforeunload',
-              () => {
-                off(window, 'resize', resizeHandler);
-                intervalHandler.dispose();
-                memoryTestbed?.stop();
-                stopStressRunner();
-                debugControls?.remove();
-
-                if (debugKeyListener) {
-                  document.removeEventListener(
-                    'keydown',
-                    debugKeyListener,
-                    true
-                  );
-                }
-
-                transportDisposers.forEach((dispose) => dispose());
-              },
-              {
-                once: true,
+            // `pagehide`, not `beforeunload`: the leave guard can still cancel an unload after `beforeunload`, and a
+            //  page restored from the back/forward cache comes back as it was. Tearing down in either case left a
+            //  game with nothing listening to the worker.
+            on(window, 'pagehide', (event: PageTransitionEvent) => {
+              if (event.persisted) {
+                return;
               }
-            );
+
+              off(window, 'resize', resizeHandler);
+              intervalHandler.dispose();
+              memoryTestbed?.stop();
+              stopStressRunner();
+              debugControls?.remove();
+
+              if (debugKeyListener) {
+                document.removeEventListener('keydown', debugKeyListener, true);
+              }
+
+              transportDisposers.forEach((dispose) => dispose());
+            });
 
             let renderFrame: number | null = null;
 

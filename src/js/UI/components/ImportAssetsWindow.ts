@@ -4,6 +4,7 @@ import {
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
 import Window from './Window';
+import { allowLeaving } from '../lib/leaveGuard';
 import { assetStore } from '../AssetStore';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
@@ -203,6 +204,8 @@ export class ImportAssetsWindow extends Window {
     this.#progressInformation.innerText = t('ImportAssetsWindow.done');
 
     // We need to reprocess everything and this is the lazy way...
+    allowLeaving();
+
     location.reload();
   }
 }

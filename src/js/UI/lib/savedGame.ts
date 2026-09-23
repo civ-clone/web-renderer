@@ -1,4 +1,5 @@
 import { Store } from '../Store';
+import { allowLeaving } from './leaveGuard';
 import { t } from 'i18next';
 
 /**
@@ -178,6 +179,8 @@ export const loadSaveFromFile = async (file: File): Promise<void> => {
 
     throw error;
   }
+
+  allowLeaving();
 
   window.location.reload();
 };

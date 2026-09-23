@@ -173,6 +173,10 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.title': 'Import assets',
 
+  'LeaveGuard.body':
+    'Leaving this page will end the game in progress. Any unsaved progress will be lost.',
+  'LeaveGuard.title': 'Leave the game?',
+
   'LockedSlider.lock': 'Lock',
 
   'MainMenu.customize-world': '$t(CustomizeWorld.title)',
