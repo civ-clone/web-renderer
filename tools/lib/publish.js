@@ -131,19 +131,10 @@ const KNOWN_COMPILE_ERRORS = {
   },
 };
 
-const KNOWN_FAILING_TESTS = {
-  // `City.yield › should provide one additional trade per Tile with trade
-  // already on in the city until the discovery of Electricity` — Colossus
-  // gives 4 where the test wants 6. Verified pre-existing: the same assertion
-  // fails identically at `civ1-wonder@9e92866^`, before any Stage 6 change,
-  // and the test imports neither module that commit touched. It only surfaced
-  // now because the package had no `ts-mocha` installed, so its suite had
-  // never actually run — which is why the gate reports "cannot run" and
-  // "failed" as different things.
-  'civ1-wonder':
-    'City.yield expects 6 trade from Colossus and gets 4; fails identically ' +
-    'at 9e92866^, before any change of ours',
-};
+// Packages whose own suite fails for a reason that predates the change being
+// published, keyed by package with the reason. Reported on every run, never
+// silently passed. Empty since civ1-wonder's Colossus test was fixed (#22).
+const KNOWN_FAILING_TESTS = {};
 
 // The binary a package's `test` script invokes, so a missing runner is told
 // apart from a failing suite by looking rather than by parsing an error.
