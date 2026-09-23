@@ -101,8 +101,6 @@ const referenceObject = (object: any) =>
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
-  // `civ1-wonder` processes `Obsolete` each time another player discovers the obsoleting advance, not just the first.
-  obsoleteWonders: WeakSet<Wonder> = new WeakSet(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
   unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
 
@@ -717,11 +715,9 @@ export class DataTransferClient extends Client implements IClient {
     });
 
     engineInstance.on('wonder:obsolete', (wonder: Wonder, city: City) => {
-      if (city.player() !== this.player() || obsoleteWonders.has(wonder)) {
+      if (city.player() !== this.player()) {
         return;
       }
-
-      obsoleteWonders.add(wonder);
 
       this.sendNotification(
         new Notification(
