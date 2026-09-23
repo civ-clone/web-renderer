@@ -135,6 +135,20 @@ export const mergeRects = (rects: Rect[]): Rect[] => {
 };
 
 /**
+ * Where a viewport `extent` px long has to start to show a world `span` px long
+ * without running past either end of it, given that it would like to start at
+ * `origin`. A world shorter than the viewport sits in the middle of it.
+ */
+export const clampOrigin = (
+  origin: number,
+  extent: number,
+  span: number
+): number =>
+  span <= extent
+    ? Math.round((span - extent) / 2)
+    : Math.min(Math.max(origin, 0), span - extent);
+
+/**
  * The shortest signed step from `from` to `to` in a world that wraps every
  * `span` tiles, in `(-span / 2, span / 2]`.
  */

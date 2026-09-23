@@ -144,6 +144,8 @@ export class Renderer {
     options.set('autoEndOfTurn', true);
     options.set('autoEndOfTurnExceptions', ['CivilDisorder']);
     options.set('unitEdgeMargin', 2);
+    options.set('mapScale', 2);
+    options.set('lockVerticalEdges', false);
 
     if (debugMode) {
       transport.send('setOption', {
@@ -516,17 +518,16 @@ export class Renderer {
 
             let activeUnits: PlayerAction[] = [];
 
-            const scale = 2,
-              world = new World(data.player.world),
+            const world = new World(data.player.world),
               intervalHandler = new IntervalHandler(),
               portal = new GamePortal(
                 world,
                 transport,
                 mapPortal,
                 {
+                  lockVerticalEdges: options.get('lockVerticalEdges', false),
                   playerId: data.player.id,
-                  // TODO: this needs to be a user-controllable item
-                  scale,
+                  scale: options.get('mapScale', 2),
                   // TODO: this needs to come from the theme
                   tileSize: 16,
                 },

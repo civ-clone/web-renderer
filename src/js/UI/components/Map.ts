@@ -47,6 +47,9 @@ export class Map implements IMap {
   #dirty: Rect[] = [];
   #originX: number = 0;
   #originY: number = 0;
+  // Set when what is on the canvas was drawn at a scale it no longer has, so
+  // the next viewport change has to redraw rather than scroll.
+  #stale: boolean = false;
   #visible: boolean = true;
   #scale: number;
   #tileSize: number;
@@ -125,6 +128,19 @@ export class Map implements IMap {
   }
 
   /**
+   * Draw at `scale` from now on. The canvas is redrawn the next time the
+   * portal points it at a viewport, since the viewport moves with the scale.
+   */
+  setScale(scale: number): void {
+    if (scale === this.#scale) {
+      return;
+    }
+
+    this.#scale = scale;
+    this.#stale = true;
+  }
+
+  /**
    * Point this layer at a window on the world, resizing or scrolling it to
    * match. The portal calls this; nothing else should need to.
    */
@@ -134,10 +150,19 @@ export class Map implements IMap {
     width: number,
     height: number
   ): void {
-    if (this.#canvas.width !== width || this.#canvas.height !== height) {
-      // Resizing a canvas clears it, so there is nothing to keep.
-      this.#canvas.width = width;
-      this.#canvas.height = height;
+    if (
+      this.#stale ||
+      this.#canvas.width !== width ||
+      this.#canvas.height !== height
+    ) {
+      // Resizing a canvas clears it, so there is nothing to keep — and a
+      // canvas drawn at another scale has nothing worth keeping either.
+      if (this.#canvas.width !== width || this.#canvas.height !== height) {
+        this.#canvas.width = width;
+        this.#canvas.height = height;
+      }
+
+      this.#stale = false;
       this.#originX = originX;
       this.#originY = originY;
 

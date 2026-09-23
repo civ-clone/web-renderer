@@ -1,6 +1,12 @@
 import { Coordinate, Tile, Unit } from '../types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
-import { Rect, isWithinView, mergeRects, rectArea } from '../lib/viewport';
+import {
+  Rect,
+  clampOrigin,
+  isWithinView,
+  mergeRects,
+  rectArea,
+} from '../lib/viewport';
 import Map from './Map';
 import Transport from '../Transport';
 import World from './World';
@@ -14,11 +20,14 @@ export interface IPortal {
   getLayer(LayerType: typeof Map): Map | null;
   getLayers(LayerType: typeof Map): Map[];
   isVisible(x: number, y: number, margin?: number): boolean;
+  lockVerticalEdges(): boolean;
   playerId(): string | null;
   render(): void;
   scale(): number;
   scrollBy(deltaX: number, deltaY: number): void;
   setCenter(x: number, y: number): void;
+  setLockVerticalEdges(lock: boolean): void;
+  setScale(scale: number): void;
   tileSize(): number;
   transport(): Transport;
   visibleBounds(): [number, number, number, number];
@@ -27,6 +36,7 @@ export interface IPortal {
 }
 
 export interface PortalSettings {
+  lockVerticalEdges: boolean;
   playerId: string | null;
   scale: number;
   tileSize: number;
@@ -37,6 +47,7 @@ type PortalOptions = {
 };
 
 const defaultPortalOptions: PortalSettings = {
+  lockVerticalEdges: false,
   playerId: null,
   scale: 2,
   tileSize: 16,
@@ -63,6 +74,9 @@ export class Portal
   // one however little the layers claim to have changed.
   #fullRender: boolean = true;
   #layers: Map[] = [];
+  // Whether the view stops at the top and bottom rows of the world rather
+  // than wrapping over the poles.
+  #lockVerticalEdges: boolean;
   // How far, in px, the view has been dragged off the centre tile. Kept within
   // half a tile of it, so `#center` is always the tile under the middle of the
   // canvas.
@@ -93,6 +107,7 @@ export class Portal
 
     this.#world = world;
     this.#canvas = canvas;
+    this.#lockVerticalEdges = settings.lockVerticalEdges;
     this.#playerId = settings.playerId;
     this.#tileSize = settings.tileSize;
     this.#scale = settings.scale;
@@ -145,14 +160,22 @@ export class Portal
         this.#world.width(),
         margin
       ) &&
-      isWithinView(
+      (isWithinView(
         y,
         this.#center.y,
         Math.floor(this.#canvas.height / this.tileSize()),
         this.#world.height(),
         margin
-      )
+      ) ||
+        // Near a locked edge the view cannot get any closer to centring the
+        // tile than it already is, and asking it to would recentre forever.
+        (this.#lockVerticalEdges &&
+          this.clampedCenterY(y, 0)[0] === this.#center.y))
     );
+  }
+
+  lockVerticalEdges(): boolean {
+    return this.#lockVerticalEdges;
   }
 
   playerId(): string | null {
@@ -200,7 +223,55 @@ export class Portal
           height
         );
       });
+
+      if (this.#lockVerticalEdges) {
+        this.coverBeyondPoles({ x, y, width, height });
+      }
     });
+  }
+
+  /**
+   * Black out whatever of `region` lies above the first row of the world or
+   * below the last. The layers wrap, so they have drawn the far pole there; the
+   * clamp keeps that off-screen unless the whole world is shorter than the
+   * canvas.
+   */
+  protected coverBeyondPoles({ x, y, width, height }: Rect): void {
+    const top = -this.#viewport.y,
+      bottom = this.#world.height() * this.tileSize() - this.#viewport.y;
+
+    this.#context.fillStyle = '#000';
+
+    if (y < top) {
+      this.#context.fillRect(x, y, width, Math.min(top, y + height) - y);
+    }
+
+    if (y + height > bottom) {
+      const start = Math.max(bottom, y);
+
+      this.#context.fillRect(x, start, width, y + height - start);
+    }
+  }
+
+  /**
+   * The centre row and offset the view would have if it centred on row `y`
+   * `offset` px down from its middle, once kept from running past the top or
+   * bottom of the world.
+   */
+  protected clampedCenterY(y: number, offset: number): [number, number] {
+    const tileSize = this.tileSize(),
+      half = Math.trunc(tileSize / 2),
+      canvasHalf = Math.trunc(this.#canvas.height / 2),
+      middle = y * tileSize + half + offset,
+      clamped =
+        clampOrigin(
+          middle - canvasHalf,
+          this.#canvas.height,
+          this.#world.height() * tileSize
+        ) + canvasHalf,
+      row = Math.round((clamped - half) / tileSize);
+
+    return [row, clamped - half - row * tileSize];
   }
 
   /**
@@ -240,21 +311,31 @@ export class Portal
    * holds the viewport rather than the world.
    */
   protected syncViewport(): void {
+    if (this.#lockVerticalEdges) {
+      // Here rather than where the centre is set, so a resize that would
+      // uncover a pole is caught too.
+      [this.#center.y, this.#offset.y] = this.clampedCenterY(
+        this.#center.y,
+        this.#offset.y
+      );
+    }
+
     const tileSize = this.tileSize(),
       // Where the world pixel at the canvas's top left corner is. The half-tile
-      // step is what centres the middle tile rather than its corner.
+      // step is what centres the middle tile rather than its corner; it was
+      // `tileSize / scale`, which is half a tile only at a scale of 2.
       // The drag offset is rounded here rather than where it is kept, so a
       // slow drag still adds up, while the layers only ever scroll by whole
       // pixels and never smear.
       originX =
         this.#center.x * tileSize +
         Math.round(this.#offset.x) +
-        Math.trunc(tileSize / this.scale()) -
+        Math.trunc(tileSize / 2) -
         Math.trunc(this.#canvas.width / 2),
       originY =
         this.#center.y * tileSize +
         Math.round(this.#offset.y) +
-        Math.trunc(tileSize / this.scale()) -
+        Math.trunc(tileSize / 2) -
         Math.trunc(this.#canvas.height / 2);
 
     if (
@@ -315,6 +396,43 @@ export class Portal
 
     this.#center.x = (((this.#center.x + stepX) % width) + width) % width;
     this.#center.y = (((this.#center.y + stepY) % height) + height) % height;
+
+    this.render();
+
+    this.emit('focus-changed', this.#center.x, this.#center.y);
+  }
+
+  setLockVerticalEdges(lock: boolean): void {
+    if (lock === this.#lockVerticalEdges) {
+      return;
+    }
+
+    this.#lockVerticalEdges = lock;
+
+    this.#fullRender = true;
+
+    this.render();
+
+    this.emit('focus-changed', this.#center.x, this.#center.y);
+  }
+
+  /**
+   * Draw the map at `scale` from now on, keeping the same tile in the middle.
+   */
+  setScale(scale: number): void {
+    if (scale === this.#scale) {
+      return;
+    }
+
+    this.#scale = scale;
+    this.#offset.x = 0;
+    this.#offset.y = 0;
+
+    this.#layers.forEach((layer) => layer.setScale(scale));
+
+    // Nothing on the layers is at the new scale, so this has to reach them
+    // even if the arithmetic happened to land on the same origin.
+    this.#viewport = { x: 0, y: 0, width: -1, height: -1 };
 
     this.render();
 
