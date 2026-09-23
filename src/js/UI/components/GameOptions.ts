@@ -23,6 +23,28 @@ export class GameOptions extends Window {
               change: () => options.set('autoEndOfTurn', input.checked),
             });
           })()
+        ),
+        s(
+          `<label>${t('GameOptions.unit-edge-margin')}</label>`,
+          (() => {
+            const input = s<HTMLInputElement>(
+              `<input type="number" min="0" max="10" step="1" value="${options.get(
+                'unitEdgeMargin',
+                0
+              )}">`
+            );
+
+            return h(input, {
+              change: () => {
+                const value = parseInt(input.value, 10);
+
+                options.set(
+                  'unitEdgeMargin',
+                  Number.isNaN(value) ? 0 : Math.min(10, Math.max(0, value))
+                );
+              },
+            });
+          })()
         )
       )
     );

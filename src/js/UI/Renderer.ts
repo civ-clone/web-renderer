@@ -143,6 +143,7 @@ export class Renderer {
     // These should be stored in localStorage or something...
     options.set('autoEndOfTurn', true);
     options.set('autoEndOfTurnExceptions', ['CivilDisorder']);
+    options.set('unitEdgeMargin', 2);
 
     if (debugMode) {
       transport.send('setOption', {
@@ -230,7 +231,15 @@ export class Renderer {
             return;
           }
 
-          if (!portal.isVisible(unit.tile.x, unit.tile.y)) {
+          // A unit on the very edge of the map is visible but easily missed,
+          // so it is brought back to the middle before it gets that far.
+          if (
+            !portal.isVisible(
+              unit.tile.x,
+              unit.tile.y,
+              options.get('unitEdgeMargin', 0)
+            )
+          ) {
             portal.setCenter(unit.tile.x, unit.tile.y);
           }
 

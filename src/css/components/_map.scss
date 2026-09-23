@@ -5,6 +5,9 @@
 
   canvas {
     height: 100%;
+    // The map pans on a drag, so the browser must not take the gesture for a
+    // scroll or a zoom of the page.
+    touch-action: none;
     width: 100%;
   }
 }

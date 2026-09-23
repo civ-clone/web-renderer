@@ -1,6 +1,6 @@
 import { Coordinate, Tile, Unit } from '../types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
-import { Rect, mergeRects, rectArea } from '../lib/viewport';
+import { Rect, isWithinView, mergeRects, rectArea } from '../lib/viewport';
 import Map from './Map';
 import Transport from '../Transport';
 import World from './World';
@@ -13,10 +13,11 @@ export interface IPortal {
   center(): Coordinate;
   getLayer(LayerType: typeof Map): Map | null;
   getLayers(LayerType: typeof Map): Map[];
-  isVisible(x: number, y: number): boolean;
+  isVisible(x: number, y: number, margin?: number): boolean;
   playerId(): string | null;
   render(): void;
   scale(): number;
+  scrollBy(deltaX: number, deltaY: number): void;
   setCenter(x: number, y: number): void;
   tileSize(): number;
   transport(): Transport;
@@ -62,6 +63,10 @@ export class Portal
   // one however little the layers claim to have changed.
   #fullRender: boolean = true;
   #layers: Map[] = [];
+  // How far, in px, the view has been dragged off the centre tile. Kept within
+  // half a tile of it, so `#center` is always the tile under the middle of the
+  // canvas.
+  #offset: Coordinate = { x: 0, y: 0 };
   #playerId: string | null = null;
   #scale: number;
   #tileSize: number;
@@ -126,30 +131,27 @@ export class Portal
     return this.#layers.filter((layer) => layer instanceof LayerType);
   }
 
-  isVisible(x: number, y: number): boolean {
-    const visibleHorizontal = Math.floor(this.#canvas.width / this.tileSize()),
-      visibleVertical = Math.floor(this.#canvas.height / this.tileSize());
-
-    if (
-      visibleHorizontal >= this.#world.width() &&
-      visibleVertical >= this.#world.height()
-    ) {
-      return true;
-    }
-
-    const [xLowerBound, xUpperBound, yLowerBound, yUpperBound] =
-      this.visibleBounds();
-
-    // I _think_ this logic is correct now...
+  /**
+   * Whether the tile at `x`, `y` is in view — and, given a `margin`, at least
+   * that many tiles in from the edge of it, which is what recentring on a unit
+   * wants: one on the very edge is technically visible but hard to see.
+   */
+  isVisible(x: number, y: number, margin: number = 0): boolean {
     return (
-      (visibleHorizontal >= this.#world.width() ||
-        (xLowerBound > xUpperBound
-          ? x < xUpperBound || x > xLowerBound
-          : x < xUpperBound && x > xLowerBound)) &&
-      (visibleVertical >= this.#world.height() ||
-        (yLowerBound > yUpperBound
-          ? y < yUpperBound || y > yLowerBound
-          : y < yUpperBound && y > yLowerBound))
+      isWithinView(
+        x,
+        this.#center.x,
+        Math.floor(this.#canvas.width / this.tileSize()),
+        this.#world.width(),
+        margin
+      ) &&
+      isWithinView(
+        y,
+        this.#center.y,
+        Math.floor(this.#canvas.height / this.tileSize()),
+        this.#world.height(),
+        margin
+      )
     );
   }
 
@@ -241,12 +243,17 @@ export class Portal
     const tileSize = this.tileSize(),
       // Where the world pixel at the canvas's top left corner is. The half-tile
       // step is what centres the middle tile rather than its corner.
+      // The drag offset is rounded here rather than where it is kept, so a
+      // slow drag still adds up, while the layers only ever scroll by whole
+      // pixels and never smear.
       originX =
         this.#center.x * tileSize +
+        Math.round(this.#offset.x) +
         Math.trunc(tileSize / this.scale()) -
         Math.trunc(this.#canvas.width / 2),
       originY =
         this.#center.y * tileSize +
+        Math.round(this.#offset.y) +
         Math.trunc(tileSize / this.scale()) -
         Math.trunc(this.#canvas.height / 2);
 
@@ -283,13 +290,58 @@ export class Portal
     return this.#scale;
   }
 
+  /**
+   * Move the view by `deltaX`, `deltaY` px, as a drag does: the centre follows
+   * whichever tile ends up under the middle of the canvas.
+   */
+  scrollBy(deltaX: number, deltaY: number): void {
+    const tileSize = this.tileSize(),
+      offsetX = this.#offset.x + deltaX,
+      offsetY = this.#offset.y + deltaY,
+      stepX = Math.round(offsetX / tileSize),
+      stepY = Math.round(offsetY / tileSize);
+
+    this.#offset.x = offsetX - stepX * tileSize;
+    this.#offset.y = offsetY - stepY * tileSize;
+
+    if (stepX === 0 && stepY === 0) {
+      this.render();
+
+      return;
+    }
+
+    const width = this.#world.width(),
+      height = this.#world.height();
+
+    this.#center.x = (((this.#center.x + stepX) % width) + width) % width;
+    this.#center.y = (((this.#center.y + stepY) % height) + height) % height;
+
+    this.render();
+
+    this.emit('focus-changed', this.#center.x, this.#center.y);
+  }
+
   setCenter(x: number, y: number): void {
     this.#center.x = x;
     this.#center.y = y;
+    this.#offset.x = 0;
+    this.#offset.y = 0;
 
     this.render();
 
     this.emit('focus-changed', x, y);
+  }
+
+  /** The tile under the canvas pixel at `x`, `y`. */
+  tileAt(x: number, y: number): Tile {
+    this.syncViewport();
+
+    const tileSize = this.tileSize();
+
+    return this.#world.get(
+      Math.floor((this.#viewport.x + x) / tileSize),
+      Math.floor((this.#viewport.y + y) / tileSize)
+    );
   }
 
   tileSize(): number {

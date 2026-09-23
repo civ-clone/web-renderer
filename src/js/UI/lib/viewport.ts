@@ -133,3 +133,46 @@ export const mergeRects = (rects: Rect[]): Rect[] => {
 
   return merged;
 };
+
+/**
+ * The shortest signed step from `from` to `to` in a world that wraps every
+ * `span` tiles, in `(-span / 2, span / 2]`.
+ */
+export const wrappedDelta = (
+  from: number,
+  to: number,
+  span: number
+): number => {
+  if (span <= 0) {
+    return 0;
+  }
+
+  const delta = (((to - from) % span) + span) % span;
+
+  return delta > span / 2 ? delta - span : delta;
+};
+
+/**
+ * Whether the tile `position` sits comfortably inside a viewport `visible`
+ * tiles across, centred on `center`, in a world `span` tiles across — at least
+ * `margin` tiles in from the last whole tile on either side.
+ *
+ * The centre tile always counts, however big the margin: a margin wider than
+ * half the viewport would otherwise mean a tile never counts as in view, and
+ * anything that recentres on that answer would do so forever.
+ */
+export const isWithinView = (
+  position: number,
+  center: number,
+  visible: number,
+  span: number,
+  margin: number = 0
+): boolean => {
+  if (visible >= span) {
+    return true;
+  }
+
+  const reach = Math.max(1, Math.floor(visible / 2) - Math.max(0, margin));
+
+  return Math.abs(wrappedDelta(center, position, span)) < reach;
+};

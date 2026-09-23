@@ -146,6 +146,8 @@ i18next.addResources('en', 'default', {
   'GameMenu.trade-report': 'Trade Report',
 
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
+  'GameOptions.unit-edge-margin':
+    'Keep the active unit this many tiles from the edge',
 
   'HappinessReport.breakdown': 'Breakdown',
   'HappinessReport.view-city':
