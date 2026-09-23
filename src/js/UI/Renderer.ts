@@ -96,7 +96,10 @@ export class Renderer {
 
     let automatePlayerEnabled = debugMode,
       stressUiEnabled = debugMode,
-      stressUiWindowsEnabled = !debugMode;
+      stressUiWindowsEnabled = !debugMode,
+      // Once a game is running, F5 is a leader-screen shortcut (TradeReport),
+      // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
+      gameStarted = false;
 
     const hasAllAssets = await assetStore.hasAllAssets();
 
@@ -121,7 +124,7 @@ export class Renderer {
 
     on(document, 'keydown', (event) => {
       if (
-        event.key === 'F5' ||
+        (event.key === 'F5' && !gameStarted) ||
         (['R', 'r'].includes(event.key) &&
           (/Mac OS X/.test(navigator.userAgent)
             ? event.metaKey
@@ -196,6 +199,7 @@ export class Renderer {
 
           if (unit !== null) {
             lastUnit = unit;
+            waitedUnits.delete(unit.id);
           }
         },
         // Display half: safe to defer/coalesce (canvas composites + unit info).
@@ -278,6 +282,11 @@ export class Renderer {
         lastUnit: Unit | null = null,
         activeUnit: Unit | null = null,
         uiStressRunner: UIStressRunner | null = null;
+
+      // Ids of units deferred with `w` (wait), oldest first: held out of
+      // auto-selection until every other active unit has had its turn. Ids,
+      // not objects, because every update reconstitutes fresh objects.
+      const waitedUnits = new Set<string>();
 
       const transportDisposers: Array<() => void> = [];
 
@@ -457,6 +466,8 @@ export class Renderer {
           objectMap: ObjectMap = { objects: {}, hierarchy: {} }
         ) => {
           try {
+            gameStarted = true;
+
             // Only for a new game: "you have risen" is an introduction, and a
             // loaded game has already had one.
             if (pendingSave === null) {
@@ -1199,7 +1210,33 @@ export class Renderer {
                 (action: PlayerAction): boolean => action._ === 'ActiveUnit'
               );
 
-              const activeUnitAction = activeUnits.reduce(
+              waitedUnits.forEach((id) => {
+                if (
+                  !activeUnits.some(
+                    (action) => (action.value as Unit).id === id
+                  )
+                ) {
+                  waitedUnits.delete(id);
+                }
+              });
+
+              // Only waited units left: the longest-waiting one is up next.
+              if (
+                activeUnits.length > 0 &&
+                activeUnits.every((action) =>
+                  waitedUnits.has((action.value as Unit).id)
+                )
+              ) {
+                const [oldestId] = waitedUnits;
+
+                waitedUnits.delete(oldestId);
+              }
+
+              const selectableActiveUnits = activeUnits.filter(
+                (action) => !waitedUnits.has((action.value as Unit).id)
+              );
+
+              const activeUnitAction = selectableActiveUnits.reduce(
                 (bestAction: PlayerAction | null, action: PlayerAction) => {
                   const unit = action.value as Unit;
                   const unitScore =
@@ -1413,7 +1450,6 @@ export class Renderer {
                 r: ['BuildRoad', 'BuildRailroad'],
                 s: ['Sleep'],
                 u: ['Unload'],
-                w: ['Wait'],
               },
               directionKeyMap: { [key: string]: NeighbourDirection } = {
                 ArrowUp: 'n',
@@ -1576,14 +1612,30 @@ export class Renderer {
                 return;
               }
 
-              if (key === 'w' && activeUnit && activeUnits.length > 1) {
-                const units = activeUnits.map(
-                    (unitAction) => unitAction.value as Unit
-                  ),
-                  current = units.indexOf(activeUnit),
-                  unit = units[current === units.length - 1 ? 0 : current + 1];
+              if (key === 'w' && activeUnit) {
+                const current = activeUnit,
+                  others = activeUnits
+                    .map((unitAction) => unitAction.value as Unit)
+                    .filter((unit) => unit.id !== current.id);
 
-                setActiveUnit(unit, portal, unitsMap, activeUnitsMap);
+                if (others.length > 0) {
+                  waitedUnits.add(current.id);
+
+                  // When everything else is waiting too, the queue wraps round
+                  // to whichever unit has waited longest.
+                  const [oldestId] = waitedUnits,
+                    next =
+                      others.find((unit) => !waitedUnits.has(unit.id)) ??
+                      others.find((unit) => unit.id === oldestId) ??
+                      others[0];
+
+                  setActiveUnit(next, portal, unitsMap, activeUnitsMap);
+                }
+
+                event.stopPropagation();
+                event.preventDefault();
+
+                return;
               }
 
               if (key === 't') {
