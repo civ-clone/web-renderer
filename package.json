@@ -18,7 +18,7 @@
     "esbuild:bundle": "node esbuild.js",
     "esbuild:bundle:dev": "node esbuild.js dev",
     "prebuild": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run prettier:format && npm run build:generate-version-text",
-    "prettier:check": "prettier --config .prettierrc 'src/**/*.{ts,scss}'",
+    "prettier:check": "prettier --config .prettierrc --check 'src/**/*.{ts,scss}'",
     "prettier:format": "prettier --config .prettierrc 'src/**/*.{ts,scss}' --write",
     "release:changelog": "node generate-changelog.mjs --release",
     "test": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run test:conformance && npm run test:hydration && npm run test:isolation && npm run test:transient && npm run test:inject && npm run test:save && npm run test:load && npm run test:saved-game && npm run test:translations && npm run test:changelog && npm run test:worked-tiles && npm run test:map-navigation",
