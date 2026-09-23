@@ -61,10 +61,16 @@ export class GamePortal extends Portal {
 
       this.clearTimeout();
 
-      const tile = this.tileAt(event.offsetX, event.offsetY),
-        playerTileUnits = tile.units.filter(
-          (unit: Unit) => unit.player.id === this.playerId()
-        );
+      const tile = this.tileAt(event.offsetX, event.offsetY);
+
+      // Past a locked pole: nothing there to open or centre on.
+      if (tile === null) {
+        return;
+      }
+
+      const playerTileUnits = tile.units.filter(
+        (unit: Unit) => unit.player.id === this.playerId()
+      );
 
       if (tile.city && tile.city.player.id === this.playerId()) {
         new City(tile.city, this, this.transport());
@@ -129,11 +135,11 @@ export class GamePortal extends Portal {
         ],
       };
 
-      showActionMenu(
-        this.tileAt(event.offsetX, event.offsetY),
-        event.x,
-        event.y
-      );
+      const tile = this.tileAt(event.offsetX, event.offsetY);
+
+      if (tile !== null) {
+        showActionMenu(tile, event.x, event.y);
+      }
     });
 
     on(this.canvas(), 'pointermove', (event) => {

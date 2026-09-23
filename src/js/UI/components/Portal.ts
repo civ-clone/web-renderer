@@ -113,9 +113,13 @@ export class Portal
     this.#scale = settings.scale;
     this.#transport = transport;
 
-    layers.forEach((MapType) =>
-      this.#layers.push(new MapType(this.#world, this.scale(), this.#tileSize))
-    );
+    layers.forEach((MapType) => {
+      const layer = new MapType(this.#world, this.scale(), this.#tileSize);
+
+      layer.setWrapVertical(!this.#lockVerticalEdges);
+
+      this.#layers.push(layer);
+    });
 
     this.#context = canvas.getContext('2d') as CanvasRenderingContext2D;
 
@@ -223,34 +227,7 @@ export class Portal
           height
         );
       });
-
-      if (this.#lockVerticalEdges) {
-        this.coverBeyondPoles({ x, y, width, height });
-      }
     });
-  }
-
-  /**
-   * Black out whatever of `region` lies above the first row of the world or
-   * below the last. The layers wrap, so they have drawn the far pole there; the
-   * clamp keeps that off-screen unless the whole world is shorter than the
-   * canvas.
-   */
-  protected coverBeyondPoles({ x, y, width, height }: Rect): void {
-    const top = -this.#viewport.y,
-      bottom = this.#world.height() * this.tileSize() - this.#viewport.y;
-
-    this.#context.fillStyle = '#000';
-
-    if (y < top) {
-      this.#context.fillRect(x, y, width, Math.min(top, y + height) - y);
-    }
-
-    if (y + height > bottom) {
-      const start = Math.max(bottom, y);
-
-      this.#context.fillRect(x, start, width, y + height - start);
-    }
   }
 
   /**
@@ -395,7 +372,12 @@ export class Portal
       height = this.#world.height();
 
     this.#center.x = (((this.#center.x + stepX) % width) + width) % width;
-    this.#center.y = (((this.#center.y + stepY) % height) + height) % height;
+    // Locked to the poles, the row is left for the clamp in `syncViewport`
+    // to stop at the edge: wrapping it first would carry a drag that runs past
+    // one pole to the other.
+    this.#center.y = this.#lockVerticalEdges
+      ? this.#center.y + stepY
+      : (((this.#center.y + stepY) % height) + height) % height;
 
     this.render();
 
@@ -409,7 +391,11 @@ export class Portal
 
     this.#lockVerticalEdges = lock;
 
-    this.#fullRender = true;
+    // The layers have the far pole drawn beyond each edge, or not, so all of
+    // them have to be redrawn either way.
+    this.#layers.forEach((layer) => layer.setWrapVertical(!lock));
+
+    this.#viewport = { x: 0, y: 0, width: -1, height: -1 };
 
     this.render();
 
@@ -450,16 +436,21 @@ export class Portal
     this.emit('focus-changed', x, y);
   }
 
-  /** The tile under the canvas pixel at `x`, `y`. */
-  tileAt(x: number, y: number): Tile {
+  /**
+   * The tile under the canvas pixel at `x`, `y` — or `null` past a locked
+   * pole, where the canvas is empty and there is no tile to point at.
+   */
+  tileAt(x: number, y: number): Tile | null {
     this.syncViewport();
 
-    const tileSize = this.tileSize();
+    const tileSize = this.tileSize(),
+      row = Math.floor((this.#viewport.y + y) / tileSize);
 
-    return this.#world.get(
-      Math.floor((this.#viewport.x + x) / tileSize),
-      Math.floor((this.#viewport.y + y) / tileSize)
-    );
+    if (this.#lockVerticalEdges && (row < 0 || row >= this.#world.height())) {
+      return null;
+    }
+
+    return this.#world.get(Math.floor((this.#viewport.x + x) / tileSize), row);
   }
 
   tileSize(): number {
