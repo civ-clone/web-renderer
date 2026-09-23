@@ -1,0 +1,1 @@
+{"version":"0.1.0@1bdd727","date":"2026-09-23T17:39:18.000Z","localChanges":["The Colossus test was out of date, not the rule (civ1-wonder ec4bb09), so the known-failing exception for it goes. Closes #22."],"externalChanges":{}}

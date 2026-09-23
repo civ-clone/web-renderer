@@ -1,0 +1,1 @@
+{"version":"0.1.0@2b6817b","date":"2026-09-23T16:04:17.000Z","localChanges":["Clicking the empty space beyond a pole no longer selects a tile from the far side of the world. A hard drag or flick stops at the pole instead of jumping to the other one. Nothing drawn on the last row, such as a city's name, spills over the first."],"externalChanges":{}}

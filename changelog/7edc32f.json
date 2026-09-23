@@ -1,0 +1,1 @@
+{"version":"0.1.0@7edc32f","date":"2026-09-23T16:02:02.000Z","localChanges":["Only the first finger pans the map. Touching or lifting another no longer stops a glide, ends the drag or counts as a tap on the tile under it."],"externalChanges":{}}
