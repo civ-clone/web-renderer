@@ -36,6 +36,13 @@ export class GamePortal extends Portal {
 
   protected bindEvents(): void {
     on(this.canvas(), 'pointerup', (event) => {
+      // Only the primary pointer drives the map: a second finger landing or
+      // lifting mid-gesture must not end the first finger's drag, or count as
+      // a click of its own.
+      if (!event.isPrimary) {
+        return;
+      }
+
       const drag = this.#drag;
 
       this.#drag = null;
@@ -103,22 +110,24 @@ export class GamePortal extends Portal {
     on(this.canvas(), 'pointerdown', (event) => {
       event.preventDefault();
 
+      if (!event.isPrimary) {
+        return;
+      }
+
       // Catching a gliding map stops it where it is, as it would a real one.
       this.stopGlide();
 
-      if (event.isPrimary) {
-        this.#drag = {
-          pointerId: event.pointerId,
-          startX: event.clientX,
-          startY: event.clientY,
-          lastX: event.clientX,
-          lastY: event.clientY,
-          dragging: false,
-          samples: [
-            { x: event.clientX, y: event.clientY, time: event.timeStamp },
-          ],
-        };
-      }
+      this.#drag = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        dragging: false,
+        samples: [
+          { x: event.clientX, y: event.clientY, time: event.timeStamp },
+        ],
+      };
 
       showActionMenu(
         this.tileAt(event.offsetX, event.offsetY),
@@ -170,7 +179,11 @@ export class GamePortal extends Portal {
       }
     });
 
-    on(this.canvas(), 'pointercancel', () => {
+    on(this.canvas(), 'pointercancel', (event) => {
+      if (!event.isPrimary) {
+        return;
+      }
+
       this.#drag = null;
 
       this.clearTimeout();
