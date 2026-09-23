@@ -62,8 +62,11 @@ export class Overview extends Map {
   // rather than taking the portal's window on the world.
   setViewport(): void {}
 
-  // Likewise the portal's scale: see `tileSize()`.
+  // Likewise the portal's scale — see `tileSize()` — and whether it stops at
+  // the poles: the minimap always shows the world whole.
   setScale(): void {}
+
+  setWrapVertical(): void {}
 
   // Deliberately ignores the portal's scale and tile size: the minimap is an
   // overview at its own fixed size, not a scaled view of the map.

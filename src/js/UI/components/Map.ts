@@ -50,6 +50,10 @@ export class Map implements IMap {
   // Set when what is on the canvas was drawn at a scale it no longer has, so
   // the next viewport change has to redraw rather than scroll.
   #stale: boolean = false;
+  // Whether a tile is also drawn a world's height above and below itself.
+  // Off when the portal stops at the poles, so nothing from one pole — a city
+  // name hanging below the last row, say — reaches past the other.
+  #wrapVertical: boolean = true;
   #visible: boolean = true;
   #scale: number;
   #tileSize: number;
@@ -125,6 +129,20 @@ export class Map implements IMap {
 
   scale(): number {
     return this.#scale;
+  }
+
+  /**
+   * Whether to draw each tile again a world's height away, as a map that
+   * wraps over the poles needs. Like `setScale`, it takes effect on the next
+   * viewport change.
+   */
+  setWrapVertical(wrap: boolean): void {
+    if (wrap === this.#wrapVertical) {
+      return;
+    }
+
+    this.#wrapVertical = wrap;
+    this.#stale = true;
   }
 
   /**
@@ -293,6 +311,9 @@ export class Map implements IMap {
         this.#canvas.height,
         size,
         overhang
+      ).filter(
+        (offsetY) =>
+          this.#wrapVertical || offsetY === tile.y * size - this.#originY
       ),
       placements: [number, number][] = [];
 
