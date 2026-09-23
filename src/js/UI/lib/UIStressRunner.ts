@@ -12,6 +12,7 @@ import Portal from '../components/Portal';
 import ScienceReport from '../components/ScienceReport';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
+import endTurn from './endTurn';
 
 interface WindowLike {
   close(): void;
@@ -374,9 +375,7 @@ export class UIStressRunner {
       player.actions.some((action) => action._ === 'EndTurn') ||
       player.mandatoryActions.some((action) => action._ === 'EndTurn')
     ) {
-      this.#transport.send('action', {
-        name: 'EndTurn',
-      });
+      endTurn(this.#transport);
     }
   }
 

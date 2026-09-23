@@ -32,8 +32,10 @@ import Landscape from './components/Map/Landscape';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
+import endTurn from './lib/endTurn';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
+import Notices from './components/Notices';
 import Overview from './components/Map/Overview';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
@@ -173,6 +175,7 @@ export class Renderer {
         unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
         preloadContainer = document.getElementById('preload') as HTMLDivElement,
         notifications = new Notifications(),
+        notices = new Notices(),
         // Taken, not read: one reload loads one save. Read here so the welcome
         // window can be skipped — a loaded game is not a new one.
         pendingSave = await takePendingSave(),
@@ -1097,6 +1100,7 @@ export class Renderer {
                   'CityBuild',
                   'CivilDisorder',
                   'EndTurn',
+                  'Notice',
                 ],
                 ignoredActionList = [
                   'ActiveUnit',
@@ -1115,11 +1119,15 @@ export class Renderer {
                   ChooseResearch: 80,
                   CityBuild: 60,
                   CivilDisorder: 10,
+                  Notice: 5,
                 },
                 playerActions = data.player.actions.filter(
                   (action): action is PlayerAction => !!action
                 ),
-                primaryActionCandidates = [...playerActions]
+                primaryActionCandidates = [
+                  ...playerActions,
+                  ...notices.actions(data),
+                ]
                   .sort(
                     (a, b) =>
                       (primaryActionPriority[a._] ?? 0) -
@@ -1305,6 +1313,7 @@ export class Renderer {
                   autoEndOfTurnExceptions.includes(action._)
                 )
               ) {
+                // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
                 transport.send('action', {
                   name: 'EndTurn',
                 });
@@ -1437,9 +1446,17 @@ export class Renderer {
             );
 
             transportDisposers.push(
-              transport.receive('gameNotification', (data): void =>
-                notifications.receive(data)
-              )
+              transport.receive('gameNotification', (notification): void => {
+                if (!notification.bubble) {
+                  notifications.receive(notification);
+
+                  return;
+                }
+
+                notices.add(notification);
+
+                scheduleRender();
+              })
             );
 
             const keyToActionsMap: {
@@ -1588,9 +1605,7 @@ export class Renderer {
                   (action) => action._ === 'EndTurn'
                 )
               ) {
-                transport.send('action', {
-                  name: 'EndTurn',
-                });
+                endTurn(transport);
 
                 event.stopPropagation();
                 event.preventDefault();

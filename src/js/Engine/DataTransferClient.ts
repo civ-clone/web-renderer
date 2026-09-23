@@ -724,10 +724,14 @@ export class DataTransferClient extends Client implements IClient {
       obsoleteWonders.add(wonder);
 
       this.sendNotification(
-        new Notification('Wonder.obsolete', {
-          city,
-          wonder,
-        })
+        new Notification(
+          'Wonder.obsolete',
+          {
+            city,
+            wonder,
+          },
+          true
+        )
       );
     });
 

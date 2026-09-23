@@ -1,5 +1,6 @@
 import Action from './Action';
 import checkIcon from 'feather-icons/dist/icons/check-circle.svg';
+import endTurn from '../../lib/endTurn';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -18,9 +19,7 @@ export class EndTurn extends Action {
 
     button.disabled = true;
 
-    this.transport().send('action', {
-      name: 'EndTurn',
-    });
+    endTurn(this.transport());
   }
 
   build(): void {

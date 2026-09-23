@@ -3,6 +3,7 @@ import { t } from 'i18next';
 
 // TODO: add in key specifically
 export interface Notification {
+  bubble?: boolean;
   data: any;
   key: string;
 }

@@ -5,6 +5,7 @@ import ChooseResearch from './Actions/ChooseResearch';
 import CityBuild from './Actions/CityBuild';
 import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
+import Notice from './Actions/Notice';
 import { PlayerAction } from '../types';
 import Portal from './Portal';
 import Revolution from './Actions/Revolution';
@@ -184,6 +185,11 @@ export class Actions extends Element implements IActions {
 
         case 'EndTurn':
           action = new EndTurn(playerAction, this.#transport);
+
+          break;
+
+        case 'Notice':
+          action = new Notice(playerAction, this.#portal, this.#transport);
 
           break;
 
