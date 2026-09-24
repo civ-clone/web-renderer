@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 924,
+        "total": 917,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -150,7 +150,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 19,
+          "Moved": 11,
           "MovementCost": 16,
           "Obsolete": 1,
           "PickGenerator": 1,
@@ -168,6 +168,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TurnEnd": 1,
           "TurnStart": 6,
           "Unit": 1,
           "Unsupported": 2,
@@ -335,7 +336,7 @@
       "randomCalls": 9050,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 924,
+        "total": 917,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -374,7 +375,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 19,
+          "Moved": 11,
           "MovementCost": 16,
           "Obsolete": 1,
           "PickGenerator": 1,
@@ -392,6 +393,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TurnEnd": 1,
           "TurnStart": 6,
           "Unit": 1,
           "Unsupported": 2,
@@ -745,7 +747,7 @@
       "randomCalls": 10115,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 924,
+        "total": 917,
         "byType": {
           "Action": 39,
           "ActionPerformed": 1,
@@ -784,7 +786,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 19,
+          "Moved": 11,
           "MovementCost": 16,
           "Obsolete": 1,
           "PickGenerator": 1,
@@ -802,6 +804,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TurnEnd": 1,
           "TurnStart": 6,
           "Unit": 1,
           "Unsupported": 2,
