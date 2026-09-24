@@ -11,6 +11,7 @@ import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import loadGame from './loadGame';
 import { plugins } from '../plugins';
+import { registerDiplomacyClasses } from './diplomacy';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 
@@ -207,6 +208,7 @@ export class Game implements IGame {
       // civilisation, because `civ1-player` unregisters one as it is claimed.
       engine.registerPlugins(plugins);
       registerClasses(defaultGame);
+      registerDiplomacyClasses(defaultGame);
     });
 
     engine.on('engine:start', (): void => {

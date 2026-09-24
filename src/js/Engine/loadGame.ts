@@ -7,6 +7,10 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
+import {
+  registerDiplomacyClasses,
+  stripInteractionCollaborators,
+} from './diplomacy';
 import { plugins } from '../plugins';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 
@@ -72,8 +76,11 @@ export const restoreGame = (
   // unregisters one as it is claimed, so a registry read afterwards is missing
   // every civilisation in the game.
   registerClasses(defaultGame);
+  registerDiplomacyClasses(defaultGame);
 
   engine.registerPlugins(plugins);
+
+  stripInteractionCollaborators(file, defaultGame);
 
   hydrate(file, defaultGame);
 
