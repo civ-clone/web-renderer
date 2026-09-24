@@ -4,47 +4,24 @@ import {
   ExchangeKnowledge,
   OfferPeace,
 } from '@civ-clone/library-diplomacy/Proposals';
-import Abstain from '@civ-clone/core-diplomacy/Proposal/Abstain';
-import Accept from '@civ-clone/core-diplomacy/Proposal/Accept';
-import Acknowledge from '@civ-clone/core-diplomacy/Proposal/Acknowledge';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
-import Declaration from '@civ-clone/core-diplomacy/Declaration';
-import Decline from '@civ-clone/core-diplomacy/Proposal/Decline';
-import Dialogue from '@civ-clone/core-diplomacy/Negotiation/Dialogue';
 import { Game } from '@civ-clone/core-game/Game';
-import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
 import Interaction from '@civ-clone/core-diplomacy/Interaction';
-import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
-import Never from '@civ-clone/core-diplomacy/Expiries/Never';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
-import Terminate from '@civ-clone/core-diplomacy/Negotiation/Terminate';
 
 /**
- * Register every diplomacy class a save can name (#80).
+ * Register the diplomacy classes a save can name that `registerClasses` does
+ * not (#80).
  *
  * A save names them from first contact onwards, and none was registered, so
- * every save made after two players met failed to load.
- *
- * The `core-diplomacy` classes are also registered by `registerClasses` from
- * `core-save-game` 0.1.8; they are here too until this build depends on it.
- * Registering the same class twice is a no-op. The rest live in `base-` and
- * `library-` packages, which `core-save-game` cannot depend on.
+ * every save made after two players met failed to load. `core-save-game`
+ * registers the `core-diplomacy` ones; these live in `library-diplomacy`,
+ * which it cannot depend on.
  */
 export const registerDiplomacyClasses = (game: Game): void =>
   game.classes.register(
     ...([
-      Abstain,
-      Accept,
-      Acknowledge,
-      Declaration,
-      Decline,
-      Dialogue,
-      Initiate,
-      Negotiation,
-      Never,
-      Terminate,
-
       Contact,
       DemandTribute,
       ExchangeKnowledge,
