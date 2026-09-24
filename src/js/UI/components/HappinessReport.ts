@@ -17,6 +17,7 @@ import Unit from './Unit';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
+import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
@@ -33,7 +34,7 @@ const buildCityRow = async (
     [key: string]: (cityYield: any) => string | HTMLElement | Element;
   } = {
     CityImprovementContent: (cityYield: CityImprovementContent) =>
-      cityYield.cityImprovement._,
+      getLabelForBuildableEntity(cityYield.cityImprovement),
     MartialLaw: (cityYield: MartialLaw) => new Unit(cityYield.unit),
     MilitaryUnhappiness: (cityYield: MilitaryUnhappiness) =>
       new SupportedUnit(city, cityYield.unit, ['MilitaryUnhappiness']),

@@ -274,10 +274,7 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
         `<div></div>`,
         ...city.improvements.map((improvement) =>
           s(
-            `<div>${t(`Improvement.${improvement._}.name`, {
-              defaultValue: improvement._,
-              ns: 'city',
-            })}</div>`,
+            `<div>${getLabelForBuildableEntity(improvement)}</div>`,
             ...city.yields
               .filter(
                 (
