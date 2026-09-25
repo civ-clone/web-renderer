@@ -198,11 +198,29 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     cityPortal.render();
 
     return h(s('<div class="city-map"></div>', portalCanvas), {
-      click: () =>
+      click: (event: MouseEvent) => {
+        if (event.target !== portalCanvas) {
+          return;
+        }
+
+        // The canvas is scaled by CSS, so `offsetX`/`offsetY` need mapping
+        // back onto its own pixels before they can be turned into a tile.
+        const localTile = cityPortal.tileAt(
+            (event.offsetX * portalCanvas.width) / portalCanvas.offsetWidth,
+            (event.offsetY * portalCanvas.height) / portalCanvas.offsetHeight
+          ),
+          tile = city.tiles.find((tile) => tile.id === localTile?.id);
+
+        if (!tile) {
+          return;
+        }
+
         transport.send('action', {
-          name: 'ReassignWorkers',
-          city: city.id,
-        }),
+          name: 'ChangeWorkedTile',
+          id: city.id,
+          tile: tile.id,
+        });
+      },
     });
   },
   renderBuild = (

@@ -13,6 +13,7 @@ import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import Busy from '@civ-clone/core-unit/Rules/Busy';
+import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
 import CityGrowth from '@civ-clone/core-city-growth/CityGrowth';
@@ -75,7 +76,10 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
-import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
+import {
+  changeWorkedTile,
+  reassignWorkers,
+} from '@civ-clone/civ1-city/lib/assignWorkers';
 import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
@@ -1286,6 +1290,30 @@ export class DataTransferClient extends Client implements IClient {
             )
           )
         );
+
+      return false;
+    }
+
+    if (playerAction instanceof ChangeWorkedTile) {
+      const city = playerAction.value(),
+        [playerTile] = playerWorldRegistryInstance
+          .getByPlayer(this.player())
+          .filter((tile) => tile.id() === action.tile);
+
+      if (!playerTile) {
+        console.log(`tile not found: ${action.tile}`);
+
+        return false;
+      }
+
+      if (changeWorkedTile(city, playerTile.tile()) === 'none') {
+        return false;
+      }
+
+      this.#dataQueue.update(
+        city.id(),
+        city.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
+      );
 
       return false;
     }
