@@ -36,7 +36,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec
       '@civ-clone/civ1-game-year':
         specifier: github:civ-clone/civ1-game-year
-        version: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/fcced3e60c9cdc7fba44ee121eed6b0658261746
+        version: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a
       '@civ-clone/civ1-goody-hut':
         specifier: github:civ-clone/civ1-goody-hut
         version: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/73db2eff1c82bc8a643f63cf0b5f1e7990db6835
@@ -1016,9 +1016,9 @@ packages:
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76}
     version: 0.1.1
 
-  '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/fcced3e60c9cdc7fba44ee121eed6b0658261746':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/fcced3e60c9cdc7fba44ee121eed6b0658261746}
-    version: 0.1.1
+  '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a':
+    resolution: {gitHosted: true, integrity: sha512-KiWiSUhNv7XRFn22Sz2mx95wtwdcXw+YyWuJNJTonZ+ep0RvFDACDsvuGxLc8m70cLvx9iPTkX3jK4bVuWLUvQ==, tarball: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a}
+    version: 0.1.2
 
   '@civ-clone/civ1-game@https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec}
@@ -3131,7 +3131,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/fcced3e60c9cdc7fba44ee121eed6b0658261746':
+  '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a':
     dependencies:
       '@civ-clone/core-game': 0.1.5
       '@civ-clone/core-game-year': 0.1.4
