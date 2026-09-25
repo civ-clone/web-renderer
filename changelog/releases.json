@@ -1,4 +1,10 @@
 [
+{"version":"0.1.0@7670195","date":"2026-09-25T06:41:43.000Z","localChanges":["From turn 252 the year shown was 1,000 years too late, 2010 AD instead of 1010 AD. It now runs on correctly through every era of the calendar (closes #74)."],"externalChanges":{"civ1-game-year":{"status":"updated","log":["Each era after the first counted its turns from the wrong offset, so turn 252 showed 2010 AD rather than 1010 AD (civ-clone/web-renderer#74)."]}}}
+,
+{"version":"0.1.0@1173501","date":"2026-09-25T06:35:34.000Z","localChanges":["A Forest's special resource now shows the brown doe, as in Civ1, instead of the Tundra's grey antlered game (closes #69)."],"externalChanges":{}}
+,
+{"version":"0.1.0@13407a8","date":"2026-09-25T05:18:28.000Z","localChanges":["release: Musketeers defend better, Monarchy comes a step sooner, and the Oracle needs Mysticism"],"externalChanges":{}}
+,
 {"version":"0.1.0@7574c3b","date":"2026-09-25T05:17:44.000Z","localChanges":["Musketeers now attack at 2 and defend at 3, which makes them the strong defensive unit of the gunpowder era (closes #75).","Monarchy now needs Ceremonial Burial and Code of Laws, rather than Mysticism, so you can reach it a step sooner (closes #77).","The Oracle now needs Mysticism, rather than Ceremonial Burial (closes #78)."],"externalChanges":{"civ1-science":{"status":"updated","log":["fix: Monarchy needs Ceremonial Burial and Code of Laws, as in Civ1, not Mysticism (civ-clone/web-renderer#77)"]},"civ1-unit":{"status":"updated","log":["chore: commit the compiled output for the movement-cost table lookup","fix: Musketeers attack 2 and defend 3, as in Civ1, not the other way round (civ-clone/web-renderer#75)"]},"civ1-wonder":{"status":"updated","log":["fix: the Oracle needs Mysticism, as in Civ1, not Ceremonial Burial (civ-clone/web-renderer#78)"]}}}
 ,
 {"version":"0.1.0@171948f","date":"2026-09-24T20:25:26.000Z","localChanges":["release: games saved after meeting another civilization load again"],"externalChanges":{}}
