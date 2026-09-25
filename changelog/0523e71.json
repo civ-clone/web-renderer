@@ -1,0 +1,1 @@
+{"version":"0.1.0@0523e71","date":"2026-09-25T15:52:40.000Z","localChanges":["On the city screen, click a worked square on the city map to take its worker off, and click another square to put a free worker there. Once every worker is placed, clicking an unworked square reassigns the city's workers automatically, as before (closes #9)."],"externalChanges":{}}
