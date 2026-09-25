@@ -45,6 +45,7 @@ const preferredUnitActionOrder = [
   'Wait',
   'Sleep',
   'Unload',
+  'LandAircraft',
   'Move',
 ];
 

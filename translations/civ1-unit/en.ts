@@ -60,6 +60,7 @@ i18next.addResources(
     'Action.Embark.name': 'Embark',
     'Action.Fortify.name': 'Fortify',
     'Action.FoundCity.name': 'Found a new city',
+    'Action.LandAircraft.name': 'Land',
     'Action.Move.name': 'Move',
     'Action.NoOrders.name': 'No orders',
     'Action.Pillage.name': 'Pillage',
