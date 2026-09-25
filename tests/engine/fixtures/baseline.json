@@ -15,7 +15,7 @@
   "checksums": {
     "1": "5fa259b4",
     "10": "f220ec27",
-    "50": "fee4678d"
+    "50": "e3ce1c7a"
   },
   "snapshots": {
     "1": {
@@ -190,9 +190,9 @@
         "hash": "7df03052"
       },
       "dto": {
-        "objects": 3245,
-        "bytes": 553536,
-        "hash": "2e5f09fc"
+        "objects": 3237,
+        "bytes": 552228,
+        "hash": "8c916aa7"
       },
       "registries": {
         "cities": 3,
@@ -412,12 +412,12 @@
       "state": {
         "entities": 2490,
         "fields": 9970,
-        "hash": "1c75a7cd"
+        "hash": "bbbdba29"
       },
       "dto": {
-        "objects": 53120,
-        "bytes": 8903529,
-        "hash": "65696a9d"
+        "objects": 53084,
+        "bytes": 8898315,
+        "hash": "519e8832"
       },
       "registries": {
         "cities": 6,
