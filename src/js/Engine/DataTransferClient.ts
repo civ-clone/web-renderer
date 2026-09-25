@@ -74,6 +74,7 @@ import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegis
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
+import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
 import { reassignWorkers } from '@civ-clone/civ1-city/lib/assignWorkers';
 import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
@@ -347,7 +348,7 @@ export class DataTransferClient extends Client implements IClient {
       );
     });
 
-    ['unit:created', 'unit:defeated'].forEach((event) => {
+    ['unit:created', 'unit:defeated', 'unit:lost-at-sea'].forEach((event) => {
       engineInstance.on(event, (unit) => {
         const playerWorld = playerWorldRegistryInstance.getByPlayer(
             this.player()
@@ -608,6 +609,23 @@ export class DataTransferClient extends Client implements IClient {
         new Notification('City.shrink', {
           city,
         })
+      );
+    });
+
+    engineInstance.on('unit:lost-at-sea', (unit: Unit) => {
+      if (unit.player() !== this.player()) {
+        return;
+      }
+
+      this.sendNotification(
+        new Notification(
+          aircraftRange.some(([UnitType]) => unit instanceof UnitType)
+            ? 'Unit.out-of-fuel'
+            : 'Unit.lost-at-sea',
+          {
+            unit,
+          }
+        )
       );
     });
 

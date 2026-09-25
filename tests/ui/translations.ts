@@ -41,6 +41,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-civilization/en');
+  await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
 
   names.forEach((item) => {
@@ -127,6 +128,17 @@ const expect = (description: string, actual: string, expected: string) => {
         'Spaceship.part-built.unmet',
         {},
         'Component added to the spaceship of an unknown civilization.',
+      ],
+      // #72
+      [
+        'Unit.lost-at-sea',
+        { unit: { _: 'Trireme' } },
+        'Our Trireme was lost at sea.',
+      ],
+      [
+        'Unit.out-of-fuel',
+        { unit: { _: 'Bomber' } },
+        'Our Bomber ran out of fuel and crashed.',
       ],
       // #60
       [

@@ -355,6 +355,11 @@ i18next.addResources('en', 'notification', {
     'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
   'Spaceship.part-built.unmet.title': 'Spaceship built',
 
+  'Unit.lost-at-sea.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was lost at sea.`,
+  'Unit.lost-at-sea.title': 'Unit lost at sea!',
+  'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
+  'Unit.out-of-fuel.title': 'Out of fuel!',
+
   'Wonder.building-complete.other-player.known.body':
     '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.known.title': 'Wonder completed',
