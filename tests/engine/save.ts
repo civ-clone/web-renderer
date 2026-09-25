@@ -26,6 +26,9 @@ import StrategyNote from '@civ-clone/core-strategy/StrategyNote';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import BusyGoTo from '@civ-clone/base-unit-action-goto/Busy/GoTo';
+import { Carrier, Fighter } from '@civ-clone/civ1-unit/Units';
+import { LandAircraft } from '@civ-clone/civ1-unit/Actions';
+import Stowed from '@civ-clone/base-unit-action-embark/Busy/Stowed';
 import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
@@ -120,6 +123,64 @@ const report = (): void => {
   })();
 
   push('a unit can be put on a journey', () => journeyStarted, 'ok');
+
+  // An aircraft landed on a Carrier (#81). Landing stows it and marks it
+  // `Stowed`, so the save has to carry the manifest and rebuild the busy rule,
+  // or the aircraft loads back in mid-air and is lost when its fuel runs out.
+  let carrier: Unit | undefined;
+  let fighter: Unit | undefined;
+
+  const landed = ((): string => {
+    try {
+      const player = (journeying as Unit).player();
+      const water = (journeying as Unit)
+        .tile()
+        .map()
+        .entries()
+        .find(
+          (tile) =>
+            tile.isWater() &&
+            unitRegistryInstance.getByTile(tile).length === 0 &&
+            tile.getNeighbours().some((neighbour) => neighbour.isWater())
+        );
+
+      if (!water) {
+        return 'no open water';
+      }
+
+      const [takeOff] = water
+        .getNeighbours()
+        .filter((neighbour) => neighbour.isWater());
+
+      carrier = new Carrier(null, player, water, ruleRegistryInstance);
+      fighter = new Fighter(null, player, takeOff, ruleRegistryInstance);
+
+      [carrier, fighter]
+        .filter((unit) => !unitRegistryInstance.includes(unit))
+        .forEach((unit) => unitRegistryInstance.register(unit));
+
+      const land = fighter
+        .actions(water)
+        .find((action) => action instanceof LandAircraft);
+
+      if (!land) {
+        return `no LandAircraft, only ${fighter
+          .actions(water)
+          .map((action) => action.constructor.name)
+          .join(', ')}`;
+      }
+
+      fighter.action(land);
+
+      return defaultGame.transports.hasUnit(fighter)
+        ? 'ok'
+        : 'the fighter was not stowed';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  })();
+
+  push('an aircraft can land on a Carrier', () => landed, 'ok');
 
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
@@ -296,6 +357,30 @@ const report = (): void => {
   push(
     'and the rebuilt rule still says the unit is going somewhere',
     () => restored?.busy()?.validate(restored as never) === false,
+    true
+  );
+
+  // The aircraft on the Carrier, after the round trip.
+  const restoredFighter = fighter
+    ? target.units.entries().find((unit) => unit.id() === fighter?.id())
+    : undefined;
+
+  push(
+    'the landed aircraft comes back',
+    () => restoredFighter !== undefined,
+    true
+  );
+  push(
+    'still aboard the same Carrier',
+    () =>
+      restoredFighter && target.transports.hasUnit(restoredFighter)
+        ? target.transports.getByUnit(restoredFighter).transport().id()
+        : null,
+    carrier?.id()
+  );
+  push(
+    'and still `Stowed`',
+    () => restoredFighter?.busy() instanceof Stowed,
     true
   );
 
