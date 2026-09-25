@@ -10,6 +10,13 @@ type ImprovementLookup = {
   [key in Improvement]: boolean;
 };
 
+// Civ1 gives Forest and Tundra the same special, Game, but draws it as a doe on
+// Forest and an antlered beast on Tundra (#69). Keyed on `Terrain:Feature`;
+// anything not listed uses the sprite named after the feature.
+const specialSprites: { [key: string]: string } = {
+  'Forest:Game': 'doe',
+};
+
 // The composed coast tile is a pure function of the 8-neighbour bitmask and is
 // always built at the sprite's 16x16, so this tops out at 256 small canvases
 // instead of allocating one per coast tile per render.
@@ -300,19 +307,23 @@ export class Landscape extends TerrainAbstract {
   }
 
   protected renderFeatures(tile: Tile, offsetX: number, offsetY: number): void {
-    tile.terrain.features.forEach((feature) =>
-      feature._ === 'Shield'
-        ? this.drawImage(
-            `terrain/${feature._.toLowerCase()}`,
-            offsetX,
-            offsetY,
-            {
-              offsetX: 4 * this.scale(),
-              offsetY: 4 * this.scale(),
-            }
-          )
-        : this.drawImage(`terrain/${feature._.toLowerCase()}`, offsetX, offsetY)
-    );
+    tile.terrain.features.forEach((feature) => {
+      const image = `terrain/${
+        specialSprites[`${tile.terrain._}:${feature._}`] ??
+        feature._.toLowerCase()
+      }`;
+
+      if (feature._ === 'Shield') {
+        this.drawImage(image, offsetX, offsetY, {
+          offsetX: 4 * this.scale(),
+          offsetY: 4 * this.scale(),
+        });
+
+        return;
+      }
+
+      this.drawImage(image, offsetX, offsetY);
+    });
   }
 
   protected renderGoodyHut(tile: Tile, offsetX: number, offsetY: number): void {
