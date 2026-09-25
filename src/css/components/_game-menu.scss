@@ -12,3 +12,10 @@
     @include action-button.white-child-svg();
   }
 }
+
+.cheat-grant .option {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0.5rem;
+}

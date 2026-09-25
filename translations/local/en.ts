@@ -138,6 +138,13 @@ i18next.addResources('en', 'default', {
   'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
   'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',
 
+  'GameMenu.cheat.enter-advance-name': 'Enter the advance name',
+  'GameMenu.cheat.enter-gold-amount': 'Enter the amount of gold',
+  'GameMenu.cheat.grant-advance': 'Grant Advance',
+  'GameMenu.cheat.grant-gold': 'Grant Gold',
+  'GameMenu.cheat.player': 'Player',
+  'GameMenu.cheat.reveal-map': 'Reveal Map',
+  'GameMenu.cheat.you': 'You',
   'GameMenu.city-status': 'City Status',
   'GameMenu.happiness-report': 'Happiness Report',
   'GameMenu.load-game': 'Load Game',

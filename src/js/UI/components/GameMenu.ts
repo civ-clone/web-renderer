@@ -1,4 +1,7 @@
 import { Element, s } from '@dom111/element';
+import CheatPlayers, {
+  CheatPlayersResult,
+} from '../../Engine/Requests/CheatPlayers';
 import CityStatus from './CityStatus';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
@@ -11,9 +14,78 @@ import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
 import { chooseSaveFile } from '../lib/savedGame';
-import { h } from '../lib/html';
+import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
+
+// Both grant cheats share one form: who receives it, then the amount or
+// advance. The local player comes first, labelled "You" with an empty value
+// so leaving the select alone sends no `player` at all; every other player
+// follows, including civilizations we haven't met, labelled with their
+// civilization. Pressing Enter in the text input submits.
+const cheatGrantWindow = (
+  title: string,
+  prompt: string,
+  players: CheatPlayersResult[],
+  onSubmit: (value: string, player: string | null) => void
+): Window => {
+  const select = s<HTMLSelectElement>(
+      `<select>${[
+        `<option value="">${t('GameMenu.cheat.you')}</option>`,
+        ...players
+          .filter((player) => !player.isLocal)
+          .map(
+            (player) =>
+              `<option value="${player.id}">${t(
+                `${player.civilization}.nation`,
+                {
+                  defaultValue: player.civilization,
+                  ns: 'civilization',
+                }
+              )}</option>`
+          ),
+      ].join('')}</select>`
+    ),
+    input = s<HTMLInputElement>('<input type="text">'),
+    window = new Window(
+      title,
+      s(
+        '<div class="cheat-grant"></div>',
+        ...(
+          [
+            [select, t('GameMenu.cheat.player')],
+            [input, prompt],
+          ] as [HTMLElement, string][]
+        ).map(([control, label]) =>
+          s(
+            `<div class="option"><label for="${elementId(
+              control
+            )}">${label}</label></div>`,
+            control
+          )
+        )
+      )
+    );
+
+  h(input, {
+    keydown: (event: KeyboardEvent) => {
+      if (event.key !== 'Enter') {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      onSubmit(input.value, select.value || null);
+
+      window.close();
+    },
+  });
+
+  input.focus();
+
+  return window;
+};
 
 export class GameMenu extends Element {
   #getPlayer: () => Player;
@@ -142,64 +214,37 @@ export class GameMenu extends Element {
                     },
                     {
                       label: t('GameMenu.cheat.grant-advance'),
-                      action: () => {
-                        const window = new Window(
+                      action: async () =>
+                        cheatGrantWindow(
                           t('GameMenu.cheat.grant-advance'),
-                          s(
-                            '<div></div>',
-                            s(
-                              `<p>${t('GameMenu.cheat.enter-advance-name')}</p>`
-                            ),
-                            h(
-                              s('<input type="text" style="display: block"/>'),
-                              {
-                                keydown: (event: KeyboardEvent) => {
-                                  if (event.key === 'Enter') {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-
-                                    this.#transport.send('cheat', {
-                                      name: 'GrantAdvance',
-                                      value: event.target!.value,
-                                    });
-
-                                    window.close();
-                                  }
-                                },
-                              }
-                            )
-                          )
-                        );
-                      },
+                          t('GameMenu.cheat.enter-advance-name'),
+                          await this.#transport.request(new CheatPlayers()),
+                          (advance, player) =>
+                            this.#transport.send('cheat', {
+                              name: 'GrantAdvance',
+                              value: {
+                                advance,
+                                ...(player ? { player } : {}),
+                              },
+                            })
+                        ),
                     },
                     {
                       label: t('GameMenu.cheat.grant-gold'),
-                      action: () => {
-                        const window = new Window(
+                      action: async () =>
+                        cheatGrantWindow(
                           t('GameMenu.cheat.grant-gold'),
-                          s(
-                            '<div></div>',
-                            s(
-                              `<p>${t('GameMenu.cheat.enter-gold-amount')}</p>`
-                            ),
-                            h(s('<input type="text" style="display: block">'), {
-                              keydown: (event: KeyboardEvent) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-
-                                  this.#transport.send('cheat', {
-                                    name: 'GrantGold',
-                                    value: parseInt(event.target!.value, 10),
-                                  });
-
-                                  window.close();
-                                }
+                          t('GameMenu.cheat.enter-gold-amount'),
+                          await this.#transport.request(new CheatPlayers()),
+                          (amount, player) =>
+                            this.#transport.send('cheat', {
+                              name: 'GrantGold',
+                              value: {
+                                amount: parseInt(amount, 10),
+                                ...(player ? { player } : {}),
                               },
                             })
-                          )
-                        );
-                      },
+                        ),
                     },
                   ]
                 : []),

@@ -226,12 +226,16 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       if (name === 'GrantAdvance') {
+        const target = this.resolveCheatPlayer(value.player);
+
+        if (!target) {
+          return;
+        }
+
         const [Advance] = advanceRegistryInstance.filter(
-            (Advance) => Advance.name === value
+            (Advance) => Advance.name === value.advance
           ),
-          playerResearch = playerResearchRegistryInstance.getByPlayer(
-            this.player()
-          );
+          playerResearch = playerResearchRegistryInstance.getByPlayer(target);
 
         if (!Advance) {
           return;
@@ -243,29 +247,40 @@ export class DataTransferClient extends Client implements IClient {
 
         playerResearch.addAdvance(Advance);
 
-        this.#dataQueue.add(
-          playerResearch.id(),
-          playerResearch.toPlainObject(
-            this.#dataFilter(filterToReference(Player))
-          )
-        );
+        // Rivals' `PlayerResearch` is never sent to the page, so patching it
+        // would leak hidden state and hand the frontend a ref it never
+        // received (#46).
+        if (target === this.player()) {
+          this.#dataQueue.add(
+            playerResearch.id(),
+            playerResearch.toPlainObject(
+              this.#dataFilter(filterToReference(Player))
+            )
+          );
+        }
       }
 
       if (name === 'GrantGold') {
+        const target = this.resolveCheatPlayer(value.player);
+
+        if (!target) {
+          return;
+        }
+
         const playerTreasury =
-          playerTreasuryRegistryInstance.getByPlayerAndType(
-            this.player(),
-            Gold
+          playerTreasuryRegistryInstance.getByPlayerAndType(target, Gold);
+
+        playerTreasury.add(value.amount);
+
+        // As above: a rival's `PlayerTreasury` stays off the wire (#46).
+        if (target === this.player()) {
+          this.#dataQueue.add(
+            playerTreasury.id(),
+            playerTreasury.toPlainObject(
+              this.#dataFilter(filterToReference(Player))
+            )
           );
-
-        playerTreasury.add(value);
-
-        this.#dataQueue.add(
-          playerTreasury.id(),
-          playerTreasury.toPlainObject(
-            this.#dataFilter(filterToReference(Player))
-          )
-        );
+        }
       }
 
       if (name === 'ModifyUnit') {
@@ -299,6 +314,17 @@ export class DataTransferClient extends Client implements IClient {
 
       this.sendPatchData();
     });
+
+    this.#transport.receive('cheatPlayers', () =>
+      this.#transport.send(
+        'cheatPlayers',
+        playerRegistryInstance.entries().map((player) => ({
+          id: player.id(),
+          civilization: player.civilization().sourceClass().name,
+          isLocal: player === this.player(),
+        }))
+      )
+    );
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
@@ -1251,6 +1277,20 @@ export class DataTransferClient extends Client implements IClient {
 
     console.log(`unhandled action: ${JSON.stringify(action)}`);
     return false;
+  }
+
+  // Resolves a cheat's target: no id means the local player, an id matching a
+  // registered player means that player (rival or not), and any other id
+  // means nothing found, which the caller treats as "do nothing".
+  private resolveCheatPlayer(id?: string): Player | null {
+    if (!id) {
+      return this.player();
+    }
+
+    return (
+      playerRegistryInstance.entries().find((player) => player.id() === id) ??
+      null
+    );
   }
 
   private sendInitialData(): void {

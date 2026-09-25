@@ -1,4 +1,5 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
+import { CheatPlayersResult } from './Requests/CheatPlayers';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
 import { GameData } from '../UI/types';
@@ -48,6 +49,7 @@ declare global {
     [key: string]: TransportData;
     action: TransportData<never, TransportPlayerAction>;
     cheat: TransportData<never, TransportCheatData>;
+    cheatPlayers: TransportData<CheatPlayersResult[], null>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     gameData: TransportData<GameData, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
@@ -125,8 +127,14 @@ declare global {
   }
 
   interface CheatDataMap {
-    GrantAdvance: string;
-    GrantGold: number;
+    GrantAdvance: {
+      advance: string;
+      player?: string;
+    };
+    GrantGold: {
+      amount: number;
+      player?: string;
+    };
     ModifyUnit: {
       unitId: string;
       properties: {
