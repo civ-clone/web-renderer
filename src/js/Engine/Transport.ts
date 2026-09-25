@@ -103,6 +103,10 @@ declare global {
       id: string;
       chosen: string;
     };
+    ChangeWorkedTile: {
+      id: string;
+      tile: string;
+    };
     CityBuild: {
       id: string;
       chosen: string;
