@@ -1,4 +1,5 @@
 import { Element, s } from '@dom111/element';
+import CheatAdvances from '../../Engine/Requests/CheatAdvances';
 import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
@@ -18,16 +19,20 @@ import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
 
-// Both grant cheats share one form: who receives it, then the amount or
-// advance. The local player comes first, labelled "You" with an empty value
-// so leaving the select alone sends no `player` at all; every other player
-// follows, including civilizations we haven't met, labelled with their
-// civilization. Pressing Enter in the text input submits.
+// Both grant cheats share one form: who receives it, then what they receive.
+// The local player comes first, labelled "You" with an empty value so leaving
+// the select alone sends no `player` at all; every other player follows,
+// including civilizations we haven't met, labelled with their civilization.
+// The Grant button or Enter submits. `onPlayerChange` refills `control` for
+// the chosen player; the player select is disabled until it has, so a reply
+// for an earlier choice can't land after a later one.
 const cheatGrantWindow = (
   title: string,
-  prompt: string,
   players: CheatPlayersResult[],
-  onSubmit: (value: string, player: string | null) => void
+  control: HTMLInputElement | HTMLSelectElement,
+  label: string,
+  onSubmit: (player: string | null) => void,
+  onPlayerChange: (player: string | null) => Promise<void> = async () => {}
 ): Window => {
   const select = s<HTMLSelectElement>(
       `<select>${[
@@ -46,7 +51,9 @@ const cheatGrantWindow = (
           ),
       ].join('')}</select>`
     ),
-    input = s<HTMLInputElement>('<input type="text">'),
+    button = s<HTMLButtonElement>(
+      `<button>${t('GameMenu.cheat.grant')}</button>`
+    ),
     window = new Window(
       title,
       s(
@@ -54,7 +61,7 @@ const cheatGrantWindow = (
         ...(
           [
             [select, t('GameMenu.cheat.player')],
-            [input, prompt],
+            [control, label],
           ] as [HTMLElement, string][]
         ).map(([control, label]) =>
           s(
@@ -63,11 +70,33 @@ const cheatGrantWindow = (
             )}">${label}</label></div>`,
             control
           )
-        )
+        ),
+        s('<div class="actions"></div>', button)
       )
-    );
+    ),
+    submit = (): void => {
+      onSubmit(select.value || null);
 
-  h(input, {
+      window.close();
+    };
+
+  h(select, {
+    change: async () => {
+      select.disabled = true;
+
+      try {
+        await onPlayerChange(select.value || null);
+      } finally {
+        select.disabled = false;
+      }
+    },
+  });
+
+  h(button, {
+    click: () => submit(),
+  });
+
+  h(control, {
     keydown: (event: KeyboardEvent) => {
       if (event.key !== 'Enter') {
         return;
@@ -76,13 +105,11 @@ const cheatGrantWindow = (
       event.preventDefault();
       event.stopPropagation();
 
-      onSubmit(input.value, select.value || null);
-
-      window.close();
+      submit();
     },
   });
 
-  input.focus();
+  control.focus();
 
   return window;
 };
@@ -220,37 +247,95 @@ export class GameMenu extends Element {
                     },
                     {
                       label: t('GameMenu.cheat.grant-advance'),
-                      action: async () =>
+                      action: async () => {
+                        const advances = s<HTMLSelectElement>(
+                            '<select multiple size="10"></select>'
+                          ),
+                          showAdvances = async (
+                            player: string | null
+                          ): Promise<void> => {
+                            const available = await this.#transport.request(
+                              new CheatAdvances(player)
+                            );
+
+                            advances.innerHTML =
+                              available.length === 0
+                                ? `<option disabled>${t(
+                                    'GameMenu.cheat.no-advances'
+                                  )}</option>`
+                                : available
+                                    .map((advance): [string, string] => [
+                                      advance,
+                                      t(`${advance}.name`, {
+                                        defaultValue: advance,
+                                        ns: 'science',
+                                      }),
+                                    ])
+                                    .sort(([, a], [, b]) => a.localeCompare(b))
+                                    .map(
+                                      ([advance, name]) =>
+                                        `<option value="${advance}">${name}</option>`
+                                    )
+                                    .join('');
+                          };
+
+                        await showAdvances(null);
+
                         cheatGrantWindow(
                           t('GameMenu.cheat.grant-advance'),
-                          t('GameMenu.cheat.enter-advance-name'),
                           await this.#transport.request(new CheatPlayers()),
-                          (advance, player) =>
+                          advances,
+                          t('GameMenu.cheat.choose-advances'),
+                          (player) => {
+                            const chosen = [...advances.selectedOptions].map(
+                              (option) => option.value
+                            );
+
+                            if (chosen.length === 0) {
+                              return;
+                            }
+
                             this.#transport.send('cheat', {
                               name: 'GrantAdvance',
                               value: {
-                                advance,
+                                advances: chosen,
                                 ...(player ? { player } : {}),
                               },
-                            })
-                        ),
+                            });
+                          },
+                          showAdvances
+                        );
+                      },
                     },
                     {
                       label: t('GameMenu.cheat.grant-gold'),
-                      action: async () =>
+                      action: async () => {
+                        const amount = s<HTMLInputElement>(
+                          '<input type="number" step="1">'
+                        );
+
                         cheatGrantWindow(
                           t('GameMenu.cheat.grant-gold'),
-                          t('GameMenu.cheat.enter-gold-amount'),
                           await this.#transport.request(new CheatPlayers()),
-                          (amount, player) =>
+                          amount,
+                          t('GameMenu.cheat.enter-gold-amount'),
+                          (player) => {
+                            const value = parseInt(amount.value, 10);
+
+                            if (Number.isNaN(value)) {
+                              return;
+                            }
+
                             this.#transport.send('cheat', {
                               name: 'GrantGold',
                               value: {
-                                amount: parseInt(amount, 10),
+                                amount: value,
                                 ...(player ? { player } : {}),
                               },
-                            })
-                        ),
+                            });
+                          }
+                        );
+                      },
                     },
                   ]
                 : []),

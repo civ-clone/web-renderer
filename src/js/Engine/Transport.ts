@@ -49,6 +49,7 @@ declare global {
     [key: string]: TransportData;
     action: TransportData<never, TransportPlayerAction>;
     cheat: TransportData<never, TransportCheatData>;
+    cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     gameData: TransportData<GameData, ObjectMap>;
@@ -128,7 +129,7 @@ declare global {
 
   interface CheatDataMap {
     GrantAdvance: {
-      advance: string;
+      advances: string[];
       player?: string;
     };
     GrantGold: {

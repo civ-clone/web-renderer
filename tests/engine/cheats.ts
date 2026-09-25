@@ -16,6 +16,7 @@ import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Writing from '@civ-clone/base-science-advance-writing/Writing';
 import { Gold } from '@civ-clone/civ1-city/Yields';
+import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
@@ -201,12 +202,73 @@ engine.on('turn:start', (turn: number): void => {
 
   trigger('cheat', {
     name: 'GrantAdvance',
-    value: { advance: 'Writing', player: rival.id() },
+    value: { advances: ['Writing'], player: rival.id() },
   });
 
   assert(
     rivalResearch.completed(Writing),
     "GrantAdvance with a rival's id should complete the advance for them"
+  );
+
+  // 6. `cheatAdvances` lists every advance a player hasn't discovered, not
+  //    just what they could research next, and GrantAdvance grants several
+  //    at once, prerequisites or not.
+  const advancesBatchesBefore = (sent.cheatAdvances ?? []).length;
+
+  trigger('cheatAdvances', rival.id());
+
+  const [rivalAvailable] = (sent.cheatAdvances ?? []).slice(
+      advancesBatchesBefore
+    ),
+    expectedAvailable = advanceRegistryInstance
+      .entries()
+      .filter((Advance) => !rivalResearch.completed(Advance))
+      .map((Advance) => Advance.name);
+
+  assert(
+    JSON.stringify(rivalAvailable) === JSON.stringify(expectedAvailable),
+    `cheatAdvances for the rival should be ${JSON.stringify(
+      expectedAvailable
+    )}, got ${JSON.stringify(rivalAvailable)}`
+  );
+  assert(
+    rivalAvailable.length >= 2,
+    `needs at least 2 available advances to grant several, got ${rivalAvailable.length}`
+  );
+
+  assert(
+    rivalAvailable.includes('Automobile'),
+    'cheatAdvances should list Automobile on the first turn'
+  );
+
+  const [first] = rivalAvailable as string[],
+    second = 'Automobile';
+
+  trigger('cheat', {
+    name: 'GrantAdvance',
+    value: { advances: [first, second], player: rival.id() },
+  });
+
+  assert(
+    rivalResearch
+      .complete()
+      .filter((advance) => [first, second].includes(advance.sourceClass().name))
+      .length === 2,
+    `GrantAdvance should complete both ${first} and ${second} for the rival`
+  );
+
+  trigger('cheatAdvances', null);
+
+  const localAvailable = (sent.cheatAdvances ?? []).pop(),
+    localResearch = playerResearchRegistryInstance.getByPlayer(localPlayer),
+    localExpected = advanceRegistryInstance
+      .entries()
+      .filter((Advance) => !localResearch.completed(Advance))
+      .map((Advance) => Advance.name);
+
+  assert(
+    JSON.stringify(localAvailable) === JSON.stringify(localExpected),
+    "cheatAdvances with no player should list the local player's advances"
   );
 
   // 5. An unknown `player` id changes nothing.
@@ -230,7 +292,7 @@ engine.on('turn:start', (turn: number): void => {
   );
 
   console.log(
-    'PASS cheats (cheatPlayers listing, GrantGold and GrantAdvance target rivals correctly)'
+    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly)'
   );
   process.exit(0);
 });

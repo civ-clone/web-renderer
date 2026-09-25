@@ -232,20 +232,19 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        const [Advance] = advanceRegistryInstance.filter(
-            (Advance) => Advance.name === value.advance
-          ),
-          playerResearch = playerResearchRegistryInstance.getByPlayer(target);
+        const playerResearch =
+            playerResearchRegistryInstance.getByPlayer(target),
+          Advances = advanceRegistryInstance.filter(
+            (Advance) =>
+              value.advances.includes(Advance.name) &&
+              !playerResearch.completed(Advance)
+          );
 
-        if (!Advance) {
+        if (Advances.length === 0) {
           return;
         }
 
-        if (playerResearch.completed(Advance)) {
-          return;
-        }
-
-        playerResearch.addAdvance(Advance);
+        Advances.forEach((Advance) => playerResearch.addAdvance(Advance));
 
         // Rivals' `PlayerResearch` is never sent to the page, so patching it
         // would leak hidden state and hand the frontend a ref it never
@@ -313,6 +312,28 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       this.sendPatchData();
+    });
+
+    this.#transport.receive('cheatAdvances', (playerId) => {
+      const target = this.resolveCheatPlayer(playerId ?? undefined);
+
+      if (!target) {
+        this.#transport.send('cheatAdvances', []);
+
+        return;
+      }
+
+      const playerResearch = playerResearchRegistryInstance.getByPlayer(target);
+
+      // Every advance not yet discovered, prerequisites or not, so a cheat can
+      // jump straight to (say) Automobile.
+      this.#transport.send(
+        'cheatAdvances',
+        advanceRegistryInstance
+          .entries()
+          .filter((Advance) => !playerResearch.completed(Advance))
+          .map((Advance) => Advance.name)
+      );
     });
 
     this.#transport.receive('cheatPlayers', () =>
