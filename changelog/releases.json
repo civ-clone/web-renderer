@@ -1,4 +1,12 @@
 [
+{"version":"0.1.0@78ea243","date":"2026-09-25T08:52:13.000Z","localChanges":["The Grant Advance cheat now lists every advance the chosen player hasn't discovered, so you can grant (say) Automobile on the first turn, and you can pick several at once."],"externalChanges":{}}
+,
+{"version":"0.1.0@fc9058b","date":"2026-09-25T08:41:06.000Z","localChanges":["Pressing Shift+5 then Shift+6 during a game now adds Reveal Map, Grant Advance and Grant Gold to the game menu until you reload, rather than revealing the map straight away."],"externalChanges":{}}
+,
+{"version":"0.1.0@5c2fa04","date":"2026-09-25T08:20:23.000Z","localChanges":["With ?cheat=1, Grant Advance and Grant Gold now let you pick which player receives them, including civilizations you haven't met (closes #65)."],"externalChanges":{}}
+,
+{"version":"0.1.0@3a7df06","date":"2026-09-25T07:19:05.000Z","localChanges":["release: lost units are reported, and computer players' aircraft fly home before running out of fuel"],"externalChanges":{}}
+,
 {"version":"0.1.0@fa6e59f","date":"2026-09-25T07:18:40.000Z","localChanges":["Computer players' Fighters and Bombers now head back to one of their cities before their fuel runs out, instead of crashing (closes #73)."],"externalChanges":{"simple-ai-client":{"status":"updated","log":["A Fighter or Bomber no longer takes a move or attack that would leave it unable to reach one of its player's cities before its fuel runs out. Carriers aren't counted, because an aircraft can't board one yet.","The client now also accepts the StrategyNoteRegistry and WorkedTileRegistry, as optional trailing constructor arguments."]}}}
 ,
 {"version":"0.1.0@658c4a0","date":"2026-09-25T06:48:06.000Z","localChanges":["When a Trireme is lost at sea, or a Bomber or Fighter runs out of fuel and crashes, you now get a message saying so, and the unit disappears from the map straight away (closes #72)."],"externalChanges":{}}
