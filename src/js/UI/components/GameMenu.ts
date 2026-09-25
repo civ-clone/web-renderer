@@ -92,7 +92,7 @@ export class GameMenu extends Element {
   #getTurn: () => number;
   #portal: Portal;
   #transport: Transport;
-  #debugMode: boolean;
+  #cheatsEnabled: boolean;
 
   constructor(
     element: HTMLElement,
@@ -104,7 +104,7 @@ export class GameMenu extends Element {
     getTurn: () => number,
     portal: Portal,
     transport: Transport,
-    debugMode: boolean = false
+    cheatsEnabled: boolean = false
   ) {
     super(element);
 
@@ -112,7 +112,13 @@ export class GameMenu extends Element {
     this.#getTurn = getTurn;
     this.#portal = portal;
     this.#transport = transport;
-    this.#debugMode = debugMode;
+    this.#cheatsEnabled = cheatsEnabled;
+  }
+
+  // For the rest of this session: the menu is rebuilt each time it opens, so
+  // the cheat items show from the next open. Nothing is saved.
+  enableCheats(): void {
+    this.#cheatsEnabled = true;
   }
 
   build(): void {
@@ -201,7 +207,7 @@ export class GameMenu extends Element {
                   new ScienceReport(this.#getPlayer());
                 },
               },
-              ...(this.#debugMode
+              ...(this.#cheatsEnabled
                 ? [
                     {
                       label: t('GameMenu.cheat.reveal-map'),

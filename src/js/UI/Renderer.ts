@@ -321,20 +321,24 @@ export class Renderer {
         })
       );
 
+      const showNotification = (data: string): void => {
+        notificationArea.innerHTML = data;
+
+        if (globalNotificationTimer) {
+          window.clearTimeout(globalNotificationTimer);
+        }
+
+        globalNotificationTimer = window.setTimeout((): void => {
+          globalNotificationTimer = undefined;
+
+          notificationArea.innerText = '';
+        }, 4000);
+      };
+
       transportDisposers.push(
-        transport.receive('notification', (data: string): void => {
-          notificationArea.innerHTML = data;
-
-          if (globalNotificationTimer) {
-            window.clearTimeout(globalNotificationTimer);
-          }
-
-          globalNotificationTimer = window.setTimeout((): void => {
-            globalNotificationTimer = undefined;
-
-            notificationArea.innerText = '';
-          }, 4000);
-        })
+        transport.receive('notification', (data: string): void =>
+          showNotification(data)
+        )
       );
 
       const interactionLabel = (interaction: Interactions) => {
@@ -1520,7 +1524,7 @@ export class Renderer {
                 F6: () => new ScienceReport(data.player),
               };
 
-            let lastKey = '';
+            let lastShiftedCode = '';
 
             on(document, 'keydown', (event) => {
               const key = mappedKeyFromEvent(event);
@@ -1706,13 +1710,20 @@ export class Renderer {
                 return;
               }
 
-              if (lastKey === '%' && key === '^') {
-                transport.send('cheat', { name: 'RevealMap', value: null });
+              // Shift+5 then Shift+6, as in Civ1: turns on the game menu's
+              // cheat items for this session. Matched on the physical keys,
+              // because what Shift+5 types depends on the keyboard layout.
+              const shiftedCode = event.shiftKey ? event.code : '';
+
+              if (lastShiftedCode === 'Digit5' && shiftedCode === 'Digit6') {
+                gameMenuItem.enableCheats();
+
+                showNotification(t('GameMenu.cheat.enabled'));
 
                 return;
               }
 
-              lastKey = key;
+              lastShiftedCode = shiftedCode;
             });
           } catch (e) {
             console.error(e);

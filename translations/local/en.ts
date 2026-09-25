@@ -138,6 +138,7 @@ i18next.addResources('en', 'default', {
   'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
   'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',
 
+  'GameMenu.cheat.enabled': 'Cheat mode enabled',
   'GameMenu.cheat.enter-advance-name': 'Enter the advance name',
   'GameMenu.cheat.enter-gold-amount': 'Enter the amount of gold',
   'GameMenu.cheat.grant-advance': 'Grant Advance',
