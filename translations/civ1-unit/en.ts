@@ -81,6 +81,7 @@ i18next.addResources(
     'Busy.Sleeping.name': 'Sleeping',
     'Busy.PlantingForest.name': 'Planting forest',
     'Busy.Pillaging.name': 'Pillaging',
+    'Busy.Stowed.name': 'Aboard',
 
     'Busy.BuildingIrrigation.icon': 'I',
     'Busy.BuildingMine.icon': 'M',
@@ -93,5 +94,6 @@ i18next.addResources(
     'Busy.Sleeping.icon': 'S',
     'Busy.PlantingForest.icon': 'PF',
     'Busy.Pillaging.icon': 'P',
+    'Busy.Stowed.icon': 'A',
   }
 );
