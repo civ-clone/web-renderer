@@ -13,6 +13,7 @@ import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import Busy from '@civ-clone/core-unit/Rules/Busy';
+import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
@@ -77,6 +78,7 @@ import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegis
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
 import {
+  changeSpecialist,
   changeWorkedTile,
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
@@ -1309,6 +1311,19 @@ export class DataTransferClient extends Client implements IClient {
       if (changeWorkedTile(city, playerTile.tile()) === 'none') {
         return false;
       }
+
+      this.#dataQueue.update(
+        city.id(),
+        city.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
+      );
+
+      return false;
+    }
+
+    if (playerAction instanceof ChangeSpecialist) {
+      const city = playerAction.value().city();
+
+      changeSpecialist(playerAction.value());
 
       this.#dataQueue.update(
         city.id(),
