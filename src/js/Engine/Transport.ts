@@ -103,6 +103,9 @@ declare global {
       id: string;
       chosen: string;
     };
+    ChangeSpecialist: {
+      id: string;
+    };
     ChangeWorkedTile: {
       id: string;
       tile: string;

@@ -68,6 +68,10 @@
         width: 16px;
         image-rendering: pixelated;
       }
+
+      &.specialist.clickable {
+        cursor: pointer;
+      }
     }
   }
 

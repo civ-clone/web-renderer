@@ -33,6 +33,11 @@ import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
+import City from '@civ-clone/core-city/City';
+import {
+  changeSpecialist,
+  changeWorkedTile,
+} from '@civ-clone/civ1-city/lib/assignWorkers';
 
 const TURNS = 12;
 
@@ -181,6 +186,63 @@ const report = (): void => {
   })();
 
   push('an aircraft can land on a Carrier', () => landed, 'ok');
+
+  // Specialists (#84). A citizen taken off a tile becomes an Entertainer, and
+  // clicking one changes its kind, which is its class, so the save has to
+  // carry the entities and resolve each class by name.
+  let specialistCity: City | undefined;
+
+  const specialised = ((): string => {
+    try {
+      specialistCity = defaultGame.cities
+        .entries()
+        .find((city) => city.tilesWorked().length >= 3);
+
+      if (!specialistCity) {
+        return 'no city working two tiles';
+      }
+
+      const centre = specialistCity.tile(),
+        [first, second] = specialistCity
+          .tilesWorked()
+          .entries()
+          .filter((tile) => tile !== centre),
+        changes = [first, second].map((tile) =>
+          changeWorkedTile(specialistCity as City, tile)
+        );
+
+      if (changes.some((change) => change !== 'removed')) {
+        return `taking tiles off gave ${changes.join(', ')}`;
+      }
+
+      const [entertainer, other] =
+        defaultGame.specialists.getByCity(specialistCity);
+
+      if (!entertainer || !other) {
+        return 'taking two tiles off did not make two specialists';
+      }
+
+      changeSpecialist(changeSpecialist(other));
+      changeSpecialist(entertainer);
+
+      return 'ok';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  })();
+
+  push('citizens can be made specialists', () => specialised, 'ok');
+  push(
+    'as a Tax collector and a Scientist',
+    () =>
+      specialistCity
+        ? defaultGame.specialists
+            .getByCity(specialistCity)
+            .map((specialist) => specialist.constructor.name)
+            .sort()
+        : null,
+    ['Scientist', 'TaxCollector']
+  );
 
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
@@ -358,6 +420,24 @@ const report = (): void => {
     'and the rebuilt rule still says the unit is going somewhere',
     () => restored?.busy()?.validate(restored as never) === false,
     true
+  );
+
+  // The specialists, after the round trip.
+  push(
+    'the specialists come back as the same kinds',
+    () => {
+      const restoredCity = target.cities
+        .entries()
+        .find((city) => city.id() === specialistCity?.id());
+
+      return restoredCity
+        ? target.specialists
+            .getByCity(restoredCity)
+            .map((specialist) => specialist.constructor.name)
+            .sort()
+        : null;
+    },
+    ['Scientist', 'TaxCollector']
   );
 
   // The aircraft on the Carrier, after the round trip.

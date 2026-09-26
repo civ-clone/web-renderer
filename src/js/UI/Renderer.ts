@@ -1134,6 +1134,7 @@ export class Renderer {
                 ignoredActionList = [
                   'ActiveUnit',
                   'ChangeProduction',
+                  'ChangeSpecialist',
                   'ChangeWorkedTile',
                   'CompleteProduction',
                   'InactiveUnit',
