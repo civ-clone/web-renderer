@@ -110,6 +110,7 @@ i18next.addResources('en', 'default', {
 
   'City.size': '{{size, number}}',
 
+  'City.Specialist.change': 'Change {{- specialist}}',
   'City.Specialist.Entertainer': 'Entertainer',
   'City.Specialist.Scientist': 'Scientist',
   'City.Specialist.TaxCollector': 'Tax collector',
