@@ -69,7 +69,7 @@
         image-rendering: pixelated;
       }
 
-      &.specialist {
+      &.specialist.clickable {
         cursor: pointer;
       }
     }

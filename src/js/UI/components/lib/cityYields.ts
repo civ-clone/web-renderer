@@ -123,7 +123,29 @@ export const renderPopulation = (
     citizen.classList.add('specialist');
 
     if (onSpecialistClick) {
+      // Only interactive where there is a handler: the Happiness report shows specialists but cannot change them.
+      citizen.classList.add('clickable');
+      citizen.setAttribute('role', 'button');
+      citizen.setAttribute('tabindex', '0');
+      citizen.setAttribute(
+        'aria-label',
+        t('City.Specialist.change', {
+          specialist: t(`City.Specialist.${specialist._}`),
+        })
+      );
+
       citizen.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        onSpecialistClick(specialist);
+      });
+
+      citizen.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') {
+          return;
+        }
+
+        event.preventDefault();
         event.stopPropagation();
 
         onSpecialistClick(specialist);
