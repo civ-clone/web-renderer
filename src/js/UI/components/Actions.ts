@@ -205,6 +205,7 @@ export class Actions extends Element implements IActions {
 
         case 'ActiveUnit':
         case 'ChangeProduction':
+        case 'ChangeSpecialist':
         case 'ChangeWorkedTile':
         case 'CompleteProduction':
         case 'InactiveUnit':

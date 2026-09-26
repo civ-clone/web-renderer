@@ -111,9 +111,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 921,
+        "total": 927,
         "byType": {
-          "Action": 41,
+          "Action": 42,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -136,7 +136,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 12,
+          "Destroyed": 13,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -145,7 +145,7 @@
           "FlightTime": 1,
           "FoodExhausted": 1,
           "FoodStorage": 2,
-          "Grow": 6,
+          "Grow": 7,
           "Interaction": 1,
           "Landed": 1,
           "Lost": 2,
@@ -177,7 +177,7 @@
           "Visibility": 1,
           "VisibilityChanged": 1,
           "Year": 5,
-          "Yield": 200,
+          "Yield": 203,
           "YieldModifier": 17
         }
       }
@@ -191,8 +191,8 @@
       },
       "dto": {
         "objects": 3250,
-        "bytes": 554633,
-        "hash": "ddf4d2a0"
+        "bytes": 554854,
+        "hash": "1bbbc3f4"
       },
       "registries": {
         "cities": 3,
@@ -336,9 +336,9 @@
       "randomCalls": 9050,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 921,
+        "total": 927,
         "byType": {
-          "Action": 41,
+          "Action": 42,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -361,7 +361,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 12,
+          "Destroyed": 13,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -370,7 +370,7 @@
           "FlightTime": 1,
           "FoodExhausted": 1,
           "FoodStorage": 2,
-          "Grow": 6,
+          "Grow": 7,
           "Interaction": 1,
           "Landed": 1,
           "Lost": 2,
@@ -402,7 +402,7 @@
           "Visibility": 1,
           "VisibilityChanged": 1,
           "Year": 5,
-          "Yield": 200,
+          "Yield": 203,
           "YieldModifier": 17
         }
       }
@@ -416,8 +416,8 @@
       },
       "dto": {
         "objects": 53156,
-        "bytes": 8911851,
-        "hash": "80fed8c4"
+        "bytes": 8913075,
+        "hash": "3fb87076"
       },
       "registries": {
         "cities": 6,
@@ -747,9 +747,9 @@
       "randomCalls": 10115,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 921,
+        "total": 927,
         "byType": {
-          "Action": 41,
+          "Action": 42,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -772,7 +772,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 12,
+          "Destroyed": 13,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -781,7 +781,7 @@
           "FlightTime": 1,
           "FoodExhausted": 1,
           "FoodStorage": 2,
-          "Grow": 6,
+          "Grow": 7,
           "Interaction": 1,
           "Landed": 1,
           "Lost": 2,
@@ -813,7 +813,7 @@
           "Visibility": 1,
           "VisibilityChanged": 1,
           "Year": 5,
-          "Yield": 200,
+          "Yield": 203,
           "YieldModifier": 17
         }
       }

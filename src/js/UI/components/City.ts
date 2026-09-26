@@ -357,7 +357,12 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
         '<div class="top-row"></div>',
         s(
           '<div class="yield-details"></div>',
-          renderPopulation(city),
+          renderPopulation(city, city.yields, (specialist) =>
+            transport.send('action', {
+              name: 'ChangeSpecialist',
+              id: specialist.id,
+            })
+          ),
           renderYields(city),
           renderSupportedUnits(city)
         ),

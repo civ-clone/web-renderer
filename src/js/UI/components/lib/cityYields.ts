@@ -4,6 +4,7 @@ import {
   CityBuild,
   CityGrowth,
   PlayerResearch,
+  Specialist,
   Yield,
 } from '../../types';
 import {
@@ -23,13 +24,45 @@ export const buildTurns = (city: City) =>
 export const growthTurns = (city: City) =>
   turnsLeft(city.growth, city.yields, 'Food');
 
+const specialistIcons: { [key: string]: string } = {
+  Entertainer: 'luxury',
+  TaxCollector: 'tax',
+  Scientist: 'science',
+};
+
+const renderCitizen = (path: string, title?: string): HTMLElement => {
+  const citizen = s('<span class="citizen"></span>');
+
+  if (title) {
+    citizen.setAttribute('title', title);
+  }
+
+  assetStore
+    .getScaled(path, 2)
+    .then((image) =>
+      citizen.append(s(`<img src="${image.toDataURL('image/png')}">`))
+    );
+
+  return citizen;
+};
+
+/**
+ * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. Specialists are
+ * drawn from the content citizens first, then from the happy ones, as the engine counts them.
+ */
 export const renderPopulation = (
   city: CityData,
-  yields: Yield[] = city.yields
+  yields: Yield[] = city.yields,
+  onSpecialistClick?: (specialist: Specialist) => void
 ): Node => {
   const growth = city.growth,
     mask = parseInt(city.name.replace(/[^a-z]/gi, ''), 36).toString(2),
     state = new Array(growth.size).fill(1),
+    specialists = [...(city.specialists ?? [])].sort(
+      (a, b) =>
+        Object.keys(specialistIcons).indexOf(a._) -
+        Object.keys(specialistIcons).indexOf(b._)
+    ),
     population = s('<div class="population"></div>');
 
   let [happiness, unhappiness] = reduceKnownYields(
@@ -62,23 +95,43 @@ export const renderPopulation = (
     }
   }
 
+  let toRemove = specialists.length;
+
+  [1, 2, 0].forEach((status) => {
+    while (toRemove > 0 && state.includes(status)) {
+      state.splice(state.lastIndexOf(status), 1);
+      toRemove--;
+    }
+  });
+
   state.forEach((status, index) =>
-    assetStore
-      .getScaled(
+    population.append(
+      renderCitizen(
         `./assets/city/people_${['unhappy', 'content', 'happy'][status]}_${
           ['f', 'm'][parseInt(mask[index % mask.length], 10)]
-        }.png`,
-        2
+        }.png`
       )
-      .then((image) =>
-        population.append(
-          s(
-            '<span class="citizen"></span>',
-            s(`<img src="${image.toDataURL('image/png')}">`)
-          )
-        )
-      )
+    )
   );
+
+  specialists.forEach((specialist) => {
+    const citizen = renderCitizen(
+      `./assets/city/people_${specialistIcons[specialist._] ?? 'luxury'}.png`,
+      t(`City.Specialist.${specialist._}`)
+    );
+
+    citizen.classList.add('specialist');
+
+    if (onSpecialistClick) {
+      citizen.addEventListener('click', (event) => {
+        event.stopPropagation();
+
+        onSpecialistClick(specialist);
+      });
+    }
+
+    population.append(citizen);
+  });
 
   return population;
 };

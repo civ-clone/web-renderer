@@ -22,12 +22,17 @@ export interface City extends EntityInstance<'City'> {
   improvements: EntityInstance[];
   originalPlayer: Player;
   player: Player;
+  specialists: Specialist[];
   tile: PlayerTile;
   tiles: PlayerTile[];
   tilesWorked: PlayerTile[];
   units: Unit[];
   yields: Yield[];
 }
+
+export type Specialist = EntityInstance<
+  'Entertainer' | 'TaxCollector' | 'Scientist'
+>;
 
 export interface CityGrowth extends EntityInstance<'CityGrowth'> {
   cost: Yield;
