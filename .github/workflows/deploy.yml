@@ -6,10 +6,12 @@
 # see docs/build-and-release.md — and commits the result the same way, naming
 # the build it came from.
 #
-# The release notes are not generated here. `ReleaseWindow` bundles
-# `changelog/releases.json`, so they are committed before pushing
-# (`npm run release:changelog`); a pipeline that wrote them would have to push
-# a commit back to `main` and trigger itself.
+# The release notes are generated here, for every commit after the newest
+# entry in `changelog/releases.json` up to and including the one being built,
+# because `ReleaseWindow` bundles that file. They are not pushed back to `main`,
+# which would trigger this workflow again. The next commit made on top of
+# `main` carries them instead (`npm run release:changelog`), and since an entry
+# is built only from git and the lockfile, it comes out the same.
 
 name: Deploy to civ.one
 
@@ -33,7 +35,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # Full history: the release notes walk every commit since the newest entry.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       # The same pnpm the lockfile was written with. Its settings — overrides,
       # `blockExoticSubdeps`, `minimumReleaseAge`, `allowBuilds` — live in
@@ -48,6 +53,14 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
+
+      # Before `npm test`, so `test:changelog` checks the entries being shipped.
+      # The token reads the engine repositories' commit logs for each entry's
+      # external changes.
+      - name: Generate the release notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node generate-changelog.mjs --release
 
       # Typechecks src/, then the conformance, hydration, isolation, transient,
       # inject and save suites. A deploy that skipped these would be the only

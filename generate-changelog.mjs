@@ -1,6 +1,7 @@
 // Release notes for the in-app release window (`ReleaseWindow`), which bundles
 // `changelog/releases.json` into `frontend.js` — so this runs *before* the
-// build. See `docs/build-and-release.md` for where it sits in a release.
+// build. The deploy workflow runs `--release` itself; the next commit on top of
+// `main` commits what it generated. See `docs/build-and-release.md`.
 //
 //   node generate-changelog.mjs <sha>     one entry, printed (what
 //                                         generate-changelog.sh redirects)

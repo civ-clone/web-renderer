@@ -52,8 +52,9 @@ From repository context:
 
 ## Releasing
 
-A release is: the engine packages it needs are published, the changelog is
-brought up to date and committed, and `main` is pushed. GitHub Actions builds
+A release is: the engine packages it needs are published, and `main` is
+pushed. The deploy build writes the release notes itself, so there is no
+release commit. GitHub Actions builds
 that commit and publishes it to
 [`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io),
 which GitHub Pages serves at **https://civ.one**.
@@ -103,11 +104,25 @@ Commit the lockfile. A release built against unpublished checkouts synced into
 
 ### 2. The changelog
 
+The deploy build generates it (see [step 3](#3-push-main)), for every commit up
+to and including the one it builds, so a push to `main` ships with its own
+notes. It isn't pushed back to `main`, because that would trigger another
+deploy. The **next commit made on top of `main`** carries it instead:
+
 ```sh
 npm run release:changelog
+git add changelog
 ```
 
-This finds the newest entry in `changelog/releases.json` and, for every commit
+Include the files in that commit, whatever it is. Usually it's the first
+commit of the next branch, taken from an up-to-date `main`. It's what the 2023
+commits did: each carried the entry for its parent. Don't make a separate
+commit for it, because its subject would become a release note of its own.
+
+If two branches both carry new entries, the second to merge conflicts in
+`releases.json`. Take `main`'s copy and run `npm run release:changelog` again.
+
+`npm run release:changelog` finds the newest entry in `changelog/releases.json` and, for every commit
 after it, writes `changelog/<sha>.json` and adds the entry to the top of
 `releases.json`, newest first. Existing entries are never rewritten — the last
 one, `0.0.0`, was written by hand and exists nowhere else. It needs a GitHub
@@ -132,9 +147,13 @@ What an entry contains:
   or bare `0.1.x` from before `civ publish`). `package.json` cannot be used for
   this: it holds `^0.1.0` ranges, which do not change when a patch is published.
 
-Commit the new `changelog/*.json` files and `releases.json` together. By the
-convention every release has followed, **a release commit carries entries up to
-its parent**; its own entry arrives with the next release.
+An entry is built only from git and the lockfile (plus the engine repositories'
+commit logs), so the one the build generated and the one committed later are
+the same bytes. `changelog/<sha>.json` files that already exist are reused, not
+regenerated.
+
+Before 2026-09-27 each release had its own `release:` commit carrying the
+entries up to its parent. Those commits stay in the history and in the notes.
 
 `generate-changelog.sh <sha>` still prints a single entry.
 `generate-changelog-combined.sh` is retired — it rebuilt `releases.json` from
@@ -146,9 +165,11 @@ scratch, which would delete the `0.0.0` entry.
 git push origin main
 ```
 
-That is the deploy. [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml)
-runs on every push to `main`: a frozen `pnpm install`, `npm test`, `npm run
-build`, then it mirrors `dist/` and `index.html` into
+That is the deploy, and merging a PR into `main` does the same.
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) runs on every
+push to `main`: a full-history checkout, a frozen `pnpm install`, `node
+generate-changelog.mjs --release` (with the workflow's `GITHUB_TOKEN` for the
+engine commit logs), `npm test`, `npm run build`, then it mirrors `dist/` and `index.html` into
 [`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io)
 and commits "Updates from build `<sha>` of web-renderer." GitHub Pages serves
 that repository's `master` at the root, with `CNAME` pointing at `civ.one`.
