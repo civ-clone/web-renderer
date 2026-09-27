@@ -63,7 +63,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-unit/tar.gz/24b01484981f1db5c55541704bcf7663f45abdb7
       '@civ-clone/civ1-wonder':
         specifier: github:civ-clone/civ1-wonder
-        version: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/9dd76ce8d580731c8329be43cd79b38485ed9ca6
+        version: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/e6550c1dfc06ca484a4ce15c702a49b57227a476
       '@civ-clone/civ1-world':
         specifier: github:civ-clone/civ1-world
         version: https://codeload.github.com/civ-clone/civ1-world/tar.gz/1f061206a3716d4d0c1eb7b698cceced8b2dbd2b
@@ -1059,8 +1059,8 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-BZZBcmooEZwKZXnATwk/Lq/8goqaHkYcEEAIBI0p0J6fNne6OPgpUBxiePYOXO7rl476Vf5fK4Os7V7LWLyuHg==, tarball: https://codeload.github.com/civ-clone/civ1-unit/tar.gz/24b01484981f1db5c55541704bcf7663f45abdb7}
     version: 0.1.8
 
-  '@civ-clone/civ1-wonder@https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/9dd76ce8d580731c8329be43cd79b38485ed9ca6':
-    resolution: {gitHosted: true, integrity: sha512-qFZZEigiKtya2M2sS2eXI1amE9wpkgS1lwcYHmNlnyggHIzRxtzykyz8oti7ofxYnhpumLrgS85sOn0zmKrSSA==, tarball: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/9dd76ce8d580731c8329be43cd79b38485ed9ca6}
+  '@civ-clone/civ1-wonder@https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/e6550c1dfc06ca484a4ce15c702a49b57227a476':
+    resolution: {gitHosted: true, integrity: sha512-Y4GssB6S/8oHCwIj670O2KI4n9THaQw2Y8uhTBzrywQwZwNuUTPWp3KH7qwJItnIiMeTsdza/sUPwTGDGuIV5g==, tarball: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/e6550c1dfc06ca484a4ce15c702a49b57227a476}
     version: 0.1.5
 
   '@civ-clone/civ1-world@https://codeload.github.com/civ-clone/civ1-world/tar.gz/1f061206a3716d4d0c1eb7b698cceced8b2dbd2b':
@@ -3417,7 +3417,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-wonder@https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/9dd76ce8d580731c8329be43cd79b38485ed9ca6':
+  '@civ-clone/civ1-wonder@https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/e6550c1dfc06ca484a4ce15c702a49b57227a476':
     dependencies:
       '@civ-clone/base-city-yield-research': 0.1.1
       '@civ-clone/base-wonder-apolloprogram': 0.1.1
