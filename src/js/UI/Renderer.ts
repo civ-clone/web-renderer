@@ -1125,6 +1125,7 @@ export class Renderer {
               );
 
               const primaryActionList = [
+                  'ChooseGovernment',
                   'ChooseResearch',
                   'CityBuild',
                   'CivilDisorder',
@@ -1147,6 +1148,7 @@ export class Renderer {
                   [key: string]: number;
                 } = {
                   EndTurn: 100,
+                  ChooseGovernment: 90,
                   ChooseResearch: 80,
                   CityBuild: 60,
                   CivilDisorder: 10,

@@ -30,6 +30,10 @@ i18next.addResources('en', 'default', {
 
   'Actions.AdjustTradeRates.title': 'Adjust trade rates',
 
+  'Actions.ChooseGovernment.body':
+    'Your revolution is over. Which government would you like?',
+  'Actions.ChooseGovernment.title': 'Choose government',
+
   'Actions.ChooseResearch.body':
     'Which advance would you like to research next?',
   'Actions.ChooseResearch.choice':
@@ -46,8 +50,10 @@ i18next.addResources('en', 'default', {
 
   'Actions.EndTurn.title': 'End turn',
 
-  'Actions.Revolution.body': 'Which government would you like to convert to?',
-  'Actions.Revolution.title': 'Choose government',
+  'Actions.Revolution.body':
+    'Overthrow your government? Your civilization will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
+  'Actions.Revolution.confirm': 'Revolution!',
+  'Actions.Revolution.title': 'Revolution',
 
   'Actions.ShowCity.label':
     '$t(Generic.view-city, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
@@ -219,6 +225,11 @@ i18next.addResources('en', 'default', {
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
 
+  'PlayerDetails.Government.body_anarchy': `{{government}} ($t(Progress.turns-left, { "count": {{turns}} }))`,
+  'PlayerDetails.Government.body_choosing':
+    '{{government}} (choose a new government)',
+  'PlayerDetails.Government.body_settled': '{{government}}',
+  'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
   'PlayerDetails.Researching.body_notresearching':
     'Nothing ($t(Progress.per-turn, { "count": {{perTurn}} }))',
@@ -231,6 +242,8 @@ i18next.addResources('en', 'default', {
     'Progress $t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) ($t(Progress.turns, {"count": {{turns}} }))',
   'Progress.data': '{{progress, number}} / {{total, number}}',
   'Progress.per-turn': '{{count, number}} / turn',
+  'Progress.turns-left_one': '{{count, number}} turn left',
+  'Progress.turns-left_other': '{{count, number}} turns left',
   'Progress.turns_one': '{{count, number}} turn',
   'Progress.turns_other': '{{count, number}} turns',
   'Progress.turns_zero': 'Never',

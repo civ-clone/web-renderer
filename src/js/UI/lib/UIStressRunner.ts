@@ -182,7 +182,7 @@ export class UIStressRunner {
     return true;
   }
 
-  private chooseRevolution(action: PlayerAction, turn: number): boolean {
+  private chooseGovernment(action: PlayerAction, turn: number): boolean {
     const playerGovernment = action.value as GameData['player']['government'];
 
     if (!playerGovernment.available.length) {
@@ -193,9 +193,18 @@ export class UIStressRunner {
       playerGovernment.available[turn % playerGovernment.available.length];
 
     this.#transport.send('action', {
-      name: 'Revolution',
+      name: 'ChooseGovernment',
       id: playerGovernment.id,
       chosen: government._,
+    });
+
+    return true;
+  }
+
+  private startRevolution(action: PlayerAction): boolean {
+    this.#transport.send('action', {
+      name: 'Revolution',
+      id: (action.value as GameData['player']['government']).id,
     });
 
     return true;
@@ -298,11 +307,22 @@ export class UIStressRunner {
       return;
     }
 
+    const chooseGovernmentAction = player.actions.find(
+      (action) => action._ === 'ChooseGovernment'
+    );
+
+    if (
+      chooseGovernmentAction &&
+      this.chooseGovernment(chooseGovernmentAction, turn)
+    ) {
+      return;
+    }
+
     const revolutionAction = player.actions.find(
       (action) => action._ === 'Revolution'
     );
 
-    if (revolutionAction && this.chooseRevolution(revolutionAction, turn)) {
+    if (revolutionAction && this.startRevolution(revolutionAction)) {
       return;
     }
 

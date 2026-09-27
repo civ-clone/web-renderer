@@ -111,6 +111,8 @@ export interface PlayerAction<
 export type Revolution = PlayerAction<PlayerGovernment>;
 
 export interface PlayerGovernment extends EntityInstance {
+  // Turns until the new government can be chosen, or `null` with no revolution under way.
+  anarchyTurns: number | null;
   available: Entity[];
   current: EntityInstance;
 }

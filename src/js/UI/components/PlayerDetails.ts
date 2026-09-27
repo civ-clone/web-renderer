@@ -15,7 +15,8 @@ export class PlayerDetails extends Element {
   build(): void {
     this.empty();
 
-    const { civilization, treasuries, research, cities } = this.#player,
+    const { civilization, government, treasuries, research, cities } =
+        this.#player,
       [goldTreasury] = treasuries.filter(
         (treasury) => treasury.yield._ === 'Gold'
       );
@@ -49,6 +50,25 @@ export class PlayerDetails extends Element {
             ns: 'civilization',
           }),
         })}</h3>`
+      ),
+      s(
+        `<p><strong>${t('PlayerDetails.Government.title')}</strong><br/>${t(
+          'PlayerDetails.Government.body',
+          {
+            government: t(`${government.current?._}.name`, {
+              defaultValue: government.current?._,
+              ns: 'government',
+            }),
+            turns: government.anarchyTurns,
+            context:
+              government.anarchyTurns === null ||
+              government.anarchyTurns === undefined
+                ? 'settled'
+                : government.anarchyTurns > 0
+                ? 'anarchy'
+                : 'choosing',
+          }
+        )}</p>`
       ),
       s(
         `<p><strong>${t('PlayerDetails.Researching.title')}</strong><br/>${t(
