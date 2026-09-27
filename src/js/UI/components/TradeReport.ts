@@ -13,6 +13,7 @@ import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
 import { h } from '../lib/html';
+import isAnarchy from './lib/government';
 import { knownIcons } from '../lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -21,6 +22,7 @@ import { yieldData } from './lib/cityYields';
 export class TradeReport extends Window {
   #cities: CityData[];
   #dataObserver: DataObserver;
+  #player: Player;
   #portal: Portal;
   #transport: Transport;
 
@@ -30,6 +32,7 @@ export class TradeReport extends Window {
     });
 
     this.#cities = player.cities;
+    this.#player = player;
     this.#dataObserver = new DataObserver(
       [
         player.id,
@@ -43,6 +46,7 @@ export class TradeReport extends Window {
         const player = (data as GameData).player;
 
         this.#cities = player.cities;
+        this.#player = player;
 
         this.#dataObserver.setIds([
           player.id,
@@ -162,6 +166,9 @@ export class TradeReport extends Window {
     super.update(
       s(
         '<div></div>',
+        ...(isAnarchy(this.#player)
+          ? [s(`<p class="anarchy">${t('TradeReport.anarchy')}</p>`)]
+          : []),
         s(
           `<div class="two-column-wrapper"></div>`,
           s('<div></div>', cityList),
