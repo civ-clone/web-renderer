@@ -14,4 +14,4 @@ So write each message for a player when you commit, not at release time. Once co
 
 ## Releasing
 
-`docs/build-and-release.md` has the full sequence. Pushing to `main` deploys to civ.one.
+`docs/build-and-release.md` has the full sequence. Pushing to `main` deploys to civ.one, and the deploy build generates the release notes itself. There is no release commit. The next commit made on top of `main` carries the generated `changelog/` files: run `npm run release:changelog` on an up-to-date `main` and include them in that commit, usually the first commit of the next branch.
