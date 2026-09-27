@@ -40,6 +40,7 @@ import { cityName } from './lib/city';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
+import isAnarchy from './lib/government';
 import { t } from 'i18next';
 
 const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
@@ -81,6 +82,9 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
           )
         )
       ),
+      ...(isAnarchy(city.player)
+        ? [s(`<p class="anarchy">${t('City.anarchy')}</p>`)]
+        : []),
       // Other, unknown yields
       ...Object.entries(
         city.yields

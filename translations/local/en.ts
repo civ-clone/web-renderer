@@ -114,6 +114,7 @@ i18next.addResources('en', 'default', {
 
   'City.Growth.title': 'Growth',
 
+  'City.anarchy': 'No taxes or research are collected during Anarchy.',
   'City.size': '{{size, number}}',
 
   'City.Specialist.change': 'Change {{- specialist}}',
@@ -231,11 +232,15 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Government.body_settled': '{{government}}',
   'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
+  'PlayerDetails.Researching.body_researching-anarchy': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) (no research during Anarchy)`,
+  'PlayerDetails.Researching.body_notresearching-anarchy':
+    'Nothing (no research during Anarchy)',
   'PlayerDetails.Researching.body_notresearching':
     'Nothing ($t(Progress.per-turn, { "count": {{perTurn}} }))',
   'PlayerDetails.Researching.body_researching': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) ($t(Progress.per-turn, { "count": {{perTurn}} }) - $t(Progress.turns, { "count": {{turns}} }))`,
   'PlayerDetails.Researching.title': 'Researching',
   'PlayerDetails.Treasury.body': `{{value}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
+  'PlayerDetails.Treasury.body_anarchy': '{{value}} (no taxes during Anarchy)',
   'PlayerDetails.Treasury.title': 'Treasury',
 
   'Progress.body':
@@ -260,6 +265,8 @@ i18next.addResources('en', 'default', {
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
 
+  'TradeReport.anarchy':
+    'No taxes are collected and no upkeep is paid during Anarchy.',
   'TradeReport.title': 'Trade report',
   'TradeReport.ImprovementList.cost': '{{- icon}} {{total, number}}',
   'TradeReport.ImprovementList.item': '{{count, number}} &times; {{name}}',

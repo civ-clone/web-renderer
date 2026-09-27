@@ -1,5 +1,6 @@
 import { City, Player } from '../types';
 import { Element, s } from '@dom111/element';
+import isAnarchy from './lib/government';
 import { reduceKnownYields } from '../lib/yieldMap';
 import { t } from 'i18next';
 
@@ -34,6 +35,7 @@ export class PlayerDetails extends Element {
         },
         [0, 0]
       ),
+      anarchy = isAnarchy(this.#player),
       researchTurns = Math.ceil(
         (research.cost.value - research.progress.value) / totalResearch
       );
@@ -82,7 +84,9 @@ export class PlayerDetails extends Element {
               ns: 'science',
             }),
             turns: Number.isFinite(researchTurns) ? researchTurns : 0,
-            context: research.researching ? 'researching' : 'notresearching',
+            context: `${research.researching ? '' : 'not'}researching${
+              anarchy ? '-anarchy' : ''
+            }`,
           }
         )}</p>`
       ),
@@ -92,6 +96,7 @@ export class PlayerDetails extends Element {
           {
             value: goldTreasury.value,
             perTurn: totalGold,
+            context: anarchy ? 'anarchy' : undefined,
           }
         )}</p>`
       )
