@@ -84,6 +84,8 @@ import {
   chooseGovernment,
   revolution,
 } from '@civ-clone/civ1-government/lib/revolution';
+import { Anarchy } from '@civ-clone/civ1-government/Governments';
+import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import {
   changeSpecialist,
   changeWorkedTile,
@@ -916,6 +918,30 @@ export class DataTransferClient extends Client implements IClient {
         );
       }
     });
+
+    engineInstance.on(
+      'player:government:collapsed',
+      (player: Player, city: City) => {
+        if (player !== this.player()) {
+          return;
+        }
+
+        // With the Pyramids there's no Anarchy, and the new government is
+        // chosen straight away.
+        this.sendNotification(
+          new Notification(
+            playerGovernmentRegistryInstance.getByPlayer(player).is(Anarchy)
+              ? 'Player.government-collapsed'
+              : 'Player.government-collapsed.pyramids',
+            {
+              city,
+            }
+          )
+        );
+
+        this.governmentChanged();
+      }
+    );
 
     engineInstance.on('city:leader-celebration', (city: City) => {
       if (city.player() === this.player()) {

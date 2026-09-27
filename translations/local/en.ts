@@ -375,6 +375,10 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.unmet-by.body':
     '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
   'Player.defeated.unmet-by.title': 'Defeated!',
+  'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
+  'Player.government-collapsed.title': 'Government falls!',
+  'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,
+  'Player.government-collapsed.pyramids.title': 'Government falls!',
   'Player.research-complete.body':
     'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" })!',
   'Player.research-complete.title': 'Advance discovered!',
