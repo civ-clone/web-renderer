@@ -99,6 +99,10 @@ declare global {
       id: string;
       chosen: string;
     };
+    ChooseGovernment: {
+      id: string;
+      chosen: string;
+    };
     ChooseResearch: {
       id: string;
       chosen: string;
@@ -130,7 +134,6 @@ declare global {
     };
     Revolution: {
       id: string;
-      chosen: string;
     };
   }
 

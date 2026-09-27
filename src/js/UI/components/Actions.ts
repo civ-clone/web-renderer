@@ -1,6 +1,7 @@
 import { Element, s } from '@dom111/element';
 import Action from './Actions/Action';
 import AdjustTradeRates from './Actions/AdjustTradeRates';
+import ChooseGovernment from './Actions/ChooseGovernment';
 import ChooseResearch from './Actions/ChooseResearch';
 import CityBuild from './Actions/CityBuild';
 import CivilDisorder from './Actions/CivilDisorder';
@@ -161,6 +162,11 @@ export class Actions extends Element implements IActions {
       switch (playerAction._) {
         case 'AdjustTradeRates':
           action = new AdjustTradeRates(playerAction, this.#transport);
+
+          break;
+
+        case 'ChooseGovernment':
+          action = new ChooseGovernment(playerAction, this.#transport);
 
           break;
 

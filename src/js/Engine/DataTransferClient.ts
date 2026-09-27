@@ -47,7 +47,10 @@ import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Retryable from './Retryable';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
-import { Revolution } from '@civ-clone/civ1-government/PlayerActions';
+import {
+  ChooseGovernment,
+  Revolution,
+} from '@civ-clone/civ1-government/PlayerActions';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
@@ -78,10 +81,15 @@ import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegis
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
 import {
+  chooseGovernment,
+  revolution,
+} from '@civ-clone/civ1-government/lib/revolution';
+import {
   changeSpecialist,
   changeWorkedTile,
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
+import anarchyTurns from './AdditionalData/anarchyTurns';
 import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
@@ -110,7 +118,7 @@ const referenceObject = (object: any) =>
         : referenceObject(object),
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
-additionalDataRegistryInstance.register(researchCosts());
+additionalDataRegistryInstance.register(anarchyTurns(), researchCosts());
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
@@ -1229,8 +1237,15 @@ export class DataTransferClient extends Client implements IClient {
       return false;
     }
 
-    // TODO: DelayedPlayerAction -> Revolution --> SelectGovernment
     if (playerAction instanceof Revolution) {
+      revolution(playerAction.value() as PlayerGovernment);
+
+      this.governmentChanged();
+
+      return false;
+    }
+
+    if (playerAction instanceof ChooseGovernment) {
       const playerGovernment = playerAction.value() as PlayerGovernment,
         { chosen } = action,
         [GovernmentType] = playerGovernment
@@ -1243,27 +1258,9 @@ export class DataTransferClient extends Client implements IClient {
         return false;
       }
 
-      playerGovernment.set(new GovernmentType());
+      chooseGovernment(playerGovernment, GovernmentType);
 
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(
-        this.player()
-      );
-
-      this.#dataQueue.update(
-        playerWorld.id(),
-        playerWorld.toPlainObject(this.#dataFilter(filterToReference(Player)))
-      );
-
-      cityRegistryInstance
-        .getByPlayer(this.player())
-        .forEach((city) =>
-          this.#dataQueue.update(
-            city.id(),
-            city.toPlainObject(
-              this.#dataFilter(filterToReference(Player, Tile, Unit))
-            )
-          )
-        );
+      this.governmentChanged();
 
       return false;
     }
@@ -1346,6 +1343,27 @@ export class DataTransferClient extends Client implements IClient {
   // Resolves a cheat's target: no id means the local player, an id matching a
   // registered player means that player (rival or not), and any other id
   // means nothing found, which the caller treats as "do nothing".
+  /** A government's yields reach every tile and city, so a change of government resends them all. */
+  private governmentChanged(): void {
+    const playerWorld = playerWorldRegistryInstance.getByPlayer(this.player());
+
+    this.#dataQueue.update(
+      playerWorld.id(),
+      playerWorld.toPlainObject(this.#dataFilter(filterToReference(Player)))
+    );
+
+    cityRegistryInstance
+      .getByPlayer(this.player())
+      .forEach((city) =>
+        this.#dataQueue.update(
+          city.id(),
+          city.toPlainObject(
+            this.#dataFilter(filterToReference(Player, Tile, Unit))
+          )
+        )
+      );
+  }
+
   private resolveCheatPlayer(id?: string): Player | null {
     if (!id) {
       return this.player();
