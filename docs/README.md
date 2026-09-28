@@ -24,6 +24,8 @@ it builds on.
 11. [`ui-stress-harness.md`](./ui-stress-harness.md)
 12. [`performance-review-2026-06.md`](./performance-review-2026-06.md)
 13. [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md)
+14. [`asound-cvl-format.md`](./asound-cvl-format.md): the Civ1 AdLib sound driver and its music bytecode
+15. [`asound-cvl-reverse-engineering.md`](./asound-cvl-reverse-engineering.md): how it was decoded, verification, tools (issue #126)
 
 ## Scope and intent
 
