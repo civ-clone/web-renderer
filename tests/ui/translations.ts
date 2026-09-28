@@ -146,6 +146,17 @@ const expect = (description: string, actual: string, expected: string) => {
         { city: asansol, wonder: colossus },
         'Colossus in Asansol is now obsolete.',
       ],
+      // #111
+      [
+        'Player.government-collapsed',
+        { city: asansol },
+        'Civil disorder in Asansol has brought down your Democracy! Your civilization falls into Anarchy.',
+      ],
+      [
+        'Player.government-collapsed.pyramids',
+        { city: asansol },
+        'Civil disorder in Asansol has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.',
+      ],
     ];
 
   notifications.forEach(([key, data, expected]) => {
