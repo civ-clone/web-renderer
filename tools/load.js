@@ -68,6 +68,21 @@ checks.push([
   true,
 ]);
 
+checks.push([
+  'and has the same city names left to hand out',
+  loaded.namePoolAtLoad === played.namePoolAtSave ||
+    `${
+      loaded.namePoolAtLoad.split(',').length -
+      played.namePoolAtSave.split(',').length
+    } more names in the pool`,
+  true,
+]);
+checks.push([
+  'and no two cities share a name as it plays on',
+  loaded.repeatedCityNamesAtThen || 'none',
+  'none',
+]);
+
 let failed = 0;
 
 checks.forEach(([label, actual, expected]) => {

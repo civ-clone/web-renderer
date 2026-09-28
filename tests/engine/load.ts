@@ -68,6 +68,26 @@ const production = (): number =>
       0
     );
 
+// The city names still to be handed out. A fresh boot fills the pool again,
+// so a loaded game that has not taken the used names back out would name its
+// next city after one already standing, the capital's first (#120).
+const namePool = (): string =>
+  defaultGame.cityNames
+    .entries()
+    .map(
+      (cityName): string =>
+        `${cityName.civilization()?.name ?? '-'}:${cityName.name()}`
+    )
+    .join(',');
+
+// Every city's name, with any repeats. Empty is the answer wanted.
+const repeatedCityNames = (): string =>
+  defaultGame.cities
+    .entries()
+    .map((city): string => city.name())
+    .filter((name, index, names): boolean => names.indexOf(name) !== index)
+    .join(',');
+
 // The same loop-stopper the other suites use: once stopped, the turn events
 // that would drive the game on are dropped rather than the process being
 // killed mid-turn.
@@ -110,11 +130,13 @@ engine.on('turn:start', (turn: number): void => {
 
     report.atSave = digest();
     report.productionAtSave = String(production());
+    report.namePoolAtSave = namePool();
   }
 
   if (turn >= then) {
     report.atThen = digest();
     report.productionAtThen = String(production());
+    report.repeatedCityNamesAtThen = repeatedCityNames();
 
     finish();
   }
@@ -136,11 +158,13 @@ if (mode === 'load') {
       // resuming hands the turn straight back to a client, which starts moving.
       report.atLoad = digest();
       report.productionAtLoad = String(production());
+      report.namePoolAtLoad = namePool();
 
       resumeGame();
 
       if (turnInstance.value() >= then) {
         report.atThen = report.atLoad;
+        report.repeatedCityNamesAtThen = repeatedCityNames();
 
         finish();
       }
