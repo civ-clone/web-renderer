@@ -83,6 +83,10 @@ declare global {
       }
     >;
     start: TransportData<null, null>;
+    // The worker has accepted `EndTurn`: nothing the UI sends is listened for until `turnStarted`.
+    turnEnded: TransportData<null, never>;
+    // The new turn is in the UI's data and the worker is listening for actions again.
+    turnStarted: TransportData<null, never>;
   }
 
   interface TransportPlayerActionMap {

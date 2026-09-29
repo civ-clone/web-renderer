@@ -1,0 +1,1 @@
+{"version":"0.1.0@6ae3760","date":"2026-09-29T13:56:17.000Z","localChanges":["Units sent with GoTo, and the computer players' units, now choose the route that gets them there soonest, following roads and railroads even when that's a longer way round. They no longer walk around hills or forest that would take them no longer to cross (#40)."],"externalChanges":{}}
