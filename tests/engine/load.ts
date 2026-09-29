@@ -80,11 +80,17 @@ const namePool = (): string =>
     )
     .join(',');
 
-// Every city's name, with any repeats. Empty is the answer wanted.
+// Any name handed out twice in this game, counting the names restored from the
+// save and those of cities since destroyed. Empty is the answer wanted. Keyed
+// by civilization as well, because two civilizations can each have an Athens,
+// and founding both is not a repeat.
 const repeatedCityNames = (): string =>
-  defaultGame.cities
-    .entries()
-    .map((city): string => city.name())
+  defaultGame.cityNames
+    .taken()
+    .map(
+      (cityName): string =>
+        `${cityName.civilization()?.name ?? '-'}:${cityName.name()}`
+    )
     .filter((name, index, names): boolean => names.indexOf(name) !== index)
     .join(',');
 
