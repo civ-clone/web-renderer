@@ -315,7 +315,8 @@ const report = (): void => {
   );
 
   // A 150-turn save must be under 1MB gzipped. This is turn 12 on the
-  // conformance world, so it is an early read rather than the answer.
+  // conformance world, so it is an early read rather than the answer: the
+  // real check is by hand, on a late-game save (03-save-format.md, Budget).
   push(`under 1MB gzipped at turn ${TURNS}`, () => gzipped < 1024 * 1024, true);
 
   const loadTarget = (): Game => {
