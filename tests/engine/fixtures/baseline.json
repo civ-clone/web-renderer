@@ -14,8 +14,8 @@
   "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them.",
   "checksums": {
     "1": "5fa259b4",
-    "10": "fb4d6906",
-    "50": "9c5365f8"
+    "10": "1774a441",
+    "50": "ec4923ba"
   },
   "snapshots": {
     "1": {
@@ -188,12 +188,12 @@
       "state": {
         "entities": 2474,
         "fields": 9802,
-        "hash": "698d3b7d"
+        "hash": "ec6d9fcc"
       },
       "dto": {
-        "objects": 3760,
-        "bytes": 645203,
-        "hash": "0283ae7f"
+        "objects": 3948,
+        "bytes": 675044,
+        "hash": "ea6901d5"
       },
       "registries": {
         "cities": 3,
@@ -256,8 +256,8 @@
           "City",
           "Player-3",
           "uMgungundlovu",
-          "0",
-          "15"
+          "1",
+          "17"
         ]
       ],
       "units": [
@@ -274,8 +274,8 @@
           "Horseman-2",
           "Horseman",
           "Player-3",
-          "1",
-          "15",
+          "2",
+          "18",
           "false",
           "false"
         ],
@@ -303,15 +303,15 @@
           "Player-2",
           "45",
           "21",
-          "false",
+          "true",
           "false"
         ],
         [
           "Settlers-3",
           "Settlers",
           "Player-3",
-          "0",
-          "15",
+          "1",
+          "17",
           "false",
           "true"
         ],
@@ -343,7 +343,7 @@
           "false"
         ]
       ],
-      "randomCalls": 8673,
+      "randomCalls": 8664,
       "mathRandomCalls": 0,
       "rules": {
         "total": 933,
@@ -421,26 +421,26 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2494,
-        "fields": 9998,
-        "hash": "e022d317"
+        "entities": 2490,
+        "fields": 9954,
+        "hash": "14ceb680"
       },
       "dto": {
-        "objects": 56368,
-        "bytes": 9439871,
-        "hash": "08ed9604"
+        "objects": 52946,
+        "bytes": 8879874,
+        "hash": "5ff73b88"
       },
       "registries": {
         "cities": 6,
         "cityImprovements": 4,
-        "goodyHuts": 22,
+        "goodyHuts": 23,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
         "tileImprovements": 12,
-        "units": 29
+        "units": 24
       },
       "world": {
         "width": 60,
@@ -491,8 +491,8 @@
           "City",
           "Player-3",
           "uMgungundlovu",
-          "0",
-          "15"
+          "1",
+          "17"
         ],
         [
           "City-4",
@@ -505,18 +505,18 @@
         [
           "City-5",
           "City",
-          "Player-1",
-          "Lagash",
-          "48",
-          "10"
+          "Player-4",
+          "Al-Hamidiyya",
+          "5",
+          "37"
         ],
         [
           "City-6",
           "City",
-          "Player-3",
-          "Mthatha",
-          "5",
-          "29"
+          "Player-1",
+          "Larsa",
+          "48",
+          "10"
         ]
       ],
       "units": [
@@ -524,17 +524,17 @@
           "Chariot-1",
           "Chariot",
           "Player-3",
-          "5",
-          "29",
+          "1",
+          "17",
           "false",
           "false"
         ],
         [
           "Chariot-2",
           "Chariot",
-          "Player-4",
-          "2",
-          "7",
+          "Player-3",
+          "3",
+          "20",
           "false",
           "false"
         ],
@@ -542,26 +542,8 @@
           "Chariot-3",
           "Chariot",
           "Player-3",
-          "8",
-          "18",
-          "false",
-          "false"
-        ],
-        [
-          "Chariot-4",
-          "Chariot",
-          "Player-4",
-          "16",
-          "37",
-          "false",
-          "false"
-        ],
-        [
-          "Chariot-5",
-          "Chariot",
-          "Player-3",
-          "2",
-          "19",
+          "58",
+          "13",
           "false",
           "false"
         ],
@@ -578,8 +560,8 @@
           "Horseman-2",
           "Horseman",
           "Player-3",
-          "0",
-          "15",
+          "4",
+          "22",
           "false",
           "false"
         ],
@@ -596,44 +578,26 @@
           "Horseman-4",
           "Horseman",
           "Player-4",
-          "11",
-          "6",
+          "26",
+          "28",
           "false",
           "false"
         ],
         [
           "Horseman-5",
           "Horseman",
-          "Player-1",
-          "42",
-          "25",
+          "Player-4",
+          "5",
+          "37",
           "false",
-          "true"
+          "false"
         ],
         [
           "Horseman-6",
           "Horseman",
-          "Player-1",
-          "49",
-          "4",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-7",
-          "Horseman",
           "Player-4",
-          "58",
-          "31",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-8",
-          "Horseman",
-          "Player-4",
-          "17",
-          "37",
+          "11",
+          "8",
           "false",
           "false"
         ],
@@ -659,8 +623,8 @@
           "Settlers-3",
           "Settlers",
           "Player-3",
-          "0",
-          "15",
+          "1",
+          "17",
           "false",
           "true"
         ],
@@ -674,7 +638,25 @@
           "true"
         ],
         [
+          "Settlers-5",
+          "Settlers",
+          "Player-4",
+          "11",
+          "34",
+          "false",
+          "false"
+        ],
+        [
           "Spearman-1",
+          "Spearman",
+          "Player-1",
+          "41",
+          "25",
+          "false",
+          "false"
+        ],
+        [
+          "Spearman-2",
           "Spearman",
           "Player-2",
           "43",
@@ -683,20 +665,11 @@
           "false"
         ],
         [
-          "Spearman-2",
-          "Spearman",
-          "Player-1",
-          "44",
-          "9",
-          "false",
-          "false"
-        ],
-        [
           "Spearman-3",
           "Spearman",
-          "Player-2",
-          "42",
-          "32",
+          "Player-1",
+          "40",
+          "20",
           "false",
           "false"
         ],
@@ -705,34 +678,16 @@
           "Spearman",
           "Player-2",
           "42",
-          "24",
+          "26",
           "false",
           "true"
         ],
         [
-          "Spearman-5",
-          "Spearman",
+          "Swordman-1",
+          "Swordman",
           "Player-1",
-          "39",
-          "21",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-6",
-          "Spearman",
-          "Player-1",
-          "35",
-          "18",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-7",
-          "Spearman",
-          "Player-2",
-          "41",
-          "25",
+          "48",
+          "10",
           "false",
           "false"
         ],
@@ -740,17 +695,17 @@
           "Warrior-1",
           "Warrior",
           "Player-1",
-          "47",
-          "10",
+          "43",
+          "25",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-2",
           "Warrior",
           "Player-1",
           "42",
-          "16",
+          "13",
           "false",
           "false"
         ],
@@ -758,31 +713,31 @@
           "Warrior-3",
           "Warrior",
           "Player-1",
-          "41",
-          "25",
+          "48",
+          "9",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-4",
           "Warrior",
           "Player-1",
-          "41",
-          "25",
+          "49",
+          "8",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-5",
           "Warrior",
           "Player-1",
-          "42",
+          "34",
           "24",
           "false",
-          "true"
+          "false"
         ]
       ],
-      "randomCalls": 9082,
+      "randomCalls": 9114,
       "mathRandomCalls": 0,
       "rules": {
         "total": 933,
