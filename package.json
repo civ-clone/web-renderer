@@ -21,7 +21,7 @@
     "prettier:check": "prettier --config .prettierrc --check 'src/**/*.{ts,scss}'",
     "prettier:format": "prettier --config .prettierrc 'src/**/*.{ts,scss}' --write",
     "release:changelog": "node generate-changelog.mjs --release",
-    "test": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run test:conformance && npm run test:hydration && npm run test:isolation && npm run test:transient && npm run test:inject && npm run test:save && npm run test:load && npm run test:diplomacy && npm run test:saved-game && npm run test:translations && npm run test:changelog && npm run test:worked-tiles && npm run test:specialists && npm run test:game-year && npm run test:patch-refs && npm run test:cheats && npm run test:map-navigation && npm run test:asset-slices",
+    "test": "npm run build:generate-plugins-ts && npm run build:generate-translations-ts && npm run ts:compile && npm run test:conformance && npm run test:hydration && npm run test:isolation && npm run test:transient && npm run test:inject && npm run test:save && npm run test:load && npm run test:diplomacy && npm run test:saved-game && npm run test:translations && npm run test:changelog && npm run test:worked-tiles && npm run test:specialists && npm run test:game-year && npm run test:patch-refs && npm run test:turn-handover && npm run test:cheats && npm run test:map-navigation && npm run test:asset-slices",
     "test:asset-slices": "node tools/asset-slices.js",
     "test:changelog": "node tools/changelog.js",
     "test:cheats": "node tools/cheats.js",
@@ -40,6 +40,7 @@
     "test:saved-game": "node tools/saved-game.js",
     "test:specialists": "node tools/specialists.js",
     "test:translations": "node tools/translations.js",
+    "test:turn-handover": "node tools/turn-handover.js",
     "test:worked-tiles": "node tools/worked-tiles.js",
     "ts:compile": "tsc --build tsconfig.json",
     "watch": "node esbuild.js watch"

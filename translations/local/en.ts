@@ -146,6 +146,7 @@ i18next.addResources('en', 'default', {
   'CustomizeWorld.title': 'Customize world',
   'CustomizeWorld.width': '$t(Generic.width)',
 
+  'Game.waiting': 'Waiting for the other civilizations…',
   'GameDetails.turn': '{{turn, number}}',
   'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
   'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',

@@ -187,6 +187,10 @@ export class DataTransferClient extends Client implements IClient {
     };
   #dataQueue: DataQueue = new DataQueue();
   #eventEmitter: EventEmitter;
+  // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
+  //  our own notifications are held (see `sendNotification`).
+  #handedOver: boolean = false;
+  #heldNotifications: Notification[] = [];
   #pendingChoiceDisposer: TransportDisposer | null = null;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   #sender: (channel: string, payload: any) => void;
@@ -1462,22 +1466,52 @@ export class DataTransferClient extends Client implements IClient {
     // text reads names and civilizations, and a notice finds its city by id.
     // In full, our own `Player` brought every city, unit and known tile with
     // it: 2 MB and 400 ms per notification in a large game (#130).
-    this.#transport.send(
-      'gameNotification',
-      notification.toPlainObject(
-        this.#dataFilter((object) =>
-          object instanceof Player
-            ? {
-                _: 'Player',
-                id: object.id(),
-                civilization: object.civilization(),
-              }
-            : object instanceof PlayerTile
-            ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
-            : object
-        )
-      ) as unknown as Notification
-    );
+    const payload = notification.toPlainObject(
+      this.#dataFilter((object) =>
+        object instanceof Player
+          ? {
+              _: 'Player',
+              id: object.id(),
+              civilization: object.civilization(),
+            }
+          : object instanceof PlayerTile
+          ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
+          : object
+      )
+    ) as unknown as Notification;
+
+    // The TurnStart rules, which say what happened in our cities, run before `takeTurn`, and so before the patch with
+    //  the new turn in it. Sent straight away, they arrived under the previous turn and year (#130), so they wait for
+    //  the handover. Serialised now all the same: they describe the game as it was when they happened.
+    if (this.#holdsNotifications()) {
+      this.#heldNotifications.push(payload);
+
+      return;
+    }
+
+    this.#transport.send('gameNotification', payload);
+  }
+
+  #holdsNotifications(): boolean {
+    if (this.#handedOver || this.#automationEnabled) {
+      return false;
+    }
+
+    const [currentPlayer] = currentPlayerRegistryInstance.entries();
+
+    return currentPlayer === this.player();
+  }
+
+  #handOver(): void {
+    this.#handedOver = true;
+
+    this.#transport.send('turnStarted', null);
+
+    this.#heldNotifications
+      .splice(0)
+      .forEach((notification) =>
+        this.#transport.send('gameNotification', notification)
+      );
   }
 
   takeTurn(): Promise<void> {
@@ -1526,6 +1560,9 @@ export class DataTransferClient extends Client implements IClient {
         );
 
         this.sendPatchData();
+
+        // The listener below is already attached, so the UI can act from here.
+        this.#handOver();
       }, 1);
 
       const listener = async (...args: any[]): Promise<void> => {
@@ -1533,7 +1570,11 @@ export class DataTransferClient extends Client implements IClient {
           if (await this.handleAction(...args)) {
             this.#eventEmitter.off('action', listener);
 
+            this.#handedOver = false;
+
             this.sendPatchData();
+
+            this.#transport.send('turnEnded', null);
 
             setTimeout(() => resolve(), 10);
 

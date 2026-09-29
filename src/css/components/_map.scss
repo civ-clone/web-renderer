@@ -2,6 +2,7 @@
   display: flex;
   flex-grow: 1;
   max-height: 100vh;
+  position: relative;
 
   canvas {
     height: 100%;
@@ -9,5 +10,23 @@
     // scroll or a zoom of the page.
     touch-action: none;
     width: 100%;
+  }
+}
+
+// Shown from ending the turn until the next one is ready.
+#map .waiting {
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 0.5rem;
+  color: #fff;
+  left: 50%;
+  padding: 0.5rem 1rem;
+  pointer-events: none;
+  position: absolute;
+  top: 1rem;
+  transform: translateX(-50%);
+  white-space: nowrap;
+
+  &:empty {
+    display: none;
   }
 }

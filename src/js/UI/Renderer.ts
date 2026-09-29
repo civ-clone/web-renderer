@@ -288,7 +288,28 @@ export class Renderer {
         )
       );
 
-      const tilesToRender: Tile[] = [],
+      // Keyed by coordinate: a tile resent several times between two renders
+      // only needs building once. A layer redraws a tile by looking its
+      // coordinates up in `world`, so a patched tile is only ready to render
+      // once `updateState` has refreshed `world`: until then it waits in
+      // `incomingTiles`. While waiting for the turn that can be a frame or
+      // more, and a render in between would draw the tile as it was.
+      const incomingTiles = new Map<string, Tile>(),
+        tilesToRender = new Map<string, Tile>(),
+        queueTileToRender = (tile: Tile): void => {
+          incomingTiles.set(`${tile.x},${tile.y}`, tile);
+        },
+        releaseIncomingTiles = (): void => {
+          incomingTiles.forEach((tile, key) => tilesToRender.set(key, tile));
+          incomingTiles.clear();
+        },
+        takeTilesToRender = (): Tile[] => {
+          const tiles = [...tilesToRender.values()];
+
+          tilesToRender.clear();
+
+          return tiles;
+        },
         // `Units` skips whichever tile holds the active unit, so a change of
         // active unit leaves two tiles stale on that layer: the one being
         // vacated, which has to draw its unit again, and the one taking over,
@@ -552,7 +573,21 @@ export class Renderer {
               mapPortal.parentElement as HTMLElement
             ).offsetHeight;
 
-            let activeUnits: PlayerAction[] = [];
+            let activeUnits: PlayerAction[] = [],
+              // From the worker accepting `EndTurn` until it hands the next
+              // turn over. Nothing sent in between is listened for, and the
+              // data still describes the turn just ended, so there is nothing
+              // to select or act on (#61, #130).
+              waitingForTurn = false;
+
+            // Always in the document and emptied rather than hidden, so that
+            // setting the text is announced: it explains why the controls
+            // have stopped responding.
+            const waitingBanner = s(
+              `<div class="waiting" role="status" aria-live="polite"></div>`
+            );
+
+            mapWrapper.append(waitingBanner);
 
             const world = new World(data.player.world),
               intervalHandler = new IntervalHandler(),
@@ -643,9 +678,13 @@ export class Renderer {
             yieldsMap.setVisible(false);
 
             portal.on('focus-changed', () => minimap.update());
-            portal.on('activate-unit', (unit) =>
-              setActiveUnit(unit, portal, unitsMap, activeUnitsMap)
-            );
+            portal.on('activate-unit', (unit) => {
+              if (waitingForTurn) {
+                return;
+              }
+
+              setActiveUnit(unit, portal, unitsMap, activeUnitsMap);
+            });
 
             intervalHandler.on(() => {
               // With no active unit the layer draws nothing, so toggling it is
@@ -658,10 +697,10 @@ export class Renderer {
                 activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
               }
 
-              const hasTilesToRender = tilesToRender.length > 0;
+              const hasTilesToRender = tilesToRender.size > 0;
 
               if (hasTilesToRender) {
-                portal.build(tilesToRender.splice(0));
+                portal.build(takeTilesToRender());
               }
 
               if (blinking || hasTilesToRender) {
@@ -785,7 +824,7 @@ export class Renderer {
                       domNodeCount: document.querySelectorAll('*').length,
                       imageCount: document.querySelectorAll('img').length,
                       objectCount: currentObjectCount,
-                      tilesPendingRender: tilesToRender.length,
+                      tilesPendingRender: tilesToRender.size,
                       turn: currentTurn,
                     },
                     heap: {
@@ -1154,9 +1193,13 @@ export class Renderer {
                   CivilDisorder: 10,
                   Notice: 5,
                 },
-                playerActions = data.player.actions.filter(
-                  (action): action is PlayerAction => !!action
-                ),
+                // Still last turn's actions while waiting, and the worker isn't
+                // listening for them: End Turn would come back, clickable.
+                playerActions = waitingForTurn
+                  ? []
+                  : data.player.actions.filter(
+                      (action): action is PlayerAction => !!action
+                    ),
                 primaryActionCandidates = [
                   ...playerActions,
                   ...notices.actions(data),
@@ -1193,7 +1236,7 @@ export class Renderer {
               renderActiveUnit(activeUnit, portal, unitsMap, activeUnitsMap);
 
               // ensure UI looks responsive
-              portal.build(tilesToRender.splice(0));
+              portal.build(takeTilesToRender());
               portal.render();
 
               minimap.update();
@@ -1252,14 +1295,18 @@ export class Renderer {
               }
 
               world.setTiles(data.player.world.tiles);
+              releaseIncomingTiles();
 
               const playerActions = data.player.actions.filter(
                 (action): action is PlayerAction => !!action
               );
 
-              activeUnits = playerActions.filter(
-                (action: PlayerAction): boolean => action._ === 'ActiveUnit'
-              );
+              // No unit to blink as if it could move, and none for the keys to move.
+              activeUnits = waitingForTurn
+                ? []
+                : playerActions.filter(
+                    (action: PlayerAction): boolean => action._ === 'ActiveUnit'
+                  );
 
               waitedUnits.forEach((id) => {
                 if (
@@ -1337,6 +1384,7 @@ export class Renderer {
               );
 
               if (
+                !waitingForTurn &&
                 options.get('autoEndOfTurn') &&
                 data.player.mandatoryActions.length === 1 &&
                 data.player.mandatoryActions.every(
@@ -1355,10 +1403,67 @@ export class Renderer {
 
             updateState(objectMap);
 
+            // While waiting there is no input to keep up with, so however many
+            // patches the other civilizations' moves send, the data is rebuilt
+            // at most once a frame (#61). During the player's own turn it has
+            // to stay synchronous: see `updateState`.
+            let stateFrame: number | null = null;
+
+            const cancelStateUpdate = (): void => {
+                if (stateFrame !== null) {
+                  cancelAnimationFrame(stateFrame);
+
+                  stateFrame = null;
+                }
+              },
+              scheduleStateUpdate = (): void => {
+                if (stateFrame !== null) {
+                  return;
+                }
+
+                stateFrame = requestAnimationFrame(() => {
+                  stateFrame = null;
+
+                  updateState(objectMap);
+                });
+              };
+
+            transportDisposers.push(cancelStateUpdate);
+
             transportDisposers.push(
               transport.receive('gameData', (data, rawData) =>
                 updateState(rawData as ObjectMap)
               )
+            );
+
+            transportDisposers.push(
+              transport.receive('turnEnded', (): void => {
+                waitingForTurn = true;
+                waitingBanner.textContent = t('Game.waiting');
+
+                updateState(objectMap);
+              })
+            );
+
+            transportDisposers.push(
+              transport.receive('turnStarted', (): void => {
+                waitingForTurn = false;
+                waitingBanner.textContent = '';
+
+                cancelStateUpdate();
+                updateState(objectMap);
+
+                // Now rather than next frame: the turn's messages follow
+                // straight away, and should open over the new turn, not the
+                // last one.
+                if (renderFrame !== null) {
+                  cancelAnimationFrame(renderFrame);
+
+                  renderFrame = null;
+                }
+
+                render();
+              })
             );
 
             const pathToParts = (path: string) =>
@@ -1455,7 +1560,7 @@ export class Renderer {
 
                             if (value._ === 'PlayerTile') {
                               // Since we only use tilesToRender for x and y this should be fine...
-                              tilesToRender.push(value);
+                              queueTileToRender(value);
                             }
                           }
                         );
@@ -1473,6 +1578,12 @@ export class Renderer {
                     }
                   )
                 );
+
+                if (waitingForTurn) {
+                  scheduleStateUpdate();
+
+                  return;
+                }
 
                 updateState(objectMap);
               })
@@ -1634,6 +1745,7 @@ export class Renderer {
 
               if (
                 key === 'Enter' &&
+                !waitingForTurn &&
                 data.player.mandatoryActions.some(
                   (action) => action._ === 'EndTurn'
                 )
