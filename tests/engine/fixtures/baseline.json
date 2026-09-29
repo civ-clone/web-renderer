@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 935,
+        "total": 937,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -137,7 +137,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 14,
+          "Destroyed": 16,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -347,7 +347,7 @@
       "randomCalls": 8661,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 935,
+        "total": 937,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -373,7 +373,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 14,
+          "Destroyed": 16,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -787,7 +787,7 @@
       "randomCalls": 9082,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 935,
+        "total": 937,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -813,7 +813,7 @@
           "Cost": 42,
           "Created": 16,
           "Defeated": 9,
-          "Destroyed": 14,
+          "Destroyed": 16,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
