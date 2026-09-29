@@ -1103,9 +1103,10 @@ The three tests from [`03-save-format.md`](./03-save-format.md) §Testing:
 - [x] ~~Non-empty `pendingEffects` **refuses to load** until Stage 6~~ —
       superseded. Effects are entities now; the placeholder field and its
       refusal are gone, and the check is a round trip.
-- [ ] A 150-turn save is under 1 MB gzipped — **measured at turn 12 only**: 837KB
-      of JSON, 57KB gzipped. The suite asserts the budget against that, which is
-      an extrapolation, not the measurement the criterion asks for.
+- [x] A 150-turn save is under 1 MB gzipped: real games up to turn 341 measure
+      418 KB at most (#18). The suite still asserts it only at turn 12, so it
+      stays a soft gate to check by hand from time to time
+      ([`03-save-format.md`](./03-save-format.md#budget-under-1-mb-gzipped-a-soft-gate)).
 
 ---
 

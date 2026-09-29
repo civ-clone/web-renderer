@@ -445,6 +445,34 @@ should be deleted). Four players fully exploring an 80×50 world is 16,000
 `PlayerTile`s carrying two refs each. If that dominates, encode `PlayerWorld` as
 a tile-id list rather than as individual entities.
 
+### Budget: under 1 MB gzipped (a soft gate)
+
+A 150-turn save should be under 1 MB gzipped. Saves from real games meet it
+comfortably, so the Stage 5 criterion is closed (#18). Measured 2026-09-29:
+
+| Save                | Gzipped | JSON    |
+| ------------------- | ------: | ------: |
+| The American, t169  |  193 KB |  5.9 MB |
+| The American, t299  |  260 KB | 10.7 MB |
+| The Greek, t208     |  418 KB | 27.7 MB |
+| The Indian, t314    |  382 KB | 26.3 MB |
+| The Indian, t341    |  417 KB | 29.4 MB |
+
+The largest is about 40% of the budget. Size depends more on the game than on
+the turn: the Greek save at turn 208 is as big as the Indian one at turn 341.
+
+It is a soft gate, not a CI failure. `test:save` asserts it, but only at turn
+12 on the conformance world, which is an early read and not the real answer.
+So check it by hand from time to time: after a change to what gets serialised
+(new entity types, new state fields, anything in `PlayerWorld`), and otherwise
+every so often.
+
+To check, play (or load) a late game, at turn 150 or later, in a current build,
+use Save to download it, and look at the file's size. The download is already
+gzipped (`.json.gz`) wherever the browser has `CompressionStream`, so the size
+on disk is the number to compare. If a save comes close to 1 MB, open an issue
+before it goes over. `PlayerTile` is the likely cause (see above).
+
 ## Testing
 
 The save/load contract needs three properties, and each has a cheap test.
