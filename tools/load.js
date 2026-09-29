@@ -78,7 +78,7 @@ checks.push([
   true,
 ]);
 checks.push([
-  'and no two cities share a name as it plays on',
+  'and no name is handed out twice as it plays on',
   loaded.repeatedCityNamesAtThen || 'none',
   'none',
 ]);
