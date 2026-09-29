@@ -5,6 +5,10 @@
 // some things as `#ref`s on the assumption that the frontend already holds
 // them; a ref to something it was never sent reconstitutes as `undefined`, and
 // the renderer then trips over the hole (`mandatoryActions` did).
+//
+// It also checks the payloads stay the size of what changed: a notification or
+// a whole-player patch that carries tiles in full has brought the map along
+// with it, which in a large game took seconds at every turn start (#130).
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -21,10 +25,14 @@ import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
 const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 60);
 
 const objectMap: ObjectMap = { hierarchy: {}, objects: {} },
-  missing = new Map<string, number>();
+  missing = new Map<string, number>(),
+  // What #130 found: payloads that carried every tile the player knows.
+  oversized: string[] = [];
 
 let stopped = false,
-  batches = 0;
+  batches = 0,
+  notifications = 0,
+  humanPlayer: Player | null = null;
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -43,6 +51,57 @@ const setObjectPath = (object: PlainObject, path: string, value: any): void => {
 
   if (target) {
     target[lastPart] = value;
+  }
+};
+
+const playerTilesIn = (objects: PlainObject): number =>
+  Object.values(objects).filter(
+    (object: PlainObject) => object?._ === 'PlayerTile' && 'terrain' in object
+  ).length;
+
+// A notification is reconstituted on its own, from nothing but what it
+// carries, so every ref in it has to resolve inside it. And it only needs to
+// say who and where: a tile in full means it brought the map along (#130).
+const checkNotification = ({ hierarchy, objects }: ObjectMap): void => {
+  notifications++;
+
+  const key = objects[hierarchy['#ref']]?.key,
+    seen = new Set<any>(),
+    visit = (value: any): void => {
+      if (!value || typeof value !== 'object' || seen.has(value)) {
+        return;
+      }
+
+      seen.add(value);
+
+      const ref = value['#ref'];
+
+      if (typeof ref === 'string') {
+        if (!(ref in objects)) {
+          const type = ref.replace(/-[0-9a-z]+$/, '');
+
+          missing.set(
+            `${type} in ${key}`,
+            (missing.get(`${type} in ${key}`) ?? 0) + 1
+          );
+
+          return;
+        }
+
+        visit(objects[ref]);
+
+        return;
+      }
+
+      Object.values(value).forEach(visit);
+    };
+
+  visit(hierarchy);
+
+  const tiles = playerTilesIn(objects);
+
+  if (tiles > 0) {
+    oversized.push(`notification ${key} carried ${tiles} PlayerTile(s)`);
   }
 };
 
@@ -93,11 +152,25 @@ const transport = {
       objectMap.objects = data.objects;
     }
 
+    if (channel === 'gameNotification') {
+      checkNotification(data);
+    }
+
     if (channel === 'gameDataPatch') {
       data.forEach((patch: PlainObject) =>
         Object.entries(patch).forEach(([key, { type, index, value }]) => {
           if (type === 'remove') {
             return fail(`unexpected remove patch for ${key}`);
+          }
+
+          // The whole player is sent with its world and tiles as refs: the
+          // frontend already holds them, and tile changes go out on their own.
+          if (key === humanPlayer?.id() && !index) {
+            const tiles = playerTilesIn(value.objects);
+
+            if (tiles > 0) {
+              oversized.push(`player patch carried ${tiles} PlayerTile(s)`);
+            }
           }
 
           if (index) {
@@ -141,6 +214,26 @@ engine.on('turn:start', (turn: number): void => {
 
   stopped = true;
 
+  if (oversized.length > 0) {
+    console.error(
+      `FAIL patchRefs: ${
+        oversized.length
+      } payload(s) carried tiles in full, e.g. ${[...new Set(oversized)]
+        .slice(0, 5)
+        .join('; ')}`
+    );
+
+    process.exit(1);
+  }
+
+  if (notifications === 0) {
+    console.error(
+      `FAIL patchRefs: no notifications over ${turn} turns, so none were checked`
+    );
+
+    process.exit(1);
+  }
+
   if (missing.size > 0) {
     console.error(
       `FAIL patchRefs: unresolvable refs over ${turn} turns and ${batches} batches: ${[
@@ -154,7 +247,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches over ${turn} turns, every reachable ref resolves)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves)`
   );
 
   process.exit(0);
@@ -163,6 +256,10 @@ engine.on('turn:start', (turn: number): void => {
 engine.on('engine:start', (): void => {
   new Array(config.players).fill(0).forEach((_, index): void => {
     const player = new Player();
+
+    if (index === 0) {
+      humanPlayer = player;
+    }
 
     playerRegistryInstance.register(player);
     clientRegistryInstance.register(

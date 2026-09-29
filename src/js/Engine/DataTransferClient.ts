@@ -164,10 +164,17 @@ export class DataTransferClient extends Client implements IClient {
 
       if (object instanceof Tile) {
         const playerWorld = playerWorldRegistryInstance.getByPlayer(
-          this.player()
-        );
+            this.player()
+          ),
+          playerTile = playerWorld.get(object.x(), object.y());
 
-        return playerWorld.get(object.x(), object.y());
+        // The caller's filter applies to the tile that is actually sent, so a
+        // caller that references `PlayerTile` gets refs rather than every tile
+        // in full (#130). Only a tile the player knows can be a ref: an
+        // undiscovered one is made up afresh, with a new id, on every call.
+        return playerTile instanceof PlayerTile
+          ? localFilter(playerTile)
+          : playerTile;
       }
 
       if (object instanceof Busy) {
@@ -1449,9 +1456,27 @@ export class DataTransferClient extends Client implements IClient {
     // Serialize with the visibility filter so notification data referencing
     // other players/cities/units is bounded to their Unknown* wrappers rather
     // than dragging (and leaking) their full object graphs over the transport.
+    //
+    // A notification is reconstituted on its own, not merged into the game
+    // data, so it cannot carry refs. It only needs to say who and where: the
+    // text reads names and civilizations, and a notice finds its city by id.
+    // In full, our own `Player` brought every city, unit and known tile with
+    // it: 2 MB and 400 ms per notification in a large game (#130).
     this.#transport.send(
       'gameNotification',
-      notification.toPlainObject(this.#dataFilter()) as unknown as Notification
+      notification.toPlainObject(
+        this.#dataFilter((object) =>
+          object instanceof Player
+            ? {
+                _: 'Player',
+                id: object.id(),
+                civilization: object.civilization(),
+              }
+            : object instanceof PlayerTile
+            ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
+            : object
+        )
+      ) as unknown as Notification
     );
   }
 
