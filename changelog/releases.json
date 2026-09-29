@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@95502e2","date":"2026-09-29T11:08:11.000Z","localChanges":["chore: update civ1-unit and civ1-wonder"],"externalChanges":{"civ1-unit":{"status":"updated","log":["Artillery cost 80 and Ironclad 50. CIV.EXE v474.05's unit table (cost ÷ 10 at offset 24 of each 34-byte record) gives 60 for both, matching Rome on 640K a Day's Tables 7-4 and 7-5. The other 26 units already matched.","Adds a test asserting every unit's build cost against that table (civ-clone/web-renderer#76)."]},"civ1-wonder":{"status":"updated","log":["Addresses review on #2."]}}}
+,
+{"version":"0.1.0@810ef46","date":"2026-09-29T10:58:45.000Z","localChanges":["Ironclads now cost 60 shields instead of 50, and Artillery 60 instead of 80, the same as in the original game (closes #76)."],"externalChanges":{}}
+,
 {"version":"0.1.0@6e65329","date":"2026-09-29T10:16:01.000Z","localChanges":["docs: how to check that saves stay under 1 MB gzipped"],"externalChanges":{}}
 ,
 {"version":"0.1.0@eb9ff01","date":"2026-09-29T09:56:48.000Z","localChanges":["test: check no city name is handed out twice after loading a game"],"externalChanges":{}}
