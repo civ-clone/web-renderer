@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 934,
+        "total": 935,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -171,7 +171,7 @@
           "TileReassigned": 1,
           "Tiles": 1,
           "TurnEnd": 1,
-          "TurnStart": 6,
+          "TurnStart": 7,
           "Unit": 1,
           "Unsupported": 2,
           "Updated": 1,
@@ -347,7 +347,7 @@
       "randomCalls": 8661,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 934,
+        "total": 935,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -407,7 +407,7 @@
           "TileReassigned": 1,
           "Tiles": 1,
           "TurnEnd": 1,
-          "TurnStart": 6,
+          "TurnStart": 7,
           "Unit": 1,
           "Unsupported": 2,
           "Updated": 1,
@@ -787,7 +787,7 @@
       "randomCalls": 9082,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 934,
+        "total": 935,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -847,7 +847,7 @@
           "TileReassigned": 1,
           "Tiles": 1,
           "TurnEnd": 1,
-          "TurnStart": 6,
+          "TurnStart": 7,
           "Unit": 1,
           "Unsupported": 2,
           "Updated": 1,
