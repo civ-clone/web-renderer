@@ -108,7 +108,7 @@ restarts or has an endless `FF 80+` loop, so the sound plays until the game stop
 | 17 | Indians | 0–7 | 61 s | yes, drone voices 6 and 7 loop every 3.7 s | 9,17,28,30,44,46,50 |
 | 18 | Germans | 0–5 | 96 s | yes, voice 2 every 96 s, the rest every 48 s | 18,20,23,26,27 |
 | 19–32 | Short national themes | 4–8 voices | 2.0–6.0 s | no | as their long versions |
-| 33 | War drums | 8 | 4.0–6.6 s | no | 55 |
+| 33 | War drums | 8 | 3.3–4.0 s | no | 55 (six patterns of 240 ticks, the one at `027E` is 200) |
 | 34 | Win | 0–7 | 47 s | no | 2,5,7,15,18,19,21,25,56 |
 | 35 | Lose | 0–6 | 30 s | no | 7,13,21,22,26 |
 | 36 | Civil disorder / Barbarians | 1–6 | 48 s | no | 3,7,16,19,21,56 |
@@ -153,21 +153,28 @@ logic (or from `asound.json`'s events plus patches).
 MicroProse's April 1994 "new sound drivers" archive (CivFanatics thread *The Civilization
 Jukebox*, files `GSOUND.CVL`, `PSOUND.CVL`, `SOUND.EXE`, `CONFIG.SND`) adds an OPL3 driver
 and a General MIDI driver with the same 11-function overlay interface. `CONFIG.SND` is 18
-bytes written by `SOUND.EXE`; the GM driver reads word 2 as the MPU-401 port and word 3 as
-its IRQ, and falls back to `0x330` when the file is missing.
+bytes written by `SOUND.EXE`; the GM driver reads word 2 as the MPU-401 port and falls back to
+`0x330` when the file is missing. It also keeps word 3, whose meaning was not traced (probably
+the IRQ).
 
 The GM driver does not need decoding: `gm.py` runs it under unicorn with an MPU-401 stub
 (status port answers "ready", data port answers `0xFE`) and records every byte written to
 the data port with its tick. `gm_export.py` parses that stream (running status, sysex,
 system-common bytes) into a type-1 SMF per sound, one track per MIDI channel, 60 PPQ at
-60 BPM, cut at the AdLib export's loop point for looping tunes. Findings:
+60 BPM, cut at the AdLib export's loop point for looping tunes. Non-looping files end about
+two seconds after the last event, because the capture waits for that much quiet. Findings:
 
-- At `Init` the driver sends, for channels 1–9 and 11–16: all notes off, reset controllers,
+- At `Init` the driver sends, for MIDI channels 10 down to 1: all notes off, reset controllers,
   volume 100, pan 64, reverb 0, chorus 0 and a pitch-bend range of 2 semitones.
-- The pieces are the same as the AdLib ones and play on the same 60 Hz ticks: for the
-  American theme the set of note-on ticks in the first 700 ticks is identical. The GM note
-  numbers equal the AdLib stream notes plus 19, which confirms the pitch mapping in the format
-  document independently.
+- The pieces are the same compositions on the same 60 Hz tick: for the American theme the
+  set of note-on ticks in the first 700 ticks is identical. The GM note numbers equal the
+  AdLib stream notes plus 19, which confirms the pitch mapping in the format document
+  independently.
+- They are re-scored, though, and not always the same length. Evolution has 2,001 note-ons
+  against the AdLib version's 2,721 with the same final tick (8,796), and the English theme
+  has 635 against 554 and ends about six seconds earlier (last note-on at tick 2,180
+  against 2,554). Only the American theme was compared tick by tick, so cutting looping GM
+  tunes at the AdLib loop point is an assumption that still needs checking per tune.
 - The GM arrangement is its own: different channel allocation, GM program numbers, per-note
   velocities and volume fades sent as CC 7. This is the best source for a MIDI-based player;
   the AdLib data remains the best source for the original sound.
@@ -215,8 +222,10 @@ Cymbal, 127 Gunshot.
 1. Port `sim.py` to TypeScript in `@civ-clone/civ1-asset-extractor` (about 400 lines; the
    Python is written to be ported line by line and `compare.py`-style tests can be reproduced
    by checking the TS port against the JSON export's event list or a captured register stream).
-2. Add an OPL2 emulator in an `AudioWorklet` (ymfm is BSD-3 and fits the MIT licence) and
-   call the port at 60 Hz plus 300 Hz while a noise slot is active.
+2. Turn the register writes into sound in an `AudioWorklet`, calling the port at 60 Hz plus
+   300 Hz while a noise slot is active. The issue (#126) settles on a small OPL2 synth written
+   for this project and lists what it has to support; ymfm (BSD-3) is the off-the-shelf
+   alternative.
 3. Map engine events to IDs using the table in the issue, pass level 3 for national themes,
    and use `PlayTune(1)` semantics (fade) when dialogs close.
 4. Optionally decode `TSOUND.CVL` and `ISOUND.CVL` the same way; the overlay layout is the

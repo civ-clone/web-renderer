@@ -33,8 +33,8 @@ that has not been checked. MicroProse's 1994 add-on drivers (`PSOUND.CVL` for OP
 use the same table and the same kind of streams; `PSOUND.CVL` even carries a debug string
 naming the voice-state fields, `Dur Not Vce Pan Dpn Gat Vol Cvl Dvl Start NTptr SRptr SRcnt
 MRptr MRcnt`, which match the fields in §4.4 (sub-repeat and main-repeat are the two loop
-levels). The GM driver plays the same pieces on the same 60 Hz ticks and its MIDI note numbers
-equal the AdLib stream notes plus 19, confirming §4.1.
+levels). The GM driver plays re-scored versions of the same pieces on the same 60 Hz tick, and
+its MIDI note numbers equal the AdLib stream notes plus 19, confirming §4.1.
 
 ## 2. Overlay layout and entry points
 
