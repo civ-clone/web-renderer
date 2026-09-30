@@ -61,6 +61,16 @@ checks.push([
   loaded.atLoad,
   played.atSave,
 ]);
+// The file must name the stream the game was on. `core-random`'s `seed()` used
+// to report the clock seed the generator was constructed with, not the one
+// `restore` moved it to, so every save named a different stream and the game
+// played on from it took one of several paths depending on the millisecond
+// the saving process started.
+checks.push([
+  'and it resumes the random stream it was playing',
+  played.rngAtSave,
+  played.rngPlayed,
+]);
 checks.push([
   'and it still applies production',
   Number(loaded.productionAtThen) > Number(loaded.productionAtLoad) ||
@@ -82,6 +92,14 @@ checks.push([
   loaded.repeatedCityNamesAtThen || 'none',
   'none',
 ]);
+// Replay equivalence — 05-engine-plan.md's last open Stage 5 criterion (#17).
+// The next draw is compared as well as the state, because two games on
+// different streams can agree on state for a few turns by chance.
+checks.push([
+  'and plays on to the game that never stopped',
+  `${loaded.atThen} ${loaded.nextDrawAtThen}`,
+  `${played.atThen} ${played.nextDrawAtThen}`,
+]);
 
 let failed = 0;
 
@@ -98,22 +116,6 @@ checks.forEach(([label, actual, expected]) => {
     }\n`
   );
 });
-
-// Replay equivalence — 05-engine-plan.md's last open Stage 5 criterion — is
-// reported rather than asserted, because it does not hold yet and pretending
-// otherwise would either fail every run or hide the gap.
-//
-// Measured: playing on from a loaded game reaches a different state from never
-// having stopped, by one unit and one RNG draw after a single turn. The state
-// *as loaded* is exact, so what diverges is the playing, not the restoring.
-// Leading suspects, none yet confirmed: module-level state no save can see —
-// `civ1-unit`'s `unitMoveStore` keyed by unit — a client's own in-memory
-// strategy, and the rules a loaded game never re-registers. Each needs its own
-// investigation.
-process.stdout.write(
-  `  note playing on diverges: ${loaded.atThen} vs ${played.atThen} — replay ` +
-    'equivalence is not claimed\n'
-);
 
 process.stdout.write(
   `\n${checks.length - failed}/${
