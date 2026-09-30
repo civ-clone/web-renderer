@@ -1,0 +1,1 @@
+{"version":"0.1.0@beea3a0","date":"2026-09-30T13:44:20.000Z","localChanges":["A unit that still has moves left now stays selected after it moves. Before, another unit could be selected, the map jumped to it, and your next key press moved the wrong unit (closes #189)."],"externalChanges":{}}

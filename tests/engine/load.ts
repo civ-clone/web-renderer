@@ -129,10 +129,14 @@ engine.on('turn:start', (turn: number): void => {
     // measurement had just killed, and the loaded game was blamed for it.
     //
     // `createdAt` fixed so two runs of this file produce identical bytes.
-    writeFileSync(
-      file,
-      JSON.stringify(save(defaultGame, { name: 'load-suite', createdAt: 0 }))
-    );
+    const saved = save(defaultGame, { name: 'load-suite', createdAt: 0 });
+
+    writeFileSync(file, JSON.stringify(saved));
+
+    // The stream the file says to resume, against the one `seed.ts` put the
+    // generator on.
+    report.rngAtSave = `${saved.rng.seed}:${saved.rng.calls}`;
+    report.rngPlayed = `${config.seed}:${randomInstance.calls()}`;
 
     report.atSave = digest();
     report.productionAtSave = String(production());
@@ -143,6 +147,9 @@ engine.on('turn:start', (turn: number): void => {
     report.atThen = digest();
     report.productionAtThen = String(production());
     report.repeatedCityNamesAtThen = repeatedCityNames();
+    // Drawn last, once everything else is measured: two games on different
+    // streams can agree on state for a few turns and still differ here.
+    report.nextDrawAtThen = String(randomInstance());
 
     finish();
   }
