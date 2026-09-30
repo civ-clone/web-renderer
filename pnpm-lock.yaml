@@ -141,7 +141,7 @@ importers:
         version: 0.1.4
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ab221b44b74ebdc78ebe79b43d59077c36290f9f
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/d660d9bce4d570295eb54eee225d41876eae19e1
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2
@@ -1142,6 +1142,9 @@ packages:
   '@civ-clone/core-spaceship@0.1.9':
     resolution: {integrity: sha512-O5NeYs4+8CTKcoMPCp9o6h0zg1w42NK8KlBgb6d7l7JHyhL65CrOFTIETgBfS58Q27K8BhYeIUgS2SYofB2tXQ==}
 
+  '@civ-clone/core-strategy-ai-client@0.1.2':
+    resolution: {integrity: sha512-DT/9dZda0vwmEhS1R8Ogc1sXF8Mw6o0uZxYB+HbzFD86z13DXB8ccCSKd42q7RjR5z9UwPE4aGNHjkDbsrAgjA==}
+
   '@civ-clone/core-strategy@0.1.6':
     resolution: {integrity: sha512-CPPdrb4YlVH5hHUpDA1ATe5fwfU1jPDd5YyWeQHgYANZIxKMQBIlgbWgJlYiFsY1f2kkzgEkRC2KbIh6ZDY7Dw==}
 
@@ -1208,8 +1211,8 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ab221b44b74ebdc78ebe79b43d59077c36290f9f':
-    resolution: {gitHosted: true, integrity: sha512-eBuj/T5QTKDJjolw0Xp73yShV8vp8t17sIorGe5RyXYdKJHIGiijgLJEEdX7ptoedWjCIkLFl62sXsI8B3gNbw==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ab221b44b74ebdc78ebe79b43d59077c36290f9f}
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/d660d9bce4d570295eb54eee225d41876eae19e1':
+    resolution: {gitHosted: true, integrity: sha512-Vp02r0OqW8+kYTdnDXq7uL0zJhbqbgT+lcrqVzPpD1KJ0tBklNh01fEqt/dps7pySoaH2JDYf4GxSuV+5cVAag==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/d660d9bce4d570295eb54eee225d41876eae19e1}
     version: 0.1.7
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2':
@@ -3720,6 +3723,14 @@ snapshots:
       '@civ-clone/core-turn-based-game': 0.1.8
       '@civ-clone/core-yield': 0.1.6
 
+  '@civ-clone/core-strategy-ai-client@0.1.2':
+    dependencies:
+      '@civ-clone/core-ai-client': 0.1.3
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-player': 0.1.9
+      '@civ-clone/core-random': 0.1.2
+      '@civ-clone/core-strategy': 0.1.6
+
   '@civ-clone/core-strategy@0.1.6':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
@@ -4101,11 +4112,10 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/ab221b44b74ebdc78ebe79b43d59077c36290f9f':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/d660d9bce4d570295eb54eee225d41876eae19e1':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-player-action-end-turn': 0.1.0
-      '@civ-clone/base-unit-type-naval-transport': 0.1.3
       '@civ-clone/civ1-city': https://codeload.github.com/civ-clone/civ1-city/tar.gz/ea509f62da75ebfac283c711a257ebca1edff1e2
       '@civ-clone/civ1-city-improvement': https://codeload.github.com/civ-clone/civ1-city-improvement/tar.gz/17010864375cff969f9eb4640f33f22f9a8743af
       '@civ-clone/civ1-government': https://codeload.github.com/civ-clone/civ1-government/tar.gz/31cd8f289536d5ce71323b6a9ca4dc1867e6b8e7
@@ -4116,7 +4126,6 @@ snapshots:
       '@civ-clone/core-city': 0.1.16
       '@civ-clone/core-city-build': 0.1.10
       '@civ-clone/core-city-growth': 0.1.4
-      '@civ-clone/core-city-improvement': 0.1.6
       '@civ-clone/core-client': 0.1.4
       '@civ-clone/core-diplomacy': 0.1.6
       '@civ-clone/core-engine': 0.1.5
@@ -4131,6 +4140,7 @@ snapshots:
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-science': 0.1.6
       '@civ-clone/core-strategy': 0.1.6
+      '@civ-clone/core-strategy-ai-client': 0.1.2
       '@civ-clone/core-terrain': 0.1.4
       '@civ-clone/core-terrain-feature': 0.1.4
       '@civ-clone/core-tile-improvement': 0.1.4
