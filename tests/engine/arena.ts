@@ -25,6 +25,7 @@ import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { StrategyRegistry } from '@civ-clone/core-strategy/StrategyRegistry';
 import World from '@civ-clone/core-world/World';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -82,9 +83,19 @@ type Seat = {
   unitsCreated: number;
   navalUnitsCreated: number;
   unitsLost: number;
+  unitsLostAtSea: number;
   unitsDefeated: number;
   eliminatedTurn: number | null;
+  // Each city's Wonders, as `<city id>:<Wonder>`, seen being built at a turn's start.
+  wondersStarted: Set<string>;
+  wondersBuilt: number;
+  improvementsBuilt: number;
+  firstCityTurn: number | null;
+  noCityAtTurn: boolean;
 };
+
+// The turn at whose start `noCityAtTurn10` checks for a city, or the last turn of a shorter game.
+const NO_CITY_TURN = 10;
 
 const seats: Seat[] = [];
 const checksums: { [turn: number]: string } = {};
@@ -225,7 +236,14 @@ const results = () =>
         unitsCreated: entry.unitsCreated,
         navalUnitsCreated: entry.navalUnitsCreated,
         unitsLost: entry.unitsLost,
+        unitsLostAtSea: entry.unitsLostAtSea,
         unitsDefeated: entry.unitsDefeated,
+        wondersStarted: entry.wondersStarted.size,
+        wondersBuilt: entry.wondersBuilt,
+        improvementsBuilt: entry.improvementsBuilt,
+        // A player that never founded a city counts as founding one on the last turn.
+        firstCityTurn: entry.firstCityTurn ?? config.turns,
+        noCityAtTurn10: entry.noCityAtTurn ? 1 : 0,
         // By name, so `civ1-treasury` isn't imported (and evaluated) ahead of the plugin list.
         gold: attempt(
           () =>
@@ -293,6 +311,26 @@ engine.on('turn:start', (turn: number): void => {
 
   currentTurn = turn;
 
+  // Wonders being built, and who has no city yet: cheap enough to read every turn.
+  seats.forEach((entry): void => {
+    const cities = cityRegistryInstance.getByPlayer(entry.player);
+
+    if (turn === Math.min(NO_CITY_TURN, config.turns)) {
+      entry.noCityAtTurn = cities.length === 0;
+    }
+
+    cities.forEach((city: City): void => {
+      const building = attempt(
+        () => cityBuildRegistryInstance.getByCity(city).building()?.item(),
+        undefined
+      );
+
+      if (building && isA(building.prototype, 'Wonder')) {
+        entry.wondersStarted.add(`${city.id()}:${building.name}`);
+      }
+    });
+  });
+
   // Only `--self-check`'s conformance game asks for these: they cost more than the game does.
   if (config.checkpoints.includes(turn)) {
     checksums[turn] = checksum(
@@ -348,6 +386,43 @@ engine.on('unit:defeated', (unit: Unit, by: Unit | null): void => {
     won.unitsDefeated += 1;
   }
 });
+
+// `civ1-unit`'s: a Trireme that ended its moves away from the coast, or an aircraft out of fuel. Only the unit the
+//  event names is counted, not any cargo lost with it.
+engine.on('unit:lost-at-sea', (unit: Unit): void => {
+  const entry = seatOf(unit.player());
+
+  if (entry) {
+    entry.unitsLostAtSea += 1;
+  }
+});
+
+// `civ1-city`'s: a city founded. A captured city isn't counted.
+engine.on('city:created', (city: City): void => {
+  const entry = seatOf(city.player());
+
+  if (entry && entry.firstCityTurn === null) {
+    entry.firstCityTurn = currentTurn;
+  }
+});
+
+// `civ1-city`'s: anything a city finishes. A Wonder is a `CityImprovement` too, so it's counted only as a Wonder.
+engine.on(
+  'city:building-complete',
+  (cityBuild: { city(): City }, built: object | null): void => {
+    const entry = seatOf(cityBuild.city().player());
+
+    if (!entry || !built) {
+      return;
+    }
+
+    if (isA(built, 'Wonder')) {
+      entry.wondersBuilt += 1;
+    } else if (isA(built, 'CityImprovement')) {
+      entry.improvementsBuilt += 1;
+    }
+  }
+);
 
 engine.on('player:defeated', (player: Player): void => {
   const entry = seats.find((seat) => seat.player === player);
@@ -428,8 +503,14 @@ engine.on('engine:start', (): void => {
       unitsCreated: 0,
       navalUnitsCreated: 0,
       unitsLost: 0,
+      unitsLostAtSea: 0,
       unitsDefeated: 0,
       eliminatedTurn: null,
+      wondersStarted: new Set(),
+      wondersBuilt: 0,
+      improvementsBuilt: 0,
+      firstCityTurn: null,
+      noCityAtTurn: false,
     };
 
     instrument(entry);

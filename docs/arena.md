@@ -79,6 +79,11 @@ Per player, at the start of the last turn:
 | `cities`, `population`, `advances`, `units`, `navalUnits`, `gold` | Held at the end. Population is the sum of city sizes. Advances are the ones `PlayerResearch.complete()` lists. |
 | `unitsCreated`, `navalUnitsCreated`                               | Units that appeared during the game (`unit:created`): built, or from a hut. The starting units aren't counted. |
 | `unitsLost`, `unitsDefeated`                                      | Units lost in combat, and enemy units beaten (`unit:defeated`).                                                |
+| `unitsLostAtSea`                                                  | Units lost at sea (`unit:lost-at-sea`): a Trireme away from the coast, or an aircraft out of fuel.             |
+| `wondersStarted`                                                  | Wonders a city was building at a turn's start, each city's each Wonder counted once, finished or not.          |
+| `wondersBuilt`, `improvementsBuilt`                               | Wonders and other city improvements finished (`city:building-complete`). The founding Palace isn't counted.    |
+| `firstCityTurn`                                                   | The turn the player founded its first city (`city:created`), or `--turns` if it never did.                     |
+| `noCityAtTurn10`                                                  | 1 if the player held no city at the start of turn 10 (of the last turn, in a shorter game).                    |
 | `explored`, `exploredLand`, `exploredSea`                         | Tiles in the player's map.                                                                                     |
 | `disorderTurns`, `disorderCityTurns`                              | Turns with any city in civil disorder, and city-turns in disorder, counted from `city:civil-disorder`.         |
 | `eliminated`                                                      | 1 if the player was defeated.                                                                                  |
