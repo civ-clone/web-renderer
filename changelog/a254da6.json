@@ -1,0 +1,1 @@
+{"version":"0.1.0@a254da6","date":"2026-09-30T06:00:27.000Z","localChanges":["When a computer player loses a city to capture, it now sends units to take it back. Before, the civilization that captured the city was the one told it had been lost, so it set off to \"liberate\" its own conquest (closes #127)."],"externalChanges":{}}

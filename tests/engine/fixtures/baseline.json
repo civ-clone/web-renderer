@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 937,
+        "total": 938,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -135,7 +135,7 @@
           "CivilDisorder": 1,
           "Complete": 13,
           "Cost": 42,
-          "Created": 16,
+          "Created": 17,
           "Defeated": 9,
           "Destroyed": 16,
           "Discovered": 3,
@@ -347,7 +347,7 @@
       "randomCalls": 8661,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 937,
+        "total": 938,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -371,7 +371,7 @@
           "CivilDisorder": 1,
           "Complete": 13,
           "Cost": 42,
-          "Created": 16,
+          "Created": 17,
           "Defeated": 9,
           "Destroyed": 16,
           "Discovered": 3,
@@ -430,7 +430,7 @@
       "dto": {
         "objects": 51727,
         "bytes": 8677094,
-        "hash": "ee866ad1"
+        "hash": "f9204f27"
       },
       "registries": {
         "cities": 6,
@@ -787,7 +787,7 @@
       "randomCalls": 9082,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 937,
+        "total": 938,
         "byType": {
           "Action": 43,
           "ActionPerformed": 1,
@@ -811,7 +811,7 @@
           "CivilDisorder": 1,
           "Complete": 13,
           "Cost": 42,
-          "Created": 16,
+          "Created": 17,
           "Defeated": 9,
           "Destroyed": 16,
           "Discovered": 3,
