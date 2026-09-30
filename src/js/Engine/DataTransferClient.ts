@@ -600,19 +600,15 @@ export class DataTransferClient extends Client implements IClient {
       'city:captured',
       (city: City, capturingPlayer: Player, originalPlayer: Player) => {
         if (originalPlayer === this.player()) {
-          const playerCities = cityRegistryInstance.getByPlayer(this.player()),
-            cityIndex = playerCities.indexOf(city);
-
-          if (cityIndex !== -1) {
-            this.#dataQueue.update(this.player().id(), () =>
-              this.player().toPlainObject(
-                this.#dataFilter(
-                  filterToReferenceAllExcept(Player, PlayerAction, Civilization)
-                )
+          // The city already belongs to the capturing player here, so resend ours: the city is gone from our list,
+          //  and losing the capital changes every remaining city's corruption.
+          this.#dataQueue.update(this.player().id(), () =>
+            this.player().toPlainObject(
+              this.#dataFilter(
+                filterToReferenceAllExcept(Player, PlayerAction, Civilization)
               )
-            );
-            // this.#dataQueue.remove(this.player().id(), `cities[${cityIndex}]`);
-          }
+            )
+          );
 
           this.sendNotification(
             new Notification('City.captured-from-us', {
