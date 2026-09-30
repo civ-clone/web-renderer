@@ -13,6 +13,7 @@
     "build:dev": "npm run prebuild && npm run esbuild:bundle:dev",
     "build:generate-plugins-ts": "node buildPluginList.js",
     "build:generate-translations-ts": "node buildTranslationList.js",
+    "arena": "npm run build:generate-plugins-ts && node tools/arena.js",
     "build:generate-version-text": "echo '{\"version\": \"'$npm_package_version\\@$(git rev-parse --short HEAD)'\"}' > build.json",
     "civ": "node tools/civ",
     "esbuild:bundle": "node esbuild.js",
