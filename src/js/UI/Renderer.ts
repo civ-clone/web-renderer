@@ -34,6 +34,7 @@ import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import { allowLeaving, guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
+import chooseActiveUnit from './lib/chooseActiveUnit';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -1334,47 +1335,17 @@ export class Renderer {
                 (action) => !waitedUnits.has((action.value as Unit).id)
               );
 
-              const activeUnitAction = selectableActiveUnits.reduce(
-                (bestAction: PlayerAction | null, action: PlayerAction) => {
-                  const unit = action.value as Unit;
-                  const unitScore =
-                    unit === lastUnit
-                      ? 2
-                      : portal.isVisible(unit.tile.x, unit.tile.y)
-                      ? 1
-                      : 0;
-
-                  if (bestAction === null) {
-                    return action;
-                  }
-
-                  const bestUnit = bestAction.value as Unit;
-                  const bestScore =
-                    bestUnit === lastUnit
-                      ? 2
-                      : portal.isVisible(bestUnit.tile.x, bestUnit.tile.y)
-                      ? 1
-                      : 0;
-
-                  return unitScore > bestScore ? action : bestAction;
-                },
-                null
+              const nextUnit = chooseActiveUnit(
+                selectableActiveUnits.map((action) => action.value as Unit),
+                lastUnit?.id ?? null,
+                (x, y) => portal.isVisible(x, y)
               );
 
-              if (lastUnit !== activeUnitAction?.value) {
+              if (nextUnit === null) {
                 lastUnit = null;
               }
 
-              applyActiveUnit(
-                lastUnit?.active
-                  ? lastUnit
-                  : activeUnitAction
-                  ? (activeUnitAction.value as Unit)
-                  : null,
-                portal,
-                unitsMap,
-                activeUnitsMap
-              );
+              applyActiveUnit(nextUnit, portal, unitsMap, activeUnitsMap);
 
               scheduleRender();
 
