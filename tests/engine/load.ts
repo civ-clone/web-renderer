@@ -35,6 +35,12 @@ import { readFileSync, writeFileSync } from 'fs';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import snapshot, { checksum } from './lib/checksum';
+import Embark from '@civ-clone/base-unit-action-embark/Embark';
+import { Land } from '@civ-clone/library-unit/Types';
+import { Trireme } from '@civ-clone/civ1-unit/Units';
+import Unit from '@civ-clone/core-unit/Unit';
+import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const mode = process.argv.includes('--load') ? 'load' : 'save';
 const file = process.argv[process.argv.indexOf(`--${mode}`) + 1];
@@ -94,6 +100,62 @@ const repeatedCityNames = (): string =>
     .filter((name, index, names): boolean => names.indexOf(name) !== index)
     .join(',');
 
+// Every ship's cargo, as `<ship>:<unit>`, asked of the ship itself. A ship's
+// registries used to be saved as plain arrays, so after a load this threw, and
+// so did the turn of any computer player that owned a ship (#228).
+const cargo = (): string =>
+  defaultGame.transports
+    .entries()
+    .map((manifest) => manifest.transport())
+    .filter((ship, index, ships) => ships.indexOf(ship) === index)
+    .flatMap((ship) =>
+      ship.cargo().map((unit: Unit): string => `${ship.id()}:${unit.id()}`)
+    )
+    .sort()
+    .join(',');
+
+// A Trireme with a land unit aboard, for the first land unit that has an empty
+// sea tile beside it. Put there directly, as the computer players don't build
+// one this early; they move it, and the unit, as they play on.
+const launchShip = (): string => {
+  for (const unit of unitRegistryInstance.entries()) {
+    if (unit.destroyed() || !(unit instanceof Land)) {
+      continue;
+    }
+
+    const sea = unit
+      .tile()
+      .getNeighbours()
+      .find(
+        (tile) =>
+          tile.isWater() && unitRegistryInstance.getByTile(tile).length === 0
+      );
+
+    if (!sea) {
+      continue;
+    }
+
+    const ship = new Trireme(null, unit.player(), sea, ruleRegistryInstance);
+
+    unitRegistryInstance.register(ship);
+    unit.action(new Embark(unit.tile(), sea, unit, ship, ruleRegistryInstance));
+
+    return `${ship.id()}:${unit.id()}`;
+  }
+
+  return 'no land unit beside the sea';
+};
+
+// Errors logged while playing on: a computer player's turn that throws is
+// caught and logged, and the game carries on without it.
+let errors = 0;
+const logError = console.error.bind(console);
+
+console.error = (...args: unknown[]): void => {
+  errors += 1;
+  logError(...args);
+};
+
 // The same loop-stopper the other suites use: once stopped, the turn events
 // that would drive the game on are dropped rather than the process being
 // killed mid-turn.
@@ -122,6 +184,8 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   if (mode === 'save' && turn === until) {
+    report.shipLaunched = launchShip();
+
     // Saved *before* the digest is taken, because taking one is not free: its
     // DTO half calls `toPlainObject`, which processes yield and support rules,
     // and `civ1-city`'s `Unsupported` rule destroys a unit a city can no longer
@@ -141,9 +205,13 @@ engine.on('turn:start', (turn: number): void => {
     report.atSave = digest();
     report.productionAtSave = String(production());
     report.namePoolAtSave = namePool();
+    report.cargoAtSave = cargo();
+
+    errors = 0;
   }
 
   if (turn >= then) {
+    report.errorsThen = String(errors);
     report.atThen = digest();
     report.productionAtThen = String(production());
     report.repeatedCityNamesAtThen = repeatedCityNames();
@@ -157,6 +225,16 @@ engine.on('turn:start', (turn: number): void => {
 
 if (mode === 'load') {
   const file_ = JSON.parse(readFileSync(file, 'utf8')) as SaveGame;
+
+  // Every Trireme as a save from before #228 holds it: its two registries
+  // written in as state, an empty array and the rules as markers. Loading has
+  // to put the game's own back either way.
+  file_.entities
+    .filter(({ type }) => type === 'Trireme')
+    .forEach(({ state }) => {
+      state._transportRegistry = [];
+      state._transportRuleRegistry = [{ $busy: 'Yield' }];
+    });
 
   // No `engine.start()`: that is what generates a world. Plugins are imported
   // for their rules, exactly as the worker does before handing over.
@@ -172,6 +250,9 @@ if (mode === 'load') {
       report.atLoad = digest();
       report.productionAtLoad = String(production());
       report.namePoolAtLoad = namePool();
+      report.cargoAtLoad = cargo();
+
+      errors = 0;
 
       resumeGame();
 

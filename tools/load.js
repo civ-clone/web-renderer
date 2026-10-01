@@ -87,6 +87,30 @@ checks.push([
     } more names in the pool`,
   true,
 ]);
+// Read from the ship's own cargo at the save, not from what `launchShip`
+// meant to do: an embark that failed would leave both cargo lists empty, and
+// the comparison below would pass on two empty strings.
+checks.push([
+  'a ship with a unit aboard is saved',
+  played.cargoAtSave.split(',').includes(played.shipLaunched) ||
+    `${played.shipLaunched} not in "${played.cargoAtSave}"`,
+  true,
+]);
+// Its registries were saved as plain arrays, so a loaded ship couldn't say
+// what it carried, and a computer player owning one lost every turn (#228).
+// The load side writes the Triremes back the way such an old save held them.
+checks.push([
+  'and comes back knowing its cargo',
+  loaded.cargoAtLoad,
+  played.cargoAtSave,
+]);
+// Zero on both sides, so a failure the uninterrupted game shares can't hide
+// one the loaded game has.
+checks.push([
+  'and no turn fails as it plays on',
+  `${played.errorsThen}/${loaded.errorsThen}`,
+  '0/0',
+]);
 checks.push([
   'and no name is handed out twice as it plays on',
   loaded.repeatedCityNamesAtThen || 'none',

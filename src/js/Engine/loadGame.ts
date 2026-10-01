@@ -40,6 +40,35 @@ export const releaseTilesOfDestroyedCities = (game = defaultGame): void =>
     .forEach((workedTile) => game.workedTiles.unregister(workedTile));
 
 /**
+ * Give every ship the game's transport and rule registries back.
+ *
+ * `core-unit-transport` used to save both as state, so a ship in a save made
+ * before it declared them transient arrives holding plain arrays where the
+ * registries should be: nothing could board or leave it, and a computer player
+ * that owned one lost every turn to the throw (#228). `Game.inject` now
+ * supplies them, which repairs those saves too; this is the same repair done
+ * here, so it holds whichever engine a build loads with. A ship is anything
+ * with the `Transport` mixin's two setters.
+ */
+export const restoreTransportRegistries = (game = defaultGame): void =>
+  game.units.entries().forEach((unit): void => {
+    const transport = unit as unknown as {
+      setRuleRegistry?: (ruleRegistry: typeof game.rules) => void;
+      setTransportRegistry?: (
+        transportRegistry: typeof game.transports
+      ) => void;
+    };
+
+    if (
+      typeof transport.setRuleRegistry === 'function' &&
+      typeof transport.setTransportRegistry === 'function'
+    ) {
+      transport.setRuleRegistry(game.rules);
+      transport.setTransportRegistry(game.transports);
+    }
+  });
+
+/**
  * Put a saved game back into a freshly started engine.
  *
  * **Into `defaultGame`, not a new `Game`.** Rules are registered when a plugin
@@ -85,6 +114,7 @@ export const restoreGame = (
   hydrate(file, defaultGame);
 
   releaseTilesOfDestroyedCities(defaultGame);
+  restoreTransportRegistries(defaultGame);
 
   const humanPlayerIds = new Set(
     file.clients

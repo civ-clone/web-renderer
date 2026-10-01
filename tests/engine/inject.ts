@@ -23,6 +23,9 @@ import { Game } from '@civ-clone/core-game/Game';
 import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Tile from '@civ-clone/core-world/Tile';
+import TransportManifest from '@civ-clone/core-unit-transport/TransportManifest';
+import { Trireme, Warrior } from '@civ-clone/civ1-unit/Units';
+import Unit from '@civ-clone/core-unit/Unit';
 import World from '@civ-clone/core-world/World';
 import Year from '@civ-clone/core-game-year/Year';
 import Yield from '@civ-clone/core-yield/Yield';
@@ -196,6 +199,60 @@ const run = async (): Promise<void> => {
     'PlayerTile.x() still correct',
     () => rebuiltPlayerTile.x(),
     playerTile.x()
+  );
+
+  // A ship. `core-unit-transport`'s `Transport` mixin holds the game's
+  // transport and rule registries; saved, they came back as plain arrays and
+  // anything asking the ship about its cargo threw (#228).
+  type Cargo = {
+    cargo(): Unit[];
+    hasCargo(): boolean;
+    unload(unit: Unit): boolean;
+  };
+
+  const trireme = new Trireme(null, player, tile, game.rules);
+  const warrior = new Warrior(null, player, tile, game.rules);
+  const shipFields = (ship: object): unknown[] => [
+    (ship as Record<string, unknown>)._transportRegistry === game.transports,
+    (ship as Record<string, unknown>)._transportRuleRegistry === game.rules,
+  ];
+  const rebuiltTrireme = injected(trireme) as unknown as Trireme & Cargo;
+
+  push(
+    'Trireme got the game`s transport and rule registries',
+    () => shipFields(rebuiltTrireme),
+    [true, true]
+  );
+
+  game.transports.register(
+    new TransportManifest(rebuiltTrireme, warrior, tile)
+  );
+
+  push(
+    'Trireme.cargo() reads the game`s registry',
+    () => rebuiltTrireme.cargo().map((unit) => unit.id()),
+    [warrior.id()]
+  );
+  push(
+    'Trireme.unload() too',
+    () => [rebuiltTrireme.unload(warrior), rebuiltTrireme.hasCargo()],
+    [true, false]
+  );
+
+  // As a save from before #228 has it: the two fields carried as state.
+  push(
+    'a Trireme saved before #228 gets the registries in place of its arrays',
+    () => {
+      const old = Object.assign(rebuild(trireme), {
+        _transportRegistry: [],
+        _transportRuleRegistry: [],
+      });
+
+      game.inject(old);
+
+      return shipFields(old);
+    },
+    [true, true]
   );
 
   // And the guard that keeps the tables honest as classes change. A transient

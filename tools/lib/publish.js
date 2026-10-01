@@ -103,33 +103,20 @@ const KNOWN_UNINSTALLABLE = {
 // would have fixed. An entry here should name a cause someone has actually
 // found, not a guess at one, or it outlives the defect.
 // A compile error the gate is told to carry, because the package builds
-// correctly with its *own* tsconfig and only fails under the scope mapping.
+// correctly with its *own* tsconfig and only fails under the scope mapping, as
+// `{ pattern, why }` keyed by package: `pattern` matches every error line it
+// excuses, so any other error in the package still refuses.
 //
 // `civ compile`/the gate map `@civ-clone/*` onto the renderer's tree so a
 // package can be built against sources that are not published yet. Those paths
 // are, by construction, not portable — and TypeScript refuses to write a
-// declaration that names a type it can only reach that way (TS2742). For
-// `core-unit-transport` the unnameable type is the inferred type of the
-// `Transport` mixin, which reaches through `Unit` for half the estate.
+// declaration that names a type it can only reach that way (TS2742).
 //
-// The package emits correct `.js` and `.d.ts` under its own config, which is
-// what the commit holds and what npm packs. Without this the package could
-// never be published again — which is how it came to ship a `TransportRegistry`
-// five months older than its source.
-const KNOWN_COMPILE_ERRORS = {
-  'core-unit-transport': {
-    // Both are the same class expression, `Transport.ts(58,14)`: TS2742
-    // cannot name the inferred type through the mapped paths, and TS4094 is
-    // Stage 1's doing — a class expression may not carry `private` members,
-    // and `Unit`'s became `private` when `#private` was converted away.
-    // Scoped to that file so any other error in the package still refuses.
-    pattern: /^Transport\.ts\(\d+,\d+\): error TS(2742|4094): /,
-    why:
-      'TS2742/TS4094 on the `Transport` mixin under the scope mapping; the ' +
-      "package's own tsconfig emits correct .js and .d.ts, which is what the " +
-      'commit holds and npm packs.',
-  },
-};
+// Empty since `core-unit-transport`'s `Transport` mixin was given a named
+// return type (#20): its inferred class type had been unnameable (TS2742) and
+// carried `Unit`'s `private` members (TS4094), and the package had shipped a
+// `TransportRegistry` five months older than its source because of it.
+const KNOWN_COMPILE_ERRORS = {};
 
 // Packages whose own suite fails for a reason that predates the change being
 // published, keyed by package with the reason. Reported on every run, never
