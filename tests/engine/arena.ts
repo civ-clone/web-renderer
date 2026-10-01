@@ -92,6 +92,11 @@ type Seat = {
   improvementsBuilt: number;
   firstCityTurn: number | null;
   noCityAtTurn: boolean;
+  // The tax, science and luxury rates at the latest turn start, and how often they had changed since the last one.
+  rates: number[] | null;
+  rateChanges: number;
+  luxuriesTotal: number;
+  rateTurns: number;
 };
 
 // The turn at whose start `noCityAtTurn10` checks for a city, or the last turn of a shorter game.
@@ -194,6 +199,21 @@ const isA = (value: object, name: string): boolean => {
   return false;
 };
 
+// The player's tax, science and luxury rates, in percent, read by name through the game the plugin list loaded, so
+//  `core-trade-rate` isn't imported (and evaluated) ahead of it. `null` before the player has any.
+const tradeRatesOf = (player: Player): number[] | null =>
+  attempt(() => {
+    const rates: { constructor: { name: string }; value(): number }[] = (
+      baseline.strategies.game as any
+    ).playerTradeRates
+      .getByPlayer(player)
+      .all();
+    const rate = (name: string): number =>
+      rates.find((rate) => rate.constructor.name === name)?.value() ?? 0;
+
+    return [rate('Tax'), rate('Research'), rate('Luxuries')];
+  }, null);
+
 const results = () =>
   seats.map((entry) => {
     const { player } = entry;
@@ -258,6 +278,12 @@ const results = () =>
         exploredSea: tiles.filter((tile) => tile.isWater()).length,
         disorderTurns: entry.disorderTurns.size,
         disorderCityTurns: entry.disorderCityTurns,
+        tax: entry.rates?.[0] ?? 0,
+        science: entry.rates?.[1] ?? 0,
+        luxuries: entry.rates?.[2] ?? 0,
+        meanLuxuries:
+          entry.rateTurns === 0 ? 0 : entry.luxuriesTotal / entry.rateTurns,
+        rateChanges: entry.rateChanges,
         eliminated:
           entry.eliminatedTurn !== null ||
           !playerRegistryInstance.includes(player)
@@ -317,6 +343,18 @@ engine.on('turn:start', (turn: number): void => {
 
     if (turn === Math.min(NO_CITY_TURN, config.turns)) {
       entry.noCityAtTurn = cities.length === 0;
+    }
+
+    const rates = tradeRatesOf(entry.player);
+
+    if (rates !== null) {
+      if (entry.rates !== null && rates.join('/') !== entry.rates.join('/')) {
+        entry.rateChanges += 1;
+      }
+
+      entry.rates = rates;
+      entry.luxuriesTotal += rates[2];
+      entry.rateTurns += 1;
     }
 
     cities.forEach((city: City): void => {
@@ -511,6 +549,10 @@ engine.on('engine:start', (): void => {
       improvementsBuilt: 0,
       firstCityTurn: null,
       noCityAtTurn: false,
+      rates: null,
+      rateChanges: 0,
+      luxuriesTotal: 0,
+      rateTurns: 0,
     };
 
     instrument(entry);
