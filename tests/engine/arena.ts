@@ -27,6 +27,10 @@ import {
   ratingAdvances,
   ratingGold,
   researchInvested,
+  score,
+  scoreCitizens,
+  scorePollution,
+  scoreWonders,
   tiers,
 } from './lib/rating';
 import Advance from '@civ-clone/core-science/Advance';
@@ -237,9 +241,8 @@ const tradeRatesOf = (player: Player): number[] | null =>
 // Civ1's Civilization Score, as v474.05 adds it up (OpenCivOne's decompile, `Overlay_20`
 //  `F20_0000_0ca9_ShowCivilizationScorePopup`; Rome on 640K a Day pp325-328 agrees). The terms the engine has no
 //  concept for yet are left out, so are 0 here: Future Technology (5 each, civ-clone/web-renderer#128), world peace (3
-//  a turn of it after AD 1, at most 100) and a landed spaceship. See docs/arena.md.
-const SCORE_PER_WONDER = 20;
-const SCORE_PER_POLLUTED_TILE = -10;
+//  a turn of it after AD 1, at most 100) and a landed spaceship. See docs/arena.md. The arithmetic is in `lib/rating`;
+//  the counts it's given are the engine's.
 
 type CityScore = {
   // A happy citizen is worth 2, a content one or a specialist 1, an unhappy one nothing: the city's size, plus its happy
@@ -259,7 +262,7 @@ const scoreCity = (city: City): CityScore => {
     );
 
   return {
-    citizens: cityGrowth.size() + happy - unhappy,
+    citizens: scoreCitizens(cityGrowth.size(), happy, unhappy),
     specialists: specialistRegistryInstance.getByCity(city).length,
     martialLaw: yields
       .filter((cityYield) => isA(cityYield, 'MartialLaw'))
@@ -291,11 +294,12 @@ const results = () =>
     const cityScores = cities.map(scoreCity);
     const sum = (key: keyof CityScore): number =>
       cityScores.reduce((total, cityScore) => total + cityScore[key], 0);
-    const scoreCitizens = sum('citizens');
-    const scoreWonders =
-      SCORE_PER_WONDER * wonderRegistryInstance.getByPlayer(player).length;
-    const scorePollution = SCORE_PER_POLLUTED_TILE * pollutedTiles();
-    const score = Math.max(0, scoreCitizens + scoreWonders + scorePollution);
+    const citizens = sum('citizens');
+    const wonders = scoreWonders(
+      wonderRegistryInstance.getByPlayer(player).length
+    );
+    const pollution = scorePollution(pollutedTiles());
+    const total = score(citizens, wonders, pollution);
     const gold = attempt(
       () =>
         playerTreasuryRegistryInstance
@@ -340,15 +344,15 @@ const results = () =>
       ),
       metrics: {
         // The score, plus the treasury and the advances in one currency: docs/arena.md.
-        rating: rating(score, gold, invested),
+        rating: rating(total, gold, invested),
         ratingGold: ratingGold(gold),
         ratingAdvances: ratingAdvances(invested),
         advanceTiers: advanceTiers(tiersOf(), research.known),
         // Never below 0, as in v474.05.
-        score,
-        scoreCitizens,
-        scoreWonders,
-        scorePollution,
+        score: total,
+        scoreCitizens: citizens,
+        scoreWonders: wonders,
+        scorePollution: pollution,
         cities: cities.length,
         population: cities.reduce(
           (total: number, city: City) =>
