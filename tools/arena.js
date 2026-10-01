@@ -39,7 +39,7 @@ const METRICS = [
   ['powerGold', 1],
   ['powerCitizens', 1],
   ['powerAdvances', 1],
-  ['powerUnits', 0],
+  ['powerUnits', 1],
   ['score', 1],
   ['scoreCitizens', 1],
   ['scoreWonders', 1],
