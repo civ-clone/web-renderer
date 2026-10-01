@@ -25,6 +25,11 @@ import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { StrategyRegistry } from '@civ-clone/core-strategy/StrategyRegistry';
 import World from '@civ-clone/core-world/World';
+import Yield from '@civ-clone/core-yield/Yield';
+import {
+  calculateCitizenState,
+  citizenSummary,
+} from '@civ-clone/civ1-city-happiness/lib/calculateCitizenState';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -36,7 +41,10 @@ import { instance as playerResearchRegistryInstance } from '@civ-clone/core-scie
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
+import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 
 export const START = '<<<arena';
 export const END = 'arena>>>';
@@ -97,6 +105,8 @@ type Seat = {
   rateChanges: number;
   luxuriesTotal: number;
   rateTurns: number;
+  // Specialists summed over the turn starts: citizen-turns spent off the map.
+  specialistTurns: number;
 };
 
 // The turn at whose start `noCityAtTurn10` checks for a city, or the last turn of a shorter game.
@@ -214,6 +224,46 @@ const tradeRatesOf = (player: Player): number[] | null =>
     return [rate('Tax'), rate('Research'), rate('Luxuries')];
   }, null);
 
+// Civ1's Civilization Score, as v474.05 adds it up (OpenCivOne's decompile, `Overlay_20`
+//  `F20_0000_0ca9_ShowCivilizationScorePopup`; Rome on 640K a Day pp325-328 agrees). The terms the engine has no
+//  concept for yet are left out, so are 0 here: Future Technology (5 each, civ-clone/web-renderer#128), world peace (3
+//  a turn of it after AD 1, at most 100) and a landed spaceship. See docs/arena.md.
+const SCORE_PER_WONDER = 20;
+const SCORE_PER_POLLUTED_TILE = -10;
+
+type CityScore = {
+  // A happy citizen is worth 2, a content one or a specialist 1, an unhappy one nothing: the city's size, plus its happy
+  //  citizens, less its unhappy ones.
+  citizens: number;
+  specialists: number;
+  // Unhappy citizens made content by units in the city.
+  martialLaw: number;
+};
+
+// By the engine's own reckoning of the city's citizens, with its trade rates as they are.
+const scoreCity = (city: City): CityScore => {
+  const cityGrowth = cityGrowthRegistryInstance.getByCity(city),
+    yields: Yield[] = city.yields(),
+    [unhappy, , happy] = citizenSummary(
+      calculateCitizenState(cityGrowth, yields, specialistRegistryInstance)
+    );
+
+  return {
+    citizens: cityGrowth.size() + happy - unhappy,
+    specialists: specialistRegistryInstance.getByCity(city).length,
+    martialLaw: yields
+      .filter((cityYield) => isA(cityYield, 'MartialLaw'))
+      .reduce((total, cityYield) => total + Math.abs(cityYield.value()), 0),
+  };
+};
+
+// Polluted tiles anywhere in the world. v474.05 counts them all against each player's score, not just the ones the
+//  player can see, as the book has it. Nothing in the engine pollutes a tile yet.
+const pollutedTiles = (): number =>
+  tileImprovementRegistryInstance.filter((improvement) =>
+    isA(improvement, 'Pollution')
+  ).length;
+
 const results = () =>
   seats.map((entry) => {
     const { player } = entry;
@@ -222,6 +272,13 @@ const results = () =>
       () => playerWorldRegistryInstance.getByPlayer(player).entries(),
       []
     );
+    const cityScores = cities.map(scoreCity);
+    const sum = (key: keyof CityScore): number =>
+      cityScores.reduce((total, cityScore) => total + cityScore[key], 0);
+    const scoreCitizens = sum('citizens');
+    const scoreWonders =
+      SCORE_PER_WONDER * wonderRegistryInstance.getByPlayer(player).length;
+    const scorePollution = SCORE_PER_POLLUTED_TILE * pollutedTiles();
 
     return {
       seat: entry.seat,
@@ -237,6 +294,11 @@ const results = () =>
         'unknown'
       ),
       metrics: {
+        // Never below 0, as in v474.05.
+        score: Math.max(0, scoreCitizens + scoreWonders + scorePollution),
+        scoreCitizens,
+        scoreWonders,
+        scorePollution,
         cities: cities.length,
         population: cities.reduce(
           (total: number, city: City) =>
@@ -278,6 +340,9 @@ const results = () =>
         exploredSea: tiles.filter((tile) => tile.isWater()).length,
         disorderTurns: entry.disorderTurns.size,
         disorderCityTurns: entry.disorderCityTurns,
+        specialists: sum('specialists'),
+        specialistTurns: entry.specialistTurns,
+        martialLaw: sum('martialLaw'),
         tax: entry.rates?.[0] ?? 0,
         science: entry.rates?.[1] ?? 0,
         luxuries: entry.rates?.[2] ?? 0,
@@ -358,6 +423,9 @@ engine.on('turn:start', (turn: number): void => {
     }
 
     cities.forEach((city: City): void => {
+      entry.specialistTurns +=
+        specialistRegistryInstance.getByCity(city).length;
+
       const building = attempt(
         () => cityBuildRegistryInstance.getByCity(city).building()?.item(),
         undefined
@@ -553,6 +621,7 @@ engine.on('engine:start', (): void => {
       rateChanges: 0,
       luxuriesTotal: 0,
       rateTurns: 0,
+      specialistTurns: 0,
     };
 
     instrument(entry);

@@ -35,6 +35,10 @@ const fixturePath = path.join(
 
 // Higher is better (1), lower is better (-1), or neither (0).
 const METRICS = [
+  ['score', 1],
+  ['scoreCitizens', 1],
+  ['scoreWonders', 1],
+  ['scorePollution', 1],
   ['cities', 1],
   ['population', 1],
   ['advances', 1],
@@ -56,6 +60,9 @@ const METRICS = [
   ['exploredSea', 1],
   ['disorderTurns', -1],
   ['disorderCityTurns', -1],
+  ['specialists', 0],
+  ['specialistTurns', 0],
+  ['martialLaw', 0],
   ['tax', 0],
   ['science', 0],
   ['luxuries', 0],
@@ -798,6 +805,7 @@ const table = (rows) => {
 
 const printGames = (games) => {
   const columns = [
+    ['score', 'score'],
     ['cities', 'cities'],
     ['population', 'pop'],
     ['advances', 'adv'],
@@ -812,6 +820,7 @@ const printGames = (games) => {
     ['explored', 'seen'],
     ['exploredSea', 'sea'],
     ['disorderTurns', 'disorder'],
+    ['specialists', 'spec'],
     ['luxuries', 'lux'],
     ['rateChanges', 'rates'],
     ['eliminated', 'out'],
