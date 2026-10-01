@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Runs tests/engine/rating.ts — the arena's rating (#202), on hand-built
+// Runs tests/engine/power.ts — the arena's measures (#202), on hand-built
 // inputs. Bundled with esbuild so each package's `.ts` is
 // resolved rather than its compiled `.js`.
 
@@ -12,12 +12,12 @@ const path = require('path');
 const { webRenderer } = require('./lib/paths');
 
 const outfile = path.join(
-  fs.mkdtempSync(path.join(os.tmpdir(), 'rating-')),
-  'rating.js'
+  fs.mkdtempSync(path.join(os.tmpdir(), 'power-')),
+  'power.js'
 );
 
 require('esbuild').buildSync({
-  entryPoints: [path.join(webRenderer, 'tests', 'engine', 'rating.ts')],
+  entryPoints: [path.join(webRenderer, 'tests', 'engine', 'power.ts')],
   bundle: true,
   keepNames: true,
   platform: 'node',

@@ -21,18 +21,20 @@ import Player from '@civ-clone/core-player/Player';
 //  `SimpleAIClient`, so modules evaluate in the same order.
 import variants from 'arena:variants';
 import { checksum, snapshot } from './lib/checksum';
+import { advanceTiers, tiers } from './lib/advanceTiers';
 import {
-  advanceTiers,
-  rating,
-  ratingAdvances,
-  ratingGold,
-  researchInvested,
+  power,
+  powerAdvances,
+  powerCitizens,
+  powerGold,
+  powerUnits,
+} from './lib/power';
+import {
   score,
   scoreCitizens,
   scorePollution,
   scoreWonders,
-  tiers,
-} from './lib/rating';
+} from './lib/score';
 import Advance from '@civ-clone/core-science/Advance';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Unit from '@civ-clone/core-unit/Unit';
@@ -119,6 +121,8 @@ type Seat = {
   rateChanges: number;
   luxuriesTotal: number;
   rateTurns: number;
+  // How many advances the player held at the first turn's start: v474.05's power ranking doesn't count them.
+  advancesAtStart: number | null;
   // Specialists summed over the turn starts: citizen-turns spent off the map.
   specialistTurns: number;
 };
@@ -241,7 +245,7 @@ const tradeRatesOf = (player: Player): number[] | null =>
 // Civ1's Civilization Score, as v474.05 adds it up (OpenCivOne's decompile, `Overlay_20`
 //  `F20_0000_0ca9_ShowCivilizationScorePopup`; Rome on 640K a Day pp325-328 agrees). The terms the engine has no
 //  concept for yet are left out, so are 0 here: Future Technology (5 each, civ-clone/web-renderer#128), world peace (3
-//  a turn of it after AD 1, at most 100) and a landed spaceship. See docs/arena.md. The arithmetic is in `lib/rating`;
+//  a turn of it after AD 1, at most 100) and a landed spaceship. See docs/arena.md. The arithmetic is in `lib/score`;
 //  the counts it's given are the engine's.
 
 type CityScore = {
@@ -280,6 +284,9 @@ const pollutedTiles = (): number =>
 // Each advance's tier, worked out from the ruleset's `Requirements` once, at the end of the game.
 let tierMap: Map<typeof Advance, number> | null = null;
 
+// Each unit type's value, from the ruleset's `BuildCost` rules, looked up once.
+const unitValues = new Map<typeof Unit, number>();
+
 const tiersOf = (): Map<typeof Advance, number> =>
   (tierMap ??= tiers(ruleRegistryInstance, advanceRegistryInstance.entries()));
 
@@ -308,25 +315,30 @@ const results = () =>
           ?.value() ?? 0,
       0
     );
-    // The player's advances in the order it came to hold them, and its progress towards the next.
-    const research = attempt(
-      () => {
-        const playerResearch =
-          playerResearchRegistryInstance.getByPlayer(player);
-
-        return {
-          known: playerResearch
-            .complete()
-            .map((advance) => advance.constructor as typeof Advance),
-          progress: playerResearch.progress().value(),
-        };
-      },
-      { known: [] as (typeof Advance)[], progress: 0 }
+    const known: (typeof Advance)[] = attempt(
+      () =>
+        playerResearchRegistryInstance
+          .getByPlayer(player)
+          .complete()
+          .map((advance) => advance.constructor as typeof Advance),
+      []
     );
-    const invested = researchInvested(
+    const population = cities.reduce(
+      (total: number, city: City) =>
+        total + cityGrowthRegistryInstance.getByCity(city).size(),
+      0
+    );
+    const eliminated =
+      entry.eliminatedTurn !== null || !playerRegistryInstance.includes(player);
+    const powerGoldValue = powerGold(gold);
+    const powerCitizensValue = powerCitizens(population);
+    const powerAdvancesValue = powerAdvances(
+      known.length - (entry.advancesAtStart ?? 0)
+    );
+    const powerUnitsValue = powerUnits(
       ruleRegistryInstance,
-      research.known,
-      research.progress
+      unitRegistryInstance.getByPlayer(player),
+      unitValues
     );
 
     return {
@@ -343,22 +355,26 @@ const results = () =>
         'unknown'
       ),
       metrics: {
-        // The score, plus the treasury and the advances in one currency: docs/arena.md.
-        rating: rating(total, gold, invested),
-        ratingGold: ratingGold(gold),
-        ratingAdvances: ratingAdvances(invested),
-        advanceTiers: advanceTiers(tiersOf(), research.known),
+        // v474.05's power ranking: docs/arena.md.
+        power: power(
+          !eliminated,
+          powerGoldValue,
+          powerCitizensValue,
+          powerAdvancesValue,
+          powerUnitsValue
+        ),
+        powerGold: powerGoldValue,
+        powerCitizens: powerCitizensValue,
+        powerAdvances: powerAdvancesValue,
+        powerUnits: powerUnitsValue,
         // Never below 0, as in v474.05.
         score: total,
         scoreCitizens: citizens,
         scoreWonders: wonders,
         scorePollution: pollution,
+        advanceTiers: advanceTiers(tiersOf(), known),
         cities: cities.length,
-        population: cities.reduce(
-          (total: number, city: City) =>
-            total + cityGrowthRegistryInstance.getByCity(city).size(),
-          0
-        ),
+        population,
         advances: attempt(
           () =>
             playerResearchRegistryInstance.getByPlayer(player).complete()
@@ -396,11 +412,7 @@ const results = () =>
         meanLuxuries:
           entry.rateTurns === 0 ? 0 : entry.luxuriesTotal / entry.rateTurns,
         rateChanges: entry.rateChanges,
-        eliminated:
-          entry.eliminatedTurn !== null ||
-          !playerRegistryInstance.includes(player)
-            ? 1
-            : 0,
+        eliminated: eliminated ? 1 : 0,
         loopGuardTurns: entry.loopGuardTurns.size,
         loopGuardHits: entry.loopGuardHits,
         unitsSkipped: entry.unitsSkipped,
@@ -455,6 +467,15 @@ engine.on('turn:start', (turn: number): void => {
 
     if (turn === Math.min(NO_CITY_TURN, config.turns)) {
       entry.noCityAtTurn = cities.length === 0;
+    }
+
+    if (entry.advancesAtStart === null) {
+      entry.advancesAtStart = attempt(
+        () =>
+          playerResearchRegistryInstance.getByPlayer(entry.player).complete()
+            .length,
+        0
+      );
     }
 
     const rates = tradeRatesOf(entry.player);
@@ -668,6 +689,7 @@ engine.on('engine:start', (): void => {
       rateChanges: 0,
       luxuriesTotal: 0,
       rateTurns: 0,
+      advancesAtStart: null,
       specialistTurns: 0,
     };
 
