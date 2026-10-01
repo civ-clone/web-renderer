@@ -74,70 +74,70 @@ run, is deterministic.
 
 Per player, at the start of the last turn:
 
-| Metric                                                                                                               | What it counts                                                                                                 |
-| -------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `rating`, `ratingGold`, `ratingAdvances`, `advanceTiers`, `score`, `scoreCitizens`, `scoreWonders`, `scorePollution` | At the end. See [Rating](#rating) and [Score](#score).                                                         |
-| `cities`, `population`, `advances`, `units`, `navalUnits`, `gold`                                                    | Held at the end. Population is the sum of city sizes. Advances are the ones `PlayerResearch.complete()` lists. |
-| `unitsCreated`, `navalUnitsCreated`                                                                                  | Units that appeared during the game (`unit:created`): built, or from a hut. The starting units aren't counted. |
-| `unitsLost`, `unitsDefeated`                                                                                         | Units lost in combat, and enemy units beaten (`unit:defeated`).                                                |
-| `unitsLostAtSea`                                                                                                     | Units lost at sea (`unit:lost-at-sea`): a Trireme away from the coast, or an aircraft out of fuel.             |
-| `wondersStarted`                                                                                                     | Wonders a city was building at a turn's start, each city's each Wonder counted once, finished or not.          |
-| `wondersBuilt`, `improvementsBuilt`                                                                                  | Wonders and other city improvements finished (`city:building-complete`). The founding Palace isn't counted.    |
-| `firstCityTurn`                                                                                                      | The turn the player founded its first city (`city:created`), or `--turns` if it never did.                     |
-| `noCityAtTurn10`                                                                                                     | 1 if the player held no city at the start of turn 10 (of the last turn, in a shorter game).                    |
-| `explored`, `exploredLand`, `exploredSea`                                                                            | Tiles in the player's map.                                                                                     |
-| `disorderTurns`, `disorderCityTurns`                                                                                 | Turns with any city in civil disorder, and city-turns in disorder, counted from `city:civil-disorder`.         |
-| `specialists`, `specialistTurns`                                                                                     | Citizens not working a tile (Entertainers and other specialists) at the end, and summed over the turn starts.  |
-| `martialLaw`                                                                                                         | Unhappy citizens made content by units in their city (the engine's `MartialLaw` yields), at the end.           |
-| `tax`, `science`, `luxuries`                                                                                         | The trade rates, in percent, at the start of the last turn.                                                    |
-| `meanLuxuries`, `rateChanges`                                                                                        | The luxury rate averaged over the turn starts, and how many turn starts had new rates.                         |
-| `eliminated`                                                                                                         | 1 if the player was defeated.                                                                                  |
-| `loopGuardTurns`, `loopGuardHits`                                                                                    | The AI's action limit was reached (`actionLimitReached`).                                                      |
-| `unitsSkipped`, `skipTurns`                                                                                          | A unit threw and was skipped for the turn (`actionFailed`).                                                    |
-| `unhandledActions`                                                                                                   | The turn ended at an action no strategy handled, other than `EndTurn`.                                         |
+| Metric                                                                                                                                           | What it counts                                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `power`, `powerGold`, `powerCitizens`, `powerAdvances`, `powerUnits`, `score`, `scoreCitizens`, `scoreWonders`, `scorePollution`, `advanceTiers` | At the end. See [Power](#power) and [Score](#score).                                                           |
+| `cities`, `population`, `advances`, `units`, `navalUnits`, `gold`                                                                                | Held at the end. Population is the sum of city sizes. Advances are the ones `PlayerResearch.complete()` lists. |
+| `unitsCreated`, `navalUnitsCreated`                                                                                                              | Units that appeared during the game (`unit:created`): built, or from a hut. The starting units aren't counted. |
+| `unitsLost`, `unitsDefeated`                                                                                                                     | Units lost in combat, and enemy units beaten (`unit:defeated`).                                                |
+| `unitsLostAtSea`                                                                                                                                 | Units lost at sea (`unit:lost-at-sea`): a Trireme away from the coast, or an aircraft out of fuel.             |
+| `wondersStarted`                                                                                                                                 | Wonders a city was building at a turn's start, each city's each Wonder counted once, finished or not.          |
+| `wondersBuilt`, `improvementsBuilt`                                                                                                              | Wonders and other city improvements finished (`city:building-complete`). The founding Palace isn't counted.    |
+| `firstCityTurn`                                                                                                                                  | The turn the player founded its first city (`city:created`), or `--turns` if it never did.                     |
+| `noCityAtTurn10`                                                                                                                                 | 1 if the player held no city at the start of turn 10 (of the last turn, in a shorter game).                    |
+| `explored`, `exploredLand`, `exploredSea`                                                                                                        | Tiles in the player's map.                                                                                     |
+| `disorderTurns`, `disorderCityTurns`                                                                                                             | Turns with any city in civil disorder, and city-turns in disorder, counted from `city:civil-disorder`.         |
+| `specialists`, `specialistTurns`                                                                                                                 | Citizens not working a tile (Entertainers and other specialists) at the end, and summed over the turn starts.  |
+| `martialLaw`                                                                                                                                     | Unhappy citizens made content by units in their city (the engine's `MartialLaw` yields), at the end.           |
+| `tax`, `science`, `luxuries`                                                                                                                     | The trade rates, in percent, at the start of the last turn.                                                    |
+| `meanLuxuries`, `rateChanges`                                                                                                                    | The luxury rate averaged over the turn starts, and how many turn starts had new rates.                         |
+| `eliminated`                                                                                                                                     | 1 if the player was defeated.                                                                                  |
+| `loopGuardTurns`, `loopGuardHits`                                                                                                                | The AI's action limit was reached (`actionLimitReached`).                                                      |
+| `unitsSkipped`, `skipTurns`                                                                                                                      | A unit threw and was skipped for the turn (`actionFailed`).                                                    |
+| `unhandledActions`                                                                                                                               | The turn ended at an action no strategy handled, other than `EndTurn`.                                         |
 
 The last three groups are counted by wrapping those methods on each client,
 so the counting doesn't depend on console output, and the AI runs exactly as
 it would have. The AI's console output is silenced unless `--verbose`.
 
-### Rating
+### Power
 
-`rating` comes first in the report: one overall answer for a change that
-trades one metric for another, such as less gold for more advances. It's
-`score + floor((treasury + researchInvested) / 10)`, worked out by
-`tests/engine/lib/rating.ts` (tested by `npm run test:rating`) so that the
-engine's measure (#149) can lift it. The treasury and the research share the
-one `floor`, so moving trade between tax and science can't move it by
-rounding; `ratingGold` and `ratingAdvances`, each floored on its own, are
-reported to read it by, and can be one short of adding up to it:
+`power` comes first in the report: one overall answer for a change that
+trades one metric for another, such as less gold for more advances. It's the
+power ranking Civ1 v474.05 ranks the civilizations by each turn and draws on
+the PowerGraph (OpenCivOne's decompile, `GameEngine.cs`
+`F0_1238_0da1_RankPlayers`, L641–661; _Rome on 640K a Day_ p337), and what
+#149 specifies as the engine's `rank(player)`:
 
-| Term             | Value                                                                                                                                                                                                                                                               |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `score`          | Civ1's Civilization Score, below.                                                                                                                                                                                                                                   |
-| `ratingGold`     | `floor(treasury / 10)`.                                                                                                                                                                                                                                             |
-| `ratingAdvances` | `floor(researchInvested / 10)`: the bulbs the ruleset's `Cost` rules charge for each advance the player holds, at the number it knew before it, plus its progress towards the next. An advance from a hut, a trade or a conquest counts at what it would have cost. |
+| Term            | v474.05                                                                                                  | Here                                                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `powerGold`     | `Coins / 32`, integer division.                                                                          | The treasury's gold / 32, truncated.                                                                                             |
+| `powerCitizens` | `TotalCitySize * 8`: 8 per point of city size.                                                           | 8 × the sum of the player's city sizes (`population`).                                                                           |
+| `powerAdvances` | `DiscoveredTechnologyCount`: 1 at the start, +1 for every advance gained after turn 0, however.          | 1 + the advances gained since the first turn's start. Advances a player starts with aren't counted.                              |
+| `powerUnits`    | `Σ Units[type].Cost × ActiveUnits[type]`, over all 28 unit types. A unit's `Cost` is in tens of shields. | Each unit's build cost by the ruleset's `BuildCost` rules / 10, rounded down. Every unit counts: Settlers, Diplomats, ships too. |
 
-Gold and advances are in one currency: a trade point becomes one gold or one
-bulb, so moving the rates between tax and science doesn't move the rating by
-itself. Its limits:
+A civilization no longer in the game is 0. `tests/engine/lib/power.ts` works it
+out, so that the engine's measure can lift it, and `npm run test:power` tests
+it on hand-built values.
 
-- Gold held is a stock and research is a running total. Gold spent, on an
-  improvement or a hurried unit, leaves `ratingGold`, and only comes back
-  through what it bought, if the score counts that. Bulbs are never lost.
-- Civ1 charges more for each advance than the last, so `ratingAdvances` grows
-  with the square of the advances held. Later in a game it outweighs the score
-  and the treasury.
-- Units, improvements and Marketplace or Library multipliers aren't counted.
-  #149's ranking counts units by their cost, and might be added later.
-- It's the same yardstick for every player. Weighting advances by how much a
-  particular leader wants them belongs to that leader's research choices
-  (#157), not to a measure that has to compare two AIs.
+It weighs gold lightly, a 32nd, so a hoard counts for little, and it's linear in
+the advances held. It leaves out what the Civilization Score counts:
+happiness, Wonders and pollution. `score` comes next in the report for those.
 
-`advanceTiers` is reported beside it, but isn't part of it. It's the sum of
-each held advance's tier, the length of its longest chain of prerequisites
-counting itself, from the ruleset's `Requirements` rules: Alphabet 1, Code of
-Laws 2, Monarchy 3, Feudalism 4, Chivalry 5. It weights advances by depth in
-the tree rather than by cost.
+A first attempt, `rating`, added the treasury and the research ever spent to
+the score in one currency, a tenth each. It was dropped because it set gold
+held against bulbs ever spent, which rewarded hoarding, and because Civ1's
+rising price per advance made the research term grow with the square of the
+advances held and swamp everything else from the middle game.
+
+Both are the same yardstick for every player. Weighting advances by how much a
+particular leader wants them belongs to that leader's research choices (#157),
+not to a measure that has to compare two AIs.
+
+`advanceTiers` is reported too, but isn't part of `power`. It's the sum of each
+held advance's tier, the length of its longest chain of prerequisites counting
+itself, from the ruleset's `Requirements` rules: Alphabet 1, Code of Laws 2,
+Monarchy 3, Feudalism 4, Chivalry 5. It weights advances by depth in the tree.
 
 ### Score
 
