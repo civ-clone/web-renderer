@@ -261,6 +261,9 @@ type CityScore = {
   martialLaw: number;
   // The city's trade before corruption.
   trade: number;
+  // Shields the city makes before it supports its units, and the shields that support costs.
+  shields: number;
+  unitSupport: number;
 };
 
 // By the engine's own reckoning of the city's citizens, with its trade rates as they are.
@@ -276,6 +279,16 @@ const scoreCity = (city: City): CityScore => {
     specialists: specialistRegistryInstance.getByCity(city).length,
     martialLaw: yields
       .filter((cityYield) => isA(cityYield, 'MartialLaw'))
+      .reduce((total, cityYield) => total + Math.abs(cityYield.value()), 0),
+    shields: yields
+      .filter(
+        (cityYield) =>
+          isA(cityYield, 'Production') &&
+          !isA(cityYield, 'UnitSupportProduction')
+      )
+      .reduce((total, cityYield) => total + cityYield.value(), 0),
+    unitSupport: yields
+      .filter((cityYield) => isA(cityYield, 'UnitSupportProduction'))
       .reduce((total, cityYield) => total + Math.abs(cityYield.value()), 0),
     trade: yields
       .filter((cityYield) => cityYield.constructor.name === 'Trade')
@@ -399,8 +412,8 @@ const results = () =>
       ),
       government: attempt(
         () =>
-          playerGovernmentRegistryInstance.getByPlayer(player).get().constructor
-            .name,
+          playerGovernmentRegistryInstance.getByPlayer(player).current()
+            ?.constructor.name ?? 'unknown',
         'unknown'
       ),
       metrics: {
@@ -460,6 +473,9 @@ const results = () =>
         ...unitPlacement(player, cities),
         unitMoves: entry.unitMoves,
         pacingMoves: entry.pacingMoves,
+        shields: sum('shields'),
+        unitSupport: sum('unitSupport'),
+        netShields: sum('shields') - sum('unitSupport'),
         tax: entry.rates?.[0] ?? 0,
         science: entry.rates?.[1] ?? 0,
         luxuries: entry.rates?.[2] ?? 0,
