@@ -23,6 +23,7 @@ import variants from 'arena:variants';
 import { checksum, snapshot } from './lib/checksum';
 import {
   advanceTiers,
+  rating,
   ratingAdvances,
   ratingGold,
   researchInvested,
@@ -318,9 +319,10 @@ const results = () =>
       },
       { known: [] as (typeof Advance)[], progress: 0 }
     );
-    const ratingGoldValue = ratingGold(gold);
-    const ratingAdvancesValue = ratingAdvances(
-      researchInvested(ruleRegistryInstance, research.known, research.progress)
+    const invested = researchInvested(
+      ruleRegistryInstance,
+      research.known,
+      research.progress
     );
 
     return {
@@ -338,9 +340,9 @@ const results = () =>
       ),
       metrics: {
         // The score, plus the treasury and the advances in one currency: docs/arena.md.
-        rating: score + ratingGoldValue + ratingAdvancesValue,
-        ratingGold: ratingGoldValue,
-        ratingAdvances: ratingAdvancesValue,
+        rating: rating(score, gold, invested),
+        ratingGold: ratingGold(gold),
+        ratingAdvances: ratingAdvances(invested),
         advanceTiers: advanceTiers(tiersOf(), research.known),
         // Never below 0, as in v474.05.
         score,

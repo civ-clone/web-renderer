@@ -19,6 +19,15 @@ export const ratingGold = (treasury: number): number =>
 export const ratingAdvances = (researchInvested: number): number =>
   Math.floor(researchInvested / RATING_DIVISOR);
 
+// The rating itself. The treasury and the research are added before the one `floor`, so moving trade between tax and
+//  science can't move it by rounding: 10 gold and 0 bulbs rate the same as 9 and 1. The two components above are
+//  reported for reading, and needn't add up to it exactly.
+export const rating = (
+  score: number,
+  treasury: number,
+  researchInvested: number
+): number => score + Math.floor((treasury + researchInvested) / RATING_DIVISOR);
+
 // What the ruleset charges for `AdvanceType` when the player already knows `known` advances, asked of its `Cost` rules
 //  with a stand-in for the player's research that knows that many.
 export const advanceCost = (
