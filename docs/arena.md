@@ -86,6 +86,8 @@ Per player, at the start of the last turn:
 | `noCityAtTurn10`                                                  | 1 if the player held no city at the start of turn 10 (of the last turn, in a shorter game).                    |
 | `explored`, `exploredLand`, `exploredSea`                         | Tiles in the player's map.                                                                                     |
 | `disorderTurns`, `disorderCityTurns`                              | Turns with any city in civil disorder, and city-turns in disorder, counted from `city:civil-disorder`.         |
+| `tax`, `science`, `luxuries`                                      | The trade rates, in percent, at the start of the last turn.                                                    |
+| `meanLuxuries`, `rateChanges`                                     | The luxury rate averaged over the turn starts, and how many turn starts had new rates.                         |
 | `eliminated`                                                      | 1 if the player was defeated.                                                                                  |
 | `loopGuardTurns`, `loopGuardHits`                                 | The AI's action limit was reached (`actionLimitReached`).                                                      |
 | `unitsSkipped`, `skipTurns`                                       | A unit threw and was skipped for the turn (`actionFailed`).                                                    |
