@@ -9,6 +9,10 @@ import {
   ratingAdvances,
   ratingGold,
   researchInvested,
+  score,
+  scoreCitizens,
+  scorePollution,
+  scoreWonders,
   tiers,
 } from './lib/rating';
 import Advance from '@civ-clone/core-science/Advance';
@@ -106,6 +110,13 @@ const cases: [string, unknown, unknown][] = [
     23,
   ],
   ['research for ten', researchInvested(civ1, all.slice(0, 10), 0), 330],
+  // Size 8: 2 happy, 3 content, 1 specialist, 2 unhappy: 2×2 + 3 + 1 = 8 + 2 − 2.
+  ['citizens of a size-8 city', scoreCitizens(8, 2, 2), 8],
+  ['citizens, all unhappy', scoreCitizens(6, 0, 6), 0],
+  ['three Wonders', scoreWonders(3), 60],
+  ['two polluted tiles', scorePollution(2), -20],
+  ['score', score(8, 60, -20), 48],
+  ['score never below 0', score(3, 0, scorePollution(1)), 0],
   ['ratingGold 99', ratingGold(99), 9],
   ['ratingAdvances 330', ratingAdvances(330), 33],
   // One floor over both: 9 gold and 1 bulb rate as 10 gold does.
