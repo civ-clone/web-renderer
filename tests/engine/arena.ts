@@ -21,6 +21,14 @@ import Player from '@civ-clone/core-player/Player';
 //  `SimpleAIClient`, so modules evaluate in the same order.
 import variants from 'arena:variants';
 import { checksum, snapshot } from './lib/checksum';
+import {
+  advanceTiers,
+  ratingAdvances,
+  ratingGold,
+  researchInvested,
+  tiers,
+} from './lib/rating';
+import Advance from '@civ-clone/core-science/Advance';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { StrategyRegistry } from '@civ-clone/core-strategy/StrategyRegistry';
@@ -37,6 +45,7 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
+import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
@@ -264,6 +273,12 @@ const pollutedTiles = (): number =>
     isA(improvement, 'Pollution')
   ).length;
 
+// Each advance's tier, worked out from the ruleset's `Requirements` once, at the end of the game.
+let tierMap: Map<typeof Advance, number> | null = null;
+
+const tiersOf = (): Map<typeof Advance, number> =>
+  (tierMap ??= tiers(ruleRegistryInstance, advanceRegistryInstance.entries()));
+
 const results = () =>
   seats.map((entry) => {
     const { player } = entry;
@@ -279,6 +294,34 @@ const results = () =>
     const scoreWonders =
       SCORE_PER_WONDER * wonderRegistryInstance.getByPlayer(player).length;
     const scorePollution = SCORE_PER_POLLUTED_TILE * pollutedTiles();
+    const score = Math.max(0, scoreCitizens + scoreWonders + scorePollution);
+    const gold = attempt(
+      () =>
+        playerTreasuryRegistryInstance
+          .getByPlayer(player)
+          .find((treasury) => treasury.yield().name === 'Gold')
+          ?.value() ?? 0,
+      0
+    );
+    // The player's advances in the order it came to hold them, and its progress towards the next.
+    const research = attempt(
+      () => {
+        const playerResearch =
+          playerResearchRegistryInstance.getByPlayer(player);
+
+        return {
+          known: playerResearch
+            .complete()
+            .map((advance) => advance.constructor as typeof Advance),
+          progress: playerResearch.progress().value(),
+        };
+      },
+      { known: [] as (typeof Advance)[], progress: 0 }
+    );
+    const ratingGoldValue = ratingGold(gold);
+    const ratingAdvancesValue = ratingAdvances(
+      researchInvested(ruleRegistryInstance, research.known, research.progress)
+    );
 
     return {
       seat: entry.seat,
@@ -294,8 +337,13 @@ const results = () =>
         'unknown'
       ),
       metrics: {
+        // The score, plus the treasury and the advances in one currency: docs/arena.md.
+        rating: score + ratingGoldValue + ratingAdvancesValue,
+        ratingGold: ratingGoldValue,
+        ratingAdvances: ratingAdvancesValue,
+        advanceTiers: advanceTiers(tiersOf(), research.known),
         // Never below 0, as in v474.05.
-        score: Math.max(0, scoreCitizens + scoreWonders + scorePollution),
+        score,
         scoreCitizens,
         scoreWonders,
         scorePollution,
@@ -327,14 +375,7 @@ const results = () =>
         firstCityTurn: entry.firstCityTurn ?? config.turns,
         noCityAtTurn10: entry.noCityAtTurn ? 1 : 0,
         // By name, so `civ1-treasury` isn't imported (and evaluated) ahead of the plugin list.
-        gold: attempt(
-          () =>
-            playerTreasuryRegistryInstance
-              .getByPlayer(player)
-              .find((treasury) => treasury.yield().name === 'Gold')
-              ?.value() ?? 0,
-          0
-        ),
+        gold,
         explored: tiles.length,
         exploredLand: tiles.filter((tile) => tile.isLand()).length,
         exploredSea: tiles.filter((tile) => tile.isWater()).length,
