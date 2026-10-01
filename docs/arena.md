@@ -104,8 +104,12 @@ it would have. The AI's console output is silenced unless `--verbose`.
 
 `rating` comes first in the report: one overall answer for a change that
 trades one metric for another, such as less gold for more advances. It's
-`score + ratingGold + ratingAdvances`, worked out by `tests/engine/lib/rating.ts`
-so that the engine's measure (#149) can lift it:
+`score + floor((treasury + researchInvested) / 10)`, worked out by
+`tests/engine/lib/rating.ts` (tested by `npm run test:rating`) so that the
+engine's measure (#149) can lift it. The treasury and the research share the
+one `floor`, so moving trade between tax and science can't move it by
+rounding; `ratingGold` and `ratingAdvances`, each floored on its own, are
+reported to read it by, and can be one short of adding up to it:
 
 | Term             | Value                                                                                                                                                                                                                                                               |
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
