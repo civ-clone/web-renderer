@@ -86,6 +86,8 @@ Per player, at the start of the last turn:
 | `noCityAtTurn10`                                                  | 1 if the player held no city at the start of turn 10 (of the last turn, in a shorter game).                    |
 | `explored`, `exploredLand`, `exploredSea`                         | Tiles in the player's map.                                                                                     |
 | `disorderTurns`, `disorderCityTurns`                              | Turns with any city in civil disorder, and city-turns in disorder, counted from `city:civil-disorder`.         |
+| `specialists`, `specialistTurns`                                  | Citizens not working a tile (Entertainers and other specialists) at the end, and summed over the turn starts.  |
+| `martialLaw`                                                      | Unhappy citizens made content by units in their city (the engine's `MartialLaw` yields), at the end.           |
 | `tax`, `science`, `luxuries`                                      | The trade rates, in percent, at the start of the last turn.                                                    |
 | `meanLuxuries`, `rateChanges`                                     | The luxury rate averaged over the turn starts, and how many turn starts had new rates.                         |
 | `eliminated`                                                      | 1 if the player was defeated.                                                                                  |
@@ -97,7 +99,32 @@ The last three groups are counted by wrapping those methods on each client,
 so the counting doesn't depend on console output, and the AI runs exactly as
 it would have. The AI's console output is silenced unless `--verbose`.
 
-The engine has no score, so none is reported.
+### Score
+
+`score` comes first in the report. It's Civ1's Civilization Score, so that a
+change that trades one metric for another (less gold, more advances) has one
+overall answer. It isn't the engine's: the engine has no score yet (#149). It
+counts, as Civ1 v474.05 does (OpenCivOne's decompile of the score screen,
+`Overlay_20` `F20_0000_0ca9_ShowCivilizationScorePopup`; _Rome on 640K a Day_
+pp325–328 agrees):
+
+| Term             | Points                                                                                                         | Here                                                                                                      |
+| ---------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `scoreCitizens`  | 2 per happy citizen, 1 per content citizen or specialist: each city's size + happy − unhappy.                  | `civ1-city-happiness`'s `calculateCitizenState` over each city's yields, at the player's own trade rates. |
+| `scoreWonders`   | 20 per Wonder the player's cities hold, obsolete or not.                                                       | `core-wonder`'s `WonderRegistry`.                                                                         |
+| `scorePollution` | −10 per polluted tile in the whole world, the same for every player.                                           | Tiles with a `Pollution` improvement. Nothing in the engine pollutes a tile yet, so it is 0.              |
+| Future Tech      | 5 per Future Technology.                                                                                       | 0: the engine has no Future Technology (#128).                                                            |
+| Peace            | 3 per turn since the last fight between two civilizations, after AD 1, at most 100; the same for every player. | 0: the engine keeps no count of turns of world peace.                                                     |
+| Spaceship        | Once it lands: habitation modules × chance of success (%) ÷ 2, so 50 per module at 100%.                       | 0: no computer player builds spaceship parts, and an arena game ends long before one could land.          |
+
+The total is never below 0. Civ1's world-conquest bonus replaces the total
+when it's higher; an arena game always plays to `--turns`, so it isn't
+counted.
+
+One difference: when v474.05 counts the citizens for the score, it sets the
+player's luxury rate to 40% for the count and puts it back afterwards. The
+arena counts them at the rates the player chose, since how the AI sets its
+rates is part of what's being compared.
 
 ## Reading the report
 
