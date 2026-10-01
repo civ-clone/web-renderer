@@ -21,6 +21,7 @@ import { DataObject } from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Tile from '@civ-clone/core-world/Tile';
+import { Trireme } from '@civ-clone/civ1-unit/Units';
 import World from '@civ-clone/core-world/World';
 import Year from '@civ-clone/core-game-year/Year';
 import Yield from '@civ-clone/core-yield/Yield';
@@ -75,6 +76,18 @@ const excludesTransient = (object: DataObject, label: string): void => {
   );
 };
 
+// Anything named for a registry is something the loading game supplies, not
+// state: written into a save it comes back as a plain array. A field nobody
+// declared is invisible to the checks above, which only test what *is*
+// declared, and that is how a ship's two registries went unnoticed (#228).
+const savesNoRegistry = (object: DataObject, label: string): void => {
+  push(
+    `${label}: saves no registry`,
+    () => object.stateKeys().filter((name) => /Registry$/.test(name)),
+    []
+  );
+};
+
 const run = async (): Promise<void> => {
   const ruleRegistry = new RuleRegistry();
   const world: World = await generateWorld(
@@ -86,6 +99,8 @@ const run = async (): Promise<void> => {
   const city = new City(player, tile, 'Babilim', ruleRegistry);
   const year = new Year(ruleRegistry);
   const value = new Yield(3);
+  // A ship, for the `Transport` mixin `core-unit-transport` adds to a unit type.
+  const trireme = new Trireme(null, player, tile, ruleRegistry);
 
   (
     [
@@ -95,11 +110,13 @@ const run = async (): Promise<void> => {
       [world, 'World'],
       [year, 'Year'],
       [value, 'Yield'],
+      [trireme, 'Trireme'],
     ] as [DataObject, string][]
   ).forEach(([object, label]) => {
     inherits(object, label);
     declaresOnlyRealFields(object, label);
     excludesTransient(object, label);
+    savesNoRegistry(object, label);
   });
 
   // Spot checks with the answers written out, so a change of meaning is visible
@@ -117,6 +134,15 @@ const run = async (): Promise<void> => {
     () =>
       ['_ruleRegistry', '_workedTileRegistry'].every((name) =>
         city.allTransient().includes(name)
+      ),
+    true
+  );
+
+  push(
+    'Trireme: declares its two registries',
+    () =>
+      ['_ruleRegistry', '_transportRegistry', '_transportRuleRegistry'].every(
+        (name) => trireme.allTransient().includes(name)
       ),
     true
   );

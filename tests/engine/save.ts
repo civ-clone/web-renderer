@@ -41,6 +41,13 @@ import {
 
 const TURNS = 12;
 
+// What a ship answers about its cargo: `core-unit-transport`'s `ITransport`, by
+// shape, as the renderer doesn't depend on that package.
+type Cargo = {
+  cargo(): Unit[];
+  unload(unit: Unit): boolean;
+};
+
 const checks: [string, () => unknown, unknown][] = [];
 const notes: string[] = [];
 
@@ -314,6 +321,30 @@ const report = (): void => {
       }`
   );
 
+  // What the loading game supplies is not saved: a registry written into a
+  // save comes back as a plain array (#228, a ship's transport and rule
+  // registries, each Carrier or Trireme carrying a dump of every rule).
+  push(
+    'no saved field is a registry',
+    () =>
+      first.entities
+        .flatMap(({ type, state }) =>
+          Object.keys(state)
+            .filter((field) => /Registry$/.test(field))
+            .map((field) => `${type}.${field}`)
+        )
+        .filter((field, i, all) => all.indexOf(field) === i),
+    []
+  );
+
+  const savedCarrier = first.entities.find(({ id }) => id === carrier?.id());
+
+  if (savedCarrier) {
+    notes.push(
+      `the Carrier is ${JSON.stringify(savedCarrier).length} bytes of the save`
+    );
+  }
+
   // A 150-turn save must be under 1MB gzipped. This is turn 12 on the
   // conformance world, so it is an early read rather than the answer: the
   // real check is by hand, on a late-game save (03-save-format.md, Budget).
@@ -465,6 +496,56 @@ const report = (): void => {
     true
   );
 
+  // The Carrier itself. Its registries were saved as state, so it came back
+  // holding plain arrays where they should be, and asking it anything about
+  // its cargo threw (#228). The manifest check above reads the registry, not
+  // the ship, which is how that went unnoticed.
+  const restoredCarrier = (
+    carrier
+      ? target.units.entries().find((unit) => unit.id() === carrier?.id())
+      : undefined
+  ) as (Unit & Cargo) | undefined;
+
+  push(
+    'and the Carrier knows what it carries',
+    () => restoredCarrier?.cargo().map((unit) => unit.id()),
+    [fighter?.id()]
+  );
+
+  // A save from before #228, made from this one by putting the two fields
+  // back the way such a save holds them: an empty array, and the rules as
+  // markers. Loading it must hand the ship the game's registries regardless.
+  push(
+    'a ship saved before #228 loads knowing its cargo',
+    () => {
+      const old = JSON.parse(json) as typeof first;
+      const ship = old.entities.find(({ id }) => id === carrier?.id());
+
+      if (!ship) {
+        return 'no Carrier in the save';
+      }
+
+      ship.state._transportRegistry = [];
+      ship.state._transportRuleRegistry = [
+        { $busy: 'Yield' },
+        { $busy: 'TurnStart' },
+      ];
+
+      const oldTarget = loadTarget();
+
+      hydrate(old, oldTarget);
+
+      const oldCarrier = oldTarget.units
+        .entries()
+        .find((unit) => unit.id() === carrier?.id()) as
+        | (Unit & Cargo)
+        | undefined;
+
+      return oldCarrier?.cargo().map((unit) => unit.id());
+    },
+    [fighter?.id()]
+  );
+
   // --- round-trip identity ------------------------------------------------
   // Save, load, save again: the two must be identical. This is the check that
   // catches a dropped field, because a field missing from `stateKeys()` is
@@ -536,6 +617,17 @@ const report = (): void => {
       });
     }
   }
+
+  // Unloading changes the game, so only once the round trip is measured.
+  push(
+    'and can unload it',
+    () =>
+      restoredCarrier && restoredFighter
+        ? restoredCarrier.unload(restoredFighter) &&
+          !target.transports.hasUnit(restoredFighter)
+        : 'nothing aboard to unload',
+    true
+  );
 
   // --- the compatibility tiers -------------------------------------------
   push(

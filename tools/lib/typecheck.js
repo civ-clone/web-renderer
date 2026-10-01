@@ -32,10 +32,6 @@ const KNOWN_FAILING = {
     'union. That needs TypeScript 4.4; this package pins an older one. ' +
     'Predates the serialisation work — verified against 0.1.13.',
   'core-civ-client': 'Same TS1023 as base-unit-action-capture-city.',
-  'core-unit-transport':
-    'TS2742: the inferred type of `Transport` cannot be named without a ' +
-    'reference to a nested path. Predates the serialisation work — verified ' +
-    'against 0.1.13.',
 };
 
 const compile = (name) => {
