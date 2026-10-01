@@ -15,7 +15,7 @@
   "checksums": {
     "1": "5fa259b4",
     "10": "45280017",
-    "50": "0ef6c596"
+    "50": "ab8e4d74"
   },
   "snapshots": {
     "1": {
@@ -193,8 +193,8 @@
       },
       "dto": {
         "objects": 3510,
-        "bytes": 602281,
-        "hash": "d560b2b6"
+        "bytes": 602323,
+        "hash": "af9e90f0"
       },
       "registries": {
         "cities": 4,
@@ -422,17 +422,17 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2492,
-        "fields": 9959,
-        "hash": "1152513d"
+        "entities": 2505,
+        "fields": 10022,
+        "hash": "0c371710"
       },
       "dto": {
-        "objects": 44799,
-        "bytes": 7491595,
-        "hash": "7f420774"
+        "objects": 55334,
+        "bytes": 9328528,
+        "hash": "46bfde07"
       },
       "registries": {
-        "cities": 5,
+        "cities": 7,
         "cityImprovements": 4,
         "goodyHuts": 27,
         "playerGovernments": 4,
@@ -440,8 +440,8 @@
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 10,
-        "units": 25
+        "tileImprovements": 16,
+        "units": 30
       },
       "world": {
         "width": 60,
@@ -507,9 +507,25 @@
           "City-5",
           "City",
           "Player-1",
-          "Eshnunna",
+          "Der",
           "44",
           "15"
+        ],
+        [
+          "City-6",
+          "City",
+          "Player-1",
+          "Marad",
+          "37",
+          "18"
+        ],
+        [
+          "City-7",
+          "City",
+          "Player-3",
+          "Babanango",
+          "5",
+          "25"
         ]
       ],
       "units": [
@@ -520,24 +536,6 @@
           "3",
           "16",
           "false",
-          "false"
-        ],
-        [
-          "Chariot-2",
-          "Chariot",
-          "Player-3",
-          "8",
-          "18",
-          "false",
-          "false"
-        ],
-        [
-          "Chariot-3",
-          "Chariot",
-          "Player-3",
-          "8",
-          "19",
-          "true",
           "false"
         ],
         [
@@ -555,51 +553,6 @@
           "Player-4",
           "10",
           "34",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-3",
-          "Horseman",
-          "Player-4",
-          "22",
-          "2",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-4",
-          "Horseman",
-          "Player-4",
-          "3",
-          "32",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-5",
-          "Horseman",
-          "Player-4",
-          "59",
-          "3",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-6",
-          "Horseman",
-          "Player-4",
-          "4",
-          "34",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-7",
-          "Horseman",
-          "Player-3",
-          "7",
-          "20",
           "false",
           "false"
         ],
@@ -642,11 +595,11 @@
         [
           "Settlers-5",
           "Settlers",
-          "Player-2",
-          "46",
-          "27",
+          "Player-1",
+          "37",
+          "18",
           "false",
-          "false"
+          "true"
         ],
         [
           "Spearman-1",
@@ -660,36 +613,9 @@
         [
           "Spearman-2",
           "Spearman",
-          "Player-2",
-          "35",
-          "24",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-3",
-          "Spearman",
-          "Player-2",
-          "39",
-          "29",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-4",
-          "Spearman",
           "Player-1",
           "37",
-          "24",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-5",
-          "Spearman",
-          "Player-1",
-          "40",
-          "16",
+          "18",
           "false",
           "false"
         ],
@@ -697,8 +623,8 @@
           "Warrior-1",
           "Warrior",
           "Player-1",
-          "46",
-          "10",
+          "37",
+          "18",
           "false",
           "false"
         ],
@@ -706,22 +632,40 @@
           "Warrior-2",
           "Warrior",
           "Player-1",
-          "46",
-          "9",
+          "43",
+          "26",
           "false",
           "false"
         ],
         [
           "Warrior-3",
           "Warrior",
-          "Player-1",
-          "41",
+          "Player-4",
           "17",
+          "6",
           "false",
           "false"
         ],
         [
           "Warrior-4",
+          "Warrior",
+          "Player-1",
+          "41",
+          "12",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-5",
+          "Warrior",
+          "Player-4",
+          "24",
+          "0",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-6",
           "Warrior",
           "Player-1",
           "44",
@@ -730,16 +674,133 @@
           "false"
         ],
         [
-          "Warrior-5",
+          "Warrior-7",
+          "Warrior",
+          "Player-2",
+          "34",
+          "23",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-8",
+          "Warrior",
+          "Player-4",
+          "19",
+          "0",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-9",
+          "Warrior",
+          "Player-2",
+          "36",
+          "30",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-a",
+          "Warrior",
+          "Player-3",
+          "4",
+          "23",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-b",
+          "Warrior",
+          "Player-3",
+          "6",
+          "19",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-c",
+          "Warrior",
+          "Player-2",
+          "37",
+          "32",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-d",
+          "Warrior",
+          "Player-4",
+          "21",
+          "35",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-e",
+          "Warrior",
+          "Player-3",
+          "6",
+          "23",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-f",
+          "Warrior",
+          "Player-2",
+          "47",
+          "33",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-g",
+          "Warrior",
+          "Player-3",
+          "5",
+          "25",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-h",
           "Warrior",
           "Player-1",
-          "43",
-          "14",
+          "39",
+          "23",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-i",
+          "Warrior",
+          "Player-2",
+          "50",
+          "28",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-j",
+          "Warrior",
+          "Player-1",
+          "37",
+          "17",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-k",
+          "Warrior",
+          "Player-3",
+          "4",
+          "17",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8971,
+      "randomCalls": 8849,
       "mathRandomCalls": 0,
       "rules": {
         "total": 938,
