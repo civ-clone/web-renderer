@@ -59,6 +59,7 @@ import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
+import { instance as unitImprovementRegistryInstance } from '@civ-clone/core-unit-improvement/UnitImprovementRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 
@@ -125,6 +126,9 @@ type Seat = {
   advancesAtStart: number | null;
   // Specialists summed over the turn starts: citizen-turns spent off the map.
   specialistTurns: number;
+  // Moves from one tile to another, and those back to the tile the unit's previous move left.
+  unitMoves: number;
+  pacingMoves: number;
 };
 
 // The turn at whose start `noCityAtTurn10` checks for a city, or the last turn of a shorter game.
@@ -255,6 +259,8 @@ type CityScore = {
   specialists: number;
   // Unhappy citizens made content by units in the city.
   martialLaw: number;
+  // The city's trade before corruption.
+  trade: number;
 };
 
 // By the engine's own reckoning of the city's citizens, with its trade rates as they are.
@@ -271,6 +277,49 @@ const scoreCity = (city: City): CityScore => {
     martialLaw: yields
       .filter((cityYield) => isA(cityYield, 'MartialLaw'))
       .reduce((total, cityYield) => total + Math.abs(cityYield.value()), 0),
+    trade: yields
+      .filter((cityYield) => cityYield.constructor.name === 'Trade')
+      .reduce((total, cityYield) => total + cityYield.value(), 0),
+  };
+};
+
+// Where the player's units are at the end: on one of its cities' tiles, fortified (anywhere), or in the field, which is
+//  anywhere else, for any unit but a worker.
+const unitPlacement = (player: Player, cities: City[]) => {
+  const cityTiles = new Set(cities.map((city: City) => city.tile()));
+  const units = unitRegistryInstance.getByPlayer(player);
+
+  return {
+    unitsInCities: units.filter((unit) => cityTiles.has(unit.tile())).length,
+    unitsFortified: units.filter((unit) =>
+      unitImprovementRegistryInstance
+        .getByUnit(unit)
+        .some((improvement) => isA(improvement, 'Fortified'))
+    ).length,
+    unitsInField: units.filter(
+      (unit) => !cityTiles.has(unit.tile()) && !isA(unit, 'Worker')
+    ).length,
+  };
+};
+
+// The tiles around the player's cities, but not under any city, that have each improvement.
+const improvedTiles = (cities: City[]) => {
+  const tiles = new Set(
+    cities
+      .flatMap((city: City) => city.tiles().entries())
+      .filter((tile) => cityRegistryInstance.getByTile(tile) === null)
+  );
+  const count = (name: string): number =>
+    [...tiles].filter((tile) =>
+      tileImprovementRegistryInstance
+        .getByTile(tile)
+        .some((improvement) => improvement.constructor.name === name)
+    ).length;
+
+  return {
+    irrigatedTiles: count('Irrigation'),
+    minedTiles: count('Mine'),
+    roadTiles: count('Road'),
   };
 };
 
@@ -406,6 +455,11 @@ const results = () =>
         specialists: sum('specialists'),
         specialistTurns: entry.specialistTurns,
         martialLaw: sum('martialLaw'),
+        trade: sum('trade'),
+        ...improvedTiles(cities),
+        ...unitPlacement(player, cities),
+        unitMoves: entry.unitMoves,
+        pacingMoves: entry.pacingMoves,
         tax: entry.rates?.[0] ?? 0,
         science: entry.rates?.[1] ?? 0,
         luxuries: entry.rates?.[2] ?? 0,
@@ -571,6 +625,40 @@ engine.on('unit:lost-at-sea', (unit: Unit): void => {
   }
 });
 
+// `civ1-unit`'s, after any unit action that moves: counts the moves that took the unit to another tile, and those that
+//  took it straight back to the tile it left on its previous move, across turns too, such as a unit pacing between two
+//  tiles. An attack, which leaves the unit where it was, isn't a move. `Embark` and `LandAircraft` emit the event twice
+//  for one action, so each action is counted once.
+const previousTile = new WeakMap<Unit, unknown>();
+const countedMoves = new WeakSet<object>();
+
+engine.on(
+  'unit:moved',
+  (unit: Unit, action: { from(): unknown; to(): unknown }): void => {
+    const entry = seatOf(unit.player());
+    const from = action.from();
+    const to = action.to();
+
+    if (
+      !entry ||
+      from === to ||
+      unit.tile() !== to ||
+      countedMoves.has(action)
+    ) {
+      return;
+    }
+
+    countedMoves.add(action);
+    entry.unitMoves += 1;
+
+    if (previousTile.get(unit) === to) {
+      entry.pacingMoves += 1;
+    }
+
+    previousTile.set(unit, from);
+  }
+);
+
 // `civ1-city`'s: a city founded. A captured city isn't counted.
 engine.on('city:created', (city: City): void => {
   const entry = seatOf(city.player());
@@ -691,6 +779,8 @@ engine.on('engine:start', (): void => {
       rateTurns: 0,
       advancesAtStart: null,
       specialistTurns: 0,
+      unitMoves: 0,
+      pacingMoves: 0,
     };
 
     instrument(entry);
