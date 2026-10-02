@@ -64,6 +64,7 @@ import UnknownPlayer from './UnknownObjects/Player';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
 import Yield from '@civ-clone/core-yield/Yield';
+import JoinCity from '@civ-clone/library-unit/Actions/JoinCity';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -539,10 +540,16 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
+        // A Settlers joining a city makes it grow with no `city:grow`, so the
+        // tile goes out with its city in full, as that event sends it. As a
+        // reference the city would keep the size the UI already has (#243).
+        const references =
+          action instanceof JoinCity ? [Player] : [Player, City];
+
         if (fromTile) {
           this.#dataQueue.update(fromTile.id(), () =>
             fromTile.toPlainObject(
-              this.#dataFilter(filterToReference(Player, City))
+              this.#dataFilter(filterToReference(...references))
             )
           );
         }
@@ -550,7 +557,7 @@ export class DataTransferClient extends Client implements IClient {
         if (toTile) {
           this.#dataQueue.update(toTile.id(), () =>
             toTile.toPlainObject(
-              this.#dataFilter(filterToReference(Player, City))
+              this.#dataFilter(filterToReference(...references))
             )
           );
         }
