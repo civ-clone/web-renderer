@@ -36,9 +36,13 @@ import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import snapshot, { checksum } from './lib/checksum';
 import Embark from '@civ-clone/base-unit-action-embark/Embark';
-import { Land } from '@civ-clone/library-unit/Types';
-import { Trireme } from '@civ-clone/civ1-unit/Units';
+import { Trireme, Warrior } from '@civ-clone/civ1-unit/Units';
+import CityBuild from '@civ-clone/core-city-build/CityBuild';
+import { Production } from '@civ-clone/civ1-city/Yields';
+import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
+import Yield from '@civ-clone/core-yield/Yield';
+import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
@@ -59,20 +63,27 @@ const digest = (): string =>
 
 const report: Record<string, string> = {};
 
-// Total build progress across every city, which is the cheapest question that
-// catches a loaded game quietly not working. `PlayerTreasury._yield` was
-// written as `{ $class: 'Gold' }`, three packages declare a class called
-// `Gold`, and the reference came back as a terrain feature — so the treasury
-// lookup threw inside `ProcessYield` and a loaded game applied no production,
-// food or trade. The state round-tripped perfectly; only playing showed it.
-const production = (): number =>
-  defaultGame.cityBuilds
-    .entries()
-    .reduce(
-      (total: number, cityBuild): number =>
-        total + cityBuild.progress().value(),
-      0
-    );
+// Shields the cities' production has put into what they are building since the
+// save (or the load), which is the cheapest question that catches a loaded game
+// quietly not working. `PlayerTreasury._yield` was written as
+// `{ $class: 'Gold' }`, three packages declare a class called `Gold`, and the
+// reference came back as a terrain feature — so the treasury lookup threw
+// inside `ProcessYield` and a loaded game applied no production, food or trade.
+// The state round-tripped perfectly; only playing showed it.
+//
+// Counted as it is added, not read off the builds' progress: progress goes
+// back to zero whenever a city finishes something. Only `Production` counts,
+// which is what `ProcessYield` adds; buying adds a plain `Yield`.
+let shields = 0;
+const addToBuild = CityBuild.prototype.add;
+
+CityBuild.prototype.add = function (this: CityBuild, value: Yield): void {
+  if (value instanceof Production) {
+    shields += value.value();
+  }
+
+  addToBuild.call(this, value);
+};
 
 // The city names still to be handed out. A fresh boot fills the pool again,
 // so a loaded game that has not taken the used names back out would name its
@@ -114,36 +125,45 @@ const cargo = (): string =>
     .sort()
     .join(',');
 
-// A Trireme with a land unit aboard, for the first land unit that has an empty
-// sea tile beside it. Put there directly, as the computer players don't build
-// one this early; they move it, and the unit, as they play on.
+// A Trireme with a Warrior aboard, both the first player's, on the coast
+// nearest their first city. Put there directly, as the computer players don't
+// build one this early, and the Warrior made for it, as there may be no unit
+// of theirs beside the sea; they move both as they play on.
 const launchShip = (): string => {
-  for (const unit of unitRegistryInstance.entries()) {
-    if (unit.destroyed() || !(unit instanceof Land)) {
-      continue;
-    }
+  const [player] = playerRegistryInstance.entries(),
+    [city] = cityRegistryInstance.getByPlayer(player),
+    [unit] = unitRegistryInstance.getByPlayer(player),
+    home = city?.tile() ?? unit?.tile() ?? world().entries()[0],
+    empty = (tile: Tile): boolean =>
+      unitRegistryInstance.getByTile(tile).length === 0,
+    ours = (tile: Tile): boolean =>
+      unitRegistryInstance
+        .getByTile(tile)
+        .every((other) => other.player() === player) &&
+      (cityRegistryInstance.getByTile(tile)?.player() ?? player) === player;
 
-    const sea = unit
-      .tile()
+  for (const land of world()
+    .entries()
+    .filter((tile) => tile.isLand() && ours(tile))
+    .sort((a, b) => a.distanceFrom(home) - b.distanceFrom(home))) {
+    const sea = land
       .getNeighbours()
-      .find(
-        (tile) =>
-          tile.isWater() && unitRegistryInstance.getByTile(tile).length === 0
-      );
+      .find((tile) => tile.isWater() && empty(tile));
 
     if (!sea) {
       continue;
     }
 
-    const ship = new Trireme(null, unit.player(), sea, ruleRegistryInstance);
+    const warrior = new Warrior(null, player, land, ruleRegistryInstance),
+      ship = new Trireme(null, player, sea, ruleRegistryInstance);
 
-    unitRegistryInstance.register(ship);
-    unit.action(new Embark(unit.tile(), sea, unit, ship, ruleRegistryInstance));
+    unitRegistryInstance.register(warrior, ship);
+    warrior.action(new Embark(land, sea, warrior, ship, ruleRegistryInstance));
 
-    return `${ship.id()}:${unit.id()}`;
+    return `${ship.id()}:${warrior.id()}`;
   }
 
-  return 'no land unit beside the sea';
+  return 'no coast to launch from';
 };
 
 // Errors logged while playing on: a computer player's turn that throws is
@@ -203,17 +223,17 @@ engine.on('turn:start', (turn: number): void => {
     report.rngPlayed = `${config.seed}:${randomInstance.calls()}`;
 
     report.atSave = digest();
-    report.productionAtSave = String(production());
     report.namePoolAtSave = namePool();
     report.cargoAtSave = cargo();
 
     errors = 0;
+    shields = 0;
   }
 
   if (turn >= then) {
     report.errorsThen = String(errors);
     report.atThen = digest();
-    report.productionAtThen = String(production());
+    report.shieldsThen = String(shields);
     report.repeatedCityNamesAtThen = repeatedCityNames();
     // Drawn last, once everything else is measured: two games on different
     // streams can agree on state for a few turns and still differ here.
@@ -248,11 +268,11 @@ if (mode === 'load') {
       // Before resuming: the comparison is with the state that was saved, and
       // resuming hands the turn straight back to a client, which starts moving.
       report.atLoad = digest();
-      report.productionAtLoad = String(production());
       report.namePoolAtLoad = namePool();
       report.cargoAtLoad = cargo();
 
       errors = 0;
+      shields = 0;
 
       resumeGame();
 

@@ -15,17 +15,7 @@ const path = require('path');
 const { envForSeed, seedsToRun } = require('./lib/seeds');
 const { webRenderer } = require('./lib/paths');
 
-// Not 2 or 6 yet. Each fails for a reason unrelated to #245, which seeds 2 to 6
-// of the save suite cover:
-//
-// - 2 and 6: no land unit stands beside empty sea at turn 6, so `launchShip`
-//   cannot put one aboard a ship, and "a ship with a unit aboard is saved"
-//   fails.
-// - 6: "and it still applies production" reads total build progress, which
-//   falls when a city finishes something. It falls from 28 to 12 in the game
-//   that never stopped as well, and the two games agree at turn 8, so it is
-//   the check that is wrong here, not the load.
-const SEEDS = [1, 3, 4, 5];
+const SEEDS = [1, 2, 3, 4, 5, 6];
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'load-'));
 const outfile = path.join(directory, 'load.js');
@@ -90,11 +80,15 @@ const playSeed = (seed) => {
     played.rngAtSave,
     played.rngPlayed,
   ]);
+  // Shields put into builds from the save to `then`, against the game that
+  // never stopped. None never matches, so a game where production stops on
+  // both sides can't pass on two zeroes.
   checks.push([
     'and it still applies production',
-    Number(loaded.productionAtThen) > Number(loaded.productionAtLoad) ||
-      `${loaded.productionAtLoad} -> ${loaded.productionAtThen}`,
-    true,
+    Number(loaded.shieldsThen) > 0
+      ? `${loaded.shieldsThen} shields`
+      : 'no shields',
+    `${played.shieldsThen} shields`,
   ]);
 
   checks.push([
