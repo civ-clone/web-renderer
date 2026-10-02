@@ -1578,7 +1578,7 @@ export class Renderer {
                 [key: string]: string[];
               } = {
                 ' ': ['NoOrders'],
-                b: ['FoundCity'],
+                b: ['FoundCity', 'JoinCity'],
                 D: ['Disband'],
                 f: ['Fortify', 'BuildFortress'],
                 i: [
