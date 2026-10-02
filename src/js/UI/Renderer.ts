@@ -35,6 +35,9 @@ import { downloadSave, takePendingSave } from './lib/savedGame';
 import { allowLeaving, guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
+import cityTooLargeToJoin, {
+  joinCitySizeLimit,
+} from './lib/cityTooLargeToJoin';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -1659,6 +1662,32 @@ export class Renderer {
 
                       return;
                     }
+                  }
+                }
+
+                // The engine offers no join in a city of size 10 or more, so
+                // the key would do nothing and say nothing.
+                if (key === 'b') {
+                  const city = cityTooLargeToJoin(
+                    activeUnit,
+                    world.get(activeUnit.tile.x, activeUnit.tile.y).city
+                  );
+
+                  if (city) {
+                    new NotificationWindow(
+                      t('JoinCity.too-large.title'),
+                      document.createTextNode(
+                        t('JoinCity.too-large.body', {
+                          city: city.name,
+                          size: joinCitySizeLimit,
+                        })
+                      )
+                    );
+
+                    event.stopPropagation();
+                    event.preventDefault();
+
+                    return;
                   }
                 }
 

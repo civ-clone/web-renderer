@@ -4,6 +4,11 @@
 // Drives a seeded game with a human `DataTransferClient`, as `turnHandover` does. On the human's first turn the test
 // founds a city with the starting Settlers, puts a second Settlers in it, and sends `JoinCity` for that unit the way
 // the `b` key does. Joining grows the city with no `city:grow` event, so the size has to go out with the move.
+//
+// The test keeps the latest `CityGrowth` size the patches have carried, as the UI's object map would. The client
+// builds each queued patch only when it sends it, so the queue is flushed before the join: otherwise the tile update
+// queued when the second Settlers appeared goes out afterwards with the new size, and the test passes with the UI
+// none the wiser in a real game, where nothing happens to be queued.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -24,11 +29,12 @@ import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegis
 
 let started = false,
   humanPlayer: Player | null = null,
+  humanClient: DataTransferClient | null = null,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => unknown) | null = null,
   pendingChoice: ((value: any) => void) | null = null,
-  // Every `CityGrowth` size a patch has carried since the join was sent, by the growth's id.
-  sizesSent: { [id: string]: number[] } | null = null;
+  // The latest size the UI has been sent for each `CityGrowth`, by its id.
+  sizesSent: { [id: string]: number } = {};
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -50,7 +56,7 @@ const collectSizes = (value: any): void => {
   }
 
   if (value._ === 'CityGrowth' && typeof value.size === 'number') {
-    (sizesSent![value.id] ??= []).push(value.size);
+    sizesSent[value.id] = value.size;
   }
 
   Object.values(value).forEach(collectSizes);
@@ -92,12 +98,14 @@ const run = async (): Promise<void> => {
     fail('the starting Settlers could not found a city');
   }
 
-  // With no home city, so the size can only reach the UI with the move, not with an update of the unit's own city.
   const cityGrowth = cityGrowthRegistryInstance.getByCity(city),
     sizeBefore = cityGrowth.size(),
-    joiner = new Settlers(null, humanPlayer!, city.tile());
+    joiner = new Settlers(city, humanPlayer!, city.tile());
 
   await settle();
+
+  // `sendPatchData` is private: the UI can't ask for it, but a real game has long since sent everything by now.
+  (humanClient as any).sendPatchData();
 
   if (
     !joiner
@@ -107,7 +115,13 @@ const run = async (): Promise<void> => {
     fail('a Settlers in its own city is not offered JoinCity');
   }
 
-  sizesSent = {};
+  if (sizesSent[cityGrowth.id()] !== sizeBefore) {
+    fail(
+      `before the join the UI should hold size ${sizeBefore} for ${cityGrowth.id()}, not ${
+        sizesSent[cityGrowth.id()]
+      }`
+    );
+  }
 
   await unitAction(joiner, 'JoinCity');
 
@@ -126,12 +140,10 @@ const run = async (): Promise<void> => {
     fail('the Settlers is still on the map after joining');
   }
 
-  const sent = sizesSent[cityGrowth.id()] ?? [];
-
-  if (sent[sent.length - 1] !== sizeBefore + 1) {
+  if (sizesSent[cityGrowth.id()] !== sizeBefore + 1) {
     fail(
-      `the UI was not sent the city's new size: it got ${
-        sent.length ? sent.join(', ') : 'nothing'
+      `the UI was not sent the city's new size: it still holds ${
+        sizesSent[cityGrowth.id()]
       } for ${cityGrowth.id()}`
     );
   }
@@ -182,7 +194,7 @@ const transport = {
       return;
     }
 
-    if (channel === 'gameDataPatch' && sizesSent !== null) {
+    if (channel === 'gameDataPatch') {
       collectSizes(JSON.parse(JSON.stringify(data)));
 
       return;
@@ -208,14 +220,14 @@ engine.on('engine:start', (): void => {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
 
-      clientRegistryInstance.register(
-        new DataTransferClient(
-          player,
-          transport as any,
-          (channel, payload) => transport.send(channel, payload),
-          () => {}
-        )
+      humanClient = new DataTransferClient(
+        player,
+        transport as any,
+        (channel, payload) => transport.send(channel, payload),
+        () => {}
       );
+
+      clientRegistryInstance.register(humanClient);
 
       return;
     }

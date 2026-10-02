@@ -196,6 +196,10 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.title': 'Import assets',
 
+  'JoinCity.too-large.body':
+    '{{city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
+  'JoinCity.too-large.title': 'City too large',
+
   'LeaveGuard.body':
     'Leaving this page will end the game in progress. Any unsaved progress will be lost.',
   'LeaveGuard.title': 'Leave the game?',
