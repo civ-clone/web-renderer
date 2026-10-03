@@ -50,6 +50,9 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       null,
       {
         actions: additionalActions,
+        // Starting a build is worth seeing, and the window also offers the
+        //  city's own screen.
+        autoChooseSingle: false,
         displayAll: true,
       }
     );

@@ -518,7 +518,7 @@ export class Renderer {
             }
           );
 
-          if (uiStressRunner) {
+          if (uiStressRunner && !selectionWindow.autoChosen()) {
             selectionWindow.selectionList().value = choices[0].id;
             uiStressRunner.automateChoice(
               selectionWindow,
