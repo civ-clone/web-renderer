@@ -97,11 +97,22 @@
       }
     }
 
+    .deficit {
+      flex: 0 1;
+
+      img {
+        // Darkened first: the icons are near-white, and a tint barely shows on white.
+        filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(6)
+          brightness(0.6);
+      }
+    }
+
     .free {
       flex: 1 1;
     }
 
     .used,
+    .deficit,
     .free {
       display: flex;
     }

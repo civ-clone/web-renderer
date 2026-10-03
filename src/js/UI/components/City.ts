@@ -14,7 +14,7 @@ import {
   getLabelForBuildable,
   getLabelForBuildableEntity,
 } from './lib/cityBuild';
-import { knownGroupLookup, knownGroups } from '../lib/yieldMap';
+import { knownGroups, splitYield } from '../lib/yieldMap';
 import {
   renderPopulation,
   renderProgress,
@@ -41,19 +41,10 @@ import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
 import isAnarchy from './lib/government';
+import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
 
-const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
-    cityYields
-      .filter((cityYield) => knownGroupLookup[type].includes(cityYield._))
-      .reduce(
-        ([used, free], cityYield) => [
-          used + (cityYield.value < 0 ? -cityYield.value : 0),
-          free + cityYield.value,
-        ],
-        [0, 0]
-      ),
-  renderYields = (city: CityData): Node => {
+const renderYields = (city: CityData): Node => {
     return s(
       '<div class="yields-detail"></div>',
       ...[
@@ -69,14 +60,33 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
           ...cityYieldNames.map((cityYieldName) =>
             s(
               `<span class="yield" data-yield="${cityYieldName}"></span>`,
-              ...reduceYield(cityYieldName, city.yields).map((n, i) =>
-                s(
-                  `<span class="${['used', 'free'][i]}"></span>`,
-                  ...yieldImages({
-                    _: cityYieldName,
-                    value: n,
-                  })
-                )
+              ...Object.entries(splitYield(cityYieldName, city.yields)).map(
+                ([part, value]) => {
+                  const span = s(
+                    `<span class="${part}"></span>`,
+                    ...yieldImages({
+                      _: cityYieldName,
+                      value,
+                    })
+                  );
+
+                  // Colour alone doesn't say that the city is short.
+                  if (part === 'deficit' && value > 0) {
+                    const label = t('City.Yield.deficit', {
+                      amount: value,
+                      yield: t(`${cityYieldName}.name`, {
+                        defaultValue: cityYieldName,
+                        ns: 'yield',
+                      }),
+                    });
+
+                    span.setAttribute('title', label);
+                    span.setAttribute('role', 'img');
+                    span.setAttribute('aria-label', label);
+                  }
+
+                  return span;
+                }
               )
             )
           )
@@ -114,9 +124,12 @@ const reduceYield = (type: string, cityYields: Yield[]): [number, number] =>
     const yieldWrappers = element.querySelectorAll('.yields-detail .yield')!;
 
     Array.from(yieldWrappers).forEach((container) => {
-      const [used, free] = Array.from(container.children);
+      const parts = Array.from(container.children);
 
-      while (used.scrollWidth + free.scrollWidth > container.clientWidth) {
+      while (
+        parts.reduce((width, part) => width + part.scrollWidth, 0) >
+        container.clientWidth
+      ) {
         const currentMaxWidth = parseInt(
           container.getAttribute('data-max-width') || '14',
           10
@@ -490,6 +503,23 @@ export class City extends Window {
 
         event.preventDefault();
         event.stopPropagation();
+      }
+
+      if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+        const specialist = specialistForKey(
+          event.key,
+          this.#city.specialists ?? []
+        );
+
+        if (specialist) {
+          this.#transport.send('action', {
+            name: 'ChangeSpecialist',
+            id: specialist.id,
+          });
+
+          event.preventDefault();
+          event.stopPropagation();
+        }
       }
 
       if (['Enter', 'x', 'X'].includes(event.key)) {
