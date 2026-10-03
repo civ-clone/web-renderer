@@ -15,6 +15,7 @@ import {
   reduceKnownYields,
 } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
+import { citizenState } from '../../lib/citizenState';
 import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -48,56 +49,26 @@ const renderCitizen = (path: string, title?: string): HTMLElement => {
 };
 
 /**
- * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. Specialists are
- * drawn from the content citizens first, then from the happy ones, as the engine counts them.
+ * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. The workers'
+ * moods come from `citizenState`, the engine's own order, so the faces drawn are the ones that decide disorder.
  */
 export const renderPopulation = (
   city: CityData,
   yields: Yield[] = city.yields,
   onSpecialistClick?: (specialist: Specialist) => void
 ): Node => {
-  const growth = city.growth,
-    state = new Array(growth.size).fill(1),
-    specialists = orderSpecialists(city.specialists ?? []);
-
-  let [happiness, unhappiness] = reduceKnownYields(
+  const specialists = orderSpecialists(city.specialists ?? []),
+    [happiness, unhappiness] = reduceKnownYields(
       yields,
       'Happiness',
       'Unhappiness'
     ),
-    currentIndex = state.length - 1;
-
-  while (unhappiness > 0 && currentIndex > -1) {
-    state[currentIndex--] = 0;
-    unhappiness--;
-  }
-
-  currentIndex = 0;
-
-  while (happiness > 0 && currentIndex < state.length) {
-    if (state[currentIndex] === 0) {
-      state[currentIndex]++;
-      happiness--;
-    }
-
-    if (state[currentIndex] === 1) {
-      state[currentIndex++]++;
-      happiness--;
-    }
-
-    if (state[currentIndex] === 2) {
-      currentIndex++;
-    }
-  }
-
-  let toRemove = specialists.length;
-
-  [1, 2, 0].forEach((status) => {
-    while (toRemove > 0 && state.includes(status)) {
-      state.splice(state.lastIndexOf(status), 1);
-      toRemove--;
-    }
-  });
+    state = citizenState(
+      city.growth.size,
+      happiness,
+      unhappiness,
+      specialists.length
+    );
 
   return drawCitizens(state, specialists, city.name, onSpecialistClick);
 };
