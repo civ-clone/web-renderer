@@ -26,9 +26,9 @@
         "hash": "ce1569d9"
       },
       "dto": {
-        "objects": 788,
-        "bytes": 135599,
-        "hash": "a16eb188"
+        "objects": 790,
+        "bytes": 135981,
+        "hash": "8e4a1db3"
       },
       "registries": {
         "cities": 0,
@@ -440,7 +440,7 @@
       "dto": {
         "objects": 60578,
         "bytes": 10168507,
-        "hash": "a19a17c2"
+        "hash": "023dc808"
       },
       "registries": {
         "cities": 6,
