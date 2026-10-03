@@ -172,6 +172,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.save-game': 'Save Game',
   'GameMenu.save-name': 'The {{player}}, turn {{turn}}, {{date}}',
   'GameMenu.science-report': 'Science Report',
+  'GameMenu.top-cities': 'Top Cities in the World',
   'GameMenu.trade-report': 'Trade Report',
 
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
@@ -271,6 +272,11 @@ i18next.addResources('en', 'default', {
 
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
+
+  'TopCitiesReport.empty': 'No cities have been founded yet.',
+  'TopCitiesReport.row': '{{rank, number}}. {{city}} ({{civilization}})',
+  'TopCitiesReport.title': 'Top Cities in the World',
+  'TopCitiesReport.unknown-city': 'Unknown city',
 
   'TradeReport.anarchy':
     'No taxes are collected and no upkeep is paid during Anarchy.',
