@@ -111,7 +111,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 940,
+        "total": 944,
         "byType": {
           "Action": 44,
           "ActionPerformed": 1,
@@ -128,6 +128,7 @@
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
+          "CanStow": 2,
           "Captured": 9,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
@@ -153,7 +154,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 12,
+          "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
           "PickGenerator": 1,
@@ -356,7 +357,7 @@
       "randomCalls": 8620,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 940,
+        "total": 944,
         "byType": {
           "Action": 44,
           "ActionPerformed": 1,
@@ -373,6 +374,7 @@
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
+          "CanStow": 2,
           "Captured": 9,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
@@ -398,7 +400,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 12,
+          "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
           "PickGenerator": 1,
@@ -815,7 +817,7 @@
       "randomCalls": 8839,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 940,
+        "total": 944,
         "byType": {
           "Action": 44,
           "ActionPerformed": 1,
@@ -832,6 +834,7 @@
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
+          "CanStow": 2,
           "Captured": 9,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
@@ -857,7 +860,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
-          "Moved": 12,
+          "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
           "PickGenerator": 1,
