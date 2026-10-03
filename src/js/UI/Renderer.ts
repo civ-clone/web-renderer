@@ -59,6 +59,7 @@ import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
+import tileToRender from './lib/tileToRender';
 import createMemoryTestbed from './lib/memoryTestbed';
 import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
@@ -1528,16 +1529,22 @@ export class Renderer {
                           })
                         );
 
-                        Object.entries(value!.objects as PlainObject).forEach(
-                          ([key, value]) => {
-                            objectMap.objects[key] = value;
+                        const objects = value!.objects as PlainObject;
 
-                            if (value._ === 'PlayerTile') {
-                              // Since we only use tilesToRender for x and y this should be fine...
-                              queueTileToRender(value);
-                            }
+                        Object.entries(objects).forEach(([key, value]) => {
+                          objectMap.objects[key] = value;
+                        });
+
+                        // After every object is in, so a city's tile ref
+                        // resolves even when the tile came in the same patch.
+                        Object.values(objects).forEach((value) => {
+                          const tile = tileToRender(value, objectMap.objects);
+
+                          if (tile) {
+                            // Since we only use tilesToRender for x and y this should be fine...
+                            queueTileToRender(tile as Tile);
                           }
-                        );
+                        });
                       }
 
                       if (type === 'remove') {
