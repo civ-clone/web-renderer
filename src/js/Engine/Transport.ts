@@ -1,5 +1,6 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
+import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
 import { GameData } from '../UI/types';
@@ -83,6 +84,8 @@ declare global {
       }
     >;
     start: TransportData<null, null>;
+    // The Top Cities in the World report (#124): the UI asks for up to this many rows.
+    topCities: TransportData<TopCitiesRow[], number>;
     // The worker has accepted `EndTurn`: nothing the UI sends is listened for until `turnStarted`.
     turnEnded: TransportData<null, never>;
     // The new turn is in the UI's data and the worker is listening for actions again.

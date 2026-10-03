@@ -57,10 +57,8 @@ export const renderPopulation = (
   onSpecialistClick?: (specialist: Specialist) => void
 ): Node => {
   const growth = city.growth,
-    mask = parseInt(city.name.replace(/[^a-z]/gi, ''), 36).toString(2),
     state = new Array(growth.size).fill(1),
-    specialists = orderSpecialists(city.specialists ?? []),
-    population = s('<div class="population"></div>');
+    specialists = orderSpecialists(city.specialists ?? []);
 
   let [happiness, unhappiness] = reduceKnownYields(
       yields,
@@ -100,6 +98,24 @@ export const renderPopulation = (
       toRemove--;
     }
   });
+
+  return drawCitizens(state, specialists, city.name, onSpecialistClick);
+};
+
+// Which citizens are drawn as women and which as men: a pattern taken from `seed` (a city's name), so the same city
+//  always looks the same.
+const citizenMask = (seed: string): string =>
+  (parseInt(seed.replace(/[^a-z]/gi, ''), 36) || 0).toString(2);
+
+// Draws the workers (`state` holds 0 for unhappy, 1 for content and 2 for happy) and then the specialists.
+const drawCitizens = <SpecialistType extends { _: string }>(
+  state: number[],
+  specialists: SpecialistType[],
+  seed: string,
+  onSpecialistClick?: (specialist: SpecialistType) => void
+): HTMLElement => {
+  const mask = citizenMask(seed),
+    population = s('<div class="population"></div>');
 
   state.forEach((status, index) =>
     population.append(
@@ -154,6 +170,29 @@ export const renderPopulation = (
 
   return population;
 };
+
+/**
+ * Citizens from counts rather than a city's yields, for a report that is sent the counts (the Top Cities report, #124):
+ * the happy, content and unhappy workers, then the specialists.
+ */
+export const renderCitizenCounts = (
+  {
+    happy,
+    content,
+    unhappy,
+    specialists,
+  }: { happy: number; content: number; unhappy: number; specialists: string[] },
+  seed: string
+): HTMLElement =>
+  drawCitizens(
+    [
+      ...new Array(happy).fill(2),
+      ...new Array(content).fill(1),
+      ...new Array(unhappy).fill(0),
+    ],
+    orderSpecialists(specialists.map((specialist) => ({ _: specialist }))),
+    seed
+  );
 
 export const renderProgress = (
   cityData: CityGrowth | CityBuild | PlayerResearch,

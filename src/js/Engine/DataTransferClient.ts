@@ -22,7 +22,7 @@ import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import { CompleteProduction } from '@civ-clone/civ1-treasury/PlayerActions';
-import DataObject from '@civ-clone/core-data-object/DataObject';
+import DataObject, { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
@@ -94,6 +94,18 @@ import {
 } from '@civ-clone/civ1-city/lib/assignWorkers';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
+import {
+  calculateCitizenState,
+  citizenSummary,
+} from '@civ-clone/civ1-city-happiness/lib/calculateCitizenState';
+import {
+  TopCitiesRow,
+  defaultTopCitiesLimit,
+  topCitiesRows,
+} from './lib/topCities';
+import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
+import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
+import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
@@ -378,6 +390,12 @@ export class DataTransferClient extends Client implements IClient {
           isLocal: player === this.player(),
         }))
       )
+    );
+
+    // Worked out here and sent as finished rows, so the UI learns nothing about rival cities beyond what the report
+    //  shows (#124).
+    this.#transport.receive('topCities', (limit) =>
+      this.#transport.send('topCities', this.topCities(limit))
     );
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
@@ -1439,6 +1457,54 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
 
     this.#dataQueue.clear();
+  }
+
+  topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {
+    const playerWorld = playerWorldRegistryInstance.getByPlayer(this.player()),
+      metPlayers = new Map<Player, boolean>();
+
+    return topCitiesRows(
+      cityRegistryInstance.entries().map((city: City) => {
+        const owner = city.player(),
+          [unhappy, content, happy] = citizenSummary(
+            calculateCitizenState(cityGrowthRegistryInstance.getByCity(city))
+          ),
+          colors = owner
+            .civilization()
+            .attributes()
+            .find((attribute) => attribute.name() === 'colors');
+
+        if (!metPlayers.has(owner)) {
+          metPlayers.set(owner, this.hasMet(owner));
+        }
+
+        return {
+          name: city.name(),
+          originalCivilization: typeNameOf(
+            city.originalPlayer().civilization().sourceClass()
+          ),
+          owner: {
+            civilization: typeNameOf(owner.civilization().sourceClass()),
+            colors: colors ? (colors.value() as [string, string]) : null,
+          },
+          size: cityGrowthRegistryInstance.getByCity(city).size(),
+          citizens: {
+            happy,
+            content,
+            unhappy,
+            specialists: specialistRegistryInstance
+              .getByCity(city)
+              .map((specialist) => typeNameOf(specialist.sourceClass())),
+          },
+          wonders: wonderRegistryInstance
+            .getByCity(city)
+            .map((wonder) => typeNameOf(wonder.sourceClass())),
+          seen: playerWorld.getByTile(city.tile()) !== null,
+          met: metPlayers.get(owner)!,
+        };
+      }),
+      Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
+    );
   }
 
   // Whether this player has met `player`, for naming them in a notification (#59). There is no formal first-contact

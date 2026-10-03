@@ -11,6 +11,7 @@ import { Player } from '../types';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
+import TopCitiesReport from './TopCitiesReport';
 import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
@@ -232,6 +233,12 @@ export class GameMenu extends Element {
                 label: t('GameMenu.science-report'),
                 action: () => {
                   new ScienceReport(this.#getPlayer());
+                },
+              },
+              {
+                label: t('GameMenu.top-cities'),
+                action: () => {
+                  new TopCitiesReport(this.#transport);
                 },
               },
               ...(this.#cheatsEnabled

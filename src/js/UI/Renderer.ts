@@ -45,6 +45,7 @@ import Overview from './components/Map/Overview';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
+import TopCitiesReport from './components/TopCitiesReport';
 import SelectionWindow from './components/SelectionWindow';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
@@ -1611,6 +1612,7 @@ export class Renderer {
                 F4: () => new HappinessReport(data.player, portal, transport),
                 F5: () => new TradeReport(data.player, portal, transport),
                 F6: () => new ScienceReport(data.player),
+                F8: () => new TopCitiesReport(transport),
               };
 
             let lastShiftedCode = '';
