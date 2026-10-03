@@ -79,3 +79,28 @@ export const knownIcons: { [key: string]: string } = {
   Research: 'city/bulb.png',
   Unhappiness: 'city/sad.png',
 };
+
+/**
+ * How a city's yield is drawn on the city screen: what it makes and uses (`used`), what it uses but doesn't make
+ * (`deficit`), and what is left over (`free`).
+ */
+export const splitYield = (
+  group: string,
+  yields: Yield[]
+): { used: number; deficit: number; free: number } => {
+  const [produced, consumed] = yields
+    .filter((cityYield) => knownGroupLookup[group]?.includes(cityYield._))
+    .reduce(
+      ([produced, consumed], cityYield) =>
+        cityYield.value < 0
+          ? [produced, consumed - cityYield.value]
+          : [produced + cityYield.value, consumed],
+      [0, 0]
+    );
+
+  return {
+    used: Math.min(produced, consumed),
+    deficit: Math.max(0, consumed - produced),
+    free: Math.max(0, produced - consumed),
+  };
+};

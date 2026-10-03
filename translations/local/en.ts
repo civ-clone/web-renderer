@@ -124,6 +124,8 @@ i18next.addResources('en', 'default', {
 
   'City.SupportedUnits.title': 'Supported units',
 
+  'City.Yield.deficit': '{{amount, number}} {{- yield}} short',
+
   'CityStatus.build_empty':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) $t(Buildable.label-empty)',
   'CityStatus.build_nonempty':

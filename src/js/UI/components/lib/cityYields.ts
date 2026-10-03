@@ -15,6 +15,7 @@ import {
   reduceKnownYields,
 } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
+import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -58,11 +59,7 @@ export const renderPopulation = (
   const growth = city.growth,
     mask = parseInt(city.name.replace(/[^a-z]/gi, ''), 36).toString(2),
     state = new Array(growth.size).fill(1),
-    specialists = [...(city.specialists ?? [])].sort(
-      (a, b) =>
-        Object.keys(specialistIcons).indexOf(a._) -
-        Object.keys(specialistIcons).indexOf(b._)
-    ),
+    specialists = orderSpecialists(city.specialists ?? []),
     population = s('<div class="population"></div>');
 
   let [happiness, unhappiness] = reduceKnownYields(
