@@ -3,6 +3,7 @@ import { off, on, s } from '@dom111/element';
 import { INotificationWindow } from './NotificationWindow';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
+import { singleChoice } from '../lib/singleChoice';
 import { t } from 'i18next';
 
 export interface ISelectionWindow extends INotificationWindow {
@@ -17,10 +18,14 @@ export interface SelectionWindowOption {
 
 export interface SelectionWindowOptions extends ActionWindowOptions {
   autoFocus?: boolean;
+  // A list with one option is chosen without being shown (#148). `false` is
+  //  for a list whose one entry is still a decision.
+  autoChooseSingle?: boolean;
   displayAll?: boolean;
 }
 
 export class SelectionWindow extends ActionWindow implements ISelectionWindow {
+  #autoChosen: boolean = false;
   #resizeHandler = () => this.resize();
   #selectionList: HTMLSelectElement;
 
@@ -31,10 +36,13 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     body: string | Node | null = t('SelectionWindow.default-body'),
     options: SelectionWindowOptions = {}
   ) {
+    const autoChoice = singleChoice(optionList, options.autoChooseSingle);
+
     options = {
       autoFocus: true,
       displayAll: false,
       ...options,
+      ...(autoChoice === null ? {} : { autoDisplay: false }),
       actions: {
         primary: {
           label: t('Generic.ok'),
@@ -146,6 +154,16 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     this.addClass('selectionWindow');
     this.#selectionList = selectionList;
 
+    if (autoChoice !== null) {
+      this.#autoChosen = true;
+
+      // Not from inside the constructor: `onChoose` usually closes the window
+      //  the caller is still constructing.
+      queueMicrotask(() => chooseHandler(String(autoChoice.value)));
+
+      return;
+    }
+
     this.resize();
 
     on(window, 'resize', this.#resizeHandler);
@@ -154,12 +172,30 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
   }
 
   close() {
+    // Never displayed, so there is nothing to remove, and closing it mustn't
+    //  move the focus or bring on the next queued notification.
+    if (this.#autoChosen) {
+      this.emit(new CustomEvent('close'));
+
+      return;
+    }
+
     off(window, 'resize', this.#resizeHandler);
 
     super.close();
   }
 
+  autoChosen(): boolean {
+    return this.#autoChosen;
+  }
+
   display(): Promise<any> {
+    // `Window`'s constructor displays the window before this class's fields
+    //  exist, hence the `in`.
+    if (#autoChosen in this && this.#autoChosen) {
+      return Promise.resolve();
+    }
+
     return super.display().then(() => {
       const select = this.query('select');
 
