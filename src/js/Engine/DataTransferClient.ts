@@ -93,6 +93,7 @@ import {
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
 import anarchyTurns from './AdditionalData/anarchyTurns';
+import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import researchCosts from './AdditionalData/researchCosts';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
@@ -121,7 +122,11 @@ const referenceObject = (object: any) =>
         : referenceObject(object),
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
-additionalDataRegistryInstance.register(anarchyTurns(), researchCosts());
+additionalDataRegistryInstance.register(
+  anarchyTurns(),
+  civilDisorderDeclared(),
+  researchCosts()
+);
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
@@ -915,6 +920,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:civil-disorder', (city: City) => {
       if (city.player() === this.player()) {
+        this.#sendCityTile(city);
         this.sendNotification(
           new Notification('City.civil-disorder', {
             city,
@@ -925,6 +931,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:order-restored', (city: City) => {
       if (city.player() === this.player()) {
+        this.#sendCityTile(city);
         this.sendNotification(
           new Notification('City.order-restored', {
             city,
@@ -1493,6 +1500,22 @@ export class DataTransferClient extends Client implements IClient {
     }
 
     this.#transport.send('gameNotification', payload);
+  }
+
+  // The map draws a city from its tile: its size, or an unhappy citizen in civil disorder (#193). A change the tile
+  //  itself doesn't record goes out with it all the same, the city in full, as `city:grow` sends it.
+  #sendCityTile(city: City): void {
+    const playerTile = playerWorldRegistryInstance
+      .getByPlayer(this.player())
+      .getByTile(city.tile());
+
+    if (!playerTile) {
+      return;
+    }
+
+    this.#dataQueue.update(playerTile.id(), () =>
+      playerTile.toPlainObject(this.#dataFilter(filterToReference(Player)))
+    );
   }
 
   #holdsNotifications(): boolean {

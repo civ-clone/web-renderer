@@ -18,6 +18,9 @@ export interface City extends EntityInstance<'City'> {
   build: CityBuild;
   celebrateLeader: boolean;
   civilDisorder: boolean;
+  // Whether the engine has declared the city in civil disorder (#193), as the
+  // map shows it. `civilDisorder` is whether it would riot as things stand.
+  civilDisorderDeclared: boolean;
   growth: CityGrowth;
   improvements: EntityInstance[];
   originalPlayer: Player;
