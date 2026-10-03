@@ -3,6 +3,9 @@ import { Map } from '../Map';
 import { Rect, rectsIntersect } from '../../lib/viewport';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { cityName } from '../lib/city';
+import { imageSize } from '../../lib/imageSize';
+
+const disorderIconPath = 'city/people_unhappy_m';
 
 export class CityNames extends Map {
   // What is currently on the canvas and where, keyed by `x,y`. Keeping it lets
@@ -122,18 +125,51 @@ export class CityNames extends Map {
 
     const widest = Math.max(
         this.context().measureText(cityName(city)).width,
-        this.context().measureText(localeProvider.number(city.growth.size))
-          .width
+        city.civilDisorder
+          ? 0
+          : this.context().measureText(localeProvider.number(city.growth.size))
+              .width
       ),
       // Generous rather than measured: comfortably more than the ascent of a
       // `8 * scale`px font, so the box never crops the glyphs.
-      ascent = 8 * scale + scale;
+      ascent = 8 * scale + scale,
+      text: Rect = {
+        x: Math.floor(centreX - widest / 2 - scale * 2),
+        y: Math.floor(digitBaseline - ascent - scale * 2),
+        width: Math.ceil(widest + scale * 4),
+        height: Math.ceil(nameBaseline - digitBaseline + ascent + scale * 4),
+      };
+
+    if (!city.civilDisorder) {
+      return text;
+    }
+
+    const icon = this.#disorderIcon(offsetX, offsetY),
+      left = Math.min(text.x, icon.x),
+      top = Math.min(text.y, icon.y);
 
     return {
-      x: Math.floor(centreX - widest / 2 - scale * 2),
-      y: Math.floor(digitBaseline - ascent - scale * 2),
-      width: Math.ceil(widest + scale * 4),
-      height: Math.ceil(nameBaseline - digitBaseline + ascent + scale * 4),
+      x: left,
+      y: top,
+      width: Math.max(text.x + text.width, icon.x + icon.width) - left,
+      height: Math.max(text.y + text.height, icon.y + icon.height) - top,
+    };
+  }
+
+  // Where the unhappy citizen goes in place of the size, as Civ1 draws a city
+  // in civil disorder: the citizen sprite on the city square, centred across
+  // it.
+  #disorderIcon(offsetX: number, offsetY: number): Rect {
+    const [width, height] = imageSize(
+        this.getPreloadedImage(disorderIconPath)
+      ).map((dimension) => dimension * this.scale()),
+      size = this.tileSize();
+
+    return {
+      x: Math.floor(offsetX + (size - width) / 2),
+      y: Math.floor(offsetY + (size - height) / 2),
+      width: Math.ceil(width),
+      height: Math.ceil(height),
     };
   }
 
@@ -147,14 +183,27 @@ export class CityNames extends Map {
       sizeText = localeProvider.number(city.growth.size),
       name = cityName(city);
 
+    // In civil disorder the size gives way to an unhappy citizen.
+    const lines: [string, number][] = [[name, nameBaseline]];
+
+    if (city.civilDisorder) {
+      const { x, y } = this.#disorderIcon(offsetX, offsetY);
+
+      this.putImage(this.getPreloadedImage(disorderIconPath), x, y);
+    } else {
+      lines.unshift([sizeText, digitBaseline]);
+    }
+
     this.#applyFont();
 
     this.context().fillStyle = 'black';
-    this.context().fillText(sizeText, centreX + scale, digitBaseline);
-    this.context().fillText(name, centreX + scale, nameBaseline);
+    lines.forEach(([text, baseline]) =>
+      this.context().fillText(text, centreX + scale, baseline)
+    );
     this.context().fillStyle = 'white';
-    this.context().fillText(sizeText, centreX, digitBaseline - scale);
-    this.context().fillText(name, centreX, nameBaseline - scale);
+    lines.forEach(([text, baseline]) =>
+      this.context().fillText(text, centreX, baseline - scale)
+    );
 
     return this.#boxFor(tile, offsetX, offsetY);
   }
