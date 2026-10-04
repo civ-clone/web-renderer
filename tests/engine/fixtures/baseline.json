@@ -15,7 +15,7 @@
   "checksums": {
     "1": "5fa259b4",
     "10": "b1ed81ad",
-    "50": "0a676145"
+    "50": "c4903e00"
   },
   "snapshots": {
     "1": {
@@ -435,14 +435,14 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2499,
-        "fields": 10019,
-        "hash": "69364f63"
+        "entities": 2498,
+        "fields": 10018,
+        "hash": "a58429bf"
       },
       "dto": {
-        "objects": 60578,
-        "bytes": 10182471,
-        "hash": "336b055e"
+        "objects": 60746,
+        "bytes": 10213797,
+        "hash": "da5cbe6d"
       },
       "registries": {
         "cities": 6,
@@ -453,7 +453,7 @@
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 14,
+        "tileImprovements": 13,
         "units": 31
       },
       "world": {
@@ -583,8 +583,8 @@
           "Settlers-5",
           "Settlers",
           "Player-1",
-          "35",
-          "18",
+          "34",
+          "19",
           "false",
           "false"
         ],
