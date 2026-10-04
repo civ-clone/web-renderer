@@ -10,6 +10,7 @@ import {
 } from '../../types';
 import { groupIcons, reduceKnownYield, yieldGroup } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
+import { citizenMoods, citizenSprites } from '../../lib/citizens';
 import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -48,7 +49,7 @@ const renderCitizen = (path: string, title?: string): HTMLElement => {
  */
 export const renderPopulation = (
   city: CityData,
-  moods: CitizenMood[] = city.citizens?.moods ?? [],
+  moods: CitizenMood[] = citizenMoods(city),
   onSpecialistClick?: (specialist: Specialist) => void
 ): Node =>
   drawCitizens(
@@ -58,11 +59,6 @@ export const renderPopulation = (
     onSpecialistClick
   );
 
-// Which citizens are drawn as women and which as men: a pattern taken from `seed` (a city's name), so the same city
-//  always looks the same.
-const citizenMask = (seed: string): string =>
-  (parseInt(seed.replace(/[^a-z]/gi, ''), 36) || 0).toString(2);
-
 // Draws the workers, one citizen per mood, and then the specialists.
 const drawCitizens = <SpecialistType extends { _: string }>(
   moods: CitizenMood[],
@@ -70,17 +66,10 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   seed: string,
   onSpecialistClick?: (specialist: SpecialistType) => void
 ): HTMLElement => {
-  const mask = citizenMask(seed),
-    population = s('<div class="population"></div>');
+  const population = s('<div class="population"></div>');
 
-  moods.forEach((mood, index) =>
-    population.append(
-      renderCitizen(
-        `./assets/city/people_${mood}_${
-          ['f', 'm'][parseInt(mask[index % mask.length], 10)]
-        }.png`
-      )
-    )
+  citizenSprites(moods, seed).forEach((path) =>
+    population.append(renderCitizen(path))
   );
 
   specialists.forEach((specialist) => {

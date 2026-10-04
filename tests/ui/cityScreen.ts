@@ -5,12 +5,14 @@
 // A yield is grouped by the ancestry the engine sends with it, so one the UI has
 // never heard of still counts with its group.
 // Keys 1–8 pick a specialist in the order the roster draws them (#107).
+// The citizens drawn are the moods the engine sends, in order, one sprite each.
 
+import { citizenMoods, citizenSprites } from '../../src/js/UI/lib/citizens';
 import {
   orderSpecialists,
   specialistForKey,
 } from '../../src/js/UI/lib/specialists';
-import { Yield } from '../../src/js/UI/types';
+import { CitizenMood, Yield } from '../../src/js/UI/types';
 import { splitYield, yieldGroup } from '../../src/js/UI/lib/yieldMap';
 
 const failures: string[] = [];
@@ -206,6 +208,36 @@ expect(
   specialistForKey('1', []),
   null
 );
+
+const moods: CitizenMood[] = ['happy', 'content', 'unhappy', 'unhappy'];
+
+expect(
+  'the citizens are the moods the engine sends, in order',
+  citizenMoods({ citizens: { moods } }),
+  moods
+);
+
+expect(
+  'a city the engine sends no citizens for draws no workers',
+  citizenMoods({}),
+  []
+);
+
+expect(
+  'each mood gets its own sprite, in order',
+  citizenSprites(moods, 'Rome').map(
+    (path) => /people_(\w+?)_[fm]\.png$/.exec(path)?.[1]
+  ),
+  moods
+);
+
+expect(
+  'a city keeps the same faces each time it is drawn',
+  citizenSprites(moods, 'Rome'),
+  citizenSprites(moods, 'Rome')
+);
+
+expect('no moods give no sprites', citizenSprites([], 'Rome'), []);
 
 if (failures.length) {
   process.stderr.write(
