@@ -2,6 +2,8 @@
 //
 // A yield the city uses more of than it makes is split into what it covers and
 // what it is short by, so the shortfall can be drawn in its own colour (#188).
+// A yield is grouped by the ancestry the engine sends with it, so one the UI has
+// never heard of still counts with its group.
 // Keys 1–8 pick a specialist in the order the roster draws them (#107).
 
 import {
@@ -9,7 +11,7 @@ import {
   specialistForKey,
 } from '../../src/js/UI/lib/specialists';
 import { Yield } from '../../src/js/UI/types';
-import { splitYield } from '../../src/js/UI/lib/yieldMap';
+import { splitYield, yieldGroup } from '../../src/js/UI/lib/yieldMap';
 
 const failures: string[] = [];
 let checks = 0;
@@ -26,8 +28,29 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
+// The group of each Civ1 yield that isn't itself a group, as the engine's ancestry gives it.
+const groups: { [key: string]: string } = {
+  UnitSupportFood: 'Food',
+  PopulationSupportFood: 'Food',
+  UnitSupportProduction: 'Production',
+  Corruption: 'Trade',
+  LuxuryHappiness: 'Happiness',
+  MartialLaw: 'Unhappiness',
+  MilitaryUnhappiness: 'Unhappiness',
+  PopulationUnhappiness: 'Unhappiness',
+  CityImprovementContent: 'Unhappiness',
+  CityImprovementMaintenanceGold: 'Gold',
+};
+
+const ancestry = (name: string): string[] =>
+  groups[name]
+    ? [name, groups[name], 'Yield', 'DataObject']
+    : [name, 'Yield', 'DataObject'];
+
 const yields = (...entries: [string, number][]): Yield[] =>
-  entries.map(([_, value]) => ({ _, value } as unknown as Yield));
+  entries.map(
+    ([_, value]) => ({ _, __: ancestry(_), value } as unknown as Yield)
+  );
 
 expect(
   'Rome makes 5 Gold and pays 6: 5 used and 1 short',
@@ -105,6 +128,33 @@ expect('a yield the city has none of is empty', splitYield('Research', []), {
   deficit: 0,
   free: 0,
 });
+
+expect(
+  'a Civ1 yield is grouped by its ancestry',
+  yieldGroup({ _: 'MartialLaw', __: ancestry('MartialLaw') }),
+  'Unhappiness'
+);
+
+expect(
+  'a group is its own group',
+  yieldGroup({ _: 'Gold', __: ancestry('Gold') }),
+  'Gold'
+);
+
+expect(
+  'an object without ancestry is its own group',
+  yieldGroup({ _: 'Food' }),
+  'Food'
+);
+
+expect(
+  'a yield the UI has never heard of is counted with its group',
+  splitYield('Gold', [
+    { _: 'Gold', __: ancestry('Gold'), value: 5 },
+    { _: 'Tithe', __: ['Tithe', 'Gold', 'Yield', 'DataObject'], value: -7 },
+  ] as unknown as Yield[]),
+  { used: 5, deficit: 2, free: 0 }
+);
 
 const specialists = [
   { _: 'Scientist', id: 'scientist' },

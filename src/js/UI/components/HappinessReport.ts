@@ -6,7 +6,7 @@ import {
   MilitaryUnhappiness,
   Player,
 } from '../types';
-import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
+import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import City from './City';
 import DataObserver from '../DataObserver';
 import Element from '@dom111/element';
@@ -42,7 +42,7 @@ const buildCityRow = async (
       const luxuriesElement = s(`<span></span>`);
 
       assetStore
-        .getScaled(`./assets/${knownIcons.Luxuries}`, 2)
+        .getScaled(`./assets/${groupIcons.Luxuries}`, 2)
         .then((image) =>
           luxuriesElement.append(
             s(`<img src="${image.toDataURL('image/png')}">`),

@@ -14,7 +14,7 @@ import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
 import { h } from '../lib/html';
 import isAnarchy from './lib/government';
-import { knownIcons } from '../lib/yieldMap';
+import { groupIcons } from '../lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { yieldData } from './lib/cityYields';
@@ -74,7 +74,7 @@ export class TradeReport extends Window {
 
   async update() {
     const goldIcon = await assetStore
-        .getScaled(`./assets/${knownIcons.Gold}`, 2)
+        .getScaled(`./assets/${groupIcons.Gold}`, 2)
         .then((image) => `<img src="${image.toDataURL('image/png')}">`),
       cityList = s(`<table class="city-list"></table>`),
       improvementList = s(`<table class="improvement-list"></table>`),

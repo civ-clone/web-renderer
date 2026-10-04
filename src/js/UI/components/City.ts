@@ -14,7 +14,7 @@ import {
   getLabelForBuildable,
   getLabelForBuildableEntity,
 } from './lib/cityBuild';
-import { knownGroups, splitYield } from '../lib/yieldMap';
+import { splitYield, yieldGroup } from '../lib/yieldMap';
 import {
   renderPopulation,
   renderProgress,
@@ -44,15 +44,22 @@ import isAnarchy from './lib/government';
 import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
 
+// The yield rows the city screen draws. This is the screen's layout, not a rule: the groups themselves come from the
+//  engine's class ancestry.
+const yieldRows = [
+  ['Food'],
+  ['Production'],
+  ['Trade'],
+  ['Luxuries', 'Gold', 'Research'],
+];
+
+// The groups drawn elsewhere on the screen: the rows above, and the citizens, which show Happiness and Unhappiness.
+const drawnYieldGroups = [...yieldRows.flat(), 'Happiness', 'Unhappiness'];
+
 const renderYields = (city: CityData): Node => {
     return s(
       '<div class="yields-detail"></div>',
-      ...[
-        ['Food'],
-        ['Production'],
-        ['Trade'],
-        ['Luxuries', 'Gold', 'Research'],
-      ].map((cityYieldNames) =>
+      ...yieldRows.map((cityYieldNames) =>
         s(
           `<div class="yields" data-yields="${cityYieldNames.join(
             ' '
@@ -99,7 +106,7 @@ const renderYields = (city: CityData): Node => {
       ...Object.entries(
         city.yields
           .filter(
-            (cityYield) => !Object.keys(knownGroups).includes(cityYield._)
+            (cityYield) => !drawnYieldGroups.includes(yieldGroup(cityYield))
           )
           .reduce((yieldObject, cityYield) => {
             if (!(cityYield._ in yieldObject)) {

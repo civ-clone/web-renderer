@@ -1,5 +1,5 @@
 import { GameData, Player, PlayerResearch, Yield } from '../types';
-import { knownIcons, reduceKnownYield } from '../lib/yieldMap';
+import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import DataObserver from '../DataObserver';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
@@ -10,7 +10,7 @@ import { t } from 'i18next';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
-    .getScaled(`./assets/${knownIcons.Research}`, 2)
+    .getScaled(`./assets/${groupIcons.Research}`, 2)
     .then((image) => `<img src="${image.toDataURL('image/png')}">`);
 
   return s(
