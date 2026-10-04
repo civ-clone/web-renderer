@@ -35,9 +35,6 @@ import { downloadSave, takePendingSave } from './lib/savedGame';
 import { allowLeaving, guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
-import cityTooLargeToJoin, {
-  joinCitySizeLimit,
-} from './lib/cityTooLargeToJoin';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -1667,30 +1664,26 @@ export class Renderer {
                   }
                 }
 
-                // The engine offers no join in a city of size 10 or more, so
-                // the key would do nothing and say nothing.
-                if (key === 'b') {
-                  const city = cityTooLargeToJoin(
-                    activeUnit,
-                    world.get(activeUnit.tile.x, activeUnit.tile.y).city
+                // Where the engine refuses a join, it says why, so the key
+                // doesn't do nothing and say nothing.
+                if (key === 'b' && activeUnit.joinCityRefusal) {
+                  const { reason, ...details } = activeUnit.joinCityRefusal,
+                    city = world.get(activeUnit.tile.x, activeUnit.tile.y).city;
+
+                  new NotificationWindow(
+                    t(`JoinCity.${reason}.title`),
+                    document.createTextNode(
+                      t(`JoinCity.${reason}.body`, {
+                        ...details,
+                        city: city?.name,
+                      })
+                    )
                   );
 
-                  if (city) {
-                    new NotificationWindow(
-                      t('JoinCity.too-large.title'),
-                      document.createTextNode(
-                        t('JoinCity.too-large.body', {
-                          city: city.name,
-                          size: joinCitySizeLimit,
-                        })
-                      )
-                    );
+                  event.stopPropagation();
+                  event.preventDefault();
 
-                    event.stopPropagation();
-                    event.preventDefault();
-
-                    return;
-                  }
+                  return;
                 }
 
                 if (key in directionKeyMap) {

@@ -153,6 +153,8 @@ export interface Unit extends EntityInstance {
   city: City | null;
   defence: Yield;
   improvements: EntityInstance[];
+  // Why the engine won't let this unit join the city it stands in (#279).
+  joinCityRefusal?: { reason: string; [detail: string]: unknown } | null;
   movement: Yield;
   moves: Yield;
   player: Player;

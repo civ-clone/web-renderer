@@ -1,4 +1,10 @@
 [
+{"version":"0.1.0@4ce9d0b","date":"2026-10-04T10:09:11.000Z","localChanges":["test: the city screen draws the moods the engine sends, in order"],"externalChanges":{}}
+,
+{"version":"0.1.0@5f4e5a0","date":"2026-10-04T10:07:19.000Z","localChanges":["chore: update civ1-city-happiness"],"externalChanges":{"civ1-city-happiness":{"status":"updated","log":["A `citizens` provider on City sends the mood of each working citizen ('unhappy' | 'content' | 'happy', from calculateCitizenState), and the moods after each non-zero Happiness/Unhappiness yield with that yield, so a renderer can draw the citizens and the Happiness report's steps without re-implementing the rule (civ-clone/web-renderer#277).","Registered through `registerAdditionalData(game)`, imported from index.ts as registerRules is. Adds core-data-object as a dependency."]}}}
+,
+{"version":"0.1.0@3613348","date":"2026-10-04T09:14:51.000Z","localChanges":["refactor: draw the citizen moods the engine sends"],"externalChanges":{}}
+,
 {"version":"0.1.0@f370efa","date":"2026-10-04T08:47:36.000Z","localChanges":["refactor: group yields by the class ancestry the engine sends"],"externalChanges":{}}
 ,
 {"version":"0.1.0@37c54a4","date":"2026-10-03T21:18:08.000Z","localChanges":["When a city has specialists, the city screen and the Happiness report now show the same happy, content and unhappy citizens that the game uses to decide disorder and celebration, so an Entertainer calming an unhappy citizen is drawn that way (closes #269)."],"externalChanges":{}}
