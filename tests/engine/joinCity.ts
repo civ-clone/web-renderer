@@ -34,7 +34,9 @@ let started = false,
   actionHandler: ((action: any) => unknown) | null = null,
   pendingChoice: ((value: any) => void) | null = null,
   // The latest size the UI has been sent for each `CityGrowth`, by its id.
-  sizesSent: { [id: string]: number } = {};
+  sizesSent: { [id: string]: number } = {},
+  // The latest `joinCityRefusal` the UI has been sent for each unit, by its id (#279).
+  refusalsSent: { [id: string]: unknown } = {};
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -57,6 +59,10 @@ const collectSizes = (value: any): void => {
 
   if (value._ === 'CityGrowth' && typeof value.size === 'number') {
     sizesSent[value.id] = value.size;
+  }
+
+  if ('joinCityRefusal' in value) {
+    refusalsSent[value.id] = value.joinCityRefusal;
   }
 
   Object.values(value).forEach(collectSizes);
@@ -148,8 +154,39 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // At size 10 another Settlers isn't offered the join, and the UI is told why, so the `b` key can say so (#279).
+  while (cityGrowth.size() < 10) {
+    cityGrowth.grow();
+  }
+
+  const refused = new Settlers(city, humanPlayer!, city.tile());
+
+  await settle();
+  (humanClient as any).sendPatchData();
+
+  if (
+    refused
+      .actions(city.tile())
+      .some((action) => action.sourceClass().name === 'JoinCity')
+  ) {
+    fail('a Settlers is offered JoinCity in its own city of size 10');
+  }
+
+  if (
+    JSON.stringify(refusalsSent[refused.id()]) !==
+    JSON.stringify({ reason: 'too-large', size: 10 })
+  ) {
+    fail(
+      `the UI was not told why the Settlers can't join a city of size 10: it holds ${JSON.stringify(
+        refusalsSent[refused.id()]
+      )}`
+    );
+  }
+
   console.log(
-    `PASS joinCity (size ${sizeBefore} to ${cityGrowth.size()}, sent to the UI with the move)`
+    `PASS joinCity (size ${sizeBefore} to ${
+      sizeBefore + 1
+    }, sent to the UI with the move; a join refused at size 10 is explained)`
   );
 
   process.exit(0);
