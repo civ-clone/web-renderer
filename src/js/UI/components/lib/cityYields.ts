@@ -1,20 +1,15 @@
 import {
   City as CityData,
   City,
+  CitizenMood,
   CityBuild,
   CityGrowth,
   PlayerResearch,
   Specialist,
   Yield,
 } from '../../types';
-import {
-  groupIcons,
-  reduceKnownYield,
-  reduceKnownYields,
-  yieldGroup,
-} from '../../lib/yieldMap';
+import { groupIcons, reduceKnownYield, yieldGroup } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
-import { citizenState } from '../../lib/citizenState';
 import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -48,38 +43,29 @@ const renderCitizen = (path: string, title?: string): HTMLElement => {
 };
 
 /**
- * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. The workers'
- * moods come from `citizenState`, the engine's own order, so the faces drawn are the ones that decide disorder.
+ * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. The moods come
+ * from the engine (civ1-city-happiness's `citizens` data), so the renderer doesn't know the rule that decides them.
  */
 export const renderPopulation = (
   city: CityData,
-  yields: Yield[] = city.yields,
+  moods: CitizenMood[] = city.citizens?.moods ?? [],
   onSpecialistClick?: (specialist: Specialist) => void
-): Node => {
-  const specialists = orderSpecialists(city.specialists ?? []),
-    [happiness, unhappiness] = reduceKnownYields(
-      yields,
-      'Happiness',
-      'Unhappiness'
-    ),
-    state = citizenState(
-      city.growth.size,
-      happiness,
-      unhappiness,
-      specialists.length
-    );
-
-  return drawCitizens(state, specialists, city.name, onSpecialistClick);
-};
+): Node =>
+  drawCitizens(
+    moods,
+    orderSpecialists(city.specialists ?? []),
+    city.name,
+    onSpecialistClick
+  );
 
 // Which citizens are drawn as women and which as men: a pattern taken from `seed` (a city's name), so the same city
 //  always looks the same.
 const citizenMask = (seed: string): string =>
   (parseInt(seed.replace(/[^a-z]/gi, ''), 36) || 0).toString(2);
 
-// Draws the workers (`state` holds 0 for unhappy, 1 for content and 2 for happy) and then the specialists.
+// Draws the workers, one citizen per mood, and then the specialists.
 const drawCitizens = <SpecialistType extends { _: string }>(
-  state: number[],
+  moods: CitizenMood[],
   specialists: SpecialistType[],
   seed: string,
   onSpecialistClick?: (specialist: SpecialistType) => void
@@ -87,10 +73,10 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   const mask = citizenMask(seed),
     population = s('<div class="population"></div>');
 
-  state.forEach((status, index) =>
+  moods.forEach((mood, index) =>
     population.append(
       renderCitizen(
-        `./assets/city/people_${['unhappy', 'content', 'happy'][status]}_${
+        `./assets/city/people_${mood}_${
           ['f', 'm'][parseInt(mask[index % mask.length], 10)]
         }.png`
       )
@@ -156,9 +142,9 @@ export const renderCitizenCounts = (
 ): HTMLElement =>
   drawCitizens(
     [
-      ...new Array(happy).fill(2),
-      ...new Array(content).fill(1),
-      ...new Array(unhappy).fill(0),
+      ...new Array<CitizenMood>(happy).fill('happy'),
+      ...new Array<CitizenMood>(content).fill('content'),
+      ...new Array<CitizenMood>(unhappy).fill('unhappy'),
     ],
     orderSpecialists(specialists.map((specialist) => ({ _: specialist }))),
     seed

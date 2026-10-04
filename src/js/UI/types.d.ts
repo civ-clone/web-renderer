@@ -13,10 +13,18 @@ export interface EntityInstance<Types = string> extends Entity<Types> {
   id: string;
 }
 
+export type CitizenMood = 'unhappy' | 'content' | 'happy';
+
 export interface City extends EntityInstance<'City'> {
   name: string;
   build: CityBuild;
   celebrateLeader: boolean;
+  // The working citizens' moods, from the engine's civ1-city-happiness `citizens` data, and for each Happiness or
+  //  Unhappiness yield the moods once it and those before it are applied. Absent under rules that don't send it.
+  citizens?: {
+    moods: CitizenMood[];
+    causes: { yield: Yield; moods: CitizenMood[] }[];
+  };
   civilDisorder: boolean;
   // Whether the engine has declared the city in civil disorder (#193), as the
   // map shows it. `civilDisorder` is whether it would riot as things stand.

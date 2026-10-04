@@ -381,7 +381,7 @@ const renderYields = (city: CityData): Node => {
         '<div class="top-row"></div>',
         s(
           '<div class="yield-details"></div>',
-          renderPopulation(city, city.yields, (specialist) =>
+          renderPopulation(city, undefined, (specialist) =>
             transport.send('action', {
               name: 'ChangeSpecialist',
               id: specialist.id,
