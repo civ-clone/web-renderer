@@ -100,3 +100,15 @@ over the whole DTO found no other.
 
 **The proper fix belongs in Stage 4**: `Unit.busy` should serialise as a rule
 identity rather than the rule object, which is both smaller and meaningful.
+
+## Accepted change: citizen moods (#277)
+
+civ1-city-happiness's `citizens` AdditionalData on `City` adds each city's
+citizen moods, and the moods after each Happiness/Unhappiness yield, to the
+DTO. Every checksum is identical, and the object count is unchanged. Only the
+DTO bytes and hash moved:
+
+| | Before | After |
+| - | ------ | ----- |
+| turn 10 | `bytes 652789, hash 2b19f863` | `bytes 653554, hash 4dee883f` |
+| turn 50 | `bytes 10168507, hash 023dc808` | `bytes 10173317, hash 37de25b6` |

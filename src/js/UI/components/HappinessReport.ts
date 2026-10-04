@@ -20,7 +20,6 @@ import { cityName } from './lib/city';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
-import instanceOf from '../lib/instanceOf';
 import { renderPopulation } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -54,23 +53,18 @@ const buildCityRow = async (
     },
   };
 
-  const happinessYields = city.yields.filter(
-      (cityYield) =>
-        instanceOf(cityYield, 'Happiness', 'Unhappiness') &&
-        cityYield.value !== 0
-    ),
-    reasons = happinessYields.map((cityYield, index) =>
+  const reasons = (city.citizens?.causes ?? []).map((cause) =>
+    s(
+      `<div class="reason"></div>`,
+      renderPopulation(city, cause.moods),
       s(
-        `<div class="reason"></div>`,
-        renderPopulation(city, happinessYields.slice(0, index + 1)),
-        s(
-          `<div class="detail"></div>`,
-          happinessReasons[cityYield._]
-            ? happinessReasons[cityYield._](cityYield)
-            : cityYield._
-        )
+        `<div class="detail"></div>`,
+        happinessReasons[cause.yield._]
+          ? happinessReasons[cause.yield._](cause.yield)
+          : cause.yield._
       )
-    );
+    )
+  );
 
   const reasonWrapper = s('<div class="reasons hidden"></div>', ...reasons);
 
