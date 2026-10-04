@@ -8,11 +8,10 @@ import {
   Yield,
 } from '../../types';
 import {
-  knownGroupLookup,
-  knownGroups,
-  knownIcons,
+  groupIcons,
   reduceKnownYield,
   reduceKnownYields,
+  yieldGroup,
 } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
 import { citizenState } from '../../lib/citizenState';
@@ -198,7 +197,7 @@ export const turnsText = (turns: number) =>
 export const yieldData = (city: CityData, yieldName: string) =>
   city.yields.reduce(
     ([total, used, free], cityYield) => {
-      const isKnown = knownGroupLookup[yieldName]?.includes(cityYield._);
+      const isKnown = yieldGroup(cityYield) === yieldName;
 
       if (isKnown && cityYield.value > 0) {
         total += cityYield.value;
@@ -218,7 +217,7 @@ export const yieldData = (city: CityData, yieldName: string) =>
   );
 
 export const yieldImages = (
-  cityYield: { _: string; value: number },
+  cityYield: { _: string; value: number; __?: string[] },
   absolute: boolean = false
 ): Node[] =>
   new Array(
@@ -231,7 +230,7 @@ export const yieldImages = (
       const icon = s('<span class="yield-icon"></span>');
 
       assetStore
-        .getScaled(`./assets/${knownIcons[knownGroups[cityYield._]]}`, 2)
+        .getScaled(`./assets/${groupIcons[yieldGroup(cityYield)]}`, 2)
         .then((image) =>
           icon.append(s(`<img src="${image.toDataURL('image/png')}">`))
         );

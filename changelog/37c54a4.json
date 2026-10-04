@@ -1,0 +1,1 @@
+{"version":"0.1.0@37c54a4","date":"2026-10-03T21:18:08.000Z","localChanges":["When a city has specialists, the city screen and the Happiness report now show the same happy, content and unhappy citizens that the game uses to decide disorder and celebration, so an Entertainer calming an unhappy citizen is drawn that way (closes #269)."],"externalChanges":{}}

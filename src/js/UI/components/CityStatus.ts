@@ -1,5 +1,5 @@
 import { City as CityData, GameData, Player } from '../types';
-import { knownIcons } from '../lib/yieldMap';
+import { groupIcons } from '../lib/yieldMap';
 import { turnsLeft, yieldData } from './lib/cityYields';
 import City from './City';
 import DataObserver from '../DataObserver';
@@ -33,7 +33,7 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'].map(
         (yieldName) =>
           assetStore
-            .getScaled(`./assets/${knownIcons[yieldName]}`, 2)
+            .getScaled(`./assets/${groupIcons[yieldName]}`, 2)
             .then((image) => `<img src="${image.toDataURL('image/png')}">`)
       )
     );
