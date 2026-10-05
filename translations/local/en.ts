@@ -76,6 +76,11 @@ i18next.addResources('en', 'default', {
 
   'Buildable.label-empty': `Nothing`,
 
+  'ChooseFromList.capture-city.steal-advance.body':
+    'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
+  'ChooseFromList.capture-city.steal-advance.choice':
+    '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
+  'ChooseFromList.capture-city.steal-advance.title': 'Acquire an advance',
   'ChooseFromList.choose-civilization.body': '',
   'ChooseFromList.choose-civilization.choice':
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
