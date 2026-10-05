@@ -112,3 +112,13 @@ DTO bytes and hash moved:
 | - | ------ | ----- |
 | turn 10 | `bytes 652789, hash 2b19f863` | `bytes 653554, hash 4dee883f` |
 | turn 50 | `bytes 10168507, hash 023dc808` | `bytes 10173317, hash 37de25b6` |
+
+## Accepted change: start positions (#191, #232)
+
+civ1-world's `pick-start-tile` no longer skips candidates while filtering out
+those within 4 of a used start square (measured with `civ1Distance`), and,
+as in v474.05, only starts a civilization on a landmass with at least 32
+Grassland, Plains or River tiles. The world is identical. At turn 1 the only
+differences are the four Settlers' positions (and the hashes and DTO sizes that
+follow from them). Entity counts and random calls are unchanged. Everything
+after turn 1 moves with them.

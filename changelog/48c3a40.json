@@ -1,0 +1,1 @@
+{"version":"0.1.0@48c3a40","date":"2026-10-05T07:47:32.000Z","localChanges":["After capturing a city, the window for choosing an advance to take now has a proper title and lists advances by name, such as \"Ceremonial Burial\" rather than \"CeremonialBurial\" (closes #268)."],"externalChanges":{}}

@@ -182,14 +182,10 @@ engine.emit = (event: string, ...args: any[]): void => {
   emit(event, ...args);
 };
 
-engine.on('turn:start', (turn: number): void => {
-  if (stopped || turn < TURNS) {
-    return;
-  }
-
+const finish = (turn: number, how: string): void => {
   stopped = true;
 
-  if (handovers < TURNS - 1) {
+  if (handovers < turn - 1) {
     fail(`only ${handovers} handovers in ${turn} turns`);
   }
 
@@ -200,10 +196,29 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS turnHandover (${handovers} handovers and ${heldNotifications} held notifications over ${turn} turns)`
+    `PASS turnHandover (${handovers} handovers and ${heldNotifications} held notifications ${how})`
   );
 
   process.exit(0);
+};
+
+engine.on('turn:start', (turn: number): void => {
+  if (stopped || turn < TURNS) {
+    return;
+  }
+
+  finish(turn, `over ${turn} turns`);
+});
+
+// The seeded game can end the human's part early: with no turns left to hand over, stop there.
+engine.on('player:defeated', (player: Player): void => {
+  if (stopped || player !== humanPlayer) {
+    return;
+  }
+
+  const turn = turnInstance.value();
+
+  finish(turn, `over ${turn} turns, until the human was defeated`);
 });
 
 engine.on('engine:start', (): void => {
