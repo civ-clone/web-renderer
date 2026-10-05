@@ -307,10 +307,15 @@ export class Window
     this.element().style.setProperty('left', currentLeft + x + 'px');
   }
 
+  // Replaces what's inside the `.body` wrapper, which stays so the body is still the part that scrolls (#283).
   update(content: string | Node): void {
-    this.element().lastElementChild?.remove();
+    this.#body = content;
 
-    this.append(content instanceof Node ? content : s(`<p>${content}</p>`));
+    this.element()
+      .querySelector(':scope > .body')
+      ?.replaceChildren(
+        content instanceof Node ? content : s(`<p>${content}</p>`)
+      );
   }
 }
 
