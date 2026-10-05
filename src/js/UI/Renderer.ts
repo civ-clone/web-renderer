@@ -35,6 +35,11 @@ import { downloadSave, takePendingSave } from './lib/savedGame';
 import { allowLeaving, guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
+import {
+  chooseFromListBody,
+  chooseFromListChoice,
+  chooseFromListTitle,
+} from './lib/chooseFromList';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -420,10 +425,7 @@ export class Renderer {
             return;
           }
 
-          const title = t(`ChooseFromList.${key}.title`, {
-            data,
-            defaultValue: t('ChooseFromList.default.body'),
-          });
+          const title = chooseFromListTitle(key, data);
 
           if (key === 'negotiation.next-step' && choices.length === 1) {
             const window = new ActionWindow(
@@ -467,10 +469,7 @@ export class Renderer {
           const body =
             key === 'negotiation.next-step'
               ? negotiationLabel(data as Negotiation)
-              : t(`ChooseFromList.${key}.body`, {
-                  data,
-                  defaultValue: t('ChooseFromList.default.body'),
-                });
+              : chooseFromListBody(key, data);
 
           // Picked client-side, among the choices offered (#15). Not a valid choice id, so it can't collide with one.
           const randomChoice = '@random',
@@ -491,10 +490,7 @@ export class Renderer {
                 const label =
                   key === 'negotiation.next-step'
                     ? interactionLabel(value as Interactions)
-                    : t(`ChooseFromList.${key}.choice`, {
-                        value,
-                        defaultValue: value?._,
-                      });
+                    : chooseFromListChoice(key, value);
 
                 return {
                   label,

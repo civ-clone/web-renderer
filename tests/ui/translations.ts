@@ -11,13 +11,27 @@
 // `UnknownCity` sent in its place used to leave it out, so "City captured!"
 // read `our city {{city.originalPlayer.civilization._}}.Asansol.name`. The
 // same goes for another player's wonder (#43).
+//
+// Every list the engine asks the player to choose from needs its own title, or
+// the window falls back to "Choose an option" (it used to fall back to the
+// body text), and the advance taken from a captured city is named, not shown
+// as its class name (#268).
 
 import { Babylonian, Indian } from '@civ-clone/civ1-civilization/Civilizations';
+import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
+import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
+import {
+  chooseFromListBody,
+  chooseFromListChoice,
+  chooseFromListTitle,
+} from '../../src/js/UI/lib/chooseFromList';
+import { readFileSync, readdirSync, statSync } from 'fs';
 import i18next, { t } from 'i18next';
 import Notification from '../../src/js/Engine/Notification';
 import Tile from '@civ-clone/core-world/Tile';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
+import { join } from 'path';
 import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
 
 const names = [
@@ -41,6 +55,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-civilization/en');
+  await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
 
@@ -177,6 +192,88 @@ const expect = (description: string, actual: string, expected: string) => {
     );
   });
 
+  // Every key a `ChoiceMeta` is created with, in the engine packages and here.
+  const choiceMetaKeys = new Set<string>(),
+    scan = (directory: string): void =>
+      readdirSync(directory).forEach((name) => {
+        const path = join(directory, name);
+
+        if (name === 'node_modules' || name.startsWith('.')) {
+          return;
+        }
+
+        if (statSync(path).isDirectory()) {
+          scan(path);
+
+          return;
+        }
+
+        if (!name.endsWith('.ts') || name.endsWith('.d.ts')) {
+          return;
+        }
+
+        const source = readFileSync(path, 'utf8');
+
+        for (const [, key] of source.matchAll(
+          /new ChoiceMeta\([^']{0,200}?'([^']+)'/g
+        )) {
+          choiceMetaKeys.add(key);
+        }
+      });
+
+  readdirSync('node_modules/@civ-clone').forEach((name) =>
+    scan(join('node_modules/@civ-clone', name))
+  );
+  scan('src');
+
+  ['capture-city.steal-advance', 'negotiation.next-step'].forEach((key) => {
+    if (!choiceMetaKeys.has(key)) {
+      failures.push(`ChoiceMeta scan: expected to find ${key}`);
+    }
+  });
+
+  choiceMetaKeys.forEach((key) => {
+    if (!i18next.exists(`ChooseFromList.${key}.title`)) {
+      failures.push(`ChooseFromList.${key}.title: missing`);
+    }
+  });
+
+  expect(
+    'ChooseFromList title fallback',
+    chooseFromListTitle('no-such-key', {}),
+    'Choose an option'
+  );
+
+  // What the UI receives: the `ChoiceMeta` serialised by the transport and rebuilt.
+  const stealAdvance = reconstituteData(
+    new ChoiceMeta(
+      [CeremonialBurial],
+      'capture-city.steal-advance',
+      asansol as any
+    ).toPlainObject()
+  );
+
+  expect(
+    'ChooseFromList.capture-city.steal-advance.title',
+    chooseFromListTitle('capture-city.steal-advance', stealAdvance.data),
+    'Acquire an advance'
+  );
+
+  expect(
+    'ChooseFromList.capture-city.steal-advance.body',
+    chooseFromListBody('capture-city.steal-advance', stealAdvance.data),
+    'Choose an advance to acquire from Asansol:'
+  );
+
+  expect(
+    'ChooseFromList.capture-city.steal-advance.choice',
+    chooseFromListChoice(
+      'capture-city.steal-advance',
+      stealAdvance.choices[0].value
+    ),
+    'Ceremonial Burial'
+  );
+
   if (failures.length) {
     console.error(`FAIL translations\n  ${failures.join('\n  ')}`);
 
@@ -184,6 +281,6 @@ const expect = (description: string, actual: string, expected: string) => {
   }
 
   console.log(
-    `PASS translations (${names.length} names, 3 keys; ${notifications.length} notifications)`
+    `PASS translations (${names.length} names, 3 keys; ${notifications.length} notifications; ${choiceMetaKeys.size} choice lists)`
   );
 })();
