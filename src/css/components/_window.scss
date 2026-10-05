@@ -6,9 +6,21 @@
   color: #123;
   margin: 0;
   outline: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 0;
   position: fixed;
+
+  // The titlebar stays put and only the body scrolls (#283).
+  &[open] {
+    display: flex;
+    flex-direction: column;
+  }
+
+  > .body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+  }
 
   &.modal {
     z-index: 10;
@@ -34,6 +46,7 @@
     background: #38e;
     color: #edc;
     display: flex;
+    flex: none;
     font-weight: bold;
     padding: 0.5em;
     text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
