@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@23af056","date":"2026-10-06T09:10:32.000Z","localChanges":["Screen readers now read out a city's citizens, such as \"3 happy, 2 content, 1 unhappy, 1 Entertainer\", on the city screen and in the Happiness and Top Cities reports. The specialists on the city screen can still be changed from the keyboard (closes #272)."],"externalChanges":{}}
+,
+{"version":"0.1.0@5e4434b","date":"2026-10-06T09:10:32.000Z","localChanges":["test: UI tests get a DOM, and check SelectionWindow choosing a single option"],"externalChanges":{}}
+,
 {"version":"0.1.0@9ae78d0","date":"2026-10-06T09:04:29.000Z","localChanges":["Starting a new game now asks how big a world you want, from Tiny to Huge, before asking how many civilizations to play with (#55). Normal is the original game's 80 × 50 map.","Bigger worlds have room for more civilizations: Large offers up to 10 and Huge up to 14, the full set (closes #55)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@ccd9a36","date":"2026-10-06T09:00:04.000Z","localChanges":["Other civilizations' cities in civil disorder now show an unhappy citizen on the map in place of their size, as your own cities do and as the original game shows them (closes #265)."],"externalChanges":{}}
