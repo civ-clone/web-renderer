@@ -34,6 +34,7 @@ import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegis
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import City from '@civ-clone/core-city/City';
+import TradeRoute from '@civ-clone/core-city/TradeRoute';
 import {
   changeSpecialist,
   changeWorkedTile,
@@ -250,6 +251,22 @@ const report = (): void => {
         : null,
     ['Scientist', 'TaxCollector']
   );
+
+  // A trade route (#57): one city's route to another, which a Caravan sets up. Registered directly, so the check
+  //  doesn't depend on a Caravan reaching a city in 12 turns.
+  const [routeHome, routePartner] = defaultGame.cities.entries();
+
+  const routed = ((): string => {
+    if (!routeHome || !routePartner) {
+      return 'fewer than two cities';
+    }
+
+    defaultGame.tradeRoutes.register(new TradeRoute(routeHome, routePartner));
+
+    return 'ok';
+  })();
+
+  push('a trade route can be set up', () => routed, 'ok');
 
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
@@ -470,6 +487,16 @@ const report = (): void => {
         : null;
     },
     ['Scientist', 'TaxCollector']
+  );
+
+  // The trade route, after the round trip.
+  push(
+    'the trade route comes back between the same cities',
+    () =>
+      target.tradeRoutes
+        .entries()
+        .map((route) => [route.from().id(), route.to().id()]),
+    routeHome && routePartner ? [[routeHome.id(), routePartner.id()]] : null
   );
 
   // The aircraft on the Carrier, after the round trip.

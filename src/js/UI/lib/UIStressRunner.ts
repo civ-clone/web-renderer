@@ -46,6 +46,9 @@ const preferredUnitActionOrder = [
   'Sleep',
   'Unload',
   'LandAircraft',
+  // A Caravan's actions skip the "Will you?" choice the arrow keys open (#57).
+  'EstablishTradeRoute',
+  'HelpBuildWonder',
   'Move',
 ];
 

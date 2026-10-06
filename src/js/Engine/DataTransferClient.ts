@@ -107,6 +107,7 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import researchCosts from './AdditionalData/researchCosts';
+import tradeRoutes from './AdditionalData/tradeRoutes';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 
 const awaitTimeout = (delay: number, reason?: any) =>
@@ -137,7 +138,8 @@ const referenceObject = (object: any) =>
 additionalDataRegistryInstance.register(
   anarchyTurns(),
   civilDisorderDeclared(),
-  researchCosts()
+  researchCosts(),
+  tradeRoutes()
 );
 
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
@@ -758,6 +760,30 @@ export class DataTransferClient extends Client implements IClient {
           new Notification('City.improvement-unsupported', {
             city,
             cityImprovement,
+          })
+        );
+      }
+    );
+
+    engineInstance.on(
+      'unit:trade-route-established',
+      (
+        player: Player,
+        home: City,
+        city: City,
+        goods: string,
+        bonus: number
+      ) => {
+        if (player !== this.player()) {
+          return;
+        }
+
+        this.sendNotification(
+          new Notification('Unit.trade-route-established', {
+            bonus,
+            city,
+            goods,
+            home,
           })
         );
       }

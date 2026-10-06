@@ -111,9 +111,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 947,
+        "total": 954,
         "byType": {
-          "Action": 44,
+          "Action": 46,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -139,7 +139,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 9,
-          "Destroyed": 16,
+          "Destroyed": 17,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -172,6 +172,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TradeRouteEstablished": 2,
           "TurnEnd": 1,
           "TurnStart": 7,
           "Unit": 1,
@@ -180,8 +181,9 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WonderHelped": 1,
           "Year": 5,
-          "Yield": 203,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }
@@ -348,9 +350,9 @@
       "randomCalls": 8616,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 947,
+        "total": 954,
         "byType": {
-          "Action": 44,
+          "Action": 46,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -376,7 +378,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 9,
-          "Destroyed": 16,
+          "Destroyed": 17,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -409,6 +411,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TradeRouteEstablished": 2,
           "TurnEnd": 1,
           "TurnStart": 7,
           "Unit": 1,
@@ -417,8 +420,9 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WonderHelped": 1,
           "Year": 5,
-          "Yield": 203,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }
@@ -776,9 +780,9 @@
       "randomCalls": 8793,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 947,
+        "total": 954,
         "byType": {
-          "Action": 44,
+          "Action": 46,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -804,7 +808,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 9,
-          "Destroyed": 16,
+          "Destroyed": 17,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -837,6 +841,7 @@
           "Stowed": 1,
           "TileReassigned": 1,
           "Tiles": 1,
+          "TradeRouteEstablished": 2,
           "TurnEnd": 1,
           "TurnStart": 7,
           "Unit": 1,
@@ -845,8 +850,9 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WonderHelped": 1,
           "Year": 5,
-          "Yield": 203,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }
