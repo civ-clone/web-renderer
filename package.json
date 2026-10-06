@@ -119,7 +119,7 @@
     "@civ-clone/core-turn-based-game": "^0.1.6",
     "@civ-clone/core-unit": "^0.1.24",
     "@civ-clone/core-world": "^0.1.14",
-    "@civ-clone/library-unit": "^0.1.5",
+    "@civ-clone/library-unit": "^0.1.6",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
     "@civ-clone/simple-world-path": "github:civ-clone/simple-world-path",
