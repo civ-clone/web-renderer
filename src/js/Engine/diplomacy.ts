@@ -4,6 +4,7 @@ import {
   ExchangeKnowledge,
   OfferPeace,
 } from '@civ-clone/library-diplomacy/Proposals';
+import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
 import { Game } from '@civ-clone/core-game/Game';
 import Interaction from '@civ-clone/core-diplomacy/Interaction';
@@ -22,6 +23,8 @@ import { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
 export const registerDiplomacyClasses = (game: Game): void =>
   game.classes.register(
     ...([
+      // A Diplomat's theft, so a city is robbed only once (#58).
+      AdvanceStolen,
       Contact,
       DemandTribute,
       ExchangeKnowledge,

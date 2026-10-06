@@ -297,6 +297,24 @@ i18next.addResources('en', 'default', {
   'ScienceReport.researching_researching': 'Researching {{researching}}',
   'ScienceReport.title': 'Player research',
 
+  'Diplomat.arrives': '{{nation}} Diplomat arrives in {{- city}}',
+  'Diplomat.steal-technology': 'Steal Technology',
+  'Diplomat.industrial-sabotage': 'Industrial Sabotage',
+  'Diplomat.incite-revolt': 'Incite a Revolt',
+  'Diplomat.peace-treaty': 'We have signed a peace treaty with the {{nation}}!',
+  'Diplomat.break-treaty': 'Break treaty',
+  'Diplomat.cancel-action': 'Cancel action',
+  'Diplomat.incite.title': 'Incite a Revolt',
+  'Diplomat.incite.body':
+    'Dissidents in {{- city}} will revolt for {{cost, number}} coins.',
+  'Diplomat.incite.forget': 'Forget it',
+  'Diplomat.incite.incite': 'Incite revolt',
+  'Diplomat.incite.subvert': 'Subvert city for {{cost, number}} coins',
+  'Diplomat.bribe.title': 'Bribe',
+  'Diplomat.bribe.body':
+    '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
+  'Diplomat.bribe.bribe': 'Bribe unit',
+
   'SelectionWindow.default-body': 'Please choose one of the following:',
 
   'SneakAttack.title': 'Sneak attack?',
@@ -450,6 +468,16 @@ i18next.addResources('en', 'notification', {
     'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
   'Spaceship.part-built.unmet.title': 'Spaceship built',
 
+  'Diplomat.advance-stolen.body': `$t({{thief.civilization._}}.plural, { "defaultValue": "{{thief.civilization._}}", "ns": "civilization" }) steal $t({{advance}}.name, { "defaultValue": "{{advance}}", "ns": "science" }).`,
+  'Diplomat.advance-stolen.title': 'Technology stolen!',
+  'Diplomat.incited.body': `$t({{originalPlayer.civilization._}}.plural, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" }) rebel! Civil War in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }). $t({{inciter.civilization._}}.name, { "defaultValue": "{{inciter.civilization._}}", "ns": "civilization" }) influence suspected.`,
+  'Diplomat.incited.title': 'Civil war!',
+  'Diplomat.sabotaged.improvement.body': `$t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) destroyed in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.improvement.title': 'Industrial sabotage!',
+  'Diplomat.sabotaged.production.body': `Production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.title': 'Industrial sabotage!',
+  'Diplomat.unit-bribed.body': `$t({{previousOwner.civilization._}}.name, { "defaultValue": "{{previousOwner.civilization._}}", "ns": "civilization" }) $t({{unit}}.name, { "defaultValue": "{{unit}}", "ns": "unit" }) unit bribed by $t({{briber.civilization._}}.plural, { "defaultValue": "{{briber.civilization._}}", "ns": "civilization" })!`,
+  'Diplomat.unit-bribed.title': 'Unit bribed!',
   'Unit.lost-at-sea.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was lost at sea.`,
   'Unit.lost-at-sea.title': 'Unit lost at sea!',
   'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,

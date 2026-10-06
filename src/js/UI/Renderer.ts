@@ -9,7 +9,6 @@ import {
   PlainObject,
   PlayerAction,
   Resolution,
-  SneakAttack,
   Tile,
   Unit,
   UnitAction,
@@ -50,6 +49,7 @@ import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
 import TopCitiesReport from './components/TopCitiesReport';
 import SelectionWindow from './components/SelectionWindow';
+import { chooseUnitAction } from './lib/unitActionPrompts';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
@@ -1687,88 +1687,25 @@ export class Renderer {
                   const neighbourActions =
                       activeUnit.actionsForNeighbours[directionKeyMap[key]] ??
                       [],
-                    [unitAction] = neighbourActions,
-                    // Taken now: the "Will you?" choice below isn't modal, and another unit can be active by the time
-                    //  it's answered (#57).
-                    unitId = activeUnit.id,
-                    perform = (chosen: UnitAction = unitAction) => {
-                      transport.send('action', {
-                        name: 'ActiveUnit',
-                        id: unitId,
-                        unitAction: chosen._,
-                        target: chosen.to.id,
-                      });
+                    // Taken now: a window below isn't modal, and another unit can be active by the time it's
+                    //  answered (#57).
+                    unitId = activeUnit.id;
 
-                      event.stopPropagation();
-                      event.preventDefault();
-                    },
-                    // A Caravan moving into one of your own cities can keep moving, or stop there, as in Civ1 (#57).
-                    caravanActions = neighbourActions.filter(
-                      (neighbourAction) =>
-                        ['EstablishTradeRoute', 'HelpBuildWonder'].includes(
-                          neighbourAction._
-                        )
-                    ),
-                    move = neighbourActions.find(
-                      (neighbourAction) => neighbourAction._ === 'Move'
-                    );
-
-                  if (caravanActions.length > 0 && move) {
-                    new SelectionWindow(
-                      t('TradeRoute.will-you'),
-                      [move, ...caravanActions].map((caravanAction) => ({
-                        label:
-                          caravanAction === move
-                            ? t('TradeRoute.keep-moving')
-                            : t(`Action.${caravanAction._}.name`, {
-                                defaultValue: caravanAction._,
-                                ns: 'unit',
-                              }),
-                        value: caravanAction._,
-                      })),
-                      (choice) =>
-                        perform(
-                          [move, ...caravanActions].find(
-                            (caravanAction) => caravanAction._ === choice
-                          )
-                        ),
-                      null,
-                      {
-                        displayAll: true,
-                      }
+                  if (neighbourActions.length > 0) {
+                    chooseUnitAction(
+                      activeUnit,
+                      neighbourActions,
+                      (chosen: UnitAction) =>
+                        transport.send('action', {
+                          name: 'ActiveUnit',
+                          id: unitId,
+                          unitAction: chosen._,
+                          target: chosen.to.id,
+                        })
                     );
 
                     event.stopPropagation();
                     event.preventDefault();
-
-                    return;
-                  }
-
-                  if (unitAction) {
-                    if (
-                      ['SneakAttack', 'SneakCaptureCity'].includes(unitAction._)
-                    ) {
-                      new ConfirmationWindow(
-                        t('SneakAttack.title'),
-                        t('SneakAttack.body', {
-                          nation: t(
-                            `${
-                              (unitAction as SneakAttack).enemy.civilization._
-                            }.nation`,
-                            {
-                              defaultValue: (unitAction as SneakAttack).enemy
-                                .civilization._,
-                              ns: 'civilization',
-                            }
-                          ),
-                        }),
-                        () => perform()
-                      );
-
-                      return;
-                    }
-
-                    perform();
 
                     return;
                   }
