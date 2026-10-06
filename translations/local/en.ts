@@ -122,6 +122,22 @@ i18next.addResources('en', 'default', {
   'City.anarchy': 'No taxes or research are collected during Anarchy.',
   'City.size': '{{size, number}}',
 
+  'City.Citizens.happy_one': '{{count, number}} happy',
+  'City.Citizens.happy_other': '{{count, number}} happy',
+  'City.Citizens.content_one': '{{count, number}} content',
+  'City.Citizens.content_other': '{{count, number}} content',
+  'City.Citizens.unhappy_one': '{{count, number}} unhappy',
+  'City.Citizens.unhappy_other': '{{count, number}} unhappy',
+  'City.Citizens.Specialist.Entertainer_one': '{{count, number}} Entertainer',
+  'City.Citizens.Specialist.Entertainer_other':
+    '{{count, number}} Entertainers',
+  'City.Citizens.Specialist.Scientist_one': '{{count, number}} Scientist',
+  'City.Citizens.Specialist.Scientist_other': '{{count, number}} Scientists',
+  'City.Citizens.Specialist.TaxCollector_one':
+    '{{count, number}} Tax collector',
+  'City.Citizens.Specialist.TaxCollector_other':
+    '{{count, number}} Tax collectors',
+  'City.Citizens.separator': ', ',
   'City.Specialist.change': 'Change {{- specialist}}',
   'City.Specialist.Entertainer': 'Entertainer',
   'City.Specialist.Scientist': 'Scientist',

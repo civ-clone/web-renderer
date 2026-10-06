@@ -10,7 +10,11 @@ import {
 } from '../../types';
 import { groupIcons, reduceKnownYield, yieldGroup } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
-import { citizenMoods, citizenSprites } from '../../lib/citizens';
+import {
+  citizenMoods,
+  citizenSprites,
+  citizenSummary,
+} from '../../lib/citizens';
 import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -34,11 +38,10 @@ const renderCitizen = (path: string, title?: string): HTMLElement => {
     citizen.setAttribute('title', title);
   }
 
-  assetStore
-    .getScaled(path, 2)
-    .then((image) =>
-      citizen.append(s(`<img src="${image.toDataURL('image/png')}">`))
-    );
+  assetStore.getScaled(path, 2).then((image) =>
+    // Decorative: the population as a whole is summarised in words (#272).
+    citizen.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
+  );
 
   return citizen;
 };
@@ -66,7 +69,20 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   seed: string,
   onSpecialistClick?: (specialist: SpecialistType) => void
 ): HTMLElement => {
-  const population = s('<div class="population"></div>');
+  const population = s('<div class="population"></div>'),
+    summary = citizenSummary(
+      moods,
+      specialists.map(({ _ }) => _)
+    );
+
+  // The faces mean nothing to a screen reader, so the population is also said in words (#272). Where the specialists
+  //  are buttons, an image role would hide them, so the words are text that's only hidden from view.
+  if (onSpecialistClick) {
+    population.append(s(`<span class="visually-hidden"></span>`, summary));
+  } else {
+    population.setAttribute('role', 'img');
+    population.setAttribute('aria-label', summary);
+  }
 
   citizenSprites(moods, seed).forEach((path) =>
     population.append(renderCitizen(path))
