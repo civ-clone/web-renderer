@@ -37,6 +37,8 @@ export interface City extends EntityInstance<'City'> {
   tile: PlayerTile;
   tiles: PlayerTile[];
   tilesWorked: PlayerTile[];
+  // Only for your own cities (#57).
+  tradeRoutes?: { civilization: string; name: string; trade: number }[];
   units: Unit[];
   yields: Yield[];
 }

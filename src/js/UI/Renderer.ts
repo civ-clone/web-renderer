@@ -12,6 +12,7 @@ import {
   SneakAttack,
   Tile,
   Unit,
+  UnitAction,
 } from './types';
 import { emit, off, on, s } from '@dom111/element';
 import i18next, { t } from 'i18next';
@@ -1683,19 +1684,62 @@ export class Renderer {
                 }
 
                 if (key in directionKeyMap) {
-                  const [unitAction] =
-                      activeUnit.actionsForNeighbours[directionKeyMap[key]],
-                    perform = () => {
+                  const neighbourActions =
+                      activeUnit.actionsForNeighbours[directionKeyMap[key]] ??
+                      [],
+                    [unitAction] = neighbourActions,
+                    perform = (chosen: UnitAction = unitAction) => {
                       transport.send('action', {
                         name: 'ActiveUnit',
                         id: activeUnit!.id,
-                        unitAction: unitAction._,
-                        target: unitAction.to.id,
+                        unitAction: chosen._,
+                        target: chosen.to.id,
                       });
 
                       event.stopPropagation();
                       event.preventDefault();
-                    };
+                    },
+                    // A Caravan moving into one of your own cities can keep moving, or stop there, as in Civ1 (#57).
+                    caravanActions = neighbourActions.filter(
+                      (neighbourAction) =>
+                        ['EstablishTradeRoute', 'HelpBuildWonder'].includes(
+                          neighbourAction._
+                        )
+                    ),
+                    move = neighbourActions.find(
+                      (neighbourAction) => neighbourAction._ === 'Move'
+                    );
+
+                  if (caravanActions.length > 0 && move) {
+                    new SelectionWindow(
+                      t('TradeRoute.will-you'),
+                      [move, ...caravanActions].map((caravanAction) => ({
+                        label:
+                          caravanAction === move
+                            ? t('TradeRoute.keep-moving')
+                            : t(`Action.${caravanAction._}.name`, {
+                                defaultValue: caravanAction._,
+                                ns: 'unit',
+                              }),
+                        value: caravanAction._,
+                      })),
+                      (choice) =>
+                        perform(
+                          [move, ...caravanActions].find(
+                            (caravanAction) => caravanAction._ === choice
+                          )
+                        ),
+                      null,
+                      {
+                        autoChooseSingle: false,
+                      }
+                    );
+
+                    event.stopPropagation();
+                    event.preventDefault();
+
+                    return;
+                  }
 
                   if (unitAction) {
                     if (

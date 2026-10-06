@@ -357,6 +357,26 @@ const renderYields = (city: CityData): Node => {
       }
     );
   },
+  // The routes this city holds, and what each adds to its trade (#57).
+  renderTradeRoutes = (city: CityData): Node | string =>
+    city.tradeRoutes?.length
+      ? s(
+          `<div class="trade-routes"><header>${t(
+            'City.trade-routes'
+          )}</header></div>`,
+          ...city.tradeRoutes.map((route) =>
+            s(
+              `<p>${t('City.trade-route', {
+                city: t('Generic.city-name', {
+                  civilization: route.civilization,
+                  name: route.name,
+                }),
+                trade: route.trade,
+              })}</p>`
+            )
+          )
+        )
+      : '',
   renderSupportedUnits = (city: CityData): Node => {
     return s(
       `<div class="supported-units"><header>${t(
@@ -399,7 +419,11 @@ const renderYields = (city: CityData): Node => {
         s(
           '<div class="tabbed-details"></div>',
           // TODO: add a tab bar
-          s('<div class="info"></div>', renderGarrisonedUnits(city, transport))
+          s(
+            '<div class="info"></div>',
+            renderGarrisonedUnits(city, transport),
+            renderTradeRoutes(city)
+          )
         ),
         renderBuild(city, chooseProduction, completeProduction)
       )
