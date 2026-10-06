@@ -94,11 +94,14 @@ const latest = () => {
   const sent: string[] = [],
     perform = (chosen: UnitAction) => sent.push(chosen._);
 
-  // A Diplomat arriving at a rival city.
+  // A Diplomat arriving at a rival city, its actions in the order the engine offers them.
   const atWar = [
     action('StealTechnology'),
+    action('EstablishEmbassy'),
+    action('InvestigateCity'),
     action('IndustrialSabotage'),
     action('InciteRevolt', { cost: 900 }),
+    action('MeetWithKing'),
   ];
 
   chooseUnitAction(roman(1000), atWar, perform);
@@ -109,14 +112,28 @@ const latest = () => {
     'Roman Diplomat arrives in Ur'
   );
   expect('the arrival window: options, in Civ1’s order', shown().options, [
+    'Establish Embassy',
+    'Investigate City',
     'Steal Technology',
     'Industrial Sabotage',
     'Incite a Revolt',
+    'Meet with King',
   ]);
 
   choose('steal-technology');
 
   expect('choosing to steal sends StealTechnology', sent, ['StealTechnology']);
+
+  [
+    ['establish-embassy', 'EstablishEmbassy'],
+    ['investigate-city', 'InvestigateCity'],
+    ['meet-with-king', 'MeetWithKing'],
+  ].forEach(([option, name]) => {
+    chooseUnitAction(roman(1000), atWar, perform);
+    choose(option);
+
+    expect(`choosing ${option} sends ${name}`, sent.slice(-1), [name]);
+  });
 
   // Inciting opens the incite window.
   chooseUnitAction(roman(1000), atWar, perform);
@@ -133,7 +150,7 @@ const latest = () => {
 
   expect('inciting sends InciteRevolt', sent.slice(-1), ['InciteRevolt']);
 
-  performWithPrompts(roman(100), atWar[2], atWar, perform);
+  performWithPrompts(roman(100), atWar[4], atWar, perform);
 
   expect('the incite window, unaffordable: only Forget it', shown().buttons, [
     'Forget it',

@@ -106,6 +106,7 @@ import {
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
+import { intelligenceRows } from './lib/intelligence';
 import researchCosts from './AdditionalData/researchCosts';
 import tradeRoutes from './AdditionalData/tradeRoutes';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
@@ -233,6 +234,9 @@ export class DataTransferClient extends Client implements IClient {
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
+  // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
+  //  talks with units met on the way (`canNegotiate`).
+  #talks: Promise<void> = Promise.resolve();
   #transport: Transport<TransportDataMap>;
 
   constructor(
@@ -416,6 +420,14 @@ export class DataTransferClient extends Client implements IClient {
     //  shows (#124).
     this.#transport.receive('topCities', (limit) =>
       this.#transport.send('topCities', this.topCities(limit))
+    );
+
+    // The intelligence report (F3, #58), worked out here for the same reason.
+    this.#transport.receive('intelligence', () =>
+      this.#transport.send(
+        'intelligence',
+        intelligenceRows(this.player(), (player) => this.hasMet(player))
+      )
     );
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
@@ -886,6 +898,89 @@ export class DataTransferClient extends Client implements IClient {
             unit: unit.sourceClass().name,
           })
         );
+      }
+    );
+
+    // The report opens on the civilization the embassy is with, as v474.05 opens it.
+    engineInstance.on(
+      'player:embassy-established',
+      (holder: Player, host: Player) => {
+        if (holder !== this.player()) {
+          return;
+        }
+
+        this.#transport.send(
+          'embassyEstablished',
+          typeNameOf(host.civilization().sourceClass())
+        );
+      }
+    );
+
+    // The city is sent once, in full, as its owner would see it. Nothing else of its owner's goes with it: players are
+    //  sent as their civilization, and other cities and every unit as the wrappers the map has for them.
+    engineInstance.on('city:investigated', (city: City, player: Player) => {
+      if (player !== this.player()) {
+        return;
+      }
+
+      const playerWorld = playerWorldRegistryInstance.getByPlayer(
+          this.player()
+        ),
+        // Tiles as the player knows them, and `Busy` by name.
+        otherwise = this.#dataFilter(),
+        // One wrapper per unit and city, so each is the same object wherever it appears.
+        wrappers = new Map<Unit | City, UnknownUnit | UnknownCity>(),
+        wrap = (object: Unit | City, make: () => UnknownUnit | UnknownCity) => {
+          if (!wrappers.has(object)) {
+            wrappers.set(object, make());
+          }
+
+          return wrappers.get(object)!;
+        };
+
+      this.#transport.send(
+        'investigateCity',
+        city.toPlainObject((object: any) => {
+          if (object === city) {
+            return object;
+          }
+
+          if (object instanceof Player) {
+            return {
+              _: 'Player',
+              id: object.id(),
+              civilization: object.civilization(),
+              // The city screen's map is laid out in the world's dimensions.
+              world: {
+                height: playerWorld.height(),
+                width: playerWorld.width(),
+              },
+            };
+          }
+
+          if (object instanceof Unit) {
+            return wrap(object, () => UnknownUnit.fromUnit(object));
+          }
+
+          if (object instanceof City) {
+            return wrap(object, () => UnknownCity.fromCity(object));
+          }
+
+          return otherwise(object);
+        }) as never
+      );
+    });
+
+    engineInstance.on(
+      'player:meet-with-king',
+      (player: Player, other: Player) => {
+        if (player !== this.player()) {
+          return;
+        }
+
+        this.#talks = this.#talks
+          .then(() => this.handleNegotiation(other))
+          .then(() => {});
       }
     );
 
@@ -1399,6 +1494,8 @@ export class DataTransferClient extends Client implements IClient {
       const [actionToPerform] = filteredActions;
 
       actionToPerform.perform();
+
+      await this.#talks;
 
       if (actionToPerform instanceof Move) {
         await this.canNegotiate(unit);

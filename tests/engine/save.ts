@@ -37,6 +37,7 @@ import { save } from '@civ-clone/core-save-game/save';
 import City from '@civ-clone/core-city/City';
 import TradeRoute from '@civ-clone/core-city/TradeRoute';
 import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
+import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import {
   changeSpecialist,
   changeWorkedTile,
@@ -284,6 +285,21 @@ const report = (): void => {
 
   if (theft) {
     defaultGame.interactions.register(theft as never);
+  }
+
+  // A Diplomat's embassy (#58), which is one-way, so which side holds it has to survive a save.
+  const embassy =
+    routeHome && routePartner
+      ? new Embassy(
+          routePartner.player(),
+          routeHome.player(),
+          defaultGame.rules,
+          defaultGame.turn
+        )
+      : null;
+
+  if (embassy) {
+    defaultGame.interactions.register(embassy as never);
   }
 
   // --- what a save of a real game actually contains -----------------------
@@ -538,6 +554,21 @@ const report = (): void => {
     theft
       ? [[theft.city().id(), theft.thief().id(), theft.victim().id()]]
       : null
+  );
+
+  // The embassy, after the round trip.
+  push(
+    'the embassy comes back, held by the same player',
+    () =>
+      target.interactions
+        .entries()
+        .filter((interaction) => interaction instanceof Embassy)
+        .map((interaction) => {
+          const restored = interaction as unknown as Embassy;
+
+          return [restored.holder().id(), restored.host().id()];
+        }),
+    embassy ? [[embassy.holder().id(), embassy.host().id()]] : null
   );
 
   // The aircraft on the Carrier, after the round trip.

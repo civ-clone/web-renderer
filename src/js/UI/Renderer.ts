@@ -1,4 +1,5 @@
 import {
+  City as CityData,
   DataPatch,
   DataPatchContents,
   Dialogue,
@@ -18,6 +19,7 @@ import i18next, { t } from 'i18next';
 import { reconstituteData, ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import ActiveUnit from './components/Map/ActiveUnit';
+import City from './components/City';
 import Cities from './components/Map/Cities';
 import CityNames from './components/Map/CityNames';
 import CityStatus from './components/CityStatus';
@@ -47,6 +49,7 @@ import Overview from './components/Map/Overview';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
+import IntelligenceReport from './components/IntelligenceReport';
 import TopCitiesReport from './components/TopCitiesReport';
 import SelectionWindow from './components/SelectionWindow';
 import { chooseUnitAction } from './lib/unitActionPrompts';
@@ -1572,6 +1575,28 @@ export class Renderer {
               })
             );
 
+            // A Diplomat's embassy opens the report on that civilization, and an investigated city's screen opens
+            //  read-only (#58).
+            transportDisposers.push(
+              transport.receive(
+                'embassyEstablished',
+                (civilization): void =>
+                  void new IntelligenceReport(transport, civilization)
+              ),
+              transport.receive(
+                'investigateCity',
+                (city): void =>
+                  void new City(
+                    city as unknown as CityData,
+                    portal,
+                    transport,
+                    {
+                      readOnly: true,
+                    }
+                  )
+              )
+            );
+
             const keyToActionsMap: {
                 [key: string]: string[];
               } = {
@@ -1603,6 +1628,7 @@ export class Renderer {
               },
               leaderScreensMap: { [key: string]: () => any } = {
                 F1: () => new CityStatus(data.player, portal, transport),
+                F3: () => new IntelligenceReport(transport),
                 F4: () => new HappinessReport(data.player, portal, transport),
                 F5: () => new TradeReport(data.player, portal, transport),
                 F6: () => new ScienceReport(data.player),

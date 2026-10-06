@@ -1,5 +1,6 @@
-// A Diplomat's work through the actions the UI sends (#58): stealing an advance, sabotage, inciting a city's revolt,
-//  and bribing a unit. Each tells the player, and what changed hands reaches the UI with the move.
+// A Diplomat's work through the actions the UI sends (#58): stealing an advance, sabotage, establishing an embassy,
+//  investigating a city, meeting the king, inciting a city's revolt, and bribing a unit. Each tells the player, and
+//  what changed hands reaches the UI with the move.
 //
 // Drives a seeded game with a human `DataTransferClient`, as `tradeRoutes` does. On the human's first turn the test
 // founds a city, puts a computer player's city of size 3 a few tiles away with a Warrior in it, gives the human gold,
@@ -16,6 +17,9 @@ import {
 } from '@civ-clone/civ1-unit/Units';
 import { BronzeWorking } from '@civ-clone/civ1-science/Advances';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
+import { IntelligenceRow } from '../../src/js/Engine/lib/intelligence';
+import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
+import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import { Gold } from '@civ-clone/civ1-city/Yields';
@@ -29,6 +33,7 @@ import { Palace } from '@civ-clone/library-city/CityImprovements';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
@@ -41,6 +46,13 @@ let started = false,
   humanClient: DataTransferClient | null = null,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => unknown) | null = null,
+  // What the UI asks for and gets back, by channel.
+  requestHandlers: { [channel: string]: (value: any) => unknown } = {},
+  requested: { [channel: string]: any } = {},
+  // The investigated city, as `WorkerTransport` rebuilds it.
+  investigated: any = null,
+  embassyWith: string | null = null,
+  negotiationSteps = 0,
   pendingChoice: ((value: any) => void) | null = null,
   // The owner the UI was last sent for each unit and city, by its id.
   ownersSent: { [id: string]: string } = {},
@@ -232,6 +244,98 @@ const run = async (): Promise<void> => {
     fail('the player was not told of the sabotage');
   }
 
+  // Establishing an embassy: the UI is told to open the report on the rival, which now has the rival's details.
+  const envoy = diplomatAt(beside[5]),
+    rivalCivilization = rival.civilization().sourceClass().name;
+
+  await flush();
+  await unitAction(envoy, 'EstablishEmbassy', site);
+
+  if (!envoy.destroyed() || embassyWith !== rivalCivilization) {
+    fail(
+      `establishing an embassy left the Diplomat ${
+        envoy.destroyed() ? 'used up' : 'still there'
+      } and the UI was told ${embassyWith}`
+    );
+  }
+
+  requestHandlers.intelligence(null);
+
+  const report = (requested.intelligence as IntelligenceRow[]).find(
+    (row) => row.civilization === rivalCivilization
+  );
+
+  if (
+    !report?.details ||
+    report.details.capital?.name !== 'Target' ||
+    !report.details.advances.includes('BronzeWorking') ||
+    report.details.units < 2
+  ) {
+    fail(`the intelligence report reads ${JSON.stringify(report)}`);
+  }
+
+  // Investigating: the city is sent once, in full, and its owner only as a civilization.
+  const investigator = diplomatAt(beside[0]);
+
+  await flush();
+  await unitAction(investigator, 'InvestigateCity', site);
+
+  if (
+    !investigator.destroyed() ||
+    investigated?.name !== 'Target' ||
+    investigated.growth?.size !== cityGrowth.size() ||
+    !Array.isArray(investigated.tiles) ||
+    investigated.player?.treasuries !== undefined ||
+    investigated.player?.cities !== undefined
+  ) {
+    fail(
+      `investigating sent ${JSON.stringify({
+        name: investigated?.name,
+        size: investigated?.growth?.size,
+        tiles: investigated?.tiles?.length,
+        player: Object.keys(investigated?.player ?? {}),
+      })}`
+    );
+  }
+
+  // Meeting the king: talks with the rival open, and the Diplomat stays, with no moves left.
+  const ambassador = diplomatAt(beside[1]),
+    talksBefore = interactionRegistryInstance
+      .getByPlayers(humanPlayer!, rival)
+      .filter((interaction) => interaction instanceof Negotiation).length;
+
+  ambassador.moves().set(1);
+
+  await flush();
+  await unitAction(ambassador, 'MeetWithKing', site);
+
+  if (
+    ambassador.destroyed() ||
+    ambassador.moves().value() !== 0 ||
+    negotiationSteps === 0 ||
+    interactionRegistryInstance
+      .getByPlayers(humanPlayer!, rival)
+      .filter((interaction) => interaction instanceof Negotiation).length !==
+      talksBefore + 1
+  ) {
+    fail(
+      `meeting the king left the Diplomat ${
+        ambassador.destroyed() ? 'used up' : 'there'
+      } with ${ambassador
+        .moves()
+        .value()} moves, after ${negotiationSteps} steps of talks`
+    );
+  }
+
+  // The talks may have ended in peace, which would make inciting below the peace-breaking kind.
+  interactionRegistryInstance
+    .getByPlayers(humanPlayer!, rival)
+    .filter(
+      (interaction): interaction is Peace =>
+        interaction instanceof Peace && interaction.active()
+    )
+    .forEach((peace) => peace.expire());
+
   // Bribing a lone rival unit beside the city.
   const chariot = new Chariot(target, rival, beside[2]),
     briber = diplomatAt(beside[3]);
@@ -338,7 +442,7 @@ const run = async (): Promise<void> => {
   told('Diplomat.unit-bribed');
 
   console.log(
-    `PASS diplomats (an advance stolen, a city sabotaged, a Chariot bribed and Target incited, each told and sent to the UI; a Warrior bribed from the player is sent to the UI too)`
+    `PASS diplomats (an advance stolen, a city sabotaged, an embassy established and its report read, Target investigated, a king met, a Chariot bribed and Target incited, each told and sent to the UI; a Warrior bribed from the player is sent to the UI too)`
   );
 
   process.exit(0);
@@ -349,6 +453,8 @@ const transport = {
     if (channel === 'action') {
       actionHandler = handler;
     }
+
+    requestHandlers[channel] = handler;
 
     return () => false;
   },
@@ -366,6 +472,10 @@ const transport = {
       const meta = data as ChoiceMeta<any>,
         respond = pendingChoice;
 
+      if (meta.key() === 'negotiation.next-step') {
+        negotiationSteps++;
+      }
+
       // `receiveOnce` is registered after the send, so answer on the next tick.
       setTimeout(() =>
         helper!
@@ -379,6 +489,24 @@ const transport = {
           })
           .catch((error) => fail('the helper could not choose', error))
       );
+
+      return;
+    }
+
+    if (channel === 'embassyEstablished') {
+      embassyWith = data;
+
+      return;
+    }
+
+    if (channel === 'investigateCity') {
+      investigated = reconstituteData(JSON.parse(JSON.stringify(data)));
+
+      return;
+    }
+
+    if (channel === 'intelligence') {
+      requested.intelligence = JSON.parse(JSON.stringify(data));
 
       return;
     }

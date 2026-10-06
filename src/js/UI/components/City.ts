@@ -153,7 +153,12 @@ const renderYields = (city: CityData): Node => {
       }
     });
   },
-  renderMap = (portal: Portal, city: CityData, transport: Transport): Node => {
+  renderMap = (
+    portal: Portal,
+    city: CityData,
+    transport: Transport,
+    readOnly: boolean
+  ): Node => {
     // Remap the city's tiles into a small local coordinate space so each layer
     // canvas is sized to the city radius rather than the full world (a full
     // `World` here allocated ~10 world-sized canvases per open/update). A
@@ -223,7 +228,7 @@ const renderYields = (city: CityData): Node => {
 
     return h(s('<div class="city-map"></div>', portalCanvas), {
       click: (event: MouseEvent) => {
-        if (event.target !== portalCanvas) {
+        if (readOnly || event.target !== portalCanvas) {
           return;
         }
 
@@ -250,7 +255,8 @@ const renderYields = (city: CityData): Node => {
   renderBuild = (
     city: CityData,
     chooseProduction: () => void,
-    completeProduction: (spendCost: SpendCost) => void
+    completeProduction: (spendCost: SpendCost) => void,
+    readOnly: boolean
   ): HTMLElement =>
     s(
       `<div class="build"></div>`,
@@ -267,19 +273,21 @@ const renderYields = (city: CityData): Node => {
               item: getLabelForBuildable(city.build.building),
             }) as string)
       ),
-      h(
-        s(
-          `<button>${t(
-            city.build.building ? 'City.Build.change' : 'City.Build.choose'
-          )}</button>`
-        ),
-        {
-          click() {
-            chooseProduction();
-          },
-        }
-      ),
-      ...city.build.spendCost.map((spendCost) =>
+      readOnly
+        ? ''
+        : h(
+            s(
+              `<button>${t(
+                city.build.building ? 'City.Build.change' : 'City.Build.choose'
+              )}</button>`
+            ),
+            {
+              click() {
+                chooseProduction();
+              },
+            }
+          ),
+      ...(readOnly ? [] : city.build.spendCost).map((spendCost) =>
         h(
           s(
             `<button class="buy" data-resource="${spendCost.resource._}">${t(
@@ -331,7 +339,11 @@ const renderYields = (city: CityData): Node => {
       )
     );
   },
-  renderGarrisonedUnits = (city: CityData, transport: Transport): Node => {
+  renderGarrisonedUnits = (
+    city: CityData,
+    transport: Transport,
+    readOnly: boolean
+  ): Node => {
     return h(
       s(
         `<div class="garrisoned-units"><header>${t(
@@ -348,7 +360,7 @@ const renderYields = (city: CityData): Node => {
             (unit: UnitData) => unit.player.id === city.player.id
           );
 
-          if (cityPlayerUnits.length === 0) {
+          if (readOnly || cityPlayerUnits.length === 0) {
             return;
           }
 
@@ -395,7 +407,8 @@ const renderYields = (city: CityData): Node => {
     portal: Portal,
     transport: Transport,
     chooseProduction: () => void,
-    completeProduction: (spendCost: SpendCost) => void
+    completeProduction: (spendCost: SpendCost) => void,
+    readOnly: boolean
   ) => {
     return s(
       '<div class="city-screen"></div>',
@@ -403,16 +416,21 @@ const renderYields = (city: CityData): Node => {
         '<div class="top-row"></div>',
         s(
           '<div class="yield-details"></div>',
-          renderPopulation(city, undefined, (specialist) =>
-            transport.send('action', {
-              name: 'ChangeSpecialist',
-              id: specialist.id,
-            })
+          renderPopulation(
+            city,
+            undefined,
+            readOnly
+              ? undefined
+              : (specialist) =>
+                  transport.send('action', {
+                    name: 'ChangeSpecialist',
+                    id: specialist.id,
+                  })
           ),
           renderYields(city),
           renderSupportedUnits(city)
         ),
-        renderMap(portal, city, transport),
+        renderMap(portal, city, transport, readOnly),
         renderImprovements(city)
       ),
       s(
@@ -423,11 +441,11 @@ const renderYields = (city: CityData): Node => {
           // TODO: add a tab bar
           s(
             '<div class="info"></div>',
-            renderGarrisonedUnits(city, transport),
+            renderGarrisonedUnits(city, transport, readOnly),
             renderTradeRoutes(city)
           )
         ),
-        renderBuild(city, chooseProduction, completeProduction)
+        renderBuild(city, chooseProduction, completeProduction, readOnly)
       )
     );
   },
@@ -436,12 +454,22 @@ const renderYields = (city: CityData): Node => {
 
 export class City extends Window {
   #city: CityData;
-  #dataObserver: DataObserver;
+  // None for a rival's city, which isn't kept up to date.
+  #dataObserver: DataObserver | null = null;
   #portal: Portal;
   #transport: Transport;
-  #treasury: PlayerTreasury;
+  #treasury: PlayerTreasury | null = null;
 
-  constructor(city: CityData, portal: Portal, transport: Transport) {
+  /**
+   * With `readOnly`, as for a rival's city a Diplomat has investigated (#58), the screen shows the city as it was sent
+   * and changes nothing: no production, worked tiles, specialists or buying, and no updates.
+   */
+  constructor(
+    city: CityData,
+    portal: Portal,
+    transport: Transport,
+    { readOnly = false }: { readOnly?: boolean } = {}
+  ) {
     super(
       cityName(city),
       cityDetails(
@@ -449,7 +477,8 @@ export class City extends Window {
         portal,
         transport,
         () => this.changeProduction(),
-        (spendCost: SpendCost) => this.completeProduction(spendCost)
+        (spendCost: SpendCost) => this.completeProduction(spendCost),
+        readOnly
       ),
       {
         canResize: true,
@@ -464,55 +493,67 @@ export class City extends Window {
     this.#city = city;
     this.#portal = portal;
     this.#transport = transport;
-    this.#treasury = getTreasuryForYield(city.player, 'Gold');
-    this.#dataObserver = new DataObserver(
-      [
-        city.id,
-        city.build.id,
-        city.growth.id,
-        ...city.units.map((unit) => unit.id),
-        getTreasuryForYield(city.player, 'Gold').id,
-      ],
-      (data: PlainObject) => {
-        const [updatedCity] = (
-          (data.player?.cities ?? []) as CityData[]
-        ).filter((cityData: CityData) => city.id === cityData.id);
 
-        this.#treasury = getTreasuryForYield(data.player, 'Gold');
+    if (!readOnly) {
+      this.#treasury = getTreasuryForYield(city.player, 'Gold');
+      this.#dataObserver = new DataObserver(
+        [
+          city.id,
+          city.build.id,
+          city.growth.id,
+          ...city.units.map((unit) => unit.id),
+          getTreasuryForYield(city.player, 'Gold').id,
+        ],
+        (data: PlainObject) => {
+          const [updatedCity] = (
+            (data.player?.cities ?? []) as CityData[]
+          ).filter((cityData: CityData) => city.id === cityData.id);
 
-        // City must have been captured or destroyed
-        if (!updatedCity) {
-          this.close();
+          this.#treasury = getTreasuryForYield(data.player, 'Gold');
 
-          return;
+          // City must have been captured or destroyed
+          if (!updatedCity) {
+            this.close();
+
+            return;
+          }
+
+          this.#city = updatedCity;
+
+          this.#dataObserver!.setIds([
+            updatedCity.id,
+            updatedCity.build.id,
+            updatedCity.growth.id,
+            ...updatedCity.units.map((unit) => unit.id),
+          ]);
+
+          this.update(
+            cityDetails(
+              updatedCity,
+              this.#portal,
+              transport,
+              () => this.changeProduction(),
+              (spendCost: SpendCost) => this.completeProduction(spendCost),
+              false
+            )
+          );
+
+          this.element().focus();
+
+          setTimeout(() => resizeYields(this.element()), 200);
         }
-
-        this.#city = updatedCity;
-
-        this.#dataObserver.setIds([
-          updatedCity.id,
-          updatedCity.build.id,
-          updatedCity.growth.id,
-          ...updatedCity.units.map((unit) => unit.id),
-        ]);
-
-        this.update(
-          cityDetails(
-            updatedCity,
-            this.#portal,
-            transport,
-            () => this.changeProduction(),
-            (spendCost: SpendCost) => this.completeProduction(spendCost)
-          )
-        );
-
-        this.element().focus();
-
-        setTimeout(() => resizeYields(this.element()), 200);
-      }
-    );
+      );
+    }
 
     this.on('keydown', (event) => {
+      if (readOnly) {
+        if (['Enter', 'x', 'X'].includes(event.key)) {
+          this.close();
+        }
+
+        return;
+      }
+
       if (['c', 'C'].includes(event.key)) {
         this.changeProduction();
 
@@ -579,7 +620,7 @@ export class City extends Window {
   }
 
   close(): void {
-    this.#dataObserver.dispose();
+    this.#dataObserver?.dispose();
 
     super.close();
   }
