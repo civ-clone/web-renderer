@@ -360,6 +360,9 @@ i18next.addResources('en', 'notification', {
   'City.improvement-unsupported.title': 'Improvement not supported!',
   'City.food-storage-exhausted.body': `Food storage exhausted in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
   'City.food-storage-exhausted.title': 'Food storage exhausted!',
+  'CityImprovement.obsolete.body':
+    'Development of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" }) makes existing $t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) obsolete.',
+  'CityImprovement.obsolete.title': 'Improvement obsolete',
 
   'GoodyHut.action-performed.Advance.body':
     'You have discovered scrolls of ancient wisdom...',

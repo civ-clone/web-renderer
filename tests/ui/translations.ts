@@ -54,6 +54,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
+  await import('../../translations/civ1-city-improvement/en');
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
@@ -160,6 +161,12 @@ const expect = (description: string, actual: string, expected: string) => {
         'Wonder.obsolete',
         { city: asansol, wonder: colossus },
         'Colossus in Asansol is now obsolete.',
+      ],
+      // #184
+      [
+        'CityImprovement.obsolete',
+        { advance: { _: 'Gunpowder' }, improvement: 'Barracks' },
+        'Development of Gunpowder makes existing Barracks obsolete.',
       ],
       // #111
       [
