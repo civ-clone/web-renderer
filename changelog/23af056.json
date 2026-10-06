@@ -1,0 +1,1 @@
+{"version":"0.1.0@23af056","date":"2026-10-06T09:10:32.000Z","localChanges":["Screen readers now read out a city's citizens, such as \"3 happy, 2 content, 1 unhappy, 1 Entertainer\", on the city screen and in the Happiness and Top Cities reports. The specialists on the city screen can still be changed from the keyboard (closes #272)."],"externalChanges":{}}
