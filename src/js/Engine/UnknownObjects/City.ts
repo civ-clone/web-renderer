@@ -2,9 +2,11 @@ import CoreCity from '@civ-clone/core-city/City';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import Tile from '@civ-clone/core-world/Tile';
+import { civilDisorder } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 
 export class City extends DataObject {
+  #civilDisorderDeclared: boolean;
   #name: string;
   #originalPlayer: Player;
   #player: Player;
@@ -20,10 +22,12 @@ export class City extends DataObject {
     tile: Tile,
     player: Player,
     size: number,
-    originalPlayer: Player = player
+    originalPlayer: Player = player,
+    civilDisorderDeclared: boolean = false
   ) {
     super();
 
+    this.#civilDisorderDeclared = civilDisorderDeclared;
     this.#name = name;
     this.#originalPlayer = originalPlayer;
     this.#player = player;
@@ -32,7 +36,17 @@ export class City extends DataObject {
 
     // `originalPlayer` is the founder, which is whose list the city's name comes from (`Generic.city-name`). Without
     //  it, any string naming another player's city showed the raw `{{city.originalPlayer.civilization._}}` (#2).
-    this.addKey('_', 'growth', 'name', 'originalPlayer', 'player', 'tile');
+    // `civilDisorderDeclared` lets the map show a rival's city in disorder, as v474.05 does for any city it draws, as it
+    //  does for your own (#265).
+    this.addKey(
+      '_',
+      'civilDisorderDeclared',
+      'growth',
+      'name',
+      'originalPlayer',
+      'player',
+      'tile'
+    );
   }
 
   static fromCity(city: CoreCity): City {
@@ -43,7 +57,8 @@ export class City extends DataObject {
       city.tile(),
       city.player(),
       cityGrowth.size(),
-      city.originalPlayer()
+      city.originalPlayer(),
+      civilDisorder(city) !== null
     );
   }
 
@@ -63,6 +78,10 @@ export class City extends DataObject {
     return this.#player;
   }
 
+  civilDisorderDeclared(): boolean {
+    return this.#civilDisorderDeclared;
+  }
+
   growth(): {
     size: number;
   } {
@@ -79,6 +98,7 @@ export class City extends DataObject {
     this.#name = city.name();
     this.#player = city.player();
     this.#growth.size = cityGrowth.size();
+    this.#civilDisorderDeclared = civilDisorder(city) !== null;
   }
 }
 

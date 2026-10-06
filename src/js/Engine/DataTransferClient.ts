@@ -671,6 +671,11 @@ export class DataTransferClient extends Client implements IClient {
       'city:destroyed',
       'city:grow',
       'city:shrink',
+      // A rival's city in disorder shows on the map as your own does (#265). The engine raises
+      //  `city:civil-disorder` before it records the disorder, which is why the city is only read when the patch is
+      //  built.
+      'city:civil-disorder',
+      'city:order-restored',
     ].forEach((event) => {
       engineInstance.on(event, (city) => {
         const playerWorld = playerWorldRegistryInstance.getByPlayer(
@@ -685,13 +690,13 @@ export class DataTransferClient extends Client implements IClient {
         if (unknownCities.has(city)) {
           const unknownCity = unknownCities.get(city)!;
 
-          unknownCity.update(city);
+          this.#dataQueue.update(unknownCity.id(), () => {
+            unknownCity.update(city);
 
-          this.#dataQueue.update(unknownCity.id(), () =>
-            unknownCity.toPlainObject(
+            return unknownCity.toPlainObject(
               this.#dataFilter(filterToReference(Tile, Unit, Player))
-            )
-          );
+            );
+          });
         }
 
         this.#dataQueue.update(playerTile.id(), () =>
