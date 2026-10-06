@@ -1688,10 +1688,13 @@ export class Renderer {
                       activeUnit.actionsForNeighbours[directionKeyMap[key]] ??
                       [],
                     [unitAction] = neighbourActions,
+                    // Taken now: the "Will you?" choice below isn't modal, and another unit can be active by the time
+                    //  it's answered (#57).
+                    unitId = activeUnit.id,
                     perform = (chosen: UnitAction = unitAction) => {
                       transport.send('action', {
                         name: 'ActiveUnit',
-                        id: activeUnit!.id,
+                        id: unitId,
                         unitAction: chosen._,
                         target: chosen.to.id,
                       });
