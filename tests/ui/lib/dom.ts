@@ -63,6 +63,30 @@ if (!('open' in DialogElement.prototype)) {
   }
 });
 
+// No `KeyboardEvent` either, and `mappedKeyFromEvent` reads `KeyboardEvent.DOM_KEY_LOCATION_NUMPAD`: enough of one
+//  for a test to dispatch a key.
+if (typeof (globalThis as any).KeyboardEvent !== 'function') {
+  (globalThis as any).KeyboardEvent = class KeyboardEvent extends (
+    ((globalThis as any).Event as typeof Event)
+  ) {
+    static DOM_KEY_LOCATION_STANDARD = 0;
+    static DOM_KEY_LOCATION_NUMPAD = 3;
+
+    key: string;
+    location: number;
+
+    constructor(
+      type: string,
+      init: EventInit & { key?: string; location?: number } = {}
+    ) {
+      super(type, init);
+
+      this.key = init.key ?? '';
+      this.location = init.location ?? 0;
+    }
+  };
+}
+
 // No IndexedDB either. `AssetStore` opens its database as it loads, so it's
 //  given one that never opens: a test that needs assets stubs the store's
 //  methods instead.

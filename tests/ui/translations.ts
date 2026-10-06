@@ -196,6 +196,19 @@ const expect = (description: string, actual: string, expected: string) => {
       ],
     ];
 
+  // #57. The goods are looked up in `default`, where they're registered, not the notification's own namespace. English
+  //  names them as the engine does, so this one is given other text for the check.
+  const goodsKey = 'TradeRoute.goods.Salt',
+    salt = i18next.getResource('en', 'default', goodsKey);
+
+  i18next.addResource('en', 'default', goodsKey, 'Rock salt');
+
+  notifications.push([
+    'Unit.trade-route-established',
+    { home: asansol, city: asansol, goods: 'Salt', bonus: 30 },
+    'Rock salt caravan from Asansol arrives in Asansol. The goods sold for 30 coins.',
+  ]);
+
   notifications.forEach(([key, data, expected]) => {
     // What the UI receives: serialised by `sendNotification`, rebuilt by the
     //  transport, then translated as `Notifications.publish` does.
@@ -213,6 +226,8 @@ const expect = (description: string, actual: string, expected: string) => {
       expected
     );
   });
+
+  i18next.addResource('en', 'default', goodsKey, salt);
 
   // Every key a `ChoiceMeta` is created with, in the engine packages and here.
   const choiceMetaKeys = new Set<string>(),
