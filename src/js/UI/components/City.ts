@@ -367,11 +367,13 @@ const renderYields = (city: CityData): Node => {
           ...city.tradeRoutes.map((route) =>
             s(
               `<p>${t('City.trade-route', {
+                // Already escaped by `Generic.city-name`, so not again (as `TopCitiesReport` does).
                 city: t('Generic.city-name', {
                   civilization: route.civilization,
                   name: route.name,
                 }),
                 trade: route.trade,
+                interpolation: { escapeValue: false },
               })}</p>`
             )
           )
