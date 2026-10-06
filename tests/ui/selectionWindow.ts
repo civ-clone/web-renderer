@@ -117,6 +117,26 @@ const open = (
     false
   );
 
+  // Keys pressed in a shown list don't reach the page, where the map's key handler would act on them: an arrow key
+  //  choosing between "Keep moving" and "Help build Wonder" would otherwise move the Caravan (#57). Every window stops
+  //  its keys, as a `TransientElement`.
+  const shown = open([option('Move'), option('HelpBuildWonder')]),
+    reached: string[] = [],
+    listener = (event: Event) => reached.push((event as KeyboardEvent).key);
+
+  // On the window's parent, which anything leaving the window passes on its way to the page.
+  shown.parent.addEventListener('keydown', listener);
+
+  ['ArrowDown', 'ArrowUp', 'PageDown', 'x'].forEach((key) =>
+    shown.parent
+      .querySelector('select')!
+      .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
+  );
+
+  shown.parent.removeEventListener('keydown', listener);
+
+  expect('keys pressed in a shown list stay in the window', reached, []);
+
   if (failures.length > 0) {
     process.stderr.write(
       `FAIL selectionWindow (${

@@ -32,6 +32,8 @@ import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-trea
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as tradeRouteRegistryInstance } from '@civ-clone/core-city/TradeRouteRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import { goods } from '@civ-clone/civ1-unit/Rules/Unit/tradeRouteEstablished';
+import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
 
 let started = false,
   humanPlayer: Player | null = null,
@@ -44,7 +46,8 @@ let started = false,
   // The latest value the UI has been sent for each `BuildProgress`, by its id.
   progressSent: { [id: string]: number } = {};
 
-const notifications: string[] = [];
+// What the UI is sent on `gameNotification`, rebuilt as `WorkerTransport` rebuilds it.
+const notifications: any[] = [];
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -185,8 +188,34 @@ const run = async (): Promise<void> => {
     );
   }
 
-  if (!notifications.includes('Unit.trade-route-established')) {
-    fail(`the player was not told: ${JSON.stringify(notifications)}`);
+  const told = notifications.find(
+    (notification) => notification.key === 'Unit.trade-route-established'
+  );
+
+  if (!told) {
+    fail(
+      `the player was not told: ${JSON.stringify(
+        notifications.map((notification) => notification.key)
+      )}`
+    );
+  }
+
+  const { bonus, city: toldCity, goods: toldGoods, home: toldHome } = told.data;
+
+  if (
+    toldHome?.name !== home.name() ||
+    toldCity?.name !== 'Partner' ||
+    !goods.includes(toldGoods) ||
+    bonus !== gold() - goldBefore
+  ) {
+    fail(
+      `the notification doesn't say what happened: ${JSON.stringify({
+        home: toldHome?.name,
+        city: toldCity?.name,
+        goods: toldGoods,
+        bonus,
+      })}`
+    );
   }
 
   const sent = routesSent[home.id()];
@@ -308,6 +337,12 @@ const transport = {
       return;
     }
 
+    if (channel === 'gameNotification') {
+      notifications.push(reconstituteData(JSON.parse(JSON.stringify(data))));
+
+      return;
+    }
+
     if (channel === 'gameDataPatch') {
       collectRoutes(JSON.parse(JSON.stringify(data)));
 
@@ -342,16 +377,6 @@ engine.on('engine:start', (): void => {
       );
 
       clientRegistryInstance.register(humanClient);
-
-      const sendNotification = (humanClient as any).sendNotification.bind(
-        humanClient
-      );
-
-      (humanClient as any).sendNotification = (notification: any) => {
-        notifications.push(notification.key());
-
-        sendNotification(notification);
-      };
 
       return;
     }
