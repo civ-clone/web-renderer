@@ -789,6 +789,111 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
+    // A Diplomat's work (#58): the player who sent it and the player it was done to are both told, as v474.05 tells
+    //  them.
+    engineInstance.on(
+      'player:advance-stolen',
+      (thief: Player, victim: Player, AdvanceType: typeof Advance) => {
+        if (![thief, victim].includes(this.player())) {
+          return;
+        }
+
+        this.sendNotification(
+          new Notification('Diplomat.advance-stolen', {
+            advance: AdvanceType.name,
+            thief,
+          })
+        );
+      }
+    );
+
+    engineInstance.on(
+      'city:sabotaged',
+      (city: City, saboteur: Player, target: unknown) => {
+        if (![saboteur, city.player()].includes(this.player())) {
+          return;
+        }
+
+        this.sendNotification(
+          target instanceof CityImprovement
+            ? new Notification('Diplomat.sabotaged.improvement', {
+                city,
+                improvement: target.sourceClass().name,
+              })
+            : new Notification('Diplomat.sabotaged.production', {
+                city,
+                build:
+                  typeof target === 'function' ? (target as Function).name : '',
+              })
+        );
+      }
+    );
+
+    engineInstance.on(
+      'city:incited',
+      (city: City, inciter: Player, originalPlayer: Player) => {
+        if (![inciter, originalPlayer].includes(this.player())) {
+          return;
+        }
+
+        this.sendNotification(
+          new Notification('Diplomat.incited', {
+            city,
+            inciter,
+            originalPlayer,
+          })
+        );
+      }
+    );
+
+    // Only the side that lost the unit is told, as in v474.05: the briber has seen the price paid.
+    engineInstance.on(
+      'unit:bribed',
+      (unit: Unit, briber: Player, previousOwner: Player) => {
+        if (previousOwner !== this.player()) {
+          return;
+        }
+
+        this.sendNotification(
+          new Notification('Diplomat.unit-bribed', {
+            briber,
+            previousOwner,
+            unit: unit.sourceClass().name,
+          })
+        );
+      }
+    );
+
+    // A bribed or defecting unit stays where it is but changes colour, and moves between the two players' lists.
+    engineInstance.on(
+      'unit:transferred',
+      (unit: Unit, player: Player, previousPlayer: Player) => {
+        const playerTile = playerWorldRegistryInstance
+          .getByPlayer(this.player())
+          .getByTile(unit.tile());
+
+        if (playerTile) {
+          this.#dataQueue.update(playerTile.id(), () =>
+            playerTile.toPlainObject(
+              this.#dataFilter(filterToReference(Player, City))
+            )
+          );
+        }
+
+        if (![player, previousPlayer].includes(this.player())) {
+          return;
+        }
+
+        this.#dataQueue.update(this.player().id(), () =>
+          this.player().toPlainObject(
+            this.#dataFilter(
+              filterToReference(PlayerWorld, PlayerTile, Tile, City)
+            )
+          )
+        );
+      }
+    );
+
     engineInstance.on('city:food-storage-exhausted', (city: City) => {
       if (city.player() !== this.player()) {
         return;

@@ -55,6 +55,9 @@ const preferredUnitActionOrder = [
 const blockedUnitActions = new Set([
   'SneakAttack',
   'SneakCaptureCity',
+  // A Diplomat's, which break a peace treaty too (#58).
+  'SneakInciteRevolt',
+  'SneakStealTechnology',
   'Attack',
   'CaptureCity',
 ]);

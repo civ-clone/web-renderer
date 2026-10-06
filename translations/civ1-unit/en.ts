@@ -44,6 +44,7 @@ i18next.addResources('en', 'unit', {
 
   // Actions
   'Action.Attack.name': 'Attack',
+  'Action.BribeUnit.name': 'Bribe unit',
   'Action.BuildIrrigation.name': 'Build irrigation',
   'Action.BuildMine.name': 'Build mine',
   'Action.BuildRailroad.name': 'Build railroad',
@@ -59,6 +60,8 @@ i18next.addResources('en', 'unit', {
   'Action.Fortify.name': 'Fortify',
   'Action.FoundCity.name': 'Found a new city',
   'Action.HelpBuildWonder.name': 'Help build Wonder',
+  'Action.IndustrialSabotage.name': 'Industrial sabotage',
+  'Action.InciteRevolt.name': 'Incite a revolt',
   'Action.JoinCity.name': 'Join city',
   'Action.LandAircraft.name': 'Land',
   'Action.Move.name': 'Move',
@@ -68,6 +71,10 @@ i18next.addResources('en', 'unit', {
   'Action.Sleep.name': 'Sleep',
   'Action.SneakAttack.name': 'Sneak attack',
   'Action.SneakCaptureCity.name': 'Sneak attack',
+  'Action.SneakInciteRevolt.name': 'Incite a revolt',
+  'Action.SneakStealTechnology.name': 'Steal technology',
+  'Action.StealTechnology.name': 'Steal technology',
+  'Action.SubvertCity.name': 'Subvert city',
   'Action.Unload.name': 'Unload',
 
   'Busy.BuildingIrrigation.name': 'Building irrigation',

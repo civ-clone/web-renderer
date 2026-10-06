@@ -209,6 +209,35 @@ const expect = (description: string, actual: string, expected: string) => {
     'Rock salt caravan from Asansol arrives in Asansol. The goods sold for 30 coins.',
   ]);
 
+  // #58: a Diplomat's work, told to both sides.
+  notifications.push(
+    [
+      'Diplomat.advance-stolen',
+      { thief: babylon, advance: 'CeremonialBurial' },
+      'Babylonians steal Ceremonial Burial.',
+    ],
+    [
+      'Diplomat.incited',
+      { city: asansol, inciter: babylon, originalPlayer: india },
+      'Indians rebel! Civil War in Asansol. Babylonian influence suspected.',
+    ],
+    [
+      'Diplomat.sabotaged.improvement',
+      { city: asansol, improvement: 'Granary' },
+      'Granary destroyed in Asansol.',
+    ],
+    [
+      'Diplomat.sabotaged.production',
+      { city: asansol },
+      'Production sabotaged in Asansol.',
+    ],
+    [
+      'Diplomat.unit-bribed',
+      { unit: 'Chariot', briber: babylon, previousOwner: india },
+      'Indian Chariot unit bribed by Babylonians!',
+    ]
+  );
+
   notifications.forEach(([key, data, expected]) => {
     // What the UI receives: serialised by `sendNotification`, rebuilt by the
     //  transport, then translated as `Notifications.publish` does.

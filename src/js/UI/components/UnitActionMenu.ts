@@ -1,8 +1,8 @@
 import { PopupMenu, PopupMenuAction } from './PopupMenu';
-import { SneakAttack, Tile, Unit as UnitData, UnitAction } from '../types';
+import { Tile, Unit as UnitData, UnitAction } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
-import ConfirmationWindow from './ConfirmationWindow';
+import { performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
 
 const buildActions = (
@@ -46,46 +46,23 @@ const buildActions = (
     ];
   }
 
-  return actions.map((action) => {
-    const perform = () =>
-      transport.send('action', {
-        name: 'ActiveUnit',
-        id: unit.id,
-        unitAction: action._,
-        target: action.to.id,
-      });
-
-    if (['SneakAttack', 'SneakCaptureCity'].includes(action._)) {
-      return {
-        label: t(`Action.${action._}.name`, {
-          defaultValue: action._,
-          ns: 'unit',
-        }),
-        action: () =>
-          new ConfirmationWindow(
-            t('SneakAttack.title'),
-            t('SneakAttack.body', {
-              nation: t(
-                `${(action as SneakAttack).enemy.civilization._}.nation`,
-                {
-                  defaultValue: (action as SneakAttack).enemy.civilization._,
-                  ns: 'civilization',
-                }
-              ),
-            }),
-            () => perform()
-          ),
-      };
-    }
-
-    return {
-      label: t(`Action.${action._}.name`, {
-        defaultValue: action._,
-        ns: 'unit',
-      }),
-      action: () => perform(),
-    };
-  });
+  return actions.map((action) => ({
+    label: t(`Action.${action._}.name`, {
+      defaultValue: action._,
+      ns: 'unit',
+    }),
+    // Through the same windows as the arrow keys: a confirmation that would break a treaty, a Diplomat's incite and
+    //  bribe windows (#58).
+    action: () =>
+      performWithPrompts(unit, action, actions, (chosen) =>
+        transport.send('action', {
+          name: 'ActiveUnit',
+          id: unit.id,
+          unitAction: chosen._,
+          target: chosen.to.id,
+        })
+      ),
+  }));
 };
 
 // TODO: This won't work as a private property of UnitActionMenu... Why?

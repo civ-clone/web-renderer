@@ -32,9 +32,11 @@ import Stowed from '@civ-clone/base-unit-action-embark/Busy/Stowed';
 import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
+import { registerDiplomacyClasses } from '../../src/js/Engine/diplomacy';
 import { save } from '@civ-clone/core-save-game/save';
 import City from '@civ-clone/core-city/City';
 import TradeRoute from '@civ-clone/core-city/TradeRoute';
+import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
 import {
   changeSpecialist,
   changeWorkedTile,
@@ -268,6 +270,22 @@ const report = (): void => {
 
   push('a trade route can be set up', () => routed, 'ok');
 
+  // A Diplomat's theft (#58), which makes a city unrobbable until it changes hands, so it has to survive a save.
+  const theft =
+    routeHome && routePartner
+      ? new AdvanceStolen(
+          routePartner.player(),
+          routeHome.player(),
+          routeHome,
+          defaultGame.rules,
+          defaultGame.turn
+        )
+      : null;
+
+  if (theft) {
+    defaultGame.interactions.register(theft as never);
+  }
+
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
   // the measurement — report it and stop, instead of crashing the run.
@@ -371,6 +389,8 @@ const report = (): void => {
     const game = gameForLoad(defaultSlots);
 
     registerClasses(game, { collisions: [] });
+    // As the app does (`src/js/Engine/Game.ts`): the diplomacy classes `registerClasses` can't name.
+    registerDiplomacyClasses(game);
 
     return game;
   };
@@ -497,6 +517,27 @@ const report = (): void => {
         .entries()
         .map((route) => [route.from().id(), route.to().id()]),
     routeHome && routePartner ? [[routeHome.id(), routePartner.id()]] : null
+  );
+
+  // The theft, after the round trip.
+  push(
+    'the theft comes back, for the same city and players',
+    () =>
+      target.interactions
+        .entries()
+        .filter((interaction) => interaction instanceof AdvanceStolen)
+        .map((interaction) => {
+          const restored = interaction as unknown as AdvanceStolen;
+
+          return [
+            restored.city().id(),
+            restored.thief().id(),
+            restored.victim().id(),
+          ];
+        }),
+    theft
+      ? [[theft.city().id(), theft.thief().id(), theft.victim().id()]]
+      : null
   );
 
   // The aircraft on the Carrier, after the round trip.
