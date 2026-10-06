@@ -1,22 +1,20 @@
-import { FinishedHandler, NewGameWindow } from './NewGameWindow';
+import { FinishedHandler, PlayerCountWindow } from './PlayerCountWindow';
 import Transport from '../Transport';
-import Request from '../../Engine/Request';
 
-export class EarthWindow extends NewGameWindow {
+// Earth is a fixed map, so there is no size to ask for (#55): only how many civilizations.
+export class EarthWindow extends PlayerCountWindow {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    super(transport, async () => {
-      if (onFinished) {
-        await onFinished();
-      }
-
-      await transport.request(
-        new Request('setOptions', {
-          width: 80,
-          height: 50,
-          earth: true,
-        })
-      );
-    });
+    super(
+      transport,
+      {
+        width: 80,
+        height: 50,
+        earth: true,
+      },
+      [7, 6, 5, 4, 3],
+      7,
+      onFinished
+    );
   }
 }
 

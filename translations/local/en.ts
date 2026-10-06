@@ -227,6 +227,12 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.number-of-players': 'How many players?',
   'NewGameWindow.civilizations_one': '1 civilization',
   'NewGameWindow.civilizations_other': '{{count}} civilizations',
+  'NewGameWindow.world-size': 'How big a world?',
+  'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',
+  'NewGameWindow.WorldSize.small': 'Small ({{width}} × {{height}})',
+  'NewGameWindow.WorldSize.normal': 'Normal ({{width}} × {{height}})',
+  'NewGameWindow.WorldSize.large': 'Large ({{width}} × {{height}})',
+  'NewGameWindow.WorldSize.huge': 'Huge ({{width}} × {{height}})',
 
   'Notification.title': 'Notification',
 

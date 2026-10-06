@@ -33,6 +33,7 @@ import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
 import { join } from 'path';
 import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
+import worldSizes from '../../src/js/UI/lib/worldSizes';
 
 const names = [
   "J. S. Bach's Cathedral",
@@ -59,6 +60,20 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
+
+  // Each world size New Game offers has a label with its dimensions (#55).
+  worldSizes.forEach(({ key, width, height }) => {
+    const label = t(`NewGameWindow.WorldSize.${key}`, { width, height });
+
+    expect(
+      `NewGameWindow.WorldSize.${key}`,
+      label.includes(`${width} × ${height}`) &&
+        !label.startsWith('NewGameWindow')
+        ? 'labelled'
+        : label,
+      'labelled'
+    );
+  });
 
   names.forEach((item) => {
     expect('City.Build.title', t('City.Build.title', { item }), item);
