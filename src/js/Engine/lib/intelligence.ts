@@ -33,6 +33,11 @@ import {
   UnitRegistry,
   instance as unitRegistryInstance,
 } from '@civ-clone/core-unit/UnitRegistry';
+import {
+  NormalAggression,
+  NormalDevelopment,
+  NormalMilitarism,
+} from '@civ-clone/civ1-civilization/Traits';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import { Gold } from '@civ-clone/library-city/Yields';
 import { Palace } from '@civ-clone/library-city/CityImprovements';
@@ -150,8 +155,15 @@ const details = (
   return {
     leader: leader === null ? null : typeNameOf(leader.sourceClass()),
     traits: (leader?.traits() ?? [])
-      .map((trait) => typeNameOf(trait.sourceClass()))
-      .filter((name) => !name.startsWith('Normal')),
+      .filter(
+        (trait) =>
+          !(
+            trait instanceof NormalAggression ||
+            trait instanceof NormalDevelopment ||
+            trait instanceof NormalMilitarism
+          )
+      )
+      .map((trait) => typeNameOf(trait.sourceClass())),
     capital: capital
       ? {
           name: capital.name(),
