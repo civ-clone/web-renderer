@@ -23,9 +23,12 @@ const sneakActions = [
   inciteActions = ['InciteRevolt', 'SneakInciteRevolt', 'SubvertCity'],
   // The Diplomat's arrival popup, in Civ1's order, each option standing for the actions that do it.
   diplomatOptions: [string, string[]][] = [
+    ['establish-embassy', ['EstablishEmbassy']],
+    ['investigate-city', ['InvestigateCity']],
     ['steal-technology', ['StealTechnology', 'SneakStealTechnology']],
     ['industrial-sabotage', ['IndustrialSabotage']],
     ['incite-revolt', inciteActions],
+    ['meet-with-king', ['MeetWithKing']],
   ];
 
 const civilization = (

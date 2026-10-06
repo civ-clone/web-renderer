@@ -188,6 +188,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.cheat.you': 'You',
   'GameMenu.city-status': 'City Status',
   'GameMenu.happiness-report': 'Happiness Report',
+  'GameMenu.intelligence-report': 'Intelligence Report',
   'GameMenu.load-game': 'Load Game',
   'GameMenu.load-game-confirm':
     'Loading a saved game will end the game in progress. Any unsaved progress will be lost.',
@@ -298,9 +299,12 @@ i18next.addResources('en', 'default', {
   'ScienceReport.title': 'Player research',
 
   'Diplomat.arrives': '{{nation}} Diplomat arrives in {{- city}}',
+  'Diplomat.establish-embassy': 'Establish Embassy',
+  'Diplomat.investigate-city': 'Investigate City',
   'Diplomat.steal-technology': 'Steal Technology',
   'Diplomat.industrial-sabotage': 'Industrial Sabotage',
   'Diplomat.incite-revolt': 'Incite a Revolt',
+  'Diplomat.meet-with-king': 'Meet with King',
   'Diplomat.peace-treaty': 'We have signed a peace treaty with the {{nation}}!',
   'Diplomat.break-treaty': 'Break treaty',
   'Diplomat.cancel-action': 'Cancel action',
@@ -314,6 +318,35 @@ i18next.addResources('en', 'default', {
   'Diplomat.bribe.body':
     '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
   'Diplomat.bribe.bribe': 'Bribe unit',
+
+  'IntelligenceReport.at-peace': 'At PEACE with {{nation}}.',
+  'IntelligenceReport.at-war': 'At WAR with {{nation}}.',
+  // Already escaped by `Generic.city-name`.
+  'IntelligenceReport.capital': 'Capital: {{- city}}',
+  'IntelligenceReport.empty': 'We have not met any other civilizations yet.',
+  'IntelligenceReport.foreign-affairs': 'Foreign Affairs:',
+  'IntelligenceReport.government': 'Government: {{government}}',
+  'IntelligenceReport.leader': 'Leader: {{leader}}',
+  'IntelligenceReport.leader_traits': 'Leader: {{leader}} ({{traits}})',
+  'IntelligenceReport.military_one': 'Military: {{count, number}} Unit.',
+  'IntelligenceReport.military_other': 'Military: {{count, number}} Units.',
+  'IntelligenceReport.no-capital': 'Capital: none',
+  'IntelligenceReport.no-embassy': 'No embassy established.',
+  'IntelligenceReport.no-foreign-affairs':
+    'No contact with other civilizations.',
+  'IntelligenceReport.no-technologies': 'None.',
+  'IntelligenceReport.subject': 'Subject: the {{nation}}',
+  'IntelligenceReport.technologies': 'Technologies:',
+  'IntelligenceReport.the': 'the {{nation}}',
+  'IntelligenceReport.title': 'Intelligence Report',
+  'IntelligenceReport.trait.Aggressive': 'Aggressive',
+  'IntelligenceReport.trait.Civilized': 'Civilized',
+  'IntelligenceReport.trait.Expansionist': 'Expansionistic',
+  'IntelligenceReport.trait.Friendly': 'Friendly',
+  'IntelligenceReport.trait.Militaristic': 'Militaristic',
+  'IntelligenceReport.trait.Perfectionist': 'Perfectionist',
+  'IntelligenceReport.treasury': 'Treasury: ${{gold, number}}',
+  'IntelligenceReport.unknown': 'Unknown',
 
   'SelectionWindow.default-body': 'Please choose one of the following:',
 

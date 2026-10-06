@@ -1,5 +1,6 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
+import { IntelligenceRow } from './lib/intelligence';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
@@ -53,9 +54,15 @@ declare global {
     cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
+    // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
+    embassyEstablished: TransportData<string, never>;
     gameData: TransportData<GameData, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
     gameNotification: TransportData<Notification, Notification>;
+    // The intelligence report (F3, #58).
+    intelligence: TransportData<IntelligenceRow[], null>;
+    // A city a Diplomat has investigated (#58), to show read-only.
+    investigateCity: TransportData<ObjectMap, never>;
     getOptions: TransportData<
       {
         [key: string]: any;

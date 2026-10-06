@@ -6,6 +6,7 @@ import {
 } from '@civ-clone/library-diplomacy/Proposals';
 import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
+import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import { Game } from '@civ-clone/core-game/Game';
 import Interaction from '@civ-clone/core-diplomacy/Interaction';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
@@ -27,6 +28,8 @@ export const registerDiplomacyClasses = (game: Game): void =>
       AdvanceStolen,
       Contact,
       DemandTribute,
+      // A Diplomat's embassy (#58).
+      Embassy,
       ExchangeKnowledge,
       OfferPeace,
       Peace,
