@@ -232,6 +232,21 @@ const expect = (description: string, actual: string, expected: string) => {
       'Production sabotaged in Asansol.',
     ],
     [
+      'Diplomat.sabotaged.production.unit',
+      { city: asansol, build: { _: 'Chariot' } },
+      'Chariot production sabotaged in Asansol.',
+    ],
+    [
+      'Diplomat.sabotaged.production.city-improvement',
+      { city: asansol, build: { _: 'Granary' } },
+      'Granary production sabotaged in Asansol.',
+    ],
+    [
+      'Diplomat.sabotaged.production.wonder',
+      { city: asansol, build: { _: 'Colossus' } },
+      'Colossus production sabotaged in Asansol.',
+    ],
+    [
       'Diplomat.unit-bribed',
       { unit: 'Chariot', briber: babylon, previousOwner: india },
       'Indian Chariot unit bribed by Babylonians!',
