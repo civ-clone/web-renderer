@@ -863,6 +863,43 @@ export class DataTransferClient extends Client implements IClient {
       );
     });
 
+    // Barracks at Gunpowder and Combustion (#184). As in Civ1, the player is told even when there were none to remove,
+    //  because rebuilding them now costs more.
+    engineInstance.on(
+      'city-improvement:obsolete',
+      (
+        player: Player,
+        advance: Advance,
+        ImprovementType: typeof CityImprovement,
+        cityImprovements: CityImprovement[]
+      ) => {
+        if (player !== this.player()) {
+          return;
+        }
+
+        new Set(
+          cityImprovements.map((cityImprovement) => cityImprovement.city())
+        ).forEach((city: City) =>
+          this.#dataQueue.update(city.id(), () =>
+            city.toPlainObject(
+              this.#dataFilter(filterToReference(Player, Tile, Unit))
+            )
+          )
+        );
+
+        this.sendNotification(
+          new Notification(
+            'CityImprovement.obsolete',
+            {
+              advance,
+              improvement: ImprovementType.name,
+            },
+            true
+          )
+        );
+      }
+    );
+
     engineInstance.on(
       'goody-hut:action-performed',
       (goodyHut: GoodyHut, action) => {
