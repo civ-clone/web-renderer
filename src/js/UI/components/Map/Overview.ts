@@ -43,6 +43,12 @@ export class Overview extends Map {
     super(...args);
 
     this.setCanvasSize();
+
+    // Every other layer draws itself when the portal first gives it a
+    // viewport, but this one ignores viewports, so it draws the world it was
+    // given now. Otherwise only tiles that later arrive as patches reach it,
+    // and a loaded game's minimap stays black (#270).
+    this.render();
   }
 
   // The portal never draws this layer; it rides in the layer list only so that
