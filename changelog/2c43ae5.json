@@ -1,0 +1,1 @@
+{"version":"0.1.0@2c43ae5","date":"2026-10-06T08:57:05.000Z","localChanges":["The minimap now shows everything you've explored as soon as you load a game, rather than staying black until the map changed (closes #270)."],"externalChanges":{}}
