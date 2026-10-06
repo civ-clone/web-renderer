@@ -1729,7 +1729,10 @@ export class Renderer {
                             (caravanAction) => caravanAction._ === choice
                           )
                         ),
-                      null
+                      null,
+                      {
+                        displayAll: true,
+                      }
                     );
 
                     event.stopPropagation();
