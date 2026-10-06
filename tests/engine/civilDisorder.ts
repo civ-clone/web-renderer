@@ -1,5 +1,7 @@
 // A city going into civil disorder, or out of it, sends its tile to the UI with the city in full, saying whether the
 //  engine has declared it in disorder, so the map can swap the city's size for an unhappy citizen and back (#193).
+// A rival's city on a tile the player knows goes out the same way, as the `UnknownCity` the player is sent, because
+//  v474.05 draws any city's disorder on the map (#265). One on a tile the player hasn't seen sends nothing.
 //
 // Drives a seeded game with a human `DataTransferClient`, as `joinCity` does. On the human's first turn the test
 // founds a city and flushes the queue. Then, as civ1-city-happiness's TurnStart rule does, it raises
@@ -64,6 +66,22 @@ const collectObjects = (value: any): void => {
 // `sendPatchData` is private: the UI can't ask for it, but the engine sends whatever is queued at the end of every
 //  action and turn.
 const flush = (): void => (humanClient as any).sendPatchData();
+
+// A rival's city goes out as an `UnknownCity`, which has an id of its own, so it's found by name.
+const tileSent = (city: City): boolean =>
+    objectsSent.some(
+      (object) =>
+        object._ === 'PlayerTile' &&
+        object.x === city.tile().x() &&
+        object.y === city.tile().y()
+    ),
+  rivalCitySent = (city: City, declared?: boolean): boolean =>
+    objectsSent.some(
+      (object) =>
+        object._ === 'City' &&
+        object.name === city.name() &&
+        (declared === undefined || object.civilDisorderDeclared === declared)
+    );
 
 // Whether the last patches sent the city's tile, and the city in full saying the engine has (or hasn't) declared it in
 //  disorder.
@@ -136,8 +154,75 @@ const run = async (): Promise<void> => {
     );
   }
 
+  const humanWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
+    rivalSettlers = unitRegistryInstance
+      .entries()
+      .filter(
+        (unit) =>
+          unit instanceof Settlers &&
+          unit.player() !== humanPlayer &&
+          humanWorld.getByTile(unit.tile()) === null
+      ),
+    [seenTile, unseenTile] = rivalSettlers
+      .map((unit) => unit.tile())
+      .filter(
+        (tile, index, tiles) =>
+          tiles.findIndex((other) => other === tile) === index
+      );
+
+  if (!seenTile || !unseenTile) {
+    fail("there aren't two rival Settlers on tiles the human hasn't seen");
+  }
+
+  humanWorld.register(seenTile);
+
+  const rivalOn = (tile: typeof seenTile): Player =>
+      rivalSettlers.find((unit) => unit.tile() === tile)!.player(),
+    seenCity = new City(rivalOn(seenTile), seenTile, 'Seenville'),
+    unseenCity = new City(rivalOn(unseenTile), unseenTile, 'Hiddenville');
+
+  flush();
+  objectsSent = [];
+
+  const seenDisorder = new PendingEffect(CIVIL_DISORDER, seenCity),
+    unseenDisorder = new PendingEffect(CIVIL_DISORDER, unseenCity);
+
+  engine.emit('city:civil-disorder', seenCity);
+  pendingEffectRegistryInstance.register(seenDisorder);
+  engine.emit('city:civil-disorder', unseenCity);
+  pendingEffectRegistryInstance.register(unseenDisorder);
+  flush();
+
+  if (!tileSent(seenCity) || !rivalCitySent(seenCity, true)) {
+    fail(
+      "a rival city's disorder on a tile the human knows did not send its tile and the city, declared in disorder"
+    );
+  }
+
+  if (tileSent(unseenCity) || rivalCitySent(unseenCity)) {
+    fail("a rival city's disorder on a tile the human hasn't seen was sent");
+  }
+
+  objectsSent = [];
+
+  pendingEffectRegistryInstance.discharge(seenDisorder);
+  pendingEffectRegistryInstance.discharge(unseenDisorder);
+  flush();
+
+  if (!tileSent(seenCity) || !rivalCitySent(seenCity, false)) {
+    fail(
+      'order restored in a rival city on a tile the human knows did not send its tile and the city, no longer in disorder'
+    );
+  }
+
+  if (tileSent(unseenCity) || rivalCitySent(unseenCity)) {
+    fail(
+      "order restored in a rival city on a tile the human hasn't seen was sent"
+    );
+  }
+
   console.log(
-    'PASS civilDisorder (the city tile goes out on disorder and on order restored)'
+    "PASS civilDisorder (your city's tile, and a known rival city's, go out on disorder and on order restored; an unseen rival's doesn't)"
   );
 
   process.exit(0);
