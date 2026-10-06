@@ -142,6 +142,24 @@ additionalDataRegistryInstance.register(
   tradeRoutes()
 );
 
+// What kind of thing a sabotaged city was building, which says where its name is translated, as `City.building-complete`
+//  notices do (#58). `target` is the class being built, or nothing.
+const sabotagedBuildKind = (target: unknown): string => {
+  const is = (Type: Function): boolean =>
+    typeof target === 'function' &&
+    Object.prototype.isPrototypeOf.call(Type, target);
+
+  return is(Unit)
+    ? '.unit'
+    : is(Wonder)
+    ? '.wonder'
+    : is(CityImprovement)
+    ? '.city-improvement'
+    : is(Part)
+    ? '.spaceship-part'
+    : '';
+};
+
 const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
   unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
@@ -820,11 +838,18 @@ export class DataTransferClient extends Client implements IClient {
                 city,
                 improvement: target.sourceClass().name,
               })
-            : new Notification('Diplomat.sabotaged.production', {
-                city,
-                build:
-                  typeof target === 'function' ? (target as Function).name : '',
-              })
+            : new Notification(
+                'Diplomat.sabotaged.production' + sabotagedBuildKind(target),
+                {
+                  city,
+                  build: {
+                    _:
+                      typeof target === 'function'
+                        ? (target as Function).name
+                        : '',
+                  },
+                }
+              )
         );
       }
     );
