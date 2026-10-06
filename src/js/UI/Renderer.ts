@@ -1729,10 +1729,7 @@ export class Renderer {
                             (caravanAction) => caravanAction._ === choice
                           )
                         ),
-                      null,
-                      {
-                        autoChooseSingle: false,
-                      }
+                      null
                     );
 
                     event.stopPropagation();
