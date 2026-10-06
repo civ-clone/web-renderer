@@ -1,4 +1,6 @@
 [
+{"version":"0.1.0@9ae78d0","date":"2026-10-06T09:04:29.000Z","localChanges":["Starting a new game now asks how big a world you want, from Tiny to Huge, before asking how many civilizations to play with (#55). Normal is the original game's 80 × 50 map.","Bigger worlds have room for more civilizations: Large offers up to 10 and Huge up to 14, the full set (closes #55)."],"externalChanges":{}}
+,
 {"version":"0.1.0@ccd9a36","date":"2026-10-06T09:00:04.000Z","localChanges":["Other civilizations' cities in civil disorder now show an unhappy citizen on the map in place of their size, as your own cities do and as the original game shows them (closes #265)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@2c43ae5","date":"2026-10-06T08:57:05.000Z","localChanges":["The minimap now shows everything you've explored as soon as you load a game, rather than staying black until the map changed (closes #270)."],"externalChanges":{}}
