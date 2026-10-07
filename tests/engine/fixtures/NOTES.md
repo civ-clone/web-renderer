@@ -141,3 +141,14 @@ not with the fixture.)
 
 The city-keyed registry indexes that arrived alongside it (#308) change nothing
 here.
+
+## Accepted change: action ids again (#311)
+
+simple-ai-client's `shouldAttack` now works out each player's military power
+once a turn rather than on every call. Each `attack()` and `defence()` it no
+longer makes creates `Yield`s, which used up `DataObject` ids. In this game no
+decision changes: the engine-state checksums at turns 1, 10 and 50 are
+unchanged, and the turn-50 DTOs dumped before and after are identical once ids
+are renumbered in order of first appearance. Only the turn-50 DTO hash moves.
+(In longer games the cache does change some decisions; the arena run on #311
+found nothing worse.)
