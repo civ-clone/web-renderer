@@ -152,3 +152,16 @@ unchanged, and the turn-50 DTOs dumped before and after are identical once ids
 are renumbered in order of first appearance. Only the turn-50 DTO hash moves.
 (In longer games the cache does change some decisions; the arena run on #311
 found nothing worse.)
+
+## Accepted change: player action ids (#314)
+
+core-player's `mandatoryAction()` and `hasMandatoryActions()` now stop at the
+first `Action` rule that offers a mandatory action, civ1-player's end-turn
+rule asks `hasMandatoryActions()` rather than listing every other mandatory
+action, and core-strategy-ai-client's `takeTurn` asks `mandatoryAction()` once
+per action rather than `hasMandatoryActions()` first. The action found is the same, but far fewer `PlayerAction`s are built,
+each of which used up a `DataObject` id. The engine-state checksums at turns 1,
+10 and 50 are unchanged, and the turn-50 DTOs dumped before and after are
+identical once ids are renumbered in order of first appearance. The DTO hashes
+at turns 1, 10 and 50 move, and the turn-50 DTO is a little smaller (shorter
+ids).
