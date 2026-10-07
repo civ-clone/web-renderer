@@ -122,3 +122,22 @@ Grassland, Plains or River tiles. The world is identical. At turn 1 the only
 differences are the four Settlers' positions (and the hashes and DTO sizes that
 follow from them). Entity counts and random calls are unchanged. Everything
 after turn 1 moves with them.
+
+## Accepted change: action ids (#306)
+
+simple-ai-client's `moveUnit` no longer asks for a unit's actions on a tile
+beyond its neighbours when a step of its path is blocked. No kind of `Move` can
+be offered there, so the unit does exactly what it did before, but each of those
+calls used to create a `GoTo` action, which used up a `DataObject` id. The
+engine-state checksums at turns 1, 10 and 50 are unchanged, as are the DTO's
+object count and byte size; only the turn-50 DTO hash moves. Compared with
+`CONFORMANCE_DUMP` before and after, the turn-50 DTOs are identical once ids are
+renumbered in order of first appearance.
+
+(`CONFORMANCE_DUMP` serialises every player, city and unit at the last turn
+before the snapshot is taken, which itself uses up ids and runs rules, so a run
+with it set never matches the fixture. Compare two dumped runs with each other,
+not with the fixture.)
+
+The city-keyed registry indexes that arrived alongside it (#308) change nothing
+here.
