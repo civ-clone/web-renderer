@@ -28,7 +28,7 @@
       "dto": {
         "objects": 770,
         "bytes": 132877,
-        "hash": "f16ae151"
+        "hash": "36922e0a"
       },
       "registries": {
         "cities": 0,
@@ -205,8 +205,8 @@
       },
       "dto": {
         "objects": 3392,
-        "bytes": 581401,
-        "hash": "b651e1a9"
+        "bytes": 581398,
+        "hash": "a0691b34"
       },
       "registries": {
         "cities": 4,
@@ -452,8 +452,8 @@
       },
       "dto": {
         "objects": 47552,
-        "bytes": 7989019,
-        "hash": "6d8ef39a"
+        "bytes": 7988010,
+        "hash": "d026346e"
       },
       "registries": {
         "cities": 6,
