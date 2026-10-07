@@ -134,6 +134,18 @@ const referenceObject = (object: any) =>
       types.some((Type) => object instanceof Type)
         ? object
         : referenceObject(object),
+  // For a payload the UI reconstitutes on its own rather than merging into the game data, so it cannot carry refs: a
+  //  player or a tile says who and where, and no more (#130).
+  standalone = (object: any) =>
+    object instanceof Player
+      ? {
+          _: 'Player',
+          id: object.id(),
+          civilization: object.civilization(),
+        }
+      : object instanceof PlayerTile
+      ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
+      : object,
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
 additionalDataRegistryInstance.register(
@@ -1383,7 +1395,18 @@ export class DataTransferClient extends Client implements IClient {
       // before registering the next one.
       this.#pendingChoiceDisposer?.();
 
-      this.#transport.send('chooseFromList', meta);
+      // Serialised like a notification (#305). Sent whole, a negotiation's players brought every player's cities, units
+      //  and known tiles: 20 MB and 10 s per step of a talk in a large game, and rivals' state the page should not see.
+      //  Still the `ChoiceMeta` the transport expects, which a test's transport hands to an AI to answer; only what it
+      //  serialises as changes.
+      this.#transport.send(
+        'chooseFromList',
+        Object.create(meta, {
+          toPlainObject: {
+            value: () => meta.toPlainObject(this.#dataFilter(standalone)),
+          },
+        })
+      );
 
       this.#pendingChoiceDisposer = this.#transport.receiveOnce(
         'chooseFromList',
@@ -1838,17 +1861,7 @@ export class DataTransferClient extends Client implements IClient {
     // In full, our own `Player` brought every city, unit and known tile with
     // it: 2 MB and 400 ms per notification in a large game (#130).
     const payload = notification.toPlainObject(
-      this.#dataFilter((object) =>
-        object instanceof Player
-          ? {
-              _: 'Player',
-              id: object.id(),
-              civilization: object.civilization(),
-            }
-          : object instanceof PlayerTile
-          ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
-          : object
-      )
+      this.#dataFilter(standalone)
     ) as unknown as Notification;
 
     // The TurnStart rules, which say what happened in our cities, run before `takeTurn`, and so before the patch with
