@@ -474,6 +474,40 @@ const transport = {
 
       if (meta.key() === 'negotiation.next-step') {
         negotiationSteps++;
+
+        // Serialised as `WorkerTransport` does it, a step of the talks says who is talking and no more: whole, its
+        //  players brought every city, unit and known tile in the game with them (#305).
+        const { objects } = (meta as any).toPlainObject(),
+          sent = Object.values(objects) as any[],
+          overshare = sent.filter(
+            ({ __ = [] }) =>
+              __.includes('City') ||
+              __.includes('Unit') ||
+              __.includes('Tile') ||
+              __.includes('PlayerTile') ||
+              __.includes('PlayerWorld')
+          ),
+          players = sent.filter(({ _ }) => _ === 'Player');
+
+        if (
+          overshare.length > 0 ||
+          players.some((player) =>
+            Object.keys(player).some(
+              (key) => !['_', '__', 'id', 'civilization'].includes(key)
+            )
+          )
+        ) {
+          fail(
+            `a step of the talks sent ${
+              sent.length
+            } objects, among them ${overshare
+              .slice(0, 5)
+              .map(({ id }) => id)
+              .join(', ')} and players with ${players
+              .map((player) => Object.keys(player).join('/'))
+              .join('; ')}`
+          );
+        }
       }
 
       // `receiveOnce` is registered after the send, so answer on the next tick.
