@@ -72,6 +72,7 @@ import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
+import ActiveUnitTiles from './lib/ActiveUnitTiles';
 import createMemoryTestbed from './lib/memoryTestbed';
 import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
@@ -217,13 +218,7 @@ export class Renderer {
           unitsMap: Units,
           activeUnitsMap: ActiveUnit
         ) => {
-          // `activeUnit` still holds the outgoing unit, and it came from the
-          // previous reconstitution, so its tile is the one being left behind.
-          [activeUnit?.tile, unit?.tile].forEach((tile) => {
-            if (tile) {
-              activeUnitTilesToRefresh.set(`${tile.x},${tile.y}`, tile);
-            }
-          });
+          activeUnitTiles.change(unit);
 
           activeUnit = unit;
 
@@ -255,8 +250,7 @@ export class Renderer {
           // than a full-world re-render of the layer on every unit selection
           // and move. Every other tile reaches this layer the same way it
           // reaches the others, through `portal.build(tilesToRender)`.
-          unitsMap.update([...activeUnitTilesToRefresh.values()]);
-          activeUnitTilesToRefresh.clear();
+          unitsMap.update(activeUnitTiles.take());
 
           unitsMap.setVisible(true);
           activeUnitsMap.render();
@@ -335,15 +329,11 @@ export class Renderer {
 
           return tiles;
         },
-        // `Units` skips whichever tile holds the active unit, so a change of
-        // active unit leaves two tiles stale on that layer: the one being
-        // vacated, which has to draw its unit again, and the one taking over,
-        // which has to stop drawing it. Collected in `applyActiveUnit`, which
-        // is the only point that still knows the outgoing unit — by the time
-        // the coalesced `renderActiveUnit` runs, `lastUnit` has already been
-        // pointed at the incoming one. Keyed by coordinate to dedupe, since
-        // several changes can land in a single frame.
-        activeUnitTilesToRefresh = new Map<string, Tile>();
+        // Collected in `applyActiveUnit`, which is the only point that still
+        // knows the outgoing unit — by the time the coalesced
+        // `renderActiveUnit` runs, `lastUnit` has already been pointed at the
+        // incoming one.
+        activeUnitTiles = new ActiveUnitTiles();
 
       let globalNotificationTimer: number | undefined,
         lastUnit: Unit | null = null,
@@ -352,7 +342,8 @@ export class Renderer {
 
       // Ids of units deferred with `w` (wait), oldest first: held out of
       // auto-selection until every other active unit has had its turn. Ids,
-      // not objects, because every update reconstitutes fresh objects.
+      // not objects, because a full rebuild (a loaded game) makes every object
+      // afresh.
       const waitedUnits = new Set<string>();
 
       const transportDisposers: Array<() => void> = [];
@@ -1328,7 +1319,13 @@ export class Renderer {
                 lastPrunedObjectCount = Object.keys(objectMap.objects).length;
               }
 
-              world.setTiles(data.player.world.tiles);
+              // Refilled when a patch re-sent the world, as it does for a tile
+              // newly seen. The tiles keep their objects otherwise, so the
+              // lookup stays as it is.
+              world.setTiles(
+                data.player.world.tiles,
+                reconstituter.refilled(data.player.world.id)
+              );
               releaseIncomingTiles();
 
               const playerActions = data.player.actions.filter(

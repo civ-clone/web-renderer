@@ -1,10 +1,15 @@
-// Which unit is active after an update (#189). Every update rebuilds the
-// units as fresh objects, so the unit that just moved has to be recognised by
-// its id, or focus jumps to whichever unit on screen is listed first.
+// Which unit is active after an update (#189). A full rebuild makes the units
+// fresh objects, so the unit that just moved has to be recognised by its id, or
+// focus jumps to whichever unit on screen is listed first.
 //
 // And asking for the active unit's actions (#323): the worker sends them for
 // that unit alone, so a unit made active without them asks, once, and the keys
 // find its actions when the answer's patch is in.
+//
+// And the tiles a change of active unit leaves stale on the units layer
+// (#327): an update refills the active unit in place, so once it has moved its
+// own `tile` is the one it moved to, and the one it left still has to be
+// redrawn.
 
 import {
   UnitActionsRequest,
@@ -15,6 +20,7 @@ import {
 import { IncrementalReconstituter } from '../../src/js/UI/lib/IncrementalReconstituter';
 import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 import chooseActiveUnit from '../../src/js/UI/lib/chooseActiveUnit';
+import ActiveUnitTiles from '../../src/js/UI/lib/ActiveUnitTiles';
 
 const failures: string[] = [];
 let checks = 0;
@@ -204,6 +210,59 @@ expect(
   sent.join(),
   'Settlers-1,Settlers-1,Warrior-1'
 );
+
+const staleTiles = new ActiveUnitTiles(),
+  refreshed = (): string =>
+    staleTiles
+      .take()
+      .map(({ x, y }) => `${x},${y}`)
+      .sort()
+      .join(' ');
+
+let data = reconstituter.rebuild(objectMap, null) as any;
+
+const [moving, next] = data.units;
+
+staleTiles.change(moving);
+
+expect('making a unit active refreshes its tile', refreshed(), '3,4');
+expect('and only once', refreshed(), '');
+
+// The move, as its patch sends it: the unit, on the tile it moved to.
+objectMap.objects['Settlers-1'] = {
+  ...objectMap.objects['Settlers-1'],
+  tile: { '#ref': 'PlayerTile-2' },
+};
+data = reconstituter.rebuild(objectMap, ['Settlers-1']);
+
+expect('the unit that moved is the same object', data.units[0], moving);
+expect(
+  'now on the tile it moved to',
+  `${moving.tile.x},${moving.tile.y}`,
+  '4,4'
+);
+
+// The update makes it active again.
+staleTiles.change(data.units[0]);
+
+expect(
+  'a move refreshes the tile it left and the tile it moved to',
+  refreshed(),
+  '3,4 4,4'
+);
+
+// Wait, and the next unit is active.
+staleTiles.change(next);
+
+expect(
+  'the next unit refreshes the tile the last one stands on, and its own',
+  refreshed(),
+  '3,4 4,4'
+);
+
+staleTiles.change(null);
+
+expect('no unit refreshes the tile the last one stood on', refreshed(), '3,4');
 
 if (failures.length) {
   console.error(`FAIL active unit\n  ${failures.join('\n  ')}`);

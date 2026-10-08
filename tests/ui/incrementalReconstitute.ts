@@ -1,11 +1,18 @@
-// The live game data is rebuilt only where a patch changed it (#322). Applies a
-// few hundred seeded-random patches, of every kind the `gameDataPatch` handler
-// receives, to a synthetic object map with shared refs, lists of refs, inline
-// objects holding refs and a cycle, and checks after each update that:
+// The live game data is rebuilt only where a patch changed it (#322), by
+// refilling each changed id's object in place (#327). Applies a few hundred
+// seeded-random patches, of every kind the `gameDataPatch` handler receives, to
+// a synthetic object map with shared refs, lists of refs, inline objects
+// holding refs, refs to ids not yet sent and a cycle, and checks after each
+// update that:
 //
 // - the result is deep-equal to a fresh `reconstituteData` of the same map,
-// - every id that cannot reach a changed id is the very object it was before,
+// - every id is the very object it was before, changed or not, and so is the
+//   root,
 // - after a prune, nothing the map dropped is still held.
+//
+// Then, one at a time: a changed list is the same array with new contents, an
+// id that arrives after something referred to it is found there, a removed id
+// is let go of, and an id whose object becomes a list is rebuilt as one.
 
 import {
   ObjectMap,
@@ -229,7 +236,7 @@ const indexPaths = (key: string): string[] => {
 
 const randomPatch = (): Patch => {
   const ids = Object.keys(objectMap.objects),
-    kind = int(5);
+    kind = int(6);
 
   // Replacing an id's object whole, or adding a new one.
   if (kind === 0) {
@@ -295,72 +302,24 @@ const randomPatch = (): Patch => {
     };
   }
 
+  // An id things may have referred to before the map held it, arriving on its
+  // own: what referred to it has to find it now.
+  if (kind === 4) {
+    const key = `Ghost-${int(5)}`;
+
+    return {
+      [key]: {
+        type: ids.includes(key) ? 'update' : 'add',
+        value: {
+          hierarchy: makeThing(key),
+          objects: {},
+        },
+      },
+    };
+  }
+
   // Two at once, as one patch can carry.
   return { ...randomPatch(), ...randomPatch() };
-};
-
-// Every id reachable from the root in the raw map, and for each the ids whose
-// own inline objects refer to it (missing ones included): what a change has to
-// rebuild is everything above it here.
-const rawGraph = (): {
-  reachable: Set<string>;
-  referrers: Map<string, Set<string>>;
-} => {
-  const reachable = new Set<string>(),
-    referrers = new Map<string, Set<string>>(),
-    queue: string[] = [];
-
-  const walk = (value: any, owner: string): void => {
-    if (!value || typeof value !== 'object') {
-      return;
-    }
-
-    if (value['#ref']) {
-      const id = value['#ref'];
-
-      if (!referrers.has(id)) {
-        referrers.set(id, new Set());
-      }
-
-      referrers.get(id)!.add(owner);
-
-      if (!reachable.has(id) && id in objectMap.objects) {
-        reachable.add(id);
-        queue.push(id);
-      }
-
-      return;
-    }
-
-    Object.values(value).forEach((child) => walk(child, owner));
-  };
-
-  walk(objectMap.hierarchy, '#root');
-
-  for (let i = 0; i < queue.length; i++) {
-    walk(objectMap.objects[queue[i]], queue[i]);
-  }
-
-  return { reachable, referrers };
-};
-
-const closure = (
-  changedIds: Set<string>,
-  referrers: Map<string, Set<string>>
-): Set<string> => {
-  const found = new Set(changedIds),
-    queue = [...changedIds];
-
-  for (let i = 0; i < queue.length; i++) {
-    referrers.get(queue[i])?.forEach((referrer) => {
-      if (!found.has(referrer)) {
-        found.add(referrer);
-        queue.push(referrer);
-      }
-    });
-  }
-
-  return found;
 };
 
 // The rebuilt object for each id, found through the result itself: every
@@ -432,13 +391,13 @@ check(
   reconstituter.rebuild(objectMap, new Set()) === result
 );
 
-let rebuilt = 0,
-  reused = 0,
+let kept = 0,
+  refilled = 0,
   pruned = 0;
 
 for (let step = 1; step <= 400; step++) {
-  const { reachable, referrers } = rawGraph(),
-    before = objectsById(result),
+  const before = objectsById(result),
+    root = result,
     changedIds = new Set<string>();
 
   // Patches that arrive while waiting for the turn are coalesced into one
@@ -455,29 +414,23 @@ for (let step = 1; step <= 400; step++) {
     deepEqual(result, reconstituteData(objectMap))
   );
 
-  const invalid = closure(changedIds, referrers),
-    after = objectsById(result);
+  check(`step ${step}: the root is the same object`, result === root);
 
-  after.forEach((object, id) => {
-    if (!before.has(id) || !reachable.has(id)) {
+  objectsById(result).forEach((object, id) => {
+    if (!before.has(id)) {
       return;
     }
 
-    if (invalid.has(id)) {
-      rebuilt++;
-
-      check(
-        `step ${step}: ${id}, which reaches a change, is rebuilt`,
-        before.get(id) !== object
-      );
-
-      return;
+    if (changedIds.has(id)) {
+      refilled++;
+    } else {
+      kept++;
     }
-
-    reused++;
 
     check(
-      `step ${step}: ${id}, which reaches no change, is the same object`,
+      `step ${step}: ${id}${
+        changedIds.has(id) ? ', which changed,' : ''
+      } is the same object`,
       before.get(id) === object
     );
   });
@@ -519,11 +472,129 @@ for (let step = 1; step <= 400; step++) {
   }
 }
 
-// Without these, the checks above could pass on a map where nothing is shared
-// or nothing is ever pruned.
-check(`some ids were reused (${reused})`, reused > 1000);
-check(`some ids were rebuilt (${rebuilt})`, rebuilt > 100);
+// Without these, the checks above could pass on a map where nothing changes,
+// nothing is shared or nothing is ever pruned.
+check(`some ids were kept (${kept})`, kept > 1000);
+check(`some ids were refilled (${refilled})`, refilled > 100);
 check(`some ids were pruned (${pruned})`, pruned > 10);
+
+// One at a time from here, each through the handler as above.
+const update = (patch: Patch): Set<string> => {
+  const changedIds = new Set<string>(),
+    root = result;
+
+  applyPatches([patch], changedIds);
+
+  result = reconstituter.rebuild(objectMap, changedIds);
+
+  check(
+    `${Object.keys(patch).join()}: the result matches reconstituteData`,
+    deepEqual(result, reconstituteData(objectMap))
+  );
+  check(
+    `${Object.keys(patch).join()}: the root is the same object`,
+    result === root
+  );
+
+  return changedIds;
+};
+
+const [a, b, c] = Object.keys(objectMap.objects);
+
+// A list with an id of its own, as the player's lists are not, but a list can
+// be.
+objectMap.objects['List-0'] = [ref(a), ref(b)];
+objectMap.hierarchy.list = ref('List-0');
+result = reconstituter.rebuild(objectMap, null);
+
+const list = result.list;
+
+update({
+  'List-0': {
+    type: 'update',
+    value: { hierarchy: [ref(c)], objects: {} },
+  },
+});
+
+check('a changed list is the same array', result.list === list);
+check(
+  'with the new contents',
+  list.length === 1 && list[0] === objectsById(result).get(c)
+);
+check(
+  'and the last call says it filled it',
+  reconstituter.refilled('List-0') && !reconstituter.refilled(a)
+);
+
+// Referred to before it was sent, then sent on its own.
+const waiting = newId(),
+  late = newId();
+
+update({
+  [waiting]: {
+    type: 'add',
+    value: {
+      hierarchy: { ...makeThing(waiting), ref: ref(late), list: [ref(late)] },
+      objects: {},
+    },
+  },
+});
+
+// Nothing refers to it yet: add it to the hierarchy's list in place.
+update({
+  'List-0': {
+    type: 'update',
+    value: { hierarchy: [ref(c), ref(waiting)], objects: {} },
+  },
+});
+
+const waitingObject = objectsById(result).get(waiting);
+
+check(
+  'a ref to an id not sent yet is undefined, and left out of a list',
+  waitingObject.ref === undefined && waitingObject.list.length === 0
+);
+
+update({
+  [late]: {
+    type: 'add',
+    value: { hierarchy: makeThing(late), objects: {} },
+  },
+});
+
+check(
+  'once it is sent, what referred to it finds it, in the same object',
+  objectsById(result).get(waiting) === waitingObject &&
+    waitingObject.ref === objectsById(result).get(late) &&
+    waitingObject.list[0] === waitingObject.ref
+);
+
+// Removed while something still refers to it.
+update({
+  [late]: {
+    type: 'remove',
+  },
+});
+
+check(
+  'a removed id is let go of',
+  !reconstituter.trackedIds().has(late) &&
+    waitingObject.ref === undefined &&
+    waitingObject.list.length === 0
+);
+
+// An object that becomes a list cannot be refilled as one.
+update({
+  [c]: {
+    type: 'update',
+    value: { hierarchy: [ref(waiting)], objects: {} },
+  },
+});
+
+check(
+  'an id whose object becomes a list is a list, wherever it is held',
+  Array.isArray(result.list[0]) && result.list[0][0] === waitingObject
+);
 
 if (failures.length > 0) {
   process.stderr.write(
@@ -535,5 +606,5 @@ if (failures.length > 0) {
 }
 
 process.stdout.write(
-  `PASS incremental-reconstitute (${checks} checks; ${reused} reused, ${rebuilt} rebuilt, ${pruned} pruned)\n`
+  `PASS incremental-reconstitute (${checks} checks; ${kept} kept, ${refilled} refilled, ${pruned} pruned)\n`
 );

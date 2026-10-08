@@ -3,13 +3,18 @@
 // viewport, and the only other way a tile reached it was a patch: a loaded
 // game's explored tiles arrive in the first `gameData` and never as patches,
 // so the minimap stayed black until something changed.
+//
+// And the world the map layers look tiles up in finds a tile newly seen
+// (#327).
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
 
 import Overview from '../../src/js/UI/components/Map/Overview';
-import { Tile } from '../../src/js/UI/types';
+import { Tile, World as WorldData } from '../../src/js/UI/types';
 import World from '../../src/js/UI/components/World';
+import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
+import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 
 const failures: string[] = [];
 let checks = 0;
@@ -62,6 +67,45 @@ expect(
     .filter(({ x }) => explored(x))
     .map(({ x, y }) => `${x},${y}`)
     .sort()
+);
+
+// A tile newly seen arrives as the world re-sent with it, as the engine sends
+// it: the tile set at an index of the world's list (#327). The data keeps one
+// object per id, so the world's lookup has to be told the world changed.
+const playerWorld: ObjectMap = {
+    hierarchy: { world: { '#ref': 'PlayerWorld-1' } },
+    objects: {
+      'PlayerWorld-1': {
+        id: 'PlayerWorld-1',
+        width,
+        height,
+        tiles: [{ '#ref': 'PlayerTile-1' }],
+      },
+      'PlayerTile-1': { id: 'PlayerTile-1', x: 0, y: 0 },
+    },
+  },
+  reconstituter = new IncrementalReconstituter(),
+  seenWorld = new World(
+    reconstituter.rebuild(playerWorld, null).world as WorldData
+  );
+
+playerWorld.objects['PlayerWorld-1'].tiles[1] = { '#ref': 'PlayerTile-2' };
+playerWorld.objects['PlayerTile-2'] = { id: 'PlayerTile-2', x: 1, y: 2 };
+
+const seenData = reconstituter.rebuild(playerWorld, [
+  'PlayerWorld-1',
+  'PlayerTile-2',
+]);
+
+seenWorld.setTiles(
+  seenData.world.tiles,
+  reconstituter.refilled(seenData.world.id)
+);
+
+expect(
+  'a tile newly seen is found in the world',
+  seenWorld.get(1, 2).id,
+  'PlayerTile-2'
 );
 
 if (failures.length > 0) {

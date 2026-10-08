@@ -10,9 +10,10 @@ export type CandidateUnit = {
  * Which unit becomes active after an update: the one that was already active
  * while it can still move, otherwise the first on screen, otherwise the first.
  *
- * Matched by id, not by object: every update reconstitutes fresh objects, so
- * the last unit is never the same object as any candidate (#189). The unit
- * returned is always the candidate, so the caller holds the current copy.
+ * Matched by id, not by object: a full rebuild (a loaded game) makes every
+ * object afresh, so the last unit need not be the same object as any candidate
+ * (#189). The unit returned is always the candidate, so the caller holds the
+ * current copy.
  */
 export const chooseActiveUnit = <T extends CandidateUnit>(
   units: T[],
