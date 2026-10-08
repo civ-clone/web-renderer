@@ -1649,8 +1649,10 @@ export class Renderer {
                 [key: string]: string[];
               } = {
                 ' ': ['NoOrders'],
+                a: ['Automate'],
                 b: ['FoundCity', 'JoinCity'],
                 D: ['Disband'],
+                e: ['Explore'],
                 f: ['Fortify', 'BuildFortress'],
                 i: [
                   'BuildIrrigation',

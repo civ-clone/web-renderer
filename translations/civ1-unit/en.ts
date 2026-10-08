@@ -44,6 +44,7 @@ i18next.addResources('en', 'unit', {
 
   // Actions
   'Action.Attack.name': 'Attack',
+  'Action.Automate.name': 'Automate',
   'Action.BribeUnit.name': 'Bribe unit',
   'Action.BuildIrrigation.name': 'Build irrigation',
   'Action.BuildMine.name': 'Build mine',
@@ -58,6 +59,7 @@ i18next.addResources('en', 'unit', {
   'Action.Embark.name': 'Embark',
   'Action.EstablishEmbassy.name': 'Establish embassy',
   'Action.EstablishTradeRoute.name': 'Establish trade route',
+  'Action.Explore.name': 'Explore',
   'Action.Fortify.name': 'Fortify',
   'Action.FoundCity.name': 'Found a new city',
   'Action.HelpBuildWonder.name': 'Help build Wonder',
@@ -92,6 +94,8 @@ i18next.addResources('en', 'unit', {
   'Busy.PlantingForest.name': 'Planting forest',
   'Busy.Pillaging.name': 'Pillaging',
   'Busy.Stowed.name': 'Aboard',
+  'Busy.Exploring.name': 'Exploring',
+  'Busy.Automated.name': 'Automated',
 
   'Busy.BuildingIrrigation.icon': 'I',
   'Busy.BuildingMine.icon': 'M',
@@ -105,4 +109,6 @@ i18next.addResources('en', 'unit', {
   'Busy.PlantingForest.icon': 'PF',
   'Busy.Pillaging.icon': 'P',
   'Busy.Stowed.icon': 'A',
+  'Busy.Exploring.icon': 'X',
+  'Busy.Automated.icon': 'W',
 });
