@@ -22,12 +22,16 @@ import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import { CompleteProduction } from '@civ-clone/civ1-treasury/PlayerActions';
-import DataObject, { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import DataObject, {
+  ObjectMap,
+  typeNameOf,
+} from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { GameData } from '../UI/types';
 import { Gold } from '@civ-clone/civ1-city/Yields';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
@@ -177,6 +181,28 @@ const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
   unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
   unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
 
+// A `CityBuild` without `available` (#324). Working out what every city could build was most of every player patch (a
+//  production change in a large game sent 500 KB of it, all for the one picker that reads it), so the picker asks for
+//  it when it opens (`cityBuildAvailable`). `toPlainObject` only reads what `keys()` names, so a stand-in that names
+//  fewer is enough; it shares the id, and so the entry in the UI's data, with the build it stands in for. A stand-in is
+//  an `instanceof CityBuild` itself, which is why `standsInForCityBuild` is there for the filter to check.
+const cityBuildStandIns: WeakMap<CityBuildItem, CityBuildItem> = new WeakMap(),
+  standsInForCityBuild: WeakSet<CityBuildItem> = new WeakSet(),
+  withoutAvailable = (cityBuild: CityBuildItem): CityBuildItem => {
+    if (!cityBuildStandIns.has(cityBuild)) {
+      const standIn: CityBuildItem = Object.create(cityBuild, {
+        keys: {
+          value: () => cityBuild.keys().filter((key) => key !== 'available'),
+        },
+      });
+
+      standsInForCityBuild.add(standIn);
+      cityBuildStandIns.set(cityBuild, standIn);
+    }
+
+    return cityBuildStandIns.get(cityBuild)!;
+  };
+
 export class DataTransferClient extends Client implements IClient {
   #automationClient: AIClient;
   #automationEnabled: boolean;
@@ -235,6 +261,16 @@ export class DataTransferClient extends Client implements IClient {
         return {
           _: object.constructor.name,
         };
+      }
+
+      // Not `available`, which the picker fetches itself (#324). The filter sees the stand-in again when it is the thing
+      //  being walked, so it is not wrapped twice.
+      if (
+        object instanceof CityBuildItem &&
+        !standsInForCityBuild.has(object) &&
+        object.city().player() === this.player()
+      ) {
+        return localFilter(withoutAvailable(object));
       }
 
       return localFilter(object);
@@ -436,6 +472,19 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.receive('topCities', (limit) =>
       this.#transport.send('topCities', this.topCities(limit))
     );
+
+    // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
+    //  resolves on its own and brings nothing of the game with it. A build that is not ours has nothing to show.
+    this.#transport.receive('cityBuildAvailable', (cityBuildId) => {
+      const [cityBuild] = cityBuildRegistryInstance.getBy('id', cityBuildId);
+
+      this.#transport.send(
+        'cityBuildAvailable',
+        cityBuild && cityBuild.city().player() === this.player()
+          ? this.cityBuildAvailable(cityBuild)
+          : { hierarchy: [], objects: {} }
+      );
+    });
 
     // The intelligence report (F3, #58), worked out here for the same reason.
     this.#transport.receive('intelligence', () =>
@@ -1783,6 +1832,17 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
 
     this.#dataQueue.clear();
+  }
+
+  cityBuildAvailable(cityBuild: CityBuildItem): ObjectMap {
+    const available = cityBuild.available(),
+      filter = this.#dataFilter(standalone);
+
+    // `toPlainObject` is a method on `DataObject`, and it is the only way in: the filter is applied to what it is called
+    //  on first, so handing it the list in place of the build gets the list serialised, as the `hierarchy`.
+    return cityBuild.toPlainObject((object: any) =>
+      object === cityBuild ? available : filter(object)
+    );
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {

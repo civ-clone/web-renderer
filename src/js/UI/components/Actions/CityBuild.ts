@@ -1,5 +1,6 @@
 import { CityBuild as CityBuildObject, PlayerAction } from '../../types';
 import Action from './Action';
+import CityBuildAvailable from '../../../Engine/Requests/CityBuildAvailable';
 import CityBuildSelectionWindow from '../CityBuildSelectionWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
@@ -18,9 +19,10 @@ export class CityBuild extends Action {
     this.#portal = portal;
   }
 
-  activate(): void {
+  async activate(): Promise<void> {
     new CityBuildSelectionWindow(
       this.value(),
+      await this.transport().request(new CityBuildAvailable(this.value().id)),
       this.transport(),
       () => this.complete(),
       {

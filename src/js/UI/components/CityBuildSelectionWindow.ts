@@ -1,4 +1,4 @@
-import { CityBuild } from '../types';
+import { BuildItem, CityBuild } from '../types';
 import { ActionWindowActions } from './ActionWindow';
 import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
@@ -14,6 +14,8 @@ export class CityBuildSelectionWindow extends SelectionWindow {
 
   constructor(
     cityBuild: CityBuild,
+    // What the city can build is not part of `cityBuild` (#324): the opener fetches it with a `CityBuildAvailable`.
+    available: BuildItem[],
     transport: Transport,
     onComplete: onCompleteHandler = () => {},
     additionalActions: ActionWindowActions = {}
@@ -22,7 +24,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       t('Actions.CityBuildSelectionWindow.title', {
         city: cityBuild.city,
       }),
-      cityBuild.available.map((buildItem) => ({
+      available.map((buildItem) => ({
         label: t('City.Build.build-item', {
           item: getLabelForBuildable(buildItem),
           cost: buildItem.cost.value,

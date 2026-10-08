@@ -1,0 +1,1 @@
+{"version":"0.1.0@e70f65a","date":"2026-10-08T14:08:24.000Z","localChanges":["Moving a unit or changing what a city builds in a large game responds several times faster. After every change the game used to rebuild everything it shows, which took most of a second with a big empire; now it rebuilds only what the change touched (closes #322)."],"externalChanges":{}}
