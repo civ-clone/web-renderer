@@ -180,6 +180,9 @@ const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
 export class DataTransferClient extends Client implements IClient {
   #automationClient: AIClient;
   #automationEnabled: boolean;
+  // Set while the action listener is handling one of the human's actions, so the several flushes an action causes (the
+  //  moved unit's tiles, then the player) go out as a single patch once it is done (#321).
+  #holdingFlushes = false;
   #dataFilter =
     (localFilter = (object: any) => object) =>
     // `Busy` as well as `DataObject`, because that is what `toPlainObject`
@@ -1772,6 +1775,11 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   private sendPatchData(): void {
+    if (this.#holdingFlushes) {
+      // The queue keeps accumulating, and the listener flushes it all in one go when the action is done.
+      return;
+    }
+
     this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
 
     this.#dataQueue.clear();
@@ -1967,7 +1975,17 @@ export class DataTransferClient extends Client implements IClient {
 
       const listener = async (...args: any[]): Promise<void> => {
         try {
-          if (await this.handleAction(...args)) {
+          let turnEnded: boolean;
+
+          this.#holdingFlushes = true;
+
+          try {
+            turnEnded = await this.handleAction(...args);
+          } finally {
+            this.#holdingFlushes = false;
+          }
+
+          if (turnEnded) {
             this.#eventEmitter.off('action', listener);
 
             this.#handedOver = false;
