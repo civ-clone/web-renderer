@@ -538,6 +538,8 @@ export class Renderer {
           data: GameData,
           objectMap: ObjectMap = { objects: {}, hierarchy: {} }
         ) => {
+          performance.mark('civ:game-data-received');
+
           try {
             gameStarted = true;
 
@@ -1161,7 +1163,15 @@ export class Renderer {
             // `dataupdated` window rebuilds, and the full `portal` composite —
             // reads only the latest `data`/`activeUnit`, so it is safe to run at
             // most once per animation frame however many patch flushes arrive.
+            let firstRender = true;
+
             const render = (): void => {
+              if (firstRender) {
+                firstRender = false;
+
+                performance.mark('civ:first-render');
+              }
+
               document.dispatchEvent(
                 new CustomEvent('dataupdated', {
                   detail: {
@@ -1893,6 +1903,9 @@ export class Renderer {
       // what generates a world.
       if (pendingSave !== null) {
         mainMenu.remove();
+
+        // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes (#325).
+        performance.mark('civ:load-sent');
 
         transport.send('load', { data: pendingSave });
       }
