@@ -1862,13 +1862,16 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   private sendInitialData(): void {
+    // Through the visibility filter, as every patch is. Sent as it was, `toPlainObject` was called on it with no filter, so
+    //  every other player went out in full, and with them their `world`: every tile each civilization knows. Reached from
+    //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
     this.#transport.send(
       'gameData',
       new TransferObject(
         this.player(),
         turnInstance,
         yearInstance
-      ) as unknown as GameData
+      ).toPlainObject(this.#dataFilter()) as unknown as GameData
     );
 
     this.#sentInitialData = true;
