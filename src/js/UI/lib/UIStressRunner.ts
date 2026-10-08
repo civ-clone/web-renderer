@@ -14,6 +14,7 @@ import ScienceReport from '../components/ScienceReport';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import endTurn from './endTurn';
+import { hasUnitActions, unitActions } from './unitActions';
 
 interface WindowLike {
   close(): void;
@@ -377,6 +378,11 @@ export class UIStressRunner {
 
       this.#setActiveUnit(activeUnit);
 
+      // Making it active asks for its actions (#323): this unit's turn comes once they are in.
+      if (!hasUnitActions(activeUnit)) {
+        return;
+      }
+
       if (unitAction) {
         this.#transport.send('action', {
           name: 'ActiveUnit',
@@ -412,8 +418,8 @@ export class UIStressRunner {
 
   private selectUnitAction(unit: Unit): UnitAction | null {
     const candidates = [
-      ...Object.values(unit.actionsForNeighbours).flat(),
-      ...unit.actions,
+      ...Object.values(unit.actionsForNeighbours ?? {}).flat(),
+      ...unitActions(unit),
     ]
       .filter(
         (action): action is UnitAction =>

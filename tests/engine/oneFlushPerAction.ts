@@ -119,6 +119,22 @@ const transport = {
 const idsIn = (patch: any[]): Set<string> =>
   new Set(patch.flatMap((update) => Object.keys(update)));
 
+// The units a patch sends with their actions (#323).
+const unitsWithActionsIn = (patch: any[]): string[] => [
+  ...new Set(
+    patch.flatMap((update) =>
+      Object.values(update).flatMap(({ value }: any) =>
+        Object.entries(value?.objects ?? {})
+          .filter(
+            ([, object]: [string, any]) =>
+              object?.__?.includes('Unit') && 'actionsForNeighbours' in object
+          )
+          .map(([id]) => id)
+      )
+    )
+  ),
+];
+
 // A unit of the human's that can step onto a neighbouring tile the player has seen.
 const findMove = (): { unit: Unit; from: Tile; to: Tile; target: string } => {
   const playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!);
@@ -153,6 +169,9 @@ const run = async (): Promise<void> => {
     playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
     fromId = playerWorld.getByTile(from)!.id(),
     toId = target;
+
+  // Moves to spare, so it can still act after the move and its actions should go with it (#323).
+  unit.moves().set(unit.moves().value() + 2);
 
   await wait(20);
   reset();
@@ -190,6 +209,17 @@ const run = async (): Promise<void> => {
     }
   });
 
+  // Only the unit that moved, which still has moves left, is sent with its actions (#323).
+  const withActions = unitsWithActionsIn(moved[0]);
+
+  if (withActions.join() !== unit.id()) {
+    fail(
+      `the move's patch carried actions for [${withActions.join(
+        ', '
+      )}], not just ${unit.id()}`
+    );
+  }
+
   // Play the rest of the turn so `EndTurn` is accepted; what that sends does not matter here.
   await helper!.takeTurn();
   await wait(50);
@@ -216,7 +246,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    `PASS oneFlushPerAction (a move sent 1 patch carrying ${ids.size} updates, ending the turn sent 1 patch then turnEnded)`
+    `PASS oneFlushPerAction (a move sent 1 patch carrying ${ids.size} updates and the moved unit's actions alone, ending the turn sent 1 patch then turnEnded)`
   );
 
   process.exit(0);

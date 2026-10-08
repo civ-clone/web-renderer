@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 
 // Runs tests/ui/activeUnit.ts — which unit is active after an update, so a
-// unit that has just moved keeps focus (#189). Bundled with esbuild, as the
-// other UI tests are.
+// unit that has just moved keeps focus (#189), and how the active unit's
+// actions are asked for (#323). Bundled with esbuild, as the other UI tests
+// are.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');

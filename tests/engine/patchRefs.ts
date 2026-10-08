@@ -20,6 +20,7 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import DataObject from '@civ-clone/core-data-object/DataObject';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -279,9 +280,149 @@ const buildItemsIn = (objects: PlainObject): number => {
   ).length;
 };
 
+// A unit's actions go out for the unit the UI asks about and no other (#323). Each turn the test asks, as the UI does
+//  when it makes a unit active: the answer must be a patch of that unit with both keys and its tiles as refs that
+//  resolve, and no patch may carry actions for any other unit, or for one listed as an `InactiveUnit`.
+const unitActions = {
+  handler: null as ((unitId: string) => void) | null,
+  asked: null as string | null,
+  answering: false,
+  requests: 0,
+  answers: 0,
+  // Patches after the answer that carried the asked unit's actions again: it was still active with moves left.
+  carried: 0,
+  failures: [] as string[],
+};
+
+const requestUnitActions = (): void => {
+  const units = unitRegistryInstance.getByPlayer(humanPlayer!),
+    unit =
+      units.find((unit) => unit.active() && unit.moves().value() > 0) ??
+      units[0];
+
+  // The UI asks once it has the game data, and not before.
+  if (
+    !unit ||
+    !unitActions.handler ||
+    Object.keys(objectMap.objects).length === 0
+  ) {
+    return;
+  }
+
+  unitActions.asked = unit.id();
+  unitActions.answering = true;
+  unitActions.requests++;
+
+  // Answered synchronously: the human isn't acting, so nothing holds the flush.
+  unitActions.handler(unit.id());
+
+  if (unitActions.answering) {
+    unitActions.answering = false;
+    unitActions.failures.push(`unitActions for ${unit.id()} sent no patch`);
+  }
+};
+
+const checkUnitActions = (data: PlainObject[]): void => {
+  const withActions = new Set<string>(),
+    inactive = new Set<string>();
+
+  data.forEach((patch) =>
+    Object.values(patch).forEach(({ value }: PlainObject) =>
+      Object.entries(value?.objects ?? {}).forEach(
+        ([id, object]: [string, any]) => {
+          if (
+            object &&
+            ('actions' in object || 'actionsForNeighbours' in object) &&
+            object.__?.includes('Unit')
+          ) {
+            withActions.add(id);
+          }
+
+          if (object?._ === 'InactiveUnit' && object.value?.['#ref']) {
+            inactive.add(object.value['#ref']);
+          }
+        }
+      )
+    )
+  );
+
+  withActions.forEach((id) => {
+    if (id !== unitActions.asked) {
+      unitActions.failures.push(
+        `a patch carried actions for ${id}, which was not asked about`
+      );
+    }
+
+    if (inactive.has(id)) {
+      unitActions.failures.push(
+        `a patch carried actions for ${id}, an InactiveUnit`
+      );
+    }
+  });
+
+  if (!unitActions.answering) {
+    if (unitActions.asked !== null && withActions.has(unitActions.asked)) {
+      unitActions.carried++;
+    }
+
+    return;
+  }
+
+  unitActions.answering = false;
+  unitActions.answers++;
+
+  const id = unitActions.asked!,
+    answer = data.find((patch) => id in patch)?.[id]?.value,
+    unit = answer?.objects?.[id];
+
+  if (!unit || !('actions' in unit) || !('actionsForNeighbours' in unit)) {
+    unitActions.failures.push(`the answer for ${id} did not carry its actions`);
+
+    return;
+  }
+
+  const tiles = playerTilesIn(answer.objects);
+
+  if (tiles > 0) {
+    unitActions.failures.push(
+      `the answer for ${id} carried ${tiles} PlayerTile(s) in full`
+    );
+  }
+
+  // Applied by now, as the renderer applies it: every ref in it must resolve.
+  const seen = new Set<any>(),
+    visit = (value: any): void => {
+      if (!value || typeof value !== 'object' || seen.has(value)) {
+        return;
+      }
+
+      seen.add(value);
+
+      const ref = value['#ref'];
+
+      if (typeof ref === 'string') {
+        if (!(ref in objectMap.objects)) {
+          unitActions.failures.push(
+            `the answer for ${id} has a ref to ${ref}, which the frontend doesn't hold`
+          );
+        }
+
+        return;
+      }
+
+      Object.values(value).forEach(visit);
+    };
+
+  visit(answer.objects);
+};
+
 const transport = {
   receive: (channel: string, handler: (...args: any[]) => void) => {
     receivers.set(channel, handler);
+
+    if (channel === 'unitActions') {
+      unitActions.handler = handler;
+    }
 
     return () => false;
   },
@@ -348,6 +489,10 @@ const transport = {
       batches++;
       checkRefs();
     }
+
+    if (channel === 'gameDataPatch') {
+      checkUnitActions(data);
+    }
   },
 };
 
@@ -386,6 +531,25 @@ engine.on('turn:start', (turn: number): void => {
     process.exit(1);
   }
 
+  if (
+    unitActions.requests === 0 ||
+    unitActions.answers !== unitActions.requests
+  ) {
+    unitActions.failures.push(
+      `${unitActions.requests} unitActions request(s), ${unitActions.answers} answer(s)`
+    );
+  }
+
+  if (unitActions.failures.length > 0) {
+    console.error(
+      `FAIL patchRefs: unit actions (#323): ${[...new Set(unitActions.failures)]
+        .slice(0, 5)
+        .join('; ')}`
+    );
+
+    process.exit(1);
+  }
+
   if (notifications === 0) {
     console.error(
       `FAIL patchRefs: no notifications over ${turn} turns, so none were checked`
@@ -409,10 +573,16 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
   );
 
   process.exit(0);
+});
+
+engine.on('player:turn-start', (player: Player): void => {
+  if (!stopped && player === humanPlayer) {
+    requestUnitActions();
+  }
 });
 
 engine.on('engine:start', (): void => {
