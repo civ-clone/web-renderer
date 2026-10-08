@@ -16,7 +16,7 @@ import {
 } from './types';
 import { emit, off, on, s } from '@dom111/element';
 import i18next, { t } from 'i18next';
-import { reconstituteData, ObjectMap } from './lib/reconstituteData';
+import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import ActiveUnit from './components/Map/ActiveUnit';
 import City from './components/City';
@@ -66,6 +66,7 @@ import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
+import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import createMemoryTestbed from './lib/memoryTestbed';
 import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
@@ -1264,6 +1265,14 @@ export class Renderer {
               }
             });
 
+            // Rebuilds only what the patches since the last update reached
+            // (#322): every id they added, replaced or edited in place goes in
+            // `changedIds` until `updateState` takes it, so patches coalesced
+            // while waiting for the turn are all accounted for.
+            const reconstituter = new IncrementalReconstituter();
+
+            let changedIds = new Set<string>();
+
             // Runs synchronously on every patch. Reconstitution and all state
             // the input handlers read synchronously (`data`, `world` tiles,
             // `activeUnit`/`activeUnits`/`lastUnit`, the map layers' active-unit
@@ -1271,9 +1280,19 @@ export class Renderer {
             // left `activeUnit` stale for ~1 frame and broke consecutive moves
             // of multi-move units. Only `render()` is coalesced to one run per
             // frame.
-            const updateState = (objectMap: ObjectMap): void => {
+            //
+            // `rebuildAll` is for a map that did not come from patches, whose
+            // changes are not known.
+            const updateState = (
+              objectMap: ObjectMap,
+              rebuildAll = false
+            ): void => {
+              const changed = rebuildAll ? null : changedIds;
+
+              changedIds = new Set();
+
               // TODO: look into if it's possible to have data reconstituted in a worker thread
-              data = reconstituteData(objectMap) as GameData;
+              data = reconstituter.rebuild(objectMap, changed) as GameData;
 
               const turnValue = Number(data?.turn?.value ?? 0),
                 objectCount = Object.keys(objectMap.objects).length;
@@ -1292,7 +1311,7 @@ export class Renderer {
 
               if (objectCount > 5000 && (scheduledPrune || growthPrune)) {
                 lastPrunedTurn = turnValue;
-                pruneObjectMap(objectMap);
+                reconstituter.forget(pruneObjectMap(objectMap));
                 lastPrunedObjectCount = Object.keys(objectMap.objects).length;
               }
 
@@ -1373,7 +1392,7 @@ export class Renderer {
               }
             };
 
-            updateState(objectMap);
+            updateState(objectMap, true);
 
             // While waiting there is no input to keep up with, so however many
             // patches the other civilizations' moves send, the data is rebuilt
@@ -1404,7 +1423,7 @@ export class Renderer {
 
             transportDisposers.push(
               transport.receive('gameData', (data, rawData) =>
-                updateState(rawData as ObjectMap)
+                updateState(rawData as ObjectMap, true)
               )
             );
 
@@ -1518,6 +1537,8 @@ export class Renderer {
                           objectMap.objects[key] = value!.hierarchy;
                         }
 
+                        changedIds.add(key);
+
                         document.dispatchEvent(
                           new CustomEvent('patchdatareceived', {
                             detail: {
@@ -1529,6 +1550,7 @@ export class Renderer {
                         Object.entries(value!.objects as PlainObject).forEach(
                           ([key, value]) => {
                             objectMap.objects[key] = value;
+                            changedIds.add(key);
 
                             if (value._ === 'PlayerTile') {
                               // Since we only use tilesToRender for x and y this should be fine...
@@ -1539,6 +1561,8 @@ export class Renderer {
                       }
 
                       if (type === 'remove') {
+                        changedIds.add(key);
+
                         if (index) {
                           removeObjectPath(objectMap.objects[key], index);
 

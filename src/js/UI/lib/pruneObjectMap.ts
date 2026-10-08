@@ -43,13 +43,15 @@ const walkValue = (
   );
 };
 
-export const pruneObjectMap = ({ hierarchy, objects }: ObjectMap): number => {
+// Returns the ids it removed, so that state built from the map can drop them
+//  too.
+export const pruneObjectMap = ({ hierarchy, objects }: ObjectMap): string[] => {
   const reachableIds = new Set<string>(),
     seen = new WeakSet<PlainObject>();
 
   walkValue(hierarchy, objects, reachableIds, seen);
 
-  let removedCount = 0;
+  const removedIds: string[] = [];
 
   Object.keys(objects).forEach((id) => {
     if (reachableIds.has(id)) {
@@ -57,10 +59,10 @@ export const pruneObjectMap = ({ hierarchy, objects }: ObjectMap): number => {
     }
 
     delete objects[id];
-    removedCount++;
+    removedIds.push(id);
   });
 
-  return removedCount;
+  return removedIds;
 };
 
 export default pruneObjectMap;

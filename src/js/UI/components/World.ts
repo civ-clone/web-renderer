@@ -111,6 +111,12 @@ export class World {
   }
 
   setTiles(tiles: Tile[]): void {
+    // The same array when no tile has changed since the last update, as only
+    // what a patch reached is rebuilt (#322).
+    if (tiles === this.#tiles) {
+      return;
+    }
+
     this.#tiles = tiles;
 
     this.rebuildLookup();
