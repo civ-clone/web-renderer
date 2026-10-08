@@ -26,9 +26,9 @@
         "hash": "1c57b3e0"
       },
       "dto": {
-        "objects": 770,
-        "bytes": 132877,
-        "hash": "36922e0a"
+        "objects": 778,
+        "bytes": 134173,
+        "hash": "2f3f5978"
       },
       "registries": {
         "cities": 0,
@@ -111,9 +111,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 975,
+        "total": 979,
         "byType": {
-          "Action": 56,
+          "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -181,7 +181,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 7,
+          "TurnStart": 9,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -204,9 +204,9 @@
         "hash": "791b4b57"
       },
       "dto": {
-        "objects": 3392,
-        "bytes": 581350,
-        "hash": "72535b0a"
+        "objects": 3401,
+        "bytes": 582763,
+        "hash": "a3582a0b"
       },
       "registries": {
         "cities": 4,
@@ -358,9 +358,9 @@
       "randomCalls": 8616,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 975,
+        "total": 979,
         "byType": {
-          "Action": 56,
+          "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -428,7 +428,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 7,
+          "TurnStart": 9,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -451,9 +451,9 @@
         "hash": "0d007da8"
       },
       "dto": {
-        "objects": 47552,
-        "bytes": 7987884,
-        "hash": "b1e60e44"
+        "objects": 47634,
+        "bytes": 8000946,
+        "hash": "42fd7ba9"
       },
       "registries": {
         "cities": 6,
@@ -796,9 +796,9 @@
       "randomCalls": 8793,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 975,
+        "total": 979,
         "byType": {
-          "Action": 56,
+          "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -866,7 +866,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 7,
+          "TurnStart": 9,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,

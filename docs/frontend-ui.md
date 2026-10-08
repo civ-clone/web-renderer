@@ -143,6 +143,10 @@ Moving around the map:
 ## Input model
 
 - Keyboard shortcuts drive many actions (unit commands, map toggles, end turn, screens).
+  Unit commands are `keyToActionsMap` in `Renderer.ts`: each key names the
+  actions it tries in turn, and the first the active unit has is sent. `e` is
+  Explore and `a` Automate (#198, #200): standing orders the engine carries on
+  at the start of each turn until it hands the unit back.
 - `mappedKeyFromEvent` normalizes key handling.
 - Some UX paths depend on modal dialog focus forwarding.
 - Pointer events drive the map, so mouse and touch share one path; a press held

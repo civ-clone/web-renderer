@@ -13,7 +13,13 @@ importers:
 
   .:
     dependencies:
+      '@civ-clone/base-unit-action-automate':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/base-unit-action-establish-embassy':
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@civ-clone/base-unit-action-explore':
         specifier: ^0.1.0
         version: 0.1.0
       '@civ-clone/base-unit-action-steal-technology':
@@ -660,6 +666,15 @@ packages:
   '@civ-clone/base-spaceship-yield-population@0.1.1':
     resolution: {integrity: sha512-0sZonlnq9L5AS9gPhjeS0BOeqhRGTbR7gT64Op3QF/wpAgkjlxHzZ+/aGNh/chfm8msLMJMiezxsOkW7lxrgqA==}
 
+  '@civ-clone/base-strategy-ai@0.1.0':
+    resolution: {integrity: sha512-eRYsoOtnEG5AU1jix6hde27u8//qF0VEejj8EPoJnpPWaqG0ItJyZMlWgxkRyBgXmjySC00ngBNPjplxSmIfGA==}
+
+  '@civ-clone/base-strategy-explore@0.1.0':
+    resolution: {integrity: sha512-jBFeSYudFhgTgcBCINxdda5WnQHQgj/WVhP0xAuDyJWRnSHaCQF7KqPbADP0AbDDr9yHQz7FkwpJg80jLuZ60g==}
+
+  '@civ-clone/base-strategy-terrain-work@0.1.0':
+    resolution: {integrity: sha512-1K2LPH41Fg/q19ORsQ6vyHd2p+pFIJkTVkfT23w8zg9LvFEzmg5ITRxIpO4nI1D1n8R351cGLzSA30wKvFNWPA==}
+
   '@civ-clone/base-terrain-arctic@0.1.0':
     resolution: {integrity: sha512-fOwqdm8HygnhfmWi4BJVqvmwuKWfiw9l15s5kZJUuDx2r+TcVY3g92nLsvzl8PgEgTCOuOBgr3IQTF0KdgjjRA==}
 
@@ -762,6 +777,9 @@ packages:
   '@civ-clone/base-unit-action-attack@0.1.8':
     resolution: {integrity: sha512-TlhiTHTHTwJtllrweVpuoi6FmstqRKx5MBxtB8CQv8RLqIpV2BgGyPmt7kCiO8LGEtIr16TQi/sHeS4vJ8zhmQ==}
 
+  '@civ-clone/base-unit-action-automate@0.1.0':
+    resolution: {integrity: sha512-fKk4hPB5eLlBvGwvUrTl2qM1IPLCk/YFMpofthMufawfYyIZQNGc0thRJV62SEBL2bDzYxrGjH2SQqp2nBNR4w==}
+
   '@civ-clone/base-unit-action-bribe-unit@0.1.0':
     resolution: {integrity: sha512-pOoujkyn9xy4BDWZLl4oNE8UBicORAmXSukv+99jqdveWWj8X7qENCtS25l85opgvF8Tlay0Xp101hONziR6/g==}
 
@@ -803,6 +821,9 @@ packages:
 
   '@civ-clone/base-unit-action-establish-trade-route@0.1.0':
     resolution: {integrity: sha512-i0S8CppJoZokX7yWoHNk+otL7RNu8xPRTv56n4YN4aXcHGOXM5CcfejDTTvktaqb4KjQzb84maUTUYiTEfqtaw==}
+
+  '@civ-clone/base-unit-action-explore@0.1.0':
+    resolution: {integrity: sha512-w/QEFyOXreQslXEzO7/bLF/p1tGBeSVNRfSlOBshkupQ56akOqBHxpEqdMFwBetCx6PB+GOaFR6frDWCeCvv9Q==}
 
   '@civ-clone/base-unit-action-fortify@0.1.7':
     resolution: {integrity: sha512-W+5ZnxIzy79aCslyoGY2v6Xs3LcrCqKivU1OMMJPgG/K1vszOcSQa1uSLnko4BYAOhntQL35DxDiLjIO3pHY6w==}
@@ -2577,6 +2598,73 @@ snapshots:
       '@civ-clone/core-spaceship': 0.1.9
       '@civ-clone/core-yield': 0.1.6
 
+  '@civ-clone/base-strategy-ai@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-action-attack': 0.1.8
+      '@civ-clone/base-unit-action-build-irrigation': 0.1.4
+      '@civ-clone/base-unit-action-build-mine': 0.1.4
+      '@civ-clone/base-unit-action-build-road': 0.1.4
+      '@civ-clone/base-unit-action-capture-city': 0.1.2
+      '@civ-clone/base-unit-action-disband': 0.1.2
+      '@civ-clone/base-unit-action-disembark': 0.1.2
+      '@civ-clone/base-unit-action-embark': 0.1.6
+      '@civ-clone/base-unit-action-fortify': 0.1.7
+      '@civ-clone/base-unit-action-found-city': 0.1.4
+      '@civ-clone/base-unit-action-join-city': 0.1.0
+      '@civ-clone/base-unit-action-move': 0.1.2
+      '@civ-clone/base-unit-action-no-orders': 0.1.0
+      '@civ-clone/base-unit-action-unload': 0.1.2
+      '@civ-clone/base-unit-type-land': 0.1.0
+      '@civ-clone/base-unit-type-naval': 0.1.0
+      '@civ-clone/core-city': 0.1.21
+      '@civ-clone/core-city-build': 0.1.11
+      '@civ-clone/core-city-growth': 0.1.5
+      '@civ-clone/core-city-improvement': 0.1.7
+      '@civ-clone/core-civilization': 0.1.7
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-diplomacy': 0.1.6
+      '@civ-clone/core-engine': 0.1.5
+      '@civ-clone/core-game': 0.1.8
+      '@civ-clone/core-goody-hut': 0.1.7
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-pending-effect': 0.1.2
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-player-world': 0.1.13
+      '@civ-clone/core-random': 0.1.2
+      '@civ-clone/core-rule': 0.1.6
+      '@civ-clone/core-science': 0.1.6
+      '@civ-clone/core-strategy': 0.1.6
+      '@civ-clone/core-terrain-feature': 0.1.5
+      '@civ-clone/core-tile-improvement': 0.1.5
+      '@civ-clone/core-trade-rate': 0.1.6
+      '@civ-clone/core-treasury': 0.1.7
+      '@civ-clone/core-turn-based-game': 0.1.8
+      '@civ-clone/core-unit': 0.1.26
+      '@civ-clone/core-unit-improvement': 0.1.3
+      '@civ-clone/core-world': 0.1.18
+      '@civ-clone/core-world-path': 0.1.2
+
+  '@civ-clone/base-strategy-explore@0.1.0':
+    dependencies:
+      '@civ-clone/base-strategy-ai': 0.1.0
+      '@civ-clone/base-unit-type-fortifiable': 0.1.0
+      '@civ-clone/base-unit-type-land': 0.1.0
+      '@civ-clone/base-unit-type-naval': 0.1.0
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-unit': 0.1.26
+      '@civ-clone/core-world': 0.1.18
+
+  '@civ-clone/base-strategy-terrain-work@0.1.0':
+    dependencies:
+      '@civ-clone/base-strategy-ai': 0.1.0
+      '@civ-clone/base-unit-type-worker': 0.1.0
+      '@civ-clone/core-city': 0.1.21
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-science': 0.1.6
+      '@civ-clone/core-unit': 0.1.26
+      '@civ-clone/core-world': 0.1.18
+      '@civ-clone/core-world-path': 0.1.2
+
   '@civ-clone/base-terrain-arctic@0.1.0':
     dependencies:
       '@civ-clone/core-terrain': 0.1.4
@@ -2724,6 +2812,20 @@ snapshots:
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
 
+  '@civ-clone/base-unit-action-automate@0.1.0':
+    dependencies:
+      '@civ-clone/base-strategy-ai': 0.1.0
+      '@civ-clone/base-strategy-terrain-work': 0.1.0
+      '@civ-clone/core-data-object': 0.1.17
+      '@civ-clone/core-game': 0.1.8
+      '@civ-clone/core-pending-effect': 0.1.2
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-rule': 0.1.6
+      '@civ-clone/core-strategy': 0.1.6
+      '@civ-clone/core-unit': 0.1.26
+      '@civ-clone/core-world': 0.1.18
+      '@civ-clone/core-world-path': 0.1.2
+
   '@civ-clone/base-unit-action-bribe-unit@0.1.0':
     dependencies:
       '@civ-clone/core-rule': 0.1.6
@@ -2828,6 +2930,18 @@ snapshots:
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
+
+  '@civ-clone/base-unit-action-explore@0.1.0':
+    dependencies:
+      '@civ-clone/base-strategy-ai': 0.1.0
+      '@civ-clone/base-strategy-explore': 0.1.0
+      '@civ-clone/core-game': 0.1.8
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-rule': 0.1.6
+      '@civ-clone/core-strategy': 0.1.6
+      '@civ-clone/core-unit': 0.1.26
+      '@civ-clone/core-world': 0.1.18
+      '@civ-clone/core-world-path': 0.1.2
 
   '@civ-clone/base-unit-action-fortify@0.1.7':
     dependencies:

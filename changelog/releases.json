@@ -1,4 +1,6 @@
 [
+{"version":"0.1.0@7c9c73a","date":"2026-10-08T19:53:41.000Z","localChanges":["docs: bring the docs up to date with the code, and record where the state rewrite got to"],"externalChanges":{}}
+,
 {"version":"0.1.0@25a3608","date":"2026-10-08T17:21:33.000Z","localChanges":["Entertainers, Tax Collectors and Scientists in your cities can now be women as well as men, like the citizens beside them (closes #334). Import your assets again to see them."],"externalChanges":{"civ1-asset-extractor":{"status":"updated","log":["A sprite in `extract-data.json` can now have an `overlay`: rows of palette indices written over it after it's cut out, `..` keeping the original pixel. New sprites can then be made from the player's own `SP257.PIC` while the repo holds only the changed pixels.","`city/people_tax_f`, `city/people_science_f` and `city/people_luxury_f` are the Tax Collector, Scientist and Entertainer as women, drawn like the existing `_f` citizens (civ-clone/web-renderer#334)."]}}}
 ,
 {"version":"0.1.0@1dbec5b","date":"2026-10-08T16:20:38.000Z","localChanges":["chore: performance marks for loading a game (#325)"],"externalChanges":{}}
