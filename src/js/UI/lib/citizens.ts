@@ -16,20 +16,35 @@ export const citizenMoods = (city: {
   citizens?: { moods: CitizenMood[] };
 }): CitizenMood[] => city.citizens?.moods ?? [];
 
-// The sprite for each mood, in order, with the face (woman or man) taken from the seed's mask.
-export const citizenSprites = (
-  moods: CitizenMood[],
-  seed: string
-): string[] => {
+// Whether the `index`th citizen drawn for `seed` is a woman.
+const isWoman = (seed: string, index: number): boolean => {
   const mask = citizenMask(seed);
 
-  return moods.map(
-    (mood, index) =>
-      `./assets/city/people_${mood}_${
-        ['f', 'm'][parseInt(mask[index % mask.length], 10)]
-      }.png`
-  );
+  return mask[index % mask.length] === '0';
 };
+
+// The sprite for each mood, in order, with the face (woman or man) taken from the seed's mask.
+export const citizenSprites = (moods: CitizenMood[], seed: string): string[] =>
+  moods.map(
+    (mood, index) =>
+      `./assets/city/people_${mood}_${isWoman(seed, index) ? 'f' : 'm'}.png`
+  );
+
+/**
+ * The sprites to try for each specialist (by its sprite name, e.g. `tax`), carrying the seed's mask on after the
+ * `workers` (#334). A woman's sprite comes with the man's after it, for assets imported before the women were added.
+ */
+export const specialistSprites = (
+  sprites: string[],
+  workers: number,
+  seed: string
+): string[][] =>
+  sprites.map((sprite, index) => [
+    ...(isWoman(seed, workers + index)
+      ? [`./assets/city/people_${sprite}_f.png`]
+      : []),
+    `./assets/city/people_${sprite}.png`,
+  ]);
 
 /**
  * The citizens in words, for a screen reader, since they're otherwise only drawn as faces (#272): "3 happy, 2 content,

@@ -7,7 +7,11 @@
 // Keys 1–8 pick a specialist in the order the roster draws them (#107).
 // The citizens drawn are the moods the engine sends, in order, one sprite each.
 
-import { citizenMoods, citizenSprites } from '../../src/js/UI/lib/citizens';
+import {
+  citizenMoods,
+  citizenSprites,
+  specialistSprites,
+} from '../../src/js/UI/lib/citizens';
 import {
   orderSpecialists,
   specialistForKey,
@@ -238,6 +242,50 @@ expect(
 );
 
 expect('no moods give no sprites', citizenSprites([], 'Rome'), []);
+
+// Specialists carry on the city's pattern of women and men after the workers (#334).
+const specialistSeeds = ['Rome', 'Babylon', 'Zimbabwe', 'Thebes'],
+  face = (path: string) => (/_f\.png$/.test(path) ? 'f' : 'm');
+
+specialistSeeds.forEach((seed) => {
+  const sprites = specialistSprites(['tax', 'science', 'luxury'], 3, seed);
+
+  expect(
+    `${seed}: each specialist is the face a worker in their place would have`,
+    sprites.map(([path]) => face(path)),
+    citizenSprites(new Array(6).fill('content'), seed).slice(3).map(face)
+  );
+  expect(
+    `${seed}: every specialist falls back to the man's sprite`,
+    sprites.map((paths) => paths[paths.length - 1]),
+    [
+      './assets/city/people_tax.png',
+      './assets/city/people_science.png',
+      './assets/city/people_luxury.png',
+    ]
+  );
+});
+
+expect(
+  'specialists are drawn as both women and men',
+  [
+    ...new Set(
+      specialistSeeds.flatMap((seed) =>
+        specialistSprites(new Array(8).fill('tax'), 0, seed).map(([path]) =>
+          face(path)
+        )
+      )
+    ),
+  ].sort(),
+  ['f', 'm']
+);
+expect(
+  "a woman specialist is tried before the man's sprite",
+  specialistSprites(new Array(8).fill('science'), 0, 'Rome').find(
+    (paths) => paths.length === 2
+  ),
+  ['./assets/city/people_science_f.png', './assets/city/people_science.png']
+);
 
 if (failures.length) {
   process.stderr.write(

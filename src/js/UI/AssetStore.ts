@@ -319,6 +319,18 @@ export class AssetStore extends Store<{
     return this.#cachedAssets.get(path)!;
   }
 
+  // The first of `paths` that has been imported, or the last of them if none has. Lets a sprite added to the
+  //  extractor fall back to an older one for assets imported before it existed.
+  async firstImported(paths: string[]): Promise<string> {
+    for (const path of paths) {
+      if (await this.get(path)) {
+        return path;
+      }
+    }
+
+    return paths[paths.length - 1];
+  }
+
   async getImage(path: string): Promise<HTMLImageElement> {
     if (!this.#cachedImages.has(path)) {
       const asset = await this.get(path),
