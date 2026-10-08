@@ -165,3 +165,15 @@ each of which used up a `DataObject` id. The engine-state checksums at turns 1,
 identical once ids are renumbered in order of first appearance. The DTO hashes
 at turns 1, 10 and 50 move, and the turn-50 DTO is a little smaller (shorter
 ids).
+
+## Accepted change: yields ids (#315)
+
+civ1-city-happiness's turn-start rule now works out each city's yields once
+for both its disorder and its celebration checks, and simple-ai-client's
+disorder, martial-law and purchase checks share one `City#yields()` result
+where they asked for it again with nothing changed in between. Each call
+creates `Yield`s, which used up `DataObject` ids. The engine-state checksums at
+turns 1, 10 and 50 are unchanged, and the turn-50 DTOs dumped before and after
+are identical once ids are renumbered in order of first appearance. The DTO
+hashes at turns 10 and 50 move, and the turn-50 DTO is a little smaller
+(shorter ids).
