@@ -6,6 +6,22 @@ verify, then bump, publish and update usage — rather than replacing it.
 
 Read this before starting any stage in [`05-engine-plan.md`](./05-engine-plan.md).
 
+> **Status, 2026-10-08.** All eight stages were published this way, and the
+> workflow is still how engine changes reach the game. `tools/civ` now has
+> thirteen commands, not the five first planned; `tools/civ --help` lists them.
+> Changes since this was written:
+>
+> - **Prefer `civ publish --pending`** over `--wave N`. It publishes every
+>   checkout with unpushed commits or an unpublished version, in dependency
+>   order, with no stage or wave number.
+> - **After a publish, reinstall in full** (see [`civ publish`](#civ-publish)).
+>   `pnpm update '@civ-clone/*'` is no longer recommended anywhere here.
+> - **The workspace overlay was never switched on.** Stage 3 was done with
+>   `civ sync` and a compile mapped onto the renderer's tree;
+>   `tools/pnpm-workspace.stage3.yaml` is still marked not active.
+> - Engine repos' default branch is `master`, not `main`. The gate asks the
+>   remote which it is.
+
 ## The landscape
 
 Measured, not estimated:
@@ -13,7 +29,7 @@ Measured, not estimated:
 | | |
 | - | - |
 | `@civ-clone` packages installed | 325 |
-| Cloned locally today | 9 (`civ1-asset-extractor`, `civ1-city`, `civ1-city-happiness`, `civ1-city-improvement`, `civ1-civilization`, `civ1-diplomacy`, `simple-world-path`, `web-renderer`, `web-renderer-rewrite`) |
+| Cloned locally at the start (now 117 checkouts under `~/Code/civ-clone`) | 9 (`civ1-asset-extractor`, `civ1-city`, `civ1-city-happiness`, `civ1-city-improvement`, `civ1-civilization`, `civ1-diplomacy`, `simple-world-path`, `web-renderer`, `web-renderer-rewrite`) |
 | Contain `#private` fields (Stage 1 surface) | **62** |
 | Total `#private` declarations | **280** |
 | Have `registerRules.ts` (Stage 3 surface) | 17 |
@@ -155,6 +171,21 @@ never hand-edit the derived fields.
 
 Five commands. Put them in `web-renderer/tools/civ` (a Node script with
 subcommands) and extract to their own repo once they stabilise.
+
+> **As built** (still in `web-renderer/tools/civ`, not extracted): `audit`,
+> `clone`, `compile`, `sync`, `watch`, `publish`, `check-dts`, `busy`,
+> `collisions`, `duplicates`, `lint`, `stale` and `typecheck`. Each has a
+> section below except these three:
+>
+> - `civ check-dts [--baseline | --published] [package…]` — by default, diffs
+>   each checkout's compiled `.d.ts` against the commit before its Stage 1
+>   refactor. `--baseline` snapshots the installed `.d.ts`; `--published`
+>   compares against that snapshot. Fails on any change beyond an added
+>   `private _x;`.
+> - `civ collisions` — finds classes that declare a private field an ancestor
+>   also declares, which becomes TS2415 once both are `private _x`.
+> - `civ typecheck [package…]` — see
+>   [A package cannot verify a change it is the base class of](#a-package-cannot-verify-a-change-it-is-the-base-class-of).
 
 ### `civ audit`
 
@@ -314,11 +345,22 @@ tree, and that produced a false "verified" for half of Stage 3 — see
 `civ sync` on file-change. Pair with `npm run watch` in `web-renderer` for a
 sub-second loop from editing `core-city/City.ts` to seeing it in the browser.
 
-### `civ publish --wave N [--dry-run]`
+### `civ publish`
 
-For each package in the wave, in manifest order:
+```
+civ publish --pending [--dry-run] [--otp CODE]
+civ publish --wave N [--stage N] [--dry-run] [--otp CODE]
+```
 
-1. Refuse if the working tree is dirty or the branch is not `main`.
+`--pending` is the one to use: it asks the checkouts what is unpublished rather
+than reading waves from the manifest, which drops a stage's packages once its
+work lands. `--stage` defaults to 1. `--otp` passes a 2FA code, which covers
+one publish.
+
+For each package, in dependency order:
+
+1. Refuse if tracked files are modified or the branch is not the repo's
+   default (`master` for every engine repo).
 2. `npm run ts:compile` — the published artifact needs current `.js`/`.d.ts`.
 3. `npm run prettier:format` then fail if the tree changed (formatting should
    already be committed).
@@ -352,6 +394,14 @@ re-resolved one.
 
 `--dry-run` performs 1–4 and prints the version bumps.
 
+> **As built:** step 3 formats and then checks the committed compiled output
+> was built from the committed source, rather than failing on any diff. Steps
+> 5–7 differ for the GitHub-resolved packages (`civ1-*`, `simple-*`): they are
+> not on npm, so the release is the version bump and the push. The `civ
+> duplicates` and `civ lint` refusals described in this document run on the
+> `--pending` path only. And `--wave` still prints `pnpm update '@civ-clone/*'`
+> as its next step when it finishes; use the reinstall above instead.
+
 **Cycle handling.** `core-player`, `core-world` and `core-world-generator` are
 one wave-4 unit. Publish all three back to back with no range changes; since each
 already satisfies `^0.1.0`, order within the group does not matter. `civ publish`
@@ -369,12 +419,13 @@ edit ~/Code/civ-clone/core-city/City.ts
   → commit in core-city
 ```
 
-Per wave:
+Per wave (or per `--pending` run):
 
 ```
-civ publish --wave N --dry-run
-  → civ publish --wave N
-  → pnpm update '@civ-clone/*'  in web-renderer
+civ publish --pending --dry-run
+  → civ publish --pending
+  → full reinstall in web-renderer, then civ duplicates / stale / typecheck
+    (see `civ publish` above — not `pnpm update '@civ-clone/*'`)
   → npm test && npm run build:dev
   → smoke checklist
   → commit the lockfile in web-renderer
@@ -394,7 +445,7 @@ acceptance criteria. These apply to every wave regardless.
 - Formatting produces no diff
 
 **Per wave, after publish**
-- `pnpm update` resolves with no peer warnings
+- The reinstall resolves with no peer warnings
 - `web-renderer` builds
 - The conformance suite passes (below)
 - Smoke: start a game, move a unit, found a city, end turn, open the city
@@ -718,6 +769,10 @@ Being honest about the residual cost:
 
 Set aside for now, but the reasoning is worth recording because Stage 3 is likely
 to make the case for it.
+
+> **Outcome:** not adopted. Stage 3 went through with `civ sync` and a compile
+> mapped onto the renderer's installed tree (`tools/stage3.js`). The overlay
+> file is kept, inactive, at `tools/pnpm-workspace.stage3.yaml`.
 
 ### What it is — and is not
 

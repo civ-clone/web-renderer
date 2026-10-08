@@ -34,14 +34,13 @@ the fingerprinting protection.
 - Some `Civilization`'s colours are terrible.
 - Sometimes the map portal doesn't re-center correctly.
 - Sometimes the `AdjustTradeRates` slider widget doesn't quite work as expected.
-- The game slows down in the later stages when rebuilding the transferred data.
+- In very large late games the other civilizations' turns and loading a save still take a second or two (see #320 and #333).
 
 ## TODO
 
 - Split out the UI functions into separate packages
 - Add the concept of asset-packs so that open source tilesets can be used
 - i18n + l10n
-- Fix the mimimap highlight render position (and have it wrap around)
 
 See also the wider `TODO`s:
 

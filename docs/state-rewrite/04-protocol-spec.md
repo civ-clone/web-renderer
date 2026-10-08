@@ -1,5 +1,7 @@
 # 04 — Transport Protocol
 
+> **Status (2026-10-08):** Protocol v2 was not built. Payloads were reduced by targeted changes instead (#321, #323, #324, #328); see the README's Status section.
+
 Two protocols are described here.
 
 - **v1** is what ships today. Phases 1 to 3 run on it unchanged, through an

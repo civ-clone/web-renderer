@@ -1,5 +1,7 @@
 # 11 — Phase 6: Lifecycle
 
+> **Status (2026-10-08):** Not done. `quit` and `restart` are still sent with nothing receiving them. Save and load shipped through `docs/engine-serialisation/` as real saves, not a replay log. See the README's Status section.
+
 **Goal.** Make `restart` and `quit` work, and build the seams that make save and
 load possible.
 

@@ -4,6 +4,23 @@ The technical design. Assumes the `#private` → `private` migration from
 [`02-design-review.md`](./02-design-review.md) §1 has landed, which is what makes
 the hydrator generic instead of per-class.
 
+> **Status, 2026-10-08.** Implemented in `core-save-game` (Stage 5) and shipped
+> in the game (`b83e1db`, 2026-09-16). The game saves with
+> `save(defaultGame, { name })` in `src/js/Engine/Game.ts` and loads through
+> `src/js/Engine/loadGame.ts`; `src/js/UI/lib/savedGame.ts` handles the file.
+> The shipped format differs from the sketch below in these ways — the type in
+> `core-save-game/SaveGame.ts` is the reference:
+>
+> - `format` is **2**. Format 1 files are refused, because a `$class` of `Gold`
+>   could mean either of two classes. Such classes now carry a `static type`.
+> - `SerialisedEntity` has a `keys` field beside `state` (see
+>   [What `inject` has to do](#what-inject-has-to-do-that-this-design-missed)).
+> - There is **no `pendingEffects` field.** A `PendingEffect` is an ordinary
+>   entity in the `pendingEffects` registry. Older files that carry
+>   `"pendingEffects": []` still load.
+> - An optional `cityNames` field records the city names already taken (#120).
+> - Files are gzipped (`.json.gz`) where the browser has `CompressionStream`.
+
 ## Why this design and not the other one
 
 Two designs were viable, and the `#private` decision picks between them:
@@ -114,6 +131,8 @@ export type SaveGame = {
   /** Serialisable continuations — see "Pending effects". */
   pendingEffects: Array<{ handler: string; data: Record<string, string> }>;
 };
+// As shipped: format 2, no `pendingEffects`, plus `keys` per entity and an
+// optional `cityNames`. See the status note at the top.
 
 export type SerialisedEntity = {
   id: string;
@@ -194,6 +213,12 @@ export const hydrate = (save: SaveGame, game: Game): void => {
 ```
 
 Six passes, but only passes 1 and 2 touch entity data and both are flat loops.
+
+> **As shipped**, pass 3 is `game.injectAll`, which also runs `onHydrated` hooks
+> and checks no transient field is left `undefined`. Pass 5 rebuilds each unit's
+> `Busy` rule. There is no pending-effects pass: effects arrive with the other
+> entities. Claimed civilisations and city names are reclaimed last. The turn
+> is restored from `meta.turn`.
 
 **Allocate-then-fill removes the topological ordering requirement entirely.**
 [`01-constraints.md`](./01-constraints.md) §5 established that the graph is a DAG
@@ -356,6 +381,13 @@ save/load forces a design change rather than merely benefiting from one.
 Until Stage 6 lands, `hydrate` should **refuse** a save whose
 `pendingEffects` is non-empty rather than dropping them silently.
 
+> **Done differently (Stage 6).** `PendingEffect` lives in
+> `core-pending-effect` and takes `(handler, target, data)`: `target` is the
+> entity the effect is owed to, saved as a `$ref`. There is no trigger field;
+> an ordinary rule decides when to discharge it. Effects are saved as entities,
+> so the separate field and the refusal are gone. Delayed unit actions use it
+> as well as Darwin's Voyage.
+
 ## Compatibility
 
 `save.engine.plugins` records every loaded package and its exact version.
@@ -379,6 +411,10 @@ const assertCompatible = (save: SaveGame, game: Game): void => {
   }
 };
 ```
+
+As shipped, the check compares `save.format` with `FORMAT` (2), reads the
+loaded plugins from `game.engine.plugins()`, and emits
+`save:version-drift` on the engine.
 
 Three tiers, deliberately:
 
@@ -497,3 +533,11 @@ half-loaded game at the renderer.
 
 Every one of these needs the deterministic RNG from Stage 2, which is why it
 sequences before the save work.
+
+> **Where they live now.** Round-trip identity and no-op suppression:
+> `npm run test:save` (`tests/engine/save.ts`). Replay equivalence:
+> `npm run test:load`, which saves in one process, loads through the game's own
+> load path in a second, and checks the loaded game plays on to the same state
+> and next random draw as one that never stopped, on six seeds (#17). It loads
+> into `defaultGame` in a fresh process rather than into a new `Game`, because
+> plugins still register their rules when imported.

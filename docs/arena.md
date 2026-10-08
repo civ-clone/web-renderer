@@ -62,6 +62,10 @@ After bundling, the runner reads esbuild's metafile and refuses to play if
 any package is bundled from two directories, if the installed
 `simple-ai-client` is in the bundle, or if either variant is missing.
 
+This means the arena can't run from a git worktree whose `node_modules` is a
+symlink to another checkout's: every package is bundled twice, once through
+each path, so the check refuses (#240, open).
+
 ## Seats and seeds
 
 In game `g`, seat `s` is the candidate if `(g + s) % 2 == 0`. `--games N`

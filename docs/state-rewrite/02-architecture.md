@@ -1,5 +1,7 @@
 # 02 — Target Architecture
 
+> **Status (2026-10-08):** This target design was not built. Its per-patch cost goal was met by `IncrementalReconstituter` (#322, #327) instead of a normalised store; see the Status section of the README.
+
 The design being built. Every piece here exists to remove a specific root cause
 from [`01-diagnosis.md`](./01-diagnosis.md); none of it is speculative.
 

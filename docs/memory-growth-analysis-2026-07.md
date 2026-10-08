@@ -15,6 +15,40 @@ continued long-session growth.
 Findings are ordered by expected impact. Each includes the mechanism, evidence,
 a proposed fix, and rough effort/risk.
 
+## Status (2026-10-08)
+
+The findings below are kept as written. Checked against the code on
+2026-10-08, of what was still open in July:
+
+- **B2, viewport-sized main-portal layers: fixed** in 4880639 (#7), after the
+  static layers were merged in b13eab8 and the minimap given its own layer in
+  7e1f687 (#53).
+- **C5, per-draw cloning in the render hot path: fixed.** `getPreloadedImage`
+  returns the preloaded element rather than a clone (c87448f, #6), the blink
+  tick leaves the map alone when no unit is blinking (687ab36, #45), and a
+  blink composites only the active unit's tile (4880639, #7).
+- **C2, full-graph reconstitution per patch: largely fixed**, though not as
+  proposed. Rendering is coalesced to one run a frame (cc4a87d), and so is the
+  rebuild while waiting for the other civilizations (b00c490, #61). During
+  your own turn the rebuild still runs on every patch, so that multi-move
+  units can move consecutively, but a move now sends one patch rather than
+  two (1e8fd07, #321), and `IncrementalReconstituter` rebuilds only the
+  objects a patch changed (e70f65a, #322; f5633a0, #327). Patches are smaller
+  too (4ae9bbd, #323; 4732149, #324; 9ae604f, #328). Moving the rebuild into
+  a worker is not done.
+- **A3, backend `remove` patches: still open**, as a question in #68. No
+  backend code sends a `remove` patch; the commented-out one in the
+  `city:captured` handler was dropped in 2315225. The prune is unchanged apart
+  from handing the ids it removes to `IncrementalReconstituter`.
+- **D1, the restart flow: still unwired.** The backend still sends `restart`
+  on the human's defeat with no frontend receiver, and `quit` has no backend
+  receiver. #176 plans to replace `restart` with a `gameOver` message.
+- **D3 / A4, prompt-id routing for `chooseFromList`: still open.** A
+  superseded listener is still disposed rather than responses being routed by
+  prompt id.
+- **C4** changed again after July: notifications and patches no longer send
+  the whole known world (97140f2, #130).
+
 ## Status update (2026-07-01)
 
 Implemented the same day as the analysis (see per-finding status notes and the
@@ -236,6 +270,9 @@ heap high-water marks elevated, and make the leaks above bite sooner.
   - Longer term (rewrite direction already documented): normalized reactive store
     with selectors, avoiding whole-graph rebuilds entirely; or move reconstitution
     into a worker (existing TODO).
+- **Status: largely fixed by 2026-10-08** — see the status note at the top.
+  The rebuild is incremental (#322, #327) and a move sends one patch (#321);
+  it is not in a worker.
 
 ### C3. `DataObserver` stacks one-shot handlers — components rebuild N times per batch
 
@@ -285,6 +322,8 @@ heap high-water marks elevated, and make the leaks above bite sooner.
     `renderUnit` — can composite onto a scratch canvas instead).
   - Restrict the blink-tick render to the active-unit layer/viewport rather than
     a full portal composite.
+- **Status: fixed 2026-09-22** — #6 (c87448f), #45 (687ab36) and the blink
+  composite in 4880639 (#7).
 
 ---
 
@@ -318,8 +357,8 @@ heap high-water marks elevated, and make the leaks above bite sooner.
 | 5 | B1 city mini-map canvas sizing/reuse | Medium | Medium | Removes ~160 MB/open canvas spikes | ✅ 2026-07-01 |
 | 6 | C4 filtered notification payloads | Small | Low | Shrinks transport payload churn | ✅ 2026-07-01 |
 | 7 | A4 `receiveOnce` disposers + `takeTurn` cleanup | Medium | Medium | Prevents listener stranding/double-processing | ✅ 2026-07-01 |
-| 8 | A3 backend `remove` patches + adaptive prune | Medium | Medium | Keeps object map bounded without cliff-edge prunes | ◐ prune part done |
-| 9 | C2 coalesced reconstitution | Medium–large | Medium | Cuts steady-state allocation rate substantially | Open |
+| 8 | A3 backend `remove` patches + adaptive prune | Medium | Medium | Keeps object map bounded without cliff-edge prunes | ◐ prune part done; `remove` patches open (#68) |
+| 9 | C2 coalesced reconstitution | Medium–large | Medium | Cuts steady-state allocation rate substantially | Largely fixed 2026-10-08 (#321, #322, #327) |
 | 10 | B2 viewport-sized layers | Large | High | Lowers baseline; part of rewrite track | Fixed 2026-09-22 |
 
 Items 1–4 are each a few lines and independently verifiable; they were landed

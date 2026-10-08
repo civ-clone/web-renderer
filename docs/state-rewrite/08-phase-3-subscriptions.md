@@ -1,5 +1,7 @@
 # 08 — Phase 3: Subscriptions and the `Renderer` Split
 
+> **Status (2026-10-08):** Not started, and still the main open piece. This design assumes the Phase 1 store, which was never built, so it needs re-planning on top of `IncrementalReconstituter`. See the README's Status section.
+
 **Goal.** Remove the DOM `CustomEvent` plumbing, make each panel update only when
 its own data changes, and break `Renderer.ts` into testable modules.
 

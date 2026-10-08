@@ -1,5 +1,7 @@
 # 06 — Phase 1: The Store, in Shadow
 
+> **Status (2026-10-08):** Superseded: no shadow store was built. See the README's Status section.
+
 **Goal.** Build the whole state layer, prove it produces the same data as
 `reconstituteData`, and ship it wired to nothing.
 

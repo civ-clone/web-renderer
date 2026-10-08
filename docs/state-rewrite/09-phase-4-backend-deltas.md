@@ -1,5 +1,7 @@
 # 09 — Phase 4: Backend Deltas
 
+> **Status (2026-10-08):** Partly met by other means: no v2 protocol, but payloads were cut by #321, #323, #324 and #328. See the README's Status section.
+
 **Goal.** Stop sending a full snapshot of every city and every unit on every
 turn and after every action.
 

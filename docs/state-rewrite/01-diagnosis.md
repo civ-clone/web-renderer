@@ -1,5 +1,7 @@
 # 01 — Diagnosis
 
+> **Status (2026-10-08):** The diagnosis was correct and its main finding, the whole-graph `reconstituteData` on every patch, has been fixed by `IncrementalReconstituter` (#322, #327). Line numbers and measurements are from 2026-08-31.
+
 What is actually wrong with the current renderer, with evidence. Read this
 before touching anything; several of the "obvious" fixes are aimed at the wrong
 layer.

@@ -1,5 +1,7 @@
 # 12 — File Migration Map
 
+> **Status (2026-10-08):** This map was not followed and its line counts date from 2026-08-31. See the README's Status section for what happened instead.
+
 Every TypeScript file in `src/js/`, with what happens to it and when. Use this
 to check nothing was forgotten, and to answer "does my change to X belong in
 this phase?" without re-deriving it.

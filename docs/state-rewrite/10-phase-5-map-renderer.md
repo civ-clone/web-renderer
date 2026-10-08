@@ -1,5 +1,7 @@
 # 10 — Phase 5: The Map Renderer
 
+> **Status (2026-10-08):** Done in substance by `4880639` (viewport-sized layers), `7e1f687` (minimap layer) and `74773f1`; not with the `StaticBuffer`/`TilePainter` design. See the README's Status section.
+
 **Goal.** Replace twelve world-sized canvases with one static viewport buffer
 plus direct dynamic drawing. Cut the canvas baseline from roughly 200 MB to
 under 30 MB and stop the 500 ms blink tick compositing the whole world.

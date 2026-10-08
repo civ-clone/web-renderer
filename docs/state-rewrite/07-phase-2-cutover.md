@@ -1,5 +1,7 @@
 # 07 — Phase 2: Cutover
 
+> **Status (2026-10-08):** Superseded by `IncrementalReconstituter` (#322, #327); `reconstituteData` remains as its test oracle. See the README's Status section.
+
 **Goal.** Delete `reconstituteData` from the runtime. Components read live views
 instead of a denormalised snapshot.
 
