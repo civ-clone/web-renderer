@@ -1,5 +1,7 @@
 # 05 — Phase 0: Foundations
 
+> **Status (2026-10-08):** Done in substance, not as written: the test suite, conformance fixture, `bench.js` and performance marks (#325) exist; recording, replay fixtures, `seedRandom` and full `tsconfig` coverage do not. See the README's Status section.
+
 **Goal.** Make the rest of the work verifiable. Nothing here changes runtime
 behaviour; everything here is what lets later phases prove they did not break
 anything.

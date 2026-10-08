@@ -1,13 +1,18 @@
 # web-renderer Documentation
 
-This folder documents the current implementation of `@civ-clone/web-renderer` to support a full rewrite.
+This folder documents the current implementation of `@civ-clone/web-renderer`. The descriptions of the current system were checked against the code on 2026-10-08.
 
 ## The rewrite plan
 
 The plan for converting the renderer to a state-based architecture lives in
-[`state-rewrite/`](./state-rewrite/README.md). Start there if you are picking up
-that work; the documents below are the description of the *current* system that
-it builds on.
+[`state-rewrite/`](./state-rewrite/README.md). It was not followed as written:
+most of its performance goals were met by smaller changes instead, and its
+README's Status section says what is left. Read that before any of the phase
+documents.
+
+The engine save/load work, which changed the `@civ-clone/*` packages as well as
+this repo, is planned and recorded in
+[`engine-serialisation/`](./engine-serialisation/README.md).
 
 ## Recommended reading order
 
@@ -24,6 +29,12 @@ it builds on.
 11. [`ui-stress-harness.md`](./ui-stress-harness.md)
 12. [`performance-review-2026-06.md`](./performance-review-2026-06.md)
 13. [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md)
+14. [`arena.md`](./arena.md)
+
+The two dated reports (12 and 13) keep their original findings, with a status
+note at the top. Outstanding work is listed in [`TODO.md`](./TODO.md) and
+[`TODO.memory-performance.md`](./TODO.memory-performance.md), and tracked in
+GitHub issues.
 
 ## Scope and intent
 
@@ -37,7 +48,7 @@ it builds on.
 - Backend runs inside a Web Worker and hosts game engine/client logic.
 - Frontend owns DOM, canvas rendering, input handling, and interaction windows.
 - Backend sends initial game data + incremental patches over a typed message transport.
-- UI reconstructs object graphs from plain objects and re-renders from that state.
+- UI rebuilds live objects from the plain objects, refilling only what a patch changed (`IncrementalReconstituter`), and re-renders at most once per frame.
 
 ## Useful entry points
 

@@ -6,6 +6,7 @@
 - Styles: `sass` via `esbuild-sass-plugin`
 - Language: TypeScript
 - Formatter: Prettier
+- Package manager: pnpm (settings in `pnpm-workspace.yaml`, lockfile `pnpm-lock.yaml`)
 
 ## Bundle outputs
 
@@ -15,12 +16,19 @@
 - `src/js/backend.ts` -> `dist/backend.js`
 - `src/js/frontend.ts` -> `dist/frontend.js`
 
+`frontend.js` starts `dist/backend.js` as a Web Worker (`src/js/frontend.ts`), so both
+have to be served from `dist/`.
+
 Notable options:
 
 - `bundle: true`
+- `keepNames: true`
 - `sourcemap: true`
 - `minify: true` by default (`dev` arg disables minify)
 - Optional watch mode (`watch` arg)
+- Loaders: `.png` and `.svg` are inlined as data URLs, `.jpg` is emitted as a file
+  named by content hash (the main menu background, `main-menu-bg-<hash>.jpg`), and
+  `.build` is loaded as text
 
 ## npm scripts (from `package.json`)
 
@@ -33,21 +41,30 @@ Notable options:
   - Prettier format write
   - generate `build.json` version string
 - `watch`: esbuild watch mode
+- `ts:compile`: `tsc --build tsconfig.json`, a typecheck of `src/`
+- `prettier:format` / `prettier:check`: Prettier over `src/**/*.{ts,scss}`
+- `test`: generate the import lists, `ts:compile`, then the `test:*` suites in turn
+  (each is a script in `tools/`)
+- `arena`: seeded headless games comparing a candidate AI with the baseline (`tools/arena.js`; see [`arena.md`](arena.md))
+- `civ`: the engine multi-repo tool (`tools/civ`), used below
 - `release:changelog`: add release-note entries for every commit since the newest one — see [Releasing](#releasing)
 
 ## Generated files in normal workflow
 
-- `src/js/plugins.ts`
+- `src/js/plugins.ts` (plugin imports and the `plugins` name-to-version manifest)
 - `src/js/translations.ts`
 - `build.json`
 
-These are generated from local environment and package set.
+These are generated from local environment and package set, and all are
+git-ignored, as is `dist/`. See
+[`plugin-and-translation-loading.md`](plugin-and-translation-loading.md).
 
 ## Serving the app
 
 From repository context:
 
-- App shell expects `dist/app.css` and `dist/frontend.js` from `index.html`.
+- App shell expects `dist/app.css` and `dist/frontend.js` from `index.html`, and
+  `frontend.js` loads `dist/backend.js` as its worker.
 - `docker-compose.yml` provides an Apache static file container on port `8080`.
 
 ## Releasing
@@ -150,12 +167,13 @@ What an entry contains:
 An entry is built only from git and the lockfile (plus the engine repositories'
 commit logs), so the one the build generated and the one committed later are
 the same bytes. `changelog/<sha>.json` files that already exist are reused, not
-regenerated.
+regenerated, unless `--force` is passed.
 
 Before 2026-09-27 each release had its own `release:` commit carrying the
 entries up to its parent. Those commits stay in the history and in the notes.
 
-`generate-changelog.sh <sha>` still prints a single entry.
+`node generate-changelog.mjs <sha>` prints a single entry, and
+`generate-changelog.sh <sha>` writes it to `changelog/<sha>.json`.
 `generate-changelog-combined.sh` is retired — it rebuilt `releases.json` from
 scratch, which would delete the `0.0.0` entry.
 
@@ -174,7 +192,9 @@ engine commit logs), `npm test`, `npm run build`, then it mirrors `dist/` and `i
 and commits "Updates from build `<sha>` of web-renderer." GitHub Pages serves
 that repository's `master` at the root, with `CNAME` pointing at `civ.one`.
 Watch it with `gh run watch`; it can also be re-run by hand from the Actions tab
-(`workflow_dispatch`).
+(`workflow_dispatch`). Only one deploy runs at a time, and a newer push waits for
+the running one rather than cancelling it. If the built files match what the site
+already has, nothing is committed.
 
 It pushes with a deploy key: the public half is on `civ-clone.github.io` with
 write access ("web-renderer GitHub Actions deploy"), the private half is the
@@ -183,6 +203,7 @@ ed25519 key, replace both, and delete the old deploy key.
 
 It mirrors `dist/` with `rsync --delete`, so superseded hashed assets are
 removed rather than accumulating as they did with `update.sh`'s `cp -R`.
+`CNAME` and `favicon.ico` exist only in the site repository and are left alone.
 
 To look at a build before pushing:
 

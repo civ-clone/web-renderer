@@ -18,7 +18,7 @@ The sampler stores periodic samples (every 2s):
 
 - `timestamp`
 - `turn`
-- `objectCount` (size of frontend object store)
+- `objectCount` (size of frontend object store: the number of keys in the object map, read after each rebuild)
 - `usedJSHeapSize` (if supported by browser)
 
 Implementation:
@@ -62,7 +62,11 @@ In debug mode the sampler is created with a fixed cap of 5,000 samples (hardcode
 - `performance.memory` is Chromium-specific; on unsupported browsers `usedJSHeapSize` will be empty.
 - `objectCount` is still useful cross-browser and should correlate with object-retention regressions.
 - For repeatable comparisons, run similar map settings/player count and automation patterns between builds.
+- `objectCount` drops when the object map is pruned (over 5,000 objects, every 5 turns or after 1.5× growth), so it falls as well as rises.
+- For load time rather than memory, loading a saved game sets the `civ:load-sent`, `civ:game-data-received` and `civ:first-render` performance marks, which `performance.getEntriesByType('mark')` or a DevTools performance recording shows.
 
 ## Next step for full reproducibility
 
 Add deterministic autoplay (or scripted action playback) so each benchmark run follows the same sequence and can be compared across commits.
+
+This is still open for the browser. Headless games are already seeded and repeatable: `npm run test:conformance` plays one against a checksum fixture, and the arena ([`arena.md`](./arena.md)) plays many.

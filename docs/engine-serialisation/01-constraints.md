@@ -1,5 +1,20 @@
 # 01 — Constraints
 
+> **Status, 2026-10-08.** These findings describe the engine *before* the work
+> in [`05-engine-plan.md`](./05-engine-plan.md), all of which is now done. They
+> are kept as the reasoning behind it. What changed since:
+>
+> - §1: `#private` fields are now TypeScript `private` (Stage 1), so generic
+>   hydration works.
+> - §4: Darwin's Voyage is a `PendingEffect` and survives a save (Stage 6). It
+>   was not the only closure: every delayed unit action (building roads,
+>   clearing forest, pillaging and so on) was the same problem, and they are
+>   `PendingEffect`s too. See Stage 6 in `05`.
+> - §7: id counters are saved and restored (`idCounters()` and
+>   `restoreIdCounters()` in `core-data-object`).
+> - §9: all three bugs are fixed. `_additionalData` is gone (Stage 4);
+>   `PlayerWorld` lookups use maps and `entries()` returns a copy (Stage 7).
+
 Eight findings that determine what a serialisation design can and cannot do,
 plus three incidental bugs found while reading.
 Each was verified against the installed packages or with a runnable experiment.

@@ -55,11 +55,11 @@ Keyboard shortcuts (work even when modal dialogs are open):
 - `Alt+Shift+J` - export debug JSON
 - `Alt+Shift+X` - export memory CSV
 
-The harness becomes active once a game has been started and initial `gameData` has been received.
+The harness becomes active once a game has been started and initial `gameData` has been received. Starting it posts a "Stress harness: windows enabled/disabled" notification.
 
 ## What it does
 
-When enabled, the harness:
+When enabled, the harness runs on a 1.2 s tick, taking at most one player action a tick, and:
 
 - cycles viewport focus between active units and cities
 - toggles map overlay visibility modes
@@ -69,15 +69,16 @@ When enabled, the harness:
   - `HappinessReport`
   - `TradeReport`
   - `City`
+  - one window every other tick, closed again after 0.9 s
   - this can be disabled with the `Stress Windows` toggle
 - auto-selects choices in selection/action windows so the game keeps progressing
 - automatically performs deterministic player actions where available:
   - choose research
-  - choose government
-  - choose/change city production
+  - choose government, or start a revolution
+  - choose/change city production (it fetches what the city can build first, as the production picker does)
   - complete production
   - launch spaceship
-  - activate/move/order units
+  - activate/move/order units (attacks, captures and sneak actions are never chosen; a unit's actions are fetched when it is made active, so it acts on a later tick)
   - end turn
 
 Implementation:

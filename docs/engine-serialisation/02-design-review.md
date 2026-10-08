@@ -1,5 +1,20 @@
 # 02 — Design Decisions Worth Reconsidering
 
+> **Status, 2026-10-08.** What became of each item in the ranked table below.
+> Stage numbers refer to [`05-engine-plan.md`](./05-engine-plan.md).
+>
+> | # | Item | Outcome |
+> | - | ---- | ------- |
+> | 1 | `#private` → `private` | **Done** (Stage 1). |
+> | 2 | Singletons → `Game` | **Done** (Stage 3): `core-game` and `civ1-game`. But plugins still register into `defaultGame` when imported, so loading still needs a fresh worker (the page reloads) and a second `Game` in one process has no rules (#248). |
+> | 3 | Identified rules | **Done** for `civ1-city`, `civ1-unit`, `civ1-science` and `civ1-player` (Stage 6). Naming stays optional, and other packages were not part of that stage. `replace`, `disable`, `before` and `after` are in `core-rule`. |
+> | 4 | Declared `process()` semantics | **Not started.** Not part of the engine plan. |
+> | 5 | State/view split | **Half done.** `static transient` and `stateKeys()` (Stage 4) give the state side; there is no `toState()` method. `addKey` and `toPlainObject` are unchanged. |
+> | 6 | `PendingEffect` | **Done** (Stage 6), as `core-pending-effect`. It also carries every delayed unit action, not only Darwin's Voyage. |
+> | 7 | `static type` | **Partly.** `ClassRegistry` refuses one-letter and duplicate names instead (Stage 5). A few classes whose names collide carry a tag. `keepNames: true` is still in `esbuild.js`. |
+> | 8 | Registry indexes | **Partly** (Stage 7). `TransportRegistry` and `PlayerWorld` are indexed; `UnitRegistry` and `CityRegistry` were measured at about 2% and left alone. |
+> | 9 | `AdditionalData` mechanism | **Not started.** The dead field is gone (Stage 4), but `PlayerTile` still installs accessors per instance. |
+
 A review of long-standing decisions in the engine, judged against two goals:
 
 1. **Keep the core idea.** Every game mechanic must stay tweakable, so the engine

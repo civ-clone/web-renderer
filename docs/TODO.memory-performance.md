@@ -1,6 +1,6 @@
 # TODO: Memory and Performance Stabilization
 
-Last updated: 2026-07-01
+Last updated: 2026-10-08
 
 > See `docs/memory-growth-analysis-2026-07.md` for the July 2026 leak analysis
 > and proposed fixes for the remaining long-session memory growth.
@@ -34,10 +34,22 @@ Last updated: 2026-07-01
       5-turn cadence.
   - File: `src/js/UI/Renderer.ts`
 - [ ] Emit backend `remove` patches for destroyed entities (object map
-      self-maintenance).
-- [ ] Coalesce full-graph reconstitution (per frame/turn instead of per patch
-      flush).
-- [ ] Viewport-sized main-portal layer buffers (rewrite track).
+      self-maintenance). Open as a question in #68: whether they are still
+      needed now that #46 turned out to be something else. The frontend applies
+      `remove` patches, but no backend code sends one; the commented-out call in
+      the `city:captured` handler was dropped in 2315225.
+- [x] Coalesce full-graph reconstitution (per frame/turn instead of per patch
+      flush). Done differently from this plan. Rendering runs at most once a
+      frame (cc4a87d). While waiting for the other civilizations the rebuild
+      runs at most once a frame too (b00c490, #61). During your own turn it
+      still runs on every patch, because deferring it broke consecutive moves of
+      multi-move units. Instead a move sends one patch rather than two (1e8fd07,
+      #321), and `IncrementalReconstituter` rebuilds only the objects a patch
+      changed rather than the whole graph (e70f65a, #322; f5633a0, #327).
+  - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/IncrementalReconstituter.ts`
+- [x] Viewport-sized main-portal layer buffers (rewrite track). Done in
+      4880639 (#7): every layer is the size of the portal, 137.4 MB → 40.0 MB of
+      layer canvas on an 80×60 world at scale 2.
 
 ## P0 - High priority
 
@@ -71,10 +83,20 @@ Last updated: 2026-07-01
 
 - [x] Audit dynamic transport channels not in `TransportDataMap` (`restart`, `quit`) and align protocol typing.
    - Files: `src/js/Engine/Transport.ts`, `src/js/Engine/DataTransferClient.ts`, `src/js/UI/components/MainMenu.ts`
+   - Typed, but still unwired: nothing on the frontend receives `restart`, and
+     nothing in the worker receives `quit`. #176 plans to replace `restart`
+     with a `gameOver` message.
 - [ ] Measure prune cadence impact on frame time in late game and tune thresholds.
    - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/pruneObjectMap.ts`
+   - Still open. The prune now runs in `updateState()` and hands the ids it
+     removed to `IncrementalReconstituter.forget()`; the thresholds are
+     unchanged (over 5,000 objects, every 5 turns or on 1.5× growth). #68
+     suggests measuring this before deciding on `remove` patches.
 - [ ] Consider moving reconstitution and patch application off main thread.
-   - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/reconstituteData.ts`
+   - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/IncrementalReconstituter.ts`
+   - Still open, with no issue of its own. Incremental rebuilding (#322) made
+     each rebuild much smaller. #333 covers the initial game data being
+     rebuilt twice on load.
 - [x] Add transport `receive` disposer support (or equivalent unsubscribe API) to prevent listener stacking.
    - Files: `src/js/Engine/ParentTransport.ts`, `src/js/Engine/WorkerTransport.ts`, `src/js/Engine/Transport.ts`
    - Change: `receive()` now returns a `TransportDisposer` function that removes the listener.
@@ -85,6 +107,8 @@ Last updated: 2026-07-01
 - [x] Add optional bounded sample mode to memory testbed.
    - File: `src/js/UI/lib/memoryTestbed.ts`
 - [ ] Promote local-player automation (`automatePlayer`) to a general game option (Game Options UI + persisted option flow).
+   - Still open, with no issue. It is only reachable through `?debug=1`, and
+     no game option is kept between page loads yet.
    - Files: `src/js/UI/components/GameOptions.ts`, `src/js/UI/GameOptionsRegistry.ts`, `src/js/UI/Renderer.ts`, `src/js/Engine/Game.ts`
 
 ## Memory testbed
@@ -99,3 +123,5 @@ Last updated: 2026-07-01
   - Usage: open with `?debug=1` (sampler, stress runner and debug panel are all enabled by the single `debug` param).
 - [ ] Add scripted scenario seeding / deterministic autoplay for cross-build reproducibility.
   - Candidate: seedable world/game configuration + repeatable action ordering across engine clients.
+  - Still open for the browser. Headless games are seeded and repeatable:
+    `npm run test:conformance` and the arena (`docs/arena.md`) play them.

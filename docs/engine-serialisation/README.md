@@ -2,6 +2,12 @@
 
 Can the civ-clone engine be given save/load, and what would it take?
 
+> **Status, 2026-10-08.** All eight stages of
+> [`05-engine-plan.md`](./05-engine-plan.md) are done, and save and load ship in
+> the game (`b83e1db`, 2026-09-16). What is still open is listed under
+> [What is left](#what-is-left). The rest of this README is the original study;
+> where the shipped design differs, a note says so.
+
 ## Verdict
 
 **Yes, and the "rehydrate entities and populate registries" instinct is right —
@@ -48,10 +54,34 @@ eight others against the goal of keeping every mechanic tweakable.
 | 1 `#private` → `private` | **Done** | All 62 packages published and pushed across twelve waves. Verified end to end: `web-renderer` reinstalled from the registry resolves all 62 at their new versions, and the conformance checksums are unchanged against the published artifacts. |
 | 2 Seeded, injectable RNG | **Done** | New `core-random` package plus 18 converted; all published. The engine no longer reaches `Math.random` — proven at runtime, not by grep: the conformance suite counts calls to it and reads 0. Checksums unchanged. |
 | 3 `Game` context | **Done** | `core-game` (43 registries, turn, year, engine, rng) and `civ1-game` for the ruleset's two. All 17 `registerRules.ts` migrated to `register(game)` and published. Two `Game`s in one process share nothing; checksums unchanged. |
-| 4–7 | Not started | |
+| 4 `transient` declarations | **Done** | 29 classes across 24 packages declare `static transient`, derived by `tools/codemod/transient-fields.js` and driven by `tools/stage4.js`. Checked by `npm run test:transient`. There is no `toState()` method: state is `DataObject.stateKeys()`, every field not in `allTransient()`. |
+| 5 `core-save-game` | **Done** | `save`, `hydrate` and the format. Round trip in `npm run test:save`; load in a second process and replay equivalence across six seeds in `npm run test:load` (#17, closed). |
+| 6 Rule identity, `PendingEffect` | **Done** | Named rules and `replace`/`disable`/`before`/`after` in `core-rule`; `core-pending-effect`; delayed actions and Darwin's Voyage survive a save. Gated by `civ busy` and `civ lint`. |
+| 7 Registry indexes | **Done** | `TransportRegistry` and `PlayerWorld` indexed. `UnitRegistry`/`CityRegistry` indexes were measured and not done. Rule dispatch was the real cost and was fixed separately (#16). |
+| Save/load in the game | **Shipped** | `b83e1db` (2026-09-16). Saves download as `.json.gz` where the browser can compress; loading reloads the page into a fresh worker — see `src/js/UI/lib/savedGame.ts` and `src/js/Engine/loadGame.ts`. |
 
-The renderer plan follows once `05` is agreed; it consumes Stage 4's `toState()`
-and Stage 5's save format, so it is not independent of these.
+No separate renderer plan was written. The save format is the one in
+[`03-save-format.md`](./03-save-format.md), as amended there.
+
+## What is left
+
+- **Plugins still register their rules into `defaultGame` when imported.**
+  Stage 3 gave every plugin a `register(game)`, but the generated plugin list
+  only imports them. So a game is always loaded into `defaultGame`, in a fresh
+  worker, and a second `Game` in one process has no rules. This is also why
+  busy rules rebuilt on load use the singleton registries (#248, open).
+- **`static type` tags (§7 of [`02-design-review.md`](./02-design-review.md))**
+  are on a handful of classes whose names collide, not all of them.
+  `keepNames: true` is still load-bearing in `esbuild.js`.
+- **Item 4 of [`02-design-review.md`](./02-design-review.md)** (declaring what a
+  rule type's results mean) was never part of the engine plan and has not
+  been started.
+- **`AdditionalData`** still installs accessors per `PlayerTile` instance
+  (item 9 of [`02-design-review.md`](./02-design-review.md)); the dead field
+  that leaked is gone.
+- Related open issues: #89 and #175 (saves do not record the world's grid or
+  new-game options), #118 (event log in saves), #163 (network play and saves),
+  #333 (loading rebuilds the initial game data twice).
 
 ## Decisions taken
 
@@ -105,6 +135,10 @@ dependency between them.
 
 Incidental findings, unrelated to serialisation but worth fixing. Evidence in
 [`01-constraints.md`](./01-constraints.md) §9.
+
+> **Both fixed.** `_additionalData` was deleted in Stage 4. `PlayerWorld` now
+> keeps a `Map` by position and by tile, and `entries()` returns a copy
+> (Stage 7).
 
 - `PlayerTile.#additionalData` is written on every `setAdditionalData()` and
   **never read** — the live values come from the `Object.defineProperty`

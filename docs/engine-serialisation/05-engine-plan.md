@@ -6,6 +6,18 @@ every stage assumes its tooling and its version strategy.
 
 The renderer plan follows separately, once this is agreed.
 
+> **Status, 2026-10-08.** All eight stages are done; each stage's acceptance
+> list below is ticked, and Stage 5's last open criterion, replay equivalence,
+> now passes (#17). Save and load ship in the game (`b83e1db`, 2026-09-16).
+> The stage drivers are `tools/stage1.js` to `tools/stage4.js`; the gates are
+> `tools/civ`, `tools/conformance.js` and the `npm test` suites; timings come
+> from `tools/bench.js`. No separate renderer plan was written.
+>
+> **Still open:** plugins register their rules into `defaultGame` when
+> imported, so a game loads only into `defaultGame` in a fresh worker, and a
+> busy rule rebuilt on load uses the singleton registries (#248). See
+> [Deferred to the renderer plan](#deferred-to-the-renderer-plan) for the rest.
+
 ## Context
 
 Multiplayer is a genuine target, which changes the ordering. Stable identity and
@@ -490,6 +502,10 @@ identically at the commit before the change:
   seeds 1–5 and 11 and fails for 7, so a fixed seed would only freeze a lucky
   one. The test asserts a call order that a random tie-break decides; it needs
   distinct priorities so the tie never arises.
+
+  *Since then:* `StrategyRegistry` no longer draws a random number at all.
+  Equal priorities keep registration order, and the generator argument is
+  accepted and ignored.
 - **`civ1-city-improvement`'s suite fails 2–3 per run** (6 before this stage),
   from two unrelated causes: RNG-dependent build-availability assertions, and
   `WorkedTileRegistry` singleton state leaking between tests — the same
@@ -514,6 +530,10 @@ the one stage where ~45 packages must change coherently and cannot be
 meaningfully tested until they all have; copy-sync means re-syncing dozens per
 attempt. Note the pnpm 10+ `linkWorkspacePackages: false` default recorded there,
 which silently sends pnpm to the registry instead of linking.
+
+> **Not followed.** The overlay was never switched on: Stage 3 used `civ sync`
+> and `tools/stage3.js`, which compiles against a `tsconfig` mapped onto the
+> renderer's installed tree. See "How it was done" below.
 
 ### The change
 
@@ -1033,6 +1053,11 @@ explicit registration for entity classes, keyed by `static type`
 ([`02-design-review.md`](./02-design-review.md) §7 — do this before relying on
 `constructor.name`, or `keepNames: true` becomes load-bearing for saves too).
 
+> **As shipped**, `core-save-game` holds `SaveGame.ts`, `save.ts`,
+> `hydrate.ts`, `encode.ts`, `registerClasses.ts`, `registries.ts` and
+> `gameForLoad.ts`. `ClassRegistry` is in `core-data-object` (below), and the
+> checksum stayed in the renderer, in `tests/engine/lib/checksum.ts`.
+
 Two small upstream changes: `core-data-object` exports id-counter read/restore,
 and `core-engine` exposes the loaded plugin manifest for
 `save.engine.plugins`.
@@ -1087,10 +1112,18 @@ The three tests from [`03-save-format.md`](./03-save-format.md) §Testing:
 - [x] **Round-trip identity** — save, load, save again; byte-identical
       (`tests/engine/save.ts`, 6,500 entities at turn 12; and in
       `core-save-game`'s own tests on a two-entity cycle)
-- [ ] **Replay equivalence** — N turns vs N/2 + save/load + N/2; matching
+- [x] **Replay equivalence** — N turns vs N/2 + save/load + N/2; matching
       checksums
 
-      **Still blocked, and the only Stage 5 criterion that is.** Plugins
+      **Done (#17, closed 2026-09-30).** `npm run test:load` saves in one
+      process and loads in a second through the game's own load path
+      (`src/js/Engine/loadGame.ts`), then checks the loaded game reaches the
+      same state and next random draw as one that never stopped, on six seeds.
+      The last divergence was `core-random`'s `seed()` reporting the clock seed
+      after a `restore` (`4a7d33e`). The blocker below was worked around by
+      loading into `defaultGame` in a fresh process, not removed.
+
+      *Original note:* **Still blocked, and the only Stage 5 criterion that is.** Plugins
       register their rules into `defaultGame` at *import*, so a game built by
       `gameForLoad` has no rules and cannot be played on. Stage 3 built
       `register(game)` for exactly this; `buildPluginList.js` emits bare
@@ -1419,7 +1452,10 @@ product of two tables as 132 rules.
 
 ## Deferred to the renderer plan
 
-Not engine work, listed so nothing is assumed done:
+Not engine work, listed so nothing is assumed done. As of 2026-10-08 only
+save/load UI is done; there is no `toState()` method to build on (Stage 4
+shipped `stateKeys()`), and the renderer's own update path was reworked
+separately.
 
 - Action DTO and `ActionCommand` with `commandId` (rewrite WP-002, WP-008)
 - Snapshot exporter and delta generator (WP-004, WP-005) — these consume Stage 4's
@@ -1427,7 +1463,9 @@ Not engine work, listed so nothing is assumed done:
   real risk in [`../state-rewrite/09-phase-4-backend-deltas.md`](../state-rewrite/09-phase-4-backend-deltas.md)
 - Protocol types package (WP-001)
 - Validation boundary (WP-009)
-- Save/load UI and persistence
+- Save/load UI and persistence — **done** (`b83e1db`, 2026-09-16). A save
+  downloads as a file; loading hands it to a fresh page through IndexedDB
+  (`src/js/UI/lib/savedGame.ts`).
 - `addKey` removal, once the renderer owns its own projection
 
 ## Sequencing

@@ -1,5 +1,7 @@
 # 03 — State Layer Specification
 
+> **Status (2026-10-08):** Not built. Superseded by `IncrementalReconstituter` (#322, #327); see the README's Status section.
+
 Complete specification for `src/js/UI/State/`. Written so it can be typed in.
 Build it in the order given; each file only depends on the ones above it.
 
