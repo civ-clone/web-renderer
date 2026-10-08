@@ -110,10 +110,13 @@ export class World {
     return this.#width;
   }
 
-  setTiles(tiles: Tile[]): void {
-    // The same array when no tile has changed since the last update, as only
-    // what a patch reached is rebuilt (#322).
-    if (tiles === this.#tiles) {
+  // `changed` when the world's tiles may be other tiles than last time, as when
+  //  a patch re-sends the world for a tile newly seen: the list can be the same
+  //  array with new contents. Otherwise the lookup still holds the right
+  //  tiles, as the data keeps one object per tile however often it changes
+  //  (#327).
+  setTiles(tiles: Tile[], changed: boolean): void {
+    if (!changed && tiles === this.#tiles) {
       return;
     }
 
