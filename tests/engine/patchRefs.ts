@@ -6,6 +6,10 @@
 // them; a ref to something it was never sent reconstitutes as `undefined`, and
 // the renderer then trips over the hole (`mandatoryActions` did).
 //
+// It also checks the page is only ever handed the human's own map (#328): `world` is additional data on `Player`, so a
+// rival's `Player` serialised in full brings every tile their civilization knows, and the initial game data did exactly
+// that, as the unit and city stand-ins' `player` and a tile's `workedBy` all reached one.
+//
 // It also checks the payloads stay the size of what changed: a notification or
 // a whole-player patch that carries tiles in full has brought the map along
 // with it, which in a large game took seconds at every turn start (#130).
@@ -31,7 +35,13 @@ const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 60);
 const objectMap: ObjectMap = { hierarchy: {}, objects: {} },
   missing = new Map<string, number>(),
   // What #130 found: payloads that carried every tile the player knows.
-  oversized: string[] = [];
+  oversized: string[] = [],
+  // What #328 found: a `PlayerWorld` that is not the human's, or a `PlayerTile` that is not in it, reachable from the
+  //  root. The first few, with the path that reaches each, so the leak can be found without a debugger.
+  foreignMap = new Map<string, string>();
+
+// The most `PlayerTile`s the root reached after any batch: the human's own known tiles, and nothing else.
+let reachablePlayerTiles = 0;
 
 // What the engine listens for, so a test can ask it something as the UI would, and what it answered (#324).
 const receivers = new Map<string, (...args: any[]) => void>(),
@@ -116,9 +126,14 @@ const checkNotification = ({ hierarchy, objects }: ObjectMap): void => {
 };
 
 // Only refs reachable from the hierarchy matter: that is what `reconstituteData` walks.
-const checkRefs = (): void => {
+//
+// Also where the page's view is checked (#328): it may hold the human's `PlayerWorld` and the `PlayerTile`s in it, and
+//  no other player's. Each ref reached is remembered with the one that led to it, so the path to a leak can be printed.
+const checkRefs = (objectMap: ObjectMap, label = 'patches'): void => {
   const seen = new Set<any>(),
-    visit = (value: any): void => {
+    via = new Map<string, string | null>(),
+    reached: [id: string, type: string][] = [],
+    visit = (value: any, from: string | null): void => {
       if (!value || typeof value !== 'object' || seen.has(value)) {
         return;
       }
@@ -136,15 +151,52 @@ const checkRefs = (): void => {
           return;
         }
 
-        visit(objectMap.objects[ref]);
+        if (!via.has(ref)) {
+          via.set(ref, from);
+
+          const type = objectMap.objects[ref]?._;
+
+          if (type === 'PlayerWorld' || type === 'PlayerTile') {
+            reached.push([ref, type]);
+          }
+        }
+
+        visit(objectMap.objects[ref], ref);
 
         return;
       }
 
-      Object.values(value).forEach(visit);
+      Object.values(value).forEach((child) => visit(child, from));
     };
 
-  visit(objectMap.hierarchy);
+  visit(objectMap.hierarchy, null);
+
+  const worldId = objectMap.objects[humanPlayer!.id()]?.world?.['#ref'],
+    ownTiles = new Set<string>(
+      (objectMap.objects[worldId]?.tiles ?? []).map(
+        (tile: PlainObject) => tile['#ref']
+      )
+    ),
+    pathTo = (id: string): string => {
+      const path: string[] = [];
+
+      for (let at: string | null | undefined = id; at; at = via.get(at)) {
+        path.unshift(at);
+      }
+
+      return path.join(' -> ');
+    };
+
+  reachablePlayerTiles = Math.max(
+    reachablePlayerTiles,
+    reached.filter(([, type]) => type === 'PlayerTile').length
+  );
+
+  reached.forEach(([id, type]) => {
+    if (type === 'PlayerWorld' ? id !== worldId : !ownTiles.has(id)) {
+      foreignMap.set(`${label} ${id}`, `${label}: ${pathTo(id)}`);
+    }
+  });
 };
 
 // What a city can build is not part of the game data (#324): the picker asks for it, and is answered on its own. Every
@@ -416,6 +468,55 @@ const checkUnitActions = (data: PlainObject[]): void => {
   visit(answer.objects);
 };
 
+// A page that loads a game already under way (a saved game, or a reload) is handed everything the player knows at once,
+//  as the initial game data: the one place a rival `Player` went out in full (#328). The live game's own initial data
+//  is sent at turn 1, when nothing is known, so a second client is asked for it at the end, over a transport of its
+//  own, and the result checked as the live game's is. The automated player explores too little to have met anyone in
+//  the turns this runs for, so the map is revealed first (the `RevealMap` cheat), which makes every civilization's
+//  units and cities known, as they are a long way into a game.
+const checkReloadedGame = (): void => {
+  receivers.get('cheat')?.({ name: 'RevealMap' });
+
+  const rivals = unitRegistryInstance
+    .entries()
+    .filter((unit) => unit.player() !== humanPlayer);
+
+  if (rivals.length === 0) {
+    fail('no other player has a unit, so none could be revealed');
+  }
+
+  const reloaded: ObjectMap = { hierarchy: {}, objects: {} },
+    client = new DataTransferClient(
+      humanPlayer!,
+      {
+        receive: () => () => false,
+        send: (channel: string, data: any): void => {
+          if (channel === 'gameData') {
+            // Round-trip, as `postMessage` would.
+            Object.assign(
+              reloaded,
+              JSON.parse(
+                JSON.stringify(
+                  data instanceof DataObject ? data.toPlainObject() : data
+                )
+              )
+            );
+          }
+        },
+      } as any,
+      () => {},
+      () => {}
+    );
+
+  (client as any).sendInitialData();
+
+  if (Object.keys(reloaded.objects).length === 0) {
+    fail('the initial game data of a game under way was never sent');
+  }
+
+  checkRefs(reloaded, 'initial game data');
+};
+
 const transport = {
   receive: (channel: string, handler: (...args: any[]) => void) => {
     receivers.set(channel, handler);
@@ -487,7 +588,7 @@ const transport = {
 
     if (channel === 'gameData' || channel === 'gameDataPatch') {
       batches++;
-      checkRefs();
+      checkRefs(objectMap);
     }
 
     if (channel === 'gameDataPatch') {
@@ -518,6 +619,30 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   stopped = true;
+
+  checkReloadedGame();
+
+  if (foreignMap.size > 0) {
+    console.error(
+      `FAIL patchRefs: the page can reach ${
+        foreignMap.size
+      } PlayerWorld(s) or PlayerTile(s) that are not the player's own (#328), e.g. ${[
+        ...foreignMap.values(),
+      ]
+        .slice(0, 3)
+        .join('; ')}`
+    );
+
+    process.exit(1);
+  }
+
+  if (reachablePlayerTiles === 0) {
+    console.error(
+      "FAIL patchRefs: no PlayerTile was reachable, so none was checked for being the player's own"
+    );
+
+    process.exit(1);
+  }
 
   if (oversized.length > 0) {
     console.error(
@@ -573,7 +698,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
   );
 
   process.exit(0);
