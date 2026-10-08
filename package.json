@@ -114,7 +114,7 @@
     "@civ-clone/core-game": "^0.1.8",
     "@civ-clone/core-game-year": "^0.1.3",
     "@civ-clone/core-goody-hut": "^0.1.6",
-    "@civ-clone/core-player": "^0.1.8",
+    "@civ-clone/core-player": "^0.1.10",
     "@civ-clone/core-player-world": "^0.1.10",
     "@civ-clone/core-registry": "^0.1.6",
     "@civ-clone/core-rule": "^0.1.4",
