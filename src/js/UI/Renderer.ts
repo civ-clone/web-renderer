@@ -53,6 +53,11 @@ import IntelligenceReport from './components/IntelligenceReport';
 import TopCitiesReport from './components/TopCitiesReport';
 import SelectionWindow from './components/SelectionWindow';
 import { chooseUnitAction } from './lib/unitActionPrompts';
+import {
+  UnitActionsRequest,
+  neighbourActions,
+  unitActions,
+} from './lib/unitActions';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
@@ -199,6 +204,10 @@ export class Renderer {
         // window can be skipped — a loaded game is not a new one.
         pendingSave = await takePendingSave(),
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
+        // The worker sends a unit's actions only once asked for them (#323).
+        unitActionsRequest = new UnitActionsRequest((unitId) =>
+          transport.send('unitActions', unitId)
+        ),
         // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
         // layers' active-unit pointers current synchronously, so consecutive
         // moves of a multi-move unit always read the post-move tile. No render.
@@ -226,6 +235,10 @@ export class Renderer {
             lastUnit = unit;
             waitedUnits.delete(unit.id);
           }
+
+          // Every way a unit becomes active comes through here: the next unit after an update, a click, the stack
+          //  window and Wait.
+          unitActionsRequest.activate(unit);
         },
         // Display half: safe to defer/coalesce (canvas composites + unit info).
         renderActiveUnit = (
@@ -1422,9 +1435,11 @@ export class Renderer {
             transportDisposers.push(cancelStateUpdate);
 
             transportDisposers.push(
-              transport.receive('gameData', (data, rawData) =>
-                updateState(rawData as ObjectMap, true)
-              )
+              transport.receive('gameData', (data, rawData) => {
+                unitActionsRequest.dataReceived();
+
+                updateState(rawData as ObjectMap, true);
+              })
             );
 
             transportDisposers.push(
@@ -1513,6 +1528,8 @@ export class Renderer {
 
             transportDisposers.push(
               transport.receive('gameDataPatch', (data: DataPatch[]) => {
+                unitActionsRequest.dataReceived();
+
                 data.forEach((patch) =>
                   Object.entries(patch).forEach(
                     ([key, { type, index, value }]: [
@@ -1691,7 +1708,7 @@ export class Renderer {
 
                   while (actions.length) {
                     const actionName = actions.shift(),
-                      [unitAction] = activeUnit.actions.filter(
+                      [unitAction] = unitActions(activeUnit).filter(
                         (action): boolean => action._ === actionName
                       );
 
@@ -1734,17 +1751,18 @@ export class Renderer {
                 }
 
                 if (key in directionKeyMap) {
-                  const neighbourActions =
-                      activeUnit.actionsForNeighbours[directionKeyMap[key]] ??
-                      [],
+                  const directionActions = neighbourActions(
+                      activeUnit,
+                      directionKeyMap[key]
+                    ),
                     // Taken now: a window below isn't modal, and another unit can be active by the time it's
                     //  answered (#57).
                     unitId = activeUnit.id;
 
-                  if (neighbourActions.length > 0) {
+                  if (directionActions.length > 0) {
                     chooseUnitAction(
                       activeUnit,
-                      neighbourActions,
+                      directionActions,
                       (chosen: UnitAction) =>
                         transport.send('action', {
                           name: 'ActiveUnit',

@@ -2,6 +2,7 @@ import { PopupMenu, PopupMenuAction } from './PopupMenu';
 import { Tile, Unit as UnitData, UnitAction } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
+import { hasUnitActions, unitActions } from '../lib/unitActions';
 import { performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
 
@@ -12,12 +13,18 @@ const buildActions = (
 ): PopupMenuAction[] => {
   let actions: UnitAction[] = [];
 
+  // Not offered anything, not even GoTo, until the unit's actions have arrived (#323): the menu doesn't open, and the
+  //  next long press finds them.
+  if (!hasUnitActions(unit)) {
+    return [];
+  }
+
   if (tile === unit.tile) {
-    actions = unit.actions;
+    actions = unitActions(unit);
   }
 
   const [neighbouringTileDetails] = Object.entries(
-    unit.actionsForNeighbours
+    unit.actionsForNeighbours ?? {}
   ).filter(([, actions]) => {
     const [action] = actions;
 

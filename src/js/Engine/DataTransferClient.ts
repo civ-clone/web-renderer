@@ -111,6 +111,10 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import { intelligenceRows } from './lib/intelligence';
+import {
+  isUnitWithoutActions,
+  unitWithoutActions,
+} from './lib/unitWithoutActions';
 import researchCosts from './AdditionalData/researchCosts';
 import tradeRoutes from './AdditionalData/tradeRoutes';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
@@ -234,6 +238,16 @@ export class DataTransferClient extends Client implements IClient {
         return unknownUnits.get(object);
       }
 
+      // The player's units go out without their actions, but for the one the UI has them for (#323).
+      if (
+        object instanceof Unit &&
+        object.player() === this.player() &&
+        !isUnitWithoutActions(object) &&
+        !this.#sendsUnitActions(object)
+      ) {
+        return localFilter(unitWithoutActions(object));
+      }
+
       if (object instanceof City && object.player() !== this.player()) {
         if (!unknownCities.has(object)) {
           unknownCities.set(object, UnknownCity.fromCity(object));
@@ -289,6 +303,12 @@ export class DataTransferClient extends Client implements IClient {
   //  talks with units met on the way (`canNegotiate`).
   #talks: Promise<void> = Promise.resolve();
   #transport: Transport<TransportDataMap>;
+  // The unit sent with its actions (#323): the one that last acted, or the one the UI last asked about. It is the UI's
+  //  active unit, so its actions go out while it can use them, and the next unit's are asked for when it moves on.
+  #unitWithActions: Unit | null = null;
+  // While a `unitActions` request is answered: the unit asked about goes out with its actions whatever its state, so
+  //  the UI is never left asking again.
+  #answeringUnitActions: Unit | null = null;
 
   constructor(
     player: Player,
@@ -484,6 +504,34 @@ export class DataTransferClient extends Client implements IClient {
           ? this.cityBuildAvailable(cityBuild)
           : { hierarchy: [], objects: {} }
       );
+    });
+
+    // The UI makes a unit active and asks for its actions, which the patches leave out for every other unit (#323). The
+    //  answer is a patch of that unit alone, with its tiles as refs the UI already holds.
+    this.#transport.receive('unitActions', (unitId) => {
+      const [unit] = unitRegistryInstance.getBy('id', unitId);
+
+      if (!unit || unit.player() !== this.player()) {
+        return;
+      }
+
+      this.#unitWithActions = unit;
+
+      this.#dataQueue.update(unit.id(), () => {
+        this.#answeringUnitActions = unit;
+
+        try {
+          return unit.toPlainObject(
+            this.#dataFilter(
+              filterToReference(Player, PlayerWorld, PlayerTile, Tile, City)
+            )
+          );
+        } finally {
+          this.#answeringUnitActions = null;
+        }
+      });
+
+      this.sendPatchData();
     });
 
     // The intelligence report (F3, #58), worked out here for the same reason.
@@ -1568,6 +1616,9 @@ export class DataTransferClient extends Client implements IClient {
 
       const [actionToPerform] = filteredActions;
 
+      // The patch this action sends keeps the unit's actions while it has moves left to use them (#323).
+      this.#unitWithActions = unit;
+
       actionToPerform.perform();
 
       await this.#talks;
@@ -1957,6 +2008,17 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#dataQueue.update(playerTile.id(), () =>
       playerTile.toPlainObject(this.#dataFilter(filterToReference(Player)))
+    );
+  }
+
+  // Only for a unit that can act: one with nothing left to do this turn is listed as an `InactiveUnit`, which the UI
+  //  doesn't read actions from.
+  #sendsUnitActions(unit: Unit): boolean {
+    return (
+      unit === this.#answeringUnitActions ||
+      (unit === this.#unitWithActions &&
+        unit.active() &&
+        unit.moves().value() > 0)
     );
   }
 

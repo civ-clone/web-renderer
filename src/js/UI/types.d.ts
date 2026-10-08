@@ -144,8 +144,9 @@ export interface PlayerTradeRates extends EntityInstance {
 }
 
 export interface Unit extends EntityInstance {
-  actions: UnitAction[];
-  actionsForNeighbours: {
+  // Only for the unit the UI has asked about, usually the active one (#323): read them through `lib/unitActions`.
+  actions?: UnitAction[];
+  actionsForNeighbours?: {
     [key: string]: UnitAction[];
   };
   active: boolean;

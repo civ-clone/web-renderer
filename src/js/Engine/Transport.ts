@@ -99,6 +99,8 @@ declare global {
     turnEnded: TransportData<null, never>;
     // The new turn is in the UI's data and the worker is listening for actions again.
     turnStarted: TransportData<null, never>;
+    // The UI asks for the actions of the unit it has made active (#323), by its id. The answer is a `gameDataPatch`.
+    unitActions: TransportData<never, string>;
   }
 
   interface TransportPlayerActionMap {
