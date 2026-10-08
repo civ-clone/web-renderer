@@ -14,6 +14,7 @@ import {
   citizenMoods,
   citizenSprites,
   citizenSummary,
+  specialistSprites,
 } from '../../lib/citizens';
 import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
@@ -31,17 +32,21 @@ const specialistIcons: { [key: string]: string } = {
   Scientist: 'science',
 };
 
-const renderCitizen = (path: string, title?: string): HTMLElement => {
+// Draws the first of `paths` that has been imported.
+const renderCitizen = (paths: string[], title?: string): HTMLElement => {
   const citizen = s('<span class="citizen"></span>');
 
   if (title) {
     citizen.setAttribute('title', title);
   }
 
-  assetStore.getScaled(path, 2).then((image) =>
-    // Decorative: the population as a whole is summarised in words (#272).
-    citizen.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
-  );
+  assetStore
+    .firstImported(paths)
+    .then((path) => assetStore.getScaled(path, 2))
+    .then((image) =>
+      // Decorative: the population as a whole is summarised in words (#272).
+      citizen.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
+    );
 
   return citizen;
 };
@@ -85,12 +90,18 @@ const drawCitizens = <SpecialistType extends { _: string }>(
   }
 
   citizenSprites(moods, seed).forEach((path) =>
-    population.append(renderCitizen(path))
+    population.append(renderCitizen([path]))
   );
 
-  specialists.forEach((specialist) => {
+  const sprites = specialistSprites(
+    specialists.map(({ _ }) => specialistIcons[_] ?? 'luxury'),
+    moods.length,
+    seed
+  );
+
+  specialists.forEach((specialist, index) => {
     const citizen = renderCitizen(
-      `./assets/city/people_${specialistIcons[specialist._] ?? 'luxury'}.png`,
+      sprites[index],
       t(`City.Specialist.${specialist._}`)
     );
 

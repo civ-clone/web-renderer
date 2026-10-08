@@ -30,9 +30,18 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   }
 };
 
-// No IndexedDB under node: every face is the same blank image.
-(assetStore as any).getScaled = () =>
-  Promise.resolve({ toDataURL: () => 'data:,' });
+// No IndexedDB under node: every face is the same blank image. The assets are an import from before the women
+//  specialists were added (#334), so those are missing.
+const drawn: string[] = [],
+  missing = /people_(luxury|science|tax)_f\.png$/;
+
+(assetStore as any).get = (path: string) =>
+  Promise.resolve(missing.test(path) ? undefined : { name: path, uri: '' });
+(assetStore as any).getScaled = (path: string) => {
+  drawn.push(path);
+
+  return Promise.resolve({ toDataURL: () => 'data:,' });
+};
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -116,6 +125,23 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
     'every face is drawn',
     faces.length,
     3 + 2 + 1 + 1 + (4 + 3) + (2 + 2)
+  );
+  expect(
+    "a woman specialist missing from older assets is drawn as the man's sprite",
+    [
+      drawn.filter((path) => missing.test(path)),
+      drawn.filter((path) => /people_(luxury|science|tax)\.png$/.test(path))
+        .length,
+    ],
+    [[], 1 + 3 + 2]
+  );
+  expect(
+    'a sprite that has been imported is drawn',
+    await assetStore.firstImported([
+      './assets/city/people_tax_m.png',
+      './assets/city/people_tax.png',
+    ]),
+    './assets/city/people_tax_m.png'
   );
   expect(
     'every face is decorative',
