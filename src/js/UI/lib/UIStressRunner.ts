@@ -6,6 +6,7 @@ import {
   UnitAction,
 } from '../types';
 import City from '../components/City';
+import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import CityStatus from '../components/CityStatus';
 import HappinessReport from '../components/HappinessReport';
 import Portal from '../components/Portal';
@@ -154,17 +155,20 @@ export class UIStressRunner {
   private chooseBuild(action: PlayerAction, turn: number): boolean {
     const cityBuild = action.value as CityData['build'];
 
-    if (!cityBuild.available.length) {
-      return false;
-    }
+    // What can be built is fetched, as the picker does (#324), so this answers when the reply does.
+    this.#transport
+      .request(new CityBuildAvailable(cityBuild.id))
+      .then((available) => {
+        if (!available.length) {
+          return;
+        }
 
-    const buildItem = cityBuild.available[turn % cityBuild.available.length];
-
-    this.#transport.send('action', {
-      name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
-      id: cityBuild.id,
-      chosen: buildItem.item._,
-    });
+        this.#transport.send('action', {
+          name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
+          id: cityBuild.id,
+          chosen: available[turn % available.length].item._,
+        });
+      });
 
     return true;
   }

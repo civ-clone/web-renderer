@@ -21,6 +21,7 @@ import {
   yieldImages,
 } from './lib/cityYields';
 import Cities from './Map/Cities';
+import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import ConfirmationWindow from './ConfirmationWindow';
 import DataObserver from '../DataObserver';
@@ -613,9 +614,14 @@ export class City extends Window {
     this.on('resize', resizeHandler);
   }
 
-  changeProduction(): void {
-    new CityBuildSelectionWindow(this.#city.build, this.#transport, () =>
-      this.element().focus()
+  async changeProduction(): Promise<void> {
+    new CityBuildSelectionWindow(
+      this.#city.build,
+      await this.#transport.request(
+        new CityBuildAvailable(this.#city.build.id)
+      ),
+      this.#transport,
+      () => this.element().focus()
     );
   }
 

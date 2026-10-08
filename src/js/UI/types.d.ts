@@ -63,7 +63,6 @@ export interface BuildItem extends EntityInstance<'BuildItem'> {
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {
-  available: BuildItem[];
   building: BuildItem | null;
   city: City;
   cost: Yield;

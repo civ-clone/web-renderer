@@ -53,6 +53,8 @@ declare global {
     cheat: TransportData<never, TransportCheatData>;
     cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
+    // What a city can build (#324): the reply is standalone, so it resolves without the game data.
+    cityBuildAvailable: TransportData<ObjectMap, string>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
     embassyEstablished: TransportData<string, never>;
