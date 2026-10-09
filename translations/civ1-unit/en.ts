@@ -82,6 +82,16 @@ i18next.addResources('en', 'unit', {
   'Action.SubvertCity.name': 'Subvert city',
   'Action.Unload.name': 'Unload',
 
+  // The mark drawn over the unit on an action's button when the action has no picture of its own (#348).
+  'Action.Automate.icon': 'W',
+  'Action.BuildFortress.icon': 'F',
+  'Action.Disband.icon': 'D',
+  'Action.Explore.icon': 'X',
+  'Action.HelpBuildWonder.icon': 'H',
+  'Action.LandAircraft.icon': 'L',
+  'Action.Pillage.icon': 'P',
+  'Action.Sleep.icon': 'S',
+
   'Busy.BuildingIrrigation.name': 'Building irrigation',
   'Busy.BuildingMine.name': 'Building mine',
   'Busy.BuildingRoad.name': 'Building road',

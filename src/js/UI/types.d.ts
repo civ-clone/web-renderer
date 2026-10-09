@@ -168,6 +168,8 @@ export interface Unit extends EntityInstance {
 
 export interface UnitAction<Types = string> extends EntityInstance<Types> {
   from: Tile;
+  // The terrain the action leaves behind, for those that change it (#348).
+  result?: string | null;
   to: Tile;
 }
 

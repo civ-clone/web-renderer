@@ -18,6 +18,8 @@ import { emit, off, on, s } from '@dom111/element';
 import i18next, { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
+import UnitActions from './components/UnitActions';
+import { keyToActionsMap } from './lib/unitActionKeys';
 import ActiveUnit from './components/Map/ActiveUnit';
 import City from './components/City';
 import Cities from './components/Map/Cities';
@@ -190,6 +192,7 @@ export class Renderer {
         secondaryActionArea = document.getElementById(
           'other-actions'
         ) as HTMLElement,
+        unitActionArea = document.getElementById('unit-actions') as HTMLElement,
         gameMenu = document.getElementById('game-menu') as HTMLElement,
         gameArea = document.getElementById('game') as HTMLElement,
         mapWrapper = document.getElementById('map') as HTMLElement,
@@ -645,6 +648,10 @@ export class Renderer {
               secondaryActions = new Actions(
                 secondaryActionArea,
                 portal,
+                this.#transport
+              ),
+              unitActionButtons = new UnitActions(
+                unitActionArea,
                 this.#transport
               ),
               gameMenuItem = new GameMenu(
@@ -1236,6 +1243,13 @@ export class Renderer {
                 )
               );
 
+              unitActionButtons.build(
+                waitingForTurn ? null : activeUnit,
+                activeUnit
+                  ? world.get(activeUnit.tile.x, activeUnit.tile.y)
+                  : null
+              );
+
               gameArea.append(primaryActions.element());
 
               const gameDetails = new GameDetails(
@@ -1645,28 +1659,7 @@ export class Renderer {
               )
             );
 
-            const keyToActionsMap: {
-                [key: string]: string[];
-              } = {
-                ' ': ['NoOrders'],
-                a: ['Automate'],
-                b: ['FoundCity', 'JoinCity'],
-                D: ['Disband'],
-                e: ['Explore'],
-                f: ['Fortify', 'BuildFortress'],
-                i: [
-                  'BuildIrrigation',
-                  'ClearForest',
-                  'ClearSwamp',
-                  'ClearJungle',
-                ],
-                m: ['BuildMine', 'PlantForest'],
-                P: ['Pillage'],
-                r: ['BuildRoad', 'BuildRailroad'],
-                s: ['Sleep'],
-                u: ['Unload'],
-              },
-              directionKeyMap: { [key: string]: NeighbourDirection } = {
+            const directionKeyMap: { [key: string]: NeighbourDirection } = {
                 ArrowUp: 'n',
                 PageUp: 'ne',
                 ArrowRight: 'e',
