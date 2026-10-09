@@ -73,6 +73,7 @@ i18next.addResources('en', 'unit', {
   'Action.NoOrders.name': 'No orders',
   'Action.Pillage.name': 'Pillage',
   'Action.PlantForest.name': 'Plant forest',
+  'Action.SetHomeCity.name': 'Set home city',
   'Action.Sleep.name': 'Sleep',
   'Action.SneakAttack.name': 'Sneak attack',
   'Action.SneakCaptureCity.name': 'Sneak attack',
@@ -90,6 +91,8 @@ i18next.addResources('en', 'unit', {
   'Action.HelpBuildWonder.icon': 'H',
   'Action.LandAircraft.icon': 'L',
   'Action.Pillage.icon': 'P',
+  'Action.Fortify.icon': 'F',
+  'Action.SetHomeCity.icon': 'H',
   'Action.Sleep.icon': 'S',
 
   'Busy.BuildingIrrigation.name': 'Building irrigation',
