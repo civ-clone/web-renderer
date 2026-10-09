@@ -16,8 +16,14 @@
 // the window falls back to "Choose an option" (it used to fall back to the
 // body text), and the advance taken from a captured city is named, not shown
 // as its class name (#268).
+//
+// The welcome doesn't put "the" before a nation that has no article (#335).
 
-import { Babylonian, Indian } from '@civ-clone/civ1-civilization/Civilizations';
+import {
+  Babylonian,
+  Indian,
+  Mongol,
+} from '@civ-clone/civ1-civilization/Civilizations';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
 import {
@@ -108,6 +114,27 @@ const expect = (description: string, actual: string, expected: string) => {
       3,
       india
     );
+
+  [
+    [
+      'English',
+      'ElizabethI',
+      'Elizabeth I, you have risen to become leader of England.',
+    ],
+    [
+      'Aztec',
+      'MoctezumaII',
+      'Moctezuma II, you have risen to become leader of the Aztec Empire.',
+    ],
+  ].forEach(([civilization, leader, expected]) =>
+    expect(
+      'Welcome.you-have-risen',
+      t('Welcome.you-have-risen', {
+        player: { civilization: { _: civilization, leader: { _: leader } } },
+      }),
+      expected
+    )
+  );
 
   const colossus = { _: 'Colossus' },
     notifications: [string, any, string][] = [

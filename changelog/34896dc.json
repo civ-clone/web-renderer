@@ -1,0 +1,1 @@
+{"version":"0.1.0@34896dc","date":"2026-10-09T19:57:14.000Z","localChanges":["The letters on busy units, such as F for fortified, are now drawn smoothly at the size the unit is shown at: on the map, in the city screen and on the action buttons. They're no longer enlarged into blocky pixels, and the units themselves keep their crisp look (closes #352)."],"externalChanges":{}}
