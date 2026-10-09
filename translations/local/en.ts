@@ -398,7 +398,7 @@ i18next.addResources('en', 'default', {
   'UnitSelectionWindow.title': 'Activate unit',
 
   'Welcome.you-have-risen':
-    '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }), you have risen to become leader of the $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }).',
+    '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }), you have risen to become leader of $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }).',
   'Welcome.your-people-have-knowledge-of':
     'Your people have knowledge of {{advances, list}}.',
 
