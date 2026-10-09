@@ -798,14 +798,14 @@ packages:
   '@civ-clone/base-unit-action-capture-city@0.1.2':
     resolution: {integrity: sha512-i3nAWHP171e5sfg3BC3O1qrcCfM/tZpJwu72HmcseDoKBpXYc/Tv36W0ErNpZNbBYjUI5U7MVRafYljksK/arQ==}
 
-  '@civ-clone/base-unit-action-clear-forest@0.1.6':
-    resolution: {integrity: sha512-RxweJAl7Tme9pUL2TVYG2zyhyq45ZTdAEqp2sQLJ1QqGP010lQGByTvyDd5lsgTL01gu3VUZIk2MFe8EVKyWrg==}
+  '@civ-clone/base-unit-action-clear-forest@0.1.7':
+    resolution: {integrity: sha512-eaAxptewRWhiWViWsKgxIz550CzAI484rj4L+NKj6Yub8Bw4n2cHXtRgE2mtf0TKffl3SlVMT0Cpkl5RDCgVHQ==}
 
-  '@civ-clone/base-unit-action-clear-jungle@0.1.6':
-    resolution: {integrity: sha512-Ux56BX7HhzqrGvRj/9sVrsWFXKZLJyGw4HLIdnzJ+1FGwzhrUBh12u6ARkn4/6tQA3w0J2T0jAGkrlEtMqu1Kw==}
+  '@civ-clone/base-unit-action-clear-jungle@0.1.7':
+    resolution: {integrity: sha512-DPDkInwt4cIeK3vZOO96wbrt0FvZmlDN1Nrgq+4qQIoEm8nKySq8uc+AiNh6Fqn/jE9n80J23duGvlhZtDHn3g==}
 
-  '@civ-clone/base-unit-action-clear-swamp@0.1.6':
-    resolution: {integrity: sha512-0pPWRg9r3b14IEdFBUuEIsxYjd12HREkzjm6i97SLdymPdYNlRsMpqQGaVjyFVygwIYgq0w5pNTD+9fnIss76g==}
+  '@civ-clone/base-unit-action-clear-swamp@0.1.7':
+    resolution: {integrity: sha512-jT7DMaiUiaP6rd7s+A/w5+3QN4vTayhfhWPRj1fUHWxPxj1TbJke3wOKcXW3K7oNALXKXOh0VCgskG6k/8zcgw==}
 
   '@civ-clone/base-unit-action-disband@0.1.2':
     resolution: {integrity: sha512-OKnvi4/zTXybbbdsaEsvdBxQFHEvXVz/v/cHri6eXRwF+72Xkl+WSaFu7jJijlImysOTEoriXoOYJ4KlEWGyXw==}
@@ -864,8 +864,8 @@ packages:
   '@civ-clone/base-unit-action-pillage@0.1.5':
     resolution: {integrity: sha512-ef58PL2g7kztwYoxXPIuq634MXsgp4OU9pNwTZroaNMyziiZwhqOut0rBsusfcflbNEdTNEug4xbKn/XeshV2A==}
 
-  '@civ-clone/base-unit-action-plant-forest@0.1.7':
-    resolution: {integrity: sha512-HpTKYNmsIYKsG0gDTiByoeSzb/gZVG6/BqLaGaLLtER8pQKI1D2yTvhPIin1hGNmjTVlkyIaKwphQki9DsewRA==}
+  '@civ-clone/base-unit-action-plant-forest@0.1.8':
+    resolution: {integrity: sha512-GF1FjpWae2a0hxvJCEjcApF2zcUUO8y5vudB+2tUp1Eh8Umv3iU4Vh/kMp+LaXo7+DXLdM1MEak4ZrqqKV9o7Q==}
 
   '@civ-clone/base-unit-action-sleep@0.1.5':
     resolution: {integrity: sha512-eIOUrWTV1vTRpeF9GXFT4Q1GyeldOqIqy3WiMc5n42casiGLEizA5jHs99xstXYFOCfGWnUqE8bnCXSeodqypA==}
@@ -2864,7 +2864,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
 
-  '@civ-clone/base-unit-action-clear-forest@0.1.6':
+  '@civ-clone/base-unit-action-clear-forest@0.1.7':
     dependencies:
       '@civ-clone/base-terrain-plains': 0.1.0
       '@civ-clone/core-rule': 0.1.6
@@ -2873,7 +2873,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
 
-  '@civ-clone/base-unit-action-clear-jungle@0.1.6':
+  '@civ-clone/base-unit-action-clear-jungle@0.1.7':
     dependencies:
       '@civ-clone/base-terrain-feature-shield': 0.1.0
       '@civ-clone/base-terrain-grassland': 0.1.0
@@ -2884,7 +2884,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
 
-  '@civ-clone/base-unit-action-clear-swamp@0.1.6':
+  '@civ-clone/base-unit-action-clear-swamp@0.1.7':
     dependencies:
       '@civ-clone/base-terrain-feature-shield': 0.1.0
       '@civ-clone/base-terrain-grassland': 0.1.0
@@ -3041,7 +3041,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.26
       '@civ-clone/core-world': 0.1.18
 
-  '@civ-clone/base-unit-action-plant-forest@0.1.7':
+  '@civ-clone/base-unit-action-plant-forest@0.1.8':
     dependencies:
       '@civ-clone/base-terrain-feature-game': 0.1.0
       '@civ-clone/base-terrain-forest': 0.1.0
@@ -4311,9 +4311,9 @@ snapshots:
       '@civ-clone/base-unit-action-build-railroad': 0.1.4
       '@civ-clone/base-unit-action-build-road': 0.1.4
       '@civ-clone/base-unit-action-capture-city': 0.1.2
-      '@civ-clone/base-unit-action-clear-forest': 0.1.6
-      '@civ-clone/base-unit-action-clear-jungle': 0.1.6
-      '@civ-clone/base-unit-action-clear-swamp': 0.1.6
+      '@civ-clone/base-unit-action-clear-forest': 0.1.7
+      '@civ-clone/base-unit-action-clear-jungle': 0.1.7
+      '@civ-clone/base-unit-action-clear-swamp': 0.1.7
       '@civ-clone/base-unit-action-disband': 0.1.2
       '@civ-clone/base-unit-action-disembark': 0.1.2
       '@civ-clone/base-unit-action-embark': 0.1.6
@@ -4332,7 +4332,7 @@ snapshots:
       '@civ-clone/base-unit-action-move': 0.1.2
       '@civ-clone/base-unit-action-no-orders': 0.1.0
       '@civ-clone/base-unit-action-pillage': 0.1.5
-      '@civ-clone/base-unit-action-plant-forest': 0.1.7
+      '@civ-clone/base-unit-action-plant-forest': 0.1.8
       '@civ-clone/base-unit-action-sleep': 0.1.5
       '@civ-clone/base-unit-action-steal-technology': 0.1.0
       '@civ-clone/base-unit-action-unload': 0.1.2
