@@ -1,6 +1,7 @@
 import { IMap } from '../Map';
 import { Rect } from '../../lib/viewport';
 import Units from './Units';
+import { drawUnitStatus } from '../../lib/renderUnit';
 
 export class ActiveUnit extends Units implements IMap {
   // This layer only ever holds the one unit, so it can clear just what it drew
@@ -34,6 +35,8 @@ export class ActiveUnit extends Units implements IMap {
       }
 
       this.putImage(image, offsetX, offsetY);
+
+      drawUnitStatus(this.context(), activeUnit, offsetX, offsetY, scale);
 
       // The stacked copy sits one scale step up and left of the tile, and a
       // unit sprite is never wider than a tile, so this covers both draws.
