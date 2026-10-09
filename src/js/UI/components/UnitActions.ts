@@ -56,7 +56,8 @@ export class UnitActions extends Element {
       signature = JSON.stringify([
         unit?.id,
         unit?.player?.civilization?._,
-        actions.map((action) => action._),
+        // The target too: a unit that moved keeps the same actions, aimed at its new tile.
+        actions.map((action) => [action._, action.to?.id]),
         layers.map((actionLayers) =>
           actionLayers.map((layer) =>
             layer.type === 'unit'
