@@ -207,6 +207,22 @@ expect(
   before
 );
 
+const moved = unitOf('Settlers', [
+  { ...action('FoundCity'), to: { id: 'Tile-2' } as Tile },
+  { ...action('BuildRoad'), to: { id: 'Tile-2' } as Tile },
+  { ...action('Fortify'), to: { id: 'Tile-2' } as Tile },
+]);
+
+sent.length = 0;
+buttons.build(moved, null);
+(container.querySelectorAll('button')[1] as HTMLElement).click();
+
+expect(
+  'a unit that moved has its buttons aimed at its new tile',
+  sent.map(([, message]) => message.target),
+  ['Tile-2']
+);
+
 buttons.build(null, null);
 
 expect('no active unit, no buttons', container.children.length, 0);
