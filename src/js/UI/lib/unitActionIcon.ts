@@ -139,14 +139,21 @@ const drawCentred = (
   );
 };
 
+// Offset as the map's unit and city labels are, a pixel of the picture apart.
 const drawMark = (context: CanvasRenderingContext2D, text: string): void => {
   context.font = 'bold 8px sans-serif';
   context.textAlign = 'center';
   context.fillStyle = 'black';
-  context.fillText(text, iconSize / 2, iconSize * 0.75);
+  context.fillText(text, iconSize / 2 + 1, iconSize * 0.75);
   context.fillStyle = 'white';
-  context.fillText(text, iconSize / 2, iconSize * 0.75);
+  context.fillText(text, iconSize / 2, iconSize * 0.75 - 1);
 };
+
+// How many of the canvas's pixels make one of the picture's: as many as the screen shows it at (#352), so the
+//  marks are written at that size rather than enlarged. A canvas not laid out yet is shown at the picture's own size.
+export const iconScale = (canvas: HTMLCanvasElement): number =>
+  ((canvas.clientWidth || iconSize) * (globalThis.devicePixelRatio || 1)) /
+  iconSize;
 
 export const drawUnitActionIcon = (
   canvas: HTMLCanvasElement,
@@ -158,9 +165,13 @@ export const drawUnitActionIcon = (
     return;
   }
 
-  canvas.width = iconSize;
-  canvas.height = iconSize;
+  const scale = iconScale(canvas);
 
+  canvas.width = Math.round(iconSize * scale);
+  canvas.height = Math.round(iconSize * scale);
+
+  // Drawn in the picture's own pixels; the sprites are enlarged pixel by pixel, and the marks written at full size.
+  context.setTransform(scale, 0, 0, scale, 0, 0);
   context.imageSmoothingEnabled = false;
 
   const stacked = layers.filter((layer) => layer.type === 'unit').length > 1;
@@ -208,7 +219,6 @@ export const drawUnitActionIcon = (
         _: layer.unit._,
         player: layer.unit.player,
         improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
-        busy: null,
       }),
       offset
     );

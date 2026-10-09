@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
 import { Unit as UnitData } from '../types';
-import renderUnit from '../lib/renderUnit';
+import renderUnit, { drawUnitStatus } from '../lib/renderUnit';
 
 export class Unit extends Element {
   #scale: number = 2;
@@ -28,6 +28,8 @@ export class Unit extends Element {
     context.imageSmoothingEnabled = false;
 
     context.drawImage(unitCanvas, offsetX, offsetY, sizeX, sizeY);
+
+    drawUnitStatus(context, unit, 0, 0, this.#scale);
   }
 
   element(): HTMLCanvasElement {

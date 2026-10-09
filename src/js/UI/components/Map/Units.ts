@@ -1,6 +1,6 @@
 import { Tile, Unit } from '../../types';
 import { Map, IMap } from '../Map';
-import renderUnit from '../../lib/renderUnit';
+import renderUnit, { drawUnitStatus } from '../../lib/renderUnit';
 
 export class Units extends Map implements IMap {
   #activeUnit: Unit | null = null;
@@ -23,6 +23,8 @@ export class Units extends Map implements IMap {
     }
 
     this.putImage(image, offsetX, offsetY);
+
+    drawUnitStatus(this.context(), unit, offsetX, offsetY, this.scale());
   }
 
   protected renderUnit(unit: Unit): CanvasImageSource {

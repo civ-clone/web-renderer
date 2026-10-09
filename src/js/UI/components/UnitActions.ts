@@ -93,8 +93,6 @@ export class UnitActions extends Element {
       button.title = label;
       button.setAttribute('aria-label', label);
 
-      this.#draw(button.querySelector('canvas')!, layers[index]);
-
       button.addEventListener('click', () => {
         this.#transport.send('action', {
           name: 'ActiveUnit',
@@ -105,6 +103,9 @@ export class UnitActions extends Element {
       });
 
       this.element().append(button);
+
+      // Once it is on the page, so the picture can be drawn at the size it is shown at.
+      this.#draw(button.querySelector('canvas')!, layers[index]);
     });
   }
 }
