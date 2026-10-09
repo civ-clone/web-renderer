@@ -60,12 +60,21 @@ const tile = { id: 'Tile-1', x: 1, y: 1 } as unknown as Tile,
 
 // The pictures.
 expect(
-  'Fortify shows the unit fortified',
-  layersFor('Fortify').map((layer) => layer.type === 'unit' && layer.fortified),
-  [true]
+  'Fortify shows the unit fortified, and marked',
+  layersFor('Fortify').map(
+    (layer) => layer.type === 'unit' && [layer.fortified, layer.status]
+  ),
+  [[true, 'S']]
+);
+expect(
+  'SetHomeCity is a marked city, so it is not mistaken for NoOrders or FoundCity',
+  [layersFor('SetHomeCity'), layersFor('NoOrders'), layersFor('FoundCity')].map(
+    (layers) => layers.map((layer) => [layer.type, (layer as any).text ?? null])
+  ),
+  [[['city', 'S']], [['unit', null]], [['city', null]]]
 );
 expect('FoundCity shows an empty city', layersFor('FoundCity'), [
-  { type: 'city', size: null, colour: null },
+  { type: 'city', text: null, colours: null },
 ]);
 expect(
   'JoinCity shows the city one larger',
@@ -73,7 +82,7 @@ expect(
     city: { growth: { size: 4 } },
     units: [],
   } as unknown as Tile),
-  [{ type: 'city', size: 5, colour: null }]
+  [{ type: 'city', text: '5', colours: null }]
 );
 expect(
   'ClearJungle shows the terrain the engine said it leaves',

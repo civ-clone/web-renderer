@@ -1,6 +1,7 @@
 import { Tile, Unit, UnitAction } from '../types';
 import getPreloadedImage from './getPreloadedImage';
-import { isDrawable } from './imageSize';
+import { imageSize, isDrawable } from './imageSize';
+import replaceColours from './replaceColours';
 import renderUnit from './renderUnit';
 
 // What a unit action's button shows (#348), as layers drawn one over another. `unitActionIconLayers` decides it from
@@ -8,7 +9,7 @@ import renderUnit from './renderUnit';
 export type IconLayer =
   | { type: 'image'; path: string }
   | { type: 'unit'; unit: Unit; fortified: boolean; status: string }
-  | { type: 'city'; size: number | null; colour: string | null };
+  | { type: 'city'; text: string | null; colours: string[] | null };
 
 export const iconSize = 16;
 
@@ -19,11 +20,11 @@ const square = (...paths: string[]): IconLayer[] =>
     path,
   }));
 
-// The first of the civilization's colours, which is what a city is drawn on.
-const civilizationColour = (unit: Unit): string | null =>
+// The civilization's colours: the first is what a city is drawn on, the second its outline.
+const civilizationColours = (unit: Unit): string[] | null =>
   unit.player?.civilization?.attributes?.find(
     (attribute) => attribute.name === 'colors'
-  )?.value?.[0] ?? null;
+  )?.value ?? null;
 
 const unitLayer = (
   unit: Unit,
@@ -51,18 +52,24 @@ export const unitActionIconLayers = (
 
   switch (action._) {
     case 'Fortify':
-      return [unitLayer(unit, '', true)];
+      return [unitLayer(unit, status, true)];
 
     case 'FoundCity':
-      return [{ type: 'city', size: null, colour: civilizationColour(unit) }];
+      return [{ type: 'city', text: null, colours: civilizationColours(unit) }];
 
     case 'JoinCity':
       return [
         {
           type: 'city',
-          size: (tile?.city?.growth.size ?? 0) + 1,
-          colour: civilizationColour(unit),
+          text: String((tile?.city?.growth.size ?? 0) + 1),
+          colours: civilizationColours(unit),
         },
+      ];
+
+    case 'SetHomeCity':
+      // The city, marked as the unit's own, so it isn't mistaken for No orders.
+      return [
+        { type: 'city', text: status, colours: civilizationColours(unit) },
       ];
 
     case 'ClearForest':
@@ -113,15 +120,32 @@ export const unitActionIconLayers = (
   }
 };
 
-const drawImage = (
+// Centred in the icon, as the unit and city pictures are narrower than it.
+const drawCentred = (
   context: CanvasRenderingContext2D,
   image: CanvasImageSource,
-  x = 0,
-  y = 0
+  offset = 0
 ): void => {
-  if (isDrawable(image)) {
-    context.drawImage(image, x, y);
+  if (!isDrawable(image)) {
+    return;
   }
+
+  const [width, height] = imageSize(image);
+
+  context.drawImage(
+    image,
+    Math.floor((iconSize - width) / 2) + offset,
+    Math.floor((iconSize - height) / 2) + offset
+  );
+};
+
+const drawMark = (context: CanvasRenderingContext2D, text: string): void => {
+  context.font = 'bold 8px sans-serif';
+  context.textAlign = 'center';
+  context.fillStyle = 'black';
+  context.fillText(text, iconSize / 2, iconSize * 0.75);
+  context.fillStyle = 'white';
+  context.fillText(text, iconSize / 2, iconSize * 0.75);
 };
 
 export const drawUnitActionIcon = (
@@ -143,27 +167,33 @@ export const drawUnitActionIcon = (
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
-      drawImage(context, getPreloadedImage(layer.path));
+      drawCentred(context, getPreloadedImage(layer.path));
 
       return;
     }
 
     if (layer.type === 'city') {
-      // As the map does: the civilization's colour behind the city.
-      if (layer.colour) {
-        context.fillStyle = layer.colour;
+      const [background, outline] = layer.colours ?? [];
+
+      // As the map does: the civilization's colour behind the city, and its second colour for the city itself.
+      if (background) {
+        context.fillStyle = background;
         context.fillRect(1, 1, iconSize - 2, iconSize - 2);
       }
 
-      drawImage(context, getPreloadedImage('map/city'));
+      const city = getPreloadedImage('map/city');
 
-      if (layer.size !== null) {
-        context.font = 'bold 8px sans-serif';
-        context.textAlign = 'center';
-        context.fillStyle = 'black';
-        context.fillText(String(layer.size), iconSize / 2, iconSize * 0.75);
-        context.fillStyle = 'white';
-        context.fillText(String(layer.size), iconSize / 2, iconSize * 0.75);
+      // Where the map puts it: a pixel in, over the colour.
+      if (isDrawable(city)) {
+        context.drawImage(
+          outline ? replaceColours(city, ['#000'], [outline]) : city,
+          1,
+          1
+        );
+      }
+
+      if (layer.text !== null) {
+        drawMark(context, layer.text);
       }
 
       return;
@@ -172,7 +202,7 @@ export const drawUnitActionIcon = (
     // Cargo is a stack, each unit a little further along than the last.
     const offset = stacked ? index * 2 : 0;
 
-    drawImage(
+    drawCentred(
       context,
       renderUnit({
         _: layer.unit._,
@@ -180,17 +210,11 @@ export const drawUnitActionIcon = (
         improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
         busy: null,
       }),
-      offset,
       offset
     );
 
     if (layer.status) {
-      context.font = 'bold 8px sans-serif';
-      context.textAlign = 'center';
-      context.fillStyle = 'black';
-      context.fillText(layer.status, iconSize / 2, iconSize * 0.75);
-      context.fillStyle = 'white';
-      context.fillText(layer.status, iconSize / 2, iconSize * 0.75);
+      drawMark(context, layer.status);
     }
   });
 };
