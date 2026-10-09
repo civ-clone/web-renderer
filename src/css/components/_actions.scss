@@ -99,6 +99,40 @@
   }
 }
 
+// The active unit's own actions, opposite the mandatory ones (#348).
+#unit-actions {
+  bottom: 0;
+  display: flex;
+  flex-flow: row wrap;
+  gap: 0.25rem;
+  // Clear of the sidebar.
+  left: 13em;
+  max-width: 40vw;
+  padding: 1rem;
+  position: absolute;
+
+  .unit-action {
+    background: #222;
+    border: 2px solid #aaa;
+    border-radius: 4px;
+    cursor: pointer;
+    height: 2.5rem;
+    padding: 0;
+    width: 2.5rem;
+
+    &:hover,
+    &:focus-visible {
+      border-color: #fff;
+    }
+
+    canvas {
+      height: 100%;
+      image-rendering: pixelated;
+      width: 100%;
+    }
+  }
+}
+
 @keyframes glow {
   10% {
     opacity: 0;

@@ -96,6 +96,7 @@ import {
   changeWorkedTile,
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
+import actionResult from './AdditionalData/actionResult';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import {
@@ -157,6 +158,7 @@ const referenceObject = (object: any) =>
   MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
 
 additionalDataRegistryInstance.register(
+  actionResult(),
   anarchyTurns(),
   civilDisorderDeclared(),
   researchCosts(),
