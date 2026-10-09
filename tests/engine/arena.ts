@@ -333,6 +333,7 @@ const improvedTiles = (cities: City[]) => {
     irrigatedTiles: count('Irrigation'),
     minedTiles: count('Mine'),
     roadTiles: count('Road'),
+    railroadTiles: count('Railroad'),
   };
 };
 
