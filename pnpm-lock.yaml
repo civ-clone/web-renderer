@@ -13,6 +13,9 @@ importers:
 
   .:
     dependencies:
+      '@civ-clone/base-leader-personality':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/base-unit-action-automate':
         specifier: ^0.1.0
         version: 0.1.0
@@ -39,7 +42,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-city-improvement/tar.gz/f6ea5b9807c423cf6ff2793aec7ef13f97f87aa8
       '@civ-clone/civ1-civilization':
         specifier: github:civ-clone/civ1-civilization
-        version: https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273
+        version: https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/60f8c14774c3a081134af0905f7727497526f678
       '@civ-clone/civ1-difficulty':
         specifier: github:civ-clone/civ1-difficulty
         version: https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
@@ -159,7 +162,7 @@ importers:
         version: 0.1.10
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/a387cdee3ea22f3882e0676e6e9adcefd8b5ba7a
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/3f08040c8ade334b0117f4a5c557510c7ada5141
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2
@@ -413,6 +416,9 @@ packages:
 
   '@civ-clone/base-government-republic@0.1.0':
     resolution: {integrity: sha512-wf0tzX0qTq4sGTWgk+qVFWi2KS5xgMujmxIrZOwGZFg5oqKeaKetlAeZ2ucEkSREv4XrtzRQlFZUPbFECcZPQQ==}
+
+  '@civ-clone/base-leader-personality@0.1.0':
+    resolution: {integrity: sha512-LtwPapTn9bk3+fpcaXsO9EmdZz2//b7m6N9IFLV8rAruoh+F0Vq8ft8E0ZfqBZBMJdZp1uaRuJZFOukN1pvhyQ==}
 
   '@civ-clone/base-leader-trait-aggression@0.1.1':
     resolution: {integrity: sha512-pLwcdSp8hzOBNX6JmTTYxECT75WYbaVtxaY6oVM1/pSx80Wd2kBgTk96xOngiFhvjHbzktkj14Xa4WteC89pnw==}
@@ -1072,8 +1078,8 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-A1Z9+Arx1f7GNiD+u5jyvSUllBmeiOD9RXMTXDGVoUjayJk4dA7paIkO5DLSv0ZTgS/c22O1ua/zakinsxbJMg==, tarball: https://codeload.github.com/civ-clone/civ1-city/tar.gz/d53ec281e0ef5144dc97958fb36ed060fcc52f6b}
     version: 0.1.4
 
-  '@civ-clone/civ1-civilization@https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273}
+  '@civ-clone/civ1-civilization@https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/60f8c14774c3a081134af0905f7727497526f678':
+    resolution: {gitHosted: true, integrity: sha512-LeoIQ5AJRqE4n75KaZ7PGW0WowRgFJ/8AOVz+CU6CUrMl8IHA8yq9zkjM0wdmsLVQkfXXP460EcBk3poLOrQNQ==, tarball: https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/60f8c14774c3a081134af0905f7727497526f678}
     version: 0.1.0
 
   '@civ-clone/civ1-default-spaceship-layout@https://codeload.github.com/civ-clone/civ1-default-spaceship-layout/tar.gz/40b18d0cca6fd1b9303cf3cbf1de326eac2df7d3':
@@ -1287,8 +1293,8 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/a387cdee3ea22f3882e0676e6e9adcefd8b5ba7a':
-    resolution: {gitHosted: true, integrity: sha512-UomasFOWaiwoYAGuh51JqlWK1ogN/f6tDa7YlxOIJVZlbSsi5CStdZtutGhHPgxtM1gdv15wWFA8PLMbk4cySw==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/a387cdee3ea22f3882e0676e6e9adcefd8b5ba7a}
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/3f08040c8ade334b0117f4a5c557510c7ada5141':
+    resolution: {gitHosted: true, integrity: sha512-Ja+V3Z7mAXfdFNKs7YydwcFGUQuee1Chw4iiSrZAlPn4tl9+VAuH5w56JXYfY2saQWa3U1Cko/tym/C7Wb2U1Q==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/3f08040c8ade334b0117f4a5c557510c7ada5141}
     version: 0.1.9
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2':
@@ -2249,6 +2255,14 @@ snapshots:
   '@civ-clone/base-government-republic@0.1.0':
     dependencies:
       '@civ-clone/core-government': 0.1.6
+
+  '@civ-clone/base-leader-personality@0.1.0':
+    dependencies:
+      '@civ-clone/core-civilization': 0.1.7
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-registry': 0.1.6
+      '@civ-clone/core-rule': 0.1.6
+      '@civ-clone/core-science': 0.1.6
 
   '@civ-clone/base-leader-trait-aggression@0.1.1':
     dependencies:
@@ -3430,9 +3444,17 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-civilization@https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273':
+  '@civ-clone/civ1-civilization@https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/60f8c14774c3a081134af0905f7727497526f678':
     dependencies:
+      '@civ-clone/base-leader-personality': 0.1.0
+      '@civ-clone/civ1-science': https://codeload.github.com/civ-clone/civ1-science/tar.gz/1950f9d7944d77cbac0bbfabe3a2912b0bf03d0e
+      '@civ-clone/core-city-improvement': 0.1.7
       '@civ-clone/core-civilization': 0.1.7
+      '@civ-clone/core-game': 0.1.9
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-rule': 0.1.6
+      '@civ-clone/core-science': 0.1.6
+      '@civ-clone/core-wonder': 0.1.5
       '@civ-clone/library-civilization': 0.1.0
 
   '@civ-clone/civ1-default-spaceship-layout@https://codeload.github.com/civ-clone/civ1-default-spaceship-layout/tar.gz/40b18d0cca6fd1b9303cf3cbf1de326eac2df7d3':
@@ -3492,7 +3514,7 @@ snapshots:
       '@civ-clone/base-terrain-swamp': 0.1.0
       '@civ-clone/base-terrain-tundra': 0.1.0
       '@civ-clone/civ1-asset-extractor': https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/130e55aee712fdf4e51dccb0a6a0cfcceda817a3
-      '@civ-clone/civ1-civilization': https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/4fbca668a1a5a31953659fa5c5999cd03466d273
+      '@civ-clone/civ1-civilization': https://codeload.github.com/civ-clone/civ1-civilization/tar.gz/60f8c14774c3a081134af0905f7727497526f678
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-registry': 0.1.6
       '@civ-clone/core-terrain': 0.1.4
@@ -4457,12 +4479,10 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/a387cdee3ea22f3882e0676e6e9adcefd8b5ba7a':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/3f08040c8ade334b0117f4a5c557510c7ada5141':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
-      '@civ-clone/base-leader-trait-aggression': 0.1.1
-      '@civ-clone/base-leader-trait-development': 0.1.1
-      '@civ-clone/base-leader-trait-militarism': 0.1.1
+      '@civ-clone/base-leader-personality': 0.1.0
       '@civ-clone/base-player-action-end-turn': 0.1.0
       '@civ-clone/base-strategy-ai': 0.1.0
       '@civ-clone/base-strategy-explore': 0.1.0
@@ -4474,6 +4494,7 @@ snapshots:
       '@civ-clone/civ1-city': https://codeload.github.com/civ-clone/civ1-city/tar.gz/d53ec281e0ef5144dc97958fb36ed060fcc52f6b
       '@civ-clone/civ1-city-happiness': https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/fb0161287ae59e72d1b1e5e78775f2479749a5f7
       '@civ-clone/civ1-city-improvement': https://codeload.github.com/civ-clone/civ1-city-improvement/tar.gz/f6ea5b9807c423cf6ff2793aec7ef13f97f87aa8
+      '@civ-clone/civ1-difficulty': https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
       '@civ-clone/civ1-government': https://codeload.github.com/civ-clone/civ1-government/tar.gz/31cd8f289536d5ce71323b6a9ca4dc1867e6b8e7
       '@civ-clone/civ1-science': https://codeload.github.com/civ-clone/civ1-science/tar.gz/1950f9d7944d77cbac0bbfabe3a2912b0bf03d0e
       '@civ-clone/civ1-unit': https://codeload.github.com/civ-clone/civ1-unit/tar.gz/8e0c98013a43d3af1f6950bb0d7ee13d0dd1c01c
