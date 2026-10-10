@@ -21,9 +21,9 @@ marked as such, with the commit or issue that fixed them.
   - `Renderer` has TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `updateState`: reconstituting in a worker thread. The object map is still pruned by `src/js/UI/lib/pruneObjectMap.ts`, and #68 asks whether the backend should send `remove` patches instead.
   - `DataQueue` includes TODO to chunk data transfer but currently sends full queue each flush. Still true.
 - **Protocol drift risk in transport channels**
-  - `quit` and `restart` are now declared in `TransportDataMap`, but neither channel has a receiver on the opposite side (`restart` from backend → no frontend handler; `quit` from frontend → no backend handler).
+  - `restart` is declared in `TransportDataMap`, but has no receiver on the opposite side (sent by the backend, no frontend handler). `quit` was removed with the main menu's Quit button, an Electron leftover (#340).
   - Suggests protocol contract is typed but only partially wired end to end.
-  - Still true on 2026-10-08. #176 plans to replace `restart` with a `gameOver` message; `quit` has no issue.
+  - Still true on 2026-10-08. #176 plans to replace `restart` with a `gameOver` message.
 
 ## Medium priority
 

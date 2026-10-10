@@ -101,7 +101,7 @@ plumbing replaced.
 | 3 | Not started | — | `Renderer.ts` is 1,918 lines (1,558 when the plan was written). `DataObserver` and the `dataupdated`/`patchdatareceived` events are still how panels update. This is the main piece of the plan still worth doing, for maintainability rather than speed. The design in `08-phase-3-subscriptions.md` assumes the Phase 1 store, so it needs re-planning on top of `IncrementalReconstituter`. |
 | 4 | Partly, by other means | Sep–Oct 2026 | No protocol v2, `del` ops or `resync`; `DataQueue` remains. Payloads were cut instead: one flush per action (#321), unit orders only for the active unit (#323), the production list only on request (#324), only the player's own known tiles (#328), smaller notifications and player data (#137). |
 | 5 | Done in substance | 2026-09-22 | `4880639`: the map layers hold the window being looked through, not the world. The minimap draws from a layer of its own (`7e1f687`), and selecting a unit redraws two tiles (`74773f1`). `Map/Overview.ts` (the minimap) still sizes its canvas to the world, at one pixel per tile. There is no `StaticBuffer`/`TilePainter` split. |
-| 6 | Not done | — | The Quit menu item sends `quit` and the end of a game sends `restart`, but nothing receives either (#340; `restart` belongs with #176, the game ending). Saving and loading shipped through the engine-serialisation work (`docs/engine-serialisation/`), as real saves rather than this plan's replay log. |
+| 6 | Not done | — | The end of a game sends `restart`, but nothing receives it (#176, the game ending). The main menu's Quit, an Electron leftover that was never shown in the browser, was removed along with the `quit` channel (#340). Saving and loading shipped through the engine-serialisation work (`docs/engine-serialisation/`), as real saves rather than this plan's replay log. |
 
 ### Where to pick up
 
@@ -111,7 +111,7 @@ plumbing replaced.
    keeping input typed while waiting).
 3. **Phase 3, re-planned (#344)**: split `Renderer.ts` and replace the
    event plumbing, keeping `IncrementalReconstituter` as the data layer.
-4. **Phase 6's lifecycle half**: wire `quit` (#340) and `restart` (#176).
+4. **Phase 6's lifecycle half**: wire `restart` (#176).
 
 The other documents in this folder are kept as the original plan. Each has a
 short status note at the top; their file and line references date from

@@ -104,7 +104,7 @@ A move next to another player's unit can start talks (`canNegotiate`), and so ca
 
 - Heavy class-based mutation makes selective diffs difficult.
 - Patch queue currently unchunked (`DataQueue` TODO).
-- `restart` and `quit` are declared in the typed transport map but have no receiver on the other side (`restart` sent by the backend has no frontend handler; `quit` sent by the frontend has no backend handler).
+- `restart` is declared in the typed transport map but has no receiver on the other side: the backend sends it and the frontend has no handler (#176). `quit` was removed with the main menu's Quit button (#340).
 - A new game hardcodes only player index 0 as human.
 
 ## Rewrite carry-forward suggestions
