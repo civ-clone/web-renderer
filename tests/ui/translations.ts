@@ -17,7 +17,11 @@
 // body text), and the advance taken from a captured city is named, not shown
 // as its class name (#268).
 //
-// The welcome doesn't put "the" before a nation that has no article (#335).
+// A city whose name isn't on its founder's list (Toronto, founded by the
+// Mongols) is named as itself, not `Mongol.Toronto.name`: i18next before 23
+// dropped a nested `$t`'s `defaultValue`, which `Generic.city-name` relies on
+// (#337). The welcome doesn't put "the" before a nation that has no article
+// (#335).
 
 import {
   Babylonian,
@@ -115,6 +119,28 @@ const expect = (description: string, actual: string, expected: string) => {
       india
     );
 
+  const toronto = new UnknownCity(
+    'Toronto',
+    null as unknown as Tile,
+    new UnknownPlayer(new Mongol()),
+    3,
+    new UnknownPlayer(new Mongol())
+  );
+
+  expect(
+    'Actions.CityBuildSelectionWindow.title',
+    t('Actions.CityBuildSelectionWindow.title', {
+      city: reconstituteData(toronto.toPlainObject()),
+    }),
+    'What would you like to build in Toronto?'
+  );
+
+  expect(
+    'Generic.city-name',
+    t('Generic.city-name', { name: 'Toronto', civilization: 'Mongol' }),
+    'Toronto'
+  );
+
   [
     [
       'English',
@@ -197,6 +223,12 @@ const expect = (description: string, actual: string, expected: string) => {
         'Unit.out-of-fuel',
         { unit: { _: 'Bomber' } },
         'Our Bomber ran out of fuel and crashed.',
+      ],
+      // #337
+      [
+        'City.civil-disorder',
+        { city: toronto },
+        'Civil disorder in Toronto. Mayor flees in panic!',
       ],
       // #60
       [
