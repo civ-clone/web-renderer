@@ -11,16 +11,12 @@ import { h } from '../lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
 
-type ImportAssetsOptions = {
-  replaceExisting: boolean;
-};
-
 export class ImportAssetsWindow extends Window {
   #fileInput: HTMLInputElement;
-  #options: ImportAssetsOptions = {
-    replaceExisting: false,
-  };
   #progressInformation: HTMLParagraphElement;
+  // Read when the files arrive, not copied on change: a copy started out of
+  // step with the box as drawn (#341).
+  #replaceExistingInput: HTMLInputElement;
 
   constructor() {
     const fileInput = s<HTMLInputElement>('<input type="file" multiple>'),
@@ -44,10 +40,7 @@ export class ImportAssetsWindow extends Window {
           '<p></p>',
           s(
             '<label></label>',
-            h(replaceExistingInput, {
-              change: () =>
-                (this.#options.replaceExisting = replaceExistingInput.checked),
-            }),
+            replaceExistingInput,
             textNode(t('ImportAssetsWindow.replace-existing'))
           )
         ),
@@ -62,6 +55,7 @@ export class ImportAssetsWindow extends Window {
     );
 
     this.#fileInput = fileInput;
+    this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
   }
 
@@ -98,7 +92,8 @@ export class ImportAssetsWindow extends Window {
     );
 
     const results: { name: string; uri: string }[] = [],
-      existingKeys = await assetStore.keys();
+      existingKeys = await assetStore.keys(),
+      replaceExisting = this.#replaceExistingInput.checked;
 
     // Wait for...
     await Promise.all(
@@ -135,7 +130,7 @@ export class ImportAssetsWindow extends Window {
                     filenamesForObject.every((path) =>
                       existingKeys.includes(path)
                     ) &&
-                    !this.#options.replaceExisting
+                    !replaceExisting
                   ) {
                     return object;
                   }
