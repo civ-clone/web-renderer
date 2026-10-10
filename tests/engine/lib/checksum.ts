@@ -1,5 +1,7 @@
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
+import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as goodyHutRegistryInstance } from '@civ-clone/core-goody-hut/GoodyHutRegistry';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
@@ -223,6 +225,9 @@ export const snapshot = (
     world,
     ...world.tiles(),
     ...cityRegistryInstance.entries(),
+    // What each city is building and its progress, and its size and food box (#253).
+    ...cityBuildRegistryInstance.entries(),
+    ...cityGrowthRegistryInstance.entries(),
     ...cityImprovementRegistryInstance.entries(),
     ...goodyHutRegistryInstance.entries(),
     ...playerGovernmentRegistryInstance.entries(),
@@ -240,6 +245,8 @@ export const snapshot = (
   ]),
   registries: {
     cities: cityRegistryInstance.entries().length,
+    cityBuilds: cityBuildRegistryInstance.entries().length,
+    cityGrowth: cityGrowthRegistryInstance.entries().length,
     cityImprovements: cityImprovementRegistryInstance.entries().length,
     goodyHuts: goodyHutRegistryInstance.entries().length,
     playerGovernments: playerGovernmentRegistryInstance.entries().length,

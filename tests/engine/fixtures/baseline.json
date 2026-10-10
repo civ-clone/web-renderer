@@ -14,9 +14,9 @@
   },
   "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them.",
   "checksums": {
-    "1": "3906c5b2",
-    "10": "5cec2085",
-    "50": "a63376f3"
+    "1": "a8219d60",
+    "10": "42f7e3fc",
+    "50": "c9cc04f1"
   },
   "snapshots": {
     "1": {
@@ -33,6 +33,8 @@
       },
       "registries": {
         "cities": 0,
+        "cityBuilds": 0,
+        "cityGrowth": 0,
         "cityImprovements": 0,
         "goodyHuts": 34,
         "playerGovernments": 4,
@@ -208,9 +210,9 @@
     "10": {
       "turn": 10,
       "state": {
-        "entities": 2479,
-        "fields": 9805,
-        "hash": "7ad972d0"
+        "entities": 2487,
+        "fields": 9837,
+        "hash": "82b1b51f"
       },
       "dto": {
         "objects": 3401,
@@ -219,6 +221,8 @@
       },
       "registries": {
         "cities": 4,
+        "cityBuilds": 4,
+        "cityGrowth": 4,
         "cityImprovements": 4,
         "goodyHuts": 34,
         "playerGovernments": 4,
@@ -463,9 +467,9 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2495,
-        "fields": 10013,
-        "hash": "a2005ed6"
+        "entities": 2503,
+        "fields": 10045,
+        "hash": "9352b629"
       },
       "dto": {
         "objects": 54403,
@@ -474,6 +478,8 @@
       },
       "registries": {
         "cities": 4,
+        "cityBuilds": 4,
+        "cityGrowth": 4,
         "cityImprovements": 4,
         "goodyHuts": 23,
         "playerGovernments": 4,
