@@ -29,7 +29,14 @@ import { instance as randomInstance } from '@civ-clone/core-random';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import World from '@civ-clone/core-world/World';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
-import { restoreGame, resumeGame } from '../../src/js/Engine/loadGame';
+import {
+  chooseDifficulty,
+  restoreGame,
+  resumeGame,
+} from '../../src/js/Engine/loadGame';
+import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
+import Client from '@civ-clone/core-client/Client';
+import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { plugins } from '../../src/js/plugins';
 import { readFileSync, writeFileSync } from 'fs';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
@@ -47,6 +54,8 @@ import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegis
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 
 const mode = process.argv.includes('--load') ? 'load' : 'save';
+// Loads the file as one saved before there were difficulty levels (#173).
+const old = process.argv.includes('--old');
 const file = process.argv[process.argv.indexOf(`--${mode}`) + 1];
 const until = Number(process.env.LOAD_UNTIL ?? 6);
 const then = Number(process.env.LOAD_THEN ?? 8);
@@ -62,6 +71,13 @@ const digest = (): string =>
   checksum(snapshot(turnInstance.value(), randomInstance.calls(), world(), 0));
 
 const report: Record<string, string> = {};
+
+// The level a game is played at, by name (#173).
+const difficulty = (): string => {
+  const Level = defaultGame.difficulty.get();
+
+  return Level ? typeNameOf(Level) : 'none';
+};
 
 // Shields the cities' production has put into what they are building since the
 // save (or the load), which is the cheapest question that catches a loaded game
@@ -223,6 +239,7 @@ engine.on('turn:start', (turn: number): void => {
     report.rngPlayed = `${config.seed}:${randomInstance.calls()}`;
 
     report.atSave = digest();
+    report.difficultyAtSave = difficulty();
     report.namePoolAtSave = namePool();
     report.cargoAtSave = cargo();
 
@@ -256,14 +273,54 @@ if (mode === 'load') {
       state._transportRuleRegistry = [{ $busy: 'Yield' }];
     });
 
+  if (old) {
+    // As a file written before #173 holds it: no level, and no entity for one.
+    const [gameDifficultyId] = file_.registries.difficulty ?? [];
+
+    delete file_.registries.difficulty;
+    file_.entities = file_.entities.filter(({ id }) => id !== gameDifficultyId);
+  }
+
   // No `engine.start()`: that is what generates a world. Plugins are imported
   // for their rules, exactly as the worker does before handing over.
   import('../../src/js/plugins')
-    .then((): void => {
+    .then(async (): Promise<void> => {
       restoreGame(
         file_,
         (player: Player): SimpleAIClient => new SimpleAIClient(player)
       );
+
+      report.difficultyAtLoad = difficulty();
+
+      if (old) {
+        // Nobody is playing, so it's the easiest level, without asking.
+        await chooseDifficulty(defaultGame);
+
+        report.difficultyHeadless = difficulty();
+
+        // With somebody playing, they're asked, with every level, easiest first.
+        const human = new (class extends Client {
+          async chooseFromList(meta: ChoiceMeta<any>): Promise<any> {
+            report.difficultyAsked = `${meta.key()}: ${meta
+              .choices()
+              .map((choice) => typeNameOf(choice.value()))
+              .join(', ')}`;
+
+            return meta.choices()[meta.choices().length - 1].value();
+          }
+        })(new Player());
+
+        defaultGame.difficulty.unregister(...defaultGame.difficulty.entries());
+        clientRegistryInstance.register(human);
+
+        await chooseDifficulty(defaultGame);
+
+        report.difficultyChosen = difficulty();
+
+        finish();
+
+        return;
+      }
 
       // Before resuming: the comparison is with the state that was saved, and
       // resuming hands the turn straight back to a client, which starts moving.
@@ -296,11 +353,20 @@ if (mode === 'load') {
   });
 
   engine.on('engine:start', (): void => {
+    // Not the level a game with none plays at (King), so a level that isn't carried shows.
+    const Emperor = defaultGame.availableDifficulties
+      .sorted()
+      .find((Level) => typeNameOf(Level) === 'Emperor');
+
+    if (Emperor) {
+      defaultGame.difficulty.set(Emperor);
+    }
+
     new Array(config.players).fill(0).forEach((): void => {
       const player = new Player();
 
-      playerRegistryInstance.register(player);
       clientRegistryInstance.register(new SimpleAIClient(player));
+      playerRegistryInstance.register(player);
     });
   });
 

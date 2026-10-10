@@ -86,6 +86,9 @@ i18next.addResources('en', 'default', {
     '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
   'ChooseFromList.choose-civilization.random': 'Random',
   'ChooseFromList.choose-civilization.title': 'Choose your civilization',
+  'ChooseFromList.choose-difficulty.body':
+    'This game was saved before there were difficulty levels. Which level should it be played at?',
+  'ChooseFromList.choose-difficulty.title': 'Difficulty level',
   'ChooseFromList.choose-leader.body': '',
   'ChooseFromList.choose-leader.choice':
     '$t(Generic.leader-name, { "leader": "{{value._}}", "ns": "default" })',
@@ -171,7 +174,13 @@ i18next.addResources('en', 'default', {
   'CustomizeWorld.title': 'Customize world',
   'CustomizeWorld.width': '$t(Generic.width)',
 
+  'DifficultyWindow.level': '{{level}}',
+  'DifficultyWindow.level_easiest': '{{level}} (easiest)',
+  'DifficultyWindow.level_toughest': '{{level}} (toughest)',
+  'DifficultyWindow.title': 'Difficulty level',
+
   'Game.waiting': 'Waiting for the other civilizations…',
+  'GameDetails.difficulty': '{{difficulty}} level',
   'GameDetails.turn': '{{turn, number}}',
   'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
   'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',

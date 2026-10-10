@@ -1,0 +1,1 @@
+{"version":"0.1.0@ec509e1","date":"2026-10-10T10:40:44.000Z","localChanges":["The options you change (auto end of turn, the unit edge margin, the map scale and stopping the map at the poles) are now remembered by your browser. They stay set when you reload the page or load a saved game (closes #343)."],"externalChanges":{}}

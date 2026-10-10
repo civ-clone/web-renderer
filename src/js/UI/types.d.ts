@@ -253,7 +253,14 @@ export interface UnitSupportProduction extends Yield<'UnitSupportProduction'> {
   unit: Unit;
 }
 
+// The level the game is played at (#173): the level's class, by name.
+export interface GameDifficulty extends EntityInstance<'GameDifficulty'> {
+  difficulty: Entity;
+}
+
 export interface GameData extends EntityInstance {
+  // Null in a game a host started without choosing a level.
+  difficulty: GameDifficulty | null;
   player: Player;
   turn: Yield;
   year: Yield;

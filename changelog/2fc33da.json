@@ -1,0 +1,1 @@
+{"version":"0.1.0@2fc33da","date":"2026-10-10T10:41:54.000Z","localChanges":["The release notes, opened from the version number on the main menu, now show one entry per day instead of one per change, so a busy day no longer fills the list. Behind-the-scenes changes, such as tests and tidying up, are gathered under a heading you can expand (closes #355)."],"externalChanges":{}}

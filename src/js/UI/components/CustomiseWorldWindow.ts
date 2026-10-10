@@ -1,3 +1,4 @@
+import DifficultyWindow from './DifficultyWindow';
 import Options from '../../Engine/Requests/Options';
 import Request from '../../Engine/Request';
 import Transport from '../Transport';
@@ -62,25 +63,29 @@ export class CustomiseWorldWindow extends Window {
           existingValues.maxIterations ?? 20
         }" step="1" min="1">`
       ),
-      submit = async () => {
+      submit = () => {
         this.close();
 
-        await this.#transport.request(
-          new Request('setOptions', {
-            players: playersInput.value,
-            height: heightInput.value,
-            width: widthInput.value,
-            landCoverage: landCoverageInput.value,
-            landSize: landSizeInput.value,
-            maxIterations: maxIterationsInput.value,
-          })
-        );
+        // Then the difficulty level, as a new game asks it (#173).
+        DifficultyWindow.ask(this.#transport, async (difficulty) => {
+          await this.#transport.request(
+            new Request('setOptions', {
+              players: playersInput.value,
+              height: heightInput.value,
+              width: widthInput.value,
+              landCoverage: landCoverageInput.value,
+              landSize: landSizeInput.value,
+              maxIterations: maxIterationsInput.value,
+              difficulty,
+            })
+          );
 
-        this.#transport.send('start', null);
+          this.#transport.send('start', null);
 
-        if (this.#onFinished) {
-          this.#onFinished();
-        }
+          if (this.#onFinished) {
+            this.#onFinished();
+          }
+        });
       };
 
     this.update(

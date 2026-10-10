@@ -1,14 +1,22 @@
 import { Element, s } from '@dom111/element';
-import { Yield } from '../types';
+import { GameDifficulty, Yield } from '../types';
+import { difficultyName } from '../lib/difficulty';
 import { t } from 'i18next';
 
 export class GameDetails extends Element {
+  #difficulty: GameDifficulty | null;
   #turn: Yield;
   #year: Yield;
 
-  constructor(element: HTMLElement, turn: Yield, year: Yield) {
+  constructor(
+    element: HTMLElement,
+    turn: Yield,
+    year: Yield,
+    difficulty: GameDifficulty | null = null
+  ) {
     super(element);
 
+    this.#difficulty = difficulty;
     this.#turn = turn;
     this.#year = year;
   }
@@ -26,6 +34,18 @@ export class GameDetails extends Element {
         )}</span></h3>`
       )
     );
+
+    if (this.#difficulty) {
+      const difficulty = document.createElement('p');
+
+      difficulty.className = 'difficulty';
+      // As text: a level's name is a translation, not markup.
+      difficulty.textContent = t('GameDetails.difficulty', {
+        difficulty: difficultyName(this.#difficulty.difficulty._),
+      });
+
+      this.append(difficulty);
+    }
   }
 
   year(year = this.#year.value): string {

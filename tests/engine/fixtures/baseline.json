@@ -5,6 +5,7 @@
       10,
       50
     ],
+    "difficulty": "King",
     "height": 40,
     "players": 4,
     "seed": 1,
@@ -15,7 +16,7 @@
   "checksums": {
     "1": "3906c5b2",
     "10": "24892d4e",
-    "50": "19fc5ff1"
+    "50": "7f896cc4"
   },
   "snapshots": {
     "1": {
@@ -111,7 +112,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 979,
+        "total": 982,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -124,6 +125,7 @@
           "BaseYield": 112,
           "Build": 103,
           "BuildCost": 76,
+          "BuildCostModifier": 1,
           "BuildingComplete": 7,
           "Built": 12,
           "CanBeWorked": 3,
@@ -181,7 +183,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 9,
+          "TurnStart": 10,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -191,7 +193,7 @@
           "VisibilityChanged": 1,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
+          "Yield": 205,
           "YieldModifier": 17
         }
       }
@@ -206,7 +208,7 @@
       "dto": {
         "objects": 3401,
         "bytes": 582763,
-        "hash": "a3582a0b"
+        "hash": "d9198a9e"
       },
       "registries": {
         "cities": 4,
@@ -358,7 +360,7 @@
       "randomCalls": 8616,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 979,
+        "total": 982,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -371,6 +373,7 @@
           "BaseYield": 112,
           "Build": 103,
           "BuildCost": 76,
+          "BuildCostModifier": 1,
           "BuildingComplete": 7,
           "Built": 12,
           "CanBeWorked": 3,
@@ -428,7 +431,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 9,
+          "TurnStart": 10,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -438,7 +441,7 @@
           "VisibilityChanged": 1,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
+          "Yield": 205,
           "YieldModifier": 17
         }
       }
@@ -446,26 +449,26 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2496,
-        "fields": 9992,
-        "hash": "0d007da8"
+        "entities": 2501,
+        "fields": 10030,
+        "hash": "ffdea1e1"
       },
       "dto": {
-        "objects": 47634,
-        "bytes": 8000946,
-        "hash": "42fd7ba9"
+        "objects": 79767,
+        "bytes": 13470519,
+        "hash": "44eb7d0a"
       },
       "registries": {
         "cities": 6,
-        "cityImprovements": 4,
-        "goodyHuts": 24,
+        "cityImprovements": 5,
+        "goodyHuts": 21,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
-        "players": 3,
-        "tileImprovements": 14,
-        "units": 28
+        "players": 4,
+        "tileImprovements": 16,
+        "units": 32
       },
       "world": {
         "width": 60,
@@ -482,6 +485,11 @@
           "Player-2",
           "Aztec",
           "MoctezumaII"
+        ],
+        [
+          "Player-3",
+          "Zulu",
+          "Shaka"
         ],
         [
           "Player-4",
@@ -517,7 +525,7 @@
         [
           "City-4",
           "City",
-          "Player-2",
+          "Player-3",
           "uMgungundlovu",
           "39",
           "25"
@@ -526,7 +534,7 @@
           "City-5",
           "City",
           "Player-2",
-          "Malinalco",
+          "Ixtapaluca",
           "35",
           "0"
         ],
@@ -534,7 +542,7 @@
           "City-6",
           "City",
           "Player-4",
-          "El-Mahalla El-Kubra",
+          "Marsa Matruh",
           "1",
           "26"
         ]
@@ -543,9 +551,18 @@
         [
           "Horseman-1",
           "Horseman",
-          "Player-4",
-          "4",
-          "21",
+          "Player-2",
+          "52",
+          "36",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-2",
+          "Horseman",
+          "Player-2",
+          "52",
+          "36",
           "false",
           "false"
         ],
@@ -595,6 +612,15 @@
           "true"
         ],
         [
+          "Settlers-6",
+          "Settlers",
+          "Player-2",
+          "38",
+          "30",
+          "false",
+          "false"
+        ],
+        [
           "Spearman-1",
           "Spearman",
           "Player-2",
@@ -606,18 +632,27 @@
         [
           "Swordman-1",
           "Swordman",
-          "Player-3",
-          "42",
-          "27",
+          "Player-4",
+          "1",
+          "17",
           "false",
-          "true"
+          "false"
         ],
         [
           "Swordman-2",
           "Swordman",
-          "Player-1",
-          "19",
+          "Player-3",
           "34",
+          "19",
+          "false",
+          "false"
+        ],
+        [
+          "Swordman-3",
+          "Swordman",
+          "Player-2",
+          "40",
+          "32",
           "false",
           "false"
         ],
@@ -637,14 +672,14 @@
           "39",
           "25",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-3",
           "Warrior",
           "Player-4",
-          "3",
-          "19",
+          "1",
+          "17",
           "false",
           "false"
         ],
@@ -661,8 +696,8 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "43",
-          "28",
+          "42",
+          "26",
           "false",
           "true"
         ],
@@ -670,8 +705,8 @@
           "Warrior-6",
           "Warrior",
           "Player-2",
-          "40",
-          "17",
+          "53",
+          "37",
           "false",
           "false"
         ],
@@ -679,49 +714,13 @@
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "6",
-          "27",
+          "5",
+          "11",
           "false",
           "false"
         ],
         [
           "Warrior-8",
-          "Warrior",
-          "Player-2",
-          "46",
-          "26",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-9",
-          "Warrior",
-          "Player-3",
-          "34",
-          "24",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-a",
-          "Warrior",
-          "Player-4",
-          "3",
-          "14",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-b",
-          "Warrior",
-          "Player-1",
-          "18",
-          "39",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-c",
           "Warrior",
           "Player-2",
           "49",
@@ -730,11 +729,47 @@
           "false"
         ],
         [
+          "Warrior-9",
+          "Warrior",
+          "Player-3",
+          "44",
+          "32",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-a",
+          "Warrior",
+          "Player-4",
+          "0",
+          "13",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-b",
+          "Warrior",
+          "Player-1",
+          "18",
+          "37",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-c",
+          "Warrior",
+          "Player-2",
+          "39",
+          "31",
+          "false",
+          "false"
+        ],
+        [
           "Warrior-d",
           "Warrior",
           "Player-4",
           "3",
-          "13",
+          "16",
           "false",
           "false"
         ],
@@ -742,40 +777,13 @@
           "Warrior-e",
           "Warrior",
           "Player-3",
-          "40",
-          "20",
+          "47",
+          "26",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-f",
-          "Warrior",
-          "Player-2",
-          "35",
-          "35",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-g",
-          "Warrior",
-          "Player-1",
-          "14",
-          "34",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-h",
-          "Warrior",
-          "Player-3",
-          "39",
-          "25",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-i",
           "Warrior",
           "Player-2",
           "35",
@@ -784,19 +792,55 @@
           "false"
         ],
         [
-          "Warrior-j",
+          "Warrior-g",
+          "Warrior",
+          "Player-1",
+          "8",
+          "1",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-h",
+          "Warrior",
+          "Player-3",
+          "38",
+          "30",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-i",
           "Warrior",
           "Player-1",
           "17",
           "33",
           "false",
           "true"
+        ],
+        [
+          "Warrior-j",
+          "Warrior",
+          "Player-3",
+          "41",
+          "31",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-k",
+          "Warrior",
+          "Player-2",
+          "35",
+          "38",
+          "false",
+          "false"
         ]
       ],
-      "randomCalls": 8793,
+      "randomCalls": 8829,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 979,
+        "total": 982,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -809,6 +853,7 @@
           "BaseYield": 112,
           "Build": 103,
           "BuildCost": 76,
+          "BuildCostModifier": 1,
           "BuildingComplete": 7,
           "Built": 12,
           "CanBeWorked": 3,
@@ -866,7 +911,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 9,
+          "TurnStart": 10,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -876,7 +921,7 @@
           "VisibilityChanged": 1,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
+          "Yield": 205,
           "YieldModifier": 17
         }
       }
