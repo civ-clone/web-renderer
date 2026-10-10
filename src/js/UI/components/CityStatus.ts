@@ -41,10 +41,9 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   return [
     s(`<header>${cityName(city)}</header>`),
     s(
-      `<div class="growth"><strong>${t(
-        'City.size',
-        city.growth
-      )}</strong> ${foodIcon} ${t('CityStatus.growth', {
+      `<div class="growth"><strong>${t('City.size', {
+        size: city.growth.size,
+      })}</strong> ${foodIcon} ${t('CityStatus.growth', {
         free: food[2],
         total: food[0],
         totals_context: food[0] === food[2] ? 'equal' : 'unequal',

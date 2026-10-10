@@ -140,8 +140,8 @@
     "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2",
     "feather-icons": "^4.28.0",
-    "i18next": "^22.4.14",
-    "i18next-browser-languagedetector": "^7.0.1",
+    "i18next": "^23.16.8",
+    "i18next-browser-languagedetector": "^8.2.1",
     "idb": "^7.1.1",
     "marked": "^4.2.5"
   }
