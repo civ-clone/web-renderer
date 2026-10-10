@@ -82,6 +82,7 @@ import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-trea
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
+import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
@@ -1872,7 +1873,8 @@ export class DataTransferClient extends Client implements IClient {
       new TransferObject(
         this.player(),
         turnInstance,
-        yearInstance
+        yearInstance,
+        gameDifficultyRegistryInstance.entries()[0] ?? null
       ).toPlainObject(this.#dataFilter()) as unknown as GameData
     );
 

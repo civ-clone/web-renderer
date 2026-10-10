@@ -1,4 +1,12 @@
 [
+{"version":"0.1.0@2fc33da","date":"2026-10-10T10:41:54.000Z","localChanges":["The release notes, opened from the version number on the main menu, now show one entry per day instead of one per change, so a busy day no longer fills the list. Behind-the-scenes changes, such as tests and tidying up, are gathered under a heading you can expand (closes #355)."],"externalChanges":{}}
+,
+{"version":"0.1.0@ec509e1","date":"2026-10-10T10:40:44.000Z","localChanges":["The options you change (auto end of turn, the unit edge margin, the map scale and stopping the map at the poles) are now remembered by your browser. They stay set when you reload the page or load a saved game (closes #343)."],"externalChanges":{}}
+,
+{"version":"0.1.0@25cb9e3","date":"2026-10-10T10:40:06.000Z","localChanges":["chore: drop the main menu's Quit button, which never showed in the browser (closes #340)"],"externalChanges":{}}
+,
+{"version":"0.1.0@d1feb2b","date":"2026-10-10T10:39:46.000Z","localChanges":["In Import Assets, \"Replace existing\" now does what its tick says. It starts ticked, so a re-import replaces the sprites you already have, and unticking it skips the ones that are complete (closes #341)."],"externalChanges":{}}
+,
 {"version":"0.1.0@a8c8d66","date":"2026-10-10T10:27:02.000Z","localChanges":["A city whose name isn't on its civilization's list, such as a Mongol Toronto, now shows as \"Toronto\" in messages and window titles like \"What would you like to build in …?\", instead of \"Mongol.Toronto.name\" (closes #337)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@dee8404","date":"2026-10-09T21:11:02.000Z","localChanges":["The welcome now reads \"leader of England\" rather than \"leader of the England\", and \"leader of the Aztec Empire\" for the Aztecs (closes #335)."],"externalChanges":{}}

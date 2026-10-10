@@ -1,4 +1,7 @@
+import AIClient from '@civ-clone/core-ai-client/AIClient';
+import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Client from '@civ-clone/core-client/Client';
+import Difficulty from '@civ-clone/core-difficulty/Difficulty';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
@@ -13,6 +16,12 @@ import {
 } from './diplomacy';
 import { plugins } from '../plugins';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
+
+declare global {
+  interface ChoiceMetaDataMap {
+    'choose-difficulty': typeof Difficulty;
+  }
+}
 
 /**
  * The class name `save` records for the human player's client.
@@ -155,11 +164,42 @@ export const resumeGame = (): void => {
     .finally((): void => engine.emit('player:turn-end', currentPlayer));
 };
 
-export const loadGame = (
+/**
+ * Give a game saved before there were difficulty levels one (#173).
+ *
+ * The person playing is asked, with the levels the rules offer. With nobody playing (the load suites and harnesses)
+ * it takes the easiest, Chieftain, whose research costs are the closest to what those games were played with. Either
+ * way the level is set in the game, so the next save carries it.
+ */
+export const chooseDifficulty = async (game = defaultGame): Promise<void> => {
+  if (game.difficulty.get() !== null) {
+    return;
+  }
+
+  const levels = game.availableDifficulties.sorted(),
+    human = game.clients
+      .entries()
+      .find((client: Client): boolean => !(client instanceof AIClient));
+
+  if (levels.length === 0) {
+    return;
+  }
+
+  game.difficulty.set(
+    human
+      ? await human.chooseFromList(new ChoiceMeta(levels, 'choose-difficulty'))
+      : levels[0]
+  );
+};
+
+export const loadGame = async (
   file: SaveGame,
   createClient: (player: Player, human: boolean) => Client
-): void => {
+): Promise<void> => {
   restoreGame(file, createClient);
+
+  await chooseDifficulty(defaultGame);
+
   resumeGame();
 };
 

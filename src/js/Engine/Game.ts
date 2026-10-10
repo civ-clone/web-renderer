@@ -14,6 +14,7 @@ import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
+import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 export interface IGame {
   start(): void;
@@ -48,6 +49,27 @@ export class Game implements IGame {
       this.#transport.send('notification', 'loading saved game...');
 
       this.load(JSON.parse(data) as SaveGame);
+    });
+
+    // The levels come from the rules rather than a list here, so a ruleset with other levels needs no change to the menu
+    //  (#173). The plugins are imported for it, as a load does, before the game has started.
+    transport.receive('difficulties', (): void => {
+      import('../plugins')
+        .then((): void =>
+          transport.send(
+            'difficulties',
+            defaultGame.availableDifficulties.sorted().map((Level) => ({
+              name: typeNameOf(Level),
+              level: Level.level(),
+            }))
+          )
+        )
+        .catch((error: Error): void =>
+          this.#transport.send(
+            'notification',
+            `could not list the difficulty levels: ${error.message}`
+          )
+        );
     });
 
     transport.receive('start', () => {
@@ -186,15 +208,16 @@ export class Game implements IGame {
    */
   load(file: SaveGame): void {
     import('../plugins')
-      .then((): void => {
+      .then(() =>
         loadGame(
           file,
           (player: Player, human: boolean): Client =>
             this.#createClient(player, human)
-        );
-
-        this.#transport.send('notification', `loaded '${file.meta.name}'`);
-      })
+        )
+      )
+      .then((): void =>
+        this.#transport.send('notification', `loaded '${file.meta.name}'`)
+      )
       .catch((error: Error): void =>
         this.#transport.send('notification', `could not load: ${error.message}`)
       );
@@ -212,6 +235,18 @@ export class Game implements IGame {
     });
 
     engine.on('engine:start', (): void => {
+      // Before any player is added: the rules that run as a player is added read it (Chieftain's starting gold).
+      const name = engine.option('difficulty'),
+        Level = defaultGame.availableDifficulties
+          .sorted()
+          .find((Available) => typeNameOf(Available) === name);
+
+      if (Level) {
+        defaultGame.difficulty.set(Level);
+      }
+    });
+
+    engine.on('engine:start', (): void => {
       new Array(parseInt(engine.option('players'), 10))
         .fill(0)
         .forEach((value: 0, i: number) => {
@@ -219,8 +254,9 @@ export class Game implements IGame {
           const player = new Player(),
             client = this.#createClient(player, i === 0);
 
-          playerRegistryInstance.register(player);
+          // The client first, so the rules that run as the player is added know whether a person plays it.
           clientRegistryInstance.register(client);
+          playerRegistryInstance.register(player);
 
           this.#transport.send('notification', `generating world...`);
         });

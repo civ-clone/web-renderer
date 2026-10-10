@@ -1,0 +1,1 @@
+{"version":"0.1.0@d1feb2b","date":"2026-10-10T10:39:46.000Z","localChanges":["In Import Assets, \"Replace existing\" now does what its tick says. It starts ticked, so a re-import replaces the sprites you already have, and unticking it skips the ones that are complete (closes #341)."],"externalChanges":{}}

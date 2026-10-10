@@ -1,4 +1,5 @@
 import { defaultWorldSize, playerCounts, worldSizes } from '../lib/worldSizes';
+import DifficultyWindow from './DifficultyWindow';
 import MandatorySelection from './MandatorySelection';
 import PlayerCountWindow from './PlayerCountWindow';
 import Transport from '../Transport';
@@ -6,7 +7,7 @@ import { t } from 'i18next';
 
 export type FinishedHandler = () => void;
 
-/** The size of the world, then how many civilizations to play with (#55). */
+/** The size of the world, then the difficulty level (#173), then how many civilizations to play with (#55). */
 export class NewGameWindow extends MandatorySelection {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
     super(
@@ -21,12 +22,16 @@ export class NewGameWindow extends MandatorySelection {
         const size =
           worldSizes.find(({ key }) => key === selection) ?? defaultWorldSize;
 
-        new PlayerCountWindow(
+        DifficultyWindow.ask(
           transport,
-          { width: size.width, height: size.height },
-          playerCounts(size),
-          size.players,
-          onFinished
+          (difficulty) =>
+            new PlayerCountWindow(
+              transport,
+              { width: size.width, height: size.height, difficulty },
+              playerCounts(size),
+              size.players,
+              onFinished
+            )
         );
       },
       undefined,

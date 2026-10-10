@@ -1,19 +1,26 @@
 import { FinishedHandler, PlayerCountWindow } from './PlayerCountWindow';
+import DifficultyWindow from './DifficultyWindow';
 import Transport from '../Transport';
 
-// Earth is a fixed map, so there is no size to ask for (#55): only how many civilizations.
-export class EarthWindow extends PlayerCountWindow {
+// Earth is a fixed map, so there is no size to ask for (#55): only the difficulty level (#173) and how many
+//  civilizations.
+export class EarthWindow {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    super(
+    DifficultyWindow.ask(
       transport,
-      {
-        width: 80,
-        height: 50,
-        earth: true,
-      },
-      [7, 6, 5, 4, 3],
-      7,
-      onFinished
+      (difficulty) =>
+        new PlayerCountWindow(
+          transport,
+          {
+            width: 80,
+            height: 50,
+            earth: true,
+            difficulty,
+          },
+          [7, 6, 5, 4, 3],
+          7,
+          onFinished
+        )
     );
   }
 }

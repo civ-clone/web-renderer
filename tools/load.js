@@ -32,10 +32,10 @@ require('esbuild').buildSync({
   logLevel: 'error',
 });
 
-const run = (mode, seed) => {
+const run = (mode, seed, ...flags) => {
   const output = execFileSync(
     process.execPath,
-    [outfile, `--${mode}`, saveFile],
+    [outfile, `--${mode}`, saveFile, ...flags],
     {
       cwd: webRenderer,
       encoding: 'utf8',
@@ -54,10 +54,12 @@ const playSeed = (seed) => {
   const checks = [];
   let played;
   let loaded;
+  let loadedOld;
 
   try {
     played = run('save', seed);
     loaded = run('load', seed);
+    loadedOld = run('load', seed, '--old');
   } catch (error) {
     process.stdout.write((error.stdout || '') + (error.stderr || ''));
     process.stdout.write('\n0/2 — a saved game reloads and plays on\n');
@@ -69,6 +71,18 @@ const playSeed = (seed) => {
     'a loaded game is the game that was saved',
     loaded.atLoad,
     played.atSave,
+  ]);
+  // The level is in the save (#173). Emperor, so a level lost on the way, read as King, can't pass.
+  checks.push([
+    'at the level it was played at',
+    `${played.difficultyAtSave} ${loaded.difficultyAtLoad}`,
+    'Emperor Emperor',
+  ]);
+  // A save from before there were levels: the player is asked for one, or, with nobody playing, it's Chieftain.
+  checks.push([
+    'a save with no level asks for one, or is Chieftain',
+    `${loadedOld.difficultyAtLoad} / ${loadedOld.difficultyHeadless} / ${loadedOld.difficultyAsked} / ${loadedOld.difficultyChosen}`,
+    'none / Chieftain / choose-difficulty: Chieftain, Warlord, Prince, King, Emperor / Emperor',
   ]);
   // The file must name the stream the game was on. `core-random`'s `seed()` used
   // to report the clock seed the generator was constructed with, not the one

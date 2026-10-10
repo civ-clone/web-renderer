@@ -1,5 +1,6 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
+import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
@@ -56,6 +57,8 @@ declare global {
     // What a city can build (#324): the reply is standalone, so it resolves without the game data.
     cityBuildAvailable: TransportData<ObjectMap, string>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
+    // The difficulty levels the rules offer, for the new game menu (#173).
+    difficulties: TransportData<DifficultyOption[], null>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
     embassyEstablished: TransportData<string, never>;
     gameData: TransportData<GameData, ObjectMap>;

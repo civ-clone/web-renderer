@@ -44,6 +44,11 @@ import {
   chooseFromListChoice,
   chooseFromListTitle,
 } from './lib/chooseFromList';
+import {
+  difficultyLabels,
+  preselectedDifficulty,
+  rememberDifficulty,
+} from './lib/difficulty';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -487,7 +492,19 @@ export class Renderer {
 
           // Picked client-side, among the choices offered (#15). Not a valid choice id, so it can't collide with one.
           const randomChoice = '@random',
-            offerRandom = key === 'choose-civilization' && choices.length > 1;
+            offerRandom = key === 'choose-civilization' && choices.length > 1,
+            // A save from before there were levels (#173): labelled and preselected as the new game menu does it. The
+            //  engine sends the levels easiest first.
+            difficulties =
+              key === 'choose-difficulty'
+                ? choices.map(({ value }, level) => ({
+                    name: (value as { _: string })._,
+                    level,
+                  }))
+                : null,
+            difficultyChoiceLabels = difficulties
+              ? difficultyLabels(difficulties)
+              : null;
 
           const selectionWindow = new SelectionWindow(
             title,
@@ -500,10 +517,12 @@ export class Renderer {
                     },
                   ]
                 : []),
-              ...choices.map(({ id, value }) => {
+              ...choices.map(({ id, value }, index) => {
                 const label =
                   key === 'negotiation.next-step'
                     ? interactionLabel(value as Interactions)
+                    : difficultyChoiceLabels
+                    ? difficultyChoiceLabels[index].label
                     : chooseFromListChoice(key, value);
 
                 return {
@@ -512,19 +531,40 @@ export class Renderer {
                 };
               }),
             ],
-            (choice) =>
+            (choice) => {
+              if (difficulties) {
+                const chosen = choices.findIndex(({ id }) => id === choice);
+
+                if (chosen > -1) {
+                  rememberDifficulty(difficulties[chosen].name);
+                }
+              }
+
               transport.send(
                 'chooseFromList',
                 offerRandom && choice === randomChoice
                   ? choices[Math.floor(Math.random() * choices.length)].id
                   : choice
-              ),
+              );
+            },
             body,
             {
               canClose: false,
               displayAll: true,
             }
           );
+
+          if (difficulties && !selectionWindow.autoChosen()) {
+            const preselected = preselectedDifficulty(difficulties),
+              preselectedIndex = difficulties.findIndex(
+                ({ name }) => name === preselected
+              );
+
+            if (preselectedIndex > -1) {
+              selectionWindow.selectionList().value =
+                choices[preselectedIndex].id;
+            }
+          }
 
           if (uiStressRunner && !selectionWindow.autoChosen()) {
             selectionWindow.selectionList().value = choices[0].id;
@@ -1257,7 +1297,8 @@ export class Renderer {
               const gameDetails = new GameDetails(
                 gameInfo,
                 data.turn,
-                data.year
+                data.year,
+                data.difficulty
               );
 
               gameDetails.build();

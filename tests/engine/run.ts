@@ -14,6 +14,8 @@ import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Snapshot, checksum, snapshot } from './lib/checksum';
 import World from '@civ-clone/core-world/World';
+import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -152,11 +154,24 @@ engine.on('turn:start', (turn: number): void => {
 // handler that builds the world — the same ordering src/js/Engine/Game.ts relies
 // on.
 engine.on('engine:start', (): void => {
+  const Level = defaultGame.availableDifficulties
+    .sorted()
+    .find((Available) => typeNameOf(Available) === config.difficulty);
+
+  if (!Level) {
+    fail(`no difficulty level '${config.difficulty}'`, null);
+
+    return;
+  }
+
+  // Before the players, as src/js/Engine/Game.ts does it.
+  defaultGame.difficulty.set(Level);
+
   new Array(config.players).fill(0).forEach((): void => {
     const player = new Player();
 
-    playerRegistryInstance.register(player);
     clientRegistryInstance.register(new SimpleAIClient(player));
+    playerRegistryInstance.register(player);
   });
 });
 

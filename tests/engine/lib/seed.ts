@@ -2,6 +2,9 @@ import { instance as rngInstance } from '@civ-clone/core-random';
 
 export type Config = {
   checkpoints: number[];
+  // The difficulty level's class name (#173). Every player here is a computer player, so it sets their research
+  //  rate, content citizens and costs.
+  difficulty: string;
   height: number;
   players: number;
   seed: number;
@@ -13,6 +16,7 @@ const supplied = JSON.parse(process.env.CONFORMANCE_CONFIG || '{}');
 
 export const config: Config = {
   checkpoints: supplied.checkpoints ?? [1, 10, 50],
+  difficulty: supplied.difficulty ?? 'King',
   height: supplied.height ?? 40,
   players: supplied.players ?? 4,
   seed: supplied.seed ?? 1,
