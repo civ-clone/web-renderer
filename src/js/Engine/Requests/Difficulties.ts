@@ -7,9 +7,9 @@ export type DifficultyOption = {
 };
 
 // The difficulty levels the rules offer, easiest first (#173).
-export class Difficulties extends Request<[], DifficultyOption[]> {
+export class Difficulties extends Request<[null], DifficultyOption[]> {
   constructor() {
-    super('difficulties');
+    super('difficulties', null);
   }
 }
 

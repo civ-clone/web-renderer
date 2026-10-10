@@ -55,14 +55,21 @@ const playSeed = (seed) => {
   let played;
   let loaded;
   let loadedOld;
+  // Which run was under way, for the report if it fails: none of the checks
+  // below can be made without all three.
+  let stage = 'the saving run';
 
   try {
     played = run('save', seed);
+    stage = 'the loading run';
     loaded = run('load', seed);
+    stage = 'the run loading it as a save with no level (#173)';
     loadedOld = run('load', seed, '--old');
   } catch (error) {
     process.stdout.write((error.stdout || '') + (error.stderr || ''));
-    process.stdout.write('\n0/2 — a saved game reloads and plays on\n');
+    process.stdout.write(
+      `\nFAIL ${stage} failed, so none of the checks ran — a saved game reloads and plays on\n`
+    );
 
     return true;
   }
