@@ -255,6 +255,7 @@ i18next.addResources('en', 'default', {
 
   'Notification.title': 'Notification',
 
+  'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{error}}',
   'SavedGame.could-not-read': 'That save could not be read: {{error}}',

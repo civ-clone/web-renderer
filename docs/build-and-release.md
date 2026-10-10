@@ -169,6 +169,14 @@ commit logs), so the one the build generated and the one committed later are
 the same bytes. `changelog/<sha>.json` files that already exist are reused, not
 regenerated, unless `--force` is passed.
 
+The release window doesn't list entries one by one. It groups them by day at
+display time (`src/js/UI/lib/releaseDays.ts`, #355), in the player's own
+timezone. A day takes its newest commit's version and date, lists every
+bullet newest first, and joins each package's external logs. Bullets from
+dev-only commits (`chore:`, `test:`, `docs:` and so on) go under a collapsed
+"Behind the scenes". `releases.json` itself stays one entry per commit.
+`npm run test:release-days` covers the grouping.
+
 Before 2026-09-27 each release had its own `release:` commit carrying the
 entries up to its parent. Those commits stay in the history and in the notes.
 

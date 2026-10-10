@@ -3,18 +3,18 @@ import { s } from '@dom111/element';
 import releases from '../../../../changelog/releases.json';
 import { instance as localeProvider } from '../LocaleProvider';
 import { marked } from 'marked';
+import { Release, byDay } from '../lib/releaseDays';
+import { t } from 'i18next';
 
-interface Release {
-  version: string;
-  date: string;
-  localChanges: string[];
-  externalChanges: {
-    [key: string]: {
-      status: 'added' | 'removed' | 'updated';
-      log: string[];
-    };
-  };
-}
+const bullets = (changes: string[], indent: string): string =>
+  changes
+    .map(
+      (change) =>
+        `<li>${marked(change.replace(/^\s*-\s*/, '').trim(), {
+          sanitize: true,
+        })}</li>`
+    )
+    .join(`\n${indent}`);
 
 const firstParentMatching = (
   target: HTMLElement,
@@ -49,12 +49,13 @@ export class ReleaseWindow extends Window {
         `<section></section>`,
         s(
           `<div class="release-list"></div>`,
-          // An entry with nothing on either side is nothing to show: it would
-          // render as a heading above an empty block.
-          ...(releases as Release[])
+          // One entry per day, however many commits landed (#355). A day with
+          // nothing to show would render as a heading above an empty block.
+          ...byDay(releases as Release[])
             .filter(
               (release) =>
                 release.localChanges.length > 0 ||
+                release.devChanges.length > 0 ||
                 Object.keys(release.externalChanges).length > 0
             )
             .map((release, i) => {
@@ -73,15 +74,23 @@ export class ReleaseWindow extends Window {
       release.localChanges.length > 0
         ? `
     <ul>
-      ${release.localChanges
-        .map(
-          (line) =>
-            `<li>${marked(line.replace(/^\s*-\s*/, '').trim(), {
-              sanitize: true,
-            })}</li>`
-        )
-        .join('\n      ')}
+      ${bullets(release.localChanges, '      ')}
     </ul>
+  `
+        : ''
+    }
+
+    ${
+      release.devChanges.length > 0
+        ? `
+    <dl>
+      <dd>${t('ReleaseWindow.behind-the-scenes')}</dd>
+      <dt aria-expanded="false">
+        <ul>
+          ${bullets(release.devChanges, '          ')}
+        </ul>
+      </dt>
+    </dl>
   `
         : ''
     }
@@ -97,14 +106,7 @@ export class ReleaseWindow extends Window {
           ([module, { status, log: changes }]) => `<dd>${status} ${module}</dd>
       <dt aria-expanded="false">
         <ul>
-          ${(changes ?? [])
-            .map(
-              (change) =>
-                `<li>${marked(change.replace(/^\s*-\s*/, '').trim(), {
-                  sanitize: true,
-                })}</li>`
-            )
-            .join('\n          ')}
+          ${bullets(changes ?? [], '          ')}
         </ul>
       </dt>`
         )
