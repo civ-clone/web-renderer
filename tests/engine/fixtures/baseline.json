@@ -15,8 +15,8 @@
   "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them.",
   "checksums": {
     "1": "3906c5b2",
-    "10": "24892d4e",
-    "50": "7f896cc4"
+    "10": "5cec2085",
+    "50": "a63376f3"
   },
   "snapshots": {
     "1": {
@@ -112,14 +112,16 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 982,
+        "total": 1001,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
           "Added": 6,
+          "AdvanceGrade": 3,
           "AnarchyDuration": 3,
+          "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
@@ -127,6 +129,7 @@
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingComplete": 7,
+          "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
@@ -148,6 +151,7 @@
           "Distribution": 15,
           "DistributionGroups": 1,
           "EmbassyEstablished": 1,
+          "Expansion": 4,
           "ExpectedMovementCost": 1,
           "Expired": 1,
           "Feature": 12,
@@ -160,6 +164,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
@@ -170,6 +175,7 @@
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
+          "ScienceBias": 2,
           "Shrink": 3,
           "Spawn": 1,
           "Spend": 6,
@@ -191,6 +197,7 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 205,
@@ -203,12 +210,12 @@
       "state": {
         "entities": 2479,
         "fields": 9805,
-        "hash": "791b4b57"
+        "hash": "7ad972d0"
       },
       "dto": {
         "objects": 3401,
-        "bytes": 582763,
-        "hash": "d9198a9e"
+        "bytes": 582791,
+        "hash": "5c09beee"
       },
       "registries": {
         "cities": 4,
@@ -357,17 +364,19 @@
           "false"
         ]
       ],
-      "randomCalls": 8616,
+      "randomCalls": 8638,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 982,
+        "total": 1001,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
           "Added": 6,
+          "AdvanceGrade": 3,
           "AnarchyDuration": 3,
+          "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
@@ -375,6 +384,7 @@
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingComplete": 7,
+          "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
@@ -396,6 +406,7 @@
           "Distribution": 15,
           "DistributionGroups": 1,
           "EmbassyEstablished": 1,
+          "Expansion": 4,
           "ExpectedMovementCost": 1,
           "Expired": 1,
           "Feature": 12,
@@ -408,6 +419,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
@@ -418,6 +430,7 @@
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
+          "ScienceBias": 2,
           "Shrink": 3,
           "Spawn": 1,
           "Spend": 6,
@@ -439,6 +452,7 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 205,
@@ -449,25 +463,25 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2501,
-        "fields": 10030,
-        "hash": "ffdea1e1"
+        "entities": 2495,
+        "fields": 10013,
+        "hash": "a2005ed6"
       },
       "dto": {
-        "objects": 79767,
-        "bytes": 13470519,
-        "hash": "44eb7d0a"
+        "objects": 54403,
+        "bytes": 9269079,
+        "hash": "7021387e"
       },
       "registries": {
-        "cities": 6,
-        "cityImprovements": 5,
-        "goodyHuts": 21,
+        "cities": 4,
+        "cityImprovements": 4,
+        "goodyHuts": 23,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 16,
+        "tileImprovements": 11,
         "units": 32
       },
       "world": {
@@ -529,40 +543,15 @@
           "uMgungundlovu",
           "39",
           "25"
-        ],
-        [
-          "City-5",
-          "City",
-          "Player-2",
-          "Ixtapaluca",
-          "35",
-          "0"
-        ],
-        [
-          "City-6",
-          "City",
-          "Player-4",
-          "Marsa Matruh",
-          "1",
-          "26"
         ]
       ],
       "units": [
         [
           "Horseman-1",
           "Horseman",
-          "Player-2",
-          "52",
-          "36",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-2",
-          "Horseman",
-          "Player-2",
-          "52",
-          "36",
+          "Player-3",
+          "40",
+          "12",
           "false",
           "false"
         ],
@@ -609,14 +598,14 @@
           "1",
           "26",
           "false",
-          "true"
+          "false"
         ],
         [
           "Settlers-6",
           "Settlers",
           "Player-2",
-          "38",
-          "30",
+          "37",
+          "32",
           "false",
           "false"
         ],
@@ -632,27 +621,18 @@
         [
           "Swordman-1",
           "Swordman",
-          "Player-4",
-          "1",
-          "17",
+          "Player-1",
+          "19",
+          "37",
           "false",
           "false"
         ],
         [
           "Swordman-2",
           "Swordman",
-          "Player-3",
-          "34",
-          "19",
-          "false",
-          "false"
-        ],
-        [
-          "Swordman-3",
-          "Swordman",
-          "Player-2",
-          "40",
-          "32",
+          "Player-4",
+          "59",
+          "12",
           "false",
           "false"
         ],
@@ -678,8 +658,8 @@
           "Warrior-3",
           "Warrior",
           "Player-4",
-          "1",
-          "17",
+          "5",
+          "24",
           "false",
           "false"
         ],
@@ -696,53 +676,53 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "42",
-          "26",
+          "44",
+          "35",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-6",
           "Warrior",
           "Player-2",
-          "53",
-          "37",
+          "40",
+          "25",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "5",
-          "11",
-          "false",
+          "4",
+          "12",
+          "true",
           "false"
         ],
         [
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "49",
-          "27",
+          "43",
+          "30",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "44",
-          "32",
+          "42",
+          "26",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-a",
           "Warrior",
           "Player-4",
-          "0",
-          "13",
+          "4",
+          "21",
           "false",
           "false"
         ],
@@ -750,8 +730,8 @@
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "18",
-          "37",
+          "9",
+          "38",
           "false",
           "false"
         ],
@@ -759,95 +739,115 @@
           "Warrior-c",
           "Warrior",
           "Player-2",
-          "39",
-          "31",
+          "40",
+          "25",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-d",
           "Warrior",
           "Player-4",
-          "3",
+          "2",
           "16",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-e",
           "Warrior",
           "Player-3",
-          "47",
-          "26",
+          "40",
+          "24",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-f",
           "Warrior",
-          "Player-2",
-          "35",
-          "0",
+          "Player-4",
+          "3",
+          "18",
           "false",
           "false"
         ],
         [
           "Warrior-g",
           "Warrior",
-          "Player-1",
-          "8",
-          "1",
+          "Player-2",
+          "41",
+          "25",
           "false",
           "false"
         ],
         [
           "Warrior-h",
           "Warrior",
-          "Player-3",
-          "38",
-          "30",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-i",
-          "Warrior",
           "Player-1",
           "17",
           "33",
           "false",
-          "true"
+          "false"
+        ],
+        [
+          "Warrior-i",
+          "Warrior",
+          "Player-2",
+          "41",
+          "25",
+          "false",
+          "false"
         ],
         [
           "Warrior-j",
           "Warrior",
-          "Player-3",
-          "41",
-          "31",
+          "Player-2",
+          "42",
+          "27",
           "false",
           "false"
         ],
         [
           "Warrior-k",
           "Warrior",
+          "Player-3",
+          "42",
+          "26",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-l",
+          "Warrior",
+          "Player-1",
+          "16",
+          "32",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-m",
+          "Warrior",
           "Player-2",
-          "35",
-          "38",
+          "37",
+          "33",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8829,
+      "randomCalls": 8884,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 982,
+        "total": 1001,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
           "Added": 6,
+          "AdvanceGrade": 3,
           "AnarchyDuration": 3,
+          "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
@@ -855,6 +855,7 @@
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingComplete": 7,
+          "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
@@ -876,6 +877,7 @@
           "Distribution": 15,
           "DistributionGroups": 1,
           "EmbassyEstablished": 1,
+          "Expansion": 4,
           "ExpectedMovementCost": 1,
           "Expired": 1,
           "Feature": 12,
@@ -888,6 +890,7 @@
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
@@ -898,6 +901,7 @@
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
+          "ScienceBias": 2,
           "Shrink": 3,
           "Spawn": 1,
           "Spend": 6,
@@ -919,6 +923,7 @@
           "ValidateMove": 2,
           "Visibility": 1,
           "VisibilityChanged": 1,
+          "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 205,
