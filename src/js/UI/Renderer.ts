@@ -169,12 +169,14 @@ export class Renderer {
       }
     });
 
-    // These should be stored in localStorage or something...
-    options.set('autoEndOfTurn', true);
-    options.set('autoEndOfTurnExceptions', ['CivilDisorder']);
-    options.set('unitEdgeMargin', 2);
-    options.set('mapScale', 2);
-    options.set('lockVerticalEdges', false);
+    // Any the player has changed come back from browser storage (#343).
+    options.defaults({
+      autoEndOfTurn: true,
+      autoEndOfTurnExceptions: ['CivilDisorder'],
+      unitEdgeMargin: 2,
+      mapScale: 2,
+      lockVerticalEdges: false,
+    });
 
     if (debugMode) {
       transport.send('setOption', {
