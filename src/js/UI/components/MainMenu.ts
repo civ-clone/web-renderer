@@ -25,7 +25,7 @@ export class MainMenu extends Element {
     this.addClass('active');
   }
 
-  async build(showQuit = false) {
+  async build() {
     const hasAssets = await assetStore.hasAllAssets();
 
     if (!hasAssets) {
@@ -83,21 +83,7 @@ export class MainMenu extends Element {
           ),
           h(s(`<button>Import Assets</button>`), {
             click: () => new ImportAssetsWindow(),
-          }),
-          h(
-            s(
-              `<button${showQuit ? '' : ' hidden'}>${t(
-                'MainMenu.quit'
-              )}</button>`
-            ),
-            {
-              click: () => {
-                this.remove();
-
-                this.#transport.send('quit', null);
-              },
-            }
-          )
+          })
         ),
         {
           keydown(event: KeyboardEvent) {

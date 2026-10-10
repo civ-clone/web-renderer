@@ -66,7 +66,7 @@ Core channels are defined in `src/js/Engine/Transport.ts`:
 
 Requests go through `Transport.request()` (`AbstractTransport`), which matches a reply to its request by channel and so sends one request per channel at a time.
 
-`quit` and `restart` are declared in `TransportDataMap`, but each is one-directional: the backend sends `restart` on local-player defeat with no frontend receiver, and the main menu sends `quit` with no backend receiver.
+`restart` is declared in `TransportDataMap`, but is one-directional: the backend sends it on local-player defeat with no frontend receiver (#176).
 
 ## Rewrite implications
 

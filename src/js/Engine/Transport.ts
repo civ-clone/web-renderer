@@ -77,7 +77,6 @@ declare global {
     notification: TransportData<string, never>;
     save: TransportData<null, { name: string }>;
     saveGame: TransportData<{ name: string; data: string }, never>;
-    quit: TransportData<null, null>;
     restart: TransportData<null, null>;
     setOption: TransportData<
       null,
