@@ -15,8 +15,8 @@
   "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them.",
   "checksums": {
     "1": "a8219d60",
-    "10": "42f7e3fc",
-    "50": "c9cc04f1"
+    "10": "cc8c23fc",
+    "50": "fcc0fb45"
   },
   "snapshots": {
     "1": {
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1001,
+        "total": 1023,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -130,13 +130,15 @@
           "Build": 103,
           "BuildCost": 76,
           "BuildCostModifier": 1,
-          "BuildingComplete": 7,
+          "BuildingCancelled": 1,
+          "BuildingComplete": 8,
+          "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 11,
+          "Captured": 12,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -191,7 +193,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 10,
+          "TurnStart": 11,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -211,13 +213,13 @@
       "turn": 10,
       "state": {
         "entities": 2487,
-        "fields": 9837,
-        "hash": "82b1b51f"
+        "fields": 9841,
+        "hash": "d152367d"
       },
       "dto": {
         "objects": 3401,
-        "bytes": 582791,
-        "hash": "5c09beee"
+        "bytes": 582999,
+        "hash": "eec7d8fe"
       },
       "registries": {
         "cities": 4,
@@ -371,7 +373,7 @@
       "randomCalls": 8638,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1001,
+        "total": 1023,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -387,13 +389,15 @@
           "Build": 103,
           "BuildCost": 76,
           "BuildCostModifier": 1,
-          "BuildingComplete": 7,
+          "BuildingCancelled": 1,
+          "BuildingComplete": 8,
+          "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 11,
+          "Captured": 12,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -448,7 +452,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 10,
+          "TurnStart": 11,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -468,13 +472,13 @@
       "turn": 50,
       "state": {
         "entities": 2503,
-        "fields": 10045,
-        "hash": "9352b629"
+        "fields": 10049,
+        "hash": "213481d1"
       },
       "dto": {
         "objects": 54403,
-        "bytes": 9269082,
-        "hash": "9be33ec7"
+        "bytes": 9269878,
+        "hash": "8eb581f3"
       },
       "registries": {
         "cities": 4,
@@ -844,7 +848,7 @@
       "randomCalls": 8884,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1001,
+        "total": 1023,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -860,13 +864,15 @@
           "Build": 103,
           "BuildCost": 76,
           "BuildCostModifier": 1,
-          "BuildingComplete": 7,
+          "BuildingCancelled": 1,
+          "BuildingComplete": 8,
+          "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 11,
+          "Captured": 12,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -921,7 +927,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 10,
+          "TurnStart": 11,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
