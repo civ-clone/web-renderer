@@ -89,7 +89,13 @@ const finish = (): void => {
           'now appears in the DTO for every fortified unit. Turn 1 is ' +
           'unchanged because nothing is fortified yet. That leak is what ' +
           'fixing `_busy` removes, which will move these numbers once more ' +
-          'and shrink them.',
+          'and shrink them. Since then it has been regenerated whenever a ' +
+          'change was meant to alter play (each such PR says so). #253 ' +
+          'widened it again, in a commit of its own: the city builds and city ' +
+          'growth registries are now hashed too, so all three checkpoints ' +
+          'moved with play unchanged. #194 then changed play (Auto, and ' +
+          'computer players choosing improvements by need), regenerated in ' +
+          'the lockfile commit that brought it in.',
         checksums,
         snapshots,
       },

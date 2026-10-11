@@ -307,6 +307,11 @@ const report = (): void => {
   // the measurement — report it and stop, instead of crashing the run.
   let first: ReturnType<typeof save>;
 
+  // A city on Auto, which only ever starts off it, so the round trip would miss a save that dropped it (#194).
+  const onAuto = defaultGame.cityBuilds.entries()[0];
+
+  onAuto?.setAuto(true);
+
   try {
     first = save(defaultGame, { name: 'acceptance', createdAt: 0 });
   } catch (error) {
@@ -447,6 +452,15 @@ const report = (): void => {
 
   push('hydrate succeeds', () => loadError?.message ?? 'ok', 'ok');
   push('loading emits no creation events', () => [...new Set(emitted)], []);
+  push(
+    'a city on Auto is still on Auto',
+    () =>
+      target.cityBuilds
+        .entries()
+        .find((cityBuild) => cityBuild.id() === onAuto?.id())
+        ?.auto(),
+    true
+  );
 
   // The journey, after the round trip. `_busy` holds a rule, so the save
   // carries only the identity and `BusyRegistry` rebuilds it — and the rule is
