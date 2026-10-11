@@ -115,9 +115,12 @@ declare global {
       id: string;
       value: [string, number][];
     };
+    // `chosen` starts that build and takes the city off Auto; `auto` puts the city on Auto, or takes it off and leaves
+    //  its build as it is (#194).
     ChangeProduction: {
       id: string;
-      chosen: string;
+      chosen?: string;
+      auto?: boolean;
     };
     ChooseGovernment: {
       id: string;
@@ -136,7 +139,8 @@ declare global {
     };
     CityBuild: {
       id: string;
-      chosen: string;
+      chosen?: string;
+      auto?: boolean;
     };
     CompleteProduction: {
       id: string;

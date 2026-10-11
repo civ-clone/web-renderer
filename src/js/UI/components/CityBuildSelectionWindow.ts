@@ -2,7 +2,11 @@ import { BuildItem, CityBuild } from '../types';
 import { ActionWindowActions } from './ActionWindow';
 import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
-import { getLabelForBuildable } from './lib/cityBuild';
+import {
+  getAutoLabel,
+  getLabelForBuildable,
+  toggleAuto,
+} from './lib/cityBuild';
 import { t } from 'i18next';
 import { turnsLeft } from './lib/cityYields';
 
@@ -44,14 +48,25 @@ export class CityBuildSelectionWindow extends SelectionWindow {
         transport.send('action', {
           name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
           id: cityBuild.id,
-          chosen: selection ? selection : '@',
+          chosen: selection,
         });
 
         this.close(true);
       },
       null,
       {
-        actions: additionalActions,
+        actions: {
+          ...additionalActions,
+          // Auto, next to the city's own screen, from the city screen and the turn's prompt alike (#194).
+          auto: {
+            label: getAutoLabel(cityBuild),
+            action: (window) => {
+              toggleAuto(cityBuild, transport);
+
+              (window as CityBuildSelectionWindow).close(true);
+            },
+          },
+        },
         // Starting a build is worth seeing, and the window also offers the
         //  city's own screen.
         autoChooseSingle: false,

@@ -63,6 +63,8 @@ export interface BuildItem extends EntityInstance<'BuildItem'> {
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {
+  // Whether the city chooses its improvements itself (#194).
+  auto: boolean;
   building: BuildItem | null;
   city: City;
   cost: Yield;
