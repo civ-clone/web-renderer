@@ -42,6 +42,13 @@
 
       header {
         min-height: 2.25rem;
+
+        // A city on Auto chooses its own improvements (#194).
+        .auto {
+          display: block;
+          font-size: 0.75em;
+          opacity: 0.75;
+        }
       }
     }
 

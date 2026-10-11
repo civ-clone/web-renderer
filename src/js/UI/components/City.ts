@@ -11,8 +11,10 @@ import {
 } from '../types';
 import { emit, s } from '@dom111/element';
 import {
+  getAutoLabel,
   getLabelForBuildable,
   getLabelForBuildableEntity,
+  toggleAuto,
 } from './lib/cityBuild';
 import { splitYield, yieldGroup } from '../lib/yieldMap';
 import {
@@ -257,7 +259,8 @@ const renderYields = (city: CityData): Node => {
     city: CityData,
     chooseProduction: () => void,
     completeProduction: (spendCost: SpendCost) => void,
-    readOnly: boolean
+    readOnly: boolean,
+    toggleAutoProduction: () => void
   ): HTMLElement =>
     s(
       `<div class="build"></div>`,
@@ -272,7 +275,10 @@ const renderYields = (city: CityData): Node => {
             })
           : (t('City.Build.title', {
               item: getLabelForBuildable(city.build.building),
-            }) as string)
+            }) as string),
+        city.build.auto
+          ? s(`<span class="auto">${t('City.Build.auto-marker')}</span>`)
+          : ''
       ),
       readOnly
         ? ''
@@ -288,6 +294,13 @@ const renderYields = (city: CityData): Node => {
               },
             }
           ),
+      readOnly
+        ? ''
+        : h(s(`<button class="auto">${getAutoLabel(city.build)}</button>`), {
+            click() {
+              toggleAutoProduction();
+            },
+          }),
       ...(readOnly ? [] : city.build.spendCost).map((spendCost) =>
         h(
           s(
@@ -446,7 +459,9 @@ const renderYields = (city: CityData): Node => {
             renderTradeRoutes(city)
           )
         ),
-        renderBuild(city, chooseProduction, completeProduction, readOnly)
+        renderBuild(city, chooseProduction, completeProduction, readOnly, () =>
+          toggleAuto(city.build, transport)
+        )
       )
     );
   },
@@ -557,6 +572,14 @@ export class City extends Window {
 
       if (['c', 'C'].includes(event.key)) {
         this.changeProduction();
+
+        event.preventDefault();
+        event.stopPropagation();
+      }
+
+      // Auto on or off (#194).
+      if (['a', 'A'].includes(event.key)) {
+        toggleAuto(this.#city.build, this.#transport);
 
         event.preventDefault();
         event.stopPropagation();

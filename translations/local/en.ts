@@ -103,6 +103,9 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.negotiation.next-step.title':
     'Negotiation between $t(Generic.civilization-name.nation, { "civilization": "{{data.players.0.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.nation, { "civilization": "{{data.players.1.civilization._}}", "ns": "default" })',
 
+  'City.Build.auto': 'Auto',
+  'City.Build.auto-marker': 'Auto',
+  'City.Build.auto-stop': 'Stop Auto',
   'City.Build.build-item':
     '{{- item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.buy': 'Buy',

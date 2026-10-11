@@ -6,6 +6,7 @@
 // never heard of still counts with its group.
 // Keys 1–8 pick a specialist in the order the roster draws them (#107).
 // The citizens drawn are the moods the engine sends, in order, one sprite each.
+// The Auto button and the A key send the action that turns Auto the other way (#194).
 
 import {
   citizenMoods,
@@ -18,6 +19,7 @@ import {
 } from '../../src/js/UI/lib/specialists';
 import { CitizenMood, Yield } from '../../src/js/UI/types';
 import { splitYield, yieldGroup } from '../../src/js/UI/lib/yieldMap';
+import { toggleAuto } from '../../src/js/UI/components/lib/cityBuild';
 
 const failures: string[] = [];
 let checks = 0;
@@ -286,6 +288,34 @@ expect(
   ),
   ['./assets/city/people_science_f.png', './assets/city/people_science.png']
 );
+
+// What toggling Auto sends: the `CityBuild` action while the city builds nothing, `ChangeProduction` otherwise.
+const autoSent = (auto: boolean, building: object | null): unknown => {
+  const sent: unknown[] = [];
+
+  toggleAuto(
+    { id: 'build-1', auto, building } as any,
+    {
+      send: (channel: string, data: unknown) => sent.push([channel, data]),
+    } as any
+  );
+
+  return sent;
+};
+
+expect(
+  'Auto, building nothing, answers the CityBuild action',
+  autoSent(false, null),
+  [['action', { name: 'CityBuild', id: 'build-1', auto: true }]]
+);
+expect(
+  'Auto, building something, answers ChangeProduction',
+  autoSent(false, {}),
+  [['action', { name: 'ChangeProduction', id: 'build-1', auto: true }]]
+);
+expect('Stop Auto turns it off', autoSent(true, {}), [
+  ['action', { name: 'ChangeProduction', id: 'build-1', auto: false }],
+]);
 
 if (failures.length) {
   process.stderr.write(

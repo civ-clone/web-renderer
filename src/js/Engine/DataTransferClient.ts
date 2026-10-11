@@ -81,6 +81,7 @@ import { instance as playerResearchRegistryInstance } from '@civ-clone/core-scie
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import autoBuild from '@civ-clone/civ1-city/lib/autoBuild';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
@@ -1653,7 +1654,18 @@ export class DataTransferClient extends Client implements IClient {
       playerAction instanceof ChangeProduction
     ) {
       const cityBuild = playerAction.value() as CityBuildItem,
-        { chosen } = action;
+        { auto, chosen } = action;
+
+      // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
+      if (typeof auto === 'boolean') {
+        cityBuild.setAuto(auto);
+
+        if (auto) {
+          autoBuild(cityBuild, ruleRegistryInstance);
+        }
+
+        return false;
+      }
 
       if (!chosen) {
         console.warn(`no build item specified`);
@@ -1672,6 +1684,8 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       cityBuild.build(buildItem.item());
+      // Choosing a build by hand takes the city off Auto.
+      cityBuild.setAuto(false);
 
       return false;
     }
