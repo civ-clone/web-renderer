@@ -96,7 +96,9 @@ const finish = (): void => {
           'moved with play unchanged. #194 then changed play (Auto, and ' +
           'computer players choosing improvements by need), regenerated in ' +
           'the lockfile commit that brought it in, and #378 again (computer ' +
-          'players ranking units with improvements and Wonders), likewise.',
+          'players ranking units with improvements and Wonders), likewise, ' +
+          'as did #30 (the Great Wall and the United Nations keeping other ' +
+          'leaders peaceful towards their owner).',
         checksums,
         snapshots,
       },

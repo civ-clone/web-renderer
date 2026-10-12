@@ -12,7 +12,7 @@
     "turns": 50,
     "width": 60
   },
-  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise.",
+  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise, as did #30 (the Great Wall and the United Nations keeping other leaders peaceful towards their owner).",
   "checksums": {
     "1": "a8219d60",
     "10": "2cdcef80",
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1023,
+        "total": 1025,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -172,6 +172,7 @@
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
+          "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
@@ -373,7 +374,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1023,
+        "total": 1025,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -431,6 +432,7 @@
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
+          "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
@@ -820,7 +822,7 @@
       "randomCalls": 8781,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1023,
+        "total": 1025,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -878,6 +880,7 @@
           "Moved": 14,
           "MovementCost": 17,
           "Obsolete": 1,
+          "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
