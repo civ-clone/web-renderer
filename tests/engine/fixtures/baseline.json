@@ -12,11 +12,11 @@
     "turns": 50,
     "width": 60
   },
-  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in.",
+  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise.",
   "checksums": {
     "1": "a8219d60",
-    "10": "cc8c23fc",
-    "50": "fcc0fb45"
+    "10": "2cdcef80",
+    "50": "fb6c9feb"
   },
   "snapshots": {
     "1": {
@@ -214,12 +214,12 @@
       "state": {
         "entities": 2487,
         "fields": 9841,
-        "hash": "d152367d"
+        "hash": "2cc30abf"
       },
       "dto": {
         "objects": 3401,
-        "bytes": 582999,
-        "hash": "eec7d8fe"
+        "bytes": 583000,
+        "hash": "102a107c"
       },
       "registries": {
         "cities": 4,
@@ -370,7 +370,7 @@
           "false"
         ]
       ],
-      "randomCalls": 8638,
+      "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
         "total": 1023,
@@ -471,28 +471,28 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2503,
-        "fields": 10049,
-        "hash": "213481d1"
+        "entities": 2508,
+        "fields": 10034,
+        "hash": "72850d2c"
       },
       "dto": {
-        "objects": 54403,
-        "bytes": 9269878,
-        "hash": "8eb581f3"
+        "objects": 41328,
+        "bytes": 7064287,
+        "hash": "d617b361"
       },
       "registries": {
-        "cities": 4,
-        "cityBuilds": 4,
-        "cityGrowth": 4,
+        "cities": 5,
+        "cityBuilds": 5,
+        "cityGrowth": 5,
         "cityImprovements": 4,
-        "goodyHuts": 23,
+        "goodyHuts": 26,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 11,
-        "units": 32
+        "tileImprovements": 14,
+        "units": 28
       },
       "world": {
         "width": 60,
@@ -553,6 +553,14 @@
           "uMgungundlovu",
           "39",
           "25"
+        ],
+        [
+          "City-5",
+          "City",
+          "Player-4",
+          "Akhmim",
+          "1",
+          "26"
         ]
       ],
       "units": [
@@ -560,8 +568,17 @@
           "Horseman-1",
           "Horseman",
           "Player-3",
-          "40",
-          "12",
+          "37",
+          "16",
+          "false",
+          "false"
+        ],
+        [
+          "Horseman-2",
+          "Horseman",
+          "Player-4",
+          "59",
+          "14",
           "false",
           "false"
         ],
@@ -608,14 +625,23 @@
           "1",
           "26",
           "false",
-          "false"
+          "true"
         ],
         [
           "Settlers-6",
           "Settlers",
           "Player-2",
           "37",
-          "32",
+          "30",
+          "false",
+          "true"
+        ],
+        [
+          "Settlers-7",
+          "Settlers",
+          "Player-2",
+          "38",
+          "30",
           "false",
           "false"
         ],
@@ -633,16 +659,7 @@
           "Swordman",
           "Player-1",
           "19",
-          "37",
-          "false",
-          "false"
-        ],
-        [
-          "Swordman-2",
-          "Swordman",
-          "Player-4",
-          "59",
-          "12",
+          "38",
           "false",
           "false"
         ],
@@ -662,14 +679,14 @@
           "39",
           "25",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-3",
           "Warrior",
           "Player-4",
-          "5",
-          "24",
+          "3",
+          "25",
           "false",
           "false"
         ],
@@ -686,17 +703,17 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "44",
-          "35",
+          "38",
+          "31",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-6",
           "Warrior",
           "Player-2",
           "40",
-          "25",
+          "24",
           "false",
           "true"
         ],
@@ -704,17 +721,17 @@
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "4",
-          "12",
-          "true",
+          "3",
+          "14",
+          "false",
           "false"
         ],
         [
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "43",
-          "30",
+          "40",
+          "25",
           "false",
           "true"
         ],
@@ -722,76 +739,22 @@
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "42",
-          "26",
+          "41",
+          "22",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-a",
           "Warrior",
-          "Player-4",
-          "4",
-          "21",
-          "false",
+          "Player-1",
+          "18",
+          "36",
+          "true",
           "false"
         ],
         [
           "Warrior-b",
-          "Warrior",
-          "Player-1",
-          "9",
-          "38",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-c",
-          "Warrior",
-          "Player-2",
-          "40",
-          "25",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-d",
-          "Warrior",
-          "Player-4",
-          "2",
-          "16",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-e",
-          "Warrior",
-          "Player-3",
-          "40",
-          "24",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-f",
-          "Warrior",
-          "Player-4",
-          "3",
-          "18",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-g",
-          "Warrior",
-          "Player-2",
-          "41",
-          "25",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-h",
           "Warrior",
           "Player-1",
           "17",
@@ -800,52 +763,61 @@
           "false"
         ],
         [
-          "Warrior-i",
+          "Warrior-c",
           "Warrior",
-          "Player-2",
-          "41",
+          "Player-4",
+          "1",
+          "16",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-d",
+          "Warrior",
+          "Player-3",
+          "39",
           "25",
           "false",
           "false"
         ],
         [
-          "Warrior-j",
+          "Warrior-e",
           "Warrior",
           "Player-2",
-          "42",
-          "27",
+          "40",
+          "25",
+          "false",
+          "true"
+        ],
+        [
+          "Warrior-f",
+          "Warrior",
+          "Player-4",
+          "5",
+          "17",
           "false",
           "false"
         ],
         [
-          "Warrior-k",
+          "Warrior-g",
           "Warrior",
-          "Player-3",
-          "42",
+          "Player-4",
+          "1",
           "26",
           "false",
-          "true"
+          "false"
         ],
         [
-          "Warrior-l",
+          "Warrior-h",
           "Warrior",
-          "Player-1",
-          "16",
-          "32",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-m",
-          "Warrior",
-          "Player-2",
-          "37",
-          "33",
+          "Player-4",
+          "3",
+          "25",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8884,
+      "randomCalls": 8781,
       "mathRandomCalls": 0,
       "rules": {
         "total": 1023,
