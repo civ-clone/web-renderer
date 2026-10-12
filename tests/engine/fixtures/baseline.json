@@ -12,11 +12,11 @@
     "turns": 50,
     "width": 60
   },
-  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise, as did #30 (the Great Wall and the United Nations keeping other leaders peaceful towards their owner).",
+  "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise, as did #30 (the Great Wall and the United Nations keeping other leaders peaceful towards their owner), and #31 (the terrain, City Walls and fortified defence bonuses of Civ1 in combat).",
   "checksums": {
     "1": "a8219d60",
     "10": "2cdcef80",
-    "50": "fb6c9feb"
+    "50": "fdf94852"
   },
   "snapshots": {
     "1": {
@@ -188,6 +188,7 @@
           "Started": 2,
           "Step": 33,
           "Stowed": 1,
+          "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
           "Tiles": 1,
@@ -205,7 +206,7 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 205,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }
@@ -219,8 +220,8 @@
       },
       "dto": {
         "objects": 3401,
-        "bytes": 583000,
-        "hash": "102a107c"
+        "bytes": 582856,
+        "hash": "ac548125"
       },
       "registries": {
         "cities": 4,
@@ -448,6 +449,7 @@
           "Started": 2,
           "Step": 33,
           "Stowed": 1,
+          "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
           "Tiles": 1,
@@ -465,7 +467,7 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 205,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }
@@ -473,27 +475,27 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2508,
-        "fields": 10034,
-        "hash": "72850d2c"
+        "entities": 2517,
+        "fields": 10055,
+        "hash": "bc422ca3"
       },
       "dto": {
-        "objects": 41328,
-        "bytes": 7064287,
-        "hash": "d617b361"
+        "objects": 39276,
+        "bytes": 6732319,
+        "hash": "40a0325c"
       },
       "registries": {
-        "cities": 5,
-        "cityBuilds": 5,
-        "cityGrowth": 5,
+        "cities": 6,
+        "cityBuilds": 6,
+        "cityGrowth": 6,
         "cityImprovements": 4,
-        "goodyHuts": 26,
+        "goodyHuts": 28,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 14,
+        "tileImprovements": 18,
         "units": 28
       },
       "world": {
@@ -560,30 +562,20 @@
           "City-5",
           "City",
           "Player-4",
-          "Akhmim",
+          "Idfu",
           "1",
           "26"
+        ],
+        [
+          "City-6",
+          "City",
+          "Player-3",
+          "Itzapalapa",
+          "41",
+          "32"
         ]
       ],
       "units": [
-        [
-          "Horseman-1",
-          "Horseman",
-          "Player-3",
-          "37",
-          "16",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-2",
-          "Horseman",
-          "Player-4",
-          "59",
-          "14",
-          "false",
-          "false"
-        ],
         [
           "Settlers-1",
           "Settlers",
@@ -633,17 +625,17 @@
           "Settlers-6",
           "Settlers",
           "Player-2",
-          "37",
-          "30",
+          "41",
+          "32",
           "false",
           "true"
         ],
         [
           "Settlers-7",
           "Settlers",
-          "Player-2",
-          "38",
-          "30",
+          "Player-3",
+          "37",
+          "24",
           "false",
           "false"
         ],
@@ -659,9 +651,18 @@
         [
           "Swordman-1",
           "Swordman",
-          "Player-1",
-          "19",
-          "38",
+          "Player-4",
+          "5",
+          "21",
+          "false",
+          "false"
+        ],
+        [
+          "Swordman-2",
+          "Swordman",
+          "Player-3",
+          "39",
+          "25",
           "false",
           "false"
         ],
@@ -705,8 +706,8 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "38",
-          "31",
+          "41",
+          "32",
           "false",
           "true"
         ],
@@ -715,7 +716,7 @@
           "Warrior",
           "Player-2",
           "40",
-          "24",
+          "25",
           "false",
           "true"
         ],
@@ -723,8 +724,8 @@
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "3",
-          "14",
+          "1",
+          "17",
           "false",
           "false"
         ],
@@ -732,8 +733,8 @@
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "40",
-          "25",
+          "43",
+          "30",
           "false",
           "true"
         ],
@@ -741,26 +742,26 @@
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "41",
-          "22",
+          "40",
+          "24",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-a",
           "Warrior",
           "Player-1",
-          "18",
-          "36",
-          "true",
+          "14",
+          "38",
+          "false",
           "false"
         ],
         [
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "17",
-          "33",
+          "7",
+          "0",
           "false",
           "false"
         ],
@@ -768,26 +769,26 @@
           "Warrior-c",
           "Warrior",
           "Player-4",
-          "1",
-          "16",
+          "3",
+          "15",
           "false",
           "false"
         ],
         [
           "Warrior-d",
           "Warrior",
-          "Player-3",
-          "39",
-          "25",
+          "Player-2",
+          "40",
+          "24",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-e",
           "Warrior",
           "Player-2",
           "40",
-          "25",
+          "24",
           "false",
           "true"
         ],
@@ -812,6 +813,15 @@
         [
           "Warrior-h",
           "Warrior",
+          "Player-2",
+          "41",
+          "32",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-i",
+          "Warrior",
           "Player-4",
           "3",
           "25",
@@ -819,7 +829,7 @@
           "false"
         ]
       ],
-      "randomCalls": 8781,
+      "randomCalls": 8790,
       "mathRandomCalls": 0,
       "rules": {
         "total": 1025,
@@ -896,6 +906,7 @@
           "Started": 2,
           "Step": 33,
           "Stowed": 1,
+          "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
           "Tiles": 1,
@@ -913,7 +924,7 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 205,
+          "Yield": 204,
           "YieldModifier": 17
         }
       }

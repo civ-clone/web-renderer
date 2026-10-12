@@ -98,7 +98,8 @@ const finish = (): void => {
           'the lockfile commit that brought it in, and #378 again (computer ' +
           'players ranking units with improvements and Wonders), likewise, ' +
           'as did #30 (the Great Wall and the United Nations keeping other ' +
-          'leaders peaceful towards their owner).',
+          'leaders peaceful towards their owner), and #31 (the terrain, City ' +
+          'Walls and fortified defence bonuses of Civ1 in combat).',
         checksums,
         snapshots,
       },
