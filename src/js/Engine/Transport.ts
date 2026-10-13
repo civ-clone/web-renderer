@@ -78,6 +78,9 @@ declare global {
     // `load` goes the other way, into a worker that has not started a game.
     load: TransportData<null, { data: string }>;
     notification: TransportData<string, never>;
+    // A unit's GoTo stopped next to its destination, which offers more than a move (#357): the unit and the tile, to
+    //  choose what to do there as the arrow keys would.
+    unitHalted: TransportData<{ target: string; unit: string }, never>;
     save: TransportData<null, { name: string }>;
     saveGame: TransportData<{ name: string; data: string }, never>;
     restart: TransportData<null, null>;

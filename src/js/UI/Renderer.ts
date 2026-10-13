@@ -59,7 +59,8 @@ import ScienceReport from './components/ScienceReport';
 import IntelligenceReport from './components/IntelligenceReport';
 import TopCitiesReport from './components/TopCitiesReport';
 import SelectionWindow from './components/SelectionWindow';
-import { chooseUnitAction } from './lib/unitActionPrompts';
+import { chooseUnitAction, openArrivalWindow } from './lib/unitActionPrompts';
+import HaltedUnits from './lib/haltedUnits';
 import {
   UnitActionsRequest,
   neighbourActions,
@@ -219,6 +220,8 @@ export class Renderer {
         unitActionsRequest = new UnitActionsRequest((unitId) =>
           transport.send('unitActions', unitId)
         ),
+        // Units whose GoTo stopped next to a choice (#357).
+        haltedUnits = new HaltedUnits(),
         // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
         // layers' active-unit pointers current synchronously, so consecutive
         // moves of a multi-move unit always read the post-move tile. No render.
@@ -1432,11 +1435,45 @@ export class Renderer {
                 (action) => !waitedUnits.has((action.value as Unit).id)
               );
 
-              const nextUnit = chooseActiveUnit(
-                selectableActiveUnits.map((action) => action.value as Unit),
-                lastUnit?.id ?? null,
-                (x, y) => portal.isVisible(x, y)
-              );
+              // A unit whose GoTo stopped next to a choice goes first, and is offered it once its actions are in.
+              const halted = haltedUnits.next(
+                  activeUnits.map((action) => action.value as Unit)
+                ),
+                nextUnit =
+                  halted?.unit ??
+                  chooseActiveUnit(
+                    selectableActiveUnits.map((action) => action.value as Unit),
+                    lastUnit?.id ?? null,
+                    (x, y) => portal.isVisible(x, y)
+                  );
+
+              if (halted?.actions?.length) {
+                const unitId = halted.unit.id,
+                  arrival = openArrivalWindow(
+                    halted.unit,
+                    halted.actions,
+                    (chosen: UnitAction) =>
+                      transport.send('action', {
+                        name: 'ActiveUnit',
+                        id: unitId,
+                        unitAction: chosen._,
+                        target: chosen.to.id,
+                      })
+                  );
+
+                // Chosen or dismissed, the next halted unit is up once it closes.
+                if (arrival !== null) {
+                  haltedUnits.opened();
+
+                  arrival.on('close', () => {
+                    haltedUnits.closed();
+
+                    if (!waitingForTurn) {
+                      updateState(objectMap);
+                    }
+                  });
+                }
+              }
 
               if (nextUnit === null) {
                 lastUnit = null;
@@ -1677,6 +1714,16 @@ export class Renderer {
                 notices.add(notification);
 
                 scheduleRender();
+              })
+            );
+
+            transportDisposers.push(
+              transport.receive('unitHalted', (halt): void => {
+                haltedUnits.add(halt);
+
+                if (!waitingForTurn) {
+                  updateState(objectMap);
+                }
               })
             );
 

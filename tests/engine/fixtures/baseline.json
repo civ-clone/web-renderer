@@ -16,7 +16,7 @@
   "checksums": {
     "1": "a8219d60",
     "10": "2cdcef80",
-    "50": "fdf94852"
+    "50": "e7c2e6e5"
   },
   "snapshots": {
     "1": {
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1026,
+        "total": 1027,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -163,6 +163,7 @@
           "FoodExhausted": 1,
           "FoodStorage": 2,
           "Grow": 7,
+          "Halted": 1,
           "Interaction": 1,
           "KingMet": 1,
           "Landed": 1,
@@ -375,7 +376,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1026,
+        "total": 1027,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -424,6 +425,7 @@
           "FoodExhausted": 1,
           "FoodStorage": 2,
           "Grow": 7,
+          "Halted": 1,
           "Interaction": 1,
           "KingMet": 1,
           "Landed": 1,
@@ -475,21 +477,21 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2517,
-        "fields": 10055,
-        "hash": "bc422ca3"
+        "entities": 2516,
+        "fields": 10054,
+        "hash": "785337ac"
       },
       "dto": {
-        "objects": 39276,
-        "bytes": 6732382,
-        "hash": "ecf911d1"
+        "objects": 39631,
+        "bytes": 6785472,
+        "hash": "c05d393a"
       },
       "registries": {
         "cities": 6,
         "cityBuilds": 6,
         "cityGrowth": 6,
         "cityImprovements": 4,
-        "goodyHuts": 28,
+        "goodyHuts": 27,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
@@ -570,7 +572,7 @@
           "City-6",
           "City",
           "Player-3",
-          "Itzapalapa",
+          "Tamuin",
           "41",
           "32"
         ]
@@ -652,17 +654,8 @@
           "Swordman-1",
           "Swordman",
           "Player-4",
-          "5",
-          "21",
-          "false",
-          "false"
-        ],
-        [
-          "Swordman-2",
-          "Swordman",
-          "Player-3",
-          "39",
-          "25",
+          "2",
+          "15",
           "false",
           "false"
         ],
@@ -682,7 +675,7 @@
           "39",
           "25",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-3",
@@ -724,8 +717,8 @@
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "1",
-          "17",
+          "2",
+          "16",
           "false",
           "false"
         ],
@@ -751,8 +744,8 @@
           "Warrior-a",
           "Warrior",
           "Player-1",
-          "14",
-          "38",
+          "15",
+          "37",
           "false",
           "false"
         ],
@@ -761,7 +754,7 @@
           "Warrior",
           "Player-1",
           "7",
-          "0",
+          "1",
           "false",
           "false"
         ],
@@ -769,8 +762,8 @@
           "Warrior-c",
           "Warrior",
           "Player-4",
-          "3",
-          "15",
+          "1",
+          "16",
           "false",
           "false"
         ],
@@ -779,7 +772,7 @@
           "Warrior",
           "Player-2",
           "40",
-          "24",
+          "25",
           "false",
           "true"
         ],
@@ -822,17 +815,26 @@
         [
           "Warrior-i",
           "Warrior",
+          "Player-3",
+          "39",
+          "23",
+          "false",
+          "false"
+        ],
+        [
+          "Warrior-j",
+          "Warrior",
           "Player-4",
-          "3",
+          "2",
           "25",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8790,
+      "randomCalls": 8788,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1026,
+        "total": 1027,
         "byType": {
           "Action": 58,
           "ActionPerformed": 1,
@@ -881,6 +883,7 @@
           "FoodExhausted": 1,
           "FoodStorage": 2,
           "Grow": 7,
+          "Halted": 1,
           "Interaction": 1,
           "KingMet": 1,
           "Landed": 1,

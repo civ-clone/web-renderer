@@ -209,17 +209,16 @@ export const performWithPrompts = (
 };
 
 /**
- * What the arrow keys do with the actions for the tile a unit moves towards: a Diplomat arriving at a rival city
- * chooses what to do there (#58), a Caravan entering one of your cities chooses whether to stop (#57), and anything
- * else takes the first action, through `performWithPrompts`.
+ * The window a unit arriving at a tile chooses from, if it gets one: a Diplomat arriving at a rival city chooses what
+ * to do there (#58), a Caravan entering one of your cities chooses whether to stop (#57). Returns the window, or
+ * `null` when there is no choice to offer, without performing anything.
  */
-export const chooseUnitAction = (
+export const openArrivalWindow = (
   unit: UnitData,
   actionsOnTile: UnitAction[],
   perform: Perform
-): void => {
-  const [first] = actionsOnTile,
-    move = actionsOnTile.find((action) => action._ === 'Move'),
+): SelectionWindow | null => {
+  const move = actionsOnTile.find((action) => action._ === 'Move'),
     caravan = actionsOnTile.filter((action) =>
       caravanActions.includes(action._)
     ),
@@ -228,7 +227,7 @@ export const chooseUnitAction = (
     );
 
   if (diplomat.length > 0) {
-    new SelectionWindow(
+    return new SelectionWindow(
       t('Diplomat.arrives', {
         nation: civilization(unit.player, 'name'),
         city: cityName(
@@ -250,12 +249,10 @@ export const chooseUnitAction = (
         displayAll: true,
       }
     );
-
-    return;
   }
 
   if (caravan.length > 0 && move) {
-    new SelectionWindow(
+    return new SelectionWindow(
       t('TradeRoute.will-you'),
       [move, ...caravan].map((action) => ({
         label:
@@ -274,7 +271,23 @@ export const chooseUnitAction = (
         displayAll: true,
       }
     );
+  }
 
+  return null;
+};
+
+/**
+ * What the arrow keys do with the actions for the tile a unit moves towards: the arrival window if there is one
+ * (`openArrivalWindow`), and otherwise the first action, through `performWithPrompts`.
+ */
+export const chooseUnitAction = (
+  unit: UnitData,
+  actionsOnTile: UnitAction[],
+  perform: Perform
+): void => {
+  const [first] = actionsOnTile;
+
+  if (openArrivalWindow(unit, actionsOnTile, perform) !== null) {
     return;
   }
 
