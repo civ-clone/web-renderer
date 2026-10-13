@@ -23,7 +23,10 @@ import {
   intelligenceRows,
 } from '../../src/js/Engine/lib/intelligence';
 import { Peace, War } from '@civ-clone/library-diplomacy/Declarations';
-import { BronzeWorking } from '@civ-clone/civ1-science/Advances';
+import {
+  BronzeWorking,
+  Monarchy as MonarchyAdvance,
+} from '@civ-clone/civ1-science/Advances';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import InteractionRegistry from '@civ-clone/core-diplomacy/InteractionRegistry';
@@ -106,7 +109,11 @@ const palace = Object.assign(Object.create(Palace.prototype), {
     playerRegistry,
     playerResearchRegistry: {
       getByPlayer: () => ({
-        complete: () => [Object.create(BronzeWorking.prototype)],
+        complete: () => [
+          Object.create(BronzeWorking.prototype),
+          // Its `type` is `MonarchyAdvance`, but the report's strings are keyed `Monarchy.name` (#373).
+          Object.create(MonarchyAdvance.prototype),
+        ],
       }),
     },
     playerTreasuryRegistry: {
@@ -145,7 +152,7 @@ expect('the details an embassy gives', rows[0].details, {
     { civilization: 'Babylonian', atPeace: true },
     { civilization: null, atPeace: false },
   ],
-  advances: ['BronzeWorking'],
+  advances: ['BronzeWorking', 'Monarchy'],
 });
 
 // The report's strings are keyed on these names (`IntelligenceReport.trait.*`).

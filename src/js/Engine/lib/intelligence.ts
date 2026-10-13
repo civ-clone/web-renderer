@@ -200,7 +200,9 @@ const details = (
         playerResearchRegistry
           .getByPlayer(subject)
           .complete()
-          .map((advance) => typeNameOf(advance.sourceClass())),
+          // Keyed as every other screen keys an advance (its `_`, the class name), not by its `type`, which is
+          //  `MonarchyAdvance` for the five that share a name with a government or improvement (#373).
+          .map((advance) => advance.sourceClass().name),
       []
     ),
   };
