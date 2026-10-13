@@ -98,8 +98,10 @@ const finish = (): void => {
           'the lockfile commit that brought it in, and #378 again (computer ' +
           'players ranking units with improvements and Wonders), likewise, ' +
           'as did #30 (the Great Wall and the United Nations keeping other ' +
-          'leaders peaceful towards their owner), and #31 (the terrain, City ' +
-          'Walls and fortified defence bonuses of Civ1 in combat).',
+          'leaders peaceful towards their owner), #31 (the terrain, City ' +
+          'Walls and fortified defence bonuses of Civ1 in combat), and #115 ' +
+          "with #236 (Isaac Newton's College and Hoover Dam taking effect, " +
+          "Michelangelo's Chapel and J.S. Bach's Cathedral as in v474.05).",
         checksums,
         snapshots,
       },
