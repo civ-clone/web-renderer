@@ -141,6 +141,32 @@ const expect = (description: string, actual: string, expected: string) => {
     'Toronto'
   );
 
+  // #382: a city name is passed to a nested `Generic.city-name` unescaped, so "Xi'an" is found on its founder's list.
+  //  Passed escaped, the lookup missed and the default escaped it a second time: "View Xi&amp;#39;an".
+  const xian = {
+    name: "Xi'an",
+    originalPlayer: { civilization: { _: 'Chinese' } },
+  };
+
+  [
+    ['Generic.view-city', "View Xi'an"],
+    ['HappinessReport.view-city', "View Xi'an"],
+    ['Actions.ShowCity.label', "View Xi'an"],
+    [
+      'Actions.CityBuildSelectionWindow.title',
+      "What would you like to build in Xi'an?",
+    ],
+  ].forEach(([key, expected]) => expect(key, t(key, { city: xian }), expected));
+
+  // A name that isn't on the list is still escaped, once, by `Generic.city-name`'s default.
+  expect(
+    'Generic.view-city (a name not on the list)',
+    t('Generic.view-city', {
+      city: { name: 'A<b>', originalPlayer: { civilization: { _: 'Mongol' } } },
+    }),
+    'View A&lt;b&gt;'
+  );
+
   [
     [
       'English',
