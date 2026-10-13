@@ -31,6 +31,7 @@ import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { GameData } from '../UI/types';
 import { Gold } from '@civ-clone/civ1-city/Yields';
+import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
@@ -460,8 +461,64 @@ export class DataTransferClient extends Client implements IClient {
         );
       }
 
+      if (name === 'CreateUnit') {
+        const { unitType, x, y } = value,
+          target = this.resolveCheatPlayer(value.player),
+          UnitType = this.cheatUnitTypes().find(
+            (UnitType) => UnitType.name === unitType
+          ),
+          [firstTile] = playerWorldRegistryInstance
+            .getByPlayer(this.player())
+            .entries();
+
+        if (!target || !UnitType || !firstTile) {
+          return;
+        }
+
+        const world = firstTile.tile().map();
+
+        if (
+          !Number.isInteger(x) ||
+          !Number.isInteger(y) ||
+          x < 0 ||
+          y < 0 ||
+          x >= world.width() ||
+          y >= world.height()
+        ) {
+          return;
+        }
+
+        // Constructing a unit registers it and emits `unit:created`, which is what sends the patches.
+        new UnitType(null, target, world.get(x, y));
+
+        // Our own new unit also needs our actions resent, or it can't be activated until something else resends them.
+        if (target === this.player()) {
+          this.#dataQueue.update(this.player().id(), () =>
+            this.player().toPlainObject(
+              this.#dataFilter(
+                filterToReferenceAllExcept(
+                  Player,
+                  PlayerAction,
+                  Unit,
+                  UnitAction,
+                  Yield,
+                  Civilization
+                )
+              )
+            )
+          );
+        }
+      }
+
       this.sendPatchData();
     });
+
+    this.#transport.receive('cheatUnitTypes', () =>
+      this.#transport.send(
+        'cheatUnitTypes',
+        this.cheatUnitTypes().map((UnitType) => UnitType.name)
+      )
+    );
 
     this.#transport.receive('cheatAdvances', (playerId) => {
       const target = this.resolveCheatPlayer(playerId ?? undefined);
@@ -2019,6 +2076,17 @@ export class DataTransferClient extends Client implements IClient {
     //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
     this.#transport.send(
       'gameData',
+  // Every unit type the game knows, taken from what cities can be told to build.
+  private cheatUnitTypes(): (typeof Unit)[] {
+    return availableCityBuildItemsRegistryInstance
+      .entries()
+      .filter(
+        (Item): Item is typeof Unit =>
+          Item === (Unit as unknown) ||
+          Object.prototype.isPrototypeOf.call(Unit, Item)
+      );
+  }
+
       new TransferObject(
         this.player(),
         turnInstance,

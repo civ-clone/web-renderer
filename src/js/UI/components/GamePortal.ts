@@ -68,6 +68,8 @@ export class GamePortal extends Portal {
         return;
       }
 
+      this.emit('tile-clicked', tile.x, tile.y);
+
       const playerTileUnits = tile.units.filter(
         (unit: Unit) => unit.player.id === this.playerId()
       );

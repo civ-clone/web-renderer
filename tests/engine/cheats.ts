@@ -21,6 +21,8 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
+import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 
 const fail = (reason: string, error?: unknown): never => {
@@ -291,8 +293,104 @@ engine.on('turn:start', (turn: number): void => {
     'an unknown player id should send no patch'
   );
 
+  // 7. `cheatUnitTypes` lists unit classes by name, and `CreateUnit` builds
+  //    one for the human and for a rival at the chosen tile.
+  trigger('cheatUnitTypes', null);
+
+  const [unitTypes] = sent.cheatUnitTypes ?? [];
+
+  assert(
+    Array.isArray(unitTypes) &&
+      ['Warrior', 'Settlers', 'Nuclear'].every((name) =>
+        unitTypes.includes(name)
+      ),
+    `cheatUnitTypes should list Warrior, Settlers and Nuclear, got ${JSON.stringify(
+      unitTypes
+    )}`
+  );
+  assert(
+    !unitTypes.includes('Barracks'),
+    'cheatUnitTypes should only list units'
+  );
+
+  const world = playerWorldRegistryInstance
+      .getByPlayer(localPlayer)
+      .entries()[0]
+      .tile()
+      .map(),
+    unitAt = (player: Player, x: number, y: number, name: string) =>
+      unitRegistryInstance
+        .getByTile(world.get(x, y))
+        .filter(
+          (unit) => unit.player() === player && unit.sourceClass().name === name
+        ),
+    localTile = playerWorldRegistryInstance
+      .getByPlayer(localPlayer)
+      .entries()[0]
+      .tile(),
+    unitPatchBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'CreateUnit',
+    value: { unitType: 'Warrior', x: localTile.x(), y: localTile.y() },
+  });
+
+  const [localUnit] = unitAt(
+    localPlayer,
+    localTile.x(),
+    localTile.y(),
+    'Warrior'
+  );
+
+  assert(!!localUnit, 'CreateUnit with no player should create a unit for us');
+  assert(
+    (sent.gameDataPatch ?? [])
+      .slice(unitPatchBatchesBefore)
+      .flat()
+      .some((patch: DataPatch) =>
+        JSON.stringify(patch).includes(localUnit.id())
+      ),
+    'the human should receive a patch for its own created unit'
+  );
+
+  const rivalTile = playerWorldRegistryInstance
+    .getByPlayer(rival)
+    .entries()[0]
+    .tile();
+
+  trigger('cheat', {
+    name: 'CreateUnit',
+    value: {
+      unitType: 'Settlers',
+      x: rivalTile.x(),
+      y: rivalTile.y(),
+      player: rival.id(),
+    },
+  });
+
+  assert(
+    unitAt(rival, rivalTile.x(), rivalTile.y(), 'Settlers').length === 1,
+    'CreateUnit with a rival id should create the unit for the rival'
+  );
+
+  // Invalid input creates nothing.
+  const unitCount = unitRegistryInstance.entries().length;
+
+  [
+    { unitType: 'NoSuchUnit', x: 0, y: 0 },
+    { unitType: 'Barracks', x: 0, y: 0 },
+    { unitType: 'Warrior', x: world.width(), y: 0 },
+    { unitType: 'Warrior', x: 0, y: -1 },
+    { unitType: 'Warrior', x: 0, y: 0, player: 'no-such-player' },
+  ].forEach((value) => trigger('cheat', { name: 'CreateUnit', value }));
+
+  assert(
+    unitRegistryInstance.entries().length === unitCount,
+    'invalid CreateUnit input should create nothing'
+  );
+
   console.log(
-    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly)'
+    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player)'
   );
   process.exit(0);
 });
