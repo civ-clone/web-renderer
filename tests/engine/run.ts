@@ -99,9 +99,12 @@ const finish = (): void => {
           'players ranking units with improvements and Wonders), likewise, ' +
           'as did #30 (the Great Wall and the United Nations keeping other ' +
           'leaders peaceful towards their owner), #31 (the terrain, City ' +
-          'Walls and fortified defence bonuses of Civ1 in combat), and #115 ' +
+          'Walls and fortified defence bonuses of Civ1 in combat), #115 ' +
           "with #236 (Isaac Newton's College and Hoover Dam taking effect, " +
-          "Michelangelo's Chapel and J.S. Bach's Cathedral as in v474.05).",
+          "Michelangelo's Chapel and J.S. Bach's Cathedral as in v474.05), " +
+          'and #241 with #380 (buy prices as in v474.05, and no unit ' +
+          'purchases in civil disorder: one Spend rule fewer, and the prices ' +
+          'in the DTO change, but play does not).',
         checksums,
         snapshots,
       },
