@@ -1,0 +1,1 @@
+{"version":"0.1.0@0f737be","date":"2026-10-13T10:40:07.000Z","localChanges":["City names with an apostrophe, such as Xi'an, read properly on the \"View\" buttons of the Happiness Report and of city messages, in the city build list's title and in the messages themselves, instead of showing \"Xi&#39;an\" (closes #382)."],"externalChanges":{}}
