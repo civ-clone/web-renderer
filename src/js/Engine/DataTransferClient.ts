@@ -38,7 +38,6 @@ import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
-import { Move } from '@civ-clone/civ1-unit/Actions';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Notification from './Notification';
 import Part from '@civ-clone/core-spaceship/Part';
@@ -299,12 +298,18 @@ export class DataTransferClient extends Client implements IClient {
   //  our own notifications are held (see `sendNotification`).
   #handedOver: boolean = false;
   #heldNotifications: Notification[] = [];
+  // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
+  //  `turnStarted` for one carried on at the start of the turn.
+  #heldHalts: { target: string; unit: string }[] = [];
+  // The other players our units have moved next to since talks were last offered (#357): by hand, on a GoTo, or on a
+  //  GoTo carried on at the start of the turn.
+  #metOnTheWay: Set<Player> = new Set();
   #pendingChoiceDisposer: TransportDisposer | null = null;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
   // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
-  //  talks with units met on the way (`canNegotiate`).
+  //  talks with units met on the way (`talkToPlayersMet`).
   #talks: Promise<void> = Promise.resolve();
   #transport: Transport<TransportDataMap>;
   // The unit sent with its actions (#323): the one that last acted, or the one the UI last asked about. It is the UI's
@@ -697,6 +702,43 @@ export class DataTransferClient extends Client implements IClient {
           );
         }
       });
+    });
+
+    engineInstance.on('unit:moved', (unit: Unit) => {
+      // Automation's own client does the talking for the moves it makes, as it does for halts.
+      if (unit.player() !== this.player() || this.#automationEnabled) {
+        return;
+      }
+
+      unit
+        .tile()
+        .getNeighbours()
+        .forEach((tile) =>
+          unitRegistryInstance.getByTile(tile).forEach((tileUnit) => {
+            if (tileUnit.player() !== this.player()) {
+              this.#metOnTheWay.add(tileUnit.player());
+            }
+          })
+        );
+    });
+
+    engineInstance.on('unit:halted', (unit: Unit, target: Tile) => {
+      if (unit.player() !== this.player() || this.#automationEnabled) {
+        return;
+      }
+
+      const playerTile = playerWorldRegistryInstance
+        .getByPlayer(this.player())
+        .getByTile(target);
+
+      if (!playerTile) {
+        return;
+      }
+
+      // Its actions go out with it, for the UI to choose from.
+      this.#unitWithActions = unit;
+
+      this.#heldHalts.push({ target: playerTile.id(), unit: unit.id() });
     });
 
     ['unit:moved'].forEach((event) => {
@@ -1627,9 +1669,7 @@ export class DataTransferClient extends Client implements IClient {
 
       await this.#talks;
 
-      if (actionToPerform instanceof Move) {
-        await this.canNegotiate(unit);
-      }
+      await this.talkToPlayersMet();
 
       return false;
     }
@@ -2063,6 +2103,17 @@ export class DataTransferClient extends Client implements IClient {
       .forEach((notification) =>
         this.#transport.send('gameNotification', notification)
       );
+
+    this.#sendHalts();
+
+    // Anyone met by a GoTo carried on at the start of the turn.
+    this.#talks = this.#talks.then(() => this.talkToPlayersMet());
+  }
+
+  #sendHalts(): void {
+    this.#heldHalts
+      .splice(0)
+      .forEach((halt) => this.#transport.send('unitHalted', halt));
   }
 
   takeTurn(): Promise<void> {
@@ -2072,6 +2123,10 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       if (this.#automationEnabled) {
+        // Automation's own client does the talking.
+        this.#metOnTheWay.clear();
+        this.#heldHalts.splice(0);
+
         this.#automationClient
           .takeTurn()
           .then(() => {
@@ -2151,6 +2206,8 @@ export class DataTransferClient extends Client implements IClient {
           );
 
           this.sendPatchData();
+
+          this.#sendHalts();
         } catch (e) {
           // Without this, a throwing action strands the listener on the
           // long-lived emitter and every later action gets double-processed.
@@ -2165,21 +2222,13 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
-  private async canNegotiate(unit: Unit): Promise<void> {
+  // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), unless
+  //  there have been talks with them recently.
+  private async talkToPlayersMet(): Promise<void> {
     // TODO: This could be a `Rule`.
-    const surroundingPlayers = Array.from(
-      new Set(
-        unit
-          .tile()
-          .getNeighbours()
-          .flatMap((tile) =>
-            unitRegistryInstance
-              .getByTile(tile)
-              .map((tileUnit) => tileUnit.player())
-              .filter((player) => player !== this.player())
-          )
-      )
-    );
+    const surroundingPlayers = Array.from(this.#metOnTheWay);
+
+    this.#metOnTheWay.clear();
 
     if (surroundingPlayers.length === 0) {
       return;

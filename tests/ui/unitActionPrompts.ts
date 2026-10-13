@@ -8,6 +8,7 @@ import { document } from './lib/dom';
 
 import {
   chooseUnitAction,
+  openArrivalWindow,
   performWithPrompts,
 } from '../../src/js/UI/lib/unitActionPrompts';
 import { Unit as UnitData, UnitAction } from '../../src/js/UI/types';
@@ -225,6 +226,41 @@ const latest = () => {
   chooseUnitAction(roman(0), [action('Move')], perform);
 
   expect('a plain move is sent with no window', sent.slice(-1), ['Move']);
+
+  // A unit whose GoTo stopped next to a tile (#357) is offered the arrival window only: an attack or a capture opens
+  //  none, and nothing is sent for the player.
+  const sentBefore = sent.length;
+
+  expect(
+    'no arrival window for an attack',
+    openArrivalWindow(roman(0), [action('Attack', {}, unitTile)], perform),
+    null
+  );
+  expect(
+    'no arrival window for capturing a city',
+    openArrivalWindow(roman(0), [action('CaptureCity')], perform),
+    null
+  );
+  expect('and nothing is sent for them', sent.length, sentBefore);
+
+  const arrival = openArrivalWindow(
+    roman(0),
+    [action('Move'), action('HelpBuildWonder')],
+    perform
+  );
+
+  let closed = 0;
+
+  arrival?.on('close', () => closed++);
+
+  expect('a Caravan’s arrival window', shown().title, 'Will you?');
+
+  (latest().querySelector('header button') as HTMLElement).dispatchEvent(
+    new Event('click', { bubbles: true })
+  );
+
+  expect('dismissing it says it closed', closed, 1);
+  expect('and sends nothing', sent.length, sentBefore);
 
   if (failures.length > 0) {
     process.stderr.write(
