@@ -855,6 +855,33 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
+    const cityChanged = (city: City): void => {
+      const playerWorld = playerWorldRegistryInstance.getByPlayer(
+          this.player()
+        ),
+        playerTile = playerWorld.getByTile(city.tile());
+
+      if (!playerTile) {
+        return;
+      }
+
+      if (unknownCities.has(city)) {
+        const unknownCity = unknownCities.get(city)!;
+
+        this.#dataQueue.update(unknownCity.id(), () => {
+          unknownCity.update(city);
+
+          return unknownCity.toPlainObject(
+            this.#dataFilter(filterToReference(Tile, Unit, Player))
+          );
+        });
+      }
+
+      this.#dataQueue.update(playerTile.id(), () =>
+        playerTile.toPlainObject(this.#dataFilter(filterToReference(Player)))
+      );
+    };
+
     [
       'city:created',
       'city:captured',
@@ -866,33 +893,101 @@ export class DataTransferClient extends Client implements IClient {
       //  built.
       'city:civil-disorder',
       'city:order-restored',
-    ].forEach((event) => {
-      engineInstance.on(event, (city) => {
-        const playerWorld = playerWorldRegistryInstance.getByPlayer(
-            this.player()
-          ),
-          playerTile = playerWorld.getByTile(city.tile());
+    ].forEach((event) => engineInstance.on(event, cityChanged));
+
+    // A nuclear detonation (#129). The engine announces it before anything changes, and patches are only built when
+    //  they're sent, so every square in the 3×3 area and every city in it is queued here and read once the units are
+    //  gone and the cities halved.
+    engineInstance.on('unit:nuclear-detonation', (unit: Unit, tile: Tile) => {
+      const playerWorld = playerWorldRegistryInstance.getByPlayer(
+          this.player()
+        ),
+        area = [tile, ...tile.getNeighbours()],
+        cities = area
+          .map((areaTile) => cityRegistryInstance.getByTile(areaTile))
+          .filter((city): city is City => city !== null);
+
+      area.forEach((areaTile) => {
+        const playerTile = playerWorld.getByTile(areaTile);
 
         if (!playerTile) {
           return;
-        }
-
-        if (unknownCities.has(city)) {
-          const unknownCity = unknownCities.get(city)!;
-
-          this.#dataQueue.update(unknownCity.id(), () => {
-            unknownCity.update(city);
-
-            return unknownCity.toPlainObject(
-              this.#dataFilter(filterToReference(Tile, Unit, Player))
-            );
-          });
         }
 
         this.#dataQueue.update(playerTile.id(), () =>
           playerTile.toPlainObject(this.#dataFilter(filterToReference(Player)))
         );
       });
+
+      cities.forEach((city) => {
+        cityChanged(city);
+
+        if (city.player() !== this.player()) {
+          return;
+        }
+
+        this.#dataQueue.update(city.id(), () =>
+          city.toPlainObject(
+            this.#dataFilter(
+              filterToReference(
+                CityBuild,
+                CityGrowth,
+                CityImprovement,
+                Player,
+                PlayerTile,
+                Tile,
+                Unit
+              )
+            )
+          )
+        );
+      });
+
+      if (
+        cities.some((city) => city.player() === this.player()) ||
+        area.some((areaTile) =>
+          unitRegistryInstance
+            .getByTile(areaTile)
+            .some((areaUnit) => areaUnit.player() === this.player())
+        )
+      ) {
+        this.#dataQueue.update(this.player().id(), () =>
+          this.player().toPlainObject(
+            this.#dataFilter(
+              filterToReferenceAllExcept(
+                Player,
+                PlayerAction,
+                Unit,
+                UnitAction,
+                Yield,
+                Civilization
+              )
+            )
+          )
+        );
+      }
+
+      if (unit.player() === this.player()) {
+        return;
+      }
+
+      this.sendNotification(
+        new Notification('Unit.nuclear-attack', {
+          player: unit.player(),
+        })
+      );
+    });
+
+    engineInstance.on('city:sdi-protected', (city: City, unit: Unit) => {
+      if (city.player() !== this.player() && unit.player() !== this.player()) {
+        return;
+      }
+
+      this.sendNotification(
+        new Notification('City.sdi-protected', {
+          city,
+        })
+      );
     });
 
     engineInstance.on('city:shrink', (city) => {

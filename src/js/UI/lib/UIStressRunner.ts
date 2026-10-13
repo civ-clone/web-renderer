@@ -62,6 +62,9 @@ const blockedUnitActions = new Set([
   'SneakStealTechnology',
   'Attack',
   'CaptureCity',
+  // A nuke destroys everything around its target, the stress runner's own units too (#129).
+  'NuclearAttack',
+  'SneakNuclearAttack',
 ]);
 
 export class UIStressRunner {
