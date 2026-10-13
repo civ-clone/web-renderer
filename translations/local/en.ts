@@ -457,6 +457,8 @@ i18next.addResources('en', 'notification', {
   'City.leader-celebration-ended.title': 'Leader celebration',
   'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.order-restored.title': 'Order restored!',
+  'City.polluted.body': `Pollution near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
+  'City.polluted.title': 'Pollution!',
   'City.sdi-protected.body': `SDI protects $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.sdi-protected.title': 'SDI Defense',
   'City.shrink.body': `Population decrease in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
