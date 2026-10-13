@@ -39,6 +39,7 @@ const preferredUnitActionOrder = [
   'BuildMine',
   'PlantForest',
   'ClearForest',
+  'CleanPollution',
   'ClearSwamp',
   'ClearJungle',
   'Fortify',

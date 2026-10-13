@@ -114,9 +114,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1033,
+        "total": 1047,
         "byType": {
-          "Action": 60,
+          "Action": 61,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -172,13 +172,15 @@
           "LostAtSea": 2,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
-          "MovementCost": 17,
+          "MovementCost": 18,
           "Obsolete": 1,
           "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
-          "ProcessYield": 4,
+          "PollutionDivisor": 4,
+          "ProcessYield": 5,
+          "Removed": 4,
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
@@ -209,7 +211,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 19
+          "YieldModifier": 22
         }
       }
     },
@@ -377,9 +379,9 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1033,
+        "total": 1047,
         "byType": {
-          "Action": 60,
+          "Action": 61,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -435,13 +437,15 @@
           "LostAtSea": 2,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
-          "MovementCost": 17,
+          "MovementCost": 18,
           "Obsolete": 1,
           "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
-          "ProcessYield": 4,
+          "PollutionDivisor": 4,
+          "ProcessYield": 5,
+          "Removed": 4,
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
@@ -472,7 +476,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 19
+          "YieldModifier": 22
         }
       }
     },
@@ -836,9 +840,9 @@
       "randomCalls": 8788,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1033,
+        "total": 1047,
         "byType": {
-          "Action": 60,
+          "Action": 61,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -894,13 +898,15 @@
           "LostAtSea": 2,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
-          "MovementCost": 17,
+          "MovementCost": 18,
           "Obsolete": 1,
           "Pacified": 2,
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
-          "ProcessYield": 4,
+          "PollutionDivisor": 4,
+          "ProcessYield": 5,
+          "Removed": 4,
           "Requirements": 60,
           "Resolved": 3,
           "RevoltIncited": 1,
@@ -931,7 +937,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 19
+          "YieldModifier": 22
         }
       }
     }

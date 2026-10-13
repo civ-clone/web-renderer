@@ -488,7 +488,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        // Constructing a unit registers it and emits `unit:created`, which is what sends the patches.
+        // Constructing a unit registers it and emits `unit:created`, which is what sends the unit itself.
         new UnitType(null, target, world.get(x, y));
 
         // Our own new unit also needs our actions resent, or it can't be activated until something else resends them.
@@ -856,7 +856,11 @@ export class DataTransferClient extends Client implements IClient {
       });
     });
 
-    ['tile-improvement:built', 'tile-improvement:pillaged'].forEach((event) => {
+    [
+      'tile-improvement:built',
+      'tile-improvement:pillaged',
+      'tile-improvement:removed',
+    ].forEach((event) => {
       engineInstance.on(event, (tile) => {
         const playerWorld = playerWorldRegistryInstance.getByPlayer(
             this.player()
@@ -1031,6 +1035,19 @@ export class DataTransferClient extends Client implements IClient {
       this.sendNotification(
         new Notification('Unit.nuclear-attack', {
           player: unit.player(),
+        })
+      );
+    });
+
+    // "Pollution near Rome." (#32).
+    engineInstance.on('city:polluted', (city: City) => {
+      if (city.player() !== this.player()) {
+        return;
+      }
+
+      this.sendNotification(
+        new Notification('City.polluted', {
+          city,
         })
       );
     });
@@ -2059,6 +2076,17 @@ export class DataTransferClient extends Client implements IClient {
       );
   }
 
+  // Every unit type the game knows, taken from what cities can be told to build.
+  private cheatUnitTypes(): (typeof Unit)[] {
+    return availableCityBuildItemsRegistryInstance
+      .entries()
+      .filter(
+        (Item): Item is typeof Unit =>
+          Item === (Unit as unknown) ||
+          Object.prototype.isPrototypeOf.call(Unit, Item)
+      );
+  }
+
   private resolveCheatPlayer(id?: string): Player | null {
     if (!id) {
       return this.player();
@@ -2076,17 +2104,6 @@ export class DataTransferClient extends Client implements IClient {
     //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
     this.#transport.send(
       'gameData',
-  // Every unit type the game knows, taken from what cities can be told to build.
-  private cheatUnitTypes(): (typeof Unit)[] {
-    return availableCityBuildItemsRegistryInstance
-      .entries()
-      .filter(
-        (Item): Item is typeof Unit =>
-          Item === (Unit as unknown) ||
-          Object.prototype.isPrototypeOf.call(Unit, Item)
-      );
-  }
-
       new TransferObject(
         this.player(),
         turnInstance,
