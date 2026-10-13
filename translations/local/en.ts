@@ -23,7 +23,7 @@ i18next.addResources('en', 'default', {
   'Generic.leader-name':
     '$t(Leader.{{- leader}}.name, { "defaultValue": "{{player.civilization.leader._}}", "ns": "civilization" })',
   'Generic.view-city':
-    'View $t(Generic.city-name, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
+    'View $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
   'Generic.unknown-civilization': 'an unknown civilization',
   'Generic.width': 'Width',
   'Generic.yes': 'Yes',
@@ -41,12 +41,12 @@ i18next.addResources('en', 'default', {
   'Actions.ChooseResearch.title': 'Choose research',
 
   'Actions.CityBuildSelectionWindow.title':
-    'What would you like to build in $t(Generic.city-name, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })?',
+    'What would you like to build in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })?',
 
   'Actions.CivilDisorder.body':
-    'Civil disorder in $t(Generic.city-name, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }), mayor flees in panic!',
+    'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }), mayor flees in panic!',
   'Actions.CivilDisorder.title':
-    'Civil disorder in $t(Generic.city-name, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })!',
+    'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })!',
 
   'Actions.EndTurn.title': 'End turn',
 
@@ -56,7 +56,7 @@ i18next.addResources('en', 'default', {
   'Actions.Revolution.title': 'Revolution',
 
   'Actions.ShowCity.label':
-    '$t(Generic.view-city, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
+    '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
 
   'Actions.ShowOnMap.label': 'Show on map',
 
@@ -77,7 +77,7 @@ i18next.addResources('en', 'default', {
   'Buildable.label-empty': `Nothing`,
 
   'ChooseFromList.capture-city.steal-advance.body':
-    'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
+    'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{- data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
   'ChooseFromList.capture-city.steal-advance.choice':
     '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
   'ChooseFromList.capture-city.steal-advance.title': 'Acquire an advance',
@@ -219,7 +219,7 @@ i18next.addResources('en', 'default', {
 
   'HappinessReport.breakdown': 'Breakdown',
   'HappinessReport.view-city':
-    '$t(Generic.view-city, { "name": "{{city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
+    '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
 
   'ImportAssetsWindow.brave':
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
@@ -423,41 +423,41 @@ i18next.addResources('en', 'default', {
 i18next.addResources('en', 'notification', {
   Title: '$t(Notification.title, { "ns": "default" })',
   'City.building-complete.unit.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" })!',
+    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" })!',
   'City.building-complete.unit.title': 'Building complete!',
   'City.building-complete.city-improvement.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{cityBuild.city.name}}", "ns": "default" }) has completed work on $t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" })!',
+    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" })!',
   'City.building-complete.city-improvement.title': 'Building complete!',
   'City.building-complete.wonder.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
+    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'City.building-complete.wonder.title': 'Building complete!',
   'City.building-complete.spaceship-part.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" })!',
+    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" })!',
   'City.building-complete.spaceship-part.title': 'Building complete!',
   'City.building-complete.other.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{cityBuild.city.name}}", "ns": "default" }) has completed work on its build project!',
+    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on its build project!',
   'City.building-complete.other.title': 'Building complete!',
   'City.captured-by-us.body':
-    'We have captured $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) from $t({{originalPlayer.civilization._}}.nation, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" })',
+    'We have captured $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) from $t({{originalPlayer.civilization._}}.nation, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" })',
   'City.captured-by-us.title': 'City captured!',
   'City.captured-from-us.body':
-    '$t({{capturingPlayer.civilization._}}.nation, { "defaultValue": "{{capturingPlayer.civilization._}}", "ns": "civilization" }) have captured our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" })!',
+    '$t({{capturingPlayer.civilization._}}.nation, { "defaultValue": "{{capturingPlayer.civilization._}}", "ns": "civilization" }) have captured our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
   'City.captured-from-us.title': 'City captured!',
-  'City.civil-disorder.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }). Mayor flees in panic!`,
+  'City.civil-disorder.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). Mayor flees in panic!`,
   'City.civil-disorder.title': 'Civil disorder',
-  'City.leader-celebration.body': `Leader celebration in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" })!`,
+  'City.leader-celebration.body': `Leader celebration in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
   'City.leader-celebration.title': 'Leader celebration',
-  'City.leader-celebration-ended.body': `Leader celebration cancelled in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" })!`,
+  'City.leader-celebration-ended.body': `Leader celebration cancelled in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
   'City.leader-celebration-ended.title': 'Leader celebration',
-  'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.order-restored.title': 'Order restored!',
-  'City.shrink.body': `Population decrease in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'City.shrink.body': `Population decrease in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.shrink.title': 'Population decrease!',
-  'City.unit-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) cannot support $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }).`,
+  'City.unit-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }).`,
   'City.unit-unsupported.title': 'Unit not supported!',
-  'City.improvement-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
+  'City.improvement-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
   'City.improvement-unsupported.title': 'Improvement not supported!',
-  'City.food-storage-exhausted.body': `Food storage exhausted in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'City.food-storage-exhausted.body': `Food storage exhausted in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.food-storage-exhausted.title': 'Food storage exhausted!',
   'CityImprovement.obsolete.body':
     'Development of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" }) makes existing $t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) obsolete.',
@@ -495,9 +495,9 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.unmet-by.body':
     '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
   'Player.defeated.unmet-by.title': 'Defeated!',
-  'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
+  'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
   'Player.government-collapsed.title': 'Government falls!',
-  'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,
+  'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,
   'Player.government-collapsed.pyramids.title': 'Government falls!',
   'Player.research-complete.body':
     'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" })!',
@@ -516,37 +516,37 @@ i18next.addResources('en', 'notification', {
 
   'Diplomat.advance-stolen.body': `$t({{thief.civilization._}}.plural, { "defaultValue": "{{thief.civilization._}}", "ns": "civilization" }) steal $t({{advance}}.name, { "defaultValue": "{{advance}}", "ns": "science" }).`,
   'Diplomat.advance-stolen.title': 'Technology stolen!',
-  'Diplomat.incited.body': `$t({{originalPlayer.civilization._}}.plural, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" }) rebel! Civil War in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }). $t({{inciter.civilization._}}.name, { "defaultValue": "{{inciter.civilization._}}", "ns": "civilization" }) influence suspected.`,
+  'Diplomat.incited.body': `$t({{originalPlayer.civilization._}}.plural, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" }) rebel! Civil War in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). $t({{inciter.civilization._}}.name, { "defaultValue": "{{inciter.civilization._}}", "ns": "civilization" }) influence suspected.`,
   'Diplomat.incited.title': 'Civil war!',
-  'Diplomat.sabotaged.improvement.body': `$t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) destroyed in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.improvement.body': `$t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) destroyed in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.improvement.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.body': `Production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.body': `Production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.production.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.unit.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.unit.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.production.unit.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.city-improvement.body': `$t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.city-improvement.body': `$t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.production.city-improvement.title':
     'Industrial sabotage!',
-  'Diplomat.sabotaged.production.wonder.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.wonder.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.production.wonder.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.spaceship-part.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }).`,
+  'Diplomat.sabotaged.production.spaceship-part.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'Diplomat.sabotaged.production.spaceship-part.title': 'Industrial sabotage!',
   'Diplomat.unit-bribed.body': `$t({{previousOwner.civilization._}}.name, { "defaultValue": "{{previousOwner.civilization._}}", "ns": "civilization" }) $t({{unit}}.name, { "defaultValue": "{{unit}}", "ns": "unit" }) unit bribed by $t({{briber.civilization._}}.plural, { "defaultValue": "{{briber.civilization._}}", "ns": "civilization" })!`,
   'Diplomat.unit-bribed.title': 'Unit bribed!',
   'Unit.lost-at-sea.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was lost at sea.`,
   'Unit.lost-at-sea.title': 'Unit lost at sea!',
-  'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,
+  'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{- home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,
   'Unit.trade-route-established.title': 'Trade route established',
   'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
   'Unit.out-of-fuel.title': 'Out of fuel!',
 
   'Wonder.building-complete.other-player.known.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.known.title': 'Wonder completed',
   'Wonder.building-complete.other-player.unknown.body':
     'A far away city has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.unknown.title': 'Wonder completed',
   'Wonder.obsolete.body':
-    '$t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{city.name}}", "ns": "default" }) is now obsolete.',
+    '$t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) is now obsolete.',
   'Wonder.obsolete.title': 'Wonder obsolete',
 });
