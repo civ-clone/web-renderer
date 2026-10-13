@@ -64,6 +64,7 @@ export class Portal
   extends EventEmitter<{
     ['activate-unit']: [Unit];
     ['focus-changed']: [number, number];
+    ['tile-clicked']: [number, number];
   }>
   implements IPortal
 {

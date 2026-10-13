@@ -54,6 +54,7 @@ declare global {
     cheat: TransportData<never, TransportCheatData>;
     cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
+    cheatUnitTypes: TransportData<string[], null>;
     // What a city can build (#324): the reply is standalone, so it resolves without the game data.
     cityBuildAvailable: TransportData<ObjectMap, string>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
@@ -168,6 +169,12 @@ declare global {
     GrantAdvance: {
       advances: string[];
       player?: string;
+    };
+    CreateUnit: {
+      player?: string;
+      unitType: string;
+      x: number;
+      y: number;
     };
     GrantGold: {
       amount: number;

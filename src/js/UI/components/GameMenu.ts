@@ -1,5 +1,6 @@
 import { Element, s } from '@dom111/element';
 import CheatAdvances from '../../Engine/Requests/CheatAdvances';
+import CheatUnitTypes from '../../Engine/Requests/CheatUnitTypes';
 import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
@@ -21,10 +22,26 @@ import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
 
-// Both grant cheats share one form: who receives it, then what they receive.
 // The local player comes first, labelled "You" with an empty value so leaving
 // the select alone sends no `player` at all; every other player follows,
 // including civilizations we haven't met, labelled with their civilization.
+const cheatPlayerSelect = (players: CheatPlayersResult[]): HTMLSelectElement =>
+  s<HTMLSelectElement>(
+    `<select>${[
+      `<option value="">${t('GameMenu.cheat.you')}</option>`,
+      ...players
+        .filter((player) => !player.isLocal)
+        .map(
+          (player) =>
+            `<option value="${player.id}">${t(`${player.civilization}.nation`, {
+              defaultValue: player.civilization,
+              ns: 'civilization',
+            })}</option>`
+        ),
+    ].join('')}</select>`
+  );
+
+// Both grant cheats share one form: who receives it, then what they receive.
 // The Grant button or Enter submits. `onPlayerChange` refills `control` for
 // the chosen player; the player select is disabled until it has, so a reply
 // for an earlier choice can't land after a later one.
@@ -36,23 +53,7 @@ const cheatGrantWindow = (
   onSubmit: (player: string | null) => void,
   onPlayerChange: (player: string | null) => Promise<void> = async () => {}
 ): Window => {
-  const select = s<HTMLSelectElement>(
-      `<select>${[
-        `<option value="">${t('GameMenu.cheat.you')}</option>`,
-        ...players
-          .filter((player) => !player.isLocal)
-          .map(
-            (player) =>
-              `<option value="${player.id}">${t(
-                `${player.civilization}.nation`,
-                {
-                  defaultValue: player.civilization,
-                  ns: 'civilization',
-                }
-              )}</option>`
-          ),
-      ].join('')}</select>`
-    ),
+  const select = cheatPlayerSelect(players),
     button = s<HTMLButtonElement>(
       `<button>${t('GameMenu.cheat.grant')}</button>`
     ),
@@ -112,6 +113,114 @@ const cheatGrantWindow = (
   });
 
   control.focus();
+
+  return window;
+};
+
+// Unlike the grant forms this stays open after Create, so several units can be
+// placed. While it is open, clicking the map fills in the clicked tile's
+// coordinates; the click still does whatever it normally does.
+const cheatCreateUnitWindow = (
+  players: CheatPlayersResult[],
+  unitTypes: string[],
+  portal: Portal,
+  start: { x: number; y: number },
+  onSubmit: (value: {
+    player: string | null;
+    unitType: string;
+    x: number;
+    y: number;
+  }) => void
+): Window => {
+  const select = cheatPlayerSelect(players),
+    unitType = s<HTMLSelectElement>(
+      `<select>${unitTypes
+        .map((unitType): [string, string] => [
+          unitType,
+          t(`${unitType}.name`, {
+            defaultValue: unitType,
+            ns: 'unit',
+          }),
+        ])
+        .sort(([, a], [, b]) => a.localeCompare(b))
+        .map(
+          ([unitType, name]) => `<option value="${unitType}">${name}</option>`
+        )
+        .join('')}</select>`
+    ),
+    x = s<HTMLInputElement>(
+      `<input type="number" step="1" min="0" value="${start.x}">`
+    ),
+    y = s<HTMLInputElement>(
+      `<input type="number" step="1" min="0" value="${start.y}">`
+    ),
+    button = s<HTMLButtonElement>(
+      `<button>${t('GameMenu.cheat.create')}</button>`
+    ),
+    window = new Window(
+      t('GameMenu.cheat.create-unit'),
+      s(
+        '<div class="cheat-grant"></div>',
+        ...(
+          [
+            [select, t('GameMenu.cheat.player')],
+            [unitType, t('GameMenu.cheat.unit-type')],
+            [x, t('GameMenu.cheat.x')],
+            [y, t('GameMenu.cheat.y')],
+          ] as [HTMLElement, string][]
+        ).map(([control, label]) =>
+          s(
+            `<div class="option"><label for="${elementId(
+              control
+            )}">${label}</label></div>`,
+            control
+          )
+        ),
+        s(`<p class="hint">${t('GameMenu.cheat.click-map')}</p>`),
+        s('<div class="actions"></div>', button)
+      )
+    ),
+    fill = (tileX: number, tileY: number): void => {
+      x.value = String(tileX);
+      y.value = String(tileY);
+    },
+    submit = (): void => {
+      const tileX = parseInt(x.value, 10),
+        tileY = parseInt(y.value, 10);
+
+      if (!unitType.value || Number.isNaN(tileX) || Number.isNaN(tileY)) {
+        return;
+      }
+
+      onSubmit({
+        player: select.value || null,
+        unitType: unitType.value,
+        x: tileX,
+        y: tileY,
+      });
+    };
+
+  portal.on('tile-clicked', fill);
+  window.on('close', () => portal.off('tile-clicked', fill));
+
+  h(button, {
+    click: () => submit(),
+  });
+
+  [x, y].forEach((control) =>
+    h(control, {
+      keydown: (event: KeyboardEvent) => {
+        if (event.key !== 'Enter') {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        submit();
+      },
+    })
+  );
 
   return window;
 };
@@ -318,6 +427,32 @@ export class GameMenu extends Element {
                             });
                           },
                           showAdvances
+                        );
+                      },
+                    },
+                    {
+                      label: t('GameMenu.cheat.create-unit'),
+                      action: async () => {
+                        const [players, unitTypes] = await Promise.all([
+                          this.#transport.request(new CheatPlayers()),
+                          this.#transport.request(new CheatUnitTypes()),
+                        ]);
+
+                        cheatCreateUnitWindow(
+                          players,
+                          unitTypes,
+                          this.#portal,
+                          this.#portal.center(),
+                          ({ player, unitType, x, y }) =>
+                            this.#transport.send('cheat', {
+                              name: 'CreateUnit',
+                              value: {
+                                unitType,
+                                x,
+                                y,
+                                ...(player ? { player } : {}),
+                              },
+                            })
                         );
                       },
                     },
