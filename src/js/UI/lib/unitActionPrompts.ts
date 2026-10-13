@@ -16,6 +16,7 @@ export type EnemyAction = UnitAction & { enemy: Player };
 const sneakActions = [
     'SneakAttack',
     'SneakCaptureCity',
+    'SneakNuclearAttack',
     'SneakStealTechnology',
     'SneakInciteRevolt',
   ],

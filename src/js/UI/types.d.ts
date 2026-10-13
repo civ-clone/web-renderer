@@ -176,7 +176,9 @@ export interface UnitAction<Types = string> extends EntityInstance<Types> {
 }
 
 export interface SneakAttack
-  extends UnitAction<'SneakAttack' | 'SneakCaptureCity'> {
+  extends UnitAction<
+    'SneakAttack' | 'SneakCaptureCity' | 'SneakNuclearAttack'
+  > {
   enemy: Player;
 }
 

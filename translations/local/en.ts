@@ -451,6 +451,8 @@ i18next.addResources('en', 'notification', {
   'City.leader-celebration-ended.title': 'Leader celebration',
   'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.order-restored.title': 'Order restored!',
+  'City.sdi-protected.body': `SDI protects $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
+  'City.sdi-protected.title': 'SDI Defense',
   'City.shrink.body': `Population decrease in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.shrink.title': 'Population decrease!',
   'City.unit-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }).`,
@@ -537,6 +539,9 @@ i18next.addResources('en', 'notification', {
   'Unit.lost-at-sea.title': 'Unit lost at sea!',
   'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{- home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,
   'Unit.trade-route-established.title': 'Trade route established',
+  'Unit.nuclear-attack.body':
+    '$t({{player.civilization._}}.nation, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" }) use nuclear weapons!',
+  'Unit.nuclear-attack.title': 'Nuclear attack!',
   'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
   'Unit.out-of-fuel.title': 'Out of fuel!',
 
