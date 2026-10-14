@@ -3,7 +3,12 @@ import { ObjectMap } from './lib/reconstituteData';
 
 export type dataUpdatedEvent = CustomEvent<{ data: PlainObject }>;
 export type dataUpdatedHandler = (data: GameData) => void;
-export type patchDataReceivedEvent = CustomEvent<{ value: ObjectMap }>;
+// `key` is what the patch updates: an object it replaces, or one it updates a part of, as an action's patch updates the
+//  player's actions alone (#411).
+export type patchDataReceivedEvent = CustomEvent<{
+  key?: string;
+  value: ObjectMap;
+}>;
 
 declare global {
   interface GlobalEventHandlersEventMap {
@@ -26,13 +31,9 @@ export class DataObserver {
     // however many patches in the batch touched the observed ids.
     this.#handler = (event) => {
       const { detail } = event,
-        objects = detail.value.objects;
+        objects = detail.value.objects ?? {};
 
-      if (!objects) {
-        return;
-      }
-
-      if (this.#ids.some((id) => id in objects)) {
+      if (this.#ids.some((id) => id === detail.key || id in objects)) {
         this.#pending = true;
       }
     };

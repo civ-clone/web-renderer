@@ -18,6 +18,12 @@
 // the tile itself, so a change to a tile that sends no tile patch is never seen, nor drawn: after each batch, every
 // `PlayerTile` the frontend holds is compared with what the client would send for it now. Only a tile patch may carry
 // a tile in full, and only its own.
+//
+// And that an action sends what it changed (#411). An action's patch no longer carries the whole player, only what the
+// action and the events it raised sent, so the human plays most of its turns by hand, as the UI does: it sends the
+// actions the UI sends, for its units, cities, research, rates and government, chosen at random, and every fourth turn
+// is automated, as a player can switch it on. After each action's patch, and each turn's hand-over, everything the
+// frontend holds of the player, every unit and city included, is compared with what the client would send for it now.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -37,8 +43,14 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import reconstituteData from '../../src/js/UI/lib/reconstituteData';
+import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
+import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
+import PlayerAction from '@civ-clone/core-player/PlayerAction';
+import Unit from '@civ-clone/core-unit/Unit';
+import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 
-const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 60);
+// Long enough for the human, playing by hand, to have founded a few cities and have units to move about (#411).
+const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 120);
 
 const objectMap: ObjectMap = { hierarchy: {}, objects: {} },
   missing = new Map<string, number>(),
@@ -179,7 +191,7 @@ const tileDifference = (
       freshObjects[freshId],
       heldObjects,
       freshObjects,
-      path,
+      `${path}<${freshId}>`,
       seen
     );
   }
@@ -290,6 +302,42 @@ const checkTilesFresh = (label: string): void => {
       );
     }
   });
+};
+
+// What the frontend holds of the player that isn't what the client would send for it now (#411), checked once an
+//  action's patch is in and once the turn is handed over: every unit and city in it, its research, treasury and rates,
+//  and its actions. Each difference is reported once, by the path that reaches it and the action after which it was
+//  first seen.
+const stalePlayer = new Map<string, string>();
+
+let playerComparisons = 0;
+
+const checkPlayerFresh = (label: string): void => {
+  const id = humanPlayer!.id(),
+    // Round-trip, as what the frontend holds was: a research cost of `Infinity` arrives as `null`.
+    fresh = JSON.parse(JSON.stringify(humanClient!.serialisePlayer())),
+    difference = tileDifference(
+      objectMap.objects[id],
+      fresh.objects[id],
+      objectMap.objects,
+      fresh.objects,
+      '',
+      // Its units and cities refer back to it.
+      new Set([`${id} ${id}`])
+    );
+
+  playerComparisons++;
+
+  if (difference !== null) {
+    const where = difference.replace(/:.*$/, '');
+
+    if (!stalePlayer.has(where)) {
+      stalePlayer.set(
+        where,
+        `after ${label} (turn ${turnInstance.value()}): ${difference}`
+      );
+    }
+  }
 };
 
 // Only a tile patch may carry a tile in full, and only its own: one keyed by the tile, or a newly discovered tile added
@@ -604,6 +652,8 @@ const buildItemsIn = (objects: PlainObject): number => {
 const unitActions = {
   handler: null as ((unitId: string) => void) | null,
   asked: null as string | null,
+  // The unit the client should have actions for: the last one asked about, or the last one the human acted with.
+  current: null as string | null,
   answering: false,
   requests: 0,
   answers: 0,
@@ -612,11 +662,14 @@ const unitActions = {
   failures: [] as string[],
 };
 
-const requestUnitActions = (): void => {
-  const units = unitRegistryInstance.getByPlayer(humanPlayer!),
+const requestUnitActions = (unit?: Unit): void => {
+  if (!unit) {
+    const units = unitRegistryInstance.getByPlayer(humanPlayer!);
+
     unit =
       units.find((unit) => unit.active() && unit.moves().value() > 0) ??
       units[0];
+  }
 
   // The UI asks once it has the game data, and not before.
   if (
@@ -628,6 +681,7 @@ const requestUnitActions = (): void => {
   }
 
   unitActions.asked = unit.id();
+  unitActions.current = unit.id();
   unitActions.answering = true;
   unitActions.requests++;
 
@@ -665,9 +719,9 @@ const checkUnitActions = (data: PlainObject[]): void => {
   );
 
   withActions.forEach((id) => {
-    if (id !== unitActions.asked) {
+    if (id !== unitActions.current) {
       unitActions.failures.push(
-        `a patch carried actions for ${id}, which was not asked about`
+        `a patch carried actions for ${id}, which was neither asked about nor the last to act`
       );
     }
 
@@ -783,6 +837,49 @@ const checkReloadedGame = (): void => {
   checkRefs(reloaded, 'initial game data');
 };
 
+// The player's actions lists sent on their own, and how many of the actions in them went as refs to ones the frontend
+//  already held (#411).
+const actionLists = { sent: 0, held: 0 };
+
+// The human, playing by hand (#411). Its choices come from a generator of its own, so that they don't move the engine's.
+const human = {
+  // Only every `automatedEvery`th turn is automated.
+  automatedEvery: 4,
+  seed: 411,
+  // The action sent and not yet answered by its patch, and how to say it has been.
+  pending: null as { label: string; done: () => void } | null,
+  turnEnded: false,
+  turns: 0,
+  actions: 0,
+  // How many of each the human sent, which the test reports.
+  sent: new Map<string, number>(),
+  // A `SimpleAIClient` for the same player, which answers whatever the human is asked to choose.
+  helper: null as SimpleAIClient | null,
+  pendingChoice: null as ((value: any) => void) | null,
+  revolted: false,
+};
+
+const roll = (): number => {
+    human.seed = (human.seed * 1103515245 + 12345) % 2147483648;
+
+    return human.seed / 2147483648;
+  },
+  pick = <T>(list: T[]): T => list[Math.floor(roll() * list.length)],
+  // One of `list`, each as likely as its weight.
+  pickWeighted = <T>(list: [T, number][]): T => {
+    let at = roll() * list.reduce((total, [, weight]) => total + weight, 0);
+
+    for (const [item, weight] of list) {
+      at -= weight;
+
+      if (at < 0) {
+        return item;
+      }
+    }
+
+    return list[list.length - 1][0];
+  };
+
 const transport = {
   receive: (channel: string, handler: (...args: any[]) => void) => {
     receivers.set(channel, handler);
@@ -793,7 +890,58 @@ const transport = {
 
     return () => false;
   },
+  receiveOnce: (channel: string, handler: (value: any) => void) => {
+    if (channel === 'chooseFromList') {
+      human.pendingChoice = handler;
+    }
+
+    return () => {
+      human.pendingChoice = null;
+    };
+  },
   send: (channel: string, data: any): void => {
+    // Whatever the human is asked to choose while it plays by hand, the helper answers, on the next tick, as
+    //  `receiveOnce` is registered after the send.
+    if (channel === 'chooseFromList') {
+      const meta = data as ChoiceMeta<any>,
+        respond = human.pendingChoice;
+
+      setTimeout(() =>
+        human
+          .helper!.chooseFromList(meta)
+          .then((value) => {
+            const [choice] = meta
+              .choices()
+              .filter((choice) => choice.value() === value);
+
+            (human.pendingChoice ?? respond)!(choice?.id());
+          })
+          .catch((error) => fail('the helper could not choose', error))
+      );
+
+      return;
+    }
+
+    if (channel === 'turnStarted') {
+      human.turnEnded = false;
+      human.turns++;
+
+      // Handed over: the whole player has just been sent.
+      checkPlayerFresh('the hand-over');
+
+      setTimeout(() =>
+        playTurn().catch((error) => fail('the human could not play', error))
+      );
+
+      return;
+    }
+
+    if (channel === 'turnEnded') {
+      human.turnEnded = true;
+
+      return;
+    }
+
     if (data instanceof DataObject) {
       data = data.toPlainObject();
     }
@@ -841,6 +989,18 @@ const transport = {
 
           checkFullTiles(key, index, value);
 
+          // The player's actions, which go as refs where the frontend already holds them (#411): those refs have to
+          //  resolve as any other does, and some have to have been sent for that to have been checked.
+          if (key === humanPlayer?.id() && index === 'actions') {
+            actionLists.sent++;
+
+            (value.hierarchy as PlainObject[]).forEach((action) => {
+              if (!(action['#ref'] in value.objects)) {
+                actionLists.held++;
+              }
+            });
+          }
+
           // The whole player is sent with its world and tiles as refs: the
           // frontend already holds them, and tile changes go out on their own.
           if (key === humanPlayer?.id() && !index) {
@@ -865,13 +1025,389 @@ const transport = {
     if (channel === 'gameData' || channel === 'gameDataPatch') {
       batches++;
       checkRefs(objectMap);
-      checkTilesFresh(`batch ${batches}`);
+      checkTilesFresh(
+        `batch ${batches}${human.pending ? `, ${human.pending.label}` : ''}`
+      );
     }
 
     if (channel === 'gameDataPatch') {
       checkUnitActions(data);
     }
+
+    // The first patch after an action is the one it sent (#321).
+    if (channel === 'gameDataPatch' && human.pending !== null) {
+      const { label, done } = human.pending;
+
+      human.pending = null;
+
+      checkPlayerFresh(label);
+      done();
+    }
   },
+};
+
+// Sends an action as the UI does, and waits for its patch.
+const act = (action: { name: string; [key: string]: any }): Promise<void> =>
+  new Promise<void>((resolve) => {
+    const label = `${action.name}${
+        action.unitAction ? ` ${action.unitAction}` : ''
+      }`,
+      timeout = setTimeout(
+        () => fail(`${label} sent no patch: ${JSON.stringify(action)}`),
+        10000
+      );
+
+    human.actions++;
+    human.sent.set(label, (human.sent.get(label) ?? 0) + 1);
+
+    if (action.name === 'ActiveUnit') {
+      unitActions.current = action.id;
+    }
+
+    human.pending = {
+      label,
+      done: () => {
+        clearTimeout(timeout);
+        resolve();
+      },
+    };
+
+    receivers.get('action')!(action);
+  });
+
+// The unit actions the human never chooses: a GoTo, exploring or automating hands the unit to the client, which then
+//  sends its actions with no one asking, and a nuclear attack takes everything around it. And Pillage, for now: when
+//  it completes, `base-unit-action-pillage` takes the improvement off the square itself rather than through the
+//  `Pillaged` rules, so the square's yields aren't worked out again and nothing says the square changed.
+const unitActionsNotChosen = new Set([
+  'Automate',
+  'Explore',
+  'GoTo',
+  'NuclearAttack',
+  'Pillage',
+  'SneakNuclearAttack',
+]);
+
+// One of a unit's actions, on its own square or a neighbour the player knows. Settlers found a city wherever they can,
+//  so that there are cities to play with. A unit that has acted this turn as often as it may is done with: it is told
+//  to wait, sleep or fortify.
+const unitAction = (
+  unit: Unit,
+  done: boolean
+): { name: string; [key: string]: any } | null => {
+  const playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
+    candidates: [[string, string], number][] = [];
+
+  [unit.tile(), ...unit.tile().getNeighbours()].forEach((tile) => {
+    const playerTile = playerWorld.getByTile(tile);
+
+    if (!playerTile) {
+      return;
+    }
+
+    unit.actions(tile).forEach((action) => {
+      const name = action.sourceClass().name;
+
+      if (unitActionsNotChosen.has(name)) {
+        return;
+      }
+
+      // Mostly to wait: a unit asleep or fortified is out of the game until it's woken.
+      if (done) {
+        if (['NoOrders', 'Sleep', 'Fortify'].includes(name)) {
+          candidates.push([
+            [name, playerTile.id()],
+            name === 'NoOrders' ? 1 : 0.1,
+          ]);
+        }
+
+        return;
+      }
+
+      candidates.push([
+        [name, playerTile.id()],
+        name === 'Move'
+          ? 4
+          : name === 'Disband'
+          ? 0.1
+          : name === 'NoOrders'
+          ? 0.5
+          : ['Sleep', 'Fortify'].includes(name)
+          ? 0.1
+          : 1,
+      ]);
+    });
+  });
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  const [name, target] =
+    candidates.find(([[name]]) => name === 'FoundCity')?.[0] ??
+    pickWeighted(candidates);
+
+  return {
+    name: 'ActiveUnit',
+    id: unit.id(),
+    unitAction: name,
+    target,
+  };
+};
+
+// What a city builds: Settlers, mostly, until there are a few cities to play with, and anything after that.
+const buildChoice = (cityBuild: any): string => {
+  const available = (cityBuild.available() as any[]).map(
+    (buildItem) => buildItem.item().name
+  );
+
+  return available.includes('Settlers') &&
+    cityRegistryInstance.getByPlayer(humanPlayer!).length < 6 &&
+    roll() < 0.8
+    ? 'Settlers'
+    : pick(available);
+};
+
+// One of the things the UI lets the player do besides moving units and making the choices it must, or nothing.
+const sideAction = (
+  actions: PlayerAction[]
+): { name: string; [key: string]: any } | null => {
+  const named = (name: string): any[] =>
+      actions.filter((action) => action.constructor.name === name),
+    kinds: (() => { name: string; [key: string]: any } | null)[] = [
+      () => {
+        const action = pick(named('ChangeProduction')),
+          cityBuild = action?.value();
+
+        if (!cityBuild) {
+          return null;
+        }
+
+        if (roll() < 0.15) {
+          return {
+            name: 'ChangeProduction',
+            id: cityBuild.id(),
+            auto: !cityBuild.auto(),
+          };
+        }
+
+        const chosen = buildChoice(cityBuild);
+
+        return chosen === cityBuild.building()?.item().name
+          ? null
+          : {
+              name: 'ChangeProduction',
+              id: cityBuild.id(),
+              chosen,
+            };
+      },
+      () => {
+        // One the treasury can pay for, as the UI only offers those.
+        const [treasury] = playerTreasuryRegistryInstance.getByPlayer(
+            humanPlayer!
+          ),
+          action = pick(
+            named('CompleteProduction').filter((action) =>
+              treasury
+                ?.cost(action.value().city())
+                .some(
+                  (spendCost) =>
+                    spendCost.resource() === treasury.yield() &&
+                    spendCost.value() <= treasury.value()
+                )
+            )
+          );
+
+        return action && treasury
+          ? {
+              name: 'CompleteProduction',
+              id: action.value().id(),
+              treasury: treasury.id(),
+            }
+          : null;
+      },
+      () => {
+        const action = pick(named('ChangeWorkedTile')),
+          city = action?.value(),
+          playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
+          tiles = city
+            ? city
+                .tiles()
+                .entries()
+                .filter((tile: any) => tile !== city.tile())
+                .map((tile: any) => playerWorld.getByTile(tile))
+                .filter(Boolean)
+            : [];
+
+        return tiles.length === 0
+          ? null
+          : {
+              name: 'ChangeWorkedTile',
+              id: city.id(),
+              tile: pick(tiles as any[]).id(),
+            };
+      },
+      () => {
+        const action = pick(named('ChangeSpecialist'));
+
+        return action
+          ? { name: 'ChangeSpecialist', id: action.value().id() }
+          : null;
+      },
+      () => {
+        const action = pick(named('ChangeWorkedTile'));
+
+        return action
+          ? { name: 'ReassignWorkers', city: action.value().id() }
+          : null;
+      },
+      () => {
+        const action = pick(named('AdjustTradeRates')),
+          rates = action?.value().all();
+
+        // The same values in another order: each is within the government's limit, as they are now.
+        return rates
+          ? {
+              name: 'AdjustTradeRates',
+              id: action.value().id(),
+              value: rates.map((rate: any, index: number) => [
+                rate.constructor.name,
+                rates[(index + 1) % rates.length].value(),
+              ]),
+            }
+          : null;
+      },
+      () => {
+        const action = pick(named('InactiveUnit'));
+
+        return action
+          ? { name: 'InactiveUnit', id: action.value().id() }
+          : null;
+      },
+      () => {
+        const action = pick(named('Revolution'));
+
+        if (!action || human.revolted || turnInstance.value() < 20) {
+          return null;
+        }
+
+        human.revolted = true;
+
+        return { name: 'Revolution', id: action.value().id() };
+      },
+    ];
+
+  return pick(kinds)();
+};
+
+// A turn played by hand, as the UI plays it: now and then something besides what must be done, otherwise each
+//  mandatory action in turn, a unit acting at a time, and the turn ended once nothing else is left. The UI asks for a
+//  unit's actions when it makes it active, and the human sometimes does too, and sometimes "waits", asking about
+//  another.
+const playTurn = async (): Promise<void> => {
+  const actedThisTurn = new Map<Unit, number>();
+
+  for (let step = 0; step < 500; step++) {
+    if (stopped || human.turnEnded) {
+      return;
+    }
+
+    const actions = humanPlayer!.actions(),
+      [mandatory] = actions.filter(
+        (action) =>
+          action instanceof MandatoryPlayerAction &&
+          action.constructor.name !== 'EndTurn'
+      );
+
+    // Units asleep or fortified, by hand or on an automated turn, are woken now and then, or there'd soon be none.
+    const inactive = actions.filter(
+      (action) => action.constructor.name === 'InactiveUnit'
+    );
+
+    if (inactive.length > 0 && roll() < 0.1) {
+      await act({ name: 'InactiveUnit', id: pick(inactive).value().id() });
+
+      continue;
+    }
+
+    if (roll() < 0.15) {
+      const side = sideAction(actions);
+
+      if (side !== null) {
+        await act(side);
+
+        continue;
+      }
+    }
+
+    if (!mandatory) {
+      await act({ name: 'EndTurn' });
+
+      if (!human.turnEnded) {
+        fail('ending the turn was refused with nothing left to do');
+      }
+
+      return;
+    }
+
+    const name = mandatory.constructor.name,
+      value: any = mandatory.value();
+
+    if (name === 'ActiveUnit') {
+      const unit = value as Unit,
+        times = actedThisTurn.get(unit) ?? 0;
+
+      if (roll() < 0.2) {
+        requestUnitActions(
+          pick(
+            actions
+              .filter((action) => action.constructor.name === 'ActiveUnit')
+              .map((action) => action.value() as Unit)
+          )
+        );
+      }
+
+      if (roll() < 0.5) {
+        requestUnitActions(unit);
+      }
+
+      const action = unitAction(unit, times >= 3);
+
+      if (action === null) {
+        return fail(`${unit.id()} has nothing it can do`);
+      }
+
+      actedThisTurn.set(unit, times + 1);
+
+      await act(action);
+
+      continue;
+    }
+
+    if (name === 'CityBuild') {
+      await act({
+        name,
+        id: value.id(),
+        chosen: buildChoice(value),
+      });
+
+      continue;
+    }
+
+    if (name === 'ChooseResearch' || name === 'ChooseGovernment') {
+      await act({
+        name,
+        id: value.id(),
+        chosen: pick(value.available() as any[]).name,
+      });
+
+      continue;
+    }
+
+    return fail(`the human does not know how to do ${name}`);
+  }
+
+  fail('the human could not end its turn in 500 actions');
 };
 
 const LOOP_EVENTS = [
@@ -898,6 +1434,20 @@ engine.on('turn:start', (turn: number): void => {
   stopped = true;
 
   checkReloadedGame();
+
+  // What the human did, to see what it covered.
+  if (process.env.PATCH_REFS_VERBOSE) {
+    console.log(
+      `${batches} batches, ${human.actions} actions by hand over ${
+        human.turns
+      } turns, ${playerComparisons} player comparisons: ${[
+        ...human.sent.entries(),
+      ]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([label, count]) => `${label} x${count}`)
+        .join(', ')}`
+    );
+  }
 
   if (foreignMap.size > 0) {
     console.error(
@@ -939,6 +1489,37 @@ engine.on('turn:start', (turn: number): void => {
   if (tilesCompared === 0) {
     console.error(
       'FAIL patchRefs: no PlayerTile the frontend holds was compared with the engine'
+    );
+
+    process.exit(1);
+  }
+
+  if (stalePlayer.size > 0) {
+    console.error(
+      `FAIL patchRefs: ${
+        stalePlayer.size
+      } part(s) of the player the frontend holds were changed with no patch of them (#411), e.g. ${[
+        ...stalePlayer.entries(),
+      ]
+        .slice(0, 5)
+        .map(([where, difference]) => `${where} ${difference}`)
+        .join('; ')}`
+    );
+
+    process.exit(1);
+  }
+
+  if (human.actions === 0 || playerComparisons === 0) {
+    console.error(
+      `FAIL patchRefs: the human sent ${human.actions} action(s), and the player was compared ${playerComparisons} time(s)`
+    );
+
+    process.exit(1);
+  }
+
+  if (actionLists.held === 0) {
+    console.error(
+      `FAIL patchRefs: ${actionLists.sent} list(s) of the player's actions were sent, and none carried a ref to an action the frontend held`
     );
 
     process.exit(1);
@@ -998,7 +1579,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${tilesCompared} comparisons found every tile the frontend holds up to date; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${tilesCompared} comparisons found every tile the frontend holds up to date; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about or the last to act, ${unitActions.carried} later patch(es) kept them; ${human.actions} actions by hand over ${human.turns} turns, after each of which, and each hand-over, ${playerComparisons} comparisons found the player the frontend holds up to date; ${actionLists.sent} lists of its actions sent, with ${actionLists.held} actions the frontend held as refs)`
   );
 
   process.exit(0);
@@ -1008,6 +1589,11 @@ engine.on('player:turn-start', (player: Player): void => {
   if (!stopped && player === humanPlayer) {
     requestUnitActions();
   }
+});
+
+// Every `automatedEvery`th turn, the human's turn is automated, as a player can switch it on.
+engine.on('turn:start', (turn: number): void => {
+  humanClient?.setAutomationEnabled(turn % human.automatedEvery === 0);
 });
 
 engine.on('engine:start', (): void => {
@@ -1027,9 +1613,9 @@ engine.on('engine:start', (): void => {
         player,
         transport as any,
         (channel, payload) => transport.send(channel, payload),
-        () => {},
-        { automationEnabled: true }
+        () => {}
       );
+      human.helper = new SimpleAIClient(player);
       client = humanClient;
     } else {
       client = new SimpleAIClient(player);

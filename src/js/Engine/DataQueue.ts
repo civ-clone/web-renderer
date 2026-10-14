@@ -5,7 +5,9 @@ type DataPatchType = 'add' | 'remove' | 'update';
 type DataPatchContents = {
   type: DataPatchType;
   index: string | null;
-  value?: (() => ObjectMap) | ObjectMap;
+  // Built when the patch is sent, from the game as it is then. One that comes back `undefined` is left out: what it
+  //  would have sent turned out to be unchanged (#411).
+  value?: (() => ObjectMap | undefined) | ObjectMap;
 };
 
 export type DataPatch = {
@@ -44,21 +46,30 @@ export class DataQueue {
 
   // TODO: look at chunking the data transfer
   transferData(): DataPatch[] {
-    return this.#queue.slice(0).map((patch) => {
-      const patchData: DataPatch = {};
+    return this.#queue
+      .slice(0)
+      .map((patch) => {
+        const patchData: DataPatch = {};
 
-      Object.entries(patch).forEach(
-        ([key, { type, index, value }]: [string, DataPatchContents]) => {
-          patchData[key] = {
-            type,
-            index,
-            value: typeof value === 'function' ? value() : value,
-          };
-        }
-      );
+        Object.entries(patch).forEach(
+          ([key, { type, index, value }]: [string, DataPatchContents]) => {
+            const built = typeof value === 'function' ? value() : value;
 
-      return patchData;
-    });
+            if (type !== 'remove' && built === undefined) {
+              return;
+            }
+
+            patchData[key] = {
+              type,
+              index,
+              value: built,
+            };
+          }
+        );
+
+        return patchData;
+      })
+      .filter((patchData) => Object.keys(patchData).length > 0);
   }
 
   update(

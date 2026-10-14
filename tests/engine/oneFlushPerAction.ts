@@ -1,12 +1,12 @@
 // A unit move reaches the UI in one patch, not two (#321).
 //
-// A move touches the tiles either side of it and, once `handleAction` returns, the player. The UI rebuilds its game
-// data for every `gameDataPatch` it gets, so the two used to cost two rebuilds. The client now holds its flushes while
-// it handles one of the human's actions and sends what queued up in one message.
+// A move touches the tiles either side of it and, once `handleAction` returns, the unit (once the player, #411). The
+// UI rebuilds its game data for every `gameDataPatch` it gets, so the two used to cost two rebuilds. The client now
+// holds its flushes while it handles one of the human's actions and sends what queued up in one message.
 //
 // Drives a seeded game with a human `DataTransferClient` over a stub transport that records every `gameDataPatch`.
 // When the turn is handed over, the test sends the same `Move` action the UI sends and expects one patch carrying the
-// from tile, the to tile and the player, followed by the move's `actionHandled` (#326). A `SimpleAIClient` for the
+// from tile, the to tile and the unit, followed by the move's `actionHandled` (#326). A `SimpleAIClient` for the
 // same player then plays the rest of the turn, so that `EndTurn` is allowed, and ending it takes one patch followed by
 // `actionHandled` and `turnEnded`.
 
@@ -204,10 +204,11 @@ const run = async (): Promise<void> => {
 
   const ids = idsIn(moved[0]);
 
+  // Not the player, whose actions are only sent when they change (#411): the unit has moves left, so they haven't.
   [
     ['the from tile', fromId],
     ['the to tile', toId],
-    ['the player', humanPlayer!.id()],
+    ['the unit', unit.id()],
   ].forEach(([what, id]) => {
     if (!ids.has(id)) {
       fail(`the move's patch does not carry ${what} (${id})`);

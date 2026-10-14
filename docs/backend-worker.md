@@ -71,7 +71,7 @@ Sends data to frontend:
 
 - With automation on, runs `SimpleAIClient.takeTurn()` for the player and sends one patch afterwards.
 - Otherwise, sends the new turn, year and player as a patch, then `turnStarted`, then the notifications held back until then.
-- Each `action` is handled with patch flushes held, then the player is queued and one patch is sent for the whole action (#321).
+- Each `action` is handled with patch flushes held, then one patch is sent for the whole action (#321): what the action changed, and the player's actions if they changed, not the whole player (#411).
 - When `EndTurn` is accepted it sends the last patch and `turnEnded`, and stops listening.
 
 ### Action processing
