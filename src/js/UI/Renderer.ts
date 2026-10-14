@@ -583,13 +583,21 @@ export class Renderer {
       transport.receiveOnce(
         'gameData',
         (
-          data: GameData,
-          objectMap: ObjectMap = { objects: {}, hierarchy: {} }
+          // The map as it arrived: the transport does not rebuild it, so that
+          // it is rebuilt once, here (#333).
+          objectMap: ObjectMap
         ) => {
           performance.mark('civ:game-data-received');
 
           try {
             gameStarted = true;
+
+            // Declared here for the first rebuild, which everything below
+            // that needs the player is built from; `updateState` goes on
+            // refilling it with each patch.
+            const reconstituter = new IncrementalReconstituter();
+
+            let data = reconstituter.rebuild(objectMap, null) as GameData;
 
             guardLeaving();
 
@@ -1343,8 +1351,6 @@ export class Renderer {
             // (#322): every id they added, replaced or edited in place goes in
             // `changedIds` until `updateState` takes it, so patches coalesced
             // while waiting for the turn are all accounted for.
-            const reconstituter = new IncrementalReconstituter();
-
             let changedIds = new Set<string>();
 
             // Runs synchronously on every patch. Reconstitution and all state
@@ -1506,7 +1512,11 @@ export class Renderer {
               }
             };
 
-            updateState(objectMap, true);
+            // Not `rebuildAll`: `data` was built from this map above and
+            // nothing has changed in it since, so the incremental rebuild
+            // finds nothing to fill. The rest (the turn, the prune check, the
+            // actions) still runs.
+            updateState(objectMap);
 
             // While waiting there is no input to keep up with, so however many
             // patches the other civilizations' moves send, the data is rebuilt
@@ -1536,10 +1546,10 @@ export class Renderer {
             transportDisposers.push(cancelStateUpdate);
 
             transportDisposers.push(
-              transport.receive('gameData', (data, rawData) => {
+              transport.receive('gameData', (rawData) => {
                 unitActionsRequest.dataReceived();
 
-                updateState(rawData as ObjectMap, true);
+                updateState(rawData, true);
               })
             );
 

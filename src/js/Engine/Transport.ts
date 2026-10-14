@@ -5,7 +5,6 @@ import { IntelligenceRow } from './lib/intelligence';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
-import { GameData } from '../UI/types';
 import Notification from './Notification';
 import { ObjectMap } from '../UI/lib/reconstituteData';
 
@@ -62,7 +61,8 @@ declare global {
     difficulties: TransportData<DifficultyOption[], null>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
     embassyEstablished: TransportData<string, never>;
-    gameData: TransportData<GameData, ObjectMap>;
+    // The map as it is sent, not rebuilt: the UI builds its game data from it once, itself (#333).
+    gameData: TransportData<ObjectMap, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
     gameNotification: TransportData<Notification, Notification>;
     // The intelligence report (F3, #58).

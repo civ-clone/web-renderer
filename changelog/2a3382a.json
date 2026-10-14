@@ -1,0 +1,1 @@
+{"version":"0.1.0@2a3382a","date":"2026-10-15T08:57:41.000Z","localChanges":["Clicking a city with a polluted square nearby opens its city screen again, instead of doing nothing (#32).","The map no longer slips out of line with its cities, units and city names when it moves over polluted squares, such as when you open a city."],"externalChanges":{}}

@@ -10,6 +10,16 @@ import AbstractTransport from './AbstractTransport';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import reconstituteData from '../UI/lib/reconstituteData';
 
+// Channels whose message is handed over as it arrived. The listener builds the live game data from the map itself with
+//  `IncrementalReconstituter`, so a rebuild here is a second copy of the same several megabytes, on the main thread,
+//  for a loaded game (#333).
+const rawChannels: ReadonlySet<PropertyKey> = new Set(['gameData']);
+
+const payload = <Data>(channel: PropertyKey, data: any): Data =>
+  data?.hierarchy && !rawChannels.has(channel)
+    ? (reconstituteData(data) as Data)
+    : data;
+
 export class WorkerTransport<
   DataMap extends {
     [key: string]: TransportData;
@@ -37,11 +47,10 @@ export class WorkerTransport<
         return;
       }
 
-      const handlerData = data?.hierarchy
-        ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
-        : data;
-
-      handler(handlerData, data);
+      handler(
+        payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
+        data
+      );
     };
 
     this.#worker.addEventListener('message', listener);
@@ -62,11 +71,10 @@ export class WorkerTransport<
         return;
       }
 
-      const handlerData = data?.hierarchy
-        ? (reconstituteData(data) as TransportReceiveArgs<DataMap[Channel]>)
-        : data;
-
-      handler(handlerData, data);
+      handler(
+        payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
+        data
+      );
 
       this.#worker.removeEventListener('message', onceHandler);
     };
