@@ -1,0 +1,1 @@
+{"version":"0.1.0@4d5a397","date":"2026-10-14T20:50:30.000Z","localChanges":["A loaded game is ready a little sooner, and a new game starts a little quicker too. The game used to send the page everything about your civilization twice when a turn began for the first time, and the page built it twice over; now it is sent and built once (closes #333)."],"externalChanges":{}}
