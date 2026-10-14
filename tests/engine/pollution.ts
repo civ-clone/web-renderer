@@ -386,8 +386,6 @@ const checkTurnStart = async (): Promise<void> => {
   if (goneTurn === null && !pollutionOn(cleanTile!)) {
     goneTurn = sinceOrder;
 
-    cleanTile!.clearYieldCache(humanPlayer!);
-
     const id = playerTileOf(cleanTile!).id();
 
     gonePatch = log
