@@ -185,10 +185,17 @@ const cheatCreateUnitWindow = (
       y.value = String(tileY);
     },
     submit = (): void => {
-      const tileX = parseInt(x.value, 10),
-        tileY = parseInt(y.value, 10);
+      const tileX = x.valueAsNumber,
+        tileY = y.valueAsNumber;
 
-      if (!unitType.value || Number.isNaN(tileX) || Number.isNaN(tileY)) {
+      // A fractional or negative coordinate is refused, not rounded onto another square.
+      if (
+        !unitType.value ||
+        !Number.isInteger(tileX) ||
+        !Number.isInteger(tileY) ||
+        tileX < 0 ||
+        tileY < 0
+      ) {
         return;
       }
 
