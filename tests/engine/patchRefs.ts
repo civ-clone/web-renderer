@@ -47,7 +47,10 @@ let reachablePlayerTiles = 0;
 const receivers = new Map<string, (...args: any[]) => void>(),
   answers: any[] = [],
   // `BuildItem`s that went out in the game data or a patch: the picker fetches them itself.
-  buildItemsSent: string[] = [];
+  buildItemsSent: string[] = [],
+  // `CityBuild`s that went out with `available`, or without what the UI reads (#410), with the channel, the key of the
+  //  patch or notification, and the path from its root to the build, so the code that sent it can be found.
+  badCityBuilds = new Map<string, string>();
 
 let stopped = false,
   batches = 0,
@@ -201,6 +204,72 @@ const checkRefs = (objectMap: ObjectMap, label = 'patches'): void => {
 
 // What a city can build is not part of the game data (#324): the picker asks for it, and is answered on its own. Every
 //  answer is the names `CityBuild.available()` gives for the player's cities, and nothing for anyone else's.
+// The `CityBuild` player action (what a city with nothing to build is waiting on) is serialised as `CityBuild` too, with
+//  only a `value` that refers to the build. It is not the thing #324 trimmed, so is not checked as one (#410).
+const isCityBuildItem = (object: PlainObject): boolean =>
+  object?._ === 'CityBuild' && !object.__?.includes('PlayerAction');
+
+const isBadCityBuild = (cityBuild: PlainObject): boolean =>
+  'available' in cityBuild ||
+  !['building', 'city', 'cost', 'progress', 'remaining'].every(
+    (key) => key in cityBuild
+  );
+
+// Notes every `CityBuild` in what a channel sent that carries `available`, or is missing what the picker reads, along
+//  with the path from the root that reaches it, as `checkRefs` does for a `PlayerWorld`. `key` is the patch's key, or
+//  the notification's root.
+const noteCityBuilds = (
+  channel: string,
+  key: string,
+  { hierarchy, objects }: ObjectMap
+): void => {
+  const seen = new Set<any>(),
+    visit = (value: any, path: string): void => {
+      if (!value || typeof value !== 'object' || seen.has(value)) {
+        return;
+      }
+
+      seen.add(value);
+
+      const ref = value['#ref'];
+
+      if (typeof ref === 'string') {
+        if (ref in objects) {
+          visit(objects[ref], `${path} -> ${ref}`);
+        }
+
+        return;
+      }
+
+      if (isCityBuildItem(value) && isBadCityBuild(value)) {
+        const problems = [
+          ...('available' in value ? ['carries available'] : []),
+          ...['building', 'city', 'cost', 'progress', 'remaining']
+            .filter((name) => !(name in value))
+            .map((name) => `has no ${name}`),
+        ];
+
+        badCityBuilds.set(
+          `${channel} ${key} ${path}`,
+          `${channel} ${key}: ${path} ${problems.join(' and ')}`
+        );
+      }
+
+      Object.entries(value).forEach(([name, child]) =>
+        visit(child, `${path}.${name}`)
+      );
+    };
+
+  visit(hierarchy, key);
+
+  // Anything in `objects` that the hierarchy does not reach is still shipped, so is checked too.
+  Object.entries(objects).forEach(([id, object]) => {
+    if (!seen.has(object)) {
+      visit(object, `${key} (unreached) ${id}`);
+    }
+  });
+};
+
 const checkCityBuildAvailable = (): void => {
   const request = (cityBuildId: string): PlainObject[] => {
       answers.length = 0;
@@ -283,22 +352,21 @@ const checkCityBuildAvailable = (): void => {
     fail('cityBuildAvailable answered for a build that does not exist');
   }
 
-  const cityBuilds = Object.values(objectMap.objects).filter(
-    (object: PlainObject) => object?._ === 'CityBuild'
-  );
+  const cityBuilds = Object.values(objectMap.objects).filter(isCityBuildItem);
 
   if (
     cityBuilds.length === 0 ||
-    cityBuilds.some(
-      (cityBuild: PlainObject) =>
-        'available' in cityBuild ||
-        !['building', 'city', 'cost', 'progress', 'remaining'].every(
-          (key) => key in cityBuild
-        )
-    )
+    cityBuilds.some(isBadCityBuild) ||
+    badCityBuilds.size > 0
   ) {
     fail(
-      'a CityBuild in the player data carries available, or is missing building, city, cost, progress or remaining'
+      `a CityBuild in the player data carries available, or is missing building, city, cost, progress or remaining (#324): ${
+        badCityBuilds.size > 0
+          ? [...badCityBuilds.values()].slice(0, 5).join('; ')
+          : `${
+              cityBuilds.filter(isBadCityBuild).length
+            } in the object map, none seen in what was sent`
+      }`
     );
   }
 
@@ -542,6 +610,7 @@ const transport = {
     if (channel === 'gameData') {
       objectMap.hierarchy = data.hierarchy;
       objectMap.objects = data.objects;
+      noteCityBuilds(channel, 'game data', data);
 
       if (buildItemsIn(data.objects) > 0) {
         buildItemsSent.push(`game data carried ${buildItemsIn(data.objects)}`);
@@ -550,6 +619,11 @@ const transport = {
 
     if (channel === 'gameNotification') {
       checkNotification(data);
+      noteCityBuilds(
+        channel,
+        data.objects?.[data.hierarchy['#ref']]?.key,
+        data
+      );
     }
 
     if (channel === 'gameDataPatch') {
@@ -558,6 +632,8 @@ const transport = {
           if (type === 'remove') {
             return fail(`unexpected remove patch for ${key}`);
           }
+
+          noteCityBuilds(channel, `${key}${index ? `[${index}]` : ''}`, value);
 
           if (buildItemsIn(value.objects) > 0) {
             buildItemsSent.push(
