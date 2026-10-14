@@ -13,6 +13,11 @@
 // It also checks the payloads stay the size of what changed: a notification or
 // a whole-player patch that carries tiles in full has brought the map along
 // with it, which in a large game took seconds at every turn start (#130).
+//
+// And that every tile the frontend holds is the tile as it is now (#138). Tiles go as refs everywhere but in a patch of
+// the tile itself, so a change to a tile that sends no tile patch is never seen, nor drawn: after each batch, every
+// `PlayerTile` the frontend holds is compared with what the client would send for it now. Only a tile patch may carry
+// a tile in full, and only its own.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -26,6 +31,9 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
+import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
+import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import reconstituteData from '../../src/js/UI/lib/reconstituteData';
@@ -55,7 +63,8 @@ const receivers = new Map<string, (...args: any[]) => void>(),
 let stopped = false,
   batches = 0,
   notifications = 0,
-  humanPlayer: Player | null = null;
+  humanPlayer: Player | null = null,
+  humanClient: DataTransferClient | null = null;
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -125,6 +134,195 @@ const checkNotification = ({ hierarchy, objects }: ObjectMap): void => {
 
   if (tiles > 0) {
     oversized.push(`notification ${key} carried ${tiles} PlayerTile(s)`);
+  }
+};
+
+// Each tile the frontend holds that isn't what the client would send for it now (#138): the first difference, and when
+//  it was first seen. A tile that is stale after one batch is usually stale after every batch until something else
+//  sends it, so each is reported once.
+const staleTiles = new Map<string, string>();
+
+let tilesCompared = 0;
+
+// `held` is what the frontend holds, and `fresh` what the client would send now. A ref the fresh tile leaves out of its
+//  own objects is to something the frontend is trusted to hold (our units and cities, the player, other tiles), so
+//  the two refs must name the same thing. Anything the fresh tile carries inline is compared by what it says, not by
+//  id: yields and the like are made afresh, with new ids, every time.
+const tileDifference = (
+  held: any,
+  fresh: any,
+  heldObjects: PlainObject,
+  freshObjects: PlainObject,
+  path: string,
+  seen: Set<string>
+): string | null => {
+  if (fresh && typeof fresh === 'object' && typeof fresh['#ref'] === 'string') {
+    const freshId = fresh['#ref'],
+      heldId = held?.['#ref'];
+
+    if (typeof heldId !== 'string') {
+      return `${path}: ${JSON.stringify(held)}, now a ref to ${freshId}`;
+    }
+
+    if (!(freshId in freshObjects)) {
+      return heldId === freshId ? null : `${path}: ${heldId}, now ${freshId}`;
+    }
+
+    if (seen.has(`${heldId} ${freshId}`)) {
+      return null;
+    }
+
+    seen.add(`${heldId} ${freshId}`);
+
+    return tileDifference(
+      heldObjects[heldId],
+      freshObjects[freshId],
+      heldObjects,
+      freshObjects,
+      path,
+      seen
+    );
+  }
+
+  if (Array.isArray(fresh)) {
+    if (!Array.isArray(held) || held.length !== fresh.length) {
+      return `${path}: ${
+        Array.isArray(held) ? held.length : JSON.stringify(held)
+      } entries, now ${fresh.length}`;
+    }
+
+    for (let i = 0; i < fresh.length; i++) {
+      const difference = tileDifference(
+        held[i],
+        fresh[i],
+        heldObjects,
+        freshObjects,
+        `${path}[${i}]`,
+        seen
+      );
+
+      if (difference !== null) {
+        return difference;
+      }
+    }
+
+    return null;
+  }
+
+  if (fresh && typeof fresh === 'object') {
+    if (!held || typeof held !== 'object') {
+      return `${path}: ${JSON.stringify(held)}, now an object`;
+    }
+
+    // Not `id`, which a `Yield` carries as a key: it's made afresh, with a new one, every time.
+    const keys = new Set(
+      [...Object.keys(held), ...Object.keys(fresh)].filter(
+        (key) => key !== 'id'
+      )
+    );
+
+    for (const key of keys) {
+      const difference = tileDifference(
+        held[key],
+        fresh[key],
+        heldObjects,
+        freshObjects,
+        path ? `${path}.${key}` : key,
+        seen
+      );
+
+      if (difference !== null) {
+        return difference;
+      }
+    }
+
+    return null;
+  }
+
+  return held === fresh
+    ? null
+    : `${path}: ${JSON.stringify(held)}, now ${JSON.stringify(fresh)}`;
+};
+
+const checkTilesFresh = (label: string): void => {
+  const playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
+    byId = new Map(
+      playerWorld
+        .entries()
+        .map((playerTile): [string, PlayerTile] => [
+          playerTile.id(),
+          playerTile,
+        ])
+    );
+
+  Object.entries(objectMap.objects).forEach(([id, held]: [string, any]) => {
+    if (
+      held?._ !== 'PlayerTile' ||
+      !('terrain' in held) ||
+      staleTiles.has(id)
+    ) {
+      return;
+    }
+
+    const playerTile = byId.get(id);
+
+    // Not the player's: the #328 check reports it.
+    if (!playerTile) {
+      return;
+    }
+
+    const fresh = humanClient!.serialiseTile(playerTile),
+      difference = tileDifference(
+        held,
+        fresh.objects[id],
+        objectMap.objects,
+        fresh.objects,
+        '',
+        new Set()
+      );
+
+    tilesCompared++;
+
+    if (difference !== null) {
+      staleTiles.set(
+        id,
+        `${playerTile.x()},${playerTile.y()} after ${label} (turn ${turnInstance.value()}): ${difference}`
+      );
+    }
+  });
+};
+
+// Only a tile patch may carry a tile in full, and only its own: one keyed by the tile, or a newly discovered tile added
+//  to the player's world (#138).
+const checkFullTiles = (
+  key: string,
+  index: string | null,
+  value: ObjectMap
+): void => {
+  const full = Object.entries(value.objects)
+    .filter(
+      ([, object]: [string, PlainObject]) =>
+        object?._ === 'PlayerTile' && 'terrain' in object
+    )
+    .map(([id]) => id);
+
+  if (full.length === 0) {
+    return;
+  }
+
+  const own =
+    full.length === 1 &&
+    (index
+      ? objectMap.objects[key]?._ === 'PlayerWorld' &&
+        value.hierarchy?.['#ref'] === full[0]
+      : full[0] === key);
+
+  if (!own) {
+    oversized.push(
+      `patch for ${key}${index ? ` at ${index}` : ''} carried ${
+        full.length
+      } PlayerTile(s) in full`
+    );
   }
 };
 
@@ -641,6 +839,8 @@ const transport = {
             );
           }
 
+          checkFullTiles(key, index, value);
+
           // The whole player is sent with its world and tiles as refs: the
           // frontend already holds them, and tile changes go out on their own.
           if (key === humanPlayer?.id() && !index) {
@@ -665,6 +865,7 @@ const transport = {
     if (channel === 'gameData' || channel === 'gameDataPatch') {
       batches++;
       checkRefs(objectMap);
+      checkTilesFresh(`batch ${batches}`);
     }
 
     if (channel === 'gameDataPatch') {
@@ -715,6 +916,29 @@ engine.on('turn:start', (turn: number): void => {
   if (reachablePlayerTiles === 0) {
     console.error(
       "FAIL patchRefs: no PlayerTile was reachable, so none was checked for being the player's own"
+    );
+
+    process.exit(1);
+  }
+
+  if (staleTiles.size > 0) {
+    console.error(
+      `FAIL patchRefs: ${
+        staleTiles.size
+      } PlayerTile(s) the frontend holds were changed with no tile patch (#138), e.g. ${[
+        ...staleTiles.entries(),
+      ]
+        .slice(0, 5)
+        .map(([id, difference]) => `${id} at ${difference}`)
+        .join('; ')}`
+    );
+
+    process.exit(1);
+  }
+
+  if (tilesCompared === 0) {
+    console.error(
+      'FAIL patchRefs: no PlayerTile the frontend holds was compared with the engine'
     );
 
     process.exit(1);
@@ -774,7 +998,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${tilesCompared} comparisons found every tile the frontend holds up to date; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about, ${unitActions.carried} later patch(es) kept them)`
   );
 
   process.exit(0);
@@ -795,17 +1019,23 @@ engine.on('engine:start', (): void => {
     }
 
     playerRegistryInstance.register(player);
-    clientRegistryInstance.register(
-      index === 0
-        ? new DataTransferClient(
-            player,
-            transport as any,
-            (channel, payload) => transport.send(channel, payload),
-            () => {},
-            { automationEnabled: true }
-          )
-        : new SimpleAIClient(player)
-    );
+
+    let client: DataTransferClient | SimpleAIClient;
+
+    if (index === 0) {
+      humanClient = new DataTransferClient(
+        player,
+        transport as any,
+        (channel, payload) => transport.send(channel, payload),
+        () => {},
+        { automationEnabled: true }
+      );
+      client = humanClient;
+    } else {
+      client = new SimpleAIClient(player);
+    }
+
+    clientRegistryInstance.register(client);
   });
 });
 
