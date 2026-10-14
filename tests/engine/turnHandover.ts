@@ -4,6 +4,9 @@
 // Drives a seeded game with a human `DataTransferClient` that is not automated, so its turns take the path the real
 // UI does: `takeTurn` sends the turn, hands over with `turnStarted` and waits for actions. The test plays each turn
 // with a `SimpleAIClient` for the same player, then sends `EndTurn` the way the UI would.
+//
+// The first hand-over follows the initial game data, which already carries the player, so it does not send the player
+// again; every later hand-over does, as that is how the UI gets the new turn's actions (#333).
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -29,7 +32,11 @@ let stopped = false,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => void) | null = null,
   // The Turn carried by the latest patch, if it carried one.
-  lastPatchTurn: number | null = null;
+  lastPatchTurn: number | null = null,
+  // Whether that patch replaced the human player.
+  lastPatchHadPlayer = false,
+  sentInitialData = false,
+  firstHandedOver = false;
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -95,9 +102,27 @@ const transport = {
       return;
     }
 
+    if (channel === 'gameData') {
+      sentInitialData = true;
+
+      return;
+    }
+
     if (channel === 'gameDataPatch') {
       const turnId = turnInstance.id(),
+        playerId = humanPlayer!.id(),
         turnPatch = (data as any[]).find((patch) => turnId in patch);
+
+      // The whole player: a unit added to its list, as one created at the start of the game is, is not.
+      lastPatchHadPlayer = (data as any[]).some(
+        (patch) => patch[playerId] && patch[playerId].index === null
+      );
+
+      if (sentInitialData && !firstHandedOver && lastPatchHadPlayer) {
+        fail(
+          'the player went out again between the initial game data and the first turnStarted'
+        );
+      }
 
       if (!turnPatch) {
         lastPatchTurn = null;
@@ -143,6 +168,17 @@ const transport = {
         );
       }
 
+      if (!sentInitialData) {
+        fail('turnStarted before the initial game data');
+      }
+
+      if (firstHandedOver && !lastPatchHadPlayer) {
+        fail(
+          `the hand-over patch for turn ${turnInstance.value()} did not carry the player, so the UI has no actions`
+        );
+      }
+
+      firstHandedOver = true;
       handedOver = true;
       handovers++;
 

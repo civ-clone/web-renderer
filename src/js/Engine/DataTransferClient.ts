@@ -29,7 +29,6 @@ import DataObject, {
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
-import { GameData } from '../UI/types';
 import { Gold } from '@civ-clone/civ1-city/Yields';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
@@ -2109,7 +2108,7 @@ export class DataTransferClient extends Client implements IClient {
         turnInstance,
         yearInstance,
         gameDifficultyRegistryInstance.entries()[0] ?? null
-      ).toPlainObject(this.#dataFilter()) as unknown as GameData
+      ).toPlainObject(this.#dataFilter())
     );
 
     this.#sentInitialData = true;
@@ -2298,7 +2297,11 @@ export class DataTransferClient extends Client implements IClient {
 
   takeTurn(): Promise<void> {
     return new Promise<void>((resolve, reject): void => {
-      if (!this.#sentInitialData) {
+      // The first turn after a load or a new game: the initial data is the player's whole state, so the hand-over
+      //  below has no need to queue and send it a second time.
+      const playerJustSent = !this.#sentInitialData;
+
+      if (playerJustSent) {
         this.sendInitialData();
       }
 
@@ -2339,11 +2342,15 @@ export class DataTransferClient extends Client implements IClient {
         this.#dataQueue.update(yearInstance.id(), () =>
           yearInstance.toPlainObject()
         );
-        this.#dataQueue.add(this.player().id(), () =>
-          this.player().toPlainObject(
-            this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
-          )
-        );
+
+        // On later turns this is how the UI gets the new turn's actions.
+        if (!playerJustSent) {
+          this.#dataQueue.add(this.player().id(), () =>
+            this.player().toPlainObject(
+              this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
+            )
+          );
+        }
 
         this.sendPatchData();
 

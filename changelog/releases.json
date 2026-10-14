@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@488a5a0","date":"2026-10-15T09:14:19.000Z","localChanges":["If one square of the map can't be drawn, the rest of the map still draws, and its cities, units and names stay lined up with the land (#32)."],"externalChanges":{}}
+,
+{"version":"0.1.0@2a3382a","date":"2026-10-15T08:57:41.000Z","localChanges":["Clicking a city with a polluted square nearby opens its city screen again, instead of doing nothing (#32).","The map no longer slips out of line with its cities, units and city names when it moves over polluted squares, such as when you open a city."],"externalChanges":{}}
+,
 {"version":"0.1.0@195800d","date":"2026-10-14T20:36:17.000Z","localChanges":["test: check a cleaned square's Food without clearing its yield cache first"],"externalChanges":{}}
 ,
 {"version":"0.1.0@e22680e","date":"2026-10-14T20:27:35.000Z","localChanges":["fix: Create Unit refuses a fractional or negative square instead of rounding it to another"],"externalChanges":{}}

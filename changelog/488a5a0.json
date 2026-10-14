@@ -1,0 +1,1 @@
+{"version":"0.1.0@488a5a0","date":"2026-10-15T09:14:19.000Z","localChanges":["If one square of the map can't be drawn, the rest of the map still draws, and its cities, units and names stay lined up with the land (#32)."],"externalChanges":{}}
