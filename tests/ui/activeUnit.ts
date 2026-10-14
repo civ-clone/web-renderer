@@ -10,6 +10,13 @@
 // (#327): an update refills the active unit in place, so once it has moved its
 // own `tile` is the one it moved to, and the one it left still has to be
 // redrawn.
+//
+// And a move shown before the engine has answered it, with the keys typed
+// while it is kept and played once it has been (#326).
+
+// Must stay first: it gives the map layers a canvas and a `document` to draw
+// with.
+import { FakeImage, fakeCanvas } from './lib/fakeCanvas';
 
 import {
   UnitActionsRequest,
@@ -21,6 +28,15 @@ import { IncrementalReconstituter } from '../../src/js/UI/lib/IncrementalReconst
 import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 import chooseActiveUnit from '../../src/js/UI/lib/chooseActiveUnit';
 import ActiveUnitTiles from '../../src/js/UI/lib/ActiveUnitTiles';
+import PendingMove, { plainMove } from '../../src/js/UI/lib/PendingMove';
+import {
+  directionKeyMap,
+  keyToActionsMap,
+} from '../../src/js/UI/lib/unitActionKeys';
+import Units from '../../src/js/UI/components/Map/Units';
+import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
+import { Tile } from '../../src/js/UI/types';
+import { TransportHandledAction } from '../../src/js/Engine/Transport';
 
 const failures: string[] = [];
 let checks = 0;
@@ -263,6 +279,496 @@ expect(
 staleTiles.change(null);
 
 expect('no unit refreshes the tile the last one stood on', refreshed(), '3,4');
+
+// A move shown before its answer (#326). A row of ten tiles, a Chariot on the
+// fourth with a Militia under it, and a Legion of the same player's further on.
+const game: ObjectMap = {
+    hierarchy: { '#ref': 'Player-2' },
+    objects: {
+      'Player-2': {
+        _: 'Player',
+        id: 'Player-2',
+        tiles: [...Array(10).keys()].map((x) => ({ '#ref': `Tile-${x}` })),
+        units: [
+          { '#ref': 'Chariot-1' },
+          { '#ref': 'Militia-1' },
+          { '#ref': 'Legion-1' },
+        ],
+      },
+      ...Object.fromEntries(
+        [...Array(10).keys()].map((x) => [
+          `Tile-${x}`,
+          { _: 'PlayerTile', id: `Tile-${x}`, x, y: 0, units: [] },
+        ])
+      ),
+    },
+  },
+  gameReconstituter = new IncrementalReconstituter(),
+  tileRef = (x: number) => ({ '#ref': `Tile-${x}` });
+
+// The engine's answer for a unit: on tile `x`, with what it can do each way (a
+// Move to the next tile unless said otherwise), and every tile listing who is
+// on it. `null` leaves its actions out, as for a unit not yet asked about.
+const place = (
+  id: string,
+  x: number,
+  actions: { [direction: string]: string } | null = { e: 'Move', w: 'Move' }
+) => {
+  game.objects[id] = {
+    _: id.split('-')[0],
+    id,
+    tile: tileRef(x),
+    ...(actions === null
+      ? {}
+      : {
+          actions: [
+            {
+              _: 'Fortify',
+              id: `Fortify-${id}`,
+              from: tileRef(x),
+              to: tileRef(x),
+            },
+          ],
+          actionsForNeighbours: Object.fromEntries(
+            Object.entries(actions).map(([direction, name]) => {
+              const to = x + (direction === 'e' ? 1 : -1);
+
+              return [
+                direction,
+                [
+                  {
+                    _: name,
+                    id: `${name}-${id}-${to}`,
+                    from: tileRef(x),
+                    to: tileRef(to),
+                  },
+                ],
+              ];
+            })
+          ),
+        }),
+  };
+
+  [...Array(10).keys()].forEach((x) => {
+    game.objects[`Tile-${x}`].units = ['Chariot-1', 'Militia-1', 'Legion-1']
+      .filter((ref) => game.objects[ref]?.tile['#ref'] === `Tile-${x}`)
+      .map((ref) => ({ '#ref': ref }));
+  });
+};
+
+// The renderer's half, as `Renderer` does it: a unit key goes through
+// `PendingMove.press`, a plain Move is sent and drawn on its tile at once, each
+// update makes the next unit active and plays the keys kept for its orders, and
+// the move's own acknowledgement settles it and plays the keys kept behind it.
+const sentActions: string[] = [],
+  // What the worker has yet to acknowledge, in the order it was sent.
+  unacknowledged: TransportHandledAction[] = [],
+  pendingMove = new PendingMove<Tile>(),
+  layerTiles = new ActiveUnitTiles();
+
+let current: any = null,
+  gameData: any = null;
+
+const find = (id: string | null) =>
+    gameData.units.find((unit: any) => unit.id === id) ?? null,
+  // The action as the renderer sends it, and the worker acknowledges it.
+  asSent = (action: any): TransportHandledAction => ({
+    name: 'ActiveUnit',
+    id: current.id,
+    unitAction: action._,
+    target: action.to.id,
+  }),
+  makeActive = (unit: any) => {
+    pendingMove.activate(unit?.id ?? null);
+
+    const pendingTile = pendingMove.destination(unit?.id ?? null);
+
+    layerTiles.change(unit === null ? null : { tile: unit.tile, pendingTile });
+
+    current = unit;
+  },
+  playKey = (key: string): boolean => {
+    if (key in keyToActionsMap) {
+      const action = unitActions(current).find((action) =>
+        keyToActionsMap[key].includes(action._)
+      );
+
+      if (action) {
+        sentActions.push(`${current.id} ${action._}`);
+        unacknowledged.push(asSent(action));
+
+        return true;
+      }
+    }
+
+    if (!(key in directionKeyMap)) {
+      return false;
+    }
+
+    const actions = neighbourActions(current, directionKeyMap[key]),
+      move = plainMove(actions);
+
+    if (move !== null) {
+      sentActions.push(`${current.id} Move ${move.to.x}`);
+      unacknowledged.push(asSent(move));
+
+      pendingMove.start(current.id, move.to);
+
+      makeActive(current);
+
+      return true;
+    }
+
+    if (actions.length > 0) {
+      sentActions.push(`${current.id} ${actions[0]._} ${actions[0].to.x}`);
+      unacknowledged.push(asSent(actions[0]));
+
+      return true;
+    }
+
+    return false;
+  },
+  press = (...keys: string[]) =>
+    keys.forEach((key) =>
+      pendingMove.press(key, hasUnitActions(current), playKey)
+    ),
+  drain = () => {
+    if (current !== null && hasUnitActions(current)) {
+      pendingMove.drain(playKey);
+    }
+  },
+  // A patch: the answer to an action, or to a `unitActions` request.
+  update = (activeId: string | null) => {
+    gameData = gameReconstituter.rebuild(game, null);
+
+    makeActive(find(activeId));
+
+    drain();
+  },
+  // The worker's `actionHandled`, after the patch with the action's result.
+  acknowledge = (action: TransportHandledAction) => {
+    if (!pendingMove.answeredBy(action)) {
+      return;
+    }
+
+    if (!pendingMove.settle(find(action.id!))) {
+      pendingMove.clear();
+    }
+
+    makeActive(current);
+
+    drain();
+  },
+  // The answer to the oldest action sent: its patch, then its acknowledgement.
+  respond = (activeId: string | null) => {
+    update(activeId);
+
+    acknowledge(unacknowledged.shift()!);
+  },
+  drawnAt = (): number =>
+    (pendingMove.destination(current.id) ?? current.tile).x,
+  refreshedTiles = (): string =>
+    layerTiles
+      .take()
+      .map(({ x }) => x)
+      .sort()
+      .join();
+
+expect(
+  'only a lone Move is shown before its answer',
+  [
+    plainMove([{ _: 'Move' }] as any),
+    plainMove([{ _: 'Attack' }] as any),
+    plainMove([{ _: 'Move' }, { _: 'EstablishTradeRoute' }] as any),
+    plainMove([]),
+  ]
+    .map((action) => action?._ ?? '-')
+    .join(),
+  'Move,-,-,-'
+);
+
+place('Militia-1', 3, null);
+place('Legion-1', 8, null);
+place('Chariot-1', 3);
+update('Chariot-1');
+
+// The map layers, each tile drawn at its column of a canvas the size of the
+// row.
+class TestUnits extends Units {
+  protected placements(tile: Tile): [number, number][] {
+    return [[tile.x * this.tileSize(), 0]];
+  }
+
+  protected renderUnit(unit: any): CanvasImageSource {
+    return new FakeImage(unit._, 16, 16) as any;
+  }
+}
+
+class TestActiveUnit extends ActiveUnit {
+  protected placements(tile: Tile): [number, number][] {
+    return [[tile.x * this.tileSize(), 0]];
+  }
+
+  protected renderUnit(unit: any): CanvasImageSource {
+    return new FakeImage(unit._, 16, 16) as any;
+  }
+}
+
+const world = {
+    get: (x: number) => gameData.tiles[x],
+    width: () => 10,
+    height: () => 1,
+  },
+  layer = (Layer: typeof TestUnits) => {
+    const { calls, canvas } = fakeCanvas(320, 32);
+
+    return { calls, layer: new Layer(world as any, 2, 16, canvas) };
+  },
+  unitsLayer = layer(TestUnits),
+  activeLayer = layer(TestActiveUnit),
+  // Each sprite drawn, as its unit and the column it was drawn in, with a +
+  // for the copy behind a stack.
+  drawn = ({ calls }: { calls: any[][] }, draw: () => void): string => {
+    calls.splice(0);
+
+    draw();
+
+    return calls
+      .filter(([name]) => name === 'drawImage')
+      .map(([, image, x]) =>
+        x % 32 === 0
+          ? `${image.path} ${x / 32}`
+          : `${image.path} ${(x + 2) / 32}+`
+      )
+      .join(', ');
+  },
+  // What the units layer draws on the Chariot's tile and the next, and what
+  // the active unit's layer draws.
+  showLayers = (): string => {
+    [unitsLayer, activeLayer].forEach(({ layer }) =>
+      layer.setActiveUnit(current, pendingMove.destination(current.id))
+    );
+
+    return `units: ${drawn(unitsLayer, () =>
+      [3, 4].forEach((x) => unitsLayer.layer.renderTile(gameData.tiles[x]))
+    )}; active: ${drawn(activeLayer, () => activeLayer.layer.render())}`;
+  };
+
+expect(
+  'before a move, the Chariot is drawn on its stack, which the units layer leaves to it',
+  showLayers(),
+  'units: ; active: Chariot 3+, Chariot 3'
+);
+
+refreshedTiles();
+press('ArrowRight');
+
+expect('a Move key is sent at once', sentActions.join(), 'Chariot-1 Move 4');
+expect(
+  'and the Chariot is drawn on the tile it is moving to, before any answer, the Militia left behind',
+  showLayers(),
+  'units: Militia 3; active: Chariot 4'
+);
+expect('both tiles are drawn again', refreshedTiles(), '3,4');
+
+press('ArrowRight', 'ArrowRight');
+
+expect(
+  'the keys typed while the move is answered are kept',
+  sentActions.length,
+  1
+);
+
+// The engine refuses: a zone of control, say. The Chariot is where it was.
+respond('Chariot-1');
+
+expect(
+  'a refused move snaps back, on to its stack',
+  showLayers(),
+  'units: ; active: Chariot 3+, Chariot 3'
+);
+expect('both tiles are drawn again', refreshedTiles(), '3,4');
+expect(
+  'and the keys typed after it go too, unplayed',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '1 false'
+);
+
+// A Chariot has three moves, and three keys are typed quickly.
+sentActions.splice(0);
+press('ArrowRight', 'ArrowRight', 'ArrowRight');
+
+expect('the first key is sent', sentActions.join(), 'Chariot-1 Move 4');
+
+place('Chariot-1', 4);
+respond('Chariot-1');
+
+expect(
+  'the second is sent once the first is answered',
+  sentActions.join(' / '),
+  'Chariot-1 Move 4 / Chariot-1 Move 5'
+);
+expect('and drawn where it is going', drawnAt(), 5);
+expect(
+  'an arrived move leaves nothing behind it',
+  showLayers(),
+  'units: Militia 3; active: Chariot 5'
+);
+
+place('Chariot-1', 5);
+respond('Chariot-1');
+
+expect(
+  'then the third, once the second is',
+  sentActions.join(' / '),
+  'Chariot-1 Move 4 / Chariot-1 Move 5 / Chariot-1 Move 6'
+);
+
+// Its last move, and the Legion is up.
+place('Chariot-1', 6, {});
+place('Legion-1', 8);
+respond('Legion-1');
+
+expect(
+  'three keys, three moves',
+  `${sentActions.length} ${pendingMove.pending()}`,
+  '3 false'
+);
+
+// A key with nothing to do that way by the time it is played.
+sentActions.splice(0);
+press('ArrowRight', 'ArrowUp', 'ArrowLeft');
+place('Legion-1', 9, { w: 'Move' });
+respond('Legion-1');
+
+expect(
+  'a kept key with nothing to do is dropped, and the next one played',
+  sentActions.join(' / '),
+  'Legion-1 Move 9 / Legion-1 Move 8'
+);
+
+// An order kept behind a move waits for the move's answer, and the keys after
+// it for its own.
+sentActions.splice(0);
+place('Legion-1', 8);
+respond('Legion-1');
+press('ArrowRight', 'f', 'ArrowLeft');
+place('Legion-1', 9, { w: 'Move' });
+respond('Legion-1');
+
+expect(
+  'an order kept behind a move goes once the move is answered',
+  sentActions.join(' / '),
+  'Legion-1 Move 9 / Legion-1 Fortify'
+);
+expect('and the key after it waits', pendingMove.queued(), true);
+
+// Fortified, and the Militia is up: the Legion's last key isn't for it.
+place('Militia-1', 3, null);
+respond('Militia-1');
+
+expect(
+  'the keys are forgotten when another unit is active',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '2 false'
+);
+
+// The Militia's actions are still on their way.
+sentActions.splice(0);
+press('ArrowLeft', 'ArrowLeft');
+
+expect(
+  'keys for a unit whose orders are on their way are kept',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '0 true'
+);
+
+place('Militia-1', 3);
+update('Militia-1');
+
+expect(
+  'and go out once they arrive, one at a time',
+  sentActions.join(' / '),
+  'Militia-1 Move 2'
+);
+
+place('Militia-1', 2);
+respond('Militia-1');
+
+expect(
+  'each after the last is answered',
+  sentActions.join(' / '),
+  'Militia-1 Move 2 / Militia-1 Move 1'
+);
+
+// Other patches can arrive between a move and its answer: the answers to
+// `unitActions` requests made again for the same unit, say, with the unit still
+// on the tile it left. Neither is the move's answer.
+place('Militia-1', 1);
+respond('Militia-1');
+sentActions.splice(0);
+press('ArrowRight', 'ArrowRight');
+update('Militia-1');
+update('Militia-1');
+
+expect(
+  'a patch before the move is acknowledged does not settle it',
+  `${pendingMove.pending()} ${drawnAt()} ${pendingMove.queued()}`,
+  'true 2 true'
+);
+expect(
+  'nor play the keys kept behind it',
+  sentActions.join(' / '),
+  'Militia-1 Move 2'
+);
+
+place('Militia-1', 2);
+respond('Militia-1');
+
+expect(
+  'its acknowledgement does',
+  sentActions.join(' / '),
+  'Militia-1 Move 2 / Militia-1 Move 3'
+);
+
+// A move that starts talks: the worker asks, and waits for the choice, before
+// it sends the move's answer, so the window opens and closes before it. The
+// renderer's `chooseFromList` receiver forgets the keys when it opens.
+place('Militia-1', 3);
+respond('Militia-1');
+sentActions.splice(0);
+press('ArrowRight', 'ArrowRight', 'ArrowRight');
+pendingMove.clearKeys();
+
+expect(
+  'talks the move opened forget the keys typed before them',
+  pendingMove.queued(),
+  false
+);
+expect(
+  'but the move is still drawn ahead',
+  `${pendingMove.pending()} ${drawnAt()}`,
+  'true 4'
+);
+
+place('Militia-1', 4);
+respond('Militia-1');
+
+expect(
+  'and once the talks are over and the move answered, nothing more is played',
+  `${sentActions.join(' / ')} ${pendingMove.pending()}`,
+  'Militia-1 Move 4 false'
+);
+
+const limited = new PendingMove();
+
+limited.start('Chariot-1', { id: 'Tile-4', x: 4, y: 0 });
+
+expect(
+  'no more than eight keys are kept',
+  [...Array(10).keys()].map(() => limited.queueKey('ArrowRight')).join(),
+  'true,true,true,true,true,true,true,true,false,false'
+);
 
 if (failures.length) {
   console.error(`FAIL active unit\n  ${failures.join('\n  ')}`);

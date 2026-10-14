@@ -18,19 +18,23 @@ export class ActiveUnit extends Units implements IMap {
 
     this.#drawn = [];
 
-    const activeUnit = this.activeUnit();
+    const activeUnit = this.activeUnit(),
+      activeTile = this.activeTile();
 
-    if (activeUnit === null) {
+    if (activeUnit === null || activeTile === null) {
       return;
     }
 
-    const tile = this.world().get(activeUnit.tile.x, activeUnit.tile.y),
+    // On the tile it is moving to, while the engine answers the move (#326).
+    const tile = this.world().get(activeTile.x, activeTile.y),
       size = this.tileSize(),
       scale = this.scale(),
-      image = this.renderUnit(activeUnit);
+      image = this.renderUnit(activeUnit),
+      // Not yet listed on a tile it is moving to, and still listed on its own.
+      stacked = this.otherUnits(tile).length > 0;
 
     this.placements(tile).forEach(([offsetX, offsetY]) => {
-      if (tile.units.length > 1) {
+      if (stacked) {
         this.putImage(image, offsetX - scale, offsetY - scale);
       }
 
