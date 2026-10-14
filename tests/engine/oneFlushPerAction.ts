@@ -6,8 +6,9 @@
 //
 // Drives a seeded game with a human `DataTransferClient` over a stub transport that records every `gameDataPatch`.
 // When the turn is handed over, the test sends the same `Move` action the UI sends and expects one patch carrying the
-// from tile, the to tile and the player. A `SimpleAIClient` for the same player then plays the rest of the turn, so
-// that `EndTurn` is allowed, and ending it takes one patch followed by `turnEnded`.
+// from tile, the to tile and the player, followed by the move's `actionHandled` (#326). A `SimpleAIClient` for the
+// same player then plays the rest of the turn, so that `EndTurn` is allowed, and ending it takes one patch followed by
+// `actionHandled` and `turnEnded`.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -104,7 +105,11 @@ const transport = {
       return;
     }
 
-    if (channel === 'turnStarted' || channel === 'turnEnded') {
+    if (
+      channel === 'actionHandled' ||
+      channel === 'turnStarted' ||
+      channel === 'turnEnded'
+    ) {
       messages.push({ channel, data });
 
       if (channel === 'turnStarted' && !started) {
@@ -220,6 +225,26 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // The UI settles a move it drew ahead on the move's own acknowledgement, which has to follow the patch with its
+  //  result (#326).
+  const sent = messages.map(({ channel }) => channel).join(),
+    acknowledged = messages.find(
+      ({ channel }) => channel === 'actionHandled'
+    )?.data;
+
+  if (sent !== 'gameDataPatch,actionHandled') {
+    fail(`a move sent [${sent}], not its patch then actionHandled`);
+  }
+
+  if (
+    acknowledged.name !== 'ActiveUnit' ||
+    acknowledged.id !== unit.id() ||
+    acknowledged.unitAction !== 'Move' ||
+    acknowledged.target !== target
+  ) {
+    fail(`a move was acknowledged as ${JSON.stringify(acknowledged)}`);
+  }
+
   // Play the rest of the turn so `EndTurn` is accepted; what that sends does not matter here.
   await helper!.takeTurn();
   await wait(50);
@@ -236,17 +261,17 @@ const run = async (): Promise<void> => {
 
   if (
     ended === 0 ||
-    channels.slice(0, ended).join() !== 'gameDataPatch,turnEnded'
+    channels.slice(0, ended).join() !== 'gameDataPatch,actionHandled,turnEnded'
   ) {
     fail(
       `ending the turn sent [${channels
         .slice(0, ended || undefined)
-        .join(', ')}], not one gameDataPatch then turnEnded`
+        .join(', ')}], not one gameDataPatch, actionHandled, then turnEnded`
     );
   }
 
   console.log(
-    `PASS oneFlushPerAction (a move sent 1 patch carrying ${ids.size} updates and the moved unit's actions alone, ending the turn sent 1 patch then turnEnded)`
+    `PASS oneFlushPerAction (a move sent 1 patch carrying ${ids.size} updates and the moved unit's actions alone, then actionHandled; ending the turn sent 1 patch, actionHandled, then turnEnded)`
   );
 
   process.exit(0);

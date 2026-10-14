@@ -2,6 +2,8 @@ import { Tile } from '../types';
 
 type TileHolder = {
   tile: Tile;
+  // Where the unit is drawn while the engine answers its move (#326).
+  pendingTile?: Tile | null;
 };
 
 // `Units` skips whichever tile holds the active unit, so a change of active
@@ -15,16 +17,23 @@ export class ActiveUnitTiles {
   //  an update refills the unit in place (#327), so by the next change that can
   //  be the tile it moved to. A tile's object keeps its coordinates however
   //  often it is refilled.
-  #tile: Tile | null = null;
+  //
+  // And, while its move is answered, the tile it is drawn on: both are drawn
+  //  differently until then, the one it left without it.
+  #tiles: Tile[] = [];
 
   change(unit: TileHolder | null): void {
-    [this.#tile, unit?.tile ?? null].forEach((tile) => {
-      if (tile) {
-        this.#stale.set(`${tile.x},${tile.y}`, tile);
-      }
-    });
+    const tiles = unit === null ? [] : [unit.tile];
 
-    this.#tile = unit?.tile ?? null;
+    if (unit?.pendingTile) {
+      tiles.push(unit.pendingTile);
+    }
+
+    [...this.#tiles, ...tiles].forEach((tile) =>
+      this.#stale.set(`${tile.x},${tile.y}`, tile)
+    );
+
+    this.#tiles = tiles;
   }
 
   take(): Tile[] {

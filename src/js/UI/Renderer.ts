@@ -6,7 +6,6 @@ import {
   GameData,
   Interactions,
   Negotiation,
-  NeighbourDirection,
   PlainObject,
   PlayerAction,
   Resolution,
@@ -19,7 +18,7 @@ import i18next, { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import UnitActions from './components/UnitActions';
-import { keyToActionsMap } from './lib/unitActionKeys';
+import { directionKeyMap, keyToActionsMap } from './lib/unitActionKeys';
 import ActiveUnit from './components/Map/ActiveUnit';
 import City from './components/City';
 import Cities from './components/Map/Cities';
@@ -63,6 +62,7 @@ import { chooseUnitAction, openArrivalWindow } from './lib/unitActionPrompts';
 import HaltedUnits from './lib/haltedUnits';
 import {
   UnitActionsRequest,
+  hasUnitActions,
   neighbourActions,
   unitActions,
 } from './lib/unitActions';
@@ -81,6 +81,7 @@ import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import ActiveUnitTiles from './lib/ActiveUnitTiles';
+import PendingMove, { plainMove } from './lib/PendingMove';
 import createMemoryTestbed from './lib/memoryTestbed';
 import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
@@ -231,13 +232,22 @@ export class Renderer {
           unitsMap: Units,
           activeUnitsMap: ActiveUnit
         ) => {
-          activeUnitTiles.change(unit);
+          // The keys kept for one unit were meant for it, not the next (#326).
+          pendingMove.activate(unit?.id ?? null);
+
+          // While its move is answered, the unit is drawn on the tile it is
+          // moving to.
+          const pendingTile = pendingMove.destination(unit?.id ?? null);
+
+          activeUnitTiles.change(
+            unit === null ? null : { tile: unit.tile, pendingTile }
+          );
 
           activeUnit = unit;
 
           portal.setActiveUnit(unit);
-          unitsMap.setActiveUnit(unit);
-          activeUnitsMap.setActiveUnit(unit);
+          unitsMap.setActiveUnit(unit, pendingTile);
+          activeUnitsMap.setActiveUnit(unit, pendingTile);
 
           if (unit !== null) {
             lastUnit = unit;
@@ -275,16 +285,14 @@ export class Renderer {
             return;
           }
 
+          const tile = pendingMove.destination(unit.id) ?? unit.tile;
+
           // A unit on the very edge of the map is visible but easily missed,
           // so it is brought back to the middle before it gets that far.
           if (
-            !portal.isVisible(
-              unit.tile.x,
-              unit.tile.y,
-              options.get('unitEdgeMargin', 0)
-            )
+            !portal.isVisible(tile.x, tile.y, options.get('unitEdgeMargin', 0))
           ) {
-            portal.setCenter(unit.tile.x, unit.tile.y);
+            portal.setCenter(tile.x, tile.y);
           }
 
           portal.render();
@@ -346,7 +354,10 @@ export class Renderer {
         // knows the outgoing unit — by the time the coalesced
         // `renderActiveUnit` runs, `lastUnit` has already been pointed at the
         // incoming one.
-        activeUnitTiles = new ActiveUnitTiles();
+        activeUnitTiles = new ActiveUnitTiles(),
+        // A move drawn before the engine has answered it, and the keys typed
+        // while it is (#326).
+        pendingMove = new PendingMove<Tile>();
 
       let globalNotificationTimer: number | undefined,
         lastUnit: Unit | null = null,
@@ -436,6 +447,13 @@ export class Renderer {
 
       transportDisposers.push(
         transport.receive('chooseFromList', ({ choices, key, data }) => {
+          // The worker waits for this before it answers the action that asked
+          // (talks a move started, say), so the window can close before the
+          // move's answer arrives: the keys kept while it was answered were
+          // typed without knowing it would be there. The move stays drawn
+          // ahead until its answer (#326).
+          pendingMove.clearKeys();
+
           if (
             uiStressRunner &&
             !stressUiWindowsEnabled &&
@@ -1339,6 +1357,141 @@ export class Renderer {
               });
             };
 
+            // What a unit key does to the active unit, typed now or kept while
+            // a move was answered (#326): 'sent' when it sent an action,
+            // 'prompted' when it opened a window to choose or confirm first,
+            // and `null` when it does nothing.
+            const playUnitKey = (key: string): 'sent' | 'prompted' | null => {
+                const unit = activeUnit;
+
+                if (unit === null) {
+                  return null;
+                }
+
+                if (key in keyToActionsMap) {
+                  const actions = [...keyToActionsMap[key]];
+
+                  while (actions.length) {
+                    const actionName = actions.shift(),
+                      [unitAction] = unitActions(unit).filter(
+                        (action): boolean => action._ === actionName
+                      );
+
+                    if (unitAction) {
+                      transport.send('action', {
+                        name: 'ActiveUnit',
+                        id: unit.id,
+                        unitAction: unitAction._,
+                        target: unitAction.to.id,
+                      });
+
+                      return 'sent';
+                    }
+                  }
+                }
+
+                // Where the engine refuses a join, it says why, so the key
+                // doesn't do nothing and say nothing.
+                if (key === 'b' && unit.joinCityRefusal) {
+                  const { reason, ...details } = unit.joinCityRefusal,
+                    city = world.get(unit.tile.x, unit.tile.y).city;
+
+                  new NotificationWindow(
+                    t(`JoinCity.${reason}.title`),
+                    document.createTextNode(
+                      t(`JoinCity.${reason}.body`, {
+                        ...details,
+                        city: city?.name,
+                      })
+                    )
+                  );
+
+                  return 'prompted';
+                }
+
+                if (!(key in directionKeyMap)) {
+                  return null;
+                }
+
+                const directionActions = neighbourActions(
+                    unit,
+                    directionKeyMap[key]
+                  ),
+                  // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
+                  //  (#57).
+                  unitId = unit.id,
+                  move = plainMove(directionActions),
+                  send = (chosen: UnitAction): void =>
+                    transport.send('action', {
+                      name: 'ActiveUnit',
+                      id: unitId,
+                      unitAction: chosen._,
+                      target: chosen.to.id,
+                    });
+
+                // Drawn on the tile it is moving to now, rather than once the
+                // engine has answered and the frame after that has drawn it.
+                if (move !== null) {
+                  send(move);
+
+                  pendingMove.start(unitId, move.to);
+
+                  applyActiveUnit(unit, portal, unitsMap, activeUnitsMap);
+
+                  scheduleRender();
+
+                  return 'sent';
+                }
+
+                if (directionActions.length === 0) {
+                  return null;
+                }
+
+                let sent = false;
+
+                chooseUnitAction(unit, directionActions, (chosen) => {
+                  sent = true;
+
+                  send(chosen);
+                });
+
+                return sent ? 'sent' : 'prompted';
+              },
+              // Plays the keys kept while the last move was answered, each
+              // read against the unit as the answer left it, as if typed now.
+              drainKeys = (): void => {
+                if (
+                  activeUnit === null ||
+                  !hasUnitActions(activeUnit) ||
+                  !pendingMove.queued()
+                ) {
+                  return;
+                }
+
+                // A window the answer opened (a hut's news, talks) has the
+                // keys now, as it would a key typed now: the rest were typed
+                // without knowing it would be there.
+                if (
+                  document.querySelector('dialog.window.modal') !== null ||
+                  document.activeElement?.closest('dialog.window')
+                ) {
+                  pendingMove.clear();
+
+                  return;
+                }
+
+                pendingMove.drain((key) => {
+                  const played = playUnitKey(key);
+
+                  // So does one a key opened, to confirm an attack, say.
+                  if (played === 'prompted') {
+                    pendingMove.clear();
+                  }
+
+                  return played !== null;
+                });
+              };
+
             transportDisposers.push(() => {
               if (renderFrame !== null) {
                 cancelAnimationFrame(renderFrame);
@@ -1489,6 +1642,10 @@ export class Renderer {
 
               scheduleRender();
 
+              // Keys kept while the unit's orders were on their way. Those kept
+              // behind a move wait for its `actionHandled` (#326).
+              drainKeys();
+
               const autoEndOfTurnExceptions = options.get(
                 'autoEndOfTurnExceptions',
                 []
@@ -1550,6 +1707,36 @@ export class Renderer {
                 unitActionsRequest.dataReceived();
 
                 updateState(rawData, true);
+              })
+            );
+
+            // The move drawn before its answer (#326), settled by its own
+            // acknowledgement, which follows the patch with its result: any
+            // other patch, the answer to a `unitActions` request say, can come
+            // first with the unit still on the tile it left. Arrived, it is
+            // where it was drawn. Refused (a zone of control, no moves left),
+            // it goes back to the tile it left, and the keys typed after it go
+            // too: they were typed for a unit that didn't move.
+            transportDisposers.push(
+              transport.receive('actionHandled', (action): void => {
+                if (!pendingMove.answeredBy(action)) {
+                  return;
+                }
+
+                const arrived = pendingMove.settle(
+                  data.player.units.find((unit) => unit.id === action.id) ??
+                    null
+                );
+
+                if (!arrived) {
+                  pendingMove.clear();
+                }
+
+                applyActiveUnit(activeUnit, portal, unitsMap, activeUnitsMap);
+
+                scheduleRender();
+
+                drainKeys();
               })
             );
 
@@ -1759,24 +1946,14 @@ export class Renderer {
               )
             );
 
-            const directionKeyMap: { [key: string]: NeighbourDirection } = {
-                ArrowUp: 'n',
-                PageUp: 'ne',
-                ArrowRight: 'e',
-                PageDown: 'se',
-                ArrowDown: 's',
-                End: 'sw',
-                ArrowLeft: 'w',
-                Home: 'nw',
-              },
-              leaderScreensMap: { [key: string]: () => any } = {
-                F1: () => new CityStatus(data.player, portal, transport),
-                F3: () => new IntelligenceReport(transport),
-                F4: () => new HappinessReport(data.player, portal, transport),
-                F5: () => new TradeReport(data.player, portal, transport),
-                F6: () => new ScienceReport(data.player),
-                F8: () => new TopCitiesReport(transport),
-              };
+            const leaderScreensMap: { [key: string]: () => any } = {
+              F1: () => new CityStatus(data.player, portal, transport),
+              F3: () => new IntelligenceReport(transport),
+              F4: () => new HappinessReport(data.player, portal, transport),
+              F5: () => new TradeReport(data.player, portal, transport),
+              F6: () => new ScienceReport(data.player),
+              F8: () => new TopCitiesReport(transport),
+            };
 
             let lastShiftedCode = '';
 
@@ -1804,82 +1981,21 @@ export class Renderer {
                 return;
               }
 
-              if (activeUnit) {
-                if (key in keyToActionsMap) {
-                  const actions = [...keyToActionsMap[key]];
+              // Kept while a move is answered, and played once it has been
+              // (#326).
+              if (
+                activeUnit &&
+                (key in keyToActionsMap || key in directionKeyMap) &&
+                pendingMove.press(
+                  key,
+                  hasUnitActions(activeUnit),
+                  (key) => playUnitKey(key) !== null
+                )
+              ) {
+                event.stopPropagation();
+                event.preventDefault();
 
-                  while (actions.length) {
-                    const actionName = actions.shift(),
-                      [unitAction] = unitActions(activeUnit).filter(
-                        (action): boolean => action._ === actionName
-                      );
-
-                    if (unitAction) {
-                      transport.send('action', {
-                        name: 'ActiveUnit',
-                        id: activeUnit.id,
-                        unitAction: unitAction._,
-                        target: unitAction.to.id,
-                      });
-
-                      event.stopPropagation();
-                      event.preventDefault();
-
-                      return;
-                    }
-                  }
-                }
-
-                // Where the engine refuses a join, it says why, so the key
-                // doesn't do nothing and say nothing.
-                if (key === 'b' && activeUnit.joinCityRefusal) {
-                  const { reason, ...details } = activeUnit.joinCityRefusal,
-                    city = world.get(activeUnit.tile.x, activeUnit.tile.y).city;
-
-                  new NotificationWindow(
-                    t(`JoinCity.${reason}.title`),
-                    document.createTextNode(
-                      t(`JoinCity.${reason}.body`, {
-                        ...details,
-                        city: city?.name,
-                      })
-                    )
-                  );
-
-                  event.stopPropagation();
-                  event.preventDefault();
-
-                  return;
-                }
-
-                if (key in directionKeyMap) {
-                  const directionActions = neighbourActions(
-                      activeUnit,
-                      directionKeyMap[key]
-                    ),
-                    // Taken now: a window below isn't modal, and another unit can be active by the time it's
-                    //  answered (#57).
-                    unitId = activeUnit.id;
-
-                  if (directionActions.length > 0) {
-                    chooseUnitAction(
-                      activeUnit,
-                      directionActions,
-                      (chosen: UnitAction) =>
-                        transport.send('action', {
-                          name: 'ActiveUnit',
-                          id: unitId,
-                          unitAction: chosen._,
-                          target: chosen.to.id,
-                        })
-                    );
-
-                    event.stopPropagation();
-                    event.preventDefault();
-
-                    return;
-                  }
-                }
+                return;
               }
 
               if (key === 'Escape' && document.activeElement !== null) {

@@ -59,7 +59,10 @@ import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import Timeout from './Error/Timeout';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
-import Transport, { TransportDisposer } from './Transport';
+import Transport, {
+  TransportDisposer,
+  TransportHandledAction,
+} from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
@@ -2289,6 +2292,13 @@ export class DataTransferClient extends Client implements IClient {
     this.#talks = this.#talks.then(() => this.talkToPlayersMet());
   }
 
+  // Says an action has been handled, once the patch with its result has gone (#326). An action's patch can't be told
+  //  from any other by what is in it (a `unitActions` answer can arrive first, with the unit where it was), so the UI
+  //  waits for this to know a move it has drawn ahead was refused.
+  #acknowledge({ name, id, unitAction, target }: TransportHandledAction): void {
+    this.#transport.send('actionHandled', { name, id, unitAction, target });
+  }
+
   #sendHalts(): void {
     this.#heldHalts
       .splice(0)
@@ -2377,6 +2387,8 @@ export class DataTransferClient extends Client implements IClient {
 
             this.sendPatchData();
 
+            this.#acknowledge(args[0]);
+
             this.#transport.send('turnEnded', null);
 
             setTimeout(() => resolve(), 10);
@@ -2393,6 +2405,8 @@ export class DataTransferClient extends Client implements IClient {
           );
 
           this.sendPatchData();
+
+          this.#acknowledge(args[0]);
 
           this.#sendHalts();
         } catch (e) {

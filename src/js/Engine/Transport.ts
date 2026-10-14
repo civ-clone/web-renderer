@@ -33,6 +33,14 @@ export type TransportReceiveHandler<Data extends TransportData> = (
 
 export type TransportDisposer = () => void;
 
+// An action the worker has handled, as the UI sent it: enough to tell which one it was (#326).
+export type TransportHandledAction = {
+  name: string;
+  id?: string;
+  unitAction?: string;
+  target?: string;
+};
+
 type TransportPlayerAction = {
   [Name in keyof TransportPlayerActionMap]: {
     name: Name;
@@ -50,6 +58,9 @@ declare global {
   interface TransportDataMap {
     [key: string]: TransportData;
     action: TransportData<never, TransportPlayerAction>;
+    // An action has been handled and the patch with its result has gone, so the UI can settle a move it drew ahead of
+    //  the answer (#326).
+    actionHandled: TransportData<TransportHandledAction, never>;
     cheat: TransportData<never, TransportCheatData>;
     cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
