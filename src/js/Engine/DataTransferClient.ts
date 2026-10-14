@@ -17,7 +17,6 @@ import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialis
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
-import CityGrowth from '@civ-clone/core-city-growth/CityGrowth';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
@@ -47,6 +46,7 @@ import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
+import PlayerTreasury from '@civ-clone/core-treasury/PlayerTreasury';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Retryable from './Retryable';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
@@ -120,9 +120,20 @@ import {
   isUnitWithoutActions,
   unitWithoutActions,
 } from './lib/unitWithoutActions';
+import playerWithoutActions from './lib/playerWithoutActions';
 import researchCosts from './AdditionalData/researchCosts';
 import tradeRoutes from './AdditionalData/tradeRoutes';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
+
+// What a player's action is, which stays the same though `actions()` makes it afresh, with a new id, every time
+//  (#411): what kind it is and what it acts on.
+const actionKey = (action: PlayerAction): string => {
+  const value = action.value();
+
+  return `${action.constructor.name} ${
+    value instanceof DataObject ? value.id() : JSON.stringify(value ?? null)
+  }`;
+};
 
 const awaitTimeout = (delay: number, reason?: any) =>
   new Promise<void>((resolve, reject) =>
@@ -235,6 +246,11 @@ export class DataTransferClient extends Client implements IClient {
     // a `private _id` for rule identity, alongside `DataObject`'s own, that
     // intersection is `never` and the renderer stops compiling.
     (object: DataObject | Busy) => {
+      // The player's actions are going out some other way, made afresh, and the frontend will hold those instead.
+      if (object instanceof PlayerAction && !this.#serialisingActions) {
+        this.#forgetHeldActions();
+      }
+
       if (object instanceof Player && object !== this.player()) {
         if (!unknownPlayers.has(object)) {
           unknownPlayers.set(object, UnknownPlayer.fromPlayer(object));
@@ -307,6 +323,16 @@ export class DataTransferClient extends Client implements IClient {
   #dataQueue: DataQueue = new DataQueue();
   // The tiles in the queue, each sent once a flush (#138).
   #queuedTiles: Set<PlayerTile> = new Set();
+  // The ids of the units, cities and parts of the player in the queue, each sent once a flush (#411).
+  #queued: Set<string> = new Set();
+  // The player's actions as the frontend was last sent them by `#sendActions`, by what each is (#411), and what each
+  //  list was. `null` once they have gone some other way, in the whole player, as fresh objects the frontend holds in
+  //  place of these.
+  #heldActions: Map<string, PlayerAction> | null = null;
+  #heldActionKeys: string[] | undefined = undefined;
+  #heldMandatoryActions: string[] | undefined = undefined;
+  // Set while `#sendActions` serialises them, or a test compares with them, which leave the actions held alone.
+  #serialisingActions = false;
   #eventEmitter: EventEmitter;
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
   //  our own notifications are held (see `sendNotification`).
@@ -507,20 +533,7 @@ export class DataTransferClient extends Client implements IClient {
 
         // Our own new unit also needs our actions resent, or it can't be activated until something else resends them.
         if (target === this.player()) {
-          this.#dataQueue.update(this.player().id(), () =>
-            this.player().toPlainObject(
-              this.#dataFilter(
-                filterToReferenceAllExcept(
-                  Player,
-                  PlayerAction,
-                  Unit,
-                  UnitAction,
-                  Yield,
-                  Civilization
-                )
-              )
-            )
-          );
+          this.#sendActions();
         }
       }
 
@@ -595,17 +608,13 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.#unitWithActions = unit;
+      this.#setUnitWithActions(unit);
 
       this.#dataQueue.update(unit.id(), () => {
         this.#answeringUnitActions = unit;
 
         try {
-          return unit.toPlainObject(
-            this.#dataFilter(
-              filterToReference(Player, PlayerWorld, PlayerTile, Tile, City)
-            )
-          );
+          return this.serialiseUnit(unit);
         } finally {
           this.#answeringUnitActions = null;
         }
@@ -636,6 +645,12 @@ export class DataTransferClient extends Client implements IClient {
           this.player()
         ),
         playerTile = playerWorld.getByTile(tile);
+
+      // A square newly seen in one of our cities' areas is one of its `tiles` from now on, where it was undiscovered
+      //  (#411).
+      if (!this.#automatedTurn()) {
+        this.#sendCitiesAround(tile);
+      }
 
       if (playerTile === null) {
         new Retryable(
@@ -687,81 +702,25 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
+        // The unit, the player's list of units, and its home city, which supports it (#411). Each is built when the
+        //  patch is sent, so a unit gone by then, a Settlers that founded a city, isn't put back (#138).
+        this.#sendUnit(unit);
+        this.#sendCity(unit.city());
+
         if (event === 'unit:created') {
-          const playerUnits = unitRegistryInstance.getByPlayer(this.player()),
-            playerIndex = playerUnits.indexOf(unit),
-            cityUnits = unitRegistryInstance.getByCity(unit.city()),
-            cityIndex = cityUnits.indexOf(unit);
-
-          // Not added to the tile's units as well: the tile patch above has them all, as they are when it is sent. Its
-          //  place among them, worked out now, put back a unit that was gone by then, a Settlers that founded a city
-          //  (#138).
-          this.#dataQueue.add(
-            player.id(),
-            () =>
-              unit.toPlainObject(
-                this.#dataFilter(
-                  filterToReference(Tile, Player, PlayerTile, City)
-                )
-              ),
-            `units[${playerIndex}]`
-          );
-
-          if (unit.city() !== null) {
-            this.#dataQueue.add(
-              unit.city().id(),
-              () =>
-                unit.toPlainObject(this.#dataFilter(filterToReference(Unit))),
-              `units[${cityIndex}]`
-            );
-          }
-
-          return;
+          this.#sendPlayerKey('units');
         }
-
-        // Actions and yields are serialised inline, not as refs: `actions()`, `attack()` and the rest build fresh
-        //  ones, with fresh ids, on every call, so the frontend never holds them already (#46).
-        this.#dataQueue.update(this.player().id(), () =>
-          this.player().toPlainObject(
-            this.#dataFilter(
-              filterToReferenceAllExcept(
-                Player,
-                PlayerAction,
-                Unit,
-                UnitAction,
-                Yield,
-                Civilization
-              )
-            )
-          )
-        );
       });
     });
 
     ['unit:destroyed'].forEach((event) => {
-      engineInstance.on(event, (unit: Unit, action: UnitAction) => {
+      engineInstance.on(event, (unit: Unit) => {
         // A disbanded or destroyed unit leaves its square, whoever's it was (#138).
         this.#sendTile(unit.tile());
 
-        if (unit.player() === this.player() && unit.city() !== null) {
-          this.#dataQueue.update(unit.city()!.id(), () =>
-            unit
-              .city()!
-              .toPlainObject(
-                this.#dataFilter(
-                  filterToReference(
-                    CityBuild,
-                    CityGrowth,
-                    CityImprovement,
-                    Player,
-                    PlayerTile,
-                    Tile,
-                    Unit
-                  )
-                )
-              )
-          );
-        }
+        // It stays in the player's list of units, marked destroyed, and its home city no longer supports it (#411).
+        this.#sendUnit(unit);
+        this.#sendCity(unit.city());
       });
     });
 
@@ -797,7 +756,8 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       // Its actions go out with it, for the UI to choose from.
-      this.#unitWithActions = unit;
+      this.#setUnitWithActions(unit);
+      this.#sendUnit(unit);
 
       this.#heldHalts.push({ target: playerTile.id(), unit: unit.id() });
     });
@@ -827,24 +787,11 @@ export class DataTransferClient extends Client implements IClient {
           }
         }
 
-        if (unit.player() === this.player() && unit.city() !== null) {
-          this.#dataQueue.update(unit.city()!.id(), () =>
-            unit
-              .city()!
-              .toPlainObject(
-                this.#dataFilter(
-                  filterToReference(
-                    CityBuild,
-                    CityGrowth,
-                    CityImprovement,
-                    Player,
-                    PlayerTile,
-                    Tile,
-                    Unit
-                  )
-                )
-              )
-          );
+        // The unit, and the city that supports it, which may be unhappy about where it is now (#411).
+        if (unit.player() === this.player() && !this.#automatedTurn()) {
+          this.#sendUnit(unit);
+          this.#sendCity(unit.city());
+          this.#sendOnTiles(action.from(), action.to());
         }
 
         this.sendPatchData();
@@ -865,12 +812,8 @@ export class DataTransferClient extends Client implements IClient {
         if (originalPlayer === this.player()) {
           // The city already belongs to the capturing player here, so resend ours: the city is gone from our list,
           //  and losing the capital changes every remaining city's corruption.
-          this.#dataQueue.update(this.player().id(), () =>
-            this.player().toPlainObject(
-              this.#dataFilter(
-                filterToReferenceAllExcept(Player, PlayerAction, Civilization)
-              )
-            )
+          this.#sendWholePlayer(
+            filterToReferenceAllExcept(Player, PlayerAction, Civilization)
           );
 
           this.sendNotification(
@@ -901,7 +844,11 @@ export class DataTransferClient extends Client implements IClient {
     // The map draws a city from its tile: its size, or an unhappy citizen in civil disorder (#193). Our own city is a
     //  ref in the tile patch, so it goes out in full along with it: a new or captured city the frontend has never had,
     //  or a size or disorder the map draws from it. Not a destroyed one.
-    const cityChanged = (city: City, destroyed: boolean = false): void => {
+    const cityChanged = (
+      city: City,
+      destroyed: boolean = false,
+      listChanged: boolean = false
+    ): void => {
       const playerWorld = playerWorldRegistryInstance.getByPlayer(
           this.player()
         ),
@@ -928,6 +875,11 @@ export class DataTransferClient extends Client implements IClient {
       if (!destroyed) {
         this.#sendCity(city);
       }
+
+      // A city founded, captured or destroyed is added to or gone from the player's list of cities (#411).
+      if (listChanged && city.player() === this.player()) {
+        this.#sendPlayerKey('cities');
+      }
     };
 
     [
@@ -941,17 +893,30 @@ export class DataTransferClient extends Client implements IClient {
       'city:civil-disorder',
       'city:order-restored',
     ].forEach((event) =>
-      engineInstance.on(event, (city: City) => cityChanged(city))
+      engineInstance.on(event, (city: City) =>
+        cityChanged(
+          city,
+          false,
+          ['city:created', 'city:captured'].includes(event)
+        )
+      )
     );
 
     engineInstance.on('city:destroyed', (city: City) =>
-      cityChanged(city, true)
+      cityChanged(city, true, true)
     );
 
     // Which city works a tile is part of the tile (`workedBy`), so it goes out whenever that changes (#138): a city
     //  founded, growing, shrinking or destroyed, a tile the player chose, workers reassigned, an enemy unit in the way.
+    //  The city's yields change with it, so ours goes too (#411): a city founded next to it takes a square it worked.
     ['city:tile-worked', 'city:tile-released'].forEach((event) =>
-      engineInstance.on(event, (city: City, tile: Tile) => this.#sendTile(tile))
+      engineInstance.on(event, (city: City, tile: Tile) => {
+        this.#sendTile(tile);
+
+        if (!this.#automatedTurn()) {
+          this.#sendCity(city);
+        }
+      })
     );
 
     // A government's yields reach every tile and city, so a change of government resends them all: whatever changed
@@ -973,29 +938,7 @@ export class DataTransferClient extends Client implements IClient {
 
       area.forEach((areaTile) => this.#sendTile(areaTile));
 
-      cities.forEach((city) => {
-        cityChanged(city);
-
-        if (city.player() !== this.player()) {
-          return;
-        }
-
-        this.#dataQueue.update(city.id(), () =>
-          city.toPlainObject(
-            this.#dataFilter(
-              filterToReference(
-                CityBuild,
-                CityGrowth,
-                CityImprovement,
-                Player,
-                PlayerTile,
-                Tile,
-                Unit
-              )
-            )
-          )
-        );
-      });
+      cities.forEach((city) => cityChanged(city));
 
       if (
         cities.some((city) => city.player() === this.player()) ||
@@ -1005,18 +948,14 @@ export class DataTransferClient extends Client implements IClient {
             .some((areaUnit) => areaUnit.player() === this.player())
         )
       ) {
-        this.#dataQueue.update(this.player().id(), () =>
-          this.player().toPlainObject(
-            this.#dataFilter(
-              filterToReferenceAllExcept(
-                Player,
-                PlayerAction,
-                Unit,
-                UnitAction,
-                Yield,
-                Civilization
-              )
-            )
+        this.#sendWholePlayer(
+          filterToReferenceAllExcept(
+            Player,
+            PlayerAction,
+            Unit,
+            UnitAction,
+            Yield,
+            Civilization
           )
         );
       }
@@ -1127,6 +1066,10 @@ export class DataTransferClient extends Client implements IClient {
         if (player !== this.player()) {
           return;
         }
+
+        // Both cities' trade changes (#411).
+        this.#sendCity(home);
+        this.#sendCity(city);
 
         this.sendNotification(
           new Notification('Unit.trade-route-established', {
@@ -1314,12 +1257,8 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.#dataQueue.update(this.player().id(), () =>
-          this.player().toPlainObject(
-            this.#dataFilter(
-              filterToReference(PlayerWorld, PlayerTile, Tile, City)
-            )
-          )
+        this.#sendWholePlayer(
+          filterToReference(PlayerWorld, PlayerTile, Tile, City)
         );
       }
     );
@@ -1443,14 +1382,8 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        new Set(
-          cityImprovements.map((cityImprovement) => cityImprovement.city())
-        ).forEach((city: City) =>
-          this.#dataQueue.update(city.id(), () =>
-            city.toPlainObject(
-              this.#dataFilter(filterToReference(Player, Tile, Unit))
-            )
-          )
+        cityImprovements.forEach((cityImprovement) =>
+          this.#sendCity(cityImprovement.city())
         );
 
         this.sendNotification(
@@ -1751,10 +1684,7 @@ export class DataTransferClient extends Client implements IClient {
 
       reassignWorkers(city);
 
-      this.#dataQueue.update(
-        city.id(),
-        city.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
-      );
+      this.#sendCity(city);
 
       return false;
     }
@@ -1811,10 +1741,14 @@ export class DataTransferClient extends Client implements IClient {
         return false;
       }
 
-      const [actionToPerform] = filteredActions;
+      const [actionToPerform] = filteredActions,
+        // Where the unit was, and the city that supported it, before it acted: a move leaves the one, and setting a new
+        //  home city leaves the other (#411).
+        fromTile = unit.tile(),
+        homeCity = unit.city();
 
       // The patch this action sends keeps the unit's actions while it has moves left to use them (#323).
-      this.#unitWithActions = unit;
+      this.#setUnitWithActions(unit);
 
       actionToPerform.perform();
 
@@ -1822,20 +1756,25 @@ export class DataTransferClient extends Client implements IClient {
 
       await this.talkToPlayersMet();
 
+      // What the action changed (#411): the unit, the cities that support it before and after, and what of ours is on
+      //  the square it acted from, the square it acted on, and the square it is on now. A Caravan that helped build a
+      //  wonder, or a Settlers that joined a city, is gone into the city on the square it acted on. Anything else is
+      //  sent by the events the action raises.
+      this.#sendUnit(unit);
+      this.#sendCity(homeCity);
+      this.#sendCity(unit.city());
+      this.#sendOnTiles(fromTile, playerTile.tile(), unit.tile());
+
       return false;
     }
 
     if (playerAction instanceof InactiveUnit) {
       const unit: Unit = playerAction.value();
 
-      if (unit.moves().value() > 0) {
-        this.#dataQueue.update(
-          unit.id(),
-          unit.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
-        );
-      }
-
       unit.activate();
+
+      // Built when the patch is sent, so as it is now it is active (#411).
+      this.#sendUnit(unit);
 
       return false;
     }
@@ -1846,6 +1785,9 @@ export class DataTransferClient extends Client implements IClient {
     ) {
       const cityBuild = playerAction.value() as CityBuildItem,
         { auto, chosen } = action;
+
+      // What the city is building, which is all a choice changes (#411).
+      this.#sendCityBuild(cityBuild);
 
       // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
       if (typeof auto === 'boolean') {
@@ -1903,6 +1845,8 @@ export class DataTransferClient extends Client implements IClient {
 
       playerResearch.research(ChosenAdvance);
 
+      this.#sendPlayerObject(playerResearch);
+
       return false;
     }
 
@@ -1921,18 +1865,16 @@ export class DataTransferClient extends Client implements IClient {
 
       playerTreasury.buy(cityBuild.city());
 
-      this.#dataQueue.update(
-        playerTreasury.id(),
-        playerTreasury.toPlainObject(
-          this.#dataFilter(filterToReference(Player))
-        )
-      );
+      this.#sendPlayerObject(playerTreasury);
+      this.#sendCityBuild(cityBuild);
 
       return false;
     }
 
     if (playerAction instanceof Revolution) {
       revolution(playerAction.value() as PlayerGovernment);
+
+      this.#sendPlayer();
 
       return false;
     }
@@ -1952,6 +1894,8 @@ export class DataTransferClient extends Client implements IClient {
 
       chooseGovernment(playerGovernment, GovernmentType);
 
+      this.#sendPlayer();
+
       return false;
     }
 
@@ -1969,16 +1913,12 @@ export class DataTransferClient extends Client implements IClient {
         })
       );
 
+      // Every city's trade is split by the rates (#411).
+      this.#sendPlayerObject(playerTradeRates);
+
       cityRegistryInstance
         .getByPlayer(this.player())
-        .forEach((city) =>
-          this.#dataQueue.update(
-            city.id(),
-            city.toPlainObject(
-              this.#dataFilter(filterToReference(Player, Tile, Unit))
-            )
-          )
-        );
+        .forEach((city) => this.#sendCity(city));
 
       return false;
     }
@@ -1999,10 +1939,7 @@ export class DataTransferClient extends Client implements IClient {
         return false;
       }
 
-      this.#dataQueue.update(
-        city.id(),
-        city.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
-      );
+      this.#sendCity(city);
 
       return false;
     }
@@ -2012,16 +1949,15 @@ export class DataTransferClient extends Client implements IClient {
 
       changeSpecialist(playerAction.value());
 
-      this.#dataQueue.update(
-        city.id(),
-        city.toPlainObject(this.#dataFilter(filterToReference(Player, Tile)))
-      );
+      this.#sendCity(city);
 
       return false;
     }
 
     if (playerAction instanceof LaunchSpaceship) {
       playerAction.value().launch();
+
+      this.#sendPlayer();
 
       return false;
     }
@@ -2044,13 +1980,7 @@ export class DataTransferClient extends Client implements IClient {
 
     cityRegistryInstance
       .getByPlayer(this.player())
-      .forEach((city) =>
-        this.#dataQueue.update(city.id(), () =>
-          city.toPlainObject(
-            this.#dataFilter(filterToReference(Player, Tile, Unit))
-          )
-        )
-      );
+      .forEach((city) => this.#sendCity(city));
   }
 
   // Every unit type the game knows, taken from what cities can be told to build.
@@ -2102,6 +2032,7 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#dataQueue.clear();
     this.#queuedTiles.clear();
+    this.#queued.clear();
   }
 
   cityBuildAvailable(cityBuild: CityBuildItem): ObjectMap {
@@ -2261,15 +2192,353 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
-  // The player's own city in full, for a change the frontend can't see in a tile patch, where the city is a ref: a new
-  //  or captured city it has never had, or a size or disorder the map draws from it.
-  #sendCity(city: City): void {
-    if (city.player() !== this.player()) {
+  /**
+   * One of the player's own objects in full, with what it refers to that the frontend already holds as refs (#411).
+   *  `toPlainObject` puts the object it's called on through the filter as well, which would make it a ref to itself,
+   *  so the object itself only goes through the visibility filter: a unit still goes without its actions, unless it's
+   *  the one the UI has them for.
+   */
+  #serialiseOwn(
+    object: City | CityBuildItem | Unit,
+    localFilter: (object: any) => any
+  ): ObjectMap {
+    const root = this.#dataFilter()(object as unknown as DataObject),
+      filter = this.#dataFilter(localFilter);
+
+    return object.toPlainObject((value: any) =>
+      value === object ? root : filter(value)
+    );
+  }
+
+  /**
+   * The whole player as the frontend should hold it now, for a test to compare with what it does hold (#411): every
+   *  unit and city in full, and the map as refs, as the turn's hand-over sends it, with the player's actions. What the
+   *  frontend is known to hold of those is left alone, as nothing is sent.
+   */
+  serialisePlayer(): ObjectMap {
+    this.#serialisingActions = true;
+
+    try {
+      return this.player().toPlainObject(
+        this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
+      );
+    } finally {
+      this.#serialisingActions = false;
+    }
+  }
+
+  /**
+   * One of the player's units, as a patch of the unit sends it (#411). Its tiles, its home city and the player are refs,
+   *  as the frontend holds them all.
+   */
+  serialiseUnit(unit: Unit): ObjectMap {
+    return this.#serialiseOwn(unit, filterToReference(Player, City, Unit));
+  }
+
+  /**
+   * One of the player's cities, as a patch of the city sends it (#411): its build, growth, improvements, specialists and
+   *  yields in full, and its tiles, the units it supports and the player as refs, as the frontend holds them all.
+   */
+  serialiseCity(city: City): ObjectMap {
+    return this.#serialiseOwn(city, filterToReference(Player, City, Unit));
+  }
+
+  // The player's own city in full, for any change to it: the frontend holds it as the last patch of it left it, as an
+  //  action's patch no longer sends the whole player (#411). Once per flush, as a tile is: the patch is only built when
+  //  it's sent.
+  #sendCity(city: City | null): void {
+    if (
+      city === null ||
+      city.player() !== this.player() ||
+      this.#queued.has(city.id())
+    ) {
       return;
     }
 
-    this.#dataQueue.update(city.id(), () =>
-      city.toPlainObject(this.#dataFilter(filterToReference(Player)))
+    this.#queued.add(city.id());
+
+    this.#dataQueue.update(city.id(), () => this.serialiseCity(city));
+  }
+
+  // What one of the player's cities is building, for a change to that alone: a new choice, or a purchase (#411). The
+  //  city in full is several times the size, with all of its yields.
+  #sendCityBuild(cityBuild: CityBuildItem): void {
+    if (
+      cityBuild.city().player() !== this.player() ||
+      this.#queued.has(cityBuild.id())
+    ) {
+      return;
+    }
+
+    this.#queued.add(cityBuild.id());
+
+    this.#dataQueue.update(cityBuild.id(), () =>
+      this.#serialiseOwn(cityBuild, filterToReference(Player, City, Unit))
+    );
+  }
+
+  // The player's own unit in full, for any change to it (#411), once per flush. With its actions if it's the one the UI
+  //  has them for when the patch is sent, and without them otherwise.
+  #sendUnit(unit: Unit | null): void {
+    if (
+      unit === null ||
+      unit.player() !== this.player() ||
+      this.#queued.has(unit.id())
+    ) {
+      return;
+    }
+
+    this.#queued.add(unit.id());
+
+    this.#dataQueue.update(unit.id(), () => this.serialiseUnit(unit));
+  }
+
+  // Everything of ours on these squares, whose units and cities an action can change by being there: a move into or out
+  //  of a city (martial law, a Republic's units abroad), a transport's cargo, a city founded under a stack (#411).
+  #sendOnTiles(...tiles: (Tile | null)[]): void {
+    tiles.forEach((tile) => {
+      if (tile === null) {
+        return;
+      }
+
+      unitRegistryInstance
+        .getByTile(tile)
+        .forEach((tileUnit) => this.#sendUnit(tileUnit));
+
+      this.#sendCity(cityRegistryInstance.getByTile(tile));
+    });
+  }
+
+  // Our cities that have this square among theirs.
+  #sendCitiesAround(tile: Tile): void {
+    tile
+      .getSurroundingArea()
+      .entries()
+      .forEach((areaTile) => {
+        const city = cityRegistryInstance.getByTile(areaTile);
+
+        if (
+          city !== null &&
+          city.player() === this.player() &&
+          city.tiles().entries().includes(tile)
+        ) {
+          this.#sendCity(city);
+        }
+      });
+  }
+
+  // The UI has actions for one unit (#323). When that changes, the unit that had them goes again without them, so the
+  //  UI asks again when it comes back to it rather than using actions from before whatever has happened since.
+  #setUnitWithActions(unit: Unit | null): void {
+    const previous = this.#unitWithActions;
+
+    this.#unitWithActions = unit;
+
+    if (previous !== null && previous !== unit) {
+      this.#sendUnit(previous);
+    }
+  }
+
+  // One of the player's keys on its own, as an update of that key (#411): the list of its units or cities when one is
+  //  added, which go as refs, as each is sent on its own.
+  #sendPlayerKey(key: 'cities' | 'units'): void {
+    if (this.#queued.has(`${this.player().id()} ${key}`)) {
+      return;
+    }
+
+    this.#queued.add(`${this.player().id()} ${key}`);
+
+    this.#dataQueue.update(
+      this.player().id(),
+      () =>
+        this.#serialisePlayerPart(
+          additionalDataRegistryInstance
+            .getByType(Player)
+            .find((additionalData) => additionalData.key() === key)!
+            .data(this.player()),
+          filterToReferenceAllExcept()
+        ),
+      key
+    );
+  }
+
+  /**
+   * The player's actions, which can change after every action, as updates of `actions` and `mandatoryActions` rather
+   *  than the whole player (#411). What each acts on goes as a ref: units, cities, builds, research, government and
+   *  rates are all held by the frontend and sent whenever they change. An action the frontend already holds, one in
+   *  the list it was last sent, goes as a ref too: `actions()` makes every one afresh, with a new id, so the one sent
+   *  before stands in for it. Nothing goes when the list is as it was, as after most moves. The mandatory ones are
+   *  the same objects (`mandatoryActions()` is `actions()` filtered), and are worked out with them: their patch comes
+   *  second, and the queue builds patches in order.
+   */
+  #sendActions(): void {
+    let mandatoryActions: ObjectMap | undefined;
+
+    this.#dataQueue.update(
+      this.player().id(),
+      () => {
+        const held = this.#heldActions,
+          actions = this.player()
+            .actions()
+            .map((action) => held?.get(actionKey(action)) ?? action),
+          mandatory = actions.filter(
+            (action) => action instanceof MandatoryPlayerAction
+          ),
+          unchanged = (list: PlayerAction[], heldList: string[] | undefined) =>
+            heldList !== undefined &&
+            list.length === heldList.length &&
+            list.every(
+              (action, index) => actionKey(action) === heldList[index]
+            ),
+          filter = (object: any) =>
+            object instanceof PlayerAction
+              ? held !== null && held.get(actionKey(object)) === object
+                ? referenceObject(object)
+                : object
+              : referenceObject(object),
+          serialise = (list: PlayerAction[]): ObjectMap => {
+            this.#serialisingActions = true;
+
+            try {
+              return this.#serialisePlayerPart(list, filter);
+            } finally {
+              this.#serialisingActions = false;
+            }
+          };
+
+        mandatoryActions = unchanged(mandatory, this.#heldMandatoryActions)
+          ? undefined
+          : serialise(mandatory);
+
+        const sent = unchanged(actions, this.#heldActionKeys)
+          ? undefined
+          : serialise(actions);
+
+        this.#heldActions = new Map(
+          actions.map((action): [string, PlayerAction] => [
+            actionKey(action),
+            action,
+          ])
+        );
+        this.#heldActionKeys = actions.map(actionKey);
+        this.#heldMandatoryActions = mandatory.map(actionKey);
+
+        return sent;
+      },
+      'actions'
+    );
+
+    this.#dataQueue.update(
+      this.player().id(),
+      () => mandatoryActions,
+      'mandatoryActions'
+    );
+  }
+
+  // The whole player, for an action that changes it broadly: a revolution, a new government, a spaceship launched.
+  //  Its cities are refs here: what changes them sends them.
+  #sendPlayer(): void {
+    this.#sendWholePlayer(
+      filterToReference(PlayerWorld, PlayerTile, Tile, City)
+    );
+  }
+
+  /**
+   * The whole player, but for its actions, which go straight after it (#411): an action the frontend already holds
+   *  goes as a ref there, so the hundreds a large game has don't all go again. The player's patch replaces what the
+   *  frontend holds of it, actions and all, so they always go, if only as refs, and in the same flush, so that none it
+   *  holds is let go of in between.
+   */
+  #sendWholePlayer(
+    localFilter: (object: any) => any,
+    type: 'add' | 'update' = 'update'
+  ): void {
+    const player = this.player();
+
+    this.#dataQueue[type](player.id(), () => {
+      const standIn = playerWithoutActions(player),
+        filter = this.#dataFilter(localFilter);
+
+      this.#heldActionKeys = undefined;
+      this.#heldMandatoryActions = undefined;
+
+      // As `#serialisePlayerPart`: the filter sees what `toPlainObject` is called on first.
+      return player.toPlainObject((object: any) =>
+        object === player ? standIn : filter(object)
+      );
+    });
+
+    this.#sendActions();
+  }
+
+  #forgetHeldActions(): void {
+    this.#heldActions = null;
+    this.#heldActionKeys = undefined;
+    this.#heldMandatoryActions = undefined;
+  }
+
+  // A value that is part of the player, serialised on its own. `toPlainObject` is a method on `DataObject`, and the
+  //  filter is applied to what it is called on first, so handing it the value in place of the player gets the value
+  //  serialised, as the `hierarchy` (as `cityBuildAvailable` does).
+  #serialisePlayerPart(
+    value: any,
+    localFilter: (object: any) => any
+  ): ObjectMap {
+    const player = this.player(),
+      filter = this.#dataFilter(localFilter);
+
+    return player.toPlainObject((object: any) =>
+      object === player ? value : filter(object)
+    );
+  }
+
+  // What an action can change of the player's own as a side effect, a hut's gold or advance, a trade route's bonus, a
+  //  bribe, cheaply enough to compare before and after each one (#411).
+  #playerState(): Map<PlayerResearch | PlayerTreasury, string> {
+    const playerResearch = playerResearchRegistryInstance.getByPlayer(
+      this.player()
+    );
+
+    return new Map<PlayerResearch | PlayerTreasury, string>([
+      ...playerTreasuryRegistryInstance
+        .getByPlayer(this.player())
+        .map((playerTreasury): [PlayerTreasury, string] => [
+          playerTreasury,
+          String(playerTreasury.value()),
+        ]),
+      [
+        playerResearch,
+        JSON.stringify([
+          playerResearch.researching()?.name ?? null,
+          playerResearch.progress().value(),
+          playerResearch.cost().value(),
+          playerResearch.complete().length,
+        ]),
+      ],
+    ]);
+  }
+
+  // Each of them that has changed since `before`.
+  #sendPlayerState(before: Map<PlayerResearch | PlayerTreasury, string>): void {
+    this.#playerState().forEach((state, object) => {
+      if (before.get(object) !== state) {
+        this.#sendPlayerObject(object);
+      }
+    });
+  }
+
+  // The player's research, trade rates or treasury, once per flush.
+  #sendPlayerObject(
+    object: PlayerResearch | PlayerTradeRates | PlayerTreasury
+  ): void {
+    if (this.#queued.has(object.id())) {
+      return;
+    }
+
+    this.#queued.add(object.id());
+
+    this.#dataQueue.update(object.id(), () =>
+      object.toPlainObject(this.#dataFilter(filterToReference(Player)))
     );
   }
 
@@ -2282,6 +2551,18 @@ export class DataTransferClient extends Client implements IClient {
         unit.active() &&
         unit.moves().value() > 0)
     );
+  }
+
+  // Whether this is our turn, automated: the whole player goes at the end of it, so what each of its moves changes of
+  //  our units and cities needn't go as well, only the squares the map draws (#411).
+  #automatedTurn(): boolean {
+    if (!this.#automationEnabled) {
+      return false;
+    }
+
+    const [currentPlayer] = currentPlayerRegistryInstance.entries();
+
+    return currentPlayer === this.player();
   }
 
   #holdsNotifications(): boolean {
@@ -2348,12 +2629,8 @@ export class DataTransferClient extends Client implements IClient {
             this.#dataQueue.update(yearInstance.id(), () =>
               yearInstance.toPlainObject()
             );
-            this.#dataQueue.update(this.player().id(), () =>
-              this.player().toPlainObject(
-                this.#dataFilter(
-                  filterToReference(PlayerWorld, PlayerTile, Tile)
-                )
-              )
+            this.#sendWholePlayer(
+              filterToReference(PlayerWorld, PlayerTile, Tile)
             );
 
             this.sendPatchData();
@@ -2374,10 +2651,9 @@ export class DataTransferClient extends Client implements IClient {
 
         // On later turns this is how the UI gets the new turn's actions.
         if (!playerJustSent) {
-          this.#dataQueue.add(this.player().id(), () =>
-            this.player().toPlainObject(
-              this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
-            )
+          this.#sendWholePlayer(
+            filterToReference(PlayerWorld, PlayerTile, Tile),
+            'add'
           );
         }
 
@@ -2392,6 +2668,8 @@ export class DataTransferClient extends Client implements IClient {
           let turnEnded: boolean;
 
           this.#holdingFlushes = true;
+
+          const playerState = this.#playerState();
 
           try {
             turnEnded = await this.handleAction(...args);
@@ -2415,13 +2693,11 @@ export class DataTransferClient extends Client implements IClient {
             return;
           }
 
-          this.#dataQueue.update(this.player().id(), () =>
-            this.player().toPlainObject(
-              this.#dataFilter(
-                filterToReference(PlayerWorld, PlayerTile, Tile, City)
-              )
-            )
-          );
+          // Not the whole player, which in a large game is hundreds of KB and most of the time an action takes: what
+          //  the action changed has been sent by now, by the action and the events it raised, and the player's actions
+          //  are sent if they changed (#411). And its research and treasury if the action changed them on the way.
+          this.#sendPlayerState(playerState);
+          this.#sendActions();
 
           this.sendPatchData();
 

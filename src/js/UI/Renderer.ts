@@ -1857,6 +1857,7 @@ export class Renderer {
                         document.dispatchEvent(
                           new CustomEvent('patchdatareceived', {
                             detail: {
+                              key,
                               value,
                             },
                           })

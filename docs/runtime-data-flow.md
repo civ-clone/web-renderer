@@ -54,13 +54,15 @@ Both extend `AbstractTransport`, whose `request()` sends on a channel and resolv
 - `index`: optional object path string (`foo.bar[3]` style)
 - `value`: object payload, or a function on the backend that is called when the queue is flushed
 
-Most patches are queued as functions, so an object is serialised once, when the patch is sent.
+Most patches are queued as functions, so an object is serialised once, when the patch is sent. A function that returns nothing is left out of the patch: what it would have sent turned out to be unchanged (#411).
 
 When patches are flushed:
 
-- While the human player's action is being handled, flushes are held, so the action (the moved unit's tiles, then the player) goes out as a single patch when it is done (#321). A unit sent somewhere with GoTo therefore appears at its destination in one step.
+- While the human player's action is being handled, flushes are held, so the action (the moved unit's tiles, the unit, then the player's actions if they changed) goes out as a single patch when it is done (#321). A unit sent somewhere with GoTo therefore appears at its destination in one step.
 - Outside the player's actions (for example while other civilizations move), each `unit:moved` flushes the queue.
 - Cheats, `unitActions` answers, the start of the turn and the end of the turn also flush.
+
+What an action sends (#411): not the whole player, but what the action changed, which the action and the events it raises send. The unit that acted, the cities that support it before and after, and what of the player's is on the squares it acted from and on; a city when its worked squares, specialists or rates change, or only its `CityBuild` when its production does or it is bought; the research or treasury when the action changed them; the player's lists of units or cities when one is added. Then the player's `actions` and `mandatoryActions`, as updates of those keys alone, and only if they changed. An action the frontend already holds goes as a ref, as `actions()` makes every one afresh with a new id. The whole player still goes at the start of the turn, at the end of an automated one, and for a revolution, a new government or a launched spaceship, with its actions straight after it in the same way. `tests/engine/patchRefs.ts` plays by hand and checks, after every action, that everything the frontend holds of the player is what the client would send now.
 
 What patches leave out:
 
