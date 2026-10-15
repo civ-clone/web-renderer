@@ -1262,7 +1262,8 @@ export class DataTransferClient extends Client implements IClient {
     );
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
-    //  no Aqueduct), so a shrinking city has no notice of its own.
+    //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
+    //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one.
     engineInstance.on('city:food-storage-exhausted', (city: City) => {
       this.#newsOf(city).famine = true;
     });
