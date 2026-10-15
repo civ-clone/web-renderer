@@ -123,7 +123,16 @@ export class Map implements IMap {
       // have to be second-guessed here.
       this.markDirty(offsetX, offsetY, size, size);
 
-      this.drawTile(tile, offsetX, offsetY);
+      // One square that can't be drawn mustn't stop the rest: a throw here used to abandon the layer mid-scroll, leaving
+      //  it out of line with the others (#32).
+      try {
+        this.drawTile(tile, offsetX, offsetY);
+      } catch (error) {
+        console.error(
+          `${this.constructor.name} could not draw ${tile.x},${tile.y}.`,
+          error
+        );
+      }
     });
   }
 
@@ -180,11 +189,13 @@ export class Map implements IMap {
         this.#canvas.height = height;
       }
 
-      this.#stale = false;
       this.#originX = originX;
       this.#originY = originY;
 
       this.render();
+
+      // Only once it's drawn: a render that throws leaves the layer stale, so the next viewport change redraws it.
+      this.#stale = false;
 
       return;
     }

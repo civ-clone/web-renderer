@@ -33,8 +33,9 @@ export const reduceKnownYield = (yields: Yield[], yieldName: string): number =>
   reduceKnownYields(yields, yieldName)[0];
 
 /**
- * A square's yields as one entry each, leaving out any that come to nothing. A square can have several entries for one
- * yield, some negative (Pollution halves Food with a negative Food, #32), so the icons drawn are what each nets to.
+ * A square's yields as one entry each, in whole icons, leaving out any that come to nothing. A square can have several
+ * entries for one yield, some negative (Pollution halves Food with a negative Food, #32), so the icons drawn are what
+ * each nets to.
  */
 export const netTileYields = (
   yields: Pick<Yield, '_' | 'value'>[]
@@ -46,8 +47,28 @@ export const netTileYields = (
       return netYields;
     }, {} as { [key: string]: number })
   )
-    .map(([_, value]) => ({ _, value }))
+    .map(([_, value]) => ({ _, value: Math.floor(value) }))
     .filter(({ value }) => value > 0);
+
+/**
+ * Where each of a square's yield icons goes, as a fraction of the square: two rows, with more columns the more icons
+ * there are. A square with more icons than the widest layout has room for draws as many as fit.
+ */
+export const tileYieldIcons = (
+  yields: Pick<Yield, '_' | 'value'>[]
+): { _: string; x: number; y: number }[] => {
+  const icons = netTileYields(yields)
+      // TODO: use a more effective sort than this, this only works by luck (Food -> Production -> Trade)
+      .sort((a, b) => a._.charCodeAt(0) - b._.charCodeAt(0))
+      .flatMap(({ _, value }) => Array.from({ length: value }, () => _)),
+    columns = Math.min(6, Math.max(2, Math.ceil(icons.length / 2)));
+
+  return icons.slice(0, columns * 2).map((_, index) => ({
+    _,
+    x: (index % columns) / columns,
+    y: Math.floor(index / columns) / 2,
+  }));
+};
 
 export const groupIcons: { [key: string]: string } = {
   Food: 'city/food.png',
