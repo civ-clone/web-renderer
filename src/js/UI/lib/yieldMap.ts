@@ -32,6 +32,23 @@ export const reduceKnownYields = (
 export const reduceKnownYield = (yields: Yield[], yieldName: string): number =>
   reduceKnownYields(yields, yieldName)[0];
 
+/**
+ * A square's yields as one entry each, leaving out any that come to nothing. A square can have several entries for one
+ * yield, some negative (Pollution halves Food with a negative Food, #32), so the icons drawn are what each nets to.
+ */
+export const netTileYields = (
+  yields: Pick<Yield, '_' | 'value'>[]
+): { _: string; value: number }[] =>
+  Object.entries(
+    yields.reduce((netYields, tileYield) => {
+      netYields[tileYield._] = (netYields[tileYield._] ?? 0) + tileYield.value;
+
+      return netYields;
+    }, {} as { [key: string]: number })
+  )
+    .map(([_, value]) => ({ _, value }))
+    .filter(({ value }) => value > 0);
+
 export const groupIcons: { [key: string]: string } = {
   Food: 'city/food.png',
   Production: 'city/production.png',

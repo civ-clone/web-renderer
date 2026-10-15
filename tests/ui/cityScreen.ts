@@ -7,6 +7,7 @@
 // Keys 1–8 pick a specialist in the order the roster draws them (#107).
 // The citizens drawn are the moods the engine sends, in order, one sprite each.
 // The Auto button and the A key send the action that turns Auto the other way (#194).
+// A polluted square's halved yields are drawn as what each nets to, or the city map runs out of icon slots (#32).
 
 import {
   citizenMoods,
@@ -18,7 +19,11 @@ import {
   specialistForKey,
 } from '../../src/js/UI/lib/specialists';
 import { CitizenMood, Yield } from '../../src/js/UI/types';
-import { splitYield, yieldGroup } from '../../src/js/UI/lib/yieldMap';
+import {
+  netTileYields,
+  splitYield,
+  yieldGroup,
+} from '../../src/js/UI/lib/yieldMap';
 import { toggleAuto } from '../../src/js/UI/components/lib/cityBuild';
 
 const failures: string[] = [];
@@ -316,6 +321,32 @@ expect(
 expect('Stop Auto turns it off', autoSent(true, {}), [
   ['action', { name: 'ChangeProduction', id: 'build-1', auto: false }],
 ]);
+
+expect(
+  'a polluted square draws what each yield nets to',
+  netTileYields([
+    { _: 'Food', value: 3 },
+    { _: 'Production', value: 2 },
+    { _: 'Trade', value: 2 },
+    { _: 'Food', value: -1 },
+    { _: 'Production', value: -1 },
+    { _: 'Trade', value: -1 },
+  ]),
+  [
+    { _: 'Food', value: 2 },
+    { _: 'Production', value: 1 },
+    { _: 'Trade', value: 1 },
+  ]
+);
+expect(
+  'a yield that nets to nothing is not drawn',
+  netTileYields([
+    { _: 'Food', value: 1 },
+    { _: 'Trade', value: 1 },
+    { _: 'Trade', value: -1 },
+  ]),
+  [{ _: 'Food', value: 1 }]
+);
 
 if (failures.length) {
   process.stderr.write(
