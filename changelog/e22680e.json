@@ -1,0 +1,1 @@
+{"version":"0.1.0@e22680e","date":"2026-10-14T20:27:35.000Z","localChanges":["fix: Create Unit refuses a fractional or negative square instead of rounding it to another"],"externalChanges":{}}

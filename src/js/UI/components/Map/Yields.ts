@@ -1,17 +1,15 @@
 import Map from '../Map';
 import { Tile } from '../../types';
+import { netTileYields } from '../../lib/yieldMap';
 
 export class Yields extends Map {
   protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
     const size = this.tileSize(),
-      total = tile.yields.reduce(
-        (total, tileYield) => total + tileYield.value,
-        0
-      ),
       // TODO: use a more effective sort than this, this only works by luck (Food -> Production -> Trade)
-      yields = [...tile.yields].sort(
+      yields = netTileYields(tile.yields).sort(
         (a, b) => a._.charCodeAt(0) - b._.charCodeAt(0)
-      );
+      ),
+      total = yields.reduce((total, tileYield) => total + tileYield.value, 0);
 
     let i = 0;
 
