@@ -129,10 +129,24 @@ export class Portal
 
   protected bindEvents(): void {}
 
+  /**
+   * Runs `action` on every layer, carrying on past one that throws: a layer left behind would otherwise leave every
+   * layer after it out of line with the ones before (#32).
+   */
+  protected eachLayer(action: (layer: Map) => void): void {
+    this.#layers.forEach((layer) => {
+      try {
+        action(layer);
+      } catch (error) {
+        console.error(`${layer.constructor.name} failed to update.`, error);
+      }
+    });
+  }
+
   build(updatedTiles: Tile[]): void {
     this.syncViewport();
 
-    this.#layers.forEach((layer: Map) => layer.update(updatedTiles));
+    this.eachLayer((layer) => layer.update(updatedTiles));
   }
 
   canvas(): HTMLCanvasElement {
@@ -332,7 +346,7 @@ export class Portal
       height: this.#canvas.height,
     };
 
-    this.#layers.forEach((layer) =>
+    this.eachLayer((layer) =>
       layer.setViewport(
         originX,
         originY,

@@ -22,6 +22,7 @@ import { CitizenMood, Yield } from '../../src/js/UI/types';
 import {
   netTileYields,
   splitYield,
+  tileYieldIcons,
   yieldGroup,
 } from '../../src/js/UI/lib/yieldMap';
 import { toggleAuto } from '../../src/js/UI/components/lib/cityBuild';
@@ -346,6 +347,58 @@ expect(
     { _: 'Trade', value: -1 },
   ]),
   [{ _: 'Food', value: 1 }]
+);
+
+expect(
+  'a fraction of a yield is not drawn as a whole icon',
+  netTileYields([{ _: 'Trade', value: 1.5 }]),
+  [{ _: 'Trade', value: 1 }]
+);
+
+const icons = (counts: { [key: string]: number }) =>
+  tileYieldIcons(Object.entries(counts).map(([_, value]) => ({ _, value })));
+
+expect(
+  'up to four icons sit in two columns',
+  icons({ Food: 2, Production: 1, Trade: 1 }),
+  [
+    { _: 'Food', x: 0, y: 0 },
+    { _: 'Food', x: 0.5, y: 0 },
+    { _: 'Production', x: 0, y: 0.5 },
+    { _: 'Trade', x: 0.5, y: 0.5 },
+  ]
+);
+expect(
+  'five icons take three columns',
+  icons({ Food: 5 }).map(({ x, y }) => [x, y]),
+  [
+    [0, 0],
+    [1 / 3, 0],
+    [2 / 3, 0],
+    [0, 0.5],
+    [1 / 3, 0.5],
+  ]
+);
+expect(
+  'a polluted square draws one icon per yield it nets to',
+  tileYieldIcons([
+    { _: 'Food', value: 3 },
+    { _: 'Production', value: 2 },
+    { _: 'Trade', value: 2 },
+    { _: 'Food', value: -1 },
+    { _: 'Production', value: -1 },
+    { _: 'Trade', value: -1 },
+  ]).map(({ _ }) => _),
+  ['Food', 'Food', 'Production', 'Trade']
+);
+
+const crowded = icons({ Food: 6, Production: 5, Trade: 4 });
+
+expect('a square with more icons than room draws twelve', crowded.length, 12);
+expect(
+  'every icon drawn lands inside its square',
+  crowded.every(({ x, y }) => x >= 0 && x < 1 && y >= 0 && y < 1),
+  true
 );
 
 if (failures.length) {
