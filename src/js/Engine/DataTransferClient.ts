@@ -418,16 +418,8 @@ export class DataTransferClient extends Client implements IClient {
               return;
             }
 
+            // Registering raises `player:visibility-changed`, which sends the tile as seeing it would (#342).
             playerWorld.register(tile);
-
-            const playerTile = playerWorld.getByTile(tile)!;
-
-            this.#queuedTiles.add(playerTile);
-            this.#dataQueue.add(
-              playerWorld.id(),
-              () => this.serialiseTile(playerTile),
-              `entries[${playerWorld.entries().indexOf(playerTile)}]`
-            );
           });
       }
 
