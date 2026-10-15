@@ -177,3 +177,12 @@ turns 1, 10 and 50 are unchanged, and the turn-50 DTOs dumped before and after
 are identical once ids are renumbered in order of first appearance. The DTO
 hashes at turns 10 and 50 move, and the turn-50 DTO is a little smaller
 (shorter ids).
+
+## Accepted change: rule counts (#138)
+
+core-city 0.1.22 adds the `TileWorked` and `TileReleased` rule types, fired by
+`WorkedTileRegistry` and turned into `city:tile-worked` and
+`city:tile-released` engine events by civ1-city, so the frontend can be sent a
+tile whenever the tiles a city works change. The rule totals at turns 1, 10 and
+50 rise by two (one rule of each type) and nothing else moves: the engine-state
+checksums, the random-call counts and the DTO hashes are unchanged.

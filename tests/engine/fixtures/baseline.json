@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1047,
+        "total": 1049,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -195,7 +195,9 @@
           "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
+          "TileReleased": 1,
           "Tiles": 1,
+          "TileWorked": 1,
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
@@ -379,7 +381,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1047,
+        "total": 1049,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -460,7 +462,9 @@
           "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
+          "TileReleased": 1,
           "Tiles": 1,
+          "TileWorked": 1,
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
@@ -840,7 +844,7 @@
       "randomCalls": 8788,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1047,
+        "total": 1049,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -921,7 +925,9 @@
           "Strength": 1,
           "TechnologyStolen": 1,
           "TileReassigned": 1,
+          "TileReleased": 1,
           "Tiles": 1,
+          "TileWorked": 1,
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
