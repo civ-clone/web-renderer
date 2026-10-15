@@ -226,8 +226,8 @@
       },
       "dto": {
         "objects": 3401,
-        "bytes": 582904,
-        "hash": "d5d112f7"
+        "bytes": 583128,
+        "hash": "196aaf14"
       },
       "registries": {
         "cities": 4,
@@ -493,8 +493,8 @@
       },
       "dto": {
         "objects": 39631,
-        "bytes": 6785472,
-        "hash": "c05d393a"
+        "bytes": 6786484,
+        "hash": "bbdd1880"
       },
       "registries": {
         "cities": 6,

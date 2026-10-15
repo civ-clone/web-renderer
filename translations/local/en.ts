@@ -127,6 +127,8 @@ i18next.addResources('en', 'default', {
 
   'City.anarchy': 'No taxes or research are collected during Anarchy.',
   'City.size': '{{size, number}}',
+  'City.pollution':
+    'Pollution {{count, number}}: this city may pollute the land around it',
   'City.trade-routes': 'Trade routes',
   'City.trade-route': '{{city}}: +{{trade, number}}',
 

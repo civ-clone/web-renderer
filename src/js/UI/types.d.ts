@@ -33,6 +33,9 @@ export interface City extends EntityInstance<'City'> {
   improvements: EntityInstance[];
   originalPlayer: Player;
   player: Player;
+  // How much the city pollutes, from the engine's civ1-city-improvement `pollution` data: never below 0, and above 0 only
+  //  when the city risks polluting the land around it (#402). Absent under rules that don't send it.
+  pollution?: number;
   specialists: Specialist[];
   tile: PlayerTile;
   tiles: PlayerTile[];

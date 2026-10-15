@@ -4,6 +4,7 @@
 //  c. a polluted square gives half its Food (rounded up);
 //  d. Settlers on a polluted square are offered CleanPollution, take Civ1's 4 turns, and the square is sent to the UI
 //     again once clean, with its yields back.
+// The city's pollution is sent with it, for the city screen (#402).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `nuclear` and `goToArrival` do. On the human's first turn
 // the starting Settlers found a city, and the test places everything each scenario needs on chosen land. The cities'
@@ -377,6 +378,20 @@ const checkTurnStart = async (): Promise<void> => {
       log
         .slice(pollutedALogFrom)
         .some((entry) => entry.kind === 'patch' && mentions(entry.data, id)),
+      `${log.length - pollutedALogFrom} messages since the pollution`
+    );
+
+    // The value is 0 here, as `smoke` processes the rule directly; civ1-city-improvement's tests check the count.
+    check(
+      "a. The city's pollution is sent to the UI (#402)",
+      log
+        .slice(pollutedALogFrom)
+        .some(
+          (entry) =>
+            entry.kind === 'patch' &&
+            mentions(entry.data, 'Smogville') &&
+            mentions(entry.data, '"pollution":')
+        ),
       `${log.length - pollutedALogFrom} messages since the pollution`
     );
 

@@ -1,0 +1,1 @@
+{"version":"0.1.0@887dbeb","date":"2026-10-14T22:39:24.000Z","localChanges":["In a large game, moving a unit, changing what a city builds or buying it now sends the map a few kilobytes instead of your whole civilization again, so each shows several times sooner (closes #411)."],"externalChanges":{}}
