@@ -3,7 +3,7 @@
 //
 // Drives a seeded game with a human `DataTransferClient`, as `turnHandover` does. On the human's first turn the test
 // founds a city with the starting Settlers, puts a second Settlers in it, and sends `JoinCity` for that unit the way
-// the `b` key does. Joining grows the city with no `city:grow` event, so the size has to go out with the move.
+// the `b` key does. Joining grows the city, and its new size has to go out with the move.
 //
 // The test keeps the latest `CityGrowth` size the patches have carried, as the UI's object map would. The client
 // builds each queued patch only when it sends it, so the queue is flushed before the join: otherwise the tile update

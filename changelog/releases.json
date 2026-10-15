@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@833c30c","date":"2026-10-15T16:00:20.000Z","localChanges":["chore: lock the engine package that sends each city's pollution"],"externalChanges":{"civ1-city-improvement":{"status":"updated","log":["A smokestacks AdditionalData on City: the city's smokestack points over 20 (lib/smokestacks), never below 0, so a renderer can draw Civ1's pollution indicator without knowing the rule (civ-clone/web-renderer#402).","lib/smokestacks is now lib/pollution (export pollution), and the AdditionalData on City is keyed pollution, so the shared concept isn't named after how Civ1 draws it (civ-clone/web-renderer#402)."]}}}
+,
+{"version":"0.1.0@026cc10","date":"2026-10-15T15:52:16.000Z","localChanges":["A city at risk of polluting the land around it now shows a smokestack for each point of risk, in a row below its Luxuries, Gold and Research. Hover over them for the amount (#402)."],"externalChanges":{}}
+,
 {"version":"0.1.0@887dbeb","date":"2026-10-14T22:39:24.000Z","localChanges":["In a large game, moving a unit, changing what a city builds or buying it now sends the map a few kilobytes instead of your whole civilization again, so each shows several times sooner (closes #411)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@d5b02c6","date":"2026-10-14T21:32:29.000Z","localChanges":["A turn in a large game now sends the map about a third less data, because a city or a notice no longer carries every square it touches in full, only the squares that actually changed. Changing which squares a city works, a revolution's new yields, and a rival entering a hut now redraw the squares they alter straight away (closes #138). A Settlers that founded a city is no longer left drawn on the square afterwards."],"externalChanges":{}}

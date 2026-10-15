@@ -224,6 +224,17 @@ const cityBuildStandIns: WeakMap<CityBuildItem, CityBuildItem> = new WeakMap(),
     return cityBuildStandIns.get(cityBuild)!;
   };
 
+// What happened to a city during one engine call (#400, #420).
+type CityNews = {
+  // Whose it was when it was first heard of.
+  ours: boolean;
+  capturedBy: Player | null;
+  capturedFrom: Player | null;
+  destroyed: boolean;
+  destroyedBy: Player | null;
+  famine: boolean;
+};
+
 export class DataTransferClient extends Client implements IClient {
   #automationClient: AIClient;
   #automationEnabled: boolean;
@@ -338,6 +349,11 @@ export class DataTransferClient extends Client implements IClient {
   //  our own notifications are held (see `sendNotification`).
   #handedOver: boolean = false;
   #heldNotifications: Notification[] = [];
+  // What happened to each city during the engine call under way, told to the player once it's over (#400, #420), so a
+  //  city lost or starved gets one notice. Capturing a size 1 city destroys it before `city:captured` is emitted, and
+  //  by then it is the capturer's, so neither event alone says that we lost it, or how.
+  #cityNews: Map<City, CityNews> = new Map();
+  #cityNewsQueued = false;
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
@@ -777,8 +793,8 @@ export class DataTransferClient extends Client implements IClient {
         this.#sendTile(fromTile);
         this.#sendTile(toTile);
 
-        // A Settlers joining a city makes it grow with no `city:grow`, so the city goes out in full, as that event sends
-        //  it. In the tile patch alone the city is a ref, and would keep the size the UI already has (#243).
+        // A Settlers joining a city makes it grow, so the city goes out in full, as `city:grow` sends it. In the tile
+        //  patch alone the city is a ref, and would keep the size the UI already has (#243).
         if (action instanceof JoinCity) {
           const city = cityRegistryInstance.getByTile(action.to());
 
@@ -816,13 +832,10 @@ export class DataTransferClient extends Client implements IClient {
             filterToReferenceAllExcept(Player, PlayerAction, Civilization)
           );
 
-          this.sendNotification(
-            new Notification('City.captured-from-us', {
-              city,
-              capturingPlayer,
-              originalPlayer,
-            })
-          );
+          Object.assign(this.#newsOf(city), {
+            capturedBy: capturingPlayer,
+            capturedFrom: originalPlayer,
+          });
 
           return;
         }
@@ -902,9 +915,14 @@ export class DataTransferClient extends Client implements IClient {
       )
     );
 
-    engineInstance.on('city:destroyed', (city: City) =>
-      cityChanged(city, true, true)
-    );
+    engineInstance.on('city:destroyed', (city: City, player: Player | null) => {
+      cityChanged(city, true, true);
+
+      Object.assign(this.#newsOf(city), {
+        destroyed: true,
+        destroyedBy: player ?? null,
+      });
+    });
 
     // Which city works a tile is part of the tile (`workedBy`), so it goes out whenever that changes (#138): a city
     //  founded, growing, shrinking or destroyed, a tile the player chose, workers reassigned, an enemy unit in the way.
@@ -991,18 +1009,6 @@ export class DataTransferClient extends Client implements IClient {
 
       this.sendNotification(
         new Notification('City.sdi-protected', {
-          city,
-        })
-      );
-    });
-
-    engineInstance.on('city:shrink', (city) => {
-      if (city.player() !== this.player()) {
-        return;
-      }
-
-      this.sendNotification(
-        new Notification('City.shrink', {
           city,
         })
       );
@@ -1263,16 +1269,10 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
+    // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
+    //  no Aqueduct), so a shrinking city has no notice of its own.
     engineInstance.on('city:food-storage-exhausted', (city: City) => {
-      if (city.player() !== this.player()) {
-        return;
-      }
-
-      this.sendNotification(
-        new Notification('City.food-storage-exhausted', {
-          city,
-        })
-      );
+      this.#newsOf(city).famine = true;
     });
 
     engineInstance.on('city:building-complete', (cityBuild, build) => {
@@ -2117,6 +2117,91 @@ export class DataTransferClient extends Client implements IClient {
           (city.player() === player || city.originalPlayer() === player) &&
           playerWorld.getByTile(city.tile()) !== null
       );
+  }
+
+  #newsOf(city: City): CityNews {
+    if (!this.#cityNews.has(city)) {
+      this.#cityNews.set(city, {
+        ours: city.player() === this.player(),
+        capturedBy: null,
+        capturedFrom: null,
+        destroyed: false,
+        destroyedBy: null,
+        famine: false,
+      });
+    }
+
+    if (!this.#cityNewsQueued) {
+      this.#cityNewsQueued = true;
+
+      // The engine handles a capture, a turn's famines and the rest synchronously, so this runs once they are done.
+      queueMicrotask(() => this.#sendCityNews());
+    }
+
+    return this.#cityNews.get(city)!;
+  }
+
+  // A lost city waits beside End Turn, as an improvement going obsolete does (#420). Famine stops play, as in Civ1.
+  #sendCityNews(): void {
+    const news = Array.from(this.#cityNews);
+
+    this.#cityNews.clear();
+    this.#cityNewsQueued = false;
+
+    news.forEach(
+      ([
+        city,
+        { ours, capturedBy, capturedFrom, destroyed, destroyedBy, famine },
+      ]) => {
+        if (capturedFrom === this.player()) {
+          this.sendNotification(
+            destroyed
+              ? new Notification(
+                  'City.destroyed-by',
+                  { city, player: capturedBy },
+                  true
+                )
+              : new Notification(
+                  'City.captured-from-us',
+                  {
+                    city,
+                    capturingPlayer: capturedBy,
+                    originalPlayer: capturedFrom,
+                  },
+                  true
+                )
+          );
+
+          return;
+        }
+
+        if (!ours) {
+          return;
+        }
+
+        if (destroyed) {
+          this.sendNotification(
+            destroyedBy
+              ? new Notification(
+                  'City.destroyed-by',
+                  { city, player: destroyedBy },
+                  true
+                )
+              : new Notification('City.destroyed', { city }, true)
+          );
+
+          return;
+        }
+
+        if (famine) {
+          this.sendNotification(
+            new Notification('City.food-storage-exhausted', {
+              city,
+            })
+          );
+        }
+      }
+    );
   }
 
   private sendNotification(notification: Notification): void {

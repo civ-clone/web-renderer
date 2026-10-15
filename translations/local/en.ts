@@ -451,6 +451,11 @@ i18next.addResources('en', 'notification', {
   'City.captured-from-us.body':
     '$t({{capturingPlayer.civilization._}}.nation, { "defaultValue": "{{capturingPlayer.civilization._}}", "ns": "civilization" }) have captured our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
   'City.captured-from-us.title': 'City captured!',
+  'City.destroyed.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been destroyed!`,
+  'City.destroyed.title': 'City destroyed!',
+  'City.destroyed-by.body':
+    '$t({{player.civilization._}}.nation, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" }) have destroyed our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+  'City.destroyed-by.title': 'City destroyed!',
   'City.civil-disorder.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). Mayor flees in panic!`,
   'City.civil-disorder.title': 'Civil disorder',
   'City.leader-celebration.body': `Leader celebration in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
@@ -463,8 +468,6 @@ i18next.addResources('en', 'notification', {
   'City.polluted.title': 'Pollution!',
   'City.sdi-protected.body': `SDI protects $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.sdi-protected.title': 'SDI Defense',
-  'City.shrink.body': `Population decrease in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'City.shrink.title': 'Population decrease!',
   'City.unit-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }).`,
   'City.unit-unsupported.title': 'Unit not supported!',
   'City.improvement-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
