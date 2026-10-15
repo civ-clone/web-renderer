@@ -389,8 +389,50 @@ engine.on('turn:start', (turn: number): void => {
     'invalid CreateUnit input should create nothing'
   );
 
+  // 8. RevealMap adds every unseen tile to the player's map under `tiles`, where the page reads it, as seeing a tile
+  //    does (#342).
+  const localWorld = playerWorldRegistryInstance.getByPlayer(localPlayer),
+    unseen = world.entries().filter((tile) => !localWorld.includes(tile)),
+    revealBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  assert(
+    unseen.length > 0,
+    'every tile is already seen (test assumption broke)'
+  );
+
+  trigger('cheat', { name: 'RevealMap', value: null });
+
+  (
+    clientRegistryInstance
+      .entries()
+      .find((client) => client instanceof DataTransferClient) as any
+  ).sendPatchData();
+
+  const revealIndexes = (sent.gameDataPatch ?? [])
+    .slice(revealBatchesBefore)
+    .flat()
+    .filter((patch: DataPatch) => localWorld.id() in patch)
+    .map((patch: DataPatch) => String(patch[localWorld.id()].index));
+
+  assert(
+    unseen.every((tile) => localWorld.includes(tile)),
+    "RevealMap should add every tile to the player's map"
+  );
+  const expectedIndexes = unseen.map(
+    (tile) =>
+      `tiles[${localWorld.entries().indexOf(localWorld.getByTile(tile)!)}]`
+  );
+
+  assert(
+    expectedIndexes.every((index) => revealIndexes.includes(index)) &&
+      revealIndexes.every((index) => /^tiles\[\d+\]$/.test(index)),
+    `RevealMap should patch each revealed tile under tiles[…], got ${JSON.stringify(
+      revealIndexes.slice(0, 3)
+    )}`
+  );
+
   console.log(
-    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player)'
+    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player, RevealMap patches the map where the page reads it)'
   );
   process.exit(0);
 });
