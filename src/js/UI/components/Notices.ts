@@ -3,6 +3,8 @@ import { Notification } from './Notifications';
 
 export interface Notice {
   city: City | null;
+  // Our civilization's colours, for a notice drawn as one of our cities (#420).
+  colours: string[] | null;
   dismiss: () => void;
   notification: Notification;
 }
@@ -32,6 +34,10 @@ export class Notices {
           data.player.cities.find(
             (city) => city.id === notification.data?.city?.id
           ) ?? null,
+        colours:
+          data.player.civilization?.attributes?.find(
+            (attribute) => attribute.name === 'colors'
+          )?.value ?? null,
         dismiss: () => this.#notices.delete(id),
         notification,
       },

@@ -27,8 +27,14 @@
     &.notice {
       @include action-button.background-gradient-silver-ring(#c9a227);
 
+      canvas,
       img {
         width: calc(8px * var(--scale));
+      }
+
+      // A city is drawn pixel for pixel, as the map draws it (#420).
+      canvas {
+        image-rendering: pixelated;
       }
     }
 

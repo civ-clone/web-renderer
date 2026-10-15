@@ -186,3 +186,12 @@ core-city 0.1.22 adds the `TileWorked` and `TileReleased` rule types, fired by
 tile whenever the tiles a city works change. The rule totals at turns 1, 10 and
 50 rise by two (one rule of each type) and nothing else moves: the engine-state
 checksums, the random-call counts and the DTO hashes are unchanged.
+
+## Accepted change: rule counts (#400)
+
+civ1-city adds `civ1-city:city/grow/emit`, `civ1-city:city/shrink/emit` and
+`civ1-city:city/food-exhausted/emit`, which raise the `city:grow`,
+`city:shrink` and `city:food-storage-exhausted` engine events. The rule totals
+at turns 1, 10 and 50 rise by three (one `Grow`, one `Shrink` and one
+`FoodExhausted`), and nothing else moves: the engine-state checksums, the
+random-call counts and the DTO hashes are unchanged.

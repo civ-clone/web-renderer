@@ -5,10 +5,17 @@ import { PlayerAction } from '../../types';
 import Portal from '../Portal';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
+import { drawUnitActionIcon } from '../../lib/unitActionIcon';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
+
+const cityNotices = [
+  'City.captured-from-us',
+  'City.destroyed',
+  'City.destroyed-by',
+];
 
 export class Notice extends Action {
   #portal: Portal;
@@ -37,6 +44,26 @@ export class Notice extends Action {
   }
 
   build(): void {
+    const { colours, notification } = this.value() as unknown as NoticeData;
+
+    // A city we've lost is one of our cities on the map, with no size (#420).
+    if (cityNotices.includes(notification.key)) {
+      const button = s(
+        `<button class="notice" title="${this.text(
+          'title'
+        )}"><canvas width="16" height="16"></canvas></button>`
+      );
+
+      this.append(button);
+
+      // Not in the page yet, so drawn at the sprite's own size and enlarged pixel by pixel by the stylesheet.
+      drawUnitActionIcon(button.querySelector('canvas')!, [
+        { type: 'city', text: null, colours },
+      ]);
+
+      return;
+    }
+
     // TODO: an icon per notice, e.g. the Wonder's own, once those are extracted (#64).
     assetStore
       .get('./assets/city/luxury.png')
