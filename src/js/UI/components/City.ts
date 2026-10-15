@@ -102,6 +102,27 @@ const renderYields = (city: CityData): Node => {
           )
         )
       ),
+      // How much the city pollutes, from the engine's `pollution` data (#402), below the yields as one more row. Civ1
+      //  draws it as smokestacks at the bottom of its info panel.
+      ...((city.pollution ?? 0) > 0
+        ? [
+            s(
+              '<div class="yields" data-yields="Pollution"></div>',
+              s(
+                `<span class="yield" data-yield="Pollution" role="img" title="${t(
+                  'City.pollution',
+                  { count: city.pollution }
+                )}" aria-label="${t('City.pollution', {
+                  count: city.pollution,
+                })}"></span>`,
+                s(
+                  '<span class="free"></span>',
+                  ...yieldImages({ _: 'Pollution', value: city.pollution! })
+                )
+              )
+            ),
+          ]
+        : []),
       ...(isAnarchy(city.player)
         ? [s(`<p class="anarchy">${t('City.anarchy')}</p>`)]
         : []),

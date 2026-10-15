@@ -90,6 +90,11 @@
     }
   }
 
+  // The pollution sprite is 16px, not 7px like the other yields', so it's drawn at the same 2x scale (#402).
+  .yield[data-yield='Pollution'] .yield-icon img {
+    width: 32px;
+  }
+
   .yield-details .yield {
     display: flex;
 
