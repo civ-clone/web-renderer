@@ -165,6 +165,8 @@ export interface Unit extends EntityInstance {
   movement: Yield;
   moves: Yield;
   player: Player;
+  // The route orders (`RoadTo`, `RailroadTo`) the engine would give this unit for a distant square (#195).
+  routeOrders?: string[];
   status: EntityInstance;
   tile: Tile;
   visibility: Yield;

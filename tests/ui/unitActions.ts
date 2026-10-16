@@ -17,6 +17,7 @@ import Move from '@civ-clone/base-unit-action-move/Move';
 import PlantForest from '@civ-clone/base-unit-action-plant-forest/PlantForest';
 import UnitActions from '../../src/js/UI/components/UnitActions';
 import actionResult from '../../src/js/Engine/AdditionalData/actionResult';
+import distantActions from '../../src/js/UI/lib/distantActions';
 import { keyToActionsMap } from '../../src/js/UI/lib/unitActionKeys';
 
 const failures: string[] = [];
@@ -141,6 +142,34 @@ expect(
   'anything else is the unit with the status over it',
   layersFor('Sleep').map((layer) => layer.type === 'unit' && layer.status),
   ['S']
+);
+
+// Road to and Railroad to show the improvement they build, as Build road and Build railroad do (#195).
+expect(
+  'Road to and Railroad to show their improvement',
+  [layersFor('RoadTo'), layersFor('RailroadTo')].map(names),
+  [layersFor('BuildRoad'), layersFor('BuildRailroad')].map(names)
+);
+
+// A distant square offers Go to, and the route orders the engine says the unit may be given (#195).
+const far = { id: 'Tile-2', x: 5, y: 5 } as unknown as Tile;
+
+expect(
+  'a distant square offers Go to alone when the engine names no route orders',
+  distantActions(unitOf('Warrior', []), far).map(({ _ }) => _),
+  ['GoTo']
+);
+expect(
+  'and the route orders it names',
+  distantActions(
+    { ...unitOf('Settlers', []), routeOrders: ['RoadTo', 'RailroadTo'] },
+    far
+  ).map(({ _, to }) => [_, to.id]),
+  [
+    ['GoTo', 'Tile-2'],
+    ['RoadTo', 'Tile-2'],
+    ['RailroadTo', 'Tile-2'],
+  ]
 );
 
 // The keys: every action the issue names that has a key still has one.

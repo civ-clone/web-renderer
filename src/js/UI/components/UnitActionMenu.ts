@@ -3,6 +3,7 @@ import { Tile, Unit as UnitData, UnitAction } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
 import { hasUnitActions, unitActions } from '../lib/unitActions';
+import distantActions from '../lib/distantActions';
 import { performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
 
@@ -42,15 +43,7 @@ const buildActions = (
   }
 
   if (tile !== unit.tile && !neighbouringTileActions?.length) {
-    actions = [
-      {
-        _: 'GoTo',
-        __: [],
-        id: '',
-        from: unit.tile,
-        to: tile,
-      },
-    ];
+    actions = distantActions(unit, tile);
   }
 
   return actions.map((action) => ({

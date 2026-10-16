@@ -99,9 +99,11 @@ export const unitActionIconLayers = (
       return square('improvements/pollution');
 
     case 'BuildRoad':
+    case 'RoadTo':
       return square('improvements/road_w', 'improvements/road_e');
 
     case 'BuildRailroad':
+    case 'RailroadTo':
       return square('improvements/railroad_w', 'improvements/railroad_e');
 
     case 'Unload': {
