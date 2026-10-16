@@ -75,6 +75,8 @@ i18next.addResources('en', 'unit', {
   'Action.NuclearAttack.name': 'Nuclear attack',
   'Action.Pillage.name': 'Pillage',
   'Action.PlantForest.name': 'Plant forest',
+  'Action.RailroadTo.name': 'Railroad to',
+  'Action.RoadTo.name': 'Road to',
   'Action.SetHomeCity.name': 'Set home city',
   'Action.Sleep.name': 'Sleep',
   'Action.SneakAttack.name': 'Sneak attack',
@@ -113,6 +115,7 @@ i18next.addResources('en', 'unit', {
   'Busy.Stowed.name': 'Aboard',
   'Busy.Exploring.name': 'Exploring',
   'Busy.Automated.name': 'Automated',
+  'Busy.BuildingRoute.name': 'Building a route',
 
   'Busy.BuildingIrrigation.icon': 'I',
   'Busy.BuildingMine.icon': 'M',
@@ -129,4 +132,5 @@ i18next.addResources('en', 'unit', {
   'Busy.Stowed.icon': 'A',
   'Busy.Exploring.icon': 'X',
   'Busy.Automated.icon': 'W',
+  'Busy.BuildingRoute.icon': 'R',
 });

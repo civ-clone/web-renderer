@@ -28,8 +28,8 @@
       },
       "dto": {
         "objects": 778,
-        "bytes": 134173,
-        "hash": "2f3f5978"
+        "bytes": 134373,
+        "hash": "c0e1300c"
       },
       "registries": {
         "cities": 0,
@@ -114,9 +114,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1056,
+        "total": 1059,
         "byType": {
-          "Action": 61,
+          "Action": 63,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -202,7 +202,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 11,
+          "TurnStart": 12,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -227,8 +227,8 @@
       },
       "dto": {
         "objects": 3401,
-        "bytes": 583128,
-        "hash": "196aaf14"
+        "bytes": 583834,
+        "hash": "0b24c6f0"
       },
       "registries": {
         "cities": 4,
@@ -382,9 +382,9 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1056,
+        "total": 1059,
         "byType": {
-          "Action": 61,
+          "Action": 63,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -470,7 +470,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 11,
+          "TurnStart": 12,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -495,8 +495,8 @@
       },
       "dto": {
         "objects": 39631,
-        "bytes": 6786484,
-        "hash": "bbdd1880"
+        "bytes": 6794488,
+        "hash": "bda2bfe8"
       },
       "registries": {
         "cities": 6,
@@ -846,9 +846,9 @@
       "randomCalls": 8788,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1056,
+        "total": 1059,
         "byType": {
-          "Action": 61,
+          "Action": 63,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -934,7 +934,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 11,
+          "TurnStart": 12,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
