@@ -168,7 +168,7 @@ importers:
         version: 0.1.11
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/65b537b247a8f4de22c6cdaaa72e1f4bfc3c6eb1
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/41d10b2d538ae87f343bc3212feb096b5a1d23a0
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2
@@ -690,8 +690,8 @@ packages:
   '@civ-clone/base-strategy-explore@0.1.0':
     resolution: {integrity: sha512-jBFeSYudFhgTgcBCINxdda5WnQHQgj/WVhP0xAuDyJWRnSHaCQF7KqPbADP0AbDDr9yHQz7FkwpJg80jLuZ60g==}
 
-  '@civ-clone/base-strategy-terrain-work@0.1.1':
-    resolution: {integrity: sha512-OKOGiGFTxlFUMHE2/kQAr55ryuchZgVChF6LWZi9fUjjXMfei9XOgXK5dH2TbngeFKxa7fKpW421qBI9W7pbxQ==}
+  '@civ-clone/base-strategy-terrain-work@0.1.2':
+    resolution: {integrity: sha512-IkL4mMZC9C1vEWSU73JmPFH+zG3XPsqAu6Q9eGUgSehVYE88wRdHgr8gqebvj8/DRCbqtGy1YSVstyvcEj0pZQ==}
 
   '@civ-clone/base-terrain-arctic@0.1.0':
     resolution: {integrity: sha512-fOwqdm8HygnhfmWi4BJVqvmwuKWfiw9l15s5kZJUuDx2r+TcVY3g92nLsvzl8PgEgTCOuOBgr3IQTF0KdgjjRA==}
@@ -1305,9 +1305,9 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/65b537b247a8f4de22c6cdaaa72e1f4bfc3c6eb1':
-    resolution: {gitHosted: true, integrity: sha512-iI4dqNSpHmx7XpcuVe6AJep0PWP+U1135cjiH+rNsNWWbn6Ul6n5o6bvwJhWqBERU+PrBw4ri4EY2x92xcIw+w==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/65b537b247a8f4de22c6cdaaa72e1f4bfc3c6eb1}
-    version: 0.1.9
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/41d10b2d538ae87f343bc3212feb096b5a1d23a0':
+    resolution: {gitHosted: true, integrity: sha512-hqmlZAVoeo5GyiePDaah1PY7D3zT8Gyuyn0B8Ria5vFJsRkGOh8uC+O/rIecsS+y77CIKPnCe8uccfcvqeydQA==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/41d10b2d538ae87f343bc3212feb096b5a1d23a0}
+    version: 0.1.10
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2':
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2}
@@ -2693,7 +2693,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.27
       '@civ-clone/core-world': 0.1.18
 
-  '@civ-clone/base-strategy-terrain-work@0.1.1':
+  '@civ-clone/base-strategy-terrain-work@0.1.2':
     dependencies:
       '@civ-clone/base-strategy-ai': 0.1.1
       '@civ-clone/base-unit-type-worker': 0.1.0
@@ -2854,7 +2854,7 @@ snapshots:
   '@civ-clone/base-unit-action-automate@0.1.0':
     dependencies:
       '@civ-clone/base-strategy-ai': 0.1.1
-      '@civ-clone/base-strategy-terrain-work': 0.1.1
+      '@civ-clone/base-strategy-terrain-work': 0.1.2
       '@civ-clone/core-data-object': 0.1.17
       '@civ-clone/core-game': 0.1.9
       '@civ-clone/core-pending-effect': 0.1.2
@@ -4527,14 +4527,14 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/65b537b247a8f4de22c6cdaaa72e1f4bfc3c6eb1':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/41d10b2d538ae87f343bc3212feb096b5a1d23a0':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-leader-personality': 0.1.0
       '@civ-clone/base-player-action-end-turn': 0.1.0
       '@civ-clone/base-strategy-ai': 0.1.1
       '@civ-clone/base-strategy-explore': 0.1.0
-      '@civ-clone/base-strategy-terrain-work': 0.1.1
+      '@civ-clone/base-strategy-terrain-work': 0.1.2
       '@civ-clone/base-trade-rate-luxuries': 0.1.0
       '@civ-clone/base-trade-rate-research': 0.1.1
       '@civ-clone/base-trade-rate-tax': 0.1.0
