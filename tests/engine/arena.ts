@@ -37,6 +37,7 @@ import {
 } from './lib/score';
 import Advance from '@civ-clone/core-science/Advance';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
+import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { StrategyRegistry } from '@civ-clone/core-strategy/StrategyRegistry';
 import World from '@civ-clone/core-world/World';
@@ -341,6 +342,67 @@ const improvedTiles = (cities: City[]) => {
   };
 };
 
+// Pairs of the player's cities, each city with its nearest within 10 squares, joined by Road all the way (#384): a city
+//  counts as Road, and the way may go anywhere within 10 squares of either city.
+const linkedCities = (cities: City[]): number => {
+  const hasRoad = (tile: Tile): boolean =>
+      cityRegistryInstance.getByTile(tile) !== null ||
+      tileImprovementRegistryInstance
+        .getByTile(tile)
+        .some((improvement) => improvement.constructor.name === 'Road'),
+    pairs = new Set<string>(),
+    linked = (from: Tile, to: Tile): boolean => {
+      const seen = new Set<Tile>([from]),
+        queue = [from];
+
+      while (queue.length > 0) {
+        const tile = queue.shift()!;
+
+        if (tile === to) {
+          return true;
+        }
+
+        tile.getNeighbours().forEach((neighbour) => {
+          if (
+            !seen.has(neighbour) &&
+            hasRoad(neighbour) &&
+            neighbour.distanceFrom(from) <= 10 &&
+            neighbour.distanceFrom(to) <= 10
+          ) {
+            seen.add(neighbour);
+            queue.push(neighbour);
+          }
+        });
+      }
+
+      return false;
+    };
+
+  cities.forEach((city: City, index: number) => {
+    const nearest = cities
+      .map((other, otherIndex): [City, number] => [other, otherIndex])
+      .filter(
+        ([other]) =>
+          other !== city && other.tile().distanceFrom(city.tile()) <= 10
+      )
+      .sort(
+        ([a], [b]) =>
+          a.tile().distanceFrom(city.tile()) -
+          b.tile().distanceFrom(city.tile())
+      )[0];
+
+    if (nearest) {
+      pairs.add([index, nearest[1]].sort((a, b) => a - b).join(':'));
+    }
+  });
+
+  return [...pairs].filter((pair) => {
+    const [a, b] = pair.split(':').map(Number);
+
+    return linked(cities[a].tile(), cities[b].tile());
+  }).length;
+};
+
 // Polluted tiles anywhere in the world. v474.05 counts them all against each player's score, not just the ones the
 //  player can see, as the book has it. Nothing in the engine pollutes a tile yet.
 const pollutedTiles = (): number =>
@@ -475,6 +537,7 @@ const results = () =>
         martialLaw: sum('martialLaw'),
         trade: sum('trade'),
         ...improvedTiles(cities),
+        linkedCities: linkedCities(cities),
         ...unitPlacement(player, cities),
         unitMoves: entry.unitMoves,
         pacingMoves: entry.pacingMoves,

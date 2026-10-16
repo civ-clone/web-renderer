@@ -75,6 +75,7 @@ const METRICS = [
   ['roadTiles', 1],
   ['railroadTiles', 1],
   ['wildTiles', 0],
+  ['linkedCities', 1],
   ['unitsInCities', 0],
   ['unitsFortified', 0],
   ['unitsInField', 0],

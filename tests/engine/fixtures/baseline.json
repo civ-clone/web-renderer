@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1052,
+        "total": 1056,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -178,6 +178,7 @@
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
+          "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
           "Removed": 4,
@@ -381,7 +382,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1052,
+        "total": 1056,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -445,6 +446,7 @@
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
+          "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
           "Removed": 4,
@@ -844,7 +846,7 @@
       "randomCalls": 8788,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1052,
+        "total": 1056,
         "byType": {
           "Action": 61,
           "ActionPerformed": 1,
@@ -908,6 +910,7 @@
           "PickGenerator": 1,
           "PickStartTile": 1,
           "Pillaged": 3,
+          "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
           "Removed": 4,
