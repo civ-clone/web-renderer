@@ -1,0 +1,1 @@
+{"version":"0.1.0@0ff39eb","date":"2026-10-15T17:55:30.000Z","localChanges":["The Reveal Map cheat no longer sends every newly revealed square a second time, under a name the map never read (closes #342)."],"externalChanges":{}}

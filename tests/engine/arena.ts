@@ -315,7 +315,7 @@ const unitPlacement = (player: Player, cities: City[]) => {
   };
 };
 
-// The tiles around the player's cities, but not under any city, that have each improvement.
+// The tiles around the player's cities, but not under any city, that have each improvement, and those still wild.
 const improvedTiles = (cities: City[]) => {
   const tiles = new Set(
     cities
@@ -334,6 +334,10 @@ const improvedTiles = (cities: City[]) => {
     minedTiles: count('Mine'),
     roadTiles: count('Road'),
     railroadTiles: count('Railroad'),
+    // Forest, Jungle and Swamp, which a worker can clear (#353, #386).
+    wildTiles: [...tiles].filter((tile) =>
+      ['Forest', 'Jungle', 'Swamp'].includes(tile.terrain().constructor.name)
+    ).length,
   };
 };
 
