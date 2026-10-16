@@ -98,7 +98,7 @@
     "typescript": "^4.0.0"
   },
   "dependencies": {
-    "@civ-clone/base-leader-personality": "^0.1.0",
+    "@civ-clone/base-leader-personality": "^0.1.1",
     "@civ-clone/base-unit-action-automate": "^0.1.0",
     "@civ-clone/base-unit-action-clean-pollution": "^0.1.0",
     "@civ-clone/base-unit-action-establish-embassy": "^0.1.0",
