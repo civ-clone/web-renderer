@@ -1,9 +1,16 @@
-import { Peace, War } from '@civ-clone/library-diplomacy/Declarations';
 import {
+  CancelTreaty,
   DemandTribute,
   ExchangeKnowledge,
   OfferPeace,
+  OfferPeaceWithGift,
 } from '@civ-clone/library-diplomacy/Proposals';
+import {
+  Peace,
+  ShamPeace,
+  Vendetta,
+  War,
+} from '@civ-clone/library-diplomacy/Declarations';
 import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
@@ -26,13 +33,20 @@ export const registerDiplomacyClasses = (game: Game): void =>
     ...([
       // A Diplomat's theft, so a city is robbed only once (#58).
       AdvanceStolen,
+      // A call to cancel a treaty with a third player (#427).
+      CancelTreaty,
       Contact,
       DemandTribute,
       // A Diplomat's embassy (#58).
       Embassy,
       ExchangeKnowledge,
       OfferPeace,
+      // A peace offer sweetened with an advance or gold (#427).
+      OfferPeaceWithGift,
       Peace,
+      // A computer player keeping a peace it means to drop, and a grudge (#427).
+      ShamPeace,
+      Vendetta,
       War,
     ] as unknown as SaveableClass[])
   );

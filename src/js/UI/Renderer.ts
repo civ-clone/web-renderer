@@ -402,7 +402,25 @@ export class Renderer {
         )
       );
 
-      const interactionLabel = (interaction: Interactions) => {
+      // The wording can depend on what kind of proposal it is (a demand for gold or for an advance, say) and on whether
+      //  it's one of our own choices: i18next's `context` picks `key_own-gold` over `key_gold` over `key` (#427).
+      const interactionContext = (
+          interaction: Interactions,
+          own: boolean
+        ): string | undefined => {
+          const kind =
+            (interaction as { kind?: string }).kind ??
+            (interaction as { proposal?: { kind?: string } }).proposal?.kind;
+
+          return (
+            [own ? 'own' : null, kind ?? null]
+              .filter((part) => part !== null)
+              .join('-') || undefined
+          );
+        },
+        interactionLabel = (interaction: Interactions, own = false) => {
+          const context = interactionContext(interaction, own);
+
           if (instanceOf(interaction, 'Dialogue')) {
             return t(`${interaction._}.${(interaction as Dialogue).key}`, {
               interaction,
@@ -413,6 +431,7 @@ export class Renderer {
 
           if (instanceOf(interaction, 'Proposal')) {
             return t(interaction._, {
+              context,
               interaction,
               defaultValue: interaction._,
               ns: 'diplomacy',
@@ -423,6 +442,7 @@ export class Renderer {
             const { proposal } = interaction as Resolution;
 
             return t(`Resolution.${proposal._}.${interaction._}`, {
+              context,
               interaction,
               defaultValue: interaction._,
               ns: 'diplomacy',
@@ -475,7 +495,10 @@ export class Renderer {
                 canClose: false,
                 actions: {
                   primary: {
-                    label: interactionLabel(choices[0].value as Interactions),
+                    label: interactionLabel(
+                      choices[0].value as Interactions,
+                      true
+                    ),
                     action: (actionWindow) => actionWindow.close(),
                   },
                 },
@@ -541,7 +564,7 @@ export class Renderer {
               ...choices.map(({ id, value }, index) => {
                 const label =
                   key === 'negotiation.next-step'
-                    ? interactionLabel(value as Interactions)
+                    ? interactionLabel(value as Interactions, true)
                     : difficultyChoiceLabels
                     ? difficultyChoiceLabels[index].label
                     : chooseFromListChoice(key, value);
