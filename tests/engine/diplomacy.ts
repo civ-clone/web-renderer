@@ -16,7 +16,12 @@ import { config } from './lib/seed';
 
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Never from '@civ-clone/core-diplomacy/Expiries/Never';
-import { Peace } from '@civ-clone/library-diplomacy/Declarations';
+import {
+  Peace,
+  ShamPeace,
+  Vendetta,
+} from '@civ-clone/library-diplomacy/Declarations';
+import { hasVendetta, heldBy } from '@civ-clone/library-diplomacy/lib/holds';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
@@ -99,6 +104,12 @@ if (mode === 'save') {
       new Peace(first, second, new Never(), defaultGame.rules)
     );
 
+    // A grudge, and a peace the first player means to drop (#427): both point one way.
+    defaultGame.interactions.register(
+      new Vendetta(second, first, new Never(), defaultGame.rules),
+      new ShamPeace(first, second, new Never(), defaultGame.rules)
+    );
+
     const saved = save(defaultGame, { name: 'diplomacy-suite', createdAt: 0 });
 
     writeFileSync(file, JSON.stringify(saved));
@@ -166,6 +177,14 @@ if (mode === 'save') {
             defaultGame.turn
       );
       report.peaceActive = treaty.active();
+
+      const [first, second] = playerRegistryInstance.entries();
+
+      report.grudges =
+        hasVendetta(second, first, defaultGame.interactions) &&
+        !hasVendetta(first, second, defaultGame.interactions) &&
+        heldBy(ShamPeace, first, second, defaultGame.interactions) !== null &&
+        heldBy(ShamPeace, second, first, defaultGame.interactions) === null;
 
       // Carry the negotiation on to its end, as the players would have.
       for (let i = 0; i < 20 && !loaded.terminated(); i++) {

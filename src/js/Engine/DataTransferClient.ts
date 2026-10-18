@@ -38,6 +38,7 @@ import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
+import mayNegotiate from '@civ-clone/library-diplomacy/lib/mayNegotiate';
 import Notification from './Notification';
 import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
@@ -169,8 +170,7 @@ const referenceObject = (object: any) =>
         }
       : object instanceof PlayerTile
       ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
-      : object,
-  MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION = 15;
+      : object;
 
 additionalDataRegistryInstance.register(
   actionResult(),
@@ -2796,8 +2796,8 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
-  // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), unless
-  //  there have been talks with them recently.
+  // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), if they may
+  //  talk now (`MayNegotiate`).
   private async talkToPlayersMet(): Promise<void> {
     // TODO: This could be a `Rule`.
     const surroundingPlayers = Array.from(this.#metOnTheWay);
@@ -2809,19 +2809,15 @@ export class DataTransferClient extends Client implements IClient {
     }
 
     await surroundingPlayers
+      // How often players talk is the ruleset's to say (`MayNegotiate`).
       .filter((player) =>
-        interactionRegistryInstance
-          .getByPlayer(player)
-          .filter(
-            (interaction) =>
-              interaction instanceof Negotiation &&
-              interaction.isBetween(player, this.player())
-          )
-          .every(
-            (interaction) =>
-              turnInstance.value() - interaction.when() >
-              MIN_NUMBER_OF_TURNS_BEFORE_NEW_NEGOTIATION
-          )
+        mayNegotiate(
+          player,
+          this.player(),
+          ruleRegistryInstance,
+          interactionRegistryInstance,
+          turnInstance
+        )
       )
       .reduce(
         (promise, player): Promise<any> =>

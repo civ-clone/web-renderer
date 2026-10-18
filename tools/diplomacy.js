@@ -50,7 +50,7 @@ try {
   loaded = run('load');
 } catch (error) {
   process.stdout.write((error.stdout || '') + (error.stderr || ''));
-  process.stdout.write('\n0/7 — a game with diplomacy in progress reloads\n');
+  process.stdout.write('\n0/8 — a game with diplomacy in progress reloads\n');
   process.exit(1);
 }
 
@@ -72,6 +72,7 @@ const checks = [
   ],
   ["with the game's rules and turn", loaded.injected, true],
   ['the treaty is still in force', loaded.peaceActive, true],
+  ['a grudge and a sham peace still point one way', loaded.grudges, true],
   ['the negotiation can be carried on', loaded.terminated, true],
   ['and the game plays on', loaded.playedOn > 0, true],
 ];
