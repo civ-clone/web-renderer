@@ -120,6 +120,12 @@ type Seat = {
   //  its cities are to take, whatever the number of attacks.
   cityAttacksRepelled: number;
   cityDefendersLost: number;
+  // Overseas (#211, #374): where its first city was founded; land units stepping ashore on another landmass; naval
+  //  units lost, however; and land units lost at sea, aboard a ship that went down.
+  homeTile: Tile | null;
+  landings: number;
+  navalUnitsLost: number;
+  cargoLost: number;
   // Turn starts summed over the players it had a peace treaty with (#427).
   peaceTurns: number;
   eliminatedTurn: number | null;
@@ -534,6 +540,14 @@ const results = () =>
         citiesCaptured: entry.citiesCaptured,
         cityAttacksRepelled: entry.cityAttacksRepelled,
         cityDefendersLost: entry.cityDefendersLost,
+        citiesOverseas: cities.filter(
+          (city: City): boolean =>
+            entry.homeTile !== null &&
+            landMassAt(city.tile()) !== landMassAt(entry.homeTile)
+        ).length,
+        landings: entry.landings,
+        navalUnitsLost: entry.navalUnitsLost,
+        cargoLost: entry.cargoLost,
         peaceTurns: entry.peaceTurns,
         ...diplomacyOf(player),
         wondersStarted: entry.wondersStarted.size,
@@ -776,6 +790,17 @@ engine.on(
     countedMoves.add(action);
     entry.unitMoves += 1;
 
+    // Ashore from a ship onto a landmass other than its first city's (#211).
+    if (
+      isA(unit, 'Land') &&
+      (from as Tile).isWater() &&
+      (to as Tile).isLand() &&
+      entry.homeTile !== null &&
+      landMassAt(to as Tile) !== landMassAt(entry.homeTile)
+    ) {
+      entry.landings += 1;
+    }
+
     if (previousTile.get(unit) === to) {
       entry.pacingMoves += 1;
     }
@@ -844,9 +869,38 @@ const diplomacyOf = (
   };
 };
 
+// The landmass `tile` is on, or `null` at sea.
+const landMassAt = (tile: Tile): unknown =>
+  world === null
+    ? null
+    : (
+        world as unknown as {
+          _landMassRegistry: { getByTile(tile: Tile): unknown };
+        }
+      )._landMassRegistry.getByTile(tile);
+
+// `civ1-unit`'s: a unit gone, however (#211): a naval unit, or a land unit that went down with its ship.
+engine.on('unit:destroyed', (unit: Unit): void => {
+  const entry = seatOf(unit.player());
+
+  if (!entry) {
+    return;
+  }
+
+  if (isA(unit, 'Naval')) {
+    entry.navalUnitsLost += 1;
+  } else if (isA(unit, 'Land') && unit.tile().isWater()) {
+    entry.cargoLost += 1;
+  }
+});
+
 // `civ1-city`'s: a city founded. A captured city isn't counted.
 engine.on('city:created', (city: City): void => {
   const entry = seatOf(city.player());
+
+  if (entry && entry.homeTile === null) {
+    entry.homeTile = city.tile();
+  }
 
   if (entry && entry.firstCityTurn === null) {
     entry.firstCityTurn = currentTurn;
@@ -956,6 +1010,10 @@ engine.on('engine:start', (): void => {
       citiesCaptured: 0,
       cityAttacksRepelled: 0,
       cityDefendersLost: 0,
+      homeTile: null,
+      landings: 0,
+      navalUnitsLost: 0,
+      cargoLost: 0,
       peaceTurns: 0,
       eliminatedTurn: null,
       wondersStarted: new Set(),
