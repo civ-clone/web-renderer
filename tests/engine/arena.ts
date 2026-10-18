@@ -50,7 +50,9 @@ import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-buil
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
+import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
@@ -111,6 +113,11 @@ type Seat = {
   unitsLost: number;
   unitsLostAtSea: number;
   unitsDefeated: number;
+  // Cities taken from the player, and taken by it (`city:captured`).
+  citiesLost: number;
+  citiesCaptured: number;
+  // Turn starts summed over the players it had a peace treaty with (#427).
+  peaceTurns: number;
   eliminatedTurn: number | null;
   // Each city's Wonders, as `<city id>:<Wonder>`, seen being built at a turn's start.
   wondersStarted: Set<string>;
@@ -519,6 +526,10 @@ const results = () =>
         unitsLost: entry.unitsLost,
         unitsLostAtSea: entry.unitsLostAtSea,
         unitsDefeated: entry.unitsDefeated,
+        citiesLost: entry.citiesLost,
+        citiesCaptured: entry.citiesCaptured,
+        peaceTurns: entry.peaceTurns,
+        ...diplomacyOf(player),
         wondersStarted: entry.wondersStarted.size,
         wondersBuilt: entry.wondersBuilt,
         improvementsBuilt: entry.improvementsBuilt,
@@ -615,6 +626,13 @@ engine.on('turn:start', (turn: number): void => {
         0
       );
     }
+
+    entry.peaceTurns += interactionRegistryInstance
+      .getByPlayer(entry.player)
+      .filter(
+        (interaction) =>
+          isA(interaction, 'Peace') && (interaction as Declaration).active()
+      ).length;
 
     const rates = tradeRatesOf(entry.player);
 
@@ -743,6 +761,63 @@ engine.on(
   }
 );
 
+// `civ1-city`'s: a city taken.
+engine.on(
+  'city:captured',
+  (city: City, capturingPlayer: Player, previousPlayer: Player): void => {
+    const loser = seatOf(previousPlayer),
+      winner = seatOf(capturingPlayer);
+
+    if (loser) {
+      loser.citiesLost += 1;
+    }
+
+    if (winner) {
+      winner.citiesCaptured += 1;
+    }
+  }
+);
+
+// What the player's meetings came to, read from the interactions at the end (#427): its meetings, the wars it
+//  declared, the peace treaties it signed, and the gold it paid and was paid in tribute.
+const diplomacyOf = (
+  player: Player
+): {
+  meetings: number;
+  warsDeclared: number;
+  treaties: number;
+  tributePaid: number;
+  tributeReceived: number;
+} => {
+  const interactions = interactionRegistryInstance.getByPlayer(player),
+    negotiations = interactions.filter((interaction) =>
+      isA(interaction, 'Negotiation')
+    ) as unknown as { interactions(): any[] }[],
+    tribute = (paying: boolean): number =>
+      negotiations
+        .flatMap((negotiation) => negotiation.interactions())
+        .filter(
+          (action) =>
+            isA(action, 'Accept') &&
+            isA(action.proposal(), 'DemandTribute') &&
+            isA(action.proposal().tribute(), 'Gold') &&
+            (paying ? action.by() : action.proposal().by()) === player
+        )
+        .reduce((total, action) => total + action.proposal().tribute().value(), 0);
+
+  return {
+    meetings: negotiations.length,
+    warsDeclared: interactions.filter(
+      (interaction) =>
+        isA(interaction, 'War') && interaction.players()[0] === player
+    ).length,
+    treaties: interactions.filter((interaction) => isA(interaction, 'Peace'))
+      .length,
+    tributePaid: tribute(true),
+    tributeReceived: tribute(false),
+  };
+};
+
 // `civ1-city`'s: a city founded. A captured city isn't counted.
 engine.on('city:created', (city: City): void => {
   const entry = seatOf(city.player());
@@ -851,6 +926,9 @@ engine.on('engine:start', (): void => {
       unitsLost: 0,
       unitsLostAtSea: 0,
       unitsDefeated: 0,
+      citiesLost: 0,
+      citiesCaptured: 0,
+      peaceTurns: 0,
       eliminatedTurn: null,
       wondersStarted: new Set(),
       wondersBuilt: 0,
