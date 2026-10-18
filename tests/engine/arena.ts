@@ -116,6 +116,10 @@ type Seat = {
   // Cities taken from the player, and taken by it (`city:captured`).
   citiesLost: number;
   citiesCaptured: number;
+  // Attacks on the player's cities its defenders beat off, and its defenders lost in its own cities (#423): how hard
+  //  its cities are to take, whatever the number of attacks.
+  cityAttacksRepelled: number;
+  cityDefendersLost: number;
   // Turn starts summed over the players it had a peace treaty with (#427).
   peaceTurns: number;
   eliminatedTurn: number | null;
@@ -528,6 +532,8 @@ const results = () =>
         unitsDefeated: entry.unitsDefeated,
         citiesLost: entry.citiesLost,
         citiesCaptured: entry.citiesCaptured,
+        cityAttacksRepelled: entry.cityAttacksRepelled,
+        cityDefendersLost: entry.cityDefendersLost,
         peaceTurns: entry.peaceTurns,
         ...diplomacyOf(player),
         wondersStarted: entry.wondersStarted.size,
@@ -715,6 +721,23 @@ engine.on('unit:defeated', (unit: Unit, by: Unit | null): void => {
   if (won) {
     won.unitsDefeated += 1;
   }
+
+  // A fight at one of the player's own cities: its defender lost there, or its defender there won.
+  const ownCityAt = (fighter: Unit): boolean =>
+    attempt(
+      () =>
+        cityRegistryInstance.getByTile(fighter.tile())?.player() ===
+        fighter.player(),
+      false
+    );
+
+  if (lost && ownCityAt(unit)) {
+    lost.cityDefendersLost += 1;
+  }
+
+  if (won && by && ownCityAt(by)) {
+    won.cityAttacksRepelled += 1;
+  }
 });
 
 // `civ1-unit`'s: a Trireme that ended its moves away from the coast, or an aircraft out of fuel. Only the unit the
@@ -803,7 +826,10 @@ const diplomacyOf = (
             isA(action.proposal().tribute(), 'Gold') &&
             (paying ? action.by() : action.proposal().by()) === player
         )
-        .reduce((total, action) => total + action.proposal().tribute().value(), 0);
+        .reduce(
+          (total, action) => total + action.proposal().tribute().value(),
+          0
+        );
 
   return {
     meetings: negotiations.length,
@@ -928,6 +954,8 @@ engine.on('engine:start', (): void => {
       unitsDefeated: 0,
       citiesLost: 0,
       citiesCaptured: 0,
+      cityAttacksRepelled: 0,
+      cityDefendersLost: 0,
       peaceTurns: 0,
       eliminatedTurn: null,
       wondersStarted: new Set(),
