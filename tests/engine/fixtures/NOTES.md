@@ -211,3 +211,15 @@ unchanged apart from the rule counts. The rule counts change with the new and re
 new. The arena (seeds 1–40 and 41–80, 80 × 300 turns each, all seats one AI)
 shows no regression in power, score, cities or advances, and fewer cities lost
 on both seed sets.
+
+## Accepted change: garrisons sized to the enemies close by (#423)
+
+simple-ai-client's Civ1 cities now build defenders up to a quarter of their
+size, plus one with an enemy unit next to them and at least as many as the
+enemy attackers within 3 tiles (up to 3), keep up to size / 4 + 1 (size / 3 + 1
+when threatened), and release a spare fortified defender one turn in eight.
+The rule counts are unchanged. The turn-1 checksums are unchanged. The turn-10
+engine state is unchanged but its DTO hash moves.
+Turn 50's state and DTO move, since cities hold and build different garrisons.
+The arena (this AI against #434's, seeds 1–40 and 41–80, 80 × 300 turns) shows
+cities lost −0.23 on both seed sets and no regression in power or score.
