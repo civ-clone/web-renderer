@@ -16,7 +16,7 @@
   "checksums": {
     "1": "a8219d60",
     "10": "2cdcef80",
-    "50": "b68b9c8b"
+    "50": "aee41053"
   },
   "snapshots": {
     "1": {
@@ -231,7 +231,7 @@
       "dto": {
         "objects": 3401,
         "bytes": 583834,
-        "hash": "0b24c6f0"
+        "hash": "636b91da"
       },
       "registries": {
         "cities": 4,
@@ -495,28 +495,28 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2515,
+        "entities": 2519,
         "fields": 10045,
-        "hash": "b349d307"
+        "hash": "d382deca"
       },
       "dto": {
-        "objects": 44495,
-        "bytes": 7668920,
-        "hash": "3b8783ea"
+        "objects": 45216,
+        "bytes": 7780513,
+        "hash": "6d03d878"
       },
       "registries": {
-        "cities": 6,
-        "cityBuilds": 6,
-        "cityGrowth": 6,
+        "cities": 7,
+        "cityBuilds": 7,
+        "cityGrowth": 7,
         "cityImprovements": 4,
-        "goodyHuts": 26,
+        "goodyHuts": 27,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 19,
-        "units": 27
+        "tileImprovements": 21,
+        "units": 25
       },
       "world": {
         "width": 60,
@@ -593,18 +593,17 @@
           "Chiauhita",
           "41",
           "32"
+        ],
+        [
+          "City-7",
+          "City",
+          "Player-4",
+          "Damanhur",
+          "1",
+          "16"
         ]
       ],
       "units": [
-        [
-          "Horseman-1",
-          "Horseman",
-          "Player-4",
-          "59",
-          "14",
-          "false",
-          "false"
-        ],
         [
           "Settlers-1",
           "Settlers",
@@ -672,17 +671,8 @@
           "Spearman-1",
           "Spearman",
           "Player-2",
-          "36",
+          "39",
           "31",
-          "false",
-          "false"
-        ],
-        [
-          "Spearman-2",
-          "Spearman",
-          "Player-2",
-          "41",
-          "32",
           "false",
           "false"
         ],
@@ -690,8 +680,8 @@
           "Warrior-1",
           "Warrior",
           "Player-4",
-          "6",
-          "27",
+          "4",
+          "24",
           "false",
           "false"
         ],
@@ -708,8 +698,8 @@
           "Warrior-3",
           "Warrior",
           "Player-4",
-          "3",
-          "25",
+          "1",
+          "16",
           "false",
           "false"
         ],
@@ -726,8 +716,8 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "43",
-          "32",
+          "41",
+          "34",
           "false",
           "false"
         ],
@@ -736,7 +726,7 @@
           "Warrior",
           "Player-2",
           "39",
-          "24",
+          "23",
           "false",
           "false"
         ],
@@ -753,8 +743,8 @@
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "42",
-          "32",
+          "38",
+          "30",
           "false",
           "false"
         ],
@@ -763,7 +753,7 @@
           "Warrior",
           "Player-3",
           "39",
-          "30",
+          "20",
           "true",
           "false"
         ],
@@ -772,7 +762,7 @@
           "Warrior",
           "Player-1",
           "18",
-          "36",
+          "37",
           "false",
           "false"
         ],
@@ -780,8 +770,8 @@
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "9",
-          "0",
+          "8",
+          "1",
           "false",
           "false"
         ],
@@ -789,8 +779,8 @@
           "Warrior-c",
           "Warrior",
           "Player-4",
-          "1",
-          "16",
+          "7",
+          "17",
           "false",
           "false"
         ],
@@ -798,8 +788,8 @@
           "Warrior-d",
           "Warrior",
           "Player-2",
-          "38",
-          "32",
+          "41",
+          "27",
           "false",
           "false"
         ],
@@ -807,8 +797,8 @@
           "Warrior-e",
           "Warrior",
           "Player-4",
-          "5",
-          "17",
+          "6",
+          "27",
           "false",
           "false"
         ],
@@ -825,9 +815,9 @@
           "Warrior-g",
           "Warrior",
           "Player-2",
-          "38",
-          "30",
-          "true",
+          "36",
+          "31",
+          "false",
           "false"
         ],
         [
@@ -840,7 +830,7 @@
           "false"
         ]
       ],
-      "randomCalls": 8776,
+      "randomCalls": 8778,
       "mathRandomCalls": 0,
       "rules": {
         "total": 1055,
