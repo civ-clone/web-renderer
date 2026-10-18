@@ -195,3 +195,19 @@ civ1-city adds `civ1-city:city/grow/emit`, `civ1-city:city/shrink/emit` and
 at turns 1, 10 and 50 rise by three (one `Grow`, one `Shrink` and one
 `FoodExhausted`), and nothing else moves: the engine-state checksums, the
 random-call counts and the DTO hashes are unchanged.
+
+## Accepted change: diplomacy as v474.05 holds it (#427, #71)
+
+civ1-diplomacy's negotiation map is rewritten as v474.05's meeting with a king,
+two computer players settle war or peace by v474.05's test, and simple-ai-client
+no longer breaks a peace on the map. Meetings between computer players now
+happen every four turns while their units are next to each other, trade
+advances and sign or cancel treaties, so play changes from the first contact: the
+engine-state checksum and the DTO hash at turn 50 move, and turns 1 and 10 are
+unchanged apart from the rule counts. The rule counts change with the new and rewritten rules:
+`Step` falls from 33 to 16, `Resolved` rises from 3 to 6, `Interaction`,
+`Detonated` and `TurnStart` each rise by one, and civ1-diplomacy's two
+`MayNegotiate` and civ1-power's four `Rank` and one `MilitaryStrength` rules are
+new. The arena (seeds 1–40 and 41–80, 80 × 300 turns each, all seats one AI)
+shows no regression in power, score, cities or advances, and fewer cities lost
+on both seed sets.

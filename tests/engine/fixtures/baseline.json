@@ -16,7 +16,7 @@
   "checksums": {
     "1": "a8219d60",
     "10": "2cdcef80",
-    "50": "e7c2e6e5"
+    "50": "b68b9c8b"
   },
   "snapshots": {
     "1": {
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1059,
+        "total": 1055,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -151,7 +151,7 @@
           "Created": 17,
           "Defeated": 9,
           "Destroyed": 17,
-          "Detonated": 4,
+          "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -165,11 +165,13 @@
           "FoodStorage": 2,
           "Grow": 8,
           "Halted": 1,
-          "Interaction": 1,
+          "Interaction": 2,
           "KingMet": 1,
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MayNegotiate": 2,
+          "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 18,
@@ -181,9 +183,10 @@
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
+          "Rank": 4,
           "Removed": 4,
           "Requirements": 60,
-          "Resolved": 3,
+          "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,
           "Shrink": 4,
@@ -191,7 +194,7 @@
           "Spend": 5,
           "Start": 2,
           "Started": 2,
-          "Step": 33,
+          "Step": 16,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,
@@ -202,7 +205,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 12,
+          "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -382,7 +385,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1059,
+        "total": 1055,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -419,7 +422,7 @@
           "Created": 17,
           "Defeated": 9,
           "Destroyed": 17,
-          "Detonated": 4,
+          "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -433,11 +436,13 @@
           "FoodStorage": 2,
           "Grow": 8,
           "Halted": 1,
-          "Interaction": 1,
+          "Interaction": 2,
           "KingMet": 1,
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MayNegotiate": 2,
+          "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 18,
@@ -449,9 +454,10 @@
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
+          "Rank": 4,
           "Removed": 4,
           "Requirements": 60,
-          "Resolved": 3,
+          "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,
           "Shrink": 4,
@@ -459,7 +465,7 @@
           "Spend": 5,
           "Start": 2,
           "Started": 2,
-          "Step": 33,
+          "Step": 16,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,
@@ -470,7 +476,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 12,
+          "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
@@ -489,28 +495,28 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2516,
-        "fields": 10054,
-        "hash": "785337ac"
+        "entities": 2515,
+        "fields": 10045,
+        "hash": "b349d307"
       },
       "dto": {
-        "objects": 39631,
-        "bytes": 6794488,
-        "hash": "bda2bfe8"
+        "objects": 44495,
+        "bytes": 7668920,
+        "hash": "3b8783ea"
       },
       "registries": {
         "cities": 6,
         "cityBuilds": 6,
         "cityGrowth": 6,
         "cityImprovements": 4,
-        "goodyHuts": 27,
+        "goodyHuts": 26,
         "playerGovernments": 4,
         "playerResearch": 4,
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 18,
-        "units": 28
+        "tileImprovements": 19,
+        "units": 27
       },
       "world": {
         "width": 60,
@@ -576,20 +582,29 @@
           "City-5",
           "City",
           "Player-4",
-          "Idfu",
+          "Arish",
           "1",
           "26"
         ],
         [
           "City-6",
           "City",
-          "Player-3",
-          "Tamuin",
+          "Player-2",
+          "Chiauhita",
           "41",
           "32"
         ]
       ],
       "units": [
+        [
+          "Horseman-1",
+          "Horseman",
+          "Player-4",
+          "59",
+          "14",
+          "false",
+          "false"
+        ],
         [
           "Settlers-1",
           "Settlers",
@@ -663,11 +678,11 @@
           "false"
         ],
         [
-          "Swordman-1",
-          "Swordman",
-          "Player-4",
-          "2",
-          "15",
+          "Spearman-2",
+          "Spearman",
+          "Player-2",
+          "41",
+          "32",
           "false",
           "false"
         ],
@@ -711,26 +726,26 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "41",
+          "43",
           "32",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-6",
           "Warrior",
           "Player-2",
-          "40",
-          "25",
+          "39",
+          "24",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "2",
-          "16",
+          "3",
+          "14",
           "false",
           "false"
         ],
@@ -738,26 +753,26 @@
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "43",
-          "30",
+          "42",
+          "32",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "40",
-          "24",
-          "false",
-          "true"
+          "39",
+          "30",
+          "true",
+          "false"
         ],
         [
           "Warrior-a",
           "Warrior",
           "Player-1",
-          "15",
-          "37",
+          "18",
+          "36",
           "false",
           "false"
         ],
@@ -765,8 +780,8 @@
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "7",
-          "1",
+          "9",
+          "0",
           "false",
           "false"
         ],
@@ -783,22 +798,13 @@
           "Warrior-d",
           "Warrior",
           "Player-2",
-          "40",
-          "25",
+          "38",
+          "32",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-e",
-          "Warrior",
-          "Player-2",
-          "40",
-          "24",
-          "false",
-          "true"
-        ],
-        [
-          "Warrior-f",
           "Warrior",
           "Player-4",
           "5",
@@ -807,7 +813,7 @@
           "false"
         ],
         [
-          "Warrior-g",
+          "Warrior-f",
           "Warrior",
           "Player-4",
           "1",
@@ -816,37 +822,28 @@
           "false"
         ],
         [
-          "Warrior-h",
+          "Warrior-g",
           "Warrior",
           "Player-2",
-          "41",
-          "32",
-          "false",
+          "38",
+          "30",
+          "true",
           "false"
         ],
         [
-          "Warrior-i",
-          "Warrior",
-          "Player-3",
-          "39",
-          "23",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-j",
+          "Warrior-h",
           "Warrior",
           "Player-4",
-          "2",
+          "3",
           "25",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8788,
+      "randomCalls": 8776,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1059,
+        "total": 1055,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -883,7 +880,7 @@
           "Created": 17,
           "Defeated": 9,
           "Destroyed": 17,
-          "Detonated": 4,
+          "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
           "DistributionGroups": 1,
@@ -897,11 +894,13 @@
           "FoodStorage": 2,
           "Grow": 8,
           "Halted": 1,
-          "Interaction": 1,
+          "Interaction": 2,
           "KingMet": 1,
           "Landed": 1,
           "Lost": 2,
           "LostAtSea": 2,
+          "MayNegotiate": 2,
+          "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
           "MovementCost": 18,
@@ -913,9 +912,10 @@
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
           "ProcessYield": 5,
+          "Rank": 4,
           "Removed": 4,
           "Requirements": 60,
-          "Resolved": 3,
+          "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,
           "Shrink": 4,
@@ -923,7 +923,7 @@
           "Spend": 5,
           "Start": 2,
           "Started": 2,
-          "Step": 33,
+          "Step": 16,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,
@@ -934,7 +934,7 @@
           "TradeRouteEstablished": 2,
           "Transferred": 2,
           "TurnEnd": 1,
-          "TurnStart": 12,
+          "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
           "Unsupported": 2,
