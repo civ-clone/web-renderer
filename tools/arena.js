@@ -57,6 +57,8 @@ const METRICS = [
   ['unitsDefeated', 1],
   ['citiesLost', -1],
   ['citiesCaptured', 1],
+  ['cityAttacksRepelled', 1],
+  ['cityDefendersLost', -1],
   ['meetings', 0],
   ['warsDeclared', 0],
   ['treaties', 0],
