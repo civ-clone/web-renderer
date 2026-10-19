@@ -22,6 +22,9 @@
 // dropped a nested `$t`'s `defaultValue`, which `Generic.city-name` relies on
 // (#337). The welcome doesn't put "the" before a nation that has no article
 // (#335).
+//
+// After an exchange of knowledge, the computer player says which advance it
+// took, by its nation and the advance's name (#453).
 
 import {
   Babylonian,
@@ -67,6 +70,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
   await import('../../translations/civ1-civilization/en');
+  await import('../../translations/civ1-diplomacy/en');
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
@@ -438,6 +442,27 @@ const expect = (description: string, actual: string, expected: string) => {
       stealAdvance.choices[0].value
     ),
     'Ceremonial Burial'
+  );
+
+  // As the page gets `AdvanceTaken` in a step of the talks: its speaker and the advance as a class name.
+  expect(
+    'AdvanceTaken.exchange-knowledge.taken',
+    t('AdvanceTaken.exchange-knowledge.taken', {
+      interaction: {
+        _: 'AdvanceTaken',
+        advance: { _: 'Writing' },
+        by: { civilization: { _: 'Egyptian' } },
+        key: 'exchange-knowledge.taken',
+      },
+      ns: 'diplomacy',
+    }),
+    'In exchange, the Egyptians take Writing.'
+  );
+
+  expect(
+    'Resolution.AdvanceTaken.Acknowledge',
+    t('Resolution.AdvanceTaken.Acknowledge', { ns: 'diplomacy' }),
+    'OK'
   );
 
   if (failures.length) {
