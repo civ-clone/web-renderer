@@ -12,11 +12,14 @@ export interface WorldSize {
   minPlayers: number;
   maxPlayers: number;
   players: number;
+  /** Whether there is an Earth map this size, so Earth offers it. */
+  earth: boolean;
 }
 
 export const worldSizes: WorldSize[] = [
   {
     key: 'tiny',
+    earth: false,
     width: 40,
     height: 25,
     minPlayers: 2,
@@ -25,6 +28,7 @@ export const worldSizes: WorldSize[] = [
   },
   {
     key: 'small',
+    earth: false,
     width: 64,
     height: 40,
     minPlayers: 3,
@@ -33,6 +37,7 @@ export const worldSizes: WorldSize[] = [
   },
   {
     key: 'normal',
+    earth: true,
     width: 80,
     height: 50,
     minPlayers: 3,
@@ -41,6 +46,7 @@ export const worldSizes: WorldSize[] = [
   },
   {
     key: 'large',
+    earth: true,
     width: 104,
     height: 65,
     minPlayers: 3,
@@ -49,6 +55,7 @@ export const worldSizes: WorldSize[] = [
   },
   {
     key: 'huge',
+    earth: true,
     width: 128,
     height: 80,
     minPlayers: 3,
@@ -56,6 +63,11 @@ export const worldSizes: WorldSize[] = [
     players: 12,
   },
 ];
+
+/** The sizes Earth comes in: Civ1's own map for Normal, and larger versions of it. */
+export const earthWorldSizes: WorldSize[] = worldSizes.filter(
+  ({ earth }) => earth
+);
 
 export const defaultWorldSize: WorldSize = worldSizes.find(
   ({ key }) => key === 'normal'

@@ -1,27 +1,11 @@
-import { FinishedHandler, PlayerCountWindow } from './PlayerCountWindow';
-import DifficultyWindow from './DifficultyWindow';
+import { FinishedHandler, NewGameWindow } from './NewGameWindow';
 import Transport from '../Transport';
+import { earthWorldSizes } from '../lib/worldSizes';
 
-// Earth is a fixed map, so there is no size to ask for (#55): only the difficulty level (#173) and how many
-//  civilizations.
-export class EarthWindow {
+/** A new game on Earth: the same questions as New Game, offering only the sizes there is an Earth map for. */
+export class EarthWindow extends NewGameWindow {
   constructor(transport: Transport, onFinished?: FinishedHandler) {
-    DifficultyWindow.ask(
-      transport,
-      (difficulty) =>
-        new PlayerCountWindow(
-          transport,
-          {
-            width: 80,
-            height: 50,
-            earth: true,
-            difficulty,
-          },
-          [7, 6, 5, 4, 3],
-          7,
-          onFinished
-        )
-    );
+    super(transport, onFinished, earthWorldSizes, { earth: true });
   }
 }
 

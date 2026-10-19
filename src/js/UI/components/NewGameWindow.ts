@@ -1,4 +1,9 @@
-import { defaultWorldSize, playerCounts, worldSizes } from '../lib/worldSizes';
+import {
+  WorldSize,
+  defaultWorldSize,
+  playerCounts,
+  worldSizes,
+} from '../lib/worldSizes';
 import DifficultyWindow from './DifficultyWindow';
 import MandatorySelection from './MandatorySelection';
 import PlayerCountWindow from './PlayerCountWindow';
@@ -7,12 +12,21 @@ import { t } from 'i18next';
 
 export type FinishedHandler = () => void;
 
-/** The size of the world, then the difficulty level (#173), then how many civilizations to play with (#55). */
+/**
+ * The size of the world, then the difficulty level (#173), then how many civilizations to play with (#55). `sizes`
+ * are the sizes to offer, and `worldOptions` go to the engine with the answers (Earth offers only the sizes it has a
+ * map for, and adds `earth`).
+ */
 export class NewGameWindow extends MandatorySelection {
-  constructor(transport: Transport, onFinished?: FinishedHandler) {
+  constructor(
+    transport: Transport,
+    onFinished?: FinishedHandler,
+    sizes: WorldSize[] = worldSizes,
+    worldOptions: { [key: string]: any } = {}
+  ) {
     super(
       t('NewGameWindow.world-size'),
-      worldSizes.map(({ key, width, height }) => ({
+      sizes.map(({ key, width, height }) => ({
         label: t(`NewGameWindow.WorldSize.${key}`, { width, height }) as string,
         value: key,
       })),
@@ -20,14 +34,19 @@ export class NewGameWindow extends MandatorySelection {
         this.close();
 
         const size =
-          worldSizes.find(({ key }) => key === selection) ?? defaultWorldSize;
+          sizes.find(({ key }) => key === selection) ?? defaultWorldSize;
 
         DifficultyWindow.ask(
           transport,
           (difficulty) =>
             new PlayerCountWindow(
               transport,
-              { width: size.width, height: size.height, difficulty },
+              {
+                ...worldOptions,
+                width: size.width,
+                height: size.height,
+                difficulty,
+              },
               playerCounts(size),
               size.players,
               onFinished
