@@ -57,7 +57,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
       '@civ-clone/civ1-diplomacy':
         specifier: github:civ-clone/civ1-diplomacy
-        version: https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/fc34fa9d9123bfccb3695c7bc72f91602588dd10
+        version: https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/a59ae38332fe2529191e39582cc1ead1757aa41d
       '@civ-clone/civ1-game':
         specifier: github:civ-clone/civ1-game
         version: https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec
@@ -1114,12 +1114,12 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-uif2csh9hXHB9yiNiEptvpspwcSG3edeASjep2HB9Dij59Ug5IdQ2R0VdPG8bmS23oYANs2PtlX8gFP1A64ZQA==, tarball: https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089}
     version: 0.1.0
 
-  '@civ-clone/civ1-diplomacy@https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/fc34fa9d9123bfccb3695c7bc72f91602588dd10':
-    resolution: {gitHosted: true, integrity: sha512-IZuNlhjx6lf+vaYOghngNvkzPh6BFbQPQCdegie0AxxlW54z7isa+MAmq5gqxTKNAM3011pB6QguG9ZfX9Mh/A==, tarball: https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/fc34fa9d9123bfccb3695c7bc72f91602588dd10}
+  '@civ-clone/civ1-diplomacy@https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/a59ae38332fe2529191e39582cc1ead1757aa41d':
+    resolution: {gitHosted: true, integrity: sha512-TyXVn8AFcOvgNlA010r6vIxG0DCdtlEY8c6BBnNGtSVSrGSD0o18UISv9d3CGHzbmworeTw8BS8uBQtwZSdVHQ==, tarball: https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/a59ae38332fe2529191e39582cc1ead1757aa41d}
     version: 0.1.1
 
   '@civ-clone/civ1-earth-generator@https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112}
+    resolution: {gitHosted: true, integrity: sha512-dhCB/x0xR4/8iXA6OEBoANjrh2shxd3KL37128IY0fILu3CgtNiBY1bFmLZdkk3yq2igDfJbz4xtiScxzF7vlg==, tarball: https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112}
     version: 0.1.2
 
   '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a':
@@ -3553,7 +3553,7 @@ snapshots:
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-rule': 0.1.6
 
-  '@civ-clone/civ1-diplomacy@https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/fc34fa9d9123bfccb3695c7bc72f91602588dd10':
+  '@civ-clone/civ1-diplomacy@https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/a59ae38332fe2529191e39582cc1ead1757aa41d':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-diplomacy-declaration-peace': 0.1.0
