@@ -235,3 +235,15 @@ which changes early moves, and later ships and passengers act differently once a
 player has explored its own landmass. The arena (this AI against #439's, seeds 1–40 and
 41–80, 80 × 300 turns) shows cities overseas up on both seed sets, cities and
 power up or level, and the costs raised as #440 and #441.
+
+## Accepted change: armies by leader, invasions and beachheads (#424, #374)
+
+civ1-civilization registers two new personality rules from
+base-leader-personality 0.1.2: `ArmySize` (Militaristic and Civilized, 2 rules)
+and `OverseasSettlers` (Expansionist, 1 rule), so the rule total rises from 1055
+to 1058 at every checkpoint. Every checksum is unchanged: in the conformance
+game's 50 turns no player has a rival to size its army for, an enemy overseas to
+invade, or a home landmass filling up. The arena (this AI against
+civ-clone/simple-ai-client 549a859, seeds 1–40 and 41–80, 80 × 300 turns) shows
+cities −0.57 and +0.07, cities captured −0.26 and −0.11, and Expansionist
+civilizations level or ahead.
