@@ -177,7 +177,7 @@ importers:
         version: 0.1.12
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/9ca559a8abafe6dcbaa46dbdc072822607a6bb72
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/549a859910245cc96bf215a865c83cb304458f96
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2
@@ -1324,8 +1324,8 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/9ca559a8abafe6dcbaa46dbdc072822607a6bb72':
-    resolution: {gitHosted: true, integrity: sha512-Av799trryCAOQuLqbOlOyIPCihNmq71mRv2vBq17xe2CUkV/cTA9tt7oabZKnOKbrv6PDh2+0ramzpX5BUdVZw==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/9ca559a8abafe6dcbaa46dbdc072822607a6bb72}
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/549a859910245cc96bf215a865c83cb304458f96':
+    resolution: {gitHosted: true, integrity: sha512-F4ePmgPpNkMjqeeCSoQj4Oud1sfAVcVJfQ2oaFf6TAlRyFlWVubJp4PE3Lx6hFVeY4V2UoROCdRxASe8faGhEQ==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/549a859910245cc96bf215a865c83cb304458f96}
     version: 0.1.11
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/518b7e73357d3b55a709b5809fcd0885a1e55fc2':
@@ -4603,7 +4603,7 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/9ca559a8abafe6dcbaa46dbdc072822607a6bb72':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/549a859910245cc96bf215a865c83cb304458f96':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-diplomacy-declaration-peace': 0.1.0
