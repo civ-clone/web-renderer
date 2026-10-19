@@ -116,8 +116,9 @@ type Seat = {
   // Cities taken from the player, and taken by it (`city:captured`).
   citiesLost: number;
   citiesCaptured: number;
-  // Of those lost, the ones on another landmass than its first city's (#441).
+  // Of those lost and captured, the ones on another landmass than its first city's (#441, #374).
   citiesLostOverseas: number;
+  citiesCapturedOverseas: number;
   // Attacks on the player's cities its defenders beat off, and its defenders lost in its own cities (#423): how hard
   //  its cities are to take, whatever the number of attacks.
   cityAttacksRepelled: number;
@@ -533,6 +534,14 @@ const results = () =>
         navalUnits: unitRegistryInstance
           .getByPlayer(player)
           .filter((unit) => isA(unit, 'Naval')).length,
+        // Land units with more attack than defence (#424).
+        attackers: unitRegistryInstance
+          .getByPlayer(player)
+          .filter(
+            (unit) =>
+              isA(unit, 'Land') &&
+              unit.attack().value() > unit.defence().value()
+          ).length,
         unitsCreated: entry.unitsCreated,
         navalUnitsCreated: entry.navalUnitsCreated,
         unitsLost: entry.unitsLost,
@@ -541,6 +550,16 @@ const results = () =>
         citiesLost: entry.citiesLost,
         citiesCaptured: entry.citiesCaptured,
         citiesLostOverseas: entry.citiesLostOverseas,
+        citiesCapturedOverseas: entry.citiesCapturedOverseas,
+        // The size of the landmass its first city is on, in tiles: an island start, say (#374).
+        homeLandmass:
+          entry.homeTile === null
+            ? 0
+            : (
+                landMassAt(entry.homeTile) as {
+                  tiles(): Tile[];
+                } | null
+              )?.tiles().length ?? 0,
         cityAttacksRepelled: entry.cityAttacksRepelled,
         cityDefendersLost: entry.cityDefendersLost,
         citiesOverseas: cities.filter(
@@ -832,6 +851,13 @@ engine.on(
 
     if (winner) {
       winner.citiesCaptured += 1;
+
+      if (
+        winner.homeTile !== null &&
+        landMassAt(city.tile()) !== landMassAt(winner.homeTile)
+      ) {
+        winner.citiesCapturedOverseas += 1;
+      }
     }
   }
 );
@@ -1019,6 +1045,7 @@ engine.on('engine:start', (): void => {
       citiesLost: 0,
       citiesCaptured: 0,
       citiesLostOverseas: 0,
+      citiesCapturedOverseas: 0,
       cityAttacksRepelled: 0,
       cityDefendersLost: 0,
       homeTile: null,
