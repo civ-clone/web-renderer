@@ -56,6 +56,7 @@ import {
   Revolution,
 } from '@civ-clone/civ1-government/PlayerActions';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
+import { choosers } from '@civ-clone/simple-ai-client/lib/Diplomacy/negotiate';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import Timeout from './Error/Timeout';
@@ -2838,18 +2839,19 @@ export class DataTransferClient extends Client implements IClient {
     );
 
     while (!negotiation.terminated()) {
-      const lastInteraction = negotiation.lastInteraction(),
-        players =
-          lastInteraction !== null
-            ? lastInteraction.for()
-            : negotiation.players().slice(1);
+      // The steps on offer, worked out once for the first player asked: each call makes new actions.
+      let offered: IAction[] | null = negotiation.nextSteps();
+
+      // The player whose steps they are chooses: after the hand-over in a meeting at peace, your OK is for the computer
+      //  player, but the next move is yours (#450).
+      const players = choosers(negotiation, offered);
 
       await players.reduce(
         (promise: Promise<void>, player: Player) =>
           promise
             .then(async () => {
               const client = clientRegistryInstance.getByPlayer(player),
-                nextSteps = negotiation.nextSteps(),
+                nextSteps = offered ?? negotiation.nextSteps(),
                 resultPromise = Promise.race([
                   client.chooseFromList(
                     new ChoiceMeta(
@@ -2869,6 +2871,8 @@ export class DataTransferClient extends Client implements IClient {
                       )
                     : new Promise<void>(() => {}),
                 ]);
+
+              offered = null;
 
               const interaction = await resultPromise;
 
