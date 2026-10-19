@@ -5,6 +5,7 @@ i18next.addResources(
   'diplomacy',
   {
     'Action.Terminate': 'Good bye!',
+    'AdvanceTaken.exchange-knowledge.taken': 'In exchange, the $t(Generic.civilization-name.plural, { "civilization": "{{interaction.by.civilization._}}", "ns": "default" }) take $t({{interaction.advance._}}.name, { "defaultValue": "{{interaction.advance._}}", "ns": "science" }).',
     'Declaration.Peace': 'peace treaty',
     'Dialogue.accept-peace.neutral': 'We affirm this treaty of eternal friendship and goodwill between the people of the $t(Generic.civilization-name.name, { "civilization": "{{interaction.by.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.name, { "civilization": "{{interaction.for.0.civilization._}}", "ns": "default" }) civilizations.',
     'Dialogue.declare-war.first-contact': 'Your people are strangers to us, and strangers we do not trust. Prepare for WAR!',
@@ -28,6 +29,7 @@ i18next.addResources(
     'OfferPeaceWithGift_everything': 'We beg you, spare us! Sign our treaty, and everything we have is yours.',
     'Resolution.CancelTreaty.Accept_own': 'Cancel our treaty with the $t(Generic.civilization-name.plural, { "civilization": "{{interaction.proposal.with.civilization._}}", "ns": "default" }).',
     'Resolution.CancelTreaty.Decline_own': 'We keep our word.',
+    'Resolution.AdvanceTaken.Acknowledge': 'OK',
     'Resolution.DemandTribute.Accept_own-advance': 'Very well, take it.',
     'Resolution.DemandTribute.Accept_own-gold': 'Pay the tribute.',
     'Resolution.DemandTribute.Decline_own-advance': 'Never!',

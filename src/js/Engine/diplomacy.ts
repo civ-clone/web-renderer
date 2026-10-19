@@ -12,6 +12,7 @@ import {
   War,
 } from '@civ-clone/library-diplomacy/Declarations';
 import AdvanceStolen from '@civ-clone/base-unit-action-steal-technology/AdvanceStolen';
+import AdvanceTaken from '@civ-clone/civ1-diplomacy/Dialogues/AdvanceTaken';
 import { Contact } from '@civ-clone/library-diplomacy/Interactions';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import { Game } from '@civ-clone/core-game/Game';
@@ -33,6 +34,8 @@ export const registerDiplomacyClasses = (game: Game): void =>
     ...([
       // A Diplomat's theft, so a city is robbed only once (#58).
       AdvanceStolen,
+      // What a computer player took in an exchange of knowledge (#453).
+      AdvanceTaken,
       // A call to cancel a treaty with a third player (#427).
       CancelTreaty,
       Contact,
