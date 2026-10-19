@@ -60,6 +60,7 @@ const METRICS = [
   ['cityAttacksRepelled', 1],
   ['cityDefendersLost', -1],
   ['citiesOverseas', 1],
+  ['citiesLostOverseas', -1],
   ['landings', 0],
   ['navalUnitsLost', -1],
   ['cargoLost', -1],

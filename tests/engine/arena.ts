@@ -116,6 +116,8 @@ type Seat = {
   // Cities taken from the player, and taken by it (`city:captured`).
   citiesLost: number;
   citiesCaptured: number;
+  // Of those lost, the ones on another landmass than its first city's (#441).
+  citiesLostOverseas: number;
   // Attacks on the player's cities its defenders beat off, and its defenders lost in its own cities (#423): how hard
   //  its cities are to take, whatever the number of attacks.
   cityAttacksRepelled: number;
@@ -538,6 +540,7 @@ const results = () =>
         unitsDefeated: entry.unitsDefeated,
         citiesLost: entry.citiesLost,
         citiesCaptured: entry.citiesCaptured,
+        citiesLostOverseas: entry.citiesLostOverseas,
         cityAttacksRepelled: entry.cityAttacksRepelled,
         cityDefendersLost: entry.cityDefendersLost,
         citiesOverseas: cities.filter(
@@ -818,6 +821,13 @@ engine.on(
 
     if (loser) {
       loser.citiesLost += 1;
+
+      if (
+        loser.homeTile !== null &&
+        landMassAt(city.tile()) !== landMassAt(loser.homeTile)
+      ) {
+        loser.citiesLostOverseas += 1;
+      }
     }
 
     if (winner) {
@@ -1008,6 +1018,7 @@ engine.on('engine:start', (): void => {
       unitsDefeated: 0,
       citiesLost: 0,
       citiesCaptured: 0,
+      citiesLostOverseas: 0,
       cityAttacksRepelled: 0,
       cityDefendersLost: 0,
       homeTile: null,
