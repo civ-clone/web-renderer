@@ -223,3 +223,15 @@ engine state is unchanged but its DTO hash moves.
 Turn 50's state and DTO move, since cities hold and build different garrisons.
 The arena (this AI against #434's, seeds 1–40 and 41–80, 80 × 300 turns) shows
 cities lost −0.23 on both seed sets and no regression in power or score.
+
+## Accepted change: computer players ferry units overseas (#211)
+
+simple-ai-client's computer players now ferry explorers and Settlers (with an
+escort) to other landmasses, build a transport for passengers waiting in a port,
+and no longer put land units aboard an exploring ship for no reason. The engine
+rules are unchanged (rule counts included), as is turn 1. Turns 10 and 50 move
+in state and DTO: land units next to the exploring Trireme no longer board it,
+which changes early moves, and later ships and passengers act differently once a
+player has explored its own landmass. The arena (this AI against #439's, seeds 1–40 and
+41–80, 80 × 300 turns) shows cities overseas up on both seed sets, cities and
+power up or level, and the costs raised as #440 and #441.
