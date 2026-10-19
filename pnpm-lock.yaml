@@ -1118,9 +1118,9 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-c4rpG8tnTg8ITnopwZTuAei/RVXNahrayiY5b0O3bTl1NZjXvNS6XzuZMs4UCNf6T6qbwDhXpO/GEbW/kgy2aA==, tarball: https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/2286dd30af95b1b45a45b56a377d76ba1acc749f}
     version: 0.1.1
 
-  '@civ-clone/civ1-earth-generator@https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76}
-    version: 0.1.1
+  '@civ-clone/civ1-earth-generator@https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112}
+    version: 0.1.2
 
   '@civ-clone/civ1-game-year@https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a':
     resolution: {gitHosted: true, integrity: sha512-KiWiSUhNv7XRFn22Sz2mx95wtwdcXw+YyWuJNJTonZ+ep0RvFDACDsvuGxLc8m70cLvx9iPTkX3jK4bVuWLUvQ==, tarball: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a}
@@ -3589,7 +3589,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-earth-generator@https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76':
+  '@civ-clone/civ1-earth-generator@https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112':
     dependencies:
       '@civ-clone/base-terrain-arctic': 0.1.0
       '@civ-clone/base-terrain-desert': 0.1.0
@@ -3622,7 +3622,7 @@ snapshots:
 
   '@civ-clone/civ1-game@https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec':
     dependencies:
-      '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76
+      '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112
       '@civ-clone/core-city': 0.1.22
       '@civ-clone/core-game': 0.1.9
     transitivePeerDependencies:
@@ -3935,7 +3935,7 @@ snapshots:
 
   '@civ-clone/civ1-world@https://codeload.github.com/civ-clone/civ1-world/tar.gz/928284076e693aa9b5ff7413ab4fa47caece620d':
     dependencies:
-      '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/08c43b35c0f02edd57fc79f269ed18116373ef76
+      '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/05d3f56f7113fd9cda7cb292a05067af6d20f112
       '@civ-clone/civ1-game': https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-government': 0.1.6
