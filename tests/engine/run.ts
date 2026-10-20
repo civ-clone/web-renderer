@@ -7,6 +7,7 @@
 
 // Must stay first: it seeds `Math.random` before any engine module evaluates.
 import { config, mathRandomCalls, random } from './lib/seed';
+import './lib/spawnedClients';
 
 import Built from '@civ-clone/core-world/Rules/Built';
 import Effect from '@civ-clone/core-rule/Effect';

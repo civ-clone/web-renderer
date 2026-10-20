@@ -1607,6 +1607,19 @@ export class DataTransferClient extends Client implements IClient {
       }
     });
 
+    // A destroyed civilization comes back as a new one (#178). We haven't met the new one, so it isn't named (#59); the
+    //  one it replaces is, if we knew it.
+    engineInstance.on(
+      'player:respawned',
+      (player: Player, defeatedPlayer: Player) => {
+        this.sendNotification(
+          this.hasMet(defeatedPlayer)
+            ? new Notification('Player.respawned', { defeatedPlayer }, true)
+            : new Notification('Player.respawned.unmet', {}, true)
+        );
+      }
+    );
+
     engineInstance.on('player:spaceship:part-built', (player: Player) => {
       if (this.player() === player) {
         return;

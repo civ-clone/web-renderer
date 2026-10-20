@@ -7,6 +7,7 @@
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import Advance from '@civ-clone/core-science/Advance';
 import Built from '@civ-clone/core-world/Rules/Built';

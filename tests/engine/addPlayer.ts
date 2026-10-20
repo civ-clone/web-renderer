@@ -5,6 +5,7 @@
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import Built from '@civ-clone/core-world/Rules/Built';
 import Effect from '@civ-clone/core-rule/Effect';
@@ -122,11 +123,6 @@ ruleRegistryInstance.register(
     })
   )
 );
-
-// As src/js/Engine/Game.ts answers it.
-engine.on('player:spawned', (player: Player): void => {
-  clientRegistryInstance.register(new SimpleAIClient(player));
-});
 
 // Part-way through turn 10, as the first player's turn starts: the way a player comes into a game being played.
 engine.on('player:turn-start', (player: Player): void => {

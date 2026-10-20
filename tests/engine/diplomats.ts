@@ -8,6 +8,7 @@
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import {
   Chariot,

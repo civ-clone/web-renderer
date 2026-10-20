@@ -1000,6 +1000,24 @@ const registryFor = (() => {
   };
 })();
 
+// A civilization brought into the game part-way through (#178: a destroyed one coming back) plays the baseline: it
+//  isn't a seat, so it counts for neither side, and the installed AI (lib/spawnedClients) can't be in this bundle.
+engine.on('player:spawned', (player: Player): void => {
+  if (clientRegistryInstance.getBy('player', player).length > 0) {
+    return;
+  }
+
+  const registry = registryFor(baseline),
+    args: unknown[] = new Array(baseline.strategyRegistryIndex + 1).fill(
+      undefined
+    );
+
+  args[0] = player;
+  args[baseline.strategyRegistryIndex] = registry;
+
+  clientRegistryInstance.register(new baseline.SimpleAIClient(...args));
+});
+
 // As `run.ts`, but each seat's client is its variant's, given that variant's strategies. Everything else is left to
 //  the constructor's defaults, which are the same singletons `run.ts` plays on.
 engine.on('engine:start', (): void => {

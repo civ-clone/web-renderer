@@ -7,6 +7,7 @@
 // Bundled by `tools/isolation.js` with esbuild, for the same reason as the
 // conformance suite — so it resolves the same `.ts` sources the renderer does.
 
+import './lib/spawnedClients';
 import { Game } from '@civ-clone/civ1-game';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';

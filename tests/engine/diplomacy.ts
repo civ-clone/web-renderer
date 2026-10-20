@@ -13,6 +13,7 @@
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Never from '@civ-clone/core-diplomacy/Expiries/Never';
