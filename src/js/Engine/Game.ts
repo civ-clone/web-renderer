@@ -31,6 +31,10 @@ export class Game implements IGame {
     // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
     //  makes one itself. Bound here rather than in `bindEvents`, so a loaded game answers too.
     engine.on('player:spawned', (player: Player): void => {
+      if (clientRegistryInstance.getBy('player', player).length > 0) {
+        return;
+      }
+
       clientRegistryInstance.register(this.#createClient(player, false));
     });
 

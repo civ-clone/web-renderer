@@ -12,6 +12,7 @@
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';

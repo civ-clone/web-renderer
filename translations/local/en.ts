@@ -605,6 +605,12 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.unmet-by.body':
     '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
   'Player.defeated.unmet-by.title': 'Defeated!',
+  'Player.respawned.body':
+    'Where $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) once stood, a new civilization has arisen.',
+  'Player.respawned.title': 'A new civilization',
+  'Player.respawned.unmet.body':
+    'Travellers tell of a new civilization arising in a distant land.',
+  'Player.respawned.unmet.title': 'A new civilization',
   'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
   'Player.government-collapsed.title': 'Government falls!',
   'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,

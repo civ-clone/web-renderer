@@ -7,6 +7,7 @@
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import { CeremonialBurial, Pottery } from '@civ-clone/civ1-science/Advances';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';

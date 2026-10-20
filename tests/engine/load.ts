@@ -17,6 +17,7 @@
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import { config } from './lib/seed';
+import './lib/spawnedClients';
 
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Runs tests/engine/addPlayer.ts once for each ending it plays — retiring, and your civilization destroyed (#176).
+// Runs tests/engine/addPlayer.ts — a player added to a running game (#168).
 // Bundled with esbuild so each package's `.ts` is resolved rather than its compiled `.js`.
 
 const { execFileSync } = require('child_process');
