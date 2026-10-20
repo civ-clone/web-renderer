@@ -109,7 +109,9 @@ const finish = (): void => {
           "improvement's saleValue in the DTO) changes no play, though turn " +
           "50's state hash moves: the sale values built for the turn-10 DTO " +
           'take ids, so entities created after it are numbered differently. ' +
-          'Random calls and entity and field counts are unchanged.',
+          'Random calls and entity and field counts are unchanged. #459 ' +
+          "shrinks the DTO: a player's units no longer include its " +
+          'destroyed ones. Play does not change.',
         checksums,
         snapshots,
       },
