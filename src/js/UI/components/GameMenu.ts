@@ -18,6 +18,7 @@ import TopCitiesReport from './TopCitiesReport';
 import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
+import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSaveFile } from '../lib/savedGame';
 import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
@@ -315,6 +316,36 @@ export class GameMenu extends Element {
                 label: t('GameMenu.options'),
                 action: () => {
                   new GameOptions(this.#portal);
+                },
+              },
+              // Retire ends the game with your score (#176); Quit leaves it for the main menu, reloading for a fresh
+              //  worker as loading a save does (#362).
+              {
+                label: t('GameMenu.retire'),
+                action: (menu) => {
+                  menu.remove();
+
+                  new ConfirmationWindow(
+                    t('GameMenu.retire'),
+                    t('GameMenu.retire-confirm'),
+                    () => this.#transport.send('retire', null)
+                  );
+                },
+              },
+              {
+                label: t('GameMenu.quit'),
+                action: (menu) => {
+                  menu.remove();
+
+                  new ConfirmationWindow(
+                    t('GameMenu.quit'),
+                    t('GameMenu.quit-confirm'),
+                    () => {
+                      allowLeaving();
+
+                      window.location.reload();
+                    }
+                  );
                 },
               },
               {

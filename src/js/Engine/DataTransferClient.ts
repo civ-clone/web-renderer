@@ -120,6 +120,12 @@ import {
 } from './lib/topCities';
 import { score, scoreTerms } from '@civ-clone/core-score/lib/score';
 import { CivilizationScore } from './lib/civilizationScore';
+import { GameOverDetails, gameOverDetails } from './lib/gameOver';
+import GameResult from '@civ-clone/core-turn-based-game/GameResult';
+import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
+import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
+import { instance as gameResultRegistryInstance } from '@civ-clone/core-turn-based-game/GameResultRegistry';
+import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
@@ -605,6 +611,38 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.receive('civilizationScore', () =>
       this.#transport.send('civilizationScore', this.civilizationScore())
     );
+
+    // Game → Retire: the game ends now, with your score (#176, #362).
+    //  Once the game has ended, the ending shows again instead.
+    this.#transport.receive('retire', () => {
+      const gameResult =
+        endGame(
+          'retired',
+          null,
+          gameResultRegistryInstance,
+          ruleRegistryInstance,
+          turnInstance
+        ) ?? gameResultRegistryInstance.get();
+
+      // A new result has already been sent, by `game:over`.
+      if (gameResult !== null && gameResult.scoringComplete()) {
+        this.#transport.send('gameOver', this.gameOver(gameResult));
+      }
+    });
+
+    // Keep playing after the game has ended: the score is final, and a turn loop waiting at the end of the turn goes on
+    //  (#176).
+    this.#transport.receive('gameContinue', () => {
+      const gameResult = gameResultRegistryInstance.get();
+
+      if (gameResult === null || gameResult.reason() === 'destroyed') {
+        return;
+      }
+
+      gameResult.completeScoring();
+
+      engineInstance.emit('game:continue');
+    });
 
     // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
     //  resolves on its own and brings nothing of the game with it. A build that is not ours has nothing to show.
@@ -1439,27 +1477,44 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
+    // However the game ends, the ending window says so (#176). Our own destruction is one of the endings.
+    engineInstance.on('game:over', (gameResult: GameResult) =>
+      this.#transport.send('gameOver', this.gameOver(gameResult))
+    );
+
+    // A game saved after it ended, and before the players chose to keep playing, ends again as it loads.
+    engineInstance.on('game:loaded', () => {
+      const gameResult = gameResultRegistryInstance.get();
+
+      if (gameResult !== null && !gameResult.scoringComplete()) {
+        this.#transport.send('gameOver', this.gameOver(gameResult));
+      }
+    });
+
+    engineInstance.on('game:retirement-warning', () =>
+      this.sendNotification(
+        new Notification('Game.retirement-warning', {
+          player: this.player(),
+        })
+      )
+    );
+
     engineInstance.on(
       'player:defeated',
       (defeatedPlayer: Player, player: Player | null) => {
+        // The ending window tells us (`game:over`). After you've kept playing from an earlier ending the game can't
+        //  end again, so the destruction is sent as an ending of its own.
         if (defeatedPlayer === this.player()) {
-          this.sendNotification(
-            new Notification(`Player.defeated.local`, {
-              defeatedPlayer,
-              player,
-            })
-          );
+          const gameResult = gameResultRegistryInstance.get();
 
-          playerRegistryInstance.unregister(
-            ...playerRegistryInstance.entries()
-          );
-          currentPlayerRegistryInstance.unregister(
-            ...currentPlayerRegistryInstance.entries()
-          );
-
-          // TODO: summary and quit
-
-          this.#transport.send('restart', null);
+          if (gameResult !== null && gameResult.scoringComplete()) {
+            this.#transport.send(
+              'gameOver',
+              this.gameOver(
+                new GameResult('destroyed', null, turnInstance.value())
+              )
+            );
+          }
 
           return;
         }
@@ -1566,17 +1621,25 @@ export class DataTransferClient extends Client implements IClient {
       );
     });
 
-    engineInstance.on('player:spaceship:lost', (player: Player) => {
-      if (this.player() !== player) {
-        return;
-      }
+    // A ship is lost when its civilization loses its capital or is destroyed (#177): one in flight returns to Earth,
+    //  one being built is cancelled. News of a civilization we haven't met doesn't reach us.
+    engineInstance.on(
+      'player:spaceship:lost',
+      (player: Player, launched: boolean) => {
+        if (this.player() !== player && !this.hasMet(player)) {
+          return;
+        }
 
-      this.sendNotification(
-        new Notification('Player.spaceship-lost', {
-          player,
-        })
-      );
-    });
+        this.sendNotification(
+          new Notification(
+            launched ? 'Spaceship.returned' : 'Spaceship.cancelled',
+            {
+              player,
+            }
+          )
+        );
+      }
+    );
 
     engineInstance.on('player:spaceship:landed', (player: Player) => {
       if (this.player() !== player) {
@@ -2094,12 +2157,50 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   civilizationScore(): CivilizationScore {
+    const gameResult = gameResultRegistryInstance.get(),
+      bonus = conquestBonusFor(
+        this.player(),
+        gameResultRegistryInstance,
+        playerWorldRegistryInstance
+      ),
+      total = score(this.player(), ruleRegistryInstance);
+
     return {
       terms: scoreTerms(this.player(), ruleRegistryInstance).map(
         ({ term, value }) => ({ term, value })
       ),
-      total: score(this.player(), ruleRegistryInstance),
+      bonus,
+      // v474.05 shows the conquest bonus as the score when it's the higher.
+      total: bonus === null ? total : Math.max(total, bonus),
+      scoringComplete: gameResult?.scoringComplete() ?? false,
     };
+  }
+
+  // How the game ended, for the ending window (#176).
+  gameOver(gameResult: GameResult): GameOverDetails {
+    const difficulty = gameDifficultyRegistryInstance.get();
+
+    let discoveries: Advance[] = [];
+
+    try {
+      discoveries = playerResearchRegistryInstance
+        .getByPlayer(this.player())
+        .complete();
+    } catch (e) {
+      // A player with no research (yet) has discovered nothing.
+    }
+
+    return gameOverDetails(gameResult, this.player(), {
+      difficulty: difficulty === null ? null : typeNameOf(difficulty),
+      discovery:
+        discoveries.length === 0
+          ? null
+          : typeNameOf(discoveries[discoveries.length - 1].sourceClass()),
+      hasMet: (player: Player) => this.hasMet(player),
+      level: levelOf(gameDifficultyRegistryInstance),
+      score: this.civilizationScore(),
+      year: yearInstance.value(gameResult.turn()),
+    });
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {

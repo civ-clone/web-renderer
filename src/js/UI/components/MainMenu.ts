@@ -1,6 +1,7 @@
 import { Element, s } from '@dom111/element';
 import CustomiseWorldWindow from './CustomiseWorldWindow';
 import EarthWindow from './EarthWindow';
+import HallOfFameWindow from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
 import ReleaseWindow from './ReleaseWindow';
@@ -81,6 +82,9 @@ export class MainMenu extends Element {
               click: () => chooseSaveFile(),
             }
           ),
+          h(s(`<button>${t('MainMenu.hall-of-fame')}</button>`), {
+            click: () => new HallOfFameWindow(),
+          }),
           h(s(`<button>Import Assets</button>`), {
             click: () => new ImportAssetsWindow(),
           })

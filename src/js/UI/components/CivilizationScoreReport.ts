@@ -46,6 +46,28 @@ const buildTerm = ({ term, value }: CivilizationScoreTerm) =>
     value
   );
 
+// The score, term by term, then the conquest bonus when there is one (#176), then the total.
+export const scoreTable = ({
+  terms,
+  bonus,
+  total,
+}: CivilizationScoreResult): HTMLTableElement =>
+  s<HTMLTableElement>(
+    '<table class="terms"></table>',
+    ...terms.map(buildTerm),
+    ...(bonus === null
+      ? []
+      : [
+          buildRow(
+            'term bonus',
+            t('CivilizationScoreReport.bonus'),
+            t('CivilizationScoreReport.bonus.detail'),
+            bonus
+          ),
+        ]),
+    buildRow('total', t('CivilizationScoreReport.total'), '', total)
+  );
+
 // The player's Civilization Score, as Civ1's World menu showed it (#149). The engine adds it up; this only draws it.
 export class CivilizationScoreReport extends Window {
   #transport: Transport;
@@ -64,12 +86,20 @@ export class CivilizationScoreReport extends Window {
   update(): void {
     this.#transport
       .request(new CivilizationScore())
-      .then(({ terms, total }: CivilizationScoreResult) =>
+      .then((score: CivilizationScoreResult) =>
         super.update(
           s(
-            '<table class="terms"></table>',
-            ...terms.map(buildTerm),
-            buildRow('total', t('CivilizationScoreReport.total'), '', total)
+            '<div></div>',
+            ...(score.scoringComplete
+              ? [
+                  s(
+                    `<p class="scoring-complete">${t(
+                      'CivilizationScoreReport.scoring-complete'
+                    )}</p>`
+                  ),
+                ]
+              : []),
+            scoreTable(score)
           )
         )
       );

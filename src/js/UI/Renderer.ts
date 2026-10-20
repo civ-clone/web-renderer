@@ -34,6 +34,7 @@ import HappinessReport from './components/HappinessReport';
 import IntervalHandler from './lib/IntervalHandler';
 import Landscape from './components/Map/Landscape';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import GameOverWindow from './components/GameOverWindow';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import { allowLeaving, guardLeaving } from './lib/leaveGuard';
@@ -381,6 +382,15 @@ export class Renderer {
             )
           );
         })
+      );
+
+      // However the game ends (#176). Listened for from the start: a game loaded at its ending says so before its map
+      //  arrives.
+      transportDisposers.push(
+        transport.receive(
+          'gameOver',
+          (details): void => void new GameOverWindow(details, transport)
+        )
       );
 
       const showNotification = (data: string): void => {

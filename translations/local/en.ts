@@ -216,6 +216,12 @@ i18next.addResources('en', 'default', {
   'GameMenu.load-game-confirm':
     'Loading a saved game will end the game in progress. Any unsaved progress will be lost.',
   'GameMenu.options': 'Options',
+  'GameMenu.quit': 'Quit',
+  'GameMenu.quit-confirm':
+    'Quitting will end the game in progress and return to the main menu. Any unsaved progress will be lost.',
+  'GameMenu.retire': 'Retire',
+  'GameMenu.retire-confirm':
+    'Retiring ends the game now, and you see your Civilization Score. You can keep playing afterwards, but nothing more is scored.',
   'GameMenu.save-game': 'Save Game',
   'GameMenu.save-name': 'The {{player}}, turn {{turn}}, {{date}}',
   'GameMenu.science-report': 'Science Report',
@@ -259,6 +265,7 @@ i18next.addResources('en', 'default', {
 
   'MainMenu.customize-world': '$t(CustomizeWorld.title)',
   'MainMenu.earth': 'Earth',
+  'MainMenu.hall-of-fame': '$t(HallOfFame.title)',
   'MainMenu.import-assets': '$t(ImportAssetsWindow.title)',
   'MainMenu.load-game': 'Load a Saved Game',
   'MainMenu.new-game': 'Start a New Game',
@@ -390,6 +397,10 @@ i18next.addResources('en', 'default', {
     'Once it lands: half its colonists (in tens of thousands) × its chance of success',
   'CivilizationScoreReport.term.wonders': 'Wonders',
   'CivilizationScoreReport.term.wonders.detail': '20 for each Wonder',
+  'CivilizationScoreReport.bonus': 'Conquest bonus',
+  'CivilizationScoreReport.bonus.detail':
+    'Conquering the world: 400, 2 for each turn before turn 550 and 100 for each opponent. It counts when it beats the rest.',
+  'CivilizationScoreReport.scoring-complete': 'Scoring completed',
   'CivilizationScoreReport.title': 'Civilization Score',
   'CivilizationScoreReport.total': 'Total',
 
@@ -450,6 +461,69 @@ i18next.addResources('en', 'default', {
   'Window.maximize': 'Maximize',
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
+
+  'GameOver.conquest.body':
+    'The {{nation}} have conquered the entire world. All hail {{leader}} the Conqueror!',
+  'GameOver.conquest.title': 'Game over',
+  'GameOver.date.body':
+    'The reign of {{leader}} of the {{nation}} ends in {{year}}, after six thousand glorious years.',
+  'GameOver.date.title': 'Game over',
+  'GameOver.destroyed.body':
+    'Archaeologists of a later age uncover the ruins of the {{nation}}, whose greatest discovery was {{discovery}}. One day, {{leader}} will return.',
+  'GameOver.destroyed.title': 'Your civilization is destroyed',
+  'GameOver.destroyed.body_none':
+    'Archaeologists of a later age uncover the ruins of the {{nation}}. One day, {{leader}} will return.',
+  'GameOver.keep-playing': 'Keep playing',
+  'GameOver.main-menu': 'Main menu',
+  'GameOver.rating':
+    'Sire, your Civilization Rating of {{rating}}% exceeds even that of {{famousLeader}}!',
+  'GameOver.rating_none': 'Sire, your Civilization Rating is {{rating}}%.',
+  'GameOver.retired.body': '{{leader}} of the {{nation}} retires in {{year}}.',
+  'GameOver.retired.title': 'Retired',
+  'GameOver.score': 'Civilization Score: {{score}}',
+  'GameOver.spaceship.title': 'Alpha Centauri',
+  'GameOver.spaceship.body_known':
+    'The {{winner}} have reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
+  'GameOver.spaceship.body_unknown':
+    'A civilization we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
+  'GameOver.spaceship.body_you':
+    'Our colonists have landed on Alpha Centauri! The name of {{leader}} of the {{nation}} will live for ever.',
+
+  'FamousLeader.CharlesDeGaulle': 'Charles de Gaulle',
+  'FamousLeader.Cleopatra': 'Cleopatra',
+  'FamousLeader.DanQuayle': 'Dan Quayle',
+  'FamousLeader.EmperorAugustus': 'Emperor Augustus',
+  'FamousLeader.EricTheRed': 'Eric the Red',
+  'FamousLeader.FerdinandMarcos': 'Ferdinand Marcos',
+  'FamousLeader.FranklinRoosevelt': 'Franklin Roosevelt',
+  'FamousLeader.KaiserWilhelm': 'Kaiser Wilhelm',
+  'FamousLeader.KingCharlemagne': 'King Charlemagne',
+  'FamousLeader.LouisXVI': 'Louis XVI',
+  'FamousLeader.Nero': 'Emperor Nero',
+  'FamousLeader.NevilleChamberlain': 'Neville Chamberlain',
+  'FamousLeader.OttoVonBismarck': 'Otto von Bismarck',
+  'FamousLeader.ShogunTokugawa': 'Shogun Tokugawa',
+  'FamousLeader.SimonBolivar': 'Simón Bolívar',
+  'FamousLeader.SolomonTheWise': 'Solomon the Wise',
+  'FamousLeader.SulaymanTheMagnificent': 'Sulayman the Magnificent',
+  'FamousLeader.ThomasJefferson': 'Thomas Jefferson',
+  'FamousLeader.VladimirLenin': 'Vladimir Lenin',
+  'FamousLeader.WinstonChurchill': 'Winston Churchill',
+
+  'HallOfFame.column.civilization': 'Civilization',
+  'HallOfFame.column.difficulty': 'Level',
+  'HallOfFame.column.ending': 'Ending',
+  'HallOfFame.column.rating': 'Rating',
+  'HallOfFame.column.score': 'Score',
+  'HallOfFame.column.year': 'Year',
+  'HallOfFame.empty': 'No games yet. Finish a game to see it here.',
+  'HallOfFame.leader': '{{leader}} of the {{nation}}',
+  'HallOfFame.rating': '{{rating}}%',
+  'HallOfFame.reason.conquest': 'Conquered the world',
+  'HallOfFame.reason.date': 'Reigned to the end',
+  'HallOfFame.reason.retired': 'Retired',
+  'HallOfFame.reason.spaceship': 'A spaceship landed',
+  'HallOfFame.title': 'Hall of Fame',
 });
 
 i18next.addResources('en', 'notification', {
@@ -522,9 +596,6 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.by.body':
     '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" })!',
   'Player.defeated.by.title': 'Defeated!',
-  'Player.defeated.local.body':
-    'You have been defeated by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
-  'Player.defeated.local.title': 'Defeated!',
   'Player.defeated.unknown.body':
     '$t({{defeatedPlayer.civilization._}}.nation, { "defaultValue": "{{defeatedPlayer.civilization._}}", "ns": "civilization" }) defeated!',
   'Player.defeated.unknown.title': 'Defeated!',
@@ -543,8 +614,6 @@ i18next.addResources('en', 'notification', {
   'Player.research-complete.title': 'Advance discovered!',
   'Player.spaceship-landed.body': 'Our spaceship has landed on Alpha Centauri!',
   'Player.spaceship-landed.title': 'Spaceship landed',
-  'Player.spaceship-lost.body': 'Our spaceship was lost in space.',
-  'Player.spaceship-lost.title': 'Spaceship lost',
 
   'Spaceship.part-built.body':
     'Component added to $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship.',
@@ -552,6 +621,16 @@ i18next.addResources('en', 'notification', {
   'Spaceship.part-built.unmet.body':
     'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
   'Spaceship.part-built.unmet.title': 'Spaceship built',
+  'Spaceship.cancelled.body':
+    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship construction cancelled.',
+  'Spaceship.cancelled.title': 'Spaceship cancelled',
+  'Spaceship.returned.body':
+    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship returns to Earth.',
+  'Spaceship.returned.title': 'Spaceship returns',
+
+  'Game.retirement-warning.body':
+    '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }) plans to retire in 20 years.',
+  'Game.retirement-warning.title': 'Retirement',
 
   'Diplomat.advance-stolen.body': `$t({{thief.civilization._}}.plural, { "defaultValue": "{{thief.civilization._}}", "ns": "civilization" }) steal $t({{advance}}.name, { "defaultValue": "{{advance}}", "ns": "science" }).`,
   'Diplomat.advance-stolen.title': 'Technology stolen!',

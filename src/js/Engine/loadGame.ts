@@ -152,6 +152,14 @@ export const resumeGame = (): void => {
   const [currentPlayer] = currentPlayerRegistryInstance.entries();
 
   if (!currentPlayer) {
+    // Saved after the game ended at the end of a turn, before the players chose to keep playing: it waits there
+    //  again (#176).
+    if (defaultGame.gameResult.pending()) {
+      engine.emit('turn:wait');
+
+      return;
+    }
+
     engine.emit('turn:start', turnInstance.value());
 
     return;
