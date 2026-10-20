@@ -515,7 +515,7 @@ i18next.addResources('en', 'notification', {
   'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,
   'Player.government-collapsed.pyramids.title': 'Government falls!',
   'Player.research-complete.body':
-    'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" })!',
+    'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science", "context": "numbered", "number": {{number}} })!',
   'Player.research-complete.title': 'Advance discovered!',
   'Player.spaceship-landed.body': 'Our spaceship has landed on Alpha Centauri!',
   'Player.spaceship-landed.title': 'Spaceship landed',

@@ -437,7 +437,13 @@ let tierMap: Map<typeof Advance, number> | null = null;
 const unitValues = new Map<typeof Unit, number>();
 
 const tiersOf = (): Map<typeof Advance, number> =>
-  (tierMap ??= tiers(ruleRegistryInstance, advanceRegistryInstance.entries()));
+  (tierMap ??= tiers(
+    ruleRegistryInstance,
+    // Future Technology is repeatable and has no place in the tree (#128).
+    advanceRegistryInstance.filter(
+      (AdvanceType: typeof Advance) => !AdvanceType.repeatable
+    )
+  ));
 
 const results = () =>
   seats.map((entry) => {

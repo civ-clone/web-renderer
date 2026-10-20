@@ -1341,6 +1341,11 @@ export class DataTransferClient extends Client implements IClient {
         new Notification('Player.research-complete', {
           playerResearch,
           advance,
+          // Which one this is, for an advance a player can hold more than one of (Future Technology 1, 2, …).
+          number: playerResearch
+            .complete()
+            .filter((known: Advance) => known instanceof advance.sourceClass())
+            .length,
         })
       );
     });

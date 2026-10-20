@@ -40,7 +40,13 @@ import {
 } from '../../src/js/UI/lib/chooseFromList';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import i18next, { t } from 'i18next';
+import {
+  advanceName,
+  advanceNames,
+  researchingName,
+} from '../../src/js/UI/components/lib/advances';
 import Notification from '../../src/js/Engine/Notification';
+import { PlayerResearch } from '../../src/js/UI/types';
 import Tile from '@civ-clone/core-world/Tile';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
@@ -339,6 +345,17 @@ const expect = (description: string, actual: string, expected: string) => {
       'Diplomat.unit-bribed',
       { unit: 'Chariot', briber: babylon, previousOwner: india },
       'Indian Chariot unit bribed by Babylonians!',
+    ],
+    // #128: a Future Technology is named with its number, any other advance as it is.
+    [
+      'Player.research-complete',
+      { advance: { _: 'FutureTechnology' }, number: 2 },
+      'You have discovered the secrets of Future Technology 2!',
+    ],
+    [
+      'Player.research-complete',
+      { advance: { _: 'CeremonialBurial' }, number: 1 },
+      'You have discovered the secrets of Ceremonial Burial!',
     ]
   );
 
@@ -463,6 +480,32 @@ const expect = (description: string, actual: string, expected: string) => {
     'Resolution.AdvanceTaken.Acknowledge',
     t('Resolution.AdvanceTaken.Acknowledge', { ns: 'diplomacy' }),
     'OK'
+  );
+
+  // #128: what the Science report, the sidebar and the research choice show.
+  const research = {
+    complete: [
+      { _: 'Writing' },
+      { _: 'FutureTechnology' },
+      { _: 'FutureTechnology' },
+    ],
+    researching: { _: 'FutureTechnology' },
+  } as unknown as PlayerResearch;
+
+  expect(
+    'advanceNames',
+    advanceNames(research.complete.map((advance) => advance._)).join(', '),
+    'Writing, Future Technology 2'
+  );
+  expect(
+    'researchingName',
+    researchingName(research) ?? '',
+    'Future Technology 3'
+  );
+  expect(
+    'advanceName',
+    advanceName('CeremonialBurial', 4),
+    'Ceremonial Burial'
   );
 
   if (failures.length) {

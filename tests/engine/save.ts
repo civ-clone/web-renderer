@@ -8,7 +8,9 @@
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import { config } from './lib/seed';
 
+import Advance from '@civ-clone/core-science/Advance';
 import Built from '@civ-clone/core-world/Rules/Built';
+import { FutureTechnology } from '@civ-clone/civ1-science/Advances';
 import { Game } from '@civ-clone/core-game/Game';
 import Player from '@civ-clone/core-player/Player';
 import { SaveError } from '@civ-clone/core-save-game/SaveGame';
@@ -302,6 +304,22 @@ const report = (): void => {
     defaultGame.interactions.register(embassy as never);
   }
 
+  // Future Technology (#128): a player holding two while researching a third. Each is another `FutureTechnology` in
+  //  the completed advances, so the count has to survive as entities rather than a number.
+  const futurePlayer = defaultGame.players.entries().at(-1),
+    futureResearch = futurePlayer
+      ? defaultGame.playerResearch.getByPlayer(futurePlayer)
+      : null;
+
+  if (futureResearch) {
+    defaultGame.advances
+      .filter((AdvanceType: typeof Advance) => !AdvanceType.repeatable)
+      .forEach((AdvanceType) => futureResearch.addAdvance(AdvanceType));
+    futureResearch.addAdvance(FutureTechnology);
+    futureResearch.addAdvance(FutureTechnology);
+    futureResearch.research(FutureTechnology);
+  }
+
   // --- what a save of a real game actually contains -----------------------
   // `save` refuses rather than writing something unloadable, so a refusal is
   // the measurement — report it and stop, instead of crashing the run.
@@ -451,6 +469,22 @@ const report = (): void => {
   }
 
   push('hydrate succeeds', () => loadError?.message ?? 'ok', 'ok');
+
+  const restoredResearch = target.playerResearch
+    .entries()
+    .find((research) => research.player().id() === futurePlayer?.id());
+
+  push(
+    'Future Technologies come back, with the next under way',
+    () => [
+      restoredResearch
+        ?.complete()
+        .filter((advance) => advance instanceof FutureTechnology).length,
+      restoredResearch?.researching()?.name,
+      restoredResearch?.available().map((AdvanceType) => AdvanceType.name),
+    ],
+    [2, 'FutureTechnology', ['FutureTechnology']]
+  );
   push('loading emits no creation events', () => [...new Set(emitted)], []);
   push(
     'a city on Auto is still on Auto',

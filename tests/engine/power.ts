@@ -37,7 +37,10 @@ const civ1 = new RuleRegistry();
 
 civ1.register(...requirementRules(), ...unitCostRules());
 
-const all = Object.values(Advances) as unknown as (typeof Advance)[];
+// Without Future Technology, which is repeatable and has no place in the tree (#128).
+const all = (Object.values(Advances) as unknown as (typeof Advance)[]).filter(
+  (AdvanceType) => !AdvanceType.repeatable
+);
 const civ1Tiers = tiers(civ1, all);
 const { Alphabet, Chivalry, CodeOfLaws, Feudalism, Monarchy, Pottery } =
   Advances as unknown as { [name: string]: typeof Advance };

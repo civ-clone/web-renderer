@@ -1,4 +1,5 @@
 import { GameData, Player, PlayerResearch, Yield } from '../types';
+import { advanceNames, researchingName } from './lib/advances';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import DataObserver from '../DataObserver';
 import Window from './Window';
@@ -15,7 +16,7 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
 
   return s(
     `<div><p><strong>${t('ScienceReport.researching', {
-      researching: playerResearch.researching?._,
+      researching: researchingName(playerResearch),
       context: playerResearch.researching ? 'researching' : 'notresearching',
     })}</strong></p><p>${t('ScienceReport.progress', {
       progress: playerResearch.progress.value,
@@ -24,14 +25,10 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
       context: playerResearch.researching ? 'researching' : 'notresearching',
     })}</p><p>${researchIcon} ${t('Progress.per-turn', {
       count: reduceKnownYield(yields, 'Research'),
-    })}</p><div class="discovered">${playerResearch.complete
-      .map(
-        (advance) =>
-          `<div>${t(`${advance._}.name`, {
-            defaultValue: advance._,
-            ns: 'science',
-          })}</div>`
-      )
+    })}</p><div class="discovered">${advanceNames(
+      playerResearch.complete.map((advance) => advance._)
+    )
+      .map((name) => `<div>${name}</div>`)
       .join('')}</div></div>`
   );
 };
