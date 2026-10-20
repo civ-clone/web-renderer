@@ -155,7 +155,7 @@
     "@civ-clone/core-power": "^0.1.0",
     "@civ-clone/core-registry": "^0.1.6",
     "@civ-clone/core-rule": "^0.1.4",
-    "@civ-clone/core-save-game": "^0.1.16",
+    "@civ-clone/core-save-game": "^0.1.17",
     "@civ-clone/core-science": "^0.1.7",
     "@civ-clone/core-score": "^0.1.0",
     "@civ-clone/core-spaceship": "^0.1.10",
