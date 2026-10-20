@@ -5,6 +5,7 @@ import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
 import CityStatus from './CityStatus';
+import CivilizationScoreReport from './CivilizationScoreReport';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
@@ -362,6 +363,12 @@ export class GameMenu extends Element {
                 label: t('GameMenu.top-cities'),
                 action: () => {
                   new TopCitiesReport(this.#transport);
+                },
+              },
+              {
+                label: t('GameMenu.civilization-score'),
+                action: () => {
+                  new CivilizationScoreReport(this.#transport);
                 },
               },
               ...(this.#cheatsEnabled

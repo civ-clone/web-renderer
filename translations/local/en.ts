@@ -220,6 +220,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.save-name': 'The {{player}}, turn {{turn}}, {{date}}',
   'GameMenu.science-report': 'Science Report',
   'GameMenu.top-cities': 'Top Cities in the World',
+  'GameMenu.civilization-score': 'Civilization Score',
   'GameMenu.trade-report': 'Trade Report',
 
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
@@ -371,6 +372,26 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.trait.Perfectionist': 'Perfectionist',
   'IntelligenceReport.treasury': 'Treasury: ${{gold, number}}',
   'IntelligenceReport.unknown': 'Unknown',
+
+  'CivilizationScoreReport.term.citizens': 'Citizens',
+  'CivilizationScoreReport.term.citizens.detail':
+    '2 for each happy citizen, 1 for each content one, counted at 40% luxuries',
+  'CivilizationScoreReport.term.future-technology': 'Future Technology',
+  'CivilizationScoreReport.term.future-technology.detail':
+    '5 for each Future Technology',
+  'CivilizationScoreReport.term.peace': 'Peace',
+  'CivilizationScoreReport.term.peace.detail':
+    '3 for each turn of world peace, up to 100',
+  'CivilizationScoreReport.term.pollution': 'Pollution',
+  'CivilizationScoreReport.term.pollution.detail':
+    '−10 for each polluted square in the world',
+  'CivilizationScoreReport.term.spaceship': 'Spaceship',
+  'CivilizationScoreReport.term.spaceship.detail':
+    'Once it lands: half its colonists (in tens of thousands) × its chance of success',
+  'CivilizationScoreReport.term.wonders': 'Wonders',
+  'CivilizationScoreReport.term.wonders.detail': '20 for each Wonder',
+  'CivilizationScoreReport.title': 'Civilization Score',
+  'CivilizationScoreReport.total': 'Total',
 
   'SelectionWindow.default-body': 'Please choose one of the following:',
 

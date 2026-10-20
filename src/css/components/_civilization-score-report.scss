@@ -1,0 +1,27 @@
+.civilization-score-report {
+  .terms {
+    border-collapse: collapse;
+    width: 100%;
+
+    td {
+      padding: 0.25rem 0.5rem;
+      vertical-align: top;
+    }
+
+    .detail {
+      display: block;
+      font-size: 0.85em;
+      opacity: 0.75;
+    }
+
+    .value {
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+
+    .total td {
+      border-top: 2px solid currentColor;
+      font-weight: bold;
+    }
+  }
+}

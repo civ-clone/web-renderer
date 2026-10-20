@@ -24,6 +24,7 @@ import City from './components/City';
 import Cities from './components/Map/Cities';
 import CityNames from './components/Map/CityNames';
 import CityStatus from './components/CityStatus';
+import CivilizationScoreReport from './components/CivilizationScoreReport';
 import ConfirmationWindow from './components/ConfirmationWindow';
 import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
@@ -1978,6 +1979,7 @@ export class Renderer {
               F5: () => new TradeReport(data.player, portal, transport),
               F6: () => new ScienceReport(data.player),
               F8: () => new TopCitiesReport(transport),
+              F9: () => new CivilizationScoreReport(transport),
             };
 
             let lastShiftedCode = '';

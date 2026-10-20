@@ -118,6 +118,8 @@ import {
   defaultTopCitiesLimit,
   topCitiesRows,
 } from './lib/topCities';
+import { score, scoreTerms } from '@civ-clone/core-score/lib/score';
+import { CivilizationScore } from './lib/civilizationScore';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
@@ -597,6 +599,11 @@ export class DataTransferClient extends Client implements IClient {
     //  shows (#124).
     this.#transport.receive('topCities', (limit) =>
       this.#transport.send('topCities', this.topCities(limit))
+    );
+
+    // The engine's `Score` rules add it up (#149).
+    this.#transport.receive('civilizationScore', () =>
+      this.#transport.send('civilizationScore', this.civilizationScore())
     );
 
     // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
@@ -2084,6 +2091,15 @@ export class DataTransferClient extends Client implements IClient {
     return cityBuild.toPlainObject((object: any) =>
       object === cityBuild ? available : filter(object)
     );
+  }
+
+  civilizationScore(): CivilizationScore {
+    return {
+      terms: scoreTerms(this.player(), ruleRegistryInstance).map(
+        ({ term, value }) => ({ term, value })
+      ),
+      total: score(this.player(), ruleRegistryInstance),
+    };
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {
