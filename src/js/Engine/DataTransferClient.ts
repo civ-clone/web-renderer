@@ -731,9 +731,14 @@ export class DataTransferClient extends Client implements IClient {
         // A disbanded or destroyed unit leaves its square, whoever's it was (#138).
         this.#sendTile(unit.tile());
 
-        // It stays in the player's list of units, marked destroyed, and its home city no longer supports it (#411).
+        // It goes once more, marked destroyed, and then drops out of the player's list of units, which no longer holds
+        //  it or the home city it kept (#459). Its home city no longer supports it (#411).
         this.#sendUnit(unit);
         this.#sendCity(unit.city());
+
+        if (unit.player() === this.player()) {
+          this.#sendPlayerKey('units');
+        }
       });
     });
 
@@ -1897,11 +1902,10 @@ export class DataTransferClient extends Client implements IClient {
 
       playerTreasury.sell(cityImprovement);
 
-      // Selling the Palace changes every city's corruption, so every city goes again (#460 would say when). Destroyed
-      //  ones too: the player's units keep its destroyed units, and they keep their home cities (#459).
+      // Selling the Palace changes every city's corruption, so every city goes again (#460 would say when).
       this.#sendPlayerObject(playerTreasury);
       cityRegistryInstance
-        .getByPlayer(this.player(), true)
+        .getByPlayer(this.player())
         .forEach((city) => this.#sendCity(city));
 
       return false;
