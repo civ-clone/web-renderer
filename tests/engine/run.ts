@@ -104,7 +104,12 @@ const finish = (): void => {
           "Michelangelo's Chapel and J.S. Bach's Cathedral as in v474.05), " +
           'and #241 with #380 (buy prices as in v474.05, and no unit ' +
           'purchases in civil disorder: one Spend rule fewer, and the prices ' +
-          'in the DTO change, but play does not).',
+          'in the DTO change, but play does not). #31 (selling an ' +
+          'improvement: a Sell and a Sold rule more, and each ' +
+          "improvement's saleValue in the DTO) changes no play, though turn " +
+          "50's state hash moves: the sale values built for the turn-10 DTO " +
+          'take ids, so entities created after it are numbered differently. ' +
+          'Random calls and entity and field counts are unchanged.',
         checksums,
         snapshots,
       },

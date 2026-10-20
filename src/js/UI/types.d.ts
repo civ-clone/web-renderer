@@ -30,7 +30,7 @@ export interface City extends EntityInstance<'City'> {
   // map shows it. `civilDisorder` is whether it would riot as things stand.
   civilDisorderDeclared: boolean;
   growth: CityGrowth;
-  improvements: EntityInstance[];
+  improvements: CityImprovement[];
   originalPlayer: Player;
   player: Player;
   // How much the city pollutes, from the engine's civ1-city-improvement `pollution` data: never below 0, and above 0 only
@@ -234,6 +234,11 @@ export interface World extends EntityInstance<'World'> {
 export interface Yield<Types = 'Yield'> extends EntityInstance<Types> {
   value: number;
   values: [number, string][];
+}
+
+export interface CityImprovement extends EntityInstance {
+  // What it sells for, from core-treasury's `Sell` rules: empty when it can't be sold now (#31).
+  saleValue?: SpendCost[];
 }
 
 export interface CityImprovementContent

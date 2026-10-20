@@ -1296,6 +1296,7 @@ export class Renderer {
                   'ChangeWorkedTile',
                   'CompleteProduction',
                   'InactiveUnit',
+                  'SellImprovement',
                 ],
                 allExcludedActions = new Set([
                   ...primaryActionList,

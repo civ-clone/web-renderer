@@ -20,7 +20,10 @@ import City from '@civ-clone/core-city/City';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Civilization from '@civ-clone/core-civilization/Civilization';
-import { CompleteProduction } from '@civ-clone/civ1-treasury/PlayerActions';
+import {
+  CompleteProduction,
+  SellImprovement,
+} from '@civ-clone/civ1-treasury/PlayerActions';
 import DataObject, {
   ObjectMap,
   typeNameOf,
@@ -82,6 +85,7 @@ import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
+import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
@@ -1866,6 +1870,39 @@ export class DataTransferClient extends Client implements IClient {
 
       this.#sendPlayerObject(playerTreasury);
       this.#sendCityBuild(cityBuild);
+
+      return false;
+    }
+
+    // Selling one of the city's improvements (#31): the rules decide whether it can be sold, and for what.
+    if (playerAction instanceof SellImprovement) {
+      const city = playerAction.value(),
+        [playerTreasury] = playerTreasuryRegistryInstance.getBy(
+          'id',
+          action.treasury
+        ),
+        [cityImprovement] = cityImprovementRegistryInstance
+          .getByCity(city)
+          .filter(
+            (cityImprovement) => cityImprovement.id() === action.improvement
+          );
+
+      if (!playerTreasury || !cityImprovement) {
+        console.warn(
+          `No playerTreasury (${action.treasury}) or improvement (${action.improvement}) found.`
+        );
+
+        return false;
+      }
+
+      playerTreasury.sell(cityImprovement);
+
+      // Selling the Palace changes every city's corruption, so every city goes again (#460 would say when). Destroyed
+      //  ones too: the player's units keep its destroyed units, and they keep their home cities (#459).
+      this.#sendPlayerObject(playerTreasury);
+      cityRegistryInstance
+        .getByPlayer(this.player(), true)
+        .forEach((city) => this.#sendCity(city));
 
       return false;
     }
