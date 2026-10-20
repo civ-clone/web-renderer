@@ -1,5 +1,6 @@
 import {
   City as CityData,
+  CityImprovement,
   CityImprovementMaintenanceGold,
   PlainObject,
   Player,
@@ -352,25 +353,50 @@ const renderYields = (city: CityData): Node => {
         }
       )}</p><p>${renderProgress(city.growth, city.yields, 'Food')}</p></div>`
     ),
-  renderImprovements = (city: CityData): Node => {
+  renderImprovements = (
+    city: CityData,
+    sellImprovement: (
+      improvement: CityImprovement,
+      saleValue: SpendCost
+    ) => void,
+    readOnly: boolean
+  ): Node => {
     return s(
       `<div class="improvements"></div>`,
       s(
         `<div></div>`,
-        ...city.improvements.map((improvement) =>
-          s(
-            `<div>${getLabelForBuildableEntity(improvement)}</div>`,
-            ...city.yields
-              .filter(
-                (
-                  cityYield: Yield | CityImprovementMaintenanceGold
-                ): cityYield is CityImprovementMaintenanceGold =>
-                  cityYield._ === 'CityImprovementMaintenanceGold' &&
-                  cityYield.cityImprovement.id === improvement.id
-              )
-              .flatMap((cityYield) => yieldImages(cityYield, true))
-          )
-        )
+        ...city.improvements.map((improvement) => {
+          const [saleValue] = readOnly
+              ? []
+              : (improvement.saleValue ?? []).filter(
+                  (saleValue) => saleValue.resource._ === 'Gold'
+                ),
+            row = s(
+              saleValue
+                ? `<button class="sell">${getLabelForBuildableEntity(
+                    improvement
+                  )}</button>`
+                : `<div>${getLabelForBuildableEntity(improvement)}</div>`,
+              ...city.yields
+                .filter(
+                  (
+                    cityYield: Yield | CityImprovementMaintenanceGold
+                  ): cityYield is CityImprovementMaintenanceGold =>
+                    cityYield._ === 'CityImprovementMaintenanceGold' &&
+                    cityYield.cityImprovement.id === improvement.id
+                )
+                .flatMap((cityYield) => yieldImages(cityYield, true))
+            );
+
+          // Selling an improvement, as clicking it in Civ1's list does (#31).
+          return saleValue
+            ? h(row, {
+                click() {
+                  sellImprovement(improvement, saleValue);
+                },
+              })
+            : row;
+        })
       )
     );
   },
@@ -443,6 +469,10 @@ const renderYields = (city: CityData): Node => {
     transport: Transport,
     chooseProduction: () => void,
     completeProduction: (spendCost: SpendCost) => void,
+    sellImprovement: (
+      improvement: CityImprovement,
+      saleValue: SpendCost
+    ) => void,
     readOnly: boolean
   ) => {
     return s(
@@ -466,7 +496,7 @@ const renderYields = (city: CityData): Node => {
           renderSupportedUnits(city)
         ),
         renderMap(portal, city, transport, readOnly),
-        renderImprovements(city)
+        renderImprovements(city, sellImprovement, readOnly)
       ),
       s(
         '<div class="bottom-row"></div>',
@@ -515,6 +545,8 @@ export class City extends Window {
         transport,
         () => this.changeProduction(),
         (spendCost: SpendCost) => this.completeProduction(spendCost),
+        (improvement: CityImprovement, saleValue: SpendCost) =>
+          this.sellImprovement(improvement, saleValue),
         readOnly
       ),
       {
@@ -571,6 +603,8 @@ export class City extends Window {
               transport,
               () => this.changeProduction(),
               (spendCost: SpendCost) => this.completeProduction(spendCost),
+              (improvement: CityImprovement, saleValue: SpendCost) =>
+                this.sellImprovement(improvement, saleValue),
               false
             )
           );
@@ -698,6 +732,28 @@ export class City extends Window {
         this.#transport.send('action', {
           name: 'CompleteProduction',
           id: this.#city.build.id,
+          treasury: treasury.id,
+        })
+    );
+  }
+
+  sellImprovement(improvement: CityImprovement, saleValue: SpendCost): void {
+    const treasury = getTreasuryForYield(
+      this.#city.player,
+      saleValue.resource._
+    );
+
+    new ConfirmationWindow(
+      t('ConfirmationWindow.Generic.title'),
+      t('City.SellImprovement.body', {
+        item: getLabelForBuildableEntity(improvement),
+        saleValue,
+      }),
+      () =>
+        this.#transport.send('action', {
+          name: 'SellImprovement',
+          id: this.#city.id,
+          improvement: improvement.id,
           treasury: treasury.id,
         })
     );

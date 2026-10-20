@@ -48,6 +48,7 @@ import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction'
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import Unit from '@civ-clone/core-unit/Unit';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
+import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 
 // Long enough for the human, playing by hand, to have founded a few cities and have units to move about (#411).
 const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 120);
@@ -857,6 +858,8 @@ const human = {
   helper: null as SimpleAIClient | null,
   pendingChoice: null as ((value: any) => void) | null,
   revolted: false,
+  // Whether it has sold an improvement: once a game is enough, and more leaves it too weak to play on with (#31).
+  sold: false,
 };
 
 const roll = (): number => {
@@ -1294,6 +1297,43 @@ const sideAction = (
         human.revolted = true;
 
         return { name: 'Revolution', id: action.value().id() };
+      },
+      () => {
+        // An improvement the rules will sell, as the UI only offers those (#31).
+        if (human.sold || turnInstance.value() < 20) {
+          return null;
+        }
+
+        const [treasury] = playerTreasuryRegistryInstance.getByPlayer(
+            humanPlayer!
+          ),
+          improvements = named('SellImprovement').flatMap((action) =>
+            cityImprovementRegistryInstance
+              .getByCity(action.value())
+              .filter((cityImprovement) =>
+                treasury
+                  ?.saleValue(cityImprovement)
+                  .some(
+                    (saleValue) => saleValue.resource() === treasury.yield()
+                  )
+              )
+          ),
+          improvement = improvements.length ? pick(improvements) : null;
+
+        if (!improvement || !treasury) {
+          return null;
+        }
+
+        human.sold = true;
+
+        return improvement && treasury
+          ? {
+              name: 'SellImprovement',
+              id: improvement.city().id(),
+              improvement: improvement.id(),
+              treasury: treasury.id(),
+            }
+          : null;
       },
     ];
 

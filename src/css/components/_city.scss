@@ -149,4 +149,20 @@
   .improvements .yield-icon:first-child {
     margin-left: 0.5rem;
   }
+
+  // An improvement that can be sold reads as the others do, and is clicked to sell it (#31).
+  .improvements button.sell {
+    all: unset;
+    display: block;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 1px dotted currentColor;
+    }
+  }
 }

@@ -115,6 +115,15 @@ const expect = (description: string, actual: string, expected: string) => {
       body.includes(`rush building of ${item} for`) ? item : body,
       item
     );
+
+    expect(
+      'City.SellImprovement.body',
+      t('City.SellImprovement.body', {
+        item,
+        saleValue: { value: 40, resource: { _: 'Gold' } },
+      }),
+      `Do you want to sell your ${item} for 40 Gold?`
+    );
   });
 
   // Asansol is an Indian city name, now held by Babylon: the name has to come
