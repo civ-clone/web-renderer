@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1061,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -128,7 +128,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 103,
+          "Build": 104,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -221,7 +221,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 22
+          "YieldModifier": 19
         }
       }
     },
@@ -389,7 +389,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1061,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -403,7 +403,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 103,
+          "Build": 104,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -496,7 +496,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 22
+          "YieldModifier": 19
         }
       }
     },
@@ -841,7 +841,7 @@
       "randomCalls": 8778,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1061,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -855,7 +855,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 103,
+          "Build": 104,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -948,7 +948,7 @@
           "WonderHelped": 1,
           "Year": 5,
           "Yield": 204,
-          "YieldModifier": 22
+          "YieldModifier": 19
         }
       }
     }
