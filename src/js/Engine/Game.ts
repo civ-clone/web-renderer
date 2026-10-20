@@ -28,6 +28,12 @@ export class Game implements IGame {
   constructor(transport: Transport<TransportDataMap>) {
     this.#transport = transport;
 
+    // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
+    //  makes one itself. Bound here rather than in `bindEvents`, so a loaded game answers too.
+    engine.on('player:spawned', (player: Player): void => {
+      clientRegistryInstance.register(this.#createClient(player, false));
+    });
+
     transport.receive('save', ({ name }: { name: string }): void => {
       try {
         this.#transport.send('saveGame', {
