@@ -5,6 +5,7 @@ import {
 import Intelligence from '../../Engine/Requests/Intelligence';
 import Transport from '../Transport';
 import Window from './Window';
+import { advanceNames } from './lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -91,11 +92,7 @@ const renderDetails = ({
     )}</h4><p>${
       advances.length === 0
         ? t('IntelligenceReport.no-technologies')
-        : advances
-            .map((advance) =>
-              t(`${advance}.name`, { defaultValue: advance, ns: 'science' })
-            )
-            .join(', ')
+        : advanceNames(advances).join(', ')
     }</p></div>`
   ),
 ];

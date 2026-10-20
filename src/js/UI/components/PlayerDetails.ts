@@ -1,6 +1,7 @@
 import { City, Player } from '../types';
 import { Element, s } from '@dom111/element';
 import isAnarchy from './lib/government';
+import { researchingName } from './lib/advances';
 import { reduceKnownYields } from '../lib/yieldMap';
 import { t } from 'i18next';
 
@@ -79,10 +80,7 @@ export class PlayerDetails extends Element {
             progress: research.progress.value,
             cost: research.cost.value,
             perTurn: totalResearch,
-            researching: t(`${research.researching?._}.name`, {
-              defaultValue: research.researching?._,
-              ns: 'science',
-            }),
+            researching: researchingName(research),
             turns: Number.isFinite(researchTurns) ? researchTurns : 0,
             context: `${research.researching ? '' : 'not'}researching${
               anarchy ? '-anarchy' : ''

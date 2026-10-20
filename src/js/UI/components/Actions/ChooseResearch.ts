@@ -4,6 +4,7 @@ import SelectionWindow from '../SelectionWindow';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
 import { combinedYields } from '../lib/playerYields';
+import { advanceName, held } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from '../lib/cityYields';
@@ -25,10 +26,7 @@ export class ChooseResearch extends Action {
     const playerResearch = this.value(),
       yields = this.#player ? combinedYields(this.#player) : null,
       label = (advance: string): string => {
-        const name = t(`${advance}.name`, {
-            defaultValue: advance,
-            ns: 'science',
-          }),
+        const name = advanceName(advance, held(playerResearch, advance) + 1),
           cost = playerResearch.costs?.[advance];
 
         if (yields === null || cost === undefined) {

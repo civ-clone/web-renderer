@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1058,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -187,7 +187,7 @@
           "ProcessYield": 5,
           "Rank": 4,
           "Removed": 4,
-          "Requirements": 60,
+          "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,
@@ -387,7 +387,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1058,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -460,7 +460,7 @@
           "ProcessYield": 5,
           "Rank": 4,
           "Removed": 4,
-          "Requirements": 60,
+          "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,
@@ -837,7 +837,7 @@
       "randomCalls": 8778,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1058,
+        "total": 1059,
         "byType": {
           "Action": 63,
           "ActionPerformed": 1,
@@ -910,7 +910,7 @@
           "ProcessYield": 5,
           "Rank": 4,
           "Removed": 4,
-          "Requirements": 60,
+          "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
           "ScienceBias": 2,

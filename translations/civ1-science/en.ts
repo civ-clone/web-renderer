@@ -31,6 +31,8 @@ i18next.addResources(
     'Feudalism.name': 'Feudalism',
     'Flight.name': 'Flight',
     'FusionPower.name': 'Fusion Power',
+    'FutureTechnology.name': 'Future Technology',
+    'FutureTechnology.name_numbered': 'Future Technology {{number}}',
     'GeneticEngineering.name': 'Genetic Engineering',
     'Gunpowder.name': 'Gunpowder',
     'HorsebackRiding.name': 'Horseback Riding',
