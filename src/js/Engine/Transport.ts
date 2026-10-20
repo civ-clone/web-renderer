@@ -3,6 +3,7 @@ import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { CivilizationScore } from './lib/civilizationScore';
+import { GameOverDetails } from './lib/gameOver';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
@@ -75,10 +76,14 @@ declare global {
     difficulties: TransportData<DifficultyOption[], null>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
     embassyEstablished: TransportData<string, never>;
+    // Keep playing after the game has ended (#176).
+    gameContinue: TransportData<never, null>;
     // The map as it is sent, not rebuilt: the UI builds its game data from it once, itself (#333).
     gameData: TransportData<ObjectMap, ObjectMap>;
     gameDataPatch: TransportData<DataPatch[], DataPatch[]>;
     gameNotification: TransportData<Notification, Notification>;
+    // How the game ended, for the ending window (#176).
+    gameOver: TransportData<GameOverDetails, never>;
     // The intelligence report (F3, #58).
     intelligence: TransportData<IntelligenceRow[], null>;
     // A city a Diplomat has investigated (#58), to show read-only.
@@ -98,7 +103,8 @@ declare global {
     unitHalted: TransportData<{ target: string; unit: string }, never>;
     save: TransportData<null, { name: string }>;
     saveGame: TransportData<{ name: string; data: string }, never>;
-    restart: TransportData<null, null>;
+    // Game → Retire (#176, #362).
+    retire: TransportData<never, null>;
     setOption: TransportData<
       null,
       {

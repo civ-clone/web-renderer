@@ -1,4 +1,5 @@
-.civilization-score-report {
+.civilization-score-report,
+.game-over {
   .terms {
     border-collapse: collapse;
     width: 100%;
@@ -23,5 +24,52 @@
       border-top: 2px solid currentColor;
       font-weight: bold;
     }
+  }
+}
+
+.civilization-score-report,
+.game-over {
+  .scoring-complete {
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+  }
+}
+
+.game-over {
+  .content {
+    max-width: 36rem;
+  }
+
+  .ending,
+  .rating {
+    text-align: center;
+  }
+
+  footer {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-top: 1rem;
+  }
+}
+
+.hall-of-fame {
+  border-collapse: collapse;
+  width: 100%;
+
+  th,
+  td {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+  }
+
+  .value {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .current td {
+    font-weight: bold;
   }
 }
