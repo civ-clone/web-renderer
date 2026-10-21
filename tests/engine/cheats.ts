@@ -432,8 +432,54 @@ engine.on('turn:start', (turn: number): void => {
     )}`
   );
 
+  // 9. ModifyUnit sets the fields it is given that a unit may have changed, ignores any others, and patches the unit; an
+  //    unknown unit changes nothing. Only `moves` is checked: the unit works out its attack, defence, movement and
+  //    visibility afresh each time they are asked for, so setting them doesn't last.
+  const movesBefore = localUnit.moves().value(),
+    movesAfter = movesBefore + 2,
+    modifyBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'ModifyUnit',
+    value: {
+      unitId: localUnit.id(),
+      properties: { moves: movesAfter, player: rival.id() },
+    },
+  });
+
+  assert(
+    localUnit.moves().value() === movesAfter,
+    `ModifyUnit should set moves to ${movesAfter}, got ${localUnit
+      .moves()
+      .value()}`
+  );
+  assert(
+    localUnit.player() === localPlayer,
+    'ModifyUnit should leave the fields it may not change alone'
+  );
+  assert(
+    (sent.gameDataPatch ?? [])
+      .slice(modifyBatchesBefore)
+      .flat()
+      .some((patch: DataPatch) => localUnit.id() in patch),
+    'ModifyUnit should patch the unit'
+  );
+
+  const modifyUnknownBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'ModifyUnit',
+    value: { unitId: 'no-such-unit', properties: { moves: movesAfter + 1 } },
+  });
+
+  assert(
+    (sent.gameDataPatch ?? []).length === modifyUnknownBatchesBefore &&
+      localUnit.moves().value() === movesAfter,
+    'ModifyUnit on an unknown unit should change and send nothing'
+  );
+
   console.log(
-    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player, RevealMap patches the map where the page reads it)'
+    'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player, RevealMap patches the map where the page reads it, ModifyUnit sets moves and only the fields it may)'
   );
   process.exit(0);
 });
