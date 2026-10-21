@@ -1,17 +1,9 @@
-import {
-  City as CityData,
-  DataPatch,
-  GameData,
-  Tile,
-  Unit,
-  UnitAction,
-} from './types';
+import { City as CityData, DataPatch, GameData, Tile } from './types';
 import { emit, off, on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import UnitActions from './components/UnitActions';
-import { directionKeyMap, keyToActionsMap } from './lib/unitActionKeys';
 import ActiveUnit from './components/Map/ActiveUnit';
 import City from './components/City';
 import Cities from './components/Map/Cities';
@@ -30,8 +22,6 @@ import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import { guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
-import chooseActiveUnit from './lib/chooseActiveUnit';
-import UnitQueue from './lib/UnitQueue';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -41,14 +31,7 @@ import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
 import IntelligenceReport from './components/IntelligenceReport';
 import TopCitiesReport from './components/TopCitiesReport';
-import { chooseUnitAction, openArrivalWindow } from './lib/unitActionPrompts';
 import HaltedUnits from './lib/haltedUnits';
-import {
-  UnitActionsRequest,
-  hasUnitActions,
-  neighbourActions,
-  unitActions,
-} from './lib/unitActions';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
@@ -65,8 +48,7 @@ import shouldAutoEndTurn from './lib/autoEndTurn';
 import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import { instance as dataChanges } from './lib/DataChanges';
-import ActiveUnitTiles from './lib/ActiveUnitTiles';
-import PendingMove, { plainMove } from './lib/PendingMove';
+import ActiveUnitController from './game/ActiveUnitController';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
@@ -133,97 +115,8 @@ export class Renderer {
         // window can be skipped — a loaded game is not a new one.
         pendingSave = await takePendingSave(),
         mainMenu = new MainMenu(mainMenuElement, this.#transport),
-        // The worker sends a unit's actions only once asked for them (#323).
-        unitActionsRequest = new UnitActionsRequest((unitId) =>
-          transport.send('unitActions', unitId)
-        ),
         // Units whose GoTo stopped next to a choice (#357).
-        haltedUnits = new HaltedUnits(),
-        // Input-critical state only: keeps `activeUnit`/`lastUnit` and the map
-        // layers' active-unit pointers current synchronously, so consecutive
-        // moves of a multi-move unit always read the post-move tile. No render.
-        applyActiveUnit = (
-          unit: Unit | null,
-          portal: GamePortal,
-          unitsMap: Units,
-          activeUnitsMap: ActiveUnit
-        ) => {
-          // The keys kept for one unit were meant for it, not the next (#326).
-          pendingMove.activate(unit?.id ?? null);
-
-          // While its move is answered, the unit is drawn on the tile it is
-          // moving to.
-          const pendingTile = pendingMove.destination(unit?.id ?? null);
-
-          activeUnitTiles.change(
-            unit === null ? null : { tile: unit.tile, pendingTile }
-          );
-
-          activeUnit = unit;
-
-          portal.setActiveUnit(unit);
-          unitsMap.setActiveUnit(unit, pendingTile);
-          activeUnitsMap.setActiveUnit(unit, pendingTile);
-
-          if (unit !== null) {
-            lastUnit = unit;
-            unitQueue.activated(unit.id);
-          }
-
-          // Every way a unit becomes active comes through here: the next unit after an update, a click, the stack
-          //  window and Wait.
-          unitActionsRequest.activate(unit);
-        },
-        // Display half: safe to defer/coalesce (canvas composites + unit info).
-        renderActiveUnit = (
-          unit: Unit | null,
-          portal: GamePortal,
-          unitsMap: Units,
-          activeUnitsMap: ActiveUnit
-        ) => {
-          const unitDetails = new UnitDetails(unitInfo, unit);
-
-          unitDetails.build();
-
-          // Only the tiles an active-unit change actually invalidated, rather
-          // than a full-world re-render of the layer on every unit selection
-          // and move. Every other tile reaches this layer the same way it
-          // reaches the others, through `portal.build(tilesToRender)`.
-          unitsMap.update(activeUnitTiles.take());
-
-          unitsMap.setVisible(true);
-          activeUnitsMap.render();
-          activeUnitsMap.setVisible(true);
-
-          if (unit === null) {
-            portal.render();
-
-            return;
-          }
-
-          const tile = pendingMove.destination(unit.id) ?? unit.tile;
-
-          // A unit on the very edge of the map is visible but easily missed,
-          // so it is brought back to the middle before it gets that far.
-          if (
-            !portal.isVisible(tile.x, tile.y, options.get('unitEdgeMargin', 0))
-          ) {
-            portal.setCenter(tile.x, tile.y);
-          }
-
-          portal.render();
-        },
-        // For input call sites (unit selection/cycling), where immediate visual
-        // feedback is wanted: apply state then render synchronously.
-        setActiveUnit = (
-          unit: Unit | null,
-          portal: GamePortal,
-          unitsMap: Units,
-          activeUnitsMap: ActiveUnit
-        ) => {
-          applyActiveUnit(unit, portal, unitsMap, activeUnitsMap);
-          renderActiveUnit(unit, portal, unitsMap, activeUnitsMap);
-        };
+        haltedUnits = new HaltedUnits();
 
       preloadAssets(preloadContainer);
 
@@ -248,21 +141,12 @@ export class Renderer {
           tilesToRender.clear();
 
           return tiles;
-        },
-        // Collected in `applyActiveUnit`, which is the only point that still
-        // knows the outgoing unit — by the time the coalesced
-        // `renderActiveUnit` runs, `lastUnit` has already been pointed at the
-        // incoming one.
-        activeUnitTiles = new ActiveUnitTiles(),
-        // A move drawn before the engine has answered it, and the keys typed
-        // while it is (#326).
-        pendingMove = new PendingMove<Tile>();
+        };
 
-      let lastUnit: Unit | null = null,
-        activeUnit: Unit | null = null;
-
-      // The units that can act this turn, and those deferred with `w` (wait).
-      const unitQueue = new UnitQueue();
+      // Made once the game data, and the map it draws on, have arrived. The
+      //  choice windows' receiver below, registered before then, forgets the
+      //  keys kept for a unit through it.
+      let activeUnitController: ActiveUnitController | null = null;
 
       const transportDisposers: Array<() => void> = [];
 
@@ -291,7 +175,7 @@ export class Renderer {
 
       transportDisposers.push(
         ChoiceHandler.listen(transport, {
-          clearKeys: (): void => pendingMove.clearKeys(),
+          clearKeys: (): void => activeUnitController?.clearKeys(),
           debugFlags,
         })
       );
@@ -399,6 +283,27 @@ export class Renderer {
               citiesMap = portal.getLayer(Cities) as Cities,
               cityNamesMap = portal.getLayer(CityNames) as CityNames,
               activeUnitsMap = portal.getLayer(ActiveUnit) as ActiveUnit,
+              unitController = new ActiveUnitController({
+                activeUnitLayer: activeUnitsMap,
+                arrivalClosed: (): void => {
+                  if (!waitingForTurn) {
+                    updateState(objectMap);
+                  }
+                },
+                data: () => data,
+                haltedUnits,
+                options,
+                portal,
+                scheduleRender: (): void => scheduleRender(),
+                showUnitDetails: (unit): void => {
+                  const unitDetails = new UnitDetails(unitInfo, unit);
+
+                  unitDetails.build();
+                },
+                transport,
+                unitsLayer: unitsMap,
+                world,
+              }),
               minimap = new Minimap(
                 minimapCanvas,
                 world,
@@ -407,10 +312,13 @@ export class Renderer {
                 // The marker shares the main map's blink phase, so the active
                 // unit can be found on the minimap and clicked to centre
                 // without reaching for the keyboard.
-                () =>
-                  activeUnit && activeUnitsMap.isVisible()
+                () => {
+                  const activeUnit = unitController.active();
+
+                  return activeUnit && activeUnitsMap.isVisible()
                     ? activeUnit.tile
-                    : null
+                    : null;
+                }
               ),
               primaryActions = new Actions(actionArea, portal, this.#transport),
               secondaryActions = new Actions(
@@ -457,6 +365,8 @@ export class Renderer {
                 minimap.update();
               };
 
+            activeUnitController = unitController;
+
             gameMenuItem.build();
 
             yieldsMap.setVisible(false);
@@ -467,14 +377,15 @@ export class Renderer {
                 return;
               }
 
-              setActiveUnit(unit, portal, unitsMap, activeUnitsMap);
+              unitController.set(unit);
             });
 
             intervalHandler.on(() => {
               // With no active unit the layer draws nothing, so toggling it is
               // invisible and there is no reason to composite every layer for
-              // it. `renderActiveUnit` sets the layer visible again whenever a
-              // unit becomes active, so leaving the flag alone here is safe.
+              // it. `unitController.render` sets the layer visible again
+              // whenever a unit becomes active, so leaving the flag alone here
+              // is safe.
               const blinking = activeUnitsMap.hasActiveUnit();
 
               if (blinking) {
@@ -517,8 +428,7 @@ export class Renderer {
               data: () => data,
               minimap,
               portal,
-              setActiveUnit: (unit) =>
-                setActiveUnit(unit, portal, unitsMap, activeUnitsMap),
+              setActiveUnit: (unit) => unitController.set(unit),
               tilesPendingRender: () => tilesToRender.size,
               transport,
               unitsMap,
@@ -567,6 +477,8 @@ export class Renderer {
 
               secondaryActions.build(secondary);
 
+              const activeUnit = unitController.active();
+
               unitActionButtons.build(
                 waitingForTurn ? null : activeUnit,
                 activeUnit
@@ -589,7 +501,7 @@ export class Renderer {
 
               playerDetails.build();
 
-              renderActiveUnit(activeUnit, portal, unitsMap, activeUnitsMap);
+              unitController.render(unitController.active());
 
               // ensure UI looks responsive
               portal.build(takeTilesToRender());
@@ -610,141 +522,6 @@ export class Renderer {
               });
             };
 
-            // What a unit key does to the active unit, typed now or kept while
-            // a move was answered (#326): 'sent' when it sent an action,
-            // 'prompted' when it opened a window to choose or confirm first,
-            // and `null` when it does nothing.
-            const playUnitKey = (key: string): 'sent' | 'prompted' | null => {
-                const unit = activeUnit;
-
-                if (unit === null) {
-                  return null;
-                }
-
-                if (key in keyToActionsMap) {
-                  const actions = [...keyToActionsMap[key]];
-
-                  while (actions.length) {
-                    const actionName = actions.shift(),
-                      [unitAction] = unitActions(unit).filter(
-                        (action): boolean => action._ === actionName
-                      );
-
-                    if (unitAction) {
-                      transport.send('action', {
-                        name: 'ActiveUnit',
-                        id: unit.id,
-                        unitAction: unitAction._,
-                        target: unitAction.to.id,
-                      });
-
-                      return 'sent';
-                    }
-                  }
-                }
-
-                // Where the engine refuses a join, it says why, so the key
-                // doesn't do nothing and say nothing.
-                if (key === 'b' && unit.joinCityRefusal) {
-                  const { reason, ...details } = unit.joinCityRefusal,
-                    city = world.get(unit.tile.x, unit.tile.y).city;
-
-                  new NotificationWindow(
-                    t(`JoinCity.${reason}.title`),
-                    document.createTextNode(
-                      t(`JoinCity.${reason}.body`, {
-                        ...details,
-                        city: city?.name,
-                      })
-                    )
-                  );
-
-                  return 'prompted';
-                }
-
-                if (!(key in directionKeyMap)) {
-                  return null;
-                }
-
-                const directionActions = neighbourActions(
-                    unit,
-                    directionKeyMap[key]
-                  ),
-                  // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
-                  //  (#57).
-                  unitId = unit.id,
-                  move = plainMove(directionActions),
-                  send = (chosen: UnitAction): void =>
-                    transport.send('action', {
-                      name: 'ActiveUnit',
-                      id: unitId,
-                      unitAction: chosen._,
-                      target: chosen.to.id,
-                    });
-
-                // Drawn on the tile it is moving to now, rather than once the
-                // engine has answered and the frame after that has drawn it.
-                if (move !== null) {
-                  send(move);
-
-                  pendingMove.start(unitId, move.to);
-
-                  applyActiveUnit(unit, portal, unitsMap, activeUnitsMap);
-
-                  scheduleRender();
-
-                  return 'sent';
-                }
-
-                if (directionActions.length === 0) {
-                  return null;
-                }
-
-                let sent = false;
-
-                chooseUnitAction(unit, directionActions, (chosen) => {
-                  sent = true;
-
-                  send(chosen);
-                });
-
-                return sent ? 'sent' : 'prompted';
-              },
-              // Plays the keys kept while the last move was answered, each
-              // read against the unit as the answer left it, as if typed now.
-              drainKeys = (): void => {
-                if (
-                  activeUnit === null ||
-                  !hasUnitActions(activeUnit) ||
-                  !pendingMove.queued()
-                ) {
-                  return;
-                }
-
-                // A window the answer opened (a hut's news, talks) has the
-                // keys now, as it would a key typed now: the rest were typed
-                // without knowing it would be there.
-                if (
-                  document.querySelector('dialog.window.modal') !== null ||
-                  document.activeElement?.closest('dialog.window')
-                ) {
-                  pendingMove.clear();
-
-                  return;
-                }
-
-                pendingMove.drain((key) => {
-                  const played = playUnitKey(key);
-
-                  // So does one a key opened, to confirm an attack, say.
-                  if (played === 'prompted') {
-                    pendingMove.clear();
-                  }
-
-                  return played !== null;
-                });
-              };
-
             transportDisposers.push(() => {
               if (renderFrame !== null) {
                 cancelAnimationFrame(renderFrame);
@@ -761,10 +538,10 @@ export class Renderer {
 
             // Runs synchronously on every patch. Reconstitution and all state
             // the input handlers read synchronously (`data`, `world` tiles,
-            // `activeUnit`/`unitQueue`/`lastUnit`, the map layers' active-unit
-            // pointers) must stay here — deferring any of it (tried 2026-07-02)
-            // left `activeUnit` stale for ~1 frame and broke consecutive moves
-            // of multi-move units. Only `render()` is coalesced to one run per
+            // `unitController`'s active unit, queue and last unit, the map
+            // layers' active-unit pointers) must stay here — deferring any of
+            // it (tried 2026-07-02) left `activeUnit` stale for ~1 frame and
+            // broke consecutive moves of multi-move units. Only `render()` is coalesced to one run per
             // frame.
             //
             // `rebuildAll` is for a map that did not come from patches, whose
@@ -813,59 +590,13 @@ export class Renderer {
               );
               releaseIncomingTiles();
 
-              unitQueue.update(data.player.actions, waitingForTurn);
-
-              const selectableActiveUnits = unitQueue.selectable();
-
-              // A unit whose GoTo stopped next to a choice goes first, and is offered it once its actions are in.
-              const halted = haltedUnits.next(unitQueue.units()),
-                nextUnit =
-                  halted?.unit ??
-                  chooseActiveUnit(
-                    selectableActiveUnits,
-                    lastUnit?.id ?? null,
-                    (x, y) => portal.isVisible(x, y)
-                  );
-
-              if (halted?.actions?.length) {
-                const unitId = halted.unit.id,
-                  arrival = openArrivalWindow(
-                    halted.unit,
-                    halted.actions,
-                    (chosen: UnitAction) =>
-                      transport.send('action', {
-                        name: 'ActiveUnit',
-                        id: unitId,
-                        unitAction: chosen._,
-                        target: chosen.to.id,
-                      })
-                  );
-
-                // Chosen or dismissed, the next halted unit is up once it closes.
-                if (arrival !== null) {
-                  haltedUnits.opened();
-
-                  arrival.on('close', () => {
-                    haltedUnits.closed();
-
-                    if (!waitingForTurn) {
-                      updateState(objectMap);
-                    }
-                  });
-                }
-              }
-
-              if (nextUnit === null) {
-                lastUnit = null;
-              }
-
-              applyActiveUnit(nextUnit, portal, unitsMap, activeUnitsMap);
+              unitController.next(data.player.actions, waitingForTurn);
 
               scheduleRender();
 
               // Keys kept while the unit's orders were on their way. Those kept
               // behind a move wait for its `actionHandled` (#326).
-              drainKeys();
+              unitController.drain();
 
               if (shouldAutoEndTurn(data.player, options, waitingForTurn)) {
                 // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
@@ -910,40 +641,18 @@ export class Renderer {
 
             transportDisposers.push(
               transport.receive('gameData', (rawData) => {
-                unitActionsRequest.dataReceived();
+                unitController.dataReceived();
 
                 updateState(rawData, true);
               })
             );
 
             // The move drawn before its answer (#326), settled by its own
-            // acknowledgement, which follows the patch with its result: any
-            // other patch, the answer to a `unitActions` request say, can come
-            // first with the unit still on the tile it left. Arrived, it is
-            // where it was drawn. Refused (a zone of control, no moves left),
-            // it goes back to the tile it left, and the keys typed after it go
-            // too: they were typed for a unit that didn't move.
+            // acknowledgement.
             transportDisposers.push(
-              transport.receive('actionHandled', (action): void => {
-                if (!pendingMove.answeredBy(action)) {
-                  return;
-                }
-
-                const arrived = pendingMove.settle(
-                  data.player.units.find((unit) => unit.id === action.id) ??
-                    null
-                );
-
-                if (!arrived) {
-                  pendingMove.clear();
-                }
-
-                applyActiveUnit(activeUnit, portal, unitsMap, activeUnitsMap);
-
-                scheduleRender();
-
-                drainKeys();
-              })
+              transport.receive('actionHandled', (action): void =>
+                unitController.actionHandled(action)
+              )
             );
 
             transportDisposers.push(
@@ -978,7 +687,7 @@ export class Renderer {
 
             transportDisposers.push(
               transport.receive('gameDataPatch', (data: DataPatch[]) => {
-                unitActionsRequest.dataReceived();
+                unitController.dataReceived();
 
                 applyDataPatches(objectMap, data, {
                   changed: (id) => changedIds.add(id),
@@ -1080,15 +789,7 @@ export class Renderer {
 
               // Kept while a move is answered, and played once it has been
               // (#326).
-              if (
-                activeUnit &&
-                (key in keyToActionsMap || key in directionKeyMap) &&
-                pendingMove.press(
-                  key,
-                  hasUnitActions(activeUnit),
-                  (key) => playUnitKey(key) !== null
-                )
-              ) {
+              if (unitController.pressKey(key)) {
                 event.stopPropagation();
                 event.preventDefault();
 
@@ -1131,6 +832,8 @@ export class Renderer {
                 }
               }
 
+              const activeUnit = unitController.active();
+
               if (key === 'c' && activeUnit) {
                 portal.setCenter(activeUnit.tile.x, activeUnit.tile.y);
 
@@ -1141,11 +844,7 @@ export class Renderer {
               }
 
               if (key === 'w' && activeUnit) {
-                const next = unitQueue.wait(activeUnit);
-
-                if (next !== null) {
-                  setActiveUnit(next, portal, unitsMap, activeUnitsMap);
-                }
+                unitController.wait();
 
                 event.stopPropagation();
                 event.preventDefault();

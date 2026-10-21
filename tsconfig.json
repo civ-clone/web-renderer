@@ -25,6 +25,7 @@
     "src/js/UI/lib/interactionLabels.ts",
     "src/js/UI/components/lib/watchCity.ts",
     "src/js/UI/lib/UnitQueue.ts",
-    "src/js/UI/components/lib/watchPlayer.ts"
+    "src/js/UI/components/lib/watchPlayer.ts",
+    "src/js/UI/game/ActiveUnitController.ts"
   ]
 }

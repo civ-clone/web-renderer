@@ -1,7 +1,7 @@
 import { PlayerAction, Unit } from '../types';
 
-// The units the player can move this turn, and those deferred with `w` (wait). `Renderer`'s `updateState` calls
-//  `update` after every rebuild, `applyActiveUnit` calls `activated` for each unit made active, and the `w` key calls
+// The units the player can move this turn, and those deferred with `w` (wait). `ActiveUnitController#next` calls
+//  `update` after every rebuild, its `apply` calls `activated` for each unit made active, and the `w` key calls
 //  `wait`. Which of the selectable units becomes active (`chooseActiveUnit`) is not decided here: it depends on the
 //  last active unit and on what is on screen, and a halted unit (#357) goes before it.
 
