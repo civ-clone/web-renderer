@@ -46,7 +46,7 @@ export class MainMenu extends Element {
             ),
             {
               click: () => {
-                new NewGameWindow(this.#transport, () => this.remove());
+                NewGameWindow.ask(this.#transport, () => this.remove());
               },
             }
           ),
@@ -68,8 +68,8 @@ export class MainMenu extends Element {
               )}</button>`
             ),
             {
-              click: async () =>
-                new CustomiseWorldWindow(this.#transport, () => this.remove()),
+              click: () =>
+                CustomiseWorldWindow.ask(this.#transport, () => this.remove()),
             }
           ),
           h(

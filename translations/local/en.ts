@@ -173,6 +173,7 @@ i18next.addResources('en', 'default', {
   'ConfirmationWindow.Generic.title': 'Are you sure?',
 
   'CustomizeWorld.build': 'Build',
+  'CustomizeWorld.even-height': 'This map grid needs an even height.',
   'CustomizeWorld.height': '$t(Generic.height)',
   'CustomizeWorld.land-coverage': 'Land coverage',
   'CustomizeWorld.land-size': 'Land size',
@@ -180,6 +181,7 @@ i18next.addResources('en', 'default', {
   'CustomizeWorld.max-iterations': 'Max iterations',
   'CustomizeWorld.players': 'Players',
   'CustomizeWorld.title': 'Customize world',
+  'CustomizeWorld.whole-number': 'A whole number, 1 or more.',
   'CustomizeWorld.width': '$t(Generic.width)',
 
   'DifficultyWindow.level': '{{level}}',
@@ -235,6 +237,10 @@ i18next.addResources('en', 'default', {
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 
+  'Grid.hex-odd-r': 'Hex',
+  'Grid.square': 'Square',
+  'Grid.staggered-iso': 'Isometric',
+
   'HappinessReport.breakdown': 'Breakdown',
   'HappinessReport.view-city':
     '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
@@ -277,6 +283,7 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.number-of-players': 'How many players?',
   'NewGameWindow.civilizations_one': '1 civilization',
   'NewGameWindow.civilizations_other': '{{count}} civilizations',
+  'NewGameWindow.map-grid': 'Which map grid?',
   'NewGameWindow.world-size': 'How big a world?',
   'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.small': 'Small ({{width}} × {{height}})',
