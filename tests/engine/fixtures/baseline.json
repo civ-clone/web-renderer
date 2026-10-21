@@ -114,9 +114,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1080,
+        "total": 1081,
         "byType": {
-          "Action": 63,
+          "Action": 64,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -236,9 +236,9 @@
         "hash": "bd300d6b"
       },
       "dto": {
-        "objects": 3349,
-        "bytes": 574012,
-        "hash": "e434d56e"
+        "objects": 3362,
+        "bytes": 576118,
+        "hash": "1601d75d"
       },
       "registries": {
         "cities": 4,
@@ -392,9 +392,9 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1080,
+        "total": 1081,
         "byType": {
-          "Action": 63,
+          "Action": 64,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -514,9 +514,9 @@
         "hash": "5fc69889"
       },
       "dto": {
-        "objects": 43093,
-        "bytes": 7413812,
-        "hash": "9a7669bb"
+        "objects": 43194,
+        "bytes": 7430399,
+        "hash": "38024015"
       },
       "registries": {
         "cities": 7,
@@ -847,9 +847,9 @@
       "randomCalls": 8782,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1080,
+        "total": 1081,
         "byType": {
-          "Action": 63,
+          "Action": 64,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,

@@ -5,6 +5,7 @@
 //  the same number of microtasks as before the move (#503): counted through `handleAction` and through the client.
 
 import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
+import { Activate } from '@civ-clone/civ1-unit/Actions';
 import {
   ChangeProduction,
   CityBuild,
@@ -312,6 +313,11 @@ const tile = { id: () => 'tile' },
         sourceClass: () => ({ name: 'Move' }),
         perform: () => record('perform'),
       },
+      // The order that wakes it (#160): the client performs it rather than calling `activate`.
+      Object.assign(Object.create(Activate.prototype), {
+        sourceClass: () => Activate,
+        perform: () => record('perform(Activate)'),
+      }),
     ],
     activate: () => record('activate'),
     tile: () => tile,
@@ -385,7 +391,7 @@ const activeUnitTicks = [
     'released@4',
   ],
   inactiveUnitTicks = [
-    'activate@0',
+    'perform(Activate)@0',
     'patches.unit@0',
     'settled(false)@1',
     'released@2',

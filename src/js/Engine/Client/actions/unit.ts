@@ -2,6 +2,7 @@
 //  (asleep or fortified) unit woken.
 
 import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
+import { Activate } from '@civ-clone/civ1-unit/Actions';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import { ActionHandler } from './ActionContext';
@@ -68,9 +69,17 @@ export const handleInactiveUnit: ActionHandler<InactiveUnit> = async (
   action,
   playerAction
 ) => {
-  const unit: Unit = playerAction.value();
+  const unit: Unit = playerAction.value(),
+    // Woken by the order the ruleset offers for it (#160), or directly where it offers none.
+    [order] = unit
+      .actions(unit.tile())
+      .filter((action: UnitAction): boolean => action instanceof Activate);
 
-  unit.activate();
+  if (order) {
+    order.perform();
+  } else {
+    unit.activate();
+  }
 
   // Built when the patch is sent, so as it is now it is active (#411).
   ctx.patches.unit(unit);
