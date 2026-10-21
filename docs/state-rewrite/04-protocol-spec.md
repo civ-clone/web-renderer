@@ -16,8 +16,9 @@ abstraction does **not** change. Only the payloads on `gameData` and
 
 ### `gameData`
 
-Sent once, from `DataTransferClient.sendInitialData()`. `WorkerTransport.send`
-detects the `DataObject` and calls `toPlainObject()`, producing:
+Sent once, by `TurnHandover.sendInitialData()` (`src/js/Engine/Client/TurnHandover.ts`) on the first hand-over;
+tests call it as `DataTransferClient.initialData()`. Since #328 the client calls `toPlainObject(dataFilter)`
+itself before sending (`WorkerTransport.send`'s own `DataObject` fallback never runs for `gameData`), producing:
 
 ```ts
 {
@@ -34,7 +35,7 @@ detects the `DataObject` and calls `toPlainObject()`, producing:
 `WorkerTransport.receive` reconstitutes it before calling the handler, but also
 passes the raw `ObjectMap` as the second argument. The current `Renderer`
 ignores the reconstituted first argument entirely and uses the raw one
-(`Renderer.ts:1202`) — so for `gameData` that reconstitution is 100% wasted work
+(then `Renderer.ts:1202`; since #333 `gameData` is a raw channel, see `WorkerTransport.rawChannels`) — so for `gameData` that reconstitution was 100% wasted work
 today.
 
 ### `gameDataPatch`

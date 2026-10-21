@@ -1,0 +1,1 @@
+{"version":"0.1.0@5d828d7","date":"2026-10-21T13:57:08.000Z","localChanges":["chore: add DataTransferClient.dispose(), which stops every engine listener and UI message the client listens for, the turn under way and a pending choice, and use it on patchRefs' second client (#449)"],"externalChanges":{}}
