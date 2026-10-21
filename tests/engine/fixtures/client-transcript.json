@@ -2,7 +2,7 @@
   "turns": 21,
   "sequence": {
     "count": 197,
-    "hash": "a877ea16808625dcfafc325b8e24f2481ad56bf8329eee6be649e4d4ed5e18a5"
+    "hash": "18878f70cf0776d61a4dd715de3e7ffa9f4d0f8068a3dcc8b38c8bf8536b62a9"
   },
   "channels": {
     "actionHandled": {
@@ -27,7 +27,7 @@
     },
     "gameDataPatch": {
       "count": 96,
-      "hash": "418f0beea78c3863314f2730ede80b21db4b92d9c15e9af72a4a78c8a9deaa63"
+      "hash": "0621358f36a4220fb9c6bde7a6276b656a3efd9a627dfd619ca062ca5aec6327"
     },
     "gameNotification": {
       "count": 1,
@@ -202,7 +202,7 @@
     "gameDataPatch fe9e39398009 update PlayerTile-6u, update PlayerTile-7y",
     "gameDataPatch 8ea6f3ce3da9 update PlayerTile-6u",
     "gameDataPatch ca7126c82c1f update PlayerTile-s3, update PlayerTile-t7",
-    "gameDataPatch de2644d7323e update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch 4ba8d3635b17 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 35f56ee3c674 update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 27382baafee6 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
@@ -212,7 +212,7 @@
     "gameDataPatch 8ea6f3ce3da9 update PlayerTile-6u",
     "gameDataPatch cb64c183f574 update PlayerTile-7y, update PlayerTile-7x",
     "gameDataPatch 460404aed3ff update PlayerTile-t7, update PlayerTile-ub",
-    "gameDataPatch ee888ecc2533 update PlayerTile-5, update Settlers-4, update City-1, update Player-1[units], update PlayerTile-21, update CityBuild-1, and 5 more",
+    "gameDataPatch be11567ad8f5 update PlayerTile-5, update Settlers-4, update City-1, update Player-1[units], update PlayerTile-21, update CityBuild-1, and 5 more",
     "turnStarted 74234e98afe7 null",
     "gameNotification cd9c0ce9a217 {\"hierarchy\":{\"#ref\":\"Notification-1\"},\"objects\":{\"Notification-1\":{\"_\":\"Noti...",
     "gameDataPatch 4f001692838e update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -226,7 +226,7 @@
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 707a57ecbb44 update PlayerTile-7x, update PlayerTile-92",
     "gameDataPatch 072720a6e035 update PlayerTile-ub, update PlayerTile-vf",
-    "gameDataPatch 46e728b2bd62 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch d187af42418f update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch d16915b7ee0b update Settlers-4, update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 27382baafee6 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",

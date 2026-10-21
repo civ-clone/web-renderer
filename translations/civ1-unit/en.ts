@@ -43,6 +43,7 @@ i18next.addResources('en', 'unit', {
   'Yield.Visibility.name': 'Visibility',
 
   // Actions
+  'Action.Activate.name': 'Activate',
   'Action.Attack.name': 'Attack',
   'Action.Automate.name': 'Automate',
   'Action.BribeUnit.name': 'Bribe unit',
