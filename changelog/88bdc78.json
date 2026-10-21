@@ -1,0 +1,1 @@
+{"version":"0.1.0@88bdc78","date":"2026-10-21T15:53:47.000Z","localChanges":["chore: add a Projection for turning tiles into map pixels and back, with SquareProjection and its tests (#90)"],"externalChanges":{}}

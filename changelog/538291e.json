@@ -1,0 +1,1 @@
+{"version":"0.1.0@538291e","date":"2026-10-21T15:54:51.000Z","localChanges":["chore: place map layers' tiles through the Projection rather than tile x size sums (#90)"],"externalChanges":{}}
