@@ -53,7 +53,7 @@ import { ClientContext, Disposer } from './Client/ClientContext';
 import './Client/registerAdditionalData';
 
 export class DataTransferClient extends Client implements IClient {
-  // Asks the player to choose, one prompt at a time (see `Client/ChoicePrompt.ts`).
+  // Asks the player to choose, each prompt open answered in turn (see `Client/ChoicePrompt.ts`).
   #choicePrompt: ChoicePrompt;
   // What the client's modules share: the player, the transport, the patches, the notifications, automation, the talks
   //  and the registries (see `Client/ClientContext.ts`). Made once, in the constructor.
@@ -168,8 +168,8 @@ export class DataTransferClient extends Client implements IClient {
 
   /**
    * Stop listening: to every engine event and every message from the UI, the `action`s of the turn under way, and the
-   * answer to a pending choice. From then on an engine event sends the player nothing and a message is ignored; a turn
-   * under way never ends, and a choice pending never settles.
+   * answers to the choices pending. From then on an engine event sends the player nothing and a message is ignored; a
+   * turn under way never ends, and a choice pending never settles.
    *
    * Not undone: what was queued before (sent by a later `flush()`), the hand-over's timer and the news of the engine
    * call under way, if either is pending, and the client's place in the `ClientRegistry`, which is its owner's.
@@ -201,7 +201,8 @@ export class DataTransferClient extends Client implements IClient {
       );
     }
 
-    // Sent to the UI to choose (see `Client/ChoicePrompt.ts`), or chosen at random if it answers with an unknown id.
+    // Sent to the UI to choose, alongside any other prompt open (see `Client/ChoicePrompt.ts`), or chosen at random if
+    //  it answers with an unknown id.
     return this.#choicePrompt.promptChoice(meta, () =>
       super.chooseFromList(meta)
     );

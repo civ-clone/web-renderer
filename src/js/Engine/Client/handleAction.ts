@@ -92,6 +92,17 @@ const dispatchAction = (
   }
 
   if (name === 'EndTurn') {
+    // Not while the talks at the start of the turn, or a Meet with King's, are open (#491): the player is still
+    //  answering them. The turn goes on, and the UI is told so once they are over, not before: the patch that goes
+    //  with the answer makes the UI's auto end of turn send `EndTurn` again, which would come straight back while they
+    //  were still open.
+    if (ctx.talks.underWay) {
+      return ctx.talks.pending.then(
+        () => false,
+        () => false
+      );
+    }
+
     return (
       mandatoryActions.length === 1 &&
       mandatoryActions.every((action) => action instanceof EndTurn)

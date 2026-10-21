@@ -17,8 +17,9 @@ export type ActionContext = Pick<
   | 'playerWorlds'
   | 'rules'
 > & {
-  // The talks a unit's action waits for, and those it offers with the players it met on the way.
-  talks: Pick<Talks, 'pending' | 'talkToPlayersMet'>;
+  // The talks a unit's action waits for, and those it offers with the players it met on the way. `EndTurn` waits for
+  //  those under way too.
+  talks: Pick<Talks, 'pending' | 'talkToPlayersMet' | 'underWay'>;
 };
 
 // Acts on one of the player's actions, as the UI sent it (`action`) and as the player has it (`playerAction`), and
