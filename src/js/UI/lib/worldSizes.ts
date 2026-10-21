@@ -1,7 +1,8 @@
 /**
  * The world sizes New Game offers (#55). Each is Civ1's 8:5 shape, with Normal being Civ1's own 80 × 50 map, and
- * each offers its own range of civilizations, with one selected: a bigger world has room for more of them. There are
- * 14 civilizations, so no size offers more. Customize World remains the place for exact values.
+ * each offers its own range of civilizations, with one selected: a bigger world has room for more of them. Civ1 has 14
+ * civilizations, so no size offers more. civ1-world-civilizations adds 12 more to choose from (#466), but a game still
+ * has at most 14. Customize World remains the place for exact values.
  *
  * `landCoverage` and `landSize` are proportions of the world, so they need no scaling here.
  */
