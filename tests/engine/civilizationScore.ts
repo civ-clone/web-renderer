@@ -1,13 +1,25 @@
 // The Civilization Score (#149) is added up in the worker by the engine's `Score` rules and sent to the UI term by term.
-//  In a seeded game driven through a human `DataTransferClient`, as `topCities` does, this founds a city and asks for
-//  the score through the transport: every civ1-score term is there in the score screen's order, the total is their sum,
-//  the new city's citizens count, and counting them at 40% luxuries leaves the player's own rates as they were.
+//  With plain data, `civilizationScore` sends each term as its name and points, never totals below 0, and shows the
+//  conquest bonus (#176) in place of the terms' sum only for the conqueror and only when it's higher. Then, in a seeded
+//  game driven through a human `DataTransferClient`, as `topCities` does, this founds a city and asks for the score
+//  through the transport: every civ1-score term is there in the score screen's order, the total is their sum, the new
+//  city's citizens count, and counting them at 40% luxuries leaves the player's own rates as they were.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import {
+  CivilizationScore,
+  CivilizationScoreDependencies,
+  civilizationScore,
+} from '../../src/js/Engine/lib/civilizationScore';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
+import Effect from '@civ-clone/core-rule/Effect';
+import { IScoreTerm } from '@civ-clone/core-score/Rules/Score';
+import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
+import Score from '@civ-clone/core-score/Rules/Score';
+import { conquestBonus } from '@civ-clone/civ1-game-end/lib/scoring';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
@@ -49,7 +61,115 @@ const rates = (): string =>
     .map((rate) => `${rate.constructor.name}:${rate.value()}`)
     .join(',');
 
+// The rules and the game's result are all `civilizationScore` reads, so plain stand-ins will do.
+const checkPlainData = (): void => {
+  const rules = new RuleRegistry(),
+    player = {} as Player,
+    rival = {} as Player,
+    values = { citizens: 0, pollution: 0 },
+    result = (
+      winner: Player | null,
+      reason: string,
+      scoringComplete: boolean
+    ) => ({
+      reason: () => reason,
+      winner: () => winner,
+      // v474.05 turn 100, 1900 points against 6 opponents: 400 + 2 * (550 - 100) + 100 * 6.
+      turn: () => 101,
+      scoringComplete: () => scoringComplete,
+    }),
+    scoreOf = (gameResult: unknown): CivilizationScore =>
+      civilizationScore(player, {
+        gameResults: { get: () => gameResult },
+        // Seven players started: six opponents.
+        playerWorlds: { length: 7 },
+        rules,
+      } as unknown as CivilizationScoreDependencies),
+    check = (description: string, actual: unknown, expected: unknown) => {
+      if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+        fail(
+          `${description}: ${JSON.stringify(actual)}, expected ${JSON.stringify(
+            expected
+          )}`
+        );
+      }
+    };
+
+  rules.register(
+    new Score(
+      new Effect(
+        (scored: Player): IScoreTerm =>
+          // Only the term and its value are sent.
+          ({
+            term: 'citizens',
+            value: scored === player ? values.citizens : -99,
+            extra: true,
+          } as IScoreTerm)
+      )
+    ),
+    new Score(
+      new Effect(
+        (): IScoreTerm => ({ term: 'pollution', value: values.pollution })
+      )
+    )
+  );
+
+  values.citizens = 5;
+  values.pollution = -2;
+
+  check('the score while the game goes on', scoreOf(null), {
+    terms: [
+      { term: 'citizens', value: 5 },
+      { term: 'pollution', value: -2 },
+    ],
+    bonus: null,
+    total: 3,
+    scoringComplete: false,
+  });
+
+  check(
+    'the conqueror scores the conquest bonus in place of a lower sum',
+    scoreOf(result(player, 'conquest', true)),
+    {
+      terms: [
+        { term: 'citizens', value: 5 },
+        { term: 'pollution', value: -2 },
+      ],
+      bonus: conquestBonus(100, 6),
+      total: 1900,
+      scoringComplete: true,
+    }
+  );
+
+  check(
+    'another player conquering the world gives no bonus',
+    scoreOf(result(rival, 'conquest', false)).bonus,
+    null
+  );
+
+  check(
+    "a game that didn't end in conquest gives no bonus",
+    scoreOf(result(player, 'spaceship', true)).bonus,
+    null
+  );
+
+  values.citizens = 2000;
+
+  check(
+    'a sum higher than the bonus is the total',
+    scoreOf(result(player, 'conquest', true)).total,
+    1998
+  );
+
+  values.citizens = 1;
+  values.pollution = -4;
+
+  check('the total never goes below 0', scoreOf(null).total, 0);
+};
+
 const run = async (): Promise<void> => {
+  checkPlainData();
+
   const [founder] = unitRegistryInstance
     .getByPlayer(humanPlayer!)
     .filter((unit) => unit instanceof Settlers);
@@ -82,7 +202,9 @@ const run = async (): Promise<void> => {
   const sent = scoreSent;
 
   if (rates() !== before) {
-    fail(`counting the citizens changed the rates from ${before} to ${rates()}`);
+    fail(
+      `counting the citizens changed the rates from ${before} to ${rates()}`
+    );
   }
 
   const terms = (sent?.terms ?? []).map(({ term }: any) => term).join(',');

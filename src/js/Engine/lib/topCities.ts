@@ -1,5 +1,18 @@
 // The Top Cities in the World report (#124), worked out in the worker so the UI only ever sees the finished rows.
 
+import {
+  calculateCitizenState,
+  citizenSummary,
+} from '@civ-clone/civ1-city-happiness/lib/calculateCitizenState';
+import City from '@civ-clone/core-city/City';
+import { CityGrowthRegistry } from '@civ-clone/core-city-growth/CityGrowthRegistry';
+import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
+import Player from '@civ-clone/core-player/Player';
+import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
+import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
+import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+
 export type TopCitiesCitizens = {
   happy: number;
   content: number;
@@ -90,3 +103,73 @@ export const topCitiesRows = (
         }
       : null,
   }));
+
+export type TopCitiesDependencies = {
+  cities: Pick<CityRegistry, 'entries'>;
+  cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
+  specialists: SpecialistRegistry;
+  wonders: Pick<WonderRegistry, 'getByCity'>;
+  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
+  hasMet: (player: Player) => boolean;
+};
+
+// What `player` knows about every city in the world, in founding order, ready for `topCitiesRows` to rank.
+export const topCitiesEntries = (
+  player: Player,
+  {
+    cities,
+    cityGrowths,
+    specialists,
+    wonders,
+    playerWorlds,
+    hasMet,
+  }: TopCitiesDependencies
+): TopCitiesEntry[] => {
+  const playerWorld = playerWorlds.getByPlayer(player),
+    metPlayers = new Map<Player, boolean>();
+
+  return cities.entries().map((city: City) => {
+    const owner = city.player(),
+      cityGrowth = cityGrowths.getByCity(city),
+      [unhappy, content, happy] = citizenSummary(
+        calculateCitizenState(
+          cityGrowth,
+          cityGrowth.city().yields(),
+          specialists
+        )
+      ),
+      colors = owner
+        .civilization()
+        .attributes()
+        .find((attribute) => attribute.name() === 'colors');
+
+    if (!metPlayers.has(owner)) {
+      metPlayers.set(owner, hasMet(owner));
+    }
+
+    return {
+      name: city.name(),
+      originalCivilization: typeNameOf(
+        city.originalPlayer().civilization().sourceClass()
+      ),
+      owner: {
+        civilization: typeNameOf(owner.civilization().sourceClass()),
+        colors: colors ? (colors.value() as [string, string]) : null,
+      },
+      size: cityGrowths.getByCity(city).size(),
+      citizens: {
+        happy,
+        content,
+        unhappy,
+        specialists: specialists
+          .getByCity(city)
+          .map((specialist) => typeNameOf(specialist.sourceClass())),
+      },
+      wonders: wonders
+        .getByCity(city)
+        .map((wonder) => typeNameOf(wonder.sourceClass())),
+      seen: playerWorld.getByTile(city.tile()) !== null,
+      met: metPlayers.get(owner)!,
+    };
+  });
+};

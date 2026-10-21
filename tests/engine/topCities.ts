@@ -1,5 +1,5 @@
 // The Top Cities in the World report (#124) is worked out in the worker and sent as finished rows. This checks the
-//  ranking (score, ties, the limit) with plain data, then, in a seeded game driven through a human
+//  ranking (score, ties, the limit) and what is known about each city (`topCitiesEntries`) with plain data, then, in a seeded game driven through a human
 //  `DataTransferClient` as `civilDisorder` does, that a row names only what the player is allowed to know: your own
 //  city in full; a rival city whose tile you haven't seen as "Unknown city"; an unmet civilization as unknown; and no
 //  row carrying an id, a tile or a score.
@@ -9,10 +9,14 @@ import { config } from './lib/seed';
 import './lib/spawnedClients';
 
 import {
+  TopCitiesDependencies,
   TopCitiesEntry,
   rankCities,
+  topCitiesEntries,
   topCitiesRows,
 } from '../../src/js/Engine/lib/topCities';
+import Happiness from '@civ-clone/base-city-yield-happiness/Happiness';
+import Unhappiness from '@civ-clone/base-city-yield-unhappiness/Unhappiness';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
@@ -105,6 +109,156 @@ const checkRanking = (): void => {
   }
 };
 
+// What the player knows about each city, read through the registries it is given, so plain stand-ins will do: the
+//  reader's own city in full, a city taken from its founder on a tile the reader hasn't seen, and an unmet player's
+//  city it has seen.
+const checkEntries = (): void => {
+  const civilization = (name: string, colors: [string, string] | null) => ({
+      sourceClass: () => ({ name }),
+      attributes: () =>
+        colors === null ? [] : [{ name: () => 'colors', value: () => colors }],
+    }),
+    player = (name: string, colors: [string, string] | null): Player =>
+      ({
+        civilization: () => civilization(name, colors),
+      } as unknown as Player),
+    reader = player('Babylonian', ['#fff', '#000']),
+    met = player('Roman', null),
+    unmet = player('Zulu', ['#0f0', '#000']),
+    yieldOf = (YieldType: typeof Happiness, value: number) =>
+      Object.assign(Object.create(YieldType.prototype), {
+        value: () => value,
+      }),
+    seenTile = {},
+    unseenTile = {},
+    city = (
+      name: string,
+      owner: Player,
+      original: Player,
+      tile: object,
+      size: number,
+      yields: unknown[],
+      specialists: string[],
+      wonders: string[]
+    ) => {
+      const created: any = {
+        name: () => name,
+        player: () => owner,
+        originalPlayer: () => original,
+        tile: () => tile,
+        yields: () => yields,
+      };
+
+      created.growth = { city: () => created, size: () => size };
+      created.specialists = specialists.map((type) => ({
+        sourceClass: () => ({ name: type }),
+      }));
+      created.wonders = wonders.map((type) => ({
+        sourceClass: () => ({ name: type }),
+      }));
+
+      return created;
+    },
+    cities = [
+      // Size 3, one Entertainer and one Happiness: one happy, one content.
+      city(
+        'Babylon',
+        reader,
+        reader,
+        seenTile,
+        3,
+        [yieldOf(Happiness, 1)],
+        ['Entertainer'],
+        ['Colossus']
+      ),
+      // Size 4 with two Unhappiness: two content, two unhappy.
+      city(
+        'Zimbabwe',
+        met,
+        unmet,
+        unseenTile,
+        4,
+        [yieldOf(Unhappiness, 2)],
+        [],
+        []
+      ),
+      city('Ulundi', unmet, unmet, seenTile, 1, [], [], []),
+    ],
+    asked: string[] = [],
+    dependencies = {
+      cities: { entries: () => cities },
+      cityGrowths: { getByCity: (city: any) => city.growth },
+      specialists: { getByCity: (city: any) => city.specialists },
+      wonders: { getByCity: (city: any) => city.wonders },
+      playerWorlds: {
+        getByPlayer: (owner: Player) => {
+          if (owner !== reader) {
+            fail("topCitiesEntries read a world other than the reader's");
+          }
+
+          return {
+            getByTile: (tile: object) => (tile === seenTile ? tile : null),
+          };
+        },
+      },
+      hasMet: (other: Player) => {
+        asked.push(other.civilization().sourceClass().name);
+
+        return other === reader || other === met;
+      },
+    } as unknown as TopCitiesDependencies,
+    entries = topCitiesEntries(reader, dependencies),
+    expected: TopCitiesEntry[] = [
+      {
+        name: 'Babylon',
+        originalCivilization: 'Babylonian',
+        owner: { civilization: 'Babylonian', colors: ['#fff', '#000'] },
+        size: 3,
+        citizens: {
+          happy: 1,
+          content: 1,
+          unhappy: 0,
+          specialists: ['Entertainer'],
+        },
+        wonders: ['Colossus'],
+        seen: true,
+        met: true,
+      },
+      {
+        name: 'Zimbabwe',
+        originalCivilization: 'Zulu',
+        owner: { civilization: 'Roman', colors: null },
+        size: 4,
+        citizens: { happy: 0, content: 2, unhappy: 2, specialists: [] },
+        wonders: [],
+        seen: false,
+        met: true,
+      },
+      {
+        name: 'Ulundi',
+        originalCivilization: 'Zulu',
+        owner: { civilization: 'Zulu', colors: ['#0f0', '#000'] },
+        size: 1,
+        citizens: { happy: 0, content: 1, unhappy: 0, specialists: [] },
+        wonders: [],
+        seen: true,
+        met: false,
+      },
+    ];
+
+  if (JSON.stringify(entries) !== JSON.stringify(expected)) {
+    fail(
+      `topCitiesEntries gave ${JSON.stringify(
+        entries
+      )}, expected ${JSON.stringify(expected)}`
+    );
+  }
+
+  if (asked.join(',') !== 'Babylonian,Roman,Zulu') {
+    fail(`hasMet was asked about ${asked.join(',')}, not once per owner`);
+  }
+};
+
 // Any key in the rows that could tie a row to an object, a place or the hidden score.
 const leakedKeys = (value: any, path: string = 'rows'): string[] =>
   value === null || typeof value !== 'object'
@@ -129,6 +283,7 @@ const rowFor = (
 
 const run = async (): Promise<void> => {
   checkRanking();
+  checkEntries();
 
   const [founder] = unitRegistryInstance
     .getByPlayer(humanPlayer!)
