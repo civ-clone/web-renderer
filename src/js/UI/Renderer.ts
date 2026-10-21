@@ -2,10 +2,7 @@ import { City as CityData, DataPatch } from './types';
 import { on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
-import Actions from './components/Actions';
-import UnitActions from './components/UnitActions';
 import City from './components/City';
-import GameDetails from './components/GameDetails';
 import GameMenu from './components/GameMenu';
 import GameOverWindow from './components/GameOverWindow';
 import MainMenu from './components/MainMenu';
@@ -14,18 +11,17 @@ import { guardLeaving } from './lib/leaveGuard';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
 import Notifications from './components/Notifications';
-import PlayerDetails from './components/PlayerDetails';
 import IntelligenceReport from './components/IntelligenceReport';
 import HaltedUnits from './lib/haltedUnits';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
 import Window from './components/Window';
 import { instance as options } from './GameOptionsRegistry';
-import partitionActions from './lib/playerActionPanels';
 import shouldAutoEndTurn from './lib/autoEndTurn';
 import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitController from './game/ActiveUnitController';
 import MapView from './game/MapView';
+import Hud from './game/Hud';
 import GameState from './game/GameState';
 import InputController from './game/InputController';
 import DebugFlags from './debug/DebugFlags';
@@ -246,16 +242,18 @@ export class Renderer {
                 unitsLayer: mapView.unitsLayer,
                 world,
               }),
-              primaryActions = new Actions(actionArea, portal, this.#transport),
-              secondaryActions = new Actions(
-                secondaryActionArea,
+              hud = new Hud({
+                actionArea,
+                gameArea,
+                gameInfo,
+                notices,
+                playerInfo,
                 portal,
-                this.#transport
-              ),
-              unitActionButtons = new UnitActions(
+                secondaryActionArea,
+                transport: this.#transport,
                 unitActionArea,
-                this.#transport
-              ),
+                world,
+              }),
               gameMenuItem = new GameMenu(
                 gameMenu,
                 // `data` is replaced on a full rebuild, so this always
@@ -327,42 +325,11 @@ export class Renderer {
 
               dataChanges.notify(gameState.data());
 
-              const { primary, secondary } = partitionActions(
-                gameState.data().player.actions,
-                notices.actions(gameState.data()),
+              hud.build(
+                gameState.data(),
+                unitController.active(),
                 gameState.waiting()
               );
-
-              primaryActions.build(primary, gameState.data().player);
-
-              secondaryActions.build(secondary);
-
-              const activeUnit = unitController.active();
-
-              unitActionButtons.build(
-                gameState.waiting() ? null : activeUnit,
-                activeUnit
-                  ? world.get(activeUnit.tile.x, activeUnit.tile.y)
-                  : null
-              );
-
-              gameArea.append(primaryActions.element());
-
-              const gameDetails = new GameDetails(
-                gameInfo,
-                gameState.data().turn,
-                gameState.data().year,
-                gameState.data().difficulty
-              );
-
-              gameDetails.build();
-
-              const playerDetails = new PlayerDetails(
-                playerInfo,
-                gameState.data().player
-              );
-
-              playerDetails.build();
 
               unitController.render(unitController.active());
 
