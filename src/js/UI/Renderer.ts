@@ -1,40 +1,33 @@
 import { City as CityData, DataPatch } from './types';
-import { emit, on, s } from '@dom111/element';
+import { on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import UnitActions from './components/UnitActions';
 import City from './components/City';
-import CityStatus from './components/CityStatus';
-import CivilizationScoreReport from './components/CivilizationScoreReport';
 import GameDetails from './components/GameDetails';
 import GameMenu from './components/GameMenu';
-import HappinessReport from './components/HappinessReport';
 import GameOverWindow from './components/GameOverWindow';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import { guardLeaving } from './lib/leaveGuard';
-import endTurn from './lib/endTurn';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
-import ScienceReport from './components/ScienceReport';
 import IntelligenceReport from './components/IntelligenceReport';
-import TopCitiesReport from './components/TopCitiesReport';
 import HaltedUnits from './lib/haltedUnits';
-import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
 import Window from './components/Window';
 import { instance as options } from './GameOptionsRegistry';
-import { mappedKeyFromEvent } from './lib/mappedKey';
 import partitionActions from './lib/playerActionPanels';
 import shouldAutoEndTurn from './lib/autoEndTurn';
 import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitController from './game/ActiveUnitController';
 import MapView from './game/MapView';
 import GameState from './game/GameState';
+import InputController from './game/InputController';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
@@ -542,135 +535,20 @@ export class Renderer {
               )
             );
 
-            const leaderScreensMap: { [key: string]: () => any } = {
-              F1: () =>
-                new CityStatus(gameState.data().player, portal, transport),
-              F3: () => new IntelligenceReport(transport),
-              F4: () =>
-                new HappinessReport(gameState.data().player, portal, transport),
-              F5: () =>
-                new TradeReport(gameState.data().player, portal, transport),
-              F6: () => new ScienceReport(gameState.data().player),
-              F8: () => new TopCitiesReport(transport),
-              F9: () => new CivilizationScoreReport(transport),
-            };
-
-            let lastShiftedCode = '';
-
-            on(document, 'keydown', (event) => {
-              const key = mappedKeyFromEvent(event);
-
-              if (key in leaderScreensMap) {
-                leaderScreensMap[event.key]();
-
-                event.preventDefault();
-              }
-
-              const modalWindow = document.querySelector('dialog.window.modal');
-
-              if (document.activeElement === document.body && modalWindow) {
-                event.preventDefault();
-
-                emit(
-                  modalWindow,
-                  new KeyboardEvent('keydown', {
-                    key: event.key,
-                  })
-                );
-
-                return;
-              }
-
-              // Kept while a move is answered, and played once it has been
-              // (#326).
-              if (unitController.pressKey(key)) {
-                event.stopPropagation();
-                event.preventDefault();
-
-                return;
-              }
-
-              if (key === 'Escape' && document.activeElement !== null) {
-                (document.activeElement as HTMLElement).blur();
-
-                return;
-              }
-
-              if (
-                key === 'Enter' &&
-                !gameState.waiting() &&
-                gameState
-                  .data()
-                  .player.mandatoryActions.some(
-                    (action) => action._ === 'EndTurn'
-                  )
-              ) {
-                endTurn(transport);
-
-                event.stopPropagation();
-                event.preventDefault();
-
-                return;
-              }
-
-              if (key === 'Tab') {
-                const topAction = actionArea.querySelector(
-                  'div.action:first-child button'
-                ) as HTMLButtonElement | null;
-
-                if (topAction !== null) {
-                  topAction.focus();
-
-                  event.preventDefault();
-                  event.stopPropagation();
-
-                  return;
-                }
-              }
-
-              const activeUnit = unitController.active();
-
-              if (key === 'c' && activeUnit) {
-                mapView.centre(activeUnit.tile);
-
-                return;
-              }
-
-              if (key === 'w' && activeUnit) {
-                unitController.wait();
-
-                event.stopPropagation();
-                event.preventDefault();
-
-                return;
-              }
-
-              if (key === 't') {
-                mapView.toggleUnits();
-
-                return;
-              }
-
-              if (key === 'y') {
-                mapView.toggleYields();
-
-                return;
-              }
-
-              // Shift+5 then Shift+6, as in Civ1: turns on the game menu's
-              // cheat items for this session. Matched on the physical keys,
-              // because what Shift+5 types depends on the keyboard layout.
-              const shiftedCode = event.shiftKey ? event.code : '';
-
-              if (lastShiftedCode === 'Digit5' && shiftedCode === 'Digit6') {
-                gameMenuItem.enableCheats();
-
-                notificationBar.show(t('GameMenu.cheat.enabled'));
-
-                return;
-              }
-
-              lastShiftedCode = shiftedCode;
+            // The game's keyboard. Registered here, as the handler always
+            // was: after `ReloadGuard` and the debug panel's capture-phase
+            // hotkeys, so it is the last `keydown` bubble listener on
+            // `document`.
+            new InputController({
+              actionArea,
+              data: () => gameState.data(),
+              gameMenu: gameMenuItem,
+              mapView,
+              notificationBar,
+              portal,
+              transport,
+              unitController,
+              waiting: () => gameState.waiting(),
             });
           } catch (e) {
             console.error(e);
