@@ -817,6 +817,9 @@ const checkReloadedGame = (): void => {
 
   client.initialData();
 
+  // Done with: its listeners would otherwise go on acting on every engine event for the rest of the run.
+  client.dispose();
+
   if (Object.keys(reloaded.objects).length === 0) {
     fail('the initial game data of a game under way was never sent');
   }

@@ -12,9 +12,9 @@ import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Tile from '@civ-clone/core-world/Tile';
 import TransferObject from '../TransferObject';
-import { TransportHandledAction } from '../Transport';
+import { TransportDisposer, TransportHandledAction } from '../Transport';
 import Unit from '@civ-clone/core-unit/Unit';
-import { ClientContext } from './ClientContext';
+import { ClientContext, Disposer } from './ClientContext';
 import { filterToReference } from './refs';
 
 export type TurnHandoverContext = Pick<
@@ -37,6 +37,8 @@ export type TurnHandoverContext = Pick<
 >;
 
 export class TurnHandover {
+  // Stops the `action` receiver, for `dispose`.
+  #actionDisposer: TransportDisposer | null;
   #context: TurnHandoverContext;
   // Each `action` the UI sends, relayed to the listener of the turn under way.
   #eventEmitter: EventEmitter = new EventEmitter();
@@ -46,14 +48,29 @@ export class TurnHandover {
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
+  // The listener of the turn under way, which acts on each `action`, for `dispose`.
+  #listener: ((...args: any[]) => Promise<void>) | null = null;
   #sentInitialData: boolean = false;
 
   constructor(context: TurnHandoverContext) {
     this.#context = context;
 
-    context.transport.receive('action', (...args): void =>
-      this.#eventEmitter.emit('action', ...args)
+    this.#actionDisposer = context.transport.receive(
+      'action',
+      (...args): void => this.#eventEmitter.emit('action', ...args)
     );
+  }
+
+  // Stops listening for the UI's `action`s, and the turn under way stops acting on them, so it never ends. What is
+  //  already under way (the hand-over's timer, an action being handled) goes on.
+  dispose(): void {
+    this.#actionDisposer?.();
+    this.#actionDisposer = null;
+
+    if (this.#listener !== null) {
+      this.#eventEmitter.off('action', this.#listener);
+      this.#listener = null;
+    }
   }
 
   get handedOver(): boolean {
@@ -251,6 +268,7 @@ export class TurnHandover {
         }
       };
 
+      this.#listener = listener;
       this.#eventEmitter.on('action', listener);
     });
   }
@@ -259,12 +277,15 @@ export class TurnHandover {
 // A GoTo that stopped next to a choice (#357). Registered where the client registered it: after the talks' `unit:moved`
 //  listener and before the patches'.
 export const registerTurnHandoverEvents = (
-  engine: Engine,
+  engine: Pick<Engine, 'on' | 'off'>,
   turnHandover: TurnHandover
-): void => {
-  engine.on('unit:halted', (unit: Unit, target: Tile) =>
-    turnHandover.unitHalted(unit, target)
-  );
+): Disposer => {
+  const listener = (unit: Unit, target: Tile): void =>
+    turnHandover.unitHalted(unit, target);
+
+  engine.on('unit:halted', listener);
+
+  return () => engine.off('unit:halted', listener);
 };
 
 export default TurnHandover;
