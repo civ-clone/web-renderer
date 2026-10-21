@@ -87,13 +87,8 @@ import {
   changeWorkedTile,
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
-import {
-  TopCitiesRow,
-  defaultTopCitiesLimit,
-  topCitiesEntries,
-  topCitiesRows,
-} from './lib/topCities';
-import { CivilizationScore, civilizationScore } from './lib/civilizationScore';
+import { TopCitiesRow, defaultTopCitiesLimit } from './lib/topCities';
+import { CivilizationScore } from './lib/civilizationScore';
 import { GameOverDetails, gameOverDetails } from './lib/gameOver';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
 import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
@@ -103,7 +98,6 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
-import { intelligenceRows } from './lib/intelligence';
 import { awaitTimeout, filterToReference, standalone } from './Client/refs';
 import {
   DataFilter,
@@ -117,6 +111,12 @@ import PlayerPatches from './Client/PlayerPatches';
 import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
 import registerCheats from './Client/cheats';
+import registerRequests, {
+  RequestsContext,
+  cityBuildAvailable as cityBuildAvailableFor,
+  civilizationScore as civilizationScoreFor,
+  topCities as topCitiesFor,
+} from './Client/requests';
 import registerNotifications from './Client/notifications/registerNotifications';
 import registerPatchEvents from './Client/events/patchEvents';
 // Last, as registering these used to follow every import here.
@@ -151,6 +151,8 @@ export class DataTransferClient extends Client implements IClient {
   #metOnTheWay: Set<Player> = new Set();
   #pendingChoiceDisposer: TransportDisposer | null = null;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
+  // What the request receivers read, kept for the methods tests call (see `Client/requests.ts`).
+  #requests: RequestsContext;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
   // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
@@ -208,16 +210,25 @@ export class DataTransferClient extends Client implements IClient {
       units: unitRegistryInstance,
     });
 
-    // Worked out here and sent as finished rows, so the UI learns nothing about rival cities beyond what the report
-    //  shows (#124).
-    this.#transport.receive('topCities', (limit) =>
-      this.#transport.send('topCities', this.topCities(limit))
-    );
+    // What the UI asks for: the reports, what a city can build and a unit's actions (see `Client/requests.ts`).
+    this.#requests = {
+      player: () => this.player(),
+      hasMet: (player: Player) => this.hasMet(player),
+      dataFilter: this.#dataFilter,
+      actions: this.#actions,
+      patches: this.#patches,
+      cities: cityRegistryInstance,
+      cityBuilds: cityBuildRegistryInstance,
+      cityGrowths: cityGrowthRegistryInstance,
+      gameResults: gameResultRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+      rules: ruleRegistryInstance,
+      specialists: specialistRegistryInstance,
+      units: unitRegistryInstance,
+      wonders: wonderRegistryInstance,
+    };
 
-    // The engine's `Score` rules add it up (#149).
-    this.#transport.receive('civilizationScore', () =>
-      this.#transport.send('civilizationScore', this.civilizationScore())
-    );
+    registerRequests(this.#transport, this.#requests);
 
     // Game → Retire: the game ends now, with your score (#176, #362).
     //  Once the game has ended, the ending shows again instead.
@@ -250,51 +261,6 @@ export class DataTransferClient extends Client implements IClient {
 
       engineInstance.emit('game:continue');
     });
-
-    // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
-    //  resolves on its own and brings nothing of the game with it. A build that is not ours has nothing to show.
-    this.#transport.receive('cityBuildAvailable', (cityBuildId) => {
-      const [cityBuild] = cityBuildRegistryInstance.getBy('id', cityBuildId);
-
-      this.#transport.send(
-        'cityBuildAvailable',
-        cityBuild && cityBuild.city().player() === this.player()
-          ? this.cityBuildAvailable(cityBuild)
-          : { hierarchy: [], objects: {} }
-      );
-    });
-
-    // The UI makes a unit active and asks for its actions, which the patches leave out for every other unit (#323). The
-    //  answer is a patch of that unit alone, with its tiles as refs the UI already holds.
-    this.#transport.receive('unitActions', (unitId) => {
-      const [unit] = unitRegistryInstance.getBy('id', unitId);
-
-      if (!unit || unit.player() !== this.player()) {
-        return;
-      }
-
-      this.#setUnitWithActions(unit);
-
-      this.#patches.update(unit.id(), () => {
-        this.#actions.answering = unit;
-
-        try {
-          return this.serialiseUnit(unit);
-        } finally {
-          this.#actions.answering = null;
-        }
-      });
-
-      this.sendPatchData();
-    });
-
-    // The intelligence report (F3, #58), worked out here for the same reason.
-    this.#transport.receive('intelligence', () =>
-      this.#transport.send(
-        'intelligence',
-        intelligenceRows(this.player(), (player) => this.hasMet(player))
-      )
-    );
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
@@ -918,22 +884,11 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   cityBuildAvailable(cityBuild: CityBuildItem): ObjectMap {
-    const available = cityBuild.available(),
-      filter = this.#dataFilter(standalone);
-
-    // `toPlainObject` is a method on `DataObject`, and it is the only way in: the filter is applied to what it is called
-    //  on first, so handing it the list in place of the build gets the list serialised, as the `hierarchy`.
-    return cityBuild.toPlainObject((object: any) =>
-      object === cityBuild ? available : filter(object)
-    );
+    return cityBuildAvailableFor(this.#dataFilter, cityBuild);
   }
 
   civilizationScore(): CivilizationScore {
-    return civilizationScore(this.player(), {
-      gameResults: gameResultRegistryInstance,
-      playerWorlds: playerWorldRegistryInstance,
-      rules: ruleRegistryInstance,
-    });
+    return civilizationScoreFor(this.#requests);
   }
 
   // How the game ended, for the ending window (#176).
@@ -964,17 +919,7 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {
-    return topCitiesRows(
-      topCitiesEntries(this.player(), {
-        cities: cityRegistryInstance,
-        cityGrowths: cityGrowthRegistryInstance,
-        specialists: specialistRegistryInstance,
-        wonders: wonderRegistryInstance,
-        playerWorlds: playerWorldRegistryInstance,
-        hasMet: (player: Player) => this.hasMet(player),
-      }),
-      Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
-    );
+    return topCitiesFor(this.#requests, limit);
   }
 
   // Whether this player has met `player`, for naming them in a notification (#59).
