@@ -77,6 +77,7 @@ import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
 import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
+import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitTiles from './lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from './lib/PendingMove';
 import ActionWindow from './components/ActionWindow';
@@ -807,6 +808,8 @@ export class Renderer {
                 })
               );
 
+              dataChanges.notify(data);
+
               const primaryActionList = [
                   'ChooseGovernment',
                   'ChooseResearch',
@@ -1076,6 +1079,16 @@ export class Renderer {
 
               // TODO: look into if it's possible to have data reconstituted in a worker thread
               data = reconstituter.rebuild(objectMap, changed) as GameData;
+
+              // Accumulated until the next render's `notify`: several rebuilds
+              //  can come between two renders, and `filledIds` is the last
+              //  one's alone. It adds the owners of refs that have just
+              //  arrived; `changed` adds the ids removed.
+              dataChanges.collect(
+                changed === null
+                  ? null
+                  : [...changed, ...reconstituter.filledIds()]
+              );
 
               const turnValue = Number(data?.turn?.value ?? 0),
                 objectCount = Object.keys(objectMap.objects).length;
