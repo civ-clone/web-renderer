@@ -448,6 +448,26 @@ check(
   reconstituter.refilled('List-0') && !reconstituter.refilled(a)
 );
 
+// What `DataChanges` is told: the same ids as `refilled`, in a set the next
+// call replaces rather than clears.
+const filledIds = reconstituter.filledIds();
+
+check(
+  'filledIds is what refilled says',
+  [...filledIds].every((id) => reconstituter.refilled(id)) &&
+    filledIds.has('List-0') &&
+    !filledIds.has(a)
+);
+
+reconstituter.rebuild(objectMap, []);
+
+check(
+  'and the next call replaces it, leaving the one taken alone',
+  reconstituter.filledIds() !== filledIds &&
+    reconstituter.filledIds().size === 0 &&
+    filledIds.has('List-0')
+);
+
 // Referred to before it was sent, then sent on its own.
 const waiting = newId(),
   late = newId();
@@ -483,6 +503,11 @@ update({
     value: { hierarchy: makeThing(late), objects: {} },
   },
 });
+
+check(
+  'filledIds has the owner of a ref that has just arrived',
+  reconstituter.filledIds().has(waiting) && reconstituter.filledIds().has(late)
+);
 
 check(
   'once it is sent, what referred to it finds it, in the same object',
