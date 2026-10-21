@@ -9,6 +9,10 @@
   overflow: hidden;
   padding: 0;
   position: fixed;
+  // Above everything on the map screen: the action stack, the game menu and
+  // the buttons beside it (1) and popup menus (2). Modal windows go higher
+  // still, below.
+  z-index: 5;
 
   // The titlebar stays put and only the body scrolls (#283).
   &[open] {
