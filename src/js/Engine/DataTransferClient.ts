@@ -3,7 +3,6 @@ import {
   DataForChoiceMeta,
 } from '@civ-clone/core-client/ChoiceMeta';
 import { Client, IClient } from '@civ-clone/core-client/Client';
-import AIClient from '@civ-clone/core-ai-client/AIClient';
 import City from '@civ-clone/core-city/City';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
@@ -19,6 +18,7 @@ import Tile from '@civ-clone/core-world/Tile';
 import Transport, { TransportHandledAction } from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import ActionsState from './Client/ActionsState';
+import Automation from './Client/Automation';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -79,8 +79,9 @@ import { ActionContext } from './Client/actions/ActionContext';
 import './Client/registerAdditionalData';
 
 export class DataTransferClient extends Client implements IClient {
-  #automationClient: AIClient;
-  #automationEnabled: boolean;
+  // Whether the player's turns are automated, and the computer player that plays them (see `Client/Automation.ts`).
+  //  Made in the constructor, which is given whether it starts on.
+  #automation: Automation;
   // The player's actions as the frontend was last sent them, and the unit it has the actions of (#411, #323).
   #actions: ActionsState = new ActionsState();
   // What acting on the UI's actions reads (see `Client/handleAction.ts`). Made in the constructor, once the patches and
@@ -132,8 +133,14 @@ export class DataTransferClient extends Client implements IClient {
   ) {
     super(player);
 
-    this.#automationClient = new SimpleAIClient(player);
-    this.#automationEnabled = automationEnabled;
+    this.#automation = new Automation(
+      new SimpleAIClient(player),
+      automationEnabled,
+      {
+        player: () => this.player(),
+        currentPlayers: currentPlayerRegistryInstance,
+      }
+    );
     this.#eventEmitter = new EventEmitter();
     this.#transport = transport;
     this.#patches = new PlayerPatches(
@@ -217,18 +224,12 @@ export class DataTransferClient extends Client implements IClient {
       rules: ruleRegistryInstance,
     };
 
-    const client = this;
-
     // The players met by our units' moves, and a Diplomat's Meet with King (see `Client/Talks.ts`). Its `unit:moved`
     //  listener is before the patches' below, which flushes.
-    registerTalkEvents(engineInstance, this.#talks, {
-      get enabled(): boolean {
-        return client.#automationEnabled;
-      },
-    });
+    registerTalkEvents(engineInstance, this.#talks, this.#automation);
 
     engineInstance.on('unit:halted', (unit: Unit, target: Tile) => {
-      if (unit.player() !== this.player() || this.#automationEnabled) {
+      if (unit.player() !== this.player() || this.#automation.enabled) {
         return;
       }
 
@@ -253,7 +254,7 @@ export class DataTransferClient extends Client implements IClient {
       player: () => this.player(),
       patches: this.#patches,
       dataFilter: this.#dataFilter,
-      automation: { automatedTurn: () => this.#automatedTurn() },
+      automation: this.#automation,
       cityNews: this.#cityNews,
     });
 
@@ -310,14 +311,14 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   setAutomationEnabled(enabled: boolean): void {
-    this.#automationEnabled = !!enabled;
+    this.#automation.setEnabled(enabled);
   }
 
   async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
     meta: ChoiceMeta<Name>
   ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
-    if (this.#automationEnabled) {
-      return this.#automationClient.chooseFromList(meta) as Promise<
+    if (this.#automation.enabled) {
+      return this.#automation.client.chooseFromList(meta) as Promise<
         DataForChoiceMeta<ChoiceMeta<Name>>
       >;
     }
@@ -417,26 +418,12 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
-  // Whether this is our turn, automated: the whole player goes at the end of it, so what each of its moves changes of
-  //  our units and cities needn't go as well, only the squares the map draws (#411).
-  #automatedTurn(): boolean {
-    if (!this.#automationEnabled) {
-      return false;
-    }
-
-    const [currentPlayer] = currentPlayerRegistryInstance.entries();
-
-    return currentPlayer === this.player();
-  }
-
   #holdsNotifications(): boolean {
-    if (this.#handedOver || this.#automationEnabled) {
+    if (this.#handedOver || this.#automation.enabled) {
       return false;
     }
 
-    const [currentPlayer] = currentPlayerRegistryInstance.entries();
-
-    return currentPlayer === this.player();
+    return this.#automation.ourTurn();
   }
 
   #handOver(): void {
@@ -474,12 +461,12 @@ export class DataTransferClient extends Client implements IClient {
         this.sendInitialData();
       }
 
-      if (this.#automationEnabled) {
+      if (this.#automation.enabled) {
         // Automation's own client does the talking.
         this.#talks.metOnTheWay.clear();
         this.#heldHalts.splice(0);
 
-        this.#automationClient
+        this.#automation.client
           .takeTurn()
           .then(() => {
             this.#patches.update(turnInstance.id(), () =>
