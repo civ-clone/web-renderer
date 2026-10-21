@@ -1,0 +1,1 @@
+{"version":"0.1.0@1c64f77","date":"2026-10-21T12:27:47.000Z","localChanges":["chore: move DataTransferClient's embassy report and investigated city into src/js/Engine/Client/diplomatEvents.ts (#449)"],"externalChanges":{}}
