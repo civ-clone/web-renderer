@@ -1,4 +1,5 @@
 import { NeighbourDirection, Tile } from '../types';
+import { Projection, SquareProjection } from '../lib/projection';
 import { Rect, repeatOffsets, tileRange } from '../lib/viewport';
 import {
   getPreloadedImage,
@@ -47,6 +48,9 @@ export class Map implements IMap {
   #dirty: Rect[] = [];
   #originX: number = 0;
   #originY: number = 0;
+  // Made when first asked for, and again after the scale or the vertical wrap changes. Not in the constructor:
+  //  `Overview` keeps a tile size of its own, and a subclass's `tileSize()` can't be relied on from here.
+  #projection: Projection | null = null;
   // Set when what is on the canvas was drawn at a scale it no longer has, so
   // the next viewport change has to redraw rather than scroll.
   #stale: boolean = false;
@@ -113,15 +117,15 @@ export class Map implements IMap {
   }
 
   renderTile(tile: Tile): void {
-    const size = this.tileSize();
+    const { width, height } = this.projection().footprint();
 
     this.placements(tile).forEach(([offsetX, offsetY]) => {
-      this.context().clearRect(offsetX, offsetY, size, size);
+      this.context().clearRect(offsetX, offsetY, width, height);
 
-      // The square that was cleared. Anything drawn past it is marked by
+      // The box that was cleared. Anything drawn past it is marked by
       // `putImage` as it is drawn, so the sprites' own sizes and offsets do not
       // have to be second-guessed here.
-      this.markDirty(offsetX, offsetY, size, size);
+      this.markDirty(offsetX, offsetY, width, height);
 
       // One square that can't be drawn mustn't stop the rest: a throw here used to abandon the layer mid-scroll, leaving
       //  it out of line with the others (#32).
@@ -151,6 +155,7 @@ export class Map implements IMap {
     }
 
     this.#wrapVertical = wrap;
+    this.#projection = null;
     this.#stale = true;
   }
 
@@ -164,6 +169,7 @@ export class Map implements IMap {
     }
 
     this.#scale = scale;
+    this.#projection = null;
     this.#stale = true;
   }
 
@@ -307,24 +313,28 @@ export class Map implements IMap {
 
   /** Every place `tile` lands on this canvas; usually one, often none. */
   protected placements(tile: Tile): [number, number][] {
-    const size = this.tileSize(),
+    const projection = this.projection(),
+      { width, height } = projection.footprint(),
+      period = projection.wrapPeriod(),
+      [tileX, tileY] = projection.tileToPixel(tile.x, tile.y),
       overhang = this.overhang(),
       columns = repeatOffsets(
-        tile.x * size - this.#originX,
-        this.#world.width() * size,
+        tileX - this.#originX,
+        period.x,
         this.#canvas.width,
-        size,
+        width,
         overhang
       ),
+      // A world that doesn't wrap over the poles has the tile only where it
+      // is, if that is on the canvas at all.
       rows = repeatOffsets(
-        tile.y * size - this.#originY,
-        this.#world.height() * size,
+        tileY - this.#originY,
+        period.y ?? projection.worldSize().height,
         this.#canvas.height,
-        size,
+        height,
         overhang
       ).filter(
-        (offsetY) =>
-          this.#wrapVertical || offsetY === tile.y * size - this.#originY
+        (offsetY) => period.y !== null || offsetY === tileY - this.#originY
       ),
       placements: [number, number][] = [];
 
@@ -333,6 +343,19 @@ export class Map implements IMap {
     );
 
     return placements;
+  }
+
+  /** Where tiles go on the world, in pixels, at this layer's tile size. */
+  protected projection(): Projection {
+    if (this.#projection === null) {
+      this.#projection = new SquareProjection(
+        this.tileSize(),
+        this.#world,
+        this.#wrapVertical
+      );
+    }
+
+    return this.#projection;
   }
 
   protected putImage(
@@ -449,8 +472,10 @@ export class Map implements IMap {
   }
 
   protected setCanvasSize(): void {
-    this.#canvas.height = this.#world.height() * this.tileSize();
-    this.#canvas.width = this.#world.width() * this.tileSize();
+    const { width, height } = this.projection().worldSize();
+
+    this.#canvas.height = height;
+    this.#canvas.width = width;
   }
 
   protected setOrigin(originX: number, originY: number): void {
@@ -460,19 +485,19 @@ export class Map implements IMap {
 
   /** The tiles that reach a region of this canvas. */
   protected tilesIn(rect: Rect): Tile[] {
-    const size = this.tileSize(),
+    const { width, height } = this.projection().footprint(),
       overhang = this.overhang(),
       columns = tileRange(
         this.#originX + rect.x,
         rect.width,
-        size,
+        width,
         overhang,
         this.#world.width()
       ),
       rows = tileRange(
         this.#originY + rect.y,
         rect.height,
-        size,
+        height,
         overhang,
         this.#world.height()
       ),
