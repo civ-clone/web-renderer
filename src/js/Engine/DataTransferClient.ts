@@ -106,19 +106,14 @@ import {
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
 import {
-  calculateCitizenState,
-  citizenSummary,
-} from '@civ-clone/civ1-city-happiness/lib/calculateCitizenState';
-import {
   TopCitiesRow,
   defaultTopCitiesLimit,
+  topCitiesEntries,
   topCitiesRows,
 } from './lib/topCities';
-import { score, scoreTerms } from '@civ-clone/core-score/lib/score';
-import { CivilizationScore } from './lib/civilizationScore';
+import { CivilizationScore, civilizationScore } from './lib/civilizationScore';
 import { GameOverDetails, gameOverDetails } from './lib/gameOver';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
-import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
 import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
 import { instance as gameResultRegistryInstance } from '@civ-clone/core-turn-based-game/GameResultRegistry';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
@@ -2074,23 +2069,11 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   civilizationScore(): CivilizationScore {
-    const gameResult = gameResultRegistryInstance.get(),
-      bonus = conquestBonusFor(
-        this.player(),
-        gameResultRegistryInstance,
-        playerWorldRegistryInstance
-      ),
-      total = score(this.player(), ruleRegistryInstance);
-
-    return {
-      terms: scoreTerms(this.player(), ruleRegistryInstance).map(
-        ({ term, value }) => ({ term, value })
-      ),
-      bonus,
-      // v474.05 shows the conquest bonus as the score when it's the higher.
-      total: bonus === null ? total : Math.max(total, bonus),
-      scoringComplete: gameResult?.scoringComplete() ?? false,
-    };
+    return civilizationScore(this.player(), {
+      gameResults: gameResultRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+      rules: ruleRegistryInstance,
+    });
   }
 
   // How the game ended, for the ending window (#176).
@@ -2121,48 +2104,14 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {
-    const playerWorld = playerWorldRegistryInstance.getByPlayer(this.player()),
-      metPlayers = new Map<Player, boolean>();
-
     return topCitiesRows(
-      cityRegistryInstance.entries().map((city: City) => {
-        const owner = city.player(),
-          [unhappy, content, happy] = citizenSummary(
-            calculateCitizenState(cityGrowthRegistryInstance.getByCity(city))
-          ),
-          colors = owner
-            .civilization()
-            .attributes()
-            .find((attribute) => attribute.name() === 'colors');
-
-        if (!metPlayers.has(owner)) {
-          metPlayers.set(owner, this.hasMet(owner));
-        }
-
-        return {
-          name: city.name(),
-          originalCivilization: typeNameOf(
-            city.originalPlayer().civilization().sourceClass()
-          ),
-          owner: {
-            civilization: typeNameOf(owner.civilization().sourceClass()),
-            colors: colors ? (colors.value() as [string, string]) : null,
-          },
-          size: cityGrowthRegistryInstance.getByCity(city).size(),
-          citizens: {
-            happy,
-            content,
-            unhappy,
-            specialists: specialistRegistryInstance
-              .getByCity(city)
-              .map((specialist) => typeNameOf(specialist.sourceClass())),
-          },
-          wonders: wonderRegistryInstance
-            .getByCity(city)
-            .map((wonder) => typeNameOf(wonder.sourceClass())),
-          seen: playerWorld.getByTile(city.tile()) !== null,
-          met: metPlayers.get(owner)!,
-        };
+      topCitiesEntries(this.player(), {
+        cities: cityRegistryInstance,
+        cityGrowths: cityGrowthRegistryInstance,
+        specialists: specialistRegistryInstance,
+        wonders: wonderRegistryInstance,
+        playerWorlds: playerWorldRegistryInstance,
+        hasMet: (player: Player) => this.hasMet(player),
       }),
       Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
     );
