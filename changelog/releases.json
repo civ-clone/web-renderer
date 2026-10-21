@@ -1,4 +1,6 @@
 [
+{"version":"0.1.0@ee9cb3a","date":"2026-10-21T21:18:38.000Z","localChanges":["The game menu, its drop-down, the buttons beside it and every window are back in their usual order on screen, and the full-height stack of action buttons no longer swallows clicks meant for the game menu behind its faded top (part of #416)."],"externalChanges":{}}
+,
 {"version":"0.1.0@f03612d","date":"2026-10-21T21:17:34.000Z","localChanges":["Windows that aren't modal, such as the city screen, open above the game menu, the small buttons beside it and the action buttons again, instead of underneath them (part of #416)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@f65c415","date":"2026-10-21T21:12:07.000Z","localChanges":["The menu that drops down from the game menu, and the unit action menu, now open above the row of small buttons beside the game menu instead of underneath it (part of #416)."],"externalChanges":{}}
