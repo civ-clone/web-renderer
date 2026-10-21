@@ -23,7 +23,6 @@ import Yield from '@civ-clone/core-yield/Yield';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import Retryable from '../../Retryable';
 import { CityNewsCollector } from '../cityNews';
 import PlayerPatches from '../PlayerPatches';
 import { DataFilter } from '../visibilityFilter';
@@ -67,23 +66,8 @@ export const registerPatchEvents = (
       ctx.patches.citiesAround(tile);
     }
 
+    // `PlayerWorld.register` adds the square before it says it is seen, so it is never missing here (#478).
     if (playerTile === null) {
-      new Retryable(
-        () => {
-          const playerTile = playerWorld.getByTile(tile);
-
-          if (playerTile === null) {
-            return false;
-          }
-
-          ctx.patches.seenTile(playerWorld, playerTile);
-
-          return true;
-        },
-        2,
-        20
-      );
-
       return;
     }
 
