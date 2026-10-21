@@ -14,6 +14,7 @@
     "src/js/Engine/Game.ts",
     "main.ts",
     "src/js/preload.ts",
-    "src/js/UI/lib/applyDataPatches.ts"
+    "src/js/UI/lib/applyDataPatches.ts",
+    "src/js/UI/debug/DebugFlags.ts"
   ]
 }
