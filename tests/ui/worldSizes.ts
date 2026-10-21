@@ -1,7 +1,7 @@
 // The world sizes New Game offers (#55): Civ1's 8:5 shape, growing in order,
 // with Normal being Civ1's own 80 × 50 map. Each offers a range of
 // civilizations, largest first, with its default inside it, and none offers
-// more than the 14 civilizations there are. Earth offers the sizes there is an
+// more than the 14 civilizations Civ1 has. Earth offers the sizes there is an
 // Earth map for: Normal, Large and Huge.
 
 import worldSizes, {
@@ -75,7 +75,7 @@ worldSizes.forEach((size, index) => {
   );
 
   expect(
-    `${size.key} offers no more than the 14 civilizations there are`,
+    `${size.key} offers no more than the 14 civilizations Civ1 has`,
     size.maxPlayers <= 14,
     true
   );
