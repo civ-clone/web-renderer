@@ -2,7 +2,6 @@ import {
   City as CityData,
   DataPatch,
   GameData,
-  PlayerAction,
   Tile,
   Unit,
   UnitAction,
@@ -32,6 +31,7 @@ import { downloadSave, takePendingSave } from './lib/savedGame';
 import { guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
+import UnitQueue from './lib/UnitQueue';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -167,7 +167,7 @@ export class Renderer {
 
           if (unit !== null) {
             lastUnit = unit;
-            waitedUnits.delete(unit.id);
+            unitQueue.activated(unit.id);
           }
 
           // Every way a unit becomes active comes through here: the next unit after an update, a click, the stack
@@ -261,11 +261,8 @@ export class Renderer {
       let lastUnit: Unit | null = null,
         activeUnit: Unit | null = null;
 
-      // Ids of units deferred with `w` (wait), oldest first: held out of
-      // auto-selection until every other active unit has had its turn. Ids,
-      // not objects, because a full rebuild (a loaded game) makes every object
-      // afresh.
-      const waitedUnits = new Set<string>();
+      // The units that can act this turn, and those deferred with `w` (wait).
+      const unitQueue = new UnitQueue();
 
       const transportDisposers: Array<() => void> = [];
 
@@ -357,12 +354,11 @@ export class Renderer {
               mapPortal.parentElement as HTMLElement
             ).offsetHeight;
 
-            let activeUnits: PlayerAction[] = [],
-              // From the worker accepting `EndTurn` until it hands the next
-              // turn over. Nothing sent in between is listened for, and the
-              // data still describes the turn just ended, so there is nothing
-              // to select or act on (#61, #130).
-              waitingForTurn = false;
+            // From the worker accepting `EndTurn` until it hands the next
+            // turn over. Nothing sent in between is listened for, and the
+            // data still describes the turn just ended, so there is nothing
+            // to select or act on (#61, #130).
+            let waitingForTurn = false;
 
             // Always in the document and emptied rather than hidden, so that
             // setting the text is announced: it explains why the controls
@@ -765,7 +761,7 @@ export class Renderer {
 
             // Runs synchronously on every patch. Reconstitution and all state
             // the input handlers read synchronously (`data`, `world` tiles,
-            // `activeUnit`/`activeUnits`/`lastUnit`, the map layers' active-unit
+            // `activeUnit`/`unitQueue`/`lastUnit`, the map layers' active-unit
             // pointers) must stay here — deferring any of it (tried 2026-07-02)
             // left `activeUnit` stale for ~1 frame and broke consecutive moves
             // of multi-move units. Only `render()` is coalesced to one run per
@@ -817,51 +813,16 @@ export class Renderer {
               );
               releaseIncomingTiles();
 
-              const playerActions = data.player.actions.filter(
-                (action): action is PlayerAction => !!action
-              );
+              unitQueue.update(data.player.actions, waitingForTurn);
 
-              // No unit to blink as if it could move, and none for the keys to move.
-              activeUnits = waitingForTurn
-                ? []
-                : playerActions.filter(
-                    (action: PlayerAction): boolean => action._ === 'ActiveUnit'
-                  );
-
-              waitedUnits.forEach((id) => {
-                if (
-                  !activeUnits.some(
-                    (action) => (action.value as Unit).id === id
-                  )
-                ) {
-                  waitedUnits.delete(id);
-                }
-              });
-
-              // Only waited units left: the longest-waiting one is up next.
-              if (
-                activeUnits.length > 0 &&
-                activeUnits.every((action) =>
-                  waitedUnits.has((action.value as Unit).id)
-                )
-              ) {
-                const [oldestId] = waitedUnits;
-
-                waitedUnits.delete(oldestId);
-              }
-
-              const selectableActiveUnits = activeUnits.filter(
-                (action) => !waitedUnits.has((action.value as Unit).id)
-              );
+              const selectableActiveUnits = unitQueue.selectable();
 
               // A unit whose GoTo stopped next to a choice goes first, and is offered it once its actions are in.
-              const halted = haltedUnits.next(
-                  activeUnits.map((action) => action.value as Unit)
-                ),
+              const halted = haltedUnits.next(unitQueue.units()),
                 nextUnit =
                   halted?.unit ??
                   chooseActiveUnit(
-                    selectableActiveUnits.map((action) => action.value as Unit),
+                    selectableActiveUnits,
                     lastUnit?.id ?? null,
                     (x, y) => portal.isVisible(x, y)
                   );
@@ -1180,22 +1141,9 @@ export class Renderer {
               }
 
               if (key === 'w' && activeUnit) {
-                const current = activeUnit,
-                  others = activeUnits
-                    .map((unitAction) => unitAction.value as Unit)
-                    .filter((unit) => unit.id !== current.id);
+                const next = unitQueue.wait(activeUnit);
 
-                if (others.length > 0) {
-                  waitedUnits.add(current.id);
-
-                  // When everything else is waiting too, the queue wraps round
-                  // to whichever unit has waited longest.
-                  const [oldestId] = waitedUnits,
-                    next =
-                      others.find((unit) => !waitedUnits.has(unit.id)) ??
-                      others.find((unit) => unit.id === oldestId) ??
-                      others[0];
-
+                if (next !== null) {
                   setActiveUnit(next, portal, unitsMap, activeUnitsMap);
                 }
 
