@@ -57,7 +57,8 @@ export class GameState {
   #data: GameData;
   #frames: FrameScheduler;
   // The map as it arrived: the transport does not rebuild it, so that it is
-  //  rebuilt once, here (#333). Patched and pruned in place.
+  //  rebuilt once, here (#333). Patched and pruned in place, until `replace`
+  //  hands over another.
   #objectMap: ObjectMap;
   #pruneSchedule: PruneSchedule;
   #reconstituter: IncrementalReconstituter;
@@ -144,8 +145,14 @@ export class GameState {
     this.update();
   }
 
-  /** A `gameData` after the first: a map that did not come from patches, whose changes are not known. */
+  /**
+   * A `gameData` after the first: a map that did not come from patches, whose changes are not known. It becomes the
+   * map later patches apply to and later updates rebuild from; rebuilding from it once while patching the old one
+   * undid it at the next patch.
+   */
   replace(objectMap: ObjectMap): void {
+    this.#objectMap = objectMap;
+
     this.#update(objectMap, true);
   }
 

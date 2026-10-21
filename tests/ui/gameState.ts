@@ -6,8 +6,9 @@
 // does) drops the deferred rebuild and rebuilds once; that each update runs in
 // the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
 // tells the world whether its tiles were refilled; that a `PlayerTile` a patch
-// carries is queued; that what changed reaches `DataChanges`; and that the map
-// is pruned on schedule and the pruned ids forgotten.
+// carries is queued; that what changed reaches `DataChanges`; that a second
+// `gameData` is the map later patches apply to; and that the map is pruned on
+// schedule and the pruned ids forgotten.
 
 import GameState, {
   FrameScheduler,
@@ -415,6 +416,54 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   check(
     'a replaced map wakes every watcher',
     woken.join(',') === 'Unit-1,Unit-2'
+  );
+}
+
+// A second `gameData`: later patches apply to the map it brought.
+{
+  const { frames, objectMap, state, updates } = setup();
+
+  state.update();
+
+  const replacement = makeMap(2);
+
+  (replacement.objects['Unit-1'] as PlainObject).moves = 7;
+
+  state.replace(replacement);
+
+  check('replace updates once', updates() === 2);
+  check(
+    "the data is the new map's",
+    state.currentTurn() === 2 && unitMoves(state, 'Unit-1') === 7
+  );
+
+  state.applyPatches([moves('Unit-2', 0)]);
+
+  check('a patch after it rebuilds at once', updates() === 3);
+  check(
+    'the patch applies to the new map',
+    (replacement.objects['Unit-2'] as PlainObject).moves === 0
+  );
+  check(
+    'and not to the old one',
+    (objectMap.objects['Unit-2'] as PlainObject).moves === 1
+  );
+  check(
+    'the new map is not undone by the patch',
+    state.currentTurn() === 2 && unitMoves(state, 'Unit-1') === 7
+  );
+  check('the patch is in the data', unitMoves(state, 'Unit-2') === 0);
+
+  // And so does one deferred while waiting.
+  state.setWaiting(true);
+  state.applyPatches([moves('Unit-1', 3)]);
+  frames.run();
+
+  check(
+    'a deferred rebuild after it keeps the new map',
+    state.currentTurn() === 2 &&
+      unitMoves(state, 'Unit-1') === 3 &&
+      unitMoves(state, 'Unit-2') === 0
   );
 }
 
