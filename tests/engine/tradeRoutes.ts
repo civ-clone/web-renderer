@@ -3,8 +3,8 @@
 //  Caravan helps its city build a Wonder, and the shields reach the UI too.
 //
 // Drives a seeded game with a human `DataTransferClient`, as `joinCity` does. On the human's first turn the test founds
-// a city with the starting Settlers, puts a computer player's city a few tiles away, and a Caravan from the new city
-// next to it, then sends `EstablishTradeRoute` the way the arrow keys do. The queue is flushed first, as `joinCity`
+// a city with the starting Settlers, puts a computer player's city far enough away that the goods are worth something,
+// and a Caravan from the new city next to it, then sends `EstablishTradeRoute` the way the arrow keys do. The queue is flushed first, as `joinCity`
 // explains.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -19,12 +19,14 @@ import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import { Gold } from '@civ-clone/civ1-city/Yields';
+import { Grassland, Plains, River } from '@civ-clone/civ1-world/Terrains';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
+import { instance as goodyHutRegistryInstance } from '@civ-clone/core-goody-hut/GoodyHutRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
@@ -120,20 +122,26 @@ const run = async (): Promise<void> => {
     fail('the starting Settlers could not found a city');
   }
 
-  // A land tile a few tiles away, with a free land tile beside it for the Caravan.
+  // Grassland, Plains or River at least 14 tiles away, with a free land tile beside it for the Caravan. The goods sell
+  //  for (distance + 10) × the two cities' trade ÷ 24, halved on one landmass. New cities on those terrains have at least
+  //  1 trade each, so this always sells for at least 1 gold, whatever the seed; a nearer partner often sold for 0. No
+  //  goody hut on either tile, or its gold would be counted as the sale's.
   const rival = playerRegistryInstance
       .entries()
       .find((player) => player !== humanPlayer)!,
     playerWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
     [site, approach] = home
       .tile()
-      .getSurroundingArea(4)
+      .getSurroundingArea(20)
       .entries()
       .filter(
         (tile) =>
-          tile.isLand() &&
-          tile.distanceFrom(home.tile()) >= 3 &&
+          [Grassland, Plains, River].some(
+            (TerrainType) => tile.terrain() instanceof TerrainType
+          ) &&
+          tile.distanceFrom(home.tile()) >= 14 &&
           cityRegistryInstance.getByTile(tile) === null &&
+          goodyHutRegistryInstance.getByTile(tile) === null &&
           unitRegistryInstance.getByTile(tile).length === 0
       )
       .flatMap((tile): [Tile, Tile][] =>
@@ -143,13 +151,16 @@ const run = async (): Promise<void> => {
             (neighbour) =>
               neighbour.isLand() &&
               cityRegistryInstance.getByTile(neighbour) === null &&
+              goodyHutRegistryInstance.getByTile(neighbour) === null &&
               unitRegistryInstance.getByTile(neighbour).length === 0
           )
           .map((neighbour): [Tile, Tile] => [tile, neighbour])
       )[0] ?? [null, null];
 
   if (!site || !approach) {
-    fail('no land near the city for a rival city and a Caravan beside it');
+    fail(
+      'no land far enough from the city for a rival city and a Caravan beside it'
+    );
   }
 
   const partner = new City(rival, site!, 'Partner');
@@ -289,11 +300,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    `PASS tradeRoutes (the goods sold for ${
-      gold() - goldBefore
-    } gold; the route to Partner, +${
-      sent[0].trade
-    } trade, was sent with the move; a Caravan's 50 shields reached the UI)`
+    `PASS tradeRoutes (the goods sold for ${bonus} gold; the route to Partner, +${sent[0].trade} trade, was sent with the move; a Caravan's 50 shields reached the UI)`
   );
 
   process.exit(0);

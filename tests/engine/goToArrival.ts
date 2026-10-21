@@ -28,6 +28,7 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { generateKey } from '@civ-clone/base-unit-action-goto/GoTo';
+import { Grassland } from '@civ-clone/civ1-world/Terrains';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -259,6 +260,7 @@ const order = async (): Promise<void> => {
     .getByCity(home)
     .build(Colossus as unknown as typeof Buildable);
 
+  // With a land step between it and the city, so a land unit can get there (a tile across water has no route).
   const landTwoAway = homeTile
     .getSurroundingArea(2)
     .entries()
@@ -267,6 +269,12 @@ const order = async (): Promise<void> => {
         tile.isLand() &&
         tile !== homeTile &&
         !tile.isNeighbourOf(homeTile) &&
+        tile
+          .getNeighbours()
+          .some(
+            (neighbour) =>
+              neighbour.isLand() && neighbour.isNeighbourOf(homeTile)
+          ) &&
         cityRegistryInstance.getByTile(tile) === null &&
         unitRegistryInstance.getByTile(tile).length === 0
     );
@@ -319,6 +327,9 @@ const order = async (): Promise<void> => {
     fail(`the blocked Bomber's journey is already over: ${describe(blocked)}`);
   }
 
+  // On Grassland, so it can't starve before the check: a size-1 city on Mountains or Swamp is gone by the next turn, and
+  //  the Bomber would fly on to Faraway.
+  blockedNext!.setTerrain(new Grassland());
   new City(rivals[0], blockedNext!, 'Roadblock');
   new Warrior(null, rivals[0], blockedNext!);
 
