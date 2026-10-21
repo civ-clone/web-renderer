@@ -1,7 +1,7 @@
 import { PlayerAction } from '../types';
 
 // Which of the player's actions go to the primary panel (the end-turn area) and which to the secondary one. Pure, so
-//  `Renderer`'s `render()` and the tests share it.
+//  `Hud`'s `build` and the tests share it.
 
 export const primaryActionList = [
     'ChooseGovernment',
