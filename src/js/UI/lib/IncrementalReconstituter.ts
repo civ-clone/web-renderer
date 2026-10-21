@@ -36,7 +36,7 @@ export class IncrementalReconstituter {
   //  arrives. Nothing else records who refers to what. An entry can outlive
   //  the ref it was recorded for, which costs one needless refill at most.
   #waiting: Map<string, Set<Owner>> = new Map();
-  // The ids the last call filled, for `refilled`.
+  // The ids the last call filled, for `refilled` and `filledIds`.
   #filled: Set<string> = new Set();
   #objectMap: ObjectMap | null = null;
   #root: PlainObject | undefined = undefined;
@@ -346,6 +346,15 @@ export class IncrementalReconstituter {
   //  place: its contents may have changed even though the object has not.
   refilled(id: string): boolean {
     return this.#filled.has(id);
+  }
+
+  // Every id the last `rebuild` filled, afresh or in place: the changed ids it
+  //  holds, new ids found inside them, the owners of refs that have just
+  //  arrived, and on a full rebuild every id it reached. Not a changed id
+  //  nothing has reached, nor one removed, nor an alias. Replaced, not
+  //  cleared, by the next call, so a set taken from here stays as it was.
+  filledIds(): ReadonlySet<string> {
+    return this.#filled;
   }
 
   // For ids `pruneObjectMap` removed: nothing reachable referred to them, so

@@ -1,0 +1,1 @@
+{"version":"0.1.0@b35f4e4","date":"2026-10-21T08:48:59.000Z","localChanges":["chore: move DataTransferClient's ref filters, stand-ins and AdditionalData registrations into src/js/Engine/Client (#449)"],"externalChanges":{}}
