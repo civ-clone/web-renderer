@@ -83,9 +83,9 @@ import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import ActiveUnitTiles from './lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from './lib/PendingMove';
-import createMemoryTestbed from './lib/memoryTestbed';
-import UIStressRunner from './lib/UIStressRunner';
 import ActionWindow from './components/ActionWindow';
+import DebugFlags from './debug/DebugFlags';
+import DebugPanel from './debug/DebugPanel';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -123,14 +123,13 @@ export class Renderer {
       return defaultValue;
     };
 
-    const debugMode = parseBooleanParam(queryParams.get('debug'), false);
+    const debugFlags = new DebugFlags(
+      parseBooleanParam(queryParams.get('debug'), false)
+    );
 
-    let automatePlayerEnabled = debugMode,
-      stressUiEnabled = debugMode,
-      stressUiWindowsEnabled = !debugMode,
-      // Once a game is running, F5 is a leader-screen shortcut (TradeReport),
-      // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
-      gameStarted = false;
+    // Once a game is running, F5 is a leader-screen shortcut (TradeReport),
+    // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
+    let gameStarted = false;
 
     const hasAllAssets = await assetStore.hasAllAssets();
 
@@ -186,12 +185,7 @@ export class Renderer {
       lockVerticalEdges: false,
     });
 
-    if (debugMode) {
-      transport.send('setOption', {
-        name: 'automateLocalPlayer',
-        value: automatePlayerEnabled,
-      });
-    }
+    DebugPanel.automateLocalPlayer(debugFlags, transport);
 
     try {
       const notificationArea = document.getElementById(
@@ -362,8 +356,7 @@ export class Renderer {
 
       let globalNotificationTimer: number | undefined,
         lastUnit: Unit | null = null,
-        activeUnit: Unit | null = null,
-        uiStressRunner: UIStressRunner | null = null;
+        activeUnit: Unit | null = null;
 
       // Ids of units deferred with `w` (wait), oldest first: held out of
       // auto-selection until every other active unit has had its turn. Ids,
@@ -485,10 +478,10 @@ export class Renderer {
           pendingMove.clearKeys();
 
           if (
-            uiStressRunner &&
-            !stressUiWindowsEnabled &&
+            debugFlags.uiStressRunner &&
+            !debugFlags.stressUiWindowsEnabled &&
             choices.length > 0 &&
-            uiStressRunner.isAutomatingChoice(choices[0].id)
+            debugFlags.uiStressRunner.isAutomatingChoice(choices[0].id)
           ) {
             transport.send('chooseFromList', choices[0].id);
 
@@ -526,9 +519,11 @@ export class Renderer {
               event.stopPropagation();
             });
 
-            if (uiStressRunner) {
-              uiStressRunner.automateChoice(window, choices[0].id, (choiceId) =>
-                transport.send('chooseFromList', choiceId)
+            if (debugFlags.uiStressRunner) {
+              debugFlags.uiStressRunner.automateChoice(
+                window,
+                choices[0].id,
+                (choiceId) => transport.send('chooseFromList', choiceId)
               );
             } else {
               window.once('close', () =>
@@ -620,9 +615,9 @@ export class Renderer {
             }
           }
 
-          if (uiStressRunner && !selectionWindow.autoChosen()) {
+          if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
             selectionWindow.selectionList().value = choices[0].id;
-            uiStressRunner.automateChoice(
+            debugFlags.uiStressRunner.automateChoice(
               selectionWindow,
               choices[0].id,
               (choiceId) => transport.send('chooseFromList', choiceId)
@@ -840,412 +835,24 @@ export class Renderer {
               currentTurn = Number(data?.turn?.value ?? 0),
               currentObjectCount = Object.keys(objectMap.objects).length;
 
-            const profileMemory = debugMode,
-              memoryMaxSamples = debugMode ? 5000 : null,
-              memoryTestbed = profileMemory
-                ? createMemoryTestbed(
-                    () => ({
-                      turn: currentTurn,
-                      objectCount: currentObjectCount,
-                    }),
-                    {
-                      maxSamples: memoryMaxSamples,
-                    }
-                  )
-                : null;
-
-            if (memoryTestbed) {
-              window.__civMemoryTestbed = memoryTestbed;
-            }
-
-            let debugControls: HTMLDivElement | null = null,
-              debugKeyListener: ((event: KeyboardEvent) => void) | null = null;
-
-            const closeOpenDialogs = (): void => {
-                document
-                  .querySelectorAll('dialog.window, dialog.window.modal')
-                  .forEach((dialogElement) => {
-                    const dialog = dialogElement as HTMLDialogElement;
-
-                    if (!dialog.open || typeof dialog.close !== 'function') {
-                      return;
-                    }
-
-                    try {
-                      dialog.close();
-                    } catch (error) {
-                      console.warn('Failed to close dialog', error);
-                    }
-                  });
-              },
-              downloadDebugFile = (
-                fileName: string,
-                content: string,
-                mimeType: string
-              ): void => {
-                // Direct creation rather than `s`: the `href` is an object
-                // URL that has to be assigned as a property, and putting one
-                // through `s` would mean interpolating it into markup for no
-                // gain. The anchor never enters the tree for longer than the
-                // click.
-                const blob = new Blob([content], { type: mimeType }),
-                  url = URL.createObjectURL(blob),
-                  anchor = document.createElement('a');
-
-                anchor.href = url;
-                anchor.download = fileName;
-                document.body.append(anchor);
-                anchor.click();
-                anchor.remove();
-                URL.revokeObjectURL(url);
-              },
-              exportDebugJson = (): void => {
-                const dialogs = Array.from(
-                    document.querySelectorAll(
-                      'dialog.window, dialog.window.modal'
-                    )
-                  ).map((dialogElement) => {
-                    const dialog = dialogElement as HTMLDialogElement,
-                      titleElement = dialog.querySelector(
-                        '.title, h1, h2, h3, legend'
-                      ) as HTMLElement | null;
-
-                    return {
-                      className: dialog.className,
-                      id: dialog.id || null,
-                      open: !!dialog.open,
-                      title: titleElement?.innerText?.trim() || null,
-                    };
-                  }),
-                  memory = (performance as any).memory,
-                  samples = memoryTestbed?.samples ?? [],
-                  sampleCount = samples.length,
-                  heapValues = samples
-                    .map((sample) => sample.usedJSHeapSize)
-                    .filter(
-                      (value): value is number => typeof value === 'number'
-                    ),
-                  firstSample = sampleCount > 0 ? samples[0] : null,
-                  lastSample =
-                    sampleCount > 0 ? samples[sampleCount - 1] : null;
-
-                const payload = {
-                    exportedAt: Date.now(),
-                    debug: {
-                      automatePlayerEnabled,
-                      stressUiEnabled,
-                      stressUiWindowsEnabled,
-                    },
-                    stressRunner: uiStressRunner?.getDebugState() ?? null,
-                    runtime: {
-                      canvasCount: document.querySelectorAll('canvas').length,
-                      dialogCount: dialogs.length,
-                      dialogs,
-                      domNodeCount: document.querySelectorAll('*').length,
-                      imageCount: document.querySelectorAll('img').length,
-                      objectCount: currentObjectCount,
-                      tilesPendingRender: tilesToRender.size,
-                      turn: currentTurn,
-                    },
-                    heap: {
-                      currentUsedJSHeapSize:
-                        memory && typeof memory.usedJSHeapSize === 'number'
-                          ? memory.usedJSHeapSize
-                          : null,
-                      jsHeapSizeLimit:
-                        memory && typeof memory.jsHeapSizeLimit === 'number'
-                          ? memory.jsHeapSizeLimit
-                          : null,
-                      totalJSHeapSize:
-                        memory && typeof memory.totalJSHeapSize === 'number'
-                          ? memory.totalJSHeapSize
-                          : null,
-                    },
-                    memory: memoryTestbed
-                      ? {
-                          firstSample,
-                          heapMax:
-                            heapValues.length > 0
-                              ? Math.max(...heapValues)
-                              : null,
-                          heapMin:
-                            heapValues.length > 0
-                              ? Math.min(...heapValues)
-                              : null,
-                          lastSample,
-                          sampleCount,
-                          samples,
-                        }
-                      : null,
-                  },
-                  json = JSON.stringify(payload, null, 2);
-
-                downloadDebugFile(
-                  `civ-debug-${Date.now()}.json`,
-                  json,
-                  'application/json'
-                );
-              },
-              exportDebugCsv = (): void => {
-                if (!memoryTestbed) {
-                  transport.send(
-                    'notification',
-                    'No memory sampler active for CSV export.'
-                  );
-
-                  return;
-                }
-
-                downloadDebugFile(
-                  `civ-memory-${Date.now()}.csv`,
-                  memoryTestbed.exportCsv(),
-                  'text/csv'
-                );
-              },
-              startStressRunner = (): void => {
-                if (uiStressRunner) {
-                  return;
-                }
-
-                transport.send(
-                  'notification',
-                  `Stress harness: windows ${
-                    stressUiWindowsEnabled ? 'enabled' : 'disabled'
-                  }`
-                );
-
-                uiStressRunner = new UIStressRunner({
-                  enableWindows: stressUiWindowsEnabled,
-                  getData: () => data,
-                  portal,
-                  setActiveUnit: (unit) =>
-                    setActiveUnit(unit, portal, unitsMap, activeUnitsMap),
-                  toggleViewModes: [
-                    () => {
-                      yieldsMap.setVisible(!yieldsMap.isVisible());
-                      portal.render();
-                      minimap.update();
-                    },
-                    () => {
-                      unitsMap.setVisible(!unitsMap.isVisible());
-                      citiesMap.setVisible(!citiesMap.isVisible());
-                      cityNamesMap.setVisible(!cityNamesMap.isVisible());
-                      portal.render();
-                      minimap.update();
-                    },
-                  ],
-                  transport,
-                });
-              },
-              stopStressRunner = (): void => {
-                uiStressRunner?.stop();
-                uiStressRunner = null;
-              },
-              setAutomatePlayer = (enabled: boolean): void => {
-                automatePlayerEnabled = enabled;
-
-                transport.send('setOption', {
-                  name: 'automateLocalPlayer',
-                  value: automatePlayerEnabled,
-                });
-              },
-              setStressUi = (enabled: boolean): void => {
-                stressUiEnabled = enabled;
-
-                if (stressUiEnabled) {
-                  startStressRunner();
-
-                  return;
-                }
-
-                stopStressRunner();
-              },
-              setStressUiWindows = (enabled: boolean): void => {
-                stressUiWindowsEnabled = enabled;
-                uiStressRunner?.setWindowsEnabled(stressUiWindowsEnabled);
-              },
-              renderDebugControls = (): void => {
-                if (!debugControls) {
-                  return;
-                }
-
-                debugControls.innerHTML = '';
-
-                const title = s(
-                  '<div style="font-weight: bold; margin-bottom: .5rem">Debug Controls</div>'
-                );
-
-                // One button shape, five buttons. The styling was repeated
-                // inline nine times per button before; the only things that
-                // actually differ are the label, the background and whether
-                // the last one carries a bottom margin.
-                const debugButton = (
-                  label: string,
-                  background: string,
-                  handler: () => void,
-                  extraStyle: string = ''
-                ): HTMLButtonElement =>
-                  h(
-                    s<HTMLButtonElement>(
-                      `<button type="button" style="
-                        display: block;
-                        width: 100%;
-                        margin-bottom: .375rem;
-                        padding: .375rem .5rem;
-                        border: 1px solid #666;
-                        background: ${background};
-                        color: #fff;
-                        cursor: pointer;
-                        ${extraStyle}
-                      ">${label}</button>`
-                    ),
-                    { click: handler }
-                  );
-
-                const makeToggle = (
-                  label: string,
-                  enabled: boolean,
-                  handler: () => void
-                ): HTMLButtonElement =>
-                  debugButton(
-                    `${label}: ${enabled ? 'ON' : 'OFF'}`,
-                    enabled ? '#063' : '#444',
-                    handler
-                  );
-
-                debugControls.append(
-                  title,
-                  makeToggle('Stress', stressUiEnabled, () => {
-                    setStressUi(!stressUiEnabled);
-                    renderDebugControls();
-                  }),
-                  makeToggle('Automate Player', automatePlayerEnabled, () => {
-                    setAutomatePlayer(!automatePlayerEnabled);
-                    renderDebugControls();
-                  }),
-                  makeToggle('Stress Windows', stressUiWindowsEnabled, () => {
-                    setStressUiWindows(!stressUiWindowsEnabled);
-                    renderDebugControls();
-                  })
-                );
-
-                const closeDialogsButton = debugButton(
-                  'Close open dialogs',
-                  '#333',
-                  closeOpenDialogs
-                );
-
-                const exportJsonButton = debugButton(
-                  'Export debug JSON',
-                  '#224',
-                  exportDebugJson
-                );
-
-                const exportCsvButton = debugButton(
-                  'Export memory CSV',
-                  '#224',
-                  exportDebugCsv
-                );
-
-                // The last button in the panel, so no bottom margin.
-                const stopAllButton = debugButton(
-                  'Stop all automation',
-                  '#700',
-                  () => {
-                    setStressUi(false);
-                    setAutomatePlayer(false);
-                    closeOpenDialogs();
-                    renderDebugControls();
-                  },
-                  'margin-bottom: 0;'
-                );
-
-                const hint = s(
-                  '<div style="margin-top: .5rem; font-size: 11px; opacity: .85">' +
-                    'Hotkeys: Alt+Shift+S/A/W/C/J/X' +
-                    '</div>'
-                );
-
-                debugControls.append(
-                  closeDialogsButton,
-                  exportJsonButton,
-                  exportCsvButton,
-                  stopAllButton,
-                  hint
-                );
-              };
-
-            if (stressUiEnabled) {
-              startStressRunner();
-            }
-
-            if (debugMode) {
-              debugControls = s<HTMLDivElement>(
-                `<div style="
-                  position: fixed;
-                  top: .5rem;
-                  right: .5rem;
-                  z-index: 2147483647;
-                  width: 220px;
-                  padding: .5rem;
-                  background: rgba(0, 0, 0, .85);
-                  color: #fff;
-                  border: 1px solid #888;
-                  font-family: monospace;
-                  font-size: 12px;
-                "></div>`
-              );
-
-              renderDebugControls();
-              document.body.append(debugControls);
-
-              debugKeyListener = (event: KeyboardEvent) => {
-                if (!(event.altKey && event.shiftKey)) {
-                  return;
-                }
-
-                const key = event.key.toLowerCase();
-
-                if (!['s', 'a', 'w', 'c', 'j', 'x'].includes(key)) {
-                  return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-
-                if (key === 's') {
-                  setStressUi(!stressUiEnabled);
-                }
-
-                if (key === 'a') {
-                  setAutomatePlayer(!automatePlayerEnabled);
-                }
-
-                if (key === 'w') {
-                  setStressUiWindows(!stressUiWindowsEnabled);
-                }
-
-                if (key === 'c') {
-                  closeOpenDialogs();
-                }
-
-                if (key === 'j') {
-                  exportDebugJson();
-                }
-
-                if (key === 'x') {
-                  exportDebugCsv();
-                }
-
-                renderDebugControls();
-              };
-
-              // Not `h`: this listens on `document` rather than on an
-              // element built here, and it needs the capture phase so the
-              // debug hotkeys fire before a focused dialog swallows them —
-              // neither of which `h(element, handlers)` expresses.
-              document.addEventListener('keydown', debugKeyListener, true);
-            }
+            // The `?debug=1` panel, hotkeys and memory testbed. Built before
+            // the game's `keydown` handler below is registered, as it always
+            // was; its own hotkey listener is capture-phase.
+            const debugPanel = new DebugPanel(debugFlags, {
+              citiesMap,
+              cityNamesMap,
+              currentObjectCount: () => currentObjectCount,
+              currentTurn: () => currentTurn,
+              data: () => data,
+              minimap,
+              portal,
+              setActiveUnit: (unit) =>
+                setActiveUnit(unit, portal, unitsMap, activeUnitsMap),
+              tilesPendingRender: () => tilesToRender.size,
+              transport,
+              unitsMap,
+              yieldsMap,
+            });
 
             // `pagehide`, not `beforeunload`: the leave guard can still cancel an unload after `beforeunload`, and a
             //  page restored from the back/forward cache comes back as it was. Tearing down in either case left a
@@ -1257,13 +864,7 @@ export class Renderer {
 
               off(window, 'resize', resizeHandler);
               intervalHandler.dispose();
-              memoryTestbed?.stop();
-              stopStressRunner();
-              debugControls?.remove();
-
-              if (debugKeyListener) {
-                document.removeEventListener('keydown', debugKeyListener, true);
-              }
+              debugPanel.dispose();
 
               transportDisposers.forEach((dispose) => dispose());
             });
