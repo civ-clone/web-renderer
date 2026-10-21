@@ -45,7 +45,7 @@ type DataPatchValue = Parameters<DataQueue['add']>[1];
 export class PlayerPatches {
   #actions: ActionsState;
   #dataFilter: DataFilter;
-  #dataQueue: DataQueue;
+  #dataQueue: DataQueue = new DataQueue();
   // Set while an action is handled, so the several flushes an action causes (the moved unit's tiles, then the player)
   //  go out as a single patch once it is done (#321). See `hold`.
   #holdingFlushes = false;
@@ -60,14 +60,12 @@ export class PlayerPatches {
     transport: Transport<TransportDataMap>,
     dataFilter: DataFilter,
     actions: ActionsState,
-    player: () => Player,
-    dataQueue: DataQueue = new DataQueue()
+    player: () => Player
   ) {
     this.#transport = transport;
     this.#dataFilter = dataFilter;
     this.#actions = actions;
     this.#player = player;
-    this.#dataQueue = dataQueue;
   }
 
   // A patch of anything else, queued as it is given: a value, or a function that builds it when it is sent.
