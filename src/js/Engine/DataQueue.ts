@@ -35,15 +35,6 @@ export class DataQueue {
     this.#queue.splice(0);
   }
 
-  remove(targetId: string, index: DataPatchContents['index'] = null): void {
-    this.#queue.push({
-      [targetId]: {
-        type: 'remove' as DataPatchType,
-        index,
-      },
-    });
-  }
-
   // TODO: look at chunking the data transfer
   transferData(): DataPatch[] {
     return this.#queue
