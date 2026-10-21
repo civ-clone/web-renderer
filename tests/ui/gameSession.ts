@@ -418,6 +418,48 @@ const run = async (): Promise<void> => {
     0
   );
 
+  // A world on a grid that can't be drawn here (#89): said, and back to the menu, with no game started.
+  const alerts: string[] = [];
+  let reloads = 0,
+    hexStarted = false;
+
+  Object.assign(window, {
+    alert: (message: string) => alerts.push(message),
+    location: { reload: () => reloads++ },
+  });
+
+  const hexMap = makeMap(1),
+    receiversBefore = receivers.length;
+
+  Object.assign(hexMap.objects['World-1'], { topologyId: 'hex-odd-r' });
+
+  new GameSession({
+    elements,
+    transport,
+    notifications: new Notifications(),
+    notices: new Notices(),
+    haltedUnits: new HaltedUnits(),
+    debugFlags: new DebugFlags(false),
+    notificationBar: new NotificationBar(elements.notificationArea),
+    pendingSave: 'a save',
+    cheatsEnabled: false,
+    setGameStarted: (): void => {
+      hexStarted = true;
+    },
+    transportDisposers: [],
+  }).start(hexMap);
+
+  expect(
+    'a world on a grid that cannot be drawn is said, and the page goes back to the menu',
+    [alerts, reloads],
+    [['SavedGame.needs-grid'], 1]
+  );
+  expect(
+    'with no game started and nothing registered',
+    [hexStarted, receivers.length - receiversBefore],
+    [false, 0]
+  );
+
   finished = true;
 
   if (failures.length > 0) {

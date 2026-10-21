@@ -15,6 +15,7 @@ import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,
   loadSaveFromFile,
+  savedTopologyId,
   takePendingSave,
 } from '../../src/js/UI/lib/savedGame';
 import i18next, { t } from 'i18next';
@@ -234,6 +235,80 @@ const reset = () => {
   );
   expect('and nothing is handed over', storedRecords().size, 0);
   expect('and the page stays where it is', reloads, 0);
+
+  // A save on a grid that can't be drawn here is refused before the reload, and the player stays on the menu (#89).
+  // The grid is the `World`'s saved `_topologyId`; a save made before it was recorded has none, and is square.
+  const onGrid = (topologyId?: string): string =>
+    JSON.stringify({
+      format: 2,
+      entities: [
+        { id: 'Player-1', type: 'Player', keys: [], state: {} },
+        {
+          id: 'World-1',
+          type: 'World',
+          keys: ['id', 'height', 'tiles', 'width'],
+          state: {
+            _height: 2,
+            _tiles: [],
+            ...(topologyId === undefined ? {} : { _topologyId: topologyId }),
+            _width: 2,
+          },
+        },
+      ],
+    });
+
+  expect(
+    'the grid comes from the World',
+    [undefined, 'square', 'hex-odd-r']
+      .map((topologyId) => savedTopologyId(JSON.parse(onGrid(topologyId))))
+      .join(),
+    'square,square,hex-odd-r'
+  );
+
+  reset();
+
+  thrown = null;
+
+  await loadSaveFromFile(
+    new File([onGrid('hex-odd-r')], 'hex.civ-clone.json')
+  ).catch((error: Error) => (thrown = error));
+
+  expect(
+    'a save on a grid that cannot be drawn is refused, naming the grid',
+    alerts.join(),
+    t('SavedGame.needs-grid', { grid: 'Hex' })
+  );
+  expect('and nothing is handed over', storedRecords().size, 0);
+  expect('and no marker is left', session.size, 0);
+  expect('and the page stays on the menu', reloads, 0);
+  expect('and it rejects', thrown !== null, true);
+
+  reset();
+
+  await loadSaveFromFile(
+    new File([onGrid('triangles')], 'triangles.civ-clone.json')
+  ).catch(() => {});
+
+  expect(
+    'a grid nobody has heard of is named as it is',
+    alerts.join(),
+    t('SavedGame.needs-grid', { grid: 'triangles' })
+  );
+  expect('and is not handed over either', storedRecords().size, 0);
+
+  for (const topologyId of ['square', undefined]) {
+    reset();
+
+    await loadSaveFromFile(
+      new File([onGrid(topologyId)], 'square.civ-clone.json')
+    );
+
+    expect(
+      `a save on ${topologyId ?? 'no recorded'} grid loads`,
+      JSON.stringify([alerts.length, reloads, await takePendingSave()]),
+      JSON.stringify([0, 1, onGrid(topologyId)])
+    );
+  }
 
   if (failures.length) {
     console.error(`FAIL savedGame\n  ${failures.join('\n  ')}`);
