@@ -125,6 +125,7 @@ import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
+import hasMet from './lib/hasMet';
 import { intelligenceRows } from './lib/intelligence';
 import {
   isUnitWithoutActions,
@@ -2167,29 +2168,13 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
-  // Whether this player has met `player`, for naming them in a notification (#59). There is no formal first-contact
-  //  record, so this stands in: any interaction between us (a negotiation or a declaration), or having seen a city
-  //  they hold or founded. The founder counts because a defeated player holds no cities by the time we are told.
+  // Whether this player has met `player`, for naming them in a notification (#59).
   private hasMet(player: Player): boolean {
-    if (player === this.player()) {
-      return true;
-    }
-
-    if (
-      interactionRegistryInstance.getByPlayers(this.player(), player).length > 0
-    ) {
-      return true;
-    }
-
-    const playerWorld = playerWorldRegistryInstance.getByPlayer(this.player());
-
-    return cityRegistryInstance
-      .entries()
-      .some(
-        (city: City) =>
-          (city.player() === player || city.originalPlayer() === player) &&
-          playerWorld.getByTile(city.tile()) !== null
-      );
+    return hasMet(this.player(), player, {
+      interactions: interactionRegistryInstance,
+      cities: cityRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+    });
   }
 
   #newsOf(city: City): CityNews {
