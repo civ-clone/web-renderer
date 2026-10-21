@@ -11,6 +11,7 @@ import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-playe
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import {
+  dropRepeatedContacts,
   registerDiplomacyClasses,
   stripInteractionCollaborators,
 } from './diplomacy';
@@ -119,6 +120,7 @@ export const restoreGame = (
   engine.registerPlugins(plugins);
 
   stripInteractionCollaborators(file, defaultGame);
+  dropRepeatedContacts(file, defaultGame);
 
   hydrate(file, defaultGame);
 
