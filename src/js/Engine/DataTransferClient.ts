@@ -26,7 +26,6 @@ import {
 import { ObjectMap, typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
-import { Gold } from '@civ-clone/civ1-city/Yields';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
@@ -136,6 +135,7 @@ import {
 import PlayerPatches from './Client/PlayerPatches';
 import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
+import registerCheats from './Client/cheats';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -211,194 +211,19 @@ export class DataTransferClient extends Client implements IClient {
       this.#eventEmitter.emit('action', ...args)
     );
 
-    // TODO: These could be `HiddenAction`s. Need to add a `perform` method to actions too...
-    this.#transport.receive('cheat', ({ name, value }): void => {
-      if (name === 'RevealMap') {
-        const playerWorld = playerWorldRegistryInstance.getByPlayer(
-          this.player()
-        );
-
-        // A bit nasty... I wonder how slow this data transfer will be...
-        const [tile] = playerWorld.entries();
-
-        tile
-          .tile()
-          .map()
-          .entries()
-          .forEach((tile) => {
-            if (playerWorld.includes(tile)) {
-              return;
-            }
-
-            // Registering raises `player:visibility-changed`, which sends the tile as seeing it would (#342).
-            playerWorld.register(tile);
-          });
-      }
-
-      if (name === 'GrantAdvance') {
-        const target = this.resolveCheatPlayer(value.player);
-
-        if (!target) {
-          return;
-        }
-
-        const playerResearch =
-            playerResearchRegistryInstance.getByPlayer(target),
-          Advances = advanceRegistryInstance.filter(
-            (Advance) =>
-              value.advances.includes(Advance.name) &&
-              !playerResearch.completed(Advance)
-          );
-
-        if (Advances.length === 0) {
-          return;
-        }
-
-        Advances.forEach((Advance) => playerResearch.addAdvance(Advance));
-
-        // Rivals' `PlayerResearch` is never sent to the page, so patching it
-        // would leak hidden state and hand the frontend a ref it never
-        // received (#46).
-        if (target === this.player()) {
-          this.#patches.add(
-            playerResearch.id(),
-            playerResearch.toPlainObject(
-              this.#dataFilter(filterToReference(Player))
-            )
-          );
-        }
-      }
-
-      if (name === 'GrantGold') {
-        const target = this.resolveCheatPlayer(value.player);
-
-        if (!target) {
-          return;
-        }
-
-        const playerTreasury =
-          playerTreasuryRegistryInstance.getByPlayerAndType(target, Gold);
-
-        playerTreasury.add(value.amount);
-
-        // As above: a rival's `PlayerTreasury` stays off the wire (#46).
-        if (target === this.player()) {
-          this.#patches.add(
-            playerTreasury.id(),
-            playerTreasury.toPlainObject(
-              this.#dataFilter(filterToReference(Player))
-            )
-          );
-        }
-      }
-
-      if (name === 'ModifyUnit') {
-        const { unitId, properties } = value;
-
-        const [unit] = unitRegistryInstance.getBy('id', unitId);
-
-        if (!unit) {
-          return;
-        }
-
-        (
-          ['attack', 'defence', 'moves', 'movement', 'visibility'] as (
-            | 'attack'
-            | 'defence'
-            | 'moves'
-            | 'movement'
-            | 'visibility'
-          )[]
-        ).forEach((property) => {
-          if (property in properties) {
-            unit[property]().set(properties[property]!);
-          }
-        });
-
-        this.#patches.add(
-          unit.id(),
-          unit.toPlainObject(this.#dataFilter(filterToReference(Player)))
-        );
-      }
-
-      if (name === 'CreateUnit') {
-        const { unitType, x, y } = value,
-          target = this.resolveCheatPlayer(value.player),
-          UnitType = this.cheatUnitTypes().find(
-            (UnitType) => UnitType.name === unitType
-          ),
-          [firstTile] = playerWorldRegistryInstance
-            .getByPlayer(this.player())
-            .entries();
-
-        if (!target || !UnitType || !firstTile) {
-          return;
-        }
-
-        const world = firstTile.tile().map();
-
-        if (
-          !Number.isInteger(x) ||
-          !Number.isInteger(y) ||
-          x < 0 ||
-          y < 0 ||
-          x >= world.width() ||
-          y >= world.height()
-        ) {
-          return;
-        }
-
-        // Constructing a unit registers it and emits `unit:created`, which is what sends the unit itself.
-        new UnitType(null, target, world.get(x, y));
-
-        // Our own new unit also needs our actions resent, or it can't be activated until something else resends them.
-        if (target === this.player()) {
-          this.#patches.actions();
-        }
-      }
-
-      this.sendPatchData();
+    // The cheats and the lists the cheat menu asks for (see `Client/cheats.ts`).
+    registerCheats(this.#transport, {
+      player: () => this.player(),
+      patches: this.#patches,
+      dataFilter: this.#dataFilter,
+      advances: advanceRegistryInstance,
+      availableCityBuildItems: availableCityBuildItemsRegistryInstance,
+      players: playerRegistryInstance,
+      playerResearches: playerResearchRegistryInstance,
+      playerTreasuries: playerTreasuryRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+      units: unitRegistryInstance,
     });
-
-    this.#transport.receive('cheatUnitTypes', () =>
-      this.#transport.send(
-        'cheatUnitTypes',
-        this.cheatUnitTypes().map((UnitType) => UnitType.name)
-      )
-    );
-
-    this.#transport.receive('cheatAdvances', (playerId) => {
-      const target = this.resolveCheatPlayer(playerId ?? undefined);
-
-      if (!target) {
-        this.#transport.send('cheatAdvances', []);
-
-        return;
-      }
-
-      const playerResearch = playerResearchRegistryInstance.getByPlayer(target);
-
-      // Every advance not yet discovered, prerequisites or not, so a cheat can
-      // jump straight to (say) Automobile.
-      this.#transport.send(
-        'cheatAdvances',
-        advanceRegistryInstance
-          .entries()
-          .filter((Advance) => !playerResearch.completed(Advance))
-          .map((Advance) => Advance.name)
-      );
-    });
-
-    this.#transport.receive('cheatPlayers', () =>
-      this.#transport.send(
-        'cheatPlayers',
-        playerRegistryInstance.entries().map((player) => ({
-          id: player.id(),
-          civilization: player.civilization().sourceClass().name,
-          isLocal: player === this.player(),
-        }))
-      )
-    );
 
     // Worked out here and sent as finished rows, so the UI learns nothing about rival cities beyond what the report
     //  shows (#124).
@@ -1876,32 +1701,6 @@ export class DataTransferClient extends Client implements IClient {
 
     console.log(`unhandled action: ${JSON.stringify(action)}`);
     return false;
-  }
-
-  // Resolves a cheat's target: no id means the local player, an id matching a
-  // registered player means that player (rival or not), and any other id
-  // means nothing found, which the caller treats as "do nothing".
-
-  // Every unit type the game knows, taken from what cities can be told to build.
-  private cheatUnitTypes(): (typeof Unit)[] {
-    return availableCityBuildItemsRegistryInstance
-      .entries()
-      .filter(
-        (Item): Item is typeof Unit =>
-          Item === (Unit as unknown) ||
-          Object.prototype.isPrototypeOf.call(Unit, Item)
-      );
-  }
-
-  private resolveCheatPlayer(id?: string): Player | null {
-    if (!id) {
-      return this.player();
-    }
-
-    return (
-      playerRegistryInstance.entries().find((player) => player.id() === id) ??
-      null
-    );
   }
 
   private sendInitialData(): void {
