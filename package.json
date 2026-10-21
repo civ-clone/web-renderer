@@ -197,7 +197,7 @@
     "@civ-clone/core-treasury": "^0.1.9",
     "@civ-clone/core-turn-based-game": "^0.1.9",
     "@civ-clone/core-unit": "^0.1.28",
-    "@civ-clone/core-world": "^0.1.19",
+    "@civ-clone/core-world": "^0.1.20",
     "@civ-clone/library-unit": "^0.1.12",
     "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
     "@civ-clone/simple-world-generator": "github:civ-clone/simple-world-generator",
