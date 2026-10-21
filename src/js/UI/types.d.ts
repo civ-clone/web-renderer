@@ -1,3 +1,4 @@
+import { Direction, EdgeDirection } from './lib/topologyFor';
 import { ObjectMap } from './lib/reconstituteData';
 
 export type PlainObject = {
@@ -222,8 +223,9 @@ export interface PlayerTile extends Tile {
   yields: Yield[];
 }
 
-export type AdjacentNeighbour = 'n' | 'e' | 's' | 'w';
-export type NeighbourDirection = AdjacentNeighbour | 'ne' | 'se' | 'sw' | 'nw';
+// The world's topology says which directions there are (#88).
+export type AdjacentNeighbour = EdgeDirection;
+export type NeighbourDirection = Direction;
 
 export interface World extends EntityInstance<'World'> {
   height: number;

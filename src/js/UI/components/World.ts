@@ -1,4 +1,5 @@
 import { NeighbourDirection, Tile, World as WorldData } from '../types';
+import topologyFor, { Topology } from '../lib/topologyFor';
 
 export class World {
   #unknown = (x: number, y: number): Tile => ({
@@ -26,12 +27,14 @@ export class World {
   #lookup = new Map<string, Tile>();
   #tiles: Tile[];
   #height: number;
+  #topology: Topology;
   #width: number;
 
   constructor(world: WorldData) {
     this.#height = world.height;
     this.#width = world.width;
     this.#tiles = world.tiles || [];
+    this.#topology = topologyFor(world);
 
     this.rebuildLookup();
   }
@@ -62,40 +65,18 @@ export class World {
     return this.#lookup.get(key)!;
   }
 
+  // The tile next to `tile` in `direction`, as the world's topology says. A tile off an edge that does not wrap is
+  //  unknown, as a tile not seen yet is.
   getNeighbour(tile: Tile, direction: NeighbourDirection): Tile {
-    if (direction === 'n') {
-      return this.get(tile.x, tile.y - 1);
+    const neighbour = this.#topology.neighbour(tile.x, tile.y, direction);
+
+    if (neighbour === null) {
+      const [dx, dy] = this.#topology.offset(direction, tile.x, tile.y);
+
+      return this.#unknown(tile.x + dx, tile.y + dy);
     }
 
-    if (direction === 'ne') {
-      return this.get(tile.x + 1, tile.y - 1);
-    }
-
-    if (direction === 'e') {
-      return this.get(tile.x + 1, tile.y);
-    }
-
-    if (direction === 'se') {
-      return this.get(tile.x + 1, tile.y + 1);
-    }
-
-    if (direction === 's') {
-      return this.get(tile.x, tile.y + 1);
-    }
-
-    if (direction === 'sw') {
-      return this.get(tile.x - 1, tile.y + 1);
-    }
-
-    if (direction === 'w') {
-      return this.get(tile.x - 1, tile.y);
-    }
-
-    if (direction === 'nw') {
-      return this.get(tile.x - 1, tile.y - 1);
-    }
-
-    throw new TypeError('Invalid direction.');
+    return this.get(neighbour[0], neighbour[1]);
   }
 
   height(): number {
@@ -104,6 +85,11 @@ export class World {
 
   tiles(): Tile[] {
     return this.#tiles;
+  }
+
+  /** The shape of the world's grid: which tile neighbours which, and which ways there are (#88). */
+  topology(): Topology {
+    return this.#topology;
   }
 
   width(): number {
