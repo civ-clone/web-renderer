@@ -80,11 +80,14 @@
   display: flex;
   flex-direction: column;
   // Newest at the bottom; when there are more than fit, the oldest run off
-  // the top behind a short fade instead of spilling over the game menu.
+  // the top behind a short fade instead of spilling over the game menu. The
+  // full height, not a maximum: with only a maximum the flex column shrank
+  // to its content and the mask cut the top of the stack off when nothing
+  // overflowed.
+  height: 100vh;
   justify-content: flex-end;
   -webkit-mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
   mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
-  max-height: 100vh;
   overflow: hidden;
   position: absolute;
   right: 0;

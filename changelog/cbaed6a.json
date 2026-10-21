@@ -1,0 +1,1 @@
+{"version":"0.1.0@cbaed6a","date":"2026-10-21T21:06:45.000Z","localChanges":["When more action buttons pile up at the bottom right of the screen than fit, the oldest now slide off the top behind a short fade instead of spilling over the game menu and the sidebar (part of #416)."],"externalChanges":{}}

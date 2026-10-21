@@ -5,6 +5,10 @@
   position: absolute;
   right: 0;
   top: 0;
+  // Above `#actions`, which now spans the full height of the right edge and
+  // comes later in the document; its masked-out top would otherwise sit over
+  // the menu and take its clicks.
+  z-index: 1;
 
   button {
     @include action-button.main();
