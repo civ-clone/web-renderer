@@ -32,7 +32,10 @@ Quick reference map of key code areas.
 
 ## UI side (`src/js/UI`)
 
-- `Renderer.ts`: main frontend orchestrator.
+- `bootstrap.ts`: page start-up, the `Renderer` class `frontend.ts` starts; hands each game to `game/GameSession`.
+- `game/*`: one game: `GameSession`, `GameState` (patches and rebuilds), `ActiveUnitController`, `MapView`, `Hud`, `InputController`.
+- `app/*`: the page's elements, i18n, assets, options, reload guard, notification bar and choice windows.
+- `debug/*`: the `?debug=1` flags and panel.
 - `Transport.ts`: UI-oriented transport type mapping.
 - `AssetStore.ts`: IndexedDB + image caches.
 - `Store.ts`: generic IndexedDB wrapper.

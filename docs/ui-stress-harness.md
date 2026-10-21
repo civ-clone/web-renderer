@@ -84,7 +84,7 @@ When enabled, the harness runs on a 1.2 s tick, taking at most one player action
 Implementation:
 
 - `src/js/UI/lib/UIStressRunner.ts`
-- integrated in `src/js/UI/Renderer.ts`
+- integrated in `src/js/UI/debug/DebugPanel.ts` and `src/js/UI/app/ChoiceHandler.ts`
 
 ## Notes on determinism
 

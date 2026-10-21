@@ -7,7 +7,8 @@ The frontend is responsible for rendering, input capture, and player interaction
 Primary files:
 
 - `src/js/frontend.ts`
-- `src/js/UI/Renderer.ts`
+- `src/js/UI/bootstrap.ts` (page start-up) and `src/js/UI/game/*` (one game)
+- `src/js/UI/app/*`, `src/js/UI/debug/*`
 - `src/js/UI/components/*`
 - `src/js/UI/components/Map/*`
 - `src/js/UI/lib/*` (helpers: viewport maths, dragging, saved games, citizens, unit actions, reconstitution)
@@ -18,9 +19,13 @@ Primary files:
 - Mixed rendering approach:
   - Canvas for world/map layers and minimap.
   - HTML/dialog-based windows for reports, menus, prompts, and forms.
-- `Renderer` acts as central coordinator for both modes.
+- `GameSession` (`game/GameSession.ts`) coordinates both modes for a game.
 
-## `Renderer` lifecycle (high level)
+## Lifecycle (high level)
+
+`bootstrap.ts` runs the page-scope steps (1–5, the `chooseFromList`,
+notification and `saveGame` receivers, and 9); `game/GameSession.ts` runs the
+rest for each game.
 
 1. Read query parameters (`?debug=1` turns on local-player automation and the UI
    stress runner, see [`ui-stress-harness.md`](ui-stress-harness.md); `?cheat=1`
@@ -143,7 +148,7 @@ Moving around the map:
 ## Input model
 
 - Keyboard shortcuts drive many actions (unit commands, map toggles, end turn, screens).
-  Unit commands are `keyToActionsMap` in `Renderer.ts`: each key names the
+  Unit commands are `keyToActionsMap` in `lib/unitActionKeys.ts`: each key names the
   actions it tries in turn, and the first the active unit has is sent. `e` is
   Explore and `a` Automate (#198, #200): standing orders the engine carries on
   at the start of each turn until it hands the unit back.
@@ -164,7 +169,7 @@ Moving around the map:
 
 ## Local client state helpers
 
-- `GameOptionsRegistry`: in-memory options, set to defaults in `Renderer.init()`
+- `GameOptionsRegistry`: in-memory options, set to defaults in `app/options.ts` on every page load
   and not persisted: `autoEndOfTurn`, `autoEndOfTurnExceptions`,
   `unitEdgeMargin`, `mapScale`, `lockVerticalEdges`.
 - `lib/DataChanges.ts`: watchers by object id, run once per render when an id
@@ -174,9 +179,10 @@ Moving around the map:
 
 ## Known frontend pain points
 
-- `Renderer.ts` has explicit TODO to break down and likely adopt framework-style architecture.
-  `Renderer.init()` is still one long function holding most of the client's
-  state in closures.
+- `Renderer.ts` was one long `init()` closure holding most of the client's
+  state. It is split into `bootstrap.ts` and the `game/`, `app/`, `debug/` and
+  `lib/` modules (#344); `bootstrap.ts` keeps the TODO asking whether to adopt
+  a framework.
 - Late-game slowdown documented around reconstitution and cleanup logic.
   Largely addressed: incremental reconstitution (#322), unit actions on demand
   (#323) and the viewport-sized layers.

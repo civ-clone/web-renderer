@@ -57,6 +57,6 @@ GitHub issues.
 - Backend entry: `src/js/backend.ts`
 - Backend orchestrator: `src/js/Engine/Game.ts`
 - Backend data bridge: `src/js/Engine/DataTransferClient.ts`
-- Frontend orchestrator: `src/js/UI/Renderer.ts`
+- Frontend start-up: `src/js/UI/bootstrap.ts` (page scope) and `src/js/UI/game/GameSession.ts` (one game)
 - Asset import UI: `src/js/UI/components/ImportAssetsWindow.ts`
 - Asset storage/cache: `src/js/UI/AssetStore.ts`
