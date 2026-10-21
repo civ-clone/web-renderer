@@ -1,31 +1,22 @@
 import { City as CityData, DataPatch, GameData, Tile } from './types';
-import { emit, off, on, s } from '@dom111/element';
+import { emit, on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import UnitActions from './components/UnitActions';
-import ActiveUnit from './components/Map/ActiveUnit';
 import City from './components/City';
-import Cities from './components/Map/Cities';
-import CityNames from './components/Map/CityNames';
 import CityStatus from './components/CityStatus';
 import CivilizationScoreReport from './components/CivilizationScoreReport';
-import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
 import GameMenu from './components/GameMenu';
-import GamePortal from './components/GamePortal';
 import HappinessReport from './components/HappinessReport';
-import IntervalHandler from './lib/IntervalHandler';
-import Landscape from './components/Map/Landscape';
 import GameOverWindow from './components/GameOverWindow';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import { guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
-import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
-import Overview from './components/Map/Overview';
 import Notifications from './components/Notifications';
 import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
@@ -35,10 +26,7 @@ import HaltedUnits from './lib/haltedUnits';
 import TradeReport from './components/TradeReport';
 import Transport from './Transport';
 import UnitDetails from './components/UnitDetails';
-import Units from './components/Map/Units';
 import Window from './components/Window';
-import World from './components/World';
-import Yields from './components/Map/Yields';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import pruneObjectMap from './lib/pruneObjectMap';
@@ -49,6 +37,7 @@ import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitController from './game/ActiveUnitController';
+import MapView from './game/MapView';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
@@ -119,29 +108,6 @@ export class Renderer {
         haltedUnits = new HaltedUnits();
 
       preloadAssets(preloadContainer);
-
-      // Keyed by coordinate: a tile resent several times between two renders
-      // only needs building once. A layer redraws a tile by looking its
-      // coordinates up in `world`, so a patched tile is only ready to render
-      // once `updateState` has refreshed `world`: until then it waits in
-      // `incomingTiles`. While waiting for the turn that can be a frame or
-      // more, and a render in between would draw the tile as it was.
-      const incomingTiles = new Map<string, Tile>(),
-        tilesToRender = new Map<string, Tile>(),
-        queueTileToRender = (tile: Tile): void => {
-          incomingTiles.set(`${tile.x},${tile.y}`, tile);
-        },
-        releaseIncomingTiles = (): void => {
-          incomingTiles.forEach((tile, key) => tilesToRender.set(key, tile));
-          incomingTiles.clear();
-        },
-        takeTilesToRender = (): Tile[] => {
-          const tiles = [...tilesToRender.values()];
-
-          tilesToRender.clear();
-
-          return tiles;
-        };
 
       // Made once the game data, and the map it draws on, have arrived. The
       //  choice windows' receiver below, registered before then, forgets the
@@ -253,38 +219,25 @@ export class Renderer {
 
             mapWrapper.append(waitingBanner);
 
-            const world = new World(data.player.world),
-              intervalHandler = new IntervalHandler(),
-              portal = new GamePortal(
-                world,
-                transport,
-                mapPortal,
-                {
-                  lockVerticalEdges: options.get('lockVerticalEdges', false),
-                  playerId: data.player.id,
-                  scale: options.get('mapScale', 2),
-                  // TODO: this needs to come from the theme
-                  tileSize: 16,
+            const mapView: MapView = new MapView({
+                activateUnit: (unit): void => {
+                  if (waitingForTurn) {
+                    return;
+                  }
+
+                  unitController.set(unit);
                 },
-                Landscape,
-                // Never composited onto the map; it rides in the layer list so
-                // `portal.build()` feeds it tile updates like any other layer.
-                Overview,
-                Fog,
-                Yields,
-                Units,
-                Cities,
-                CityNames,
-                ActiveUnit
-              ),
-              overviewMap = portal.getLayer(Overview) as Overview,
-              yieldsMap = portal.getLayer(Yields) as Yields,
-              unitsMap = portal.getLayer(Units) as Units,
-              citiesMap = portal.getLayer(Cities) as Cities,
-              cityNamesMap = portal.getLayer(CityNames) as CityNames,
-              activeUnitsMap = portal.getLayer(ActiveUnit) as ActiveUnit,
+                activeUnit: () => unitController.active(),
+                mapPortal,
+                minimapCanvas,
+                options,
+                playerId: data.player.id,
+                transport,
+                world: data.player.world,
+              }),
+              { portal, world } = mapView,
               unitController = new ActiveUnitController({
-                activeUnitLayer: activeUnitsMap,
+                activeUnitLayer: mapView.activeUnitLayer,
                 arrivalClosed: (): void => {
                   if (!waitingForTurn) {
                     updateState(objectMap);
@@ -301,25 +254,9 @@ export class Renderer {
                   unitDetails.build();
                 },
                 transport,
-                unitsLayer: unitsMap,
+                unitsLayer: mapView.unitsLayer,
                 world,
               }),
-              minimap = new Minimap(
-                minimapCanvas,
-                world,
-                portal,
-                overviewMap,
-                // The marker shares the main map's blink phase, so the active
-                // unit can be found on the minimap and clicked to centre
-                // without reaching for the keyboard.
-                () => {
-                  const activeUnit = unitController.active();
-
-                  return activeUnit && activeUnitsMap.isVisible()
-                    ? activeUnit.tile
-                    : null;
-                }
-              ),
               primaryActions = new Actions(actionArea, portal, this.#transport),
               secondaryActions = new Actions(
                 secondaryActionArea,
@@ -341,70 +278,11 @@ export class Renderer {
                 portal,
                 transport,
                 parseBooleanParam(queryParams.get('cheat'), false)
-              ),
-              resizeHandler = () => {
-                const width = (mapPortal.parentElement as HTMLElement)
-                    .offsetWidth,
-                  height = (mapPortal.parentElement as HTMLElement)
-                    .offsetHeight;
-
-                // Assigning either of these clears the canvas even when the
-                // value has not changed, and the portal composites what changed
-                // rather than everything, so a resize that resizes nothing
-                // would wipe the map and put nothing back.
-                if (mapPortal.width === width && mapPortal.height === height) {
-                  return;
-                }
-
-                mapPortal.width = width;
-                mapPortal.height = height;
-
-                // The layers are the size of the portal, so resizing them is
-                // part of rendering now.
-                portal.render();
-                minimap.update();
-              };
+              );
 
             activeUnitController = unitController;
 
             gameMenuItem.build();
-
-            yieldsMap.setVisible(false);
-
-            portal.on('focus-changed', () => minimap.update());
-            portal.on('activate-unit', (unit) => {
-              if (waitingForTurn) {
-                return;
-              }
-
-              unitController.set(unit);
-            });
-
-            intervalHandler.on(() => {
-              // With no active unit the layer draws nothing, so toggling it is
-              // invisible and there is no reason to composite every layer for
-              // it. `unitController.render` sets the layer visible again
-              // whenever a unit becomes active, so leaving the flag alone here
-              // is safe.
-              const blinking = activeUnitsMap.hasActiveUnit();
-
-              if (blinking) {
-                activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
-              }
-
-              const hasTilesToRender = tilesToRender.size > 0;
-
-              if (hasTilesToRender) {
-                portal.build(takeTilesToRender());
-              }
-
-              if (blinking || hasTilesToRender) {
-                portal.render();
-                minimap.update();
-              }
-            });
-
-            on(window, 'resize', resizeHandler);
 
             // This needs wrapping.
             // let lastTurn = 1,
@@ -421,18 +299,18 @@ export class Renderer {
             // the game's `keydown` handler below is registered, as it always
             // was; its own hotkey listener is capture-phase.
             const debugPanel = new DebugPanel(debugFlags, {
-              citiesMap,
-              cityNamesMap,
+              citiesMap: mapView.citiesLayer,
+              cityNamesMap: mapView.cityNamesLayer,
               currentObjectCount: () => currentObjectCount,
               currentTurn: () => currentTurn,
               data: () => data,
-              minimap,
+              minimap: mapView.minimap,
               portal,
               setActiveUnit: (unit) => unitController.set(unit),
-              tilesPendingRender: () => tilesToRender.size,
+              tilesPendingRender: () => mapView.tilesPending(),
               transport,
-              unitsMap,
-              yieldsMap,
+              unitsMap: mapView.unitsLayer,
+              yieldsMap: mapView.yieldsLayer,
             });
 
             // `pagehide`, not `beforeunload`: the leave guard can still cancel an unload after `beforeunload`, and a
@@ -443,8 +321,7 @@ export class Renderer {
                 return;
               }
 
-              off(window, 'resize', resizeHandler);
-              intervalHandler.dispose();
+              mapView.dispose();
               debugPanel.dispose();
 
               transportDisposers.forEach((dispose) => dispose());
@@ -503,11 +380,7 @@ export class Renderer {
 
               unitController.render(unitController.active());
 
-              // ensure UI looks responsive
-              portal.build(takeTilesToRender());
-              portal.render();
-
-              minimap.update();
+              mapView.flush();
             };
 
             const scheduleRender = (): void => {
@@ -588,7 +461,7 @@ export class Renderer {
                 data.player.world.tiles,
                 reconstituter.refilled(data.player.world.id)
               );
-              releaseIncomingTiles();
+              mapView.releaseTiles();
 
               unitController.next(data.player.actions, waitingForTurn);
 
@@ -691,8 +564,8 @@ export class Renderer {
 
                 applyDataPatches(objectMap, data, {
                   changed: (id) => changedIds.add(id),
-                  // Since we only use tilesToRender for x and y this should be fine...
-                  tile: (tile) => queueTileToRender(tile as Tile),
+                  // Since we only use the queued tiles for x and y this should be fine...
+                  tile: (tile) => mapView.queueTile(tile as Tile),
                 });
 
                 if (waitingForTurn) {
@@ -835,10 +708,7 @@ export class Renderer {
               const activeUnit = unitController.active();
 
               if (key === 'c' && activeUnit) {
-                portal.setCenter(activeUnit.tile.x, activeUnit.tile.y);
-
-                portal.render();
-                minimap.update();
+                mapView.centre(activeUnit.tile);
 
                 return;
               }
@@ -853,19 +723,13 @@ export class Renderer {
               }
 
               if (key === 't') {
-                unitsMap.setVisible(!unitsMap.isVisible());
-                citiesMap.setVisible(!citiesMap.isVisible());
-                cityNamesMap.setVisible(!cityNamesMap.isVisible());
-
-                portal.render();
+                mapView.toggleUnits();
 
                 return;
               }
 
               if (key === 'y') {
-                yieldsMap.setVisible(!yieldsMap.isVisible());
-
-                portal.render();
+                mapView.toggleYields();
 
                 return;
               }
