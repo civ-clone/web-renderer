@@ -1,0 +1,1 @@
+{"version":"0.1.0@7baf653","date":"2026-10-21T13:27:08.000Z","localChanges":["chore: give DataTransferClient public flush() and initialData() for tests, in place of reaching its private sendPatchData() and sendInitialData(), and drop its unused sender and receiver parameters (#449)"],"externalChanges":{}}

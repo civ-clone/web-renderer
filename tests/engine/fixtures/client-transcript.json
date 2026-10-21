@@ -2,7 +2,7 @@
   "turns": 21,
   "sequence": {
     "count": 197,
-    "hash": "20a71d837dcbf1e94ee41d040135618583bb036b0bf992a93e4214bb0917132d"
+    "hash": "a05fd0b284ed67ca3752abcafc32d3cc3e0ce45d2437d634d8baf13448ec3765"
   },
   "channels": {
     "actionHandled": {
@@ -27,7 +27,7 @@
     },
     "gameDataPatch": {
       "count": 96,
-      "hash": "9be41880ba7eedcdf4de064b8cdb3a1976f7d167007918cf47043594a856ebf1"
+      "hash": "418f0beea78c3863314f2730ede80b21db4b92d9c15e9af72a4a78c8a9deaa63"
     },
     "gameNotification": {
       "count": 1,
@@ -35,11 +35,11 @@
     },
     "intelligence": {
       "count": 2,
-      "hash": "2e3987da12c89ce0a4196e69984544c2f666016430f4941bac93519acf5c04dc"
+      "hash": "ffedf86c3ee629c60f55c1143a5b7678fbb2f01e1395f23f1f6507ba3a43dc98"
     },
     "topCities": {
       "count": 2,
-      "hash": "793d92f1965c534d47ad91a8f17889c504d7897bd89e4a457b4ae559df42e6ac"
+      "hash": "a3ee28b225dd6f092387da19ad7119f3184e1b8c5701e18be99ce4c85699e316"
     },
     "turnEnded": {
       "count": 20,
@@ -70,7 +70,7 @@
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 5845423adc60 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
-    "gameDataPatch 62b2406c7d91 add PlayerWorld-1[tiles[9]], add PlayerWorld-1[tiles[10]], add PlayerWorld-1[tiles[11]], add PlayerWorld-1[tiles[12]], add PlayerWorld-1[tiles[13]], add PlayerWorld-1[tiles[14]], and 1186 more",
+    "gameDataPatch f07aa74f27ae add PlayerWorld-1[tiles[9]], add PlayerWorld-1[tiles[10]], add PlayerWorld-1[tiles[11]], add PlayerWorld-1[tiles[12]], add PlayerWorld-1[tiles[13]], add PlayerWorld-1[tiles[14]], and 1186 more",
     "gameDataPatch b22d6d502da4 add PlayerTreasury-1",
     "gameDataPatch 36b3dd62363b update PlayerTile-5, update Warrior-1, update Player-1[units], update Player-1[actions], update Player-1[mandatoryActions]",
     "cityBuildAvailable 7ffea0ef2b48 {\"hierarchy\":[{\"#ref\":\"BuildItem-1v\"},{\"#ref\":\"BuildItem-1w\"},{\"#ref\":\"BuildI...",
@@ -85,11 +85,11 @@
     "turnEnded 74234e98afe7 null",
     "gameDataPatch e495399c1691 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
-    "gameDataPatch 7731f89c1eeb update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
+    "gameDataPatch f127111c2113 update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
     "actionHandled 6c2a1a2455eb {\"name\":\"Revolution\",\"id\":\"PlayerGovernment-1\"}",
-    "topCities 2e9ed5312f9d [{\"rank\":1,\"size\":1,\"citizens\":{\"happy\":0,\"content\":1,\"unhappy\":0,\"specialist...",
+    "topCities 01925eb894e4 [{\"rank\":1,\"size\":1,\"citizens\":{\"happy\":0,\"content\":1,\"unhappy\":0,\"specialist...",
     "civilizationScore 7d953659593c {\"terms\":[{\"term\":\"citizens\",\"value\":1},{\"term\":\"wonders\",\"value\":0},{\"term\":...",
-    "intelligence b7aa608a9c5d [{\"civilization\":\"Khmer\",\"colors\":[\"#7CB342\",\"#3E2723\"],\"details\":null},{\"civ...",
+    "intelligence deff20b575ac [{\"civilization\":\"Khmer\",\"colors\":[\"#9CCC65\",\"#3E2723\"],\"details\":null},{\"civ...",
     "cityBuildAvailable cf066f948525 {\"hierarchy\":[{\"#ref\":\"BuildItem-2j\"},{\"#ref\":\"BuildItem-2k\"},{\"#ref\":\"BuildI...",
     "gameDataPatch 901c4782da89 update Warrior-1",
     "gameDataPatch 56a0ae147b09 update PlayerTile-4, update PlayerTile-21, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -108,7 +108,7 @@
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 2475d4ba9013 update PlayerTile-x, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 27382baafee6 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
-    "gameDataPatch e6e3744df7be update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
+    "gameDataPatch 35270809de94 update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
     "actionHandled 177aa69b861c {\"name\":\"ChooseGovernment\",\"id\":\"PlayerGovernment-1\"}",
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
@@ -120,7 +120,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch d36745376b8e update PlayerTile-ua",
+    "gameDataPatch 6f08a1618fee update PlayerTile-ua",
     "gameDataPatch 27d8579fe56a update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 57b34efd79f0 update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -128,7 +128,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch d36745376b8e update PlayerTile-ua",
+    "gameDataPatch 6f08a1618fee update PlayerTile-ua",
     "gameDataPatch e8b1baf545d6 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 5929bd0d8707 update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -157,8 +157,8 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 9d2115de8335 update PlayerTile-5q, update City-4, update PlayerTile-6u",
-    "gameDataPatch 2ef73d871ee0 update PlayerTile-ua, update PlayerTile-t6",
+    "gameDataPatch db170767566b update PlayerTile-5q, update City-4, update PlayerTile-6u",
+    "gameDataPatch b28f1f4a9148 update PlayerTile-ua, update PlayerTile-t6",
     "gameDataPatch 51a3665e2e19 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch e4a2e5939a93 update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -166,8 +166,8 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 6e360845f63e update PlayerTile-6u",
-    "gameDataPatch 3de12303edb5 update PlayerTile-t6, update PlayerTile-t5",
+    "gameDataPatch 599e55fa3eca update PlayerTile-6u",
+    "gameDataPatch a276997ac05c update PlayerTile-t6, update PlayerTile-t5",
     "gameDataPatch 43cc62aa9057 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch d64124492323 update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -175,7 +175,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch b65595387fba update PlayerTile-t5, update PlayerTile-s1",
+    "gameDataPatch ab75906e7db4 update PlayerTile-t5, update PlayerTile-s1",
     "gameDataPatch 552e54534d23 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 05711f0268b4 update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -183,7 +183,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 01a18469e227 update PlayerTile-s1, update PlayerTile-s2",
+    "gameDataPatch c13fdd00df3b update PlayerTile-s1, update PlayerTile-s2",
     "gameDataPatch 27cc01e83171 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch d165a58f781f update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -191,7 +191,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch dcaa0e17138e update PlayerTile-s2, update PlayerTile-s3",
+    "gameDataPatch e67e2bce16a3 update PlayerTile-s2, update PlayerTile-s3",
     "gameDataPatch 59e911d64249 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 57c67be4a1af update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -199,9 +199,9 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 0ae0ddd4e7d7 update PlayerTile-6u, update PlayerTile-7y",
-    "gameDataPatch c9d53db08f41 update PlayerTile-6u",
-    "gameDataPatch 73849cc105c0 update PlayerTile-s3, update PlayerTile-t7",
+    "gameDataPatch fe9e39398009 update PlayerTile-6u, update PlayerTile-7y",
+    "gameDataPatch 8ea6f3ce3da9 update PlayerTile-6u",
+    "gameDataPatch ca7126c82c1f update PlayerTile-s3, update PlayerTile-t7",
     "gameDataPatch de2644d7323e update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 35f56ee3c674 update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -209,9 +209,9 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch c9d53db08f41 update PlayerTile-6u",
-    "gameDataPatch cf91c4e2ce61 update PlayerTile-7y, update PlayerTile-7x",
-    "gameDataPatch 9a98751a64f9 update PlayerTile-t7, update PlayerTile-ub",
+    "gameDataPatch 8ea6f3ce3da9 update PlayerTile-6u",
+    "gameDataPatch cb64c183f574 update PlayerTile-7y, update PlayerTile-7x",
+    "gameDataPatch 460404aed3ff update PlayerTile-t7, update PlayerTile-ub",
     "gameDataPatch ee888ecc2533 update PlayerTile-5, update Settlers-4, update City-1, update Player-1[units], update PlayerTile-21, update CityBuild-1, and 5 more",
     "turnStarted 74234e98afe7 null",
     "gameNotification cd9c0ce9a217 {\"hierarchy\":{\"#ref\":\"Notification-1\"},\"objects\":{\"Notification-1\":{\"_\":\"Noti...",
@@ -224,8 +224,8 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 9992e0619ea4 update PlayerTile-7x, update PlayerTile-92",
-    "gameDataPatch b02f54643258 update PlayerTile-ub, update PlayerTile-vf",
+    "gameDataPatch 707a57ecbb44 update PlayerTile-7x, update PlayerTile-92",
+    "gameDataPatch 072720a6e035 update PlayerTile-ub, update PlayerTile-vf",
     "gameDataPatch 46e728b2bd62 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch d16915b7ee0b update Settlers-4, update PlayerTile-7, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -237,8 +237,8 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch b43255b4623f update PlayerTile-92, update PlayerTile-93",
-    "gameDataPatch 370672a68f77 update PlayerTile-vf, update PlayerTile-ve",
+    "gameDataPatch 94eb4874c15f update PlayerTile-92, update PlayerTile-93",
+    "gameDataPatch fb18f20ecbe1 update PlayerTile-vf, update PlayerTile-ve",
     "gameDataPatch bf03f85bfa81 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 398da9a725fc update Settlers-4, update PlayerTile-22, update PlayerTile-7, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -246,7 +246,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 8d8160614b71 {\"name\":\"EndTurn\"}",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch ca4aee1ecc7a update PlayerTile-93, update PlayerTile-7z",
-    "gameDataPatch 44f3ec09eb0f update PlayerTile-ve, update PlayerTile-vd"
+    "gameDataPatch fa4fab97e344 update PlayerTile-93, update PlayerTile-7z",
+    "gameDataPatch 6cffd91f2e97 update PlayerTile-ve, update PlayerTile-vd"
   ]
 }

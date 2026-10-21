@@ -1,0 +1,1 @@
+{"version":"0.1.0@302e5cb","date":"2026-10-21T13:14:29.000Z","localChanges":["chore: move DataTransferClient's turn hand-over (the initial data, turnStarted, each action's patch and actionHandled, turnEnded, the halted GoTos) into src/js/Engine/Client/TurnHandover.ts, and count its microtasks (#449)"],"externalChanges":{}}

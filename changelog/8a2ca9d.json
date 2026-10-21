@@ -1,0 +1,1 @@
+{"version":"0.1.0@8a2ca9d","date":"2026-10-21T12:54:18.000Z","localChanges":["chore: move DataTransferClient's action handling into src/js/Engine/Client/handleAction.ts and Client/actions/ (#449)"],"externalChanges":{}}

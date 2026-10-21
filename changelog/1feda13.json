@@ -1,0 +1,1 @@
+{"version":"0.1.0@1feda13","date":"2026-10-21T13:31:32.000Z","localChanges":["chore: point the comments that still name DataTransferClient's old #sendActions at PlayerPatches, and say which of the client's report methods are still called (#503)"],"externalChanges":{}}

@@ -366,8 +366,8 @@ packages:
   '@civ-clone/base-city-yield-unit-support-production@0.1.2':
     resolution: {integrity: sha512-QxcmoXN7Gl5U057b/FQUhA7K3W09igzha7w9j67GdgUlM4YRnefgpr5jc+c+8wxrcS80LF0cg7bHiNvP2aU3cw==}
 
-  '@civ-clone/base-civilization-american@0.1.2':
-    resolution: {integrity: sha512-5l0sUp/VAXSBkdTQp/pwaWm3JmZ5zUsHGFY7Bk3GfIF8rEOwfSRq4T6l8UK1V+eF5e0h6ZesA1mCP+eh+7Wo9w==}
+  '@civ-clone/base-civilization-american@0.1.3':
+    resolution: {integrity: sha512-GoKGLVqQFX/g6/itXKuTIPsQ70QFI53jOOa5GJUBEvkpweJSvnIZxMGHYXeFLlp7fK3SLyrtqx3UimXXRYcLCg==}
 
   '@civ-clone/base-civilization-australian@0.1.0':
     resolution: {integrity: sha512-vgJmLsVTp7rfEw8EESi+f7njhgARz7nFlKNEIs9UKdiXnO4mLAMyPS4vf+9JHvUe/MHFiD5QTFLH9iaqP2K5Vw==}
@@ -375,20 +375,20 @@ packages:
   '@civ-clone/base-civilization-aztec@0.1.1':
     resolution: {integrity: sha512-B820NouUmn7Rq4V0QY45gOVAzf/ohS1/VFKQGfjOqAWyVc0Jtu6CoH1e8+9WiIo+TepuboLZlbJH7W25KWCA+g==}
 
-  '@civ-clone/base-civilization-babylonian@0.1.1':
-    resolution: {integrity: sha512-mjWz7nrbypWVbWYEPw4RezBjFEnSOBWmnqEg8JL1UXVU1EGgkNfnez5hyCIxq5dd6FvHitC9ap8EEbwR4ILMaA==}
+  '@civ-clone/base-civilization-babylonian@0.1.2':
+    resolution: {integrity: sha512-2ekUX1Yb4UCD6Oav8o9CVki354vDWrb0rVbsBv9FV41Xdup5n0EYpNih9sPVVoTzxsOQJ+RF4dk4lOGInoK+jg==}
 
   '@civ-clone/base-civilization-brazilian@0.1.0':
     resolution: {integrity: sha512-emg3wN05LBEl3xqIb0BkRJ0nm/ZJbENr5lEhfeS2EbjmInV3PtE1kYuFe3BMPBBme5kg2UFO8KD4N4icCXR0nw==}
 
-  '@civ-clone/base-civilization-chinese@0.1.2':
-    resolution: {integrity: sha512-UnalI6452Jq/KpxtqVjkKlYKlFIUyf1PtrD5j2jRcQg8Cmal5b8UisuOMyl+NQm78xs/LbnaZOLvXSK8EPzBsA==}
+  '@civ-clone/base-civilization-chinese@0.1.3':
+    resolution: {integrity: sha512-n/xcsrh+ymD2/Z2MUGo4aIAKsVtKo6YMa966O+hfejBQ+/pPu8t6WfBkPavCrf6oPsvbQXjbNrtNj42QN1/LhA==}
 
   '@civ-clone/base-civilization-chukchi@0.1.0':
     resolution: {integrity: sha512-fmuuWRX4r6oWucyihagcECwipszCaAp98RaKJmP5qe1pcvw07Z6ZgVqxdNREgXFQUCKn1Ah6rZecV4OpFFGRdw==}
 
-  '@civ-clone/base-civilization-egyptian@0.1.1':
-    resolution: {integrity: sha512-GuZAcer27xab2HeEWF2JF/o2PCsUguZCH20Sh4mOG/FQ6C/3H1V7OkogdhrcMMUO4jvYe35XXrrUq7fWNfDgnA==}
+  '@civ-clone/base-civilization-egyptian@0.1.2':
+    resolution: {integrity: sha512-fmP0f/HGEh/4LLRJ/wlDd+adQK2nghyRejTuyEkdIVbxOxwufltlu4EhjG4VPDpbZtMHfi3ihL9AxYGTHUJ5DQ==}
 
   '@civ-clone/base-civilization-english@0.1.1':
     resolution: {integrity: sha512-nZLSsSUKjPHCgty8/unTnT/hKIShmgh9hhvgtNwey5bQ22PDV9zgbXTkj226z0MR1LAV+P3FN4UAgW410U/BVA==}
@@ -396,29 +396,29 @@ packages:
   '@civ-clone/base-civilization-ethiopian@0.1.0':
     resolution: {integrity: sha512-BsALHdsqsneEyWp7ok2RnCMHIfYgSzxmojfK8vgCSqA7yTsB9+P8yS4wyAr3zEpXuk4ox5SoVq79mQ6ZKGdleQ==}
 
-  '@civ-clone/base-civilization-french@0.1.2':
-    resolution: {integrity: sha512-P9NrZ6ZqQ+91p26tmac1uOOu0ohnjRByuVEq1uFIJckPgTv06QZgwv+ZBepa1jx4hcfyc9+R04fXsx+fHFVWYA==}
+  '@civ-clone/base-civilization-french@0.1.3':
+    resolution: {integrity: sha512-7RdHIZc6NzqwW9G3Ioiz6X/XpULEawEp198WLLAjTFcW53Pl4uVotM6rNJM3ipX34gZ6oXg9wgOC5CHkwwWplg==}
 
-  '@civ-clone/base-civilization-german@0.1.1':
-    resolution: {integrity: sha512-YmnUtWGy9yc1HoQ4Kac1otjPQHPzssquDWfofgfUgS1RzUqCwEw+2Cc1um7A6f7Ps7J2S11/E+3Uu/eKzjP43A==}
+  '@civ-clone/base-civilization-german@0.1.2':
+    resolution: {integrity: sha512-pvAj8rblhZc2DhmK9DcagEt5GMmS9+b3iSrh/fAIOw0D6N6pGSGf6Ue2TqKJB+Bg4RikR7JKamXzzw3OXcZyiQ==}
 
-  '@civ-clone/base-civilization-greek@0.1.3':
-    resolution: {integrity: sha512-9Q+Qt916aP/mqn/XAE0i9LyCMFT6omO5+7rQuUmc/xuOw9CPXEf5jJtE/LeQBjLjrWmAvAaD/HBDT6x4GSU1dw==}
+  '@civ-clone/base-civilization-greek@0.1.4':
+    resolution: {integrity: sha512-lc5sR0vXV0aLNdbQ/jcpCVtkjiejCiiZcLFjvoQZqQeSXK6rKDVGjDJTchQLNICyn+ijT8doSiQWVXEBRdPMVg==}
 
-  '@civ-clone/base-civilization-inca@0.1.0':
-    resolution: {integrity: sha512-Fv7MmV3JDgxdJxcLfxNlU5dApIwQtk7rZNf+v8dXCwbKLoFc9yvtk8GThwuNxlvXbLBhRUeQ2Ne1u7/e2dodrQ==}
+  '@civ-clone/base-civilization-inca@0.1.1':
+    resolution: {integrity: sha512-fAHE8H9dtkVysr8gNc5dEbnNLj7qkAX4T6Gt0iG+3aInXfxUWiAEtT/+zZL1MVR/VdRrUpuLxV+eIUS81Otpdg==}
 
-  '@civ-clone/base-civilization-indian@0.1.3':
-    resolution: {integrity: sha512-aURZ+yz8SnrmK2P9tKVsvdJfzuUPGL4T3Lc76VqtD9EJ84Oi9uvIughzTTA68k5lUNvVZLNloD+ZKd2osPw20w==}
+  '@civ-clone/base-civilization-indian@0.1.4':
+    resolution: {integrity: sha512-P7Nx5/py22OMv5+Ba5AWUg0DWutNy1wpEKtzc9L0/bioS8VjgBZepEQXLo2/UZubvkeafvC/4kyCEch34XG6/w==}
 
-  '@civ-clone/base-civilization-indonesian@0.1.0':
-    resolution: {integrity: sha512-/xf1KZ6UzImUWpr/yZ7bKgi+L4Vwke7bG15QS99qZiyIJEKytS4VlmhmsfiOKwU5elMAyifB51uRyD1wOMFqLg==}
+  '@civ-clone/base-civilization-indonesian@0.1.1':
+    resolution: {integrity: sha512-7B7T900UIUKkZOeIyZ3FNmZ4O9wl5hUFAq7gJ3UnL2ED77kVKJoepsCZ1W2P36No6HRdY/ecsqp9nWdCid6KRw==}
 
   '@civ-clone/base-civilization-japanese@0.1.1':
     resolution: {integrity: sha512-I9OTkiN8VOiFEa/LTk0IrdetNWAuuLdAMAs2OjjnB66FfnN0EL8RbnbHMG67Pr9CQC6CdeeWUkererlWXolntw==}
 
-  '@civ-clone/base-civilization-khmer@0.1.0':
-    resolution: {integrity: sha512-iaKsp27n60vF605fe9drkE89MUSrGExlY692O6jIKZrzvw5Rjre2OHqQyY91FtOt/w+fD00ueZXosNt7Edi+gA==}
+  '@civ-clone/base-civilization-khmer@0.1.1':
+    resolution: {integrity: sha512-fr3ieU92i3uqrmwr3BMyGnIdrRQGY/4mMo+9+jpC6rX0VaJRfD+odoFYsvoZUe0A60Z7G1vdYCpIrH8lTZIXmg==}
 
   '@civ-clone/base-civilization-kongo@0.1.0':
     resolution: {integrity: sha512-7DbENFG5uVMbAweZ339ifBMd6MEAg3c1gcqYs3sjmjVPGC+SdSTLps+vFc8q/t+lZNGb6LJvzW8f0x0OCR3mkg==}
@@ -426,23 +426,23 @@ packages:
   '@civ-clone/base-civilization-malian@0.1.0':
     resolution: {integrity: sha512-EUsCkF8bBoHebZoarIdD0FzamQX9huZHD0qBxwLyycOskEF32Jpfn1gRlMrPGoDkTLB28wM5/qMN3Usoh2q91g==}
 
-  '@civ-clone/base-civilization-mongol@0.1.1':
-    resolution: {integrity: sha512-gSwGd2Kn1NH77W1cN910u1CgeVLkKjuLUv4UHEBVeyGrnj/QUOiI3EHAZG3k0q2gvtZQx02ZXSeyNh7NqOwdiw==}
+  '@civ-clone/base-civilization-mongol@0.1.2':
+    resolution: {integrity: sha512-E0OP3zZICBKo4FG0puHRlRnJM6mvpr5Pl4TO41ZehW8Pn1uzzLr0YRNHw/nVvjkppQUYObi8fvGMj2zKp6NiQg==}
 
-  '@civ-clone/base-civilization-roman@0.1.3':
-    resolution: {integrity: sha512-PyrhpkAwl+1ChoN0sdBTGDQ9nx7RZfiXPnHulzdTj6WHyhznMRVZyKNDm91uNjIWQ5+aU46+3YFyOCpeOcGT4Q==}
+  '@civ-clone/base-civilization-roman@0.1.4':
+    resolution: {integrity: sha512-vsfG5WMOPJhU7zhTZopdiWst74Jlmg6OlIoz/ogXmbZ6SG+WVMjEcfg431euL69CBcPnew70Hsn47gx//yxKhQ==}
 
-  '@civ-clone/base-civilization-russian@0.1.1':
-    resolution: {integrity: sha512-ZLyQpQxKCUrBcR3XamQCyQuZy2AKC8NEkpXONH07RoQVfj3Emx9HlJ3BVQW5z8br3X3Vll6u+sti6N7UCGV9fg==}
+  '@civ-clone/base-civilization-russian@0.1.2':
+    resolution: {integrity: sha512-t8VuKWyUAAywHwLMgEAE82U1Z1P/8/9JVcl08CzqrTbMgi5VsnpHWq7inJAd27EgPm7SvBRD1TsOKV2lEv/hiw==}
 
   '@civ-clone/base-civilization-sioux@0.1.0':
     resolution: {integrity: sha512-EsISULgMh/Wh2FVDbGD96k84dhdSJxMsTqQTtxkIXjglW/jjMPoPOT814ewRFrd1Qhs+Q2Ca5lJWGnSfbhltwA==}
 
-  '@civ-clone/base-civilization-viking@0.1.0':
-    resolution: {integrity: sha512-yVEf8Df0ziVMGJknMWGZGcyUVtyk0dlhpFReras+ywNw40NiBdvT+hYgvfGaiebV9KCvhFDcEf0UG9ZD0tA5dA==}
+  '@civ-clone/base-civilization-viking@0.1.1':
+    resolution: {integrity: sha512-591KVHGzN0YJFE4DJuWeOdHY1EBj7ZFQqFB6Qoz1FZKOjqQshM44XTbt7scodqUaUkCS7i5R0Hkcv1v5fVvV6g==}
 
-  '@civ-clone/base-civilization-zulu@0.1.1':
-    resolution: {integrity: sha512-tlkMOcdOAe80mUwvgXXo+49Zf3k2y3i3kFpTW4AkuCXnhZcWWjsR6C1FtMCxAn544Uk0WIQPqssxSl1a71skHg==}
+  '@civ-clone/base-civilization-zulu@0.1.2':
+    resolution: {integrity: sha512-2rrrGbwCG+TQSwfPU15BXTe82ZOESfumX3eNJQ0MPrqFL98YIw3xas7TQi1LUW9Y16uCijMDOv01GVZcys6VxQ==}
 
   '@civ-clone/base-diplomacy-declaration-peace@0.1.0':
     resolution: {integrity: sha512-FBPDBFHFmqdZT0KEvQc0NgBTkpq2THCTBFqJNq2Hlk3bWGVu7tbqjtmotIhBUIAGdbkam+h1dWhSzkJuZ9Qg3g==}
@@ -2228,7 +2228,7 @@ snapshots:
       '@civ-clone/core-unit': 0.1.28
       '@civ-clone/core-yield': 0.1.6
 
-  '@civ-clone/base-civilization-american@0.1.2':
+  '@civ-clone/base-civilization-american@0.1.3':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2240,7 +2240,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-babylonian@0.1.1':
+  '@civ-clone/base-civilization-babylonian@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2248,7 +2248,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-chinese@0.1.2':
+  '@civ-clone/base-civilization-chinese@0.1.3':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2256,7 +2256,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-egyptian@0.1.1':
+  '@civ-clone/base-civilization-egyptian@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2268,27 +2268,27 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-french@0.1.2':
+  '@civ-clone/base-civilization-french@0.1.3':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-german@0.1.1':
+  '@civ-clone/base-civilization-german@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-greek@0.1.3':
+  '@civ-clone/base-civilization-greek@0.1.4':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-inca@0.1.0':
+  '@civ-clone/base-civilization-inca@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-indian@0.1.3':
+  '@civ-clone/base-civilization-indian@0.1.4':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-indonesian@0.1.0':
+  '@civ-clone/base-civilization-indonesian@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2296,7 +2296,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-khmer@0.1.0':
+  '@civ-clone/base-civilization-khmer@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2308,15 +2308,15 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-mongol@0.1.1':
+  '@civ-clone/base-civilization-mongol@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-roman@0.1.3':
+  '@civ-clone/base-civilization-roman@0.1.4':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-russian@0.1.1':
+  '@civ-clone/base-civilization-russian@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2324,11 +2324,11 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-viking@0.1.0':
+  '@civ-clone/base-civilization-viking@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-zulu@0.1.1':
+  '@civ-clone/base-civilization-zulu@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -4133,14 +4133,14 @@ snapshots:
       '@civ-clone/base-civilization-brazilian': 0.1.0
       '@civ-clone/base-civilization-chukchi': 0.1.0
       '@civ-clone/base-civilization-ethiopian': 0.1.0
-      '@civ-clone/base-civilization-inca': 0.1.0
-      '@civ-clone/base-civilization-indonesian': 0.1.0
+      '@civ-clone/base-civilization-inca': 0.1.1
+      '@civ-clone/base-civilization-indonesian': 0.1.1
       '@civ-clone/base-civilization-japanese': 0.1.1
-      '@civ-clone/base-civilization-khmer': 0.1.0
+      '@civ-clone/base-civilization-khmer': 0.1.1
       '@civ-clone/base-civilization-kongo': 0.1.0
       '@civ-clone/base-civilization-malian': 0.1.0
       '@civ-clone/base-civilization-sioux': 0.1.0
-      '@civ-clone/base-civilization-viking': 0.1.0
+      '@civ-clone/base-civilization-viking': 0.1.1
       '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/7ad66bc8ba20f8adcb1bad8abf7792e73bee31a0
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/library-civilization': 0.1.0
@@ -4597,20 +4597,20 @@ snapshots:
 
   '@civ-clone/library-civilization@0.1.0':
     dependencies:
-      '@civ-clone/base-civilization-american': 0.1.2
+      '@civ-clone/base-civilization-american': 0.1.3
       '@civ-clone/base-civilization-aztec': 0.1.1
-      '@civ-clone/base-civilization-babylonian': 0.1.1
-      '@civ-clone/base-civilization-chinese': 0.1.2
-      '@civ-clone/base-civilization-egyptian': 0.1.1
+      '@civ-clone/base-civilization-babylonian': 0.1.2
+      '@civ-clone/base-civilization-chinese': 0.1.3
+      '@civ-clone/base-civilization-egyptian': 0.1.2
       '@civ-clone/base-civilization-english': 0.1.1
-      '@civ-clone/base-civilization-french': 0.1.2
-      '@civ-clone/base-civilization-german': 0.1.1
-      '@civ-clone/base-civilization-greek': 0.1.3
-      '@civ-clone/base-civilization-indian': 0.1.3
-      '@civ-clone/base-civilization-mongol': 0.1.1
-      '@civ-clone/base-civilization-roman': 0.1.3
-      '@civ-clone/base-civilization-russian': 0.1.1
-      '@civ-clone/base-civilization-zulu': 0.1.1
+      '@civ-clone/base-civilization-french': 0.1.3
+      '@civ-clone/base-civilization-german': 0.1.2
+      '@civ-clone/base-civilization-greek': 0.1.4
+      '@civ-clone/base-civilization-indian': 0.1.4
+      '@civ-clone/base-civilization-mongol': 0.1.2
+      '@civ-clone/base-civilization-roman': 0.1.4
+      '@civ-clone/base-civilization-russian': 0.1.2
+      '@civ-clone/base-civilization-zulu': 0.1.2
       '@civ-clone/base-leader-trait-aggression': 0.1.1
       '@civ-clone/base-leader-trait-development': 0.1.1
       '@civ-clone/base-leader-trait-militarism': 0.1.1
