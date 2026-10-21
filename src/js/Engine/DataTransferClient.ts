@@ -89,11 +89,9 @@ import {
 } from '@civ-clone/civ1-city/lib/assignWorkers';
 import { TopCitiesRow, defaultTopCitiesLimit } from './lib/topCities';
 import { CivilizationScore } from './lib/civilizationScore';
-import { GameOverDetails, gameOverDetails } from './lib/gameOver';
+import { GameOverDetails } from './lib/gameOver';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
-import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
 import { instance as gameResultRegistryInstance } from '@civ-clone/core-turn-based-game/GameResultRegistry';
-import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
@@ -117,6 +115,10 @@ import registerRequests, {
   civilizationScore as civilizationScoreFor,
   topCities as topCitiesFor,
 } from './Client/requests';
+import registerGameEnd, {
+  GameEndContext,
+  gameOver as gameOverFor,
+} from './Client/gameEnd';
 import registerNotifications from './Client/notifications/registerNotifications';
 import registerPatchEvents from './Client/events/patchEvents';
 // Last, as registering these used to follow every import here.
@@ -134,6 +136,8 @@ export class DataTransferClient extends Client implements IClient {
   //  constructor, which is given the transport.
   #patches: PlayerPatches;
   #eventEmitter: EventEmitter;
+  // What the game-end receivers and listeners read, kept for `gameOver` (see `Client/gameEnd.ts`).
+  #gameEnd: GameEndContext;
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
   //  our own notifications are held (see `#holdsNotifications`).
   #handedOver: boolean = false;
@@ -229,38 +233,6 @@ export class DataTransferClient extends Client implements IClient {
     };
 
     registerRequests(this.#transport, this.#requests);
-
-    // Game → Retire: the game ends now, with your score (#176, #362).
-    //  Once the game has ended, the ending shows again instead.
-    this.#transport.receive('retire', () => {
-      const gameResult =
-        endGame(
-          'retired',
-          null,
-          gameResultRegistryInstance,
-          ruleRegistryInstance,
-          turnInstance
-        ) ?? gameResultRegistryInstance.get();
-
-      // A new result has already been sent, by `game:over`.
-      if (gameResult !== null && gameResult.scoringComplete()) {
-        this.#transport.send('gameOver', this.gameOver(gameResult));
-      }
-    });
-
-    // Keep playing after the game has ended: the score is final, and a turn loop waiting at the end of the turn goes on
-    //  (#176).
-    this.#transport.receive('gameContinue', () => {
-      const gameResult = gameResultRegistryInstance.get();
-
-      if (gameResult === null || gameResult.reason() === 'destroyed') {
-        return;
-      }
-
-      gameResult.completeScoring();
-
-      engineInstance.emit('game:continue');
-    });
 
     engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
@@ -405,37 +377,21 @@ export class DataTransferClient extends Client implements IClient {
       this.#cityNews.of(city).famine = true;
     });
 
-    // However the game ends, the ending window says so (#176). Our own destruction is one of the endings.
-    engineInstance.on('game:over', (gameResult: GameResult) =>
-      this.#transport.send('gameOver', this.gameOver(gameResult))
-    );
+    // How the game ends for us: Game → Retire, keeping playing, and the ending window, sent however the game ends (see
+    //  `Client/gameEnd.ts`).
+    this.#gameEnd = {
+      player: () => this.player(),
+      hasMet: (player: Player) => this.hasMet(player),
+      civilizationScore: () => this.civilizationScore(),
+      difficulties: gameDifficultyRegistryInstance,
+      gameResults: gameResultRegistryInstance,
+      playerResearches: playerResearchRegistryInstance,
+      rules: ruleRegistryInstance,
+      turn: turnInstance,
+      year: yearInstance,
+    };
 
-    // A game saved after it ended, and before the players chose to keep playing, ends again as it loads.
-    engineInstance.on('game:loaded', () => {
-      const gameResult = gameResultRegistryInstance.get();
-
-      if (gameResult !== null && !gameResult.scoringComplete()) {
-        this.#transport.send('gameOver', this.gameOver(gameResult));
-      }
-    });
-
-    // Our destruction is the game's end. Another civilization's is told in `Client/notifications/player.ts`.
-    engineInstance.on('player:defeated', (defeatedPlayer: Player) => {
-      // The ending window tells us (`game:over`). After you've kept playing from an earlier ending the game can't end
-      //  again, so the destruction is sent as an ending of its own.
-      if (defeatedPlayer === this.player()) {
-        const gameResult = gameResultRegistryInstance.get();
-
-        if (gameResult !== null && gameResult.scoringComplete()) {
-          this.#transport.send(
-            'gameOver',
-            this.gameOver(
-              new GameResult('destroyed', null, turnInstance.value())
-            )
-          );
-        }
-      }
-    });
+    registerGameEnd(this.#transport, engineInstance, this.#gameEnd);
 
     // What the player is told of, after the listeners above, so that what an event changes is queued before the
     //  player is told of it (see `Client/notifications/registerNotifications.ts`).
@@ -893,29 +849,7 @@ export class DataTransferClient extends Client implements IClient {
 
   // How the game ended, for the ending window (#176).
   gameOver(gameResult: GameResult): GameOverDetails {
-    const difficulty = gameDifficultyRegistryInstance.get();
-
-    let discoveries: Advance[] = [];
-
-    try {
-      discoveries = playerResearchRegistryInstance
-        .getByPlayer(this.player())
-        .complete();
-    } catch (e) {
-      // A player with no research (yet) has discovered nothing.
-    }
-
-    return gameOverDetails(gameResult, this.player(), {
-      difficulty: difficulty === null ? null : typeNameOf(difficulty),
-      discovery:
-        discoveries.length === 0
-          ? null
-          : typeNameOf(discoveries[discoveries.length - 1].sourceClass()),
-      hasMet: (player: Player) => this.hasMet(player),
-      level: levelOf(gameDifficultyRegistryInstance),
-      score: this.civilizationScore(),
-      year: yearInstance.value(gameResult.turn()),
-    });
+    return gameOverFor(this.#gameEnd, gameResult);
   }
 
   topCities(limit: number = defaultTopCitiesLimit): TopCitiesRow[] {
