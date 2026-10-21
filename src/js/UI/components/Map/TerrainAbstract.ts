@@ -1,4 +1,4 @@
-import { NeighbourDirection, Tile } from '../../types';
+import { Tile } from '../../types';
 import { Map, IMap } from '../Map';
 
 export class TerrainAbstract extends Map implements IMap {
@@ -6,10 +6,10 @@ export class TerrainAbstract extends Map implements IMap {
     // we need to redraw the surrounding tiles to prevent the hidden terrain showing up incorrectly.
     const extendedTilesToUpdate = [...tilesToUpdate];
 
+    const directions = this.world().topology().directions();
+
     tilesToUpdate.forEach((tile) => {
-      (
-        ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'] as NeighbourDirection[]
-      ).forEach((direction) => {
+      directions.forEach((direction) => {
         const target = this.world().getNeighbour(tile, direction);
 
         if (extendedTilesToUpdate.includes(target)) {

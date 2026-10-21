@@ -245,10 +245,14 @@ export class Map implements IMap {
     );
   }
 
+  // The directions from `tile` whose neighbour passes `filter`, in the order given: by default the ones that share an
+  //  edge, as the world's topology lists them (#88).
   protected filterNeighbours(
     tile: Tile,
     filter: (tile: Tile) => boolean,
-    directions: NeighbourDirection[] = ['n', 'e', 's', 'w']
+    directions: readonly NeighbourDirection[] = this.#world
+      .topology()
+      .edgeDirections()
   ): NeighbourDirection[] {
     return directions.filter((direction: NeighbourDirection): boolean =>
       filter(this.#world.getNeighbour(tile, direction))

@@ -143,7 +143,8 @@ export class Landscape extends TerrainAbstract {
       // formula from: http://forums.civfanatics.com/showpost.php?p=13507808&postcount=40
       // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
       // ocean tile. Starting with the tile to the left as the least significant bit and
-      // going clockwise
+      // going clockwise. This order is how Civ1's coast sprite is laid out, not the
+      // topology's, so it is spelled out here: the tileset's sprites decide it (#92).
       bitmask =
         (this.world().getNeighbour(tile, 'w').isLand ? 1 : 0) |
         (this.world().getNeighbour(tile, 'nw').isLand ? 2 : 0) |
@@ -257,13 +258,15 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    const neighbouringRoad = this.filterNeighbours(
+    // A road or railroad joins its neighbours every way the world's topology has (#88).
+    const directions = this.world().topology().directions(),
+      neighbouringRoad = this.filterNeighbours(
         tile,
         (adjoiningTile: Tile): boolean =>
           adjoiningTile.improvements.some(
             (improvement: EntityInstance): boolean => improvement._ === 'Road'
           ),
-        ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
+        directions
       ),
       neighbouringRailroad = this.filterNeighbours(
         tile,
@@ -273,7 +276,7 @@ export class Landscape extends TerrainAbstract {
             (improvement: EntityInstance): boolean =>
               improvement._ === 'Railroad'
           ),
-        ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw']
+        directions
       );
 
     neighbouringRoad.forEach((direction: NeighbourDirection): void => {
