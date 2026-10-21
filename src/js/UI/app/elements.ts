@@ -1,0 +1,59 @@
+// The page's fixed elements, looked up once in `Renderer.init` before any game
+// exists. Cast without null checks, as they always were: `index.html` has
+// them all.
+export interface AppElements {
+  notificationArea: HTMLElement;
+  mainMenuElement: HTMLElement;
+  actionArea: HTMLElement;
+  secondaryActionArea: HTMLElement;
+  unitActionArea: HTMLElement;
+  gameMenu: HTMLElement;
+  gameArea: HTMLElement;
+  mapWrapper: HTMLElement;
+  mapPortal: HTMLCanvasElement;
+  gameInfo: HTMLElement;
+  playerInfo: HTMLElement;
+  minimapCanvas: HTMLCanvasElement;
+  unitInfo: HTMLCanvasElement;
+  preloadContainer: HTMLDivElement;
+}
+
+export const appElements = (): AppElements => {
+  const notificationArea = document.getElementById(
+      'notification'
+    ) as HTMLElement,
+    mainMenuElement = document.querySelector('#mainmenu') as HTMLElement,
+    actionArea = document.getElementById('actions') as HTMLElement,
+    secondaryActionArea = document.getElementById(
+      'other-actions'
+    ) as HTMLElement,
+    unitActionArea = document.getElementById('unit-actions') as HTMLElement,
+    gameMenu = document.getElementById('game-menu') as HTMLElement,
+    gameArea = document.getElementById('game') as HTMLElement,
+    mapWrapper = document.getElementById('map') as HTMLElement,
+    mapPortal = mapWrapper.querySelector('canvas') as HTMLCanvasElement,
+    gameInfo = document.getElementById('gameDetails') as HTMLElement,
+    playerInfo = document.getElementById('playerDetails') as HTMLElement,
+    minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement,
+    unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
+    preloadContainer = document.getElementById('preload') as HTMLDivElement;
+
+  return {
+    notificationArea,
+    mainMenuElement,
+    actionArea,
+    secondaryActionArea,
+    unitActionArea,
+    gameMenu,
+    gameArea,
+    mapWrapper,
+    mapPortal,
+    gameInfo,
+    playerInfo,
+    minimapCanvas,
+    unitInfo,
+    preloadContainer,
+  };
+};
+
+export default appElements;
