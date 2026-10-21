@@ -1,4 +1,16 @@
 [
+{"version":"0.1.0@17524cf","date":"2026-10-21T09:10:44.000Z","localChanges":["chore: move the action panels, the auto end of turn check and the prune schedule out of Renderer.ts into lib/"],"externalChanges":{}}
+,
+{"version":"0.1.0@810a789","date":"2026-10-21T09:03:35.000Z","localChanges":["chore: collect each rebuild's changed ids in DataChanges and notify on each render"],"externalChanges":{}}
+,
+{"version":"0.1.0@28a0f20","date":"2026-10-21T09:03:35.000Z","localChanges":["chore: add DataChanges, which tells watchers when the ids they show change"],"externalChanges":{}}
+,
+{"version":"0.1.0@3a0c9b8","date":"2026-10-21T09:10:33.000Z","localChanges":["chore: move the page setup out of Renderer.ts into app/ (elements, i18n, assets, options, ReloadGuard) and lib/parseBooleanParam.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@41a4bd4","date":"2026-10-21T08:59:19.000Z","localChanges":["chore: move how DataTransferClient builds the Top Cities entries and the Civilization Score into src/js/Engine/lib, with their registries passed in, and test them with plain data (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@f75cd6b","date":"2026-10-21T08:55:25.000Z","localChanges":["chore: move DataTransferClient's hasMet into src/js/Engine/lib/hasMet.ts, with its registries passed in, and test it with plain data (#449)"],"externalChanges":{}}
+,
 {"version":"0.1.0@d736e63","date":"2026-10-21T08:32:00.000Z","localChanges":["docs: the 2026-10-21 code review reports and where each finding went"],"externalChanges":{}}
 ,
 {"version":"0.1.0@b35f4e4","date":"2026-10-21T08:48:59.000Z","localChanges":["chore: move DataTransferClient's ref filters, stand-ins and AdditionalData registrations into src/js/Engine/Client (#449)"],"externalChanges":{}}

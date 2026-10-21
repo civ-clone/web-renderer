@@ -60,8 +60,6 @@ export const removeObjectPath = (object: PlainObject, path: string): void => {
 export type DataPatchCallbacks = {
   /** Each id an entry adds, updates or removes, and each id in an add or update's side-table, in the order applied. */
   changed(id: string): void;
-  /** Each add or update entry, after its own id is set and `changed`, before its side-table is copied in. */
-  received?(key: string, value: ObjectMap | PlainObject): void;
   /** Each `PlayerTile` in a side-table, once it is in the map and `changed`. */
   tile?(tile: PlainObject): void;
 };
@@ -74,7 +72,7 @@ export type DataPatchCallbacks = {
 export const applyDataPatches = (
   objectMap: ObjectMap,
   patches: DataPatch[],
-  { changed, received, tile }: DataPatchCallbacks
+  { changed, tile }: DataPatchCallbacks
 ): void =>
   patches.forEach((patch) =>
     Object.entries(patch).forEach(([key, { type, index, value }]) => {
@@ -93,8 +91,6 @@ export const applyDataPatches = (
         }
 
         changed(key);
-
-        received?.(key, value!);
 
         Object.entries(value!.objects as PlainObject).forEach(
           ([key, value]) => {

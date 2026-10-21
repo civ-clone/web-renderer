@@ -1,0 +1,1 @@
+{"version":"0.1.0@3a0c9b8","date":"2026-10-21T09:10:33.000Z","localChanges":["chore: move the page setup out of Renderer.ts into app/ (elements, i18n, assets, options, ReloadGuard) and lib/parseBooleanParam.ts"],"externalChanges":{}}

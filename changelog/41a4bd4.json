@@ -1,0 +1,1 @@
+{"version":"0.1.0@41a4bd4","date":"2026-10-21T08:59:19.000Z","localChanges":["chore: move how DataTransferClient builds the Top Cities entries and the Civilization Score into src/js/Engine/lib, with their registries passed in, and test them with plain data (#449)"],"externalChanges":{}}

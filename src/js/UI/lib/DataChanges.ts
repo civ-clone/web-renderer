@@ -2,8 +2,8 @@ import { GameData } from '../types';
 
 // Which ids changed between two renders, and who wants to know (#344). The
 //  renderer `collect`s what each rebuild filled and `notify`s once per render,
-//  where `dataupdated` is dispatched; a window `watch`es the ids it shows and
-//  is handed the new data when any of them changed.
+//  first thing in `render()`; a window `watch`es the ids it shows and is
+//  handed the new data when any of them changed.
 //
 // A module singleton, as `GameOptionsRegistry.instance` is, because windows
 //  are opened from too many places to hand one through. The class stays

@@ -6,9 +6,15 @@
 // for a changed id, for a child id its getter reads live, for a late ref
 // arriving at what it watches, for a `remove` and for a full rebuild; not for
 // unrelated ids; once per render however many rebuilds came before it; and that
-// unwatching or watching during a render is honoured.
+// unwatching or watching during a render is honoured. Then the same for a real
+// `DataObserver`, which watches the module's shared `instance`: built with no
+// `document` (this runs in Node), woken by a change or a `remove` with the new
+// data, following `setIds`, and stopped by `dispose`.
 
-import { DataChanges } from '../../src/js/UI/lib/DataChanges';
+import DataChanges, {
+  instance as sharedChanges,
+} from '../../src/js/UI/lib/DataChanges';
+import DataObserver from '../../src/js/UI/DataObserver';
 import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
@@ -100,15 +106,21 @@ const update = (patches: DataPatch[], rebuildAll = false): void => {
 
   data = reconstituter.rebuild(objectMap, changed) as GameData;
 
-  dataChanges.collect(
-    changed === null ? null : [...changed, ...reconstituter.filledIds()]
-  );
+  const collected =
+    changed === null ? null : [...changed, ...reconstituter.filledIds()];
+
+  dataChanges.collect(collected);
+  // Where `Renderer` collects, for the `DataObserver`s at the end.
+  sharedChanges.collect(collected);
 
   lastChanged = changedIds;
   lastFilled = reconstituter.filledIds();
 };
 
-const render = (): void => dataChanges.notify(data);
+const render = (): void => {
+  dataChanges.notify(data);
+  sharedChanges.notify(data);
+};
 
 const replace = (id: string, hierarchy: PlainObject, objects = {}) => ({
   [id]: { type: 'update' as const, value: { hierarchy, objects } },
@@ -412,6 +424,80 @@ check(
     `unwatching twice removes only that watcher (${ranTwice.join()})`,
     ranTwice.join() === 'second'
   );
+}
+
+// A `DataObserver`, as the city screen and the reports use it.
+{
+  const received: GameData[] = [];
+
+  let observer: DataObserver | null = null;
+
+  try {
+    observer = new DataObserver(['City-1'], (data) => received.push(data));
+  } catch (error) {
+    logged.push(error);
+  }
+
+  check(
+    'a DataObserver can be built with no document and no game',
+    observer !== null
+  );
+
+  update([replace('City-1', { ...objectMap.objects['City-1'], name: 'Roma' })]);
+  render();
+
+  check(
+    `a DataObserver wakes for its changed id, with the new data (${received.length})`,
+    received.length === 1 &&
+      received[0] === data &&
+      received[0].player.cities[0].name === 'Roma'
+  );
+
+  received.length = 0;
+  update([replace('City-2', { ...objectMap.objects['City-2'], name: 'Vei' })]);
+  render();
+
+  check('but not for an unrelated id', received.length === 0);
+
+  observer!.setIds(['City-2', 'Unit-1']);
+
+  update([replace('City-1', { ...objectMap.objects['City-1'], name: 'Rome' })]);
+  render();
+
+  check('after setIds, its old id no longer wakes it', received.length === 0);
+
+  update([replace('City-2', { ...objectMap.objects['City-2'], name: 'Veii' })]);
+  render();
+
+  check(
+    `and the new one does, on the next change (${received.length})`,
+    received.length === 1
+  );
+
+  received.length = 0;
+  update([{ 'Unit-1': { type: 'remove' } }]);
+  render();
+
+  check(
+    `a DataObserver wakes for a removed id (${received.length})`,
+    received.length === 1
+  );
+
+  received.length = 0;
+  observer!.dispose();
+  update([replace('City-2', { ...objectMap.objects['City-2'], name: 'Vei' })]);
+  render();
+  update([], true);
+  render();
+
+  check(
+    `dispose stops it, even for a full rebuild (${received.length})`,
+    received.length === 0
+  );
+
+  observer!.dispose();
+
+  check('and disposing twice is harmless', received.length === 0);
 }
 
 finished = true;
