@@ -247,3 +247,18 @@ invade, or a home landmass filling up. The arena (this AI against
 civ-clone/simple-ai-client 549a859, seeds 1–40 and 41–80, 80 × 300 turns) shows
 cities −0.57 and +0.07, cities captured −0.26 and −0.11, and Expansionist
 civilizations level or ahead.
+
+## Accepted change: the world records its grid (#89)
+
+core-world 0.1.22 saves which grid the world is on (`World._topologyId`), and
+core-player-world 0.1.14 sends it to the client as the `PlayerWorld` key
+`topologyId`. Nothing else changed. `state.fields` rises by one at every
+checkpoint (9,729 → 9,730, 9,841 → 9,842, 10,045 → 10,046), so `state.hash`
+moves, and `dto.bytes` rises by 22 bytes (`,"topologyId":"square"`) for every
+`PlayerWorld` a player, city or unit carries (+176, +352, +1,166), so `dto.hash`
+moves; the three checksums move with them. Run again with `_topologyId` made
+transient and the key filtered out of `PlayerWorld.keys()`, the result is
+byte-identical to the previous `baseline.json`, checksums `11b928fc / e024fabe /
+6eba621c` included. In `client-transcript.json` only the one `gameData` message
+(and so the `gameData` channel and sequence hashes) changed; with the key taken
+back out of it, every hash matches the previous fixture.
