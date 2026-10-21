@@ -50,8 +50,14 @@ export interface WorldDimensions {
  * drawn on its own in a test can have a world with none, and only the sizes that need them would notice.
  */
 export class SquareProjection implements Projection {
+  // The answers never change for a projection's life (the map builds a new
+  // one when the scale or the wrap changes), and `placements` asks for them
+  // for every tile it draws, so each is made once rather than per call.
+  #footprint: Size;
   #size: number;
   #world: WorldDimensions;
+  #worldSize: Size | null = null;
+  #wrapPeriod: { x: number; y: number | null } | null = null;
   #wrapVertical: boolean;
 
   constructor(
@@ -62,10 +68,11 @@ export class SquareProjection implements Projection {
     this.#size = size;
     this.#world = world;
     this.#wrapVertical = wrapVertical;
+    this.#footprint = { width: size, height: size };
   }
 
   footprint(): Size {
-    return { width: this.#size, height: this.#size };
+    return this.#footprint;
   }
 
   pixelToTile(px: number, py: number): [number, number] {
@@ -77,17 +84,25 @@ export class SquareProjection implements Projection {
   }
 
   worldSize(): Size {
-    return {
-      width: this.#world.width() * this.#size,
-      height: this.#world.height() * this.#size,
-    };
+    if (!this.#worldSize) {
+      this.#worldSize = {
+        width: this.#world.width() * this.#size,
+        height: this.#world.height() * this.#size,
+      };
+    }
+
+    return this.#worldSize;
   }
 
   wrapPeriod(): { x: number; y: number | null } {
-    return {
-      x: this.#world.width() * this.#size,
-      y: this.#wrapVertical ? this.#world.height() * this.#size : null,
-    };
+    if (!this.#wrapPeriod) {
+      this.#wrapPeriod = {
+        x: this.#world.width() * this.#size,
+        y: this.#wrapVertical ? this.#world.height() * this.#size : null,
+      };
+    }
+
+    return this.#wrapPeriod;
   }
 }
 
