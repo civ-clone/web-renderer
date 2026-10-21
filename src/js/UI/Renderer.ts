@@ -75,6 +75,9 @@ import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
+import PruneSchedule from './lib/PruneSchedule';
+import partitionActions from './lib/playerActionPanels';
+import shouldAutoEndTurn from './lib/autoEndTurn';
 import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import { instance as dataChanges } from './lib/DataChanges';
@@ -746,9 +749,11 @@ export class Renderer {
             // let lastTurn = 1,
             //   clearNextTurn = false;
 
-            let lastPrunedTurn = -1,
-              lastPrunedObjectCount = Object.keys(objectMap.objects).length,
-              currentTurn = Number(data?.turn?.value ?? 0),
+            const pruneSchedule = new PruneSchedule(
+              Object.keys(objectMap.objects).length
+            );
+
+            let currentTurn = Number(data?.turn?.value ?? 0),
               currentObjectCount = Object.keys(objectMap.objects).length;
 
             // The `?debug=1` panel, hotkeys and memory testbed. Built before
@@ -810,62 +815,15 @@ export class Renderer {
 
               dataChanges.notify(data);
 
-              const primaryActionList = [
-                  'ChooseGovernment',
-                  'ChooseResearch',
-                  'CityBuild',
-                  'CivilDisorder',
-                  'EndTurn',
-                  'Notice',
-                ],
-                ignoredActionList = [
-                  'ActiveUnit',
-                  'ChangeProduction',
-                  'ChangeSpecialist',
-                  'ChangeWorkedTile',
-                  'CompleteProduction',
-                  'InactiveUnit',
-                  'SellImprovement',
-                ],
-                allExcludedActions = new Set([
-                  ...primaryActionList,
-                  ...ignoredActionList,
-                ]),
-                primaryActionPriority: {
-                  [key: string]: number;
-                } = {
-                  EndTurn: 100,
-                  ChooseGovernment: 90,
-                  ChooseResearch: 80,
-                  CityBuild: 60,
-                  CivilDisorder: 10,
-                  Notice: 5,
-                },
-                // Still last turn's actions while waiting, and the worker isn't
-                // listening for them: End Turn would come back, clickable.
-                playerActions = waitingForTurn
-                  ? []
-                  : data.player.actions.filter(
-                      (action): action is PlayerAction => !!action
-                    ),
-                primaryActionCandidates = [
-                  ...playerActions,
-                  ...notices.actions(data),
-                ]
-                  .sort(
-                    (a, b) =>
-                      (primaryActionPriority[a._] ?? 0) -
-                      (primaryActionPriority[b._] ?? 0)
-                  )
-                  .filter((action) => primaryActionList.includes(action._));
-
-              primaryActions.build(primaryActionCandidates, data.player);
-
-              secondaryActions.build(
-                playerActions.filter(
-                  (action) => !allExcludedActions.has(action._)
-                )
+              const { primary, secondary } = partitionActions(
+                data.player.actions,
+                notices.actions(data),
+                waitingForTurn
               );
+
+              primaryActions.build(primary, data.player);
+
+              secondaryActions.build(secondary);
 
               unitActionButtons.build(
                 waitingForTurn ? null : activeUnit,
@@ -1096,19 +1054,12 @@ export class Renderer {
               currentTurn = turnValue;
               currentObjectCount = objectCount;
 
-              const scheduledPrune =
-                  Number.isFinite(turnValue) &&
-                  turnValue > 0 &&
-                  turnValue % 5 === 0 &&
-                  turnValue !== lastPrunedTurn,
-                // Also prune on unexpected growth so the map can't balloon
-                // within the 5-turn window between scheduled prunes.
-                growthPrune = objectCount > lastPrunedObjectCount * 1.5;
-
-              if (objectCount > 5000 && (scheduledPrune || growthPrune)) {
-                lastPrunedTurn = turnValue;
+              if (pruneSchedule.due(turnValue, objectCount)) {
                 reconstituter.forget(pruneObjectMap(objectMap));
-                lastPrunedObjectCount = Object.keys(objectMap.objects).length;
+                pruneSchedule.pruned(
+                  turnValue,
+                  Object.keys(objectMap.objects).length
+                );
               }
 
               // Refilled when a patch re-sent the world, as it does for a tile
@@ -1209,22 +1160,7 @@ export class Renderer {
               // behind a move wait for its `actionHandled` (#326).
               drainKeys();
 
-              const autoEndOfTurnExceptions = options.get(
-                'autoEndOfTurnExceptions',
-                []
-              );
-
-              if (
-                !waitingForTurn &&
-                options.get('autoEndOfTurn') &&
-                data.player.mandatoryActions.length === 1 &&
-                data.player.mandatoryActions.every(
-                  (action) => action._ === 'EndTurn'
-                ) &&
-                !data.player.actions.some((action) =>
-                  autoEndOfTurnExceptions.includes(action._)
-                )
-              ) {
+              if (shouldAutoEndTurn(data.player, options, waitingForTurn)) {
                 // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
                 transport.send('action', {
                   name: 'EndTurn',
