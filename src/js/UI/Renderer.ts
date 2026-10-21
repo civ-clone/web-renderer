@@ -1,12 +1,10 @@
 import {
   City as CityData,
   DataPatch,
-  DataPatchContents,
   Dialogue,
   GameData,
   Interactions,
   Negotiation,
-  PlainObject,
   PlayerAction,
   Resolution,
   Tile,
@@ -81,6 +79,7 @@ import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
+import applyDataPatches from './lib/applyDataPatches';
 import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import ActiveUnitTiles from './lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from './lib/PendingMove';
@@ -1805,126 +1804,24 @@ export class Renderer {
               })
             );
 
-            const pathToParts = (path: string) =>
-                path.replace(/]/g, '').split(/[.[]/),
-              getPenultimateObject = (
-                object: PlainObject,
-                path: string
-              ): [PlainObject, string | undefined] => {
-                const parts = pathToParts(path),
-                  lastPart = parts.pop();
-
-                const tmpObj = parts.reduce((tmpObj, part) => {
-                  if (!tmpObj || !(part in tmpObj)) {
-                    return null;
-                  }
-
-                  return tmpObj[part];
-                }, object);
-
-                return [tmpObj, lastPart];
-              },
-              setObjectPath = (
-                object: PlainObject,
-                path: string,
-                value: any
-              ): void => {
-                const [tmpObj, lastPart] = getPenultimateObject(object, path);
-
-                if (!tmpObj || !lastPart) {
-                  console.warn(
-                    `unable to set ${path} of ${object} (${lastPart})`
-                  );
-                  return;
-                }
-
-                tmpObj[lastPart] = value;
-              },
-              removeObjectPath = (object: PlainObject, path: string): void => {
-                const [tmpObj, lastPart] = getPenultimateObject(object, path);
-
-                if (!tmpObj || !lastPart) {
-                  console.warn(
-                    `unable to set ${path} of ${object} (${lastPart})`
-                  );
-                  return;
-                }
-
-                if (Array.isArray(tmpObj) && /^\d+$/.test(lastPart)) {
-                  tmpObj.splice(parseInt(lastPart, 10), 1);
-
-                  return;
-                }
-
-                delete tmpObj[lastPart];
-              };
-
             transportDisposers.push(
               transport.receive('gameDataPatch', (data: DataPatch[]) => {
                 unitActionsRequest.dataReceived();
 
-                data.forEach((patch) =>
-                  Object.entries(patch).forEach(
-                    ([key, { type, index, value }]: [
-                      string,
-                      DataPatchContents
-                    ]) => {
-                      if (type === 'add' || type === 'update') {
-                        if (!value!.hierarchy) {
-                          console.error('No hierarchy');
-                          console.error(value);
-
-                          return;
-                        }
-
-                        if (index) {
-                          setObjectPath(
-                            objectMap.objects[key],
-                            index,
-                            value!.hierarchy
-                          );
-                        } else {
-                          objectMap.objects[key] = value!.hierarchy;
-                        }
-
-                        changedIds.add(key);
-
-                        document.dispatchEvent(
-                          new CustomEvent('patchdatareceived', {
-                            detail: {
-                              key,
-                              value,
-                            },
-                          })
-                        );
-
-                        Object.entries(value!.objects as PlainObject).forEach(
-                          ([key, value]) => {
-                            objectMap.objects[key] = value;
-                            changedIds.add(key);
-
-                            if (value._ === 'PlayerTile') {
-                              // Since we only use tilesToRender for x and y this should be fine...
-                              queueTileToRender(value);
-                            }
-                          }
-                        );
-                      }
-
-                      if (type === 'remove') {
-                        changedIds.add(key);
-
-                        if (index) {
-                          removeObjectPath(objectMap.objects[key], index);
-
-                          return;
-                        }
-
-                        delete objectMap.objects[key];
-                      }
-                    }
-                  )
-                );
+                applyDataPatches(objectMap, data, {
+                  changed: (id) => changedIds.add(id),
+                  received: (key, value) =>
+                    document.dispatchEvent(
+                      new CustomEvent('patchdatareceived', {
+                        detail: {
+                          key,
+                          value,
+                        },
+                      })
+                    ),
+                  // Since we only use tilesToRender for x and y this should be fine...
+                  tile: (tile) => queueTileToRender(tile as Tile),
+                });
 
                 if (waitingForTurn) {
                   scheduleStateUpdate();

@@ -13,6 +13,7 @@
     "src/js/Engine/*",
     "src/js/Engine/Game.ts",
     "main.ts",
-    "src/js/preload.ts"
+    "src/js/preload.ts",
+    "src/js/UI/lib/applyDataPatches.ts"
   ]
 }
