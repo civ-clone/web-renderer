@@ -8,7 +8,8 @@
 
 import Engine from '@civ-clone/core-engine/Engine';
 import { NotificationContext, NotificationTable } from './NotificationContext';
-import Notification from '../../Notification';
+import { Disposer } from '../ClientContext';
+import Notifier from '../Notifier';
 import cityNotifications from './city';
 import diplomatNotifications from './diplomat';
 import playerNotifications from './player';
@@ -57,9 +58,8 @@ export const registrationOrder: string[] = [
 
 export const registerNotifications = (
   engine: Pick<Engine, 'on' | 'off'>,
-  ctx: NotificationContext,
-  notifier: { notify(notification: Notification): void }
-): (() => void) => {
+  ctx: NotificationContext & { notifier: Pick<Notifier, 'notify'> }
+): Disposer => {
   const handlers = notificationTables.flat();
 
   handlers.forEach(([event]) => {
@@ -76,7 +76,7 @@ export const registerNotifications = (
           const notification = handler(ctx, ...args);
 
           if (notification !== null) {
-            notifier.notify(notification);
+            ctx.notifier.notify(notification);
           }
         };
 

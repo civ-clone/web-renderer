@@ -23,28 +23,30 @@ import Yield from '@civ-clone/core-yield/Yield';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import Automation from '../Automation';
 import { CityNewsCollector } from '../cityNews';
-import PlayerPatches from '../PlayerPatches';
-import { DataFilter } from '../visibilityFilter';
+import { ClientContext, Disposer } from '../ClientContext';
 import { filterToReference, filterToReferenceAllExcept } from '../refs';
 import { knownUnknownCity } from '../standIns';
 
-export interface PatchEventsContext {
-  player(): Player;
+export type PatchEventsContext = Pick<
+  ClientContext,
+  | 'player'
   // The patches queued for the player, and the flush that sends them.
-  patches: PlayerPatches;
+  | 'patches'
   // What the player may see, which a rival's city, a build or research goes through when it changes.
-  dataFilter: DataFilter;
+  | 'dataFilter'
+> & {
   // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
-  automation: { automatedTurn(): boolean };
+  automation: Pick<Automation, 'automatedTurn'>;
   // What happened to each city during the engine call under way: a city captured from us, or destroyed.
   cityNews: Pick<CityNewsCollector, 'of'>;
-}
+};
 
 export const registerPatchEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: PatchEventsContext
-): (() => void) => {
+): Disposer => {
   const listeners: [string, (...args: any[]) => void][] = [],
     on = (event: string, listener: (...args: any[]) => void): void => {
       engine.on(event, listener);

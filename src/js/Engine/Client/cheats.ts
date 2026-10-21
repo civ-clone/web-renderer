@@ -2,34 +2,27 @@
 //  menu asks for (`cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`), and the checks that decide whether a
 //  `CreateUnit` is acted on and which of a `ModifyUnit`'s fields are, which can be checked with plain data.
 
-import { AdvanceRegistry } from '@civ-clone/core-science/AdvanceRegistry';
-import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { Gold } from '@civ-clone/civ1-city/Yields';
 import Player from '@civ-clone/core-player/Player';
-import { PlayerRegistry } from '@civ-clone/core-player/PlayerRegistry';
-import { PlayerResearchRegistry } from '@civ-clone/core-science/PlayerResearchRegistry';
-import { PlayerTreasuryRegistry } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
-import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import Unit from '@civ-clone/core-unit/Unit';
-import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
 import Transport, { TransportDisposer } from '../Transport';
-import PlayerPatches from './PlayerPatches';
-import { DataFilter } from './visibilityFilter';
+import { ClientContext } from './ClientContext';
 import { filterToReference } from './refs';
 
-export type CheatsContext = {
-  player(): Player;
-  patches: PlayerPatches;
+export type CheatsContext = Pick<
+  ClientContext,
+  | 'player'
+  | 'patches'
   // What the player may see, which their research, treasury or a unit goes through when a cheat changes it.
-  dataFilter: DataFilter;
-  advances: Pick<AdvanceRegistry, 'entries' | 'filter'>;
-  availableCityBuildItems: Pick<AvailableCityBuildItemsRegistry, 'entries'>;
-  players: Pick<PlayerRegistry, 'entries'>;
-  playerResearches: Pick<PlayerResearchRegistry, 'getByPlayer'>;
-  playerTreasuries: Pick<PlayerTreasuryRegistry, 'getByPlayerAndType'>;
-  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
-  units: Pick<UnitRegistry, 'getBy'>;
-};
+  | 'dataFilter'
+  | 'advances'
+  | 'availableCityBuildItems'
+  | 'players'
+  | 'playerResearches'
+  | 'playerTreasuries'
+  | 'playerWorlds'
+  | 'units'
+>;
 
 export type CreateUnitValue = CheatDataMap['CreateUnit'];
 

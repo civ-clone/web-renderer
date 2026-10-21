@@ -5,26 +5,25 @@
 import City from '@civ-clone/core-city/City';
 import Engine from '@civ-clone/core-engine/Engine';
 import Player from '@civ-clone/core-player/Player';
-import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import Unit from '@civ-clone/core-unit/Unit';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import Transport from '../Transport';
 import UnknownCity from '../UnknownObjects/City';
 import UnknownUnit from '../UnknownObjects/Unit';
-import { DataFilter } from './visibilityFilter';
+import { ClientContext, Disposer } from './ClientContext';
 
-export type DiplomatEventsContext = {
-  player(): Player;
-  transport: Transport<TransportDataMap>;
+export type DiplomatEventsContext = Pick<
+  ClientContext,
+  | 'player'
+  | 'transport'
   // What the player may see, which an investigated city's tiles go through.
-  dataFilter: DataFilter;
-  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
-};
+  | 'dataFilter'
+  | 'playerWorlds'
+>;
 
 export const registerDiplomatEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: DiplomatEventsContext
-): (() => void) => {
+): Disposer => {
   const listeners: [string, (...args: any[]) => void][] = [],
     on = (event: string, listener: (...args: any[]) => void): void => {
       engine.on(event, listener);

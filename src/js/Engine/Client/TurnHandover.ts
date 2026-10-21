@@ -8,42 +8,33 @@
 
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import Engine from '@civ-clone/core-engine/Engine';
-import { GameDifficultyRegistry } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
-import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import Tile from '@civ-clone/core-world/Tile';
 import TransferObject from '../TransferObject';
-import Transport, { TransportHandledAction } from '../Transport';
-import { Turn } from '@civ-clone/core-turn-based-game/Turn';
+import { TransportHandledAction } from '../Transport';
 import Unit from '@civ-clone/core-unit/Unit';
-import { Year } from '@civ-clone/core-game-year/Year';
-import ActionsState from './ActionsState';
-import Automation from './Automation';
-import { DataFilter } from './visibilityFilter';
-import Notifier from './Notifier';
-import PlayerPatches from './PlayerPatches';
-import Talks from './Talks';
+import { ClientContext } from './ClientContext';
 import { filterToReference } from './refs';
 
-export type TurnHandoverContext = {
-  player(): Player;
-  transport: Transport<TransportDataMap>;
-  dataFilter: DataFilter;
-  actions: ActionsState;
-  patches: PlayerPatches;
-  notifier: Notifier;
-  talks: Talks;
+export type TurnHandoverContext = Pick<
+  ClientContext,
+  | 'player'
+  | 'transport'
+  | 'dataFilter'
+  | 'actions'
+  | 'patches'
+  | 'notifier'
+  | 'talks'
   // Read live, as it is turned on and off mid-game.
-  automation: Automation;
+  | 'automation'
   // Acts on what the UI sends on `action` and says whether the turn is over: the client's own `handleAction`.
-  handleAction(...args: any[]): Promise<boolean>;
-  difficulties: Pick<GameDifficultyRegistry, 'entries'>;
-  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
-  turn: Turn;
-  year: Year;
-};
+  | 'handleAction'
+  | 'difficulties'
+  | 'playerWorlds'
+  | 'turn'
+  | 'year'
+>;
 
 export class TurnHandover {
   #context: TurnHandoverContext;

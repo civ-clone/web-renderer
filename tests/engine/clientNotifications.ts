@@ -815,9 +815,12 @@ const contextOf = ({
         .filter(([listeningEvent]) => listeningEvent === event)
         .forEach(([, listener]) => listener(...args)),
     notified: unknown[] = [],
-    dispose = registerNotifications(engine as any, contextOf(), {
-      notify: (notification: Notification) =>
-        notified.push(describe(notification)),
+    dispose = registerNotifications(engine as any, {
+      ...contextOf(),
+      notifier: {
+        notify: (notification: Notification) =>
+          notified.push(describe(notification)),
+      },
     });
 
   expect(
