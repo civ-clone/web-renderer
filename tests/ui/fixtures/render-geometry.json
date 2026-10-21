@@ -1195,5 +1195,359 @@
 ],
 "city map scale 3": [
 {"canvas":"240x240","origin":[48,48],"draws":{"portal":"10 fd1cd01e8f3e","Plain":"295 f430b21c36f9","Yields":"1109 e669c6826121","Unworkable":"167 bb5d3dc70105"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"landscape 9x7 wrapped scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"432 f3814b92ec4a","Fog":"78 99d67276117a"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"432 1da96b3e40ac","Fog":"76 06dc22c27e83"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"523 8bbfa14c91e6","Fog":"97 38d6ee8830b0"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"574 bd56e57ecc08","Fog":"98 17c758a93643"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"555 a44cb7f8a962","Fog":"107 f3ec12b660b0"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"16 9d6900ef8d5a","Landscape":"155 a96285d81dae","Fog":"25 cfbd25f90e8c"},"errors":[]}
+],
+"landscape 9x7 wrapped scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"980 18ff4c4eafca","Fog":"182 fea60a2f8292"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"1747 3273e067ce4c","Fog":"291 b0a7001326a3"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"1844 bbb456e4c894","Fog":"328 90451bee0bab"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"1723 b5db1cc12f91","Fog":"287 881ea3e5c4f5"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"1741 b82ffcd83fdd","Fog":"321 c8eb4cab62c1"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"495 94f8e65a921e","Fog":"87 de89b5a2d5b5"},"errors":[]}
+],
+"landscape 9x7 wrapped scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"240 cc0d8a4428fa","Fog":"38 6881bae2977c"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"224 c487c8bd1103","Fog":"42 6246b0203b1b"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"206 9c3de7ba7fa6","Fog":"38 171c7f8f8935"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"224 3a7f72ba9945","Fog":"38 197375af41d8"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"218 d9a29f52839e","Fog":"40 132f0ea1bbcf"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"0 e3b0c44298fc","Landscape":"24 4e71693ba23f","Fog":"2 4aa233c2dca3"},"errors":[]}
+],
+"landscape 9x7 wrapped scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"432 836646cee594","Fog":"78 b531a368a73f"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"432 9db28c0a7ddf","Fog":"76 72e31bcce2ac"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"592 dbc2e909a6a5","Fog":"108 3d83bb0d1102"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"627 65723810d3b0","Fog":"109 701d3334180c"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"559 7abafa9d83ce","Fog":"103 702e09c68f7f"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"8 76cd8cc7e173","Landscape":"125 d5fd6e0b90aa","Fog":"17 b019302b39c6"},"errors":[]}
+],
+"landscape 9x7 locked scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"294 6bcded1640ab","Fog":"56 acfae98a588e"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":5},"draws":{"portal":"4 46f2806d46c9","Landscape":"326 bc56e2b7ba84","Fog":"56 fdfc3af6cf25"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"483 4ee41754461f","Fog":"85 da690a8bbd22"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":5},"draws":{"portal":"4 46f2806d46c9","Landscape":"384 7f9e009263f3","Fog":"70 970c19fa7ee5"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"461 97d96ed434b7","Fog":"87 6052a9e9a981"},"errors":[]},
+{"step":"build","center":{"x":4,"y":2},"draws":{"portal":"28 cb60d44666a3","Landscape":"120 52267d049ad7","Fog":"20 5869260c81f7"},"errors":[]}
+],
+"landscape 9x7 locked scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"780 2c5f59cc67b9","Fog":"136 1b5e1aecc9e6"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"1049 cbf7ade93d2c","Fog":"183 829ae263386a"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"1069 50e732c00730","Fog":"191 5fdcd8ba1cc4"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"938 588708f378ce","Fog":"180 d4cd8fa14db4"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"880 f2b768c9a59a","Fog":"166 216579c38839"},"errors":[]},
+{"step":"build","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"299 c84d98f721f0","Fog":"49 7051c5627c43"},"errors":[]}
+],
+"landscape 9x7 locked scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"136 7ee5af2f928c","Fog":"24 008b74283e96"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"142 a260a0501da9","Fog":"26 b865bab96572"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"206 9c3de7ba7fa6","Fog":"38 171c7f8f8935"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"152 cfb60fb32815","Fog":"24 cf185b6394ec"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"206 3aceeedd3894","Fog":"38 f5cbbc92f5a1"},"errors":[]},
+{"step":"build","center":{"x":4,"y":3},"draws":{"portal":"4 6af7b15173d2","Landscape":"34 f9dce8d85bdf","Fog":"4 dd8ed3a479ca"},"errors":[]}
+],
+"landscape 9x7 locked scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"294 2c3235b8a681","Fog":"56 e8a0d2ee0d78"},"errors":[]},
+{"step":"setCenter 8,6","center":{"x":8,"y":5},"draws":{"portal":"4 46a6702a93f0","Landscape":"326 b4a1b64a7f81","Fog":"56 30693960edd0"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"573 55a650ee4c57","Fog":"101 8dc62c7e4527"},"errors":[]},
+{"step":"setCenter 1,6","center":{"x":1,"y":5},"draws":{"portal":"4 46a6702a93f0","Landscape":"425 688a886fefb1","Fog":"79 99589a3e0dcd"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"495 e524d907ed89","Fog":"93 9f72a3e5c87a"},"errors":[]},
+{"step":"build","center":{"x":4,"y":3},"draws":{"portal":"16 3279385a6922","Landscape":"97 99f909e323d7","Fog":"15 01ed1ff5b80d"},"errors":[]}
+],
+"landscape 12x8 wrapped scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"434 91a7b4feace0","Fog":"76 ec80ace6c51e"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"432 1d45c99e0c01","Fog":"78 b19e628c5ddd"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"426 876a8c7382c6","Fog":"74 78fbf79f5f74"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"472 6fbdacc7835e","Fog":"70 803fddd72d2f"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":5},"draws":{"portal":"4 46f2806d46c9","Landscape":"589 4344b447fce9","Fog":"105 c5931bcf776f"},"errors":[]},
+{"step":"build","center":{"x":4,"y":5},"draws":{"portal":"0 e3b0c44298fc","Landscape":"63 17e5527d04ff","Fog":"7 c67e632c1dc3"},"errors":[]}
+],
+"landscape 12x8 wrapped scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"1002 a8624d37fdbd","Fog":"180 a24ae0ed5082"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":7},"draws":{"portal":"4 46a6702a93f0","Landscape":"1000 ce4d8b428f29","Fog":"174 416872f79c51"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"1259 d5e88c31a822","Fog":"231 bde9ae01b838"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":7},"draws":{"portal":"4 46a6702a93f0","Landscape":"1321 30aaae89b166","Fog":"219 6904be5325fb"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":5},"draws":{"portal":"4 46a6702a93f0","Landscape":"1107 92f516f606d1","Fog":"215 bb87ca918279"},"errors":[]},
+{"step":"build","center":{"x":4,"y":5},"draws":{"portal":"4 46a6702a93f0","Landscape":"252 b74a4ab8c671","Fog":"42 74b268f63a4f"},"errors":[]}
+],
+"landscape 12x8 wrapped scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"226 075e5b9234a4","Fog":"38 661f6d549370"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"216 420899e5e64f","Fog":"40 8a0f748b5fc5"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"228 d86e6d6dea18","Fog":"38 da25934e4adc"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"230 d097e9a60d02","Fog":"32 71060b4237a8"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":5},"draws":{"portal":"4 46f2806d46c9","Landscape":"216 f8ed1b152403","Fog":"40 cb51b689e8ff"},"errors":[]},
+{"step":"build","center":{"x":4,"y":5},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]}
+],
+"landscape 12x8 wrapped scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"434 3b1c4f538a88","Fog":"76 ab9365ce293d"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":7},"draws":{"portal":"4 46a6702a93f0","Landscape":"432 40adcb49055b","Fog":"78 1f90849b3cf1"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"426 7fc382d3e04b","Fog":"74 73e64687bb15"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":7},"draws":{"portal":"4 46a6702a93f0","Landscape":"472 d8e56f94ff7d","Fog":"70 fbeef674d404"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":5},"draws":{"portal":"4 46a6702a93f0","Landscape":"597 b025d52f2cef","Fog":"103 7090b11d35a3"},"errors":[]},
+{"step":"build","center":{"x":4,"y":5},"draws":{"portal":"0 e3b0c44298fc","Landscape":"63 c489ff6fcbd9","Fog":"7 127fff64efd2"},"errors":[]}
+],
+"landscape 12x8 locked scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"296 7988ed0a00c6","Fog":"58 30f42adb9378"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"304 da19f31cee2c","Fog":"54 09fe77060499"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"426 876a8c7382c6","Fog":"74 78fbf79f5f74"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":6},"draws":{"portal":"4 46f2806d46c9","Landscape":"342 048f014e8d17","Fog":"52 bdb34d3b28d3"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"561 f86a961dd4ce","Fog":"103 676276ab5085"},"errors":[]},
+{"step":"build","center":{"x":4,"y":3},"draws":{"portal":"16 0d2cabbd716c","Landscape":"81 331126b74b66","Fog":"9 674cc82f12fe"},"errors":[]}
+],
+"landscape 12x8 locked scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"895 d28ff819d7d0","Fog":"157 cc164fa6f5ae"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"899 8591955695b1","Fog":"155 24be38c02149"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"902 180086068628","Fog":"164 20f66c8aafd4"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"918 2b434ca047f9","Fog":"158 d6db298ced10"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"715 3ecab1f6b492","Fog":"133 aebf70a2d402"},"errors":[]},
+{"step":"build","center":{"x":4,"y":3},"draws":{"portal":"20 17409788c284","Landscape":"171 32e75cea5fe9","Fog":"27 85578e9ddd47"},"errors":[]}
+],
+"landscape 12x8 locked scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"136 083418f101fc","Fog":"26 7c00b620ed01"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"128 0a091b17fe34","Fog":"22 4085868fe547"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"228 d86e6d6dea18","Fog":"38 da25934e4adc"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":7},"draws":{"portal":"4 46f2806d46c9","Landscape":"154 e18a074a6436","Fog":"18 f295a20342b8"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46f2806d46c9","Landscape":"224 67ec8af6ad96","Fog":"40 a9cb618c3793"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"0 e3b0c44298fc","Landscape":"24 606ad6832945","Fog":"2 58d9e8c8848e"},"errors":[]}
+],
+"landscape 12x8 locked scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"296 315809b307f8","Fog":"58 7ddc2df89c8b"},"errors":[]},
+{"step":"setCenter 11,7","center":{"x":11,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"304 aad331aa07cc","Fog":"54 2610fc526a53"},"errors":[]},
+{"step":"setCenter 6,4","center":{"x":6,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"426 7fc382d3e04b","Fog":"74 73e64687bb15"},"errors":[]},
+{"step":"setCenter 1,7","center":{"x":1,"y":6},"draws":{"portal":"4 46a6702a93f0","Landscape":"342 2b835eec5773","Fog":"52 e5167ca2c887"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":4},"draws":{"portal":"4 46a6702a93f0","Landscape":"521 7d1b70916306","Fog":"95 0fb4ddce4f63"},"errors":[]},
+{"step":"build","center":{"x":4,"y":4},"draws":{"portal":"8 9198dc44f2fa","Landscape":"58 332fdafe5b9e","Fog":"6 909be7e25410"},"errors":[]}
+],
+"landscape 5x4 wrapped scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"412 af9e76f22000","Fog":"64 c505b82b3b2d"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"751 c6eaaec5440a","Fog":"115 58f9c93630fb"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"788 c1d47647d7b4","Fog":"152 a37cfb19351b"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"745 1eeac3e4905f","Fog":"123 6950663645c1"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"924 e51a1e63f502","Fog":"150 56975fa818fc"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"452 f740b2498ee9","Fog":"72 e33323dd6b17"},"errors":[]}
+],
+"landscape 5x4 wrapped scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"1016 cfa44dc3251f","Fog":"172 76678ba94783"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"1987 873281334ab6","Fog":"355 eededb90db1a"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"2075 029c97ad8f6c","Fog":"327 3b30b67d8b3a"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"1785 1cda1885e55a","Fog":"325 6ad23bae3c39"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"2057 c1589e78e376","Fog":"353 c0cbb206ed1e"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"994 8b41bc8e3c95","Fog":"166 8509124e0bfa"},"errors":[]}
+],
+"landscape 5x4 wrapped scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46f2806d46c9","Landscape":"226 98cc08d7b6e6","Fog":"36 b58631d05178"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"216 f45583c2b7f8","Fog":"34 c05cdd477aff"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"343 20e05737a8f2","Fog":"65 3edd8e92744f"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"355 717ef5f90571","Fog":"67 eaf0af34539a"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"212 95ba4d382f6a","Fog":"38 303701d74d0b"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"197 f22c20fb0c5b","Fog":"35 f30252c33061"},"errors":[]}
+],
+"landscape 5x4 wrapped scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":0},"draws":{"portal":"4 46a6702a93f0","Landscape":"412 265b83f183bf","Fog":"64 ec69d840c5ab"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"751 773b07546799","Fog":"115 ff8ef2b03835"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"835 f94acffb5a00","Fog":"159 ac384d08961d"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":3},"draws":{"portal":"4 46a6702a93f0","Landscape":"822 09a9cdd0227e","Fog":"132 5eb50ca79500"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"814 52a6b74b613b","Fog":"136 b5106089a076"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"397 0a2287533daa","Fog":"65 5ac5b49526e4"},"errors":[]}
+],
+"landscape 5x4 locked scale 1 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"231 f8d3b5760588","Fog":"37 649c1ac98064"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"252 a26ccbc81ace","Fog":"46 e3cf16ebb306"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"220 f609918f83bf","Fog":"46 e9a4a3d95721"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"180 d733798c77c9","Fog":"36 5a32879cec18"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"282 7339cb9c5276","Fog":"50 63e9311ee234"},"errors":[]},
+{"step":"build","center":{"x":4,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"260 af2ee268ccaa","Fog":"40 ec10c729fb17"},"errors":[]}
+],
+"landscape 5x4 locked scale 1 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"459 3197b6359f3d","Fog":"77 630433fa2d9b"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"452 4c8549f374f3","Fog":"82 952f0c41eef2"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"454 040b8bdf4034","Fog":"78 68ff7782f662"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"368 5eaa0e5fbb3a","Fog":"70 ad3ed1f0ff9b"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"422 61d633893057","Fog":"78 62dc4995b6fa"},"errors":[]},
+{"step":"build","center":{"x":4,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"400 4623aac9b85d","Fog":"68 c0110faa93e0"},"errors":[]}
+],
+"landscape 5x4 locked scale 2 canvas 80x64": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"134 6ff29a140918","Fog":"20 6560a7bdf8aa"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"136 5c5500b5ecdd","Fog":"22 b043f7ee7730"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46f2806d46c9","Landscape":"258 63308b989d98","Fog":"50 5a0adda85209"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":3},"draws":{"portal":"4 46f2806d46c9","Landscape":"195 f056b8579dff","Fog":"43 80018c45ce5e"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"134 f7c90cd161f6","Fog":"20 bbb4878af460"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46f2806d46c9","Landscape":"133 81036df3c09b","Fog":"19 df2a565fff35"},"errors":[]}
+],
+"landscape 5x4 locked scale 2 canvas 150x110": [
+{"step":"constructed","center":{"x":0,"y":0},"draws":{"portal":"0 e3b0c44298fc","Landscape":"0 e3b0c44298fc","Fog":"0 e3b0c44298fc"},"errors":[]},
+{"step":"setCenter 0,0","center":{"x":0,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"231 170096b6074f","Fog":"37 5f3aa004db1c"},"errors":[]},
+{"step":"setCenter 4,3","center":{"x":4,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"386 cc023d2fea6d","Fog":"70 3936b199fc2d"},"errors":[]},
+{"step":"setCenter 2,2","center":{"x":2,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"250 db1138b08523","Fog":"50 5dafd369ac63"},"errors":[]},
+{"step":"setCenter 1,3","center":{"x":1,"y":2},"draws":{"portal":"4 46a6702a93f0","Landscape":"224 74ef58bcfee8","Fog":"42 298e4a852835"},"errors":[]},
+{"step":"scrolled","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"413 7e6fae914f45","Fog":"75 581cbbac5b81"},"errors":[]},
+{"step":"build","center":{"x":4,"y":1},"draws":{"portal":"4 46a6702a93f0","Landscape":"230 cbf21368d72a","Fog":"36 8c9387661ca7"},"errors":[]}
+],
+"city screen 9x7 city 4,3 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-2-2@1,2 Tile-2-3@1,3 Tile-2-4@1,4 Tile-3-1@2,1 Tile-3-2@2,2 Tile-3-3@2,3 Tile-3-4@2,4 Tile-3-5@2,5 Tile-4-1@3,1 Tile-4-2@3,2 Tile-4-3@3,3 Tile-4-4@3,4 Tile-4-5@3,5 Tile-5-1@4,1 Tile-5-2@4,2 Tile-5-3@4,3 Tile-5-4@4,4 Tile-5-5@4,5 Tile-6-2@5,2 Tile-6-3@5,3 Tile-6-4@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"387 61de716bc241","Fog":"215 e37b831f4b55","TestCities":"71 a8dc3f146956","TestUnits":"94 b20cef09dbbb","Yields":"387 042ecd6e21c0","Unworkable":"103 e8e000f99d5f"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 9x7 city 4,3 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-2-2@1,2 Tile-2-3@1,3 Tile-2-4@1,4 Tile-3-1@2,1 Tile-3-2@2,2 Tile-3-3@2,3 Tile-3-4@2,4 Tile-3-5@2,5 Tile-4-1@3,1 Tile-4-2@3,2 Tile-4-3@3,3 Tile-4-4@3,4 Tile-4-5@3,5 Tile-5-1@4,1 Tile-5-2@4,2 Tile-5-3@4,3 Tile-5-4@4,4 Tile-5-5@4,5 Tile-6-2@5,2 Tile-6-3@5,3 Tile-6-4@5,4","draws":{"portal":"16 0a203146b334","Landscape":"387 5d3b164ca877","Fog":"215 bd62b12e7b71","TestCities":"71 98606ef78e32","TestUnits":"94 b923ba80d2ce","Yields":"387 330f77a92b04","Unworkable":"103 3dc0bc95fcc6"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 9x7 city 4,3 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-2-2@1,2 Tile-2-3@1,3 Tile-2-4@1,4 Tile-3-1@2,1 Tile-3-2@2,2 Tile-3-3@2,3 Tile-3-4@2,4 Tile-3-5@2,5 Tile-4-1@3,1 Tile-4-2@3,2 Tile-4-3@3,3 Tile-4-4@3,4 Tile-4-5@3,5 Tile-5-1@4,1 Tile-5-2@4,2 Tile-5-3@4,3 Tile-5-4@4,4 Tile-5-5@4,5 Tile-6-2@5,2 Tile-6-3@5,3 Tile-6-4@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"387 b79c6d1d686d","Fog":"215 476da8d13211","TestCities":"71 e62526a3134d","TestUnits":"94 b5508050d957","Yields":"387 1ce4d1157fac","Unworkable":"103 2a0632211e08"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 9x7 city 0,0 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-7-6@1,2 Tile-7-0@1,3 Tile-7-1@1,4 Tile-8-5@2,1 Tile-8-6@2,2 Tile-8-0@2,3 Tile-8-1@2,4 Tile-8-2@2,5 Tile-0-5@3,1 Tile-0-6@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-5@4,1 Tile-1-6@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-6@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"427 c60a8a1e468e","Fog":"215 383f92669ded","TestCities":"79 70f57946ea02","TestUnits":"79 ea295092593b","Yields":"351 556c2f02663e","Unworkable":"99 e149668b1259"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 9x7 city 0,0 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-7-6@1,2 Tile-7-0@1,3 Tile-7-1@1,4 Tile-8-5@2,1 Tile-8-6@2,2 Tile-8-0@2,3 Tile-8-1@2,4 Tile-8-2@2,5 Tile-0-5@3,1 Tile-0-6@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-5@4,1 Tile-1-6@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-6@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 0a203146b334","Landscape":"427 fc5e09bb7562","Fog":"215 d38aa07f9419","TestCities":"79 1f60df0f4883","TestUnits":"79 915f6d3c3bdb","Yields":"351 f0815e2ce669","Unworkable":"99 582eb9f80823"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 9x7 city 0,0 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-7-6@1,2 Tile-7-0@1,3 Tile-7-1@1,4 Tile-8-5@2,1 Tile-8-6@2,2 Tile-8-0@2,3 Tile-8-1@2,4 Tile-8-2@2,5 Tile-0-5@3,1 Tile-0-6@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-5@4,1 Tile-1-6@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-6@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"427 3c5dbf3e850a","Fog":"215 7b47e49984b5","TestCities":"79 c88b3ed45e19","TestUnits":"79 b2452564775f","Yields":"351 f6f0465bcefd","Unworkable":"99 08cfc5f5004e"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 9x7 city 8,6 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-6-5@1,2 Tile-6-6@1,3 Tile-6-0@1,4 Tile-7-4@2,1 Tile-7-5@2,2 Tile-7-6@2,3 Tile-7-0@2,4 Tile-7-1@2,5 Tile-8-4@3,1 Tile-8-5@3,2 Tile-8-6@3,3 Tile-8-0@3,4 Tile-8-1@3,5 Tile-0-4@4,1 Tile-0-5@4,2 Tile-0-6@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-5@5,2 Tile-1-6@5,3 Tile-1-0@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"391 6193cd15d129","Fog":"215 a380b21ea450","TestCities":"71 a8dc3f146956","TestUnits":"76 ee52e2262f4d","Yields":"331 faae41d99c2c","Unworkable":"99 1673b480dd62"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 9x7 city 8,6 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-6-5@1,2 Tile-6-6@1,3 Tile-6-0@1,4 Tile-7-4@2,1 Tile-7-5@2,2 Tile-7-6@2,3 Tile-7-0@2,4 Tile-7-1@2,5 Tile-8-4@3,1 Tile-8-5@3,2 Tile-8-6@3,3 Tile-8-0@3,4 Tile-8-1@3,5 Tile-0-4@4,1 Tile-0-5@4,2 Tile-0-6@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-5@5,2 Tile-1-6@5,3 Tile-1-0@5,4","draws":{"portal":"16 0a203146b334","Landscape":"391 ac10818103ff","Fog":"215 31cf23c39dab","TestCities":"71 98606ef78e32","TestUnits":"76 4ace427446fb","Yields":"331 1343578794a1","Unworkable":"99 5d7c01bf7fac"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 9x7 city 8,6 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-6-5@1,2 Tile-6-6@1,3 Tile-6-0@1,4 Tile-7-4@2,1 Tile-7-5@2,2 Tile-7-6@2,3 Tile-7-0@2,4 Tile-7-1@2,5 Tile-8-4@3,1 Tile-8-5@3,2 Tile-8-6@3,3 Tile-8-0@3,4 Tile-8-1@3,5 Tile-0-4@4,1 Tile-0-5@4,2 Tile-0-6@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-5@5,2 Tile-1-6@5,3 Tile-1-0@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"391 ae9e2f6fead6","Fog":"215 4c3d43617cc5","TestCities":"71 e62526a3134d","TestUnits":"76 2f91389c75cd","Yields":"331 6a5cf078a65f","Unworkable":"99 3fb6c637ec78"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 9x7 city 1,5 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-8-4@1,2 Tile-8-5@1,3 Tile-8-6@1,4 Tile-0-3@2,1 Tile-0-4@2,2 Tile-0-5@2,3 Tile-0-6@2,4 Tile-0-0@2,5 Tile-1-3@3,1 Tile-1-4@3,2 Tile-1-5@3,3 Tile-1-6@3,4 Tile-1-0@3,5 Tile-2-3@4,1 Tile-2-4@4,2 Tile-2-5@4,3 Tile-2-6@4,4 Tile-2-0@4,5 Tile-3-4@5,2 Tile-3-5@5,3 Tile-3-6@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"443 6efcf81d19dd","Fog":"199 ac00c9129eb6","TestCities":"79 a9a21d65d39c","TestUnits":"83 3788b4f506be","Yields":"333 ff5be49bfac0","Unworkable":"101 4f63c99b8324"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 9x7 city 1,5 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-8-4@1,2 Tile-8-5@1,3 Tile-8-6@1,4 Tile-0-3@2,1 Tile-0-4@2,2 Tile-0-5@2,3 Tile-0-6@2,4 Tile-0-0@2,5 Tile-1-3@3,1 Tile-1-4@3,2 Tile-1-5@3,3 Tile-1-6@3,4 Tile-1-0@3,5 Tile-2-3@4,1 Tile-2-4@4,2 Tile-2-5@4,3 Tile-2-6@4,4 Tile-2-0@4,5 Tile-3-4@5,2 Tile-3-5@5,3 Tile-3-6@5,4","draws":{"portal":"16 0a203146b334","Landscape":"443 42e882683ed4","Fog":"199 503c78611431","TestCities":"79 73f1c3471435","TestUnits":"83 cb2d3c5ba35d","Yields":"333 6572555f8bed","Unworkable":"101 27ae0147ff2a"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 9x7 city 1,5 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-8-4@1,2 Tile-8-5@1,3 Tile-8-6@1,4 Tile-0-3@2,1 Tile-0-4@2,2 Tile-0-5@2,3 Tile-0-6@2,4 Tile-0-0@2,5 Tile-1-3@3,1 Tile-1-4@3,2 Tile-1-5@3,3 Tile-1-6@3,4 Tile-1-0@3,5 Tile-2-3@4,1 Tile-2-4@4,2 Tile-2-5@4,3 Tile-2-6@4,4 Tile-2-0@4,5 Tile-3-4@5,2 Tile-3-5@5,3 Tile-3-6@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"443 54fd8729cf1f","Fog":"199 4ea6fbe759fa","TestCities":"79 9cdffee5afbd","TestUnits":"83 d88e970cc595","Yields":"333 be21f81660f4","Unworkable":"101 53750f4b1304"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 9x7 city 7,1 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-5-0@1,2 Tile-5-1@1,3 Tile-5-2@1,4 Tile-6-6@2,1 Tile-6-0@2,2 Tile-6-1@2,3 Tile-6-2@2,4 Tile-6-3@2,5 Tile-7-6@3,1 Tile-7-0@3,2 Tile-7-1@3,3 Tile-7-2@3,4 Tile-7-3@3,5 Tile-8-6@4,1 Tile-8-0@4,2 Tile-8-1@4,3 Tile-8-2@4,4 Tile-8-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"407 d2e12f6bba70","Fog":"215 124fcc35a8f3","TestCities":"71 a8dc3f146956","TestUnits":"83 193ddd449270","Yields":"399 cebebd532155","Unworkable":"101 d224d7045186"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 9x7 city 7,1 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-5-0@1,2 Tile-5-1@1,3 Tile-5-2@1,4 Tile-6-6@2,1 Tile-6-0@2,2 Tile-6-1@2,3 Tile-6-2@2,4 Tile-6-3@2,5 Tile-7-6@3,1 Tile-7-0@3,2 Tile-7-1@3,3 Tile-7-2@3,4 Tile-7-3@3,5 Tile-8-6@4,1 Tile-8-0@4,2 Tile-8-1@4,3 Tile-8-2@4,4 Tile-8-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 0a203146b334","Landscape":"407 74bd737100b1","Fog":"215 6900b95ee747","TestCities":"71 98606ef78e32","TestUnits":"83 2ca89677cd01","Yields":"399 a7b66a4a0d36","Unworkable":"101 66039c5a32d7"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 9x7 city 7,1 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-5-0@1,2 Tile-5-1@1,3 Tile-5-2@1,4 Tile-6-6@2,1 Tile-6-0@2,2 Tile-6-1@2,3 Tile-6-2@2,4 Tile-6-3@2,5 Tile-7-6@3,1 Tile-7-0@3,2 Tile-7-1@3,3 Tile-7-2@3,4 Tile-7-3@3,5 Tile-8-6@4,1 Tile-8-0@4,2 Tile-8-1@4,3 Tile-8-2@4,4 Tile-8-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"407 01091b57cfbf","Fog":"215 e0e9316732cc","TestCities":"71 e62526a3134d","TestUnits":"83 77eed9253305","Yields":"399 73f2ae8f2301","Unworkable":"101 611629dadf5a"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 12x8 city 6,4 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-4-3@1,2 Tile-4-4@1,3 Tile-4-5@1,4 Tile-5-2@2,1 Tile-5-3@2,2 Tile-5-4@2,3 Tile-5-5@2,4 Tile-5-6@2,5 Tile-6-2@3,1 Tile-6-3@3,2 Tile-6-4@3,3 Tile-6-5@3,4 Tile-6-6@3,5 Tile-7-2@4,1 Tile-7-3@4,2 Tile-7-4@4,3 Tile-7-5@4,4 Tile-7-6@4,5 Tile-8-3@5,2 Tile-8-4@5,3 Tile-8-5@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"407 c136e943d1ea","Fog":"215 c10bbaa752fd","TestCities":"71 a8dc3f146956","TestUnits":"87 b3f5ca1c370c","Yields":"427 670f70a844d8","Unworkable":"101 b548a718ce14"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 12x8 city 6,4 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-4-3@1,2 Tile-4-4@1,3 Tile-4-5@1,4 Tile-5-2@2,1 Tile-5-3@2,2 Tile-5-4@2,3 Tile-5-5@2,4 Tile-5-6@2,5 Tile-6-2@3,1 Tile-6-3@3,2 Tile-6-4@3,3 Tile-6-5@3,4 Tile-6-6@3,5 Tile-7-2@4,1 Tile-7-3@4,2 Tile-7-4@4,3 Tile-7-5@4,4 Tile-7-6@4,5 Tile-8-3@5,2 Tile-8-4@5,3 Tile-8-5@5,4","draws":{"portal":"16 0a203146b334","Landscape":"407 208b9de12133","Fog":"215 cd4f724940fd","TestCities":"71 98606ef78e32","TestUnits":"87 26f67cc5aadd","Yields":"427 31862b9de5f2","Unworkable":"101 0d7943f56495"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 12x8 city 6,4 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-4-3@1,2 Tile-4-4@1,3 Tile-4-5@1,4 Tile-5-2@2,1 Tile-5-3@2,2 Tile-5-4@2,3 Tile-5-5@2,4 Tile-5-6@2,5 Tile-6-2@3,1 Tile-6-3@3,2 Tile-6-4@3,3 Tile-6-5@3,4 Tile-6-6@3,5 Tile-7-2@4,1 Tile-7-3@4,2 Tile-7-4@4,3 Tile-7-5@4,4 Tile-7-6@4,5 Tile-8-3@5,2 Tile-8-4@5,3 Tile-8-5@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"407 9f84b9674fd6","Fog":"215 06da26b36e6c","TestCities":"71 e62526a3134d","TestUnits":"87 dac591dd065f","Yields":"427 38ffbf979460","Unworkable":"101 b7a9b57c20e4"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 12x8 city 0,0 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-10-7@1,2 Tile-10-0@1,3 Tile-10-1@1,4 Tile-11-6@2,1 Tile-11-7@2,2 Tile-11-0@2,3 Tile-11-1@2,4 Tile-11-2@2,5 Tile-0-6@3,1 Tile-0-7@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-6@4,1 Tile-1-7@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-7@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"403 bc49a386a0e0","Fog":"215 e37b831f4b55","TestCities":"79 70f57946ea02","TestUnits":"79 0431fb4fcf73","Yields":"441 f61c81a8abc1","Unworkable":"99 edff08128287"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 12x8 city 0,0 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-10-7@1,2 Tile-10-0@1,3 Tile-10-1@1,4 Tile-11-6@2,1 Tile-11-7@2,2 Tile-11-0@2,3 Tile-11-1@2,4 Tile-11-2@2,5 Tile-0-6@3,1 Tile-0-7@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-6@4,1 Tile-1-7@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-7@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 0a203146b334","Landscape":"403 a373dd7578a5","Fog":"215 bd62b12e7b71","TestCities":"79 1f60df0f4883","TestUnits":"79 4e27d2a11a2d","Yields":"441 a758b5bbe1f7","Unworkable":"99 c78a1f93e0e5"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 12x8 city 0,0 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-10-7@1,2 Tile-10-0@1,3 Tile-10-1@1,4 Tile-11-6@2,1 Tile-11-7@2,2 Tile-11-0@2,3 Tile-11-1@2,4 Tile-11-2@2,5 Tile-0-6@3,1 Tile-0-7@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-6@4,1 Tile-1-7@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-7@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"403 3db329aeb6fb","Fog":"215 476da8d13211","TestCities":"79 c88b3ed45e19","TestUnits":"79 a05ed22edff4","Yields":"441 aa2062fb05ad","Unworkable":"99 b72ed3d4d437"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 12x8 city 11,7 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-9-6@1,2 Tile-9-7@1,3 Tile-9-0@1,4 Tile-10-5@2,1 Tile-10-6@2,2 Tile-10-7@2,3 Tile-10-0@2,4 Tile-10-1@2,5 Tile-11-5@3,1 Tile-11-6@3,2 Tile-11-7@3,3 Tile-11-0@3,4 Tile-11-1@3,5 Tile-0-5@4,1 Tile-0-6@4,2 Tile-0-7@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-6@5,2 Tile-1-7@5,3 Tile-1-0@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"371 77520146d92b","Fog":"207 c147448bdf4d","TestCities":"71 a8dc3f146956","TestUnits":"97 1a218a3fd0a6","Yields":"457 58b5968a6ff4","Unworkable":"99 e36f2e429c25"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 12x8 city 11,7 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-9-6@1,2 Tile-9-7@1,3 Tile-9-0@1,4 Tile-10-5@2,1 Tile-10-6@2,2 Tile-10-7@2,3 Tile-10-0@2,4 Tile-10-1@2,5 Tile-11-5@3,1 Tile-11-6@3,2 Tile-11-7@3,3 Tile-11-0@3,4 Tile-11-1@3,5 Tile-0-5@4,1 Tile-0-6@4,2 Tile-0-7@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-6@5,2 Tile-1-7@5,3 Tile-1-0@5,4","draws":{"portal":"16 0a203146b334","Landscape":"371 531e79ee8255","Fog":"207 54b743b01cfb","TestCities":"71 98606ef78e32","TestUnits":"97 0429d63a99f8","Yields":"457 e852f2952b01","Unworkable":"99 2fd6cd3e3d2d"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 12x8 city 11,7 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-9-6@1,2 Tile-9-7@1,3 Tile-9-0@1,4 Tile-10-5@2,1 Tile-10-6@2,2 Tile-10-7@2,3 Tile-10-0@2,4 Tile-10-1@2,5 Tile-11-5@3,1 Tile-11-6@3,2 Tile-11-7@3,3 Tile-11-0@3,4 Tile-11-1@3,5 Tile-0-5@4,1 Tile-0-6@4,2 Tile-0-7@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-6@5,2 Tile-1-7@5,3 Tile-1-0@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"371 2c88c0617dd1","Fog":"207 2cdc2a87fef7","TestCities":"71 e62526a3134d","TestUnits":"97 07796aefe311","Yields":"457 470a9e8a976e","Unworkable":"99 7fb059c54c36"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 12x8 city 1,6 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-11-5@1,2 Tile-11-6@1,3 Tile-11-7@1,4 Tile-0-4@2,1 Tile-0-5@2,2 Tile-0-6@2,3 Tile-0-7@2,4 Tile-0-0@2,5 Tile-1-4@3,1 Tile-1-5@3,2 Tile-1-6@3,3 Tile-1-7@3,4 Tile-1-0@3,5 Tile-2-4@4,1 Tile-2-5@4,2 Tile-2-6@4,3 Tile-2-7@4,4 Tile-2-0@4,5 Tile-3-5@5,2 Tile-3-6@5,3 Tile-3-7@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"455 4f6083ef09ad","Fog":"199 547a588b78ad","TestCities":"79 3c5676710c84","TestUnits":"87 d223da893f8b","Yields":"367 6739393f9b6c","Unworkable":"99 68884c5af742"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 12x8 city 1,6 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-11-5@1,2 Tile-11-6@1,3 Tile-11-7@1,4 Tile-0-4@2,1 Tile-0-5@2,2 Tile-0-6@2,3 Tile-0-7@2,4 Tile-0-0@2,5 Tile-1-4@3,1 Tile-1-5@3,2 Tile-1-6@3,3 Tile-1-7@3,4 Tile-1-0@3,5 Tile-2-4@4,1 Tile-2-5@4,2 Tile-2-6@4,3 Tile-2-7@4,4 Tile-2-0@4,5 Tile-3-5@5,2 Tile-3-6@5,3 Tile-3-7@5,4","draws":{"portal":"16 0a203146b334","Landscape":"455 96a713574fa4","Fog":"199 1af18ae72d39","TestCities":"79 26defe5f6b39","TestUnits":"87 52c7737616a7","Yields":"367 72ae1e30c840","Unworkable":"99 0b3120b0d262"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 12x8 city 1,6 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-11-5@1,2 Tile-11-6@1,3 Tile-11-7@1,4 Tile-0-4@2,1 Tile-0-5@2,2 Tile-0-6@2,3 Tile-0-7@2,4 Tile-0-0@2,5 Tile-1-4@3,1 Tile-1-5@3,2 Tile-1-6@3,3 Tile-1-7@3,4 Tile-1-0@3,5 Tile-2-4@4,1 Tile-2-5@4,2 Tile-2-6@4,3 Tile-2-7@4,4 Tile-2-0@4,5 Tile-3-5@5,2 Tile-3-6@5,3 Tile-3-7@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"455 e820b83a3961","Fog":"199 47195afddc1e","TestCities":"79 9ae8e323421b","TestUnits":"87 542a0a8241fd","Yields":"367 95407de9302b","Unworkable":"99 ddfccf96fdbd"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 12x8 city 10,1 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-8-0@1,2 Tile-8-1@1,3 Tile-8-2@1,4 Tile-9-7@2,1 Tile-9-0@2,2 Tile-9-1@2,3 Tile-9-2@2,4 Tile-9-3@2,5 Tile-10-7@3,1 Tile-10-0@3,2 Tile-10-1@3,3 Tile-10-2@3,4 Tile-10-3@3,5 Tile-11-7@4,1 Tile-11-0@4,2 Tile-11-1@4,3 Tile-11-2@4,4 Tile-11-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"383 bac9d69b1749","Fog":"215 0330de3ebec5","TestCities":"83 735327e51204","TestUnits":"97 9df7524aec48","Yields":"387 a1bfcea35d2a","Unworkable":"105 c9d938372dd6"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 12x8 city 10,1 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-8-0@1,2 Tile-8-1@1,3 Tile-8-2@1,4 Tile-9-7@2,1 Tile-9-0@2,2 Tile-9-1@2,3 Tile-9-2@2,4 Tile-9-3@2,5 Tile-10-7@3,1 Tile-10-0@3,2 Tile-10-1@3,3 Tile-10-2@3,4 Tile-10-3@3,5 Tile-11-7@4,1 Tile-11-0@4,2 Tile-11-1@4,3 Tile-11-2@4,4 Tile-11-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 0a203146b334","Landscape":"383 c35793968c85","Fog":"215 7d16504b97c8","TestCities":"83 c17adab7184d","TestUnits":"97 4af9d100817f","Yields":"387 7dc774dd3aeb","Unworkable":"105 9db38083f7e7"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 12x8 city 10,1 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-8-0@1,2 Tile-8-1@1,3 Tile-8-2@1,4 Tile-9-7@2,1 Tile-9-0@2,2 Tile-9-1@2,3 Tile-9-2@2,4 Tile-9-3@2,5 Tile-10-7@3,1 Tile-10-0@3,2 Tile-10-1@3,3 Tile-10-2@3,4 Tile-10-3@3,5 Tile-11-7@4,1 Tile-11-0@4,2 Tile-11-1@4,3 Tile-11-2@4,4 Tile-11-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"383 62411e6cf07b","Fog":"215 71e482ea7c77","TestCities":"83 257a12ec97fb","TestUnits":"97 16554b3aa32d","Yields":"387 952407b368b6","Unworkable":"105 f2ffee410249"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 40x25 city 20,12 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-18-11@1,2 Tile-18-12@1,3 Tile-18-13@1,4 Tile-19-10@2,1 Tile-19-11@2,2 Tile-19-12@2,3 Tile-19-13@2,4 Tile-19-14@2,5 Tile-20-10@3,1 Tile-20-11@3,2 Tile-20-12@3,3 Tile-20-13@3,4 Tile-20-14@3,5 Tile-21-10@4,1 Tile-21-11@4,2 Tile-21-12@4,3 Tile-21-13@4,4 Tile-21-14@4,5 Tile-22-11@5,2 Tile-22-12@5,3 Tile-22-13@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"387 cbdf62e20091","Fog":"199 9255df995c33","TestCities":"83 1232fa4949c2","TestUnits":"90 79408aca162e","Yields":"411 d05dd4ed0e4c","Unworkable":"99 092794748eb2"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 40x25 city 20,12 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-18-11@1,2 Tile-18-12@1,3 Tile-18-13@1,4 Tile-19-10@2,1 Tile-19-11@2,2 Tile-19-12@2,3 Tile-19-13@2,4 Tile-19-14@2,5 Tile-20-10@3,1 Tile-20-11@3,2 Tile-20-12@3,3 Tile-20-13@3,4 Tile-20-14@3,5 Tile-21-10@4,1 Tile-21-11@4,2 Tile-21-12@4,3 Tile-21-13@4,4 Tile-21-14@4,5 Tile-22-11@5,2 Tile-22-12@5,3 Tile-22-13@5,4","draws":{"portal":"16 0a203146b334","Landscape":"387 c6b884697013","Fog":"199 93b12081e62c","TestCities":"83 21a6a29432fd","TestUnits":"90 86bcc2a291c3","Yields":"411 8f052e760c74","Unworkable":"99 e35bbe81caaa"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 40x25 city 20,12 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-18-11@1,2 Tile-18-12@1,3 Tile-18-13@1,4 Tile-19-10@2,1 Tile-19-11@2,2 Tile-19-12@2,3 Tile-19-13@2,4 Tile-19-14@2,5 Tile-20-10@3,1 Tile-20-11@3,2 Tile-20-12@3,3 Tile-20-13@3,4 Tile-20-14@3,5 Tile-21-10@4,1 Tile-21-11@4,2 Tile-21-12@4,3 Tile-21-13@4,4 Tile-21-14@4,5 Tile-22-11@5,2 Tile-22-12@5,3 Tile-22-13@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"387 8cf1527f0a77","Fog":"199 44480db5d951","TestCities":"83 fffbc34d3b7f","TestUnits":"90 643144a4862b","Yields":"411 3c136b06892f","Unworkable":"99 24f045fdd8b2"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 40x25 city 0,0 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-38-24@1,2 Tile-38-0@1,3 Tile-38-1@1,4 Tile-39-23@2,1 Tile-39-24@2,2 Tile-39-0@2,3 Tile-39-1@2,4 Tile-39-2@2,5 Tile-0-23@3,1 Tile-0-24@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-23@4,1 Tile-1-24@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-24@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"411 7a22220f6cec","Fog":"199 547a588b78ad","TestCities":"79 70f57946ea02","TestUnits":"79 ad81dc83df49","Yields":"357 85bc61d794b4","Unworkable":"103 f1cad14cbd89"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 40x25 city 0,0 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-38-24@1,2 Tile-38-0@1,3 Tile-38-1@1,4 Tile-39-23@2,1 Tile-39-24@2,2 Tile-39-0@2,3 Tile-39-1@2,4 Tile-39-2@2,5 Tile-0-23@3,1 Tile-0-24@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-23@4,1 Tile-1-24@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-24@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 0a203146b334","Landscape":"411 ee2c6b312148","Fog":"199 1af18ae72d39","TestCities":"79 1f60df0f4883","TestUnits":"79 6db048bd6e2f","Yields":"357 d7b7c312ba3a","Unworkable":"103 38f3c73cacd5"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 40x25 city 0,0 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-38-24@1,2 Tile-38-0@1,3 Tile-38-1@1,4 Tile-39-23@2,1 Tile-39-24@2,2 Tile-39-0@2,3 Tile-39-1@2,4 Tile-39-2@2,5 Tile-0-23@3,1 Tile-0-24@3,2 Tile-0-0@3,3 Tile-0-1@3,4 Tile-0-2@3,5 Tile-1-23@4,1 Tile-1-24@4,2 Tile-1-0@4,3 Tile-1-1@4,4 Tile-1-2@4,5 Tile-2-24@5,2 Tile-2-0@5,3 Tile-2-1@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"411 0c78cb4255cb","Fog":"199 47195afddc1e","TestCities":"79 c88b3ed45e19","TestUnits":"79 58665a1f81a9","Yields":"357 2c02fe5c6716","Unworkable":"103 e63d3a1d5e51"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 40x25 city 39,24 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-37-23@1,2 Tile-37-24@1,3 Tile-37-0@1,4 Tile-38-22@2,1 Tile-38-23@2,2 Tile-38-24@2,3 Tile-38-0@2,4 Tile-38-1@2,5 Tile-39-22@3,1 Tile-39-23@3,2 Tile-39-24@3,3 Tile-39-0@3,4 Tile-39-1@3,5 Tile-0-22@4,1 Tile-0-23@4,2 Tile-0-24@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-23@5,2 Tile-1-24@5,3 Tile-1-0@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"403 17e6db470a69","Fog":"199 547a588b78ad","TestCities":"71 a8dc3f146956","TestUnits":"86 d6c4e098e2d0","Yields":"297 aaedaa3e490b","Unworkable":"103 f1cad14cbd89"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 40x25 city 39,24 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-37-23@1,2 Tile-37-24@1,3 Tile-37-0@1,4 Tile-38-22@2,1 Tile-38-23@2,2 Tile-38-24@2,3 Tile-38-0@2,4 Tile-38-1@2,5 Tile-39-22@3,1 Tile-39-23@3,2 Tile-39-24@3,3 Tile-39-0@3,4 Tile-39-1@3,5 Tile-0-22@4,1 Tile-0-23@4,2 Tile-0-24@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-23@5,2 Tile-1-24@5,3 Tile-1-0@5,4","draws":{"portal":"16 0a203146b334","Landscape":"403 733e19996e92","Fog":"199 1af18ae72d39","TestCities":"71 98606ef78e32","TestUnits":"86 fc61fd4b1623","Yields":"297 65dcf9e162de","Unworkable":"103 38f3c73cacd5"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 40x25 city 39,24 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-37-23@1,2 Tile-37-24@1,3 Tile-37-0@1,4 Tile-38-22@2,1 Tile-38-23@2,2 Tile-38-24@2,3 Tile-38-0@2,4 Tile-38-1@2,5 Tile-39-22@3,1 Tile-39-23@3,2 Tile-39-24@3,3 Tile-39-0@3,4 Tile-39-1@3,5 Tile-0-22@4,1 Tile-0-23@4,2 Tile-0-24@4,3 Tile-0-0@4,4 Tile-0-1@4,5 Tile-1-23@5,2 Tile-1-24@5,3 Tile-1-0@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"403 ed5f4c5bfeb6","Fog":"199 47195afddc1e","TestCities":"71 e62526a3134d","TestUnits":"86 a1d68c865b28","Yields":"297 7acc3e831f55","Unworkable":"103 e63d3a1d5e51"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 40x25 city 1,23 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-39-22@1,2 Tile-39-23@1,3 Tile-39-24@1,4 Tile-0-21@2,1 Tile-0-22@2,2 Tile-0-23@2,3 Tile-0-24@2,4 Tile-0-0@2,5 Tile-1-21@3,1 Tile-1-22@3,2 Tile-1-23@3,3 Tile-1-24@3,4 Tile-1-0@3,5 Tile-2-21@4,1 Tile-2-22@4,2 Tile-2-23@4,3 Tile-2-24@4,4 Tile-2-0@4,5 Tile-3-22@5,2 Tile-3-23@5,3 Tile-3-24@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"411 66b36dae05c5","Fog":"199 547a588b78ad","TestCities":"79 a9a21d65d39c","TestUnits":"83 fe97fff1ae43","Yields":"381 1d7400069946","Unworkable":"99 092794748eb2"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 40x25 city 1,23 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-39-22@1,2 Tile-39-23@1,3 Tile-39-24@1,4 Tile-0-21@2,1 Tile-0-22@2,2 Tile-0-23@2,3 Tile-0-24@2,4 Tile-0-0@2,5 Tile-1-21@3,1 Tile-1-22@3,2 Tile-1-23@3,3 Tile-1-24@3,4 Tile-1-0@3,5 Tile-2-21@4,1 Tile-2-22@4,2 Tile-2-23@4,3 Tile-2-24@4,4 Tile-2-0@4,5 Tile-3-22@5,2 Tile-3-23@5,3 Tile-3-24@5,4","draws":{"portal":"16 0a203146b334","Landscape":"411 d974316abb68","Fog":"199 1af18ae72d39","TestCities":"79 73f1c3471435","TestUnits":"83 fcd5011fbf2d","Yields":"381 ac8bcf837c9b","Unworkable":"99 e35bbe81caaa"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 40x25 city 1,23 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-39-22@1,2 Tile-39-23@1,3 Tile-39-24@1,4 Tile-0-21@2,1 Tile-0-22@2,2 Tile-0-23@2,3 Tile-0-24@2,4 Tile-0-0@2,5 Tile-1-21@3,1 Tile-1-22@3,2 Tile-1-23@3,3 Tile-1-24@3,4 Tile-1-0@3,5 Tile-2-21@4,1 Tile-2-22@4,2 Tile-2-23@4,3 Tile-2-24@4,4 Tile-2-0@4,5 Tile-3-22@5,2 Tile-3-23@5,3 Tile-3-24@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"411 fa556fd90f50","Fog":"199 47195afddc1e","TestCities":"79 9cdffee5afbd","TestUnits":"83 15286494acf5","Yields":"381 76d03597da48","Unworkable":"99 24f045fdd8b2"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"city screen 40x25 city 38,1 scale 1": [
+{"canvas":"80x80","center":{"x":3,"y":3},"local":"Tile-36-0@1,2 Tile-36-1@1,3 Tile-36-2@1,4 Tile-37-24@2,1 Tile-37-0@2,2 Tile-37-1@2,3 Tile-37-2@2,4 Tile-37-3@2,5 Tile-38-24@3,1 Tile-38-0@3,2 Tile-38-1@3,3 Tile-38-2@3,4 Tile-38-3@3,5 Tile-39-24@4,1 Tile-39-0@4,2 Tile-39-1@4,3 Tile-39-2@4,4 Tile-39-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 6fc09f030781","Landscape":"359 276f4ced2b33","Fog":"199 547a588b78ad","TestCities":"71 a8dc3f146956","TestUnits":"90 0b01a0006f3e","Yields":"393 ed350110dee1","Unworkable":"101 b548a718ce14"},"tileAt":"80 fdbec4d0a1fd","errors":[]}
+],
+"city screen 40x25 city 38,1 scale 2": [
+{"canvas":"160x160","center":{"x":3,"y":3},"local":"Tile-36-0@1,2 Tile-36-1@1,3 Tile-36-2@1,4 Tile-37-24@2,1 Tile-37-0@2,2 Tile-37-1@2,3 Tile-37-2@2,4 Tile-37-3@2,5 Tile-38-24@3,1 Tile-38-0@3,2 Tile-38-1@3,3 Tile-38-2@3,4 Tile-38-3@3,5 Tile-39-24@4,1 Tile-39-0@4,2 Tile-39-1@4,3 Tile-39-2@4,4 Tile-39-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 0a203146b334","Landscape":"359 3e9619eff59b","Fog":"199 1af18ae72d39","TestCities":"71 98606ef78e32","TestUnits":"90 bc48da708b14","Yields":"393 2c23a186aeca","Unworkable":"101 0d7943f56495"},"tileAt":"160 895b2412b81b","errors":[]}
+],
+"city screen 40x25 city 38,1 scale 3": [
+{"canvas":"240x240","center":{"x":3,"y":3},"local":"Tile-36-0@1,2 Tile-36-1@1,3 Tile-36-2@1,4 Tile-37-24@2,1 Tile-37-0@2,2 Tile-37-1@2,3 Tile-37-2@2,4 Tile-37-3@2,5 Tile-38-24@3,1 Tile-38-0@3,2 Tile-38-1@3,3 Tile-38-2@3,4 Tile-38-3@3,5 Tile-39-24@4,1 Tile-39-0@4,2 Tile-39-1@4,3 Tile-39-2@4,4 Tile-39-3@4,5 Tile-0-0@5,2 Tile-0-1@5,3 Tile-0-2@5,4","draws":{"portal":"16 8436775d6dda","Landscape":"359 7483a3ff78b7","Fog":"199 47195afddc1e","TestCities":"71 e62526a3134d","TestUnits":"90 ade07e56393f","Yields":"393 02dac5b9a139","Unworkable":"101 b7a9b57c20e4"},"tileAt":"240 cfb2f79afd10","errors":[]}
+],
+"made canvases": [
+{"draws":{"unnamed-497 16x16":"4 f5760a97c5b1","unnamed-498 16x16":"4 fb4253d7a32a","unnamed-499 16x16":"4 505eb3430ba3","unnamed-500 16x16":"4 4234d928009c","unnamed-501 16x16":"4 a7a5c3722f3e","unnamed-502 16x16":"4 89f85399517b","unnamed-503 16x16":"4 38b821ed0b57","unnamed-504 16x16":"4 18c7247b7a04","unnamed-505 16x16":"4 161d88ee9250","unnamed-506 16x16":"4 643e79babee9","unnamed-507 16x16":"4 c768a0faf83f","unnamed-508 16x16":"4 ab4be89a81db","unnamed-509 16x16":"4 2cac26899ce7","unnamed-510 16x16":"4 410bd6fdead0","unnamed-511 16x16":"4 ded709beddef","unnamed-512 16x16":"4 5dea567aa700","unnamed-513 16x16":"4 accd0edf15a6","unnamed-514 16x16":"4 cf603ea6e8dc","unnamed-515 16x16":"4 13e13180797d","unnamed-532 16x16":"4 20a2ee894104","unnamed-533 16x16":"4 2cd866f1e6d1","unnamed-534 16x16":"4 762ac8f43f2b","unnamed-535 16x16":"4 f478c9500a70","unnamed-536 16x16":"4 6cfb52a144c0","unnamed-537 16x16":"4 5c62401b510b","unnamed-538 16x16":"4 4148b36993f0","unnamed-539 16x16":"4 840bb999a8b1","unnamed-576 16x16":"4 803739341f7f","unnamed-577 16x16":"4 7a9318fe69ca","unnamed-578 16x16":"4 a93b578500ec","unnamed-579 16x16":"4 01095fa2ffc5","unnamed-580 16x16":"4 c82358d2331c","unnamed-581 16x16":"4 d23f0b694268","unnamed-600 16x16":"4 fef90403e2cf","unnamed-601 16x16":"4 1896b996bf5b","unnamed-602 16x16":"4 4d104c9d98be","unnamed-603 16x16":"4 b5ff94087824","unnamed-604 16x16":"4 1a484ad9dfde","unnamed-605 16x16":"4 b52176f5d48a","unnamed-624 16x16":"4 8f328408978f","unnamed-625 16x16":"4 57d3ee793042","unnamed-626 16x16":"4 0e6efb486f1c","unnamed-627 16x16":"4 ac10aa89eb36","unnamed-646 16x16":"4 7c5242c603d5","unnamed-647 16x16":"4 632e7f15c0ee","unnamed-648 16x16":"4 56b6cbbdbed5","unnamed-649 16x16":"4 aa2df07dc529","unnamed-650 16x16":"4 24b34aeef18b","unnamed-669 16x16":"4 0bedcf0e1611","unnamed-670 16x16":"4 e7d54bdabd33","unnamed-671 16x16":"4 c2e80dc19140","unnamed-672 16x16":"4 4669c688de85","unnamed-691 16x16":"4 3a71ca6ca3dd","unnamed-692 16x16":"4 2344ac23f060","unnamed-693 16x16":"4 2e3c690dcfb6","unnamed-694 16x16":"4 23bfc1907565","unnamed-713 16x16":"4 43904b8aafe7","unnamed-714 16x16":"4 dc393f2fdd5c","unnamed-715 16x16":"4 2d42ace4a762","unnamed-716 16x16":"4 1e13ba347bb9","unnamed-717 16x16":"4 2afc1fcf496c","unnamed-718 16x16":"4 30ad4d463b65","unnamed-737 16x16":"4 b8ee5d34bcff","unnamed-738 16x16":"4 396441e646c0","unnamed-757 16x16":"4 a2e2492ded72","unnamed-758 16x16":"4 0a71e507eb03","unnamed-777 16x16":"4 2460621c32ce","unnamed-778 16x16":"4 f7d59cb837d6","unnamed-797 16x16":"4 61220dfc0bfb","unnamed-798 16x16":"4 7a02c3c20118","unnamed-799 16x16":"4 21ae38b9ea83","unnamed-818 16x16":"4 6e1819131226","unnamed-819 16x16":"4 73f14810bf44","unnamed-838 16x16":"4 e2085d0bf567","unnamed-857 16x16":"4 7e3905a99ba1","unnamed-858 16x16":"4 a8c7c579d33e","unnamed-859 16x16":"4 27e12981ad88","unnamed-860 16x16":"4 87e4836a15eb","unnamed-861 16x16":"4 d19ae1cc9514","unnamed-862 16x16":"4 2780cb132a48","unnamed-881 16x16":"4 58aa4f706401","unnamed-882 16x16":"4 77e6e58cd08c","unnamed-883 16x16":"4 5be9fd37e772","unnamed-884 16x16":"4 c5b9d47206cf","unnamed-885 16x16":"4 81c0bc7e154b","unnamed-886 16x16":"4 d4c6e8c48661","unnamed-887 16x16":"4 bee26c8143fb"}}
 ]
 }

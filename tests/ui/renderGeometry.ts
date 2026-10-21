@@ -1,7 +1,10 @@
 // Everything the map layers draw, and every number the portal works out, over a grid of worlds, scales, canvas sizes,
 //  centres and drags, is the same as tests/ui/fixtures/render-geometry.json says. It was recorded before the tile and
-//  pixel maths moved behind a `Projection` (#90), so it proves that move changed nothing anyone can see. `--update`
-//  rewrites the fixture; set `RENDER_GEOMETRY_DUMP` to a path to write the whole recording there as well.
+//  pixel maths moved behind a `Projection` (#90), so it proves that move changed nothing anyone can see. The terrain
+//  (`Landscape`: coasts, river mouths, terrain joins, roads and railroads) and the city screen's map, cities seen
+//  across the seam, were added before the renderer's neighbours, directions and city box went through the world's
+//  topology (#88). `--update` rewrites the fixture; set `RENDER_GEOMETRY_DUMP` to a path to write the whole recording
+//  there as well.
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
@@ -15,15 +18,17 @@ import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
 import Cities from '../../src/js/UI/components/Map/Cities';
 import CityNames from '../../src/js/UI/components/Map/CityNames';
 import Fog from '../../src/js/UI/components/Map/Fog';
+import Landscape from '../../src/js/UI/components/Map/Landscape';
 import Map from '../../src/js/UI/components/Map';
 import Overview from '../../src/js/UI/components/Map/Overview';
 import Portal from '../../src/js/UI/components/Portal';
 import { Rect } from '../../src/js/UI/lib/viewport';
-import { Tile } from '../../src/js/UI/types';
+import { City, Tile } from '../../src/js/UI/types';
 import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
 import World from '../../src/js/UI/components/World';
 import Yields from '../../src/js/UI/components/Map/Yields';
+import { tileBounds } from '../../src/js/UI/lib/projection';
 
 const update = process.argv.includes('--update'),
   fixturePath = path.join(
@@ -134,14 +139,33 @@ const takeCalls = (canvas: HTMLCanvasElement): string[] => {
 
 let unnamedCanvases = 0;
 
-// A layer the portal makes for itself gets its canvas from `s('<canvas></canvas>')`.
+const createdCanvases: HTMLCanvasElement[] = [];
+
+// A layer the portal makes for itself gets its canvas from `s('<canvas></canvas>')`, and a coast square is put together
+//  on one from `s('<canvas height="16" width="16"></canvas>')`, so the size it is given is kept.
 Object.assign((globalThis as any).document, {
-  createElement: () => ({
-    set innerHTML(_: string) {},
-    get firstElementChild() {
-      return recordingCanvas(`unnamed-${unnamedCanvases++}`, 0, 0);
-    },
-  }),
+  createElement: () => {
+    let html = '';
+
+    return {
+      set innerHTML(value: string) {
+        html = value;
+      },
+      get firstElementChild() {
+        const size = (attribute: string): number =>
+            Number(html.match(new RegExp(`${attribute}="(\\d+)"`))?.[1] ?? 0),
+          canvas = recordingCanvas(
+            `unnamed-${unnamedCanvases++}`,
+            size('width'),
+            size('height')
+          );
+
+        createdCanvases.push(canvas);
+
+        return canvas;
+      },
+    };
+  },
 });
 
 console.error = (...args: unknown[]) =>
@@ -162,6 +186,53 @@ console.error = (...args: unknown[]) =>
 ].forEach(([path, width, height]) =>
   preloadImage(path as string, width as number, height as number)
 );
+
+// The terrain's sprites: every join of each land terrain with its edge neighbours, in the `n e s w` order the sprite
+//  names use, and each way a road, a railroad and a river mouth can point.
+const landscapeTerrains = [
+    'Grassland',
+    'Hills',
+    'Forest',
+    'River',
+    'Plains',
+    'Desert',
+    'Mountains',
+  ],
+  edgeDirections = ['n', 'e', 's', 'w'],
+  allDirections = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'];
+
+[
+  'terrain/land',
+  'terrain/ocean',
+  'improvements/irrigation',
+  'improvements/mine',
+  'improvements/pollution',
+  'terrain/shield',
+  'terrain/doe',
+  'terrain/oasis',
+  'map/hut',
+  ...edgeDirections.map((direction) => `terrain/river_mouth_${direction}`),
+  ...allDirections.flatMap((direction) => [
+    `improvements/road_${direction}`,
+    `improvements/railroad_${direction}`,
+  ]),
+  ...landscapeTerrains.flatMap((terrain) =>
+    new Array(16)
+      .fill(null)
+      .map(
+        (_, mask) =>
+          `terrain/${terrain.toLowerCase()}${
+            mask === 0
+              ? ''
+              : `_${edgeDirections
+                  .filter((direction, bit) => mask & (1 << bit))
+                  .join('')}`
+          }`
+      )
+  ),
+].forEach((path) => preloadImage(path, 16, 16));
+
+preloadImage('terrain/coast_sprite', 128, 16);
 
 // The layers, with what the recording needs of them in reach.
 class Plain extends Map {
@@ -226,6 +297,13 @@ const player = {
       attributes: [{ name: 'colors', value: ['#ff0000', '#00ff00'] }],
     },
   },
+  otherPlayer = {
+    id: 'Player-2',
+    civilization: {
+      _: 'Roman',
+      attributes: [{ name: 'colors', value: ['#0000ff', '#ffffff'] }],
+    },
+  },
   ownCity = { id: 'City-A' },
   otherCity = { id: 'City-B' };
 
@@ -266,6 +344,98 @@ const makeTiles = (width: number, height: number): Tile[] => {
                 ...(n % 4 === 0
                   ? [{ id: `Unit-${x}-${y}-b`, _: 'Settlers', busy: null }]
                   : []),
+              ]
+            : [],
+        workedBy: n % 5 === 1 ? otherCity : n % 5 === 2 ? ownCity : null,
+        yields: [
+          { _: 'Food', value: n % 3 },
+          { _: 'Production', value: (n >> 1) % 3 },
+          { _: 'Trade', value: n % 5 === 0 ? 4 : n % 2 },
+        ],
+      } as unknown as Tile);
+    }
+  }
+
+  return tiles;
+};
+
+// A world of land and sea for the terrain to draw, the same every run: patches of each terrain two tiles across, so
+//  like joins like, coasts with land on every side of them, river mouths, roads, railroads, improvements, features,
+//  goody huts, cities and a scattering of unseen tiles. `isCoast` is water with land on any of its eight sides.
+const makeLandscapeTiles = (width: number, height: number): Tile[] => {
+  const wrap = (value: number, size: number): number =>
+      ((value % size) + size) % size,
+    landAt = (x: number, y: number): boolean => {
+      const wx = wrap(x, width),
+        wy = wrap(y, height);
+
+      return (wx * 3 + wy * 5 + ((wx * wy) % 3)) % 8 < 5;
+    },
+    tiles: Tile[] = [];
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const n = x * 7 + y * 13,
+        unknown = n % 17 === 5,
+        isLand = landAt(x, y),
+        terrain = isLand
+          ? landscapeTerrains[
+              (Math.floor(x / 2) + Math.floor(y / 2) * 3) %
+                landscapeTerrains.length
+            ]
+          : 'Ocean',
+        road = isLand && (x + y) % 3 !== 0,
+        railroad = road && x % 2 === 0,
+        city = isLand && !unknown && x % 4 === 1 && y % 3 === 1,
+        neighbours = [-1, 0, 1].flatMap((dy) =>
+          [-1, 0, 1].map((dx) => landAt(x + dx, y + dy))
+        );
+
+      tiles.push({
+        _: 'Tile',
+        id: `Tile-${x}-${y}`,
+        x,
+        y,
+        city: city
+          ? {
+              id: `City-${x}-${y}`,
+              name: `City ${x} ${y}`,
+              civilDisorderDeclared: (x + y) % 3 === 0,
+              growth: { size: ((x + y) % 9) + 1 },
+              player,
+            }
+          : null,
+        goodyHut: isLand && !city && n % 13 === 4 ? {} : null,
+        improvements: [
+          ...(road ? [{ _: 'Road' }] : []),
+          ...(railroad ? [{ _: 'Railroad' }] : []),
+          ...(isLand && (x * y) % 5 === 1 ? [{ _: 'Irrigation' }] : []),
+          ...(terrain === 'Hills' && x % 2 === 1 ? [{ _: 'Mine' }] : []),
+          ...(isLand && (x + y * 3) % 11 === 2 ? [{ _: 'Pollution' }] : []),
+        ],
+        isCoast: !isLand && neighbours.includes(true),
+        isLand,
+        isWater: !isLand,
+        terrain: {
+          _: unknown ? 'Unknown' : terrain,
+          features:
+            terrain === 'Grassland' && (x + y) % 2 === 0
+              ? [{ _: 'Shield' }]
+              : terrain === 'Forest' && x % 3 === 0
+              ? [{ _: 'Game' }]
+              : terrain === 'Desert'
+              ? [{ _: 'Oasis' }]
+              : [],
+        },
+        units:
+          n % 6 === 4
+            ? [
+                {
+                  id: `Unit-${x}-${y}-a`,
+                  _: 'Warrior',
+                  busy: null,
+                  player: n % 4 === 0 ? player : otherPlayer,
+                },
               ]
             : [],
         workedBy: n % 5 === 1 ? otherCity : n % 5 === 2 ? ownCity : null,
@@ -344,6 +514,37 @@ const tilesUnderPixels = (portal: TestPortal, step: number): string[] => {
   }
 
   return rows;
+};
+
+// Where `City.ts`'s `renderMap` puts a city's squares in the city screen's own small world, and which squares size
+//  its canvas: the same sums, copied from it.
+const cityMapLayout = (city: City) => {
+  const cityRadius = 2,
+    localSize = cityRadius * 2 + 3,
+    localCenter = cityRadius + 1,
+    wrapDelta = (delta: number, max: number): number =>
+      delta > max / 2 ? delta - max : delta < -max / 2 ? delta + max : delta,
+    toLocal = (tile: Tile): Tile => ({
+      ...tile,
+      x: localCenter + wrapDelta(tile.x - city.tile.x, city.player.world.width),
+      y:
+        localCenter + wrapDelta(tile.y - city.tile.y, city.player.world.height),
+    }),
+    block: { x: number; y: number }[] = [];
+
+  for (let dy = -cityRadius; dy <= cityRadius; dy++) {
+    for (let dx = -cityRadius; dx <= cityRadius; dx++) {
+      block.push({ x: localCenter + dx, y: localCenter + dy });
+    }
+  }
+
+  return {
+    block,
+    localCenter,
+    localSize,
+    localTiles: city.tiles.map(toLocal),
+    localTilesWorked: city.tilesWorked.map(toLocal),
+  };
 };
 
 const digest = (lines: string[]): string =>
@@ -571,6 +772,241 @@ const record = (): { [key: string]: unknown } => {
     };
   });
 
+  // The terrain: coasts, river mouths, joins, roads and railroads, centred on and scrolled across the seams, and
+  //  redrawn around a few tiles as an update redraws their neighbours too.
+  (
+    [
+      [9, 7],
+      [12, 8],
+      [5, 4],
+    ] as [number, number][]
+  ).forEach(([width, height]) =>
+    [false, true].forEach((lock) =>
+      [1, 2].forEach((scale) =>
+        (
+          [
+            [80, 64],
+            [150, 110],
+          ] as [number, number][]
+        ).forEach(([cw, ch]) => {
+          const world = new World({
+              width,
+              height,
+              tiles: makeLandscapeTiles(width, height),
+            } as any),
+            portalCanvas = recordingCanvas('portal', cw, ch),
+            portal = new TestPortal(
+              world,
+              {} as any,
+              portalCanvas,
+              {
+                playerId: player.id,
+                scale,
+                tileSize: 16,
+                lockVerticalEdges: lock,
+              },
+              Landscape,
+              Fog
+            ),
+            layers = [Landscape, Fog].map(
+              (Type) => portal.getLayer(Type as any)!
+            ),
+            steps: unknown[] = [];
+
+          layers.forEach((layer) =>
+            canvasNames.set(layer.canvas(), layer.constructor.name)
+          );
+
+          const snapshot = (step: string) =>
+            steps.push({
+              step,
+              center: { ...portal.center() },
+              draws: Object.fromEntries(
+                [portalCanvas, ...layers.map((layer) => layer.canvas())].map(
+                  (canvas) => [canvasNames.get(canvas), takeCalls(canvas)]
+                )
+              ),
+              errors: errors.splice(0),
+            });
+
+          snapshot('constructed');
+
+          (
+            [
+              [0, 0],
+              [width - 1, height - 1],
+              [Math.floor(width / 2), Math.floor(height / 2)],
+              [1, height - 1],
+            ] as [number, number][]
+          ).forEach(([x, y]) => {
+            portal.setCenter(x, y);
+
+            snapshot(`setCenter ${x},${y}`);
+          });
+
+          portal.scrollBy(16 * scale * 3 + 5, -16 * scale * 2 - 3);
+          snapshot('scrolled');
+
+          portal.build([
+            world.get(0, 0),
+            world.get(width - 1, height - 1),
+            world.get(2, 1),
+          ]);
+          portal.render();
+          snapshot('build');
+
+          recording[
+            `landscape ${width}x${height} ${
+              lock ? 'locked' : 'wrapped'
+            } scale ${scale} canvas ${cw}x${ch}`
+          ] = steps;
+        })
+      )
+    )
+  );
+
+  // The city screen's map as `City.ts`'s `renderMap` builds it, for cities in the middle of the world and across
+  //  each seam: the city's squares moved next to it in a small world of their own, a canvas the size of the squares
+  //  within its radius, and every layer the screen draws.
+  (
+    [
+      [9, 7],
+      [12, 8],
+      [40, 25],
+    ] as [number, number][]
+  ).forEach(([width, height]) => {
+    const worldTiles = makeLandscapeTiles(width, height),
+      worldData = {
+        _: 'World',
+        id: 'World-1',
+        width,
+        height,
+        tiles: worldTiles,
+      },
+      at = (x: number, y: number): Tile =>
+        worldTiles[
+          (((y % height) + height) % height) * width +
+            (((x % width) + width) % width)
+        ];
+
+    (
+      [
+        [Math.floor(width / 2), Math.floor(height / 2)],
+        [0, 0],
+        [width - 1, height - 1],
+        [1, height - 2],
+        [width - 2, 1],
+      ] as [number, number][]
+    ).forEach(([cityX, cityY]) => {
+      // The fat cross as the engine sends it: the five-square block, column by column, without its corners.
+      const cityTiles: Tile[] = [];
+
+      for (let dx = -2; dx <= 2; dx++) {
+        for (let dy = -2; dy <= 2; dy++) {
+          if (Math.abs(dx) !== 2 || Math.abs(dy) !== 2) {
+            cityTiles.push(at(cityX + dx, cityY + dy));
+          }
+        }
+      }
+
+      const city = {
+        id: 'City-A',
+        name: 'Home',
+        civilDisorderDeclared: false,
+        growth: { size: 5 },
+        player: { ...player, world: worldData },
+        tile: at(cityX, cityY),
+        tiles: cityTiles,
+        tilesWorked: cityTiles.filter((tile, index) => index % 3 === 0),
+      } as unknown as City;
+
+      [1, 2, 3].forEach((scale) => {
+        const { localCenter, localSize, localTiles, localTilesWorked, block } =
+            cityMapLayout(city),
+          portalCanvas = recordingCanvas('portal', 0, 0),
+          cityPortal = new TestPortal(
+            new World({
+              ...city.player.world,
+              width: localSize,
+              height: localSize,
+              tiles: localTiles,
+            }),
+            {} as any,
+            portalCanvas,
+            { playerId: city.player.id, scale, tileSize: 16 },
+            Landscape,
+            Fog,
+            TestCities,
+            TestUnits,
+            Yields,
+            Unworkable
+          ),
+          layers = [
+            Landscape,
+            Fog,
+            TestCities,
+            TestUnits,
+            Yields,
+            Unworkable,
+          ].map((Type) => cityPortal.getLayer(Type as any)!);
+
+        layers.forEach((layer) =>
+          canvasNames.set(layer.canvas(), layer.constructor.name)
+        );
+
+        const { width: canvasWidth, height: canvasHeight } = tileBounds(
+          cityPortal.projection(),
+          block
+        );
+
+        portalCanvas.height = canvasHeight;
+        portalCanvas.width = canvasWidth;
+
+        cityPortal.setCenter(localCenter, localCenter);
+        cityPortal.build(localTiles);
+        cityPortal
+          .getLayer(TestUnits)!
+          .render(
+            localTiles.filter((tile) =>
+              tile.units.some((unit) => unit.player.id !== city.player.id)
+            )
+          );
+        cityPortal.getLayer(Yields)!.render(localTilesWorked);
+        (cityPortal.getLayer(Unworkable) as Unworkable).setCity(city);
+        cityPortal.getLayer(Unworkable)!.render(localTiles);
+        cityPortal.render();
+
+        recording[
+          `city screen ${width}x${height} city ${cityX},${cityY} scale ${scale}`
+        ] = {
+          canvas: `${portalCanvas.width}x${portalCanvas.height}`,
+          center: { ...cityPortal.center() },
+          local: localTiles.map(({ id, x, y }) => `${id}@${x},${y}`).join(' '),
+          draws: Object.fromEntries(
+            [portalCanvas, ...layers.map((layer) => layer.canvas())].map(
+              (canvas) => [canvasNames.get(canvas), takeCalls(canvas)]
+            )
+          ),
+          tileAt: tilesUnderPixels(cityPortal, 1),
+          errors: errors.splice(0),
+        };
+      });
+    });
+  });
+
+  // What was drawn on each canvas a layer made for itself and kept, which is each coast square that was put together:
+  //  the terrain's draws name them, and this says what is on them.
+  recording['made canvases'] = {
+    draws: Object.fromEntries(
+      createdCanvases
+        .filter((canvas) => canvasNames.get(canvas)!.startsWith('unnamed-'))
+        .map((canvas) => [
+          `${canvasNames.get(canvas)} ${canvas.width}x${canvas.height}`,
+          takeCalls(canvas),
+        ])
+    ),
+  };
+
   return recording;
 };
 
@@ -693,7 +1129,7 @@ const main = (): void => {
       console.log(
         `UPDATED renderGeometry: ${
           scenarios.length
-        } portals and 3 city maps, ${steps} lines, written to ${path.relative(
+        } portals, 3 city maps, the terrain and the city screen, ${steps} lines, written to ${path.relative(
           process.cwd(),
           fixturePath
         )}`
@@ -730,7 +1166,7 @@ const main = (): void => {
     passed = true;
 
     console.log(
-      `PASS renderGeometry (${scenarios.length} portals and 3 city maps, ${steps} lines, are as they were)`
+      `PASS renderGeometry (${scenarios.length} portals, 3 city maps, the terrain and the city screen, ${steps} lines, are as they were)`
     );
 
     process.exit(0);
