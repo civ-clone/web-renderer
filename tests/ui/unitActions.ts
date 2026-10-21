@@ -18,7 +18,11 @@ import PlantForest from '@civ-clone/base-unit-action-plant-forest/PlantForest';
 import UnitActions from '../../src/js/UI/components/UnitActions';
 import actionResult from '../../src/js/Engine/AdditionalData/actionResult';
 import distantActions from '../../src/js/UI/lib/distantActions';
-import { keyToActionsMap } from '../../src/js/UI/lib/unitActionKeys';
+import {
+  directionKeys,
+  keyToActionsMap,
+} from '../../src/js/UI/lib/unitActionKeys';
+import topologyFor from '../../src/js/UI/lib/topologyFor';
 
 const failures: string[] = [];
 let checks = 0;
@@ -262,6 +266,38 @@ expect(
   'a unit whose actions have not arrived has no buttons',
   container.children.length,
   0
+);
+
+// The keys that move a unit, from the world's topology (#88).
+const square = topologyFor({ width: 10, height: 8 });
+
+expect(
+  'on a square grid the arrows and Home, PageUp, End and PageDown move a unit each of the eight ways',
+  directionKeys(square),
+  {
+    ArrowUp: 'n',
+    PageUp: 'ne',
+    ArrowRight: 'e',
+    PageDown: 'se',
+    ArrowDown: 's',
+    End: 'sw',
+    ArrowLeft: 'w',
+    Home: 'nw',
+  }
+);
+expect(
+  'a square grid has a key for each of its directions, and no other',
+  Object.values(directionKeys(square)).sort(),
+  [...square.directions()].sort()
+);
+expect(
+  'a grid without a direction has no key for it, so the key does nothing',
+  directionKeys(
+    Object.assign(Object.create(square), {
+      directions: () => ['n', 'e', 's', 'w'],
+    })
+  ),
+  { ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' }
 );
 
 // The engine side.

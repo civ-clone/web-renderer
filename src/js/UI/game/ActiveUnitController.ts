@@ -9,7 +9,7 @@ import {
 import { t } from 'i18next';
 import { TransportHandledAction } from '../../Engine/Transport';
 import Transport from '../Transport';
-import { directionKeyMap, keyToActionsMap } from '../lib/unitActionKeys';
+import { directionKeys, keyToActionsMap } from '../lib/unitActionKeys';
 import NotificationWindow from '../components/NotificationWindow';
 import chooseActiveUnit from '../lib/chooseActiveUnit';
 import UnitQueue from '../lib/UnitQueue';
@@ -23,6 +23,7 @@ import {
 } from '../lib/unitActions';
 import ActiveUnitTiles from '../lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from '../lib/PendingMove';
+import { Topology } from '../lib/topologyFor';
 
 // The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key does to
 //  it, typed now or kept while a move is answered (#326).
@@ -68,7 +69,8 @@ export type ActiveUnitControllerDeps = {
   showUnitDetails: (unit: Unit | null) => void;
   transport: Pick<Transport, 'send'>;
   unitsLayer: ActiveUnitUnitsLayer;
-  world: { get(x: number, y: number): Tile };
+  // `topology` for the keys that move a unit: one per direction the world has (#88).
+  world: { get(x: number, y: number): Tile; topology(): Topology };
 };
 
 export class ActiveUnitController {
@@ -275,7 +277,8 @@ export class ActiveUnitController {
 
     return !!(
       activeUnit &&
-      (key in keyToActionsMap || key in directionKeyMap) &&
+      (key in keyToActionsMap ||
+        key in directionKeys(this.#deps.world.topology())) &&
       this.#pendingMove.press(
         key,
         hasUnitActions(activeUnit),
@@ -393,11 +396,13 @@ export class ActiveUnitController {
       return 'prompted';
     }
 
-    if (!(key in directionKeyMap)) {
+    const keyDirections = directionKeys(world.topology());
+
+    if (!(key in keyDirections)) {
       return null;
     }
 
-    const directionActions = neighbourActions(unit, directionKeyMap[key]),
+    const directionActions = neighbourActions(unit, keyDirections[key]),
       // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
       //  (#57).
       unitId = unit.id,
