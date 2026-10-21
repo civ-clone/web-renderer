@@ -747,8 +747,8 @@ packages:
   '@civ-clone/base-strategy-ai@0.1.3':
     resolution: {integrity: sha512-3UTu2INLeWjuQdnycBVr0705ZNr+j1itcHQjzE7FY9BHVl0SDEwtSxITiuU/WxWsqx+QubzIF7jWUJjmg2WIBw==}
 
-  '@civ-clone/base-strategy-explore@0.1.0':
-    resolution: {integrity: sha512-jBFeSYudFhgTgcBCINxdda5WnQHQgj/WVhP0xAuDyJWRnSHaCQF7KqPbADP0AbDDr9yHQz7FkwpJg80jLuZ60g==}
+  '@civ-clone/base-strategy-explore@0.1.1':
+    resolution: {integrity: sha512-hcJpm/+TtMms3nhAshs4nxrT5AZIMHUL3Rup5r/2GrvJYqFzfWIAih+/3VjuBzthWv30EP6Uz9z2DckSkO/ldA==}
 
   '@civ-clone/base-strategy-terrain-work@0.1.2':
     resolution: {integrity: sha512-IkL4mMZC9C1vEWSU73JmPFH+zG3XPsqAu6Q9eGUgSehVYE88wRdHgr8gqebvj8/DRCbqtGy1YSVstyvcEj0pZQ==}
@@ -2819,9 +2819,10 @@ snapshots:
       '@civ-clone/core-world': 0.1.18
       '@civ-clone/core-world-path': 0.1.2
 
-  '@civ-clone/base-strategy-explore@0.1.0':
+  '@civ-clone/base-strategy-explore@0.1.1':
     dependencies:
       '@civ-clone/base-strategy-ai': 0.1.3
+      '@civ-clone/base-unit-action-no-orders': 0.1.0
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
       '@civ-clone/base-unit-type-land': 0.1.0
       '@civ-clone/base-unit-type-naval': 0.1.0
@@ -3148,7 +3149,7 @@ snapshots:
   '@civ-clone/base-unit-action-explore@0.1.0':
     dependencies:
       '@civ-clone/base-strategy-ai': 0.1.3
-      '@civ-clone/base-strategy-explore': 0.1.0
+      '@civ-clone/base-strategy-explore': 0.1.1
       '@civ-clone/core-game': 0.1.11
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-rule': 0.1.6
@@ -4835,7 +4836,7 @@ snapshots:
       '@civ-clone/base-leader-personality': 0.1.2
       '@civ-clone/base-player-action-end-turn': 0.1.0
       '@civ-clone/base-strategy-ai': 0.1.3
-      '@civ-clone/base-strategy-explore': 0.1.0
+      '@civ-clone/base-strategy-explore': 0.1.1
       '@civ-clone/base-strategy-terrain-work': 0.1.2
       '@civ-clone/base-strategy-victory': 0.1.0
       '@civ-clone/base-trade-rate-luxuries': 0.1.0

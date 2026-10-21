@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@f9e7d56","date":"2026-10-21T14:27:31.000Z","localChanges":["When a second choice appeared while talks were waiting for your answer at the start of a turn, or while another civilization had opened talks on the way, every unit afterwards stopped answering keys or needed its orders given twice until the game was saved and loaded; that no longer happens (closes #491, closes #526).","When capturing a city offers you an advance to steal at the same moment a civilization opens talks, both windows now take their answers in whichever order you give them, and the advance you pick is the one you get, where before one answer was lost or a talk step was chosen for you.","Your turn no longer ends while talks at the start of it are still waiting for your answer."],"externalChanges":{}}
+,
+{"version":"0.1.0@14e0560","date":"2026-10-21T14:13:14.000Z","localChanges":["docs: record how the Renderer.ts and DataTransferClient.ts splits were built, and where they differ from the plans"],"externalChanges":{}}
+,
 {"version":"0.1.0@5d828d7","date":"2026-10-21T13:57:08.000Z","localChanges":["chore: add DataTransferClient.dispose(), which stops every engine listener and UI message the client listens for, the turn under way and a pending choice, and use it on patchRefs' second client (#449)"],"externalChanges":{}}
 ,
 {"version":"0.1.0@a147d9c","date":"2026-10-21T13:52:28.000Z","localChanges":["chore: give DataTransferClient's modules one shared ClientContext, made once in its constructor, instead of a context of their own each (#449)"],"externalChanges":{}}
