@@ -103,8 +103,6 @@
   display: flex;
   flex-direction: row;
   padding: 1em;
-  // Above the full-height `#actions` stack, like the game menu.
-  z-index: 1;
 
   .action {
     margin: 0 0 0 0.5em;
