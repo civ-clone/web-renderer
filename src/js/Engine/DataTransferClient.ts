@@ -73,6 +73,7 @@ import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
+import ActionsState, { diffActions } from './Client/ActionsState';
 import Yield from '@civ-clone/core-yield/Yield';
 import JoinCity from '@civ-clone/library-unit/Actions/JoinCity';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
@@ -182,8 +183,8 @@ export class DataTransferClient extends Client implements IClient {
     // intersection is `never` and the renderer stops compiling.
     (object: DataObject | Busy) => {
       // The player's actions are going out some other way, made afresh, and the frontend will hold those instead.
-      if (object instanceof PlayerAction && !this.#serialisingActions) {
-        this.#forgetHeldActions();
+      if (object instanceof PlayerAction && !this.#actions.serialising) {
+        this.#actions.forget();
       }
 
       if (object instanceof Player && object !== this.player()) {
@@ -199,7 +200,7 @@ export class DataTransferClient extends Client implements IClient {
         object instanceof Unit &&
         object.player() === this.player() &&
         !isUnitWithoutActions(object) &&
-        !this.#sendsUnitActions(object)
+        !this.#actions.sendsUnitActions(object)
       ) {
         return localFilter(unitWithoutActions(object));
       }
@@ -248,14 +249,8 @@ export class DataTransferClient extends Client implements IClient {
   #queuedTiles: Set<PlayerTile> = new Set();
   // The ids of the units, cities and parts of the player in the queue, each sent once a flush (#411).
   #queued: Set<string> = new Set();
-  // The player's actions as the frontend was last sent them by `#sendActions`, by what each is (#411), and what each
-  //  list was. `null` once they have gone some other way, in the whole player, as fresh objects the frontend holds in
-  //  place of these.
-  #heldActions: Map<string, PlayerAction> | null = null;
-  #heldActionKeys: string[] | undefined = undefined;
-  #heldMandatoryActions: string[] | undefined = undefined;
-  // Set while `#sendActions` serialises them, or a test compares with them, which leave the actions held alone.
-  #serialisingActions = false;
+  // The player's actions as the frontend was last sent them, and the unit it has the actions of (#411, #323).
+  #actions: ActionsState = new ActionsState();
   #eventEmitter: EventEmitter;
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
   //  our own notifications are held (see `sendNotification`).
@@ -280,12 +275,6 @@ export class DataTransferClient extends Client implements IClient {
   //  talks with units met on the way (`talkToPlayersMet`).
   #talks: Promise<void> = Promise.resolve();
   #transport: Transport<TransportDataMap>;
-  // The unit sent with its actions (#323): the one that last acted, or the one the UI last asked about. It is the UI's
-  //  active unit, so its actions go out while it can use them, and the next unit's are asked for when it moves on.
-  #unitWithActions: Unit | null = null;
-  // While a `unitActions` request is answered: the unit asked about goes out with its actions whatever its state, so
-  //  the UI is never left asking again.
-  #answeringUnitActions: Unit | null = null;
 
   constructor(
     player: Player,
@@ -568,12 +557,12 @@ export class DataTransferClient extends Client implements IClient {
       this.#setUnitWithActions(unit);
 
       this.#dataQueue.update(unit.id(), () => {
-        this.#answeringUnitActions = unit;
+        this.#actions.answering = unit;
 
         try {
           return this.serialiseUnit(unit);
         } finally {
-          this.#answeringUnitActions = null;
+          this.#actions.answering = null;
         }
       });
 
@@ -2308,14 +2297,14 @@ export class DataTransferClient extends Client implements IClient {
    *  frontend is known to hold of those is left alone, as nothing is sent.
    */
   serialisePlayer(): ObjectMap {
-    this.#serialisingActions = true;
+    this.#actions.serialising = true;
 
     try {
       return this.player().toPlainObject(
         this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
       );
     } finally {
-      this.#serialisingActions = false;
+      this.#actions.serialising = false;
     }
   }
 
@@ -2419,16 +2408,11 @@ export class DataTransferClient extends Client implements IClient {
       });
   }
 
-  // The UI has actions for one unit (#323). When that changes, the unit that had them goes again without them, so the
-  //  UI asks again when it comes back to it rather than using actions from before whatever has happened since.
+  // The UI has actions for one unit (#323). When that changes, the unit that had them goes again without them.
   #setUnitWithActions(unit: Unit | null): void {
-    const previous = this.#unitWithActions;
-
-    this.#unitWithActions = unit;
-
-    if (previous !== null && previous !== unit) {
-      this.#sendUnit(previous);
-    }
+    this.#actions.setUnitWithActions(unit, (previous) =>
+      this.#sendUnit(previous)
+    );
   }
 
   // One of the player's keys on its own, as an update of that key (#411): the list of its units or cities when one is
@@ -2469,19 +2453,14 @@ export class DataTransferClient extends Client implements IClient {
     this.#dataQueue.update(
       this.player().id(),
       () => {
-        const held = this.#heldActions,
+        const held = this.#actions.held,
           actions = this.player()
             .actions()
             .map((action) => held?.get(actionKey(action)) ?? action),
           mandatory = actions.filter(
             (action) => action instanceof MandatoryPlayerAction
           ),
-          unchanged = (list: PlayerAction[], heldList: string[] | undefined) =>
-            heldList !== undefined &&
-            list.length === heldList.length &&
-            list.every(
-              (action, index) => actionKey(action) === heldList[index]
-            ),
+          changed = diffActions(actions, mandatory, this.#actions),
           filter = (object: any) =>
             object instanceof PlayerAction
               ? held !== null && held.get(actionKey(object)) === object
@@ -2489,31 +2468,26 @@ export class DataTransferClient extends Client implements IClient {
                 : object
               : referenceObject(object),
           serialise = (list: PlayerAction[]): ObjectMap => {
-            this.#serialisingActions = true;
+            this.#actions.serialising = true;
 
             try {
               return this.#serialisePlayerPart(list, filter);
             } finally {
-              this.#serialisingActions = false;
+              this.#actions.serialising = false;
             }
           };
 
-        mandatoryActions = unchanged(mandatory, this.#heldMandatoryActions)
-          ? undefined
-          : serialise(mandatory);
+        mandatoryActions =
+          changed.mandatory === undefined
+            ? undefined
+            : serialise(changed.mandatory);
 
-        const sent = unchanged(actions, this.#heldActionKeys)
-          ? undefined
-          : serialise(actions);
+        const sent =
+          changed.actions === undefined
+            ? undefined
+            : serialise(changed.actions);
 
-        this.#heldActions = new Map(
-          actions.map((action): [string, PlayerAction] => [
-            actionKey(action),
-            action,
-          ])
-        );
-        this.#heldActionKeys = actions.map(actionKey);
-        this.#heldMandatoryActions = mandatory.map(actionKey);
+        this.#actions.hold(changed.nextHeld);
 
         return sent;
       },
@@ -2551,8 +2525,8 @@ export class DataTransferClient extends Client implements IClient {
       const standIn = playerWithoutActions(player),
         filter = this.#dataFilter(localFilter);
 
-      this.#heldActionKeys = undefined;
-      this.#heldMandatoryActions = undefined;
+      this.#actions.heldKeys = undefined;
+      this.#actions.heldMandatory = undefined;
 
       // As `#serialisePlayerPart`: the filter sees what `toPlainObject` is called on first.
       return player.toPlainObject((object: any) =>
@@ -2561,12 +2535,6 @@ export class DataTransferClient extends Client implements IClient {
     });
 
     this.#sendActions();
-  }
-
-  #forgetHeldActions(): void {
-    this.#heldActions = null;
-    this.#heldActionKeys = undefined;
-    this.#heldMandatoryActions = undefined;
   }
 
   // A value that is part of the player, serialised on its own. `toPlainObject` is a method on `DataObject`, and the
@@ -2631,17 +2599,6 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#dataQueue.update(object.id(), () =>
       object.toPlainObject(this.#dataFilter(filterToReference(Player)))
-    );
-  }
-
-  // Only for a unit that can act: one with nothing left to do this turn is listed as an `InactiveUnit`, which the UI
-  //  doesn't read actions from.
-  #sendsUnitActions(unit: Unit): boolean {
-    return (
-      unit === this.#answeringUnitActions ||
-      (unit === this.#unitWithActions &&
-        unit.active() &&
-        unit.moves().value() > 0)
     );
   }
 
