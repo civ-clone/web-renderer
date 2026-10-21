@@ -6,16 +6,13 @@ import { Client, IClient } from '@civ-clone/core-client/Client';
 import City from '@civ-clone/core-city/City';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
-import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
-import Transport, { TransportHandledAction } from './Transport';
+import Transport from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import ActionsState from './Client/ActionsState';
 import Automation from './Client/Automation';
@@ -45,7 +42,6 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
-import { filterToReference } from './Client/refs';
 import {
   DataFilter,
   makeDataFilter,
@@ -73,6 +69,9 @@ import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
 import ChoicePrompt from './Client/ChoicePrompt';
 import registerDiplomatEvents from './Client/diplomatEvents';
+import TurnHandover, {
+  registerTurnHandoverEvents,
+} from './Client/TurnHandover';
 import { handleAction as handleActionFor } from './Client/handleAction';
 import { ActionContext } from './Client/actions/ActionContext';
 // Last, as registering these used to follow every import here.
@@ -93,21 +92,14 @@ export class DataTransferClient extends Client implements IClient {
   // The patches queued for the player and the flush that sends them (see `Client/PlayerPatches.ts`). Made in the
   //  constructor, which is given the transport.
   #patches: PlayerPatches;
-  #eventEmitter: EventEmitter;
   // What the game-end receivers and listeners read, kept for `gameOver` (see `Client/gameEnd.ts`).
   #gameEnd: GameEndContext;
-  // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
-  //  our own notifications are held (see `#holdsNotifications`).
-  #handedOver: boolean = false;
   // The notifications sent the player, held until the hand-over (see `Client/Notifier.ts`). Made in the constructor,
   //  which is given the transport.
   #notifier: Notifier;
   // What happened to each city during the engine call under way, told to the player once it's over (#400, #420; see
   //  `Client/cityNews.ts`).
   #cityNews: CityNewsCollector;
-  // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
-  //  `turnStarted` for one carried on at the start of the turn.
-  #heldHalts: { target: string; unit: string }[] = [];
   // Asks the player to choose, one prompt at a time (see `Client/ChoicePrompt.ts`). Made in the constructor, which is
   //  given the transport.
   #choicePrompt: ChoicePrompt;
@@ -115,10 +107,12 @@ export class DataTransferClient extends Client implements IClient {
   // What the request receivers read, kept for the methods tests call (see `Client/requests.ts`).
   #requests: RequestsContext;
   #sender: (channel: string, payload: any) => void;
-  #sentInitialData: boolean = false;
   // Talks with other players: those met on the way and a Diplomat's Meet with King (see `Client/Talks.ts`).
   #talks: Talks;
   #transport: Transport<TransportDataMap>;
+  // The turn handed to the UI and back, and each `action` it sends acted on (see `Client/TurnHandover.ts`). Made in
+  //  the constructor, once the patches, the notifications and the talks are.
+  #turnHandover: TurnHandover;
 
   constructor(
     player: Player,
@@ -141,7 +135,6 @@ export class DataTransferClient extends Client implements IClient {
         currentPlayers: currentPlayerRegistryInstance,
       }
     );
-    this.#eventEmitter = new EventEmitter();
     this.#transport = transport;
     this.#patches = new PlayerPatches(
       transport,
@@ -150,7 +143,6 @@ export class DataTransferClient extends Client implements IClient {
       () => this.player()
     );
     this.#notifier = new Notifier(transport, this.#dataFilter);
-    this.#notifier.holdWhile(() => this.#holdsNotifications());
     this.#choicePrompt = new ChoicePrompt(transport, this.#dataFilter);
     this.#cityNews = new CityNewsCollector(
       () => this.player(),
@@ -159,9 +151,33 @@ export class DataTransferClient extends Client implements IClient {
     this.#sender = sender;
     this.#receiver = receiver;
 
-    this.#transport.receive('action', (...args): void =>
-      this.#eventEmitter.emit('action', ...args)
-    );
+    this.#talks = new Talks({
+      player: () => this.player(),
+      clients: clientRegistryInstance,
+      interactions: interactionRegistryInstance,
+      rules: ruleRegistryInstance,
+      turn: turnInstance,
+      units: unitRegistryInstance,
+    });
+
+    // The turn handed to the UI and back: it listens for the UI's `action`s, and holds our notifications until the
+    //  hand-over (see `Client/TurnHandover.ts`).
+    this.#turnHandover = new TurnHandover({
+      player: () => this.player(),
+      transport,
+      dataFilter: this.#dataFilter,
+      actions: this.#actions,
+      patches: this.#patches,
+      notifier: this.#notifier,
+      talks: this.#talks,
+      automation: this.#automation,
+      handleAction: (...args: any[]) => this.handleAction(...args),
+      difficulties: gameDifficultyRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+      turn: turnInstance,
+      year: yearInstance,
+    });
+    this.#notifier.holdWhile(() => this.#turnHandover.holdsNotifications());
 
     // The cheats and the lists the cheat menu asks for (see `Client/cheats.ts`).
     registerCheats(this.#transport, {
@@ -202,15 +218,6 @@ export class DataTransferClient extends Client implements IClient {
       console.error(error);
     });
 
-    this.#talks = new Talks({
-      player: () => this.player(),
-      clients: clientRegistryInstance,
-      interactions: interactionRegistryInstance,
-      rules: ruleRegistryInstance,
-      turn: turnInstance,
-      units: unitRegistryInstance,
-    });
-
     // What the UI's actions read and change (see `Client/handleAction.ts`).
     this.#actionContext = {
       player: () => this.player(),
@@ -228,25 +235,8 @@ export class DataTransferClient extends Client implements IClient {
     //  listener is before the patches' below, which flushes.
     registerTalkEvents(engineInstance, this.#talks, this.#automation);
 
-    engineInstance.on('unit:halted', (unit: Unit, target: Tile) => {
-      if (unit.player() !== this.player() || this.#automation.enabled) {
-        return;
-      }
-
-      const playerTile = playerWorldRegistryInstance
-        .getByPlayer(this.player())
-        .getByTile(target);
-
-      if (!playerTile) {
-        return;
-      }
-
-      // Its actions go out with it, for the UI to choose from.
-      this.#setUnitWithActions(unit);
-      this.#patches.unit(unit);
-
-      this.#heldHalts.push({ target: playerTile.id(), unit: unit.id() });
-    });
+    // A GoTo that stopped next to a choice, told once its move has gone (see `Client/TurnHandover.ts`).
+    registerTurnHandoverEvents(engineInstance, this.#turnHandover);
 
     // What each engine event changes of what the player is sent, queued for the next flush, and the flush after every
     //  unit's move (see `Client/events/patchEvents.ts`). After the talks' `unit:moved` listener above, as it was.
@@ -343,21 +333,9 @@ export class DataTransferClient extends Client implements IClient {
     return handleActionFor(this.#actionContext, ...args);
   }
 
+  // The player's whole state, sent before the first hand-over (see `Client/TurnHandover.ts`). Named, as tests reach it.
   private sendInitialData(): void {
-    // Through the visibility filter, as every patch is. Sent as it was, `toPlainObject` was called on it with no filter, so
-    //  every other player went out in full, and with them their `world`: every tile each civilization knows. Reached from
-    //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
-    this.#transport.send(
-      'gameData',
-      new TransferObject(
-        this.player(),
-        turnInstance,
-        yearInstance,
-        gameDifficultyRegistryInstance.entries()[0] ?? null
-      ).toPlainObject(this.#dataFilter(undefined, { tilesInFull: true }))
-    );
-
-    this.#sentInitialData = true;
+    this.#turnHandover.sendInitialData();
   }
 
   // Every flush goes through `PlayerPatches#flush`, which holds them while an action is handled. Named, as tests reach it.
@@ -411,151 +389,9 @@ export class DataTransferClient extends Client implements IClient {
     return serialiseCity(this.#dataFilter, city);
   }
 
-  // The UI has actions for one unit (#323). When that changes, the unit that had them goes again without them.
-  #setUnitWithActions(unit: Unit | null): void {
-    this.#actions.setUnitWithActions(unit, (previous) =>
-      this.#patches.unit(previous)
-    );
-  }
-
-  #holdsNotifications(): boolean {
-    if (this.#handedOver || this.#automation.enabled) {
-      return false;
-    }
-
-    return this.#automation.ourTurn();
-  }
-
-  #handOver(): void {
-    this.#handedOver = true;
-
-    this.#transport.send('turnStarted', null);
-
-    this.#notifier.release();
-
-    this.#sendHalts();
-
-    this.#talks.handOver();
-  }
-
-  // Says an action has been handled, once the patch with its result has gone (#326). An action's patch can't be told
-  //  from any other by what is in it (a `unitActions` answer can arrive first, with the unit where it was), so the UI
-  //  waits for this to know a move it has drawn ahead was refused.
-  #acknowledge({ name, id, unitAction, target }: TransportHandledAction): void {
-    this.#transport.send('actionHandled', { name, id, unitAction, target });
-  }
-
-  #sendHalts(): void {
-    this.#heldHalts
-      .splice(0)
-      .forEach((halt) => this.#transport.send('unitHalted', halt));
-  }
-
+  // The player's turn, handed to the UI, or played by automation (see `Client/TurnHandover.ts`).
   takeTurn(): Promise<void> {
-    return new Promise<void>((resolve, reject): void => {
-      // The first turn after a load or a new game: the initial data is the player's whole state, so the hand-over
-      //  below has no need to queue and send it a second time.
-      const playerJustSent = !this.#sentInitialData;
-
-      if (playerJustSent) {
-        this.sendInitialData();
-      }
-
-      if (this.#automation.enabled) {
-        // Automation's own client does the talking.
-        this.#talks.metOnTheWay.clear();
-        this.#heldHalts.splice(0);
-
-        this.#automation.client
-          .takeTurn()
-          .then(() => {
-            this.#patches.update(turnInstance.id(), () =>
-              turnInstance.toPlainObject()
-            );
-            this.#patches.update(yearInstance.id(), () =>
-              yearInstance.toPlainObject()
-            );
-            this.#patches.wholePlayer(
-              filterToReference(PlayerWorld, PlayerTile, Tile)
-            );
-
-            this.sendPatchData();
-            resolve();
-          })
-          .catch(reject);
-
-        return;
-      }
-
-      setTimeout(() => {
-        this.#patches.update(turnInstance.id(), () =>
-          turnInstance.toPlainObject()
-        );
-        this.#patches.update(yearInstance.id(), () =>
-          yearInstance.toPlainObject()
-        );
-
-        // On later turns this is how the UI gets the new turn's actions.
-        if (!playerJustSent) {
-          this.#patches.wholePlayer(
-            filterToReference(PlayerWorld, PlayerTile, Tile),
-            'add'
-          );
-        }
-
-        this.sendPatchData();
-
-        // The listener below is already attached, so the UI can act from here.
-        this.#handOver();
-      }, 1);
-
-      const listener = async (...args: any[]): Promise<void> => {
-        try {
-          const playerState = this.#patches.playerState();
-
-          // Every flush is held while the action is handled (#321).
-          const turnEnded = await this.#patches.hold(() =>
-            this.handleAction(...args)
-          );
-
-          if (turnEnded) {
-            this.#eventEmitter.off('action', listener);
-
-            this.#handedOver = false;
-
-            this.sendPatchData();
-
-            this.#acknowledge(args[0]);
-
-            this.#transport.send('turnEnded', null);
-
-            setTimeout(() => resolve(), 10);
-
-            return;
-          }
-
-          // Not the whole player, which in a large game is hundreds of KB and most of the time an action takes: what
-          //  the action changed has been sent by now, by the action and the events it raised, and the player's actions
-          //  are sent if they changed (#411). And its research and treasury if the action changed them on the way.
-          this.#patches.playerStateChanged(playerState);
-          this.#patches.actions();
-
-          this.sendPatchData();
-
-          this.#acknowledge(args[0]);
-
-          this.#sendHalts();
-        } catch (e) {
-          // Without this, a throwing action strands the listener on the
-          // long-lived emitter and every later action gets double-processed.
-          this.#eventEmitter.off('action', listener);
-
-          reject(e);
-        }
-      };
-
-      this.#eventEmitter.on('action', listener);
-    });
+    return this.#turnHandover.takeTurn();
   }
 }
 

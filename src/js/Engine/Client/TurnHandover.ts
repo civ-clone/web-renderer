@@ -1,0 +1,279 @@
+// Handing the player's turn to the UI and back (#449), moved out of `DataTransferClient.takeTurn`: the initial data,
+//  the patch with the new turn, `turnStarted` and what was held for it, each `action` the UI sends acted on with its
+//  patch and `actionHandled`, and `turnEnded`. An automated turn is played by automation's computer player instead.
+//
+// What goes out, in order: on the first turn `gameData`; 1 ms later the hand-over's patch, `turnStarted`, the
+//  notifications held until then and the GoTos that halted (`unitHalted`). Per action, one patch, `actionHandled`, then
+//  the halts; for `EndTurn`, one patch, `actionHandled` and `turnEnded`, and the turn is over 10 ms later.
+
+import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
+import Engine from '@civ-clone/core-engine/Engine';
+import { GameDifficultyRegistry } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
+import Player from '@civ-clone/core-player/Player';
+import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
+import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
+import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import Tile from '@civ-clone/core-world/Tile';
+import TransferObject from '../TransferObject';
+import Transport, { TransportHandledAction } from '../Transport';
+import { Turn } from '@civ-clone/core-turn-based-game/Turn';
+import Unit from '@civ-clone/core-unit/Unit';
+import { Year } from '@civ-clone/core-game-year/Year';
+import ActionsState from './ActionsState';
+import Automation from './Automation';
+import { DataFilter } from './visibilityFilter';
+import Notifier from './Notifier';
+import PlayerPatches from './PlayerPatches';
+import Talks from './Talks';
+import { filterToReference } from './refs';
+
+export type TurnHandoverContext = {
+  player(): Player;
+  transport: Transport<TransportDataMap>;
+  dataFilter: DataFilter;
+  actions: ActionsState;
+  patches: PlayerPatches;
+  notifier: Notifier;
+  talks: Talks;
+  // Read live, as it is turned on and off mid-game.
+  automation: Automation;
+  // Acts on what the UI sends on `action` and says whether the turn is over: the client's own `handleAction`.
+  handleAction(...args: any[]): Promise<boolean>;
+  difficulties: Pick<GameDifficultyRegistry, 'entries'>;
+  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
+  turn: Turn;
+  year: Year;
+};
+
+export class TurnHandover {
+  #context: TurnHandoverContext;
+  // Each `action` the UI sends, relayed to the listener of the turn under way.
+  #eventEmitter: EventEmitter = new EventEmitter();
+  // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
+  //  our own notifications are held (see `holdsNotifications`).
+  #handedOver: boolean = false;
+  // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
+  //  `turnStarted` for one carried on at the start of the turn.
+  #heldHalts: { target: string; unit: string }[] = [];
+  #sentInitialData: boolean = false;
+
+  constructor(context: TurnHandoverContext) {
+    this.#context = context;
+
+    context.transport.receive('action', (...args): void =>
+      this.#eventEmitter.emit('action', ...args)
+    );
+  }
+
+  get handedOver(): boolean {
+    return this.#handedOver;
+  }
+
+  // Whether a notification given now waits for the hand-over: on our own turn, by hand, until it is handed over. Read
+  //  as each one is given, as is automation.
+  holdsNotifications(): boolean {
+    if (this.#handedOver || this.#context.automation.enabled) {
+      return false;
+    }
+
+    return this.#context.automation.ourTurn();
+  }
+
+  sendInitialData(): void {
+    // Through the visibility filter, as every patch is. Sent as it was, `toPlainObject` was called on it with no filter, so
+    //  every other player went out in full, and with them their `world`: every tile each civilization knows. Reached from
+    //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
+    this.#context.transport.send(
+      'gameData',
+      new TransferObject(
+        this.#context.player(),
+        this.#context.turn,
+        this.#context.year,
+        this.#context.difficulties.entries()[0] ?? null
+      ).toPlainObject(
+        this.#context.dataFilter(undefined, { tilesInFull: true })
+      )
+    );
+
+    this.#sentInitialData = true;
+  }
+
+  // A GoTo that stopped next to a choice (#357): the unit goes with its actions, for the UI to choose from, and the UI
+  //  is told once the patch with it has gone.
+  unitHalted(unit: Unit, target: Tile): void {
+    if (
+      unit.player() !== this.#context.player() ||
+      this.#context.automation.enabled
+    ) {
+      return;
+    }
+
+    const playerTile = this.#context.playerWorlds
+      .getByPlayer(this.#context.player())
+      .getByTile(target);
+
+    if (!playerTile) {
+      return;
+    }
+
+    // Its actions go out with it, for the UI to choose from.
+    this.#setUnitWithActions(unit);
+    this.#context.patches.unit(unit);
+
+    this.#heldHalts.push({ target: playerTile.id(), unit: unit.id() });
+  }
+
+  // The UI has actions for one unit (#323). When that changes, the unit that had them goes again without them.
+  #setUnitWithActions(unit: Unit | null): void {
+    this.#context.actions.setUnitWithActions(unit, (previous) =>
+      this.#context.patches.unit(previous)
+    );
+  }
+
+  #handOver(): void {
+    this.#handedOver = true;
+
+    this.#context.transport.send('turnStarted', null);
+
+    this.#context.notifier.release();
+
+    this.#sendHalts();
+
+    this.#context.talks.handOver();
+  }
+
+  // Says an action has been handled, once the patch with its result has gone (#326). An action's patch can't be told
+  //  from any other by what is in it (a `unitActions` answer can arrive first, with the unit where it was), so the UI
+  //  waits for this to know a move it has drawn ahead was refused.
+  #acknowledge({ name, id, unitAction, target }: TransportHandledAction): void {
+    this.#context.transport.send('actionHandled', {
+      name,
+      id,
+      unitAction,
+      target,
+    });
+  }
+
+  #sendHalts(): void {
+    this.#heldHalts
+      .splice(0)
+      .forEach((halt) => this.#context.transport.send('unitHalted', halt));
+  }
+
+  takeTurn(): Promise<void> {
+    const { automation, patches, turn, year } = this.#context;
+
+    return new Promise<void>((resolve, reject): void => {
+      // The first turn after a load or a new game: the initial data is the player's whole state, so the hand-over
+      //  below has no need to queue and send it a second time.
+      const playerJustSent = !this.#sentInitialData;
+
+      if (playerJustSent) {
+        this.sendInitialData();
+      }
+
+      if (automation.enabled) {
+        // Automation's own client does the talking.
+        this.#context.talks.metOnTheWay.clear();
+        this.#heldHalts.splice(0);
+
+        automation.client
+          .takeTurn()
+          .then(() => {
+            patches.update(turn.id(), () => turn.toPlainObject());
+            patches.update(year.id(), () => year.toPlainObject());
+            patches.wholePlayer(
+              filterToReference(PlayerWorld, PlayerTile, Tile)
+            );
+
+            patches.flush();
+            resolve();
+          })
+          .catch(reject);
+
+        return;
+      }
+
+      setTimeout(() => {
+        patches.update(turn.id(), () => turn.toPlainObject());
+        patches.update(year.id(), () => year.toPlainObject());
+
+        // On later turns this is how the UI gets the new turn's actions.
+        if (!playerJustSent) {
+          patches.wholePlayer(
+            filterToReference(PlayerWorld, PlayerTile, Tile),
+            'add'
+          );
+        }
+
+        patches.flush();
+
+        // The listener below is already attached, so the UI can act from here.
+        this.#handOver();
+      }, 1);
+
+      const listener = async (...args: any[]): Promise<void> => {
+        try {
+          const playerState = patches.playerState();
+
+          // Every flush is held while the action is handled (#321). `hold` is `async`, so what follows runs a microtask
+          //  after the hold is let go, one later than when the listener let go of it itself (before #518): a patch then
+          //  `actionHandled` on the 4th microtask after a unit's action, not the 3rd, and the 2nd after `EndTurn`, not
+          //  the 1st. Nothing runs in that gap. Kept as it is, `tests/engine/clientTurnHandover.ts` counts them (#503).
+          const turnEnded = await patches.hold(() =>
+            this.#context.handleAction(...args)
+          );
+
+          if (turnEnded) {
+            this.#eventEmitter.off('action', listener);
+
+            this.#handedOver = false;
+
+            patches.flush();
+
+            this.#acknowledge(args[0]);
+
+            this.#context.transport.send('turnEnded', null);
+
+            setTimeout(() => resolve(), 10);
+
+            return;
+          }
+
+          // Not the whole player, which in a large game is hundreds of KB and most of the time an action takes: what
+          //  the action changed has been sent by now, by the action and the events it raised, and the player's actions
+          //  are sent if they changed (#411). And its research and treasury if the action changed them on the way.
+          patches.playerStateChanged(playerState);
+          patches.actions();
+
+          patches.flush();
+
+          this.#acknowledge(args[0]);
+
+          this.#sendHalts();
+        } catch (e) {
+          // Without this, a throwing action strands the listener on the
+          // long-lived emitter and every later action gets double-processed.
+          this.#eventEmitter.off('action', listener);
+
+          reject(e);
+        }
+      };
+
+      this.#eventEmitter.on('action', listener);
+    });
+  }
+}
+
+// A GoTo that stopped next to a choice (#357). Registered where the client registered it: after the talks' `unit:moved`
+//  listener and before the patches'.
+export const registerTurnHandoverEvents = (
+  engine: Engine,
+  turnHandover: TurnHandover
+): void => {
+  engine.on('unit:halted', (unit: Unit, target: Tile) =>
+    turnHandover.unitHalted(unit, target)
+  );
+};
+
+export default TurnHandover;
