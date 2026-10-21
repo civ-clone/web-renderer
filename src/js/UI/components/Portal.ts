@@ -8,6 +8,7 @@ import {
   rectArea,
 } from '../lib/viewport';
 import Map from './Map';
+import { Projection, SquareProjection } from '../lib/projection';
 import Transport from '../Transport';
 import World from './World';
 import { s } from '@dom111/element';
@@ -83,6 +84,9 @@ export class Portal
   // canvas.
   #offset: Coordinate = { x: 0, y: 0 };
   #playerId: string | null = null;
+  // Where tiles go on the world in pixels, at this portal's scale; made again
+  // whenever the scale or the vertical wrap changes.
+  #projection: Projection;
   #scale: number;
   #tileSize: number;
   #transport: Transport;
@@ -113,6 +117,7 @@ export class Portal
     this.#tileSize = settings.tileSize;
     this.#scale = settings.scale;
     this.#transport = transport;
+    this.#projection = this.#createProjection();
 
     layers.forEach((MapType) => {
       const layer = new MapType(this.#world, this.scale(), this.#tileSize);
@@ -171,18 +176,20 @@ export class Portal
    * wants: one on the very edge is technically visible but hard to see.
    */
   isVisible(x: number, y: number, margin: number = 0): boolean {
+    const { width, height } = this.#projection.footprint();
+
     return (
       isWithinView(
         x,
         this.#center.x,
-        Math.floor(this.#canvas.width / this.tileSize()),
+        Math.floor(this.#canvas.width / width),
         this.#world.width(),
         margin
       ) &&
       (isWithinView(
         y,
         this.#center.y,
-        Math.floor(this.#canvas.height / this.tileSize()),
+        Math.floor(this.#canvas.height / height),
         this.#world.height(),
         margin
       ) ||
@@ -251,19 +258,28 @@ export class Portal
    * bottom of the world.
    */
   protected clampedCenterY(y: number, offset: number): [number, number] {
-    const tileSize = this.tileSize(),
-      half = Math.trunc(tileSize / 2),
+    const projection = this.#projection,
+      tileHeight = projection.footprint().height,
+      half = Math.trunc(tileHeight / 2),
       canvasHalf = Math.trunc(this.#canvas.height / 2),
-      middle = y * tileSize + half + offset,
+      middle = projection.tileToPixel(0, y)[1] + half + offset,
       clamped =
         clampOrigin(
           middle - canvasHalf,
           this.#canvas.height,
-          this.#world.height() * tileSize
+          projection.worldSize().height
         ) + canvasHalf,
-      row = Math.round((clamped - half) / tileSize);
+      row = Math.round((clamped - half) / tileHeight);
 
-    return [row, clamped - half - row * tileSize];
+    return [row, clamped - half - projection.tileToPixel(0, row)[1]];
+  }
+
+  #createProjection(): Projection {
+    return new SquareProjection(
+      this.tileSize(),
+      this.#world,
+      !this.#lockVerticalEdges
+    );
   }
 
   /**
@@ -312,7 +328,11 @@ export class Portal
       );
     }
 
-    const tileSize = this.tileSize(),
+    const { width, height } = this.#projection.footprint(),
+      [centerX, centerY] = this.#projection.tileToPixel(
+        this.#center.x,
+        this.#center.y
+      ),
       // Where the world pixel at the canvas's top left corner is. The half-tile
       // step is what centres the middle tile rather than its corner; it was
       // `tileSize / scale`, which is half a tile only at a scale of 2.
@@ -320,14 +340,14 @@ export class Portal
       // slow drag still adds up, while the layers only ever scroll by whole
       // pixels and never smear.
       originX =
-        this.#center.x * tileSize +
+        centerX +
         Math.round(this.#offset.x) +
-        Math.trunc(tileSize / 2) -
+        Math.trunc(width / 2) -
         Math.trunc(this.#canvas.width / 2),
       originY =
-        this.#center.y * tileSize +
+        centerY +
         Math.round(this.#offset.y) +
-        Math.trunc(tileSize / 2) -
+        Math.trunc(height / 2) -
         Math.trunc(this.#canvas.height / 2);
 
     if (
@@ -368,14 +388,15 @@ export class Portal
    * whichever tile ends up under the middle of the canvas.
    */
   scrollBy(deltaX: number, deltaY: number): void {
-    const tileSize = this.tileSize(),
+    const { width: tileWidth, height: tileHeight } =
+        this.#projection.footprint(),
       offsetX = this.#offset.x + deltaX,
       offsetY = this.#offset.y + deltaY,
-      stepX = Math.round(offsetX / tileSize),
-      stepY = Math.round(offsetY / tileSize);
+      stepX = Math.round(offsetX / tileWidth),
+      stepY = Math.round(offsetY / tileHeight);
 
-    this.#offset.x = offsetX - stepX * tileSize;
-    this.#offset.y = offsetY - stepY * tileSize;
+    this.#offset.x = offsetX - stepX * tileWidth;
+    this.#offset.y = offsetY - stepY * tileHeight;
 
     if (stepX === 0 && stepY === 0) {
       this.render();
@@ -405,6 +426,7 @@ export class Portal
     }
 
     this.#lockVerticalEdges = lock;
+    this.#projection = this.#createProjection();
 
     // The layers have the far pole drawn beyond each edge, or not, so all of
     // them have to be redrawn either way.
@@ -426,6 +448,7 @@ export class Portal
     }
 
     this.#scale = scale;
+    this.#projection = this.#createProjection();
     this.#offset.x = 0;
     this.#offset.y = 0;
 
@@ -458,14 +481,21 @@ export class Portal
   tileAt(x: number, y: number): Tile | null {
     this.syncViewport();
 
-    const tileSize = this.tileSize(),
-      row = Math.floor((this.#viewport.y + y) / tileSize);
+    const [column, row] = this.#projection.pixelToTile(
+      this.#viewport.x + x,
+      this.#viewport.y + y
+    );
 
     if (this.#lockVerticalEdges && (row < 0 || row >= this.#world.height())) {
       return null;
     }
 
-    return this.#world.get(Math.floor((this.#viewport.x + x) / tileSize), row);
+    return this.#world.get(column, row);
+  }
+
+  /** Where tiles go on the world in pixels, at this portal's scale. */
+  projection(): Projection {
+    return this.#projection;
   }
 
   tileSize(): number {
@@ -486,12 +516,9 @@ export class Portal
   }
 
   visibleRange(): [Coordinate, Coordinate] {
-    const tileRangeX = Math.floor(
-        Math.floor(this.#canvas.width / this.tileSize()) / 2
-      ),
-      tileRangeY = Math.floor(
-        Math.floor(this.#canvas.height / this.tileSize()) / 2
-      );
+    const { width, height } = this.#projection.footprint(),
+      tileRangeX = Math.floor(Math.floor(this.#canvas.width / width) / 2),
+      tileRangeY = Math.floor(Math.floor(this.#canvas.height / height) / 2);
 
     return [
       {
@@ -510,12 +537,9 @@ export class Portal
   }
 
   rawVisibleRange(): [Coordinate, Coordinate] {
-    const tileRangeX = Math.floor(
-        Math.floor(this.#canvas.width / this.tileSize()) / 2
-      ),
-      tileRangeY = Math.floor(
-        Math.floor(this.#canvas.height / this.tileSize()) / 2
-      );
+    const { width, height } = this.#projection.footprint(),
+      tileRangeX = Math.floor(Math.floor(this.#canvas.width / width) / 2),
+      tileRangeY = Math.floor(Math.floor(this.#canvas.height / height) / 2);
 
     return [
       {
