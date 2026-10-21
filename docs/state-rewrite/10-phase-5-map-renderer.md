@@ -367,6 +367,8 @@ against a build from before the phase.
   game. Rendering bugs are much easier to see with a fixed world than with a live
   one.
 - The `scale` and `tileSize` values are hardcoded in `Renderer.ts` with TODOs
-  saying they should be user-controllable and theme-supplied. This phase is the
+  saying they should be user-controllable and theme-supplied. (They are now in
+  `game/MapView.ts`, #344: `scale` reads the `mapScale` option, and `tileSize`
+  still carries its TODO.) This phase is the
   natural place to thread them through as parameters, but **do not add the
   options UI here** — thread the values, leave the UI for later.

@@ -1,0 +1,1 @@
+{"version":"0.1.0@a147d9c","date":"2026-10-21T13:52:28.000Z","localChanges":["chore: give DataTransferClient's modules one shared ClientContext, made once in its constructor, instead of a context of their own each (#449)"],"externalChanges":{}}

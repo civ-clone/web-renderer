@@ -7,7 +7,7 @@
 3. Worker starts engine and creates clients.
 4. Human client (`DataTransferClient`) sends the initial `gameData` snapshot the first time `takeTurn()` runs.
 5. Frontend keeps the raw object map and builds the game data from it with `IncrementalReconstituter`.
-6. As game changes occur, backend queues patches in `DataQueue` and flushes them as `gameDataPatch`.
+6. As game changes occur, backend queues patches in `DataQueue` (owned by `Client/PlayerPatches.ts`) and flushes them as `gameDataPatch`.
 7. Frontend mutates the local object map from patches, rebuilds only the ids they touched, and re-renders affected views.
 8. At the start of the player's turn the worker sends the turn's patch, then `turnStarted`, then any notifications it held back.
 9. Player input sends `action` messages; backend applies each action and sends one patch for it.
@@ -42,7 +42,7 @@ Both extend `AbstractTransport`, whose `request()` sends on a channel and resolv
 
 ### Initial snapshot (`gameData`)
 
-- Sent from `DataTransferClient.sendInitialData()`.
+- Sent by the turn hand-over, `TurnHandover.sendInitialData()` in `src/js/Engine/Client/TurnHandover.ts`, the first time `takeTurn()` runs. Tests call it as `DataTransferClient.initialData()`.
 - A `TransferObject` rooted at the player, turn and year, serialised through the visibility filter, so other players arrive as `UnknownPlayer` and only the tiles the player knows are sent (#328).
 - Frontend treats this as full state bootstrap. A later `gameData` replaces the object map and rebuilds everything.
 
@@ -78,13 +78,13 @@ Frontend patch handling in `game/GameState.ts`, through `lib/applyDataPatches.ts
   - Record every id touched in `changedIds`, and queue any `PlayerTile` in the patch to be redrawn.
 - `remove`
   - Remove nested path or root object.
-- Then `updateState` hands `changedIds` to `IncrementalReconstituter.rebuild()`, which refills only those ids' objects in place (#322, #327). Anything holding one of those objects sees the new contents without being rebuilt itself.
+- Then `GameState` hands `changedIds` to `IncrementalReconstituter.rebuild()`, which refills only those ids' objects in place (#322, #327). Anything holding one of those objects sees the new contents without being rebuilt itself.
 
-During the player's turn `updateState` runs synchronously on every patch, so input handlers always read the post-move state. While waiting for the other civilizations it runs at most once per animation frame (#61). Rendering (`render()`) always runs at most once per frame.
+During the player's turn `GameState` rebuilds synchronously on every patch, so input handlers always read the post-move state. While waiting for the other civilizations it rebuilds at most once per animation frame (#61). Rendering (`render()`) always runs at most once per frame.
 
 ## How open windows learn of changes
 
-- After each rebuild, `updateState` `collect`s into `lib/DataChanges.ts` the ids the patches changed (removed ones included) and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
+- After each rebuild, `GameState` `collect`s into `lib/DataChanges.ts` the ids the patches changed (removed ones included) and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
 - At the start of each render, `notify` runs, once, each watcher whose ids (read then, so they can follow what the window shows) were among those collected since the last render, or every watcher after a rebuild of everything.
 - A window `watch`es the ids it shows and unwatches when it closes: the city screen through `components/lib/watchCity.ts`, the four reports through `components/lib/watchPlayer.ts`, and the unit stack window directly. There are no `document` events for this any more.
 
@@ -119,6 +119,6 @@ The worker also sends `embassyEstablished` (opens the intelligence report) and `
 
 - `game/GameState.ts` still has a TODO about reconstituting in a worker thread. Rebuilds are now incremental, but `gameData` is reconstituted twice: once by `WorkerTransport` (used for the welcome window) and once by `IncrementalReconstituter`.
 - Patch application relies on manual string-path mutation logic.
-- The backend never emits `remove` patches (there is no `DataQueue.remove` call), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The ids it removes are passed to `IncrementalReconstituter.forget()`.
+- The backend never emits `remove` patches (`DataQueue` has no `remove` since #539), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The ids it removes are passed to `IncrementalReconstituter.forget()`.
 
 See [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md) for a detailed analysis of these paths.

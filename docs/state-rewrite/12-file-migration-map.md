@@ -32,16 +32,16 @@ Legend:
 | `ParentTransport.ts` | 75 | Keep | — | |
 | `WorkerTransport.ts` | 96 | Change | 2 | Stop reconstituting on receive |
 | `IpcTransport.ts` | 29 | **Delete** | 0 | The entire file is commented out |
-| `DataTransferClient.ts` | 1406 | Change | 4, 6 | `DeltaBuilder` + `del` (4); `dispose()` (6) |
+| `DataTransferClient.ts` | 1406 | Change | 4, 6 | `DeltaBuilder` + `del` (4); `dispose()` (6). Not done as planned: split into a composition root over `Client/*` instead, with `dispose()` (#449, `13-data-transfer-client-split.md`) |
 | `DataQueue.ts` | 79 | **Delete** | 4 | Replaced by `DeltaBuilder` |
 | `Game.ts` | 170 | Change | 0, 6 | `seed` option (0); `restart`/`quit` (6) |
 | `TransferObject.ts` | 34 | Keep | — | Still the root entity |
 | `Notification.ts` | 25 | Keep | — | |
 | `Request.ts` | 31 | Keep | — | Used by `NewGameWindow`, `EarthWindow` |
 | `Requests/Options.ts` | 12 | Keep | — | |
-| `Retryable.ts` | 46 | Keep | — | Used by the reveal-map cheat |
+| `Retryable.ts` | 46 | Keep | — | Deleted (#539, #478): its one use could not run |
 | `Error/Timeout.ts` | 3 | Keep | — | |
-| `Error/RetryFailed.ts` | 11 | Keep | — | |
+| `Error/RetryFailed.ts` | 11 | Keep | — | Deleted with `Retryable.ts` (#539, #478) |
 | `UnknownObjects/City.ts` | 65 | Keep | — | Fog-of-war boundary |
 | `UnknownObjects/Player.ts` | 29 | Keep | — | |
 | `UnknownObjects/Unit.ts` | 38 | Keep | — | |
@@ -55,8 +55,8 @@ Legend:
 
 | File | Lines | Action | Phase | Notes |
 | ---- | ----: | ------ | ----- | ----- |
-| `Renderer.ts` | 1558 | **Delete** | 3 | Split into `bootstrap` + controllers |
-| `DataObserver.ts` | 64 | **Delete** | 3 | Replaced by `watch` |
+| `Renderer.ts` | 1558 | **Delete** | 3 | Split into `bootstrap` + controllers. Done: split, and renamed to `bootstrap.ts` (#344, `08-phase-3-subscriptions.md`) |
+| `DataObserver.ts` | 64 | **Delete** | 3 | Replaced by `watch`. Done (#520) |
 | `Transport.ts` | 36 | Change | 4 | Type mapping follows the protocol |
 | `types.d.ts` | 336 | Change | 2, 4 | Entity shapes stay; `DataPatch*` goes in 4 |
 | `Store.ts` | 55 | Keep | — | **IndexedDB wrapper. Not the entity store.** |
@@ -91,6 +91,8 @@ Legend:
 
 Contents are moved out of `Renderer.ts`; see
 [`08-phase-3-subscriptions.md`](./08-phase-3-subscriptions.md) for the order.
+As built, there is no `controllers/` folder and no `AppContext`: one game lives in
+`game/`, and the module list is in that document's "As built" section (#344).
 
 | File | From |
 | ---- | ---- |

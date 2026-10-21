@@ -30,7 +30,8 @@ Loading a saved game takes a different path. The player picks a file, `src/js/UI
   - Worker-side bootstrap and option handling (`setOption`, `getOptions`, `setOptions`).
   - Save (`save` → `saveGame`) and load (`load`) via `@civ-clone/core-save-game`.
   - Creates players and chooses the client implementation (`DataTransferClient` for player 0 in a new game, `SimpleAIClient` for others). A loaded game makes a `DataTransferClient` for whichever player the save records as human.
-- `src/js/Engine/DataTransferClient.ts`
+- `src/js/Engine/DataTransferClient.ts`, over `src/js/Engine/Client/*`
+  - The composition root of the human player's client (#449): it builds one shared context and registers the modules in `src/js/Engine/Client/` (visibility filter and serialisers, patches and flushes, notifications, patch-producing engine listeners, talks, actions, the turn hand-over, cheats, requests, the game's end, automation), and can `dispose()` them. `docs/backend-worker.md` lists each module.
   - Adapts the core game model into UI-transferable objects, through a visibility filter.
   - Handles player actions, cheats and UI requests from the frontend.
   - Emits `gameData` (initial snapshot) and `gameDataPatch` (incremental updates), and `turnStarted`/`turnEnded` around the player's turn.
@@ -68,7 +69,7 @@ Core channels are defined in `src/js/Engine/Transport.ts`:
 
 Requests go through `Transport.request()` (`AbstractTransport`), which matches a reply to its request by channel and so sends one request per channel at a time.
 
-`restart` is declared in `TransportDataMap`, but is one-directional: the backend sends it on local-player defeat with no frontend receiver (#176).
+The game's end uses `gameOver`, `retire` and `gameContinue` (#176); there is no `restart` or `quit` channel any more (#340).
 
 ## Rewrite implications
 
