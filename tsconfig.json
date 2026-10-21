@@ -64,6 +64,7 @@
     "src/js/UI/lib/scaleImage.ts",
     "src/js/UI/lib/singleChoice.ts",
     "src/js/UI/lib/specialists.ts",
+    "src/js/UI/lib/topologyFor.ts",
     "src/js/UI/lib/unitActionIcon.ts",
     "src/js/UI/lib/unitActionKeys.ts",
     "src/js/UI/lib/unitActionPrompts.ts",
