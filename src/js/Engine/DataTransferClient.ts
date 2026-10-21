@@ -26,13 +26,8 @@ import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
-import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
-import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
-import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
-import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
-import mayNegotiate from '@civ-clone/library-diplomacy/lib/mayNegotiate';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
@@ -40,16 +35,13 @@ import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
 import {
   ChooseGovernment,
   Revolution,
 } from '@civ-clone/civ1-government/PlayerActions';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import { choosers } from '@civ-clone/simple-ai-client/lib/Diplomacy/negotiate';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
-import Timeout from './Error/Timeout';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
 import Transport, {
   TransportDisposer,
@@ -96,7 +88,7 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
-import { awaitTimeout, filterToReference, standalone } from './Client/refs';
+import { filterToReference, standalone } from './Client/refs';
 import {
   DataFilter,
   makeDataFilter,
@@ -121,6 +113,7 @@ import registerGameEnd, {
 } from './Client/gameEnd';
 import registerNotifications from './Client/notifications/registerNotifications';
 import registerPatchEvents from './Client/events/patchEvents';
+import Talks, { registerTalkEvents } from './Client/Talks';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -150,18 +143,14 @@ export class DataTransferClient extends Client implements IClient {
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
-  // The other players our units have moved next to since talks were last offered (#357): by hand, on a GoTo, or on a
-  //  GoTo carried on at the start of the turn.
-  #metOnTheWay: Set<Player> = new Set();
   #pendingChoiceDisposer: TransportDisposer | null = null;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   // What the request receivers read, kept for the methods tests call (see `Client/requests.ts`).
   #requests: RequestsContext;
   #sender: (channel: string, payload: any) => void;
   #sentInitialData: boolean = false;
-  // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
-  //  talks with units met on the way (`talkToPlayersMet`).
-  #talks: Promise<void> = Promise.resolve();
+  // Talks with other players: those met on the way and a Diplomat's Meet with King (see `Client/Talks.ts`).
+  #talks: Talks;
   #transport: Transport<TransportDataMap>;
 
   constructor(
@@ -239,22 +228,23 @@ export class DataTransferClient extends Client implements IClient {
       console.error(error);
     });
 
-    engineInstance.on('unit:moved', (unit: Unit) => {
-      // Automation's own client does the talking for the moves it makes, as it does for halts.
-      if (unit.player() !== this.player() || this.#automationEnabled) {
-        return;
-      }
+    this.#talks = new Talks({
+      player: () => this.player(),
+      clients: clientRegistryInstance,
+      interactions: interactionRegistryInstance,
+      rules: ruleRegistryInstance,
+      turn: turnInstance,
+      units: unitRegistryInstance,
+    });
 
-      unit
-        .tile()
-        .getNeighbours()
-        .forEach((tile) =>
-          unitRegistryInstance.getByTile(tile).forEach((tileUnit) => {
-            if (tileUnit.player() !== this.player()) {
-              this.#metOnTheWay.add(tileUnit.player());
-            }
-          })
-        );
+    const client = this;
+
+    // The players met by our units' moves, and a Diplomat's Meet with King (see `Client/Talks.ts`). Its `unit:moved`
+    //  listener is before the patches' below, which flushes.
+    registerTalkEvents(engineInstance, this.#talks, {
+      get enabled(): boolean {
+        return client.#automationEnabled;
+      },
     });
 
     engineInstance.on('unit:halted', (unit: Unit, target: Tile) => {
@@ -356,19 +346,6 @@ export class DataTransferClient extends Client implements IClient {
         }) as never
       );
     });
-
-    engineInstance.on(
-      'player:meet-with-king',
-      (player: Player, other: Player) => {
-        if (player !== this.player()) {
-          return;
-        }
-
-        this.#talks = this.#talks
-          .then(() => this.handleNegotiation(other))
-          .then(() => {});
-      }
-    );
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
@@ -571,9 +548,9 @@ export class DataTransferClient extends Client implements IClient {
 
       actionToPerform.perform();
 
-      await this.#talks;
+      await this.#talks.pending;
 
-      await this.talkToPlayersMet();
+      await this.#talks.talkToPlayersMet();
 
       // What the action changed (#411): the unit, the cities that support it before and after, and what of ours is on
       //  the square it acted from, the square it acted on, and the square it is on now. A Caravan that helped build a
@@ -923,8 +900,7 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#sendHalts();
 
-    // Anyone met by a GoTo carried on at the start of the turn.
-    this.#talks = this.#talks.then(() => this.talkToPlayersMet());
+    this.#talks.handOver();
   }
 
   // Says an action has been handled, once the patch with its result has gone (#326). An action's patch can't be told
@@ -952,7 +928,7 @@ export class DataTransferClient extends Client implements IClient {
 
       if (this.#automationEnabled) {
         // Automation's own client does the talking.
-        this.#metOnTheWay.clear();
+        this.#talks.metOnTheWay.clear();
         this.#heldHalts.splice(0);
 
         this.#automationClient
@@ -1045,110 +1021,6 @@ export class DataTransferClient extends Client implements IClient {
 
       this.#eventEmitter.on('action', listener);
     });
-  }
-
-  // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
-  // Offers talks with each player a unit of ours has moved next to since the last time (`#metOnTheWay`), if they may
-  //  talk now (`MayNegotiate`).
-  private async talkToPlayersMet(): Promise<void> {
-    // TODO: This could be a `Rule`.
-    const surroundingPlayers = Array.from(this.#metOnTheWay);
-
-    this.#metOnTheWay.clear();
-
-    if (surroundingPlayers.length === 0) {
-      return;
-    }
-
-    await surroundingPlayers
-      // How often players talk is the ruleset's to say (`MayNegotiate`).
-      .filter((player) =>
-        mayNegotiate(
-          player,
-          this.player(),
-          ruleRegistryInstance,
-          interactionRegistryInstance,
-          turnInstance
-        )
-      )
-      .reduce(
-        (promise, player): Promise<any> =>
-          promise.then(() => this.handleNegotiation(player)),
-        Promise.resolve()
-      );
-  }
-
-  private async handleNegotiation(player: Player): Promise<Negotiation> {
-    const negotiation = new Negotiation(
-      player,
-      this.player(),
-      ruleRegistryInstance
-    );
-
-    negotiation.proceed(
-      new Initiate(player, negotiation, ruleRegistryInstance) as IAction
-    );
-
-    while (!negotiation.terminated()) {
-      // The steps on offer, worked out once for the first player asked: each call makes new actions.
-      let offered: IAction[] | null = negotiation.nextSteps();
-
-      // The player whose steps they are chooses: after the hand-over in a meeting at peace, your OK is for the computer
-      //  player, but the next move is yours (#450).
-      const players = choosers(negotiation, offered);
-
-      await players.reduce(
-        (promise: Promise<void>, player: Player) =>
-          promise
-            .then(async () => {
-              const client = clientRegistryInstance.getByPlayer(player),
-                nextSteps = offered ?? negotiation.nextSteps(),
-                resultPromise = Promise.race([
-                  client.chooseFromList(
-                    new ChoiceMeta(
-                      nextSteps,
-                      'negotiation.next-step',
-                      negotiation
-                    )
-                  ),
-                  client instanceof AIClient
-                    ? awaitTimeout(
-                        500,
-                        new Timeout(
-                          `Timeout waiting for ${client.player().id()} (${
-                            client.player().civilization().sourceClass().name
-                          }) - sent ${nextSteps.length} options`
-                        )
-                      )
-                    : new Promise<void>(() => {}),
-                ]);
-
-              offered = null;
-
-              const interaction = await resultPromise;
-
-              if (!interaction) {
-                return;
-              }
-
-              negotiation.proceed(interaction);
-
-              if (interaction instanceof Resolution) {
-                await interaction.proposal().resolve(interaction);
-              }
-            })
-            .catch((reason) => console.error(reason)),
-        Promise.resolve()
-      );
-
-      if (negotiation.terminated()) {
-        break;
-      }
-    }
-
-    interactionRegistryInstance.register(negotiation as IInteraction);
-
-    return negotiation;
   }
 }
 
