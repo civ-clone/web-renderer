@@ -268,8 +268,8 @@ export const registerPatchEvents = (
 
   // A nuclear detonation (#129). The engine announces it before anything changes, and patches are only built when
   //  they're sent, so every square in the 3×3 area and every city in it is queued here and read once the units are
-  //  gone and the cities halved.
-  on('unit:nuclear-detonation', (unit: Unit, tile: Tile) => {
+  //  gone and the cities halved. The other players are told of it in `Client/notifications/unit.ts`.
+  on('unit:nuclear-detonation', (_unit: Unit, tile: Tile) => {
     const area = [tile, ...tile.getNeighbours()],
       cities = area
         .map((areaTile) => cityRegistryInstance.getByTile(areaTile))
@@ -298,8 +298,6 @@ export const registerPatchEvents = (
         )
       );
     }
-
-    // The other players are told of it in `Client/notifications/unit.ts`.
   });
 
   // Both cities' trade changes (#411). The player is told of it in `Client/notifications/unit.ts`.
@@ -360,8 +358,8 @@ export const registerPatchEvents = (
     'city-improvement:obsolete',
     (
       player: Player,
-      advance: Advance,
-      ImprovementType: typeof CityImprovement,
+      _advance: Advance,
+      _ImprovementType: typeof CityImprovement,
       cityImprovements: CityImprovement[]
     ) => {
       if (player !== ctx.player()) {
@@ -378,6 +376,7 @@ export const registerPatchEvents = (
   on('goody-hut:action-performed', (goodyHut: GoodyHut) =>
     ctx.patches.tile(goodyHut.tile())
   );
+
   return () =>
     listeners.forEach(([event, listener]) => engine.off(event, listener));
 };
