@@ -75,9 +75,10 @@ export const registerDiplomatEvents = (
             _: 'Player',
             id: object.id(),
             civilization: object.civilization(),
-            // The city screen's map is laid out in the world's dimensions.
+            // The city screen's map is laid out in the world's dimensions, on its grid.
             world: {
               height: playerWorld.height(),
+              topologyId: playerWorld.topologyId(),
               width: playerWorld.width(),
             },
           };

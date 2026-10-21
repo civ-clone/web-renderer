@@ -171,6 +171,11 @@ const run = async (): Promise<void> => {
     true
   );
   push(
+    'World: keeps which grid it is on (#89)',
+    () => world.stateKeys().includes('_topologyId'),
+    true
+  );
+  push(
     'World: does not keep its generator',
     () => world.stateKeys().includes('_generator'),
     false
