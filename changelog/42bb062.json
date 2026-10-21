@@ -1,0 +1,1 @@
+{"version":"0.1.0@42bb062","date":"2026-10-21T11:51:08.000Z","localChanges":["chore: move DataTransferClient's notices into handler tables in src/js/Engine/Client/notifications/, and test every key they send (#449)"],"externalChanges":{}}

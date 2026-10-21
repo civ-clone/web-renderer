@@ -63,6 +63,8 @@ import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegis
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as unitImprovementRegistryInstance } from '@civ-clone/core-unit-improvement/UnitImprovementRegistry';
+import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
+import { victoryDependenciesFor } from '@civ-clone/base-strategy-victory/lib/VictoryDependencies';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 
@@ -80,7 +82,11 @@ type Variant = {
   // Filled in when the plugin list reaches the variant's `registerStrategies`, where the installed package's
   //  `index.ts` would have loaded it.
   strategies: {
-    createStrategies?: (dependencies: unknown) => unknown[];
+    createStrategies?: (
+      dependencies: unknown,
+      knowledge?: unknown,
+      victoryDependencies?: unknown
+    ) => unknown[];
     dependenciesFor?: (game: unknown) => unknown;
     // `core-game`'s `defaultGame`, captured there too rather than imported here, which would evaluate `core-game`
     //  ahead of the plugin list.
@@ -610,6 +616,19 @@ const results = () =>
           entry.rateTurns === 0 ? 0 : entry.luxuriesTotal / entry.rateTurns,
         rateChanges: entry.rateChanges,
         eliminated: eliminated ? 1 : 0,
+        // The space race (#376): parts on the player's latest ship, and its ships launched and landed.
+        spaceshipParts: attempt(() => {
+          const ships = spaceshipRegistryInstance.getBy('player', player),
+            latest = ships[ships.length - 1];
+
+          return latest ? latest.activeParts().length : 0;
+        }, 0),
+        spaceshipsLaunched: spaceshipRegistryInstance
+          .getBy('player', player)
+          .filter((spaceship) => spaceship.launched() !== false).length,
+        spaceshipsLanded: spaceshipRegistryInstance
+          .getBy('player', player)
+          .filter((spaceship) => spaceship.successful() === true).length,
         loopGuardTurns: entry.loopGuardTurns.size,
         loopGuardHits: entry.loopGuardHits,
         unitsSkipped: entry.unitsSkipped,
@@ -991,7 +1010,13 @@ const registryFor = (() => {
       const registry = new StrategyRegistry();
 
       registry.register(
-        ...(createStrategies!(dependenciesFor!(game)) as any[])
+        // The game's registries for playing to win (#376), so a variant's strategies read the spaceships of the game being
+        //  played. A variant from before them ignores the argument.
+        ...(createStrategies!(
+          dependenciesFor!(game),
+          undefined,
+          victoryDependenciesFor(game as any)
+        ) as any[])
       );
       registries.set(variant, registry);
     }

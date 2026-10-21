@@ -1,0 +1,1 @@
+{"version":"0.1.0@743c7e4","date":"2026-10-21T10:41:51.000Z","localChanges":["If one of your cities is captured or destroyed while its city screen is open, the screen now closes, instead of staying up with buttons that no longer do anything (closes #483)."],"externalChanges":{}}

@@ -1,0 +1,1 @@
+{"version":"0.1.0@a17b101","date":"2026-10-21T11:59:43.000Z","localChanges":["chore: move the panels around the map (both action panels, the unit action buttons, the game and player details) out of Renderer.ts into game/Hud.ts"],"externalChanges":{}}

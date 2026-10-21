@@ -1,0 +1,1 @@
+{"version":"0.1.0@3c31558","date":"2026-10-21T11:27:09.000Z","localChanges":["chore: move the map, its minimap, blink, resize and tile queues out of Renderer.ts into game/MapView.ts"],"externalChanges":{}}
