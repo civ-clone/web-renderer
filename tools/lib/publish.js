@@ -65,17 +65,29 @@ const binary = (dir, tool) => {
 
 // TypeScript's downlevel emit for `#private` fields uses WeakMaps and these
 // helpers. A compiled file still containing them was built before the
-// conversion, whatever its formatting says.
-const HELPERS = /__classPrivateFieldGet|__classPrivateFieldSet|new WeakMap\(\)/;
+// conversion, whatever its formatting says. A WeakMap the source makes itself,
+// as a cache, is not one of them.
+const HELPERS = /__classPrivateFieldGet|__classPrivateFieldSet/;
+const WEAK_MAP = /new WeakMap\(\)/;
 
 const compiledWithPrivateFieldHelpers = (dir) =>
   sourceFiles(dir)
-    .map((file) => file.replace(/\.ts$/, '.js'))
-    .filter(
-      (file) =>
-        fs.existsSync(file) && HELPERS.test(fs.readFileSync(file, 'utf8'))
-    )
-    .map((file) => path.relative(dir, file));
+    .filter((source) => {
+      const file = source.replace(/\.ts$/, '.js');
+
+      if (!fs.existsSync(file)) {
+        return false;
+      }
+
+      const compiled = fs.readFileSync(file, 'utf8');
+
+      return (
+        HELPERS.test(compiled) ||
+        (WEAK_MAP.test(compiled) &&
+          !/new WeakMap\b/.test(fs.readFileSync(source, 'utf8')))
+      );
+    })
+    .map((file) => path.relative(dir, file.replace(/\.ts$/, '.js')));
 
 // Suites that were failing before the work being published touched them, with
 // the reason. A package listed here still runs its tests and still reports the
