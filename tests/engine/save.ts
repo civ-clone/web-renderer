@@ -694,6 +694,56 @@ const report = (): void => {
     [fighter?.id()]
   );
 
+  // The world's grid is saved (#89). A save from before it was, made from this
+  // one by taking the field and the PlayerWorld key back out, loads as square,
+  // and its PlayerWorlds send the client the grid again.
+  push(
+    "a save records the world's grid",
+    () =>
+      (JSON.parse(json) as typeof first).entities
+        .filter(({ type }) => type === 'World')
+        .map(({ state }) => state._topologyId),
+    ['square']
+  );
+  push(
+    'a world saved before #89 loads as square, and tells the client so',
+    () => {
+      const old = JSON.parse(json) as typeof first;
+
+      old.entities.forEach((entity) => {
+        if (entity.type === 'World') {
+          delete entity.state._topologyId;
+        }
+
+        if (entity.type === 'PlayerWorld') {
+          entity.keys = entity.keys.filter((key) => key !== 'topologyId');
+        }
+      });
+
+      const oldTarget = loadTarget();
+
+      hydrate(old, oldTarget);
+
+      const playerWorld = oldTarget.playerWorlds.entries()[0],
+        world = (
+          playerWorld as unknown as {
+            _world: {
+              topologyId(): string;
+              topology(): { id(): string };
+            };
+          }
+        )._world;
+
+      return [
+        world.topologyId(),
+        world.topology().id(),
+        playerWorld.keys().includes('topologyId'),
+        playerWorld.topologyId(),
+      ];
+    },
+    ['square', 'square', true, 'square']
+  );
+
   // --- round-trip identity ------------------------------------------------
   // Save, load, save again: the two must be identical. This is the check that
   // catches a dropped field, because a field missing from `stateKeys()` is

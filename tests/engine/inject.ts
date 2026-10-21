@@ -161,9 +161,9 @@ const run = async (): Promise<void> => {
     true
   );
 
-  // `World._generator` is rebuilt from the world's own saved dimensions,
-  // because every geometry method is a pure function of height and width and a
-  // loaded world never calls `generate()`.
+  // `World._generator` is rebuilt as a plain `Generator` from the world's own
+  // saved dimensions and grid (its topology id), because a loaded world never
+  // calls `generate()` and the generator's geometry depends only on those.
   const rebuiltWorld = injected(world);
 
   push(
@@ -175,6 +175,41 @@ const run = async (): Promise<void> => {
     'World kept its dimensions',
     () => [rebuiltWorld.width(), rebuiltWorld.height()],
     [world.width(), world.height()]
+  );
+  push(
+    'World kept its grid, and its topology is that grid (#89)',
+    () => [rebuiltWorld.topologyId(), rebuiltWorld.topology().id()],
+    ['square', 'square']
+  );
+  push(
+    "World's rebuilt generator is on the world's grid",
+    () =>
+      (
+        rebuiltWorld as unknown as {
+          _generator: { topology(): { id(): string } };
+        }
+      )._generator
+        .topology()
+        .id(),
+    'square'
+  );
+
+  // A world saved before the grid was recorded (#89) has no `_topologyId`: it
+  // was square, it loads as square, and the next save records it.
+  const oldWorld = rebuild(world);
+
+  delete (oldWorld as unknown as Record<string, unknown>)._topologyId;
+  game.inject(oldWorld);
+
+  push(
+    'A world saved before #89 loads as square',
+    () => [oldWorld.topologyId(), oldWorld.topology().id()],
+    ['square', 'square']
+  );
+  push(
+    'and saves its grid next time',
+    () => oldWorld.stateKeys().includes('_topologyId'),
+    true
   );
 
   // `Civilization._attributes` is a filtered view of the game's attribute
