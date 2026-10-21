@@ -55,6 +55,7 @@
     "src/js/UI/lib/leaveGuard.ts",
     "src/js/UI/lib/mappedKey.ts",
     "src/js/UI/lib/memoryTestbed.ts",
+    "src/js/UI/lib/projection.ts",
     "src/js/UI/lib/pruneObjectMap.ts",
     "src/js/UI/lib/reconstituteData.ts",
     "src/js/UI/lib/releaseDays.ts",
