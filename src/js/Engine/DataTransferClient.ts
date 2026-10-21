@@ -21,7 +21,7 @@ import {
   CompleteProduction,
   SellImprovement,
 } from '@civ-clone/civ1-treasury/PlayerActions';
-import { ObjectMap, typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
@@ -46,8 +46,6 @@ import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
 import Transport, { TransportHandledAction } from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
-import UnknownCity from './UnknownObjects/City';
-import UnknownUnit from './UnknownObjects/Unit';
 import ActionsState from './Client/ActionsState';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -112,6 +110,7 @@ import registerNotifications from './Client/notifications/registerNotifications'
 import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
 import ChoicePrompt from './Client/ChoicePrompt';
+import registerDiplomatEvents from './Client/diplomatEvents';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -278,74 +277,12 @@ export class DataTransferClient extends Client implements IClient {
       cityNews: this.#cityNews,
     });
 
-    // The report opens on the civilization the embassy is with, as v474.05 opens it.
-    engineInstance.on(
-      'player:embassy-established',
-      (holder: Player, host: Player) => {
-        if (holder !== this.player()) {
-          return;
-        }
-
-        this.#transport.send(
-          'embassyEstablished',
-          typeNameOf(host.civilization().sourceClass())
-        );
-      }
-    );
-
-    // The city is sent once, in full, as its owner would see it. Nothing else of its owner's goes with it: players are
-    //  sent as their civilization, and other cities and every unit as the wrappers the map has for them.
-    engineInstance.on('city:investigated', (city: City, player: Player) => {
-      if (player !== this.player()) {
-        return;
-      }
-
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(
-          this.player()
-        ),
-        // Tiles as the player knows them, in full, as nothing else is sent with it, and `Busy` by name.
-        otherwise = this.#dataFilter(undefined, { tilesInFull: true }),
-        // One wrapper per unit and city, so each is the same object wherever it appears.
-        wrappers = new Map<Unit | City, UnknownUnit | UnknownCity>(),
-        wrap = (object: Unit | City, make: () => UnknownUnit | UnknownCity) => {
-          if (!wrappers.has(object)) {
-            wrappers.set(object, make());
-          }
-
-          return wrappers.get(object)!;
-        };
-
-      this.#transport.send(
-        'investigateCity',
-        city.toPlainObject((object: any) => {
-          if (object === city) {
-            return object;
-          }
-
-          if (object instanceof Player) {
-            return {
-              _: 'Player',
-              id: object.id(),
-              civilization: object.civilization(),
-              // The city screen's map is laid out in the world's dimensions.
-              world: {
-                height: playerWorld.height(),
-                width: playerWorld.width(),
-              },
-            };
-          }
-
-          if (object instanceof Unit) {
-            return wrap(object, () => UnknownUnit.fromUnit(object));
-          }
-
-          if (object instanceof City) {
-            return wrap(object, () => UnknownCity.fromCity(object));
-          }
-
-          return otherwise(object);
-        }) as never
-      );
+    // A Diplomat's embassy report and investigated city (see `Client/diplomatEvents.ts`).
+    registerDiplomatEvents(engineInstance, {
+      player: () => this.player(),
+      transport: this.#transport,
+      dataFilter: this.#dataFilter,
+      playerWorlds: playerWorldRegistryInstance,
     });
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
