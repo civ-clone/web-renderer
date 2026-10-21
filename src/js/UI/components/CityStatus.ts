@@ -1,8 +1,7 @@
-import { City as CityData, GameData, Player } from '../types';
+import { City as CityData, Player } from '../types';
 import { groupIcons } from '../lib/yieldMap';
 import { turnsLeft, yieldData } from './lib/cityYields';
 import City from './City';
-import DataObserver from '../DataObserver';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
@@ -12,6 +11,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { getLabelForBuildable } from './lib/cityBuild';
 import { cityName } from './lib/city';
+import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   const [food, production, trade, research, gold, luxuries] = [
@@ -88,9 +88,9 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
 
 export class CityStatus extends Window {
   #cities: CityData[];
-  #dataObserver: DataObserver;
   #portal: Portal;
   #transport: Transport;
+  #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
     super(t('CityStatus.title'), s('<div class="loading"></div>'), {
@@ -98,32 +98,11 @@ export class CityStatus extends Window {
     });
 
     this.#cities = player.cities;
-    this.#dataObserver = new DataObserver(
-      [
-        player.id,
-        ...player.cities.flatMap(({ id, build, growth }: CityData) => [
-          id,
-          growth.id,
-          build.id,
-        ]),
-      ],
-      (data) => {
-        const player = (data as GameData).player;
+    this.#unwatch = watchPlayer(player, cityRowIds, (player) => {
+      this.#cities = player.cities;
 
-        this.#cities = player.cities;
-
-        this.#dataObserver.setIds([
-          player.id,
-          ...player.cities.flatMap(({ id, build, growth }: CityData) => [
-            id,
-            growth.id,
-            build.id,
-          ]),
-        ]);
-
-        this.update();
-      }
-    );
+      this.update();
+    });
     this.#portal = portal;
     this.#transport = transport;
 
@@ -131,7 +110,7 @@ export class CityStatus extends Window {
   }
 
   close() {
-    this.#dataObserver.dispose();
+    this.#unwatch();
 
     return super.close();
   }
