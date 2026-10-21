@@ -1,12 +1,8 @@
 import {
   City as CityData,
   DataPatch,
-  Dialogue,
   GameData,
-  Interactions,
-  Negotiation,
   PlayerAction,
-  Resolution,
   Tile,
   Unit,
   UnitAction,
@@ -36,16 +32,6 @@ import { downloadSave, takePendingSave } from './lib/savedGame';
 import { guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
-import {
-  chooseFromListBody,
-  chooseFromListChoice,
-  chooseFromListTitle,
-} from './lib/chooseFromList';
-import {
-  difficultyLabels,
-  preselectedDifficulty,
-  rememberDifficulty,
-} from './lib/difficulty';
 import Minimap from './components/Minimap';
 import NotificationWindow from './components/NotificationWindow';
 import Notices from './components/Notices';
@@ -55,7 +41,6 @@ import PlayerDetails from './components/PlayerDetails';
 import ScienceReport from './components/ScienceReport';
 import IntelligenceReport from './components/IntelligenceReport';
 import TopCitiesReport from './components/TopCitiesReport';
-import SelectionWindow from './components/SelectionWindow';
 import { chooseUnitAction, openArrivalWindow } from './lib/unitActionPrompts';
 import HaltedUnits from './lib/haltedUnits';
 import {
@@ -73,7 +58,6 @@ import World from './components/World';
 import Yields from './components/Map/Yields';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
-import instanceOf from './lib/instanceOf';
 import pruneObjectMap from './lib/pruneObjectMap';
 import PruneSchedule from './lib/PruneSchedule';
 import partitionActions from './lib/playerActionPanels';
@@ -83,7 +67,6 @@ import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitTiles from './lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from './lib/PendingMove';
-import ActionWindow from './components/ActionWindow';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
@@ -92,6 +75,8 @@ import initI18n from './app/i18n';
 import { preloadAssets, setCursor } from './app/assets';
 import setOptionDefaults from './app/options';
 import ReloadGuard from './app/ReloadGuard';
+import NotificationBar from './app/NotificationBar';
+import ChoiceHandler from './app/ChoiceHandler';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -273,8 +258,7 @@ export class Renderer {
         // while it is (#326).
         pendingMove = new PendingMove<Tile>();
 
-      let globalNotificationTimer: number | undefined,
-        lastUnit: Unit | null = null,
+      let lastUnit: Unit | null = null,
         activeUnit: Unit | null = null;
 
       // Ids of units deferred with `w` (wait), oldest first: held out of
@@ -304,244 +288,14 @@ export class Renderer {
         )
       );
 
-      const showNotification = (data: string): void => {
-        notificationArea.innerHTML = data;
+      const notificationBar = new NotificationBar(notificationArea);
 
-        if (globalNotificationTimer) {
-          window.clearTimeout(globalNotificationTimer);
-        }
-
-        globalNotificationTimer = window.setTimeout((): void => {
-          globalNotificationTimer = undefined;
-
-          notificationArea.innerText = '';
-        }, 4000);
-      };
+      transportDisposers.push(notificationBar.listen(transport));
 
       transportDisposers.push(
-        transport.receive('notification', (data: string): void =>
-          showNotification(data)
-        )
-      );
-
-      // The wording can depend on what kind of proposal it is (a demand for gold or for an advance, say) and on whether
-      //  it's one of our own choices: i18next's `context` picks `key_own-gold` over `key_gold` over `key` (#427).
-      const interactionContext = (
-          interaction: Interactions,
-          own: boolean
-        ): string | undefined => {
-          const kind =
-            (interaction as { kind?: string }).kind ??
-            (interaction as { proposal?: { kind?: string } }).proposal?.kind;
-
-          return (
-            [own ? 'own' : null, kind ?? null]
-              .filter((part) => part !== null)
-              .join('-') || undefined
-          );
-        },
-        interactionLabel = (interaction: Interactions, own = false) => {
-          const context = interactionContext(interaction, own);
-
-          if (instanceOf(interaction, 'Dialogue')) {
-            return t(`${interaction._}.${(interaction as Dialogue).key}`, {
-              interaction,
-              defaultValue: interaction._,
-              ns: 'diplomacy',
-            });
-          }
-
-          if (instanceOf(interaction, 'Proposal')) {
-            return t(interaction._, {
-              context,
-              interaction,
-              defaultValue: interaction._,
-              ns: 'diplomacy',
-            });
-          }
-
-          if (instanceOf(interaction, 'Resolution')) {
-            const { proposal } = interaction as Resolution;
-
-            return t(`Resolution.${proposal._}.${interaction._}`, {
-              context,
-              interaction,
-              defaultValue: interaction._,
-              ns: 'diplomacy',
-            });
-          }
-
-          return t(`Action.${interaction._}`, {
-            interaction,
-            defaultValue: interaction._,
-            ns: 'diplomacy',
-          });
-        },
-        negotiationLabel = (negotiation: Negotiation) => {
-          const currentInteraction = negotiation.lastInteraction;
-
-          if (currentInteraction === null) {
-            return 'negotiation.missing-label';
-          }
-
-          return interactionLabel(currentInteraction);
-        };
-
-      transportDisposers.push(
-        transport.receive('chooseFromList', ({ choices, key, data }) => {
-          // The worker waits for this before it answers the action that asked
-          // (talks a move started, say), so the window can close before the
-          // move's answer arrives: the keys kept while it was answered were
-          // typed without knowing it would be there. The move stays drawn
-          // ahead until its answer (#326).
-          pendingMove.clearKeys();
-
-          if (
-            debugFlags.uiStressRunner &&
-            !debugFlags.stressUiWindowsEnabled &&
-            choices.length > 0 &&
-            debugFlags.uiStressRunner.isAutomatingChoice(choices[0].id)
-          ) {
-            transport.send('chooseFromList', choices[0].id);
-
-            return;
-          }
-
-          const title = chooseFromListTitle(key, data);
-
-          if (key === 'negotiation.next-step' && choices.length === 1) {
-            const window = new ActionWindow(
-              title,
-              negotiationLabel(data as Negotiation),
-              {
-                canClose: false,
-                actions: {
-                  primary: {
-                    label: interactionLabel(
-                      choices[0].value as Interactions,
-                      true
-                    ),
-                    action: (actionWindow) => actionWindow.close(),
-                  },
-                },
-              }
-            );
-
-            window.on('keydown', (event) => {
-              if (event.key !== 'Enter') {
-                return;
-              }
-
-              window.close();
-
-              event.preventDefault();
-              event.stopPropagation();
-            });
-
-            if (debugFlags.uiStressRunner) {
-              debugFlags.uiStressRunner.automateChoice(
-                window,
-                choices[0].id,
-                (choiceId) => transport.send('chooseFromList', choiceId)
-              );
-            } else {
-              window.once('close', () =>
-                transport.send('chooseFromList', choices[0].id)
-              );
-            }
-
-            return;
-          }
-
-          const body =
-            key === 'negotiation.next-step'
-              ? negotiationLabel(data as Negotiation)
-              : chooseFromListBody(key, data);
-
-          // Picked client-side, among the choices offered (#15). Not a valid choice id, so it can't collide with one.
-          const randomChoice = '@random',
-            offerRandom = key === 'choose-civilization' && choices.length > 1,
-            // A save from before there were levels (#173): labelled and preselected as the new game menu does it. The
-            //  engine sends the levels easiest first.
-            difficulties =
-              key === 'choose-difficulty'
-                ? choices.map(({ value }, level) => ({
-                    name: (value as { _: string })._,
-                    level,
-                  }))
-                : null,
-            difficultyChoiceLabels = difficulties
-              ? difficultyLabels(difficulties)
-              : null;
-
-          const selectionWindow = new SelectionWindow(
-            title,
-            [
-              ...(offerRandom
-                ? [
-                    {
-                      label: t(`ChooseFromList.${key}.random`),
-                      value: randomChoice,
-                    },
-                  ]
-                : []),
-              ...choices.map(({ id, value }, index) => {
-                const label =
-                  key === 'negotiation.next-step'
-                    ? interactionLabel(value as Interactions, true)
-                    : difficultyChoiceLabels
-                    ? difficultyChoiceLabels[index].label
-                    : chooseFromListChoice(key, value);
-
-                return {
-                  label,
-                  value: id,
-                };
-              }),
-            ],
-            (choice) => {
-              if (difficulties) {
-                const chosen = choices.findIndex(({ id }) => id === choice);
-
-                if (chosen > -1) {
-                  rememberDifficulty(difficulties[chosen].name);
-                }
-              }
-
-              transport.send(
-                'chooseFromList',
-                offerRandom && choice === randomChoice
-                  ? choices[Math.floor(Math.random() * choices.length)].id
-                  : choice
-              );
-            },
-            body,
-            {
-              canClose: false,
-              displayAll: true,
-            }
-          );
-
-          if (difficulties && !selectionWindow.autoChosen()) {
-            const preselected = preselectedDifficulty(difficulties),
-              preselectedIndex = difficulties.findIndex(
-                ({ name }) => name === preselected
-              );
-
-            if (preselectedIndex > -1) {
-              selectionWindow.selectionList().value =
-                choices[preselectedIndex].id;
-            }
-          }
-
-          if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
-            selectionWindow.selectionList().value = choices[0].id;
-            debugFlags.uiStressRunner.automateChoice(
-              selectionWindow,
-              choices[0].id,
-              (choiceId) => transport.send('chooseFromList', choiceId)
-            );
-          }
+        ChoiceHandler.listen(transport, {
+          clearKeys: (): void => pendingMove.clearKeys(),
+          debugFlags,
         })
       );
 
@@ -1477,7 +1231,7 @@ export class Renderer {
               if (lastShiftedCode === 'Digit5' && shiftedCode === 'Digit6') {
                 gameMenuItem.enableCheats();
 
-                showNotification(t('GameMenu.cheat.enabled'));
+                notificationBar.show(t('GameMenu.cheat.enabled'));
 
                 return;
               }

@@ -21,6 +21,7 @@
     "src/js/UI/lib/DataChanges.ts",
     "src/js/UI/lib/playerActionPanels.ts",
     "src/js/UI/lib/autoEndTurn.ts",
-    "src/js/UI/lib/PruneSchedule.ts"
+    "src/js/UI/lib/PruneSchedule.ts",
+    "src/js/UI/lib/interactionLabels.ts"
   ]
 }
