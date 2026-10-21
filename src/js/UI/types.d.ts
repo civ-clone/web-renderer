@@ -1,4 +1,4 @@
-import { Direction, EdgeDirection } from './lib/topologyFor';
+import { Direction, EdgeDirection, TopologyId } from './lib/topologyFor';
 import { ObjectMap } from './lib/reconstituteData';
 
 export type PlainObject = {
@@ -230,6 +230,8 @@ export type NeighbourDirection = Direction;
 export interface World extends EntityInstance<'World'> {
   height: number;
   tiles: PlayerTile[];
+  // Which grid the world is on (#89). A save made before the grid was recorded does not say: it is square.
+  topologyId?: TopologyId;
   width: number;
 }
 
