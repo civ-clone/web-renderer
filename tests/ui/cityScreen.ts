@@ -8,6 +8,11 @@
 // The citizens drawn are the moods the engine sends, in order, one sprite each.
 // The Auto button and the A key send the action that turns Auto the other way (#194).
 // A polluted square's halved yields are drawn as what each nets to, or the city map runs out of icon slots (#32).
+// An open city screen follows what it shows through `watchCity` (#344): its city, build, growth, supported units (a
+// new one without re-subscribing) and the player's gold, redrawing for each, and closes, watching nothing more, when
+// a patch keyed on the player takes the city out of the player's list, as a capture or a destruction does (#483).
+// Patches go through the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is
+// collected into the shared `DataChanges` instance as `Renderer` does; a "render" is a `notify`.
 
 import {
   citizenMoods,
@@ -25,10 +30,27 @@ import {
   tileYieldIcons,
   yieldGroup,
 } from '../../src/js/UI/lib/yieldMap';
+import { City, DataPatch, GameData } from '../../src/js/UI/types';
+import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
+import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
+import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
+import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
 import { toggleAuto } from '../../src/js/UI/components/lib/cityBuild';
+import watchCity from '../../src/js/UI/components/lib/watchCity';
 
 const failures: string[] = [];
-let checks = 0;
+let checks = 0,
+  finished = false;
+
+// A suite that stops before its checks would otherwise exit 0 (#473).
+process.on('exit', (code: number): void => {
+  if (code === 0 && !finished) {
+    process.stderr.write(
+      `FAIL cityScreen: stopped after ${checks} checks, before the end\n`
+    );
+    process.exitCode = 1;
+  }
+});
 
 const expect = (description: string, actual: unknown, expected: unknown) => {
   checks++;
@@ -400,6 +422,263 @@ expect(
   crowded.every(({ x, y }) => x >= 0 && x < 1 && y >= 0 && y < 1),
   true
 );
+
+// The city screen's watch (#344, #483).
+{
+  const ref = (id: string) => ({ '#ref': id }),
+    unit = (id: string, moves = 1): PlainObject => ({ _: 'Unit', id, moves });
+
+  // A player with two cities, Rome supporting one unit, and its gold.
+  const objectMap: ObjectMap = {
+    hierarchy: { player: ref('Player-1') },
+    objects: {
+      'Player-1': {
+        _: 'Player',
+        id: 'Player-1',
+        actions: [],
+        cities: [ref('City-1'), ref('City-2')],
+        treasuries: [ref('Treasury-1')],
+        units: [ref('Unit-1')],
+      },
+      'City-1': {
+        _: 'City',
+        id: 'City-1',
+        name: 'Rome',
+        build: ref('CityBuild-1'),
+        growth: ref('CityGrowth-1'),
+        player: ref('Player-1'),
+        units: [ref('Unit-1')],
+      },
+      'City-2': {
+        _: 'City',
+        id: 'City-2',
+        name: 'Veii',
+        build: ref('CityBuild-2'),
+        growth: ref('CityGrowth-2'),
+        player: ref('Player-1'),
+        units: [],
+      },
+      'CityBuild-1': { _: 'CityBuild', id: 'CityBuild-1', building: null },
+      'CityBuild-2': { _: 'CityBuild', id: 'CityBuild-2', building: null },
+      'CityGrowth-1': { _: 'CityGrowth', id: 'CityGrowth-1', size: 1 },
+      'CityGrowth-2': { _: 'CityGrowth', id: 'CityGrowth-2', size: 1 },
+      'Treasury-1': {
+        _: 'PlayerTreasury',
+        id: 'Treasury-1',
+        yield: { _: 'Gold' },
+        value: 10,
+      },
+      'Unit-1': unit('Unit-1'),
+    },
+  };
+
+  const reconstituter = new IncrementalReconstituter();
+
+  let data = reconstituter.rebuild(objectMap, null) as GameData;
+
+  // As `updateState` does: rebuild, then collect.
+  const update = (patches: DataPatch[], rebuildAll = false): void => {
+      const changedIds = new Set<string>();
+
+      applyDataPatches(objectMap, patches, {
+        changed: (id) => changedIds.add(id),
+      });
+
+      const changed = rebuildAll ? null : changedIds;
+
+      data = reconstituter.rebuild(objectMap, changed) as GameData;
+
+      dataChanges.collect(
+        changed === null ? null : [...changed, ...reconstituter.filledIds()]
+      );
+    },
+    render = (): void => dataChanges.notify(data),
+    replace = (id: string, changes: PlainObject, objects = {}) => ({
+      [id]: {
+        type: 'update' as const,
+        value: {
+          hierarchy: (objectMap.objects[id] = {
+            ...objectMap.objects[id],
+            ...changes,
+          }),
+          objects,
+        },
+      },
+    }),
+    // One of the player's keys on its own, as the client sends its cities or actions.
+    replacePlayerKey = (key: string, hierarchy: unknown) => ({
+      'Player-1': {
+        type: 'update' as const,
+        index: key,
+        value: { hierarchy, objects: {} },
+      },
+    }),
+    findCity = (id: string): City =>
+      data.player.cities.find((city) => city.id === id)!;
+
+  // What the screen did since the last `reset`, as `City` would: redraw with the city given, or close.
+  const updated: City[] = [];
+  let closes = 0;
+
+  const reset = (): void => {
+    updated.length = 0;
+    closes = 0;
+  };
+
+  // `City.close` calls what `watchCity` returned, as here.
+  const unwatch = watchCity(findCity('City-1'), {
+    update: (city) => updated.push(city),
+    close: () => {
+      closes++;
+      unwatch();
+    },
+  });
+
+  update([replace('City-1', { name: 'Roma' })]);
+  render();
+
+  expect(
+    'the screen redraws when its city changes, with the city as it is now',
+    updated.map(({ name }) => name),
+    ['Roma']
+  );
+
+  // A change to gold alone, after that first redraw: the old re-subscription dropped the treasury here.
+  reset();
+  update([replace('Treasury-1', { value: 35 })]);
+  render();
+
+  expect(
+    'after a first redraw, a change to gold alone still redraws it',
+    [updated.length, closes, updated[0]?.player.treasuries[0].value],
+    [1, 0, 35]
+  );
+
+  reset();
+  update([replace('CityBuild-1', { building: { _: 'Militia' } })]);
+  update([replace('CityGrowth-1', { size: 2 })]);
+  render();
+
+  expect(
+    'a change to its build and growth redraws it once per render',
+    updated.length,
+    1
+  );
+
+  // A unit built in the city, then a change to that unit alone.
+  reset();
+  update([
+    replace(
+      'City-1',
+      { units: [ref('Unit-1'), ref('Unit-2')] },
+      { 'Unit-2': unit('Unit-2') }
+    ),
+  ]);
+  render();
+  reset();
+  update([replace('Unit-2', { moves: 0 })]);
+  render();
+
+  expect(
+    'a unit added to the city is followed without re-subscribing',
+    [updated.length, updated[0]?.units.map(({ id, moves }) => [id, moves])],
+    [
+      1,
+      [
+        ['Unit-1', 1],
+        ['Unit-2', 0],
+      ],
+    ]
+  );
+
+  // The player changes with most actions.
+  reset();
+  update([replacePlayerKey('actions', [])]);
+  render();
+
+  expect(
+    'a change to the player alone, its city still there, neither redraws nor closes it',
+    [updated.length, closes],
+    [0, 0]
+  );
+
+  reset();
+  update([replace('City-2', { name: 'Vei' })]);
+  render();
+
+  expect(
+    'another city changing changes nothing',
+    [updated.length, closes],
+    [0, 0]
+  );
+
+  // A rebuild of everything leaves what the screen held stale: it is found again.
+  reset();
+  update([], true);
+  render();
+
+  expect(
+    'a rebuild of everything redraws it with the rebuilt city',
+    [updated.length, closes, updated[0] === findCity('City-1')],
+    [1, 0, true]
+  );
+
+  reset();
+  update([replace('Treasury-1', { value: 20 })]);
+  render();
+
+  expect(
+    'and it still follows gold after that',
+    [updated.length, closes],
+    [1, 0]
+  );
+
+  // Captured: the player's list of cities loses it, in a patch keyed on the player, with nothing of the city's own.
+  reset();
+  update([replacePlayerKey('cities', [ref('City-2')])]);
+  render();
+
+  expect(
+    'a patch keyed on the player that takes the city out of its list closes the screen',
+    [updated.length, closes],
+    [0, 1]
+  );
+
+  reset();
+  update([replace('City-1', { name: 'Rome' })]);
+  update([replace('Treasury-1', { value: 5 })]);
+  update([replacePlayerKey('actions', [])]);
+  render();
+  update([], true);
+  render();
+
+  expect(
+    'and nothing wakes it after that, not even a rebuild of everything',
+    [updated.length, closes],
+    [0, 0]
+  );
+
+  // Gone while one of its own ids changes too, as when a unit it supported is lost with it.
+  const unwatchVeii = watchCity(findCity('City-2'), {
+    update: (city) => updated.push(city),
+    close: () => {
+      closes++;
+      unwatchVeii();
+    },
+  });
+
+  reset();
+  update([replace('City-2', { name: 'Veii' }), replacePlayerKey('cities', [])]);
+  render();
+
+  expect(
+    'a city gone in the same render as a change of its own closes the screen once, without redrawing it',
+    [updated.length, closes],
+    [0, 1]
+  );
+}
+
+finished = true;
 
 if (failures.length) {
   process.stderr.write(

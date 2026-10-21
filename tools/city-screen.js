@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// Runs tests/ui/cityScreen.ts — the city screen's yield shortfall (#188)
-// and its specialist keys (#107). Bundled with esbuild, as the other UI tests
-// are.
+// Runs tests/ui/cityScreen.ts — the city screen's yield shortfall (#188),
+// its specialist keys (#107) and what keeps it current (#344, #483). Bundled
+// with esbuild, as the other UI tests are.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
