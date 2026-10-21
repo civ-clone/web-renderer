@@ -12,7 +12,6 @@ import AIClient from '@civ-clone/core-ai-client/AIClient';
 import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import Advance from '@civ-clone/core-science/Advance';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
-import Busy from '@civ-clone/core-unit/Rules/Busy';
 import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
@@ -24,10 +23,7 @@ import {
   CompleteProduction,
   SellImprovement,
 } from '@civ-clone/civ1-treasury/PlayerActions';
-import DataObject, {
-  ObjectMap,
-  typeNameOf,
-} from '@civ-clone/core-data-object/DataObject';
+import { ObjectMap, typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import DataQueue from './DataQueue';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
@@ -123,10 +119,6 @@ import { instance as specialistRegistryInstance } from '@civ-clone/core-city/Spe
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
 import { intelligenceRows } from './lib/intelligence';
-import {
-  isUnitWithoutActions,
-  unitWithoutActions,
-} from './lib/unitWithoutActions';
 import playerWithoutActions from './lib/playerWithoutActions';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import {
@@ -137,15 +129,18 @@ import {
   referenceObject,
   standalone,
 } from './Client/refs';
-import {
-  knownUnknownCity,
-  standsInForCityBuild,
-  unknownCityOf,
-  unknownPlayerOf,
-  unknownUnitOf,
-  withoutAvailable,
-} from './Client/standIns';
+import { knownUnknownCity } from './Client/standIns';
 import { sabotagedBuildKind } from './Client/notifications/diplomat';
+import {
+  DataFilter,
+  makeDataFilter,
+  serialiseCity,
+  serialiseOwn,
+  serialisePlayer,
+  serialisePlayerPart,
+  serialiseTile,
+  serialiseUnit,
+} from './Client/visibilityFilter';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -166,84 +161,6 @@ export class DataTransferClient extends Client implements IClient {
   // Set while the action listener is handling one of the human's actions, so the several flushes an action causes (the
   //  moved unit's tiles, then the player) go out as a single patch once it is done (#321).
   #holdingFlushes = false;
-  // Tiles go as refs unless asked for in full (#138). A `PlayerTile` goes in full in a tile patch (`serialiseTile`), and
-  //  in the payloads that cannot hold refs, or that bring the frontend tiles it has never had: the initial game data and
-  //  an investigated city. Everywhere else the frontend already holds every tile the player knows, and a tile that
-  //  changes is sent on its own, so a tile in full there is only payload.
-  #dataFilter =
-    (
-      localFilter = (object: any) => object,
-      { tilesInFull = false }: { tilesInFull?: boolean } = {}
-    ) =>
-    // `Busy` as well as `DataObject`, because that is what `toPlainObject`
-    // actually hands a filter: it walks every field, and `Unit._busy` holds a
-    // rule. Typed as `DataObject` alone, the `instanceof Busy` branch below
-    // narrows to `DataObject & Busy` — and since `core-rule@0.1.5` gave `Rule`
-    // a `private _id` for rule identity, alongside `DataObject`'s own, that
-    // intersection is `never` and the renderer stops compiling.
-    (object: DataObject | Busy) => {
-      // The player's actions are going out some other way, made afresh, and the frontend will hold those instead.
-      if (object instanceof PlayerAction && !this.#actions.serialising) {
-        this.#actions.forget();
-      }
-
-      if (object instanceof Player && object !== this.player()) {
-        return unknownPlayerOf(object);
-      }
-
-      if (object instanceof Unit && object.player() !== this.player()) {
-        return unknownUnitOf(object);
-      }
-
-      // The player's units go out without their actions, but for the one the UI has them for (#323).
-      if (
-        object instanceof Unit &&
-        object.player() === this.player() &&
-        !isUnitWithoutActions(object) &&
-        !this.#actions.sendsUnitActions(object)
-      ) {
-        return localFilter(unitWithoutActions(object));
-      }
-
-      if (object instanceof City && object.player() !== this.player()) {
-        return unknownCityOf(object);
-      }
-
-      if (object instanceof Tile) {
-        const playerWorld = playerWorldRegistryInstance.getByPlayer(
-            this.player()
-          ),
-          playerTile = playerWorld.get(object.x(), object.y());
-
-        // The caller's filter applies to the tile that is actually sent (#130). Only a tile the player knows can be a
-        //  ref: an undiscovered one is made up afresh, with a new id, on every call, so it goes inline.
-        return playerTile instanceof PlayerTile
-          ? this.#filterPlayerTile(playerTile, localFilter, tilesInFull)
-          : playerTile;
-      }
-
-      if (object instanceof PlayerTile) {
-        return this.#filterPlayerTile(object, localFilter, tilesInFull);
-      }
-
-      if (object instanceof Busy) {
-        return {
-          _: object.constructor.name,
-        };
-      }
-
-      // Not `available`, which the picker fetches itself (#324). The filter sees the stand-in again when it is the thing
-      //  being walked, so it is not wrapped twice.
-      if (
-        object instanceof CityBuildItem &&
-        !standsInForCityBuild.has(object) &&
-        object.city().player() === this.player()
-      ) {
-        return localFilter(withoutAvailable(object));
-      }
-
-      return localFilter(object);
-    };
   #dataQueue: DataQueue = new DataQueue();
   // The tiles in the queue, each sent once a flush (#138).
   #queuedTiles: Set<PlayerTile> = new Set();
@@ -251,6 +168,9 @@ export class DataTransferClient extends Client implements IClient {
   #queued: Set<string> = new Set();
   // The player's actions as the frontend was last sent them, and the unit it has the actions of (#411, #323).
   #actions: ActionsState = new ActionsState();
+  // What the player may see, which every payload goes through (see `Client/visibilityFilter.ts`). After `#actions`,
+  //  which it is made with.
+  #dataFilter: DataFilter = makeDataFilter(() => this.player(), this.#actions);
   #eventEmitter: EventEmitter;
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
   //  our own notifications are held (see `sendNotification`).
@@ -2226,32 +2146,9 @@ export class DataTransferClient extends Client implements IClient {
     this.#transport.send('gameNotification', payload);
   }
 
-  // A caller's filter can still send a tile as something else, a notification's stand-in say, and that stands.
-  //  Otherwise a tile is a ref unless the caller asked for tiles in full (#138).
-  #filterPlayerTile(
-    playerTile: PlayerTile,
-    localFilter: (object: any) => any,
-    tilesInFull: boolean
-  ): any {
-    const filtered = localFilter(playerTile);
-
-    return filtered !== playerTile || tilesInFull
-      ? filtered
-      : referenceObject(playerTile);
-  }
-
-  /**
-   * One of the player's tiles in full, as a tile patch sends it (#138). `toPlainObject` puts the tile it's called on
-   *  through the filter as well, which would make it a ref to itself, so the tile is kept and only what it holds is
-   *  filtered: the player's own units and cities as refs, as the frontend holds them, and anyone else's as the stand-ins
-   *  the map has for them, inline, as the frontend may never have had them (#46).
-   */
+  // One of the player's tiles in full, as a tile patch sends it (#138).
   serialiseTile(playerTile: PlayerTile): ObjectMap {
-    const filter = this.#dataFilter(filterToReference(Player, Unit, City));
-
-    return playerTile.toPlainObject((object: any) =>
-      object === playerTile ? object : filter(object)
-    ) as ObjectMap;
+    return serialiseTile(this.#dataFilter, playerTile);
   }
 
   // The frontend redraws a tile only when it arrives in a patch, so every change that alters one sends it (#138). Once
@@ -2273,55 +2170,19 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
-  /**
-   * One of the player's own objects in full, with what it refers to that the frontend already holds as refs (#411).
-   *  `toPlainObject` puts the object it's called on through the filter as well, which would make it a ref to itself,
-   *  so the object itself only goes through the visibility filter: a unit still goes without its actions, unless it's
-   *  the one the UI has them for.
-   */
-  #serialiseOwn(
-    object: City | CityBuildItem | Unit,
-    localFilter: (object: any) => any
-  ): ObjectMap {
-    const root = this.#dataFilter()(object as unknown as DataObject),
-      filter = this.#dataFilter(localFilter);
-
-    return object.toPlainObject((value: any) =>
-      value === object ? root : filter(value)
-    );
-  }
-
-  /**
-   * The whole player as the frontend should hold it now, for a test to compare with what it does hold (#411): every
-   *  unit and city in full, and the map as refs, as the turn's hand-over sends it, with the player's actions. What the
-   *  frontend is known to hold of those is left alone, as nothing is sent.
-   */
+  // The whole player as the frontend should hold it now, for a test to compare with what it does hold (#411).
   serialisePlayer(): ObjectMap {
-    this.#actions.serialising = true;
-
-    try {
-      return this.player().toPlainObject(
-        this.#dataFilter(filterToReference(PlayerWorld, PlayerTile, Tile))
-      );
-    } finally {
-      this.#actions.serialising = false;
-    }
+    return serialisePlayer(this.#dataFilter, this.player(), this.#actions);
   }
 
-  /**
-   * One of the player's units, as a patch of the unit sends it (#411). Its tiles, its home city and the player are refs,
-   *  as the frontend holds them all.
-   */
+  // One of the player's units, as a patch of the unit sends it (#411).
   serialiseUnit(unit: Unit): ObjectMap {
-    return this.#serialiseOwn(unit, filterToReference(Player, City, Unit));
+    return serialiseUnit(this.#dataFilter, unit);
   }
 
-  /**
-   * One of the player's cities, as a patch of the city sends it (#411): its build, growth, improvements, specialists and
-   *  yields in full, and its tiles, the units it supports and the player as refs, as the frontend holds them all.
-   */
+  // One of the player's cities, as a patch of the city sends it (#411).
   serialiseCity(city: City): ObjectMap {
-    return this.#serialiseOwn(city, filterToReference(Player, City, Unit));
+    return serialiseCity(this.#dataFilter, city);
   }
 
   // The player's own city in full, for any change to it: the frontend holds it as the last patch of it left it, as an
@@ -2354,7 +2215,11 @@ export class DataTransferClient extends Client implements IClient {
     this.#queued.add(cityBuild.id());
 
     this.#dataQueue.update(cityBuild.id(), () =>
-      this.#serialiseOwn(cityBuild, filterToReference(Player, City, Unit))
+      serialiseOwn(
+        this.#dataFilter,
+        cityBuild,
+        filterToReference(Player, City, Unit)
+      )
     );
   }
 
@@ -2427,7 +2292,9 @@ export class DataTransferClient extends Client implements IClient {
     this.#dataQueue.update(
       this.player().id(),
       () =>
-        this.#serialisePlayerPart(
+        serialisePlayerPart(
+          this.#dataFilter,
+          this.player(),
           additionalDataRegistryInstance
             .getByType(Player)
             .find((additionalData) => additionalData.key() === key)!
@@ -2471,7 +2338,12 @@ export class DataTransferClient extends Client implements IClient {
             this.#actions.serialising = true;
 
             try {
-              return this.#serialisePlayerPart(list, filter);
+              return serialisePlayerPart(
+                this.#dataFilter,
+                this.player(),
+                list,
+                filter
+              );
             } finally {
               this.#actions.serialising = false;
             }
@@ -2528,28 +2400,13 @@ export class DataTransferClient extends Client implements IClient {
       this.#actions.heldKeys = undefined;
       this.#actions.heldMandatory = undefined;
 
-      // As `#serialisePlayerPart`: the filter sees what `toPlainObject` is called on first.
+      // As `serialisePlayerPart`: the filter sees what `toPlainObject` is called on first.
       return player.toPlainObject((object: any) =>
         object === player ? standIn : filter(object)
       );
     });
 
     this.#sendActions();
-  }
-
-  // A value that is part of the player, serialised on its own. `toPlainObject` is a method on `DataObject`, and the
-  //  filter is applied to what it is called on first, so handing it the value in place of the player gets the value
-  //  serialised, as the `hierarchy` (as `cityBuildAvailable` does).
-  #serialisePlayerPart(
-    value: any,
-    localFilter: (object: any) => any
-  ): ObjectMap {
-    const player = this.player(),
-      filter = this.#dataFilter(localFilter);
-
-    return player.toPlainObject((object: any) =>
-      object === player ? value : filter(object)
-    );
   }
 
   // What an action can change of the player's own as a side effect, a hut's gold or advance, a trade route's bonus, a
