@@ -103,10 +103,8 @@ export class DataTransferClient extends Client implements IClient {
   // Asks the player to choose, one prompt at a time (see `Client/ChoicePrompt.ts`). Made in the constructor, which is
   //  given the transport.
   #choicePrompt: ChoicePrompt;
-  #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   // What the request receivers read, kept for the methods tests call (see `Client/requests.ts`).
   #requests: RequestsContext;
-  #sender: (channel: string, payload: any) => void;
   // Talks with other players: those met on the way and a Diplomat's Meet with King (see `Client/Talks.ts`).
   #talks: Talks;
   #transport: Transport<TransportDataMap>;
@@ -117,8 +115,6 @@ export class DataTransferClient extends Client implements IClient {
   constructor(
     player: Player,
     transport: Transport<TransportDataMap>,
-    sender: (channel: string, payload: any) => void,
-    receiver: (channel: string, handler: (...args: any[]) => void) => void,
     {
       automationEnabled = false,
     }: {
@@ -148,8 +144,6 @@ export class DataTransferClient extends Client implements IClient {
       () => this.player(),
       (notification) => this.#notifier.notify(notification)
     );
-    this.#sender = sender;
-    this.#receiver = receiver;
 
     this.#talks = new Talks({
       player: () => this.player(),
@@ -333,13 +327,21 @@ export class DataTransferClient extends Client implements IClient {
     return handleActionFor(this.#actionContext, ...args);
   }
 
-  // The player's whole state, sent before the first hand-over (see `Client/TurnHandover.ts`). Named, as tests reach it.
-  private sendInitialData(): void {
+  /**
+   * Send the player's whole state, as the first hand-over does (see `Client/TurnHandover.ts`).
+   *
+   * For tests and `Game.ts`: the UI can't ask for it.
+   */
+  initialData(): void {
     this.#turnHandover.sendInitialData();
   }
 
-  // Every flush goes through `PlayerPatches#flush`, which holds them while an action is handled. Named, as tests reach it.
-  private sendPatchData(): void {
+  /**
+   * Send the patches queued for the player, unless an action is being handled (see `PlayerPatches#flush`).
+   *
+   * For tests and `Game.ts`: the UI can't ask for it, but the engine flushes after every action and turn.
+   */
+  flush(): void {
     this.#patches.flush();
   }
 

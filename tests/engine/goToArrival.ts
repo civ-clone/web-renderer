@@ -310,7 +310,7 @@ const order = async (): Promise<void> => {
   playerTileOf(manualStart);
 
   await settle();
-  (humanClient as any).sendPatchData();
+  humanClient!.flush();
 
   // 1.
   await unitAction(bomber, 'GoTo', homeTile);
@@ -646,12 +646,7 @@ engine.on('engine:start', (): void => {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
 
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
 
       clientRegistryInstance.register(humanClient);
 

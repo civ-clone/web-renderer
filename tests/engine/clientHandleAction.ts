@@ -477,12 +477,7 @@ const run = async (): Promise<void> => {
   });
   (playerWorldRegistryInstance as any).getByPlayer = () => [playerTile];
 
-  const client = new DataTransferClient(
-    player,
-    transport,
-    () => {},
-    () => {}
-  );
+  const client = new DataTransferClient(player, transport);
 
   player.actions = () => [new ActiveUnit(player, unit)];
   expect(

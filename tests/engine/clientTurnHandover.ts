@@ -488,12 +488,7 @@ const throughTheClient = async (): Promise<void> => {
     return Promise.resolve('automation');
   };
 
-  const client = new DataTransferClient(
-    player,
-    transport,
-    () => {},
-    () => {}
-  );
+  const client = new DataTransferClient(player, transport);
 
   const listenersFor = (event: string) =>
       registered

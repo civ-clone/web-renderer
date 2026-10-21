@@ -356,7 +356,7 @@ const run = async (): Promise<void> => {
     fail(`the rows carry ${leakedKeys(sent).join(', ')}`);
   }
 
-  const ownCivilization = (humanClient as any)
+  const ownCivilization = humanClient!
     .player()
     .civilization()
     .sourceClass().name;
@@ -494,12 +494,7 @@ engine.on('engine:start', (): void => {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
 
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
 
       clientRegistryInstance.register(humanClient);
 

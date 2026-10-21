@@ -675,12 +675,7 @@ const humanClient = (player: Player): DataTransferClient => {
   humanPlayer = player;
   helper = new SimpleAIClient(player);
 
-  return new DataTransferClient(
-    player,
-    transport as any,
-    (channel, payload) => transport.send(channel, payload),
-    () => {}
-  );
+  return new DataTransferClient(player, transport as any);
 };
 
 // Nothing keeps the process alive between turns but the engine's own work, so a run that stalls just ends.

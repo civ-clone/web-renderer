@@ -267,12 +267,7 @@ engine.on('engine:start', (): void => {
     if (index === 0) {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
 
       clientRegistryInstance.register(humanClient);
 

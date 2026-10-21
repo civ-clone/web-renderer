@@ -3,7 +3,6 @@ import DataTransferClient from './DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import TransferObject from './TransferObject';
 import Transport from './Transport';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -191,18 +190,9 @@ export class Game implements IGame {
       return new SimpleAIClient(player);
     }
 
-    const client = new DataTransferClient(
-      player,
-      this.#transport,
-      (channel: string, payload: TransferObject) =>
-        this.#transport.send(channel, payload),
-      (channel: string, handler: (...args: any[]) => void): void => {
-        this.#transport.receive(channel, handler);
-      },
-      {
-        automationEnabled: this.#automateLocalPlayer,
-      }
-    );
+    const client = new DataTransferClient(player, this.#transport, {
+      automationEnabled: this.#automateLocalPlayer,
+    });
 
     this.#localPlayerClient = client;
 
