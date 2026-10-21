@@ -12,7 +12,7 @@ import {
   UnitAction,
 } from './types';
 import { emit, off, on, s } from '@dom111/element';
-import i18next, { t } from 'i18next';
+import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import Actions from './components/Actions';
 import UnitActions from './components/UnitActions';
@@ -23,7 +23,6 @@ import Cities from './components/Map/Cities';
 import CityNames from './components/Map/CityNames';
 import CityStatus from './components/CityStatus';
 import CivilizationScoreReport from './components/CivilizationScoreReport';
-import ConfirmationWindow from './components/ConfirmationWindow';
 import Fog from './components/Map/Fog';
 import GameDetails from './components/GameDetails';
 import GameMenu from './components/GameMenu';
@@ -31,11 +30,10 @@ import GamePortal from './components/GamePortal';
 import HappinessReport from './components/HappinessReport';
 import IntervalHandler from './lib/IntervalHandler';
 import Landscape from './components/Map/Landscape';
-import LanguageDetector from 'i18next-browser-languagedetector';
 import GameOverWindow from './components/GameOverWindow';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
-import { allowLeaving, guardLeaving } from './lib/leaveGuard';
+import { guardLeaving } from './lib/leaveGuard';
 import endTurn from './lib/endTurn';
 import chooseActiveUnit from './lib/chooseActiveUnit';
 import {
@@ -73,8 +71,6 @@ import Units from './components/Map/Units';
 import Window from './components/Window';
 import World from './components/World';
 import Yields from './components/Map/Yields';
-import { assetStore } from './AssetStore';
-import { h } from './lib/html';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
 import instanceOf from './lib/instanceOf';
@@ -86,6 +82,12 @@ import PendingMove, { plainMove } from './lib/PendingMove';
 import ActionWindow from './components/ActionWindow';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
+import parseBooleanParam from './lib/parseBooleanParam';
+import appElements from './app/elements';
+import initI18n from './app/i18n';
+import { preloadAssets, setCursor } from './app/assets';
+import setOptionDefaults from './app/options';
+import ReloadGuard from './app/ReloadGuard';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -102,27 +104,6 @@ export class Renderer {
     const transport = this.#transport;
     const queryParams = new URLSearchParams(window.location.search);
 
-    const parseBooleanParam = (
-      value: string | null,
-      defaultValue: boolean
-    ): boolean => {
-      if (value === null) {
-        return defaultValue;
-      }
-
-      const normalised = value.trim().toLowerCase();
-
-      if (['1', 'true', 'yes', 'on'].includes(normalised)) {
-        return true;
-      }
-
-      if (['0', 'false', 'no', 'off'].includes(normalised)) {
-        return false;
-      }
-
-      return defaultValue;
-    };
-
     const debugFlags = new DebugFlags(
       parseBooleanParam(queryParams.get('debug'), false)
     );
@@ -131,81 +112,32 @@ export class Renderer {
     // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
     let gameStarted = false;
 
-    const hasAllAssets = await assetStore.hasAllAssets();
+    await setCursor();
+    await initI18n();
 
-    if (hasAllAssets) {
-      const scaledCursor = await assetStore.getScaled(
-        './assets/cursor/torch.png',
-        2
-      );
+    new ReloadGuard(() => gameStarted);
 
-      document.body.style.cursor = `url('${scaledCursor.toDataURL(
-        'image/png'
-      )}'), default`;
-    }
-    // Load translations
-    i18next.use(LanguageDetector);
-
-    await i18next.init({
-      defaultNS: 'default',
-      ns: ['default'],
-    });
-    await import('../translations');
-
-    on(document, 'keydown', (event) => {
-      if (
-        (event.key === 'F5' && !gameStarted) ||
-        (['R', 'r'].includes(event.key) &&
-          (/Mac OS X/.test(navigator.userAgent)
-            ? event.metaKey
-            : event.ctrlKey))
-      ) {
-        event.preventDefault();
-
-        new ConfirmationWindow(
-          'Quit',
-          'Are you sure you want to reload?',
-          () => {
-            allowLeaving();
-
-            window.location.reload();
-          }
-        );
-
-        return;
-      }
-    });
-
-    // Any the player has changed come back from browser storage (#343).
-    options.defaults({
-      autoEndOfTurn: true,
-      autoEndOfTurnExceptions: ['CivilDisorder'],
-      unitEdgeMargin: 2,
-      mapScale: 2,
-      lockVerticalEdges: false,
-    });
+    setOptionDefaults();
 
     DebugPanel.automateLocalPlayer(debugFlags, transport);
 
     try {
-      const notificationArea = document.getElementById(
-          'notification'
-        ) as HTMLElement,
-        mainMenuElement = document.querySelector('#mainmenu') as HTMLElement,
-        actionArea = document.getElementById('actions') as HTMLElement,
-        secondaryActionArea = document.getElementById(
-          'other-actions'
-        ) as HTMLElement,
-        unitActionArea = document.getElementById('unit-actions') as HTMLElement,
-        gameMenu = document.getElementById('game-menu') as HTMLElement,
-        gameArea = document.getElementById('game') as HTMLElement,
-        mapWrapper = document.getElementById('map') as HTMLElement,
-        mapPortal = mapWrapper.querySelector('canvas') as HTMLCanvasElement,
-        gameInfo = document.getElementById('gameDetails') as HTMLElement,
-        playerInfo = document.getElementById('playerDetails') as HTMLElement,
-        minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement,
-        unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
-        preloadContainer = document.getElementById('preload') as HTMLDivElement,
+      const {
+          notificationArea,
+          mainMenuElement,
+          actionArea,
+          secondaryActionArea,
+          unitActionArea,
+          gameMenu,
+          gameArea,
+          mapWrapper,
+          mapPortal,
+          gameInfo,
+          playerInfo,
+          minimapCanvas,
+          unitInfo,
+          preloadContainer,
+        } = appElements(),
         notifications = new Notifications(),
         notices = new Notices(),
         // Taken, not read: one reload loads one save. Read here so the welcome
@@ -304,24 +236,7 @@ export class Renderer {
           renderActiveUnit(unit, portal, unitsMap, activeUnitsMap);
         };
 
-      // preloaded the images as they could be remote
-      assetStore.getAll().then((records) =>
-        records.forEach((record) =>
-          preloadContainer.append(
-            h(
-              s<HTMLImageElement>(
-                `<img src="${record.uri}" data-path="${record.name}">`
-              ),
-              {
-                error: () =>
-                  console.error(
-                    `There was a problem preloading '${record.name}', you may have some missing details.`
-                  ),
-              }
-            )
-          )
-        )
-      );
+      preloadAssets(preloadContainer);
 
       // Keyed by coordinate: a tile resent several times between two renders
       // only needs building once. A layer redraws a tile by looking its
