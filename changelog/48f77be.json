@@ -1,0 +1,1 @@
+{"version":"0.1.0@48f77be","date":"2026-10-21T10:35:23.000Z","localChanges":["chore: move the choice lists, the notification bar and the diplomacy wording out of Renderer.ts into app/ChoiceHandler.ts, app/NotificationBar.ts and lib/interactionLabels.ts"],"externalChanges":{}}

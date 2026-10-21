@@ -1,0 +1,1 @@
+{"version":"0.1.0@8104b80","date":"2026-10-21T11:30:30.000Z","localChanges":["chore: move DataTransferClient's cheats and the cheat menu's lists into src/js/Engine/Client/cheats.ts, and test the checks they make (#449)"],"externalChanges":{}}

@@ -1,0 +1,1 @@
+{"version":"0.1.0@d33a2f0","date":"2026-10-21T10:43:25.000Z","localChanges":["chore: move DataTransferClient's visibility filter and serialisers into src/js/Engine/Client/visibilityFilter.ts, and test the parts that need no game (#449)"],"externalChanges":{}}

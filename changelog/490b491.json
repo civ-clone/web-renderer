@@ -1,0 +1,1 @@
+{"version":"0.1.0@490b491","date":"2026-10-21T11:58:55.000Z","localChanges":["chore: move the game's keyboard handler and leader screens out of Renderer.ts into game/InputController.ts"],"externalChanges":{}}

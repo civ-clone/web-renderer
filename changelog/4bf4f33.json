@@ -1,0 +1,1 @@
+{"version":"0.1.0@4bf4f33","date":"2026-10-21T11:45:05.000Z","localChanges":["chore: fix a second gameData being undone by the next patch, which went on patching the first map (the worker only sends one today)"],"externalChanges":{}}

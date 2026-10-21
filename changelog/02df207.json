@@ -1,0 +1,1 @@
+{"version":"0.1.0@02df207","date":"2026-10-21T10:15:34.000Z","localChanges":["chore: move what DataTransferClient holds of the player's actions into src/js/Engine/Client/ActionsState.ts, with the held-list comparison as diffActions, and test them with plain data (#449)"],"externalChanges":{}}

@@ -1,0 +1,1 @@
+{"version":"0.1.0@0bf8444","date":"2026-10-21T11:15:44.000Z","localChanges":["chore: the unit stack window watches its units through lib/DataChanges.ts, and DataObserver.ts is deleted"],"externalChanges":{}}

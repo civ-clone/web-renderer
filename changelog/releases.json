@@ -1,4 +1,40 @@
 [
+{"version":"0.1.0@a17b101","date":"2026-10-21T11:59:43.000Z","localChanges":["chore: move the panels around the map (both action panels, the unit action buttons, the game and player details) out of Renderer.ts into game/Hud.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@490b491","date":"2026-10-21T11:58:55.000Z","localChanges":["chore: move the game's keyboard handler and leader screens out of Renderer.ts into game/InputController.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@42bb062","date":"2026-10-21T11:51:08.000Z","localChanges":["chore: move DataTransferClient's notices into handler tables in src/js/Engine/Client/notifications/, and test every key they send (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@4bf4f33","date":"2026-10-21T11:45:05.000Z","localChanges":["chore: fix a second gameData being undone by the next patch, which went on patching the first map (the worker only sends one today)"],"externalChanges":{}}
+,
+{"version":"0.1.0@413c2e4","date":"2026-10-21T11:44:37.000Z","localChanges":["chore: move the game's data, its rebuilds and the patch receivers' data work out of Renderer.ts into game/GameState.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@8104b80","date":"2026-10-21T11:30:30.000Z","localChanges":["chore: move DataTransferClient's cheats and the cheat menu's lists into src/js/Engine/Client/cheats.ts, and test the checks they make (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@3c31558","date":"2026-10-21T11:27:09.000Z","localChanges":["chore: move the map, its minimap, blink, resize and tile queues out of Renderer.ts into game/MapView.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@3abc08f","date":"2026-10-21T11:22:00.000Z","localChanges":["chore: move DataTransferClient's notifications and city news into src/js/Engine/Client/Notifier.ts and cityNews.ts, and test them (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@0bf8444","date":"2026-10-21T11:15:44.000Z","localChanges":["chore: the unit stack window watches its units through lib/DataChanges.ts, and DataObserver.ts is deleted"],"externalChanges":{}}
+,
+{"version":"0.1.0@3549873","date":"2026-10-21T11:10:46.000Z","localChanges":["chore: move the active unit, its keys and its queue out of Renderer.ts into game/ActiveUnitController.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@c339e20","date":"2026-10-21T11:01:40.000Z","localChanges":["chore: move DataTransferClient's patch queue, its send-once helpers and the held flush into src/js/Engine/Client/PlayerPatches.ts, and test the hold (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@0e9e04a","date":"2026-10-21T10:58:56.000Z","localChanges":["chore: the City Status, Happiness, Trade and Science reports watch their player through components/lib/watchPlayer.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@a503e96","date":"2026-10-21T10:51:22.000Z","localChanges":["chore: move the active and waited units out of Renderer.ts into lib/UnitQueue.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@743c7e4","date":"2026-10-21T10:41:51.000Z","localChanges":["If one of your cities is captured or destroyed while its city screen is open, the screen now closes, instead of staying up with buttons that no longer do anything (closes #483)."],"externalChanges":{}}
+,
+{"version":"0.1.0@d33a2f0","date":"2026-10-21T10:43:25.000Z","localChanges":["chore: move DataTransferClient's visibility filter and serialisers into src/js/Engine/Client/visibilityFilter.ts, and test the parts that need no game (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@48f77be","date":"2026-10-21T10:35:23.000Z","localChanges":["chore: move the choice lists, the notification bar and the diplomacy wording out of Renderer.ts into app/ChoiceHandler.ts, app/NotificationBar.ts and lib/interactionLabels.ts"],"externalChanges":{}}
+,
+{"version":"0.1.0@02df207","date":"2026-10-21T10:15:34.000Z","localChanges":["chore: move what DataTransferClient holds of the player's actions into src/js/Engine/Client/ActionsState.ts, with the held-list comparison as diffActions, and test them with plain data (#449)"],"externalChanges":{}}
+,
+{"version":"0.1.0@37ec551","date":"2026-10-21T10:21:24.000Z","localChanges":["The city screen, the list of units on a square and the City Status, Happiness, Trade and Science reports now refresh whenever anything they show changes, including a unit that is lost. During the computer players' turns, a window left open could go on showing things as they were before the last move until your next turn began (closes #481)."],"externalChanges":{}}
+,
 {"version":"0.1.0@17524cf","date":"2026-10-21T09:10:44.000Z","localChanges":["chore: move the action panels, the auto end of turn check and the prune schedule out of Renderer.ts into lib/"],"externalChanges":{}}
 ,
 {"version":"0.1.0@810a789","date":"2026-10-21T09:03:35.000Z","localChanges":["chore: collect each rebuild's changed ids in DataChanges and notify on each render"],"externalChanges":{}}

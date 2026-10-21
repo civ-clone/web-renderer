@@ -1,0 +1,1 @@
+{"version":"0.1.0@3abc08f","date":"2026-10-21T11:22:00.000Z","localChanges":["chore: move DataTransferClient's notifications and city news into src/js/Engine/Client/Notifier.ts and cityNews.ts, and test them (#449)"],"externalChanges":{}}
