@@ -24,7 +24,7 @@ The sampler stores periodic samples (every 2s):
 Implementation:
 
 - `src/js/UI/lib/memoryTestbed.ts`
-- wired in `src/js/UI/Renderer.ts`
+- wired in `src/js/UI/debug/DebugPanel.ts`, which `src/js/UI/game/GameSession.ts` builds under `?debug=1`
 
 ## Collecting data in DevTools
 

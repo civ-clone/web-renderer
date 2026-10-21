@@ -16,13 +16,13 @@
 ### Loading a saved game
 
 1. `lib/savedGame.ts` stores the chosen save in IndexedDB, marks it in `sessionStorage`, and reloads the page.
-2. `Renderer.init()` takes the pending save, registers all its transport listeners, then sends `load` (no `start`).
+2. `Renderer.init()` (`src/js/UI/bootstrap.ts`) takes the pending save, registers all its transport listeners, then sends `load` (no `start`).
 3. The worker imports the plugins, hydrates the save into `defaultGame` (`restoreGame`), and resumes the player who was mid-turn (`resumeGame`), or starts the turn if the save was taken between turns.
 4. From there the flow is the same as above, starting at step 4.
 
 ### Performance marks
 
-`Renderer` sets `performance.mark` entries for where a load's time goes (#325): `civ:load-sent` when `load` is sent, `civ:game-data-received` when the first `gameData` arrives, and `civ:first-render` on the first render. They show in a DevTools timeline or `performance.getEntriesByType('mark')`.
+The page sets `performance.mark` entries for where a load's time goes (#325): `civ:load-sent` when `load` is sent (`bootstrap.ts`), `civ:game-data-received` when the first `gameData` arrives, and `civ:first-render` on the first render (both `game/GameSession.ts`). They show in a DevTools timeline or `performance.getEntriesByType('mark')`.
 
 ## Transport details
 
@@ -69,7 +69,7 @@ What patches leave out:
 - A unit goes out without its actions, except the unit the UI has made active. The frontend asks for that unit's actions with `unitActions` (`lib/unitActions.ts`), and the answer is a patch of that unit alone (#323).
 - A city's `CityBuild` goes out without `available`. The production picker asks for the list with the `cityBuildAvailable` request when it opens (#324).
 
-Frontend patch handling in `Renderer`:
+Frontend patch handling in `game/GameState.ts`, through `lib/applyDataPatches.ts`:
 
 - `add/update`
   - If `index` exists, set nested path inside target object.
@@ -117,7 +117,7 @@ The worker also sends `embassyEstablished` (opens the intelligence report) and `
 
 ## Known data-flow pain points
 
-- `Renderer` still has a TODO about reconstituting in a worker thread. Rebuilds are now incremental, but `gameData` is reconstituted twice: once by `WorkerTransport` (used for the welcome window) and once by `IncrementalReconstituter`.
+- `game/GameState.ts` still has a TODO about reconstituting in a worker thread. Rebuilds are now incremental, but `gameData` is reconstituted twice: once by `WorkerTransport` (used for the welcome window) and once by `IncrementalReconstituter`.
 - Patch application relies on manual string-path mutation logic.
 - The backend never emits `remove` patches (there is no `DataQueue.remove` call), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The ids it removes are passed to `IncrementalReconstituter.forget()`.
 

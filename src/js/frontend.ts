@@ -1,4 +1,4 @@
-import Renderer from './UI/Renderer';
+import Renderer from './UI/bootstrap';
 import WorkerTransport from './Engine/WorkerTransport';
 
 const renderer = new Renderer(

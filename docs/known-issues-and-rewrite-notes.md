@@ -11,7 +11,7 @@ marked as such, with the commit or issue that fixed them.
   - `src/js/UI/Renderer.ts` is a very large mixed-responsibility class (state, rendering, input, transport, window logic).
   - Increases regression risk and makes isolated feature rewrites difficult.
   - Still stands: about 1,900 lines on 2026-10-08. No issue tracks breaking it up.
-  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`): 1,213 lines then, and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`.
+  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`), and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`. Split: `Renderer.ts` is now `src/js/UI/bootstrap.ts`, 149 lines of page start-up, with one game in `src/js/UI/game/` and the rest in `app/`, `debug/` and `lib/`.
 - **Late-game performance bottlenecks** (mostly addressed; tracked in #320)
   - README notes slowdown when rebuilding transferred data. The README note is still there, but most of the cause has been fixed:
     - The turn-start freeze in large games: notifications and patches no longer resend the whole known world (97140f2, #130), and the frontend rebuilds at most once a frame while the other civilizations move (b00c490, #61).
@@ -19,7 +19,7 @@ marked as such, with the commit or issue that fixed them.
     - The frontend rebuilds only the objects a patch changed, with `src/js/UI/lib/IncrementalReconstituter.ts`, instead of the whole graph (e70f65a, #322; f5633a0, #327).
     - Patches no longer carry every unit's actions (4ae9bbd, #323) or every city's build list (4732149, #324), and the page is sent only the player's own map (9ae604f, #328).
   - Still open: #326 (show a move straight away, keep keypresses typed during the lag), #333 (the initial game data is rebuilt twice on load) and #151 (turn handover refinements).
-  - `Renderer` has TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `updateState`: reconstituting in a worker thread. The object map is still pruned by `src/js/UI/lib/pruneObjectMap.ts`, and #68 asks whether the backend should send `remove` patches instead.
+  - `Renderer` had TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `GameState`'s rebuild (`src/js/UI/game/GameState.ts`): reconstituting in a worker thread. The object map is still pruned by `src/js/UI/lib/pruneObjectMap.ts`, and #68 asks whether the backend should send `remove` patches instead.
   - `DataQueue` includes TODO to chunk data transfer but currently sends full queue each flush. Still true.
 - **Protocol drift risk in transport channels**
   - `restart` is declared in `TransportDataMap`, but has no receiver on the opposite side (sent by the backend, no frontend handler). `quit` was removed with the main menu's Quit button, an Electron leftover (#340).
@@ -29,8 +29,8 @@ marked as such, with the commit or issue that fixed them.
 ## Medium priority
 
 - **Hardcoded UI behavior and theme parameters**
-  - Map scale/tile size hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). Tile size is still 16 in `Renderer`; #56 is to take it from the tileset.
-  - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `Renderer.init()` sets them on every page load.
+  - Map scale/tile size hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). Tile size is still 16, now in `src/js/UI/game/MapView.ts`; #56 is to take it from the tileset.
+  - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `src/js/UI/app/options.ts` sets them on every page load.
 - **Plugin/translation generation portability**
   - Generated import files use absolute filesystem paths, potentially brittle across environments.
   - Still true of `src/js/plugins.ts` and `src/js/translations.ts` (both git-ignored). It breaks the arena in a git worktree with a symlinked `node_modules` (#240).
@@ -50,8 +50,9 @@ From `README.md` known issues/TODO:
 
 ## Source-level TODO hotspots
 
-- `src/js/UI/Renderer.ts`
+- `src/js/UI/bootstrap.ts` (was `Renderer.ts`)
   - Explicit note to break down and potentially use framework approach.
+- `src/js/UI/game/GameState.ts`
   - Performance TODOs around reconstitution and background processing. One is left: reconstituting in a worker thread.
 - `src/js/Engine/DataTransferClient.ts`
   - Multiple TODOs around action handling structure, hidden actions, negotiation reuse, and cleanup behavior.

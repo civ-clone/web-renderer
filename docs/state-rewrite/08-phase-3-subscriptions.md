@@ -3,7 +3,9 @@
 > **Status (2026-10-21):** Re-planned on top of `IncrementalReconstituter`, which replaced the Phase 1 store this
 > document used to assume (#344). Line numbers are from `main` at `18f28b0`. The original 2026-08-31 text is in git
 > history; its Part A/B/C structure is replaced by the two tracks below. Track A landed on 2026-10-21 (#497, #507,
-> #509, #513, #517, #520); Track B is under way.
+> #509, #513, #517, #520); Track B landed the same day (#499, #506, #508, #512, #516, #519, #522, #524, #527,
+> #528, #532, #533, #535): `Renderer.ts` is now `bootstrap.ts`. The "Done when" list below is met except for the
+> line counts (`bootstrap.ts` 149; five modules over 350) and two `lib/` files outside `tsconfig.json`; see #503.
 
 **Goal.** Panels update when the data they show changes, without the `document` `CustomEvent` plumbing
 (`dataupdated`, `patchdatareceived`, `DataObserver`), and `src/js/UI/Renderer.ts` (2,166 lines, one `init()` closure
