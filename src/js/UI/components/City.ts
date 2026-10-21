@@ -17,6 +17,7 @@ import {
   toggleAuto,
 } from './lib/cityBuild';
 import { splitYield, yieldGroup } from '../lib/yieldMap';
+import { tileBounds } from '../lib/projection';
 import {
   renderPopulation,
   renderProgress,
@@ -228,8 +229,20 @@ const renderYields = (city: CityData): Node => {
         Unworkable
       );
 
-    portalCanvas.height = portal.tileSize() * 5;
-    portalCanvas.width = portal.tileSize() * 5;
+    // The canvas shows the block of squares within the city's radius, so it is
+    // as big as that block is in pixels.
+    const block: { x: number; y: number }[] = [];
+
+    for (let dy = -cityRadius; dy <= cityRadius; dy++) {
+      for (let dx = -cityRadius; dx <= cityRadius; dx++) {
+        block.push({ x: localCenter + dx, y: localCenter + dy });
+      }
+    }
+
+    const { width, height } = tileBounds(cityPortal.projection(), block);
+
+    portalCanvas.height = height;
+    portalCanvas.width = width;
 
     cityPortal.setCenter(localCenter, localCenter);
     cityPortal.build(localTiles);
