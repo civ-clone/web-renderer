@@ -68,6 +68,12 @@ export const registerPatchEvents = (
 
     // `PlayerWorld.register` adds the square before it says it is seen, so it is never missing here (#478).
     if (playerTile === null) {
+      // Never reached today (`PlayerWorld.register` adds the tile before the rule fires); say so if it ever is,
+      //  rather than dropping the square silently.
+      console.warn(
+        `visibility-changed: no PlayerTile yet for ${tile.x()},${tile.y()}`
+      );
+
       return;
     }
 
