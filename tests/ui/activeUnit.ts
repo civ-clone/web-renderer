@@ -29,10 +29,8 @@ import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 import chooseActiveUnit from '../../src/js/UI/lib/chooseActiveUnit';
 import ActiveUnitTiles from '../../src/js/UI/lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from '../../src/js/UI/lib/PendingMove';
-import {
-  directionKeyMap,
-  keyToActionsMap,
-} from '../../src/js/UI/lib/unitActionKeys';
+import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
+import ActiveUnitController from '../../src/js/UI/game/ActiveUnitController';
 import Units from '../../src/js/UI/components/Map/Units';
 import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
 import { Tile } from '../../src/js/UI/types';
@@ -356,109 +354,118 @@ const place = (
   });
 };
 
-// The renderer's half, as `Renderer` does it: a unit key goes through
-// `PendingMove.press`, a plain Move is sent and drawn on its tile at once, each
-// update makes the next unit active and plays the keys kept for its orders, and
-// the move's own acknowledgement settles it and plays the keys kept behind it.
+// The renderer's half, through the `ActiveUnitController` that `Renderer`
+// drives: a unit key goes through `pressKey`, a plain Move is sent and drawn on
+// its tile at once, each update makes the next unit active and plays the keys
+// kept for its orders, and the move's own acknowledgement settles it and plays
+// the keys kept behind it.
 const sentActions: string[] = [],
   // What the worker has yet to acknowledge, in the order it was sent.
   unacknowledged: TransportHandledAction[] = [],
   pendingMove = new PendingMove<Tile>(),
-  layerTiles = new ActiveUnitTiles();
+  // The tiles the controller has the units layer draw again.
+  layerTiles: Tile[] = [];
 
-let current: any = null,
-  gameData: any = null;
+let gameData: any = null;
+
+// The map layers, each tile drawn at its column of a canvas the size of the
+// row.
+class TestUnits extends Units {
+  protected placements(tile: Tile): [number, number][] {
+    return [[tile.x * this.tileSize(), 0]];
+  }
+
+  protected renderUnit(unit: any): CanvasImageSource {
+    return new FakeImage(unit._, 16, 16) as any;
+  }
+
+  update(tiles: Tile[]): void {
+    layerTiles.push(...tiles);
+  }
+}
+
+class TestActiveUnit extends ActiveUnit {
+  protected placements(tile: Tile): [number, number][] {
+    return [[tile.x * this.tileSize(), 0]];
+  }
+
+  protected renderUnit(unit: any): CanvasImageSource {
+    return new FakeImage(unit._, 16, 16) as any;
+  }
+}
+
+const world = {
+    get: (x: number) => gameData.tiles[x],
+    width: () => 10,
+    height: () => 1,
+  },
+  layer = <T extends typeof Units>(Layer: T) => {
+    const { calls, canvas } = fakeCanvas(320, 32);
+
+    return {
+      calls,
+      layer: new Layer(world as any, 2, 16, canvas) as InstanceType<T>,
+    };
+  },
+  unitsLayer = layer(TestUnits),
+  activeLayer = layer(TestActiveUnit),
+  controller = new ActiveUnitController({
+    activeUnitLayer: activeLayer.layer,
+    arrivalClosed: () => {},
+    data: () => ({ player: gameData } as any),
+    haltedUnits: new HaltedUnits(),
+    options: { get: (key: string, defaultValue: any = null) => defaultValue },
+    pendingMove,
+    portal: {
+      isVisible: () => true,
+      render: () => {},
+      setActiveUnit: () => {},
+      setCenter: () => {},
+    },
+    scheduleRender: () => {},
+    showUnitDetails: () => {},
+    // The action as the renderer sends it, and the worker acknowledges it.
+    transport: {
+      send: ((name: string, action: TransportHandledAction) => {
+        if (name !== 'action') {
+          return;
+        }
+
+        sentActions.push(
+          action.unitAction === 'Move'
+            ? `${action.id} Move ${game.objects[action.target!].x}`
+            : `${action.id} ${action.unitAction}`
+        );
+        unacknowledged.push(action);
+      }) as any,
+    },
+    unitsLayer: unitsLayer.layer,
+    world: world as any,
+  }),
+  current = (): any => controller.active();
 
 const find = (id: string | null) =>
     gameData.units.find((unit: any) => unit.id === id) ?? null,
-  // The action as the renderer sends it, and the worker acknowledges it.
-  asSent = (action: any): TransportHandledAction => ({
-    name: 'ActiveUnit',
-    id: current.id,
-    unitAction: action._,
-    target: action.to.id,
-  }),
-  makeActive = (unit: any) => {
-    pendingMove.activate(unit?.id ?? null);
-
-    const pendingTile = pendingMove.destination(unit?.id ?? null);
-
-    layerTiles.change(unit === null ? null : { tile: unit.tile, pendingTile });
-
-    current = unit;
-  },
-  playKey = (key: string): boolean => {
-    if (key in keyToActionsMap) {
-      const action = unitActions(current).find((action) =>
-        keyToActionsMap[key].includes(action._)
-      );
-
-      if (action) {
-        sentActions.push(`${current.id} ${action._}`);
-        unacknowledged.push(asSent(action));
-
-        return true;
-      }
-    }
-
-    if (!(key in directionKeyMap)) {
-      return false;
-    }
-
-    const actions = neighbourActions(current, directionKeyMap[key]),
-      move = plainMove(actions);
-
-    if (move !== null) {
-      sentActions.push(`${current.id} Move ${move.to.x}`);
-      unacknowledged.push(asSent(move));
-
-      pendingMove.start(current.id, move.to);
-
-      makeActive(current);
-
-      return true;
-    }
-
-    if (actions.length > 0) {
-      sentActions.push(`${current.id} ${actions[0]._} ${actions[0].to.x}`);
-      unacknowledged.push(asSent(actions[0]));
-
-      return true;
-    }
-
-    return false;
-  },
   press = (...keys: string[]) =>
-    keys.forEach((key) =>
-      pendingMove.press(key, hasUnitActions(current), playKey)
-    ),
-  drain = () => {
-    if (current !== null && hasUnitActions(current)) {
-      pendingMove.drain(playKey);
-    }
-  },
-  // A patch: the answer to an action, or to a `unitActions` request.
+    keys.forEach((key) => controller.pressKey(key)),
+  // A patch: the answer to an action, or to a `unitActions` request. The
+  // player's actions name the unit that can act, as `Renderer`'s
+  // `updateState` passes them on.
   update = (activeId: string | null) => {
     gameData = gameReconstituter.rebuild(game, null);
 
-    makeActive(find(activeId));
+    controller.next(
+      [find(activeId)]
+        .filter((unit) => unit !== null)
+        .map((unit) => ({ _: 'ActiveUnit', value: unit } as any)),
+      false
+    );
 
-    drain();
+    controller.drain();
   },
   // The worker's `actionHandled`, after the patch with the action's result.
-  acknowledge = (action: TransportHandledAction) => {
-    if (!pendingMove.answeredBy(action)) {
-      return;
-    }
-
-    if (!pendingMove.settle(find(action.id!))) {
-      pendingMove.clear();
-    }
-
-    makeActive(current);
-
-    drain();
-  },
+  acknowledge = (action: TransportHandledAction) =>
+    controller.actionHandled(action),
   // The answer to the oldest action sent: its patch, then its acknowledgement.
   respond = (activeId: string | null) => {
     update(activeId);
@@ -466,13 +473,17 @@ const find = (id: string | null) =>
     acknowledge(unacknowledged.shift()!);
   },
   drawnAt = (): number =>
-    (pendingMove.destination(current.id) ?? current.tile).x,
-  refreshedTiles = (): string =>
-    layerTiles
-      .take()
+    (pendingMove.destination(current().id) ?? current().tile).x,
+  // The tiles the next render of the active unit draws again.
+  refreshedTiles = (): string => {
+    controller.render(current());
+
+    return layerTiles
+      .splice(0)
       .map(({ x }) => x)
       .sort()
       .join();
+  };
 
 expect(
   'only a lone Move is shown before its answer',
@@ -492,43 +503,9 @@ place('Legion-1', 8, null);
 place('Chariot-1', 3);
 update('Chariot-1');
 
-// The map layers, each tile drawn at its column of a canvas the size of the
-// row.
-class TestUnits extends Units {
-  protected placements(tile: Tile): [number, number][] {
-    return [[tile.x * this.tileSize(), 0]];
-  }
-
-  protected renderUnit(unit: any): CanvasImageSource {
-    return new FakeImage(unit._, 16, 16) as any;
-  }
-}
-
-class TestActiveUnit extends ActiveUnit {
-  protected placements(tile: Tile): [number, number][] {
-    return [[tile.x * this.tileSize(), 0]];
-  }
-
-  protected renderUnit(unit: any): CanvasImageSource {
-    return new FakeImage(unit._, 16, 16) as any;
-  }
-}
-
-const world = {
-    get: (x: number) => gameData.tiles[x],
-    width: () => 10,
-    height: () => 1,
-  },
-  layer = (Layer: typeof TestUnits) => {
-    const { calls, canvas } = fakeCanvas(320, 32);
-
-    return { calls, layer: new Layer(world as any, 2, 16, canvas) };
-  },
-  unitsLayer = layer(TestUnits),
-  activeLayer = layer(TestActiveUnit),
-  // Each sprite drawn, as its unit and the column it was drawn in, with a +
-  // for the copy behind a stack.
-  drawn = ({ calls }: { calls: any[][] }, draw: () => void): string => {
+// Each sprite drawn, as its unit and the column it was drawn in, with a + for
+// the copy behind a stack.
+const drawn = ({ calls }: { calls: any[][] }, draw: () => void): string => {
     calls.splice(0);
 
     draw();
@@ -544,15 +521,10 @@ const world = {
   },
   // What the units layer draws on the Chariot's tile and the next, and what
   // the active unit's layer draws.
-  showLayers = (): string => {
-    [unitsLayer, activeLayer].forEach(({ layer }) =>
-      layer.setActiveUnit(current, pendingMove.destination(current.id))
-    );
-
-    return `units: ${drawn(unitsLayer, () =>
+  showLayers = (): string =>
+    `units: ${drawn(unitsLayer, () =>
       [3, 4].forEach((x) => unitsLayer.layer.renderTile(gameData.tiles[x]))
     )}; active: ${drawn(activeLayer, () => activeLayer.layer.render())}`;
-  };
 
 expect(
   'before a move, the Chariot is drawn on its stack, which the units layer leaves to it',
