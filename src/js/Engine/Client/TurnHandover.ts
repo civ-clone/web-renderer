@@ -4,7 +4,8 @@
 //
 // What goes out, in order: on the first turn `gameData`; 1 ms later the hand-over's patch, `turnStarted`, the
 //  notifications held until then and the GoTos that halted (`unitHalted`). Per action, one patch, `actionHandled`, then
-//  the halts; for `EndTurn`, one patch, `actionHandled` and `turnEnded`, and the turn is over 10 ms later.
+//  the halts; for `EndTurn`, one patch, `actionHandled` and `turnEnded`, and the turn is over 10 ms later. An `EndTurn`
+//  sent while talks are open is answered as any other action is once they are over, and the turn goes on (#491).
 
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import Engine from '@civ-clone/core-engine/Engine';

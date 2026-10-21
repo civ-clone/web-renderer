@@ -43,6 +43,8 @@ export class Talks {
   // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
   //  talks with units met on the way (`talkToPlayersMet`).
   #talks: Promise<void> = Promise.resolve();
+  // How many of the links in `#talks` have yet to settle: talks are under way while any has (#491).
+  #unsettled: number = 0;
 
   constructor(context: TalksContext) {
     this.#context = context;
@@ -55,6 +57,12 @@ export class Talks {
   // The talks under way, for an action to wait for before it offers talks with the players met on the way.
   get pending(): Promise<void> {
     return this.#talks;
+  }
+
+  // Whether `pending` has yet to settle: a Meet with King's talks, or those at the start of the turn, are open. `EndTurn`
+  //  waits for them (`handleAction.ts`). Counted, as a promise can't be asked whether it has settled.
+  get underWay(): boolean {
+    return this.#unsettled > 0;
   }
 
   player(): Player {
@@ -79,11 +87,27 @@ export class Talks {
     this.#talks = this.#talks
       .then(() => this.handleNegotiation(other))
       .then(() => {});
+
+    this.#countUntilSettled();
   }
 
   handOver(): void {
     // Anyone met by a GoTo carried on at the start of the turn.
     this.#talks = this.#talks.then(() => this.talkToPlayersMet());
+
+    this.#countUntilSettled();
+  }
+
+  // Counts the link just added to `#talks` until it settles, either way. Off to one side, so the chain an action waits
+  //  for is as it was. Registered as the link is added, it runs before anything that waits for the link.
+  #countUntilSettled(): void {
+    const settled = (): void => {
+      this.#unsettled--;
+    };
+
+    this.#unsettled++;
+
+    this.#talks.then(settled, settled);
   }
 
   // TODO: This is duplicated between here and SimpleAIClient, this should be re-usable.
