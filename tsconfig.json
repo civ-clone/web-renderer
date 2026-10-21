@@ -23,6 +23,7 @@
     "src/js/UI/lib/autoEndTurn.ts",
     "src/js/UI/lib/PruneSchedule.ts",
     "src/js/UI/lib/interactionLabels.ts",
-    "src/js/UI/components/lib/watchCity.ts"
+    "src/js/UI/components/lib/watchCity.ts",
+    "src/js/UI/lib/UnitQueue.ts"
   ]
 }
