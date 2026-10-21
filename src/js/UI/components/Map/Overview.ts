@@ -29,6 +29,12 @@ const landColour = '#58a038',
 /**
  * The whole world at a few pixels a tile, for the minimap.
  *
+ * It plots tiles in storage order, one flat square a tile, whatever the map's
+ * own projection: Civ2 does the same, and an isometric or hex map will stagger
+ * alternate rows here rather than draw the map's shape (#90). So it keeps
+ * `Map`'s square projection, at the overview's tile size, even once the map
+ * has another.
+ *
  * The minimap used to be three full-world layer canvases scaled down on every
  * update — 14.7 megapixels thrown into a 190px-wide target, on every patch and
  * every recentre. This draws the same information directly at the size it is

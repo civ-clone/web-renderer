@@ -7,7 +7,7 @@ export class Cities extends Map {
       return;
     }
 
-    const size = this.tileSize(),
+    const { width, height } = this.projection().footprint(),
       city = tile.city,
       player = city.player,
       civilization = player.civilization,
@@ -17,15 +17,15 @@ export class Cities extends Map {
 
     if (tile.units.length > 0) {
       this.context().fillStyle = '#000';
-      this.context().fillRect(offsetX, offsetY, size, size);
+      this.context().fillRect(offsetX, offsetY, width, height);
     }
 
     this.context().fillStyle = colors.value[0];
     this.context().fillRect(
       offsetX + this.scale(),
       offsetY + this.scale(),
-      size - this.scale() * 2,
-      size - this.scale() * 2
+      width - this.scale() * 2,
+      height - this.scale() * 2
     );
 
     this.drawImage(`map/city`, offsetX, offsetY, {

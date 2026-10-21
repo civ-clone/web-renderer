@@ -9,7 +9,7 @@ export class Unworkable extends Map {
   }
 
   protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
-    const size = this.tileSize();
+    const { width, height } = this.projection().footprint();
 
     if (
       tile.workedBy !== null &&
@@ -17,7 +17,7 @@ export class Unworkable extends Map {
       tile.workedBy.id !== this.#city.id
     ) {
       this.context().fillStyle = 'rgba(200, 64, 64, 0.5)';
-      this.context().fillRect(offsetX, offsetY, size, size);
+      this.context().fillRect(offsetX, offsetY, width, height);
     }
   }
 }
