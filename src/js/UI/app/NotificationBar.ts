@@ -1,8 +1,8 @@
 import Transport from '../Transport';
 
-// The line along the top of the page that shows a message for 4 seconds: the worker's `notification` messages, and
-//  the cheats notice from the game's `keydown` handler. A new message replaces the one showing and restarts the
-//  timer. Set as HTML (#469).
+// The line along the top of the page that shows a message for 4 seconds: the worker's `notification` messages, the
+//  cheats notice from the game's `keydown` handler, and the `?debug=1` panel's notices. A new message replaces the
+//  one showing and restarts the timer. Set as HTML (#469).
 export class NotificationBar {
   #notificationArea: HTMLElement;
   #timer: number | undefined;

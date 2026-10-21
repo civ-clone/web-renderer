@@ -5,6 +5,7 @@ import CityNames from '../components/Map/CityNames';
 import DebugFlags from './DebugFlags';
 import GamePortal from '../components/GamePortal';
 import Minimap from '../components/Minimap';
+import NotificationBar from '../app/NotificationBar';
 import Transport from '../Transport';
 import UIStressRunner from '../lib/UIStressRunner';
 import Units from '../components/Map/Units';
@@ -22,6 +23,9 @@ export type DebugPanelDeps = {
   currentTurn: () => number;
   data: () => GameData;
   minimap: Minimap;
+  // Where the panel's notices show. Not `transport.send('notification')`: that
+  // channel only comes from the worker.
+  notificationBar: NotificationBar;
   portal: GamePortal;
   setActiveUnit: (unit: Unit | null) => void;
   tilesPendingRender: () => number;
@@ -282,8 +286,7 @@ export class DebugPanel {
 
   #exportDebugCsv(): void {
     if (!this.#memoryTestbed) {
-      this.#deps.transport.send(
-        'notification',
+      this.#deps.notificationBar.show(
         'No memory sampler active for CSV export.'
       );
 
@@ -307,6 +310,7 @@ export class DebugPanel {
       cityNamesMap,
       data,
       minimap,
+      notificationBar,
       portal,
       setActiveUnit,
       transport,
@@ -314,8 +318,7 @@ export class DebugPanel {
       yieldsMap,
     } = this.#deps;
 
-    transport.send(
-      'notification',
+    notificationBar.show(
       `Stress harness: windows ${
         this.#flags.stressUiWindowsEnabled ? 'enabled' : 'disabled'
       }`

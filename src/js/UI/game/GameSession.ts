@@ -240,6 +240,7 @@ export class GameSession {
         currentTurn: () => gameState.currentTurn(),
         data: () => gameState.data(),
         minimap: mapView.minimap,
+        notificationBar,
         portal,
         setActiveUnit: (unit) => unitController.set(unit),
         tilesPendingRender: () => mapView.tilesPending(),
