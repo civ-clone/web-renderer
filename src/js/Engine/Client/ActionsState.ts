@@ -48,13 +48,14 @@ export const diffActions = (
 });
 
 export class ActionsState implements HeldActions {
-  // The player's actions as the frontend was last sent them by `#sendActions`, by what each is (#411), and what each
-  //  list was. `null` once they have gone some other way, in the whole player, as fresh objects the frontend holds in
-  //  place of these.
+  // The player's actions as the frontend was last sent them by `PlayerPatches#actions`, by what each is (#411), and
+  //  what each list was. `null` once they have gone some other way, in the whole player, as fresh objects the
+  //  frontend holds in place of these.
   held: Map<string, PlayerAction> | null = null;
   heldKeys: string[] | undefined = undefined;
   heldMandatory: string[] | undefined = undefined;
-  // Set while `#sendActions` serialises them, or a test compares with them, which leave the actions held alone.
+  // Set while `PlayerPatches#actions` serialises them, or `serialisePlayer` serialises the player for a test to compare
+  //  with, which leave the actions held alone.
   serialising = false;
   // The unit sent with its actions (#323): the one that last acted, or the one the UI last asked about. It is the UI's
   //  active unit, so its actions go out while it can use them, and the next unit's are asked for when it moves on.

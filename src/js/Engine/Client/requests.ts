@@ -1,6 +1,7 @@
 // What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities and intelligence reports,
 //  the Civilization Score, what a city can build and a unit's actions, each answered on the channel it was asked on.
-//  The client's `topCities`, `civilizationScore` and `cityBuildAvailable` are these, for the tests that call them.
+//  The client's `topCities`, `civilizationScore` and `cityBuildAvailable` are these: `topCities` for its test, and
+//  `civilizationScore` for the ending window (`gameEnd.ts`).
 
 import Player from '@civ-clone/core-player/Player';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
