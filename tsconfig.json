@@ -10,7 +10,7 @@
     "target": "ES2018"
   },
   "include": [
-    "src/js/Engine/*",
+    "src/js/Engine/**/*",
     "src/js/Engine/Game.ts",
     "main.ts",
     "src/js/preload.ts",
