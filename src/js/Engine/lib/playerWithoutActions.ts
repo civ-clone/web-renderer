@@ -13,7 +13,7 @@ const omitted = ['actions', 'mandatoryActions'],
   standIns: WeakMap<Player, Player> = new WeakMap();
 
 // The player serialises as this stand-in without `actions` and `mandatoryActions` (#411), which go on their own,
-//  after it, so that an action the frontend already holds goes as a ref (`DataTransferClient#sendActions`). In full,
+//  after it, so that an action the frontend already holds goes as a ref (`Client/PlayerPatches.ts` `actions`). In full,
 //  every one of them went again with a new id, hundreds in a large game.
 //
 // As `unitWithoutActions`: each key the stand-in keeps calls the player's own method, and its additional data (its
