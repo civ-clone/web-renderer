@@ -1,0 +1,1 @@
+{"version":"0.1.0@ad2ecdc","date":"2026-10-21T13:07:57.000Z","localChanges":["chore: move DataTransferClient's automation (whether it is on, the computer player that plays the turns) into src/js/Engine/Client/Automation.ts (#449)"],"externalChanges":{}}

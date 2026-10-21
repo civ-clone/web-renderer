@@ -1,0 +1,1 @@
+{"version":"0.1.0@9effa00","date":"2026-10-21T13:30:40.000Z","localChanges":["chore: delete Retryable and RetryFailed, whose only use, a newly seen square missing from the player's world, can't happen (#478)"],"externalChanges":{}}
