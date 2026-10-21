@@ -1,25 +1,43 @@
 import DifficultyWindow from './DifficultyWindow';
+import MapGridWindow from './MapGridWindow';
 import Options from '../../Engine/Requests/Options';
 import Request from '../../Engine/Request';
+import { TopologyId } from '../lib/topologyFor';
 import Transport from '../Transport';
 import Window from './Window';
+import { customSizeProblem } from '../lib/worldSizes';
 import { elementId, h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 type FinishedHandler = () => void;
 
+/** The world's exact size and land, on the grid chosen before it (#89); then the difficulty level. */
 export class CustomiseWorldWindow extends Window {
   #onFinished?: FinishedHandler;
+  #topologyId: TopologyId;
   #transport: Transport;
 
-  constructor(transport: Transport, onFinished?: FinishedHandler) {
+  constructor(
+    transport: Transport,
+    onFinished?: FinishedHandler,
+    topologyId: TopologyId = 'square'
+  ) {
     super(t('CustomizeWorld.title'), s('<div class="customise-world"></div>'));
 
     this.#onFinished = onFinished;
+    this.#topologyId = topologyId;
     this.#transport = transport;
 
     this.init();
+  }
+
+  /** Customize World: the map's grid, then the world on it. */
+  static ask(transport: Transport, onFinished?: FinishedHandler): void {
+    MapGridWindow.ask(
+      (topologyId) =>
+        new CustomiseWorldWindow(transport, onFinished, topologyId)
+    );
   }
 
   async init(): Promise<void> {
@@ -64,6 +82,22 @@ export class CustomiseWorldWindow extends Window {
         }" step="1" min="1">`
       ),
       submit = () => {
+        // A size the grid cannot be would otherwise start a game that never arrives: say so beside the box instead.
+        const problem = customSizeProblem(
+          this.#topologyId,
+          widthInput.value,
+          heightInput.value
+        );
+
+        if (problem !== null) {
+          const input = problem.field === 'width' ? widthInput : heightInput;
+
+          input.setCustomValidity(t(problem.message));
+          input.reportValidity();
+
+          return;
+        }
+
         this.close();
 
         // Then the difficulty level, as a new game asks it (#173).
@@ -76,6 +110,7 @@ export class CustomiseWorldWindow extends Window {
               landCoverage: landCoverageInput.value,
               landSize: landSizeInput.value,
               maxIterations: maxIterationsInput.value,
+              topologyId: this.#topologyId,
               difficulty,
             })
           );
@@ -87,6 +122,11 @@ export class CustomiseWorldWindow extends Window {
           }
         });
       };
+
+    // The message goes once the box is changed.
+    [widthInput, heightInput].forEach((input) =>
+      input.addEventListener('input', () => input.setCustomValidity(''))
+    );
 
     this.update(
       s(
