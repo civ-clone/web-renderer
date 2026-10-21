@@ -28,7 +28,7 @@ Quick reference map of key code areas.
 - `AdditionalData/*`: extra fields added to engine objects for the UI (`anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `tradeRoutes`).
 - `lib/*`: worker-side helpers: report rows for Top Cities and the intelligence report, and the stand-in that sends a unit without its actions (`unitWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
-- `Retryable.ts`, `Error/*`: retry helper (used when a newly visible tile is not yet in the player's world) and its errors.
+- `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
 
 ## UI side (`src/js/UI`)
 
