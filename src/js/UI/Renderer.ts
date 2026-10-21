@@ -1,4 +1,4 @@
-import { City as CityData, DataPatch, GameData, Tile } from './types';
+import { City as CityData, DataPatch } from './types';
 import { emit, on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
@@ -29,15 +29,12 @@ import UnitDetails from './components/UnitDetails';
 import Window from './components/Window';
 import { instance as options } from './GameOptionsRegistry';
 import { mappedKeyFromEvent } from './lib/mappedKey';
-import pruneObjectMap from './lib/pruneObjectMap';
-import PruneSchedule from './lib/PruneSchedule';
 import partitionActions from './lib/playerActionPanels';
 import shouldAutoEndTurn from './lib/autoEndTurn';
-import applyDataPatches from './lib/applyDataPatches';
-import IncrementalReconstituter from './lib/IncrementalReconstituter';
 import { instance as dataChanges } from './lib/DataChanges';
 import ActiveUnitController from './game/ActiveUnitController';
 import MapView from './game/MapView';
+import GameState from './game/GameState';
 import DebugFlags from './debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
@@ -158,12 +155,15 @@ export class Renderer {
           try {
             gameStarted = true;
 
-            // Declared here for the first rebuild, which everything below
-            // that needs the player is built from; `updateState` goes on
-            // refilling it with each patch.
-            const reconstituter = new IncrementalReconstituter();
-
-            let data = reconstituter.rebuild(objectMap, null) as GameData;
+            // The first rebuild, which everything below that needs the
+            // player is built from; each update goes on refilling it.
+            const gameState = new GameState(objectMap, {
+              tiles: {
+                queueTile: (tile): void => mapView.queueTile(tile),
+                setTiles: (tiles, changed): void =>
+                  world.setTiles(tiles, changed),
+              },
+            });
 
             guardLeaving();
 
@@ -175,19 +175,21 @@ export class Renderer {
                 s(
                   `<div class="welcome">
 <p>${t('Welcome.you-have-risen', {
-                    player: data.player,
+                    player: gameState.data().player,
                   })}</p>
 <p>${t('Welcome.your-people-have-knowledge-of', {
                     advances: [
                       'Irrigation',
                       'Mining',
                       'Roads',
-                      ...data.player.research.complete.map((advance) =>
-                        t(`${advance._}.name`, {
-                          defaultValue: advance._,
-                          ns: 'science',
-                        })
-                      ),
+                      ...gameState
+                        .data()
+                        .player.research.complete.map((advance) =>
+                          t(`${advance._}.name`, {
+                            defaultValue: advance._,
+                            ns: 'science',
+                          })
+                        ),
                     ],
                   })}</p>
 </div>`
@@ -204,12 +206,6 @@ export class Renderer {
               mapPortal.parentElement as HTMLElement
             ).offsetHeight;
 
-            // From the worker accepting `EndTurn` until it hands the next
-            // turn over. Nothing sent in between is listened for, and the
-            // data still describes the turn just ended, so there is nothing
-            // to select or act on (#61, #130).
-            let waitingForTurn = false;
-
             // Always in the document and emptied rather than hidden, so that
             // setting the text is announced: it explains why the controls
             // have stopped responding.
@@ -221,7 +217,7 @@ export class Renderer {
 
             const mapView: MapView = new MapView({
                 activateUnit: (unit): void => {
-                  if (waitingForTurn) {
+                  if (gameState.waiting()) {
                     return;
                   }
 
@@ -231,19 +227,19 @@ export class Renderer {
                 mapPortal,
                 minimapCanvas,
                 options,
-                playerId: data.player.id,
+                playerId: gameState.data().player.id,
                 transport,
-                world: data.player.world,
+                world: gameState.data().player.world,
               }),
               { portal, world } = mapView,
               unitController = new ActiveUnitController({
                 activeUnitLayer: mapView.activeUnitLayer,
                 arrivalClosed: (): void => {
-                  if (!waitingForTurn) {
-                    updateState(objectMap);
+                  if (!gameState.waiting()) {
+                    gameState.update();
                   }
                 },
-                data: () => data,
+                data: () => gameState.data(),
                 haltedUnits,
                 options,
                 portal,
@@ -269,12 +265,13 @@ export class Renderer {
               ),
               gameMenuItem = new GameMenu(
                 gameMenu,
-                // `data` is reassigned on every patch, so this always resolves
-                // to the current player rather than the turn-0 snapshot.
-                () => data.player,
+                // `data` is replaced on a full rebuild, so this always
+                // resolves to the current player rather than the turn-0
+                // snapshot.
+                () => gameState.data().player,
                 // Same reason: the turn a save is named after is the turn it
                 // was taken on.
-                () => Number(data?.turn?.value ?? 0),
+                () => Number(gameState.data()?.turn?.value ?? 0),
                 portal,
                 transport,
                 parseBooleanParam(queryParams.get('cheat'), false)
@@ -288,22 +285,15 @@ export class Renderer {
             // let lastTurn = 1,
             //   clearNextTurn = false;
 
-            const pruneSchedule = new PruneSchedule(
-              Object.keys(objectMap.objects).length
-            );
-
-            let currentTurn = Number(data?.turn?.value ?? 0),
-              currentObjectCount = Object.keys(objectMap.objects).length;
-
             // The `?debug=1` panel, hotkeys and memory testbed. Built before
             // the game's `keydown` handler below is registered, as it always
             // was; its own hotkey listener is capture-phase.
             const debugPanel = new DebugPanel(debugFlags, {
               citiesMap: mapView.citiesLayer,
               cityNamesMap: mapView.cityNamesLayer,
-              currentObjectCount: () => currentObjectCount,
-              currentTurn: () => currentTurn,
-              data: () => data,
+              currentObjectCount: () => gameState.currentObjectCount(),
+              currentTurn: () => gameState.currentTurn(),
+              data: () => gameState.data(),
               minimap: mapView.minimap,
               portal,
               setActiveUnit: (unit) => unitController.set(unit),
@@ -342,22 +332,22 @@ export class Renderer {
                 performance.mark('civ:first-render');
               }
 
-              dataChanges.notify(data);
+              dataChanges.notify(gameState.data());
 
               const { primary, secondary } = partitionActions(
-                data.player.actions,
-                notices.actions(data),
-                waitingForTurn
+                gameState.data().player.actions,
+                notices.actions(gameState.data()),
+                gameState.waiting()
               );
 
-              primaryActions.build(primary, data.player);
+              primaryActions.build(primary, gameState.data().player);
 
               secondaryActions.build(secondary);
 
               const activeUnit = unitController.active();
 
               unitActionButtons.build(
-                waitingForTurn ? null : activeUnit,
+                gameState.waiting() ? null : activeUnit,
                 activeUnit
                   ? world.get(activeUnit.tile.x, activeUnit.tile.y)
                   : null
@@ -367,14 +357,17 @@ export class Renderer {
 
               const gameDetails = new GameDetails(
                 gameInfo,
-                data.turn,
-                data.year,
-                data.difficulty
+                gameState.data().turn,
+                gameState.data().year,
+                gameState.data().difficulty
               );
 
               gameDetails.build();
 
-              const playerDetails = new PlayerDetails(playerInfo, data.player);
+              const playerDetails = new PlayerDetails(
+                playerInfo,
+                gameState.data().player
+              );
 
               playerDetails.build();
 
@@ -403,67 +396,21 @@ export class Renderer {
               }
             });
 
-            // Rebuilds only what the patches since the last update reached
-            // (#322): every id they added, replaced or edited in place goes in
-            // `changedIds` until `updateState` takes it, so patches coalesced
-            // while waiting for the turn are all accounted for.
-            let changedIds = new Set<string>();
-
-            // Runs synchronously on every patch. Reconstitution and all state
-            // the input handlers read synchronously (`data`, `world` tiles,
-            // `unitController`'s active unit, queue and last unit, the map
-            // layers' active-unit pointers) must stay here — deferring any of
-            // it (tried 2026-07-02) left `activeUnit` stale for ~1 frame and
-            // broke consecutive moves of multi-move units. Only `render()` is coalesced to one run per
-            // frame.
-            //
-            // `rebuildAll` is for a map that did not come from patches, whose
-            // changes are not known.
-            const updateState = (
-              objectMap: ObjectMap,
-              rebuildAll = false
-            ): void => {
-              const changed = rebuildAll ? null : changedIds;
-
-              changedIds = new Set();
-
-              // TODO: look into if it's possible to have data reconstituted in a worker thread
-              data = reconstituter.rebuild(objectMap, changed) as GameData;
-
-              // Accumulated until the next render's `notify`: several rebuilds
-              //  can come between two renders, and `filledIds` is the last
-              //  one's alone. It adds the owners of refs that have just
-              //  arrived; `changed` adds the ids removed.
-              dataChanges.collect(
-                changed === null
-                  ? null
-                  : [...changed, ...reconstituter.filledIds()]
-              );
-
-              const turnValue = Number(data?.turn?.value ?? 0),
-                objectCount = Object.keys(objectMap.objects).length;
-
-              currentTurn = turnValue;
-              currentObjectCount = objectCount;
-
-              if (pruneSchedule.due(turnValue, objectCount)) {
-                reconstituter.forget(pruneObjectMap(objectMap));
-                pruneSchedule.pruned(
-                  turnValue,
-                  Object.keys(objectMap.objects).length
-                );
-              }
-
-              // Refilled when a patch re-sent the world, as it does for a tile
-              // newly seen. The tiles keep their objects otherwise, so the
-              // lookup stays as it is.
-              world.setTiles(
-                data.player.world.tiles,
-                reconstituter.refilled(data.player.world.id)
-              );
+            // Runs synchronously on every patch during the player's turn, in
+            // this order, after `gameState` has rebuilt the data, pruned the
+            // map and set the world's tiles. All state the input handlers
+            // read synchronously (`unitController`'s active unit, queue and
+            // last unit, the map layers' active-unit pointers) must stay
+            // here — deferring any of it (tried 2026-07-02) left `activeUnit`
+            // stale for ~1 frame and broke consecutive moves of multi-move
+            // units. Only `render()` is coalesced to one run per frame.
+            gameState.onUpdated((): void => {
               mapView.releaseTiles();
 
-              unitController.next(data.player.actions, waitingForTurn);
+              unitController.next(
+                gameState.data().player.actions,
+                gameState.waiting()
+              );
 
               scheduleRender();
 
@@ -471,52 +418,33 @@ export class Renderer {
               // behind a move wait for its `actionHandled` (#326).
               unitController.drain();
 
-              if (shouldAutoEndTurn(data.player, options, waitingForTurn)) {
+              if (
+                shouldAutoEndTurn(
+                  gameState.data().player,
+                  options,
+                  gameState.waiting()
+                )
+              ) {
                 // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
                 transport.send('action', {
                   name: 'EndTurn',
                 });
               }
-            };
+            });
 
-            // Not `rebuildAll`: `data` was built from this map above and
+            // Not a full rebuild: `data` was built from this map above and
             // nothing has changed in it since, so the incremental rebuild
             // finds nothing to fill. The rest (the turn, the prune check, the
             // actions) still runs.
-            updateState(objectMap);
+            gameState.update();
 
-            // While waiting there is no input to keep up with, so however many
-            // patches the other civilizations' moves send, the data is rebuilt
-            // at most once a frame (#61). During the player's own turn it has
-            // to stay synchronous: see `updateState`.
-            let stateFrame: number | null = null;
-
-            const cancelStateUpdate = (): void => {
-                if (stateFrame !== null) {
-                  cancelAnimationFrame(stateFrame);
-
-                  stateFrame = null;
-                }
-              },
-              scheduleStateUpdate = (): void => {
-                if (stateFrame !== null) {
-                  return;
-                }
-
-                stateFrame = requestAnimationFrame(() => {
-                  stateFrame = null;
-
-                  updateState(objectMap);
-                });
-              };
-
-            transportDisposers.push(cancelStateUpdate);
+            transportDisposers.push((): void => gameState.dispose());
 
             transportDisposers.push(
               transport.receive('gameData', (rawData) => {
                 unitController.dataReceived();
 
-                updateState(rawData, true);
+                gameState.replace(rawData);
               })
             );
 
@@ -530,20 +458,21 @@ export class Renderer {
 
             transportDisposers.push(
               transport.receive('turnEnded', (): void => {
-                waitingForTurn = true;
+                gameState.setWaiting(true);
                 waitingBanner.textContent = t('Game.waiting');
 
-                updateState(objectMap);
+                gameState.update();
               })
             );
 
             transportDisposers.push(
               transport.receive('turnStarted', (): void => {
-                waitingForTurn = false;
+                // Drops the rebuild deferred while waiting: this one replaces
+                // it.
+                gameState.setWaiting(false);
                 waitingBanner.textContent = '';
 
-                cancelStateUpdate();
-                updateState(objectMap);
+                gameState.update();
 
                 // Now rather than next frame: the turn's messages follow
                 // straight away, and should open over the new turn, not the
@@ -562,19 +491,8 @@ export class Renderer {
               transport.receive('gameDataPatch', (data: DataPatch[]) => {
                 unitController.dataReceived();
 
-                applyDataPatches(objectMap, data, {
-                  changed: (id) => changedIds.add(id),
-                  // Since we only use the queued tiles for x and y this should be fine...
-                  tile: (tile) => mapView.queueTile(tile as Tile),
-                });
-
-                if (waitingForTurn) {
-                  scheduleStateUpdate();
-
-                  return;
-                }
-
-                updateState(objectMap);
+                // Rebuilt now, or once a frame while waiting for the turn.
+                gameState.applyPatches(data);
               })
             );
 
@@ -596,8 +514,8 @@ export class Renderer {
               transport.receive('unitHalted', (halt): void => {
                 haltedUnits.add(halt);
 
-                if (!waitingForTurn) {
-                  updateState(objectMap);
+                if (!gameState.waiting()) {
+                  gameState.update();
                 }
               })
             );
@@ -625,11 +543,14 @@ export class Renderer {
             );
 
             const leaderScreensMap: { [key: string]: () => any } = {
-              F1: () => new CityStatus(data.player, portal, transport),
+              F1: () =>
+                new CityStatus(gameState.data().player, portal, transport),
               F3: () => new IntelligenceReport(transport),
-              F4: () => new HappinessReport(data.player, portal, transport),
-              F5: () => new TradeReport(data.player, portal, transport),
-              F6: () => new ScienceReport(data.player),
+              F4: () =>
+                new HappinessReport(gameState.data().player, portal, transport),
+              F5: () =>
+                new TradeReport(gameState.data().player, portal, transport),
+              F6: () => new ScienceReport(gameState.data().player),
               F8: () => new TopCitiesReport(transport),
               F9: () => new CivilizationScoreReport(transport),
             };
@@ -677,10 +598,12 @@ export class Renderer {
 
               if (
                 key === 'Enter' &&
-                !waitingForTurn &&
-                data.player.mandatoryActions.some(
-                  (action) => action._ === 'EndTurn'
-                )
+                !gameState.waiting() &&
+                gameState
+                  .data()
+                  .player.mandatoryActions.some(
+                    (action) => action._ === 'EndTurn'
+                  )
               ) {
                 endTurn(transport);
 
