@@ -1,14 +1,12 @@
 import {
   City as CityData,
   CityImprovementContent,
-  GameData,
   MartialLaw,
   MilitaryUnhappiness,
   Player,
 } from '../types';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import City from './City';
-import DataObserver from '../DataObserver';
 import Element from '@dom111/element';
 import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
@@ -23,6 +21,7 @@ import { instance as localeProvider } from '../LocaleProvider';
 import { renderPopulation } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import watchPlayer, { cityIds } from './lib/watchPlayer';
 
 const buildCityRow = async (
   city: CityData,
@@ -103,10 +102,10 @@ const buildCityRow = async (
 };
 
 export class HappinessReport extends Window {
-  #dataObserver: DataObserver;
   #player: Player;
   #portal: Portal;
   #transport: Transport;
+  #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
     super('Happiness report', s('<div></div>'), {
@@ -118,19 +117,11 @@ export class HappinessReport extends Window {
       t('HappinessReport.breakdown')
     );
 
-    this.#dataObserver = new DataObserver(
-      [player.id, ...player.cities.map((city) => city.id)],
-      (data) => {
-        this.#player = (data as GameData).player;
+    this.#unwatch = watchPlayer(player, cityIds, (player) => {
+      this.#player = player;
 
-        this.#dataObserver.setIds([
-          player.id,
-          ...player.cities.map((city) => city.id),
-        ]);
-
-        this.update();
-      }
-    );
+      this.update();
+    });
 
     this.#player = player;
     this.#portal = portal;
@@ -140,7 +131,7 @@ export class HappinessReport extends Window {
   }
 
   close() {
-    this.#dataObserver.dispose();
+    this.#unwatch();
 
     return super.close();
   }

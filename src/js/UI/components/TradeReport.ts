@@ -1,12 +1,10 @@
 import {
   City as CityData,
   CityImprovementMaintenanceGold,
-  GameData,
   Player,
   Yield,
 } from '../types';
 import City from './City';
-import DataObserver from '../DataObserver';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
@@ -17,14 +15,15 @@ import isAnarchy from './lib/government';
 import { groupIcons } from '../lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 import { yieldData } from './lib/cityYields';
 
 export class TradeReport extends Window {
   #cities: CityData[];
-  #dataObserver: DataObserver;
   #player: Player;
   #portal: Portal;
   #transport: Transport;
+  #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
     super(t('TradeReport.title'), s('<div class="loading"></div>'), {
@@ -33,33 +32,12 @@ export class TradeReport extends Window {
 
     this.#cities = player.cities;
     this.#player = player;
-    this.#dataObserver = new DataObserver(
-      [
-        player.id,
-        ...player.cities.flatMap(({ id, build, growth }: CityData) => [
-          id,
-          growth.id,
-          build.id,
-        ]),
-      ],
-      (data) => {
-        const player = (data as GameData).player;
+    this.#unwatch = watchPlayer(player, cityRowIds, (player) => {
+      this.#cities = player.cities;
+      this.#player = player;
 
-        this.#cities = player.cities;
-        this.#player = player;
-
-        this.#dataObserver.setIds([
-          player.id,
-          ...player.cities.flatMap(({ id, build, growth }: CityData) => [
-            id,
-            growth.id,
-            build.id,
-          ]),
-        ]);
-
-        this.update();
-      }
-    );
+      this.update();
+    });
     this.#portal = portal;
     this.#transport = transport;
 
@@ -67,7 +45,7 @@ export class TradeReport extends Window {
   }
 
   close() {
-    this.#dataObserver.dispose();
+    this.#unwatch();
 
     return super.close();
   }

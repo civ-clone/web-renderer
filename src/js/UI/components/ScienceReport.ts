@@ -1,13 +1,13 @@
-import { GameData, Player, PlayerResearch, Yield } from '../types';
+import { Player, PlayerResearch, Yield } from '../types';
 import { advanceNames, researchingName } from './lib/advances';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
-import DataObserver from '../DataObserver';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { combinedYields } from './lib/playerYields';
 import { turnsLeft } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import watchPlayer, { researchIds } from './lib/watchPlayer';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
@@ -34,8 +34,8 @@ const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
 };
 
 export class ScienceReport extends Window {
-  #dataObserver: DataObserver;
   #player: Player;
+  #unwatch: () => void;
 
   constructor(player: Player) {
     super(t('ScienceReport.title'), s('<div></div>'), {
@@ -46,26 +46,15 @@ export class ScienceReport extends Window {
 
     this.update();
 
-    this.#dataObserver = new DataObserver(
-      [player.id, player.research.id, ...player.cities.map((city) => city.id)],
-      (data) => {
-        const player = (data as GameData).player;
+    this.#unwatch = watchPlayer(player, researchIds, (player) => {
+      this.#player = player;
 
-        this.#dataObserver.setIds([
-          player.id,
-          player.research.id,
-          ...player.cities.map((city) => city.id),
-        ]);
-
-        this.#player = player;
-
-        this.update();
-      }
-    );
+      this.update();
+    });
   }
 
   close() {
-    this.#dataObserver.dispose();
+    this.#unwatch();
 
     return super.close();
   }
