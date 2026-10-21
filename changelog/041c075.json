@@ -1,0 +1,1 @@
+{"version":"0.1.0@041c075","date":"2026-10-21T18:22:47.000Z","localChanges":["chore: take the map's terrain joins, river mouths, fog edges, roads, railroads and redrawn neighbours from the world's topology's directions, keeping Civ1's coast sprite order spelled out (#88)"],"externalChanges":{}}

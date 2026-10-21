@@ -1,0 +1,1 @@
+{"version":"0.1.0@e91ff02","date":"2026-10-21T18:22:12.000Z","localChanges":["chore: look up the UI's map neighbours through the world's topology, the engine's own SquareTopology, rather than a second copy of the square grid (#88)"],"externalChanges":{}}

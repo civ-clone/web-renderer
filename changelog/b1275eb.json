@@ -1,0 +1,1 @@
+{"version":"0.1.0@b1275eb","date":"2026-10-21T18:21:00.000Z","localChanges":["test: record the terrain (coasts, river mouths, joins, roads and railroads) and the city screen's map across the seam in the render-geometry fixture (#88)"],"externalChanges":{}}

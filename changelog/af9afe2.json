@@ -1,0 +1,1 @@
+{"version":"0.1.0@af9afe2","date":"2026-10-21T18:24:05.000Z","localChanges":["chore: bind the keys that move a unit from a table per grid, filtered to the world's topology's directions, so a key with no direction does nothing (#88)"],"externalChanges":{}}
