@@ -1,5 +1,6 @@
 import { Store } from '../Store';
 import { allowLeaving } from './leaveGuard';
+import { isSupportedTopology } from './supportedTopologies';
 import { t } from 'i18next';
 
 /**
@@ -142,14 +143,31 @@ const readSave = async (file: File): Promise<string> => {
   return decompressed(buffer);
 };
 
+/**
+ * Which grid a save's world is on (#89), from the save itself: the `World`'s saved `_topologyId`. A save made before
+ * the grid was recorded has none, and is square.
+ */
+export const savedTopologyId = (save: {
+  entities: { type?: string; state?: { [field: string]: unknown } }[];
+}): string => {
+  const topologyId = save.entities.find(({ type }) => type === 'World')?.state
+    ?._topologyId;
+
+  return typeof topologyId === 'string' ? topologyId : 'square';
+};
+
+/** The name of the grid `topologyId`, for telling the player about it. */
+export const gridName = (topologyId: string): string =>
+  t(`Grid.${topologyId}`, { defaultValue: topologyId });
+
 /** Reads a save the player chose, and reloads into it. */
 export const loadSaveFromFile = async (file: File): Promise<void> => {
-  let data: string;
+  let data: string, parsed: any;
 
   try {
     data = await readSave(file);
 
-    const parsed = JSON.parse(data);
+    parsed = JSON.parse(data);
 
     if (typeof parsed?.format !== 'number' || !Array.isArray(parsed.entities)) {
       throw new TypeError(t('SavedGame.not-a-save'));
@@ -161,6 +179,17 @@ export const loadSaveFromFile = async (file: File): Promise<void> => {
     );
 
     throw error;
+  }
+
+  // A world on a grid that can't be drawn here would load into a map of nonsense: say so, and stay on the menu.
+  const topologyId = savedTopologyId(parsed);
+
+  if (!isSupportedTopology(topologyId)) {
+    const message = t('SavedGame.needs-grid', { grid: gridName(topologyId) });
+
+    window.alert(message);
+
+    throw new Error(message);
   }
 
   try {

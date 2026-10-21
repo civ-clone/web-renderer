@@ -4,7 +4,9 @@ import { t } from 'i18next';
 import { ObjectMap } from '../lib/reconstituteData';
 import City from '../components/City';
 import GameMenu from '../components/GameMenu';
-import { guardLeaving } from '../lib/leaveGuard';
+import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
+import { gridName } from '../lib/savedGame';
+import { isSupportedTopology } from '../lib/supportedTopologies';
 import NotificationWindow from '../components/NotificationWindow';
 import Notices from '../components/Notices';
 import Notifications from '../components/Notifications';
@@ -103,8 +105,6 @@ export class GameSession {
     performance.mark('civ:game-data-received');
 
     try {
-      setGameStarted();
-
       // The first rebuild, which everything below that needs the
       // player is built from; each update goes on refilling it.
       const gameState = new GameState(objectMap, {
@@ -113,6 +113,23 @@ export class GameSession {
           setTiles: (tiles, changed): void => world.setTiles(tiles, changed),
         },
       });
+
+      // A world on a grid that can't be drawn here (#89). Loading a save checks first, so this is for any other way in:
+      //  say so and go back to the menu, rather than draw a map of nonsense.
+      const { topologyId } = gameState.data().player.world;
+
+      if (!isSupportedTopology(topologyId)) {
+        window.alert(
+          t('SavedGame.needs-grid', { grid: gridName(topologyId!) })
+        );
+
+        allowLeaving();
+        window.location.reload();
+
+        return;
+      }
+
+      setGameStarted();
 
       guardLeaving();
 
