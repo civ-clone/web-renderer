@@ -42,6 +42,7 @@
     "src/js/UI/lib/chooseActiveUnit.ts",
     "src/js/UI/lib/chooseFromList.ts",
     "src/js/UI/lib/citizens.ts",
+    "src/js/UI/lib/cityMapLayout.ts",
     "src/js/UI/lib/difficulty.ts",
     "src/js/UI/lib/distantActions.ts",
     "src/js/UI/lib/drag.ts",

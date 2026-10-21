@@ -5,7 +5,6 @@ import {
   PlainObject,
   Player,
   SpendCost,
-  Tile,
   Unit as UnitData,
   Yield,
 } from '../types';
@@ -17,6 +16,7 @@ import {
   toggleAuto,
 } from './lib/cityBuild';
 import { splitYield, yieldGroup } from '../lib/yieldMap';
+import cityMapLayout from '../lib/cityMapLayout';
 import { tileBounds } from '../lib/projection';
 import {
   renderPopulation,
@@ -185,33 +185,21 @@ const renderYields = (city: CityData): Node => {
     readOnly: boolean
   ): Node => {
     // Remap the city's tiles into a small local coordinate space so each layer
-    // canvas is sized to the city radius rather than the full world (a full
-    // `World` here allocated ~10 world-sized canvases per open/update). A
-    // one-tile empty border around the block keeps neighbour lookups (coast,
-    // fog, terrain transitions) resolving to unknown tiles exactly as
-    // out-of-radius lookups did against the full-world lookup map.
-    const cityRadius = 2,
-      localSize = cityRadius * 2 + 3,
-      localCenter = cityRadius + 1,
-      wrapDelta = (delta: number, max: number): number =>
-        delta > max / 2 ? delta - max : delta < -max / 2 ? delta + max : delta,
-      toLocal = (tile: Tile): Tile => ({
-        ...tile,
-        x:
-          localCenter +
-          wrapDelta(tile.x - city.tile.x, city.player.world.width),
-        y:
-          localCenter +
-          wrapDelta(tile.y - city.tile.y, city.player.world.height),
-      }),
-      localTiles = city.tiles.map(toLocal),
-      localTilesWorked = city.tilesWorked.map(toLocal),
+    // canvas is sized to the city's squares rather than the full world (a full
+    // `World` here allocated ~10 world-sized canvases per open/update).
+    const {
+        center,
+        height: localHeight,
+        tiles: localTiles,
+        tilesWorked: localTilesWorked,
+        width: localWidth,
+      } = cityMapLayout(city),
       portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
       cityPortal = new Portal(
         new World({
           ...city.player.world,
-          width: localSize,
-          height: localSize,
+          width: localWidth,
+          height: localHeight,
           tiles: localTiles,
         }),
         transport,
@@ -229,22 +217,17 @@ const renderYields = (city: CityData): Node => {
         Unworkable
       );
 
-    // The canvas shows the block of squares within the city's radius, so it is
-    // as big as that block is in pixels.
-    const block: { x: number; y: number }[] = [];
-
-    for (let dy = -cityRadius; dy <= cityRadius; dy++) {
-      for (let dx = -cityRadius; dx <= cityRadius; dx++) {
-        block.push({ x: localCenter + dx, y: localCenter + dy });
-      }
-    }
-
-    const { width, height } = tileBounds(cityPortal.projection(), block);
+    // The canvas shows the city's squares, so it is as big as they are in
+    // pixels.
+    const { width, height } = tileBounds(cityPortal.projection(), [
+      center,
+      ...localTiles,
+    ]);
 
     portalCanvas.height = height;
     portalCanvas.width = width;
 
-    cityPortal.setCenter(localCenter, localCenter);
+    cityPortal.setCenter(center.x, center.y);
     cityPortal.build(localTiles);
 
     const unitMap = cityPortal.getLayer(Units)!;
