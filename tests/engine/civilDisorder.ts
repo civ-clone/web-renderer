@@ -64,9 +64,8 @@ const collectObjects = (value: any): void => {
   Object.values(value).forEach(collectObjects);
 };
 
-// `sendPatchData` is private: the UI can't ask for it, but the engine sends whatever is queued at the end of every
-//  action and turn.
-const flush = (): void => (humanClient as any).sendPatchData();
+// The UI can't ask for a flush, but the engine sends whatever is queued at the end of every action and turn.
+const flush = (): void => humanClient!.flush();
 
 // A rival's city goes out as an `UnknownCity`, which has an id of its own, so it's found by name.
 const tileSent = (city: City): boolean =>
@@ -294,12 +293,7 @@ engine.on('engine:start', (): void => {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
 
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
 
       clientRegistryInstance.register(humanClient);
 

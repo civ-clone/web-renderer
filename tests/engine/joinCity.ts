@@ -111,8 +111,8 @@ const run = async (): Promise<void> => {
 
   await settle();
 
-  // `sendPatchData` is private: the UI can't ask for it, but a real game has long since sent everything by now.
-  (humanClient as any).sendPatchData();
+  // The UI can't ask for a flush, but a real game has long since sent everything by now.
+  humanClient!.flush();
 
   if (
     !joiner
@@ -163,7 +163,7 @@ const run = async (): Promise<void> => {
   const refused = new Settlers(city, humanPlayer!, city.tile());
 
   await settle();
-  (humanClient as any).sendPatchData();
+  humanClient!.flush();
 
   if (
     refused
@@ -258,12 +258,7 @@ engine.on('engine:start', (): void => {
       humanPlayer = player;
       helper = new SimpleAIClient(player);
 
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
 
       clientRegistryInstance.register(humanClient);
 

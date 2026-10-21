@@ -798,29 +798,24 @@ const checkReloadedGame = (): void => {
   }
 
   const reloaded: ObjectMap = { hierarchy: {}, objects: {} },
-    client = new DataTransferClient(
-      humanPlayer!,
-      {
-        receive: () => () => false,
-        send: (channel: string, data: any): void => {
-          if (channel === 'gameData') {
-            // Round-trip, as `postMessage` would.
-            Object.assign(
-              reloaded,
-              JSON.parse(
-                JSON.stringify(
-                  data instanceof DataObject ? data.toPlainObject() : data
-                )
+    client = new DataTransferClient(humanPlayer!, {
+      receive: () => () => false,
+      send: (channel: string, data: any): void => {
+        if (channel === 'gameData') {
+          // Round-trip, as `postMessage` would.
+          Object.assign(
+            reloaded,
+            JSON.parse(
+              JSON.stringify(
+                data instanceof DataObject ? data.toPlainObject() : data
               )
-            );
-          }
-        },
-      } as any,
-      () => {},
-      () => {}
-    );
+            )
+          );
+        }
+      },
+    } as any);
 
-  (client as any).sendInitialData();
+  client.initialData();
 
   if (Object.keys(reloaded.objects).length === 0) {
     fail('the initial game data of a game under way was never sent');
@@ -1637,12 +1632,7 @@ engine.on('engine:start', (): void => {
     let client: DataTransferClient | SimpleAIClient;
 
     if (index === 0) {
-      humanClient = new DataTransferClient(
-        player,
-        transport as any,
-        (channel, payload) => transport.send(channel, payload),
-        () => {}
-      );
+      humanClient = new DataTransferClient(player, transport as any);
       human.helper = new SimpleAIClient(player);
       client = humanClient;
     } else {

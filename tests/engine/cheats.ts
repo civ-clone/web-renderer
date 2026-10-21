@@ -406,8 +406,10 @@ engine.on('turn:start', (turn: number): void => {
   (
     clientRegistryInstance
       .entries()
-      .find((client) => client instanceof DataTransferClient) as any
-  ).sendPatchData();
+      .find(
+        (client) => client instanceof DataTransferClient
+      ) as DataTransferClient
+  ).flush();
 
   const revealIndexes = (sent.gameDataPatch ?? [])
     .slice(revealBatchesBefore)
@@ -491,13 +493,9 @@ engine.on('engine:start', (): void => {
     playerRegistryInstance.register(player);
     clientRegistryInstance.register(
       index === 0
-        ? new DataTransferClient(
-            player,
-            transport as any,
-            (channel, payload) => transport.send(channel, payload),
-            () => {},
-            { automationEnabled: true }
-          )
+        ? new DataTransferClient(player, transport as any, {
+            automationEnabled: true,
+          })
         : new SimpleAIClient(player)
     );
   });

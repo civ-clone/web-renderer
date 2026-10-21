@@ -290,12 +290,7 @@ engine.on('engine:start', (): void => {
       helper = new SimpleAIClient(player);
 
       clientRegistryInstance.register(
-        new DataTransferClient(
-          player,
-          transport as any,
-          (channel, payload) => transport.send(channel, payload),
-          () => {}
-        )
+        new DataTransferClient(player, transport as any)
       );
 
       return;
