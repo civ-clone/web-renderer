@@ -19,6 +19,13 @@ export type EdgeDirection = SquareEdgeDirection;
 
 export type Topology = ITopology<Direction>;
 
+/** The grids there are, for what the UI keeps per grid (the keys that move a unit). */
+export type TopologyName = 'square';
+
+/** Which grid `topology` is, or `null` for one the UI has nothing for. */
+export const topologyName = (topology: Topology): TopologyName | null =>
+  topology instanceof SquareTopology ? 'square' : null;
+
 /** The topology of a world `width` tiles across and `height` down. */
 export const topologyFor = ({
   height,

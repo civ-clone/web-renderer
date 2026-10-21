@@ -30,6 +30,7 @@ import chooseActiveUnit from '../../src/js/UI/lib/chooseActiveUnit';
 import ActiveUnitTiles from '../../src/js/UI/lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from '../../src/js/UI/lib/PendingMove';
 import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
+import topologyFor from '../../src/js/UI/lib/topologyFor';
 import ActiveUnitController from '../../src/js/UI/game/ActiveUnitController';
 import Units from '../../src/js/UI/components/Map/Units';
 import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
@@ -394,10 +395,12 @@ class TestActiveUnit extends ActiveUnit {
   }
 }
 
-const world = {
+const topology = topologyFor({ width: 10, height: 1 }),
+  world = {
     get: (x: number) => gameData.tiles[x],
     width: () => 10,
     height: () => 1,
+    topology: () => topology,
   },
   layer = <T extends typeof Units>(Layer: T) => {
     const { calls, canvas } = fakeCanvas(320, 32);
