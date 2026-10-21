@@ -141,7 +141,7 @@
   },
   "dependencies": {
     "@civ-clone/base-leader-personality": "^0.1.2",
-    "@civ-clone/base-strategy-victory": "^0.1.0",
+    "@civ-clone/base-strategy-victory": "^0.1.1",
     "@civ-clone/base-unit-action-automate": "^0.1.0",
     "@civ-clone/base-unit-action-build-route": "^0.1.0",
     "@civ-clone/base-unit-action-clean-pollution": "^0.1.0",

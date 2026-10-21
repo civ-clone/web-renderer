@@ -1,0 +1,1 @@
+{"version":"0.1.0@7e2487a","date":"2026-10-21T21:19:38.000Z","localChanges":["The stack of action buttons at the bottom right now ends just below the game menu instead of running up behind it, so the menu is always clear of it and stays clickable (part of #416)."],"externalChanges":{}}
