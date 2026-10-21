@@ -43,10 +43,7 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
-import Transport, {
-  TransportDisposer,
-  TransportHandledAction,
-} from './Transport';
+import Transport, { TransportHandledAction } from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
@@ -88,7 +85,7 @@ import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-gro
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
-import { filterToReference, standalone } from './Client/refs';
+import { filterToReference } from './Client/refs';
 import {
   DataFilter,
   makeDataFilter,
@@ -114,6 +111,7 @@ import registerGameEnd, {
 import registerNotifications from './Client/notifications/registerNotifications';
 import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
+import ChoicePrompt from './Client/ChoicePrompt';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -143,7 +141,9 @@ export class DataTransferClient extends Client implements IClient {
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
-  #pendingChoiceDisposer: TransportDisposer | null = null;
+  // Asks the player to choose, one prompt at a time (see `Client/ChoicePrompt.ts`). Made in the constructor, which is
+  //  given the transport.
+  #choicePrompt: ChoicePrompt;
   #receiver: (channel: string, handler: (...args: any[]) => void) => void;
   // What the request receivers read, kept for the methods tests call (see `Client/requests.ts`).
   #requests: RequestsContext;
@@ -178,6 +178,7 @@ export class DataTransferClient extends Client implements IClient {
     );
     this.#notifier = new Notifier(transport, this.#dataFilter);
     this.#notifier.holdWhile(() => this.#holdsNotifications());
+    this.#choicePrompt = new ChoicePrompt(transport, this.#dataFilter);
     this.#cityNews = new CityNewsCollector(
       () => this.player(),
       (notification) => this.#notifier.notify(notification)
@@ -404,59 +405,18 @@ export class DataTransferClient extends Client implements IClient {
       >;
     }
 
-    return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) => {
-      if (
-        meta.choices().length === 1 &&
-        'negotiation.next-step' !== meta.key()
-      ) {
-        const [choice] = meta.choices();
+    if (meta.choices().length === 1 && 'negotiation.next-step' !== meta.key()) {
+      const [choice] = meta.choices();
 
-        resolve(choice.value());
-
-        return;
-      }
-
-      // A listener stranded by an abandoned prompt would consume this
-      // prompt's response (and retain its ChoiceMeta closure), so dispose it
-      // before registering the next one.
-      this.#pendingChoiceDisposer?.();
-
-      // Serialised like a notification (#305). Sent whole, a negotiation's players brought every player's cities, units
-      //  and known tiles: 20 MB and 10 s per step of a talk in a large game, and rivals' state the page should not see.
-      //  Still the `ChoiceMeta` the transport expects, which a test's transport hands to an AI to answer; only what it
-      //  serialises as changes.
-      this.#transport.send(
-        'chooseFromList',
-        Object.create(meta, {
-          toPlainObject: {
-            value: () => meta.toPlainObject(this.#dataFilter(standalone)),
-          },
-        })
+      return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) =>
+        resolve(choice.value())
       );
+    }
 
-      this.#pendingChoiceDisposer = this.#transport.receiveOnce(
-        'chooseFromList',
-        async (chosenId) => {
-          this.#pendingChoiceDisposer = null;
-
-          const [choice] = meta
-            .choices()
-            .filter((choice) => choice.id() === chosenId);
-
-          if (!choice) {
-            console.warn(
-              `No choice found for '${chosenId}' against '${meta.id()}', using super.`
-            );
-
-            resolve(await super.chooseFromList(meta));
-
-            return;
-          }
-
-          resolve(choice.value());
-        }
-      );
-    });
+    // Sent to the UI to choose (see `Client/ChoicePrompt.ts`), or chosen at random if it answers with an unknown id.
+    return this.#choicePrompt.promptChoice(meta, () =>
+      super.chooseFromList(meta)
+    );
   }
 
   async handleAction(...args: any[]): Promise<boolean> {
