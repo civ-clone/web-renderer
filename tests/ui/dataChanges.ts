@@ -6,15 +6,15 @@
 // for a changed id, for a child id its getter reads live, for a late ref
 // arriving at what it watches, for a `remove` and for a full rebuild; not for
 // unrelated ids; once per render however many rebuilds came before it; and that
-// unwatching or watching during a render is honoured. Then the same for a real
-// `DataObserver`, which watches the module's shared `instance`: built with no
-// `document` (this runs in Node), woken by a change or a `remove` with the new
-// data, following `setIds`, and stopped by `dispose`.
+// unwatching or watching during a render is honoured. Then the same for a
+// watcher on the module's shared `instance`, as the city screen, the reports and
+// the unit stack window use it: added with no `document` (this runs in Node),
+// woken by a change or a `remove` with the new data, following its ids as they
+// are when read, and stopped by unwatching.
 
 import DataChanges, {
   instance as sharedChanges,
 } from '../../src/js/UI/lib/DataChanges';
-import DataObserver from '../../src/js/UI/DataObserver';
 import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
@@ -110,7 +110,7 @@ const update = (patches: DataPatch[], rebuildAll = false): void => {
     changed === null ? null : [...changed, ...reconstituter.filledIds()];
 
   dataChanges.collect(collected);
-  // Where `Renderer` collects, for the `DataObserver`s at the end.
+  // Where `Renderer` collects, for the shared watcher at the end.
   sharedChanges.collect(collected);
 
   lastChanged = changedIds;
@@ -426,28 +426,33 @@ check(
   );
 }
 
-// A `DataObserver`, as the city screen and the reports use it.
+// A watcher on the shared `instance`, as the city screen, the reports and the
+//  unit stack window use it.
 {
-  const received: GameData[] = [];
+  const received: GameData[] = [],
+    ids = ['City-1'];
 
-  let observer: DataObserver | null = null;
+  let unwatch: (() => void) | null = null;
 
   try {
-    observer = new DataObserver(['City-1'], (data) => received.push(data));
+    unwatch = sharedChanges.watch(
+      () => ids,
+      (data) => received.push(data)
+    );
   } catch (error) {
     logged.push(error);
   }
 
   check(
-    'a DataObserver can be built with no document and no game',
-    observer !== null
+    'a shared watcher can be added with no document and no game',
+    unwatch !== null
   );
 
   update([replace('City-1', { ...objectMap.objects['City-1'], name: 'Roma' })]);
   render();
 
   check(
-    `a DataObserver wakes for its changed id, with the new data (${received.length})`,
+    `a shared watcher wakes for its changed id, with the new data (${received.length})`,
     received.length === 1 &&
       received[0] === data &&
       received[0].player.cities[0].name === 'Roma'
@@ -459,12 +464,15 @@ check(
 
   check('but not for an unrelated id', received.length === 0);
 
-  observer!.setIds(['City-2', 'Unit-1']);
+  ids.splice(0, ids.length, 'City-2', 'Unit-1');
 
   update([replace('City-1', { ...objectMap.objects['City-1'], name: 'Rome' })]);
   render();
 
-  check('after setIds, its old id no longer wakes it', received.length === 0);
+  check(
+    'with its ids changed, its old id no longer wakes it',
+    received.length === 0
+  );
 
   update([replace('City-2', { ...objectMap.objects['City-2'], name: 'Veii' })]);
   render();
@@ -479,25 +487,25 @@ check(
   render();
 
   check(
-    `a DataObserver wakes for a removed id (${received.length})`,
+    `a shared watcher wakes for a removed id (${received.length})`,
     received.length === 1
   );
 
   received.length = 0;
-  observer!.dispose();
+  unwatch!();
   update([replace('City-2', { ...objectMap.objects['City-2'], name: 'Vei' })]);
   render();
   update([], true);
   render();
 
   check(
-    `dispose stops it, even for a full rebuild (${received.length})`,
+    `unwatching stops it, even for a full rebuild (${received.length})`,
     received.length === 0
   );
 
-  observer!.dispose();
+  unwatch!();
 
-  check('and disposing twice is harmless', received.length === 0);
+  check('and unwatching twice is harmless', received.length === 0);
 }
 
 finished = true;

@@ -99,18 +99,22 @@ plumbing replaced.
 | 0 | Done in substance, not as written | Sep–Oct 2026 | `npm test` runs about 40 suites (`tools/*.js`, `tests/engine`, `tests/ui`), with a conformance fixture (`tests/engine/fixtures/baseline.json`, `NOTES.md`), `tools/bench.js` and load-time performance marks (#325). Not done: `?record=1`/`Alt+Shift+R` recording, the patch-replay fixtures, `seedRandom`, and `tsconfig.json` covering all of `src/`. That last gap matters: `npm run ts:compile` reaches only two files under `src/js/UI/`, and esbuild strips types without checking them, so nothing type-checks the UI code (#339). A one-off check across `src/js` on 2026-10-08 found 35 type errors across 14 files (7 of them i18next `t()` results passed where a `string` is expected). |
 | 1 | Superseded | — | No shadow store was built. |
 | 2 | Superseded by a different design | 2026-10-08 | `IncrementalReconstituter` (`src/js/UI/lib/IncrementalReconstituter.ts`, #322, #327) rebuilds only the ids a patch changed and refills those objects in place, so work per patch is proportional to the change, the plan's main target. `reconstituteData` stays as the reference it is tested against (`test:incremental-reconstitute`) and for one-off messages. `WorkerTransport` still reconstitutes one-off messages; on load that rebuilds the initial data twice (#333). |
-| 3 | Re-planned, not started | — | `Renderer.ts` is 2,166 lines (1,558 when the plan was written). `DataObserver` and the `dataupdated`/`patchdatareceived` events are still how panels update. `08-phase-3-subscriptions.md` was rewritten on 2026-10-21 (#344) on top of `IncrementalReconstituter`: a `DataChanges` subscription fed by the ids each rebuild refilled, and a 20-step split into 24 modules. The worker-side `DataTransferClient.ts` (3,080 lines) gets the same treatment in `13-data-transfer-client-split.md`, an 18-step split that keeps the wire identical (#449). |
+| 3 | In progress | 2026-10-21 (Track A) | `08-phase-3-subscriptions.md` was rewritten on 2026-10-21 (#344) on top of `IncrementalReconstituter`: a `DataChanges` subscription fed by the ids each rebuild refilled, and a 20-step split into 24 modules. Track A (steps 1–6, the subscriptions) is done: windows watch the ids they show through `lib/DataChanges.ts`, and `DataObserver` and the `dataupdated`/`patchdatareceived` events are gone (#497, #507, #509, #513, #517, #520). Track B (the split): steps 7 and 9–13 are done (#499, #506, #512, #508, #516, #519); 8 and 14–20 are left. `Renderer.ts` is 1,213 lines, from 2,166 when the plan was rewritten. The worker-side `DataTransferClient.ts` (3,080 lines) gets the same treatment in `13-data-transfer-client-split.md`, an 18-step split that keeps the wire identical (#449). |
 | 4 | Partly, by other means | Sep–Oct 2026 | No protocol v2, `del` ops or `resync`; `DataQueue` remains. Payloads were cut instead: one flush per action (#321), unit orders only for the active unit (#323), the production list only on request (#324), only the player's own known tiles (#328), smaller notifications and player data (#137). |
 | 5 | Done in substance | 2026-09-22 | `4880639`: the map layers hold the window being looked through, not the world. The minimap draws from a layer of its own (`7e1f687`), and selecting a unit redraws two tiles (`74773f1`). `Map/Overview.ts` (the minimap) still sizes its canvas to the world, at one pixel per tile. There is no `StaticBuffer`/`TilePainter` split. |
 | 6 | Done by other means | 2026-10-20 | The game ending shipped as #176 (`a9626ad`, #464): `gameOver`, Retire and `gameContinue` channels, with no `restart`; the `restart` and `quit` channels are gone (#340). Saving and loading shipped through the engine-serialisation work (`docs/engine-serialisation/`), as real saves rather than this plan's replay log. What is left of this phase is `dispose()` on the clients and the UI modules, which `08` and `13` each include as a step. |
 
 ### Where to pick up
 
-1. **Phase 3 (#344)**: `08-phase-3-subscriptions.md`, Track A (the
-   subscriptions, steps 1–6) and Track B (the split, steps 7–20). Start with
-   step 1 of each; they are independent.
-2. **`DataTransferClient` (`13-data-transfer-client-split.md`)**: step 0, the
-   transcript fixture, then steps 1–3, which are independent of each other.
+1. **Phase 3 (#344)**: `08-phase-3-subscriptions.md`. Track A (the
+   subscriptions, steps 1–6) landed on 2026-10-21. Track B (the split): steps
+   7 and 9–13 have landed; next are 14 (`MapView`), 15 (`GameState`) with the
+   step 16 fix, 17 (`Hud`), 18 (`InputController`), 19 (`GameSession`), 20
+   (`bootstrap.ts` and `tsconfig`), and the step 8 debug-notice change.
+2. **`DataTransferClient` (`13-data-transfer-client-split.md`)**: steps 0–6
+   landed on 2026-10-21 (#498, #505, #511, #514, #518); next are 7
+   (`Notifier`, city news) and 8 (the notification tables), then 9–17.
+   Review notes to fold back into both plans are collected in #503.
 3. Done since 2026-10-08: #333 (one rebuild on load), #326 (a move is drawn on
    the keypress), the rest of #320, and #176 (the game can end). #151's
    leftovers (batched turn-start notifications, coalesced AI flushes) stay

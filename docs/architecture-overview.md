@@ -49,8 +49,8 @@ Loading a saved game takes a different path. The player picks a file, `src/js/UI
 - Backend is the source of truth for game state.
 - Frontend holds a large mutable object map (`objectMap`) and applies patches to it in place.
 - `IncrementalReconstituter` rebuilds only the ids the patches since the last update touched, refilling each id's object in place. `reconstituteData` still rebuilds one-off payloads (notifications, choices, request answers) in `WorkerTransport`.
-- UI emits custom events (`patchdatareceived`, `dataupdated`) for dependent components.
-- Display work (panels, `dataupdated`, the portal composite) runs at most once per animation frame. State updates stay synchronous during the player's turn, and are coalesced to once a frame while waiting for the other civilizations.
+- Open windows watch the ids they show through `lib/DataChanges.ts`, which runs each one, once per render, when any of those ids changed since the last (#344).
+- Display work (panels, the windows' watchers, the portal composite) runs at most once per animation frame. State updates stay synchronous during the player's turn, and are coalesced to once a frame while waiting for the other civilizations.
 
 ## Transport contract (high level)
 

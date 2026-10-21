@@ -13,6 +13,9 @@ Uncaught IndexSizeError: Failed to execute 'getImageData' on 'CanvasRenderingCon
     at Renderer.ts:1292:17
 ```
 
+  The trace is from before #344: `DataObserver.ts` has gone, and windows now
+  watch what they show through `lib/DataChanges.ts`.
+
 - [x] When a `City` is captured from the `HumanPlayer` the `PopupWindow` has translation labels visible.
 - [x] There's a `Wonder` that has no label when displayed in the `CityBuild` `Window`. (`JsBachsCathedral`, probably a quoting problem)
 - [x] When a `City` is destroyed, its `WorkedTile`s aren't cleared.
@@ -53,6 +56,8 @@ sections B2/C5.
       input-critical state: `data`, `world` tiles, `activeUnit`/`activeUnits`/`lastUnit`)
       and a `requestAnimationFrame`-coalesced `render()` (both `Actions` panels,
       detail panels, `dataupdated` dispatch, `portal.build`/`render`, `minimap`).
+      Since #344, `activeUnits` is `lib/UnitQueue.ts` and the `dataupdated`
+      dispatch is `DataChanges.notify`.
       Verify: multi-move units can move consecutively; reports open current;
       `autoEndOfTurn` still advances; map recenters on active unit.
       Done in cc4a87d, the same commit that added this item: `updateState()`

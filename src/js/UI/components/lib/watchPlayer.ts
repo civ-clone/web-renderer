@@ -33,7 +33,9 @@ export const watchPlayer = (
   update: (player: Player, data: GameData) => void,
   changes: DataChanges = instance
 ): (() => void) => {
-  // Refilled in place by each rebuild, replaced by the one `data` holds after each update.
+  // Refilled in place by each rebuild from patches, `refillAll` included, so it survives those. Only a rebuild of
+  //  everything (which resets the reconstituter) or a second `gameData` replaces it, so after each update it is swapped
+  //  for the one `data` holds.
   let current = player;
 
   return changes.watch(

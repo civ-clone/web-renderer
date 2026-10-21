@@ -2,7 +2,8 @@
 
 > **Status (2026-10-21):** Re-planned on top of `IncrementalReconstituter`, which replaced the Phase 1 store this
 > document used to assume (#344). Line numbers are from `main` at `18f28b0`. The original 2026-08-31 text is in git
-> history; its Part A/B/C structure is replaced by the two tracks below. Nothing here has been built yet.
+> history; its Part A/B/C structure is replaced by the two tracks below. Track A landed on 2026-10-21 (#497, #507,
+> #509, #513, #517, #520); Track B is under way.
 
 **Goal.** Panels update when the data they show changes, without the `document` `CustomEvent` plumbing
 (`dataupdated`, `patchdatareceived`, `DataObserver`), and `src/js/UI/Renderer.ts` (2,166 lines, one `init()` closure
@@ -137,9 +138,11 @@ which a change to gold alone no longer refreshes the city screen's Buy prices.
 - `turnStarted` renders synchronously (L1798–1804) so the turn's windows open over the new turn. Keep that path
   calling `render()` directly.
 - Windows hold objects, not ids. Because the reconstituter refills in place, a held `city` stays current between full
-  rebuilds; after one (`gameData`, or `refillAll` when an id is dropped or an alias moves) the held object is stale.
-  Handlers keep re-finding by id from `data`, as `City` does above. `HappinessReport` L127–130 re-subscribes from its
-  constructor's `player`, which is correct only because of in-place refill; the `watch` version reads `data.player`.
+  rebuilds. `refillAll` (when an id is dropped or an alias moves) refills every object in place too, so a held object
+  survives it; only a full rebuild (a second `gameData`, or a rebuild of everything, which resets the reconstituter)
+  replaces objects and leaves the held one stale. Handlers keep re-finding by id from `data`, as `City` does above.
+  `HappinessReport` L127–130 re-subscribes from its constructor's `player`, which is correct only because of in-place
+  refill; the `watch` version reads `data.player`.
 - `collect` must accumulate across rebuilds, because `refilled()`/`filledIds()` are last-call only and the arrival
   window's `close` handler (L1662–1668) re-enters `updateState`.
 

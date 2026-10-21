@@ -167,7 +167,8 @@ Moving around the map:
 - `GameOptionsRegistry`: in-memory options, set to defaults in `Renderer.init()`
   and not persisted: `autoEndOfTurn`, `autoEndOfTurnExceptions`,
   `unitEdgeMargin`, `mapScale`, `lockVerticalEdges`.
-- `DataObserver`: event-based subscription by object IDs.
+- `lib/DataChanges.ts`: watchers by object id, run once per render when an id
+  they watch changed (#344).
 - `Store` wrapper around IndexedDB via `idb` (used by `AssetStore` and the
   pending-save hand-over).
 
