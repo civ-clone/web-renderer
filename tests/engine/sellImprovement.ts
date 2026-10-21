@@ -3,7 +3,8 @@
 //  turn, so a second sale that turn is refused and the rest of its improvements go out with no sale value.
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
-// test founds a city, gives it a Temple and a Library, then sells the Temple and tries to sell the Library.
+// test founds a city, gives it a Temple and a Library, then sells the Temple and tries to sell the Library. Then it
+// launches a spaceship, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -28,6 +29,10 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import Spaceship from '@civ-clone/core-spaceship/Spaceship';
+import { instance as layoutRegistryInstance } from '@civ-clone/core-spaceship/LayoutRegistry';
+import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
+import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 
 let started = false,
   humanPlayer: Player | null = null,
@@ -194,8 +199,37 @@ const run = async (): Promise<void> => {
     fail('the city sold a second improvement in the same turn');
   }
 
+  // Launching a spaceship (#449: no other suite sends a `LaunchSpaceship`). Put there directly, as the Apollo Program
+  //  would, with no parts: the ship launches and the player goes out again.
+  const [LayoutType] = layoutRegistryInstance.entries() as any[],
+    spaceship = new Spaceship(humanPlayer!, new LayoutType());
+
+  spaceshipRegistryInstance.register(spaceship);
+  flush();
+  objectsSent = [];
+
+  await Promise.resolve(
+    actionHandler!({ name: 'LaunchSpaceship', id: spaceship.id() })
+  ).then(settle);
+
+  if (spaceship.launched() !== turnInstance.value()) {
+    fail(
+      `launching the spaceship left it launched: ${JSON.stringify(
+        spaceship.launched()
+      )}, not on turn ${turnInstance.value()}`
+    );
+  }
+
+  if (
+    !objectsSent.some(
+      (object) => object._ === 'Player' && object.id === humanPlayer!.id()
+    )
+  ) {
+    fail('the player that launched its spaceship was not sent to the UI');
+  }
+
   console.log(
-    'PASS sellImprovement (the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused)'
+    'PASS sellImprovement (the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship launches and the player goes out again)'
   );
 
   process.exit(0);

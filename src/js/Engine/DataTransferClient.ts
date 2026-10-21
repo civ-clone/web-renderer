@@ -1,51 +1,23 @@
-import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
-import {
-  ChangeProduction,
-  CityBuild,
-} from '@civ-clone/core-city-build/PlayerActions';
 import {
   ChoiceMeta,
   DataForChoiceMeta,
 } from '@civ-clone/core-client/ChoiceMeta';
 import { Client, IClient } from '@civ-clone/core-client/Client';
 import AIClient from '@civ-clone/core-ai-client/AIClient';
-import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
-import Advance from '@civ-clone/core-science/Advance';
-import BuildItem from '@civ-clone/core-city-build/BuildItem';
-import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
-import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
-import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
-import {
-  CompleteProduction,
-  SellImprovement,
-} from '@civ-clone/civ1-treasury/PlayerActions';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
-import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
-import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Player from '@civ-clone/core-player/Player';
-import PlayerAction from '@civ-clone/core-player/PlayerAction';
-import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
-import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
-import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import {
-  ChooseGovernment,
-  Revolution,
-} from '@civ-clone/civ1-government/PlayerActions';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TransferObject from './TransferObject';
 import Tile from '@civ-clone/core-world/Tile';
-import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
 import Transport, { TransportHandledAction } from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
-import UnitAction from '@civ-clone/core-unit/Action';
 import ActionsState from './Client/ActionsState';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -59,21 +31,11 @@ import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-cit
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
-import autoBuild from '@civ-clone/civ1-city/lib/autoBuild';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
-import {
-  chooseGovernment,
-  revolution,
-} from '@civ-clone/civ1-government/lib/revolution';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
-import {
-  changeSpecialist,
-  changeWorkedTile,
-  reassignWorkers,
-} from '@civ-clone/civ1-city/lib/assignWorkers';
 import { TopCitiesRow, defaultTopCitiesLimit } from './lib/topCities';
 import { CivilizationScore } from './lib/civilizationScore';
 import { GameOverDetails } from './lib/gameOver';
@@ -111,6 +73,8 @@ import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
 import ChoicePrompt from './Client/ChoicePrompt';
 import registerDiplomatEvents from './Client/diplomatEvents';
+import { handleAction as handleActionFor } from './Client/handleAction';
+import { ActionContext } from './Client/actions/ActionContext';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -119,6 +83,9 @@ export class DataTransferClient extends Client implements IClient {
   #automationEnabled: boolean;
   // The player's actions as the frontend was last sent them, and the unit it has the actions of (#411, #323).
   #actions: ActionsState = new ActionsState();
+  // What acting on the UI's actions reads (see `Client/handleAction.ts`). Made in the constructor, once the patches and
+  //  the talks are.
+  #actionContext: ActionContext;
   // What the player may see, which every payload goes through (see `Client/visibilityFilter.ts`). After `#actions`,
   //  which it is made with.
   #dataFilter: DataFilter = makeDataFilter(() => this.player(), this.#actions);
@@ -236,6 +203,19 @@ export class DataTransferClient extends Client implements IClient {
       turn: turnInstance,
       units: unitRegistryInstance,
     });
+
+    // What the UI's actions read and change (see `Client/handleAction.ts`).
+    this.#actionContext = {
+      player: () => this.player(),
+      patches: this.#patches,
+      actions: this.#actions,
+      talks: this.#talks,
+      cities: cityRegistryInstance,
+      cityImprovements: cityImprovementRegistryInstance,
+      playerTreasuries: playerTreasuryRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+      rules: ruleRegistryInstance,
+    };
 
     const client = this;
 
@@ -356,339 +336,10 @@ export class DataTransferClient extends Client implements IClient {
     );
   }
 
-  async handleAction(...args: any[]): Promise<boolean> {
-    const [action] = args,
-      player = this.player(),
-      actions = player.actions(),
-      mandatoryActions = actions.filter(
-        (action: PlayerAction): boolean =>
-          action instanceof MandatoryPlayerAction
-      );
-
-    const { name, id } = action;
-
-    // TODO: a proper action for this probably...
-    if (name === 'ReassignWorkers') {
-      const [city] = cityRegistryInstance.getBy('id', action.city);
-
-      if (!city) {
-        return false;
-      }
-
-      reassignWorkers(city);
-
-      this.#patches.city(city);
-
-      return false;
-    }
-
-    if (name === 'EndTurn') {
-      return (
-        mandatoryActions.length === 1 &&
-        mandatoryActions.every((action) => action instanceof EndTurn)
-      );
-    }
-
-    if (!name) {
-      console.log(`action not specified: `, action);
-
-      return false;
-    }
-
-    const [playerAction] = actions.filter(
-      (action: PlayerAction): boolean =>
-        action.constructor.name === name &&
-        id === (action.value() ? action.value().id() : undefined)
-    );
-
-    if (!playerAction) {
-      console.log('action not specified');
-
-      return false;
-    }
-
-    // TODO: other actions
-    // TODO: make this better...
-    if (playerAction instanceof ActiveUnit) {
-      const { unitAction, target } = action,
-        unit: Unit = playerAction.value(),
-        [playerTile] = playerWorldRegistryInstance
-          .getByPlayer(this.player())
-          .filter((tile) => tile.id() === target);
-
-      if (!playerTile) {
-        console.log(`tile not found: ${target}`);
-
-        return false;
-      }
-
-      const actions = unit.actions(playerTile.tile()),
-        filteredActions = actions.filter(
-          (action: UnitAction): boolean =>
-            action.sourceClass().name === unitAction
-        );
-
-      if (filteredActions.length === 0) {
-        console.log(`action not found: ${unitAction}`);
-
-        return false;
-      }
-
-      const [actionToPerform] = filteredActions,
-        // Where the unit was, and the city that supported it, before it acted: a move leaves the one, and setting a new
-        //  home city leaves the other (#411).
-        fromTile = unit.tile(),
-        homeCity = unit.city();
-
-      // The patch this action sends keeps the unit's actions while it has moves left to use them (#323).
-      this.#setUnitWithActions(unit);
-
-      actionToPerform.perform();
-
-      await this.#talks.pending;
-
-      await this.#talks.talkToPlayersMet();
-
-      // What the action changed (#411): the unit, the cities that support it before and after, and what of ours is on
-      //  the square it acted from, the square it acted on, and the square it is on now. A Caravan that helped build a
-      //  wonder, or a Settlers that joined a city, is gone into the city on the square it acted on. Anything else is
-      //  sent by the events the action raises.
-      this.#patches.unit(unit);
-      this.#patches.city(homeCity);
-      this.#patches.city(unit.city());
-      this.#patches.onTiles(fromTile, playerTile.tile(), unit.tile());
-
-      return false;
-    }
-
-    if (playerAction instanceof InactiveUnit) {
-      const unit: Unit = playerAction.value();
-
-      unit.activate();
-
-      // Built when the patch is sent, so as it is now it is active (#411).
-      this.#patches.unit(unit);
-
-      return false;
-    }
-
-    if (
-      playerAction instanceof CityBuild ||
-      playerAction instanceof ChangeProduction
-    ) {
-      const cityBuild = playerAction.value() as CityBuildItem,
-        { auto, chosen } = action;
-
-      // What the city is building, which is all a choice changes (#411).
-      this.#patches.cityBuild(cityBuild);
-
-      // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
-      if (typeof auto === 'boolean') {
-        cityBuild.setAuto(auto);
-
-        if (auto) {
-          autoBuild(cityBuild, ruleRegistryInstance);
-        }
-
-        return false;
-      }
-
-      if (!chosen) {
-        console.warn(`no build item specified`);
-
-        return false;
-      }
-
-      const [buildItem] = cityBuild
-        .available()
-        .filter((buildItem: BuildItem) => buildItem.item().name === chosen);
-
-      if (!buildItem) {
-        console.log(`build item not available: ${chosen}`);
-
-        return false;
-      }
-
-      cityBuild.build(buildItem.item());
-      // Choosing a build by hand takes the city off Auto.
-      cityBuild.setAuto(false);
-
-      return false;
-    }
-
-    if (playerAction instanceof ChooseResearch) {
-      const playerResearch = playerAction.value() as PlayerResearch,
-        { chosen } = action;
-
-      if (!chosen) {
-        console.warn(`no advance specified`);
-
-        return false;
-      }
-
-      const [ChosenAdvance] = playerResearch
-        .available()
-        .filter((AdvanceType: typeof Advance) => AdvanceType.name === chosen);
-
-      if (!ChosenAdvance) {
-        console.log(`build item not available: ${chosen}`);
-
-        return false;
-      }
-
-      playerResearch.research(ChosenAdvance);
-
-      this.#patches.playerObject(playerResearch);
-
-      return false;
-    }
-
-    if (playerAction instanceof CompleteProduction) {
-      const cityBuild = playerAction.value(),
-        [playerTreasury] = playerTreasuryRegistryInstance.getBy(
-          'id',
-          action.treasury
-        );
-
-      if (!playerTreasury) {
-        console.warn(`No playerTreasury found for id: ${action.treasury}.`);
-
-        return false;
-      }
-
-      playerTreasury.buy(cityBuild.city());
-
-      this.#patches.playerObject(playerTreasury);
-      this.#patches.cityBuild(cityBuild);
-
-      return false;
-    }
-
-    // Selling one of the city's improvements (#31): the rules decide whether it can be sold, and for what.
-    if (playerAction instanceof SellImprovement) {
-      const city = playerAction.value(),
-        [playerTreasury] = playerTreasuryRegistryInstance.getBy(
-          'id',
-          action.treasury
-        ),
-        [cityImprovement] = cityImprovementRegistryInstance
-          .getByCity(city)
-          .filter(
-            (cityImprovement) => cityImprovement.id() === action.improvement
-          );
-
-      if (!playerTreasury || !cityImprovement) {
-        console.warn(
-          `No playerTreasury (${action.treasury}) or improvement (${action.improvement}) found.`
-        );
-
-        return false;
-      }
-
-      playerTreasury.sell(cityImprovement);
-
-      // Selling the Palace changes every city's corruption, so every city goes again (#460 would say when).
-      this.#patches.playerObject(playerTreasury);
-      cityRegistryInstance
-        .getByPlayer(this.player())
-        .forEach((city) => this.#patches.city(city));
-
-      return false;
-    }
-
-    if (playerAction instanceof Revolution) {
-      revolution(playerAction.value() as PlayerGovernment);
-
-      this.#patches.player();
-
-      return false;
-    }
-
-    if (playerAction instanceof ChooseGovernment) {
-      const playerGovernment = playerAction.value() as PlayerGovernment,
-        { chosen } = action,
-        [GovernmentType] = playerGovernment
-          .available()
-          .filter((GovernmentType) => GovernmentType.name === chosen);
-
-      if (!GovernmentType) {
-        console.error(`Government type: '${chosen}' not found.`);
-
-        return false;
-      }
-
-      chooseGovernment(playerGovernment, GovernmentType);
-
-      this.#patches.player();
-
-      return false;
-    }
-
-    if (playerAction instanceof AdjustTradeRates) {
-      const playerTradeRates = playerAction.value() as PlayerTradeRates,
-        { value } = action;
-
-      playerTradeRates.setAll(
-        value.map(([name, value]: [string, string]) => {
-          const [rate] = playerTradeRates
-            .all()
-            .filter((rate) => rate.constructor.name === name);
-
-          return [rate.constructor as typeof TradeRate, value];
-        })
-      );
-
-      // Every city's trade is split by the rates (#411).
-      this.#patches.playerObject(playerTradeRates);
-
-      cityRegistryInstance
-        .getByPlayer(this.player())
-        .forEach((city) => this.#patches.city(city));
-
-      return false;
-    }
-
-    if (playerAction instanceof ChangeWorkedTile) {
-      const city = playerAction.value(),
-        [playerTile] = playerWorldRegistryInstance
-          .getByPlayer(this.player())
-          .filter((tile) => tile.id() === action.tile);
-
-      if (!playerTile) {
-        console.log(`tile not found: ${action.tile}`);
-
-        return false;
-      }
-
-      if (changeWorkedTile(city, playerTile.tile()) === 'none') {
-        return false;
-      }
-
-      this.#patches.city(city);
-
-      return false;
-    }
-
-    if (playerAction instanceof ChangeSpecialist) {
-      const city = playerAction.value().city();
-
-      changeSpecialist(playerAction.value());
-
-      this.#patches.city(city);
-
-      return false;
-    }
-
-    if (playerAction instanceof LaunchSpaceship) {
-      playerAction.value().launch();
-
-      this.#patches.player();
-
-      return false;
-    }
-
-    console.log(`unhandled action: ${JSON.stringify(action)}`);
-    return false;
+  // What the UI sends on `action`, acted on (see `Client/handleAction.ts`). Says whether the turn is over. Not `async`,
+  //  so that it settles when the action's handler does, inside the listener's hold on flushes.
+  handleAction(...args: any[]): Promise<boolean> {
+    return handleActionFor(this.#actionContext, ...args);
   }
 
   private sendInitialData(): void {
