@@ -1,0 +1,1 @@
+{"version":"0.1.0@d9a3567","date":"2026-10-21T12:10:04.000Z","localChanges":["chore: the publish check no longer mistakes a package's own WeakMap cache for leftover private-field helpers"],"externalChanges":{}}

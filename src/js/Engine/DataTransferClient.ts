@@ -17,8 +17,6 @@ import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTil
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
 import City from '@civ-clone/core-city/City';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
-import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
-import Civilization from '@civ-clone/core-civilization/Civilization';
 import {
   CompleteProduction,
   SellImprovement,
@@ -28,7 +26,6 @@ import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
-import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
@@ -43,7 +40,6 @@ import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import Retryable from './Retryable';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
 import {
   ChooseGovernment,
@@ -64,8 +60,6 @@ import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
 import UnknownUnit from './UnknownObjects/Unit';
 import ActionsState from './Client/ActionsState';
-import Yield from '@civ-clone/core-yield/Yield';
-import JoinCity from '@civ-clone/library-unit/Actions/JoinCity';
 import { instance as advanceRegistryInstance } from '@civ-clone/core-science/AdvanceRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -110,13 +104,7 @@ import { instance as specialistRegistryInstance } from '@civ-clone/core-city/Spe
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
 import { intelligenceRows } from './lib/intelligence';
-import {
-  awaitTimeout,
-  filterToReference,
-  filterToReferenceAllExcept,
-  standalone,
-} from './Client/refs';
-import { knownUnknownCity } from './Client/standIns';
+import { awaitTimeout, filterToReference, standalone } from './Client/refs';
 import {
   DataFilter,
   makeDataFilter,
@@ -130,6 +118,7 @@ import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
 import registerCheats from './Client/cheats';
 import registerNotifications from './Client/notifications/registerNotifications';
+import registerPatchEvents from './Client/events/patchEvents';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -312,89 +301,6 @@ export class DataTransferClient extends Client implements IClient {
       console.error(error);
     });
 
-    engineInstance.on('player:visibility-changed', (tile, player) => {
-      if (player !== this.player()) {
-        return;
-      }
-
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(
-          this.player()
-        ),
-        playerTile = playerWorld.getByTile(tile);
-
-      // A square newly seen in one of our cities' areas is one of its `tiles` from now on, where it was undiscovered
-      //  (#411).
-      if (!this.#automatedTurn()) {
-        this.#patches.citiesAround(tile);
-      }
-
-      if (playerTile === null) {
-        new Retryable(
-          () => {
-            const playerTile = playerWorld.getByTile(tile);
-
-            if (playerTile === null) {
-              return false;
-            }
-
-            this.#patches.seenTile(playerWorld, playerTile);
-
-            return true;
-          },
-          2,
-          20
-        );
-
-        return;
-      }
-
-      this.#patches.seenTile(playerWorld, playerTile);
-    });
-
-    ['unit:created', 'unit:defeated', 'unit:lost-at-sea'].forEach((event) => {
-      engineInstance.on(event, (unit) => {
-        const playerWorld = playerWorldRegistryInstance.getByPlayer(
-            this.player()
-          ),
-          playerTile = playerWorld.getByTile(unit.tile());
-
-        if (!playerTile) {
-          return;
-        }
-
-        this.#patches.tile(playerTile);
-
-        if (unit.player() !== this.player()) {
-          return;
-        }
-
-        // The unit, the player's list of units, and its home city, which supports it (#411). Each is built when the
-        //  patch is sent, so a unit gone by then, a Settlers that founded a city, isn't put back (#138).
-        this.#patches.unit(unit);
-        this.#patches.city(unit.city());
-
-        if (event === 'unit:created') {
-          this.#patches.playerKey('units');
-        }
-      });
-    });
-
-    ['unit:destroyed'].forEach((event) => {
-      engineInstance.on(event, (unit: Unit) => {
-        // A disbanded or destroyed unit leaves its square, whoever's it was (#138).
-        this.#patches.tile(unit.tile());
-
-        // It goes once more, marked destroyed, and then drops out of the player's list of units, which no longer holds
-        //  it or the home city it kept (#459). Its home city no longer supports it (#411).
-        this.#patches.unit(unit);
-        this.#patches.city(unit.city());
-
-        if (unit.player() === this.player()) {
-          this.#patches.playerKey('units');
-        }
-      });
-    });
-
     engineInstance.on('unit:moved', (unit: Unit) => {
       // Automation's own client does the talking for the moves it makes, as it does for halts.
       if (unit.player() !== this.player() || this.#automationEnabled) {
@@ -433,208 +339,15 @@ export class DataTransferClient extends Client implements IClient {
       this.#heldHalts.push({ target: playerTile.id(), unit: unit.id() });
     });
 
-    ['unit:moved'].forEach((event) => {
-      engineInstance.on(event, (unit: Unit, action: UnitAction) => {
-        const playerWorld = playerWorldRegistryInstance.getByPlayer(
-            this.player()
-          ),
-          fromTile = playerWorld.getByTile(action.from()),
-          toTile = playerWorld.getByTile(action.to());
-
-        if (!fromTile && !toTile) {
-          return;
-        }
-
-        this.#patches.tile(fromTile);
-        this.#patches.tile(toTile);
-
-        // A Settlers joining a city makes it grow, so the city goes out in full, as `city:grow` sends it. In the tile
-        //  patch alone the city is a ref, and would keep the size the UI already has (#243).
-        if (action instanceof JoinCity) {
-          const city = cityRegistryInstance.getByTile(action.to());
-
-          if (city !== null) {
-            this.#patches.city(city);
-          }
-        }
-
-        // The unit, and the city that supports it, which may be unhappy about where it is now (#411).
-        if (unit.player() === this.player() && !this.#automatedTurn()) {
-          this.#patches.unit(unit);
-          this.#patches.city(unit.city());
-          this.#patches.onTiles(action.from(), action.to());
-        }
-
-        this.sendPatchData();
-      });
+    // What each engine event changes of what the player is sent, queued for the next flush, and the flush after every
+    //  unit's move (see `Client/events/patchEvents.ts`). After the talks' `unit:moved` listener above, as it was.
+    registerPatchEvents(engineInstance, {
+      player: () => this.player(),
+      patches: this.#patches,
+      dataFilter: this.#dataFilter,
+      automation: { automatedTurn: () => this.#automatedTurn() },
+      cityNews: this.#cityNews,
     });
-
-    [
-      'tile-improvement:built',
-      'tile-improvement:pillaged',
-      'tile-improvement:removed',
-    ].forEach((event) => {
-      engineInstance.on(event, (tile) => this.#patches.tile(tile));
-    });
-
-    engineInstance.on(
-      'city:captured',
-      (city: City, capturingPlayer: Player, originalPlayer: Player) => {
-        // Our capture of it is told in `Client/notifications/city.ts`.
-        if (originalPlayer === this.player()) {
-          // The city already belongs to the capturing player here, so resend ours: the city is gone from our list,
-          //  and losing the capital changes every remaining city's corruption.
-          this.#patches.wholePlayer(
-            filterToReferenceAllExcept(Player, PlayerAction, Civilization)
-          );
-
-          Object.assign(this.#cityNews.of(city), {
-            capturedBy: capturingPlayer,
-            capturedFrom: originalPlayer,
-          });
-        }
-      }
-    );
-
-    // The map draws a city from its tile: its size, or an unhappy citizen in civil disorder (#193). Our own city is a
-    //  ref in the tile patch, so it goes out in full along with it: a new or captured city the frontend has never had,
-    //  or a size or disorder the map draws from it. Not a destroyed one.
-    const cityChanged = (
-      city: City,
-      destroyed: boolean = false,
-      listChanged: boolean = false
-    ): void => {
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(
-          this.player()
-        ),
-        playerTile = playerWorld.getByTile(city.tile());
-
-      if (!playerTile) {
-        return;
-      }
-
-      const unknownCity = knownUnknownCity(city);
-
-      if (unknownCity) {
-        this.#patches.update(unknownCity.id(), () => {
-          unknownCity.update(city);
-
-          return unknownCity.toPlainObject(
-            this.#dataFilter(filterToReference(Tile, Unit, Player))
-          );
-        });
-      }
-
-      this.#patches.tile(playerTile);
-
-      if (!destroyed) {
-        this.#patches.city(city);
-      }
-
-      // A city founded, captured or destroyed is added to or gone from the player's list of cities (#411).
-      if (listChanged && city.player() === this.player()) {
-        this.#patches.playerKey('cities');
-      }
-    };
-
-    [
-      'city:created',
-      'city:captured',
-      'city:grow',
-      'city:shrink',
-      // A rival's city in disorder shows on the map as your own does (#265). The engine raises
-      //  `city:civil-disorder` before it records the disorder, which is why the city is only read when the patch is
-      //  built.
-      'city:civil-disorder',
-      'city:order-restored',
-    ].forEach((event) =>
-      engineInstance.on(event, (city: City) =>
-        cityChanged(
-          city,
-          false,
-          ['city:created', 'city:captured'].includes(event)
-        )
-      )
-    );
-
-    engineInstance.on('city:destroyed', (city: City, player: Player | null) => {
-      cityChanged(city, true, true);
-
-      Object.assign(this.#cityNews.of(city), {
-        destroyed: true,
-        destroyedBy: player ?? null,
-      });
-    });
-
-    // Which city works a tile is part of the tile (`workedBy`), so it goes out whenever that changes (#138): a city
-    //  founded, growing, shrinking or destroyed, a tile the player chose, workers reassigned, an enemy unit in the way.
-    //  The city's yields change with it, so ours goes too (#411): a city founded next to it takes a square it worked.
-    ['city:tile-worked', 'city:tile-released'].forEach((event) =>
-      engineInstance.on(event, (city: City, tile: Tile) => {
-        this.#patches.tile(tile);
-
-        if (!this.#automatedTurn()) {
-          this.#patches.city(city);
-        }
-      })
-    );
-
-    // A government's yields reach every tile and city, so a change of government resends them all: whatever changed
-    //  it, a revolution, a new government chosen, or one that collapsed.
-    engineInstance.on('player:government:changed', (player: Player) => {
-      if (player === this.player()) {
-        this.#patches.allTilesAndCities();
-      }
-    });
-
-    // A nuclear detonation (#129). The engine announces it before anything changes, and patches are only built when
-    //  they're sent, so every square in the 3×3 area and every city in it is queued here and read once the units are
-    //  gone and the cities halved.
-    engineInstance.on('unit:nuclear-detonation', (unit: Unit, tile: Tile) => {
-      const area = [tile, ...tile.getNeighbours()],
-        cities = area
-          .map((areaTile) => cityRegistryInstance.getByTile(areaTile))
-          .filter((city): city is City => city !== null);
-
-      area.forEach((areaTile) => this.#patches.tile(areaTile));
-
-      cities.forEach((city) => cityChanged(city));
-
-      if (
-        cities.some((city) => city.player() === this.player()) ||
-        area.some((areaTile) =>
-          unitRegistryInstance
-            .getByTile(areaTile)
-            .some((areaUnit) => areaUnit.player() === this.player())
-        )
-      ) {
-        this.#patches.wholePlayer(
-          filterToReferenceAllExcept(
-            Player,
-            PlayerAction,
-            Unit,
-            UnitAction,
-            Yield,
-            Civilization
-          )
-        );
-      }
-
-      // The other players are told of it in `Client/notifications/unit.ts`.
-    });
-
-    // Both cities' trade changes (#411). The player is told of it in `Client/notifications/unit.ts`.
-    engineInstance.on(
-      'unit:trade-route-established',
-      (player: Player, home: City, city: City) => {
-        if (player !== this.player()) {
-          return;
-        }
-
-        this.#patches.city(home);
-        this.#patches.city(city);
-      }
-    );
 
     // The report opens on the civilization the embassy is with, as v474.05 opens it.
     engineInstance.on(
@@ -719,78 +432,12 @@ export class DataTransferClient extends Client implements IClient {
       }
     );
 
-    // A bribed or defecting unit stays where it is but changes colour, and moves between the two players' lists.
-    engineInstance.on(
-      'unit:transferred',
-      (unit: Unit, player: Player, previousPlayer: Player) => {
-        this.#patches.tile(unit.tile());
-
-        if (![player, previousPlayer].includes(this.player())) {
-          return;
-        }
-
-        this.#patches.wholePlayer(
-          filterToReference(PlayerWorld, PlayerTile, Tile, City)
-        );
-      }
-    );
-
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
     //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one.
     engineInstance.on('city:food-storage-exhausted', (city: City) => {
       this.#cityNews.of(city).famine = true;
     });
-
-    // Our build is told of in `Client/notifications/city.ts`, as a rival's wonder is.
-    engineInstance.on('city:building-complete', (cityBuild) => {
-      if (cityBuild.city().player() !== this.player()) {
-        return;
-      }
-
-      this.#patches.update(cityBuild.id(), () =>
-        cityBuild.toPlainObject(
-          this.#dataFilter(filterToReference(Tile, Unit, Player))
-        )
-      );
-    });
-
-    // The advance is told of in `Client/notifications/player.ts`.
-    engineInstance.on('player:research-complete', (playerResearch) => {
-      if (playerResearch.player() !== this.player()) {
-        return;
-      }
-
-      this.#patches.update(playerResearch.id(), () =>
-        playerResearch.toPlainObject(
-          this.#dataFilter(filterToReference(Player))
-        )
-      );
-    });
-
-    // The cities whose improvements are gone (#184). The player is told in `Client/notifications/city.ts`.
-    engineInstance.on(
-      'city-improvement:obsolete',
-      (
-        player: Player,
-        advance: Advance,
-        ImprovementType: typeof CityImprovement,
-        cityImprovements: CityImprovement[]
-      ) => {
-        if (player !== this.player()) {
-          return;
-        }
-
-        cityImprovements.forEach((cityImprovement) =>
-          this.#patches.city(cityImprovement.city())
-        );
-      }
-    );
-
-    // The hut is gone from the square, whoever found it (#138). The finder is told in `Client/notifications/unit.ts`.
-    engineInstance.on('goody-hut:action-performed', (goodyHut: GoodyHut) =>
-      this.#patches.tile(goodyHut.tile())
-    );
 
     // However the game ends, the ending window says so (#176). Our own destruction is one of the endings.
     engineInstance.on('game:over', (gameResult: GameResult) =>
