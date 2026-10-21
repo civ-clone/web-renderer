@@ -71,7 +71,6 @@ import Transport, {
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
-import UnknownPlayer from './UnknownObjects/Player';
 import UnknownUnit from './UnknownObjects/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
 import Yield from '@civ-clone/core-yield/Yield';
@@ -106,9 +105,6 @@ import {
   changeWorkedTile,
   reassignWorkers,
 } from '@civ-clone/civ1-city/lib/assignWorkers';
-import actionResult from './AdditionalData/actionResult';
-import anarchyTurns from './AdditionalData/anarchyTurns';
-import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import {
   calculateCitizenState,
   citizenSummary,
@@ -135,107 +131,26 @@ import {
   unitWithoutActions,
 } from './lib/unitWithoutActions';
 import playerWithoutActions from './lib/playerWithoutActions';
-import researchCosts from './AdditionalData/researchCosts';
-import tradeRoutes from './AdditionalData/tradeRoutes';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
-
-// What a player's action is, which stays the same though `actions()` makes it afresh, with a new id, every time
-//  (#411): what kind it is and what it acts on.
-const actionKey = (action: PlayerAction): string => {
-  const value = action.value();
-
-  return `${action.constructor.name} ${
-    value instanceof DataObject ? value.id() : JSON.stringify(value ?? null)
-  }`;
-};
-
-const awaitTimeout = (delay: number, reason?: any) =>
-  new Promise<void>((resolve, reject) =>
-    setTimeout(() => (reason === undefined ? resolve() : reject(reason)), delay)
-  );
-
-const referenceObject = (object: any) =>
-    object instanceof DataObject
-      ? {
-          '#ref': object.id(),
-        }
-      : object,
-  filterToReference =
-    (...types: (new (...args: any[]) => any)[]) =>
-    (object: any) =>
-      types.some((Type) => object instanceof Type)
-        ? referenceObject(object)
-        : object,
-  filterToReferenceAllExcept =
-    (...types: (new (...args: any[]) => any)[]) =>
-    (object: any) =>
-      types.some((Type) => object instanceof Type)
-        ? object
-        : referenceObject(object),
-  // For a payload the UI reconstitutes on its own rather than merging into the game data, so it cannot carry refs: a
-  //  player or a tile says who and where, and no more (#130).
-  standalone = (object: any) =>
-    object instanceof Player
-      ? {
-          _: 'Player',
-          id: object.id(),
-          civilization: object.civilization(),
-        }
-      : object instanceof PlayerTile
-      ? { _: 'PlayerTile', id: object.id(), x: object.x(), y: object.y() }
-      : object;
-
-additionalDataRegistryInstance.register(
-  actionResult(),
-  anarchyTurns(),
-  civilDisorderDeclared(),
-  researchCosts(),
-  tradeRoutes()
-);
-
-// What kind of thing a sabotaged city was building, which says where its name is translated, as `City.building-complete`
-//  notices do (#58). `target` is the class being built, or nothing.
-const sabotagedBuildKind = (target: unknown): string => {
-  const is = (Type: Function): boolean =>
-    typeof target === 'function' &&
-    Object.prototype.isPrototypeOf.call(Type, target);
-
-  return is(Unit)
-    ? '.unit'
-    : is(Wonder)
-    ? '.wonder'
-    : is(CityImprovement)
-    ? '.city-improvement'
-    : is(Part)
-    ? '.spaceship-part'
-    : '';
-};
-
-const unknownPlayers: WeakMap<Player, UnknownPlayer> = new WeakMap(),
-  unknownUnits: WeakMap<Unit, UnknownUnit> = new WeakMap(),
-  unknownCities: WeakMap<City, UnknownCity> = new WeakMap();
-
-// A `CityBuild` without `available` (#324). Working out what every city could build was most of every player patch (a
-//  production change in a large game sent 500 KB of it, all for the one picker that reads it), so the picker asks for
-//  it when it opens (`cityBuildAvailable`). `toPlainObject` only reads what `keys()` names, so a stand-in that names
-//  fewer is enough; it shares the id, and so the entry in the UI's data, with the build it stands in for. A stand-in is
-//  an `instanceof CityBuild` itself, which is why `standsInForCityBuild` is there for the filter to check.
-const cityBuildStandIns: WeakMap<CityBuildItem, CityBuildItem> = new WeakMap(),
-  standsInForCityBuild: WeakSet<CityBuildItem> = new WeakSet(),
-  withoutAvailable = (cityBuild: CityBuildItem): CityBuildItem => {
-    if (!cityBuildStandIns.has(cityBuild)) {
-      const standIn: CityBuildItem = Object.create(cityBuild, {
-        keys: {
-          value: () => cityBuild.keys().filter((key) => key !== 'available'),
-        },
-      });
-
-      standsInForCityBuild.add(standIn);
-      cityBuildStandIns.set(cityBuild, standIn);
-    }
-
-    return cityBuildStandIns.get(cityBuild)!;
-  };
+import {
+  actionKey,
+  awaitTimeout,
+  filterToReference,
+  filterToReferenceAllExcept,
+  referenceObject,
+  standalone,
+} from './Client/refs';
+import {
+  knownUnknownCity,
+  standsInForCityBuild,
+  unknownCityOf,
+  unknownPlayerOf,
+  unknownUnitOf,
+  withoutAvailable,
+} from './Client/standIns';
+import { sabotagedBuildKind } from './Client/notifications/diplomat';
+// Last, as registering these used to follow every import here.
+import './Client/registerAdditionalData';
 
 // What happened to a city during one engine call (#400, #420).
 type CityNews = {
@@ -276,19 +191,11 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       if (object instanceof Player && object !== this.player()) {
-        if (!unknownPlayers.has(object)) {
-          unknownPlayers.set(object, UnknownPlayer.fromPlayer(object));
-        }
-
-        return unknownPlayers.get(object);
+        return unknownPlayerOf(object);
       }
 
       if (object instanceof Unit && object.player() !== this.player()) {
-        if (!unknownUnits.has(object)) {
-          unknownUnits.set(object, UnknownUnit.fromUnit(object));
-        }
-
-        return unknownUnits.get(object);
+        return unknownUnitOf(object);
       }
 
       // The player's units go out without their actions, but for the one the UI has them for (#323).
@@ -302,11 +209,7 @@ export class DataTransferClient extends Client implements IClient {
       }
 
       if (object instanceof City && object.player() !== this.player()) {
-        if (!unknownCities.has(object)) {
-          unknownCities.set(object, UnknownCity.fromCity(object));
-        }
-
-        return unknownCities.get(object);
+        return unknownCityOf(object);
       }
 
       if (object instanceof Tile) {
@@ -918,9 +821,9 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      if (unknownCities.has(city)) {
-        const unknownCity = unknownCities.get(city)!;
+      const unknownCity = knownUnknownCity(city);
 
+      if (unknownCity) {
         this.#dataQueue.update(unknownCity.id(), () => {
           unknownCity.update(city);
 
