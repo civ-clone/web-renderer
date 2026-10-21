@@ -1,0 +1,1 @@
+{"version":"0.1.0@744ec5f","date":"2026-10-21T16:14:38.000Z","localChanges":["chore: make SquareProjection answer footprint, worldSize and wrapPeriod once rather than allocate per tile drawn (#90)"],"externalChanges":{}}
