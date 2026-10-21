@@ -114,12 +114,9 @@ export class CityNames extends Map {
   }
 
   #boxFor(tile: Tile, offsetX: number, offsetY: number): Rect {
-    const size = this.tileSize(),
-      scale = this.scale(),
+    const scale = this.scale(),
       city = tile.city!,
-      centreX = offsetX + size / 2,
-      digitBaseline = offsetY + size * 0.75,
-      nameBaseline = offsetY + size * 1.6;
+      { centreX, digitBaseline, nameBaseline } = this.#anchor(offsetX, offsetY);
 
     this.#applyFont();
 
@@ -174,12 +171,9 @@ export class CityNames extends Map {
   }
 
   #drawLabel(tile: Tile, offsetX: number, offsetY: number): Rect {
-    const size = this.tileSize(),
-      scale = this.scale(),
+    const scale = this.scale(),
       city = tile.city!,
-      centreX = offsetX + size / 2,
-      digitBaseline = offsetY + size * 0.75,
-      nameBaseline = offsetY + size * 1.6,
+      { centreX, digitBaseline, nameBaseline } = this.#anchor(offsetX, offsetY),
       sizeText = localeProvider.number(city.growth.size),
       name = cityName(city);
 
@@ -206,6 +200,21 @@ export class CityNames extends Map {
     );
 
     return this.#boxFor(tile, offsetX, offsetY);
+  }
+
+  // Where a label goes on the tile's box: centred across it, the size three
+  // quarters of the way down and the name hanging below it.
+  #anchor(
+    offsetX: number,
+    offsetY: number
+  ): { centreX: number; digitBaseline: number; nameBaseline: number } {
+    const { width, height } = this.projection().footprint();
+
+    return {
+      centreX: offsetX + width / 2,
+      digitBaseline: offsetY + height * 0.75,
+      nameBaseline: offsetY + height * 1.6,
+    };
   }
 
   #applyFont(): void {
