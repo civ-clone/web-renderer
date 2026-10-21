@@ -4,7 +4,6 @@ import {
   CityImprovementMaintenanceGold,
   PlainObject,
   Player,
-  PlayerTreasury,
   SpendCost,
   Tile,
   Unit as UnitData,
@@ -27,7 +26,6 @@ import Cities from './Map/Cities';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import ConfirmationWindow from './ConfirmationWindow';
-import DataObserver from '../DataObserver';
 import Fog from './Map/Fog';
 import Landscape from './Map/Landscape';
 import Portal from './Portal';
@@ -47,6 +45,7 @@ import instanceOf from '../lib/instanceOf';
 import isAnarchy from './lib/government';
 import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
+import watchCity from './lib/watchCity';
 
 // The yield rows the city screen draws. This is the screen's layout, not a rule: the groups themselves come from the
 //  engine's class ancestry.
@@ -521,11 +520,10 @@ const renderYields = (city: CityData): Node => {
 
 export class City extends Window {
   #city: CityData;
-  // None for a rival's city, which isn't kept up to date.
-  #dataObserver: DataObserver | null = null;
   #portal: Portal;
   #transport: Transport;
-  #treasury: PlayerTreasury | null = null;
+  // None for a rival's city, which isn't kept up to date.
+  #unwatch: (() => void) | null = null;
 
   /**
    * With `readOnly`, as for a rival's city a Diplomat has investigated (#58), the screen shows the city as it was sent
@@ -564,37 +562,9 @@ export class City extends Window {
     this.#transport = transport;
 
     if (!readOnly) {
-      this.#treasury = getTreasuryForYield(city.player, 'Gold');
-      this.#dataObserver = new DataObserver(
-        [
-          city.id,
-          city.build.id,
-          city.growth.id,
-          ...city.units.map((unit) => unit.id),
-          getTreasuryForYield(city.player, 'Gold').id,
-        ],
-        (data: PlainObject) => {
-          const [updatedCity] = (
-            (data.player?.cities ?? []) as CityData[]
-          ).filter((cityData: CityData) => city.id === cityData.id);
-
-          this.#treasury = getTreasuryForYield(data.player, 'Gold');
-
-          // City must have been captured or destroyed
-          if (!updatedCity) {
-            this.close();
-
-            return;
-          }
-
+      this.#unwatch = watchCity(city, {
+        update: (updatedCity) => {
           this.#city = updatedCity;
-
-          this.#dataObserver!.setIds([
-            updatedCity.id,
-            updatedCity.build.id,
-            updatedCity.growth.id,
-            ...updatedCity.units.map((unit) => unit.id),
-          ]);
 
           this.update(
             cityDetails(
@@ -612,8 +582,10 @@ export class City extends Window {
           this.element().focus();
 
           setTimeout(() => resizeYields(this.element()), 200);
-        }
-      );
+        },
+        // Captured or destroyed.
+        close: () => this.close(),
+      });
     }
 
     this.on('keydown', (event) => {
@@ -704,7 +676,7 @@ export class City extends Window {
   }
 
   close(): void {
-    this.#dataObserver?.dispose();
+    this.#unwatch?.();
 
     super.close();
   }
