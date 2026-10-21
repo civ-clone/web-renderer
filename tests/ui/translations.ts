@@ -369,7 +369,7 @@ const expect = (description: string, actual: string, expected: string) => {
   );
 
   notifications.forEach(([key, data, expected]) => {
-    // What the UI receives: serialised by `sendNotification`, rebuilt by the
+    // What the UI receives: serialised by `Notifier.notify`, rebuilt by the
     //  transport, then translated as `Notifications.publish` does.
     const notification = reconstituteData(
       new Notification(key, data).toPlainObject()

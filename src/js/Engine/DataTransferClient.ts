@@ -134,19 +134,10 @@ import {
   serialiseUnit,
 } from './Client/visibilityFilter';
 import PlayerPatches from './Client/PlayerPatches';
+import Notifier from './Client/Notifier';
+import CityNewsCollector from './Client/cityNews';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
-
-// What happened to a city during one engine call (#400, #420).
-type CityNews = {
-  // Whose it was when it was first heard of.
-  ours: boolean;
-  capturedBy: Player | null;
-  capturedFrom: Player | null;
-  destroyed: boolean;
-  destroyedBy: Player | null;
-  famine: boolean;
-};
 
 export class DataTransferClient extends Client implements IClient {
   #automationClient: AIClient;
@@ -161,14 +152,14 @@ export class DataTransferClient extends Client implements IClient {
   #patches: PlayerPatches;
   #eventEmitter: EventEmitter;
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
-  //  our own notifications are held (see `sendNotification`).
+  //  our own notifications are held (see `#holdsNotifications`).
   #handedOver: boolean = false;
-  #heldNotifications: Notification[] = [];
-  // What happened to each city during the engine call under way, told to the player once it's over (#400, #420), so a
-  //  city lost or starved gets one notice. Capturing a size 1 city destroys it before `city:captured` is emitted, and
-  //  by then it is the capturer's, so neither event alone says that we lost it, or how.
-  #cityNews: Map<City, CityNews> = new Map();
-  #cityNewsQueued = false;
+  // The notifications sent the player, held until the hand-over (see `Client/Notifier.ts`). Made in the constructor,
+  //  which is given the transport.
+  #notifier: Notifier;
+  // What happened to each city during the engine call under way, told to the player once it's over (#400, #420; see
+  //  `Client/cityNews.ts`).
+  #cityNews: CityNewsCollector;
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
@@ -206,6 +197,12 @@ export class DataTransferClient extends Client implements IClient {
       this.#dataFilter,
       this.#actions,
       () => this.player()
+    );
+    this.#notifier = new Notifier(transport, this.#dataFilter);
+    this.#notifier.holdWhile(() => this.#holdsNotifications());
+    this.#cityNews = new CityNewsCollector(
+      () => this.player(),
+      (notification) => this.#notifier.notify(notification)
     );
     this.#sender = sender;
     this.#receiver = receiver;
@@ -671,7 +668,7 @@ export class DataTransferClient extends Client implements IClient {
             filterToReferenceAllExcept(Player, PlayerAction, Civilization)
           );
 
-          Object.assign(this.#newsOf(city), {
+          Object.assign(this.#cityNews.of(city), {
             capturedBy: capturingPlayer,
             capturedFrom: originalPlayer,
           });
@@ -680,7 +677,7 @@ export class DataTransferClient extends Client implements IClient {
         }
 
         if (capturingPlayer === this.player()) {
-          this.sendNotification(
+          this.#notifier.notify(
             new Notification('City.captured-by-us', {
               city,
               capturingPlayer,
@@ -757,7 +754,7 @@ export class DataTransferClient extends Client implements IClient {
     engineInstance.on('city:destroyed', (city: City, player: Player | null) => {
       cityChanged(city, true, true);
 
-      Object.assign(this.#newsOf(city), {
+      Object.assign(this.#cityNews.of(city), {
         destroyed: true,
         destroyedBy: player ?? null,
       });
@@ -821,7 +818,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('Unit.nuclear-attack', {
           player: unit.player(),
         })
@@ -834,7 +831,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('City.polluted', {
           city,
         })
@@ -846,7 +843,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('City.sdi-protected', {
           city,
         })
@@ -858,7 +855,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification(
           aircraftRange.some(([UnitType]) => unit instanceof UnitType)
             ? 'Unit.out-of-fuel'
@@ -875,7 +872,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('City.unit-unsupported', {
           city,
           unit,
@@ -890,7 +887,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('City.improvement-unsupported', {
             city,
             cityImprovement,
@@ -916,7 +913,7 @@ export class DataTransferClient extends Client implements IClient {
         this.#patches.city(home);
         this.#patches.city(city);
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('Unit.trade-route-established', {
             bonus,
             city,
@@ -936,7 +933,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('Diplomat.advance-stolen', {
             advance: AdvanceType.name,
             thief,
@@ -952,7 +949,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           target instanceof CityImprovement
             ? new Notification('Diplomat.sabotaged.improvement', {
                 city,
@@ -981,7 +978,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('Diplomat.incited', {
             city,
             inciter,
@@ -999,7 +996,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('Diplomat.unit-bribed', {
             briber,
             previousOwner,
@@ -1112,7 +1109,7 @@ export class DataTransferClient extends Client implements IClient {
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
     //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one.
     engineInstance.on('city:food-storage-exhausted', (city: City) => {
-      this.#newsOf(city).famine = true;
+      this.#cityNews.of(city).famine = true;
     });
 
     engineInstance.on('city:building-complete', (cityBuild, build) => {
@@ -1126,7 +1123,7 @@ export class DataTransferClient extends Client implements IClient {
       ) {
         // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
         //  a city we have never seen is not named at all (#43).
-        this.sendNotification(
+        this.#notifier.notify(
           playerWorld.getByTile(cityBuild.city().tile())
             ? new Notification('Wonder.building-complete.other-player.known', {
                 city: cityBuild.city(),
@@ -1164,7 +1161,7 @@ export class DataTransferClient extends Client implements IClient {
           ? 'spaceship-part'
           : 'other';
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('City.building-complete.' + suffix, {
           cityBuild,
           build,
@@ -1183,7 +1180,7 @@ export class DataTransferClient extends Client implements IClient {
         )
       );
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('Player.research-complete', {
           playerResearch,
           advance,
@@ -1201,7 +1198,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification(
           'Wonder.obsolete',
           {
@@ -1231,7 +1228,7 @@ export class DataTransferClient extends Client implements IClient {
           this.#patches.city(cityImprovement.city())
         );
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification(
             'CityImprovement.obsolete',
             {
@@ -1257,7 +1254,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification(
             `GoodyHut.action-performed.${action.constructor.name}`,
             {
@@ -1284,7 +1281,7 @@ export class DataTransferClient extends Client implements IClient {
     });
 
     engineInstance.on('game:retirement-warning', () =>
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('Game.retirement-warning', {
           player: this.player(),
         })
@@ -1314,7 +1311,7 @@ export class DataTransferClient extends Client implements IClient {
         // A civilization we have not met is neither named nor sent (#59).
         const victor = player !== null && this.hasMet(player) ? player : null;
 
-        this.sendNotification(
+        this.#notifier.notify(
           this.hasMet(defeatedPlayer)
             ? new Notification(
                 victor === null
@@ -1339,7 +1336,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:civil-disorder', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('City.civil-disorder', {
             city,
           })
@@ -1349,7 +1346,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:order-restored', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('City.order-restored', {
             city,
           })
@@ -1366,7 +1363,7 @@ export class DataTransferClient extends Client implements IClient {
 
         // With the Pyramids there's no Anarchy, and the new government is
         // chosen straight away.
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification(
             playerGovernmentRegistryInstance.getByPlayer(player).is(Anarchy)
               ? 'Player.government-collapsed'
@@ -1381,7 +1378,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:leader-celebration', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('City.leader-celebration', {
             city,
           })
@@ -1391,7 +1388,7 @@ export class DataTransferClient extends Client implements IClient {
 
     engineInstance.on('city:leader-celebration-ended', (city: City) => {
       if (city.player() === this.player()) {
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('City.leader-celebration-ended', {
             city,
           })
@@ -1404,7 +1401,7 @@ export class DataTransferClient extends Client implements IClient {
     engineInstance.on(
       'player:respawned',
       (player: Player, defeatedPlayer: Player) => {
-        this.sendNotification(
+        this.#notifier.notify(
           this.hasMet(defeatedPlayer)
             ? new Notification('Player.respawned', { defeatedPlayer }, true)
             : new Notification('Player.respawned.unmet', {}, true)
@@ -1417,7 +1414,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         this.hasMet(player)
           ? new Notification('Spaceship.part-built', {
               player,
@@ -1435,7 +1432,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification(
             launched ? 'Spaceship.returned' : 'Spaceship.cancelled',
             {
@@ -1451,7 +1448,7 @@ export class DataTransferClient extends Client implements IClient {
         return;
       }
 
-      this.sendNotification(
+      this.#notifier.notify(
         new Notification('Player.spaceship-landed', {
           player,
         })
@@ -1465,7 +1462,7 @@ export class DataTransferClient extends Client implements IClient {
           return;
         }
 
-        this.sendNotification(
+        this.#notifier.notify(
           new Notification('Player.declaration-expired', {
             player,
             declaration,
@@ -1998,117 +1995,6 @@ export class DataTransferClient extends Client implements IClient {
     });
   }
 
-  #newsOf(city: City): CityNews {
-    if (!this.#cityNews.has(city)) {
-      this.#cityNews.set(city, {
-        ours: city.player() === this.player(),
-        capturedBy: null,
-        capturedFrom: null,
-        destroyed: false,
-        destroyedBy: null,
-        famine: false,
-      });
-    }
-
-    if (!this.#cityNewsQueued) {
-      this.#cityNewsQueued = true;
-
-      // The engine handles a capture, a turn's famines and the rest synchronously, so this runs once they are done.
-      queueMicrotask(() => this.#sendCityNews());
-    }
-
-    return this.#cityNews.get(city)!;
-  }
-
-  // A lost city waits beside End Turn, as an improvement going obsolete does (#420). Famine stops play, as in Civ1.
-  #sendCityNews(): void {
-    const news = Array.from(this.#cityNews);
-
-    this.#cityNews.clear();
-    this.#cityNewsQueued = false;
-
-    news.forEach(
-      ([
-        city,
-        { ours, capturedBy, capturedFrom, destroyed, destroyedBy, famine },
-      ]) => {
-        if (capturedFrom === this.player()) {
-          this.sendNotification(
-            destroyed
-              ? new Notification(
-                  'City.destroyed-by',
-                  { city, player: capturedBy },
-                  true
-                )
-              : new Notification(
-                  'City.captured-from-us',
-                  {
-                    city,
-                    capturingPlayer: capturedBy,
-                    originalPlayer: capturedFrom,
-                  },
-                  true
-                )
-          );
-
-          return;
-        }
-
-        if (!ours) {
-          return;
-        }
-
-        if (destroyed) {
-          this.sendNotification(
-            destroyedBy
-              ? new Notification(
-                  'City.destroyed-by',
-                  { city, player: destroyedBy },
-                  true
-                )
-              : new Notification('City.destroyed', { city }, true)
-          );
-
-          return;
-        }
-
-        if (famine) {
-          this.sendNotification(
-            new Notification('City.food-storage-exhausted', {
-              city,
-            })
-          );
-        }
-      }
-    );
-  }
-
-  private sendNotification(notification: Notification): void {
-    // Serialize with the visibility filter so notification data referencing
-    // other players/cities/units is bounded to their Unknown* wrappers rather
-    // than dragging (and leaking) their full object graphs over the transport.
-    //
-    // A notification is reconstituted on its own, not merged into the game
-    // data, so it cannot carry refs. It only needs to say who and where: the
-    // text reads names and civilizations, and a notice finds its city by id.
-    // In full, our own `Player` brought every city, unit and known tile with
-    // it: 2 MB and 400 ms per notification in a large game (#130).
-    const payload = notification.toPlainObject(
-      this.#dataFilter(standalone)
-    ) as unknown as Notification;
-
-    // The TurnStart rules, which say what happened in our cities, run before `takeTurn`, and so before the patch with
-    //  the new turn in it. Sent straight away, they arrived under the previous turn and year (#130), so they wait for
-    //  the handover. Serialised now all the same: they describe the game as it was when they happened.
-    if (this.#holdsNotifications()) {
-      this.#heldNotifications.push(payload);
-
-      return;
-    }
-
-    this.#transport.send('gameNotification', payload);
-  }
-
   // One of the player's tiles in full, as a tile patch sends it (#138).
   serialiseTile(playerTile: PlayerTile): ObjectMap {
     return serialiseTile(this.#dataFilter, playerTile);
@@ -2163,11 +2049,7 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#transport.send('turnStarted', null);
 
-    this.#heldNotifications
-      .splice(0)
-      .forEach((notification) =>
-        this.#transport.send('gameNotification', notification)
-      );
+    this.#notifier.release();
 
     this.#sendHalts();
 
