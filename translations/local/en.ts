@@ -299,6 +299,8 @@ i18next.addResources('en', 'default', {
   'SavedGame.could-not-read': 'That save could not be read: {{error}}',
 
   'SavedGame.could-not-write': 'That save could not be written: {{error}}',
+  'SavedGame.needs-grid':
+    'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
