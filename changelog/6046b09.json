@@ -1,0 +1,1 @@
+{"version":"0.1.0@6046b09","date":"2026-10-21T12:08:26.000Z","localChanges":["chore: move DataTransferClient's game ending (Retire, keep playing, the ending window and its details) into src/js/Engine/Client/gameEnd.ts (#449)"],"externalChanges":{}}

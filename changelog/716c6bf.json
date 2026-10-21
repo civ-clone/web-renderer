@@ -1,0 +1,1 @@
+{"version":"0.1.0@716c6bf","date":"2026-10-21T12:24:18.000Z","localChanges":["chore: move DataTransferClient's talks (players met on the way, Meet with King, each negotiation) into src/js/Engine/Client/Talks.ts (#449)"],"externalChanges":{}}

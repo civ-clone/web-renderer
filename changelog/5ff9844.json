@@ -1,0 +1,1 @@
+{"version":"0.1.0@5ff9844","date":"2026-10-21T12:26:48.000Z","localChanges":["chore: rename Renderer.ts to bootstrap.ts, and type-check the UI modules under lib/ and app/ whose imports are clean"],"externalChanges":{}}

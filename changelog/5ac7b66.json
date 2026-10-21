@@ -1,0 +1,1 @@
+{"version":"0.1.0@5ac7b66","date":"2026-10-21T12:25:24.000Z","localChanges":["chore: move DataTransferClient's prompt to the player (sending the choices and waiting for the answer) into src/js/Engine/Client/ChoicePrompt.ts (#449)"],"externalChanges":{}}

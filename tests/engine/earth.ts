@@ -1,6 +1,7 @@
 // An Earth game is played on the Earth map for the size asked for: Normal (80 × 50) is Civilization's own map, and
 // Large (104 × 65) and Huge (128 × 80) have larger maps of their own. Every civilization starts on its start tile
-// for that size. `tools/earth.js` runs this once per size, with all 14 civilizations.
+// for that size, Civilization's own 14 and any a plugin adds (civ1-world-civilizations, #466), which all register
+// their start tiles. `tools/earth.js` runs this once per size, with 14 civilizations.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -11,6 +12,7 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import World from '@civ-clone/core-world/World';
 import { earthMaps } from '@civ-clone/civ1-earth-generator/EarthMaps';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
+import { instance as earthStartTileRegistryInstance } from '@civ-clone/civ1-earth-generator/EarthStartTileRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
@@ -76,19 +78,20 @@ engine.on('game:start', (): void => {
 
   const players = playerRegistryInstance.entries();
 
-  expect('all 14 civilizations are playing', players.length, 14);
+  expect('14 civilizations are playing', players.length, 14);
 
   players.forEach((player: Player) => {
     const CivilizationType = player.civilization().sourceClass(),
-      [, expected] =
-        map.startTiles.find(([Type]) => Type === CivilizationType) ?? [],
+      startTile = earthStartTileRegistryInstance
+        .getByCivilization(CivilizationType)
+        .startTileForMap(world!),
       [unit] = unitRegistryInstance.getByPlayer(player),
       tile = unit?.tile();
 
     expect(
       `the ${CivilizationType.name} start on their start tile`,
       tile ? { x: tile.x(), y: tile.y() } : null,
-      expected ?? null
+      { x: startTile.x(), y: startTile.y() }
     );
   });
 

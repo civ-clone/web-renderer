@@ -1,0 +1,1 @@
+{"version":"0.1.0@7b25131","date":"2026-10-21T12:06:52.000Z","localChanges":["chore: move DataTransferClient's request receivers (Top Cities, Civilization Score, intelligence, a city's builds, a unit's actions) into src/js/Engine/Client/requests.ts (#449)"],"externalChanges":{}}
