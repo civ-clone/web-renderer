@@ -44,6 +44,7 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import reconstituteData from '../../src/js/UI/lib/reconstituteData';
+import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
@@ -87,17 +88,6 @@ const fail = (reason: string, error?: unknown): never => {
   process.exit(1);
 
   throw new Error(reason);
-};
-
-// Mirrors `Renderer`'s `setObjectPath`.
-const setObjectPath = (object: PlainObject, path: string, value: any): void => {
-  const parts = path.replace(/]/g, '').split(/[.[]/),
-    lastPart = parts.pop()!,
-    target = parts.reduce((object, part) => object?.[part], object);
-
-  if (target) {
-    target[lastPart] = value;
-  }
 };
 
 const playerTilesIn = (objects: PlainObject): number =>
@@ -1015,13 +1005,10 @@ const transport = {
             }
           }
 
-          if (index) {
-            setObjectPath(objectMap.objects[key], index, value.hierarchy);
-          } else {
-            objectMap.objects[key] = value.hierarchy;
-          }
-
-          Object.assign(objectMap.objects, value.objects);
+          // Through the same code as `Renderer`, an entry at a time so the checks above see the map as it was before it.
+          applyDataPatches(objectMap, [{ [key]: { type, index, value } }], {
+            changed: () => {},
+          });
         })
       );
     }

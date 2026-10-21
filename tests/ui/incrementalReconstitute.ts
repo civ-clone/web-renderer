@@ -21,6 +21,7 @@ import {
 } from '../../src/js/UI/lib/reconstituteData';
 import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
 import pruneObjectMap from '../../src/js/UI/lib/pruneObjectMap';
+import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
 
 const failures: string[] = [];
 let checks = 0;
@@ -114,53 +115,6 @@ objectMap.hierarchy = {
   settings: { focus: ref(pick(Object.keys(objectMap.objects))) },
 };
 
-// As the `gameDataPatch` handler in `Renderer.ts` applies a patch and collects
-// the ids it changed.
-const pathToParts = (path: string) => path.replace(/]/g, '').split(/[.[]/),
-  getPenultimateObject = (
-    object: PlainObject,
-    path: string
-  ): [PlainObject, string | undefined] => {
-    const parts = pathToParts(path),
-      lastPart = parts.pop();
-
-    const tmpObj = parts.reduce((tmpObj, part) => {
-      if (!tmpObj || !(part in tmpObj)) {
-        return null;
-      }
-
-      return tmpObj[part];
-    }, object);
-
-    return [tmpObj, lastPart];
-  },
-  setObjectPath = (object: PlainObject, path: string, value: any): void => {
-    const [tmpObj, lastPart] = getPenultimateObject(object, path);
-
-    if (!tmpObj || !lastPart) {
-      console.warn(`unable to set ${path} of ${object} (${lastPart})`);
-      return;
-    }
-
-    tmpObj[lastPart] = value;
-  },
-  removeObjectPath = (object: PlainObject, path: string): void => {
-    const [tmpObj, lastPart] = getPenultimateObject(object, path);
-
-    if (!tmpObj || !lastPart) {
-      console.warn(`unable to set ${path} of ${object} (${lastPart})`);
-      return;
-    }
-
-    if (Array.isArray(tmpObj) && /^\d+$/.test(lastPart)) {
-      tmpObj.splice(parseInt(lastPart, 10), 1);
-
-      return;
-    }
-
-    delete tmpObj[lastPart];
-  };
-
 type Patch = {
   [key: string]: {
     type: 'add' | 'update' | 'remove';
@@ -170,43 +124,11 @@ type Patch = {
   };
 };
 
+// Through the same code as the `gameDataPatch` handler in `Renderer.ts`, collecting the ids it changed.
 const applyPatches = (patches: Patch[], changedIds: Set<string>): void =>
-  patches.forEach((patch) =>
-    Object.entries(patch).forEach(([key, { type, index, value }]) => {
-      if (type === 'add' || type === 'update') {
-        if (!value!.hierarchy) {
-          console.error('No hierarchy');
-
-          return;
-        }
-
-        if (index) {
-          setObjectPath(objectMap.objects[key], index, value!.hierarchy);
-        } else {
-          objectMap.objects[key] = value!.hierarchy;
-        }
-
-        changedIds.add(key);
-
-        Object.entries(value!.objects).forEach(([key, value]) => {
-          objectMap.objects[key] = value;
-          changedIds.add(key);
-        });
-      }
-
-      if (type === 'remove') {
-        changedIds.add(key);
-
-        if (index) {
-          removeObjectPath(objectMap.objects[key], index);
-
-          return;
-        }
-
-        delete objectMap.objects[key];
-      }
-    })
-  );
+  applyDataPatches(objectMap, patches, {
+    changed: (id) => changedIds.add(id),
+  });
 
 // A side-table of other objects, as a patch carries: replacements for ids the
 // map holds and new ids, which may refer to each other.
