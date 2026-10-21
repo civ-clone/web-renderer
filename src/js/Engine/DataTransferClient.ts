@@ -36,8 +36,6 @@ import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import mayNegotiate from '@civ-clone/library-diplomacy/lib/mayNegotiate';
-import Notification from './Notification';
-import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
@@ -65,7 +63,6 @@ import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import UnknownCity from './UnknownObjects/City';
 import UnknownUnit from './UnknownObjects/Unit';
-import Wonder from '@civ-clone/core-wonder/Wonder';
 import ActionsState from './Client/ActionsState';
 import Yield from '@civ-clone/core-yield/Yield';
 import JoinCity from '@civ-clone/library-unit/Actions/JoinCity';
@@ -86,12 +83,10 @@ import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
-import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
 import {
   chooseGovernment,
   revolution,
 } from '@civ-clone/civ1-government/lib/revolution';
-import { Anarchy } from '@civ-clone/civ1-government/Governments';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
 import {
   changeSpecialist,
@@ -115,7 +110,6 @@ import { instance as specialistRegistryInstance } from '@civ-clone/core-city/Spe
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import hasMet from './lib/hasMet';
 import { intelligenceRows } from './lib/intelligence';
-import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import {
   awaitTimeout,
   filterToReference,
@@ -123,7 +117,6 @@ import {
   standalone,
 } from './Client/refs';
 import { knownUnknownCity } from './Client/standIns';
-import { sabotagedBuildKind } from './Client/notifications/diplomat';
 import {
   DataFilter,
   makeDataFilter,
@@ -136,6 +129,7 @@ import PlayerPatches from './Client/PlayerPatches';
 import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
 import registerCheats from './Client/cheats';
+import registerNotifications from './Client/notifications/registerNotifications';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -486,6 +480,7 @@ export class DataTransferClient extends Client implements IClient {
     engineInstance.on(
       'city:captured',
       (city: City, capturingPlayer: Player, originalPlayer: Player) => {
+        // Our capture of it is told in `Client/notifications/city.ts`.
         if (originalPlayer === this.player()) {
           // The city already belongs to the capturing player here, so resend ours: the city is gone from our list,
           //  and losing the capital changes every remaining city's corruption.
@@ -497,20 +492,6 @@ export class DataTransferClient extends Client implements IClient {
             capturedBy: capturingPlayer,
             capturedFrom: originalPlayer,
           });
-
-          return;
-        }
-
-        if (capturingPlayer === this.player()) {
-          this.#notifier.notify(
-            new Notification('City.captured-by-us', {
-              city,
-              capturingPlayer,
-              originalPlayer,
-            })
-          );
-
-          return;
         }
       }
     );
@@ -639,195 +620,19 @@ export class DataTransferClient extends Client implements IClient {
         );
       }
 
-      if (unit.player() === this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification('Unit.nuclear-attack', {
-          player: unit.player(),
-        })
-      );
+      // The other players are told of it in `Client/notifications/unit.ts`.
     });
 
-    // "Pollution near Rome." (#32).
-    engineInstance.on('city:polluted', (city: City) => {
-      if (city.player() !== this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification('City.polluted', {
-          city,
-        })
-      );
-    });
-
-    engineInstance.on('city:sdi-protected', (city: City, unit: Unit) => {
-      if (city.player() !== this.player() && unit.player() !== this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification('City.sdi-protected', {
-          city,
-        })
-      );
-    });
-
-    engineInstance.on('unit:lost-at-sea', (unit: Unit) => {
-      if (unit.player() !== this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification(
-          aircraftRange.some(([UnitType]) => unit instanceof UnitType)
-            ? 'Unit.out-of-fuel'
-            : 'Unit.lost-at-sea',
-          {
-            unit,
-          }
-        )
-      );
-    });
-
-    engineInstance.on('unit:unsupported', (city: City, unit: Unit) => {
-      if (city.player() !== this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification('City.unit-unsupported', {
-          city,
-          unit,
-        })
-      );
-    });
-
-    engineInstance.on(
-      'city:unsupported-improvement',
-      (city: City, cityImprovement: CityImprovement) => {
-        if (city.player() !== this.player()) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification('City.improvement-unsupported', {
-            city,
-            cityImprovement,
-          })
-        );
-      }
-    );
-
+    // Both cities' trade changes (#411). The player is told of it in `Client/notifications/unit.ts`.
     engineInstance.on(
       'unit:trade-route-established',
-      (
-        player: Player,
-        home: City,
-        city: City,
-        goods: string,
-        bonus: number
-      ) => {
+      (player: Player, home: City, city: City) => {
         if (player !== this.player()) {
           return;
         }
 
-        // Both cities' trade changes (#411).
         this.#patches.city(home);
         this.#patches.city(city);
-
-        this.#notifier.notify(
-          new Notification('Unit.trade-route-established', {
-            bonus,
-            city,
-            goods,
-            home,
-          })
-        );
-      }
-    );
-
-    // A Diplomat's work (#58): the player who sent it and the player it was done to are both told, as v474.05 tells
-    //  them.
-    engineInstance.on(
-      'player:advance-stolen',
-      (thief: Player, victim: Player, AdvanceType: typeof Advance) => {
-        if (![thief, victim].includes(this.player())) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification('Diplomat.advance-stolen', {
-            advance: AdvanceType.name,
-            thief,
-          })
-        );
-      }
-    );
-
-    engineInstance.on(
-      'city:sabotaged',
-      (city: City, saboteur: Player, target: unknown) => {
-        if (![saboteur, city.player()].includes(this.player())) {
-          return;
-        }
-
-        this.#notifier.notify(
-          target instanceof CityImprovement
-            ? new Notification('Diplomat.sabotaged.improvement', {
-                city,
-                improvement: target.sourceClass().name,
-              })
-            : new Notification(
-                'Diplomat.sabotaged.production' + sabotagedBuildKind(target),
-                {
-                  city,
-                  build: {
-                    _:
-                      typeof target === 'function'
-                        ? (target as Function).name
-                        : '',
-                  },
-                }
-              )
-        );
-      }
-    );
-
-    engineInstance.on(
-      'city:incited',
-      (city: City, inciter: Player, originalPlayer: Player) => {
-        if (![inciter, originalPlayer].includes(this.player())) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification('Diplomat.incited', {
-            city,
-            inciter,
-            originalPlayer,
-          })
-        );
-      }
-    );
-
-    // Only the side that lost the unit is told, as in v474.05: the briber has seen the price paid.
-    engineInstance.on(
-      'unit:bribed',
-      (unit: Unit, briber: Player, previousOwner: Player) => {
-        if (previousOwner !== this.player()) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification('Diplomat.unit-bribed', {
-            briber,
-            previousOwner,
-            unit: unit.sourceClass().name,
-          })
-        );
       }
     );
 
@@ -937,34 +742,8 @@ export class DataTransferClient extends Client implements IClient {
       this.#cityNews.of(city).famine = true;
     });
 
-    engineInstance.on('city:building-complete', (cityBuild, build) => {
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(
-        this.player()
-      );
-
-      if (
-        cityBuild.city().player() !== this.player() &&
-        build instanceof Wonder
-      ) {
-        // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
-        //  a city we have never seen is not named at all (#43).
-        this.#notifier.notify(
-          playerWorld.getByTile(cityBuild.city().tile())
-            ? new Notification('Wonder.building-complete.other-player.known', {
-                city: cityBuild.city(),
-                build,
-              })
-            : new Notification(
-                'Wonder.building-complete.other-player.unknown',
-                {
-                  build,
-                }
-              )
-        );
-
-        return;
-      }
-
+    // Our build is told of in `Client/notifications/city.ts`, as a rival's wonder is.
+    engineInstance.on('city:building-complete', (cityBuild) => {
       if (cityBuild.city().player() !== this.player()) {
         return;
       }
@@ -974,27 +753,10 @@ export class DataTransferClient extends Client implements IClient {
           this.#dataFilter(filterToReference(Tile, Unit, Player))
         )
       );
-
-      const suffix =
-        build instanceof Unit
-          ? 'unit'
-          : build instanceof Wonder
-          ? 'wonder'
-          : build instanceof CityImprovement
-          ? 'city-improvement'
-          : build instanceof Part
-          ? 'spaceship-part'
-          : 'other';
-
-      this.#notifier.notify(
-        new Notification('City.building-complete.' + suffix, {
-          cityBuild,
-          build,
-        })
-      );
     });
 
-    engineInstance.on('player:research-complete', (playerResearch, advance) => {
+    // The advance is told of in `Client/notifications/player.ts`.
+    engineInstance.on('player:research-complete', (playerResearch) => {
       if (playerResearch.player() !== this.player()) {
         return;
       }
@@ -1004,39 +766,9 @@ export class DataTransferClient extends Client implements IClient {
           this.#dataFilter(filterToReference(Player))
         )
       );
-
-      this.#notifier.notify(
-        new Notification('Player.research-complete', {
-          playerResearch,
-          advance,
-          // Which one this is, for an advance a player can hold more than one of (Future Technology 1, 2, …).
-          number: playerResearch
-            .complete()
-            .filter((known: Advance) => known instanceof advance.sourceClass())
-            .length,
-        })
-      );
     });
 
-    engineInstance.on('wonder:obsolete', (wonder: Wonder, city: City) => {
-      if (city.player() !== this.player()) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification(
-          'Wonder.obsolete',
-          {
-            city,
-            wonder,
-          },
-          true
-        )
-      );
-    });
-
-    // Barracks at Gunpowder and Combustion (#184). As in Civ1, the player is told even when there were none to remove,
-    //  because rebuilding them now costs more.
+    // The cities whose improvements are gone (#184). The player is told in `Client/notifications/city.ts`.
     engineInstance.on(
       'city-improvement:obsolete',
       (
@@ -1052,43 +784,12 @@ export class DataTransferClient extends Client implements IClient {
         cityImprovements.forEach((cityImprovement) =>
           this.#patches.city(cityImprovement.city())
         );
-
-        this.#notifier.notify(
-          new Notification(
-            'CityImprovement.obsolete',
-            {
-              advance,
-              improvement: ImprovementType.name,
-            },
-            true
-          )
-        );
       }
     );
 
-    engineInstance.on(
-      'goody-hut:action-performed',
-      (goodyHut: GoodyHut, action) => {
-        const tile = goodyHut.tile(),
-          units = unitRegistryInstance.getByTile(tile);
-
-        // The hut is gone from the square, whoever found it (#138).
-        this.#patches.tile(tile);
-
-        if (!units.some((unit: Unit) => unit.player() === this.player())) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification(
-            `GoodyHut.action-performed.${action.constructor.name}`,
-            {
-              goodyHut,
-              action,
-            }
-          )
-        );
-      }
+    // The hut is gone from the square, whoever found it (#138). The finder is told in `Client/notifications/unit.ts`.
+    engineInstance.on('goody-hut:action-performed', (goodyHut: GoodyHut) =>
+      this.#patches.tile(goodyHut.tile())
     );
 
     // However the game ends, the ending window says so (#176). Our own destruction is one of the endings.
@@ -1105,198 +806,42 @@ export class DataTransferClient extends Client implements IClient {
       }
     });
 
-    engineInstance.on('game:retirement-warning', () =>
-      this.#notifier.notify(
-        new Notification('Game.retirement-warning', {
-          player: this.player(),
-        })
-      )
-    );
+    // Our destruction is the game's end. Another civilization's is told in `Client/notifications/player.ts`.
+    engineInstance.on('player:defeated', (defeatedPlayer: Player) => {
+      // The ending window tells us (`game:over`). After you've kept playing from an earlier ending the game can't end
+      //  again, so the destruction is sent as an ending of its own.
+      if (defeatedPlayer === this.player()) {
+        const gameResult = gameResultRegistryInstance.get();
 
-    engineInstance.on(
-      'player:defeated',
-      (defeatedPlayer: Player, player: Player | null) => {
-        // The ending window tells us (`game:over`). After you've kept playing from an earlier ending the game can't
-        //  end again, so the destruction is sent as an ending of its own.
-        if (defeatedPlayer === this.player()) {
-          const gameResult = gameResultRegistryInstance.get();
-
-          if (gameResult !== null && gameResult.scoringComplete()) {
-            this.#transport.send(
-              'gameOver',
-              this.gameOver(
-                new GameResult('destroyed', null, turnInstance.value())
-              )
-            );
-          }
-
-          return;
+        if (gameResult !== null && gameResult.scoringComplete()) {
+          this.#transport.send(
+            'gameOver',
+            this.gameOver(
+              new GameResult('destroyed', null, turnInstance.value())
+            )
+          );
         }
-
-        // A civilization we have not met is neither named nor sent (#59).
-        const victor = player !== null && this.hasMet(player) ? player : null;
-
-        this.#notifier.notify(
-          this.hasMet(defeatedPlayer)
-            ? new Notification(
-                victor === null
-                  ? 'Player.defeated.unknown'
-                  : 'Player.defeated.by',
-                {
-                  defeatedPlayer,
-                  player: victor,
-                }
-              )
-            : new Notification(
-                victor === null
-                  ? 'Player.defeated.unmet'
-                  : 'Player.defeated.unmet-by',
-                {
-                  player: victor,
-                }
-              )
-        );
-      }
-    );
-
-    engineInstance.on('city:civil-disorder', (city: City) => {
-      if (city.player() === this.player()) {
-        this.#notifier.notify(
-          new Notification('City.civil-disorder', {
-            city,
-          })
-        );
       }
     });
 
-    engineInstance.on('city:order-restored', (city: City) => {
-      if (city.player() === this.player()) {
-        this.#notifier.notify(
-          new Notification('City.order-restored', {
-            city,
-          })
-        );
-      }
-    });
-
-    engineInstance.on(
-      'player:government:collapsed',
-      (player: Player, city: City) => {
-        if (player !== this.player()) {
-          return;
-        }
-
-        // With the Pyramids there's no Anarchy, and the new government is
-        // chosen straight away.
-        this.#notifier.notify(
-          new Notification(
-            playerGovernmentRegistryInstance.getByPlayer(player).is(Anarchy)
-              ? 'Player.government-collapsed'
-              : 'Player.government-collapsed.pyramids',
-            {
-              city,
-            }
-          )
-        );
-      }
-    );
-
-    engineInstance.on('city:leader-celebration', (city: City) => {
-      if (city.player() === this.player()) {
-        this.#notifier.notify(
-          new Notification('City.leader-celebration', {
-            city,
-          })
-        );
-      }
-    });
-
-    engineInstance.on('city:leader-celebration-ended', (city: City) => {
-      if (city.player() === this.player()) {
-        this.#notifier.notify(
-          new Notification('City.leader-celebration-ended', {
-            city,
-          })
-        );
-      }
-    });
-
-    // A destroyed civilization comes back as a new one (#178). We haven't met the new one, so it isn't named (#59); the
-    //  one it replaces is, if we knew it.
-    engineInstance.on(
-      'player:respawned',
-      (player: Player, defeatedPlayer: Player) => {
-        this.#notifier.notify(
-          this.hasMet(defeatedPlayer)
-            ? new Notification('Player.respawned', { defeatedPlayer }, true)
-            : new Notification('Player.respawned.unmet', {}, true)
-        );
-      }
-    );
-
-    engineInstance.on('player:spaceship:part-built', (player: Player) => {
-      if (this.player() === player) {
-        return;
-      }
-
-      this.#notifier.notify(
-        this.hasMet(player)
-          ? new Notification('Spaceship.part-built', {
-              player,
-            })
-          : new Notification('Spaceship.part-built.unmet', {})
-      );
-    });
-
-    // A ship is lost when its civilization loses its capital or is destroyed (#177): one in flight returns to Earth,
-    //  one being built is cancelled. News of a civilization we haven't met doesn't reach us.
-    engineInstance.on(
-      'player:spaceship:lost',
-      (player: Player, launched: boolean) => {
-        if (this.player() !== player && !this.hasMet(player)) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification(
-            launched ? 'Spaceship.returned' : 'Spaceship.cancelled',
-            {
-              player,
-            }
-          )
-        );
-      }
-    );
-
-    engineInstance.on('player:spaceship:landed', (player: Player) => {
-      if (this.player() !== player) {
-        return;
-      }
-
-      this.#notifier.notify(
-        new Notification('Player.spaceship-landed', {
-          player,
-        })
-      );
-    });
-
-    engineInstance.on(
-      'player:declaration-expired',
-      (player: Player, declaration: Declaration) => {
-        if (player !== this.player()) {
-          return;
-        }
-
-        this.#notifier.notify(
-          new Notification('Player.declaration-expired', {
-            player,
-            declaration,
-            enemy: declaration
-              .players()
-              .filter((declarationPlayer) => declarationPlayer !== player)[0],
-          })
-        );
-      }
+    // What the player is told of, after the listeners above, so that what an event changes is queued before the
+    //  player is told of it (see `Client/notifications/registerNotifications.ts`).
+    registerNotifications(
+      engineInstance,
+      {
+        player: () => this.player(),
+        hasMet: (player: Player) => this.hasMet(player),
+        hasSeen: (tile: Tile) =>
+          Boolean(
+            playerWorldRegistryInstance
+              .getByPlayer(this.player())
+              .getByTile(tile)
+          ),
+        unitsOn: (tile: Tile) => unitRegistryInstance.getByTile(tile),
+        government: (player: Player) =>
+          playerGovernmentRegistryInstance.getByPlayer(player),
+      },
+      this.#notifier
     );
   }
 
