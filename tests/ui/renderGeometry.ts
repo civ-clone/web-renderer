@@ -28,6 +28,7 @@ import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
 import World from '../../src/js/UI/components/World';
 import Yields from '../../src/js/UI/components/Map/Yields';
+import cityMapLayout from '../../src/js/UI/lib/cityMapLayout';
 import { tileBounds } from '../../src/js/UI/lib/projection';
 
 const update = process.argv.includes('--update'),
@@ -516,37 +517,6 @@ const tilesUnderPixels = (portal: TestPortal, step: number): string[] => {
   return rows;
 };
 
-// Where `City.ts`'s `renderMap` puts a city's squares in the city screen's own small world, and which squares size
-//  its canvas: the same sums, copied from it.
-const cityMapLayout = (city: City) => {
-  const cityRadius = 2,
-    localSize = cityRadius * 2 + 3,
-    localCenter = cityRadius + 1,
-    wrapDelta = (delta: number, max: number): number =>
-      delta > max / 2 ? delta - max : delta < -max / 2 ? delta + max : delta,
-    toLocal = (tile: Tile): Tile => ({
-      ...tile,
-      x: localCenter + wrapDelta(tile.x - city.tile.x, city.player.world.width),
-      y:
-        localCenter + wrapDelta(tile.y - city.tile.y, city.player.world.height),
-    }),
-    block: { x: number; y: number }[] = [];
-
-  for (let dy = -cityRadius; dy <= cityRadius; dy++) {
-    for (let dx = -cityRadius; dx <= cityRadius; dx++) {
-      block.push({ x: localCenter + dx, y: localCenter + dy });
-    }
-  }
-
-  return {
-    block,
-    localCenter,
-    localSize,
-    localTiles: city.tiles.map(toLocal),
-    localTilesWorked: city.tilesWorked.map(toLocal),
-  };
-};
-
 const digest = (lines: string[]): string =>
   createHash('sha256').update(lines.join('\n')).digest('hex').slice(0, 12);
 
@@ -866,8 +836,8 @@ const record = (): { [key: string]: unknown } => {
   );
 
   // The city screen's map as `City.ts`'s `renderMap` builds it, for cities in the middle of the world and across
-  //  each seam: the city's squares moved next to it in a small world of their own, a canvas the size of the squares
-  //  within its radius, and every layer the screen draws.
+  //  each seam: the city's squares moved next to it in a small world of their own (`cityMapLayout`), a canvas the size
+  //  of those squares, and every layer the screen draws.
   (
     [
       [9, 7],
@@ -921,14 +891,19 @@ const record = (): { [key: string]: unknown } => {
       } as unknown as City;
 
       [1, 2, 3].forEach((scale) => {
-        const { localCenter, localSize, localTiles, localTilesWorked, block } =
-            cityMapLayout(city),
+        const {
+            center,
+            height: localHeight,
+            tiles: localTiles,
+            tilesWorked: localTilesWorked,
+            width: localWidth,
+          } = cityMapLayout(city),
           portalCanvas = recordingCanvas('portal', 0, 0),
           cityPortal = new TestPortal(
             new World({
               ...city.player.world,
-              width: localSize,
-              height: localSize,
+              width: localWidth,
+              height: localHeight,
               tiles: localTiles,
             }),
             {} as any,
@@ -956,13 +931,13 @@ const record = (): { [key: string]: unknown } => {
 
         const { width: canvasWidth, height: canvasHeight } = tileBounds(
           cityPortal.projection(),
-          block
+          [center, ...localTiles]
         );
 
         portalCanvas.height = canvasHeight;
         portalCanvas.width = canvasWidth;
 
-        cityPortal.setCenter(localCenter, localCenter);
+        cityPortal.setCenter(center.x, center.y);
         cityPortal.build(localTiles);
         cityPortal
           .getLayer(TestUnits)!
