@@ -1,0 +1,1 @@
+{"version":"0.1.0@91af10d","date":"2026-10-21T18:25:43.000Z","localChanges":["chore: size the city screen's map from the squares the engine says the city has, placed through the world's topology, rather than a radius of 2 (#88)"],"externalChanges":{}}
