@@ -1,11 +1,11 @@
 import Transport from '../Transport';
 import Unit from './Unit';
-import { PlainObject, Unit as UnitData } from '../types';
+import { GameData, Unit as UnitData } from '../types';
 import Window from './Window';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import DataObserver from '../DataObserver';
+import { instance as dataChanges } from '../lib/DataChanges';
 
 type OnComplete = (unit: UnitData) => void;
 
@@ -37,7 +37,7 @@ const build = (
   );
 
 export class UnitSelectionWindow extends Window {
-  #dataObserver: DataObserver;
+  #unwatch: () => void;
 
   constructor(
     units: UnitData[],
@@ -48,25 +48,30 @@ export class UnitSelectionWindow extends Window {
 
     const unitIds = units.map((unit) => unit.id);
 
-    this.#dataObserver = new DataObserver(unitIds, (data: PlainObject) => {
-      const updatedUnits = ((data.player?.units ?? []) as UnitData[]).filter(
-        (unit: UnitData) => unitIds.includes(unit.id)
-      );
+    // Wakes on the render after any of the units shown changes or is removed (#344), and redraws those still in the
+    //  player's list, closing when none are.
+    this.#unwatch = dataChanges.watch(
+      () => unitIds,
+      (data: GameData) => {
+        const updatedUnits = ((data.player?.units ?? []) as UnitData[]).filter(
+          (unit: UnitData) => unitIds.includes(unit.id)
+        );
 
-      if (!updatedUnits.length) {
-        this.close();
+        if (!updatedUnits.length) {
+          this.close();
 
-        return;
+          return;
+        }
+
+        this.update(build(updatedUnits, transport, onComplete));
       }
-
-      this.update(build(updatedUnits, transport, onComplete));
-    });
+    );
 
     this.update(build(units, transport, onComplete));
   }
 
   close() {
-    this.#dataObserver.dispose();
+    this.#unwatch();
 
     super.close();
   }

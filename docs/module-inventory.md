@@ -35,7 +35,6 @@ Quick reference map of key code areas.
 - `Renderer.ts`: main frontend orchestrator.
 - `Transport.ts`: UI-oriented transport type mapping.
 - `AssetStore.ts`: IndexedDB + image caches.
-- `DataObserver.ts`: patch/data event subscription helper.
 - `Store.ts`: generic IndexedDB wrapper.
 - `GameOptionsRegistry.ts`: in-memory UI options.
 - `LocaleProvider.ts`: locale-aware number, percentage, list and relative-time formatting.
@@ -44,6 +43,7 @@ Quick reference map of key code areas.
 - `components/Portal.ts`, `GamePortal.ts`, `Minimap.ts`, `World.ts`: compositing the layers, map input (click, drag), the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
 - `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, viewport geometry, saved games, etc.).
 - `lib/IncrementalReconstituter.ts`: rebuilds the game data from the object map, touching only the ids a patch changed.
+- `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `components/lib/watchCity.ts` and `watchPlayer.ts` do it for the city screen and the reports.
 - `lib/reconstituteData.ts`: full rebuild of an object map; used for one-off payloads and as the reference for `IncrementalReconstituter`.
 - `lib/pruneObjectMap.ts`: drops object-map entries nothing reachable refers to.
 - `lib/unitActions.ts`: asks the worker for the active unit's actions (`unitActions`).

@@ -82,11 +82,11 @@ Frontend patch handling in `Renderer`:
 
 During the player's turn `updateState` runs synchronously on every patch, so input handlers always read the post-move state. While waiting for the other civilizations it runs at most once per animation frame (#61). Rendering (`render()`) always runs at most once per frame.
 
-## Event bridge inside frontend
+## How open windows learn of changes
 
-- `patchdatareceived` is dispatched for each applied `add`/`update` patch payload.
-- `dataupdated` is dispatched at the start of each render, after state has been rebuilt.
-- `DataObserver` subscribes by object IDs and calls its handler once per `dataupdated` if any observed ID was among the `objects` of a patch since the last one.
+- After each rebuild, `updateState` `collect`s into `lib/DataChanges.ts` the ids the patches changed (removed ones included) and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
+- At the start of each render, `notify` runs, once, each watcher whose ids (read then, so they can follow what the window shows) were among those collected since the last render, or every watcher after a rebuild of everything.
+- A window `watch`es the ids it shows and unwatches when it closes: the city screen through `components/lib/watchCity.ts`, the four reports through `components/lib/watchPlayer.ts`, and the unit stack window directly. There are no `document` events for this any more.
 
 ## Choice/interaction flow
 
