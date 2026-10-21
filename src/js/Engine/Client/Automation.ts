@@ -3,14 +3,14 @@
 //  fourth turn), so whatever reads it holds this object and reads `enabled` as it goes, never a copy of it.
 
 import AIClient from '@civ-clone/core-ai-client/AIClient';
-import { CurrentPlayerRegistry } from '@civ-clone/core-player/CurrentPlayerRegistry';
-import Player from '@civ-clone/core-player/Player';
+import { ClientContext } from './ClientContext';
 
-export type AutomationContext = {
-  player(): Player;
+export type AutomationContext = Pick<
+  ClientContext,
+  | 'player'
   // Whose turn it is.
-  currentPlayers: Pick<CurrentPlayerRegistry, 'entries'>;
-};
+  | 'currentPlayers'
+>;
 
 export class Automation {
   // The computer player that plays our turns, and answers our choices, while automation is on.

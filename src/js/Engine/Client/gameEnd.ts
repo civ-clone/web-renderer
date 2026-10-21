@@ -4,34 +4,31 @@
 
 import Advance from '@civ-clone/core-science/Advance';
 import Engine from '@civ-clone/core-engine/Engine';
-import { GameDifficultyRegistry } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
-import { GameResultRegistry } from '@civ-clone/core-turn-based-game/GameResultRegistry';
 import Player from '@civ-clone/core-player/Player';
-import { PlayerResearchRegistry } from '@civ-clone/core-science/PlayerResearchRegistry';
-import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
-import { Turn } from '@civ-clone/core-turn-based-game/Turn';
-import { Year } from '@civ-clone/core-game-year/Year';
 import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import Transport, { TransportDisposer } from '../Transport';
-import { CivilizationScore } from '../lib/civilizationScore';
+import { ClientContext, Disposer } from './ClientContext';
+import { TransportDisposer } from '../Transport';
 import { GameOverDetails, gameOverDetails } from '../lib/gameOver';
 
-export type GameEndContext = {
-  player(): Player;
+export type GameEndContext = Pick<
+  ClientContext,
+  | 'player'
+  // What the ending window is sent on.
+  | 'transport'
   // Whether we have met a player, which says whether the window names the winner.
-  hasMet(player: Player): boolean;
+  | 'hasMet'
   // Our Civilization Score, as `civilizationScore` sends it.
-  civilizationScore(): CivilizationScore;
-  difficulties: GameDifficultyRegistry;
-  gameResults: GameResultRegistry;
-  playerResearches: Pick<PlayerResearchRegistry, 'getByPlayer'>;
-  rules: RuleRegistry;
-  turn: Turn;
-  year: Pick<Year, 'value'>;
-};
+  | 'civilizationScore'
+  | 'difficulties'
+  | 'gameResults'
+  | 'playerResearches'
+  | 'rules'
+  | 'turn'
+  | 'year'
+>;
 
 // How the game ended, for the ending window (#176).
 export const gameOver = (
@@ -64,11 +61,11 @@ export const gameOver = (
 // The `retire` and `gameContinue` receivers, then the `game:over`, `game:loaded` and `player:defeated` listeners, in
 //  that order.
 export const registerGameEnd = (
-  transport: Transport<TransportDataMap>,
   engine: Pick<Engine, 'on' | 'off' | 'emit'>,
   ctx: GameEndContext
-): (() => void) => {
-  const disposers: TransportDisposer[] = [],
+): Disposer => {
+  const { transport } = ctx,
+    disposers: TransportDisposer[] = [],
     listeners: [string, (...args: any[]) => void][] = [],
     on = (event: string, listener: (...args: any[]) => void): void => {
       engine.on(event, listener);

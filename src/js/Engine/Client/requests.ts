@@ -5,16 +5,7 @@
 
 import Player from '@civ-clone/core-player/Player';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
-import { CityBuildRegistry } from '@civ-clone/core-city-build/CityBuildRegistry';
-import { CityGrowthRegistry } from '@civ-clone/core-city-growth/CityGrowthRegistry';
-import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
-import { GameResultRegistry } from '@civ-clone/core-turn-based-game/GameResultRegistry';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
-import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
-import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
-import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
-import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import Transport, { TransportDisposer } from '../Transport';
 import {
   TopCitiesRow,
@@ -26,31 +17,31 @@ import {
   CivilizationScore,
   civilizationScore as civilizationScoreOf,
 } from '../lib/civilizationScore';
-import ActionsState from './ActionsState';
-import PlayerPatches from './PlayerPatches';
+import { ClientContext } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
 import { standalone } from './refs';
 
-export type RequestsContext = {
-  player(): Player;
+export type RequestsContext = Pick<
+  ClientContext,
+  | 'player'
   // Whether we have met a player, which says what the reports may show of them.
-  hasMet(player: Player): boolean;
+  | 'hasMet'
   // What the player may see, which a city's build list and a unit's actions go through.
-  dataFilter: DataFilter;
+  | 'dataFilter'
   // The unit the UI has the actions of (#323), which `unitActions` changes.
-  actions: ActionsState;
-  patches: PlayerPatches;
-  cities: Pick<CityRegistry, 'entries'>;
-  cityBuilds: Pick<CityBuildRegistry, 'getBy'>;
-  cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
-  gameResults: GameResultRegistry;
-  playerWorlds: PlayerWorldRegistry;
-  rules: RuleRegistry;
-  specialists: SpecialistRegistry;
-  units: Pick<UnitRegistry, 'getBy'>;
-  wonders: Pick<WonderRegistry, 'getByCity'>;
-};
+  | 'actions'
+  | 'patches'
+  | 'cities'
+  | 'cityBuilds'
+  | 'cityGrowths'
+  | 'gameResults'
+  | 'playerWorlds'
+  | 'rules'
+  | 'specialists'
+  | 'units'
+  | 'wonders'
+>;
 
 export const topCities = (
   ctx: RequestsContext,

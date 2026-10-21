@@ -8,34 +8,32 @@
 
 import { ChoiceMeta } from '@civ-clone/core-client/ChoiceMeta';
 import AIClient from '@civ-clone/core-ai-client/AIClient';
-import { ClientRegistry } from '@civ-clone/core-client/ClientRegistry';
 import Engine from '@civ-clone/core-engine/Engine';
 import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
-import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Player from '@civ-clone/core-player/Player';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
-import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
-import { Turn } from '@civ-clone/core-turn-based-game/Turn';
 import Unit from '@civ-clone/core-unit/Unit';
-import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
 import { choosers } from '@civ-clone/simple-ai-client/lib/Diplomacy/negotiate';
 import mayNegotiate from '@civ-clone/library-diplomacy/lib/mayNegotiate';
+import Automation from './Automation';
+import { ClientContext, Disposer } from './ClientContext';
 import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 
-export type TalksContext = {
-  player(): Player;
+export type TalksContext = Pick<
+  ClientContext,
+  | 'player'
   // Whose client chooses each step: ours, or a computer player's.
-  clients: Pick<ClientRegistry, 'getByPlayer'>;
-  interactions: InteractionRegistry;
-  rules: RuleRegistry;
-  turn: Turn;
+  | 'clients'
+  | 'interactions'
+  | 'rules'
+  | 'turn'
   // The units next to one of ours that has moved.
-  units: Pick<UnitRegistry, 'getByTile'>;
-};
+  | 'units'
+>;
 
 export class Talks {
   #context: TalksContext;
@@ -197,10 +195,12 @@ export class Talks {
 //  `unit:moved` listener is registered before the patches' (`events/patchEvents.ts`), which flushes.
 export const registerTalkEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
-  talks: Talks,
-  // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
-  automation: { readonly enabled: boolean }
-): (() => void) => {
+  ctx: Pick<ClientContext, 'player'> & {
+    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithKing'>;
+    // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
+    automation: Pick<Automation, 'enabled'>;
+  }
+): Disposer => {
   const listeners: [string, (...args: any[]) => void][] = [],
     on = (event: string, listener: (...args: any[]) => void): void => {
       engine.on(event, listener);
@@ -210,19 +210,19 @@ export const registerTalkEvents = (
 
   on('unit:moved', (unit: Unit) => {
     // Automation's own client does the talking for the moves it makes, as it does for halts.
-    if (unit.player() !== talks.player() || automation.enabled) {
+    if (unit.player() !== ctx.player() || ctx.automation.enabled) {
       return;
     }
 
-    talks.meetNeighboursOf(unit);
+    ctx.talks.meetNeighboursOf(unit);
   });
 
   on('player:meet-with-king', (player: Player, other: Player) => {
-    if (player !== talks.player()) {
+    if (player !== ctx.player()) {
       return;
     }
 
-    talks.meetWithKing(other);
+    ctx.talks.meetWithKing(other);
   });
 
   return (): void =>
