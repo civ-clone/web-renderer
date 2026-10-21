@@ -48,7 +48,7 @@ import TurnHandover, {
   registerTurnHandoverEvents,
 } from './Client/TurnHandover';
 import { handleAction as handleActionFor } from './Client/handleAction';
-import { ClientContext } from './Client/ClientContext';
+import { ClientContext, Disposer } from './Client/ClientContext';
 // Last, as registering these used to follow every import here.
 import './Client/registerAdditionalData';
 
@@ -58,6 +58,8 @@ export class DataTransferClient extends Client implements IClient {
   // What the client's modules share: the player, the transport, the patches, the notifications, automation, the talks
   //  and the registries (see `Client/ClientContext.ts`). Made once, in the constructor.
   #context: ClientContext;
+  // What undoes each registration below: the engine listeners and the transport receivers (`dispose`).
+  #disposers: Disposer[] = [];
   // The turn handed to the UI and back, and each `action` it sends acted on (see `Client/TurnHandover.ts`).
   #turnHandover: TurnHandover;
 
@@ -128,28 +130,54 @@ export class DataTransferClient extends Client implements IClient {
     //  (`Client/events/patchEvents.ts`); a Diplomat's embassy report and investigated city (`Client/diplomatEvents.ts`);
     //  how the game ends for us (`Client/gameEnd.ts`); and what the player is told of, last, so that what an event
     //  changes is queued before the player is told of it (`Client/notifications/registerNotifications.ts`).
-    registerCheats(transport, this.#context);
-    registerRequests(transport, this.#context);
+    const on = (event: string, listener: (...args: any[]) => void): void => {
+      engineInstance.on(event, listener);
 
-    engineInstance.on('engine:plugins:load:failed', (packagePath, error) => {
+      this.#disposers.push(() => engineInstance.off(event, listener));
+    };
+
+    this.#disposers.push(
+      registerCheats(transport, this.#context),
+      registerRequests(transport, this.#context)
+    );
+
+    on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
       console.error(error);
     });
 
-    registerTalkEvents(engineInstance, this.#context);
-    registerTurnHandoverEvents(engineInstance, this.#turnHandover);
-    registerPatchEvents(engineInstance, this.#context);
-    registerDiplomatEvents(engineInstance, this.#context);
+    this.#disposers.push(
+      registerTalkEvents(engineInstance, this.#context),
+      registerTurnHandoverEvents(engineInstance, this.#turnHandover),
+      registerPatchEvents(engineInstance, this.#context),
+      registerDiplomatEvents(engineInstance, this.#context)
+    );
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
     //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one.
-    engineInstance.on('city:food-storage-exhausted', (city: City) => {
+    on('city:food-storage-exhausted', (city: City) => {
       this.#context.cityNews.of(city).famine = true;
     });
 
-    registerGameEnd(engineInstance, this.#context);
-    registerNotifications(engineInstance, this.#context);
+    this.#disposers.push(
+      registerGameEnd(engineInstance, this.#context),
+      registerNotifications(engineInstance, this.#context)
+    );
+  }
+
+  /**
+   * Stop listening: to every engine event and every message from the UI, the `action`s of the turn under way, and the
+   * answer to a pending choice. From then on an engine event sends the player nothing and a message is ignored; a turn
+   * under way never ends, and a choice pending never settles.
+   *
+   * Not undone: what was queued before (sent by a later `flush()`), the hand-over's timer and the news of the engine
+   * call under way, if either is pending, and the client's place in the `ClientRegistry`, which is its owner's.
+   */
+  dispose(): void {
+    this.#disposers.splice(0).forEach((dispose) => dispose());
+    this.#choicePrompt.cancel();
+    this.#turnHandover.dispose();
   }
 
   setAutomationEnabled(enabled: boolean): void {

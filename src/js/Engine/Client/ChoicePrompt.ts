@@ -24,6 +24,13 @@ export class ChoicePrompt {
     this.#dataFilter = dataFilter;
   }
 
+  // Stops listening for the answer to the prompt pending, if one is: the client is done with (`dispose`), and its
+  //  promise never settles.
+  cancel(): void {
+    this.#pendingChoiceDisposer?.();
+    this.#pendingChoiceDisposer = null;
+  }
+
   // Sends `meta` to the UI and resolves with the value of the choice it answers with, or with `fallback`'s if it
   //  answers with an id that isn't one of them.
   promptChoice<Name extends keyof ChoiceMetaDataMap>(
