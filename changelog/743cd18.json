@@ -1,0 +1,1 @@
+{"version":"0.1.0@743cd18","date":"2026-10-21T21:09:22.000Z","localChanges":["The stack of action buttons at the bottom right no longer cuts off its top when the screen isn't scaled, and the game menu's buttons stay on top of it (part of #416)."],"externalChanges":{}}
