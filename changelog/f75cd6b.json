@@ -1,0 +1,1 @@
+{"version":"0.1.0@f75cd6b","date":"2026-10-21T08:55:25.000Z","localChanges":["chore: move DataTransferClient's hasMet into src/js/Engine/lib/hasMet.ts, with its registries passed in, and test it with plain data (#449)"],"externalChanges":{}}

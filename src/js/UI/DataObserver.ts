@@ -1,60 +1,27 @@
-import { GameData, PlainObject } from './types';
-import { ObjectMap } from './lib/reconstituteData';
+import { GameData } from './types';
+import { instance as dataChanges } from './lib/DataChanges';
 
-export type dataUpdatedEvent = CustomEvent<{ data: PlainObject }>;
 export type dataUpdatedHandler = (data: GameData) => void;
-// `key` is what the patch updates: an object it replaces, or one it updates a part of, as an action's patch updates the
-//  player's actions alone (#411).
-export type patchDataReceivedEvent = CustomEvent<{
-  key?: string;
-  value: ObjectMap;
-}>;
 
-declare global {
-  interface GlobalEventHandlersEventMap {
-    dataupdated: dataUpdatedEvent;
-    patchdatareceived: patchDataReceivedEvent;
-  }
-}
-
+// Runs `handler` with the new data on the render after any of `ids` changed
+//  (#344): added, updated, removed, or refilled because a ref it was waiting
+//  for arrived, and on every render after a rebuild of everything. The ids are
+//  read then, so `setIds` applies to the next render whenever it is called.
 export class DataObserver {
-  #handler: (event: patchDataReceivedEvent) => void;
-  #updateHandler: (event: dataUpdatedEvent) => void;
-  #pending: boolean = false;
   #ids: string[] = [];
+  #unwatch: () => void;
 
   constructor(ids: string[], handler: dataUpdatedHandler) {
     this.setIds(ids);
 
-    // A boolean flag (rather than stacking one-shot `dataupdated` listeners
-    // per matching patch) ensures the handler runs at most once per update,
-    // however many patches in the batch touched the observed ids.
-    this.#handler = (event) => {
-      const { detail } = event,
-        objects = detail.value.objects ?? {};
-
-      if (this.#ids.some((id) => id === detail.key || id in objects)) {
-        this.#pending = true;
-      }
-    };
-
-    this.#updateHandler = (event) => {
-      if (!this.#pending) {
-        return;
-      }
-
-      this.#pending = false;
-
-      handler(event.detail.data as GameData);
-    };
-
-    document.addEventListener('patchdatareceived', this.#handler);
-    document.addEventListener('dataupdated', this.#updateHandler);
+    this.#unwatch = dataChanges.watch(
+      () => this.#ids,
+      (data) => handler(data)
+    );
   }
 
   dispose(): void {
-    document.removeEventListener('patchdatareceived', this.#handler);
-    document.removeEventListener('dataupdated', this.#updateHandler);
+    this.#unwatch();
   }
 
   setIds(ids: string[]): void {

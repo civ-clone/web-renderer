@@ -793,7 +793,7 @@ export class Renderer {
             let renderFrame: number | null = null;
 
             // The display work — both `Actions` panels, detail panels, the
-            // `dataupdated` window rebuilds, and the full `portal` composite —
+            // windows watching `dataChanges`, and the full `portal` composite —
             // reads only the latest `data`/`activeUnit`, so it is safe to run at
             // most once per animation frame however many patch flushes arrive.
             let firstRender = true;
@@ -804,14 +804,6 @@ export class Renderer {
 
                 performance.mark('civ:first-render');
               }
-
-              document.dispatchEvent(
-                new CustomEvent('dataupdated', {
-                  detail: {
-                    data,
-                  },
-                })
-              );
 
               dataChanges.notify(data);
 
@@ -1275,15 +1267,6 @@ export class Renderer {
 
                 applyDataPatches(objectMap, data, {
                   changed: (id) => changedIds.add(id),
-                  received: (key, value) =>
-                    document.dispatchEvent(
-                      new CustomEvent('patchdatareceived', {
-                        detail: {
-                          key,
-                          value,
-                        },
-                      })
-                    ),
                   // Since we only use tilesToRender for x and y this should be fine...
                   tile: (tile) => queueTileToRender(tile as Tile),
                 });
