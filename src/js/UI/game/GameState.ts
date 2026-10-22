@@ -1,5 +1,5 @@
 import { DataPatch, GameData, Tile } from '../types';
-import { ObjectMap } from '../lib/reconstituteData';
+import { ObjectMap, PlainObject } from '../lib/reconstituteData';
 import DataChanges, { instance as sharedChanges } from '../lib/DataChanges';
 import IncrementalReconstituter from '../lib/IncrementalReconstituter';
 import PruneSchedule from '../lib/PruneSchedule';
@@ -26,7 +26,7 @@ export type FrameScheduler = {
 
 /** Where the map's tiles go: `MapView`'s `world` and its queue of tiles to draw. */
 export type GameStateTiles = {
-  /** Each `PlayerTile` a patch carries, once it is in the map. */
+  /** Each `PlayerTile` a patch carries, and the tile of each unit it changes the look of, once they are in the map. */
   queueTile(tile: Tile): void;
   /** After each rebuild, with whether the world's tiles were refilled. */
   setTiles(tiles: Tile[], changed: boolean): void;
@@ -44,6 +44,20 @@ const animationFrames: FrameScheduler = {
   request: (callback) => requestAnimationFrame(callback),
   cancel: (handle) => cancelAnimationFrame(handle),
 };
+
+// What the map draws of a unit, as the map holds it (refs and all): its type,
+//  its owner, its square, what it is busy with and whether it is fortified.
+//  `null` for anything that is not a unit.
+const drawnUnit = (value: PlainObject | undefined): string | null =>
+  value?.__?.includes('Unit')
+    ? JSON.stringify([
+        value._,
+        value.player,
+        value.tile,
+        value.busy,
+        value.improvements,
+      ])
+    : null;
 
 export class GameState {
   #changes: DataChanges;
@@ -133,16 +147,43 @@ export class GameState {
 
   /** A `gameDataPatch`: applied to the map, then rebuilt now, or next frame while waiting for the turn. */
   applyPatches(patches: DataPatch[]): void {
+    // The squares of the units whose look a patch changed, where they are and
+    //  where they were. A unit can come on its own, as one that finishes
+    //  fortifying does at the start of the turn, with no tile to say its
+    //  square needs drawing again (#487). Looked up once the patches are in,
+    //  as the tile can come after the unit.
+    const unitTileIds = new Set<string>();
+
     applyDataPatches(this.#objectMap, patches, {
       changed: (id) => this.#changedIds.add(id),
       set: (id, value, previous) => {
         if (previous === undefined) {
           this.#objectCount++;
         }
+
+        const drawn = drawnUnit(value);
+
+        if (drawn === null || drawn === drawnUnit(previous)) {
+          return;
+        }
+
+        [value.tile, previous?.tile].forEach((tile) => {
+          if (tile?.['#ref']) {
+            unitTileIds.add(tile['#ref']);
+          }
+        });
       },
       removed: () => this.#objectCount--,
       // Since we only use the queued tiles for x and y this should be fine...
       tile: (tile) => this.#tiles.queueTile(tile as Tile),
+    });
+
+    unitTileIds.forEach((id) => {
+      const tile = this.#objectMap.objects[id];
+
+      if (typeof tile?.x === 'number' && typeof tile?.y === 'number') {
+        this.#tiles.queueTile(tile as Tile);
+      }
     });
 
     if (this.#waitingForTurn) {
