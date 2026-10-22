@@ -5,7 +5,8 @@
 // What goes out, in order: on the first turn `gameData`; 1 ms later the hand-over's patch, `turnStarted`, the
 //  notifications held until then and the GoTos that halted (`unitHalted`). Per action, one patch, `actionHandled`, then
 //  the halts; for `EndTurn`, one patch, `actionHandled` and `turnEnded`, and the turn is over 10 ms later. An `EndTurn`
-//  sent while talks are open is answered as any other action is once they are over, and the turn goes on (#491).
+//  sent while talks are open is answered as any other action is once they are over, and the turn goes on (#491). An
+//  action that throws is answered too, with its patch, `actionHandled` and a `workerError`, and the turn goes on (#470).
 
 import EventEmitter from '@dom111/typed-event-emitter/EventEmitter';
 import Engine from '@civ-clone/core-engine/Engine';
@@ -17,6 +18,7 @@ import { TransportDisposer, TransportHandledAction } from '../Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import { ClientContext, Disposer } from './ClientContext';
 import { filterToReference } from './refs';
+import { describeError } from '../answer';
 
 export type TurnHandoverContext = Pick<
   ClientContext,
@@ -238,8 +240,25 @@ export class TurnHandover {
       }, 1);
 
       const listener = async (...args: any[]): Promise<void> => {
+        // How far the action got, for when something throws (#470): the turn's end, once it is decided, and the answer
+        //  and `turnEnded`, once they have gone.
+        let playerState: ReturnType<typeof patches.playerState> | null = null,
+          ended = false,
+          acknowledged = false,
+          turnEndedSent = false;
+
+        const acknowledge = (): void => {
+          this.#acknowledge(args[0]);
+
+          acknowledged = true;
+        };
+
+        // An `EndTurn` sent while talks are open is refused (#491).
+        const waitedForTalks =
+          args[0]?.name === 'EndTurn' && this.#context.talks.underWay;
+
         try {
-          const playerState = patches.playerState();
+          playerState = patches.playerState();
 
           // Every flush is held while the action is handled (#321). `hold` is `async`, so what follows runs a microtask
           //  after the hold is let go, one later than when the listener let go of it itself (before #518): a patch then
@@ -250,15 +269,19 @@ export class TurnHandover {
           );
 
           if (turnEnded) {
+            ended = true;
+
             this.#eventEmitter.off('action', listener);
 
             this.#handedOver = false;
 
             patches.flush();
 
-            this.#acknowledge(args[0]);
+            acknowledge();
 
             this.#context.transport.send('turnEnded', null);
+
+            turnEndedSent = true;
 
             setTimeout(() => resolve(), 10);
 
@@ -273,21 +296,61 @@ export class TurnHandover {
 
           patches.flush();
 
-          this.#acknowledge(args[0]);
+          acknowledge();
 
           this.#sendHalts();
 
           // An `EndTurn` refused, as while talks are open (#491): the UI's auto end of turn waits for its answer before
           //  it sends another (#151), and so looks again only at the next patch, which goes after the answer.
-          if (args[0]?.name === 'EndTurn') {
+          if (waitedForTalks) {
             patches.flush();
           }
         } catch (e) {
-          // Without this, a throwing action strands the listener on the
-          // long-lived emitter and every later action gets double-processed.
-          this.#eventEmitter.off('action', listener);
+          // Rejected, the turn ended without a word to the UI: no `actionHandled`, so a move drawn ahead never settled,
+          //  and no `turnEnded` (#470). What the action changed before it threw is sent, with the player's actions as
+          //  they are now, the UI is told it has been handled and that something went wrong, and the next action is
+          //  listened for as any other. A turn that had ended still ends. Each step on its own, so one that throws
+          //  doesn't stop the rest. An `EndTurn` that threw gets no second patch after its answer, which only an
+          //  `EndTurn` refused for talks needs: auto end of turn would send it again, and it would throw again.
+          const attempt = (step: () => void): void => {
+            try {
+              step();
+            } catch (error) {
+              console.error(error);
+            }
+          };
 
-          reject(e);
+          console.error(e);
+
+          if (!ended) {
+            if (playerState !== null) {
+              const before = playerState;
+
+              attempt(() => patches.playerStateChanged(before));
+            }
+
+            attempt(() => patches.actions());
+          }
+
+          attempt(() => patches.flush());
+
+          if (!acknowledged) {
+            attempt(acknowledge);
+          }
+
+          attempt(() =>
+            this.#context.transport.send('workerError', {
+              message: describeError(e),
+            })
+          );
+
+          if (ended) {
+            if (!turnEndedSent) {
+              attempt(() => this.#context.transport.send('turnEnded', null));
+            }
+
+            setTimeout(() => resolve(), 10);
+          }
         }
       };
     });

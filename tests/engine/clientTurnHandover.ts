@@ -7,7 +7,7 @@
 //  - a unit's action sends one patch, `actionHandled` and its halts on the 4th microtask after the UI's `action`, a
 //    microtask after the hold on flushes is let go (`PlayerPatches.hold` is `async`), with the talks' flush held;
 //  - `EndTurn` sends one patch, `actionHandled` and `turnEnded` on the 2nd, and the turn is over 10 ms later;
-//  - a throwing action ends the turn with its error and stops listening, and an automated turn is played by
+//  - a throwing action is answered, with a `workerError`, and the turn goes on (#470), and an automated turn is played by
 //    automation's client and sends the turn and the whole player in one patch, without a hand-over;
 //  - whether notifications are held reads the hand-over and automation as each is given.
 // Then, through the client: after `setAutomationEnabled` toggles, the engine listeners the client registered (the
@@ -93,6 +93,7 @@ const wait = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
 // What the UI is sent, and the `action`s it sends.
+let failNextPatch = false;
 let actionHandler: ((...args: any[]) => void) | null = null;
 const transport: any = {
   receive: (channel: string, handler: (...args: any[]) => void) => {
@@ -104,6 +105,13 @@ const transport: any = {
   },
   receiveOnce: () => () => false,
   send: (channel: string, data: any): void => {
+    // A patch that can't be posted, once (#470).
+    if (channel === 'gameDataPatch' && failNextPatch) {
+      failNextPatch = false;
+
+      throw new Error('could not be cloned');
+    }
+
     if (channel === 'gameNotification') {
       record(`gameNotification(${data.key})`);
 
@@ -195,6 +203,7 @@ const metOnTheWay = new Set<any>(),
   talks: any = {
     metOnTheWay,
     handOver: () => record('talks.handOver'),
+    underWay: false,
   };
 
 const automationClient: any = {
@@ -413,10 +422,11 @@ const run = async (): Promise<void> => {
 
   // An `EndTurn` refused while talks are open (#491): its patch and answer, then one more patch, for the UI's auto end
   //  of turn to look again once it has its answer (#151).
-  actionContext.talks.underWay = true;
+  // The same talks in the game: the hand-over and the action read them.
+  talks.underWay = actionContext.talks.underWay = true;
   sendAction({ name: 'EndTurn' });
   await wait(5);
-  actionContext.talks.underWay = false;
+  talks.underWay = actionContext.talks.underWay = false;
   expect(
     'a refused End Turn sends its patch, its answer, then a patch',
     untimed(events.splice(0)),
@@ -431,18 +441,49 @@ const run = async (): Promise<void> => {
     ]
   );
 
-  // A throwing action ends the turn with its error, and the turn listens no more.
+  // A throwing action is answered, the UI is told something went wrong, and the turn goes on (#470).
+  const logged = console.error;
+
+  console.error = () => {};
   throwing = true;
   sendAction({ name: 'EndTurn' });
   await wait(5);
   throwing = false;
-  expect('a throwing action rejects the turn', secondError, 'the action threw');
-  expect('a throwing action sends nothing', events.splice(0), [
-    'patches.playerState',
-  ]);
+  console.error = logged;
+  expect('a throwing action does not end the turn', secondError, '');
+  expect(
+    'a throwing action sends its patch, actionHandled and workerError',
+    events.splice(0),
+    [
+      'patches.playerState',
+      // The player's actions as they are now, so the UI isn't left with those from before.
+      'patches.playerStateChanged(state)',
+      'patches.actions',
+      'gameDataPatch',
+      'actionHandled',
+      'workerError',
+    ]
+  );
+  expect('still handed over', turnHandover.handedOver, true);
+
+  // After a throw, the next action is acted on: here an End Turn whose patch can't be sent, which still ends the turn.
+  console.error = () => {};
+  failNextPatch = true;
   sendAction({ name: 'EndTurn' });
-  await wait(5);
-  expect('after a throw, the turn listens no more', events.splice(0), []);
+  await second;
+  console.error = logged;
+  expect(
+    'an End Turn whose patch could not be sent still answers and ends the turn',
+    untimed(events.splice(0)),
+    [
+      'patches.playerState',
+      'settled(true)',
+      'gameDataPatch',
+      'actionHandled',
+      'workerError',
+      'turnEnded',
+    ]
+  );
 
   // An automated turn: automation's client plays it, and the turn and the whole player go in one patch. What a GoTo
   //  halted on and who was met before it are dropped.

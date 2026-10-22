@@ -35,6 +35,12 @@ export type TransportReceiveHandler<Data extends TransportData> = (
 
 export type TransportDisposer = () => void;
 
+// A request the worker could not answer, on the channel it was asked on (#470).
+export type TransportFailure = {
+  channel: string;
+  message: string;
+};
+
 // An action the worker has handled, as the UI sent it: enough to tell which one it was (#326).
 export type TransportHandledAction = {
   name: string;
@@ -119,6 +125,11 @@ declare global {
       }
     >;
     start: TransportData<null, null>;
+    // A request the worker could not answer, so the page's `request` on that channel rejects, rather than waiting for
+    //  good (#470).
+    requestFailed: TransportData<TransportFailure, never>;
+    // A load that failed (#470): the page says so and goes back to the main menu.
+    loadFailed: TransportData<{ message: string }, never>;
     // The Top Cities in the World report (#124): the UI asks for up to this many rows.
     topCities: TransportData<TopCitiesRow[], number>;
     // The worker has accepted `EndTurn`: nothing the UI sends is listened for until `turnStarted`.
@@ -127,6 +138,10 @@ declare global {
     turnStarted: TransportData<null, never>;
     // The UI asks for the actions of the unit it has made active (#323), by its id. The answer is a `gameDataPatch`.
     unitActions: TransportData<never, string>;
+    // Something went wrong in the worker that nothing else answers for (#470): an uncaught error or rejection, a game
+    //  that could not start, an action that threw. The page says so. `WorkerTransport` sends the page's own listeners
+    //  one for an error the `Worker` itself raises.
+    workerError: TransportData<{ message: string }, never>;
   }
 
   interface TransportPlayerActionMap {

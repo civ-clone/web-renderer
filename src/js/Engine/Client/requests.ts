@@ -21,6 +21,7 @@ import { ClientContext } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
 import { standalone } from './refs';
+import answer from '../answer';
 
 export type RequestsContext = Pick<
   ClientContext,
@@ -89,30 +90,26 @@ export const registerRequests = (
   // Worked out here and sent as finished rows, so the UI learns nothing about rival cities beyond what the report
   //  shows (#124).
   disposers.push(
-    transport.receive('topCities', (limit) =>
-      transport.send('topCities', topCities(ctx, limit))
-    )
+    answer(transport, 'topCities', (limit) => topCities(ctx, limit))
   );
 
   // The engine's `Score` rules add it up (#149).
   disposers.push(
-    transport.receive('civilizationScore', () =>
-      transport.send('civilizationScore', civilizationScore(ctx))
-    )
+    answer(transport, 'civilizationScore', () => civilizationScore(ctx))
   );
+
+  // Each request is answered with `answer`, so one that throws is answered with a `requestFailed` rather than never, and
+  //  the UI's next request on its channel isn't stuck behind it (#470).
 
   // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
   //  resolves on its own and brings nothing of the game with it. A build that is not ours has nothing to show.
   disposers.push(
-    transport.receive('cityBuildAvailable', (cityBuildId) => {
+    answer(transport, 'cityBuildAvailable', (cityBuildId) => {
       const [cityBuild] = ctx.cityBuilds.getBy('id', cityBuildId);
 
-      transport.send(
-        'cityBuildAvailable',
-        cityBuild && cityBuild.city().player() === ctx.player()
-          ? cityBuildAvailable(ctx.dataFilter, cityBuild)
-          : { hierarchy: [], objects: {} }
-      );
+      return cityBuild && cityBuild.city().player() === ctx.player()
+        ? cityBuildAvailable(ctx.dataFilter, cityBuild)
+        : { hierarchy: [], objects: {} };
     })
   );
 
@@ -147,11 +144,8 @@ export const registerRequests = (
 
   // The intelligence report (F3, #58), worked out here for the same reason as the Top Cities.
   disposers.push(
-    transport.receive('intelligence', () =>
-      transport.send(
-        'intelligence',
-        intelligenceRows(ctx.player(), (player) => ctx.hasMet(player))
-      )
+    answer(transport, 'intelligence', () =>
+      intelligenceRows(ctx.player(), (player) => ctx.hasMet(player))
     )
   );
 

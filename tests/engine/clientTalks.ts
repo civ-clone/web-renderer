@@ -11,6 +11,7 @@ import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTreasury from '@civ-clone/core-treasury/PlayerTreasury';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Talks, { TalksContext } from '../../src/js/Engine/Client/Talks';
+import Timeout from '../../src/js/Engine/Error/Timeout';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 
@@ -72,6 +73,7 @@ const ours = new Player(),
     interactions,
     patches,
     rules,
+    transport,
     turn: { value: () => 1 },
     units: { getByTile: () => [] },
   } as unknown as TalksContext),
@@ -135,6 +137,90 @@ playerResearchRegistryInstance.register(new PlayerResearch(ours));
     'gold received in talks that failed is sent all the same',
     treasuryPatches(),
     [75]
+  );
+
+  sent.splice(0);
+
+  // Talks a Meet with King started that fail don't fail the talks after them, or the actions that wait for them (#470).
+  const logged = console.error;
+  let pendingFailed = false;
+
+  console.error = () => {};
+  talks.meetWithKing(rival);
+  await talks.pending.catch(() => {
+    pendingFailed = true;
+  });
+  console.error = logged;
+
+  interactions.register = () => {};
+  step.onChoose = () => treasury.add(5);
+  talks.meetWithKing(rival);
+  await talks.pending;
+
+  expect(
+    'talks that failed leave the talks under way settled, and the next go ahead',
+    [pendingFailed, talks.underWay, treasuryPatches()],
+    [false, false, [100, 105]]
+  );
+
+  sent.splice(0);
+
+  // A chooser that fails every time is not asked for ever: the talks end, and the UI is told (#470). Here it gives in
+  //  after 20 tries, so that without the limit this ends, and fails, rather than hanging.
+  let asked = 0;
+
+  step.onChoose = () => {
+    asked++;
+
+    if (asked <= 20) {
+      throw new Error('no answer');
+    }
+  };
+
+  console.error = () => {};
+
+  const givenUp = await talks.handleNegotiation(rival);
+
+  console.error = logged;
+
+  expect(
+    'talks whose chooser fails every time end after a few tries, and say so',
+    [
+      asked,
+      givenUp.terminated(),
+      sent
+        .filter(([channel]) => channel === 'workerError')
+        .map(([, data]) => data.message),
+    ],
+    // Three rounds without a step (`maxStalledRounds`).
+    [3, true, ['no answer']]
+  );
+
+  sent.splice(0);
+
+  // One that is only slow, as a computer player that misses its 500 ms each time, ends the talks too, but nothing has
+  //  gone wrong to say.
+  asked = 0;
+  step.onChoose = () => {
+    asked++;
+
+    throw new Timeout('too slow');
+  };
+
+  console.error = () => {};
+
+  const timedOut = await talks.handleNegotiation(rival);
+
+  console.error = logged;
+
+  expect(
+    'talks whose chooser only times out end after a few tries, unsaid',
+    [
+      asked,
+      timedOut.terminated(),
+      sent.filter(([channel]) => channel === 'workerError'),
+    ],
+    [3, true, []]
   );
 
   finished = true;

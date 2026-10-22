@@ -4,8 +4,21 @@ import {
   TransportData,
   TransportDisposer,
   TransportReceiveHandler,
+  TransportFailure,
   TransportSendArgs,
 } from './Transport';
+
+// What a request the worker could not answer rejects with (#470).
+export class RequestFailed extends Error {
+  readonly channel: string;
+
+  constructor(channel: string, message: string) {
+    super(message);
+
+    this.name = 'RequestFailed';
+    this.channel = channel;
+  }
+}
 
 export abstract class AbstractTransport<
   DataMap extends {
@@ -30,6 +43,9 @@ export abstract class AbstractTransport<
   //  there. Two requests on one channel in flight together would both resolve with the first reply (two production
   //  pickers open at once, each asking for its city's list, #324), so a channel takes one request at a time: the next
   //  is sent once the reply to the last has arrived. Different channels don't wait on each other.
+  //
+  // A request the worker could not answer is answered with a `requestFailed` on its channel (`answer.ts`), which
+  //  rejects it and frees the channel for the next (#470). The next waits for the last whether it was answered or not.
   async request<
     RequestType extends Request,
     Args extends any[] = RequestArgs<RequestType>,
@@ -37,14 +53,32 @@ export abstract class AbstractTransport<
   >(request: Request): Promise<Return> {
     const channel = request.channel(),
       previous = this.#pending.get(channel) ?? Promise.resolve(),
-      current = previous.then(
-        () =>
-          new Promise<Return>((resolve) => {
-            this.receiveOnce(channel, (value: Return) => resolve(value));
+      ask = (): Promise<Return> =>
+        new Promise<Return>((resolve, reject) => {
+          const disposers: TransportDisposer[] = [],
+            settle = (): void => disposers.forEach((dispose) => dispose());
 
-            this.send(channel, request.args()[0]);
-          })
-      );
+          disposers.push(
+            this.receiveOnce(channel, (value: Return): void => {
+              settle();
+              resolve(value);
+            }),
+            this.receive(
+              'requestFailed' as keyof DataMap,
+              (failure: TransportFailure): void => {
+                if (failure?.channel !== channel) {
+                  return;
+                }
+
+                settle();
+                reject(new RequestFailed(failure.channel, failure.message));
+              }
+            )
+          );
+
+          this.send(channel, request.args()[0]);
+        }),
+      current = previous.then(ask, ask);
 
     this.#pending.set(channel, current);
 

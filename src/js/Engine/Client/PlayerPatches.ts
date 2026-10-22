@@ -411,11 +411,14 @@ export class PlayerPatches {
       return;
     }
 
-    this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
-
-    this.#dataQueue.clear();
-    this.#queuedTiles.clear();
-    this.#queued.clear();
+    // Emptied whether it went or not: kept, what couldn't be sent would stop every later patch the same way (#470).
+    try {
+      this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
+    } finally {
+      this.#dataQueue.clear();
+      this.#queuedTiles.clear();
+      this.#queued.clear();
+    }
   }
 }
 
