@@ -62,6 +62,10 @@ export type DataPatchCallbacks = {
   changed(id: string): void;
   /** Each `PlayerTile` in a side-table, once it is in the map and `changed`. */
   tile?(tile: PlainObject): void;
+  /** Each whole object an add or update puts in the map, its own or in its side-table, with the one it replaced. */
+  set?(id: string, value: PlainObject, previous: PlainObject | undefined): void;
+  /** Each id a remove takes out of the map, if the map held it. A remove with an `index` takes out a path, not an id. */
+  removed?(id: string): void;
 };
 
 /**
@@ -72,7 +76,7 @@ export type DataPatchCallbacks = {
 export const applyDataPatches = (
   objectMap: ObjectMap,
   patches: DataPatch[],
-  { changed, tile }: DataPatchCallbacks
+  { changed, tile, set, removed }: DataPatchCallbacks
 ): void =>
   patches.forEach((patch) =>
     Object.entries(patch).forEach(([key, { type, index, value }]) => {
@@ -87,14 +91,20 @@ export const applyDataPatches = (
         if (index) {
           setObjectPath(objectMap.objects[key], index, value!.hierarchy);
         } else {
+          const previous = objectMap.objects[key];
+
           objectMap.objects[key] = value!.hierarchy;
+          set?.(key, value!.hierarchy, previous);
         }
 
         changed(key);
 
         Object.entries(value!.objects as PlainObject).forEach(
           ([key, value]) => {
+            const previous = objectMap.objects[key];
+
             objectMap.objects[key] = value;
+            set?.(key, value, previous);
             changed(key);
 
             if (value._ === 'PlayerTile') {
@@ -113,7 +123,10 @@ export const applyDataPatches = (
           return;
         }
 
-        delete objectMap.objects[key];
+        if (key in objectMap.objects) {
+          delete objectMap.objects[key];
+          removed?.(key);
+        }
       }
     })
   );
