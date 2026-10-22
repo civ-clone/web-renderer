@@ -1,0 +1,1 @@
+{"version":"0.1.0@56383ef","date":"2026-10-22T07:20:16.000Z","localChanges":["A save file can no longer run script on the page through the message shown when it loads, or fails to load (closes #469)."],"externalChanges":{}}

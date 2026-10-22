@@ -132,8 +132,10 @@ let endTurnEvents = 0;
 document.addEventListener('endturn', () => endTurnEvents++);
 
 type KeyInit = {
+  altKey?: boolean;
   code?: string;
   ctrlKey?: boolean;
+  metaKey?: boolean;
   key: string;
   location?: number;
   shiftKey?: boolean;
@@ -141,10 +143,12 @@ type KeyInit = {
 
 // The test DOM's `KeyboardEvent` takes only `key` and `location`: the rest is set on the event.
 const press = ({
+  altKey = false,
   code = '',
   ctrlKey = false,
   key,
   location = 0,
+  metaKey = false,
   shiftKey = false,
 }: KeyInit): KeyboardEvent => {
   const event = new KeyboardEvent('keydown', {
@@ -155,9 +159,10 @@ const press = ({
   });
 
   Object.defineProperties(event, {
+    altKey: { value: altKey },
     code: { value: code },
     ctrlKey: { value: ctrlKey },
-    metaKey: { value: false },
+    metaKey: { value: metaKey },
     shiftKey: { value: shiftKey },
   });
 
@@ -293,15 +298,37 @@ const run = async (): Promise<void> => {
 
   unitKeys = [];
 
-  // Ctrl+R is a reload, which the reload guard asks about: the handler does not check the modifiers (#479).
+  // Ctrl/Cmd/Alt with a key is the browser's, not the game's: Ctrl+R is a reload the reload guard asks about, and
+  //  must not also build a road (#479).
   reset();
-  press({ code: 'KeyR', ctrlKey: true, key: 'r' });
+  unitKeys = ['r', 'f'];
+  event = press({ code: 'KeyR', ctrlKey: true, key: 'r' });
+  press({ code: 'KeyF', key: 'f', metaKey: true });
+  press({ code: 'KeyF', altKey: true, key: 'f' });
+  press({ code: 'KeyT', ctrlKey: true, key: 't' });
+  press({ code: 'KeyC', ctrlKey: true, key: 'c' });
 
-  note(
-    `Ctrl+R reaches pressKey as ${JSON.stringify(
-      pressed
-    )} (current behaviour, #479)`
+  expect(
+    'Ctrl, Cmd or Alt with a key sends no unit order and toggles nothing',
+    [pressed, calls],
+    [[], []]
   );
+  expect('and is left to the browser', event.defaultPrevented, false);
+
+  // Caps Lock on: the key comes as `P`, Shift isn't held (#479).
+  reset();
+  unitKeys = ['p', 'P', 'd', 'D'];
+  press({ code: 'KeyP', key: 'P' });
+  press({ code: 'KeyD', key: 'D' });
+  press({ code: 'KeyP', key: 'p', shiftKey: true });
+
+  expect(
+    'Caps Lock leaves a letter as it is without Shift: p, not P (Pillage)',
+    pressed,
+    ['p', 'd', 'P']
+  );
+
+  unitKeys = [];
 
   // Escape.
 
@@ -386,6 +413,17 @@ const run = async (): Promise<void> => {
   press({ code: 'Digit6', key: '6' });
 
   expect('and only shifted', calls, []);
+
+  // Shift let go and pressed again between the two (#479).
+  reset();
+  press({ code: 'ShiftLeft', key: 'Shift', shiftKey: true });
+  press({ code: 'Digit5', key: '%', shiftKey: true });
+  press({ code: 'ShiftLeft', key: 'Shift', shiftKey: true });
+  press({ code: 'Digit6', key: '^', shiftKey: true });
+
+  expect('Shift pressed again in between still counts', calls, [
+    'enableCheats',
+  ]);
 
   // `dispose`.
 
