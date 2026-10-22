@@ -383,6 +383,11 @@ const run = async (): Promise<void> => {
     secondError = error.message;
   });
 
+  // An `EndTurn` sent before the hand-over, as auto end of turn sends one in answer to the last turn's final patch, is
+  //  not acted on: it would end the turn before `turnStarted` (#151).
+  actions = () => [new EndTurn(player, null)];
+  sendAction({ name: 'EndTurn' });
+
   await wait(20);
   expect('a later turn sends the player again', events.splice(0), [
     'patches.update(turn)',
@@ -393,6 +398,26 @@ const run = async (): Promise<void> => {
     'gameNotification(ours)',
     'talks.handOver',
   ]);
+
+  // An `EndTurn` refused while talks are open (#491): its patch and answer, then one more patch, for the UI's auto end
+  //  of turn to look again once it has its answer (#151).
+  actionContext.talks.underWay = true;
+  sendAction({ name: 'EndTurn' });
+  await wait(5);
+  actionContext.talks.underWay = false;
+  expect(
+    'a refused End Turn sends its patch, its answer, then a patch',
+    untimed(events.splice(0)),
+    [
+      'patches.playerState',
+      'settled(false)',
+      'patches.playerStateChanged(state)',
+      'patches.actions',
+      'gameDataPatch',
+      'actionHandled',
+      'gameDataPatch',
+    ]
+  );
 
   // A throwing action ends the turn with its error, and the turn listens no more.
   throwing = true;
