@@ -17,7 +17,13 @@
 - `src/js/frontend.ts` -> `dist/frontend.js`
 
 `frontend.js` starts `dist/backend.js` as a Web Worker (`src/js/frontend.ts`), so both
-have to be served from `dist/`.
+have to be served from `dist/`. It also copies `changelog/releases.json` to
+`dist/releases.json`, which the Releases window fetches when it opens (#476).
+
+`build.json`'s version goes on the URLs as `?v=`: on the worker's and the
+release notes' in the code, and on `index.html`'s stylesheet and script when the
+deploy workflow copies it to the site. The site is served with a ten-minute
+cache, so without it a cached `frontend.js` could start a newer `backend.js`.
 
 Notable options:
 
@@ -76,9 +82,8 @@ that commit and publishes it to
 [`civ-clone/civ-clone.github.io`](https://github.com/civ-clone/civ-clone.github.io),
 which GitHub Pages serves at **https://civ.one**.
 
-The order matters in two places. `ReleaseWindow` *imports*
-`changelog/releases.json`, so the notes are bundled into `frontend.js` — they
-have to be committed before `main` is pushed. And `build.json` records
+The order matters in two places. The build copies `changelog/releases.json`
+into `dist/` for `ReleaseWindow`, so the notes are generated before the build. And `build.json` records
 `<version>@<HEAD>`, so a build is only ever of the commit being released — which
 the pipeline guarantees.
 

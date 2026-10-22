@@ -4,7 +4,7 @@ import EarthWindow from './EarthWindow';
 import HallOfFameWindow from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
-import ReleaseWindow from './ReleaseWindow';
+import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
 import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
 import { chooseSaveFile } from '../lib/savedGame';
@@ -123,7 +123,7 @@ export class MainMenu extends Element {
             click(event) {
               event.preventDefault();
 
-              new ReleaseWindow();
+              new ReleaseWindow(() => fetchReleases(version));
             },
           }
         )

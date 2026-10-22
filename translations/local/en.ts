@@ -298,6 +298,8 @@ i18next.addResources('en', 'default', {
 
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
+  'ReleaseWindow.failed': 'The release notes could not be loaded.',
+  'ReleaseWindow.loading': 'Loading the release notes…',
   'ReleaseWindow.title': 'Releases',
 
   'ReloadGuard.body': 'Are you sure you want to reload?',
