@@ -234,6 +234,8 @@ const run = async (): Promise<void> => {
   if (failures > 0) {
     process.exit(1);
   }
+
+  process.stdout.write('PASS transient\n');
 };
 
 run().catch((error) => {

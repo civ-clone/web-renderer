@@ -935,6 +935,10 @@ const report = (): void => {
     `\n${checks.length - failures}/${checks.length} — save and load\n`
   );
 
+  if (failures === 0) {
+    process.stdout.write('PASS save\n');
+  }
+
   process.exit(failures > 0 ? 1 : 0);
 };
 

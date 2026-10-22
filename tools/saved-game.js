@@ -9,31 +9,15 @@
 // would be more machinery than the thing under test. The `sessionStorage` the
 // suite installs keeps its real size limit, which is where the bug was.
 
-const { execFileSync } = require('child_process');
-const fs = require('fs');
-const os = require('os');
 const path = require('path');
 
+const { runSuite } = require('./lib/suite');
 const { webRenderer } = require('./lib/paths');
-
-const outfile = path.join(
-  fs.mkdtempSync(path.join(os.tmpdir(), 'saved-game-')),
-  'savedGame.js'
-);
 
 const fakeStore = path.join(webRenderer, 'tests', 'ui', 'lib', 'FakeStore.ts');
 
-// Asynchronous because `buildSync` takes no plugins.
-(async () => {
-  await require('esbuild').build({
-    entryPoints: [path.join(webRenderer, 'tests', 'ui', 'savedGame.ts')],
-    bundle: true,
-    keepNames: true,
-    platform: 'node',
-    format: 'cjs',
-    target: 'node18',
-    outfile,
-    logLevel: 'error',
+runSuite('ui', 'savedGame', {
+  esbuild: {
     plugins: [
       {
         name: 'fake-store',
@@ -45,18 +29,5 @@ const fakeStore = path.join(webRenderer, 'tests', 'ui', 'lib', 'FakeStore.ts');
         },
       },
     ],
-  });
-
-  try {
-    process.stdout.write(
-      execFileSync(process.execPath, [outfile], {
-        cwd: webRenderer,
-        encoding: 'utf8',
-      })
-    );
-  } catch (error) {
-    process.stdout.write(error.stdout || '');
-    process.stderr.write(error.stderr || '');
-    process.exit(1);
-  }
-})();
+  },
+});

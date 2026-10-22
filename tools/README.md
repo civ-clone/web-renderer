@@ -109,6 +109,14 @@ Both bundle their entrypoint with esbuild rather than running it through
 `.js` first, so a plain `require` would test the published artifact rather than
 the source `civ sync` just wrote.
 
+Most suites run through `tools/run-suite.js <engine|ui> <name>` (the
+`test:*` scripts in `package.json` say which), which bundles
+`tests/<kind>/<name>.ts`, runs it with a timeout, and passes it only if it
+exits 0 **and** prints a line starting `PASS` (#473). Exit 0 alone is not a
+pass: an engine suite whose game never reaches the human's turn drains the
+event loop and exits 0 with no output. A new suite prints `PASS <name> …` when
+its checks are done. `npm run test:run-suite` checks the runner itself.
+
 The conformance fixture records two independent things:
 
 - **`checksums`** — engine state. Stage 1 must not move these.
