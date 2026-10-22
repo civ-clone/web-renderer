@@ -1,4 +1,12 @@
 [
+{"version":"0.1.0@3262ba9","date":"2026-10-22T07:31:10.000Z","localChanges":["test: updating, scrolling and drawing tiles that overlap their neighbours leaves what a full redraw would, and what one tile's update costs (#91)"],"externalChanges":{}}
+,
+{"version":"0.1.0@c3e56c5","date":"2026-10-22T07:31:10.000Z","localChanges":["chore: where the map's tiles overlap their neighbours, a changed tile is redrawn with everything that reaches it, back to front, and the minimap stays square (#91)"],"externalChanges":{}}
+,
+{"version":"0.1.0@f89018c","date":"2026-10-22T07:21:25.000Z","localChanges":["chore: the map projection says whether its tiles overlap, how far its sprites reach, the order to draw them in and which tiles reach a rectangle (#91)"],"externalChanges":{}}
+,
+{"version":"0.1.0@3002f83","date":"2026-10-22T07:19:57.000Z","localChanges":["test: pixel checks that updating or scrolling a map layer leaves what a full redraw would (#91)"],"externalChanges":{}}
+,
 {"version":"0.1.0@0f4c70d","date":"2026-10-22T07:28:04.000Z","localChanges":["Pressing on the map and letting go somewhere else, over the sidebar or a window that has just opened, no longer leaves the map scrolling with the mouse when no button is held, or opens the unit menu a moment later. A press that started somewhere else and is let go over the map no longer counts as a click on it (closes #490)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@782b5c8","date":"2026-10-22T07:26:35.000Z","localChanges":["A city that is short of food now says it will never grow, on the city screen and in City Status, instead of counting its shortfall as progress and showing a number of turns. Production that falls short says Never in the same way (closes #489)."],"externalChanges":{}}

@@ -37,7 +37,7 @@ marked as such, with the commit or issue that fixed them.
 - **Asset readiness is strict and static**
   - Required asset list is a large hardcoded path list in `AssetStore`.
   - Any naming/version mismatch blocks gameplay entry.
-  - Still true: `#requiredAssets` in `src/js/UI/AssetStore.ts`.
+  - The list is no longer hard-coded: `AssetStore` reads it from the tileset descriptor's `assets.required` (`src/js/UI/tilesets/civ1.json`, #56). Still true that any missing required sprite blocks gameplay entry.
 
 ## Lower priority / UX defects (already noted upstream)
 

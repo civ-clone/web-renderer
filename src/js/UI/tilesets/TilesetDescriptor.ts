@@ -155,7 +155,7 @@ export interface TilesetDescriptor {
   /** The map scales it can be shown at, and the one a player starts on. */
   scales: number[];
   defaultScale: number;
-  /** Where its sprites are kept: `prefix + name + ext`. */
+  /** Where its sprites are kept: see `spriteKey`. */
   storage: { prefix: string; ext: string };
   /** The tileset a missing optional sprite may come from. */
   fallback: string | null;
@@ -395,5 +395,16 @@ export const expandName = (
 
     return values[placeholder];
   });
+
+/**
+ * Where `tileset` keeps the sprite it calls `name`: `prefix + name + ext`, the record's `name` in the asset store and
+ * the `data-path` of its image in the preload container. Civ1's `terrain/land` is `./assets/terrain/land.png`, as the
+ * import has always stored it, so nobody imports again. Another pack keeps its sprites under a prefix of its own,
+ * `./assets/<id>/`, so the same name in two packs is two keys. Sprites are only ever looked up by this whole key.
+ */
+export const spriteKey = (
+  { storage: { prefix, ext } }: TilesetDescriptor,
+  name: string
+): string => `${prefix}${name}${ext}`;
 
 export default validateDescriptor;

@@ -4,10 +4,11 @@
 //  (`Landscape`: coasts, river mouths, terrain joins, roads and railroads) and the city screen's map, cities seen
 //  across the seam, were added before the renderer's neighbours, directions and city box went through the world's
 //  topology (#88). `--update` rewrites the fixture; set `RENDER_GEOMETRY_DUMP` to a path to write the whole recording
-//  there as well.
+//  there as well, and `RENDER_GEOMETRY_SPRITES` to one to write the sprites the layers asked for and the ones put in the
+//  preload container (tests/ui/spriteKeys.ts reads it, #56).
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
-import { FakeImage, preloadImage } from './lib/fakeCanvas';
+import { FakeImage, askedFor, preloadImage, preloaded } from './lib/fakeCanvas';
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -1093,6 +1094,16 @@ const main = (): void => {
 
     if (process.env.RENDER_GEOMETRY_DUMP) {
       dump(process.env.RENDER_GEOMETRY_DUMP);
+    }
+
+    if (process.env.RENDER_GEOMETRY_SPRITES) {
+      fs.writeFileSync(
+        process.env.RENDER_GEOMETRY_SPRITES,
+        JSON.stringify({
+          asked: [...new Set(askedFor())].sort(),
+          preloaded: preloaded(),
+        })
+      );
     }
 
     if (update) {

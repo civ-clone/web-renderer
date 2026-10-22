@@ -51,8 +51,8 @@ the Tax Collector, Scientist and Entertainer drawn over the men's sprites (#334)
 
 ## Optional assets
 
-Not every extracted sprite is required. The women specialists are deliberately left out of `#requiredAssets`, so
-assets imported before they existed still pass the readiness check.
+Not every extracted sprite is required. The women specialists are deliberately listed under the tileset's
+`assets.optional` rather than `assets.required`, so assets imported before they existed still pass the readiness check.
 
 Code that draws an optional sprite falls back to an older one. `assetStore.firstImported(paths)` returns the first of
 `paths` that has been imported, or the last of them if none has. The city screen's citizens (`renderCitizen` in
@@ -68,13 +68,24 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
   - raw asset records
   - `HTMLImageElement` instances (`getImage`), cached only once the image has loaded
   - scaled canvas results (`getScaled`), keyed by path and scale, cached only once the image is drawable
-- Required-asset list (`#requiredAssets`, 286 paths) used as runtime readiness check.
+- The required sprites (286 for Civ1) as the runtime readiness check, and the optional ones. Both lists come from the
+  tileset descriptor's `assets` (`src/js/UI/tilesets/civ1.json`, through `currentTileset()` in
+  `src/js/UI/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
 - `firstImported(paths)` for optional assets (see above).
 
 The map layers do not read `AssetStore` directly. At startup `Renderer` appends every stored record to `#preload` as
-an `<img data-path="...">`, and the layers look sprites up by path with `getPreloadedImage()` (for example
-`units/settlers` or `city/food`). It returns the preloaded element itself, not a clone, and a blank canvas (with a
-console error) for a path it cannot find. Caches built from those images, such as `replaceColours` and `renderUnit`,
+an `<img data-path="...">`, and the layers look sprites up by name with `getPreloadedImage()` (for example
+`units/settlers` or `city/food`).
+
+A sprite's key, its record's `name` and its image's `data-path`, is the tileset's `storage.prefix + name +
+storage.ext` (`spriteKey` in `src/js/UI/tilesets/TilesetDescriptor.ts`): `./assets/units/settlers.png` for Civ1, as
+the import has always stored it. Another pack keeps its sprites under `./assets/<id>/`. `getPreloadedImage()` matches
+the whole key and nothing else, so a second pack's sprite of the same name is never taken for Civ1's (#56). It used to
+match the end of the key, which would have found either.
+
+It returns the preloaded element itself, not a clone, and a blank canvas for a sprite it cannot find, with one console
+error per missing sprite rather than one per draw. A miss is not remembered: an image appended to `#preload` later is
+found on the next lookup. Caches built from those images, such as `replaceColours` and `renderUnit`,
 hand out shared entries that callers must treat as immutable, and are cleared through `onPreloadedImagesChanged`
 when the preload container changes.
 
@@ -93,15 +104,20 @@ when the preload container changes.
   starts off and only follows the checkbox once it is changed.
 - Browser-specific caveat: Brave fingerprinting can distort imported visuals (noted in README, and shown in the import
   window when `navigator.brave` is present).
-- Required asset list is static and large, so any mismatch in naming/path conventions fails readiness.
+- The required list is large, so any mismatch in naming/path conventions fails readiness. `npm run test:tilesets`
+  checks that the extractor cuts out every sprite the tileset lists, and no other.
 - An image that fails to load is not cached, so a later import can replace it.
 - `npm run test:asset-slices` checks that every unit sprite in `extract-data.json` is cut out at 15×15 (#12).
+- `npm run test:sprite-keys` checks that every sprite the map asks for is found as it was before lookups took the whole
+  key, and that a second pack's sprites are not taken for Civ1's.
 
 ## Rewrite recommendations
 
 - Isolate extraction, validation, and persistence into a dedicated asset service module.
-- Version the asset schema (to support future tilesets/asset packs).
-- Move required-asset manifest to declarative data file instead of hardcoded class field.
+- Version the asset schema (to support future tilesets/asset packs). Done for the tileset descriptor (`schema: 1`,
+  #56); the store's records themselves are still unversioned.
+- Move required-asset manifest to declarative data file instead of hardcoded class field. Done: the tileset
+  descriptor's `assets` lists (#56).
 - Preserve IndexedDB caching, but add migration strategy for asset format changes. Partly addressed: optional assets
   with a fallback (`firstImported`) let new sprites arrive without invalidating an existing import, and a re-import
   extracts only the groups with something missing.
