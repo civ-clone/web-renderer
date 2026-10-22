@@ -258,6 +258,24 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
     );
   }
 
+  const { anchor, overhang } = geometry as {
+    [key: string]: { [key: string]: unknown };
+  };
+
+  if (!Number.isInteger(anchor.x) || !Number.isInteger(anchor.y)) {
+    refuse('geometry.anchor must have a whole x and y in px.');
+  }
+
+  if (
+    !(['top', 'right', 'bottom', 'left'] as const).every((side) =>
+      isWholeNumber(overhang[side], 0)
+    )
+  ) {
+    refuse(
+      'geometry.overhang must have a whole top, right, bottom and left of 0 px or more.'
+    );
+  }
+
   const scales = json.scales;
 
   if (

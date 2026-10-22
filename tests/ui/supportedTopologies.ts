@@ -1,14 +1,17 @@
-// The map grid a new game is on (#89). Only the grids that can be drawn are offered, and while that is only square the
-// question answers itself and is never shown, so New Game opens on the world sizes as it always has; the grid still
-// goes to the engine as `topologyId`, and Earth (square only) never asks. Each grid has its own sizes: square's are
-// New Game's own, isometric's are half as wide and twice as tall, hex's are as tabled, and both of those have even
-// heights. Customize World refuses a size the grid cannot be. The UI builds a world's topology from the grid it says it
-// is on, square when it does not say.
+// The map grid a new game is on (#89). Only the grids that can be drawn are offered: the installed tilesets' that have
+// a projection (#92). While that is only Civ1's square the question answers itself and is never shown, so New Game
+// opens on the world sizes as it always has; the grid still goes to the engine as `topologyId`, and Earth (square only)
+// never asks. Each grid has its own sizes: square's are New Game's own, isometric's are half as wide and twice as tall,
+// hex's are as tabled, and both of those have even heights. Customize World refuses a size the grid cannot be. The UI
+// builds a world's topology from the grid it says it is on, square when it does not say.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
 
-import topologyFor, { topologyName } from '../../src/js/UI/lib/topologyFor';
+import topologyFor, {
+  TopologyId,
+  topologyName,
+} from '../../src/js/UI/lib/topologyFor';
 import worldSizes, {
   customSizeProblem,
   earthWorldSizes,
@@ -26,7 +29,11 @@ import Request from '../../src/js/Engine/Request';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import Transport from '../../src/js/UI/Transport';
+import civ1Json from '../../src/js/UI/tilesets/civ1.json';
 import i18next from 'i18next';
+import { drawableGrids } from '../../src/js/UI/lib/projectionFor';
+import { installedTilesets } from '../../src/js/UI/lib/tilesets';
+import validateDescriptor from '../../src/js/UI/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,
@@ -136,8 +143,68 @@ const text = (element: Element | null): string =>
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
   await import('../../translations/local/en');
 
-  // The grids there are.
+  // The grids there are: the ones the installed tilesets are drawn for.
+  const civ1 = validateDescriptor(civ1Json),
+    // A hex tileset, as one installed with #94 would say.
+    hexStub = validateDescriptor({
+      ...JSON.parse(JSON.stringify(civ1Json)),
+      id: 'hex-stub',
+      name: 'A hex tileset',
+      grid: 'hex-odd-r',
+    });
+
+  expect(
+    "only Civ1's tileset is installed, and it is drawn on square",
+    installedTilesets().map(({ id, grid }) => [id, grid]),
+    [['civ1', 'square']]
+  );
   expect('only square can be drawn for now', supportedTopologies(), ['square']);
+  expect(
+    "the grids are the installed tilesets' own, that there is a projection for",
+    [
+      drawableGrids(),
+      supportedTopologies(installedTilesets(), drawableGrids()),
+    ],
+    [['square'], ['square']]
+  );
+  expect(
+    'a hex tileset is not offered before there is a hex projection (#94)',
+    [supportedTopologies([civ1, hexStub]), supportedTopologies([hexStub])],
+    [['square'], []]
+  );
+
+  // Once there is a hex projection.
+  const withHex: TopologyId[] = ['square', 'hex-odd-r'];
+
+  expect(
+    'a hex tileset adds hex, after square, whichever was installed first',
+    [
+      supportedTopologies([civ1, hexStub], withHex),
+      supportedTopologies([hexStub, civ1], withHex),
+    ],
+    [
+      ['square', 'hex-odd-r'],
+      ['square', 'hex-odd-r'],
+    ]
+  );
+  expect(
+    'a grid two tilesets are drawn for is offered once, and none gives none',
+    [
+      supportedTopologies([civ1, civ1], withHex),
+      supportedTopologies([], withHex),
+    ],
+    [['square'], []]
+  );
+  expect(
+    'a hex tileset alone offers only hex',
+    supportedTopologies([hexStub], withHex),
+    ['hex-odd-r']
+  );
+  expect(
+    'a projection with no tileset drawn for its grid offers nothing',
+    supportedTopologies([civ1], ['staggered-iso', 'hex-odd-r']),
+    []
+  );
   expect(
     'a world that does not say is square, and square is supported',
     [isSupportedTopology(undefined), isSupportedTopology('square')],
@@ -336,8 +403,10 @@ const text = (element: Element | null): string =>
 
   expect('and square is chosen for the player', chosen, ['square']);
 
-  // With more than one (once #92 offers them), it is asked.
-  new MapGridWindow(['square', 'hex-odd-r'], (grid) => chosen.push(grid));
+  // With a hex tileset installed as well, and a projection for it, it is asked, square to start with.
+  new MapGridWindow(supportedTopologies([civ1, hexStub], withHex), (grid) =>
+    chosen.push(grid)
+  );
 
   await settle();
 
@@ -345,6 +414,11 @@ const text = (element: Element | null): string =>
     title: 'Which map grid?',
     options: ['Square', 'Hex'],
   });
+  expect(
+    'square to start with',
+    (latest().querySelector('select') as HTMLSelectElement).value,
+    'square'
+  );
 
   choose('hex-odd-r');
 

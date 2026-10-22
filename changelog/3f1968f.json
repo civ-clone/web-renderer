@@ -1,0 +1,1 @@
+{"version":"0.1.0@3f1968f","date":"2026-10-22T07:28:05.000Z","localChanges":["With auto end of turn on, ending a turn sent a second End Turn, which could end your next turn before it had even started and leave the game saying it was waiting for the other civilizations (#151)."],"externalChanges":{}}

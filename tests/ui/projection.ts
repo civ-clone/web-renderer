@@ -9,6 +9,10 @@ import {
   tileBounds,
 } from '../../src/js/UI/lib/projection';
 import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';
+import civ1Json from '../../src/js/UI/tilesets/civ1.json';
+import currentTileset from '../../src/js/UI/lib/tilesets';
+import projectionFor from '../../src/js/UI/lib/projectionFor';
+import validateDescriptor from '../../src/js/UI/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,
@@ -316,6 +320,177 @@ expect(
   [0, 1, 2, 3, 4, 5, 6, 7]
 );
 expect('no tiles', wrapIndices(3, 3, 8), []);
+
+// The map's projection comes from the tileset (#92): Civ1's square grid gives the squares the map always had, the same
+//  at every tile of every world, at every scale, wrapping or not.
+const civ1 = currentTileset();
+
+worlds.forEach(([width, height]) =>
+  [16, 32, 48, 64, 17].forEach((tileSize) =>
+    [true, false].forEach((wrapVertical) => {
+      const world = dimensions(width, height),
+        fromTileset = projectionFor(civ1, world, tileSize, wrapVertical),
+        byHand = new SquareProjection(tileSize, world, wrapVertical),
+        name = `Civ1 on ${width}x${height} at ${tileSize}px${
+          wrapVertical ? '' : ', stopping at the poles'
+        }`,
+        misses: string[] = [];
+
+      expect(
+        `${name}: the same whole-world answers as squares made by hand`,
+        [
+          fromTileset instanceof SquareProjection,
+          fromTileset.footprint(),
+          fromTileset.worldSize(),
+          fromTileset.wrapPeriod(),
+          fromTileset.overlapsNeighbours(),
+          fromTileset.reach(),
+        ],
+        [
+          true,
+          byHand.footprint(),
+          byHand.worldSize(),
+          byHand.wrapPeriod(),
+          byHand.overlapsNeighbours(),
+          byHand.reach(),
+        ]
+      );
+
+      for (let y = -1; y <= height; y++) {
+        for (let x = -1; x <= width; x++) {
+          const [px, py] = byHand.tileToPixel(x, y),
+            pixels: [number, number][] = [
+              [px, py],
+              [px + tileSize - 1, py + tileSize - 1],
+              [px + Math.floor(tileSize / 2), py - 1],
+            ],
+            found = [
+              fromTileset.tileToPixel(x, y),
+              ...pixels.map(([pixelX, pixelY]) =>
+                fromTileset.pixelToTile(pixelX, pixelY)
+              ),
+              fromTileset.tileSpan(
+                { x: px, y: py, width: tileSize * 2 + 1, height: 1 },
+                tileSize
+              ),
+            ],
+            wanted = [
+              [px, py],
+              ...pixels.map(([pixelX, pixelY]) =>
+                byHand.pixelToTile(pixelX, pixelY)
+              ),
+              byHand.tileSpan(
+                { x: px, y: py, width: tileSize * 2 + 1, height: 1 },
+                tileSize
+              ),
+            ];
+
+          if (JSON.stringify(found) !== JSON.stringify(wanted)) {
+            misses.push(
+              `${x},${y}: ${JSON.stringify(found)}, not ${JSON.stringify(
+                wanted
+              )}`
+            );
+          }
+        }
+      }
+
+      sweep(`${name}: every tile and its pixels are where they were`, misses);
+    })
+  )
+);
+
+// A tileset's own tile size: a 32px square tileset drawn 32px across is the squares Civ1 gives at 2×.
+const tilesetWith = (changes: { [key: string]: unknown }) =>
+    validateDescriptor({
+      ...JSON.parse(JSON.stringify(civ1Json)),
+      ...changes,
+    }),
+  thrown = (fn: () => unknown): string | null => {
+    try {
+      fn();
+
+      return null;
+    } catch (error) {
+      return (error as Error).message;
+    }
+  },
+  stub32 = tilesetWith({
+    id: 'stub-32',
+    tile: { width: 32, height: 32 },
+    geometry: { ...civ1.geometry, columnStep: 32, rowStep: 32 },
+  }),
+  world = dimensions(13, 9),
+  answers = (projection: ReturnType<typeof projectionFor>) => [
+    projection.footprint(),
+    projection.worldSize(),
+    projection.wrapPeriod(),
+    projection.tileToPixel(5, 7),
+    projection.pixelToTile(170, 230),
+  ];
+
+expect(
+  'a 32px tileset at 32px is the same squares as Civ1 at 32px',
+  answers(projectionFor(stub32, world, 32)),
+  answers(projectionFor(civ1, world, 32))
+);
+
+// A tileset the map can't draw yet is refused, saying why, rather than drawn wrong.
+expect(
+  'there is no projection for isometric or hex grids yet',
+  (['staggered-iso', 'hex-odd-r'] as const).map((grid) =>
+    thrown(() => projectionFor(tilesetWith({ id: grid, grid }), world, 32))
+  ),
+  [
+    'Tileset "staggered-iso": there is no projection for the staggered-iso grid yet (#94/#97).',
+    'Tileset "hex-odd-r": there is no projection for the hex-odd-r grid yet (#94/#97).',
+  ]
+);
+
+const squareGeometry = (
+  geometry: { [key: string]: unknown },
+  tile = { width: 16, height: 16 }
+) =>
+  thrown(() =>
+    projectionFor(
+      tilesetWith({
+        id: 'odd',
+        tile,
+        geometry: { ...civ1.geometry, ...geometry },
+      }),
+      world,
+      32
+    )
+  );
+
+expect(
+  "a square grid's tiles are as far apart as they are big, and no row is shifted",
+  [
+    squareGeometry({ oddRowShift: 8 }),
+    squareGeometry({ rowStep: 12 }),
+    squareGeometry({ columnStep: 24 }),
+    squareGeometry({ columnStep: 24, rowStep: 16 }, { width: 24, height: 16 }),
+  ],
+  [
+    'Tileset "odd": a square grid\'s tiles are as far apart as they are wide and tall, and no row is shifted, not 16 × 16 tiles 16 × 16 apart with odd rows 8 across.',
+    'Tileset "odd": a square grid\'s tiles are as far apart as they are wide and tall, and no row is shifted, not 16 × 16 tiles 16 × 12 apart with odd rows 0 across.',
+    'Tileset "odd": a square grid\'s tiles are as far apart as they are wide and tall, and no row is shifted, not 16 × 16 tiles 24 × 16 apart with odd rows 0 across.',
+    'Tileset "odd": a square grid\'s tiles are as far apart as they are wide and tall, and no row is shifted, not 24 × 16 tiles 24 × 16 apart with odd rows 0 across.',
+  ]
+);
+
+const noSpill =
+  'Tileset "odd": a square grid\'s sprites sit in their own tile, with no anchor or overhang, for now.';
+
+expect(
+  "a square grid's sprites stay in their tile",
+  [
+    squareGeometry({ anchor: { x: 0, y: 2 } }),
+    squareGeometry({ overhang: { top: 16, right: 0, bottom: 0, left: 0 } }),
+    squareGeometry({ overhang: { top: 0, right: 0, bottom: 0, left: 1 } }),
+  ],
+  [noSpill, noSpill, noSpill]
+);
 
 finished = true;
 
