@@ -61,7 +61,12 @@ const defaultPortalOptions: PortalSettings = {
 const MAX_PARTIAL_COVERAGE = 0.5,
   // Likewise: a handful of regions is cheaper than the whole canvas, a hundred
   // of them is not.
-  MAX_PARTIAL_REGIONS = 8;
+  MAX_PARTIAL_REGIONS = 8,
+  // Merging the rectangles is quadratic in how many there are, and a change
+  // of government redraws every known square on every layer: thousands of
+  // them, which only ever end in compositing the lot (#488). Past this many,
+  // the whole canvas is cheaper without merging them first.
+  MAX_PARTIAL_RECTS = 256;
 
 export class Portal
   extends EventEmitter<{
@@ -77,6 +82,8 @@ export class Portal
   // Nothing has been composited yet, so the first render cannot be a partial
   // one however little the layers claim to have changed.
   #fullRender: boolean = true;
+  // The layers that were hidden when the canvas was last composited (#488).
+  #hiddenWhenComposited: Set<Map> = new Set();
   #layers: Map[] = [];
   // Whether the view stops at the top and bottom rows of the world rather
   // than wrapping over the poles.
@@ -221,6 +228,10 @@ export class Portal
 
     this.#layers.forEach((layer) => layer.clearDirty());
 
+    this.#hiddenWhenComposited = new Set(
+      this.#layers.filter((layer) => !layer.isVisible())
+    );
+
     this.#fullRender = false;
 
     regions.forEach(({ x, y, width, height }: Rect) => {
@@ -290,18 +301,35 @@ export class Portal
    * out was the only saving left.
    */
   protected dirtyRegions(): Rect[] {
-    const whole = [
+    const canvasArea = this.#canvas.width * this.#canvas.height,
+      whole = [
         { x: 0, y: 0, width: this.#canvas.width, height: this.#canvas.height },
       ],
-      // A hidden layer still reports what it changed: it is hidden by being
-      // left out of the composite, and the pixels it used to contribute have to
-      // be composited over by the layers below it.
+      // A layer hidden since the last composite still counts: the pixels it
+      // contributed then have to be composited over by the layers below it. One
+      // that was hidden then and is hidden now has nothing on the canvas, so
+      // what it redraws while hidden, such as the yields on every square after
+      // a change of government, changes nothing there (#488).
       dirty = this.#layers
-        .filter((layer) => layer.composited())
+        .filter(
+          (layer) =>
+            layer.composited() &&
+            (layer.isVisible() || !this.#hiddenWhenComposited.has(layer))
+        )
         .flatMap((layer) => layer.dirtyRects());
 
     if (dirty.length === 0) {
       return [];
+    }
+
+    // Before merging them, which is quadratic: so many rectangles only ever
+    // ends in compositing the lot, and so does one that covers more than the
+    // share allowed, as what it merges into is at least as big (#488).
+    if (
+      dirty.length > MAX_PARTIAL_RECTS ||
+      dirty.some((rect) => rectArea(rect) > canvasArea * MAX_PARTIAL_COVERAGE)
+    ) {
+      return whole;
     }
 
     const regions = mergeRects(dirty);
@@ -311,7 +339,7 @@ export class Portal
     }
 
     return regions.reduce((total, rect) => total + rectArea(rect), 0) >
-      this.#canvas.width * this.#canvas.height * MAX_PARTIAL_COVERAGE
+      canvasArea * MAX_PARTIAL_COVERAGE
       ? whole
       : regions;
   }
