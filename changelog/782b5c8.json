@@ -1,0 +1,1 @@
+{"version":"0.1.0@782b5c8","date":"2026-10-22T07:26:35.000Z","localChanges":["A city that is short of food now says it will never grow, on the city screen and in City Status, instead of counting its shortfall as progress and showing a number of turns. Production that falls short says Never in the same way (closes #489)."],"externalChanges":{}}
