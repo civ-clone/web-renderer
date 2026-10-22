@@ -114,12 +114,9 @@ export const makeDataFilter =
     }
 
     // Not `available`, which the picker fetches itself (#324). The filter sees the stand-in again when it is the thing
-    //  being walked, so it is not wrapped twice.
-    if (
-      object instanceof CityBuildItem &&
-      !standsInForCityBuild.has(object) &&
-      object.city().player() === player()
-    ) {
+    //  being walked, so it is not wrapped twice. A rival's build, which only an investigated city sends, goes without it
+    //  as well: what it could build would show the rival's advances (#493).
+    if (object instanceof CityBuildItem && !standsInForCityBuild.has(object)) {
       return localFilter(withoutAvailable(object));
     }
 

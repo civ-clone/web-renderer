@@ -169,9 +169,11 @@ expect(
 
 current = them;
 
+// A rival's build, as an investigated city sends it, goes without `available` too: it would show the rival's advances
+//  (#493).
 expect(
-  'once the player is another, the build is no longer its own, and goes as it is',
-  dataFilter(identity)(asData(build)) === build,
+  'once the player is another, the build still goes as the stand-in, without available',
+  dataFilter(identity)(asData(build)) === sent,
   true
 );
 
