@@ -25,6 +25,9 @@
 //
 // After an exchange of knowledge, the computer player says which advance it
 // took, by its nation and the advance's name (#453).
+//
+// English is all there is, so it's what a French browser sees too: everything
+// here is checked with the app's own options and `fr-FR` (#471).
 
 import {
   Babylonian,
@@ -50,6 +53,7 @@ import { PlayerResearch } from '../../src/js/UI/types';
 import Tile from '@civ-clone/core-world/Tile';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
+import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { join } from 'path';
 import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
 import worldSizes from '../../src/js/UI/lib/worldSizes';
@@ -71,7 +75,7 @@ const expect = (description: string, actual: string, expected: string) => {
 };
 
 (async () => {
-  await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
+  await i18next.init({ ...i18nOptions, lng: 'fr-FR' });
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
@@ -80,6 +84,8 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
+
+  expect('Generic.ok (fr-FR)', t('Generic.ok'), 'OK');
 
   // Each world size New Game offers has a label with its dimensions (#55).
   worldSizes.forEach(({ key, width, height }) => {
