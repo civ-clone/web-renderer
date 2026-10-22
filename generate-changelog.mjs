@@ -266,9 +266,22 @@ const externalChanges = async (sha) => {
     return modules;
 };
 
+// A commit whose package.json does not parse (d3c88eb was merged with conflict
+// markers in it) must not stop every later deploy from generating its notes:
+// fall back to the nearest earlier commit whose package.json does parse, and say so.
+const packageJsonAt = (hash) => {
+    try {
+        return JSON.parse(git('show', `${hash}:package.json`));
+    } catch (e) {
+        console.warn(`  ${hash}: package.json does not parse (${e.message.split('\n')[0]}); using ${hash}^'s`);
+
+        return packageJsonAt(`${hash}^`);
+    }
+};
+
 export const entryFor = async (rev) => {
     const hash = git('log', '--format=%h', '-n', '1', rev),
-        { version } = JSON.parse(git('show', `${hash}:package.json`));
+        { version } = packageJsonAt(hash);
 
     return {
         version: `${version}@${hash}`,

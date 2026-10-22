@@ -1,0 +1,1 @@
+{"version":"0.1.0@d3c88eb","date":"2026-10-22T07:46:16.000Z","localChanges":["chore: the asset store takes its list of sprites from the tileset, and the map finds each sprite by its full name, ready for a second tileset (#56)"],"externalChanges":{}}
