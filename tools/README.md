@@ -69,39 +69,6 @@ guess read as a diagnosis and cost a detour. The list is now empty, and the
 causes are written up in
 [`../docs/engine-serialisation/05-engine-plan.md`](../docs/engine-serialisation/05-engine-plan.md#the-two-failing-suites-resolved).
 
-## Stage 1
-
-```
-./tools/civ audit --write
-./tools/civ clone --stage 1
-./tools/civ check-dts --baseline          # optional: snapshot what is on npm
-npm run test:conformance:update           # record the baseline BEFORE converting
-
-node tools/stage1.js --wave 0 --commit    # …through --wave 11
-npm test                                  # conformance + hydration, after each wave
-./tools/civ collisions
-node tools/verify-stage1.js               # no package left with stale compiled output
-```
-
-Then publish, wave by wave:
-
-```
-./tools/civ publish --wave 0        # …through --wave 11
-pnpm install && npm test            # once, after the last wave
-```
-
-`stage1.js` runs the per-package procedure: install if needed, record what was
-already failing, run `codemod/private-fields.js`, compile, format, test, sync.
-It stops at the first genuine failure and commits only what passed every step.
-A package that could not build **before** the change is reported and carried
-past — a pre-existing breakage is not this stage's to fix — but it then holds
-stale compiled output, which is what `verify-stage1.js` is for.
-
-One gap worth knowing: `stage1.js` reports "already converted" and returns
-early, which skips the compile and test checks. A package converted in a run
-that later aborted therefore never got verified. `verify-stage1.js` and
-`civ publish --dry-run` are what caught those.
-
 ## Never symlink a scope directory into a checkout
 
 `simple-ai-client` cannot be installed — around twenty `github:` dependencies,
@@ -121,24 +88,8 @@ so and it does not check that the hoisted links still exist. Recovery is
 `rm -rf node_modules && pnpm install`.
 
 `civ sync --into` copies rather than links precisely so this cannot happen.
-Where a package's own toolchain is unavailable, the stage drivers and the
-publish gate fall back to the renderer's `tsc` and `prettier` by path, which
-needs no symlink at all.
-
-## Stages 2 and 3
-
-```
-node tools/stage2.js --wave N --commit     # Math.random → injected seeded rng
-node tools/stage3.js --all --commit        # registerRules → register(game)
-```
-
-`stage3.js` compiles against a throwaway `tsconfig` that maps the whole
-`@civ-clone` scope onto the renderer's installed tree. These packages ship
-`.ts` beside their `.js` and TypeScript resolves the `.ts` first, so a compile
-needs every transitive dependency's *source* — including one a package has only
-just declared and not installed. Copying 300 packages into each checkout also
-works and is enormous. `paths` is compile-time only, so the emitted JavaScript
-is identical either way.
+Where a package's own toolchain is unavailable, the publish gate falls back
+to the renderer's `tsc` and `prettier` by path, which needs no symlink at all.
 
 ## Tests
 
@@ -148,7 +99,6 @@ is identical either way.
 | `npm run test:conformance -- --twice` | The run is deterministic. |
 | `npm run arena -- --self-check` | The AI arena changes no play: two copies of the baseline AI, seated alternately, reproduce the conformance fixture, and every seat plays the same whichever copy sat in it. Not part of `npm test`; `npm run arena -- --candidate <ref>` is the comparison itself (`docs/arena.md`). |
 | `civ duplicates` | No `@civ-clone` package is installed twice. Two copies are two classes, so `instanceof` across them is false and nothing reports it. Run it after any install, before trusting a conformance result. |
-| `node tools/stage4.js --all` | Re-run is a no-op: an already-declared class is skipped, so a package with nothing left to say drops out of `--all` on its own. |
 | `npm run test:transient` | The `transient` declarations take effect — names are real fields, `allTransient()` stays additive across the prototype chain, state survives, and `stateKeys()` is narrower than `Object.keys()` at all. |
 | `civ typecheck` | Every checkout still compiles. The only gate here that is not per-package, and the only one that could have caught core-data-object@0.1.14 breaking 22 of them. |
 | `civ stale` | Every installed copy matches its checkout. A suite cannot exercise code that is not in the tree — this is what a false "Stage 3 verified" looked like. |

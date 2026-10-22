@@ -2,18 +2,7 @@ import { Window, IWindow, WindowOptions } from './Window';
 
 export interface INotificationWindow extends IWindow {}
 
-const notificationQueue: [
-  NotificationWindow,
-  boolean,
-  (...args: any[]) => void
-][] = [];
-
-const hasOpenWindow = (): boolean =>
-  !!document.querySelector('div.notificationWindow');
-
-export interface NotificationWindowOptions extends WindowOptions {
-  queue?: boolean;
-}
+export interface NotificationWindowOptions extends WindowOptions {}
 
 export class NotificationWindow extends Window implements INotificationWindow {
   #options: NotificationWindowOptions = {};
@@ -28,7 +17,6 @@ export class NotificationWindow extends Window implements INotificationWindow {
       canClose: true,
       canMaximise: false,
       classes: 'notificationWindow',
-      queue: true,
       ...passedOptions,
     };
 
@@ -56,38 +44,14 @@ export class NotificationWindow extends Window implements INotificationWindow {
     });
   }
 
-  close(): void {
-    super.close();
-
-    if (notificationQueue.length && hasOpenWindow()) {
-      const [notification, focus, resolve] = notificationQueue.shift()!;
-
-      notification.display(focus);
-
-      resolve();
-    }
-  }
-
   display(focus = true): Promise<void> {
-    return new Promise((resolve) => {
-      if (hasOpenWindow()) {
-        notificationQueue.push([this, focus, resolve]);
+    super.display();
 
-        return;
-      }
-
-      super.display();
-
-      if (!focus) {
-        resolve();
-
-        return;
-      }
-
+    if (focus) {
       this.element().focus();
+    }
 
-      resolve();
-    });
+    return Promise.resolve();
   }
 }
 

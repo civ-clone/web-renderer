@@ -17,7 +17,6 @@
         sassPlugin(),
       ],
       loader: {
-        '.build': 'text',
         '.jpg': 'file',
         '.png': 'dataurl',
         '.svg': 'dataurl'

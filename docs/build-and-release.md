@@ -182,8 +182,8 @@ entries up to its parent. Those commits stay in the history and in the notes.
 
 `node generate-changelog.mjs <sha>` prints a single entry, and
 `generate-changelog.sh <sha>` writes it to `changelog/<sha>.json`.
-`generate-changelog-combined.sh` is retired — it rebuilt `releases.json` from
-scratch, which would delete the `0.0.0` entry.
+There is no script to rebuild `releases.json` from scratch: doing so would
+delete the `0.0.0` entry.
 
 ### 3. Push `main`
 
