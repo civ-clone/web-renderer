@@ -183,7 +183,7 @@ const observe = async (): Promise<{ [check: string]: unknown }> => {
 
   engine.emit('game:retirement-warning');
   results['the retirement warning'] = taken();
-
+  // A cheat sends its patch itself, with the player's actions, as what can be bought turns on the gold there is (#494).
   // A cheat sends its patch itself.
   deliver('cheat', { name: 'GrantGold', value: { amount: 10 } });
   results['GrantGold'] = [taken(), granted.splice(0)];
@@ -223,7 +223,7 @@ const run = async (): Promise<void> => {
       'gameDataPatch(home,city)',
     ],
     'the retirement warning': ['gameNotification(Game.retirement-warning)'],
-    GrantGold: [['gameDataPatch(treasury)'], [10]],
+    GrantGold: [['gameDataPatch(treasury,Player-1,Player-1)'], [10]],
     topCities: ['topCities'],
     'an action in the turn under way': [[{ name: 'EndTurn' }], undefined],
   });
