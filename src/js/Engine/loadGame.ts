@@ -16,6 +16,7 @@ import {
   stripInteractionCollaborators,
 } from './diplomacy';
 import { plugins } from '../plugins';
+import { registerBarbarianClasses } from './barbarians';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 
 declare global {
@@ -116,6 +117,7 @@ export const restoreGame = (
   // every civilisation in the game.
   registerClasses(defaultGame);
   registerDiplomacyClasses(defaultGame);
+  registerBarbarianClasses(defaultGame);
 
   engine.registerPlugins(plugins);
 

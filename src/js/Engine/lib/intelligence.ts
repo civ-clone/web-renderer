@@ -43,6 +43,7 @@ import { Gold } from '@civ-clone/library-city/Yields';
 import { Palace } from '@civ-clone/library-city/CityImprovements';
 import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import Player from '@civ-clone/core-player/Player';
+import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 export type IntelligenceAffair = {
@@ -208,7 +209,7 @@ const details = (
   };
 };
 
-/** A row for each civilization `reader` has met, in the order they joined the game. */
+/** A row for each civilization `reader` has met, in the order they joined the game. Never the barbarians (#169). */
 export const intelligenceRows = (
   reader: Player,
   hasMet: (player: Player) => boolean,
@@ -216,7 +217,9 @@ export const intelligenceRows = (
 ): IntelligenceRow[] =>
   dependencies.playerRegistry
     .entries()
-    .filter((player) => player !== reader && hasMet(player))
+    .filter(
+      (player) => player !== reader && !isBarbarian(player) && hasMet(player)
+    )
     .map((player) => {
       const colors = player
         .civilization()

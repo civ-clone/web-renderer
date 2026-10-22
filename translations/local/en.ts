@@ -629,6 +629,15 @@ i18next.addResources('en', 'notification', {
   'Player.defeated.unmet-by.body':
     '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
   'Player.defeated.unmet-by.title': 'Defeated!',
+  'Barbarians.landing.body':
+    'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
+  'Barbarians.landing.title': 'Barbarians!',
+  'Barbarians.uprising.body':
+    'Travellers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+  'Barbarians.uprising.title': 'Barbarian uprising',
+  'Barbarians.uprising.guerrilla.body':
+    'Travellers report: Guerrilla uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+  'Barbarians.uprising.guerrilla.title': 'Guerrilla uprising',
   'Player.respawned.body':
     'Where $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) once stood, a new civilization has arisen.',
   'Player.respawned.title': 'A new civilization',

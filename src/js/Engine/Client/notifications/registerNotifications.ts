@@ -10,6 +10,7 @@ import Engine from '@civ-clone/core-engine/Engine';
 import { NotificationContext, NotificationTable } from './NotificationContext';
 import { Disposer } from '../ClientContext';
 import Notifier from '../Notifier';
+import { barbarianNotifications } from './barbarians';
 import cityNotifications from './city';
 import diplomatNotifications from './diplomat';
 import playerNotifications from './player';
@@ -20,6 +21,7 @@ export const notificationTables: NotificationTable[] = [
   unitNotifications,
   diplomatNotifications,
   playerNotifications,
+  barbarianNotifications,
 ];
 
 // The order the client registered these listeners in when they were part of it, kept. Only the order of one event's
@@ -54,6 +56,8 @@ export const registrationOrder: string[] = [
   'player:spaceship:lost',
   'player:spaceship:landed',
   'player:declaration-expired',
+  'barbarians:landed',
+  'barbarians:uprising',
 ];
 
 export const registerNotifications = (
