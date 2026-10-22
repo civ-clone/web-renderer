@@ -80,7 +80,14 @@ export class LockedSlider extends Element {
   }
 
   set(value: string): void {
-    value = Math.max(parseInt(value, 10), 0).toString();
+    const parsed = parseInt(value, 10);
+
+    // An empty or half-typed number box ('', '-') isn't a value yet: leave every slider as it is until it is (#485).
+    if (Number.isNaN(parsed)) {
+      return;
+    }
+
+    value = Math.min(Math.max(parsed, 0), 100).toString();
 
     if (this.#range.value !== value) {
       this.#range.value = value;
