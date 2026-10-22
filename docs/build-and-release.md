@@ -151,10 +151,11 @@ What an entry contains:
 - **Local changes** come from the commit message. Written one change per line,
   each line is a bullet. Written as a subject, a blank line and a body, the
   subject is dropped and each body paragraph becomes a bullet, with wrapped
-  lines joined and `- ` items kept separate. Trailers such as `Co-Authored-By:`
-  are dropped — but only below the first line, because `release:` and every
-  other conventional-commit subject is shaped exactly like a trailer, and a
-  commit with no body would otherwise contribute nothing at all. So a commit
+  lines joined and `- ` items kept separate. Trailers at the end of the message
+  are dropped however many blank lines come before them, but only known keys
+  (`Co-Authored-By:`, `Claude-Session:`, `Signed-off-by:` and the like), so a
+  closing `Note: …` stays and a `release:` subject is never mistaken for one.
+  A paragraph that is only `Closes #nn.` is dropped too. So a commit
   message *is* its release note, and is worth writing for a player as well as a
   reviewer. `npm run test:changelog` covers the shapes.
 - **External changes** compare the `@civ-clone` packages resolved in the

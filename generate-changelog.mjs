@@ -34,29 +34,61 @@ const git = (...args) =>
 // Written one change per line — every commit before 2026 — each line is a
 // bullet, as it always was. Written as a subject, a blank line and a body, the
 // subject is dropped and the body becomes the bullets: one per paragraph, with
-// hard-wrapped lines joined back up and `- ` items kept as their own. Trailers
-// (`Co-Authored-By:` and the like) are not changes and are dropped. A message
+// hard-wrapped lines joined back up and `- ` items kept as their own. A message
 // that is a subject and nothing else keeps its subject.
 //
-// A trailer is only a trailer below the first line: `release: …`, `docs: …` and
-// every other conventional-commit subject matches `TRAILER` exactly as
-// `Co-Authored-By: …` does, and dropping those left a body-less commit with
-// nothing at all to show.
-const TRAILER = /^[A-Za-z][\w-]*: \S/;
+// Trailers (`Co-Authored-By:` and the like) are not changes and are dropped,
+// wherever they sit at the end of the message: after one blank line, several,
+// or none (#475). Only the keys in `TRAILERS` count: `Note: …` or `Warning: …`
+// closing a body is a sentence for the player, and every conventional-commit
+// subject (`release: …`, `docs: …`) has the same shape as a trailer too.
+//
+// A paragraph that only closes an issue (`Closes #46.`) says nothing to a
+// player, so it is dropped rather than shown as a bullet of its own.
+const TRAILERS = [
+    'acked-by',
+    'change-id',
+    'claude-session',
+    'co-authored-by',
+    'helped-by',
+    'reported-by',
+    'reviewed-by',
+    'signed-off-by',
+    'suggested-by',
+    'tested-by',
+];
+
+const isTrailer = (line) => {
+    const match = /^([A-Za-z][\w-]*): \S/.exec(line.trim());
+
+    return match !== null && TRAILERS.includes(match[1].toLowerCase());
+};
+
+const CLOSES_ONLY = /^(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?) #\d+\.?$/i;
 
 export const toBullets = (message) => {
-    const paragraphs = message.replace(/\r/g, '').trim().split(/\n[ \t]*\n/)
-        .map((paragraph) => paragraph.split('\n'))
-        .filter((lines) => lines.some((line) => line.trim() !== ''));
+    const paragraphs = message.replace(/\r/g, '').trim().split(/\n(?:[ \t]*\n)+/)
+        .map((paragraph) => paragraph.split('\n').filter((line) => line.trim() !== ''))
+        .filter((lines) => lines.length > 0);
 
-    while (paragraphs.length > 1 && paragraphs[paragraphs.length - 1].every((line) => TRAILER.test(line.trim()))) {
+    // Trailing trailers, from the end of the message back; never the subject.
+    while (paragraphs.length > 0) {
+        const last = paragraphs[paragraphs.length - 1];
+
+        while (last.length > (paragraphs.length === 1 ? 1 : 0) && isTrailer(last[last.length - 1])) {
+            last.pop();
+        }
+
+        if (last.length > 0) {
+            break;
+        }
+
         paragraphs.pop();
     }
 
     if (paragraphs.length === 1) {
-        const lines = paragraphs[0].map((line) => line.trim()).filter((line) => line !== '');
-
-        return lines.filter((line, index) => index === 0 || !TRAILER.test(line));
+        return paragraphs[0].map((line) => line.trim())
+            .filter((line, index) => index === 0 || (!isTrailer(line) && !CLOSES_ONLY.test(line)));
     }
 
     const bullets = paragraphs.slice(1).flatMap((lines) => lines
@@ -71,7 +103,8 @@ export const toBullets = (message) => {
             }
 
             return items;
-        }, []));
+        }, []))
+        .filter((bullet) => !CLOSES_ONLY.test(bullet));
 
     return bullets.length > 0 ? bullets : paragraphs[0].map((line) => line.trim());
 };
