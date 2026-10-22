@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@6dc72db","date":"2026-10-22T07:20:02.000Z","localChanges":["chore: the map takes its tile size, its scales and its label sizes from the tileset, rather than fixed numbers (#56)"],"externalChanges":{}}
+,
+{"version":"0.1.0@fca3564","date":"2026-10-22T07:13:53.000Z","localChanges":["chore: describe the Civ1 tileset (its tile size, its sprites and how they are named), ready for other tilesets (#56)"],"externalChanges":{}}
+,
 {"version":"0.1.0@370a452","date":"2026-10-21T21:45:19.000Z","localChanges":["chore: waking a sleeping or fortified unit is now an order the engine offers, like fortifying or sleeping (closes #160)"],"externalChanges":{"base-unit-action-activate":{"status":"added","log":["chore: scaffold","feat: Activate, waking a unit as an order like any other","Merge pull request #1 from civ-clone/feat/activate"]},"civ1-unit":{"status":"updated","log":["feat: offer Activate to a unit that's busy or fortified, so waking it is an order like any other (civ-clone/web-renderer#160)","fix: Activate isn't offered to cargo stowed aboard a transport, and library-unit ^0.1.13 for Activate","Merge pull request #30 from civ-clone/feat/activate"]},"library-unit":{"status":"updated","log":["feat: Activate, from base-unit-action-activate (civ-clone/web-renderer#160)","Merge pull request #9 from civ-clone/feat/activate"]},"simple-ai-client":{"status":"updated","log":["feat: computer players wake their units with the Activate order where the ruleset offers one (civ-clone/web-renderer#160)","Merge pull request #64 from civ-clone/feat/activate"]}}}
 ,
 {"version":"0.1.0@f45ea7c","date":"2026-10-22T06:53:41.000Z","localChanges":["docs: how Civ1's AdLib music driver works, for bringing its music to civ.one"],"externalChanges":{}}

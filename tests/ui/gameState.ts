@@ -7,8 +7,9 @@
 // the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
 // tells the world whether its tiles were refilled; that a `PlayerTile` a patch
 // carries is queued; that what changed reaches `DataChanges`; that a second
-// `gameData` is the map later patches apply to; and that the map is pruned on
-// schedule and the pruned ids forgotten.
+// `gameData` is the map later patches apply to; that the map is pruned on
+// schedule and the pruned ids forgotten; and that the object count is kept as
+// patches go, without counting the whole map (#480).
 
 import GameState, {
   FrameScheduler,
@@ -505,6 +506,92 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   check(
     'the data still holds the player',
     (state.data().player.units as PlainObject[]).length === 1
+  );
+}
+
+// The object count is kept as patches add and remove objects, not counted
+// on every update (#480): a late game's map holds ~120k.
+{
+  const objectMap = makeMap();
+  let enumerations = 0;
+
+  objectMap.objects = new Proxy(objectMap.objects, {
+    ownKeys: (target) => {
+      enumerations++;
+
+      return Reflect.ownKeys(target);
+    },
+  });
+
+  const { state } = setup(objectMap),
+    size = Object.keys(makeMap().objects).length;
+
+  state.update();
+  enumerations = 0;
+
+  state.applyPatches([
+    moves('Unit-1', 0),
+    update('Unit-3', unit('Unit-3')),
+    // The player loses Unit-2.
+    update('Player-1', {
+      _: 'Player',
+      id: 'Player-1',
+      actions: [],
+      units: [ref('Unit-1')],
+      world: ref('World-1'),
+    }),
+    { 'Unit-2': { type: 'remove' } },
+    // Not in the map: nothing to count.
+    { 'Unit-9': { type: 'remove' } },
+  ]);
+
+  check('a patch does not enumerate the map', enumerations === 0);
+  check(
+    'a new object is counted, a removed one uncounted',
+    state.currentObjectCount() === size
+  );
+
+  state.applyPatches([
+    update(
+      'Player-1',
+      {
+        _: 'Player',
+        id: 'Player-1',
+        actions: [],
+        units: [ref('Unit-1'), ref('Unit-4'), ref('Unit-5')],
+        world: ref('World-1'),
+      },
+      {
+        'Unit-4': unit('Unit-4'),
+        'Unit-5': unit('Unit-5'),
+        'Unit-1': unit('Unit-1'),
+      }
+    ),
+  ]);
+
+  check(
+    "a side-table's new objects are counted",
+    state.currentObjectCount() === size + 2
+  );
+  check('nor does the next patch', enumerations === 0);
+
+  state.replace(makeMap());
+
+  check('a replaced map is counted', state.currentObjectCount() === size);
+}
+
+// After a prune, the next update counts what the prune left.
+{
+  const objectMap = makeMap(4, 5000),
+    { state } = setup(objectMap);
+
+  state.update();
+  state.applyPatches([update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 5 })]);
+  state.applyPatches([moves('Unit-1', 0)]);
+
+  check(
+    'the count after a prune is what is left',
+    state.currentObjectCount() === Object.keys(objectMap.objects).length
   );
 }
 

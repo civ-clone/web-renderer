@@ -53,6 +53,10 @@ export class GameState {
   //  all accounted for.
   #changedIds = new Set<string>();
   #currentObjectCount: number;
+  // How many objects the map holds, kept as patches add and remove them:
+  //  counting the keys of a late game's map on every update cost ~12 ms
+  //  (#480).
+  #objectCount: number;
   #currentTurn: number;
   #data: GameData;
   #frames: FrameScheduler;
@@ -88,12 +92,11 @@ export class GameState {
 
     this.#data = this.#reconstituter.rebuild(objectMap, null) as GameData;
 
-    this.#pruneSchedule = new PruneSchedule(
-      Object.keys(objectMap.objects).length
-    );
+    this.#objectCount = Object.keys(objectMap.objects).length;
+    this.#pruneSchedule = new PruneSchedule(this.#objectCount);
 
     this.#currentTurn = Number(this.#data?.turn?.value ?? 0);
-    this.#currentObjectCount = Object.keys(objectMap.objects).length;
+    this.#currentObjectCount = this.#objectCount;
   }
 
   /** The data as last rebuilt. The same object between full rebuilds: it is refilled in place. */
@@ -132,6 +135,12 @@ export class GameState {
   applyPatches(patches: DataPatch[]): void {
     applyDataPatches(this.#objectMap, patches, {
       changed: (id) => this.#changedIds.add(id),
+      set: (id, value, previous) => {
+        if (previous === undefined) {
+          this.#objectCount++;
+        }
+      },
+      removed: () => this.#objectCount--,
       // Since we only use the queued tiles for x and y this should be fine...
       tile: (tile) => this.#tiles.queueTile(tile as Tile),
     });
@@ -152,6 +161,7 @@ export class GameState {
    */
   replace(objectMap: ObjectMap): void {
     this.#objectMap = objectMap;
+    this.#objectCount = Object.keys(objectMap.objects).length;
 
     this.#update(objectMap, true);
   }
@@ -203,17 +213,17 @@ export class GameState {
     );
 
     const turnValue = Number(this.#data?.turn?.value ?? 0),
-      objectCount = Object.keys(objectMap.objects).length;
+      objectCount = this.#objectCount;
 
     this.#currentTurn = turnValue;
     this.#currentObjectCount = objectCount;
 
     if (this.#pruneSchedule.due(turnValue, objectCount)) {
-      this.#reconstituter.forget(pruneObjectMap(objectMap));
-      this.#pruneSchedule.pruned(
-        turnValue,
-        Object.keys(objectMap.objects).length
-      );
+      const removedIds = pruneObjectMap(objectMap);
+
+      this.#objectCount -= removedIds.length;
+      this.#reconstituter.forget(removedIds);
+      this.#pruneSchedule.pruned(turnValue, this.#objectCount);
     }
 
     // Refilled when a patch re-sent the world, as it does for a tile newly

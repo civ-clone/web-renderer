@@ -1,0 +1,1 @@
+{"version":"0.1.0@6dc72db","date":"2026-10-22T07:20:02.000Z","localChanges":["chore: the map takes its tile size, its scales and its label sizes from the tileset, rather than fixed numbers (#56)"],"externalChanges":{}}
