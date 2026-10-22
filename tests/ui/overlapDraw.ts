@@ -956,6 +956,8 @@ const probe = (Type: typeof Map): any => {
     #projection: any = null;
     #wraps = true;
     drawn = 0;
+    // Each place a tile was drawn, as `x,y at px,py`, with a `|` before each region redrawn.
+    drawnAt: string[] = [];
 
     useProjection(make: ((layer: any) => Projection) | null): void {
       this.#make = make;
@@ -997,8 +999,15 @@ const probe = (Type: typeof Map): any => {
       return this.#projection;
     }
 
+    protected redrawRegion(rect: Rect): void {
+      this.drawnAt.push('|');
+
+      super.redrawRegion(rect);
+    }
+
     protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
       this.drawn++;
+      this.drawnAt.push(`${tile.x},${tile.y} at ${offsetX},${offsetY}`);
 
       super.drawTile(tile, offsetX, offsetY);
     }
@@ -1596,6 +1605,90 @@ caught(
   square,
   { ...units, name: 'UnitsWithoutReach', Type: UnitsWithoutReach },
   'updating a tile leaves what a full redraw would'
+);
+
+// A terrain layer draws an updated tile's neighbours again too, as its terrain joins up with theirs, but each tile only
+//  once however many of the updated tiles it is next to (#488). The tiles an update names are copies, as a patch's
+//  are, and the world has no tile at all for one square, so it gives a new unseen one each time it is asked.
+const eachTileOnce = (projection: ProjectionSpec, spec: LayerSpec): void => {
+  const [scenario] = scenarios,
+    {
+      world: [width, height],
+      scale,
+      wrapVertical,
+      canvas,
+      origin,
+    } = scenario,
+    world = new World({
+      width,
+      height,
+      tiles: makeWorld(width, height)
+        .tiles()
+        .filter(({ x, y }) => x !== 4 || y !== 4),
+    } as any),
+    { layer } = makeLayer(
+      spec,
+      projection,
+      world,
+      scale,
+      wrapVertical,
+      canvas,
+      origin
+    ),
+    copy = (x: number, y: number): Tile => ({ ...world.get(x, y) }),
+    name = `${spec.name} on ${projection.name}`,
+    updates: [string, Tile[], number | null][] = [
+      ['one tile', [copy(2, 2)], 9],
+      [
+        'the eight tiles around an unseen one',
+        [3, 4, 5].flatMap((x) =>
+          [3, 4, 5].filter((y) => x !== 4 || y !== 4).map((y) => copy(x, y))
+        ),
+        25,
+      ],
+      [
+        'every tile, twice',
+        [...world.tiles(), ...world.tiles()].map(({ x, y }) => copy(x, y)),
+        null,
+      ],
+    ];
+
+  updates.forEach(([description, tiles, square]) => {
+    layer.drawnAt = [];
+    layer.update(tiles);
+
+    // Where tiles are redrawn by region, a place reaching two of them is drawn in each, clipped to it, so no pixel is
+    //  drawn twice; within a region, and where tiles are drawn alone, a place is drawn once.
+    const drawnAt: string[] = layer.drawnAt,
+      regions: string[][] = [[]];
+
+    drawnAt.forEach((place) =>
+      place === '|' ? regions.push([]) : regions[regions.length - 1].push(place)
+    );
+
+    const repeated = regions.flatMap((places) =>
+      places.filter((place, index) => places.indexOf(place) !== index)
+    );
+
+    sweep(
+      `${name}, updating ${description}: each place is drawn once`,
+      repeated
+    );
+
+    if (projection.name === 'square' && square !== null) {
+      expect(
+        `${name}, updating ${description}: the tiles and their neighbours are drawn`,
+        new Set(drawnAt.map((place) => place.split(' ')[0])).size,
+        square
+      );
+    }
+  });
+};
+
+projectionSpecs.forEach((projection) =>
+  layerSpecs
+    .filter(({ name }) => name === 'Landscape' || name === 'Fog')
+    .forEach((spec) => eachTileOnce(projection, spec))
 );
 
 // A city can go while the map scrolls, before the update that says so reaches the layer: the strip the scroll uncovers
