@@ -266,11 +266,12 @@ export const registerPatchEvents = (
     })
   );
 
-  // A government's yields reach every tile and city, so a change of government resends them all: whatever changed
-  //  it, a revolution, a new government chosen, or one that collapsed.
+  // A government's yields reach every city and many squares, so a change of government sends the cities and the
+  //  squares whose yields it changed (#488): whatever changed it, a revolution, a new government chosen, or one that
+  //  collapsed.
   on('player:government:changed', (player: Player) => {
     if (player === ctx.player()) {
-      ctx.patches.allTilesAndCities();
+      ctx.patches.governmentChanged();
     }
   });
 

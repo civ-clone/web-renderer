@@ -15,6 +15,7 @@ import PlayerTreasury from '@civ-clone/core-treasury/PlayerTreasury';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
+import Yield from '@civ-clone/core-yield/Yield';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
@@ -42,6 +43,28 @@ import {
 
 type DataPatchValue = Parameters<DataQueue['add']>[1];
 
+/**
+ * The yields the engine holds for `tile` as `player` sees it, or `undefined` if it has none: `Tile` keeps them until
+ *  something that changes them makes it forget them, but has no way to ask for them without working them out again,
+ *  which would give the new government's yields once a change of government is under way (#488). Anything but a list
+ *  of yields there is taken as none, so the square goes.
+ */
+const cachedYields = (tile: Tile, player: Player): Yield[] | undefined => {
+  const cache = (tile as unknown as { _yieldCache?: unknown })._yieldCache,
+    cached = cache instanceof Map ? cache.get(player) : undefined;
+
+  return Array.isArray(cached) &&
+    cached.every((tileYield) => tileYield instanceof Yield)
+    ? cached
+    : undefined;
+};
+
+// What a tile's yields send, each kind with what it is made up of, to compare.
+const yieldsKey = (yields: Yield[]): string =>
+  JSON.stringify(
+    yields.map((tileYield) => [tileYield.constructor.name, tileYield.values()])
+  );
+
 export class PlayerPatches {
   #actions: ActionsState;
   #dataFilter: DataFilter;
@@ -54,6 +77,8 @@ export class PlayerPatches {
   #queued: Set<string> = new Set();
   // The tiles in the queue, each sent once a flush (#138).
   #queuedTiles: Set<PlayerTile> = new Set();
+  // The tiles a change of government queued, sent only if their yields changed (#488). See `governmentChanged`.
+  #governmentTiles: Set<PlayerTile> = new Set();
   #transport: Transport<TransportDataMap>;
 
   constructor(
@@ -380,17 +405,61 @@ export class PlayerPatches {
   }
 
   /**
-   * A government's yields reach every tile and city, so a change of government resends them all. Built when the patch is
-   *  sent: `player:government:changed` is raised before the tiles' yields are worked out again.
+   * A government's yields reach every city, and every square that yields enough of something to be docked or given a
+   *  bonus, so a change of government sends every city and every square whose yields it changed (#488). Most squares
+   *  yield the same under the new government as under the old: going into Anarchy from Despotism changes none.
+   *
+   * `player:government:changed` is raised before the engine forgets the squares' yields, so what each yielded under the
+   *  old government is still there to compare with what it yields once the patch is built. A square with none, which
+   *  the engine had forgotten already, goes regardless. A square something else in the same flush sends goes in full
+   *  from there. A second change in the same flush keeps the yields from before the first, which the frontend holds.
    */
-  allTilesAndCities(): void {
-    playerWorldRegistryInstance
-      .getByPlayer(this.#player())
-      .forEach((playerTile) => this.tile(playerTile));
+  governmentChanged(): void {
+    const player = this.#player();
 
-    cityRegistryInstance
-      .getByPlayer(this.#player())
-      .forEach((city) => this.city(city));
+    playerWorldRegistryInstance.getByPlayer(player).forEach((playerTile) => {
+      if (
+        this.#queuedTiles.has(playerTile) ||
+        this.#governmentTiles.has(playerTile)
+      ) {
+        return;
+      }
+
+      // Worked out now, as the yields themselves could be changed in place before the patch is built.
+      let before: string | undefined;
+
+      try {
+        const cached = cachedYields(playerTile.tile(), player);
+
+        before = cached === undefined ? undefined : yieldsKey(cached);
+      } catch {
+        before = undefined;
+      }
+
+      this.#governmentTiles.add(playerTile);
+
+      this.#dataQueue.update(playerTile.id(), () => {
+        if (this.#queuedTiles.has(playerTile)) {
+          return undefined;
+        }
+
+        // Anything that goes wrong comparing them sends the square, rather than leaving the frontend's as it was.
+        try {
+          if (
+            before !== undefined &&
+            before === yieldsKey(playerTile.yields())
+          ) {
+            return undefined;
+          }
+        } catch {
+          // Sent in full, below.
+        }
+
+        return serialiseTile(this.#dataFilter, playerTile);
+      });
+    });
+
+    cityRegistryInstance.getByPlayer(player).forEach((city) => this.city(city));
   }
 
   // Holds every flush while `fn` runs, as the action listener does while an action is handled, awaited talks and all,
@@ -417,6 +486,7 @@ export class PlayerPatches {
     } finally {
       this.#dataQueue.clear();
       this.#queuedTiles.clear();
+      this.#governmentTiles.clear();
       this.#queued.clear();
     }
   }
