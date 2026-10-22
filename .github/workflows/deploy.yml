@@ -8,7 +8,7 @@
 #
 # The release notes are generated here, for every commit after the newest
 # entry in `changelog/releases.json` up to and including the one being built,
-# because `ReleaseWindow` bundles that file. They are not pushed back to `main`,
+# because the build copies that file into `dist/` for `ReleaseWindow`. They are not pushed back to `main`,
 # which would trigger this workflow again. The next commit made on top of
 # `main` carries them instead (`npm run release:changelog`), and since an entry
 # is built only from git and the lockfile, it comes out the same.
@@ -62,9 +62,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node generate-changelog.mjs --release
 
-      # Typechecks src/, then the conformance, hydration, isolation, transient,
-      # inject and save suites. A deploy that skipped these would be the only
-      # place the renderer ships without them.
+      # Typechecks src/ and tests/, then every suite. A deploy that skipped
+      # these would be the only place the renderer ships without them.
       - run: npm test
 
       - run: npm run build
@@ -84,7 +83,16 @@ jobs:
           BUILD: ${{ github.sha }}
         run: |
           rsync -a --delete dist/ site/dist/
-          cp index.html site/index.html
+
+          # The build on the stylesheet's and script's URLs, as frontend.js puts
+          # it on the worker's (#476): the site is served with a ten-minute
+          # cache, and a cached frontend.js from the last deploy must not run
+          # with this deploy's backend.js, or a cached app.css ask for an image
+          # rsync has just deleted.
+          VERSION="$(node -p "encodeURIComponent(require('./build.json').version)")"
+          sed -e "s#dist/app\.css#dist/app.css?v=${VERSION}#" \
+            -e "s#dist/frontend\.js#dist/frontend.js?v=${VERSION}#" \
+            index.html > site/index.html
 
           cd site
 

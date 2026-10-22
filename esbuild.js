@@ -49,6 +49,14 @@
 
   build(buildOptions)
     .then(() => {
+      // Fetched by the Releases window when it opens, rather than bundled into
+      // frontend.js (#476).
+      require('fs').copyFileSync(
+        'changelog/releases.json',
+        'dist/releases.json'
+      );
+
+
       console.log('\x1b[32mdone.\x1b[0m');
     })
     .catch((e) => {
