@@ -480,6 +480,77 @@ engine.on('turn:start', (turn: number): void => {
     'ModifyUnit on an unknown unit should change and send nothing'
   );
 
+  // 10. Cheats that change what the player can do resend the player's actions (#494): moves taken from our unit leave it
+  //     nothing to do, and granting the advance being researched makes Choose Research due at once.
+  const patchesSince = (before: number): DataPatch[] =>
+      (sent.gameDataPatch ?? []).slice(before).flat(),
+    actionsPatched = (patches: DataPatch[], index: string): any[] =>
+      patches
+        .filter(
+          (patch) =>
+            localPlayer.id() in patch && patch[localPlayer.id()].index === index
+        )
+        .map((patch) => patch[localPlayer.id()].value),
+    stillBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'ModifyUnit',
+    value: { unitId: localUnit.id(), properties: { moves: 0 } },
+  });
+
+  assert(
+    actionsPatched(patchesSince(stillBatchesBefore), 'actions').length > 0,
+    "ModifyUnit on our unit should resend the player's actions"
+  );
+
+  if (localResearch.researching() === null) {
+    localResearch.research(localResearch.available()[0]);
+  }
+
+  const Researching = localResearch.researching()!;
+
+  // Settles what the frontend holds of the actions with something being researched.
+  trigger('cheat', { name: 'GrantGold', value: { amount: 1 } });
+
+  const grantBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'GrantAdvance',
+    value: { advances: [Researching.name] },
+  });
+
+  assert(
+    localResearch.completed(Researching) &&
+      localResearch.researching() === null,
+    `granting ${Researching.name} should leave nothing researched`
+  );
+  assert(
+    actionsPatched(patchesSince(grantBatchesBefore), 'mandatoryActions').some(
+      (value) => JSON.stringify(value).includes('ChooseResearch')
+    ),
+    'granting the advance being researched should send ChooseResearch in mandatoryActions'
+  );
+
+  // A rival's unit is changed, but sent as nothing keyed by its own id, which the frontend never had (#494).
+  const [rivalUnit] = unitAt(rival, rivalTile.x(), rivalTile.y(), 'Settlers'),
+    rivalModifyBatchesBefore = (sent.gameDataPatch ?? []).length;
+
+  trigger('cheat', {
+    name: 'ModifyUnit',
+    value: { unitId: rivalUnit.id(), properties: { moves: 0 } },
+  });
+
+  assert(
+    rivalUnit.moves().value() === 0,
+    "ModifyUnit should still change a rival's unit"
+  );
+  assert(
+    !patchesSince(rivalModifyBatchesBefore).some(
+      (patch) => rivalUnit.id() in patch
+    ),
+    "ModifyUnit on a rival's unit should send no patch keyed by its id"
+  );
+
   console.log(
     'PASS cheats (cheatPlayers and cheatAdvances listings, GrantGold and GrantAdvance target rivals correctly, CreateUnit places units for any player, RevealMap patches the map where the page reads it, ModifyUnit sets moves and only the fields it may)'
   );

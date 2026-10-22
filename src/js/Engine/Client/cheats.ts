@@ -156,6 +156,10 @@ export const registerCheats = (
               ctx.dataFilter(filterToReference(Player))
             )
           );
+
+          // Granting the advance being researched leaves nothing researched, so Choose Research is due now, not after
+          //  the next action (#494).
+          ctx.patches.actions();
         }
       }
 
@@ -181,6 +185,9 @@ export const registerCheats = (
               ctx.dataFilter(filterToReference(Player))
             )
           );
+
+          // What can be bought turns on the gold there is (#494).
+          ctx.patches.actions();
         }
       }
 
@@ -197,10 +204,14 @@ export const registerCheats = (
           unit[property]().set(amount)
         );
 
-        ctx.patches.add(
-          unit.id(),
-          unit.toPlainObject(ctx.dataFilter(filterToReference(Player)))
-        );
+        // A rival's unit is changed, but nothing is sent: the frontend only holds it as the stand-in the map has for it,
+        //  under another id, and a patch keyed by the unit's own would hand it a ref it never had (#494).
+        if (unit.player() === ctx.player()) {
+          ctx.patches.unit(unit);
+
+          // Moves given or taken make the unit one with something to do, or not (#494).
+          ctx.patches.actions();
+        }
       }
 
       if (name === 'CreateUnit') {
