@@ -282,6 +282,20 @@ export class GameSession {
 
       let renderFrame: number | null = null;
 
+      // Whether an End Turn is on its way, sent by hand or by auto end of turn, until the worker answers it. The patch
+      //  that answers it comes before `turnEnded`, and still has End Turn as the only thing left, so without this auto
+      //  end of turn would send a second one, which could end the next turn before it started (#151).
+      let endTurnSent = false;
+
+      const endTurnListener = (): void => {
+        endTurnSent = true;
+      };
+
+      document.addEventListener('endturn', endTurnListener);
+      transportDisposers.push((): void =>
+        document.removeEventListener('endturn', endTurnListener)
+      );
+
       // The display work — both `Actions` panels, detail panels, the
       // windows watching `dataChanges`, and the full `portal` composite —
       // reads only the latest `data`/`activeUnit`, so it is safe to run at
@@ -351,12 +365,15 @@ export class GameSession {
         unitController.drain();
 
         if (
+          !endTurnSent &&
           shouldAutoEndTurn(
             gameState.data().player,
             options,
             gameState.waiting()
           )
         ) {
+          endTurnSent = true;
+
           // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
           transport.send('action', {
             name: 'EndTurn',
@@ -383,9 +400,15 @@ export class GameSession {
       // The move drawn before its answer (#326), settled by its own
       // acknowledgement.
       transportDisposers.push(
-        transport.receive('actionHandled', (action): void =>
-          unitController.actionHandled(action)
-        )
+        transport.receive('actionHandled', (action): void => {
+          // Answered: the turn ends (`turnEnded` follows at once), or it goes on, as when talks are open (#491), and End
+          //  Turn may be sent again.
+          if (action.name === 'EndTurn') {
+            endTurnSent = false;
+          }
+
+          unitController.actionHandled(action);
+        })
       );
 
       transportDisposers.push(
@@ -399,6 +422,10 @@ export class GameSession {
 
       transportDisposers.push(
         transport.receive('turnStarted', (): void => {
+          // A new turn: an End Turn sent before it was handed over is never answered, as the worker wasn't listening
+          //  (#151).
+          endTurnSent = false;
+
           // Drops the rebuild deferred while waiting: this one replaces
           // it.
           gameState.setWaiting(false);

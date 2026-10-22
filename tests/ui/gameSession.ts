@@ -19,6 +19,7 @@ import Transport from '../../src/js/UI/Transport';
 import appElements from '../../src/js/UI/app/elements';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
+import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
 
 const failures: string[] = [];
 let checks = 0,
@@ -292,7 +293,7 @@ const run = async (): Promise<void> => {
   expect(
     "the page's disposers stay first, then the render frame's, the state's and one per receiver",
     transportDisposers.length,
-    1 + 2 + 9
+    1 + 3 + 9
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);
@@ -459,6 +460,92 @@ const run = async (): Promise<void> => {
     [hexStarted, receivers.length - receiversBefore],
     [false, 0]
   );
+
+  // Auto end of turn sends End Turn once, until the worker answers it (#151): the patch that comes with the answer still
+  //  has End Turn as the only thing left, and a second one could end the next turn before it started.
+  receivers.splice(0);
+  sent.splice(0);
+  options.set('autoEndOfTurn', true);
+
+  const endTurnMap = makeMap(1),
+    endTurns = (): number =>
+      sent.filter(
+        ([name, data]) => name === 'action' && (data as any)?.name === 'EndTurn'
+      ).length;
+
+  Object.assign(endTurnMap.objects['Player-1'], {
+    actions: [ref('EndTurn-1')],
+    mandatoryActions: [ref('EndTurn-1')],
+  });
+  endTurnMap.objects['EndTurn-1'] = { _: 'EndTurn', id: 'EndTurn-1' };
+
+  new GameSession({
+    elements,
+    transport,
+    notifications: new Notifications(),
+    notices: new Notices(),
+    haltedUnits: new HaltedUnits(),
+    debugFlags: new DebugFlags(false),
+    notificationBar: new NotificationBar(elements.notificationArea),
+    pendingSave: 'a save',
+    cheatsEnabled: false,
+    setGameStarted: (): void => {},
+    transportDisposers: [],
+  }).start(endTurnMap);
+
+  expect('with only End Turn left, the turn is ended', endTurns(), 1);
+
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 1 }),
+  ]);
+
+  expect('the patch before its answer sends no second End Turn', endTurns(), 1);
+
+  // Refused, as while talks are open (#491), in the order the worker sends it: the patch, the answer, then one more
+  //  patch, which ends the turn again.
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 1 }),
+  ]);
+  deliver('actionHandled', { name: 'EndTurn' });
+
+  expect('the answer alone sends nothing', endTurns(), 1);
+
+  deliver('gameDataPatch', []);
+
+  expect(
+    'the patch after a refused End Turn ends the turn again',
+    endTurns(),
+    2
+  );
+
+  // Accepted: the patch, the answer and `turnEnded`.
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 2 }),
+  ]);
+  deliver('actionHandled', { name: 'EndTurn' });
+  deliver('turnEnded');
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 2 }),
+  ]);
+
+  expect('not while waiting for the other civilizations', endTurns(), 2);
+
+  deliver('turnStarted');
+
+  expect('the next turn, with only End Turn left, is ended', endTurns(), 3);
+
+  // That End Turn is never answered, as when it reached the worker before the turn was handed over: the next turn
+  //  starts all the same, and is ended (#151).
+  deliver('turnEnded');
+  deliver('turnStarted');
+
+  expect(
+    'an End Turn never answered does not stop the next turn being ended',
+    endTurns(),
+    4
+  );
+
+  options.set('autoEndOfTurn', false);
 
   finished = true;
 

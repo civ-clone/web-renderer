@@ -217,7 +217,12 @@ export class TurnHandover {
 
         patches.flush();
 
-        // The listener below is already attached, so the UI can act from here.
+        // Attached here, not when the turn is taken, so the UI can act from here and not before: an `EndTurn` sent in
+        //  answer to the last turn's final patch (auto end of turn sees End Turn as the only thing left) would
+        //  otherwise end this turn before it was handed over, and `turnStarted` would follow `turnEnded` (#151).
+        this.#listener = listener;
+        this.#eventEmitter.on('action', listener);
+
         this.#handOver();
       }, 1);
 
@@ -260,6 +265,12 @@ export class TurnHandover {
           this.#acknowledge(args[0]);
 
           this.#sendHalts();
+
+          // An `EndTurn` refused, as while talks are open (#491): the UI's auto end of turn waits for its answer before
+          //  it sends another (#151), and so looks again only at the next patch, which goes after the answer.
+          if (args[0]?.name === 'EndTurn') {
+            patches.flush();
+          }
         } catch (e) {
           // Without this, a throwing action strands the listener on the
           // long-lived emitter and every later action gets double-processed.
@@ -268,9 +279,6 @@ export class TurnHandover {
           reject(e);
         }
       };
-
-      this.#listener = listener;
-      this.#eventEmitter.on('action', listener);
     });
   }
 }
