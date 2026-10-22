@@ -5,6 +5,30 @@ export type Size = {
   height: number;
 };
 
+/** How far, in px, a sprite may reach past its tile's sprite box on each side. */
+export type Reach = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
+/** One place a tile is drawn: the tile, and the top left of its sprite box on the canvas, in px. */
+export type Placement = {
+  x: number;
+  y: number;
+  px: number;
+  py: number;
+};
+
+/** The first and last (exclusive) columns and rows, not wrapped, that reach a rectangle. */
+export type TileSpan = {
+  columns: [number, number];
+  rows: [number, number];
+};
+
+const noReach: Reach = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
+
 /**
  * Where tiles go in pixels on the map, and which tile a pixel is on (#90).
  *
@@ -35,6 +59,28 @@ export interface Projection {
    * poles.
    */
   wrapPeriod(): { x: number; y: number | null };
+
+  /**
+   * Whether a tile's sprite box overlaps its neighbours' (a staggered or hex grid), so a tile can't be cleared and
+   *  redrawn on its own: whatever of its neighbours reaches into its box has to be drawn again too, in order (#91).
+   */
+  overlapsNeighbours(): boolean;
+
+  /** How far past its sprite box the projection's own sprites reach, as a tall mountain reaches into the row above. */
+  reach(): Reach;
+
+  /**
+   * Back to front: by screen y, then screen x, then the tile's own co-ordinates. A total order on placements rather
+   *  than tiles, because a tile on the seam is drawn twice in two different places, and each copy has its own
+   *  neighbours to go in front of or behind.
+   */
+  compareDrawOrder(a: Placement, b: Placement): number;
+
+  /**
+   * The columns and rows, not wrapped, whose sprite boxes grown by `overhang` reach `rect`, a rectangle in world px.
+   *  The caller wraps them, as `wrapIndices` does.
+   */
+  tileSpan(rect: Rect, overhang: number): TileSpan;
 }
 
 /** How many tiles a world is across and down, as `World` says. */
@@ -71,12 +117,38 @@ export class SquareProjection implements Projection {
     this.#footprint = { width: size, height: size };
   }
 
+  compareDrawOrder(a: Placement, b: Placement): number {
+    return a.py - b.py || a.px - b.px || a.y - b.y || a.x - b.x;
+  }
+
   footprint(): Size {
     return this.#footprint;
   }
 
+  // Each square stays in its own box, so a tile can be cleared and redrawn on its own, in any order.
+  overlapsNeighbours(): boolean {
+    return false;
+  }
+
   pixelToTile(px: number, py: number): [number, number] {
     return [Math.floor(px / this.#size), Math.floor(py / this.#size)];
+  }
+
+  reach(): Reach {
+    return noReach;
+  }
+
+  tileSpan({ x, y, width, height }: Rect, overhang: number): TileSpan {
+    const size = this.#size,
+      span = (start: number, length: number): [number, number] =>
+        size <= 0
+          ? [0, 0]
+          : [
+              Math.floor((start - overhang) / size),
+              Math.ceil((start + length + overhang) / size),
+            ];
+
+    return { columns: span(x, width), rows: span(y, height) };
   }
 
   tileToPixel(x: number, y: number): [number, number] {
