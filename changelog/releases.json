@@ -1,4 +1,6 @@
 [
+{"version":"0.1.0@9e651cf","date":"2026-10-22T07:59:58.000Z","localChanges":["chore: the release notes generator carries on past a commit whose package.json does not parse"],"externalChanges":{}}
+,
 {"version":"0.1.0@508a641","date":"2026-10-22T07:58:01.000Z","localChanges":["fix: repair package.json after a merge left conflict markers in it"],"externalChanges":{}}
 ,
 {"version":"0.1.0@d3c88eb","date":"2026-10-22T07:46:16.000Z","localChanges":["chore: the asset store takes its list of sprites from the tileset, and the map finds each sprite by its full name, ready for a second tileset (#56)"],"externalChanges":{}}
