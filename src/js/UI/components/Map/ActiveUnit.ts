@@ -28,6 +28,7 @@ export class ActiveUnit extends Units implements IMap {
     // On the tile it is moving to, while the engine answers the move (#326).
     const tile = this.world().get(activeTile.x, activeTile.y),
       { width, height } = this.projection().footprint(),
+      reach = this.reach(),
       scale = this.scale(),
       image = this.renderUnit(activeUnit),
       // Not yet listed on a tile it is moving to, and still listed on its own.
@@ -49,14 +50,14 @@ export class ActiveUnit extends Units implements IMap {
         this.tileSize() / scale
       );
 
-      // The stacked copy sits one scale step up and left of the tile, and a
-      // unit sprite is never bigger than a tile's box, so this covers both
-      // draws.
+      // The tile's box and as far past it as a unit is drawn: the stacked
+      // copy one scale step up and left, and whatever the projection's
+      // sprites reach.
       const drawn = {
-        x: offsetX - scale,
-        y: offsetY - scale,
-        width: width + scale,
-        height: height + scale,
+        x: offsetX - reach.left,
+        y: offsetY - reach.top,
+        width: width + reach.left + reach.right,
+        height: height + reach.top + reach.bottom,
       };
 
       this.#drawn.push(drawn);

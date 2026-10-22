@@ -1,4 +1,5 @@
 import { EntityInstance, Tile } from '../../types';
+import { Projection, SquareProjection } from '../../lib/projection';
 import { Map } from '../Map';
 
 // The width the minimap is given in the sidebar. The layer picks the largest
@@ -45,6 +46,8 @@ const landColour = '#58a038',
  * alongside every other layer.
  */
 export class Overview extends Map {
+  #projection: Projection | null = null;
+
   constructor(...args: ConstructorParameters<typeof Map>) {
     super(...args);
 
@@ -61,6 +64,15 @@ export class Overview extends Map {
   // `build()` feeds it tile updates alongside every other layer.
   composited(): boolean {
     return false;
+  }
+
+  // Squares at the overview's own tile size, whatever projection the map has.
+  protected projection(): Projection {
+    if (this.#projection === null) {
+      this.#projection = new SquareProjection(this.tileSize(), this.world());
+    }
+
+    return this.#projection;
   }
 
   // Every tile is drawn as a flat square of exactly its own size, and the

@@ -1,6 +1,7 @@
 import { Coordinate, Tile, Unit } from '../../types';
 import { Map, IMap } from '../Map';
 import renderUnit, { drawUnitStatus } from '../../lib/renderUnit';
+import { Reach } from '../../lib/projection';
 
 export class Units extends Map implements IMap {
   #activeUnit: Unit | null = null;
@@ -45,6 +46,18 @@ export class Units extends Map implements IMap {
       this.scale(),
       this.tileSize() / this.scale()
     );
+  }
+
+  // The copy behind a stack is drawn a scale step up and left of the tile.
+  protected reach(): Reach {
+    const reach = super.reach(),
+      scale = this.scale();
+
+    return {
+      ...reach,
+      top: reach.top + scale,
+      left: reach.left + scale,
+    };
   }
 
   protected renderUnit(unit: Unit): CanvasImageSource {

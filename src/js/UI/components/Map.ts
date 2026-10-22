@@ -1,6 +1,17 @@
 import { NeighbourDirection, Tile } from '../types';
-import { Projection, SquareProjection } from '../lib/projection';
-import { Rect, repeatOffsets, wrapIndices } from '../lib/viewport';
+import {
+  Placement,
+  Projection,
+  Reach,
+  SquareProjection,
+} from '../lib/projection';
+import {
+  Rect,
+  mergeRects,
+  rectsIntersect,
+  repeatOffsets,
+  wrapIndices,
+} from '../lib/viewport';
 import {
   getPreloadedImage,
   setPreloadContainer,
@@ -17,6 +28,9 @@ export interface IMap {
   tileSize(): number;
   world(): World;
 }
+
+/** One place a tile is drawn on a layer's canvas. */
+export type TilePlacement = Placement & { tile: Tile };
 
 interface DrawImageOptions {
   augment?: (image: CanvasImageSource) => CanvasImageSource;
@@ -41,9 +55,17 @@ interface DrawImageOptions {
  *
  * Layers also record what they changed, so the portal can composite the parts
  * of itself that moved rather than all of it.
+ *
+ * On the square grid each tile is drawn into its own box, so a tile can be
+ * cleared and drawn again on its own. Where the projection's tiles overlap
+ * their neighbours (#91), nothing is cleared per tile: a changed tile's box,
+ * and as far past it as the layer draws (`reach()`), is cleared once and every
+ * tile that reaches it is drawn again, back to front, clipped to it.
  */
 export class Map implements IMap {
   #canvas: HTMLCanvasElement;
+  // The region being redrawn, while it is: nothing outside it changes, so nothing outside it is marked dirty.
+  #clip: Rect | null = null;
   #context: CanvasRenderingContext2D;
   #dirty: Rect[] = [];
   #originX: number = 0;
@@ -113,10 +135,24 @@ export class Map implements IMap {
   render(tiles: Tile[] = this.visibleTiles()): void {
     this.clear();
 
+    if (this.projection().overlapsNeighbours()) {
+      this.placementsOf(
+        tiles.map(({ x, y }: Tile) => this.world().get(x, y))
+      ).forEach((placement) => this.paint(placement));
+
+      return;
+    }
+
     tiles.forEach(({ x, y }: Tile) => this.renderTile(this.world().get(x, y)));
   }
 
   renderTile(tile: Tile): void {
+    if (this.projection().overlapsNeighbours()) {
+      this.redrawTiles([tile]);
+
+      return;
+    }
+
     const { width, height } = this.projection().footprint();
 
     this.placements(tile).forEach(([offsetX, offsetY]) => {
@@ -127,16 +163,7 @@ export class Map implements IMap {
       // have to be second-guessed here.
       this.markDirty(offsetX, offsetY, width, height);
 
-      // One square that can't be drawn mustn't stop the rest: a throw here used to abandon the layer mid-scroll, leaving
-      //  it out of line with the others (#32).
-      try {
-        this.drawTile(tile, offsetX, offsetY);
-      } catch (error) {
-        console.error(
-          `${this.constructor.name} could not draw ${tile.x},${tile.y}.`,
-          error
-        );
-      }
+      this.#draw(tile, offsetX, offsetY);
     });
   }
 
@@ -218,6 +245,12 @@ export class Map implements IMap {
   }
 
   update(tilesToUpdate: Tile[]): void {
+    if (this.projection().overlapsNeighbours()) {
+      this.redrawTiles(tilesToUpdate);
+
+      return;
+    }
+
     tilesToUpdate.forEach(({ x, y }: Tile) =>
       this.renderTile(this.world().get(x, y))
     );
@@ -269,10 +302,18 @@ export class Map implements IMap {
     width: number,
     height: number
   ): void {
-    const left = Math.max(0, Math.floor(x)),
+    let left = Math.max(0, Math.floor(x)),
       top = Math.max(0, Math.floor(y)),
       right = Math.min(this.#canvas.width, Math.ceil(x + width)),
       bottom = Math.min(this.#canvas.height, Math.ceil(y + height));
+
+    // A sprite drawn into a region being redrawn is mostly clipped away; only what reached the canvas changed.
+    if (this.#clip !== null) {
+      left = Math.max(left, this.#clip.x);
+      top = Math.max(top, this.#clip.y);
+      right = Math.min(right, this.#clip.x + this.#clip.width);
+      bottom = Math.min(bottom, this.#clip.y + this.#clip.height);
+    }
 
     if (right <= left || bottom <= top) {
       return;
@@ -313,6 +354,39 @@ export class Map implements IMap {
    */
   protected overhang(): number {
     return this.tileSize();
+  }
+
+  /**
+   * Draw one place a tile lands, over what is there: on a projection whose tiles overlap, clearing its box would cut
+   *  into the tiles behind it.
+   */
+  protected paint({ tile, px, py }: TilePlacement): void {
+    this.#draw(tile, px, py);
+  }
+
+  /**
+   * Every place `tiles` land on this canvas, back to front, as the projection orders them: by place rather than by
+   *  tile, as a tile on the seam can be in front of one neighbour and behind another. Only the places whose box and
+   *  reach meet `within`, if it is given.
+   */
+  protected placementsOf(
+    tiles: Tile[],
+    within: Rect | null = null
+  ): TilePlacement[] {
+    const projection = this.projection(),
+      placements: TilePlacement[] = [];
+
+    tiles.forEach((tile) =>
+      this.placements(tile).forEach(([px, py]) => {
+        if (within !== null && !rectsIntersect(within, this.#reachOf(px, py))) {
+          return;
+        }
+
+        placements.push({ tile, x: tile.x, y: tile.y, px, py });
+      })
+    );
+
+    return placements.sort((a, b) => projection.compareDrawOrder(a, b));
   }
 
   /** Every place `tile` lands on this canvas; usually one, often none. */
@@ -399,8 +473,90 @@ export class Map implements IMap {
     return replaceColours(image, source, replacement);
   }
 
+  /**
+   * How far past a tile's sprite box anything this layer draws for the tile can reach, px per side: the projection's
+   *  own reach, and more for a layer that draws past the box. On a projection whose tiles overlap, an update redraws
+   *  this much around a changed tile, so it has to cover everything the tile draws; `overhang()` has to be at least
+   *  as much on every side.
+   */
+  protected reach(): Reach {
+    return this.projection().reach();
+  }
+
+  /**
+   * Redraw `rect` from nothing: clear it once, then draw every place a tile reaches it, back to front, clipped to it.
+   *  How tiles that overlap their neighbours are redrawn.
+   */
+  protected redrawRegion(rect: Rect): void {
+    const context = this.context();
+
+    context.save();
+    context.beginPath();
+    context.rect(rect.x, rect.y, rect.width, rect.height);
+    context.clip();
+
+    this.#clip = rect;
+
+    try {
+      context.clearRect(rect.x, rect.y, rect.width, rect.height);
+
+      this.markDirty(rect.x, rect.y, rect.width, rect.height);
+
+      this.placementsOf(this.tilesIn(rect), rect).forEach((placement) =>
+        this.paint(placement)
+      );
+    } finally {
+      this.#clip = null;
+
+      context.restore();
+    }
+  }
+
+  /**
+   * Redraw `tiles` where the projection's tiles overlap: each place one lands, out to the layer's reach, as one region
+   *  with whatever else reaches it, so the neighbours a tile overlaps are drawn again, in order, over and under it.
+   */
+  protected redrawTiles(tiles: Tile[]): void {
+    const regions: Rect[] = [];
+
+    tiles.forEach(({ x, y }: Tile) =>
+      this.placements(this.world().get(x, y)).forEach(([px, py]) => {
+        const reach = this.#reachOf(px, py),
+          // Whole pixels, so a region's edge is never half cleared.
+          left = Math.max(0, Math.floor(reach.x)),
+          top = Math.max(0, Math.floor(reach.y)),
+          right = Math.min(
+            this.#canvas.width,
+            Math.ceil(reach.x + reach.width)
+          ),
+          bottom = Math.min(
+            this.#canvas.height,
+            Math.ceil(reach.y + reach.height)
+          );
+
+        if (right > left && bottom > top) {
+          regions.push({
+            x: left,
+            y: top,
+            width: right - left,
+            height: bottom - top,
+          });
+        }
+      })
+    );
+
+    // Disjoint, so no pixel is drawn twice.
+    mergeRects(regions).forEach((region) => this.redrawRegion(region));
+  }
+
   /** Redraw one region of the canvas, leaving the rest of it alone. */
   protected renderRegion(rect: Rect): void {
+    if (this.projection().overlapsNeighbours()) {
+      this.redrawRegion(rect);
+
+      return;
+    }
+
     const context = this.context();
 
     context.save();
@@ -530,6 +686,32 @@ export class Map implements IMap {
     this.#visible = visible;
 
     this.markContentDirty();
+  }
+
+  // One square that can't be drawn mustn't stop the rest: a throw here used to abandon the layer mid-scroll, leaving it
+  //  out of line with the others (#32).
+  #draw(tile: Tile, offsetX: number, offsetY: number): void {
+    try {
+      this.drawTile(tile, offsetX, offsetY);
+    } catch (error) {
+      console.error(
+        `${this.constructor.name} could not draw ${tile.x},${tile.y}.`,
+        error
+      );
+    }
+  }
+
+  // The box of a tile placed at `px`, `py`, and as far past it as the layer draws.
+  #reachOf(px: number, py: number): Rect {
+    const { width, height } = this.projection().footprint(),
+      reach = this.reach();
+
+    return {
+      x: px - reach.left,
+      y: py - reach.top,
+      width: width + reach.left + reach.right,
+      height: height + reach.top + reach.bottom,
+    };
   }
 }
 

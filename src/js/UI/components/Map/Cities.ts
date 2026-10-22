@@ -1,7 +1,20 @@
 import { Map } from '../Map';
+import { Reach } from '../../lib/projection';
 import { Tile } from '../../types';
 
 export class Cities extends Map {
+  // The city glyph is drawn a scale step right of and below the tile's corner.
+  protected reach(): Reach {
+    const reach = super.reach(),
+      scale = this.scale();
+
+    return {
+      ...reach,
+      right: reach.right + scale,
+      bottom: reach.bottom + scale,
+    };
+  }
+
   protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
     if (!tile.city) {
       return;
