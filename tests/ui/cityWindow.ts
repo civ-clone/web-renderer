@@ -3,6 +3,7 @@
 //  is not sent, naming a specialist the city no longer has; an update doesn't take the focus from a window open over
 //  the screen; and the production picker opens once however often it is asked for while the worker answers, and not
 //  at all once the screen has closed. The production action's picker opens once too.
+// The turns the screen says growth or production will take (#489): never, for a city with nothing to spare or short.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -12,6 +13,7 @@ import { City as CityData, GameData } from '../../src/js/UI/types';
 import i18next from 'i18next';
 import City from '../../src/js/UI/components/City';
 import CityBuildAction from '../../src/js/UI/components/Actions/CityBuild';
+import { turnsLeft } from '../../src/js/UI/components/lib/cityYields';
 import Portal from '../../src/js/UI/components/Portal';
 import Transport from '../../src/js/UI/Transport';
 import { assetStore } from '../../src/js/UI/AssetStore';
@@ -295,6 +297,37 @@ const run = async (): Promise<void> => {
   await settle();
 
   expect('and opens one picker', windows(), 1);
+
+  // Turns to grow or build.
+
+  const food = (...values: number[]) =>
+      values.map((value) => ({ _: 'Food', __: ['Food', 'Yield'], value })),
+    growth = { progress: { value: 10 }, cost: { value: 30 } } as any;
+
+  expect(
+    'a city with 2 Food to spare fills its 20 left in 10 turns',
+    turnsLeft(growth, food(6, -4) as any, 'Food'),
+    10
+  );
+  expect(
+    'one 2 Food short never does',
+    turnsLeft(growth, food(2, -4) as any, 'Food'),
+    0
+  );
+  expect(
+    'nor one with nothing to spare',
+    turnsLeft(growth, food(4, -4) as any, 'Food'),
+    0
+  );
+  expect(
+    'but what progress already covers is done next turn, with nothing to spare',
+    turnsLeft(
+      { progress: { value: 35 }, cost: { value: 10 } } as any,
+      food(4, -4) as any,
+      'Food'
+    ),
+    1
+  );
 
   finished = true;
 

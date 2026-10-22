@@ -2,8 +2,8 @@
 
 // Runs tests/ui/cityWindow.ts — the open city screen's keys, clicks and
 // updates (#484): Enter on a button, a second specialist change, the focus
-// on an update and the production picker. Bundled with esbuild, as the other
-// UI tests are.
+// on an update and the production picker, and the turns to grow or build
+// (#489). Bundled with esbuild, as the other UI tests are.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
