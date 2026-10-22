@@ -1,0 +1,1 @@
+{"version":"0.1.0@d01d4e5","date":"2026-10-21T22:08:22.000Z","localChanges":["test: checks for the map grid question, the size of each grid, and refusing a save on a grid that can't be drawn (#89)"],"externalChanges":{}}

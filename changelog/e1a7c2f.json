@@ -1,0 +1,1 @@
+{"version":"0.1.0@e1a7c2f","date":"2026-10-21T22:05:27.000Z","localChanges":["Customize World now says when the width or height can't make a map (empty, zero, negative or not a whole number), beside the box to fix. Before, an empty or negative size started a game that never appeared, and a size with a fraction was quietly rounded down (#89)."],"externalChanges":{}}
