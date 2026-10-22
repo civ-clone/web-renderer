@@ -1,0 +1,46 @@
+# Run the tests on every pull request, so a change that breaks a suite is
+# caught before it reaches `main` (#477). The deploy workflow runs them again
+# after the merge; until now that was the first time they ran, and a failure
+# there left `main` undeployable with player-facing fixes queued behind it.
+#
+# The same install and `npm test` as deploy.yml, plus `prettier:check`: the
+# build only formats (`prettier:format` in `prebuild`), so nothing failed on
+# unformatted source. Nothing here builds or deploys.
+
+name: Test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# A newer push to the same pull request replaces the run under way.
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The same pnpm the lockfile was written with; see deploy.yml.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: npm run prettier:check
+
+      - run: npm test
