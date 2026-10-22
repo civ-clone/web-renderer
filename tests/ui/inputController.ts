@@ -208,7 +208,35 @@ const run = async (): Promise<void> => {
   );
   document.body.append(modal);
 
+  // #351: one the browser has closed, but which is still in the page, isn't drawn and doesn't take the keys.
+  event = press({ key: 'x' });
+
+  expect(
+    'a closed modal window gets no keys',
+    [modalKeys, pressed, event.defaultPrevented],
+    [[], ['x'], false]
+  );
+
+  reset();
+
+  modal.setAttribute('open', '');
+
+  // Nor does an open one with another open on top of it.
+  const covered = document.createElement('dialog'),
+    coveredKeys: string[] = [];
+
+  covered.className = 'window modal';
+  covered.setAttribute('open', '');
+  covered.addEventListener('keydown', (keyEvent) =>
+    coveredKeys.push((keyEvent as KeyboardEvent).key)
+  );
+  modal.before(covered);
+
   event = press({ key: 'Enter' });
+
+  expect('the one beneath gets none', coveredKeys, []);
+
+  covered.remove();
 
   expect(
     'a key typed while the body has the focus goes to the modal window',

@@ -20,8 +20,8 @@ import { mappedKeyFromEvent } from '../lib/mappedKey';
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
 //  hotkeys. It is the last `keydown` bubble listener on `document`.
 //
-// Reaches into the document beyond the elements it is given: a key typed while the body has the focus goes to the open
-//  `dialog.window.modal`, read from `document` and `document.activeElement` on each key press; Escape blurs
+// Reaches into the document beyond the elements it is given: a key typed while the body has the focus goes to the top
+//  `dialog.window.modal[open]`, read from `document` and `document.activeElement` on each key press; Escape blurs
 //  `document.activeElement`; and Tab focuses the first action button in `actionArea`.
 
 export type InputControllerDeps = {
@@ -97,7 +97,10 @@ export class InputController {
       event.preventDefault();
     }
 
-    const modalWindow = document.querySelector('dialog.window.modal');
+    // The open one on top, the last in the page: a closed one isn't drawn, and shouldn't take the keys (#351).
+    const modalWindow = Array.from(
+      document.querySelectorAll('dialog.window.modal[open]')
+    ).pop();
 
     if (document.activeElement === document.body && modalWindow) {
       event.preventDefault();

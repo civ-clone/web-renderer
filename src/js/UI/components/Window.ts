@@ -72,6 +72,31 @@ export class Window
 
     this.on('cancel', (event) => event.preventDefault());
 
+    // The dialog's own `close`, not the one `close()` sends: the browser closed it without asking. Chromium does that,
+    //  with no cancelable `cancel`, to an Escape it takes as a second close request in a row, which left a window that
+    //  wasn't drawn but still took the keys (#351). One that can't be closed is shown again, and any other is closed
+    //  properly. After `close()` the dialog has already gone, and listeners only ever hear `close()`'s own event.
+    this.on('close', (event) => {
+      // The `?debug=1` panel's "close open dialogs" means it: the native close goes to the listeners as it always did.
+      if (event instanceof CustomEvent || this.element().dataset.forceClose) {
+        return;
+      }
+
+      event.stopImmediatePropagation();
+
+      if (!this.element().isConnected) {
+        return;
+      }
+
+      if (!this.options.canClose) {
+        this.showDialog();
+
+        return;
+      }
+
+      this.close();
+    });
+
     this.options = {
       ...defaultOptions,
       ...options,
@@ -229,8 +254,13 @@ export class Window
 
   bindClose(): void {
     this.on('keydown', (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && this.options.canClose) {
-        this.close();
+      if (event.key === 'Escape') {
+        // Or the browser closes the dialog too, and Chromium closes the next one along (#351).
+        event.preventDefault();
+
+        if (this.options.canClose) {
+          this.close();
+        }
       }
 
       // Capture all keypresses whilst this is focused
@@ -258,17 +288,23 @@ export class Window
 
     this.bindClose();
 
-    if (this.options.modal) {
-      this.element().showModal();
-    } else {
-      this.element().show();
-    }
+    this.showDialog();
 
     if (!focus) {
       return;
     }
 
     this.element().focus();
+  }
+
+  private showDialog(): void {
+    if (this.options.modal) {
+      this.element().showModal();
+
+      return;
+    }
+
+    this.element().show();
   }
 
   maximise(): void {

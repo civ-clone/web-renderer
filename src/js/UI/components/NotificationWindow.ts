@@ -39,7 +39,16 @@ export class NotificationWindow extends Window implements INotificationWindow {
 
   bindClose(): void {
     this.on('keydown', (event) => {
+      // Closing this can open the next notice straight away, and a key left to the browser would close that one too,
+      //  leaving a window that isn't drawn but has the keys (#351). Escape is the browser's whether or not this can
+      //  close: one that can't would be closed by it, and only shown again.
+      if (event.key === 'Escape') {
+        event.preventDefault();
+      }
+
       if (['Enter', 'Escape'].includes(event.key) && this.#options.canClose) {
+        event.preventDefault();
+
         this.close();
 
         event.stopPropagation();

@@ -178,6 +178,9 @@ export class DebugPanel {
         }
 
         try {
+          // Past `Window`'s own handling, which shows a window that can't be closed again (#351): this is the way out
+          //  of a stuck prompt.
+          dialog.dataset.forceClose = 'true';
           dialog.close();
         } catch (error) {
           console.warn('Failed to close dialog', error);
