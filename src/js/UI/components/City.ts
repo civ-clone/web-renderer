@@ -4,6 +4,7 @@ import {
   CityImprovementMaintenanceGold,
   PlainObject,
   Player,
+  Specialist,
   SpendCost,
   Unit as UnitData,
   Yield,
@@ -472,6 +473,7 @@ const renderYields = (city: CityData): Node => {
       improvement: CityImprovement,
       saleValue: SpendCost
     ) => void,
+    changeSpecialist: (specialist: Specialist) => void,
     readOnly: boolean
   ) => {
     return s(
@@ -483,13 +485,7 @@ const renderYields = (city: CityData): Node => {
           renderPopulation(
             city,
             undefined,
-            readOnly
-              ? undefined
-              : (specialist) =>
-                  transport.send('action', {
-                    name: 'ChangeSpecialist',
-                    id: specialist.id,
-                  })
+            readOnly ? undefined : changeSpecialist
           ),
           renderYields(city),
           renderSupportedUnits(city)
@@ -515,12 +511,25 @@ const renderYields = (city: CityData): Node => {
       )
     );
   },
+  // Enter or X closes the screen, but Enter on a focused button presses that button instead (#484).
+  closesScreen = (event: KeyboardEvent): boolean =>
+    ['Enter', 'x', 'X'].includes(event.key) &&
+    !(
+      event.key === 'Enter' &&
+      event.target instanceof HTMLElement &&
+      event.target.closest('button, [role="button"], input, select') !== null
+    ),
   getTreasuryForYield = (player: Player, yieldName: string) =>
     player.treasuries.filter((treasury) => treasury.yield._ === yieldName)[0];
 
 export class City extends Window {
   #city: CityData;
+  // Whether the city screen is waiting for what the city can build, to open the production picker (#484).
+  #choosingProduction = false;
   #portal: Portal;
+  // Whether a specialist has been changed and the city not yet updated with it. Changing one replaces it, so a second
+  //  change sent before then would name a specialist the city no longer has, and be lost (#484).
+  #specialistChanging = false;
   #transport: Transport;
   // None for a rival's city, which isn't kept up to date.
   #unwatch: (() => void) | null = null;
@@ -545,6 +554,7 @@ export class City extends Window {
         (spendCost: SpendCost) => this.completeProduction(spendCost),
         (improvement: CityImprovement, saleValue: SpendCost) =>
           this.sellImprovement(improvement, saleValue),
+        (specialist: Specialist) => this.#changeSpecialist(specialist),
         readOnly
       ),
       {
@@ -575,11 +585,22 @@ export class City extends Window {
               (spendCost: SpendCost) => this.completeProduction(spendCost),
               (improvement: CityImprovement, saleValue: SpendCost) =>
                 this.sellImprovement(improvement, saleValue),
+              (specialist: Specialist) => this.#changeSpecialist(specialist),
               false
             )
           );
 
-          this.element().focus();
+          // The specialists drawn now are the city's latest, so they can be changed again.
+          this.#specialistChanging = false;
+
+          // Not from a window open over the screen, a production picker or a confirmation, where the next Enter is
+          //  meant for that window (#484).
+          const focusedWindow =
+            document.activeElement?.closest('dialog.window') ?? null;
+
+          if (focusedWindow === null || focusedWindow === this.element()) {
+            this.element().focus();
+          }
 
           setTimeout(() => resizeYields(this.element()), 200);
         },
@@ -590,7 +611,7 @@ export class City extends Window {
 
     this.on('keydown', (event) => {
       if (readOnly) {
-        if (['Enter', 'x', 'X'].includes(event.key)) {
+        if (closesScreen(event)) {
           this.close();
         }
 
@@ -637,17 +658,14 @@ export class City extends Window {
         );
 
         if (specialist) {
-          this.#transport.send('action', {
-            name: 'ChangeSpecialist',
-            id: specialist.id,
-          });
+          this.#changeSpecialist(specialist);
 
           event.preventDefault();
           event.stopPropagation();
         }
       }
 
-      if (['Enter', 'x', 'X'].includes(event.key)) {
+      if (closesScreen(event)) {
         this.close();
       }
     });
@@ -665,14 +683,47 @@ export class City extends Window {
   }
 
   async changeProduction(): Promise<void> {
+    // Asked again before the first answer came: one picker is enough (#484).
+    if (this.#choosingProduction) {
+      return;
+    }
+
+    this.#choosingProduction = true;
+
+    let available;
+
+    try {
+      available = await this.#transport.request(
+        new CityBuildAvailable(this.#city.build.id)
+      );
+    } finally {
+      this.#choosingProduction = false;
+    }
+
+    // Closed while waiting: the picker would open over the map (#484).
+    if (!this.element().isConnected) {
+      return;
+    }
+
     new CityBuildSelectionWindow(
       this.#city.build,
-      await this.#transport.request(
-        new CityBuildAvailable(this.#city.build.id)
-      ),
+      available,
       this.#transport,
       () => this.element().focus()
     );
+  }
+
+  #changeSpecialist(specialist: Specialist): void {
+    if (this.#specialistChanging) {
+      return;
+    }
+
+    this.#specialistChanging = true;
+
+    this.#transport.send('action', {
+      name: 'ChangeSpecialist',
+      id: specialist.id,
+    });
   }
 
   close(): void {

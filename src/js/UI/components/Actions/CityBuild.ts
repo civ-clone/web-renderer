@@ -11,6 +11,8 @@ import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
 
 export class CityBuild extends Action {
+  // Whether the picker is waiting for what the city can build (#484).
+  #opening = false;
   #portal: Portal;
 
   constructor(action: PlayerAction, portal: Portal, transport: Transport) {
@@ -20,9 +22,26 @@ export class CityBuild extends Action {
   }
 
   async activate(): Promise<void> {
+    // Pressed again before the first answer came: one picker is enough (#484).
+    if (this.#opening) {
+      return;
+    }
+
+    this.#opening = true;
+
+    let available;
+
+    try {
+      available = await this.transport().request(
+        new CityBuildAvailable(this.value().id)
+      );
+    } finally {
+      this.#opening = false;
+    }
+
     new CityBuildSelectionWindow(
       this.value(),
-      await this.transport().request(new CityBuildAvailable(this.value().id)),
+      available,
       this.transport(),
       () => this.complete(),
       {
