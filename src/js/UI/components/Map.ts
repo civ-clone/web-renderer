@@ -1,10 +1,5 @@
 import { NeighbourDirection, Tile } from '../types';
-import {
-  Placement,
-  Projection,
-  Reach,
-  SquareProjection,
-} from '../lib/projection';
+import { Placement, Projection, Reach } from '../lib/projection';
 import {
   Rect,
   mergeRects,
@@ -17,7 +12,9 @@ import {
   setPreloadContainer,
 } from '../lib/getPreloadedImage';
 import World from './World';
+import currentTileset from '../lib/tilesets';
 import { imageSize } from '../lib/imageSize';
+import projectionFor from '../lib/projectionFor';
 import replaceColours from '../lib/replaceColours';
 import { s } from '@dom111/element';
 
@@ -426,9 +423,10 @@ export class Map implements IMap {
   /** Where tiles go on the world, in pixels, at this layer's tile size. */
   protected projection(): Projection {
     if (this.#projection === null) {
-      this.#projection = new SquareProjection(
-        this.tileSize(),
+      this.#projection = projectionFor(
+        currentTileset(),
         this.#world,
+        this.tileSize(),
         this.#wrapVertical
       );
     }

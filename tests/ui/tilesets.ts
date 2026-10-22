@@ -428,6 +428,37 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     [true, true, true, true, true]
   );
   expect(
+    "an anchor or overhang that isn't whole pixels on every side is refused",
+    [
+      { anchor: {} },
+      { anchor: { x: 0, y: '0' } },
+      { anchor: { x: 0.5, y: 0 } },
+      { overhang: {} },
+      { overhang: { top: 0 } },
+      { overhang: { top: 0, right: 0, bottom: -1, left: 0 } },
+      { overhang: { top: 0, right: 0, bottom: 0, left: 1.5 } },
+      {
+        anchor: { x: -2, y: 3 },
+        overhang: { ...civ1.geometry.overhang, top: 16 },
+      },
+    ].map((change) =>
+      thrown(() =>
+        validateDescriptor(
+          civ1With({ geometry: { ...civ1.geometry, ...change } })
+        )
+      )
+    ),
+    [
+      ...Array(3).fill(
+        'Tileset "civ1": geometry.anchor must have a whole x and y in px.'
+      ),
+      ...Array(4).fill(
+        'Tileset "civ1": geometry.overhang must have a whole top, right, bottom and left of 0 px or more.'
+      ),
+      null,
+    ]
+  );
+  expect(
     'a scale it cannot be shown at is refused',
     [
       civ1With({ scales: [] }),

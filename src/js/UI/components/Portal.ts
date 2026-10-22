@@ -8,12 +8,13 @@ import {
   rectArea,
 } from '../lib/viewport';
 import Map from './Map';
-import { Projection, SquareProjection } from '../lib/projection';
+import { Projection } from '../lib/projection';
 import Transport from '../Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
+import projectionFor from '../lib/projectionFor';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -275,9 +276,10 @@ export class Portal
   }
 
   #createProjection(): Projection {
-    return new SquareProjection(
-      this.tileSize(),
+    return projectionFor(
+      currentTileset(),
       this.#world,
+      this.tileSize(),
       !this.#lockVerticalEdges
     );
   }

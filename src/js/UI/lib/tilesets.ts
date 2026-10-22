@@ -7,6 +7,9 @@ import civ1 from '../tilesets/civ1.json';
 //  with #152.
 const civ1Tileset = validateDescriptor(civ1);
 
+/** The tilesets there are to draw the map with: the grids a game can be on are theirs (`supportedTopologies`). */
+export const installedTilesets = (): TilesetDescriptor[] => [civ1Tileset];
+
 /** The tileset the map is drawn with. */
 export const currentTileset = (): TilesetDescriptor => civ1Tileset;
 
