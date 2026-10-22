@@ -1,11 +1,10 @@
 import { IPortal } from './Portal';
 import Window from './Window';
+import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-
-export const MAP_SCALES = [1, 2, 3, 4];
 
 export class GameOptions extends Window {
   // The map's options take effect as they are changed, so the window is given
@@ -54,14 +53,18 @@ export class GameOptions extends Window {
         s(
           `<label>${t('GameOptions.map-scale')}</label>`,
           (() => {
-            const current = options.get('mapScale', portal.scale()),
+            // The scales the map's tileset can be shown at.
+            const { scales } = currentTileset(),
+              current = options.get('mapScale', portal.scale()),
               select = s<HTMLSelectElement>(
-                `<select>${MAP_SCALES.map(
-                  (scale) =>
-                    `<option value="${scale}"${
-                      scale === current ? ' selected' : ''
-                    }>${scale}×</option>`
-                ).join('')}</select>`
+                `<select>${scales
+                  .map(
+                    (scale) =>
+                      `<option value="${scale}"${
+                        scale === current ? ' selected' : ''
+                      }>${scale}×</option>`
+                  )
+                  .join('')}</select>`
               );
 
             return h(select, {

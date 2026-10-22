@@ -40,7 +40,14 @@ export class ActiveUnit extends Units implements IMap {
 
       this.putImage(image, offsetX, offsetY);
 
-      drawUnitStatus(this.context(), activeUnit, offsetX, offsetY, scale);
+      drawUnitStatus(
+        this.context(),
+        activeUnit,
+        offsetX,
+        offsetY,
+        scale,
+        this.tileSize() / scale
+      );
 
       // The stacked copy sits one scale step up and left of the tile, and a
       // unit sprite is never bigger than a tile's box, so this covers both

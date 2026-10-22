@@ -13,6 +13,7 @@ import Transport from '../Transport';
 import Units from '../components/Map/Units';
 import World from '../components/World';
 import Yields from '../components/Map/Yields';
+import currentTileset, { nativeTileSize } from '../lib/tilesets';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
@@ -71,6 +72,7 @@ export class MapView {
 
     const world = new World(worldData),
       intervalHandler = new IntervalHandler(),
+      tileset = currentTileset(),
       portal = new GamePortal(
         world,
         transport,
@@ -78,9 +80,8 @@ export class MapView {
         {
           lockVerticalEdges: options.get('lockVerticalEdges', false),
           playerId,
-          scale: options.get('mapScale', 2),
-          // TODO: this needs to come from the theme
-          tileSize: 16,
+          scale: options.get('mapScale', tileset.defaultScale),
+          tileSize: nativeTileSize(tileset),
         },
         Landscape,
         // Never composited onto the map; it rides in the layer list so

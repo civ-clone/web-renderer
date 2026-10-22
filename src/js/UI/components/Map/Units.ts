@@ -37,7 +37,14 @@ export class Units extends Map implements IMap {
 
     this.putImage(image, offsetX, offsetY);
 
-    drawUnitStatus(this.context(), unit, offsetX, offsetY, this.scale());
+    drawUnitStatus(
+      this.context(),
+      unit,
+      offsetX,
+      offsetY,
+      this.scale(),
+      this.tileSize() / this.scale()
+    );
   }
 
   protected renderUnit(unit: Unit): CanvasImageSource {

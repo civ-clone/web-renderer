@@ -1,5 +1,7 @@
 import { EntityInstance, NeighbourDirection, Tile } from '../../types';
+import { CoastStrip } from '../../tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
+import currentTileset from '../../lib/tilesets';
 import { isDrawable } from '../../lib/imageSize';
 import { onPreloadedImagesChanged } from '../../lib/getPreloadedImage';
 import { s } from '@dom111/element';
@@ -17,23 +19,27 @@ const specialSprites: { [key: string]: string } = {
   'Forest:Game': 'doe',
 };
 
-// The composed coast tile is a pure function of the 8-neighbour bitmask and is
-// always built at the sprite's 16x16, so this tops out at 256 small canvases
-// instead of allocating one per coast tile per render.
-const coastTileCache = new Map<number, HTMLCanvasElement>();
+// The composed coast tile is a pure function of the tileset and the 8-neighbour
+// bitmask, and is always built at the sprite's own size, so this tops out at 256
+// small canvases a tileset instead of allocating one per coast tile per render.
+const coastTileCache = new Map<string, HTMLCanvasElement>();
 
 onPreloadedImagesChanged(() => coastTileCache.clear());
 
-// We divide the tile into four 8x8 subtiles and for each of these we want a 3 bit
-// bitmask of the surrounding tiles. We do this by looking at the 3 least
-// significant bits for the top left subtile and shift the mask to the right as we
-// are going around the tile. This way we are "rotating" our bitmask. The result
-// are our x offsets into ter257.pic
+// We divide the tile into four quarters (8x8 in Civ1) and for each of these we
+// want a 3 bit bitmask of the surrounding tiles. We do this by looking at the 3
+// least significant bits for the top left quarter and shift the mask to the right
+// as we are going around the tile. This way we are "rotating" our bitmask. The
+// result are our column offsets into the strip (ter257.pic in Civ1), each column
+// `cell` px wide.
 const buildCoastTile = (
   sprite: HTMLImageElement,
-  bitmask: number
+  bitmask: number,
+  tilesetId: string,
+  { cell, quarter }: CoastStrip
 ): HTMLCanvasElement => {
-  const cached = coastTileCache.get(bitmask);
+  const key = `${tilesetId}:${bitmask}`,
+    cached = coastTileCache.get(key);
 
   if (cached) {
     return cached;
@@ -43,55 +49,57 @@ const buildCoastTile = (
     topRightSubtileOffset = (bitmask >> 2) & 7,
     bottomRightSubtileOffset = (bitmask >> 4) & 7,
     bottomLeftSubtileOffset = ((bitmask >> 6) & 7) | ((bitmask & 1) << 2),
-    image = s<HTMLCanvasElement>('<canvas height="16" width="16"></canvas>'),
+    image = s<HTMLCanvasElement>(
+      `<canvas height="${cell}" width="${cell}"></canvas>`
+    ),
     imageContext = image.getContext('2d') as CanvasRenderingContext2D;
 
   imageContext.drawImage(
     sprite,
-    topLeftSubtileOffset << 4,
+    topLeftSubtileOffset * cell,
     0,
-    8,
-    8,
+    quarter,
+    quarter,
     0,
     0,
-    8,
-    8
+    quarter,
+    quarter
   );
   imageContext.drawImage(
     sprite,
-    (topRightSubtileOffset << 4) + 8,
+    topRightSubtileOffset * cell + quarter,
     0,
-    8,
-    8,
-    8,
+    quarter,
+    quarter,
+    quarter,
     0,
-    8,
-    8
+    quarter,
+    quarter
   );
   imageContext.drawImage(
     sprite,
-    (bottomRightSubtileOffset << 4) + 8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8,
-    8
+    bottomRightSubtileOffset * cell + quarter,
+    quarter,
+    quarter,
+    quarter,
+    quarter,
+    quarter,
+    quarter,
+    quarter
   );
   imageContext.drawImage(
     sprite,
-    bottomLeftSubtileOffset << 4,
-    8,
-    8,
-    8,
+    bottomLeftSubtileOffset * cell,
+    quarter,
+    quarter,
+    quarter,
     0,
-    8,
-    8,
-    8
+    quarter,
+    quarter,
+    quarter
   );
 
-  coastTileCache.set(bitmask, image);
+  coastTileCache.set(key, image);
 
   return image;
 };
@@ -155,12 +163,20 @@ export class Landscape extends TerrainAbstract {
         (this.world().getNeighbour(tile, 's').isLand ? 64 : 0) |
         (this.world().getNeighbour(tile, 'sw').isLand ? 128 : 0);
 
+    const tileset = currentTileset(),
+      { strip } = tileset.families.coast;
+
     // There is at least one surrounding tile that is not ocean, so we need
     // to render coast. The sprite check covers an early render reaching an
     // image that has not decoded yet, which would be an empty coast tile
-    // cached for the rest of the session.
-    if (bitmask > 0 && isDrawable(sprite)) {
-      this.putImage(buildCoastTile(sprite, bitmask), offsetX, offsetY);
+    // cached for the rest of the session. Only a coast cut from one strip, as
+    // Civ1's is, can be drawn yet (#92).
+    if (bitmask > 0 && strip && isDrawable(sprite)) {
+      this.putImage(
+        buildCoastTile(sprite, bitmask, tileset.id, strip),
+        offsetX,
+        offsetY
+      );
     }
 
     this.filterNeighbours(

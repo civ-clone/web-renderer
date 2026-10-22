@@ -29,7 +29,7 @@ marked as such, with the commit or issue that fixed them.
 ## Medium priority
 
 - **Hardcoded UI behavior and theme parameters**
-  - Map scale/tile size hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). Tile size is still 16, now in `src/js/UI/game/MapView.ts`; #56 is to take it from the tileset.
+  - Map scale and tile size used to be hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). The tile size, the scales offered and the label fonts now come from the tileset descriptor (`src/js/UI/tilesets/civ1.json`, read through `src/js/UI/lib/tilesets.ts`, #56); choosing between several tilesets waits for a second one (#152).
   - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `src/js/UI/app/options.ts` sets them on every page load.
 - **Plugin/translation generation portability**
   - Generated import files use absolute filesystem paths, potentially brittle across environments.

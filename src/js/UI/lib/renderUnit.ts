@@ -1,3 +1,4 @@
+import currentTileset, { nativeTileSize } from './tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from './getPreloadedImage';
@@ -29,7 +30,8 @@ const unitStatus = (unit: Pick<UnitData, 'busy'>): string | null =>
 
 /**
  * Writes a busy unit's letter onto `context`, over the unit drawn at
- * `offsetX`/`offsetY` and `scale` times its size (#352).
+ * `offsetX`/`offsetY` and `scale` times its size (#352), on a tile `tileSize`
+ * native px across.
  *
  * It is written at the size it is shown at, as the city labels are, rather than
  * into the sprite, which is then enlarged pixel by pixel.
@@ -40,7 +42,7 @@ export const drawUnitStatus = (
   offsetX: number,
   offsetY: number,
   scale: number,
-  tileSize: number = 16
+  tileSize: number = nativeTileSize(currentTileset())
 ): void => {
   const status = unitStatus(unit);
 
@@ -50,9 +52,10 @@ export const drawUnitStatus = (
 
   // if (unit.busy._ === 'Sleeping') {} // TODO: fade the unit like in Civ 1
   const centreX = offsetX + (tileSize * scale) / 2,
-    baseline = offsetY + tileSize * scale * 0.75;
+    baseline = offsetY + tileSize * scale * 0.75,
+    fontSize = currentTileset().units.status.fontSize * scale;
 
-  context.font = `bold ${8 * scale}px sans-serif`;
+  context.font = `bold ${fontSize}px sans-serif`;
   context.textAlign = 'center';
   context.fillStyle = 'black';
   context.fillText(status, centreX + scale, baseline);

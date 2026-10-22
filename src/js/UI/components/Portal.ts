@@ -13,6 +13,7 @@ import Transport from '../Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
+import currentTileset, { nativeTileSize } from '../lib/tilesets';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -50,8 +51,8 @@ type PortalOptions = {
 const defaultPortalOptions: PortalSettings = {
   lockVerticalEdges: false,
   playerId: null,
-  scale: 2,
-  tileSize: 16,
+  scale: currentTileset().defaultScale,
+  tileSize: nativeTileSize(currentTileset()),
 };
 
 // Past this share of the canvas, working out what changed and compositing it
@@ -99,7 +100,6 @@ export class Portal
     canvas: HTMLCanvasElement = s<HTMLCanvasElement>('<canvas></canvas>'),
     options: PortalOptions = {
       playerId: null,
-      scale: 2,
     },
     ...layers: (typeof Map)[]
   ) {

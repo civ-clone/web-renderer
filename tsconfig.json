@@ -73,6 +73,8 @@
     "src/js/UI/lib/viewport.ts",
     "src/js/UI/lib/worldSizes.ts",
     "src/js/UI/lib/yieldMap.ts",
+    "src/js/UI/lib/tilesets.ts",
+    "src/js/UI/modules.d.ts",
     "src/js/UI/tilesets/TilesetDescriptor.ts"
   ]
 }
