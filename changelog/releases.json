@@ -1,4 +1,20 @@
 [
+{"version":"0.1.0@b9fd51c","date":"2026-10-22T07:41:52.000Z","localChanges":["test: type-check the tests as part of npm test, and fix the type errors it found in them (#339)"],"externalChanges":{}}
+,
+{"version":"0.1.0@c251974","date":"2026-10-22T07:37:07.000Z","localChanges":["chore: run the tests and the formatting check on every pull request, before it can reach main (closes #477)"],"externalChanges":{}}
+,
+{"version":"0.1.0@1874eca","date":"2026-10-22T07:37:02.000Z","localChanges":["The release notes are no longer part of the game's main script, which they made about three times bigger: they load when you open the Releases window (closes #476).","After an update to civ.one, the page no longer mixes files from the old and new versions for the first few minutes."],"externalChanges":{}}
+,
+{"version":"0.1.0@df6867e","date":"2026-10-22T07:36:05.000Z","localChanges":["test: every suite now fails when it never finishes its checks, instead of passing silently (#473)"],"externalChanges":{}}
+,
+{"version":"0.1.0@60e0339","date":"2026-10-22T07:33:46.000Z","localChanges":["chore: games play the same on every computer for the same seed, whatever order its disk lists the rules in (#474)"],"externalChanges":{}}
+,
+{"version":"0.1.0@a96e528","date":"2026-10-22T07:25:51.000Z","localChanges":["fix: the release notes no longer show commit trailers, keep a closing Note: paragraph and leave out lone Closes lines (#475)"],"externalChanges":{}}
+,
+{"version":"0.1.0@97611db","date":"2026-10-22T07:22:51.000Z","localChanges":["chore: remove dead tooling and unused code found by the review (#478)"],"externalChanges":{}}
+,
+{"version":"0.1.0@c871979","date":"2026-10-22T08:02:20.000Z","localChanges":["chore: release notes for the latest release"],"externalChanges":{}}
+,
 {"version":"0.1.0@9e651cf","date":"2026-10-22T07:59:58.000Z","localChanges":["chore: the release notes generator carries on past a commit whose package.json does not parse"],"externalChanges":{}}
 ,
 {"version":"0.1.0@508a641","date":"2026-10-22T07:58:01.000Z","localChanges":["fix: repair package.json after a merge left conflict markers in it"],"externalChanges":{}}
