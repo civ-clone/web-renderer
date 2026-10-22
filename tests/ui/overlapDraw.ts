@@ -13,7 +13,24 @@
 //  layers draw a few pixels past the box, which an update of a neighbour then clears without redrawing (#486): the
 //  copy behind a stack of units (`scale` px up and left), the city glyph (`scale` px right and down) and a row of six
 //  yield icons (to the right). For those layers the redraw may differ from a full one only in a strip that wide along
-//  the edges of a box; everywhere else, and for every other layer, it has to be the same.
+//  the edges of a box; everywhere else, and for every other layer, it has to be the same. Each of those strips is
+//  inside what the layer declares as its reach.
+//
+// Where a projection's tiles overlap their neighbours, a tile can't be cleared and drawn again on its own: its box,
+//  out to the layer's reach, is cleared once and everything reaching it is drawn again, back to front. Three test
+//  projections go that way, and on each of them the three properties above hold exactly, for every layer:
+//
+//  - "square, through the overlap path": the square grid, drawn as if it overlapped, where the strips are gone;
+//  - "brick": rows half a tile apart, every other one shifted half a tile across, as a staggered isometric map is,
+//    with diamond sprites so the tiles behind show through the corners of the ones in front;
+//  - "tall": the square grid, with sprites half a tile taller than the box, reaching into the row above, as mountains
+//    and cities do in many tilesets.
+//
+// A full render also has to put the tile in front on top, which a test layer of one sprite per tile checks against
+//  the sprites drawn back to front here. And each of three mistakes the overlap path could make (drawing in the wrong
+//  order, clearing each tile's box before drawing it, a reach too small for what a layer draws) fails a check by name.
+//
+// `--measure` prints what updating one tile costs on each projection, rather than running the checks.
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
@@ -32,8 +49,16 @@ import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
 import Cities from '../../src/js/UI/components/Map/Cities';
 import Fog from '../../src/js/UI/components/Map/Fog';
 import Landscape from '../../src/js/UI/components/Map/Landscape';
-import Map from '../../src/js/UI/components/Map';
-import { Rect } from '../../src/js/UI/lib/viewport';
+import Map, { TilePlacement } from '../../src/js/UI/components/Map';
+import {
+  Placement,
+  Projection,
+  Reach,
+  SquareProjection,
+  TileSpan,
+  WorldDimensions,
+} from '../../src/js/UI/lib/projection';
+import { Rect, mergeRects, rectArea } from '../../src/js/UI/lib/viewport';
 import { Tile } from '../../src/js/UI/types';
 import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
@@ -43,7 +68,11 @@ import Yields from '../../src/js/UI/components/Map/Yields';
 useSoftwareCanvases();
 
 const failures: string[] = [],
-  errors: string[] = [];
+  errors: string[] = [],
+  measure = process.argv.includes('--measure');
+
+// Where failed checks go: `failures`, except while a deliberately broken layer is checked.
+let collect: string[] = failures;
 let checks = 0,
   finished = false;
 
@@ -64,7 +93,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
   checks++;
 
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    failures.push(
+    collect.push(
       `${description}\n    expected: ${JSON.stringify(
         expected
       )}\n    actual:   ${JSON.stringify(actual)}`
@@ -77,7 +106,7 @@ const sweep = (description: string, misses: string[]) => {
   checks++;
 
   if (misses.length > 0) {
-    failures.push(
+    collect.push(
       `${description}: ${misses.length} wrong, first ${misses
         .slice(0, 5)
         .join('; ')}`
@@ -203,9 +232,6 @@ const sweep = (description: string, misses: string[]) => {
 }
 
 // --- The world ------------------------------------------------------------------------------------------------------
-
-// Every sprite has a scattering of see-through pixels, as real ones do, so what is under it shows.
-setSpriteMask((path, x, y) => (mix(stringHash(path), x, y) % 5 === 0 ? 0 : 1));
 
 const terrains = [
     'Grassland',
@@ -414,7 +440,42 @@ class TestActiveUnit extends ActiveUnit {
   }
 }
 
-type Reach = { top: number; right: number; bottom: number; left: number };
+// One sprite a tile, half a tile taller than the box, reaching into the row above.
+class TallPlain extends Map {
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+    const variant = (tile as any).variant;
+
+    if (variant === 0) {
+      return;
+    }
+
+    this.putImage(
+      new FakeImage(`tall/${tile.x}_${tile.y}_${variant}`, 16, 24) as any,
+      offsetX,
+      offsetY - 8 * this.scale()
+    );
+  }
+}
+
+// Broken on purpose, each of them, to show the checks catch it.
+
+// Clears each tile's box before drawing it, as the square grid does.
+class ClearsEachTile extends Plain {
+  protected paint(placement: TilePlacement): void {
+    const { width, height } = this.projection().footprint();
+
+    this.context().clearRect(placement.px, placement.py, width, height);
+
+    super.paint(placement);
+  }
+}
+
+// Draws taller than the box but says it doesn't.
+class ReachTooSmall extends TallPlain {
+  protected reach(): Reach {
+    return noReach;
+  }
+}
 
 const noReach: Reach = { top: 0, right: 0, bottom: 0, left: 0 };
 
@@ -443,12 +504,46 @@ type LayerSpec = {
   mutations: Mutation[];
   // How far past a tile's square box the layer draws on the square grid (#486).
   squareStrip: (scale: number) => Reach;
+  // The projections it is checked on, if not all of them.
+  projections?: string[];
+  // The sprite a tile is, for the layers simple enough to draw back to front here: where it goes from the top left of
+  //  the tile's box.
+  sprite?: (tile: any, scale: number) => [FakeImage, number, number] | null;
 };
 
 const layerSpecs: LayerSpec[] = [
   {
     name: 'Plain',
     Type: Plain,
+    sprite: (tile) =>
+      tile.variant === 0
+        ? null
+        : [
+            new FakeImage(`plain/${tile.x}_${tile.y}_${tile.variant}`, 16, 16),
+            0,
+            0,
+          ],
+    mutations: [
+      {
+        name: 'another sprite',
+        apply: swap('variant', (tile) => (tile.variant % 2) + 1),
+      },
+      { name: 'no sprite', apply: swap('variant', () => 0) },
+    ],
+    squareStrip: () => noReach,
+  },
+  {
+    name: 'TallPlain',
+    Type: TallPlain,
+    projections: ['tall'],
+    sprite: (tile, scale) =>
+      tile.variant === 0
+        ? null
+        : [
+            new FakeImage(`tall/${tile.x}_${tile.y}_${tile.variant}`, 16, 24),
+            0,
+            -8 * scale,
+          ],
     mutations: [
       {
         name: 'another sprite',
@@ -579,18 +674,143 @@ const layerSpecs: LayerSpec[] = [
   {
     name: 'ActiveUnit',
     Type: TestActiveUnit,
-    // Moving the active unit to the tile: `apply` is given the layer's tile and the layers to tell.
+    // The checks move the active unit to the tile themselves.
     mutations: [{ name: 'the active unit moves here', apply: () => () => {} }],
     squareStrip: () => noReach,
   },
 ];
 
-// How a layer is drawn: the projection it is given (none: the layer's own square one), and the reach the test
-//  allows it on that projection.
+// The square grid, drawn as if its tiles overlapped.
+class OverlappingSquare extends SquareProjection {
+  overlapsNeighbours(): boolean {
+    return true;
+  }
+}
+
+// The square grid with sprites half a tile taller than the box, reaching into the row above.
+class Tall extends OverlappingSquare {
+  #reach: Reach;
+
+  constructor(size: number, world: WorldDimensions, wrapVertical: boolean) {
+    super(size, world, wrapVertical);
+
+    this.#reach = { top: size / 2, right: 0, bottom: 0, left: 0 };
+  }
+
+  reach(): Reach {
+    return this.#reach;
+  }
+}
+
+// Rows half a tile apart, every other one shifted half a tile across: a staggered isometric map's boxes. The world
+//  has to be an even number of rows high to wrap over the poles.
+class Brick implements Projection {
+  #size: number;
+  #world: WorldDimensions;
+  #wrapVertical: boolean;
+
+  constructor(size: number, world: WorldDimensions, wrapVertical: boolean) {
+    this.#size = size;
+    this.#world = world;
+    this.#wrapVertical = wrapVertical;
+  }
+
+  compareDrawOrder(a: Placement, b: Placement): number {
+    return a.py - b.py || a.px - b.px || a.y - b.y || a.x - b.x;
+  }
+
+  footprint() {
+    return { width: this.#size, height: this.#size };
+  }
+
+  overlapsNeighbours(): boolean {
+    return true;
+  }
+
+  pixelToTile(px: number, py: number): [number, number] {
+    const row = Math.floor(py / (this.#size / 2));
+
+    return [
+      Math.floor((px - (row % 2 === 0 ? 0 : this.#size / 2)) / this.#size),
+      row,
+    ];
+  }
+
+  reach(): Reach {
+    return noReach;
+  }
+
+  tileSpan({ x, y, width, height }: Rect, overhang: number): TileSpan {
+    const size = this.#size,
+      step = size / 2;
+
+    return {
+      // Odd rows start half a tile across.
+      columns: [
+        Math.floor((x - overhang - step) / size),
+        Math.ceil((x + width + overhang) / size),
+      ],
+      // A row's boxes are a whole tile high, so the row a tile above still reaches down into the rectangle.
+      rows: [
+        Math.floor((y - overhang - size) / step) + 1,
+        Math.ceil((y + height + overhang) / step),
+      ],
+    };
+  }
+
+  tileToPixel(x: number, y: number): [number, number] {
+    return [
+      x * this.#size + (y % 2 === 0 ? 0 : this.#size / 2),
+      (y * this.#size) / 2,
+    ];
+  }
+
+  worldSize() {
+    return {
+      width: this.#world.width() * this.#size + this.#size / 2,
+      height: ((this.#world.height() + 1) * this.#size) / 2,
+    };
+  }
+
+  wrapPeriod() {
+    return {
+      x: this.#world.width() * this.#size,
+      y: this.#wrapVertical ? (this.#world.height() * this.#size) / 2 : null,
+    };
+  }
+}
+
+// Brick, drawn column by column as the square grid used to be.
+class BrickByColumn extends Brick {
+  compareDrawOrder(a: Placement, b: Placement): number {
+    return a.px - b.px || a.py - b.py || a.x - b.x || a.y - b.y;
+  }
+}
+
+// Every sprite has a scattering of see-through pixels, as real ones do, so what is under it shows.
+const scatteredMask = (path: string, x: number, y: number): number =>
+    mix(stringHash(path), x, y) % 5 === 0 ? 0 : 1,
+  // And, on the brick grid, is a diamond, as an isometric tile is.
+  diamondMask = (
+    path: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): number =>
+    Math.abs(x + 0.5 - width / 2) / (width / 2) +
+      Math.abs(y + 0.5 - height / 2) / (height / 2) >
+    1
+      ? 0
+      : scatteredMask(path, x, y);
+
+// How a layer is drawn: the projection it is given (none: the layer's own square one), the reach the test allows it
+//  on that projection, and the sprites' see-through pixels.
 type ProjectionSpec = {
   name: string;
-  make: ((layer: Map) => any) | null;
+  make: ((layer: any) => Projection) | null;
   strip: (spec: LayerSpec, scale: number) => Reach;
+  mask: typeof diamondMask;
 };
 
 const projectionSpecs: ProjectionSpec[] = [
@@ -598,8 +818,38 @@ const projectionSpecs: ProjectionSpec[] = [
     name: 'square',
     make: null,
     strip: (spec, scale) => spec.squareStrip(scale),
+    mask: scatteredMask,
+  },
+  {
+    name: 'square, through the overlap path',
+    make: (layer) =>
+      new OverlappingSquare(layer.tileSize(), layer.world(), layer.wraps()),
+    strip: () => noReach,
+    mask: scatteredMask,
+  },
+  {
+    name: 'brick',
+    make: (layer) => new Brick(layer.tileSize(), layer.world(), layer.wraps()),
+    strip: () => noReach,
+    mask: diamondMask,
+  },
+  {
+    name: 'tall',
+    make: (layer) => new Tall(layer.tileSize(), layer.world(), layer.wraps()),
+    strip: () => noReach,
+    mask: scatteredMask,
   },
 ];
+
+const brokenOrder: ProjectionSpec = {
+  name: 'brick, drawn column by column',
+  make: (layer) =>
+    new BrickByColumn(layer.tileSize(), layer.world(), layer.wraps()),
+  strip: () => noReach,
+  mask: diamondMask,
+};
+
+let mask: ProjectionSpec['mask'] | null = null;
 
 // A layer of `Type`, on a software canvas, with its projection, pointed at a viewport.
 const makeLayer = (
@@ -612,6 +862,12 @@ const makeLayer = (
   [originX, originY]: [number, number],
   activeUnit: any = null
 ): { layer: any; canvas: SoftwareCanvas } => {
+  if (mask !== projection.mask) {
+    mask = projection.mask;
+
+    setSpriteMask(mask);
+  }
+
   const canvas = softwareCanvas(0, 0),
     Probe = probe(spec.Type),
     layer = new Probe(world, scale, 16, canvas);
@@ -641,13 +897,33 @@ const probe = (Type: typeof Map): any => {
   }
 
   const Probe = class extends (Type as any) {
-    #make: ((layer: Map) => any) | null = null;
+    #make: ((layer: any) => Projection) | null = null;
     #projection: any = null;
+    #wraps = true;
     drawn = 0;
 
-    useProjection(make: ((layer: Map) => any) | null): void {
+    useProjection(make: ((layer: any) => Projection) | null): void {
       this.#make = make;
       this.#projection = null;
+    }
+
+    setWrapVertical(wrap: boolean): void {
+      this.#wraps = wrap;
+      this.#projection = null;
+
+      super.setWrapVertical(wrap);
+    }
+
+    wraps(): boolean {
+      return this.#wraps;
+    }
+
+    reachOf(): Reach {
+      return this.reach();
+    }
+
+    overhangOf(): number {
+      return this.overhang();
     }
 
     origin(): [number, number] {
@@ -660,7 +936,7 @@ const probe = (Type: typeof Map): any => {
       }
 
       if (this.#projection === null) {
-        this.#projection = this.#make(this as unknown as Map);
+        this.#projection = this.#make(this);
       }
 
       return this.#projection;
@@ -811,7 +1087,7 @@ const sampleTiles = (world: World): Tile[] =>
       ({ x, y }) =>
         ((x === 0 || x === world.width() - 1) &&
           (y === 0 || y === world.height() - 1)) ||
-        (x * 3 + y * 5) % 7 === 0
+        (x * 3 + y * 5) % 9 === 0
     );
 
 const updateMatchesRedraw = (
@@ -995,13 +1271,324 @@ const scrollMatchesRedraw = (
   sweep(`${name}: scrolling leaves what drawing afresh would`, misses);
 };
 
+// A full render puts the tile in front on top: the same as drawing each tile's sprite, at every place it lands, from
+//  the top of the canvas down and then from the left, here rather than by the projection's own order.
+const fullRenderIsBackToFront = (
+  projection: ProjectionSpec,
+  spec: LayerSpec,
+  scenario: Scenario
+): void => {
+  const {
+      world: [width, height],
+      scale,
+      wrapVertical,
+      canvas: [canvasWidth, canvasHeight],
+      origin: [originX, originY],
+    } = scenario,
+    world = makeWorld(width, height),
+    { layer, canvas } = makeLayer(
+      spec,
+      projection,
+      world,
+      scale,
+      wrapVertical,
+      [canvasWidth, canvasHeight],
+      [originX, originY]
+    ),
+    grid: Projection = projection.make
+      ? projection.make(layer)
+      : new SquareProjection(16 * scale, world, wrapVertical),
+    period = grid.wrapPeriod(),
+    sprites: [Placement, FakeImage, number, number][] = [];
+
+  world.tiles().forEach((tile) => {
+    const sprite = spec.sprite!(tile, scale);
+
+    if (sprite === null) {
+      return;
+    }
+
+    const [image, dx, dy] = sprite,
+      [tileX, tileY] = grid.tileToPixel(tile.x, tile.y);
+
+    [-2, -1, 0, 1, 2].forEach((across) =>
+      (period.y === null ? [0] : [-2, -1, 0, 1, 2]).forEach((down) => {
+        const px = tileX + across * period.x - originX,
+          py = tileY + down * (period.y ?? 0) - originY;
+
+        if (
+          px + dx < canvasWidth &&
+          px + dx + image.naturalWidth * scale > 0 &&
+          py + dy < canvasHeight &&
+          py + dy + image.naturalHeight * scale > 0
+        ) {
+          sprites.push([{ x: tile.x, y: tile.y, px, py }, image, dx, dy]);
+        }
+      })
+    );
+  });
+
+  const expected = new SoftwareCanvas(canvasWidth, canvasHeight),
+    context = expected.getContext();
+
+  sprites
+    .sort(([a], [b]) => a.py - b.py || a.px - b.px || a.y - b.y || a.x - b.x)
+    .forEach(([{ px, py }, image, dx, dy]) =>
+      context.drawImage(
+        image,
+        px + dx,
+        py + dy,
+        image.naturalWidth * scale,
+        image.naturalHeight * scale
+      )
+    );
+
+  const wrong = differences(canvas.snapshot(), expected.snapshot());
+
+  sweep(
+    `${describe(
+      projection,
+      spec,
+      scenario
+    )}: a full render draws back to front`,
+    wrong.length === 0
+      ? []
+      : [`${wrong.length} px, first at ${at(expected.snapshot(), wrong[0])}`]
+  );
+};
+
+// The reach a layer declares covers what it draws past its box on the square grid (#486), and the margin it culls
+//  tiles by covers its reach, or a tile just off the canvas that reaches on to it would never be drawn.
+const reachIsCovered = (
+  projection: ProjectionSpec,
+  spec: LayerSpec,
+  scenario: Scenario
+): void => {
+  const {
+      world: [width, height],
+      scale,
+      wrapVertical,
+      canvas,
+      origin,
+    } = scenario,
+    { layer } = makeLayer(
+      spec,
+      projection,
+      makeWorld(width, height),
+      scale,
+      wrapVertical,
+      canvas,
+      origin
+    ),
+    reach: Reach = layer.reachOf(),
+    strip = spec.squareStrip(scale),
+    sides = ['top', 'right', 'bottom', 'left'] as (keyof Reach)[],
+    name = describe(projection, spec, scenario);
+
+  expect(
+    `${name}: the overhang covers the reach`,
+    sides.filter((side) => reach[side] > layer.overhangOf()),
+    []
+  );
+  expect(
+    `${name}: the reach covers the square grid's strips`,
+    sides.filter((side) => strip[side] > reach[side]),
+    []
+  );
+};
+
+const checkLayer = (
+  projection: ProjectionSpec,
+  spec: LayerSpec,
+  scenario: Scenario
+): void => {
+  updateMatchesRedraw(projection, spec, scenario);
+  scrollMatchesRedraw(projection, spec, scenario);
+
+  if (spec.sprite) {
+    fullRenderIsBackToFront(projection, spec, scenario);
+  }
+};
+
+const checksOn = (projection: ProjectionSpec, spec: LayerSpec): boolean =>
+  spec.projections === undefined || spec.projections.includes(projection.name);
+
+// Checks a layer broken on purpose, and expects `check` to fail.
+const caught = (
+  description: string,
+  projection: ProjectionSpec,
+  spec: LayerSpec,
+  check: string
+): void => {
+  const missed: string[] = [],
+    counted = checks;
+
+  collect = missed;
+
+  scenarios
+    .filter(({ scale, canvas }) => scale === 1 && canvas[0] === 200)
+    .forEach((scenario) => checkLayer(projection, spec, scenario));
+
+  collect = failures;
+  checks = counted;
+
+  expect(
+    `${description} fails "${check}"`,
+    missed.some((failure) => failure.includes(`: ${check}`)),
+    true
+  );
+};
+
+// What updating the tile in the middle of a big world costs a layer: the tiles drawn, the draw calls, the pixels
+//  cleared and drawn, and the area the portal is told to composite.
+const measureUpdate = (
+  projection: ProjectionSpec,
+  spec: LayerSpec,
+  scale: number
+): string[] => {
+  const world = makeWorld(40, 26),
+    canvas: [number, number] = [200, 150],
+    tile = world.get(20, 12) as any,
+    { layer: probeLayer } = makeLayer(
+      spec,
+      projection,
+      world,
+      scale,
+      true,
+      canvas,
+      [0, 0]
+    ),
+    grid: Projection = probeLayer.projection(),
+    [tileX, tileY] = grid.tileToPixel(20, 12),
+    { width, height } = grid.footprint(),
+    origin: [number, number] = [
+      tileX + width / 2 - canvas[0] / 2,
+      tileY + height / 2 - canvas[1] / 2,
+    ],
+    { layer, canvas: pixels } = makeLayer(
+      spec,
+      projection,
+      world,
+      scale,
+      true,
+      canvas,
+      origin
+    );
+
+  layer.clearDirty();
+  pixels.resetCounters();
+  layer.drawn = 0;
+
+  const undo = spec.mutations[0].apply(tile);
+
+  layer.update([tile]);
+  undo();
+
+  const { calls, clearedPixels, paintedPixels } = pixels.counters;
+
+  return [
+    spec.name,
+    projection.name,
+    String(scale),
+    String(layer.drawn),
+    String(
+      ['drawImage', 'fillRect', 'fillText', 'fill'].reduce(
+        (total, method) => total + (calls[method] ?? 0),
+        0
+      )
+    ),
+    String(calls.clearRect ?? 0),
+    String(clearedPixels),
+    String(paintedPixels),
+    String(
+      mergeRects(layer.dirtyRects()).reduce(
+        (total: number, rect: Rect) => total + rectArea(rect),
+        0
+      )
+    ),
+  ];
+};
+
+if (measure) {
+  const rows = [
+    [
+      'Layer',
+      'Projection',
+      'Scale',
+      'Tiles drawn',
+      'Draw calls',
+      'clearRect calls',
+      'Cleared px',
+      'Painted px',
+      'Dirty px',
+    ],
+  ];
+
+  ['Plain', 'TallPlain', 'Landscape', 'Units', 'Cities', 'Yields'].forEach(
+    (layerName) =>
+      projectionSpecs.forEach((projection) =>
+        [1, 2, 3].forEach((scale) => {
+          const spec = layerSpecs.find(({ name }) => name === layerName)!;
+
+          if (checksOn(projection, spec)) {
+            rows.push(measureUpdate(projection, spec, scale));
+          }
+        })
+      )
+  );
+
+  console.log(
+    rows
+      .map((row, index) =>
+        [
+          `| ${row.join(' | ')} |`,
+          ...(index === 0 ? [`|${row.map(() => '---').join('|')}|`] : []),
+        ].join('\n')
+      )
+      .join('\n')
+  );
+
+  finished = true;
+
+  process.exit(errors.length ? 1 : 0);
+}
+
 projectionSpecs.forEach((projection) =>
-  layerSpecs.forEach((spec) =>
-    scenarios.forEach((scenario) => {
-      updateMatchesRedraw(projection, spec, scenario);
-      scrollMatchesRedraw(projection, spec, scenario);
-    })
-  )
+  layerSpecs
+    .filter((spec) => checksOn(projection, spec))
+    .forEach((spec) =>
+      scenarios.forEach((scenario) => {
+        checkLayer(projection, spec, scenario);
+
+        if (scenario === scenarios[0] || scenario === scenarios[2]) {
+          reachIsCovered(projection, spec, scenario);
+        }
+      })
+    )
+);
+
+const plain = layerSpecs.find(({ name }) => name === 'Plain')!,
+  tallPlain = layerSpecs.find(({ name }) => name === 'TallPlain')!,
+  brick = projectionSpecs.find(({ name }) => name === 'brick')!,
+  tall = projectionSpecs.find(({ name }) => name === 'tall')!;
+
+caught(
+  'drawing brick tiles column by column',
+  brokenOrder,
+  plain,
+  'a full render draws back to front'
+);
+caught(
+  "clearing each brick tile's box before drawing it",
+  brick,
+  { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
+  'a full render draws back to front'
+);
+caught(
+  'a tall layer with no reach',
+  tall,
+  { ...tallPlain, name: 'ReachTooSmall', Type: ReachTooSmall },
+  'updating a tile leaves what a full redraw would'
 );
 
 sweep('nothing a layer drew was logged as an error', errors);
