@@ -1,0 +1,1 @@
+{"version":"0.1.0@f89018c","date":"2026-10-22T07:21:25.000Z","localChanges":["chore: the map projection says whether its tiles overlap, how far its sprites reach, the order to draw them in and which tiles reach a rectangle (#91)"],"externalChanges":{}}

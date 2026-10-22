@@ -1,6 +1,6 @@
 // The tileset descriptor (#56, #92). Civ1's says what the renderer already does: its required sprites are the ones the
-//  asset store asks for today, its optional ones the three women specialists, its tile the extractor's default size,
-//  and its name templates give the sprite names the map layers ask for. A descriptor the renderer cannot read (another
+//  asset store has always asked for (and the store reads them from it), its optional ones the three women specialists,
+//  its tile the extractor's default size, and its name templates give the sprite names the map layers ask for. A descriptor the renderer cannot read (another
 //  schema, a grid the engine does not know, a size that is not whole pixels, a broken sprite list) is refused.
 //
 // The map takes its tile size, its scales and its label sizes from the descriptor, and only the tile drawn on screen
@@ -24,7 +24,7 @@ import Portal from '../../src/js/UI/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import { Tile } from '../../src/js/UI/types';
 import World from '../../src/js/UI/components/World';
-import { assetStore } from '../../src/js/UI/AssetStore';
+import { AssetStore, assetStore } from '../../src/js/UI/AssetStore';
 import i18next from 'i18next';
 import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
 import setOptionDefaults from '../../src/js/UI/app/options';
@@ -102,7 +102,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     [[1, 2, 3, 4], 2]
   );
 
-  // Its sprites are the asset store's.
+  // The asset store asks for its sprites, where it keeps them.
   const stored = (name: string): string =>
       `${civ1.storage.prefix}${name}${civ1.storage.ext}`,
     { required, optional } = civ1.assets;
@@ -114,14 +114,40 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
 
   expect('the store asks for 286 sprites', storeRequires.length, 286);
   expect(
-    "the required sprites are the store's, where it keeps them",
-    sorted(required.map(stored)),
-    sorted(storeRequires)
+    "the store's sprites are the tileset's, in its order, where it keeps them",
+    [assetStore.requiredAssets, storeRequires, assetStore.optionalAssets],
+    [required.map(stored), required.map(stored), optional.map(stored)]
   );
   expect(
     'kept where they always have been, so nobody imports again',
     [civ1.storage, required.length, new Set(required).size],
     [{ prefix: './assets/', ext: '.png' }, 286, 286]
+  );
+
+  // And a store for another tileset asks for that one's, under its prefix (#56).
+  const otherStore = new AssetStore(
+    validateDescriptor(
+      civ1With({
+        id: 'other',
+        storage: { prefix: './assets/other/', ext: '.png' },
+        assets: {
+          required: ['terrain/x', 'terrain/y'],
+          optional: ['terrain/z'],
+          ui: [],
+        },
+      })
+    )
+  );
+
+  (otherStore as any).keys = async (): Promise<string[]> => [
+    './assets/terrain/x.png',
+    './assets/other/terrain/y.png',
+  ];
+
+  expect(
+    "a store reads its sprites from the tileset it is for: Civ1's sprite of the same name is not one of them",
+    [await otherStore.missingAssets(), otherStore.optionalAssets],
+    [['./assets/other/terrain/x.png'], ['./assets/other/terrain/z.png']]
   );
   expect(
     'the optional sprites are the three women specialists',

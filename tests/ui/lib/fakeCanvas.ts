@@ -48,10 +48,28 @@ export const fakeCanvas = (width: number, height: number) => {
   };
 };
 
+const asked: string[] = [];
+
+/** Every key a lookup has asked the preload container for, in the order asked. */
+export const askedFor = (): string[] => [...asked];
+
+/** The paths of the images put in the preload container. */
+export const preloaded = (): string[] => images.map(({ path }) => path);
+
+// Looked up as the page does, by the whole key in `data-path`: nothing else matches.
 const preload = {
   querySelectorAll: () => [],
-  querySelector: (selector: string) =>
-    images.find((image) => selector.includes(`${image.path}.png`)) ?? null,
+  querySelector: (selector: string) => {
+    const key = selector.match(/^img\[data-path="(.*)"\]$/)?.[1] ?? null;
+
+    if (key === null) {
+      throw new Error(`The preload container cannot answer ${selector}.`);
+    }
+
+    asked.push(key);
+
+    return images.find(({ path }) => `./assets/${path}.png` === key) ?? null;
+  },
 };
 
 Object.assign(globalThis, {
