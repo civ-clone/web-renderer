@@ -1,0 +1,1 @@
+{"version":"0.1.0@a96e528","date":"2026-10-22T07:25:51.000Z","localChanges":["fix: the release notes no longer show commit trailers, keep a closing Note: paragraph and leave out lone Closes lines (#475)"],"externalChanges":{}}

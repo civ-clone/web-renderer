@@ -1,0 +1,1 @@
+{"version":"0.1.0@b9fd51c","date":"2026-10-22T07:41:52.000Z","localChanges":["test: type-check the tests as part of npm test, and fix the type errors it found in them (#339)"],"externalChanges":{}}

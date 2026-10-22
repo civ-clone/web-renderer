@@ -1,0 +1,1 @@
+{"version":"0.1.0@df6867e","date":"2026-10-22T07:36:05.000Z","localChanges":["test: every suite now fails when it never finishes its checks, instead of passing silently (#473)"],"externalChanges":{}}
