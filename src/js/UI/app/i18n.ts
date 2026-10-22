@@ -1,14 +1,12 @@
 import i18next from 'i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import i18nOptions from './i18nOptions';
 
 // Load translations
 export const initI18n = async (): Promise<void> => {
   i18next.use(LanguageDetector);
 
-  await i18next.init({
-    defaultNS: 'default',
-    ns: ['default'],
-  });
+  await i18next.init(i18nOptions);
   await import('../../translations');
 };
 
