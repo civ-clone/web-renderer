@@ -149,6 +149,53 @@ const sent: [string, unknown][] = [],
     ['gameDataPatch', [patch('d', { value: 4 })]],
   ]);
 
+  sent.splice(0);
+
+  // A patch whose value throws as it is built is left out, and the rest go, then and after (#470).
+  const logged = console.error;
+
+  console.error = () => {};
+
+  patches.update('e', patchValue(5));
+  patches.update('broken', () => {
+    throw new Error('half destroyed');
+  });
+  patches.update('f', patchValue(6));
+  patches.flush();
+  patches.update('g', patchValue(7));
+  patches.flush();
+
+  console.error = logged;
+
+  expect('a value that throws is left out, and the rest go', sent, [
+    ['gameDataPatch', [patch('e', { value: 5 }), patch('f', { value: 6 })]],
+    ['gameDataPatch', [patch('g', { value: 7 })]],
+  ]);
+
+  sent.splice(0);
+
+  // A patch that can't be sent is let go of all the same, so the next goes.
+  const send = transport.send;
+
+  transport.send = () => {
+    throw new Error('could not be cloned');
+  };
+  patches.update('h', patchValue(8));
+
+  try {
+    patches.flush();
+  } catch (error) {
+    // Passed on, as the caller's to report.
+  }
+
+  transport.send = send;
+  patches.update('i', patchValue(9));
+  patches.flush();
+
+  expect('a patch that could not be sent is not sent again', sent, [
+    ['gameDataPatch', [patch('i', { value: 9 })]],
+  ]);
+
   finished = true;
 
   if (failures.length > 0) {

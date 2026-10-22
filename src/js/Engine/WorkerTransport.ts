@@ -31,6 +31,23 @@ export class WorkerTransport<
     super();
 
     this.#worker = worker;
+
+    // An error the worker didn't catch, or a message that couldn't be read, reaches the page only as an event on the
+    //  `Worker`, which nothing would hear (#470). Passed on to the `workerError` listeners as though the worker had sent
+    //  it, as it does for a rejection nothing handled. The page says what went wrong in its own words, then the message,
+    //  when there is one.
+    const passOn = (message: string): void => {
+      worker.dispatchEvent(
+        new MessageEvent('message', {
+          data: { channel: 'workerError', data: { message } },
+        })
+      );
+    };
+
+    worker.addEventListener('error', (event: ErrorEvent): void =>
+      passOn(event.message ?? '')
+    );
+    worker.addEventListener('messageerror', (): void => passOn(''));
   }
 
   receive<Channel extends keyof DataMap>(

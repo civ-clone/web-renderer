@@ -44,7 +44,17 @@ export class DataQueue {
 
         Object.entries(patch).forEach(
           ([key, { type, index, value }]: [string, DataPatchContents]) => {
-            const built = typeof value === 'function' ? value() : value;
+            let built;
+
+            // One that throws is left out, and the rest go: thrown, it stopped the whole patch, and stayed queued, so
+            //  every later one threw too and the UI heard nothing more for the rest of the game (#470).
+            try {
+              built = typeof value === 'function' ? value() : value;
+            } catch (error) {
+              console.error(error);
+
+              return;
+            }
 
             if (type !== 'remove' && built === undefined) {
               return;

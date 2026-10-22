@@ -8,7 +8,10 @@
 // concurrent requests on one channel each get their own answer, that different channels do not wait on each other, and
 // that a channel is free again after its reply.
 
-import AbstractTransport from '../../src/js/Engine/AbstractTransport';
+import AbstractTransport, {
+  RequestFailed,
+} from '../../src/js/Engine/AbstractTransport';
+import answer from '../../src/js/Engine/answer';
 import Request from '../../src/js/Engine/Request';
 
 type Handler = (data: any) => void;
@@ -19,6 +22,19 @@ const fail = (reason: string): never => {
 
   throw new Error(reason);
 };
+
+// A run that stops before it reports has checked nothing: a request that never settles leaves node nothing to wait for
+//  (#473).
+let finished = false;
+
+process.on('exit', (code: number): void => {
+  if (code === 0 && !finished) {
+    process.stderr.write(
+      'FAIL transportRequests: stopped before the checks ran\n'
+    );
+    process.exitCode = 1;
+  }
+});
 
 class StubTransport extends AbstractTransport<any> {
   #listeners: Map<string, Handler[]> = new Map();
@@ -37,11 +53,16 @@ class StubTransport extends AbstractTransport<any> {
 
     this.sent.push([channel, data]);
 
-    // Answered later, as a worker would, with every listener on the channel hearing it, as `WorkerTransport` does.
+    // Answered later, as a worker would, with every listener on the channel hearing it, as `WorkerTransport` does. One
+    //  asked to fail is answered as `answer` answers a handler that threw (#470).
     setTimeout(() => {
-      const listeners = [...(this.#listeners.get(channel) ?? [])];
+      const [replyChannel, reply] =
+          data === 'fail'
+            ? ['requestFailed', { channel, message: `${channel} failed` }]
+            : [channel, `${channel}:${data}`],
+        listeners = [...(this.#listeners.get(replyChannel) ?? [])];
 
-      listeners.forEach((listener) => listener(`${channel}:${data}`));
+      listeners.forEach((listener) => listener(reply));
     }, 5);
   }
 
@@ -122,8 +143,92 @@ const run = async (): Promise<void> => {
     fail(`a lone request after the others got ${alone}`);
   }
 
+  // A request the worker could not answer rejects, and frees its channel: the one behind it gets its own reply (#470).
+  const [failed, after] = await Promise.allSettled([
+    transport.request(new Ask('builds', 'fail')),
+    transport.request(new Ask('builds', 'after')),
+  ]);
+
+  if (
+    failed.status !== 'rejected' ||
+    !(failed.reason instanceof RequestFailed) ||
+    failed.reason.message !== 'builds failed'
+  ) {
+    fail(
+      `a request answered with requestFailed settled as ${String(
+        failed.status
+      )}`
+    );
+  }
+
+  if (after.status !== 'fulfilled' || after.value !== 'builds:after') {
+    fail(`the request behind a failed one settled as ${JSON.stringify(after)}`);
+  }
+
+  // Another channel's failure is not this one's.
+  const [otherFailed, mine] = await Promise.allSettled([
+    transport.request(new Ask('cities', 'fail')),
+    transport.request(new Ask('builds', 'mine')),
+  ]);
+
+  if (otherFailed.status !== 'rejected' || mine.status !== 'fulfilled') {
+    fail("one channel's failure settled another's request");
+  }
+
+  // The worker's side: `answer` replies on the channel with what the handler gives, or a promise once it resolves, and
+  //  with a `requestFailed` on that channel when it throws or rejects.
+  const handlers: { [channel: string]: (data: any) => void } = {},
+    replies: [string, any][] = [],
+    worker = {
+      receive: (channel: string, handler: (data: any) => void) => {
+        handlers[channel] = handler;
+
+        return () => {};
+      },
+      send: (channel: string, data: any) => replies.push([channel, data]),
+    },
+    logged = console.error;
+
+  console.error = () => {};
+
+  answer(worker as any, 'value', (data) => `value:${data}`);
+  answer(worker as any, 'later', (data) => Promise.resolve(`later:${data}`));
+  answer(worker as any, 'throws', () => {
+    throw new Error('it threw');
+  });
+  answer(worker as any, 'rejects', () =>
+    Promise.reject(new Error('it rejected'))
+  );
+
+  handlers.value('a');
+
+  if (JSON.stringify(replies) !== JSON.stringify([['value', 'value:a']])) {
+    fail(`answer sent ${JSON.stringify(replies)} for a value, not at once`);
+  }
+
+  handlers.later('b');
+  handlers.throws('c');
+  handlers.rejects('d');
+
+  await new Promise((resolve) => setTimeout(resolve, 0));
+
+  console.error = logged;
+
+  const expected = [
+    ['value', 'value:a'],
+    ['requestFailed', { channel: 'throws', message: 'it threw' }],
+    ['later', 'later:b'],
+    ['requestFailed', { channel: 'rejects', message: 'it rejected' }],
+  ];
+
+  if (JSON.stringify(replies) !== JSON.stringify(expected)) {
+    fail(`answer sent ${JSON.stringify(replies)}`);
+  }
+
+  finished = true;
+
   console.log(
-    'PASS transportRequests (2, then 3 concurrent requests on one channel each got their own reply; another channel was not held up)'
+    'PASS transportRequests (2, then 3 concurrent requests on one channel each got their own reply; another channel was not held up; a failed request rejected and freed its channel; answer replied, or said it failed)'
   );
 };
 

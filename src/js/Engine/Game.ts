@@ -8,6 +8,7 @@ import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
+import answer, { describeError } from './answer';
 import loadGame from './loadGame';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
@@ -57,29 +58,31 @@ export class Game implements IGame {
     transport.receive('load', ({ data }: { data: string }): void => {
       this.#transport.send('notification', 'loading saved game...');
 
-      this.load(JSON.parse(data) as SaveGame);
+      let file: SaveGame;
+
+      try {
+        file = JSON.parse(data) as SaveGame;
+      } catch (error) {
+        // As any other failed load (#470).
+        this.#transport.send('loadFailed', { message: describeError(error) });
+
+        return;
+      }
+
+      this.load(file);
     });
 
     // The levels come from the rules rather than a list here, so a ruleset with other levels needs no change to the menu
-    //  (#173). The plugins are imported for it, as a load does, before the game has started.
-    transport.receive('difficulties', (): void => {
-      import('../plugins')
-        .then((): void =>
-          transport.send(
-            'difficulties',
-            defaultGame.availableDifficulties.sorted().map((Level) => ({
-              name: typeNameOf(Level),
-              level: Level.level(),
-            }))
-          )
-        )
-        .catch((error: Error): void =>
-          this.#transport.send(
-            'notification',
-            `could not list the difficulty levels: ${error.message}`
-          )
-        );
-    });
+    //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
+    //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).
+    answer(transport, 'difficulties', () =>
+      import('../plugins').then(() =>
+        defaultGame.availableDifficulties.sorted().map((Level) => ({
+          name: typeNameOf(Level),
+          level: Level.level(),
+        }))
+      )
+    );
 
     transport.receive('start', () => {
       this.bindEvents();
@@ -107,18 +110,15 @@ export class Game implements IGame {
       engine.setOption(name, value);
     });
 
-    transport.receive('getOptions', (values) =>
-      transport.send(
-        'getOptions',
-        values.reduce((options, optionName) => {
-          options[optionName] = engine.option(optionName);
+    answer(transport, 'getOptions', (values: string[]) =>
+      values.reduce((options, optionName) => {
+        options[optionName] = engine.option(optionName);
 
-          return options;
-        }, {} as { [key: string]: any })
-      )
+        return options;
+      }, {} as { [key: string]: any })
     );
 
-    transport.receive('setOptions', (values) => {
+    answer(transport, 'setOptions', (values: { [key: string]: any }) => {
       Object.entries(values).forEach(([option, value]) => {
         if (option === 'automateLocalPlayer') {
           this.#automateLocalPlayer = !!value;
@@ -132,7 +132,7 @@ export class Game implements IGame {
         engine.setOption(option, value);
       });
 
-      transport.send('setOptions', null);
+      return null;
     });
   }
 
@@ -218,9 +218,12 @@ export class Game implements IGame {
       .then((): void =>
         this.#transport.send('notification', `loaded '${file.meta.name}'`)
       )
-      .catch((error: Error): void =>
-        this.#transport.send('notification', `could not load: ${error.message}`)
-      );
+      // Its own channel, as the page has already put its menu away: it says so and goes back to it (#470).
+      .catch((error: unknown): void => {
+        console.error(error);
+
+        this.#transport.send('loadFailed', { message: describeError(error) });
+      });
   }
 
   start(): void {
@@ -265,7 +268,14 @@ export class Game implements IGame {
     // we don't want to try and use FS objects so replace this call with the direct events instead.
     engine.start();
 
-    import('../plugins').then(() => engine.emit('plugins:load:end'));
+    // A game that can't start would otherwise leave the page waiting with nothing to say why (#470).
+    import('../plugins')
+      .then(() => engine.emit('plugins:load:end'))
+      .catch((error: unknown): void => {
+        console.error(error);
+
+        this.#transport.send('workerError', { message: describeError(error) });
+      });
   }
 }
 

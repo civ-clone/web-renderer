@@ -12,6 +12,7 @@ import Engine from '@civ-clone/core-engine/Engine';
 import { IAction } from '@civ-clone/core-diplomacy/Negotiation/Action';
 import { IInteraction } from '@civ-clone/core-diplomacy/Interaction';
 import Initiate from '@civ-clone/core-diplomacy/Negotiation/Initiate';
+import Terminate from '@civ-clone/core-diplomacy/Negotiation/Terminate';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Player from '@civ-clone/core-player/Player';
 import Resolution from '@civ-clone/core-diplomacy/Proposal/Resolution';
@@ -22,6 +23,7 @@ import Automation from './Automation';
 import { ClientContext, Disposer } from './ClientContext';
 import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
+import { describeError } from '../answer';
 
 export type TalksContext = Pick<
   ClientContext,
@@ -32,10 +34,15 @@ export type TalksContext = Pick<
   // The player's treasuries and research, which the talks can change without an event to say so (#492).
   | 'patches'
   | 'rules'
+  // Talks given up on are said, as `workerError` (#470).
+  | 'transport'
   | 'turn'
   // The units next to one of ours that has moved.
   | 'units'
 >;
+
+// How many rounds in a row the talks may go without a step before they are ended (see `#negotiate`).
+export const maxStalledRounds = 3;
 
 export class Talks {
   #context: TalksContext;
@@ -85,17 +92,24 @@ export class Talks {
       );
   }
 
+  // Each link of the chain catches what its talks threw, so one that fails doesn't fail every talk after it, and every
+  //  action that waits for them (#470).
   meetWithKing(other: Player): void {
     this.#talks = this.#talks
       .then(() => this.handleNegotiation(other))
-      .then(() => {});
+      .then(
+        () => {},
+        (error) => console.error(error)
+      );
 
     this.#countUntilSettled();
   }
 
   handOver(): void {
     // Anyone met by a GoTo carried on at the start of the turn.
-    this.#talks = this.#talks.then(() => this.talkToPlayersMet());
+    this.#talks = this.#talks
+      .then(() => this.talkToPlayersMet())
+      .catch((error) => console.error(error));
 
     this.#countUntilSettled();
   }
@@ -168,7 +182,15 @@ export class Talks {
       new Initiate(player, negotiation, this.#context.rules) as IAction
     );
 
+    // Rounds in a row in which nobody took a step: a chooser that threw, timed out or gave nothing. Asked again, as a
+    //  computer player that was slow may answer next time, but not for ever: one that fails every time was asked again
+    //  and again, and the worker did nothing else (#470).
+    let stalled = 0,
+      lastFailure: unknown = null;
+
     while (!negotiation.terminated()) {
+      const steps = negotiation.interactions().length;
+
       // The steps on offer, worked out once for the first player asked: each call makes new actions.
       let offered: IAction[] | null = negotiation.nextSteps();
 
@@ -216,11 +238,38 @@ export class Talks {
                 await interaction.proposal().resolve(interaction);
               }
             })
-            .catch((reason) => console.error(reason)),
+            .catch((reason) => {
+              console.error(reason);
+
+              lastFailure = reason;
+            }),
         Promise.resolve()
       );
 
       if (negotiation.terminated()) {
+        break;
+      }
+
+      stalled = negotiation.interactions().length === steps ? stalled + 1 : 0;
+
+      if (stalled >= maxStalledRounds) {
+        // Ended, as though the other player had ended it: the end of talks' rules run as they would then, so a computer
+        //  player bluffing about peace still means to drop it (`civ1-diplomacy`'s sham peace). Said, unless a computer
+        //  player was only slow to answer, which is not something gone wrong.
+        try {
+          negotiation.proceed(
+            new Terminate(player, negotiation, this.#context.rules) as IAction
+          );
+        } catch (error) {
+          console.error(error);
+        }
+
+        if (!(lastFailure instanceof Timeout)) {
+          this.#context.transport.send('workerError', {
+            message: describeError(lastFailure ?? 'the talks went nowhere'),
+          });
+        }
+
         break;
       }
     }

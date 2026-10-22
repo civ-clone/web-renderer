@@ -8,6 +8,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import Transport, { TransportDisposer } from '../Transport';
 import { ClientContext } from './ClientContext';
 import { filterToReference } from './refs';
+import answer from '../answer';
 
 export type CheatsContext = Pick<
   ClientContext,
@@ -243,48 +244,37 @@ export const registerCheats = (
   );
 
   disposers.push(
-    transport.receive('cheatUnitTypes', () =>
-      transport.send(
-        'cheatUnitTypes',
-        cheatUnitTypes(ctx).map((UnitType) => UnitType.name)
-      )
+    answer(transport, 'cheatUnitTypes', () =>
+      cheatUnitTypes(ctx).map((UnitType) => UnitType.name)
     )
   );
 
   disposers.push(
-    transport.receive('cheatAdvances', (playerId) => {
+    answer(transport, 'cheatAdvances', (playerId) => {
       const target = resolveCheatPlayer(ctx, playerId ?? undefined);
 
       if (!target) {
-        transport.send('cheatAdvances', []);
-
-        return;
+        return [];
       }
 
       const playerResearch = ctx.playerResearches.getByPlayer(target);
 
       // Every advance not yet discovered, prerequisites or not, so a cheat can
       // jump straight to (say) Automobile.
-      transport.send(
-        'cheatAdvances',
-        ctx.advances
-          .entries()
-          .filter((Advance) => !playerResearch.completed(Advance))
-          .map((Advance) => Advance.name)
-      );
+      return ctx.advances
+        .entries()
+        .filter((Advance) => !playerResearch.completed(Advance))
+        .map((Advance) => Advance.name);
     })
   );
 
   disposers.push(
-    transport.receive('cheatPlayers', () =>
-      transport.send(
-        'cheatPlayers',
-        ctx.players.entries().map((player) => ({
-          id: player.id(),
-          civilization: player.civilization().sourceClass().name,
-          isLocal: player === ctx.player(),
-        }))
-      )
+    answer(transport, 'cheatPlayers', () =>
+      ctx.players.entries().map((player) => ({
+        id: player.id(),
+        civilization: player.civilization().sourceClass().name,
+        isLocal: player === ctx.player(),
+      }))
     )
   );
 

@@ -18,6 +18,7 @@ import setOptionDefaults from './app/options';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
+import WorkerFailures from './app/WorkerFailures';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -93,6 +94,9 @@ export class Renderer {
       const notificationBar = new NotificationBar(elements.notificationArea);
 
       transportDisposers.push(notificationBar.listen(transport));
+
+      // From the start: a load or a new game can fail before there is a game to show (#470).
+      transportDisposers.push(WorkerFailures.listen(transport));
 
       transportDisposers.push(
         ChoiceHandler.listen(transport, {

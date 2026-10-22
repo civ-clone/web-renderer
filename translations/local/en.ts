@@ -307,6 +307,8 @@ i18next.addResources('en', 'default', {
 
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',
+  'SavedGame.could-not-load':
+    'That save could not be loaded, so you are back at the main menu: {{- error}}',
   'SavedGame.could-not-read': 'That save could not be read: {{- error}}',
 
   'SavedGame.could-not-write': 'That save could not be written: {{- error}}',
@@ -477,6 +479,10 @@ i18next.addResources('en', 'default', {
   'Window.maximize': 'Maximize',
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
+
+  'WorkerFailure.body':
+    'Something went wrong in the game. It may carry on; if nothing happens, reload the page.',
+  'WorkerFailure.title': 'Something went wrong',
 
   'GameOver.conquest.body':
     'The {{nation}} have conquered the entire world. All hail {{leader}} the Conqueror!',
