@@ -120,7 +120,12 @@ whole world, and the layer knows which world pixel sits at its top left. So a
 tile has no fixed place on a canvas, and because the world wraps it can have
 several places or none. Layers therefore implement
 `drawTile(tile, offsetX, offsetY)` and are handed the places to draw in;
-`Map.renderTile()` works those out and calls it once per place.
+`Map.renderTile()` works those out and calls it once per place. A layer that
+draws past a tile's box (the copy behind a stack of units, the city glyph,
+yield icons, city names) says how far in `reach()` and is redrawn by region
+instead: the changed tile's box and reach are cleared once and every tile that
+reaches them is drawn again, back to front (#486), as on a projection whose
+tiles overlap (#91).
 
 Moving the view blits the overlap across and draws only the strips it uncovers.
 Layers record which parts of themselves changed, and `Portal.render()`

@@ -383,6 +383,11 @@ class TestUnits extends Units {
   update(tiles: Tile[]): void {
     layerTiles.push(...tiles);
   }
+
+  // What the layer itself does with an update, which the controller's are kept from.
+  redraw(tiles: Tile[]): void {
+    super.update(tiles);
+  }
 }
 
 class TestActiveUnit extends ActiveUnit {
@@ -526,7 +531,7 @@ const drawn = ({ calls }: { calls: any[][] }, draw: () => void): string => {
   // the active unit's layer draws.
   showLayers = (): string =>
     `units: ${drawn(unitsLayer, () =>
-      [3, 4].forEach((x) => unitsLayer.layer.renderTile(gameData.tiles[x]))
+      unitsLayer.layer.redraw([3, 4].map((x) => gameData.tiles[x]))
     )}; active: ${drawn(activeLayer, () => activeLayer.layer.render())}`;
 
 expect(

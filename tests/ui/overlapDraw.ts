@@ -9,26 +9,27 @@
 //  - every pixel the update changed is inside what the layer marked dirty, so the portal composites all of it;
 //  - scrolling leaves the canvas as drawing it afresh at the new origin would.
 //
-// On the square grid a tile is drawn into its own box, cleared first, so a tile's update is that box alone. Three
-//  layers draw a few pixels past the box, which an update of a neighbour then clears without redrawing (#486): the
-//  copy behind a stack of units (`scale` px up and left), the city glyph (`scale` px right and down) and a row of six
-//  yield icons (to the right). For those layers the redraw may differ from a full one only in a strip that wide along
-//  the edges of a box; everywhere else, and for every other layer, it has to be the same. Each of those strips is
-//  inside what the layer declares as its reach.
+// On the square grid a layer that draws each tile inside its own box clears a tile's box and draws it again on its
+//  own. Four layers draw past the box: the copy behind a stack of units (`scale` px up and left), the city glyph
+//  (`scale` px right and down), a row of six yield icons (to the right) and a city's name (well past it either side,
+//  and below). Clearing only the box left the rest of what such a tile drew behind, and clearing a neighbour's box cut
+//  into it (#486), so those layers declare how far they reach and are redrawn as regions, as the projections whose
+//  tiles overlap are. On the square grid too, every layer has to leave exactly what a full redraw would.
 //
 // Where a projection's tiles overlap their neighbours, a tile can't be cleared and drawn again on its own: its box,
 //  out to the layer's reach, is cleared once and everything reaching it is drawn again, back to front. Three test
 //  projections go that way, and on each of them the three properties above hold exactly, for every layer:
 //
-//  - "square, through the overlap path": the square grid, drawn as if it overlapped, where the strips are gone;
+//  - "square, through the overlap path": the square grid, drawn as if it overlapped, for every layer;
 //  - "brick": rows half a tile apart, every other one shifted half a tile across, as a staggered isometric map is,
 //    with diamond sprites so the tiles behind show through the corners of the ones in front;
 //  - "tall": the square grid, with sprites half a tile taller than the box, reaching into the row above, as mountains
 //    and cities do in many tilesets.
 //
 // A full render also has to put the tile in front on top, which a test layer of one sprite per tile checks against
-//  the sprites drawn back to front here. And each of three mistakes the overlap path could make (drawing in the wrong
-//  order, clearing each tile's box before drawing it, a reach too small for what a layer draws) fails a check by name.
+//  the sprites drawn back to front here. And each of four mistakes the region path could make (drawing in the wrong
+//  order, clearing each tile's box before drawing it, a reach too small for what a layer draws, and a layer that draws
+//  past its box on the square grid declaring no reach, as all of them did before #486) fails a check by name.
 //
 // `--measure` prints what updating one tile costs on each projection, rather than running the checks.
 
@@ -47,6 +48,7 @@ import {
 } from './lib/softwareCanvas';
 import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
 import Cities from '../../src/js/UI/components/Map/Cities';
+import CityNames from '../../src/js/UI/components/Map/CityNames';
 import Fog from '../../src/js/UI/components/Map/Fog';
 import Landscape from '../../src/js/UI/components/Map/Landscape';
 import Map, { TilePlacement } from '../../src/js/UI/components/Map';
@@ -64,8 +66,17 @@ import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
 import World from '../../src/js/UI/components/World';
 import Yields from '../../src/js/UI/components/Map/Yields';
+import i18next from 'i18next';
 
 useSoftwareCanvases();
+
+// With no translations loaded, a city's name is its own: without this, every one would be drawn as "undefined".
+i18next.init({
+  lng: 'en',
+  defaultNS: 'default',
+  ns: ['default'],
+  initImmediate: false,
+});
 
 const failures: string[] = [],
   errors: string[] = [],
@@ -249,6 +260,7 @@ const terrains = [
 [
   ['map/city', 16, 16],
   ['map/hut', 15, 15],
+  ['city/people_unhappy_m', 8, 16],
   ['city/food', 7, 7],
   ['city/production', 7, 7],
   ['city/trade', 7, 7],
@@ -477,6 +489,14 @@ class ReachTooSmall extends TallPlain {
   }
 }
 
+// Draws the copy behind a stack past the box but says it doesn't, so on the square grid each tile is cleared and drawn
+//  in its own box, as every layer was before #486.
+class UnitsWithoutReach extends TestUnits {
+  protected reach(): Reach {
+    return noReach;
+  }
+}
+
 const noReach: Reach = { top: 0, right: 0, bottom: 0, left: 0 };
 
 type Mutation = {
@@ -502,7 +522,7 @@ type LayerSpec = {
   name: string;
   Type: typeof Map;
   mutations: Mutation[];
-  // How far past a tile's square box the layer draws on the square grid (#486).
+  // How far past a tile's square box the layer draws on the square grid, which its reach has to cover (#486).
   squareStrip: (scale: number) => Reach;
   // The projections it is checked on, if not all of them.
   projections?: string[];
@@ -659,6 +679,47 @@ const layerSpecs: LayerSpec[] = [
     }),
   },
   {
+    name: 'CityNames',
+    Type: CityNames,
+    mutations: [
+      {
+        name: 'a city',
+        apply: swap('city', (tile) =>
+          tile.city ? null : makeCity(tile.x, tile.y)
+        ),
+      },
+      // One of the widest in the city lists, so it overlaps its neighbours' names and reaches nearly as far as a name
+      //  can.
+      {
+        name: 'a long name',
+        apply: swap('city', (tile) => ({
+          ...makeCity(tile.x, tile.y),
+          name: 'Augusta Praetoria Salassorum',
+        })),
+      },
+      {
+        name: 'civil disorder',
+        apply: swap('city', (tile) => ({
+          ...makeCity(tile.x, tile.y),
+          civilDisorderDeclared: true,
+        })),
+      },
+    ],
+    // The longest name here, "Augusta Praetoria Salassorum", centred on the tile, with its shadow a scale step right;
+    //  and the name's baseline 0.6 of a tile below the box, the software canvas's text falling a quarter of its 8px size
+    //  below that.
+    squareStrip: (scale) => {
+      const across = (28 * 8 * scale * 0.6) / 2 - 8 * scale;
+
+      return {
+        top: 0,
+        right: Math.ceil(across + scale),
+        bottom: Math.ceil(16 * scale * 0.6 + 8 * scale * 0.25),
+        left: Math.ceil(across),
+      };
+    },
+  },
+  {
     name: 'Unworkable',
     Type: Unworkable,
     mutations: [
@@ -804,12 +865,11 @@ const scatteredMask = (path: string, x: number, y: number): number =>
       ? 0
       : scatteredMask(path, x, y);
 
-// How a layer is drawn: the projection it is given (none: the layer's own square one), the reach the test allows it
-//  on that projection, and the sprites' see-through pixels.
+// How a layer is drawn: the projection it is given (none: the layer's own square one), and the sprites' see-through
+//  pixels.
 type ProjectionSpec = {
   name: string;
   make: ((layer: any) => Projection) | null;
-  strip: (spec: LayerSpec, scale: number) => Reach;
   mask: typeof diamondMask;
 };
 
@@ -817,26 +877,22 @@ const projectionSpecs: ProjectionSpec[] = [
   {
     name: 'square',
     make: null,
-    strip: (spec, scale) => spec.squareStrip(scale),
     mask: scatteredMask,
   },
   {
     name: 'square, through the overlap path',
     make: (layer) =>
       new OverlappingSquare(layer.tileSize(), layer.world(), layer.wraps()),
-    strip: () => noReach,
     mask: scatteredMask,
   },
   {
     name: 'brick',
     make: (layer) => new Brick(layer.tileSize(), layer.world(), layer.wraps()),
-    strip: () => noReach,
     mask: diamondMask,
   },
   {
     name: 'tall',
     make: (layer) => new Tall(layer.tileSize(), layer.world(), layer.wraps()),
-    strip: () => noReach,
     mask: scatteredMask,
   },
 ];
@@ -845,7 +901,6 @@ const brokenOrder: ProjectionSpec = {
   name: 'brick, drawn column by column',
   make: (layer) =>
     new BrickByColumn(layer.tileSize(), layer.world(), layer.wraps()),
-  strip: () => noReach,
   mask: diamondMask,
 };
 
@@ -959,29 +1014,6 @@ const probe = (Type: typeof Map): any => {
 const at = (canvas: Pixels, index: number): string =>
   `${index % canvas.width},${Math.floor(index / canvas.width)}`;
 
-// Whether a canvas pixel is in a strip `reach` wide along the edge of a square tile's box: where a sprite drawn past
-//  its own box lands in its neighbour's, or where its neighbour's lands in it.
-const inStrip = (
-  canvas: Pixels,
-  index: number,
-  [originX, originY]: [number, number],
-  tileSize: number,
-  reach: Reach
-): boolean => {
-  const x =
-      ((((index % canvas.width) + originX) % tileSize) + tileSize) % tileSize,
-    y =
-      (((Math.floor(index / canvas.width) + originY) % tileSize) + tileSize) %
-      tileSize;
-
-  return (
-    x < reach.right ||
-    x >= tileSize - reach.left ||
-    y < reach.bottom ||
-    y >= tileSize - reach.top
-  );
-};
-
 const inside = (canvas: Pixels, index: number, rects: Rect[]): boolean => {
   const x = index % canvas.width,
     y = Math.floor(index / canvas.width);
@@ -994,28 +1026,6 @@ const inside = (canvas: Pixels, index: number, rects: Rect[]): boolean => {
       y < rect.y + rect.height
   );
 };
-
-// The strip pixels each layer was allowed to differ by, for the summary.
-const stripPixels: { [layer: string]: number } = {};
-
-// The differing pixels that aren't in a strip the layer is allowed to differ in, counting the ones that are.
-const outsideStrips = (
-  spec: LayerSpec,
-  canvas: Pixels,
-  differing: number[],
-  origin: [number, number],
-  tileSize: number,
-  strip: Reach
-): number[] =>
-  differing.filter((index) => {
-    if (!inStrip(canvas, index, origin, tileSize, strip)) {
-      return true;
-    }
-
-    stripPixels[spec.name] = (stripPixels[spec.name] ?? 0) + 1;
-
-    return false;
-  });
 
 type Scenario = {
   world: [number, number];
@@ -1104,8 +1114,6 @@ const updateMatchesRedraw = (
       origin,
     } = scenario,
     world = makeWorld(width, height),
-    tileSize = 16 * scale,
-    strip = projection.strip(spec, scale),
     isActiveUnit = spec.Type === TestActiveUnit;
 
   let activeUnit: any = isActiveUnit ? makeUnit('Active', 1, 1) : null;
@@ -1162,14 +1170,7 @@ const updateMatchesRedraw = (
           step = `${tile.x},${tile.y} ${mutation.name}${
             next === null ? ' undone' : ''
           }`,
-          wrong = outsideStrips(
-            spec,
-            after,
-            differences(after, redrawn),
-            origin,
-            tileSize,
-            strip
-          ),
+          wrong = differences(after, redrawn),
           dirty = updated.layer.dirtyRects(),
           unmarked = differences(before, after).filter(
             (index) => !inside(after, index, dirty)
@@ -1216,8 +1217,6 @@ const scrollMatchesRedraw = (
       scrolls,
     } = scenario,
     world = makeWorld(width, height),
-    tileSize = 16 * scale,
-    strip = projection.strip(spec, scale),
     activeUnit = spec.Type === TestActiveUnit ? makeUnit('Active', 1, 1) : null,
     scrolled = makeLayer(
       spec,
@@ -1250,14 +1249,7 @@ const scrollMatchesRedraw = (
         [originX, originY],
         activeUnit
       ).canvas.snapshot(),
-      wrong = outsideStrips(
-        spec,
-        after,
-        differences(after, fresh),
-        [originX, originY],
-        tileSize,
-        strip
-      );
+      wrong = differences(after, fresh);
 
     if (wrong.length > 0) {
       misses.push(
@@ -1524,17 +1516,24 @@ if (measure) {
     ],
   ];
 
-  ['Plain', 'TallPlain', 'Landscape', 'Units', 'Cities', 'Yields'].forEach(
-    (layerName) =>
-      projectionSpecs.forEach((projection) =>
-        [1, 2, 3].forEach((scale) => {
-          const spec = layerSpecs.find(({ name }) => name === layerName)!;
+  [
+    'Plain',
+    'TallPlain',
+    'Landscape',
+    'Units',
+    'Cities',
+    'Yields',
+    'CityNames',
+  ].forEach((layerName) =>
+    projectionSpecs.forEach((projection) =>
+      [1, 2, 3].forEach((scale) => {
+        const spec = layerSpecs.find(({ name }) => name === layerName)!;
 
-          if (checksOn(projection, spec)) {
-            rows.push(measureUpdate(projection, spec, scale));
-          }
-        })
-      )
+        if (checksOn(projection, spec)) {
+          rows.push(measureUpdate(projection, spec, scale));
+        }
+      })
+    )
   );
 
   console.log(
@@ -1569,6 +1568,8 @@ projectionSpecs.forEach((projection) =>
 
 const plain = layerSpecs.find(({ name }) => name === 'Plain')!,
   tallPlain = layerSpecs.find(({ name }) => name === 'TallPlain')!,
+  units = layerSpecs.find(({ name }) => name === 'Units')!,
+  square = projectionSpecs.find(({ name }) => name === 'square')!,
   brick = projectionSpecs.find(({ name }) => name === 'brick')!,
   tall = projectionSpecs.find(({ name }) => name === 'tall')!;
 
@@ -1590,6 +1591,96 @@ caught(
   { ...tallPlain, name: 'ReachTooSmall', Type: ReachTooSmall },
   'updating a tile leaves what a full redraw would'
 );
+caught(
+  'units on the square grid with no reach, each tile cleared in its own box',
+  square,
+  { ...units, name: 'UnitsWithoutReach', Type: UnitsWithoutReach },
+  'updating a tile leaves what a full redraw would'
+);
+
+// A city can go while the map scrolls, before the update that says so reaches the layer: the strip the scroll uncovers
+//  is drawn from the world, without the city, and clears only its own part of the name. The update still has to clear
+//  the rest.
+const cityGoesWhileScrolling = (
+  projection: ProjectionSpec,
+  scenario: Scenario
+): void => {
+  const spec = layerSpecs.find(({ name }) => name === 'CityNames')!,
+    {
+      world: [width, height],
+      scale,
+      wrapVertical,
+      canvas: size,
+      origin,
+    } = scenario,
+    world = makeWorld(width, height),
+    tileSize = 16 * scale,
+    misses: string[] = [];
+
+  world
+    .tiles()
+    .filter((tile) => tile.city)
+    .forEach((tile) =>
+      [
+        [tileSize * 2, 0],
+        [-tileSize * 2, 0],
+        [0, tileSize],
+        [7, -5],
+      ].forEach(([dx, dy]) => {
+        const { layer, canvas } = makeLayer(
+            spec,
+            projection,
+            world,
+            scale,
+            wrapVertical,
+            size,
+            origin
+          ),
+          moved: [number, number] = [origin[0] + dx, origin[1] + dy],
+          undo = swap('city', () => null)(tile);
+
+        layer.setViewport(...moved, ...size);
+        layer.update([{ ...tile }]);
+
+        const after = canvas.snapshot(),
+          wrong = differences(
+            after,
+            makeLayer(
+              spec,
+              projection,
+              world,
+              scale,
+              wrapVertical,
+              size,
+              moved
+            ).canvas.snapshot()
+          );
+
+        if (wrong.length > 0) {
+          misses.push(
+            `${tile.x},${tile.y} by ${dx},${dy}: ${
+              wrong.length
+            } px, first at ${at(after, wrong[0])}`
+          );
+        }
+
+        undo();
+      })
+    );
+
+  sweep(
+    `${describe(
+      projection,
+      spec,
+      scenario
+    )}: a city that goes while the map scrolls has all of its name cleared`,
+    misses
+  );
+};
+
+projectionSpecs.forEach((projection) =>
+  scenarios.forEach((scenario) => cityGoesWhileScrolling(projection, scenario))
+);
 
 sweep('nothing a layer drew was logged as an error', errors);
 
@@ -1607,10 +1698,4 @@ if (failures.length) {
   process.exitCode = 1;
 }
 
-console.log(
-  `PASS overlapDraw (${checks} checks; on the square grid the strips past a tile's box (#486) differed by ${
-    Object.entries(stripPixels)
-      .map(([layer, pixels]) => `${layer} ${pixels} px`)
-      .join(', ') || 'nothing'
-  })`
-);
+console.log(`PASS overlapDraw (${checks} checks)`);

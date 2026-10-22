@@ -34,7 +34,18 @@ export const fakeCanvas = (width: number, height: number) => {
       measureText: (text: string) => ({ width: String(text).length * 10 }),
     };
 
-  ['clearRect', 'drawImage', 'fillRect', 'fillText'].forEach((name) => {
+  // The clip a layer redraws a region under (#486) is recorded, not applied.
+  [
+    'clearRect',
+    'drawImage',
+    'fillRect',
+    'fillText',
+    'save',
+    'beginPath',
+    'rect',
+    'clip',
+    'restore',
+  ].forEach((name) => {
     context[name] = (...args: any[]) => calls.push([name, ...args]);
   });
 

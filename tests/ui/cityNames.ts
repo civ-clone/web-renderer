@@ -25,8 +25,8 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 
 // Drawn at the top left of the canvas, once, wherever the tile is.
 class TestCityNames extends CityNames {
-  protected placements(): [number, number][] {
-    return [[0, 0]];
+  drawAtOrigin(tile: Tile): void {
+    this.drawTile(tile, 0, 0);
   }
 }
 
@@ -49,7 +49,7 @@ const unhappy = preloadImage('city/people_unhappy_m', 8, 16),
         },
       } as unknown as Tile;
 
-    layer.renderTile(tile);
+    layer.drawAtOrigin(tile);
 
     return {
       calls,

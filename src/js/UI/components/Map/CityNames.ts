@@ -1,6 +1,7 @@
 import { Tile } from '../../types';
 import { Map } from '../Map';
-import { Rect, rectsIntersect } from '../../lib/viewport';
+import { Reach } from '../../lib/projection';
+import { Rect } from '../../lib/viewport';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { cityName } from '../lib/city';
 import currentTileset from '../../lib/tilesets';
@@ -9,148 +10,73 @@ import { imageSize } from '../../lib/imageSize';
 const disorderIconPath = 'city/people_unhappy_m';
 
 export class CityNames extends Map {
-  // What is currently on the canvas and where, keyed by `x,y`. Keeping it lets
-  // an update clear only the boxes it invalidated instead of the whole canvas,
-  // and find the labels to redraw without walking every tile in the world.
-  // Plain objects because `Map` in this file is the layer base class.
-  #drawn: { [key: string]: Rect[] } = {};
+  // The tiles a label was last drawn for, as `x,y`: an update has to clear the label of a city that has gone, and
+  //  needn't touch a tile that has no city and had none.
+  #labelled: Set<string> = new Set();
 
   render(tiles: Tile[] = this.visibleTiles()): void {
-    this.clear();
+    this.#labelled.clear();
 
-    this.#drawn = {};
-
-    tiles.forEach(({ x, y }: Tile) => this.renderTile(this.world().get(x, y)));
+    super.render(tiles);
   }
 
-  renderTile(tile: Tile): void {
+  // A label is wider than its tile and overlaps its neighbours' labels, so it is redrawn as a region (`reach()`): the
+  //  labels it overlaps are cleared and drawn again with it, rather than drawn over themselves (#486).
+  update(tilesToUpdate: Tile[]): void {
+    const changed = tilesToUpdate.filter(
+      ({ x, y }: Tile) =>
+        this.#labelled.has(`${x},${y}`) || Boolean(this.world().get(x, y).city)
+    );
+
+    super.update(changed);
+
+    // Only once its label has been cleared. A redraw that comes first, a scroll before the update reaches the map,
+    //  finds the city gone and draws nothing there, but clears only its own part of the label.
+    changed.forEach(({ x, y }: Tile) => {
+      if (!this.world().get(x, y).city) {
+        this.#labelled.delete(`${x},${y}`);
+      }
+    });
+  }
+
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
     if (!tile.city) {
       return;
     }
 
-    // Clearing is the caller's job here — `render` clears the canvas and
-    // `update` clears the boxes — because a label is wider than its tile, so
-    // clearing just the tile would leave most of the old label behind.
-    this.#drawn[`${tile.x},${tile.y}`] = this.placements(tile).map(
-      ([offsetX, offsetY]) => {
-        const box = this.#drawLabel(tile, offsetX, offsetY);
+    this.#labelled.add(`${tile.x},${tile.y}`);
 
-        this.markDirty(box.x, box.y, box.width, box.height);
-
-        return box;
-      }
-    );
+    this.#drawLabel(tile, offsetX, offsetY);
   }
 
-  update(tilesToUpdate: Tile[]): void {
-    const dirty: Rect[] = [];
-
-    tilesToUpdate.forEach(({ x, y }: Tile) => {
-      const key = `${x},${y}`,
-        previous = this.#drawn[key];
-
-      if (previous) {
-        dirty.push(...previous);
-
-        delete this.#drawn[key];
-      }
-
-      const tile = this.world().get(x, y);
-
-      if (tile.city) {
-        this.placements(tile).forEach(([offsetX, offsetY]) =>
-          dirty.push(this.#boxFor(tile, offsetX, offsetY))
-        );
-      }
-    });
-
-    if (dirty.length === 0) {
-      return;
-    }
-
-    dirty.forEach(({ x, y, width, height }) => {
-      this.context().clearRect(x, y, width, height);
-
-      this.markDirty(x, y, width, height);
-    });
-
-    // A label overhangs its neighbours, so clearing one box can bite into
-    // another city's; redraw every label still standing that overlapped what
-    // was cleared, along with the updated tiles that have a city.
-    const toRedraw = new Set<string>(
-      Object.keys(this.#drawn).filter((key) =>
-        this.#drawn[key].some((box) =>
-          dirty.some((cleared) => rectsIntersect(box, cleared))
-        )
-      )
-    );
-
-    tilesToUpdate.forEach(({ x, y }: Tile) => {
-      if (this.world().get(x, y).city) {
-        toRedraw.add(`${x},${y}`);
-      }
-    });
-
-    toRedraw.forEach((key) => {
-      const [x, y] = key.split(',').map(Number);
-
-      this.renderTile(this.world().get(x, y));
-    });
-  }
-
-  // A label is centred on its tile and much wider than it, so a city several
-  // tiles off the canvas can still have its name reach on to it. Three tiles
-  // either side is comfortably more than the longest name in the locale files.
+  // A label is centred on its tile and much wider than it, so a city several tiles off the canvas can still have its
+  //  name reach on to it, and the region an update clears has to be as wide as the widest name. The widest in the city
+  //  lists, "Augusta Praetoria Salassorum" and "Raurkela Industrial Township" (28 characters), reach about three
+  //  and a quarter tiles past their tile in a bold sans-serif at the tileset's size; four leaves room for a wider
+  //  system font.
   protected overhang(): number {
-    return this.tileSize() * 3;
+    return this.tileSize() * 4;
   }
 
-  // The boxes are recorded in canvas co-ordinates, so moving the window
-  // invalidates every one of them. Only tiles with cities are drawn at all, so
-  // starting again is cheaper than moving the record along with the canvas.
-  protected scrollTo(originX: number, originY: number): void {
-    this.setOrigin(originX, originY);
-
-    this.render();
-  }
-
-  #boxFor(tile: Tile, offsetX: number, offsetY: number): Rect {
-    const scale = this.scale(),
-      city = tile.city!,
-      { centreX, digitBaseline, nameBaseline } = this.#anchor(offsetX, offsetY);
-
-    this.#applyFont();
-
-    const widest = Math.max(
-        this.context().measureText(cityName(city)).width,
-        city.civilDisorderDeclared
-          ? 0
-          : this.context().measureText(localeProvider.number(city.growth.size))
-              .width
-      ),
-      // Generous rather than measured: comfortably more than the ascent of the
-      // font, so the box never crops the glyphs.
-      ascent = this.#fontSize() + scale,
-      text: Rect = {
-        x: Math.floor(centreX - widest / 2 - scale * 2),
-        y: Math.floor(digitBaseline - ascent - scale * 2),
-        width: Math.ceil(widest + scale * 4),
-        height: Math.ceil(nameBaseline - digitBaseline + ascent + scale * 4),
-      };
-
-    if (!city.civilDisorderDeclared) {
-      return text;
-    }
-
-    const icon = this.#disorderIcon(offsetX, offsetY),
-      left = Math.min(text.x, icon.x),
-      top = Math.min(text.y, icon.y);
+  // As far as a label can reach past its tile: the overhang either side, and from the top of the size to the bottom of
+  //  the name, which hangs below the tile. Generous rather than measured: the text is taken to rise a scale step more
+  //  than the font size, and to fall two below its baseline, with a pixel more each way for rounding, so the region
+  //  never crops a glyph. The unhappy citizen in place of the size, a citizen no taller than the tile drawn a scale
+  //  step down, ends well above the name; its image isn't looked at here, as it is only loaded for a city in disorder.
+  protected reach(): Reach {
+    const reach = super.reach(),
+      overhang = this.overhang(),
+      scale = this.scale(),
+      { height } = this.projection().footprint(),
+      { digitBaseline, nameBaseline } = this.#anchor(0, 0),
+      top = digitBaseline - this.#fontSize() - scale * 3,
+      bottom = Math.max(nameBaseline + scale * 2, height + scale);
 
     return {
-      x: left,
-      y: top,
-      width: Math.max(text.x + text.width, icon.x + icon.width) - left,
-      height: Math.max(text.y + text.height, icon.y + icon.height) - top,
+      top: reach.top + Math.max(0, Math.ceil(-top) + 1),
+      right: reach.right + overhang,
+      bottom: reach.bottom + Math.max(0, Math.ceil(bottom - height) + 1),
+      left: reach.left + overhang,
     };
   }
 
@@ -171,7 +97,7 @@ export class CityNames extends Map {
     };
   }
 
-  #drawLabel(tile: Tile, offsetX: number, offsetY: number): Rect {
+  #drawLabel(tile: Tile, offsetX: number, offsetY: number): void {
     const scale = this.scale(),
       city = tile.city!,
       { centreX, digitBaseline, nameBaseline } = this.#anchor(offsetX, offsetY),
@@ -199,8 +125,6 @@ export class CityNames extends Map {
     lines.forEach(([text, baseline]) =>
       this.context().fillText(text, centreX, baseline - scale)
     );
-
-    return this.#boxFor(tile, offsetX, offsetY);
   }
 
   // Where a label goes on the tile's box: centred across it, the size three
