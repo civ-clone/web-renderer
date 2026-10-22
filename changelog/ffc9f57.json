@@ -1,0 +1,1 @@
+{"version":"0.1.0@ffc9f57","date":"2026-10-22T08:22:42.000Z","localChanges":["Changing government on a large map is quicker now that the map's terrain is no longer drawn over and over again (closes #488)."],"externalChanges":{}}
