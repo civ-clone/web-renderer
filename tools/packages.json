@@ -3,7 +3,7 @@
   "root": "~/Code/civ-clone",
   "org": "civ-clone",
   "totals": {
-    "installed": 326,
+    "installed": 376,
     "remainingByStage": {
       "1": {
         "packages": 0,
@@ -14,12 +14,12 @@
         "waves": 1
       },
       "3": {
-        "packages": 17,
-        "waves": 4
+        "packages": 25,
+        "waves": 6
       }
     },
     "stage1Declarations": 0,
-    "fromGitHub": 22
+    "fromGitHub": 29
   },
   "cycles": [
     [
@@ -29,12 +29,68 @@
     ]
   ],
   "packages": {
+    "base-unit-action-automate": {
+      "waves": {
+        "3": 0
+      },
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "base-unit-action-build-route": {
+      "waves": {
+        "3": 1
+      },
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "base-unit-action-explore": {
+      "waves": {
+        "3": 0
+      },
+      "version": "0.1.0",
+      "resolution": "npm",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
     "base-unit-action-goto": {
       "waves": {
         "3": 0
       },
-      "version": "0.1.3",
+      "version": "0.1.9",
       "resolution": "npm",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-barbarians": {
+      "waves": {
+        "3": 2
+      },
+      "version": "0.1.2",
+      "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
       "mathRandom": 0,
@@ -47,7 +103,7 @@
       "waves": {
         "3": 2
       },
-      "version": "0.1.0",
+      "version": "0.1.6",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -61,7 +117,7 @@
       "waves": {
         "3": 3
       },
-      "version": "0.1.0",
+      "version": "0.1.1",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -75,6 +131,20 @@
       "waves": {
         "3": 2
       },
+      "version": "0.1.7",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-difficulty": {
+      "waves": {
+        "3": 0
+      },
       "version": "0.1.0",
       "resolution": "github",
       "privateFields": 0,
@@ -87,9 +157,23 @@
     },
     "civ1-diplomacy": {
       "waves": {
-        "3": 0
+        "3": 2
       },
-      "version": "0.1.0",
+      "version": "0.1.4",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-game-end": {
+      "waves": {
+        "3": 2
+      },
+      "version": "0.1.2",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -103,7 +187,7 @@
       "waves": {
         "3": 0
       },
-      "version": "0.1.0",
+      "version": "0.1.2",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -117,7 +201,7 @@
       "waves": {
         "3": 2
       },
-      "version": "0.1.1",
+      "version": "0.1.5",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -131,7 +215,7 @@
       "waves": {
         "3": 0
       },
-      "version": "0.1.0",
+      "version": "0.1.1",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -143,7 +227,21 @@
     },
     "civ1-player": {
       "waves": {
-        "3": 0
+        "3": 1
+      },
+      "version": "0.1.7",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-power": {
+      "waves": {
+        "3": 2
       },
       "version": "0.1.0",
       "resolution": "github",
@@ -157,7 +255,21 @@
     },
     "civ1-science": {
       "waves": {
-        "3": 0
+        "3": 1
+      },
+      "version": "0.1.6",
+      "resolution": "github",
+      "privateFields": 0,
+      "privateFieldFiles": [],
+      "mathRandom": 0,
+      "registerRules": true,
+      "stages": [
+        3
+      ]
+    },
+    "civ1-score": {
+      "waves": {
+        "3": 4
       },
       "version": "0.1.0",
       "resolution": "github",
@@ -171,9 +283,9 @@
     },
     "civ1-spaceship": {
       "waves": {
-        "3": 0
+        "3": 3
       },
-      "version": "0.1.0",
+      "version": "0.1.4",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -187,7 +299,7 @@
       "waves": {
         "3": 0
       },
-      "version": "0.1.0",
+      "version": "0.1.1",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -199,9 +311,9 @@
     },
     "civ1-treasury": {
       "waves": {
-        "3": 0
+        "3": 1
       },
-      "version": "0.1.0",
+      "version": "0.1.2",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -215,7 +327,7 @@
       "waves": {
         "3": 1
       },
-      "version": "0.1.0",
+      "version": "0.1.16",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -227,9 +339,9 @@
     },
     "civ1-wonder": {
       "waves": {
-        "3": 3
+        "3": 4
       },
-      "version": "0.1.0",
+      "version": "0.1.7",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -243,7 +355,7 @@
       "waves": {
         "3": 0
       },
-      "version": "0.1.0",
+      "version": "0.1.5",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -257,7 +369,7 @@
       "waves": {
         "2": 0
       },
-      "version": "0.1.0",
+      "version": "0.1.2",
       "resolution": "npm",
       "privateFields": 0,
       "privateFieldFiles": [],
@@ -269,9 +381,9 @@
     },
     "simple-ai-client": {
       "waves": {
-        "3": 3
+        "3": 5
       },
-      "version": "0.1.3",
+      "version": "0.1.19",
       "resolution": "github",
       "privateFields": 0,
       "privateFieldFiles": [],
