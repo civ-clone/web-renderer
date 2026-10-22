@@ -1,0 +1,6 @@
+# Development tools only: imported by the scripts, never shipped. unicorn is GPL-2.0.
+capstone>=5
+unicorn>=2
+mido>=1.3
+# optional, GPL, only for render.py:
+# pyopl

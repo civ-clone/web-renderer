@@ -1,0 +1,1 @@
+{"version":"0.1.0@85ae1c3","date":"2026-10-21T22:06:00.000Z","localChanges":["chore: a save on a map grid that can't be drawn here is refused with a message, rather than loaded (#89)"],"externalChanges":{}}

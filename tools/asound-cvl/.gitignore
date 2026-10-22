@@ -1,0 +1,5 @@
+venv/
+__pycache__/
+out/
+gm-out/
+*.wav
