@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // Runs tests/ui/mapNavigation.ts — the maths behind recentring on a unit and
-// panning the map (#14). Bundled with esbuild, as the other UI tests are.
+// panning the map (#14), and a press on the map until it is let go (#490).
+// Bundled with esbuild, as the other UI tests are.
 
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -24,6 +25,9 @@ require('esbuild').buildSync({
   target: 'node18',
   outfile,
   logLevel: 'error',
+  // linkedom reaches for the optional native `canvas` package, and copes
+  //  without it.
+  external: ['canvas'],
 });
 
 try {

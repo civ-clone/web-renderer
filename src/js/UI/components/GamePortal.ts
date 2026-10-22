@@ -45,9 +45,15 @@ export class GamePortal extends Portal {
 
       const drag = this.#drag;
 
+      // A press that started somewhere else, or that a long press has already
+      //  taken, isn't a click on the map (#490).
+      if (drag === null) {
+        return;
+      }
+
       this.#drag = null;
 
-      if (drag !== null && drag.dragging) {
+      if (drag.dragging) {
         this.glide(releaseVelocity(drag.samples, event.timeStamp));
 
         return;
@@ -137,6 +143,12 @@ export class GamePortal extends Portal {
         ],
       };
 
+      // The press is the map's until it is let go, wherever that is: over the
+      // sidebar, off the window or on a window opened under the pointer.
+      // Released there without it, the map kept following the mouse with no
+      // button held (#490).
+      this.canvas().setPointerCapture(event.pointerId);
+
       const tile = this.tileAt(event.offsetX, event.offsetY);
 
       if (tile !== null) {
@@ -163,10 +175,6 @@ export class GamePortal extends Portal {
         drag.dragging = true;
 
         this.clearTimeout();
-
-        // Keep the drag going when the pointer leaves the canvas, over the
-        // sidebar or off the window, until it is let go.
-        this.canvas().setPointerCapture(event.pointerId);
       }
 
       // The map follows the pointer, so the view moves the opposite way.
