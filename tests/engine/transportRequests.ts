@@ -1,12 +1,11 @@
 // A transport's requests on one channel get their own replies, however many are in flight (#324).
 //
-// A reply is matched to its request by channel alone, and every `receiveOnce` on a channel fires on the next message
-// there. Before `AbstractTransport.request` took one request per channel at a time, two production pickers asking for
-// their cities' lists together would both have been given the first city's.
+// Before replies carried their request's id (#470), two production pickers asking for their cities' lists together
+// would both have been given the first city's.
 //
-// Drives `AbstractTransport` over a stub that answers each request on a later tick, in the order asked, and checks that
-// concurrent requests on one channel each get their own answer, that different channels do not wait on each other, and
-// that a channel is free again after its reply.
+// Drives `AbstractTransport` over a stub that answers each request on a later tick, in the order asked, with its id,
+// and checks that concurrent requests on one channel each get their own answer, that different channels do not wait on
+// each other, and that a channel is free again after its reply. `requestIds` checks replies out of order and timeouts.
 
 import AbstractTransport, {
   RequestFailed,
@@ -14,7 +13,7 @@ import AbstractTransport, {
 import answer from '../../src/js/Engine/answer';
 import Request from '../../src/js/Engine/Request';
 
-type Handler = (data: any) => void;
+type Handler = (data: any, meta?: { id?: number }) => void;
 
 const fail = (reason: string): never => {
   process.stderr.write(`FAIL transportRequests: ${reason}\n`);
@@ -48,32 +47,32 @@ class StubTransport extends AbstractTransport<any> {
     return this.#add(String(channel), handler, true);
   }
 
-  send(channelName: PropertyKey, data: any): void {
+  protected post(channelName: PropertyKey, data: any, id?: number): void {
     const channel = String(channelName);
 
     this.sent.push([channel, data]);
 
-    // Answered later, as a worker would, with every listener on the channel hearing it, as `WorkerTransport` does. One
-    //  asked to fail is answered as `answer` answers a handler that threw (#470).
+    // Answered later, as a worker would, with the request's id, and with every listener on the channel hearing it, as
+    //  `WorkerTransport` does. One asked to fail is answered as `answer` answers a handler that threw (#470).
     setTimeout(() => {
       const [replyChannel, reply] =
           data === 'fail'
-            ? ['requestFailed', { channel, message: `${channel} failed` }]
+            ? ['requestFailed', { channel, message: `${channel} failed`, id }]
             : [channel, `${channel}:${data}`],
         listeners = [...(this.#listeners.get(replyChannel) ?? [])];
 
-      listeners.forEach((listener) => listener(reply));
+      listeners.forEach((listener) => listener(reply, { id }));
     }, 5);
   }
 
   #add(channel: string, handler: Handler, once: boolean) {
     const listeners = this.#listeners.get(channel) ?? [],
-      listener: Handler = (data) => {
+      listener: Handler = (data, meta) => {
         if (once) {
           this.#remove(channel, listener);
         }
 
-        handler(data);
+        handler(data, meta);
       };
 
     listeners.push(listener);
@@ -176,15 +175,17 @@ const run = async (): Promise<void> => {
   }
 
   // The worker's side: `answer` replies on the channel with what the handler gives, or a promise once it resolves, and
-  //  with a `requestFailed` on that channel when it throws or rejects.
-  const handlers: { [channel: string]: (data: any) => void } = {},
-    replies: [string, any][] = [],
+  //  with a `requestFailed` on that channel when it throws or rejects, each with the request's id (#470).
+  const handlers: { [channel: string]: Handler } = {},
+    replies: any[][] = [],
     worker = {
-      receive: (channel: string, handler: (data: any) => void) => {
+      receive: (channel: string, handler: Handler) => {
         handlers[channel] = handler;
 
         return () => {};
       },
+      reply: (channel: string, data: any, id: number) =>
+        replies.push([channel, data, id]),
       send: (channel: string, data: any) => replies.push([channel, data]),
     },
     logged = console.error;
@@ -200,25 +201,30 @@ const run = async (): Promise<void> => {
     Promise.reject(new Error('it rejected'))
   );
 
-  handlers.value('a');
+  handlers.value('a', { id: 1 });
 
-  if (JSON.stringify(replies) !== JSON.stringify([['value', 'value:a']])) {
+  if (JSON.stringify(replies) !== JSON.stringify([['value', 'value:a', 1]])) {
     fail(`answer sent ${JSON.stringify(replies)} for a value, not at once`);
   }
 
-  handlers.later('b');
-  handlers.throws('c');
-  handlers.rejects('d');
+  handlers.later('b', { id: 2 });
+  handlers.throws('c', { id: 3 });
+  handlers.rejects('d', { id: 4 });
+  // A message with no id is no request: answered as a plain message, and a failure goes only to the console.
+  handlers.value('e');
+  handlers.throws('f');
 
   await new Promise((resolve) => setTimeout(resolve, 0));
 
   console.error = logged;
 
   const expected = [
-    ['value', 'value:a'],
-    ['requestFailed', { channel: 'throws', message: 'it threw' }],
-    ['later', 'later:b'],
-    ['requestFailed', { channel: 'rejects', message: 'it rejected' }],
+    ['value', 'value:a', 1],
+    // A failure says which request it answers in itself, as it goes on its own channel.
+    ['requestFailed', { channel: 'throws', message: 'it threw', id: 3 }],
+    ['value', 'value:e'],
+    ['later', 'later:b', 2],
+    ['requestFailed', { channel: 'rejects', message: 'it rejected', id: 4 }],
   ];
 
   if (JSON.stringify(replies) !== JSON.stringify(expected)) {

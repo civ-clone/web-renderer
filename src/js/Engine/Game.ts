@@ -38,6 +38,13 @@ export class Game implements IGame {
       clientRegistryInstance.register(this.#createClient(player, false));
     });
 
+    // A sign of life as each player's turn starts (#470), so that the page, waiting on a request while the AI players
+    //  take their turns, doesn't take a long round for a game that has stopped. Bound here, so a loaded game sends it
+    //  too.
+    engine.on('player:turn-start', (): void =>
+      this.#transport.send('alive', null)
+    );
+
     transport.receive('save', ({ name }: { name: string }): void => {
       try {
         this.#transport.send('saveGame', {

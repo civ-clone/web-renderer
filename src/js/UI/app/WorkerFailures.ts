@@ -9,10 +9,10 @@ export interface WorkerFailuresDeps {
 }
 
 // What went wrong in the worker (#470), which the player would otherwise never hear of: an error or a rejection nothing
-//  handled, a game that could not start or an action that threw (`workerError`), and a request it could not answer
-//  (`requestFailed`), each said in a window, and a load that failed (`loadFailed`), said, then back to the main menu.
-//  The worker's message goes as text: it can hold text from a save file. Returns the disposer for `Renderer`'s
-//  `transportDisposers`.
+//  handled, a game that could not start, an action that threw, a request it could not answer, or a worker that has
+//  said nothing for a while with a request waiting on it (`workerError`, the last two from `WorkerTransport`), each
+//  said in a window, and a load that failed (`loadFailed`), said, then back to the main menu. The worker's message
+//  goes as text: it can hold text from a save file. Returns the disposer for `Renderer`'s `transportDisposers`.
 export const WorkerFailures = {
   listen(
     transport: Transport,
@@ -21,11 +21,13 @@ export const WorkerFailures = {
       reload = (): void => window.location.reload(),
     }: Partial<WorkerFailuresDeps> = {}
   ): () => void {
-    const show = (message: string): void => {
+    const show = (message: string, notAnswering?: boolean): void => {
         const body = document.createElement('div'),
           what = document.createElement('p');
 
-        what.textContent = t('WorkerFailure.body');
+        what.textContent = t(
+          notAnswering ? 'WorkerFailure.not-answering' : 'WorkerFailure.body'
+        );
         body.append(what);
 
         if (message) {
@@ -38,9 +40,8 @@ export const WorkerFailures = {
         new NotificationWindow(t('WorkerFailure.title'), body).display();
       },
       disposers = [
-        transport.receive('workerError', ({ message }): void => show(message)),
-        transport.receive('requestFailed', ({ message }): void =>
-          show(message)
+        transport.receive('workerError', ({ message, notAnswering }): void =>
+          show(message, notAnswering)
         ),
         // The page put its menu away to load, and the save is gone from where it waited: a reload is the menu again.
         transport.receive('loadFailed', ({ message }): void => {

@@ -1,12 +1,17 @@
 import {
+  RequestId,
   TransportData,
   TransportDisposer,
   TransportMessage,
   TransportReceiveArgs,
   TransportReceiveHandler,
   TransportSendArgs,
+  TransportWorkerError,
 } from './Transport';
-import AbstractTransport from './AbstractTransport';
+import AbstractTransport, {
+  AbstractTransportOptions,
+  RequestFailed,
+} from './AbstractTransport';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import reconstituteData from '../UI/lib/reconstituteData';
 
@@ -26,28 +31,56 @@ export class WorkerTransport<
   }
 > extends AbstractTransport<DataMap> {
   #worker;
+  // Set while the page's own `workerError` goes to its listeners, which is not the worker saying anything.
+  #passingOn = false;
 
-  constructor(worker: Worker) {
-    super();
+  constructor(worker: Worker, options: AbstractTransportOptions = {}) {
+    super(options);
 
     this.#worker = worker;
 
+    // Every message from the worker says it is still there (#470).
+    worker.addEventListener('message', (): void => {
+      if (!this.#passingOn) {
+        this.heard();
+      }
+    });
+
     // An error the worker didn't catch, or a message that couldn't be read, reaches the page only as an event on the
-    //  `Worker`, which nothing would hear (#470). Passed on to the `workerError` listeners as though the worker had sent
-    //  it, as it does for a rejection nothing handled. The page says what went wrong in its own words, then the message,
-    //  when there is one.
-    const passOn = (message: string): void => {
-      worker.dispatchEvent(
+    //  `Worker`, which nothing would hear (#470).
+    worker.addEventListener('error', (event: ErrorEvent): void =>
+      this.#passOn({ message: event.message ?? '' })
+    );
+    worker.addEventListener('messageerror', (): void =>
+      this.#passOn({ message: '' })
+    );
+  }
+
+  // Something went wrong that the worker didn't say, passed on to the `workerError` listeners as though the worker had
+  //  sent it, as it does for a rejection nothing handled (#470).
+  #passOn(error: TransportWorkerError): void {
+    this.#passingOn = true;
+
+    try {
+      this.#worker.dispatchEvent(
         new MessageEvent('message', {
-          data: { channel: 'workerError', data: { message } },
+          data: { channel: 'workerError', data: error },
         })
       );
-    };
+    } finally {
+      this.#passingOn = false;
+    }
+  }
 
-    worker.addEventListener('error', (event: ErrorEvent): void =>
-      passOn(event.message ?? '')
-    );
-    worker.addEventListener('messageerror', (): void => passOn(''));
+  // A request the worker could not answer, said as the worker's own errors are.
+  protected requestRejected(error: RequestFailed): void {
+    this.#passOn({ message: error.message });
+  }
+
+  // The worker has said nothing for a while with a request waiting on it. The page says so in its own words: the
+  //  channels are no help to a player, and are in the console.
+  protected notAnswering(): void {
+    this.#passOn({ message: '', notAnswering: true });
   }
 
   receive<Channel extends keyof DataMap>(
@@ -55,7 +88,7 @@ export class WorkerTransport<
     handler: TransportReceiveHandler<DataMap[Channel]>
   ): TransportDisposer {
     const listener = ({
-      data: { channel: receivingChannel, data },
+      data: { channel: receivingChannel, data, id },
     }: MessageEvent<TransportMessage>) => {
       // Only reconstitute payloads for the channel this listener cares about;
       // reconstituting first meant every listener rebuilt the full object
@@ -64,10 +97,10 @@ export class WorkerTransport<
         return;
       }
 
-      handler(
-        payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
-        data
-      );
+      handler(payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data), {
+        rawData: data,
+        id,
+      });
     };
 
     this.#worker.addEventListener('message', listener);
@@ -82,16 +115,16 @@ export class WorkerTransport<
     handler: TransportReceiveHandler<DataMap[Channel]>
   ): TransportDisposer {
     const onceHandler = ({
-      data: { channel: receivingChannel, data },
+      data: { channel: receivingChannel, data, id },
     }: MessageEvent<TransportMessage>) => {
       if (channel !== receivingChannel) {
         return;
       }
 
-      handler(
-        payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
-        data
-      );
+      handler(payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data), {
+        rawData: data,
+        id,
+      });
 
       this.#worker.removeEventListener('message', onceHandler);
     };
@@ -103,9 +136,10 @@ export class WorkerTransport<
     };
   }
 
-  send<Channel extends keyof DataMap>(
+  protected post<Channel extends keyof DataMap>(
     channel: Channel,
-    data: TransportSendArgs<DataMap[Channel]>
+    data: TransportSendArgs<DataMap[Channel]>,
+    id?: RequestId
   ): void {
     if ((data as any) instanceof DataObject) {
       data = data.toPlainObject();
@@ -114,6 +148,7 @@ export class WorkerTransport<
     this.#worker.postMessage({
       channel,
       data,
+      ...(id === undefined ? {} : { id }),
     });
   }
 }

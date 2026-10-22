@@ -1,6 +1,7 @@
-// What went wrong in the worker, said to the player (#470): `workerError` and `requestFailed` each open a window that
-//  says so, with the worker's message as text (it can hold text from a save file), and `loadFailed` says so and goes
-//  back to the main menu, by reloading the page.
+// What went wrong in the worker, said to the player (#470): `workerError` opens a window that says so, with the
+//  worker's message as text (it can hold text from a save file), or that the game has stopped answering, and
+//  `loadFailed` says so and goes back to the main menu, by reloading the page. A request the worker could not answer
+//  reaches it as a `workerError` from `WorkerTransport` (tests/engine/requestIds.ts).
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -63,6 +64,7 @@ const run = async (): Promise<void> => {
           SavedGame: { 'could-not-load': 'Not loaded: {{error}}' },
           WorkerFailure: {
             body: 'Something went wrong.',
+            'not-answering': 'The game has stopped answering.',
             title: 'Oops',
           },
         },
@@ -79,9 +81,9 @@ const run = async (): Promise<void> => {
   });
 
   expect(
-    'it listens for errors, failed requests and failed loads',
+    'it listens for errors and failed loads, and not for failed requests, which come as errors',
     Array.from(receivers.keys()),
-    ['workerError', 'requestFailed', 'loadFailed']
+    ['workerError', 'loadFailed']
   );
 
   deliver('workerError', { message: '<img src=x> broke' });
@@ -111,11 +113,15 @@ const run = async (): Promise<void> => {
   );
 
   closeAll();
-  deliver('requestFailed', { channel: 'topCities', message: 'no cities' });
+  deliver('workerError', { message: '', notAnswering: true });
 
   expect(
-    'a request the worker could not answer opens a window too',
-    windows().map((text) => text.includes('no cities')),
+    'a game that has stopped answering says so in its own words',
+    windows().map(
+      (text) =>
+        text.includes('The game has stopped answering.') &&
+        !text.includes('Something went wrong.')
+    ),
     [true]
   );
 
@@ -165,7 +171,6 @@ const run = async (): Promise<void> => {
 
   expect('every receiver is disposed of', disposed, [
     'workerError',
-    'requestFailed',
     'loadFailed',
   ]);
 

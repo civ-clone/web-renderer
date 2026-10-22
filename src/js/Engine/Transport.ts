@@ -10,11 +10,17 @@ import { DataPatch } from './DataQueue';
 import Notification from './Notification';
 import { ObjectMap } from '../UI/lib/reconstituteData';
 
+// Which request a message asks or answers (#470): the page's `request` gives each one its own, and the worker's reply,
+//  or its `requestFailed`, carries it back, so a reply is matched to its request and not only to its channel.
+export type RequestId = number;
+
 export type TransportMessage<
   Channel extends keyof TransportDataMap = keyof TransportDataMap
 > = {
   channel: Channel;
   data: TransportReceiveArgs<TransportDataMap[Channel]>;
+  // Only on a request and its reply.
+  id?: RequestId;
 };
 
 export type TransportData<Send = any, Receive = any> = {
@@ -28,17 +34,32 @@ export type TransportSendArgs<Data extends TransportData> =
 export type TransportReceiveArgs<Data extends TransportData> =
   Data extends TransportData<any, infer Receive> ? Receive : never;
 
+// What came with a message besides its data: the payload as it arrived, before `WorkerTransport` rebuilt it, and the
+//  request the message asks or answers, when it is one.
+export type TransportMeta = {
+  rawData?: ObjectMap;
+  id?: RequestId;
+};
+
 export type TransportReceiveHandler<Data extends TransportData> = (
   data: TransportReceiveArgs<Data>,
-  rawData?: ObjectMap
+  meta?: TransportMeta
 ) => void;
 
 export type TransportDisposer = () => void;
 
-// A request the worker could not answer, on the channel it was asked on (#470).
+// A request the worker could not answer, on the channel it was asked on (#470), and which one it was.
 export type TransportFailure = {
   channel: string;
   message: string;
+  id: RequestId;
+};
+
+// Something went wrong in the worker (#470). `notAnswering` is the page's own: the worker has said nothing for a while
+//  when a request is waiting on it, and the page says so in its own words, as `message` names no more than a channel.
+export type TransportWorkerError = {
+  message: string;
+  notAnswering?: boolean;
 };
 
 // An action the worker has handled, as the UI sent it: enough to tell which one it was (#326).
@@ -125,8 +146,8 @@ declare global {
       }
     >;
     start: TransportData<null, null>;
-    // A request the worker could not answer, so the page's `request` on that channel rejects, rather than waiting for
-    //  good (#470).
+    // A request the worker could not answer, so the page's `request` with its id rejects, rather than waiting for good
+    //  (#470).
     requestFailed: TransportData<TransportFailure, never>;
     // A load that failed (#470): the page says so and goes back to the main menu.
     loadFailed: TransportData<{ message: string }, never>;
@@ -140,8 +161,14 @@ declare global {
     unitActions: TransportData<never, string>;
     // Something went wrong in the worker that nothing else answers for (#470): an uncaught error or rejection, a game
     //  that could not start, an action that threw. The page says so. `WorkerTransport` sends the page's own listeners
-    //  one for an error the `Worker` itself raises.
-    workerError: TransportData<{ message: string }, never>;
+    //  one for an error the `Worker` itself raises, a request the worker could not answer, and a worker that has said
+    //  nothing for a while when a request is waiting on it.
+    workerError: TransportData<TransportWorkerError, never>;
+    // The worker has started and is listening (#470): until it has said anything, the page can't tell a worker that
+    //  has stopped answering from one that is still loading.
+    ready: TransportData<null, never>;
+    // A sign of life as each player's turn starts (#470), which says no more than that.
+    alive: TransportData<null, never>;
   }
 
   interface TransportPlayerActionMap {
@@ -251,6 +278,13 @@ export interface Transport<
   >(
     request: Request
   ): Promise<Return>;
+
+  // The answer to the request `id`, which the page matches it to (#470).
+  reply<Channel extends keyof DataMap>(
+    channel: Channel,
+    data: TransportSendArgs<DataMap[Channel]>,
+    id: RequestId
+  ): void;
 
   send<Channel extends keyof DataMap>(
     channel: Channel,

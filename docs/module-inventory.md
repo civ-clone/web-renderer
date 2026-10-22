@@ -41,7 +41,7 @@ Quick reference map of key code areas.
   - `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
 - `Transport.ts`: channel and payload typing.
-- `AbstractTransport.ts`: shared `request()` implementation (one request per channel at a time).
+- `AbstractTransport.ts`: shared `request()` implementation (replies matched by request id; a silent worker reported).
 - `ParentTransport.ts` / `WorkerTransport.ts`: worker messaging implementations.
 - `DataQueue.ts`: patch queue and transfer serialization, owned by `Client/PlayerPatches.ts`.
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
