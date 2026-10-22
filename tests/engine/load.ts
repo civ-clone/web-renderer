@@ -49,6 +49,7 @@ import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Production } from '@civ-clone/civ1-city/Yields';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
+import type Action from '@civ-clone/core-unit/Action';
 import Yield from '@civ-clone/core-yield/Yield';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
@@ -174,8 +175,16 @@ const launchShip = (): string => {
     const warrior = new Warrior(null, player, land, ruleRegistryInstance),
       ship = new Trireme(null, player, sea, ruleRegistryInstance);
 
-    unitRegistryInstance.register(warrior, ship);
-    warrior.action(new Embark(land, sea, warrior, ship, ruleRegistryInstance));
+    unitRegistryInstance.register(warrior, ship as unknown as Unit);
+    warrior.action(
+      new Embark(
+        land,
+        sea,
+        warrior,
+        ship,
+        ruleRegistryInstance
+      ) as unknown as Action
+    );
 
     return `${ship.id()}:${warrior.id()}`;
   }

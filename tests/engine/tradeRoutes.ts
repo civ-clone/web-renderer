@@ -148,13 +148,13 @@ const run = async (): Promise<void> => {
         tile
           .getNeighbours()
           .filter(
-            (neighbour) =>
+            (neighbour: Tile) =>
               neighbour.isLand() &&
               cityRegistryInstance.getByTile(neighbour) === null &&
               goodyHutRegistryInstance.getByTile(neighbour) === null &&
               unitRegistryInstance.getByTile(neighbour).length === 0
           )
-          .map((neighbour): [Tile, Tile] => [tile, neighbour])
+          .map((neighbour: Tile): [Tile, Tile] => [tile, neighbour])
       )[0] ?? [null, null];
 
   if (!site || !approach) {

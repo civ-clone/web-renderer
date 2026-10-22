@@ -272,7 +272,7 @@ const order = async (): Promise<void> => {
         tile
           .getNeighbours()
           .some(
-            (neighbour) =>
+            (neighbour: Tile) =>
               neighbour.isLand() && neighbour.isNeighbourOf(homeTile)
           ) &&
         cityRegistryInstance.getByTile(tile) === null &&

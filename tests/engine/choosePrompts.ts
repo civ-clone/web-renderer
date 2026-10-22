@@ -615,7 +615,7 @@ const captureWithTalks = async (): Promise<void> => {
           const beside = tile.getNeighbours().filter(free),
             [attack] = beside,
             [other] = beside.filter(
-              (candidate) =>
+              (candidate: Tile) =>
                 candidate !== attack && candidate.distanceFrom(attack) > 1
             );
 

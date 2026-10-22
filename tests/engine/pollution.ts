@@ -65,7 +65,10 @@ let pollutedAId: string | null = null,
 const MAX_TURNS = 6,
   CLEAN_TURNS = 4;
 
-const fail = (reason: string, error?: unknown): never => {
+const fail: (reason: string, error?: unknown) => never = (
+  reason: string,
+  error?: unknown
+): never => {
   process.stderr.write(
     `FAIL pollution: ${reason}\n${
       error instanceof Error ? error.stack : String(error ?? '')

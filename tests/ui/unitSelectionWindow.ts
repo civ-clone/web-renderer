@@ -265,7 +265,9 @@ const sent: Array<{ name: string; id: string }> = [],
   chosen: string[] = [],
   clicking = new UnitSelectionWindow(
     data.player.units,
-    { send: (_: string, action: any) => sent.push(action) } as Transport,
+    {
+      send: (_: string, action: any) => sent.push(action),
+    } as unknown as Transport,
     (unit: Unit) => chosen.push(unit.id)
   ),
   click = (window: UnitSelectionWindow, index: number): void => {
@@ -280,7 +282,9 @@ data = reconstituter.rebuild(objectMap, null) as GameData;
 
 const awake = new UnitSelectionWindow(
   data.player.units,
-  { send: (_: string, action: any) => sent.push(action) } as Transport,
+  {
+    send: (_: string, action: any) => sent.push(action),
+  } as unknown as Transport,
   (unit: Unit) => chosen.push(unit.id)
 );
 

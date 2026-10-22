@@ -4,11 +4,15 @@
 
 import ActionsState from '../../src/js/Engine/Client/ActionsState';
 import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
+import type { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 
 const failures: string[] = [];
+
+// A patch's value, which the queue carries without looking inside.
+const patchValue = (value: number) => ({ value } as unknown as ObjectMap);
 let checks = 0,
   finished = false;
 
@@ -63,7 +67,7 @@ const sent: [string, unknown][] = [],
 
   sent.splice(0);
 
-  patches.update('a', { value: 1 });
+  patches.update('a', patchValue(1));
   patches.flush();
   patches.flush();
 
@@ -90,13 +94,13 @@ const sent: [string, unknown][] = [],
   // Held
 
   const returned = await patches.hold(async () => {
-    patches.update('b', { value: 2 });
+    patches.update('b', patchValue(2));
     patches.flush();
 
     // Across an await, as an action's talks are.
     await tick();
 
-    patches.update('c', { value: 3 });
+    patches.update('c', patchValue(3));
     patches.flush();
 
     expect('nothing is sent while held', sent.length, 0);
@@ -121,7 +125,7 @@ const sent: [string, unknown][] = [],
 
   try {
     await patches.hold(async () => {
-      patches.update('d', { value: 4 });
+      patches.update('d', patchValue(4));
       patches.flush();
 
       await tick();

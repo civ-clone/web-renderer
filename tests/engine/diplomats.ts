@@ -203,7 +203,7 @@ const run = async (): Promise<void> => {
   playerWorld.register(
     site,
     ...site.getNeighbours(),
-    ...beside.flatMap((tile) => tile.getNeighbours())
+    ...beside.flatMap((tile: Tile) => tile.getNeighbours())
   );
 
   const diplomatAt = (tile: Tile): Unit =>
@@ -393,7 +393,7 @@ const run = async (): Promise<void> => {
       tile
         .getNeighbours()
         .filter(free)
-        .map((neighbour): [Tile, Tile] => [tile, neighbour])
+        .map((neighbour: Tile): [Tile, Tile] => [tile, neighbour])
     )[0] ?? [null, null];
 
   if (!lonely || !rivalSide) {

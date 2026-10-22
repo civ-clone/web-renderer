@@ -38,7 +38,6 @@
     "src/js/UI/lib/IncrementalReconstituter.ts",
     "src/js/UI/lib/IntervalHandler.ts",
     "src/js/UI/lib/PendingMove.ts",
-    "src/js/UI/lib/augmentData.ts",
     "src/js/UI/lib/chooseActiveUnit.ts",
     "src/js/UI/lib/chooseFromList.ts",
     "src/js/UI/lib/citizens.ts",

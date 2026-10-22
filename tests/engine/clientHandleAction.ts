@@ -51,6 +51,7 @@ import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
+import type Unit from '@civ-clone/core-unit/Unit';
 import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import Talks from '../../src/js/Engine/Client/Talks';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
@@ -98,7 +99,7 @@ console.log = (...args: any[]): void => {
 };
 
 const player: any = { actions: (): PlayerAction[] => [] },
-  valued = (id: string) => ({ id: () => id });
+  valued = (id: string) => ({ id: () => id } as unknown as Unit);
 
 // findPlayerAction
 const first = new InactiveUnit(player, valued('unit-1')),

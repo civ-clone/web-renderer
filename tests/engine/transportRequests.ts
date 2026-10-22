@@ -24,15 +24,17 @@ class StubTransport extends AbstractTransport<any> {
   #listeners: Map<string, Handler[]> = new Map();
   sent: [string, any][] = [];
 
-  receive(channel: string, handler: Handler) {
-    return this.#add(channel, handler, false);
+  receive(channel: PropertyKey, handler: Handler) {
+    return this.#add(String(channel), handler, false);
   }
 
-  receiveOnce(channel: string, handler: Handler) {
-    return this.#add(channel, handler, true);
+  receiveOnce(channel: PropertyKey, handler: Handler) {
+    return this.#add(String(channel), handler, true);
   }
 
-  send(channel: string, data: any): void {
+  send(channelName: PropertyKey, data: any): void {
+    const channel = String(channelName);
+
     this.sent.push([channel, data]);
 
     // Answered later, as a worker would, with every listener on the channel hearing it, as `WorkerTransport` does.

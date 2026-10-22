@@ -38,7 +38,7 @@ export const reduceKnownYield = (yields: Yield[], yieldName: string): number =>
  * each nets to.
  */
 export const netTileYields = (
-  yields: Pick<Yield, '_' | 'value'>[]
+  yields: Pick<Yield<string>, '_' | 'value'>[]
 ): { _: string; value: number }[] =>
   Object.entries(
     yields.reduce((netYields, tileYield) => {
@@ -55,7 +55,7 @@ export const netTileYields = (
  * there are. A square with more icons than the widest layout has room for draws as many as fit.
  */
 export const tileYieldIcons = (
-  yields: Pick<Yield, '_' | 'value'>[]
+  yields: Pick<Yield<string>, '_' | 'value'>[]
 ): { _: string; x: number; y: number }[] => {
   const icons = netTileYields(yields)
       // TODO: use a more effective sort than this, this only works by luck (Food -> Production -> Trade)

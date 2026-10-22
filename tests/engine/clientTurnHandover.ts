@@ -198,7 +198,9 @@ const metOnTheWay = new Set<any>(),
   };
 
 const automationClient: any = {
-    takeTurn: async (): Promise<void> => record('automation.takeTurn'),
+    takeTurn: async (): Promise<void> => {
+      record('automation.takeTurn');
+    },
   },
   automation = new Automation(automationClient, false, {
     player: () => player,
@@ -248,7 +250,7 @@ const turnHandover = new TurnHandover({
 
     return handled;
   },
-  difficulties: { entries: () => [] },
+  difficulties: { entries: () => [] } as any,
   playerWorlds: {
     getByPlayer: () => ({
       getByTile: (target: any) => (target === tile ? playerTile : null),

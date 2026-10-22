@@ -35,7 +35,10 @@ let world: World | null = null,
 
 const turnsTaken: number[] = [];
 
-const fail = (reason: string, error?: unknown): never => {
+const fail: (reason: string, error?: unknown) => never = (
+  reason: string,
+  error?: unknown
+): never => {
   process.stderr.write(
     `FAIL addPlayer: ${reason}\n${
       error instanceof Error ? error.stack : String(error ?? '')

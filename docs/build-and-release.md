@@ -47,10 +47,13 @@ Notable options:
   - Prettier format write
   - generate `build.json` version string
 - `watch`: esbuild watch mode
-- `ts:compile`: `tsc --build tsconfig.json`, a typecheck of `src/`
+- `ts:compile`: `tsc --build tsconfig.json`, a typecheck of the parts of `src/` it
+  lists so far (#339)
+- `ts:compile:tests`: a typecheck of `tests/` (`tsconfig.tests.json`, via
+  `tools/typecheck-tests.js`)
 - `prettier:format` / `prettier:check`: Prettier over `src/**/*.{ts,scss}`
-- `test`: generate the import lists, `ts:compile`, then the `test:*` suites in turn
-  (each is a script in `tools/`)
+- `test`: generate the import lists, `ts:compile`, `ts:compile:tests`, then the
+  `test:*` suites in turn (most through `tools/run-suite.js`)
 - `arena`: seeded headless games comparing a candidate AI with the baseline (`tools/arena.js`; see [`arena.md`](arena.md))
 - `civ`: the engine multi-repo tool (`tools/civ`), used below
 - `release:changelog`: add release-note entries for every commit since the newest one — see [Releasing](#releasing)
