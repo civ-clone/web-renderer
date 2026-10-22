@@ -28,8 +28,8 @@
       },
       "dto": {
         "objects": 778,
-        "bytes": 134707,
-        "hash": "3d4e804f"
+        "bytes": 134713,
+        "hash": "8d9c3aa7"
       },
       "registries": {
         "cities": 0,
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1081,
+        "total": 1086,
         "byType": {
           "Action": 64,
           "ActionPerformed": 1,
@@ -128,7 +128,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 104,
+          "Build": 105,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -173,7 +173,7 @@
           "Landed": 2,
           "Lost": 2,
           "LostAtSea": 2,
-          "MayNegotiate": 2,
+          "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
@@ -198,8 +198,9 @@
           "Shrink": 4,
           "Sold": 1,
           "Spawn": 1,
+          "Spawning": 1,
           "Spend": 5,
-          "Start": 6,
+          "Start": 8,
           "Started": 2,
           "Step": 16,
           "Stowed": 1,
@@ -237,8 +238,8 @@
       },
       "dto": {
         "objects": 3362,
-        "bytes": 576344,
-        "hash": "2713a5d4"
+        "bytes": 576359,
+        "hash": "3652457e"
       },
       "registries": {
         "cities": 4,
@@ -392,7 +393,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1081,
+        "total": 1086,
         "byType": {
           "Action": 64,
           "ActionPerformed": 1,
@@ -406,7 +407,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 104,
+          "Build": 105,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -451,7 +452,7 @@
           "Landed": 2,
           "Lost": 2,
           "LostAtSea": 2,
-          "MayNegotiate": 2,
+          "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
@@ -476,8 +477,9 @@
           "Shrink": 4,
           "Sold": 1,
           "Spawn": 1,
+          "Spawning": 1,
           "Spend": 5,
-          "Start": 6,
+          "Start": 8,
           "Started": 2,
           "Step": 16,
           "Stowed": 1,
@@ -515,8 +517,8 @@
       },
       "dto": {
         "objects": 48005,
-        "bytes": 8173362,
-        "hash": "0979e132"
+        "bytes": 8173398,
+        "hash": "c7beff35"
       },
       "registries": {
         "cities": 5,
@@ -858,7 +860,7 @@
       "randomCalls": 8795,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1081,
+        "total": 1086,
         "byType": {
           "Action": 64,
           "ActionPerformed": 1,
@@ -872,7 +874,7 @@
           "Availability": 6,
           "Available": 5,
           "BaseYield": 112,
-          "Build": 104,
+          "Build": 105,
           "BuildCost": 76,
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
@@ -917,7 +919,7 @@
           "Landed": 2,
           "Lost": 2,
           "LostAtSea": 2,
-          "MayNegotiate": 2,
+          "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
           "Moved": 14,
@@ -942,8 +944,9 @@
           "Shrink": 4,
           "Sold": 1,
           "Spawn": 1,
+          "Spawning": 1,
           "Spend": 5,
-          "Start": 6,
+          "Start": 8,
           "Started": 2,
           "Step": 16,
           "Stowed": 1,

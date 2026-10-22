@@ -6,6 +6,7 @@ import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
 import { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import Player from '@civ-clone/core-player/Player';
 import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 
 export type HasMetDependencies = {
   interactions: Pick<InteractionRegistry, 'getByPlayers'>;
@@ -22,6 +23,11 @@ export const hasMet = (
   { interactions, cities, playerWorlds }: HasMetDependencies
 ): boolean => {
   if (other === self) {
+    return true;
+  }
+
+  // Everyone knows the barbarians (#169): a notice never calls them an unknown civilization.
+  if (isBarbarian(other)) {
     return true;
   }
 

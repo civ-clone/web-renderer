@@ -1,0 +1,1 @@
+{"version":"0.1.0@66175d1","date":"2026-10-22T15:13:44.000Z","localChanges":["If the game stops answering for 30 seconds while you're waiting on a report or a list, a window now says so, and what you asked for still appears if the game catches up (closes #470)."],"externalChanges":{}}

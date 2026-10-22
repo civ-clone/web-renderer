@@ -416,6 +416,10 @@ const generate = (root, variants) => {
     `${roles
       .map((role) => `import ${role} from ${at(role, 'SimpleAIClient')};`)
       .join('\n')}
+${roles
+  .filter((role) => fs.existsSync(path.join(root, role, 'BarbarianClient.ts')))
+  .map((role) => `import ${role}Barbarian from ${at(role, 'BarbarianClient')};`)
+  .join('\n')}
 
 export default {
 ${roles
@@ -423,6 +427,11 @@ ${roles
     (role) => `  ${role}: {
     label: ${JSON.stringify(variants[role].label)},
     SimpleAIClient: ${role},
+    BarbarianClient: ${
+      fs.existsSync(path.join(root, role, 'BarbarianClient.ts'))
+        ? `${role}Barbarian`
+        : 'null'
+    },
     strategies: {},
     strategyRegistryIndex: ${variants[role].strategyRegistryIndex},
   },`

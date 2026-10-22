@@ -81,8 +81,11 @@ const checkPlainData = (): void => {
     scoreOf = (gameResult: unknown): CivilizationScore =>
       civilizationScore(player, {
         gameResults: { get: () => gameResult },
-        // Seven players started: six opponents.
-        playerWorlds: { length: 7 },
+        // Seven players started: six opponents. Each world names its player: none are the barbarians (#169).
+        playerWorlds: {
+          length: 7,
+          entries: () => new Array(7).fill({ player: () => player }),
+        },
         rules,
       } as unknown as CivilizationScoreDependencies),
     check = (description: string, actual: unknown, expected: unknown) => {

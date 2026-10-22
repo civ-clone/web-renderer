@@ -92,6 +92,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-trade-rate/en');
   await import('../../translations/civ1-world/en');
   await import('../../translations/civ1-world-civilizations/en');
+  await import('../../translations/base-civilization-barbarian/en');
 
   expect('Generic.ok (fr-FR)', t('Generic.ok'), 'OK');
 
@@ -350,6 +351,25 @@ const expect = (description: string, actual: string, expected: string) => {
     { home: asansol, city: asansol, goods: 'Salt', bonus: 30 },
     'Rock salt caravan from Asansol arrives in Asansol. The goods sold for 30 coins.',
   ]);
+
+  // #169: the barbarians' arrival.
+  notifications.push(
+    [
+      'Barbarians.landing',
+      { city: asansol },
+      'Barbarian raiding party lands near Asansol! Citizens are alarmed.',
+    ],
+    [
+      'Barbarians.uprising',
+      { city: asansol },
+      'Travellers report: Barbarian uprising near Asansol!',
+    ],
+    [
+      'Barbarians.uprising.guerrilla',
+      { city: asansol },
+      'Travellers report: Guerrilla uprising near Asansol!',
+    ]
+  );
 
   // #58: a Diplomat's work, told to both sides.
   notifications.push(

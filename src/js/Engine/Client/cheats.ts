@@ -5,6 +5,7 @@
 import { Gold } from '@civ-clone/civ1-city/Yields';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
+import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import Transport, { TransportDisposer } from '../Transport';
 import { ClientContext } from './ClientContext';
 import { filterToReference } from './refs';
@@ -269,12 +270,16 @@ export const registerCheats = (
   );
 
   disposers.push(
+    // The barbarians (#169) aren't a civilization to play as.
     answer(transport, 'cheatPlayers', () =>
-      ctx.players.entries().map((player) => ({
-        id: player.id(),
-        civilization: player.civilization().sourceClass().name,
-        isLocal: player === ctx.player(),
-      }))
+      ctx.players
+        .entries()
+        .filter((player) => !isBarbarian(player))
+        .map((player) => ({
+          id: player.id(),
+          civilization: player.civilization().sourceClass().name,
+          isLocal: player === ctx.player(),
+        }))
     )
   );
 

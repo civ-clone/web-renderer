@@ -12,6 +12,9 @@ import answer, { describeError } from './answer';
 import loadGame from './loadGame';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
+import { registerBarbarianClasses } from './barbarians';
+import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
+import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
@@ -193,6 +196,12 @@ export class Game implements IGame {
   }
 
   #createClient(player: Player, human: boolean): Client {
+    // The barbarians (#169) are never the human's: `civ1-barbarians` spawns their player, and it asks for a client
+    //  with `player:spawned` like any player added mid-game.
+    if (isBarbarian(player)) {
+      return new BarbarianClient(player);
+    }
+
     if (!human) {
       return new SimpleAIClient(player);
     }
@@ -242,6 +251,7 @@ export class Game implements IGame {
       engine.registerPlugins(plugins);
       registerClasses(defaultGame);
       registerDiplomacyClasses(defaultGame);
+      registerBarbarianClasses(defaultGame);
     });
 
     engine.on('engine:start', (): void => {
