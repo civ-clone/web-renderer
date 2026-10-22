@@ -11,6 +11,7 @@ import { TransportHandledAction } from '../../Engine/Transport';
 import Transport from '../Transport';
 import { directionKeys, keyToActionsMap } from '../lib/unitActionKeys';
 import NotificationWindow from '../components/NotificationWindow';
+import { cityNameText } from '../components/lib/city';
 import chooseActiveUnit from '../lib/chooseActiveUnit';
 import UnitQueue from '../lib/UnitQueue';
 import { chooseUnitAction, openArrivalWindow } from '../lib/unitActionPrompts';
@@ -388,7 +389,7 @@ export class ActiveUnitController {
         document.createTextNode(
           t(`JoinCity.${reason}.body`, {
             ...details,
-            city: city?.name,
+            city: city ? cityNameText(city) : '',
           })
         )
       );

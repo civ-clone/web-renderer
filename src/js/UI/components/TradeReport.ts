@@ -10,6 +10,7 @@ import Transport from '../Transport';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
+import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { h } from '../lib/html';
 import isAnarchy from './lib/government';
 import { groupIcons } from '../lib/yieldMap';
@@ -60,6 +61,7 @@ export class TradeReport extends Window {
         [key: string]: {
           count: number;
           cost: number;
+          name: string;
         };
       } = {},
       [totalIncome, totalSpend, totalGold] = this.#cities.reduce(
@@ -75,6 +77,8 @@ export class TradeReport extends Window {
                   improvements[improvement._] = {
                     count: 0,
                     cost: cityYield.value,
+                    // Its name, not its class name (#472).
+                    name: getLabelForBuildableEntity(improvement),
                   };
                 }
 
@@ -115,7 +119,7 @@ export class TradeReport extends Window {
       );
 
     improvementList.append(
-      ...Object.entries(improvements).map(([name, { count, cost }]) => {
+      ...Object.values(improvements).map(({ count, cost, name }) => {
         const row = document.createElement('tr');
 
         row.append(

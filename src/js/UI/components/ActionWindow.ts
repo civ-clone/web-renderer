@@ -5,6 +5,7 @@ import {
 } from './NotificationWindow';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
+import { t } from 'i18next';
 
 export interface ActionWindowAction {
   label: string;
@@ -30,7 +31,7 @@ export class ActionWindow extends NotificationWindow {
       ...options,
       actions: {
         primary: {
-          label: 'OK',
+          label: t('Generic.ok'),
           action: (actionWindow) => actionWindow.close(),
           ...(options.actions?.primary ?? {}),
         },
