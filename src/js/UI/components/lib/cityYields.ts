@@ -182,16 +182,21 @@ export const turnsLeft = (
   yields: Yield[],
   yieldName: string
 ) => {
-  const remainingTurns = Math.max(
-    1,
-    Math.ceil(
-      (data.cost.value - data.progress.value) /
-        Math.abs(reduceKnownYield(yields, yieldName))
-    )
-  );
+  const net = reduceKnownYield(yields, yieldName),
+    remaining = data.cost.value - data.progress.value;
 
-  // Return 0 so that it can be handled as a plural in the translations as `Never`, rather than `Infinity turns`.
-  return Number.isFinite(remainingTurns) ? remainingTurns : 0;
+  // Done at the end of the turn, whatever comes in: progress already covers the cost.
+  if (remaining <= 0) {
+    return 1;
+  }
+
+  // 0, which the translations say as `Never`, with nothing to spare or a shortfall: a starving city counted its
+  //  shortfall as progress (#489).
+  if (net <= 0) {
+    return 0;
+  }
+
+  return Math.max(1, Math.ceil(remaining / net));
 };
 export const turnsText = (turns: number) =>
   t('Progress.turns', { count: turns });
