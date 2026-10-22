@@ -2,7 +2,7 @@
   "turns": 21,
   "sequence": {
     "count": 197,
-    "hash": "b62b4ff1f055cde721df73c5d2913f72bb0de71569c1e53fcafdc62dd3060e29"
+    "hash": "78fe3e301e807320a9306c98672a46b2675ebb8311a0d427241be906e0f77043"
   },
   "channels": {
     "actionHandled": {
@@ -27,7 +27,7 @@
     },
     "gameDataPatch": {
       "count": 96,
-      "hash": "df42d0266074b220c13f2ae51fe5449113cdd9c3de12e5bb50160888a9fbb911"
+      "hash": "01ff329630194259da0ab7c4232ad97dc93782f684647b67511bca864c3d5c64"
     },
     "gameNotification": {
       "count": 1,
@@ -85,7 +85,7 @@
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 7f22a481cdb3 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
-    "gameDataPatch 1beaefde19a0 update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
+    "gameDataPatch 7f465049c35e update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-6, update PlayerTile-7, update PlayerTile-8, and 7 more",
     "actionHandled 6c2a1a2455eb {\"name\":\"Revolution\",\"id\":\"PlayerGovernment-1\"}",
     "topCities 204ab3306d80 [{\"rank\":1,\"size\":1,\"citizens\":{\"happy\":0,\"content\":1,\"unhappy\":0,\"specialist...",
     "civilizationScore 7d953659593c {\"terms\":[{\"term\":\"citizens\",\"value\":1},{\"term\":\"wonders\",\"value\":0},{\"term\":...",
@@ -106,7 +106,7 @@
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 0d5797eb5e0e update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
-    "gameDataPatch b3346882a50c update PlayerTile-1, update PlayerTile-2, update PlayerTile-3, update PlayerTile-4, update PlayerTile-5, update PlayerTile-6, and 1198 more",
+    "gameDataPatch 8448f3801a8a update PlayerTile-1, update PlayerTile-7, update PlayerTile-w, update PlayerTile-y, update PlayerTile-20, update PlayerTile-22, and 7 more",
     "actionHandled 177aa69b861c {\"name\":\"ChooseGovernment\",\"id\":\"PlayerGovernment-1\"}",
     "gameDataPatch 6ca499446752 update PlayerTile-x, update PlayerTile-22, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 27382baafee6 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
