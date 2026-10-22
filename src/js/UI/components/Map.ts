@@ -1,6 +1,6 @@
 import { NeighbourDirection, Tile } from '../types';
 import { Projection, SquareProjection } from '../lib/projection';
-import { Rect, repeatOffsets, tileRange } from '../lib/viewport';
+import { Rect, repeatOffsets, wrapIndices } from '../lib/viewport';
 import {
   getPreloadedImage,
   setPreloadContainer,
@@ -489,22 +489,17 @@ export class Map implements IMap {
 
   /** The tiles that reach a region of this canvas. */
   protected tilesIn(rect: Rect): Tile[] {
-    const { width, height } = this.projection().footprint(),
-      overhang = this.overhang(),
-      columns = tileRange(
-        this.#originX + rect.x,
-        rect.width,
-        width,
-        overhang,
-        this.#world.width()
+    const span = this.projection().tileSpan(
+        {
+          x: this.#originX + rect.x,
+          y: this.#originY + rect.y,
+          width: rect.width,
+          height: rect.height,
+        },
+        this.overhang()
       ),
-      rows = tileRange(
-        this.#originY + rect.y,
-        rect.height,
-        height,
-        overhang,
-        this.#world.height()
-      ),
+      columns = wrapIndices(...span.columns, this.#world.width()),
+      rows = wrapIndices(...span.rows, this.#world.height()),
       tiles: Tile[] = [];
 
     columns.forEach((x) =>

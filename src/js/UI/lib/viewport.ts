@@ -57,8 +57,25 @@ export const tileRange = (
     return [];
   }
 
-  const first = Math.floor((start - overhang) / size),
-    last = Math.ceil((start + length + overhang) / size);
+  return wrapIndices(
+    Math.floor((start - overhang) / size),
+    Math.ceil((start + length + overhang) / size),
+    count
+  );
+};
+
+/**
+ * The indices `first` up to (not including) `last` of `count` tiles that wrap,
+ * so a run across the seam reads e.g. `38, 39, 0, 1`.
+ */
+export const wrapIndices = (
+  first: number,
+  last: number,
+  count: number
+): number[] => {
+  if (count <= 0) {
+    return [];
+  }
 
   // Past a world's worth every tile is in range, and returning them once each
   // is what the caller wants — drawing a tile twice would double up anything

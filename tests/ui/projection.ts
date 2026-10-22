@@ -1,8 +1,14 @@
 // Square tiles through the `Projection` the map layers and the portal use (#90): a tile's pixel maps back to the tile,
 //  every pixel of its sprite box does, and a world's width (or height, over the poles) along is the same tile once the
-//  caller wraps it.
+//  caller wraps it. And what the layers ask of it to draw tiles that overlap (#91), which square tiles don't: no reach,
+//  a draw order that is a total order, and the tiles reaching a rectangle are the ones the square sums always gave.
 
-import { SquareProjection, tileBounds } from '../../src/js/UI/lib/projection';
+import {
+  Placement,
+  SquareProjection,
+  tileBounds,
+} from '../../src/js/UI/lib/projection';
+import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';
 
 const failures: string[] = [];
 let checks = 0,
@@ -189,6 +195,127 @@ expect(
   tileBounds(new SquareProjection(32, dimensions(10, 10)), [{ x: 4, y: 7 }]),
   { x: 128, y: 224, width: 32, height: 32 }
 );
+
+// What drawing tiles that overlap needs, which square tiles answer with nothing to do (#91).
+worlds.forEach(([width, height]) =>
+  sizes.forEach((size) => {
+    const projection = new SquareProjection(size, dimensions(width, height)),
+      name = `${width}x${height} at ${size}px`,
+      spans: string[] = [];
+
+    expect(
+      `${name}: squares don't overlap their neighbours`,
+      projection.overlapsNeighbours(),
+      false
+    );
+    expect(`${name}: nothing reaches past its box`, projection.reach(), {
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+    });
+
+    // The tiles reaching a rectangle are the ones `tileRange` gave before there was a projection, in the same order,
+    //  so the layers draw the same tiles in the same order on the square grid.
+    [-3 * size - 1, -size, -1, 0, 1, size - 1, size, 5 * size + 3].forEach(
+      (start) =>
+        [0, 1, size, 3 * size + 2, width * size, 2 * width * size + 1].forEach(
+          (length) =>
+            [0, 1, size, 3 * size].forEach((overhang) => {
+              const { columns, rows } = projection.tileSpan(
+                  { x: start, y: start + 1, width: length, height: length },
+                  overhang
+                ),
+                found = [
+                  wrapIndices(...columns, width),
+                  wrapIndices(...rows, height),
+                ],
+                wanted = [
+                  tileRange(start, length, size, overhang, width),
+                  tileRange(start + 1, length, size, overhang, height),
+                ];
+
+              if (JSON.stringify(found) !== JSON.stringify(wanted)) {
+                spans.push(
+                  `${start}+${length} over ${overhang}: ${JSON.stringify(
+                    found
+                  )}, not ${JSON.stringify(wanted)}`
+                );
+              }
+            })
+        )
+    );
+
+    sweep(`${name}: the tiles reaching a rectangle are tileRange's`, spans);
+
+    // Every tile, and a copy of each a world along either way, as the seam draws them.
+    const placements: Placement[] = [],
+      order: string[] = [],
+      sorted: string[] = [];
+
+    for (let y = 0; y < Math.min(height, 8); y++) {
+      for (let x = 0; x < Math.min(width, 8); x++) {
+        const [px, py] = projection.tileToPixel(x, y);
+
+        [-1, 0, 1].forEach((repeat) =>
+          placements.push({
+            x,
+            y,
+            px: px + repeat * width * size,
+            py,
+          })
+        );
+      }
+    }
+
+    const sign = (value: number): number => Math.sign(value) || 0;
+
+    placements.forEach((a) =>
+      placements.forEach((b) => {
+        const ab = projection.compareDrawOrder(a, b),
+          ba = projection.compareDrawOrder(b, a),
+          same = a === b;
+
+        if (sign(ab) !== -sign(ba) || (ab === 0) !== same) {
+          order.push(`${JSON.stringify(a)} against ${JSON.stringify(b)}`);
+        }
+      })
+    );
+
+    const inOrder = [...placements].sort((a, b) =>
+      projection.compareDrawOrder(a, b)
+    );
+
+    inOrder.forEach((a, index) =>
+      inOrder.slice(index + 1).forEach((b) => {
+        if (
+          projection.compareDrawOrder(a, b) > 0 ||
+          b.py < a.py ||
+          (b.py === a.py && b.px <= a.px)
+        ) {
+          sorted.push(`${JSON.stringify(a)} before ${JSON.stringify(b)}`);
+        }
+      })
+    );
+
+    sweep(
+      `${name}: the draw order puts any two places one way round, and only the same place level`,
+      order
+    );
+    sweep(
+      `${name}: in draw order, a place is above, or level and left of, every one after it`,
+      sorted
+    );
+  })
+);
+
+expect('wrapping across the seam', wrapIndices(-2, 2, 40), [38, 39, 0, 1]);
+expect(
+  'a world or more is every tile once',
+  wrapIndices(-3, 5, 8),
+  [0, 1, 2, 3, 4, 5, 6, 7]
+);
+expect('no tiles', wrapIndices(3, 3, 8), []);
 
 finished = true;
 
