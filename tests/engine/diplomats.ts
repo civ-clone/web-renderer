@@ -287,7 +287,10 @@ const run = async (): Promise<void> => {
     investigated.growth?.size !== cityGrowth.size() ||
     !Array.isArray(investigated.tiles) ||
     investigated.player?.treasuries !== undefined ||
-    investigated.player?.cities !== undefined
+    investigated.player?.cities !== undefined ||
+    // Not what the city could build, which would show the rival's advances (#493).
+    !investigated.build ||
+    'available' in investigated.build
   ) {
     fail(
       `investigating sent ${JSON.stringify({
@@ -295,6 +298,7 @@ const run = async (): Promise<void> => {
         size: investigated?.growth?.size,
         tiles: investigated?.tiles?.length,
         player: Object.keys(investigated?.player ?? {}),
+        build: Object.keys(investigated?.build ?? {}),
       })}`
     );
   }
