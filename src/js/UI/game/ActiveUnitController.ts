@@ -30,7 +30,7 @@ import { Topology } from '../lib/topologyFor';
 //  it, typed now or kept while a move is answered (#326).
 //
 // Reaches into `document` in one place: `drain` leaves the kept keys to a modal window, or a window with the focus,
-//  as a key typed now would be (`dialog.window.modal`, `document.activeElement`).
+//  as a key typed now would be (`dialog.window.modal[open]`, `document.activeElement`).
 
 /** What the controller needs of the map portal (`GamePortal`). */
 export interface ActiveUnitPortal {
@@ -194,7 +194,7 @@ export class ActiveUnitController {
     // keys now, as it would a key typed now: the rest were typed
     // without knowing it would be there.
     if (
-      document.querySelector('dialog.window.modal') !== null ||
+      document.querySelector('dialog.window.modal[open]') !== null ||
       document.activeElement?.closest('dialog.window')
     ) {
       pendingMove.clear();
