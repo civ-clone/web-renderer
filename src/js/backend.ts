@@ -10,3 +10,7 @@ const transport = new ParentTransport(),
 addEventListener('unhandledrejection', (event: PromiseRejectionEvent): void =>
   transport.send('workerError', { message: describeError(event.reason) })
 );
+
+// Started and listening (#470): until the worker has said something, the page can't tell one that has stopped answering
+//  from one still loading, so its silence counts for nothing until now.
+transport.send('ready', null);

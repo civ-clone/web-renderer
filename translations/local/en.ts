@@ -482,6 +482,8 @@ i18next.addResources('en', 'default', {
 
   'WorkerFailure.body':
     'Something went wrong in the game. It may carry on; if nothing happens, reload the page.',
+  'WorkerFailure.not-answering':
+    'The game has stopped answering. It may be busy and carry on; if nothing happens, reload the page.',
   'WorkerFailure.title': 'Something went wrong',
 
   'GameOver.conquest.body':

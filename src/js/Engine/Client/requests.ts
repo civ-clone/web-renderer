@@ -99,7 +99,7 @@ export const registerRequests = (
   );
 
   // Each request is answered with `answer`, so one that throws is answered with a `requestFailed` rather than never, and
-  //  the UI's next request on its channel isn't stuck behind it (#470).
+  //  the UI hears that it failed, rather than waiting for good (#470).
 
   // What a city can build, for the production picker (#324). Standalone, as a notification is, so the picker's list
   //  resolves on its own and brings nothing of the game with it. A build that is not ours has nothing to show.

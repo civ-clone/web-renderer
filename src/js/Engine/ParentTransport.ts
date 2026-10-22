@@ -1,4 +1,5 @@
 import {
+  RequestId,
   TransportData,
   TransportDisposer,
   TransportMessage,
@@ -22,10 +23,10 @@ export class ParentTransport<
     handler: TransportReceiveHandler<DataMap[Channel]>
   ): TransportDisposer {
     const listener = ({
-      data: { channel: receivingChannel, data },
+      data: { channel: receivingChannel, data, id },
     }: TransportEventListenerArg) => {
       if (channel === receivingChannel) {
-        handler(data);
+        handler(data, { id });
       }
     };
 
@@ -41,10 +42,10 @@ export class ParentTransport<
     handler: TransportReceiveHandler<DataMap[Channel]>
   ): TransportDisposer {
     const fullHandler = ({
-      data: { channel: receivingChannel, data },
+      data: { channel: receivingChannel, data, id },
     }: MessageEvent<TransportMessage>) => {
       if (channel === receivingChannel) {
-        handler(data);
+        handler(data, { id });
 
         removeEventListener('message', fullHandler);
       }
@@ -57,9 +58,11 @@ export class ParentTransport<
     };
   }
 
-  send<Channel extends keyof DataMap>(
+  // `id` is the request this answers, when it is a reply: `answer` echoes it (#470).
+  protected post<Channel extends keyof DataMap>(
     channel: Channel,
-    data: TransportSendArgs<DataMap[Channel]>
+    data: TransportSendArgs<DataMap[Channel]>,
+    id?: RequestId
   ): void {
     if ((data as any) instanceof DataObject) {
       data = data.toPlainObject();
@@ -68,6 +71,7 @@ export class ParentTransport<
     postMessage({
       channel,
       data,
+      ...(id === undefined ? {} : { id }),
     });
   }
 }

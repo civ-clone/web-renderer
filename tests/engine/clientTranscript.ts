@@ -103,15 +103,21 @@ const transport = {
       pendingChoice = null;
     };
   },
-  send: (channel: string, data: any): void => {
+  // A reply to a request, with its id (#470), recorded as `send` records anything else.
+  reply: (channel: string, data: any, id: number): void =>
+    transport.send(channel, data, id),
+  // `id` only from `reply`.
+  send: (channel: string, data: any, id?: number): void => {
     if (stopped) {
       return;
     }
 
-    // As `ParentTransport.send` and `postMessage` would.
+    const plain = data instanceof DataObject ? data.toPlainObject() : data;
+
+    // As `ParentTransport` and `postMessage` would: a reply to a request carries its id (#470).
     transcript.push([
       channel,
-      JSON.stringify(data instanceof DataObject ? data.toPlainObject() : data),
+      JSON.stringify(id === undefined ? plain : { data: plain, id }),
     ]);
 
     if (channel === 'chooseFromList') {
@@ -174,7 +180,10 @@ const act = (action: { name: string; [key: string]: any }): Promise<void> =>
     receivers.get('action')!(action);
   });
 
-const request = (channel: string, ...args: any[]): void => {
+// Each question is asked with an id of its own, as the page's `request` asks it (#470), which the answer echoes.
+let requestId = 0;
+
+const request = (channel: string, data?: any): void => {
   const receiver = receivers.get(channel);
 
   if (!receiver) {
@@ -183,7 +192,7 @@ const request = (channel: string, ...args: any[]): void => {
 
   did(channel);
 
-  receiver!(...args);
+  receiver!(data, { id: ++requestId });
 };
 
 const cheat = (name: string, value?: any): void => {

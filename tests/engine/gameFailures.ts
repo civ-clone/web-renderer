@@ -1,8 +1,10 @@
 // What the worker's `Game` says when it can't do what the page asked (#470), over a stub transport: a save that can't
 //  be loaded (one that needs a plugin that isn't there) is answered on `loadFailed`, not as a passing `notification`,
-//  so the page can say so and go back to its menu.
+//  so the page can say so and go back to its menu. And a game that was never started, as a loaded one isn't, still
+//  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
 
 import Game from '../../src/js/Engine/Game';
+import { instance as engine } from '@civ-clone/core-engine/Engine';
 
 const failures: string[] = [];
 let checks = 0,
@@ -51,7 +53,22 @@ const receivers = new Map<string, (data: any) => void>(),
     return null;
   };
 
+// What `Game` binds to each player's turn start as it is made, which a loaded game, never `start`ed, has as well.
+//  The engine's own listeners from the plugins are left out: there is no game here for them to play.
+const turnStart: ((...args: any[]) => void)[] = [],
+  on = engine.on;
+
+engine.on = ((event: string, handler: (...args: any[]) => void): void => {
+  if (event === 'player:turn-start') {
+    turnStart.push(handler);
+  }
+
+  on.call(engine, event as any, handler);
+}) as typeof engine.on;
+
 new Game(transport);
+
+engine.on = on;
 
 (async () => {
   const logged = console.error;
@@ -93,6 +110,19 @@ new Game(transport);
     'a save that is not JSON is answered on loadFailed too',
     sent.filter(([channel]) => channel === 'loadFailed').length,
     1
+  );
+
+  // A loaded game is never `start`ed, so `bindEvents` never runs for it: the sign of life is bound without it.
+  sent.splice(0);
+  [1, 2].forEach(() => turnStart.forEach((handler) => handler(null)));
+
+  expect(
+    'a game that was not started sends a sign of life as each player turn starts',
+    sent.filter(([channel]) => channel === 'alive'),
+    [
+      ['alive', null],
+      ['alive', null],
+    ]
   );
 
   finished = true;
