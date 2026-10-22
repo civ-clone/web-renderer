@@ -9,10 +9,11 @@ import { instance as dataChanges } from '../lib/DataChanges';
 
 type OnComplete = (unit: UnitData) => void;
 
+// A unit clicked is the one chosen, awake or not: a fortified or sentried one is woken first (#482).
 const build = (
   units: UnitData[],
   transport: Transport,
-  onComplete: OnComplete
+  choose: OnComplete
 ): HTMLDivElement =>
   s(
     '<div></div>',
@@ -26,9 +27,9 @@ const build = (
               name: 'InactiveUnit',
               id: unit.id,
             });
-
-            onComplete(unit);
           }
+
+          choose(unit);
         },
       });
 
@@ -46,7 +47,13 @@ export class UnitSelectionWindow extends Window {
   ) {
     super(t('UnitSelectionWindow.title'), s('<div></div>'));
 
-    const unitIds = units.map((unit) => unit.id);
+    const unitIds = units.map((unit) => unit.id),
+      // The window has done its job once a unit is chosen (#482).
+      choose = (unit: UnitData): void => {
+        onComplete(unit);
+
+        this.close();
+      };
 
     // Wakes on the render after any of the units shown changes or is removed (#344), and redraws those still in the
     //  player's list, closing when none are.
@@ -63,11 +70,11 @@ export class UnitSelectionWindow extends Window {
           return;
         }
 
-        this.update(build(updatedUnits, transport, onComplete));
+        this.update(build(updatedUnits, transport, choose));
       }
     );
 
-    this.update(build(units, transport, onComplete));
+    this.update(build(units, transport, choose));
   }
 
   close() {

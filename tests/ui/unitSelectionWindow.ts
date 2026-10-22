@@ -1,7 +1,8 @@
 // What keeps the unit stack window current (#344). The window opened on a stack watches the ids of the units it was
 // opened with through the shared `DataChanges` instance: it redraws on the render after one of them changes, showing
 // those still in the player's list, does nothing for a unit it doesn't show, closes once none of its units are left,
-// and stops watching when it closes.
+// and stops watching when it closes. Clicking a unit chooses it, waking it first if it is asleep, and closes the
+// window (#482).
 // The real `UnitSelectionWindow` is built under linkedom, with a canvas context that draws nothing. Patches go through
 // the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is collected into the shared
 // `DataChanges` instance as `Renderer` does; a "render" is a `notify`.
@@ -258,6 +259,48 @@ update([], true);
 render();
 
 expect('and then it watches nothing more', last.redraws, []);
+
+// Clicking a unit chooses it, awake or not, and closes the window (#482).
+const sent: Array<{ name: string; id: string }> = [],
+  chosen: string[] = [],
+  clicking = new UnitSelectionWindow(
+    data.player.units,
+    { send: (_: string, action: any) => sent.push(action) } as Transport,
+    (unit: Unit) => chosen.push(unit.id)
+  ),
+  click = (window: UnitSelectionWindow, index: number): void => {
+    window
+      .element()
+      .querySelectorAll('canvas')
+      [index].dispatchEvent(new Event('click'));
+  };
+
+objectMap.objects['Unit-1'].active = true;
+data = reconstituter.rebuild(objectMap, null) as GameData;
+
+const awake = new UnitSelectionWindow(
+  data.player.units,
+  { send: (_: string, action: any) => sent.push(action) } as Transport,
+  (unit: Unit) => chosen.push(unit.id)
+);
+
+click(awake, 0);
+
+expect(
+  'clicking an awake unit chooses it, without waking it',
+  [chosen, sent],
+  [['Unit-1'], []]
+);
+expect('and closes the window', awake.element().isConnected, false);
+
+click(clicking, 0);
+
+expect(
+  'clicking a sleeping unit wakes it and chooses it',
+  [chosen, sent],
+  [['Unit-1', 'Unit-1'], [{ name: 'InactiveUnit', id: 'Unit-1' }]]
+);
+expect('and closes the window too', clicking.element().isConnected, false);
 
 expect(
   'nothing but the missing sprites was logged',
