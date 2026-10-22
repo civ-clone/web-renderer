@@ -13,6 +13,15 @@ import Transport from '../Transport';
 import endTurn from '../lib/endTurn';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 
+// A letter as typed with Shift alone deciding its case, so Caps Lock doesn't turn `p` (CleanPollution) into `P`
+//  (Pillage), or `d` into `D` (Disband) (#479).
+const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
+  /^[a-z]$/i.test(key)
+    ? event.shiftKey
+      ? key.toUpperCase()
+      : key.toLowerCase()
+    : key;
+
 // The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), a key passed on to a modal window, the unit keys,
 //  Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`, and the Shift+5, Shift+6 cheat sequence.
 //
@@ -89,7 +98,13 @@ export class InputController {
       } = this.#deps,
       leaderScreensMap = this.#leaderScreensMap;
 
-    const key = mappedKeyFromEvent(event);
+    // None of the game's keys takes Ctrl, Cmd or Alt: those are the browser's (Ctrl+R reloads, Ctrl+F finds), and
+    //  must not also build a road or fortify (#479).
+    if (event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    const key = withoutCapsLock(mappedKeyFromEvent(event), event);
 
     if (key in leaderScreensMap) {
       leaderScreensMap[event.key]();
@@ -190,6 +205,12 @@ export class InputController {
     // Shift+5 then Shift+6, as in Civ1: turns on the game menu's
     // cheat items for this session. Matched on the physical keys,
     // because what Shift+5 types depends on the keyboard layout.
+    // Shift itself, pressed again between the two, doesn't break the
+    // sequence (#479).
+    if (key === 'Shift') {
+      return;
+    }
+
     const shiftedCode = event.shiftKey ? event.code : '';
 
     if (this.#lastShiftedCode === 'Digit5' && shiftedCode === 'Digit6') {

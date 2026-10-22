@@ -1,0 +1,1 @@
+{"version":"0.1.0@620eb3a","date":"2026-10-22T07:23:41.000Z","localChanges":["Players whose browser is set to a language other than English now see the game in English, rather than internal names such as \"Generic.ok\" on menus, windows and messages (closes #471)."],"externalChanges":{}}

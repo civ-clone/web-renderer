@@ -1,4 +1,12 @@
 [
+{"version":"0.1.0@4bd042d","date":"2026-10-22T07:30:19.000Z","localChanges":["Dismissing messages with Escape one after another could leave an invisible message window that took every key, so units stopped responding and no more messages appeared until the page was reloaded (closes #351).","Pressing Escape twice on the game over window no longer hides it, so you can still choose to keep playing (#351)."],"externalChanges":{}}
+,
+{"version":"0.1.0@440f533","date":"2026-10-22T07:28:37.000Z","localChanges":["When a save can't be read or written, the message now quotes the problem as it is, without codes in place of its quotation marks (#472).","The message saying a city is too large for Settlers to join now writes names such as Xi'an correctly (#472).","The Civil Disorder button's tooltip now names the city, rather than showing a placeholder (#472).","The Trade report now names each city improvement, such as \"City Walls\" rather than \"CityWalls\" (#472).","The window asking whether to reload the page is now titled \"Reload\" rather than \"Quit\", and the last few fixed English labels can now be translated (closes #472)."],"externalChanges":{}}
+,
+{"version":"0.1.0@620eb3a","date":"2026-10-22T07:23:41.000Z","localChanges":["Players whose browser is set to a language other than English now see the game in English, rather than internal names such as \"Generic.ok\" on menus, windows and messages (closes #471)."],"externalChanges":{}}
+,
+{"version":"0.1.0@56383ef","date":"2026-10-22T07:20:16.000Z","localChanges":["A save file can no longer run script on the page through the message shown when it loads, or fails to load (closes #469)."],"externalChanges":{}}
+,
 {"version":"0.1.0@36881a9","date":"2026-10-22T07:24:18.000Z","localChanges":["A unit that finishes fortifying at the start of your turn now shows its fortified look straight away, rather than only once its square was drawn again for some other reason, and a sentried unit woken by an enemy no longer keeps its old letter (closes #487)."],"externalChanges":{}}
 ,
 {"version":"0.1.0@0be8fa9","date":"2026-10-22T07:22:40.000Z","localChanges":["Late in a game, every move, and every change while the other civilizations take their turns, no longer spends around a hundredth of a second recounting everything the game has sent before the map can be drawn (closes #480)."],"externalChanges":{}}
