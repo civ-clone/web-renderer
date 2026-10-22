@@ -81,6 +81,12 @@ export class TurnHandover {
   // Whether a notification given now waits for the hand-over: on our own turn, by hand, until it is handed over. Read
   //  as each one is given, as is automation.
   holdsNotifications(): boolean {
+    // Before the initial data the UI isn't listening for them, as after a load that resumes a computer player's turn
+    //  (#151): they go once it has been sent.
+    if (!this.#sentInitialData) {
+      return true;
+    }
+
     if (this.#handedOver || this.#context.automation.enabled) {
       return false;
     }
@@ -105,6 +111,11 @@ export class TurnHandover {
     );
 
     this.#sentInitialData = true;
+
+    // What was held for it, unless it is still held for the hand-over.
+    if (!this.holdsNotifications()) {
+      this.#context.notifier.release();
+    }
   }
 
   // A GoTo that stopped next to a choice (#357): the unit goes with its actions, for the UI to choose from, and the UI

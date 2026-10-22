@@ -141,6 +141,8 @@ player.setCivilization(new Civilization());
 // The initial data is the player's whole state, which needs a game, and the year a game's rules; the hand-over's own
 //  patch is all this needs.
 (TurnHandover.prototype as any).sendInitialData = function (): void {};
+// Without the initial data, every notification would be held for it (#151): this is about what is sent at all.
+(TurnHandover.prototype as any).holdsNotifications = (): boolean => false;
 (yearInstance as any).toPlainObject = () => ({ id: yearInstance.id() });
 // What the player's research and treasury were before an action, which needs a game too: each action here ends the
 //  turn, which sends the patch whatever they were.
