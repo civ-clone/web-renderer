@@ -397,6 +397,7 @@ const renderYields = (city: CityData): Node => {
   },
   renderGarrisonedUnits = (
     city: CityData,
+    portal: Portal,
     transport: Transport,
     readOnly: boolean
   ): Node => {
@@ -420,7 +421,10 @@ const renderYields = (city: CityData): Node => {
             return;
           }
 
-          new UnitSelectionWindow(cityPlayerUnits, transport);
+          // The unit chosen is made the active one, as it is from the map (#482).
+          new UnitSelectionWindow(cityPlayerUnits, transport, (unit) =>
+            portal.emit('activate-unit', unit)
+          );
         },
       }
     );
@@ -501,7 +505,7 @@ const renderYields = (city: CityData): Node => {
           // TODO: add a tab bar
           s(
             '<div class="info"></div>',
-            renderGarrisonedUnits(city, transport, readOnly),
+            renderGarrisonedUnits(city, portal, transport, readOnly),
             renderTradeRoutes(city)
           )
         ),
