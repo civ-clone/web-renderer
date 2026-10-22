@@ -1,0 +1,1 @@
+{"version":"0.1.0@31378e5","date":"2026-10-22T08:19:10.000Z","localChanges":["fix: starting a revolution no longer freezes the game for a moment on large maps, and a new government sends only the squares it changes (#488)"],"externalChanges":{}}

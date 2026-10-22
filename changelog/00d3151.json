@@ -1,0 +1,1 @@
+{"version":"0.1.0@00d3151","date":"2026-10-22T08:10:56.000Z","localChanges":["perf: the map no longer stalls working out what to redraw after a change of government on large maps (#488)"],"externalChanges":{}}

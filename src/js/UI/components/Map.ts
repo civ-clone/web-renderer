@@ -53,11 +53,12 @@ interface DrawImageOptions {
  * Layers also record what they changed, so the portal can composite the parts
  * of itself that moved rather than all of it.
  *
- * On the square grid each tile is drawn into its own box, so a tile can be
- * cleared and drawn again on its own. Where the projection's tiles overlap
- * their neighbours (#91), nothing is cleared per tile: a changed tile's box,
- * and as far past it as the layer draws (`reach()`), is cleared once and every
- * tile that reaches it is drawn again, back to front, clipped to it.
+ * On the square grid a layer that draws each tile inside its own box can
+ * clear a tile and draw it again on its own. Where the projection's tiles
+ * overlap their neighbours (#91), or the layer draws past a tile's box (#486),
+ * nothing is cleared per tile: a changed tile's box, and as far past it as the
+ * layer draws (`reach()`), is cleared once and every tile that reaches it is
+ * drawn again, back to front, clipped to it.
  */
 export class Map implements IMap {
   #canvas: HTMLCanvasElement;
@@ -132,7 +133,7 @@ export class Map implements IMap {
   render(tiles: Tile[] = this.visibleTiles()): void {
     this.clear();
 
-    if (this.projection().overlapsNeighbours()) {
+    if (this.#byRegion()) {
       this.placementsOf(
         tiles.map(({ x, y }: Tile) => this.world().get(x, y))
       ).forEach((placement) => this.paint(placement));
@@ -144,7 +145,7 @@ export class Map implements IMap {
   }
 
   renderTile(tile: Tile): void {
-    if (this.projection().overlapsNeighbours()) {
+    if (this.#byRegion()) {
       this.redrawTiles([tile]);
 
       return;
@@ -242,7 +243,7 @@ export class Map implements IMap {
   }
 
   update(tilesToUpdate: Tile[]): void {
-    if (this.projection().overlapsNeighbours()) {
+    if (this.#byRegion()) {
       this.redrawTiles(tilesToUpdate);
 
       return;
@@ -473,9 +474,9 @@ export class Map implements IMap {
 
   /**
    * How far past a tile's sprite box anything this layer draws for the tile can reach, px per side: the projection's
-   *  own reach, and more for a layer that draws past the box. On a projection whose tiles overlap, an update redraws
-   *  this much around a changed tile, so it has to cover everything the tile draws; `overhang()` has to be at least
-   *  as much on every side.
+   *  own reach, and more for a layer that draws past the box. Where it is more than nothing, or the projection's tiles
+   *  overlap, an update redraws this much around a changed tile, so it has to cover everything the tile draws;
+   *  `overhang()` has to be at least as much on every side.
    */
   protected reach(): Reach {
     return this.projection().reach();
@@ -483,7 +484,7 @@ export class Map implements IMap {
 
   /**
    * Redraw `rect` from nothing: clear it once, then draw every place a tile reaches it, back to front, clipped to it.
-   *  How tiles that overlap their neighbours are redrawn.
+   *  How tiles that overlap their neighbours, or draw past their boxes, are redrawn.
    */
   protected redrawRegion(rect: Rect): void {
     const context = this.context();
@@ -511,8 +512,9 @@ export class Map implements IMap {
   }
 
   /**
-   * Redraw `tiles` where the projection's tiles overlap: each place one lands, out to the layer's reach, as one region
-   *  with whatever else reaches it, so the neighbours a tile overlaps are drawn again, in order, over and under it.
+   * Redraw `tiles` where the projection's tiles overlap, or the layer draws past their boxes: each place one lands, out
+   *  to the layer's reach, as one region with whatever else reaches it, so the neighbours a tile overlaps are drawn
+   *  again, in order, over and under it.
    */
   protected redrawTiles(tiles: Tile[]): void {
     const regions: Rect[] = [];
@@ -549,7 +551,7 @@ export class Map implements IMap {
 
   /** Redraw one region of the canvas, leaving the rest of it alone. */
   protected renderRegion(rect: Rect): void {
-    if (this.projection().overlapsNeighbours()) {
+    if (this.#byRegion()) {
       this.redrawRegion(rect);
 
       return;
@@ -684,6 +686,20 @@ export class Map implements IMap {
     this.#visible = visible;
 
     this.markContentDirty();
+  }
+
+  // Whether tiles are redrawn by region, each changed one cleared out to its reach and drawn again with everything that
+  //  reaches it, rather than cleared and drawn in their own boxes: where the projection's tiles overlap their
+  //  neighbours, and for a layer that draws past a tile's box, as clearing only the box would leave the rest behind,
+  //  and clearing a neighbour's box would cut into it (#486).
+  #byRegion(): boolean {
+    if (this.projection().overlapsNeighbours()) {
+      return true;
+    }
+
+    const { top, right, bottom, left } = this.reach();
+
+    return top > 0 || right > 0 || bottom > 0 || left > 0;
   }
 
   // One square that can't be drawn mustn't stop the rest: a throw here used to abandon the layer mid-scroll, leaving it

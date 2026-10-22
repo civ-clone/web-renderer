@@ -32,8 +32,8 @@ preloadImage('map/city', 16, 16);
 
 // Drawn at the top left of the canvas, once, with a stand-in for the sprite.
 class TestUnits extends Units {
-  protected placements(): [number, number][] {
-    return [[0, 0]];
+  drawAtOrigin(tile: Tile): void {
+    this.drawTile(tile, 0, 0);
   }
 
   protected renderUnit(): CanvasImageSource {
@@ -68,7 +68,7 @@ const draw = (scale: number, busy: string | null) => {
       units: [{ _: 'Settlers', busy: busy ? { _: busy } : null } as Unit],
     } as unknown as Tile;
 
-  layer.renderTile(tile);
+  layer.drawAtOrigin(tile);
 
   return written();
 };
