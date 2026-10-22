@@ -29,6 +29,8 @@ export type TalksContext = Pick<
   // Whose client chooses each step: ours, or a computer player's.
   | 'clients'
   | 'interactions'
+  // The player's treasuries and research, which the talks can change without an event to say so (#492).
+  | 'patches'
   | 'rules'
   | 'turn'
   // The units next to one of ours that has moved.
@@ -141,7 +143,21 @@ export class Talks {
       );
   }
 
+  // Gold given or taken in the talks moves without an event to say so (`civ1-diplomacy`'s `give`), so the player's
+  //  treasuries and research are compared before and after, and what changed is sent (#492). Inside an action the flush
+  //  is held, and goes with the action's patch.
   async handleNegotiation(player: Player): Promise<Negotiation> {
+    const before = this.#context.patches.playerState();
+
+    try {
+      return await this.#negotiate(player);
+    } finally {
+      this.#context.patches.playerStateChanged(before);
+      this.#context.patches.flush();
+    }
+  }
+
+  async #negotiate(player: Player): Promise<Negotiation> {
     const negotiation = new Negotiation(
       player,
       this.player(),
