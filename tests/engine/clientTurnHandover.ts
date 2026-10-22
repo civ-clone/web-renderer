@@ -264,6 +264,16 @@ notifier.holdWhile(() => turnHandover.holdsNotifications());
 registerTurnHandoverEvents(engine, turnHandover);
 
 const run = async (): Promise<void> => {
+  // Before the first `gameData`, as after a load that resumes a computer player's turn: the UI isn't listening for
+  //  notifications yet, so they are held, even on their turn (#151).
+  currentPlayers = [];
+  notifier.notify(note('loaded'));
+  expect(
+    'before the initial data, a notification is held',
+    events.splice(0),
+    []
+  );
+
   currentPlayers = [player];
 
   // The first turn: what happened before it is held, and goes after `turnStarted`.
@@ -284,7 +294,8 @@ const run = async (): Promise<void> => {
   expect(
     "the initial data goes through the player's filter, tiles in full",
     filterCalls.map((args) => args[1] ?? null),
-    [null, { tilesInFull: true }, null]
+    // The two notifications given before it, the initial data, then the one given after.
+    [null, null, { tilesInFull: true }, null]
   );
   expect('not handed over yet', turnHandover.handedOver, false);
 
@@ -297,6 +308,7 @@ const run = async (): Promise<void> => {
       'patches.update(year)',
       'gameDataPatch',
       'turnStarted',
+      'gameNotification(loaded)',
       'gameNotification(before)',
       'gameNotification(during)',
       'unitHalted(unit-1)',
