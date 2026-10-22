@@ -6,10 +6,11 @@
 // does) drops the deferred rebuild and rebuilds once; that each update runs in
 // the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
 // tells the world whether its tiles were refilled; that a `PlayerTile` a patch
-// carries is queued; that what changed reaches `DataChanges`; that a second
-// `gameData` is the map later patches apply to; that the map is pruned on
-// schedule and the pruned ids forgotten; and that the object count is kept as
-// patches go, without counting the whole map (#480).
+// carries is queued, and the square of a unit whose look it changes (#487);
+// that what changed reaches `DataChanges`; that a second `gameData` is the map
+// later patches apply to; that the map is pruned on schedule and the pruned
+// ids forgotten; and that the object count is kept as patches go, without
+// counting the whole map (#480).
 
 import GameState, {
   FrameScheduler,
@@ -365,6 +366,131 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     "the patch's PlayerTile is queued",
     queued.length === 1 && queued[0].id === 'Tile-3'
   );
+}
+
+// The square of a unit a patch changes the look of is queued, though no tile
+// comes with it (#487).
+{
+  // A unit the map draws, as the worker sends it: its tile and the rest as refs.
+  const warrior = (
+    id: string,
+    {
+      tile = 'Tile-1',
+      busy = null as PlainObject | null,
+      improvements = [] as PlainObject[],
+      moves = 1,
+    } = {}
+  ): PlainObject => ({
+    _: 'Warrior',
+    __: ['Warrior', 'Fortifiable', 'Land', 'Unit', 'Buildable', 'DataObject'],
+    id,
+    busy,
+    improvements,
+    moves,
+    player: ref('Player-1'),
+    tile: ref(tile),
+  });
+
+  // As the worker sends an object: a ref to itself, with the object in the
+  // side-table.
+  const sent = (
+    id: string,
+    hierarchy: PlainObject,
+    objects: PlainObject = {}
+  ): DataPatch => update(id, ref(id), { [id]: hierarchy, ...objects });
+
+  const objectMap = makeMap();
+
+  objectMap.objects['Unit-1'] = warrior('Unit-1', {
+    busy: { _: 'Fortifying' },
+  });
+  objectMap.objects['Unit-2'] = warrior('Unit-2');
+
+  const { queued, state } = setup(objectMap),
+    queuedIds = (): string =>
+      queued
+        .splice(0)
+        .map((tile) => tile.id)
+        .join(',');
+
+  state.update();
+
+  // Its moves are new each turn; the map draws none of it.
+  state.applyPatches([
+    sent('Unit-1', warrior('Unit-1', { busy: { _: 'Fortifying' }, moves: 0 })),
+  ]);
+
+  check('a unit that looks the same queues nothing', queuedIds() === '');
+
+  // The start of the turn: the player re-sent, the unit fortified in its
+  // side-table, the map as refs.
+  state.applyPatches([
+    sent('Player-1', objectMap.objects['Player-1'] as PlainObject, {
+      'Unit-1': warrior('Unit-1', {
+        busy: { _: 'Fortified' },
+        improvements: [ref('Fortified-1')],
+      }),
+      'Fortified-1': { _: 'Fortified', id: 'Fortified-1' },
+      'Unit-2': warrior('Unit-2', { moves: 0 }),
+    }),
+  ]);
+
+  check(
+    'a unit that has fortified queues its square',
+    queuedIds() === 'Tile-1'
+  );
+
+  // On its own, as a unit woken by an enemy is sent.
+  state.applyPatches([sent('Unit-1', warrior('Unit-1'))]);
+
+  check('a unit on its own queues its square', queuedIds() === 'Tile-1');
+
+  // A unit moved queues where it was as well as where it is.
+  state.applyPatches([sent('Unit-2', warrior('Unit-2', { tile: 'Tile-2' }))]);
+
+  check('a unit moved queues both squares', queuedIds() === 'Tile-2,Tile-1');
+
+  // A new unit, as one a city builds arrives at the start of the turn.
+  const count = state.currentObjectCount();
+
+  state.applyPatches([
+    sent(
+      'Player-1',
+      {
+        ...(objectMap.objects['Player-1'] as PlainObject),
+        units: [ref('Unit-1'), ref('Unit-2'), ref('Unit-3')],
+      },
+      { 'Unit-3': warrior('Unit-3', { tile: 'Tile-2' }) }
+    ),
+  ]);
+
+  check('a new unit queues its square', queuedIds() === 'Tile-2');
+  check(
+    'the new unit is in the data',
+    (state.data().player.units as PlainObject[]).length === 3
+  );
+
+  // A new object sent as a ref to itself, then itself in the side-table, is
+  // one object (#480).
+  state.applyPatches([sent('Unit-4', warrior('Unit-4', { tile: 'Tile-2' }))]);
+
+  check(
+    'an object sent as a ref to itself is counted once',
+    state.currentObjectCount() === count + 2
+  );
+  check('and queues its square', queuedIds() === 'Tile-2');
+
+  // What isn't a unit queues nothing of its own.
+  state.applyPatches([
+    sent('Turn-1', {
+      _: 'Turn',
+      id: 'Turn-1',
+      value: 2,
+      tile: ref('Tile-1'),
+    }),
+  ]);
+
+  check('what is not a unit queues nothing', queuedIds() === '');
 }
 
 // What changed reaches `DataChanges`.

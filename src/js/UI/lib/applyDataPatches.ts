@@ -88,20 +88,31 @@ export const applyDataPatches = (
           return;
         }
 
+        const patchKey = key,
+          original = objectMap.objects[key],
+          // The worker sends an object as a ref to itself, with the object in the side-table: `set` hears of it once,
+          //  from the side-table, with what the map held before the ref.
+          selfRef =
+            !index &&
+            value!.hierarchy['#ref'] === key &&
+            key in (value!.objects as PlainObject);
+
         if (index) {
           setObjectPath(objectMap.objects[key], index, value!.hierarchy);
         } else {
-          const previous = objectMap.objects[key];
-
           objectMap.objects[key] = value!.hierarchy;
-          set?.(key, value!.hierarchy, previous);
+
+          if (!selfRef) {
+            set?.(key, value!.hierarchy, original);
+          }
         }
 
         changed(key);
 
         Object.entries(value!.objects as PlainObject).forEach(
           ([key, value]) => {
-            const previous = objectMap.objects[key];
+            const previous =
+              selfRef && key === patchKey ? original : objectMap.objects[key];
 
             objectMap.objects[key] = value;
             set?.(key, value, previous);
