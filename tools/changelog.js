@@ -55,7 +55,77 @@ const cases = [
     'Change one\nChange two\nChange three',
     ['Change one', 'Change two', 'Change three'],
   ],
+  [
+    'a trailer after two blank lines is still a trailer (#475)',
+    'fix: a thing\n' +
+      '\n' +
+      'Jobs take as long as Civ1 says (#261).\n' +
+      '\n' +
+      '\n' +
+      'Claude-Session: https://claude.ai/code/session_x',
+    ['Jobs take as long as Civ1 says (#261).'],
+  ],
+  [
+    'a trailer straight after the body, with no blank line, is dropped',
+    'feat: X\n' +
+      '\n' +
+      'You can now do X.\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>',
+    ['You can now do X.'],
+  ],
+  [
+    'trailers split over several paragraphs are all dropped',
+    'fix: a thing\n' +
+      '\n' +
+      'Fixed.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' +
+      '\n' +
+      'Claude-Session: https://claude.ai/code/session_x',
+    ['Fixed.'],
+  ],
+  [
+    'a last paragraph such as `Note: …` is part of the notes',
+    'fix: a thing\n' +
+      '\n' +
+      'Fixed.\n' +
+      '\n' +
+      'Note: saves from before this still load.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>',
+    ['Fixed.', 'Note: saves from before this still load.'],
+  ],
+  [
+    'so is `Warning: …` with nothing after it',
+    'fix: a thing\n\nFixed.\n\nWarning: older saves lose their notes.',
+    ['Fixed.', 'Warning: older saves lose their notes.'],
+  ],
+  [
+    'a paragraph that only closes an issue is not a bullet',
+    'fix: a thing\n' +
+      '\n' +
+      'The window opens again.\n' +
+      '\n' +
+      'Closes #46.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>',
+    ['The window opens again.'],
+  ],
+  [
+    'a body that only closes an issue leaves the subject',
+    'fix: the window opens again\n\nFixes #46',
+    ['fix: the window opens again'],
+  ],
+  [
+    'closing an issue inside a sentence keeps the sentence',
+    'fix: a thing\n\nCloses #51. The window lists every release.',
+    ['Closes #51. The window lists every release.'],
+  ],
 ];
+
+// Entries that shipped with a trailer in them before #475, kept as they were
+// released.
+const SHIPPED_WITH_TRAILERS = ['0.1.0@f9a75f1'];
 
 (async () => {
   const { toBullets } = await import(
@@ -77,7 +147,11 @@ const cases = [
 
   // Nothing empty may reach the window: an entry with no local and no external
   // changes renders as a heading above an empty block.
-  const releases = require(path.join(webRenderer, 'changelog', 'releases.json')),
+  const releases = require(path.join(
+      webRenderer,
+      'changelog',
+      'releases.json'
+    )),
     empty = releases.filter(
       (release) =>
         release.localChanges.length === 0 &&
@@ -93,6 +167,31 @@ const cases = [
         .join(', ')}`
     );
   }
+
+  // No trailer may reach the window, and no bullet may start with the space a
+  // trailer glued onto the line before leaves behind (#475).
+  releases
+    .filter((release) => !SHIPPED_WITH_TRAILERS.includes(release.version))
+    .forEach((release) => {
+      [
+        ...release.localChanges,
+        ...Object.values(release.externalChanges).flatMap(
+          (change) => change.log ?? []
+        ),
+      ]
+        .filter(
+          (bullet) =>
+            /^\s/.test(bullet) ||
+            /(^|\s)(Co-Authored-By|Claude-Session): \S/i.test(bullet)
+        )
+        .forEach((bullet) =>
+          failures.push(
+            `a trailer in changelog/releases.json\n    ${
+              release.version
+            }: ${JSON.stringify(bullet)}`
+          )
+        );
+    });
 
   if (failures.length) {
     console.error(`FAIL changelog\n  ${failures.join('\n  ')}`);
