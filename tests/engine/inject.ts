@@ -199,7 +199,7 @@ const run = async (): Promise<void> => {
   const oldWorld = rebuild(world);
 
   delete (oldWorld as unknown as Record<string, unknown>)._topologyId;
-  game.inject(oldWorld);
+  game.inject(oldWorld as unknown as DataObject);
 
   push(
     'A world saved before #89 loads as square',
@@ -283,7 +283,7 @@ const run = async (): Promise<void> => {
         _transportRuleRegistry: [],
       });
 
-      game.inject(old);
+      game.inject(old as unknown as DataObject);
 
       return shipFields(old);
     },

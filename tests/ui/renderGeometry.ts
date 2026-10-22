@@ -24,7 +24,7 @@ import Map from '../../src/js/UI/components/Map';
 import Overview from '../../src/js/UI/components/Map/Overview';
 import Portal from '../../src/js/UI/components/Portal';
 import { Rect } from '../../src/js/UI/lib/viewport';
-import { City, Tile } from '../../src/js/UI/types';
+import { City, PlayerTile, Tile } from '../../src/js/UI/types';
 import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
 import World from '../../src/js/UI/components/World';
@@ -242,7 +242,8 @@ class Plain extends Map {
     return [this.originX(), this.originY()];
   }
 
-  placementsOf(tile: Tile): [number, number][] {
+  // Not `placementsOf`, which `Map` has (#91) and draws overlapping tiles with: overriding it would change what's drawn.
+  placementsAt(tile: Tile): [number, number][] {
     return this.placements(tile);
   }
 
@@ -609,7 +610,7 @@ const record = (): { [key: string]: unknown } => {
           .join(' '),
         placements: sampleTiles.map(([x, y]) =>
           plain
-            .placementsOf(world.get(x, y))
+            .placementsAt(world.get(x, y))
             .map(([px, py]) => `${px},${py}`)
             .join(' ')
         ),
@@ -905,7 +906,7 @@ const record = (): { [key: string]: unknown } => {
               ...city.player.world,
               width: localWidth,
               height: localHeight,
-              tiles: localTiles,
+              tiles: localTiles as PlayerTile[],
             }),
             {} as any,
             portalCanvas,

@@ -4,6 +4,7 @@
 //  without `available`, read against the client's player as it is now rather than when the filter was made.
 
 import Busy from '@civ-clone/core-unit/Rules/Busy';
+import type { DataObject } from '@civ-clone/core-data-object/DataObject';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
@@ -47,6 +48,9 @@ const make = <T>(Type: { prototype: T }, fields: Record<string, any> = {}): T =>
     )
   );
 
+// DataObject's `_keys: (keyof this)[]` keeps a subclass with methods of its own from being passed as a DataObject.
+const asData = (object: unknown): DataObject => object as DataObject;
+
 const identity = (object: any) => object,
   playerTile = make(PlayerTile, { id: () => 'PlayerTile-1' }),
   standIn = { _: 'PlayerTile', id: 'PlayerTile-1', x: 1, y: 2 };
@@ -80,12 +84,17 @@ const actions = new ActionsState(),
     return object;
   };
 
-expect('a tile through the filter goes as a ref', dataFilter()(playerTile), {
-  '#ref': 'PlayerTile-1',
-});
+expect(
+  'a tile through the filter goes as a ref',
+  dataFilter()(asData(playerTile)),
+  {
+    '#ref': 'PlayerTile-1',
+  }
+);
 expect(
   'a tile through the filter with tiles in full goes in full',
-  dataFilter(undefined, { tilesInFull: true })(playerTile) === playerTile,
+  dataFilter(undefined, { tilesInFull: true })(asData(playerTile)) ===
+    playerTile,
   true
 );
 
@@ -110,7 +119,7 @@ actions.serialising = true;
 
 expect(
   'an action while the actions are serialised goes as it is',
-  dataFilter()(action) === action,
+  dataFilter()(asData(action)) === action,
   true
 );
 expect(
@@ -123,7 +132,7 @@ actions.serialising = false;
 
 expect(
   'an action serialised any other way goes as it is',
-  dataFilter()(action) === action,
+  dataFilter()(asData(action)) === action,
   true
 );
 expect(
@@ -136,7 +145,7 @@ const build = make(CityBuildItem, {
     city: () => ({ player: () => me }),
     keys: () => ['available', 'building', 'progress'],
   }),
-  sent = dataFilter(identity)(build);
+  sent = dataFilter(identity)(asData(build));
 
 expect(
   "the player's own build goes as a stand-in, not the build",
@@ -149,7 +158,7 @@ expect("the player's own build goes without available", sent.keys(), [
 ]);
 expect(
   'the stand-in is the same one each time',
-  dataFilter(identity)(build) === sent,
+  dataFilter(identity)(asData(build)) === sent,
   true
 );
 expect(
@@ -162,7 +171,7 @@ current = them;
 
 expect(
   'once the player is another, the build is no longer its own, and goes as it is',
-  dataFilter(identity)(build) === build,
+  dataFilter(identity)(asData(build)) === build,
   true
 );
 

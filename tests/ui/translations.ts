@@ -52,6 +52,7 @@ import Notification from '../../src/js/Engine/Notification';
 import { PlayerResearch } from '../../src/js/UI/types';
 import Tile from '@civ-clone/core-world/Tile';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
+import type Player from '@civ-clone/core-player/Player';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
 import { cityNameText } from '../../src/js/UI/components/lib/city';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
@@ -141,8 +142,13 @@ const expect = (description: string, actual: string, expected: string) => {
 
   // Asansol is an Indian city name, now held by Babylon: the name has to come
   //  from the founder, not the current owner.
-  const india = new UnknownPlayer(new Indian()),
-    babylon = new UnknownPlayer(new Babylonian()),
+  // An `UnknownCity` takes the stand-ins for players as the client builds them, which aren't core `Player`s.
+  const unknownPlayer = (
+    ...args: ConstructorParameters<typeof UnknownPlayer>
+  ): Player => new UnknownPlayer(...args) as unknown as Player;
+
+  const india = unknownPlayer(new Indian()),
+    babylon = unknownPlayer(new Babylonian()),
     asansol = new UnknownCity(
       'Asansol',
       null as unknown as Tile,
@@ -154,9 +160,9 @@ const expect = (description: string, actual: string, expected: string) => {
   const toronto = new UnknownCity(
     'Toronto',
     null as unknown as Tile,
-    new UnknownPlayer(new Mongol()),
+    unknownPlayer(new Mongol()),
     3,
-    new UnknownPlayer(new Mongol())
+    unknownPlayer(new Mongol())
   );
 
   expect(
@@ -409,11 +415,13 @@ const expect = (description: string, actual: string, expected: string) => {
 
     expect(
       `${key}.body`,
-      t(`${notification.key}.body`, {
-        ...notification.data,
-        ns: 'notification',
-        skipOnVariables: false,
-      }),
+      String(
+        t(`${notification.key}.body`, {
+          ...notification.data,
+          ns: 'notification',
+          skipOnVariables: false,
+        })
+      ),
       expected
     );
   });

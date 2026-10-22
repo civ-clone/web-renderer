@@ -7,6 +7,7 @@
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import type Civilization from '@civ-clone/core-civilization/Civilization';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import World from '@civ-clone/core-world/World';
@@ -83,7 +84,7 @@ engine.on('game:start', (): void => {
   players.forEach((player: Player) => {
     const CivilizationType = player.civilization().sourceClass(),
       startTile = earthStartTileRegistryInstance
-        .getByCivilization(CivilizationType)
+        .getByCivilization(CivilizationType as typeof Civilization)
         .startTileForMap(world!),
       [unit] = unitRegistryInstance.getByPlayer(player),
       tile = unit?.tile();

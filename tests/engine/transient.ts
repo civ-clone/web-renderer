@@ -21,6 +21,7 @@ import { DataObject } from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Tile from '@civ-clone/core-world/Tile';
+import Turn from '@civ-clone/core-turn-based-game/Turn';
 import { Trireme } from '@civ-clone/civ1-unit/Units';
 import World from '@civ-clone/core-world/World';
 import Year from '@civ-clone/core-game-year/Year';
@@ -97,7 +98,7 @@ const run = async (): Promise<void> => {
   const player = new Player(ruleRegistry);
   const tile = world.get(2, 2) as Tile;
   const city = new City(player, tile, 'Babilim', ruleRegistry);
-  const year = new Year(ruleRegistry);
+  const year = new Year(new Turn(), ruleRegistry);
   const value = new Yield(3);
   // A ship, for the `Transport` mixin `core-unit-transport` adds to a unit type.
   const trireme = new Trireme(null, player, tile, ruleRegistry);

@@ -16,7 +16,7 @@ import Yield from '@civ-clone/core-yield/Yield';
 
 const checks: [string, () => unknown, unknown][] = [];
 
-const hydrate = <T>(Class: { prototype: T }, state: object): T =>
+const hydrate = <T extends object>(Class: { prototype: T }, state: object): T =>
   Object.assign(Object.create(Class.prototype), state);
 
 const player = hydrate(Player, { _id: 'Player-1', _keys: ['id'] });
@@ -65,7 +65,11 @@ const roundTripped = hydrate(
   JSON.parse(JSON.stringify({ _id: 'City-2', _keys: ['id'], _name: 'Nineveh' }))
 );
 
-checks.push(['City.name() after JSON round trip', () => roundTripped.name(), 'Nineveh']);
+checks.push([
+  'City.name() after JSON round trip',
+  () => roundTripped.name(),
+  'Nineveh',
+]);
 
 let failed = 0;
 
@@ -85,12 +89,16 @@ checks.forEach(([label, run, expected]) => {
   }
 
   console.log(
-    `  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(34)} ${JSON.stringify(actual)}${ok ? '' : ` (expected ${JSON.stringify(expected)})`}`
+    `  ${ok ? 'ok  ' : 'FAIL'} ${label.padEnd(34)} ${JSON.stringify(actual)}${
+      ok ? '' : ` (expected ${JSON.stringify(expected)})`
+    }`
   );
 });
 
 console.log(
-  `\n${checks.length - failed}/${checks.length} hydrated without running a constructor`
+  `\n${checks.length - failed}/${
+    checks.length
+  } hydrated without running a constructor`
 );
 
 if (failed === 0) {

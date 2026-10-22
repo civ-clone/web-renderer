@@ -171,11 +171,16 @@ const report = (): void => {
         .getNeighbours()
         .filter((neighbour) => neighbour.isWater());
 
-      carrier = new Carrier(null, player, water, ruleRegistryInstance);
+      carrier = new Carrier(
+        null,
+        player,
+        water,
+        ruleRegistryInstance
+      ) as unknown as Unit;
       fighter = new Fighter(null, player, takeOff, ruleRegistryInstance);
 
       [carrier, fighter]
-        .filter((unit) => !unitRegistryInstance.includes(unit))
+        .filter((unit): unit is Unit => !unitRegistryInstance.includes(unit!))
         .forEach((unit) => unitRegistryInstance.register(unit));
 
       const land = fighter
