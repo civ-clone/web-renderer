@@ -63,7 +63,7 @@ export class ChooseResearch extends Action {
         this.transport().send('action', {
           name: 'ChooseResearch',
           id: this.value().id,
-          chosen: selection ? selection : '@',
+          chosen: selection,
         });
 
         this.complete();

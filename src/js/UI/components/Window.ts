@@ -14,11 +14,6 @@ type WindowSize = {
   width: number | string;
 };
 
-type WindowPosition = {
-  x: number;
-  y: number;
-};
-
 export type WindowSettings = {
   autoDisplay: boolean;
   autofocus: boolean;
@@ -28,7 +23,6 @@ export type WindowSettings = {
   classes: string | string[];
   modal: boolean;
   parent: HTMLElement;
-  position: WindowPosition | 'auto';
   size: WindowSize | 'auto' | 'maximised';
 };
 
@@ -43,7 +37,6 @@ const defaultOptions: WindowSettings = {
   classes: '',
   modal: false,
   parent: document.body,
-  position: 'auto',
   size: 'auto',
 };
 
@@ -131,27 +124,8 @@ export class Window
       });
     }
 
-    if (this.options.position === 'auto') {
-      this.addClass('position-auto');
-    }
-
-    if (this.options.position !== 'auto') {
-      (
-        [
-          ['x', 'left'],
-          ['y', 'top'],
-        ] as ['x' | 'y', 'left' | 'top'][]
-      ).forEach(([axis, property]) => {
-        this.element().style[property] =
-          Math.min(
-            0,
-            Math.max(
-              document.body.clientHeight - 20,
-              (this.options.position as WindowPosition)[axis]
-            )
-          ) + 'px';
-      });
-    }
+    // Placed by the stylesheet until it is first moved.
+    this.addClass('position-auto');
 
     if (this.options.classes) {
       this.addClass(

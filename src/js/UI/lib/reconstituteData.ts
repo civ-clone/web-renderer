@@ -11,15 +11,11 @@ export type ObjectMap = {
   objects: ObjectStore;
 };
 
-export const reconstituteData = (
-  { hierarchy, objects }: ObjectMap,
-  orphanIds: string[] | null = null
-): PlainObject => {
+export const reconstituteData = ({
+  hierarchy,
+  objects,
+}: ObjectMap): PlainObject => {
   const seenObjects: Map<PlainObject, PlainObject> = new Map();
-
-  if (orphanIds) {
-    Object.keys(objects).forEach((id) => orphanIds.push(id));
-  }
 
   const getReferences = (value: any): PlainObject => {
     if (seenObjects.has(value)) {
@@ -47,10 +43,6 @@ export const reconstituteData = (
     }
 
     if (value && value['#ref']) {
-      if (orphanIds) {
-        orphanIds.splice(orphanIds.indexOf(value['#ref']), 1);
-      }
-
       if (!(value['#ref'] in objects)) {
         console.error(new TypeError(`missing ${value['#ref']}`));
       }

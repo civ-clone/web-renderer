@@ -452,11 +452,7 @@ i18next.addResources('en', 'default', {
   'TradeReport.ImprovementList.income-value':
     '{{- icon}} $t(Progress.per-turn, { "count": {{count}} })',
   'TradeReport.ImprovementList.cost-title': 'Total cost',
-  'TradeReport.ImprovementList.cost-value':
-    '{{- icon}} $t(Progress.per-turn, { "count": {{count}} })',
   'TradeReport.ImprovementList.surplus-title': 'Total surplus',
-  'TradeReport.ImprovementList.surplus-value':
-    '{{- icon}} $t(Progress.per-turn, { "count": {{count}} })',
 
   'UnitDetails.header':
     '{{unitName}} ($t(Generic.coordinates, { "x": {{x}}, "y": {{y}} }))',

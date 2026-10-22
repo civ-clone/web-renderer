@@ -65,7 +65,6 @@ export class ConfirmationWindow extends NotificationWindow {
       {
         classes: 'confirmationWindow',
         ...options,
-        queue: false,
       }
     );
 

@@ -42,7 +42,7 @@ Quick reference map of key code areas.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
 - `Transport.ts`: channel and payload typing.
 - `AbstractTransport.ts`: shared `request()` implementation (one request per channel at a time).
-- `ParentTransport.ts` / `WorkerTransport.ts`: worker messaging implementations. `IpcTransport.ts` is an old Electron transport, entirely commented out.
+- `ParentTransport.ts` / `WorkerTransport.ts`: worker messaging implementations.
 - `DataQueue.ts`: patch queue and transfer serialization, owned by `Client/PlayerPatches.ts`.
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
