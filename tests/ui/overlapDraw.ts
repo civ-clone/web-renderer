@@ -1558,6 +1558,11 @@ if (measure) {
 
   finished = true;
 
+  // The suite runner passes a run only once it prints a PASS line (#473), which measuring has to as well.
+  if (errors.length === 0) {
+    console.log('PASS overlapDraw --measure (measured; no checks run)');
+  }
+
   process.exit(errors.length ? 1 : 0);
 }
 
