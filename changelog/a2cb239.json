@@ -1,0 +1,1 @@
+{"version":"0.1.0@a2cb239","date":"2026-10-22T07:20:29.000Z","localChanges":["In the window that lists the units on a square, clicking a unit that is already awake now makes it the active one, and the window closes once you have picked a unit. Clicking a unit in a city's list of units present wakes it and makes it the active unit too (closes #482)."],"externalChanges":{}}
