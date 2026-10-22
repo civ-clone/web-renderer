@@ -2,7 +2,8 @@ import Transport from '../Transport';
 
 // The line along the top of the page that shows a message for 4 seconds: the worker's `notification` messages, the
 //  cheats notice from the game's `keydown` handler, and the `?debug=1` panel's notices. A new message replaces the
-//  one showing and restarts the timer. Set as HTML (#469).
+//  one showing and restarts the timer. Set as text: a loaded save's name and errors reach it, and none of it is
+//  markup (#469).
 export class NotificationBar {
   #notificationArea: HTMLElement;
   #timer: number | undefined;
@@ -12,7 +13,7 @@ export class NotificationBar {
   }
 
   show(data: string): void {
-    this.#notificationArea.innerHTML = data;
+    this.#notificationArea.textContent = data;
 
     if (this.#timer) {
       window.clearTimeout(this.#timer);
@@ -21,7 +22,7 @@ export class NotificationBar {
     this.#timer = window.setTimeout((): void => {
       this.#timer = undefined;
 
-      this.#notificationArea.innerText = '';
+      this.#notificationArea.textContent = '';
     }, 4000);
   }
 

@@ -35,7 +35,7 @@ export type InputControllerDeps = {
     toggleUnits(): void;
     toggleYields(): void;
   };
-  notificationBar: { show(html: string): void };
+  notificationBar: { show(text: string): void };
   portal: GamePortal;
   transport: Transport;
   unitController: {

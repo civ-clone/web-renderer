@@ -1,4 +1,8 @@
 [
+{"version":"0.1.0@36881a9","date":"2026-10-22T07:24:18.000Z","localChanges":["A unit that finishes fortifying at the start of your turn now shows its fortified look straight away, rather than only once its square was drawn again for some other reason, and a sentried unit woken by an enemy no longer keeps its old letter (closes #487)."],"externalChanges":{}}
+,
+{"version":"0.1.0@0be8fa9","date":"2026-10-22T07:22:40.000Z","localChanges":["Late in a game, every move, and every change while the other civilizations take their turns, no longer spends around a hundredth of a second recounting everything the game has sent before the map can be drawn (closes #480)."],"externalChanges":{}}
+,
 {"version":"0.1.0@6dc72db","date":"2026-10-22T07:20:02.000Z","localChanges":["chore: the map takes its tile size, its scales and its label sizes from the tileset, rather than fixed numbers (#56)"],"externalChanges":{}}
 ,
 {"version":"0.1.0@fca3564","date":"2026-10-22T07:13:53.000Z","localChanges":["chore: describe the Civ1 tileset (its tile size, its sprites and how they are named), ready for other tilesets (#56)"],"externalChanges":{}}
