@@ -3,6 +3,7 @@ import { Map } from '../Map';
 import { Rect, rectsIntersect } from '../../lib/viewport';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { cityName } from '../lib/city';
+import currentTileset from '../../lib/tilesets';
 import { imageSize } from '../../lib/imageSize';
 
 const disorderIconPath = 'city/people_unhappy_m';
@@ -127,9 +128,9 @@ export class CityNames extends Map {
           : this.context().measureText(localeProvider.number(city.growth.size))
               .width
       ),
-      // Generous rather than measured: comfortably more than the ascent of a
-      // `8 * scale`px font, so the box never crops the glyphs.
-      ascent = 8 * scale + scale,
+      // Generous rather than measured: comfortably more than the ascent of the
+      // font, so the box never crops the glyphs.
+      ascent = this.#fontSize() + scale,
       text: Rect = {
         x: Math.floor(centreX - widest / 2 - scale * 2),
         y: Math.floor(digitBaseline - ascent - scale * 2),
@@ -217,8 +218,13 @@ export class CityNames extends Map {
     };
   }
 
+  // The tileset's label size, in px at this scale.
+  #fontSize(): number {
+    return currentTileset().cities.labels.fontSize * this.scale();
+  }
+
   #applyFont(): void {
-    this.context().font = `bold ${8 * this.scale()}px sans-serif`;
+    this.context().font = `bold ${this.#fontSize()}px sans-serif`;
     this.context().textAlign = 'center';
   }
 }

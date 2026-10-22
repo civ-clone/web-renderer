@@ -186,8 +186,8 @@ Moving around the map:
 - Late-game slowdown documented around reconstitution and cleanup logic.
   Largely addressed: incremental reconstitution (#322), unit actions on demand
   (#323) and the viewport-sized layers.
-- Tile size (16, with a TODO to take it from the theme) and terrain colours on
-  the minimap are hardcoded. Map scale is now an option.
+- Terrain colours on the minimap are hardcoded. Map scale is now an option, and
+  the tile size comes from the tileset descriptor (`src/js/UI/tilesets/`, #56).
 
 ## Rewrite opportunities (reactive store direction)
 
