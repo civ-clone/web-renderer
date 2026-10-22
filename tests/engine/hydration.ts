@@ -93,4 +93,8 @@ console.log(
   `\n${checks.length - failed}/${checks.length} hydrated without running a constructor`
 );
 
+if (failed === 0) {
+  console.log('PASS hydration');
+}
+
 process.exit(failed === 0 ? 0 : 1);

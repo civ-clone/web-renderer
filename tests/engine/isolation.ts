@@ -4,7 +4,7 @@
 // show it: that suite drives `defaultGame`, deliberately, because running on
 // the adopted singletons is what proves the migration changed nothing.
 //
-// Bundled by `tools/isolation.js` with esbuild, for the same reason as the
+// Bundled by `tools/run-suite.js` with esbuild, for the same reason as the
 // conformance suite — so it resolves the same `.ts` sources the renderer does.
 
 import './lib/spawnedClients';
@@ -171,5 +171,9 @@ console.log(
     checks.length
   } — two games in one process share nothing`
 );
+
+if (failed === 0) {
+  console.log('PASS isolation');
+}
 
 process.exit(failed === 0 ? 0 : 1);
