@@ -53,6 +53,7 @@ import { PlayerResearch } from '../../src/js/UI/types';
 import Tile from '@civ-clone/core-world/Tile';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
+import { cityNameText } from '../../src/js/UI/components/lib/city';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { join } from 'path';
 import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
@@ -84,6 +85,12 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-wonder/en');
+  await import('../../translations/civ1-difficulty/en');
+  await import('../../translations/civ1-government/en');
+  await import('../../translations/civ1-spaceship/en');
+  await import('../../translations/civ1-trade-rate/en');
+  await import('../../translations/civ1-world/en');
+  await import('../../translations/civ1-world-civilizations/en');
 
   expect('Generic.ok (fr-FR)', t('Generic.ok'), 'OK');
 
@@ -190,6 +197,25 @@ const expect = (description: string, actual: string, expected: string) => {
       city: { name: 'A<b>', originalPlayer: { civilization: { _: 'Mongol' } } },
     }),
     'View A&lt;b&gt;'
+  );
+
+  // #472: the refusal is a text node, so a name with an apostrophe is written as one, whether or not it's on its
+  //  founder's list.
+  [
+    [xian, "Xi'an"],
+    [
+      {
+        name: "O'Brien",
+        originalPlayer: { civilization: { _: 'Mongol' } },
+      },
+      "O'Brien",
+    ],
+  ].forEach(([city, name]: any) =>
+    expect(
+      'JoinCity.too-large.body',
+      t('JoinCity.too-large.body', { city: cityNameText(city), size: 8 }),
+      `${name} is too large for Settlers to join. Only cities smaller than size 8 can be joined.`
+    )
   );
 
   [
@@ -440,6 +466,69 @@ const expect = (description: string, actual: string, expected: string) => {
     }
   });
 
+  // #472: the save alerts are text, so an error's quotes and brackets are written as they are.
+  const parseError = `Unexpected token '<', "<html>" is not valid JSON`;
+
+  [
+    ['SavedGame.could-not-read', 'That save could not be read: '],
+    ['SavedGame.could-not-write', 'That save could not be written: '],
+    [
+      'SavedGame.could-not-hand-over',
+      'That save could not be handed to the reloading page, so the game has not been loaded: ',
+    ],
+  ].forEach(([key, prefix]) =>
+    expect(key, t(key, { error: parseError }), prefix + parseError)
+  );
+
+  // #472: every key the UI looks up by name is there, in whichever namespace it's in.
+  const namespaces = Object.keys(i18next.store.data.en),
+    // A key looked up with a `count` or a `context` is there with a suffix: `Progress.turns_one`.
+    flatten = (resources: object, prefix = ''): string[] =>
+      Object.entries(resources).flatMap(([key, value]) =>
+        typeof value === 'object'
+          ? flatten(value, `${prefix}${key}.`)
+          : [`${prefix}${key}`]
+      ),
+    suffixed = namespaces.flatMap((ns) =>
+      flatten(i18next.getResourceBundle('en', ns))
+    ),
+    literalKeys = new Set<string>(),
+    scanUI = (directory: string): void =>
+      readdirSync(directory).forEach((name) => {
+        const path = join(directory, name);
+
+        if (statSync(path).isDirectory()) {
+          scanUI(path);
+
+          return;
+        }
+
+        if (!name.endsWith('.ts')) {
+          return;
+        }
+
+        for (const [, key] of readFileSync(path, 'utf8').matchAll(
+          /\bt\(\s*'([^']+)'/g
+        )) {
+          literalKeys.add(key);
+        }
+      });
+
+  scanUI('src/js/UI');
+
+  if (literalKeys.size < 100) {
+    failures.push(`t() scan: only ${literalKeys.size} keys found`);
+  }
+
+  literalKeys.forEach((key) => {
+    if (
+      !i18next.exists(key, { ns: namespaces }) &&
+      !suffixed.some((resource) => resource.startsWith(`${key}_`))
+    ) {
+      failures.push(`${key}: missing`);
+    }
+  });
+
   expect(
     'ChooseFromList title fallback',
     chooseFromListTitle('no-such-key', {}),
@@ -530,6 +619,6 @@ const expect = (description: string, actual: string, expected: string) => {
   }
 
   console.log(
-    `PASS translations (${names.length} names, 3 keys; ${notifications.length} notifications; ${choiceMetaKeys.size} choice lists)`
+    `PASS translations (${names.length} names, 3 keys; ${notifications.length} notifications; ${choiceMetaKeys.size} choice lists; ${literalKeys.size} UI keys)`
   );
 })();

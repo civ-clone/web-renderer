@@ -108,7 +108,7 @@ export class HappinessReport extends Window {
   #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
-    super('Happiness report', s('<div></div>'), {
+    super(t('HappinessReport.title'), s('<div></div>'), {
       classes: 'happiness-report',
     });
 

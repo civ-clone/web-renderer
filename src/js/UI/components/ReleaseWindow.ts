@@ -44,7 +44,7 @@ const toggleExpanded = (target: Node | null, expectedSelector: string) => {
 export class ReleaseWindow extends Window {
   constructor() {
     super(
-      'Releases',
+      t('ReleaseWindow.title'),
       s(
         `<section></section>`,
         s(
@@ -98,7 +98,7 @@ export class ReleaseWindow extends Window {
     ${
       Object.keys(release.externalChanges).length > 0
         ? `
-    <h3>External changes</h3>
+    <h3>${t('ReleaseWindow.external-changes')}</h3>
     
     <dl>
       ${Object.entries(release.externalChanges)

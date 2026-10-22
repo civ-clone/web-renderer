@@ -11,7 +11,7 @@ export class GameOptions extends Window {
   // the portal to apply them to.
   constructor(portal: IPortal) {
     super(
-      'Options',
+      t('GameOptions.title'),
       s(
         `<div></div>`,
         s(

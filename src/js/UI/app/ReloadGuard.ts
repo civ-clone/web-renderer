@@ -1,6 +1,7 @@
 import { off, on } from '@dom111/element';
 import ConfirmationWindow from '../components/ConfirmationWindow';
 import { allowLeaving } from '../lib/leaveGuard';
+import { t } from 'i18next';
 
 // F5 and Ctrl/Cmd+R ask before reloading. Once a game is running, F5 is a
 // leader-screen shortcut (TradeReport), not a reload; only Ctrl/Cmd+R stays a
@@ -18,11 +19,15 @@ export class ReloadGuard {
     ) {
       event.preventDefault();
 
-      new ConfirmationWindow('Quit', 'Are you sure you want to reload?', () => {
-        allowLeaving();
+      new ConfirmationWindow(
+        t('ReloadGuard.title'),
+        t('ReloadGuard.body'),
+        () => {
+          allowLeaving();
 
-        window.location.reload();
-      });
+          window.location.reload();
+        }
+      );
 
       return;
     }

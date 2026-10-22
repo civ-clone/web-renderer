@@ -4,7 +4,6 @@ import ActionWindow from '../ActionWindow';
 import Portal from '../Portal';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
-import { cityName } from '../lib/city';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
@@ -47,7 +46,7 @@ export class CivilDisorder extends Action {
           `<button class="civilDisorder" title="${t(
             'Actions.CivilDisorder.title',
             {
-              cityName: cityName(city),
+              city,
             }
           )}"><img src="${asset!.uri}"></button>`
         )

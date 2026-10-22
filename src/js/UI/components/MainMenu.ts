@@ -85,7 +85,7 @@ export class MainMenu extends Element {
           h(s(`<button>${t('MainMenu.hall-of-fame')}</button>`), {
             click: () => new HallOfFameWindow(),
           }),
-          h(s(`<button>Import Assets</button>`), {
+          h(s(`<button>${t('MainMenu.import-assets')}</button>`), {
             click: () => new ImportAssetsWindow(),
           })
         ),

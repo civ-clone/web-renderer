@@ -1,3 +1,5 @@
+import { t } from 'i18next';
+
 export class LocaleProvider {
   #defaultLocale: string;
   #locale: string;
@@ -64,7 +66,7 @@ export class LocaleProvider {
       secondsDifference = Math.trunc((date.getTime() - Date.now()) / 1000);
 
     if (Math.abs(secondsDifference) < 10) {
-      return 'just now';
+      return t('Generic.just-now');
     }
 
     const [value, unit] = (

@@ -10,6 +10,7 @@ i18next.addResources('en', 'default', {
   'Generic.close': 'Close',
   'Generic.coordinates': '{{x, number}}, {{y, number}}',
   'Generic.height': 'Height',
+  'Generic.just-now': 'just now',
   'Generic.no': 'No',
   'Generic.ok': 'OK',
   'Generic.city-name':
@@ -231,6 +232,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.civilization-score': 'Civilization Score',
   'GameMenu.trade-report': 'Trade Report',
 
+  'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
@@ -242,6 +244,7 @@ i18next.addResources('en', 'default', {
   'Grid.staggered-iso': 'Isometric',
 
   'HappinessReport.breakdown': 'Breakdown',
+  'HappinessReport.title': 'Happiness report',
   'HappinessReport.view-city':
     '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
 
@@ -260,7 +263,7 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.title': 'Import assets',
 
   'JoinCity.too-large.body':
-    '{{city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
+    '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
   'JoinCity.too-large.title': 'City too large',
 
   'LeaveGuard.body':
@@ -294,11 +297,17 @@ i18next.addResources('en', 'default', {
   'Notification.title': 'Notification',
 
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
-  'SavedGame.could-not-hand-over':
-    'That save could not be handed to the reloading page, so the game has not been loaded: {{error}}',
-  'SavedGame.could-not-read': 'That save could not be read: {{error}}',
+  'ReleaseWindow.external-changes': 'External changes',
+  'ReleaseWindow.title': 'Releases',
 
-  'SavedGame.could-not-write': 'That save could not be written: {{error}}',
+  'ReloadGuard.body': 'Are you sure you want to reload?',
+  'ReloadGuard.title': 'Reload',
+
+  'SavedGame.could-not-hand-over':
+    'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',
+  'SavedGame.could-not-read': 'That save could not be read: {{- error}}',
+
+  'SavedGame.could-not-write': 'That save could not be written: {{- error}}',
   'SavedGame.needs-grid':
     'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
   'SavedGame.no-decompression':
