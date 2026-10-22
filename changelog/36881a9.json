@@ -1,0 +1,1 @@
+{"version":"0.1.0@36881a9","date":"2026-10-22T07:24:18.000Z","localChanges":["A unit that finishes fortifying at the start of your turn now shows its fortified look straight away, rather than only once its square was drawn again for some other reason, and a sentried unit woken by an enemy no longer keeps its old letter (closes #487)."],"externalChanges":{}}
