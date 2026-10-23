@@ -433,7 +433,8 @@
     "occupied": "#000",
     "colouring": {
       "mode": "replaceColours",
-      "keys": ["#000"]
+      "keys": ["#000"],
+      "colours": [1]
     },
     "labels": {
       "x": 0.5,

@@ -4,7 +4,6 @@ import { Reach } from '../../lib/projection';
 import { Rect } from '../../lib/viewport';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { cityName } from '../lib/city';
-import currentTileset from '../../lib/tilesets';
 import { imageSize } from '../../lib/imageSize';
 
 const disorderIconPath = 'city/people_unhappy_m';
@@ -80,18 +79,19 @@ export class CityNames extends Map {
     };
   }
 
-  // Where the unhappy citizen goes in place of the size: one pixel in from
-  // the centre of the city square, and one down, as Civ1 draws a city in civil
-  // disorder (CivOne's `Icons.City` puts it at 5, 1).
+  // Where the unhappy citizen goes in place of the size, where the tileset puts it: Civ1's is one pixel in from the
+  //  centre of the city square, and one down, as Civ1 draws a city in civil disorder (CivOne's `Icons.City` puts it
+  //  at 5, 1).
   #disorderIcon(offsetX: number, offsetY: number): Rect {
     const scale = this.scale(),
+      { x, y } = this.tileset().cities.labels.disorderIcon,
       [width, height] = imageSize(this.getPreloadedImage(disorderIconPath)).map(
         (dimension) => dimension * scale
       );
 
     return {
-      x: Math.floor(offsetX + 5 * scale),
-      y: Math.floor(offsetY + scale),
+      x: Math.floor(offsetX + x * scale),
+      y: Math.floor(offsetY + y * scale),
       width: Math.ceil(width),
       height: Math.ceil(height),
     };
@@ -127,24 +127,25 @@ export class CityNames extends Map {
     );
   }
 
-  // Where a label goes on the tile's box: centred across it, the size three
-  // quarters of the way down and the name hanging below it.
+  // Where a label goes on the tile's box, as parts of it, where the tileset says: Civ1's are centred across it, the
+  //  size three quarters of the way down and the name hanging below it.
   #anchor(
     offsetX: number,
     offsetY: number
   ): { centreX: number; digitBaseline: number; nameBaseline: number } {
-    const { width, height } = this.projection().footprint();
+    const { width, height } = this.projection().footprint(),
+      { x, sizeBaseline, nameBaseline } = this.tileset().cities.labels;
 
     return {
-      centreX: offsetX + width / 2,
-      digitBaseline: offsetY + height * 0.75,
-      nameBaseline: offsetY + height * 1.6,
+      centreX: offsetX + width * x,
+      digitBaseline: offsetY + height * sizeBaseline,
+      nameBaseline: offsetY + height * nameBaseline,
     };
   }
 
   // The tileset's label size, in px at this scale.
   #fontSize(): number {
-    return currentTileset().cities.labels.fontSize * this.scale();
+    return this.tileset().cities.labels.fontSize * this.scale();
   }
 
   #applyFont(): void {

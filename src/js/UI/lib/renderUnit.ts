@@ -1,3 +1,8 @@
+import {
+  Colouring,
+  TilesetDescriptor,
+  expandName,
+} from '../tilesets/TilesetDescriptor';
 import currentTileset, { nativeTileSize } from './tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
@@ -8,9 +13,9 @@ import { isDrawable } from './imageSize';
 import replaceColours from './replaceColours';
 import { s } from '@dom111/element';
 
-// Keyed on everything that affects the output, so it is bounded by unit type x
-// civilization colours x fortified — a few hundred entries at most for a given
-// game, rather than one canvas per unit per render.
+// Keyed on everything that affects the output, so it is bounded by tileset x unit
+// type x civilization colours x fortified — a few hundred entries at most for a
+// given game, rather than one canvas per unit per render.
 const renderedUnitCache = new Map<string, HTMLCanvasElement>();
 
 onPreloadedImagesChanged(() => renderedUnitCache.clear());
@@ -29,9 +34,28 @@ const unitStatus = (unit: Pick<UnitData, 'busy'>): string | null =>
     : null;
 
 /**
+ * The player's colours that replace `colouring`'s keys, one for each: the ones its `colours` names, or the player's
+ * first, second, … in order (#56). A colour the player has none of is their first: a civilization with fewer colours
+ * than the tileset asks for is drawn in the one it has rather than not at all.
+ */
+export const replacementColours = (
+  { keys, colours }: Extract<Colouring, { mode: 'replaceColours' }>,
+  playerColours: string[]
+): string[] =>
+  keys.map(
+    (key, index) => playerColours[colours?.[index] ?? index] ?? playerColours[0]
+  );
+
+/** A player's colours, as their civilization's `colors` attribute lists them. */
+export const playerColours = (player: UnitData['player']): string[] =>
+  player.civilization.attributes.filter(
+    (attribute) => attribute.name === 'colors'
+  )[0].value;
+
+/**
  * Writes a busy unit's letter onto `context`, over the unit drawn at
  * `offsetX`/`offsetY` and `scale` times its size (#352), on a tile `tileSize`
- * native px across.
+ * native px across, where `tileset` puts it.
  *
  * It is written at the size it is shown at, as the city labels are, rather than
  * into the sprite, which is then enlarged pixel by pixel.
@@ -42,7 +66,8 @@ export const drawUnitStatus = (
   offsetX: number,
   offsetY: number,
   scale: number,
-  tileSize: number = nativeTileSize(currentTileset())
+  tileSize: number = nativeTileSize(currentTileset()),
+  tileset: TilesetDescriptor = currentTileset()
 ): void => {
   const status = unitStatus(unit);
 
@@ -51,9 +76,10 @@ export const drawUnitStatus = (
   }
 
   // if (unit.busy._ === 'Sleeping') {} // TODO: fade the unit like in Civ 1
-  const centreX = offsetX + (tileSize * scale) / 2,
-    baseline = offsetY + tileSize * scale * 0.75,
-    fontSize = currentTileset().units.status.fontSize * scale;
+  const { x, baseline: down, fontSize: size } = tileset.units.status,
+    centreX = offsetX + tileSize * scale * x,
+    baseline = offsetY + tileSize * scale * down,
+    fontSize = size * scale;
 
   context.font = `bold ${fontSize}px sans-serif`;
   context.textAlign = 'center';
@@ -64,36 +90,47 @@ export const drawUnitStatus = (
 };
 
 /**
- * Renders `unit` with its civilization's colours and any fortified overlay. A
- * busy unit's letter is drawn by `drawUnitStatus`, once the unit is in place.
+ * Renders `unit` with its civilization's colours and any fortified overlay, as
+ * `tileset` draws them. A busy unit's letter is drawn by `drawUnitStatus`, once
+ * the unit is in place.
  *
  * The result may be a shared cache entry, so callers must treat it as immutable.
  */
 export const renderUnit = (
-  unit: Pick<UnitData, '_' | 'player' | 'improvements'>
+  unit: Pick<UnitData, '_' | 'player' | 'improvements'>,
+  tileset: TilesetDescriptor = currentTileset()
 ): CanvasImageSource => {
-  const player = unit.player,
-    civilization = player.civilization,
-    [colors] = civilization.attributes.filter(
-      (attribute) => attribute.name === 'colors'
-    ),
+  const colours = playerColours(unit.player),
     fortified =
       unit.improvements?.some((improvement) => improvement._ === 'Fortified') ??
       false,
-    key = [unit._, colors.value.join(','), fortified ? 'fortified' : ''].join(
-      '|'
-    );
+    key = [
+      tileset.id,
+      unit._,
+      colours.join(','),
+      fortified ? 'fortified' : '',
+    ].join('|');
 
   if (renderedUnitCache.has(key)) {
     return renderedUnitCache.get(key)!;
   }
 
-  const source = getPreloadedImage(`units/${unit._.toLowerCase()}`),
+  const { units, names } = tileset,
+    // Only colour keys can be drawn yet: `validateDescriptor` refuses an overlay (#152).
+    colouring = units.colouring as Extract<
+      Colouring,
+      { mode: 'replaceColours' }
+    >,
+    source = getPreloadedImage(
+      expandName(units.sprite, {
+        unit: names.unit[unit._] ?? unit._.toLowerCase(),
+      }),
+      tileset
+    ),
     recoloured = replaceColours(
       source,
-      // To come from theme manifest
-      ['#60E064', '#2C7800'],
-      colors.value
+      colouring.keys,
+      replacementColours(colouring, colours)
     ),
     // `replaceColours` may hand back a shared cache entry, so the overlays below
     // go onto a canvas of our own rather than drawing onto it.
@@ -107,7 +144,7 @@ export const renderUnit = (
   context.drawImage(recoloured, 0, 0);
 
   if (fortified) {
-    const fortify = getPreloadedImage('map/fortify');
+    const fortify = getPreloadedImage(units.fortified, tileset);
 
     if (isDrawable(fortify)) {
       context.drawImage(fortify, 0, 0);

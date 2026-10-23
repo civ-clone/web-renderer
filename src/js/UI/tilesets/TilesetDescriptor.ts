@@ -105,14 +105,18 @@ export interface TilesetFamilies {
 }
 
 /**
- * How player colours go on: Civ1 swaps the sprite's `keys` colours for the player's; other packs draw a separate
- * sprite in the player's colour over it (`overlay`).
+ * How player colours go on: Civ1 swaps the sprite's `keys` colours for the player's (`colours` says which of the
+ * player's colours replaces each key, by index: 0, 1, … in order unless it says otherwise); other packs draw a
+ * separate sprite in the player's colour over it (`overlay`).
  */
 export type Colouring =
-  | { mode: 'replaceColours'; keys: string[] }
+  | { mode: 'replaceColours'; keys: string[]; colours?: number[] }
   | { mode: 'overlay'; sprite: string; key: string; anchor: Point | 'sprite' };
 
-/** A label written over a tile: across at `x` of the tile, on a baseline at `baseline` of it, `fontSize` native px. */
+/**
+ * A label written over a tile: across at `x` of the tile, on a baseline at `baseline` of it, `fontSize` native px. The
+ * parts are of the tile's width, which is its height while every tileset's tiles are square (#94/#97).
+ */
 export interface Label {
   x: number;
   baseline: number;
@@ -130,13 +134,20 @@ export interface TilesetUnits {
 }
 
 export interface TilesetCities {
-  /** `box`: Civ1's sprite in a box of the player's colour; `styles`: a sprite per style, size and walls. */
+  /**
+   * `box`: Civ1's sprite in a box of the player's first colour, `inset` px in from the tile, on a box of `occupied`
+   * when the city has units in it; `styles`: a sprite per style, size and walls.
+   */
   mode: 'box' | 'styles';
   sprite: string;
-  inset?: number;
+  inset: number;
   /** The box's colour when the city has units in it. */
-  occupied?: string;
+  occupied: string;
   colouring: Colouring;
+  /**
+   * Where a city's size and name go: across at `x` of the tile (within it), on baselines at those parts of it, and the
+   * unhappy citizen in place of the size at `disorderIcon` native px from its corner (within it).
+   */
   labels: {
     x: number;
     sizeBaseline: number;
@@ -204,6 +215,10 @@ const mapFamilies: {
 /** The placeholders in a sprite name: `terrain/{terrain}_{dirs}` has `terrain` and `dirs`. */
 const placeholders = (template: string): string[] =>
   Array.from(template.matchAll(/\{([a-z]+)\}/gi), ([, name]) => name);
+
+// The colours `replaceColours` can read: `#rgb`, `#rrggbb`, `rgb(…)` and `rgba(…)`. Any other would match a sprite's
+//  transparent pixels, or be ignored by the canvas and leave the last colour drawn in its place.
+const colourPattern = /^(#[0-9a-f]{3}|#[0-9a-f]{6}|rgba?\([\d\s.,]+\))$/i;
 
 const isObject = (value: unknown): value is { [key: string]: unknown } =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -525,8 +540,8 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
       refuse(
         `${where}.sprite has {${unknown(sprite as string).join(
           '}, {'
-        )}}, but the map only fills ${
-          given.length > 0 ? `{${given.join('}, {')}}` : 'nothing'
+        )}}, but the map fills ${
+          given.length > 0 ? `only {${given.join('}, {')}}` : 'none'
         } here.`
       );
     }
@@ -551,7 +566,7 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
       !(
         isObject(isolated) &&
         typeof isolated.dot === 'string' &&
-        isolated.dot !== '' &&
+        colourPattern.test(isolated.dot) &&
         isWholeNumber(isolated.size, 1)
       )
     ) {
@@ -581,6 +596,131 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
       refuse(`${where}.anchors must give a whole x and y in px for each name.`);
     }
   });
+
+  // What the units and cities layers read as they draw (#56 d3).
+  const isColour = (value: unknown): boolean =>
+      typeof value === 'string' && colourPattern.test(value),
+    isPoint = (value: unknown, whole: boolean): boolean =>
+      isObject(value) &&
+      (whole
+        ? Number.isInteger(value.x) && Number.isInteger(value.y)
+        : Number.isFinite(value.x) && Number.isFinite(value.y)),
+    checkSprite = (where: string, sprite: unknown, allowed: string[]): void => {
+      if (typeof sprite !== 'string' || sprite === '') {
+        refuse(`${where} must name a sprite.`);
+      }
+
+      const unknown = placeholders(sprite as string).filter(
+        (name) => !allowed.includes(name)
+      );
+
+      if (unknown.length > 0) {
+        refuse(
+          `${where} has {${unknown.join('}, {')}}, but the map fills ${
+            allowed.length > 0 ? `only {${allowed.join('}, {')}}` : 'none'
+          } here.`
+        );
+      }
+    },
+    checkColouring = (where: string, colouring: unknown): void => {
+      if (!isObject(colouring)) {
+        refuse(`${where} must say how player colours go on.`);
+      }
+
+      const { mode, keys, colours } = colouring as { [key: string]: unknown };
+
+      // An overlay in the player's colour is typed for Civ2's shield, but cannot be drawn yet (#152).
+      if (mode !== 'replaceColours') {
+        refuse(
+          `${where}.mode ${JSON.stringify(
+            mode
+          )} cannot be drawn yet: only replaceColours.`
+        );
+      }
+
+      if (!isStringList(keys) || keys.length === 0 || !keys.every(isColour)) {
+        refuse(`${where}.keys must list the colours to replace.`);
+      }
+
+      if (
+        colours !== undefined &&
+        !(
+          Array.isArray(colours) &&
+          colours.length === (keys as string[]).length &&
+          colours.every((index) => isWholeNumber(index, 0))
+        )
+      ) {
+        refuse(
+          `${where}.colours must give a player's colour, by whole index, for each key.`
+        );
+      }
+    };
+
+  checkSprite('units.sprite', units.sprite, ['unit']);
+  checkSprite('units.fortified', units.fortified, []);
+  checkColouring('units.colouring', units.colouring);
+
+  if (!isPoint(units.stackOffset, true)) {
+    refuse('units.stackOffset must have a whole x and y in px.');
+  }
+
+  const status = units.status as { [key: string]: unknown };
+
+  if (!isPoint({ x: status.x, y: status.baseline }, false)) {
+    refuse('units.status must have an x and a baseline, as parts of the tile.');
+  }
+
+  // Each city a sprite per style, size and walls is typed for Civ2, but cannot be drawn yet (#152).
+  if (cities.mode !== 'box') {
+    refuse(
+      `cities.mode ${JSON.stringify(
+        cities.mode
+      )} cannot be drawn yet: only box.`
+    );
+  }
+
+  checkSprite('cities.sprite', cities.sprite, []);
+  checkColouring('cities.colouring', cities.colouring);
+
+  if (!isWholeNumber(cities.inset, 0)) {
+    refuse('cities.inset must be a whole number of px, 0 or more.');
+  }
+
+  if (!isColour(cities.occupied)) {
+    refuse('cities.occupied must be a colour.');
+  }
+
+  const labels = cities.labels as { [key: string]: unknown };
+
+  if (
+    !(['x', 'sizeBaseline', 'nameBaseline'] as const).every((anchor) =>
+      Number.isFinite(labels[anchor])
+    )
+  ) {
+    refuse(
+      'cities.labels must have an x, a sizeBaseline and a nameBaseline, as parts of the tile.'
+    );
+  }
+
+  // Within the tile, where the region a label is redrawn in reaches (`CityNames.reach()`).
+  if (!((labels.x as number) >= 0 && (labels.x as number) <= 1)) {
+    refuse('cities.labels.x must be within the tile, from 0 to 1.');
+  }
+
+  const { width, height } = json.tile as { [key: string]: number },
+    icon = labels.disorderIcon as { [key: string]: number };
+
+  if (
+    !isPoint(icon, true) ||
+    icon.x < 0 ||
+    icon.y < 0 ||
+    icon.x >= width ||
+    icon.y >= height
+  ) {
+    refuse(
+      'cities.labels.disorderIcon must have a whole x and y in px, within the tile.'
+    );
+  }
 
   return json as unknown as TilesetDescriptor;
 };
