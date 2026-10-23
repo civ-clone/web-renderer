@@ -1,6 +1,6 @@
 # 11 — Phase 6: Lifecycle
 
-> **Status (2026-10-08):** Not done. `quit` and `restart` are still sent with nothing receiving them. Save and load shipped through `docs/engine-serialisation/` as real saves, not a replay log. See the README's Status section.
+> **Status (2026-10-23):** Done by other means. The game ending shipped instead of `restart` (#176), and the `restart` and `quit` channels are gone (#340). Save and load shipped through `docs/engine-serialisation/` as real saves, not a replay log. `DataTransferClient.dispose()` landed with its split (#541). See the README's Status section.
 
 **Goal.** Make `restart` and `quit` work, and build the seams that make save and
 load possible.
