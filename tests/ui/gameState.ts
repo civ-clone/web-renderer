@@ -1,17 +1,18 @@
-// When the game's data is rebuilt (#344): `GameState`, as `GameSession` drives it,
-// with its frame scheduler faked so the test says when a frame comes. Checks
-// that during the player's turn each patch flush rebuilds at once; that while
-// waiting for the turn the flushes coalesce to one rebuild per frame; that
-// handing the turn over (`setWaiting(false)` then `update()`, as `turnStarted`
-// does) drops the deferred rebuild and rebuilds once; that each update runs in
-// the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
-// tells the world whether its tiles were refilled; that a `PlayerTile` a patch
-// carries is queued, and the square of a unit (#487) or a city (#578) whose
-// look it changes; that what changed reaches `DataChanges`, the owners of refs
-// that have just arrived included, once per update; that a second
-// `gameData` is the map later patches apply to; that the map is pruned on
-// schedule and the pruned ids forgotten; and that the object count is kept as
-// patches go, without counting the whole map (#480).
+// When the game's data is rebuilt (#344): `GameState`, as `GameSession` drives
+// it, with its frame scheduler faked so the test says when a frame comes.
+// Checks that during the player's turn each patch flush rebuilds at once; that
+// while waiting for the turn the flushes coalesce to one rebuild per frame;
+// that handing the turn over (`setWaiting(false)` then `update()`, as
+// `turnStarted` does) drops the deferred rebuild and rebuilds once; that each
+// update runs in the order the input handlers rely on (rebuild, tiles, then
+// `onUpdated`) and tells the world whether its tiles were refilled; that a
+// `PlayerTile` a patch carries is queued, and the square of a unit (#487) or a
+// city (#578) whose look it changes; that what changed reaches `DataChanges`,
+// the owners of refs that have just arrived included, once per update; that a
+// second `gameData` is the map later patches apply to, its size the prunes' new
+// baseline; that the map is pruned on schedule and the pruned ids forgotten;
+// and that the object count is kept as patches go, without counting the whole
+// map (#480).
 
 import GameState, {
   FrameScheduler,
@@ -932,6 +933,40 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   state.replace(makeMap());
 
   check('a replaced map is counted', state.currentObjectCount() === size);
+}
+
+// A second `gameData` is measured from afresh: a much bigger map than the
+// first is not pruned for having grown, as the first is not.
+{
+  const { state } = setup(makeMap(1)),
+    replacement = makeMap(1, 6000);
+
+  state.update();
+  state.replace(replacement);
+
+  check(
+    'a replaced map is not pruned for being bigger than the one it replaced',
+    'Junk-0' in replacement.objects
+  );
+
+  // It still grows from there: half as big again, and it is pruned.
+  state.applyPatches([
+    update(
+      'Player-1',
+      { ...(replacement.objects['Player-1'] as PlainObject) },
+      Object.fromEntries(
+        [...Array(3100).keys()].map((i) => [
+          `Extra-${i}`,
+          { _: 'Junk', id: `Extra-${i}` },
+        ])
+      )
+    ),
+  ]);
+
+  check(
+    'it is pruned once it grows by half from there',
+    !('Junk-0' in replacement.objects)
+  );
 }
 
 // After a prune, the next update counts what the prune left.
