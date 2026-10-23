@@ -5,5 +5,6 @@ i18next.addResources(
   'unit',
   {
     'MechanizedInfantry.name': 'Mechanised Infantry',
+    'Yield.Defence.name': 'Defence',
   }
 );

@@ -5,5 +5,6 @@ i18next.addResources(
   'city',
   {
     'Improvement.RecyclingCenter.name': 'Recycling Centre',
+    'Improvement.SdiDefence.name': 'SDI Defence',
   }
 );

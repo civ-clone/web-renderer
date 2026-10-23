@@ -364,12 +364,12 @@ const expect = (description: string, actual: string, expected: string) => {
     [
       'Barbarians.uprising',
       { city: asansol },
-      'Travellers report: Barbarian uprising near Asansol!',
+      'Travelers report: Barbarian uprising near Asansol!',
     ],
     [
       'Barbarians.uprising.guerrilla',
       { city: asansol },
-      'Travellers report: Guerrilla uprising near Asansol!',
+      'Travelers report: Guerrilla uprising near Asansol!',
     ]
   );
 

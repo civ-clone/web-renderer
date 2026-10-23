@@ -37,7 +37,7 @@ i18next.addResources('en', 'unit', {
 
   // Yields
   'Yield.Attack.name': 'Attack',
-  'Yield.Defence.name': 'Defence',
+  'Yield.Defence.name': 'Defense',
   'Yield.Movement.name': 'Movement',
   'Yield.Moves.name': 'Moves',
   'Yield.Visibility.name': 'Visibility',
