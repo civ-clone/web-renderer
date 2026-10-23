@@ -1,6 +1,5 @@
 import { DragSample, releaseVelocity } from '../lib/drag';
 import { Tile, Unit } from '../types';
-import City from './City';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import Portal from './Portal';
 import UnitActionMenu from './UnitActionMenu';
@@ -80,9 +79,11 @@ export class GamePortal extends Portal {
         (unit: Unit) => unit.player.id === this.playerId()
       );
 
-      if (tile.city && tile.city.player.id === this.playerId()) {
-        new City(tile.city, this, this.transport());
-      } else if (playerTileUnits.length) {
+      // A city that opens, or the square's units; a city that doesn't open (another civilisation's) is a square like
+      //  any other.
+      const opened = tile.city ? this.openCity(tile.city) : false;
+
+      if (!opened && playerTileUnits.length) {
         new UnitSelectionWindow(
           playerTileUnits,
           this.transport(),

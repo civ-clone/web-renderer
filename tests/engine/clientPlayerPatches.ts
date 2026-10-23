@@ -8,6 +8,7 @@ import type { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
+import { stubView } from './lib/view';
 
 const failures: string[] = [];
 
@@ -37,6 +38,7 @@ process.on('exit', (code: number): void => {
 });
 
 const sent: [string, unknown][] = [],
+  view = stubView(() => ({} as Player)),
   transport = {
     send: (channel: string, data: unknown) => sent.push([channel, data]),
   },
@@ -46,7 +48,7 @@ const sent: [string, unknown][] = [],
     transport as any,
     dataFilter,
     new ActionsState(),
-    () => ({} as Player)
+    () => view
   ),
   patch = (id: string, value: unknown) => ({
     [id]: { type: 'update', index: null, value },

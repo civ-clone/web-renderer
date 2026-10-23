@@ -4,7 +4,6 @@ import {
   Player,
   Yield,
 } from '../types';
-import City from './City';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
@@ -23,7 +22,6 @@ export class TradeReport extends Window {
   #cities: CityData[];
   #player: Player;
   #portal: Portal;
-  #transport: Transport;
   #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
@@ -40,7 +38,6 @@ export class TradeReport extends Window {
       this.update();
     });
     this.#portal = portal;
-    this.#transport = transport;
 
     this.update();
   }
@@ -91,7 +88,7 @@ export class TradeReport extends Window {
             row = document.createElement('tr');
 
           h(row, {
-            click: () => new City(city, this.#portal, this.#transport),
+            click: () => this.#portal.openCity(city),
           });
 
           row.append(

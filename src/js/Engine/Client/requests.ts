@@ -26,6 +26,8 @@ import answer from '../answer';
 export type RequestsContext = Pick<
   ClientContext,
   | 'player'
+  // Which players are our own.
+  | 'view'
   // Whether we have met a player, which says what the reports may show of them.
   | 'hasMet'
   // What the player may see, which a city's build list and a unit's actions go through.
@@ -107,7 +109,7 @@ export const registerRequests = (
     answer(transport, 'cityBuildAvailable', (cityBuildId) => {
       const [cityBuild] = ctx.cityBuilds.getBy('id', cityBuildId);
 
-      return cityBuild && cityBuild.city().player() === ctx.player()
+      return cityBuild && ctx.view.owns(cityBuild.city().player())
         ? cityBuildAvailable(ctx.dataFilter, cityBuild)
         : { hierarchy: [], objects: {} };
     })
@@ -119,7 +121,7 @@ export const registerRequests = (
     transport.receive('unitActions', (unitId) => {
       const [unit] = ctx.units.getBy('id', unitId);
 
-      if (!unit || unit.player() !== ctx.player()) {
+      if (!unit || !ctx.view.owns(unit.player())) {
         return;
       }
 

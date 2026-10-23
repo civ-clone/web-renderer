@@ -28,7 +28,7 @@ import { knownUnknownCity } from '../standIns';
 
 export type PatchEventsContext = Pick<
   ClientContext,
-  | 'player'
+  | 'view'
   // The patches queued for the player, and the flush that sends them.
   | 'patches'
   // What the player may see, which a rival's city, a build or research goes through when it changes.
@@ -37,7 +37,6 @@ export type PatchEventsContext = Pick<
   // What the player knows of a square, the city on one and the units on one.
   Registries<{
     cities: 'getByTile';
-    playerWorlds: 'getByPlayer';
     units: 'getByTile';
   }> & {
     // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
@@ -58,12 +57,11 @@ export const registerPatchEvents = (
     };
 
   on('player:visibility-changed', (tile, player) => {
-    if (player !== ctx.player()) {
+    if (!ctx.view.owns(player)) {
       return;
     }
 
-    const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
-      playerTile = playerWorld.getByTile(tile);
+    const playerTile = ctx.view.tile(tile);
 
     // A square newly seen in one of our cities' areas is one of its `tiles` from now on, where it was undiscovered
     //  (#411).
@@ -82,13 +80,12 @@ export const registerPatchEvents = (
       return;
     }
 
-    ctx.patches.seenTile(playerWorld, playerTile);
+    ctx.patches.seenTile(ctx.view.world(), playerTile);
   });
 
   ['unit:created', 'unit:defeated', 'unit:lost-at-sea'].forEach((event) => {
     on(event, (unit) => {
-      const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
-        playerTile = playerWorld.getByTile(unit.tile());
+      const playerTile = ctx.view.tile(unit.tile());
 
       if (!playerTile) {
         return;
@@ -96,7 +93,7 @@ export const registerPatchEvents = (
 
       ctx.patches.tile(playerTile);
 
-      if (unit.player() !== ctx.player()) {
+      if (!ctx.view.owns(unit.player())) {
         return;
       }
 
@@ -121,7 +118,7 @@ export const registerPatchEvents = (
       ctx.patches.unit(unit);
       ctx.patches.city(unit.city());
 
-      if (unit.player() === ctx.player()) {
+      if (ctx.view.owns(unit.player())) {
         ctx.patches.playerKey('units');
       }
     });
@@ -129,9 +126,8 @@ export const registerPatchEvents = (
 
   ['unit:moved'].forEach((event) => {
     on(event, (unit: Unit, action: UnitAction) => {
-      const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
-        fromTile = playerWorld.getByTile(action.from()),
-        toTile = playerWorld.getByTile(action.to());
+      const fromTile = ctx.view.tile(action.from()),
+        toTile = ctx.view.tile(action.to());
 
       if (!fromTile && !toTile) {
         return;
@@ -151,7 +147,7 @@ export const registerPatchEvents = (
       }
 
       // The unit, and the city that supports it, which may be unhappy about where it is now (#411).
-      if (unit.player() === ctx.player() && !ctx.automation.automatedTurn()) {
+      if (ctx.view.owns(unit.player()) && !ctx.automation.automatedTurn()) {
         ctx.patches.unit(unit);
         ctx.patches.city(unit.city());
         ctx.patches.onTiles(action.from(), action.to());
@@ -177,12 +173,16 @@ export const registerPatchEvents = (
       //  (for a city lost, the whole player below sends them as refs), and the next turn's hand-over, which does, is
       //  too late for a city screen open until then. A size 1 city that its capture destroys is already the
       //  capturer's when `city:destroyed` is raised, so that loss is sent from here.
-      if ([capturingPlayer, originalPlayer].includes(ctx.player())) {
+      if (
+        [capturingPlayer, originalPlayer].some((player) =>
+          ctx.view.owns(player)
+        )
+      ) {
         ctx.patches.cities();
       }
 
       // Our capture of it is told in `Client/notifications/city.ts`.
-      if (originalPlayer === ctx.player()) {
+      if (ctx.view.owns(originalPlayer)) {
         // The city already belongs to the capturing player here, so resend ours: the city is gone from our list.
         ctx.patches.wholePlayer(
           filterToReferenceAllExcept(Player, PlayerAction, Civilization)
@@ -204,8 +204,7 @@ export const registerPatchEvents = (
     destroyed: boolean = false,
     listChanged: boolean = false
   ): void => {
-    const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
-      playerTile = playerWorld.getByTile(city.tile());
+    const playerTile = ctx.view.tile(city.tile());
 
     if (!playerTile) {
       return;
@@ -230,7 +229,7 @@ export const registerPatchEvents = (
     }
 
     // A city founded, captured or destroyed is added to or gone from the player's list of cities (#411).
-    if (listChanged && city.player() === ctx.player()) {
+    if (listChanged && ctx.view.owns(city.player())) {
       ctx.patches.playerKey('cities');
     }
   };
@@ -259,7 +258,7 @@ export const registerPatchEvents = (
     cityChanged(city, true, true);
 
     // Our other cities, as for one captured from us (#515): it may have been the capital, or held a wonder.
-    if (city.player() === ctx.player()) {
+    if (ctx.view.owns(city.player())) {
       ctx.patches.cities();
     }
 
@@ -286,7 +285,7 @@ export const registerPatchEvents = (
   //  squares whose yields it changed (#488): whatever changed it, a revolution, a new government chosen, or one that
   //  collapsed.
   on('player:government:changed', (player: Player) => {
-    if (player === ctx.player()) {
+    if (ctx.view.owns(player)) {
       ctx.patches.governmentChanged();
     }
   });
@@ -305,11 +304,11 @@ export const registerPatchEvents = (
     cities.forEach((city) => cityChanged(city));
 
     if (
-      cities.some((city) => city.player() === ctx.player()) ||
+      cities.some((city) => ctx.view.owns(city.player())) ||
       area.some((areaTile) =>
         ctx.units
           .getByTile(areaTile)
-          .some((areaUnit) => areaUnit.player() === ctx.player())
+          .some((areaUnit) => ctx.view.owns(areaUnit.player()))
       )
     ) {
       ctx.patches.wholePlayer(
@@ -329,7 +328,7 @@ export const registerPatchEvents = (
   on(
     'unit:trade-route-established',
     (player: Player, home: City, city: City) => {
-      if (player !== ctx.player()) {
+      if (!ctx.view.owns(player)) {
         return;
       }
 
@@ -344,7 +343,7 @@ export const registerPatchEvents = (
     (unit: Unit, player: Player, previousPlayer: Player) => {
       ctx.patches.tile(unit.tile());
 
-      if (![player, previousPlayer].includes(ctx.player())) {
+      if (![player, previousPlayer].some((player) => ctx.view.owns(player))) {
         return;
       }
 
@@ -356,7 +355,7 @@ export const registerPatchEvents = (
 
   // Our build is told of in `Client/notifications/city.ts`, as a rival's wonder is.
   on('city:building-complete', (cityBuild) => {
-    if (cityBuild.city().player() !== ctx.player()) {
+    if (!ctx.view.owns(cityBuild.city().player())) {
       return;
     }
 
@@ -369,7 +368,7 @@ export const registerPatchEvents = (
 
   // The advance is told of in `Client/notifications/player.ts`.
   on('player:research-complete', (playerResearch) => {
-    if (playerResearch.player() !== ctx.player()) {
+    if (!ctx.view.owns(playerResearch.player())) {
       return;
     }
 
@@ -387,7 +386,7 @@ export const registerPatchEvents = (
       _ImprovementType: typeof CityImprovement,
       cityImprovements: CityImprovement[]
     ) => {
-      if (player !== ctx.player()) {
+      if (!ctx.view.owns(player)) {
         return;
       }
 

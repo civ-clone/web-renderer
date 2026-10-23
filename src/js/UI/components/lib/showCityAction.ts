@@ -1,4 +1,3 @@
-import City from '../City';
 import { City as CityData } from '../../types';
 import { INotificationWindow } from '../NotificationWindow';
 import Portal from '../Portal';
@@ -16,7 +15,7 @@ export const showCityAction = (
   action(selectionWindow: INotificationWindow) {
     selectionWindow.close();
 
-    new City(city, portal, transport);
+    portal.openCity(city);
   },
 });
 

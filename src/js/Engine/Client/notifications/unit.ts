@@ -14,7 +14,7 @@ export const unitNotifications: NotificationTable = [
   [
     'unit:nuclear-detonation',
     (ctx: NotificationContext, unit: Unit) =>
-      unit.player() === ctx.player()
+      ctx.view.owns(unit.player())
         ? null
         : new Notification('Unit.nuclear-attack', {
             player: unit.player(),
@@ -24,7 +24,7 @@ export const unitNotifications: NotificationTable = [
   [
     'unit:lost-at-sea',
     (ctx: NotificationContext, unit: Unit) =>
-      unit.player() !== ctx.player()
+      !ctx.view.owns(unit.player())
         ? null
         : new Notification(
             aircraftRange.some(([UnitType]) => unit instanceof UnitType)
@@ -39,7 +39,7 @@ export const unitNotifications: NotificationTable = [
   [
     'unit:unsupported',
     (ctx: NotificationContext, city: City, unit: Unit) =>
-      city.player() !== ctx.player()
+      !ctx.view.owns(city.player())
         ? null
         : new Notification('City.unit-unsupported', {
             city,
@@ -57,7 +57,7 @@ export const unitNotifications: NotificationTable = [
       goods: string,
       bonus: number
     ) =>
-      player !== ctx.player()
+      !ctx.view.owns(player)
         ? null
         : new Notification('Unit.trade-route-established', {
             bonus,
@@ -73,7 +73,7 @@ export const unitNotifications: NotificationTable = [
     (ctx: NotificationContext, goodyHut: GoodyHut, action: object) =>
       ctx
         .unitsOn(goodyHut.tile())
-        .some((unit: Unit) => unit.player() === ctx.player())
+        .some((unit: Unit) => ctx.view.owns(unit.player()))
         ? new Notification(
             `GoodyHut.action-performed.${action.constructor.name}`,
             {

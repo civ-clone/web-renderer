@@ -10,11 +10,21 @@ export class Notifier {
   #dataFilter: DataFilter;
   #held: Notification[] = [];
   #holds: () => boolean = () => false;
+  #noticesOnly: boolean;
   #transport: Transport<TransportDataMap>;
 
-  constructor(transport: Transport<TransportDataMap>, dataFilter: DataFilter) {
+  constructor(
+    transport: Transport<TransportDataMap>,
+    dataFilter: DataFilter,
+    {
+      // Every notification goes as a `bubble`, a notice beside the actions rather than a window to close: for a
+      //  watcher (#607, #613), whose game plays on without them and who would otherwise close a window per event.
+      noticesOnly = false,
+    }: { noticesOnly?: boolean } = {}
+  ) {
     this.#transport = transport;
     this.#dataFilter = dataFilter;
+    this.#noticesOnly = noticesOnly;
   }
 
   // Notifications given while `predicate` is true are held until `release`.
@@ -22,7 +32,12 @@ export class Notifier {
     this.#holds = predicate;
   }
 
-  notify(notification: Notification): void {
+  notify(given: Notification): void {
+    const notification =
+      this.#noticesOnly && !given.bubble()
+        ? new Notification(given.key(), given.data(), true)
+        : given;
+
     // Serialize with the visibility filter so notification data referencing
     // other players/cities/units is bounded to their Unknown* wrappers rather
     // than dragging (and leaking) their full object graphs over the transport.

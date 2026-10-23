@@ -28,7 +28,7 @@ export const buildingCompleteKind = (build: unknown): string =>
 const ours =
   (key: string) =>
   (ctx: NotificationContext, city: City): Notification | null =>
-    city.player() === ctx.player()
+    ctx.view.owns(city.player())
       ? new Notification(key, {
           city,
         })
@@ -44,7 +44,7 @@ export const cityNotifications: NotificationTable = [
       capturingPlayer: Player,
       originalPlayer: Player
     ) =>
-      originalPlayer !== ctx.player() && capturingPlayer === ctx.player()
+      !ctx.view.owns(originalPlayer) && ctx.view.owns(capturingPlayer)
         ? new Notification('City.captured-by-us', {
             city,
             capturingPlayer,
@@ -59,7 +59,7 @@ export const cityNotifications: NotificationTable = [
   [
     'city:sdi-protected',
     (ctx: NotificationContext, city: City, unit: Unit) =>
-      city.player() !== ctx.player() && unit.player() !== ctx.player()
+      !ctx.view.owns(city.player()) && !ctx.view.owns(unit.player())
         ? null
         : new Notification('City.sdi-protected', {
             city,
@@ -69,7 +69,7 @@ export const cityNotifications: NotificationTable = [
   [
     'city:unsupported-improvement',
     (ctx: NotificationContext, city: City, cityImprovement: CityImprovement) =>
-      city.player() !== ctx.player()
+      !ctx.view.owns(city.player())
         ? null
         : new Notification('City.improvement-unsupported', {
             city,
@@ -82,7 +82,7 @@ export const cityNotifications: NotificationTable = [
     'city:building-complete',
     (ctx: NotificationContext, cityBuild: CityBuildItem, build: unknown) => {
       if (
-        cityBuild.city().player() !== ctx.player() &&
+        !ctx.view.owns(cityBuild.city().player()) &&
         build instanceof Wonder
       ) {
         // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
@@ -97,7 +97,7 @@ export const cityNotifications: NotificationTable = [
             });
       }
 
-      if (cityBuild.city().player() !== ctx.player()) {
+      if (!ctx.view.owns(cityBuild.city().player())) {
         return null;
       }
 
@@ -114,7 +114,7 @@ export const cityNotifications: NotificationTable = [
   [
     'wonder:obsolete',
     (ctx: NotificationContext, wonder: Wonder, city: City) =>
-      city.player() !== ctx.player()
+      !ctx.view.owns(city.player())
         ? null
         : new Notification(
             'Wonder.obsolete',
@@ -136,7 +136,7 @@ export const cityNotifications: NotificationTable = [
       advance: Advance,
       ImprovementType: typeof CityImprovement
     ) =>
-      player !== ctx.player()
+      !ctx.view.owns(player)
         ? null
         : new Notification(
             'CityImprovement.obsolete',

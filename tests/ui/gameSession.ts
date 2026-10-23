@@ -12,6 +12,13 @@ import { DataPatch } from '../../src/js/UI/types';
 import i18next from 'i18next';
 import ActiveUnitController from '../../src/js/UI/game/ActiveUnitController';
 import GameSession from '../../src/js/UI/game/GameSession';
+import {
+  observerCityOpener,
+  playerCityOpener,
+} from '../../src/js/UI/lib/cityOpeners';
+import { ObserverState } from '../../src/js/Engine/Observer';
+import Portal from '../../src/js/UI/components/Portal';
+import { City as CityData } from '../../src/js/UI/types';
 import DebugFlags from '../../src/js/UI/debug/DebugFlags';
 import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
 import Notices from '../../src/js/UI/components/Notices';
@@ -188,7 +195,8 @@ type Handler = (data: any) => void;
 
 const receivers: Array<[string, Handler]> = [],
   disposed: string[] = [],
-  sent: Array<[string, unknown]> = [];
+  sent: Array<[string, unknown]> = [],
+  requested: Array<[string, unknown[]]> = [];
 
 const transport = {
   receive: (name: string, handler: Handler) => {
@@ -200,6 +208,12 @@ const transport = {
   },
   receiveOnce: () => {},
   send: (name: string, data: unknown) => sent.push([name, data]),
+  // A request never answered: what was asked is what the checks read.
+  request: (request: { channel(): string; args(): unknown[] }) => {
+    requested.push([request.channel(), request.args()]);
+
+    return new Promise(() => {});
+  },
 } as unknown as Transport;
 
 const deliver = (name: string, data?: unknown): void =>
@@ -571,6 +585,142 @@ const run = async (): Promise<void> => {
   );
 
   options.set('autoEndOfTurn', false);
+
+  // A watcher's notices (#607, #613): no End Turn clears them, so a turn's are kept until the turn after it has come,
+  //  and a change of view, which sends a whole game's data, clears them all.
+  receivers.splice(0);
+  sent.splice(0);
+
+  const watcherNotices = new Notices(),
+    noticesShown = (): number =>
+      watcherNotices.actions({
+        player: { cities: [], civilization: null },
+      } as any).length;
+
+  new GameSession({
+    elements,
+    transport,
+    notifications: new Notifications(),
+    notices: watcherNotices,
+    haltedUnits: new HaltedUnits(),
+    debugFlags: new DebugFlags(false),
+    notificationBar: new NotificationBar(elements.notificationArea),
+    pendingSave: null,
+    cheatsEnabled: false,
+    setGameStarted: (): void => {},
+    transportDisposers: [],
+    observer: () => ({
+      players: [
+        { id: 'Player-1', civilization: 'Egyptian', leader: 'RamessesII' },
+      ],
+      view: { kind: 'players', playerIds: ['Player-1'] },
+      paused: false,
+    }),
+  }).start(makeMap(1));
+
+  deliver('gameNotification', {
+    bubble: true,
+    key: 'SomethingHappened',
+    data: {},
+  });
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 1 }),
+  ]);
+
+  expect(
+    'a watcher keeps a notice through the turn it came in',
+    noticesShown(),
+    1
+  );
+
+  // The turn's data comes after what it told of: the notice stays for that turn, and goes with the next.
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 2 }),
+  ]);
+
+  expect(
+    "the turn's own data arriving keeps the notice, for the pause between turns",
+    noticesShown(),
+    1
+  );
+
+  deliver('gameNotification', {
+    bubble: true,
+    key: 'SomethingElse',
+    data: {},
+  });
+  deliver('gameDataPatch', [
+    update('Turn-1', { _: 'Turn', id: 'Turn-1', value: 3 }),
+  ]);
+
+  expect(
+    "the next turn's data drops the earlier turn's notice and keeps its own",
+    noticesShown(),
+    1
+  );
+
+  deliver('gameData', makeMap(3));
+
+  expect(
+    "a change of view, which sends a whole game's data, clears them all",
+    noticesShown(),
+    0
+  );
+
+  // How a city opens (#613): a player's own from the page's data, a watcher's by asking the worker for it, when it is
+  //  a civilisation watched's, or any city of the whole map.
+  const portalFor = (playerId: string): Portal =>
+      ({
+        playerId: () => playerId,
+        transport: () => transport,
+      } as unknown as Portal),
+    cityOf = (playerId: string): CityData =>
+      ({
+        id: `City-${playerId}`,
+        player: { id: playerId },
+        tile: { x: 3, y: 4 },
+      } as unknown as CityData),
+    watching = (view: ObserverState['view']) =>
+      observerCityOpener(transport, () => ({
+        players: [],
+        view,
+        paused: false,
+      }));
+
+  expect(
+    'a player opens their own cities and no others',
+    [
+      playerCityOpener().opens(cityOf('Player-1'), portalFor('Player-1')),
+      playerCityOpener().opens(cityOf('Player-2'), portalFor('Player-1')),
+    ],
+    [true, false]
+  );
+  expect(
+    "a watcher opens the watched civilisations' cities and no others",
+    [
+      watching({ kind: 'players', playerIds: ['Player-1'] }).opens(
+        cityOf('Player-1'),
+        portalFor('Player-1')
+      ),
+      watching({ kind: 'players', playerIds: ['Player-1'] }).opens(
+        cityOf('Player-2'),
+        portalFor('Player-1')
+      ),
+      watching({ kind: 'world' }).opens(
+        cityOf('Player-2'),
+        portalFor('Player-1')
+      ),
+    ],
+    [true, false, true]
+  );
+
+  watching({ kind: 'world' }).open(cityOf('Player-2'), portalFor('Player-1'));
+
+  expect(
+    'a watcher opening a city asks the worker for the city on its square',
+    requested,
+    [['observeCity', [{ x: 3, y: 4 }]]]
+  );
 
   finished = true;
 

@@ -324,7 +324,9 @@ i18next.addResources('en', 'default', {
   'Observer.player': '{{civilization}} ({{leader}})',
   'Observer.player_no-leader': '{{civilization}}',
   'Observer.title': 'Watching the game',
+  'Observer.civilizations': 'As these civilizations see it',
   'Observer.view-as': 'See the game as',
+  'Observer.whole-map': 'The whole map',
   'Observer.watching': 'Watching: the computer players are taking their turns…',
 
   'Notification.title': 'Notification',

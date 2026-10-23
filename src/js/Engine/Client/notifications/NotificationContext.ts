@@ -7,6 +7,8 @@ import Notification from '../../Notification';
 export type NotificationContext = Pick<
   ClientContext,
   | 'player'
+  // Which players are our own, whose events are told as ours.
+  | 'view'
   // Whether we have met a player, which says whether a notice may name them (#59).
   | 'hasMet'
   // Whether we have seen a square, which says whether a rival's wonder is told with its city (#43).

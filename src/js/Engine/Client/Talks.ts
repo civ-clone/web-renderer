@@ -285,7 +285,7 @@ export class Talks {
 //  `unit:moved` listener is registered before the patches' (`events/patchEvents.ts`), which flushes.
 export const registerTalkEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
-  ctx: Pick<ClientContext, 'player'> & {
+  ctx: Pick<ClientContext, 'view'> & {
     talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithKing'>;
     // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
     automation: Pick<Automation, 'enabled'>;
@@ -300,7 +300,7 @@ export const registerTalkEvents = (
 
   on('unit:moved', (unit: Unit) => {
     // Automation's own client does the talking for the moves it makes, as it does for halts.
-    if (unit.player() !== ctx.player() || ctx.automation.enabled) {
+    if (!ctx.view.owns(unit.player()) || ctx.automation.enabled) {
       return;
     }
 
@@ -308,7 +308,7 @@ export const registerTalkEvents = (
   });
 
   on('player:meet-with-king', (player: Player, other: Player) => {
-    if (player !== ctx.player()) {
+    if (!ctx.view.owns(player)) {
       return;
     }
 

@@ -2,6 +2,7 @@ import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
 import { ObserverState } from './Observer';
+import { ObserverChoice } from './ObserverViews';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { RequirementData } from './lib/requirements';
@@ -114,8 +115,11 @@ declare global {
     // Watching a game nobody here plays (#607): the players to see it as, the one seen as, and whether the turns are
     //  held. Sent whenever any of that changes, before the viewed player's `gameData`.
     observer: TransportData<ObserverState, never>;
-    // The page's choice of player to see the game as.
-    observe: TransportData<never, { playerId: string }>;
+    // The page's choice of what to see the game as: some civilisations' game together, or the whole map (#613).
+    observe: TransportData<never, { view: ObserverChoice }>;
+    // A city a watcher opens, by its square (#613): answered in full, as `investigateCity` is sent, or `null` when
+    //  there is none there to open.
+    observeCity: TransportData<ObjectMap | null, { x: number; y: number }>;
     // Hold the turns between turns, and let them go again.
     pause: TransportData<never, null>;
     resume: TransportData<never, null>;

@@ -13,6 +13,7 @@ import PlayerTreasury from '@civ-clone/core-treasury/PlayerTreasury';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Talks, { TalksContext } from '../../src/js/Engine/Client/Talks';
 import Timeout from '../../src/js/Engine/Error/Timeout';
+import { stubView } from './lib/view';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 
@@ -40,6 +41,7 @@ process.on('exit', (code: number): void => {
 
 const ours = new Player(),
   rival = new Player(),
+  view = stubView(() => ours),
   treasury = new PlayerTreasury(ours, Gold),
   rules = new RuleRegistry(),
   sent: [string, any][] = [],
@@ -55,7 +57,7 @@ const ours = new Player(),
     transport as any,
     dataFilter,
     new ActionsState(),
-    () => ours
+    () => view
   ),
   // What each step does to our gold, standing in for a proposal resolved (`civ1-diplomacy`'s `give`), which raises no
   //  event.

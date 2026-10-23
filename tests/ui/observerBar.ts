@@ -1,8 +1,10 @@
-// Watching a game nobody here plays (#607), with the real components built under linkedom: the bar lists the players
-//  with the one being viewed checked, and its radios and button send `observe`, `pause` and `resume`; an `update` redraws
-//  it from the new state (Play and "paused" when held, a player gone); a watched game's ending records no Hall of Fame
+// Watching a game nobody here plays (#607, #613), with the real components built under linkedom: the bar offers the
+//  whole map or the civilizations, with a checkbox per player ticked as `view` says, and its radios, checkboxes and
+//  button send `observe`, `pause` and `resume` (the last tick can't be cleared); an `update` redraws it from the new
+//  state (Play and "paused" when held, a player gone, the whole map); a watched game's ending records no Hall of Fame
 //  entry and offers no Keep playing; and a `GameSession` given an observer skips the welcome and the leave guard, draws
-//  the bar in the map, redraws it on the worker's `observer`, and waits with `Observer.watching`.
+//  the bar in the map, redraws it and shows or hides the player's panel on the worker's `observer`, and waits with
+//  `Observer.watching`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -133,17 +135,57 @@ const players = [
   ],
   state = (overrides: Partial<ObserverState> = {}): ObserverState => ({
     players,
-    viewing: 'Player-1',
+    view: { kind: 'players', playerIds: ['Player-1'] },
     paused: false,
     ...overrides,
-  });
+  }),
+  world = { kind: 'world' } as const,
+  watching = (...playerIds: string[]) =>
+    ({ kind: 'players', playerIds } as const);
 
+// linkedom reflects `checked` inconsistently, and the bar sets both the property and the attribute: read the attribute,
+//  and set both as a click would.
 const radios = (bar: HTMLElement): HTMLInputElement[] =>
-    [...bar.querySelectorAll('input[type="radio"]')] as HTMLInputElement[],
-  checked = (bar: HTMLElement): string[] =>
+    [
+      ...bar.querySelectorAll('input[name="observe-kind"]'),
+    ] as HTMLInputElement[],
+  boxes = (bar: HTMLElement): HTMLInputElement[] =>
+    [
+      ...bar.querySelectorAll('input[name="observe-player"]'),
+    ] as HTMLInputElement[],
+  radio = (bar: HTMLElement, kind: string): HTMLInputElement =>
+    radios(bar).find((input) => input.value === kind) as HTMLInputElement,
+  // Which kind of view is chosen.
+  kind = (bar: HTMLElement): string[] =>
     radios(bar)
-      .filter((radio) => radio.hasAttribute('checked'))
-      .map((radio) => radio.value),
+      .filter((input) => input.hasAttribute('checked'))
+      .map((input) => input.value),
+  // Which civilizations are ticked.
+  checked = (bar: HTMLElement): string[] =>
+    boxes(bar)
+      .filter((box) => box.hasAttribute('checked'))
+      .map((box) => box.value),
+  // The property, as the bar reads it.
+  ticked = (bar: HTMLElement): string[] =>
+    boxes(bar)
+      .filter((box) => box.checked)
+      .map((box) => box.value),
+  tick = (box: HTMLInputElement, on: boolean): void => {
+    box.checked = on;
+
+    if (on) {
+      box.setAttribute('checked', '');
+    } else {
+      box.removeAttribute('checked');
+    }
+
+    box.dispatchEvent(new Event('change'));
+  },
+  choose = (input: HTMLInputElement): void => {
+    input.checked = true;
+    input.setAttribute('checked', '');
+    input.dispatchEvent(new Event('change'));
+  },
   labels = (bar: HTMLElement): string[] =>
     [...bar.querySelectorAll('label')].map((label) => label.textContent ?? ''),
   button = (bar: HTMLElement): HTMLButtonElement =>
@@ -280,6 +322,9 @@ const mount = (): ReturnType<typeof appElements> => {
   return appElements();
 };
 
+const playerInfo = (): HTMLElement =>
+  document.getElementById('playerDetails') as HTMLElement;
+
 const startSession = (observer?: () => ObserverState | null): void => {
   const elements = mount();
 
@@ -324,11 +369,13 @@ const run = async (): Promise<void> => {
             pause: 'Pause',
             paused: 'Paused',
             play: 'Play',
+            civilizations: 'Civilizations',
             player: '{{civilization}} ({{leader}})',
             'player_no-leader': '{{civilization}}',
             title: 'Observer',
             'view-as': 'View as',
             watching: 'Watching',
+            'whole-map': 'Whole map',
           },
           Welcome: {
             'you-have-risen': 'You have risen',
@@ -358,37 +405,116 @@ const run = async (): Promise<void> => {
     true
   );
   expect(
-    'there is a radio for each player, all of one group',
-    radios(element).map((radio) => [radio.name, radio.value]),
+    'there are two kinds of view, in one group',
+    radios(element).map((input) => [input.name, input.value]),
     [
-      ['observe', 'Player-1'],
-      ['observe', 'Player-2'],
-      ['observe', 'Player-3'],
+      ['observe-kind', 'world'],
+      ['observe-kind', 'players'],
     ]
   );
-  expect('the viewed player is checked', checked(element), ['Player-1']);
   expect(
-    'each is labelled with its civilization and leader, a leaderless one with its civilization alone',
-    labels(element),
-    ['Roman (Caesar)', 'Egyptian (RamessesII)', 'Zulu']
+    'the kinds are in a fieldset for the view',
+    element.querySelectorAll('fieldset.view input[name="observe-kind"]').length,
+    2
   );
   expect(
-    'each label is for its radio',
+    'there is a checkbox for each player',
+    boxes(element).map((box) => [box.type, box.name, box.value]),
+    [
+      ['checkbox', 'observe-player', 'Player-1'],
+      ['checkbox', 'observe-player', 'Player-2'],
+      ['checkbox', 'observe-player', 'Player-3'],
+    ]
+  );
+  expect('the civilizations kind is chosen', kind(element), ['players']);
+  expect('and as a property too', radio(element, 'players').checked, true);
+  expect('the viewed player is checked', checked(element), ['Player-1']);
+  expect('and as a property too', ticked(element), ['Player-1']);
+  expect(
+    'the kinds are labelled, then each player with its civilization and leader, a leaderless one with its civilization alone',
+    labels(element),
+    [
+      'Whole map',
+      'Civilizations',
+      'Roman (Caesar)',
+      'Egyptian (RamessesII)',
+      'Zulu',
+    ]
+  );
+  expect(
+    'each label is for its input',
     [...element.querySelectorAll('label')].map((label) =>
-      radios(element).some((radio) => radio.id === label.getAttribute('for'))
+      [...element.querySelectorAll('input')].some(
+        (input) => input.id === label.getAttribute('for')
+      )
     ),
-    [true, true, true]
+    [true, true, true, true, true]
   );
   expect('the button reads Pause', button(element).textContent, 'Pause');
   expect('nothing is said of being paused', status(element), '');
 
-  // Choosing another player to see the game as.
-  const second = radios(element)[1];
+  // Choosing the whole map.
+  choose(radio(element, 'world'));
 
-  second.dispatchEvent(new Event('change'));
+  expect('choosing the whole map sends observe for the world', sent, [
+    ['observe', { view: { kind: 'world' } }],
+  ]);
 
-  expect('choosing a player sends observe with their id', sent, [
-    ['observe', { playerId: 'Player-2' }],
+  sent.splice(0);
+
+  // Ticking another civilization to see it too.
+  tick(boxes(element)[1], true);
+
+  expect('ticking a player sends every player ticked', sent, [
+    [
+      'observe',
+      { view: { kind: 'players', playerIds: ['Player-1', 'Player-2'] } },
+    ],
+  ]);
+
+  sent.splice(0);
+
+  tick(boxes(element)[0], false);
+
+  expect('unticking one sends the ones left', sent, [
+    ['observe', { view: { kind: 'players', playerIds: ['Player-2'] } }],
+  ]);
+
+  sent.splice(0);
+
+  // The last tick can't be cleared: it is ticked again and nothing is sent.
+  tick(boxes(element)[1], false);
+
+  expect('unticking the last one sends nothing', sent, []);
+  expect('and leaves it ticked', ticked(element), ['Player-2']);
+
+  sent.splice(0);
+
+  // Back to the civilizations with none ticked: the first player's.
+  bar.update(state({ view: world }));
+  boxes(element).forEach((box) => {
+    box.checked = false;
+    box.removeAttribute('checked');
+  });
+  choose(radio(element, 'players'));
+
+  expect(
+    'choosing the civilizations with nobody ticked sends the first player',
+    sent,
+    [['observe', { view: { kind: 'players', playerIds: ['Player-1'] } }]]
+  );
+
+  sent.splice(0);
+
+  // Choosing the civilizations again with some ticked sends them all.
+  bar.update(state({ view: watching('Player-2', 'Player-3') }));
+  choose(radio(element, 'players'));
+
+  expect('choosing the civilizations sends the ones ticked', sent, [
+    [
+      'observe',
+      { view: { kind: 'players', playerIds: ['Player-2', 'Player-3'] } },
+    ],
   ]);
 
   sent.splice(0);
@@ -400,9 +526,11 @@ const run = async (): Promise<void> => {
   sent.splice(0);
 
   // Held between turns, and the worker saying who is now viewed.
-  bar.update(state({ paused: true, viewing: 'Player-2' }));
+  bar.update(state({ paused: true, view: watching('Player-2') }));
 
   expect('an update redraws who is viewed', checked(element), ['Player-2']);
+  expect('as a property too', ticked(element), ['Player-2']);
+  expect('with the civilizations kind chosen', kind(element), ['players']);
   expect('the button now reads Play', button(element).textContent, 'Play');
   expect('and says it is paused', status(element), 'Paused');
 
@@ -412,16 +540,19 @@ const run = async (): Promise<void> => {
 
   sent.splice(0);
 
-  // The pace with no change of view sends nothing, and a change comes from the redrawn radios.
-  radios(element)[2].dispatchEvent(new Event('change'));
+  // The pace with no change of view sends nothing, and a change comes from the redrawn checkboxes.
+  tick(boxes(element)[2], true);
 
-  expect('the redrawn radios send for their own player', sent, [
-    ['observe', { playerId: 'Player-3' }],
+  expect('the redrawn checkboxes send for their own players', sent, [
+    [
+      'observe',
+      { view: { kind: 'players', playerIds: ['Player-2', 'Player-3'] } },
+    ],
   ]);
 
   sent.splice(0);
 
-  bar.update(state({ paused: false, viewing: 'Player-2' }));
+  bar.update(state({ paused: false, view: watching('Player-2') }));
 
   expect(
     'letting the turns go again reads Pause with nothing said',
@@ -436,17 +567,20 @@ const run = async (): Promise<void> => {
   sent.splice(0);
 
   // A player gone.
-  bar.update(state({ players: players.slice(0, 2), viewing: 'Player-1' }));
+  bar.update(state({ players: players.slice(0, 2) }));
 
   expect(
-    'a player removed leaves their radio out',
-    radios(element).map((radio) => radio.value),
+    'a player removed leaves their checkbox out',
+    boxes(element).map((box) => box.value),
     ['Player-1', 'Player-2']
   );
   expect('with their label', labels(element), [
+    'Whole map',
+    'Civilizations',
     'Roman (Caesar)',
     'Egyptian (RamessesII)',
   ]);
+  expect('and the view redrawn', checked(element), ['Player-1']);
   expect(
     'and one bar still',
     parent.querySelectorAll('div.observer-bar').length,
@@ -461,9 +595,43 @@ const run = async (): Promise<void> => {
     [1, 1]
   );
 
-  bar.update(state({ viewing: null }));
+  // Several together, and the whole map.
+  bar.update(state({ view: watching('Player-1', 'Player-2') }));
 
-  expect('viewing no one checks no one', checked(element), []);
+  expect('several viewed together are all ticked', checked(element), [
+    'Player-1',
+    'Player-2',
+  ]);
+
+  const kept = boxes(element);
+
+  bar.update(state({ view: watching('Player-2') }));
+
+  expect(
+    'a change of view alone keeps the same checkboxes',
+    boxes(element).every((box, index) => box === kept[index]),
+    true
+  );
+  expect('and ticks the one viewed', ticked(element), ['Player-2']);
+
+  bar.update(state({ view: world }));
+
+  expect('the whole map chooses the world kind', kind(element), ['world']);
+  expect(
+    'as a property too',
+    [radio(element, 'world').checked, radio(element, 'players').checked],
+    [true, false]
+  );
+  expect('and ticks no one', checked(element), []);
+  expect('as a property too', ticked(element), []);
+
+  bar.update(state({ view: watching('Player-1') }));
+
+  expect(
+    'back to the civilizations',
+    [kind(element), checked(element)],
+    [['players'], ['Player-1']]
+  );
 
   // The ending of a game watched, and of one played.
   new GameOverWindow(details(), transport, { observer: true });
@@ -524,17 +692,39 @@ const run = async (): Promise<void> => {
     [1, ['Player-1']]
   );
   expect(
+    "the player's panel is shown for civilizations' views",
+    playerInfo().hidden,
+    false
+  );
+  expect(
     "the session listens for the worker's observer state",
     receivers.some(([name]) => name === 'observer'),
     true
   );
 
-  deliver('observer', state({ paused: true, viewing: 'Player-2' }));
+  deliver('observer', state({ paused: true, view: watching('Player-2') }));
 
   expect(
     'the bar is redrawn when the worker sends observer',
     [checked(map), button(map).textContent, status(map)],
     [['Player-2'], 'Play', 'Paused']
+  );
+  expect("and the player's panel is still shown", playerInfo().hidden, false);
+
+  deliver('observer', state({ paused: true, view: world }));
+
+  expect(
+    'the whole map redraws the bar and hides the panel',
+    [kind(map), checked(map), playerInfo().hidden],
+    [['world'], [], true]
+  );
+
+  deliver('observer', state({ paused: true, view: watching('Player-3') }));
+
+  expect(
+    "civilizations again show the player's panel",
+    [kind(map), checked(map), playerInfo().hidden],
+    [['players'], ['Player-3'], false]
   );
   expect(
     'and is still the one bar',
@@ -554,6 +744,23 @@ const run = async (): Promise<void> => {
     'a turn ending sets the waiting banner to Observer.watching',
     map.querySelector('.waiting')?.textContent,
     'Watching'
+  );
+
+  // A session that begins on the whole map.
+  startSession(() => state({ view: world }));
+
+  expect(
+    "a session begun on the whole map hides the player's panel and chooses the world",
+    [playerInfo().hidden, kind(document.getElementById('map') as HTMLElement)],
+    [true, ['world']]
+  );
+
+  deliver('observer', state({ view: watching('Player-1') }));
+
+  expect(
+    'and shows the panel once civilizations are viewed',
+    playerInfo().hidden,
+    false
   );
 
   // A game played, for comparison.

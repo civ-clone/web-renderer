@@ -1,4 +1,5 @@
 import { Tile, Unit, World as WorldData } from '../types';
+import { CityOpener } from '../lib/cityOpeners';
 import { off, on } from '@dom111/element';
 import ActiveUnit from '../components/Map/ActiveUnit';
 import Cities from '../components/Map/Cities';
@@ -31,6 +32,8 @@ export type MapViewDeps = {
   activateUnit: (unit: Unit) => void;
   // Read on every minimap update, so always the unit active now.
   activeUnit: () => Unit | null;
+  // How a city opens from the map (`lib/cityOpeners.ts`): the player's own, or a watcher's.
+  cityOpener: CityOpener;
   mapPortal: HTMLCanvasElement;
   minimapCanvas: HTMLCanvasElement;
   options: { get(key: string, defaultValue?: any): any };
@@ -66,6 +69,7 @@ export class MapView {
   constructor({
     activateUnit,
     activeUnit,
+    cityOpener,
     mapPortal,
     minimapCanvas,
     options,
@@ -83,6 +87,7 @@ export class MapView {
         transport,
         mapPortal,
         {
+          cityOpener,
           lockVerticalEdges: options.get('lockVerticalEdges', false),
           playerId,
           scale: options.get('mapScale', tileset.defaultScale),

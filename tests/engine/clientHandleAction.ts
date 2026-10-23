@@ -54,6 +54,7 @@ import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import type Unit from '@civ-clone/core-unit/Unit';
 import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import Talks from '../../src/js/Engine/Client/Talks';
+import { stubView } from './lib/view';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 
 const failures: string[] = [];
@@ -211,6 +212,7 @@ const patchesCalls: string[] = [],
   plainContext = (overrides: Partial<ActionContext> = {}): ActionContext =>
     ({
       player: () => player,
+      view: stubView(() => player, { getByTile: () => null, filter: () => [] }),
       patches: {
         city: () => patchesCalls.push('city'),
         unit: () => patchesCalls.push('unit'),
@@ -220,7 +222,6 @@ const patchesCalls: string[] = [],
       cities: { getBy: () => [], getByPlayer: () => [] },
       cityImprovements: { getByCity: () => [] },
       playerTreasuries: { getBy: () => [] },
-      playerWorlds: { getByPlayer: () => [] },
       rules: {},
       ...overrides,
     } as any);
@@ -298,12 +299,13 @@ const transport: any = {
 };
 
 // The hold the action listener puts on flushes while the action is handled, as it is: a flush from the talks is held.
-const patches = new PlayerPatches(
-  transport,
-  (() => ({})) as any,
-  new ActionsState(),
-  () => player
-);
+const patchesView = stubView(() => player),
+  patches = new PlayerPatches(
+    transport,
+    (() => ({})) as any,
+    new ActionsState(),
+    () => patchesView
+  );
 
 const tile = { id: () => 'tile' },
   playerTile = { id: () => 'player-tile', tile: () => tile },
@@ -413,7 +415,10 @@ const run = async (): Promise<void> => {
       },
       talkToPlayersMet,
     } as any,
-    playerWorlds: { getByPlayer: () => [playerTile] } as any,
+    view: stubView(() => player, {
+      getByTile: () => null,
+      filter: (filter: (tile: any) => boolean) => [playerTile].filter(filter),
+    }),
   });
 
   player.actions = () => [new ActiveUnit(player, unit)];

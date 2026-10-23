@@ -8,6 +8,8 @@ import Talks from '../Talks';
 export type ActionContext = Pick<
   ClientContext,
   | 'player'
+  // What is known of each square, which a target tile is found among.
+  | 'view'
   | 'patches'
   // The unit the UI has the actions of (#323), which a unit's action changes.
   | 'actions'
@@ -18,7 +20,6 @@ export type ActionContext = Pick<
     cities: 'getBy' | 'getByPlayer';
     cityImprovements: 'getByCity';
     playerTreasuries: 'getBy';
-    playerWorlds: 'getByPlayer';
   }> & {
     // The talks a unit's action waits for, and those it offers with the players it met on the way. `EndTurn` waits for
     //  those under way too.

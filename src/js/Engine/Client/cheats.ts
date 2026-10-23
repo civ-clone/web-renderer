@@ -14,6 +14,8 @@ import answer from '../answer';
 export type CheatsContext = Pick<
   ClientContext,
   | 'player'
+  // Which players are our own, and what is known of each square.
+  | 'view'
   | 'patches'
   // What the player may see, which their research, treasury or a unit goes through when a cheat changes it.
   | 'dataFilter'
@@ -24,7 +26,6 @@ export type CheatsContext = Pick<
     players: 'entries';
     playerResearches: 'getByPlayer';
     playerTreasuries: 'getByPlayerAndType';
-    playerWorlds: 'getByPlayer';
     units: 'getBy';
   }>;
 
@@ -111,7 +112,7 @@ export const registerCheats = (
   disposers.push(
     transport.receive('cheat', ({ name, value }): void => {
       if (name === 'RevealMap') {
-        const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player());
+        const playerWorld = ctx.view.world();
 
         // A bit nasty... I wonder how slow this data transfer will be...
         const [tile] = playerWorld.entries();
@@ -153,7 +154,7 @@ export const registerCheats = (
         // Rivals' `PlayerResearch` is never sent to the page, so patching it
         // would leak hidden state and hand the frontend a ref it never
         // received (#46).
-        if (target === ctx.player()) {
+        if (ctx.view.owns(target)) {
           ctx.patches.add(
             playerResearch.id(),
             playerResearch.toPlainObject(
@@ -182,7 +183,7 @@ export const registerCheats = (
         playerTreasury.add(value.amount);
 
         // As above: a rival's `PlayerTreasury` stays off the wire (#46).
-        if (target === ctx.player()) {
+        if (ctx.view.owns(target)) {
           ctx.patches.add(
             playerTreasury.id(),
             playerTreasury.toPlainObject(
@@ -210,7 +211,7 @@ export const registerCheats = (
 
         // A rival's unit is changed, but nothing is sent: the frontend only holds it as the stand-in the map has for it,
         //  under another id, and a patch keyed by the unit's own would hand it a ref it never had (#494).
-        if (unit.player() === ctx.player()) {
+        if (ctx.view.owns(unit.player())) {
           ctx.patches.unit(unit);
 
           // Moves given or taken make the unit one with something to do, or not (#494).
@@ -220,7 +221,7 @@ export const registerCheats = (
 
       if (name === 'CreateUnit') {
         const target = resolveCheatPlayer(ctx, value.player),
-          [firstTile] = ctx.playerWorlds.getByPlayer(ctx.player()).entries();
+          [firstTile] = ctx.view.world().entries();
 
         if (!target || !firstTile) {
           return;
@@ -237,7 +238,7 @@ export const registerCheats = (
         new UnitType(null, target, world.get(value.x, value.y));
 
         // Our own new unit also needs our actions resent, or it can't be activated until something else resends them.
-        if (target === ctx.player()) {
+        if (ctx.view.owns(target)) {
           ctx.patches.actions();
         }
       }
@@ -280,7 +281,7 @@ export const registerCheats = (
         .map((player) => ({
           id: player.id(),
           civilization: player.civilization().sourceClass().name,
-          isLocal: player === ctx.player(),
+          isLocal: ctx.view.owns(player),
         }))
     )
   );

@@ -6,7 +6,6 @@ import {
   Player,
 } from '../types';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
-import City from './City';
 import Element from '@dom111/element';
 import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
@@ -83,7 +82,7 @@ const buildCityRow = async (
           click(event: MouseEvent) {
             event.stopPropagation();
 
-            new City(city, portal, transport);
+            portal.openCity(city);
           },
         }
       ),

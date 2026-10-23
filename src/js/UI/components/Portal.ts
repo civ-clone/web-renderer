@@ -15,6 +15,8 @@ import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
 import projectionFor from '../lib/projectionFor';
+import { City as CityData } from '../types';
+import { CityOpener } from '../lib/cityOpeners';
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
@@ -24,6 +26,7 @@ export interface IPortal {
   getLayers(LayerType: typeof Map): Map[];
   isVisible(x: number, y: number, margin?: number): boolean;
   lockVerticalEdges(): boolean;
+  openCity(city: CityData): boolean;
   playerId(): string | null;
   render(): void;
   scale(): number;
@@ -39,6 +42,8 @@ export interface IPortal {
 }
 
 export interface PortalSettings {
+  // How a city opens from here, and which do (`lib/cityOpeners.ts`): none, for a portal nothing opens from.
+  cityOpener: CityOpener | null;
   lockVerticalEdges: boolean;
   playerId: string | null;
   scale: number;
@@ -50,6 +55,7 @@ type PortalOptions = {
 };
 
 const defaultPortalOptions: PortalSettings = {
+  cityOpener: null,
   lockVerticalEdges: false,
   playerId: null,
   scale: currentTileset().defaultScale,
@@ -78,6 +84,7 @@ export class Portal
 {
   #canvas: HTMLCanvasElement;
   #center: Coordinate = { x: 0, y: 0 };
+  #cityOpener: CityOpener | null;
   #context: CanvasRenderingContext2D;
   // Nothing has been composited yet, so the first render cannot be a partial
   // one however little the layers claim to have changed.
@@ -120,6 +127,7 @@ export class Portal
 
     this.#world = world;
     this.#canvas = canvas;
+    this.#cityOpener = settings.cityOpener;
     this.#lockVerticalEdges = settings.lockVerticalEdges;
     this.#playerId = settings.playerId;
     this.#tileSize = settings.tileSize;
@@ -210,6 +218,21 @@ export class Portal
 
   lockVerticalEdges(): boolean {
     return this.#lockVerticalEdges;
+  }
+
+  /**
+   * Opens `city`'s screen the way this portal's game opens one, from the map, a report or a notice alike, and says
+   * whether it did: a player's own city opens, a watcher's any city of a civilisation watched (#613), and nothing
+   * opens from a portal given no opener.
+   */
+  openCity(city: CityData): boolean {
+    if (this.#cityOpener === null || !this.#cityOpener.opens(city, this)) {
+      return false;
+    }
+
+    this.#cityOpener.open(city, this);
+
+    return true;
   }
 
   playerId(): string | null {

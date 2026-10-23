@@ -37,6 +37,7 @@ import { DataFilter } from './visibilityFilter';
 import Notifier from './Notifier';
 import PlayerPatches from './PlayerPatches';
 import Talks from './Talks';
+import { View } from './View';
 
 // The engine's registries the client reads (see `registries.ts`), typed as narrowly as its modules read them: the union
 //  of what each one reads (see `Registries` below).
@@ -68,8 +69,10 @@ export interface ClientRegistries {
 }
 
 export interface ClientContext extends ClientRegistries {
-  // The player the client is for.
+  // The player the client is for: the view's primary player.
   player(): Player;
+  // Whose units and cities are "own", and what is known of each square (#613). Today the player, and what they know.
+  view: View;
   transport: Transport<TransportDataMap>;
   // The player's actions as the frontend was last sent them, and the unit it has the actions of (#411, #323).
   actions: ActionsState;

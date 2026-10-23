@@ -23,6 +23,8 @@ import { describeError } from '../answer';
 export type TurnHandoverContext = Pick<
   ClientContext,
   | 'player'
+  // Which players are our own, and what is known of each square.
+  | 'view'
   | 'transport'
   | 'dataFilter'
   | 'actions'
@@ -37,7 +39,7 @@ export type TurnHandoverContext = Pick<
   | 'turn'
   | 'year'
 > &
-  Registries<{ difficulties: 'entries'; playerWorlds: 'getByPlayer' }>;
+  Registries<{ difficulties: 'entries' }>;
 
 export class TurnHandover {
   // Stops the `action` receiver, for `dispose`.
@@ -121,15 +123,20 @@ export class TurnHandover {
     // Through the visibility filter, as every patch is. Sent as it was, `toPlainObject` was called on it with no filter, so
     //  every other player went out in full, and with them their `world`: every tile each civilization knows. Reached from
     //  our units' and cities' `player`/`originalPlayer`, a tile's `units`/`city`/`workedBy` and a unit's actions (#328).
+    // The payload's player is the view's own stand-in for it (#613): it goes as it is, not through the filter, which
+    //  would take a player the view doesn't own for a foreign one (as `PlayerPatches.wholePlayer` does with its own).
+    const payload = this.#context.view.payload(false),
+      filter = this.#context.dataFilter(undefined, { tilesInFull: true });
+
     this.#context.transport.send(
       'gameData',
       new TransferObject(
-        this.#context.player(),
+        payload,
         this.#context.turn,
         this.#context.year,
         this.#context.difficulties.entries()[0] ?? null
-      ).toPlainObject(
-        this.#context.dataFilter(undefined, { tilesInFull: true })
+      ).toPlainObject((object: any) =>
+        object === payload ? object : filter(object)
       )
     );
 
@@ -145,15 +152,13 @@ export class TurnHandover {
   //  is told once the patch with it has gone.
   unitHalted(unit: Unit, target: Tile): void {
     if (
-      unit.player() !== this.#context.player() ||
+      !this.#context.view.owns(unit.player()) ||
       this.#context.automation.enabled
     ) {
       return;
     }
 
-    const playerTile = this.#context.playerWorlds
-      .getByPlayer(this.#context.player())
-      .getByTile(target);
+    const playerTile = this.#context.view.tile(target);
 
     if (!playerTile) {
       return;

@@ -7,7 +7,7 @@ import { ClientContext } from './ClientContext';
 
 export type AutomationContext = Pick<
   ClientContext,
-  | 'player'
+  | 'view'
   // Whose turn it is.
   | 'currentPlayers'
 >;
@@ -36,11 +36,12 @@ export class Automation {
     this.#enabled = !!enabled;
   }
 
-  // Whether it is our turn, automated or not.
+  // Whether it is our turn, automated or not: the primary player's, whose whole state goes at the end of it. Another
+  //  owner's turn (a view of several, #613) isn't, so its moves are patched one by one.
   ourTurn(): boolean {
     const [currentPlayer] = this.#context.currentPlayers.entries();
 
-    return currentPlayer === this.#context.player();
+    return currentPlayer === this.#context.view.primary();
   }
 
   // Whether this is our turn, automated: the whole player goes at the end of it, so what each of its moves changes of
