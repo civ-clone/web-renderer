@@ -238,7 +238,8 @@ const actionContext: any = {
 
 let throwing = false;
 
-const turnHandover = new TurnHandover({
+// Its context, which a check below changes after the hand-over is made, as the client's `handleAction` can be.
+const handoverContext = {
   player: () => player,
   transport,
   dataFilter,
@@ -267,7 +268,9 @@ const turnHandover = new TurnHandover({
   } as any,
   turn: { id: () => 'turn' } as any,
   year: { id: () => 'year' } as any,
-});
+};
+
+const turnHandover = new TurnHandover(handoverContext);
 
 notifier.holdWhile(() => turnHandover.holdsNotifications());
 registerTurnHandoverEvents(engine, turnHandover);
@@ -515,10 +518,23 @@ const run = async (): Promise<void> => {
     'turnStarted',
     'talks.handOver',
   ]);
+  // `handleAction` is the context's as it is when the action comes, not as it was when the hand-over was made (#503).
+  const madeWith = handoverContext.handleAction;
+
+  handoverContext.handleAction = (...args: any[]): Promise<boolean> => {
+    record('handleAction, as it is now');
+
+    return madeWith(...args);
+  };
   actions = () => [new EndTurn(player, null)];
   sendAction({ name: 'EndTurn' });
   await third;
-  events.length = 0;
+  handoverContext.handleAction = madeWith;
+  expect(
+    "the context's handleAction is read as each action comes",
+    untimed(events.splice(0)).slice(0, 3),
+    ['patches.playerState', 'handleAction, as it is now', 'settled(true)']
+  );
 
   await throughTheClient();
 

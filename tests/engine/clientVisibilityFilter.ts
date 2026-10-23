@@ -1,7 +1,9 @@
 // The parts of the client's visibility filter that need no game (#449), checked with stand-in objects: a tile goes as
 //  a ref unless asked for in full or the caller's filter sends something else, a `Busy` rule goes by name, a player's
 //  action serialised anywhere but where the actions are sent forgets the ones held, and the player's own build goes
-//  without `available`, read against the client's player as it is now rather than when the filter was made.
+//  without `available`, read against the client's player as it is now rather than when the filter was made. Then what
+//  goes through the caller's filter and what doesn't (#503): another player goes as the stand-in the player knows, our
+//  own player, a unit of ours without its actions and our build without `available` each go through it.
 
 import Busy from '@civ-clone/core-unit/Rules/Busy';
 import type { DataObject } from '@civ-clone/core-data-object/DataObject';
@@ -9,6 +11,9 @@ import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
+import Unit from '@civ-clone/core-unit/Unit';
+import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
+import { isUnitWithoutActions } from '../../src/js/Engine/lib/unitWithoutActions';
 import ActionsState from '../../src/js/Engine/Client/ActionsState';
 import {
   filterPlayerTile,
@@ -71,8 +76,8 @@ expect(
   standIn
 );
 
-const me = make(Player),
-  them = make(Player);
+const me = make(Player, { civilization: () => 'ours' }),
+  them = make(Player, { civilization: () => 'theirs' });
 let current = me;
 
 const actions = new ActionsState(),
@@ -166,6 +171,75 @@ expect(
   dataFilter(identity)(sent) === sent,
   true
 );
+
+// The caller's filter, with what it was handed marked, to tell what went through it from what didn't.
+const marking = (object: any) => ({ marked: object });
+
+expect(
+  "our build's stand-in goes through the caller's filter",
+  dataFilter(marking)(asData(build)).marked === sent,
+  true
+);
+
+expect(
+  "our own player goes through the caller's filter",
+  dataFilter(marking)(asData(me)).marked === me,
+  true
+);
+
+const theirs = dataFilter(marking)(asData(them));
+
+expect(
+  "another player goes as the stand-in we know, not through the caller's filter",
+  [
+    theirs instanceof UnknownPlayer,
+    theirs.civilization?.(),
+    dataFilter()(asData(them)) === theirs,
+  ],
+  [true, 'theirs', true]
+);
+
+// A unit of ours, which can act until it is told it can't.
+class Warrior extends Unit {}
+
+let canAct = true;
+
+const warrior = make(Warrior, {
+    player: () => me,
+    keys: () => ['id', 'actions', 'actionsForNeighbours', 'moves'],
+    sourceClass: () => Warrior,
+    active: () => canAct,
+    moves: () => ({ value: () => 1 }),
+    id: () => 'Warrior-1',
+  }),
+  withoutActions = dataFilter(marking)(asData(warrior)).marked;
+
+expect(
+  "a unit of ours goes without its actions, through the caller's filter",
+  [
+    withoutActions !== warrior && isUnitWithoutActions(withoutActions),
+    withoutActions?.keys(),
+  ],
+  [true, ['_', '__', 'id', 'moves']]
+);
+
+actions.unitWithActions = warrior;
+
+expect(
+  "the one the UI has the actions of goes as it is, through the caller's filter",
+  dataFilter(marking)(asData(warrior)).marked === warrior,
+  true
+);
+
+canAct = false;
+
+expect(
+  'and without them once it can no longer act',
+  isUnitWithoutActions(dataFilter(marking)(asData(warrior)).marked),
+  true
+);
+
+actions.unitWithActions = null;
 
 current = them;
 

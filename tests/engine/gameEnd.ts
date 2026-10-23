@@ -3,7 +3,8 @@
 //
 //  - `retired`: Game → Retire sends the ending with your score and rating, the turn loop's result is pending until
 //    Keep playing, and afterwards the score is final ("scoring completed"), a second Retire shows the same ending,
-//    and being destroyed after that still sends the archeologists' ending.
+//    and being destroyed after that still sends the archeologists' ending. A game loaded while the ending waits for
+//    Keep playing shows it again, and one loaded after does not (#503).
 //  - `destroyed`: losing every unit before founding a city destroys your civilization, which sends the archeologists'
 //    ending with no score and no Keep playing.
 
@@ -78,10 +79,37 @@ const retired = async (): Promise<void> => {
     fail('the game ended, but nothing is waiting for Keep playing');
   }
 
+  // A game saved now ends again as it loads: `loadGame` says it has loaded once the client is made.
+  engine.emit('game:loaded');
+
+  const resent = (sent.gameOver ?? []).splice(1);
+
+  if (
+    resent.length !== 1 ||
+    JSON.stringify(resent[0]) !== JSON.stringify(ending)
+  ) {
+    fail(
+      `a game loaded before Keep playing sent ${JSON.stringify(
+        resent
+      )}, not the same ending again, once`
+    );
+  }
+
   handlers.gameContinue(null);
 
   if (gameResultRegistryInstance.pending()) {
     fail('Keep playing left the game waiting');
+  }
+
+  // Once kept playing, a game saved and loaded goes on.
+  engine.emit('game:loaded');
+
+  if ((sent.gameOver ?? []).length !== 1) {
+    fail(
+      `a game loaded after Keep playing sent the ending again: ${JSON.stringify(
+        sent.gameOver
+      )}`
+    );
   }
 
   handlers.civilizationScore(null);
@@ -126,7 +154,7 @@ const retired = async (): Promise<void> => {
   }
 
   console.log(
-    `PASS gameEnd retired (the ending, Keep playing, then a final score, and destroyed afterwards: ${JSON.stringify(
+    `PASS gameEnd retired (the ending, again as the game loads, Keep playing, then a final score, and destroyed afterwards: ${JSON.stringify(
       ending
     )})`
   );
