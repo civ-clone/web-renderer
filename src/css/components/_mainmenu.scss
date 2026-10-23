@@ -23,6 +23,21 @@
     position: absolute;
     transition: opacity 1.5s 0.5s;
 
+    // New Game and its Customize button side by side, one under the other when there isn't the width (#605).
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+
+      button {
+        flex: 1 1 auto;
+        width: auto;
+      }
+
+      .secondary {
+        font-weight: normal;
+      }
+    }
+
     button {
       appearance: none;
       background: none;
@@ -61,4 +76,48 @@
   display: flex;
   justify-content: space-between;
   margin: 0.5rem 0.5rem 0;
+}
+
+.game-setup {
+  .option {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.5rem 0.5rem 0;
+  }
+
+  details.advanced {
+    margin: 0.5rem;
+
+    summary {
+      cursor: pointer;
+    }
+  }
+
+  h4 {
+    margin: 1rem 0.5rem 0;
+  }
+
+  table.seats {
+    border-collapse: collapse;
+    margin: 0.5rem;
+    width: calc(100% - 1rem);
+
+    th,
+    td {
+      padding: 0.25rem;
+      text-align: left;
+    }
+
+    input[type='text'] {
+      width: 8em;
+    }
+
+    .remove {
+      margin: 0;
+    }
+  }
+
+  .actions {
+    margin: 0 0.5rem;
+  }
 }
