@@ -665,8 +665,6 @@ export class GameSetupWindow extends Window {
     );
 
     this.#addSeat.disabled = this.#seats.length >= this.#maxSeats();
-    // A game with no human seat needs the observer (#607) to be watched: until then it can't be started here.
-    this.#startButton.disabled = !humanSeated;
 
     if (focused) {
       const row = this.#seatsBody.children[focused.row];

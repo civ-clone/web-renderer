@@ -9,7 +9,8 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import answer, { describeError } from './answer';
-import loadGame from './loadGame';
+import loadGame, { HUMAN_CLIENT } from './loadGame';
+import Observer from './Observer';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
@@ -45,6 +46,7 @@ type ResolvedSeat = {
 export class Game implements IGame {
   #automateLocalPlayer: boolean = false;
   #eventsBound: boolean = false;
+  #observer: Observer | null = null;
   #localPlayerClient: DataTransferClient | null = null;
   #transport: Transport<TransportDataMap>;
 
@@ -86,7 +88,7 @@ export class Game implements IGame {
 
       const notice = playerProgress(
         player,
-        this.#localPlayerClient?.player() ?? null,
+        this.#localPlayerClient?.player() ?? this.#observer?.player() ?? null,
         (reader: Player, other: Player): boolean =>
           hasMet(reader, other, registries)
       );
@@ -277,6 +279,20 @@ export class Game implements IGame {
     ] as unknown as (new (player: Player) => Client)[];
   }
 
+  // A watched game stops at its ending, as a played one does, for the page to see it (#606): with every client a
+  //  computer's the game would otherwise call its scoring complete and run on. A played game carries on as before.
+  #stopAtEnding(observed: boolean): void {
+    const rule = defaultGame.rules.getById(
+      'civ1-game-end:game-over/carry-on-unattended'
+    );
+
+    if (observed) {
+      rule?.disable();
+    } else {
+      rule?.enable();
+    }
+  }
+
   // The AI client a computer seat asked for, by class name; the host's own default when it asked for none.
   #aiClientType(name?: string): new (player: Player) => Client {
     if (name === undefined) {
@@ -321,7 +337,28 @@ export class Game implements IGame {
     });
   }
 
-  #createClient(player: Player, seat: Seat): Client {
+  // A watched game's computer players give the worker a moment before each turn they take (#607): an all-computer
+  //  turn loop never otherwise leaves its promise chain, so a `pause` from the page would wait for good. The class
+  //  keeps its name, which a save records.
+  #paced(
+    AIClientType: new (player: Player) => Client
+  ): new (player: Player) => Client {
+    const Paced = class extends (AIClientType as new (
+      player: Player
+    ) => Client) {
+      async takeTurn(): Promise<any> {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        return super.takeTurn();
+      }
+    };
+
+    Object.defineProperty(Paced, 'name', { value: AIClientType.name });
+
+    return Paced;
+  }
+
+  #createClient(player: Player, seat: Seat, paced: boolean = false): Client {
     // The barbarians (#169) are never the human's: `civ1-barbarians` spawns their player, and it asks for a client
     //  with `player:spawned` like any player added mid-game.
     if (isBarbarian(player)) {
@@ -329,7 +366,9 @@ export class Game implements IGame {
     }
 
     if (seat.kind !== 'human') {
-      return new (this.#aiClientType(seat.ai))(player);
+      const AIClientType = this.#aiClientType(seat.ai);
+
+      return new (paced ? this.#paced(AIClientType) : AIClientType)(player);
     }
 
     // One human player on this transport until each seat has its own (#161): a second one, in a seat list or a
@@ -357,14 +396,31 @@ export class Game implements IGame {
    * settlers never run. See `loadGame`.
    */
   load(file: SaveGame): void {
+    // A save with no human in it is watched, as a game set up without one is (#607): the observer sees it as its
+    //  first civilization once it is back, since a loaded game doesn't start. A file with no clients at all is left
+    //  to the load to refuse (#470).
+    const observed =
+      Array.isArray(file.clients) &&
+      !file.clients.some(({ module }) => module === HUMAN_CLIENT);
+
+    this.#observer?.dispose();
+    this.#observer = observed ? new Observer(this.#transport) : null;
+
     import('../plugins')
-      .then(() =>
-        loadGame(
+      .then(() => {
+        this.#stopAtEnding(observed);
+
+        return loadGame(
           file,
           (player: Player, human: boolean): Client =>
-            this.#createClient(player, { kind: human ? 'human' : 'computer' })
-        )
-      )
+            this.#createClient(
+              player,
+              { kind: human ? 'human' : 'computer' },
+              observed
+            ),
+          () => this.#observer?.observeFirst()
+        );
+      })
       .then((): void =>
         this.#transport.send('notification', `loaded '${file.meta.name}'`)
       )
@@ -389,6 +445,14 @@ export class Game implements IGame {
       return;
     }
 
+    // A game nobody here plays is watched instead (#607): the page sees it as one of its players, and can hold the
+    //  turns. Made before the engine starts, so it hears the game start.
+    const observed = !seats.some(({ seat }) => seat.kind === 'human');
+
+    // Whatever the game before this one had: a played game isn't watched.
+    this.#observer?.dispose();
+    this.#observer = observed ? new Observer(this.#transport) : null;
+
     engine.on('engine:start', (): void => {
       // The manifest is what `save` writes into the file and `hydrate` checks
       // it against, and the class registry is what turns a saved `type` back
@@ -398,6 +462,8 @@ export class Game implements IGame {
       registerClasses(defaultGame);
       registerDiplomacyClasses(defaultGame);
       registerBarbarianClasses(defaultGame);
+
+      this.#stopAtEnding(observed);
     });
 
     engine.on('engine:start', (): void => {
@@ -416,7 +482,7 @@ export class Game implements IGame {
       // The seats the game was set up with (#604), or the `players` count as one human and the rest computers.
       seats.forEach(({ seat, choice }: ResolvedSeat): void => {
         const player = new Player(),
-          client = this.#createClient(player, seat);
+          client = this.#createClient(player, seat, observed);
 
         applySeatChoice(player, choice, defaultGame);
 

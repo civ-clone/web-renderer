@@ -206,11 +206,15 @@ export const chooseDifficulty = async (game = defaultGame): Promise<void> => {
 
 export const loadGame = async (
   file: SaveGame,
-  createClient: (player: Player, human: boolean) => Client
+  createClient: (player: Player, human: boolean) => Client,
+  // Once the game is back and before it moves: an observer (#607) sends its first view from here.
+  beforeResume: () => void = () => {}
 ): Promise<void> => {
   restoreGame(file, createClient);
 
   await chooseDifficulty(defaultGame);
+
+  beforeResume();
 
   resumeGame();
 };

@@ -318,6 +318,14 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.WorldSize.normal': 'Normal ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.large': 'Large ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.huge': 'Huge ({{width}} × {{height}})',
+  'Observer.pause': 'Pause',
+  'Observer.paused': 'Paused between turns',
+  'Observer.play': 'Play',
+  'Observer.player': '{{civilization}} ({{leader}})',
+  'Observer.player_no-leader': '{{civilization}}',
+  'Observer.title': 'Watching the game',
+  'Observer.view-as': 'See the game as',
+  'Observer.watching': 'Watching: the computer players are taking their turns…',
 
   'Notification.title': 'Notification',
 

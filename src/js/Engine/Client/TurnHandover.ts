@@ -41,7 +41,7 @@ export type TurnHandoverContext = Pick<
 
 export class TurnHandover {
   // Stops the `action` receiver, for `dispose`.
-  #actionDisposer: TransportDisposer | null;
+  #actionDisposer: TransportDisposer | null = null;
   #context: TurnHandoverContext;
   // Set by `dispose`: a turn taken from then on is never handed over.
   #disposed: boolean = false;
@@ -59,8 +59,16 @@ export class TurnHandover {
   #listener: ((...args: any[]) => Promise<void>) | null = null;
   #sentInitialData: boolean = false;
 
-  constructor(context: TurnHandoverContext) {
+  constructor(
+    context: TurnHandoverContext,
+    // An observer's client (#607) sends the player's state but acts on nothing: it never listens for `action`s.
+    { listenForActions = true }: { listenForActions?: boolean } = {}
+  ) {
     this.#context = context;
+
+    if (!listenForActions) {
+      return;
+    }
 
     this.#actionDisposer = context.transport.receive(
       'action',

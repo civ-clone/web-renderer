@@ -1,6 +1,7 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
+import { ObserverState } from './Observer';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { RequirementData } from './lib/requirements';
@@ -110,6 +111,14 @@ declare global {
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     // The player's Civilization Score (#149).
     civilizationScore: TransportData<CivilizationScore, null>;
+    // Watching a game nobody here plays (#607): the players to see it as, the one seen as, and whether the turns are
+    //  held. Sent whenever any of that changes, before the viewed player's `gameData`.
+    observer: TransportData<ObserverState, never>;
+    // The page's choice of player to see the game as.
+    observe: TransportData<never, { playerId: string }>;
+    // Hold the turns between turns, and let them go again.
+    pause: TransportData<never, null>;
+    resume: TransportData<never, null>;
     // The civilizations still to be chosen, with their leaders, for the game setup (#604).
     civilizations: TransportData<CivilizationOption[], null>;
     // The difficulty levels the rules offer, for the new game menu (#173).

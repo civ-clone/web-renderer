@@ -10,6 +10,8 @@ import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
+import { filterToReference } from './Client/refs';
+import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Transport from './Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import ActionsState from './Client/ActionsState';
@@ -68,8 +70,13 @@ export class DataTransferClient extends Client implements IClient {
     transport: Transport<TransportDataMap>,
     {
       automationEnabled = false,
+      readOnly = false,
     }: {
       automationEnabled?: boolean;
+      // An observer's view of the player (#607): everything the player is sent, nothing the UI could do as them. No
+      //  cheats, no `action`s, no talks, no retiring or keeping playing, and the notifications are never held for a
+      //  hand-over that never comes. The client isn't the player's in the `ClientRegistry`: their own client plays.
+      readOnly?: boolean;
     } = {}
   ) {
     super(player);
@@ -120,8 +127,12 @@ export class DataTransferClient extends Client implements IClient {
 
     // The turn handed to the UI and back: it listens for the UI's `action`s, and holds our notifications until the
     //  hand-over (see `Client/TurnHandover.ts`).
-    this.#turnHandover = new TurnHandover(this.#context);
-    notifier.holdWhile(() => this.#turnHandover.holdsNotifications());
+    this.#turnHandover = new TurnHandover(this.#context, {
+      listenForActions: !readOnly,
+    });
+    notifier.holdWhile(
+      () => !readOnly && this.#turnHandover.holdsNotifications()
+    );
 
     // In this order, which is the order of the receivers and the engine listeners: the cheats and the lists the cheat
     //  menu asks for (`Client/cheats.ts`); what the UI asks for (`Client/requests.ts`); the talks' `unit:moved` before
@@ -136,22 +147,32 @@ export class DataTransferClient extends Client implements IClient {
       this.#disposers.push(() => engineInstance.off(event, listener));
     };
 
-    this.#disposers.push(
-      registerCheats(transport, this.#context),
-      registerRequests(transport, this.#context)
-    );
+    if (!readOnly) {
+      this.#disposers.push(registerCheats(transport, this.#context));
+    }
+
+    this.#disposers.push(registerRequests(transport, this.#context));
 
     on('engine:plugins:load:failed', (packagePath, error) => {
       console.log(packagePath + ' failed to load');
       console.error(error);
     });
 
-    this.#disposers.push(
-      registerTalkEvents(engineInstance, this.#context),
-      registerTurnHandoverEvents(engineInstance, this.#turnHandover),
-      registerPatchEvents(engineInstance, this.#context),
-      registerDiplomatEvents(engineInstance, this.#context)
-    );
+    if (!readOnly) {
+      this.#disposers.push(
+        registerTalkEvents(engineInstance, this.#context),
+        registerTurnHandoverEvents(engineInstance, this.#turnHandover)
+      );
+    }
+
+    this.#disposers.push(registerPatchEvents(engineInstance, this.#context));
+
+    // A Diplomat's report opens a window on the page: not for a watcher.
+    if (!readOnly) {
+      this.#disposers.push(
+        registerDiplomatEvents(engineInstance, this.#context)
+      );
+    }
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
@@ -161,7 +182,7 @@ export class DataTransferClient extends Client implements IClient {
     });
 
     this.#disposers.push(
-      registerGameEnd(engineInstance, this.#context),
+      registerGameEnd(engineInstance, this.#context, { readOnly }),
       registerNotifications(engineInstance, this.#context)
     );
   }
@@ -240,6 +261,27 @@ export class DataTransferClient extends Client implements IClient {
     }
 
     this.#turnHandover.sendInitialData();
+  }
+
+  /**
+   * Send the player whole again, as a hand-over does on a later turn, with the turn and the year: what an observer's
+   * client (#607) does as each turn ends, having no hand-over of its own.
+   */
+  refresh(): void {
+    // A client done with sends nothing more (`dispose`).
+    if (this.#disposed) {
+      return;
+    }
+
+    const { patches, turn, year } = this.#context;
+
+    patches.update(turn.id(), () => turn.toPlainObject());
+    patches.update(year.id(), () => year.toPlainObject());
+    patches.wholePlayer(
+      filterToReference(PlayerWorld, PlayerTile, Tile),
+      'add'
+    );
+    patches.flush();
   }
 
   /**

@@ -26,6 +26,8 @@ import DebugFlags from '../debug/DebugFlags';
 import DebugPanel from '../debug/DebugPanel';
 import { AppElements } from '../app/elements';
 import NotificationBar from '../app/NotificationBar';
+import ObserverBar from '../components/ObserverBar';
+import { ObserverState } from '../../Engine/Observer';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug
 //  panel and the keyboard, the render pair, the order each update runs in, and the game's receivers.
@@ -51,6 +53,9 @@ export type GameSessionDeps = {
   pendingSave: string | null;
   // `?cheat=1`, for the game menu.
   cheatsEnabled: boolean;
+  // The game watched rather than played (#607): the observer's state as last sent, or `null` for a game of our own,
+  //  which is what a session without one plays.
+  observer?: () => ObserverState | null;
   // Once a game is running, F5 is a leader-screen shortcut: the reload guard reads this live.
   setGameStarted: () => void;
   // The page's transport disposers, which the `pagehide` teardown runs: the game's are added after them.
@@ -98,9 +103,13 @@ export class GameSession {
       notificationBar,
       pendingSave,
       cheatsEnabled,
+      observer = (): ObserverState | null => null,
       setGameStarted,
       transportDisposers,
     } = this.#deps;
+
+    // Watching, not playing (#607): no welcome, nothing to lose on leaving, and a bar to choose the view and the pace.
+    const observing = observer() !== null;
 
     performance.mark('civ:game-data-received');
 
@@ -131,11 +140,13 @@ export class GameSession {
 
       setGameStarted();
 
-      guardLeaving();
+      if (!observing) {
+        guardLeaving();
+      }
 
       // Only for a new game: "you have risen" is an introduction, and a
-      // loaded game has already had one.
-      if (pendingSave === null) {
+      // loaded game has already had one. A watched game is nobody's to be welcomed to.
+      if (pendingSave === null && !observing) {
         new NotificationWindow(
           'Welcome',
           s(
@@ -417,7 +428,9 @@ export class GameSession {
       transportDisposers.push(
         transport.receive('turnEnded', (): void => {
           gameState.setWaiting(true);
-          waitingBanner.textContent = t('Game.waiting');
+          waitingBanner.textContent = t(
+            observing ? 'Observer.watching' : 'Game.waiting'
+          );
 
           gameState.update();
         })
@@ -484,6 +497,18 @@ export class GameSession {
           }
         })
       );
+
+      // The observer's bar (#607), redrawn as the worker's `observer` state changes: a new view's `gameData` follows,
+      //  and replaces the game's data as a load does.
+      if (observing) {
+        const observerBar = new ObserverBar(mapWrapper, transport, observer()!);
+
+        transportDisposers.push(
+          transport.receive('observer', (state): void =>
+            observerBar.update(state)
+          )
+        );
+      }
 
       // A Diplomat's embassy opens the report on that civilization, and an investigated city's screen opens
       //  read-only (#58).
