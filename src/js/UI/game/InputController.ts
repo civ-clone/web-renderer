@@ -130,8 +130,8 @@ export class InputController {
       return;
     }
 
-    // Kept while a move is answered, and played once it has been
-    // (#326).
+    // Kept while a move or another order is answered, and played once
+    // it has been (#326, #543).
     if (unitController.pressKey(key)) {
       event.stopPropagation();
       event.preventDefault();

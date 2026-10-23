@@ -26,8 +26,8 @@ import ActiveUnitTiles from '../lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from '../lib/PendingMove';
 import { Topology } from '../lib/topologyFor';
 
-// The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key does to
-//  it, typed now or kept while a move is answered (#326).
+// The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key or one
+//  of its buttons does to it, typed now or kept while a move or another order is answered (#326, #543).
 //
 // Reaches into `document` in one place: `drain` leaves the kept keys to a modal window, or a window with the focus,
 //  as a key typed now would be (`dialog.window.modal[open]`, `document.activeElement`).
@@ -89,6 +89,8 @@ export class ActiveUnitController {
   #unitActionsRequest: UnitActionsRequest;
   // The units that can act this turn, and those deferred with `w` (wait).
   #unitQueue = new UnitQueue();
+  // Whether the turn has been ended and the game is waiting for the next one, as the last rebuild said.
+  #waiting = false;
 
   constructor(deps: ActiveUnitControllerDeps) {
     this.#deps = deps;
@@ -96,6 +98,37 @@ export class ActiveUnitController {
     this.#unitActionsRequest = new UnitActionsRequest((unitId) =>
       deps.transport.send('unitActions', unitId)
     );
+  }
+
+  /**
+   * A unit's action button (#348): the action of that name the active unit has now, sent as its key would send it and
+   * waited for as any order is (#543). Nothing when the button was drawn for a unit that is no longer active, or while
+   * a move or an order is answered or keys are kept: the button was drawn for the unit as it was before them.
+   */
+  act(unitId: string, actionName: string): boolean {
+    const unit = this.#activeUnit,
+      pendingMove = this.#pendingMove;
+
+    if (
+      unit === null ||
+      unit.id !== unitId ||
+      pendingMove.pending() ||
+      pendingMove.queued()
+    ) {
+      return false;
+    }
+
+    const [action] = unitActions(unit).filter(
+      (action): boolean => action._ === actionName
+    );
+
+    if (!action) {
+      return false;
+    }
+
+    this.#send(unit.id, action);
+
+    return true;
   }
 
   active(): Unit | null {
@@ -109,8 +142,20 @@ export class ActiveUnitController {
   // where it was drawn. Refused (a zone of control, no moves left),
   // it goes back to the tile it left, and the keys typed after it go
   // too: they were typed for a unit that didn't move.
+  //
+  // Any other order is settled by its own acknowledgement too (#543), and
+  // the keys typed since are played against whichever unit is up now, the
+  // one that acted or the next.
   actionHandled(action: TransportHandledAction): void {
     const pendingMove = this.#pendingMove;
+
+    if (pendingMove.orderAnsweredBy(action)) {
+      pendingMove.settleOrder();
+
+      this.drain();
+
+      return;
+    }
 
     if (!pendingMove.answeredBy(action)) {
       return;
@@ -166,7 +211,7 @@ export class ActiveUnitController {
     this.#unitActionsRequest.activate(unit);
   }
 
-  /** The keys kept while a move is answered are forgotten, the move itself is not. */
+  /** The keys kept while a move or an order is answered are forgotten, the move or order itself is not. */
   clearKeys(): void {
     this.#pendingMove.clearKeys();
   }
@@ -176,7 +221,7 @@ export class ActiveUnitController {
     this.#unitActionsRequest.dataReceived();
   }
 
-  // Plays the keys kept while the last move was answered, each
+  // Plays the keys kept while the last move or order was answered, each
   // read against the unit as the answer left it, as if typed now.
   drain(): void {
     const activeUnit = this.#activeUnit,
@@ -219,8 +264,16 @@ export class ActiveUnitController {
    * arrival window.
    */
   next(actions: PlayerAction[], waiting: boolean): void {
-    const { haltedUnits, portal, transport } = this.#deps,
+    const { haltedUnits, portal } = this.#deps,
       unitQueue = this.#unitQueue;
+
+    this.#waiting = waiting;
+
+    // The turn is over: an order sent as it ended is never answered, as the worker has stopped listening, and the keys
+    //  kept were for this turn (#543).
+    if (waiting) {
+      this.#pendingMove.release();
+    }
 
     unitQueue.update(actions, waiting);
 
@@ -241,13 +294,7 @@ export class ActiveUnitController {
         arrival = openArrivalWindow(
           halted.unit,
           halted.actions,
-          (chosen: UnitAction) =>
-            transport.send('action', {
-              name: 'ActiveUnit',
-              id: unitId,
-              unitAction: chosen._,
-              target: chosen.to.id,
-            })
+          (chosen: UnitAction) => this.#send(unitId, chosen, true)
         );
 
       // Chosen or dismissed, the next halted unit is up once it closes.
@@ -270,8 +317,8 @@ export class ActiveUnitController {
   }
 
   /**
-   * A unit key typed now: played, or kept while a move is answered and played once it has been (#326). `false` when
-   * it is not a unit key, or there is no active unit.
+   * A unit key typed now: played, or kept while a move or another order is answered and played once it has been
+   * (#326, #543). `false` when it is not a unit key, or there is no active unit.
    */
   pressKey(key: string): boolean {
     const activeUnit = this.#activeUnit;
@@ -329,6 +376,16 @@ export class ActiveUnitController {
     this.render(unit);
   }
 
+  /**
+   * The next turn is handed over (`turnStarted`): nothing sent before it is answered any more, so no move or order is
+   * waited for, and no key kept (#543).
+   */
+  turnStarted(): void {
+    this.#waiting = false;
+
+    this.#pendingMove.release();
+  }
+
   /** `w`: the active unit waits, and the next unit is made active, if there is another. */
   wait(): void {
     const activeUnit = this.#activeUnit;
@@ -366,12 +423,7 @@ export class ActiveUnitController {
           );
 
         if (unitAction) {
-          transport.send('action', {
-            name: 'ActiveUnit',
-            id: unit.id,
-            unitAction: unitAction._,
-            target: unitAction.to.id,
-          });
+          this.#send(unit.id, unitAction);
 
           return 'sent';
         }
@@ -407,19 +459,18 @@ export class ActiveUnitController {
       // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
       //  (#57).
       unitId = unit.id,
-      move = plainMove(directionActions),
-      send = (chosen: UnitAction): void =>
-        transport.send('action', {
-          name: 'ActiveUnit',
-          id: unitId,
-          unitAction: chosen._,
-          target: chosen.to.id,
-        });
+      move = plainMove(directionActions);
 
     // Drawn on the tile it is moving to now, rather than once the
-    // engine has answered and the frame after that has drawn it.
+    // engine has answered and the frame after that has drawn it, and
+    // waited for as that, not as an order.
     if (move !== null) {
-      send(move);
+      transport.send('action', {
+        name: 'ActiveUnit',
+        id: unitId,
+        unitAction: move._,
+        target: move.to.id,
+      });
 
       this.#pendingMove.start(unitId, move.to);
 
@@ -439,10 +490,29 @@ export class ActiveUnitController {
     chooseUnitAction(unit, directionActions, (chosen) => {
       sent = true;
 
-      send(chosen);
+      this.#send(unitId, chosen, true);
     });
 
     return sent ? 'sent' : 'prompted';
+  }
+
+  // Sends `action` for `unitId`, and keeps the keys typed after it until
+  // its acknowledgement (#543): until then the unit is as it was before
+  // it. Not for a plain move, drawn ahead and waited for as that (#326).
+  // `towardsTile` for an order behind a direction key or an arrival
+  // window: its keys are the unit's, as a move's are.
+  //
+  // Sent while waiting for the next turn (from a window left open over End
+  // Turn), it is not waited for: the worker is not listening, so it is
+  // never answered.
+  #send(unitId: string, action: UnitAction, towardsTile = false): void {
+    const order = { id: unitId, unitAction: action._, target: action.to.id };
+
+    this.#deps.transport.send('action', { name: 'ActiveUnit', ...order });
+
+    if (!this.#waiting) {
+      this.#pendingMove.sent(order, towardsTile);
+    }
   }
 }
 

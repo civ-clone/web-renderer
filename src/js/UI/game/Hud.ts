@@ -24,6 +24,8 @@ export type HudDeps = {
   portal: Portal;
   secondaryActionArea: HTMLElement;
   transport: Transport;
+  // A unit's action button clicked: the active unit's controller sends it, as its key would (#543).
+  unitAction: (unitId: string, unitAction: string) => void;
   unitActionArea: HTMLElement;
   // For the active unit's tile, as the world holds it.
   world: { get(x: number, y: number): Tile };
@@ -43,6 +45,7 @@ export class Hud {
       portal,
       secondaryActionArea,
       transport,
+      unitAction,
       unitActionArea,
     } = deps;
 
@@ -52,7 +55,7 @@ export class Hud {
       portal,
       transport
     );
-    this.#unitActionButtons = new UnitActions(unitActionArea, transport);
+    this.#unitActionButtons = new UnitActions(unitActionArea, unitAction);
   }
 
   build(data: GameData, activeUnit: Unit | null, waiting: boolean): void {

@@ -13,6 +13,12 @@ const KEY_LIMIT = 8;
 // The tile a move goes to: its id is what the move was sent with, and what its acknowledgement names.
 type Destination = Coordinate & { id: string };
 
+// Any other order sent for a unit, as it was sent, and as its acknowledgement names it (#543).
+export type Order = Required<
+  Pick<TransportHandledAction, 'id' | 'unitAction'>
+> &
+  Pick<TransportHandledAction, 'target'>;
+
 const sameTile = (a: Coordinate, b: Coordinate): boolean =>
   a.x === b.x && a.y === b.y;
 
@@ -31,19 +37,39 @@ export const plainMove = (actions: UnitAction[]): UnitAction | null =>
  *
  * Everything belongs to one unit, the active one. Another unit becoming active forgets it all, as the keys were meant
  * for the last one.
+ *
+ * Any other order sent (a unit key, a button, a choice in a window) is waited for too, until its own acknowledgement
+ * (#543): until then the page still holds the unit as it was before the order, and a key read against it would be
+ * sent for a unit that has already acted. The keys typed after an order for the unit's own tile (Fortify, Sentry, a
+ * button) are for whichever unit is up once it is answered, the one that acted or the next, so another unit becoming
+ * active keeps them while it is on its way. An order towards another tile (an attack, a choice on arriving) is a move
+ * as far as the keys go: they were meant for the unit that made it, and another unit becoming active forgets them.
  */
 export class PendingMove<T extends Destination = Destination, Key = string> {
   #keys: Key[] = [];
+  #order: Order | null = null;
+  // Whether the keys kept behind the order belong to its unit, as behind a move.
+  #orderKeysForUnit = false;
   #to: T | null = null;
   #unitId: string | null = null;
 
-  /** The active unit is now `unitId`: a different unit forgets the last one's move and keys. */
+  /**
+   * The active unit is now `unitId`: a different unit forgets the last one's move and keys, but for the keys typed
+   * since an order for its own tile that is still on its way, which are for whichever unit is up once it is answered.
+   * An order towards another tile is forgotten with its keys, as a move is.
+   */
   activate(unitId: string | null): void {
     if (unitId === this.#unitId) {
       return;
     }
 
-    this.clear();
+    if (this.#order === null || this.#orderKeysForUnit) {
+      this.#order = null;
+
+      this.clear();
+    } else {
+      this.#to = null;
+    }
 
     this.#unitId = unitId;
   }
@@ -62,6 +88,7 @@ export class PendingMove<T extends Destination = Destination, Key = string> {
     );
   }
 
+  /** Forgets the move drawn ahead and the keys kept. An order on its way is still waited for. */
   clear(): void {
     this.#to = null;
     this.#keys = [];
@@ -94,8 +121,9 @@ export class PendingMove<T extends Destination = Destination, Key = string> {
     }
   }
 
+  /** Whether the engine has yet to answer a move drawn ahead or an order. */
   pending(): boolean {
-    return this.#to !== null;
+    return this.#to !== null || this.#order !== null;
   }
 
   /**
@@ -138,6 +166,50 @@ export class PendingMove<T extends Destination = Destination, Key = string> {
     this.#to = null;
 
     return to !== null && unit !== null && sameTile(unit.tile, to);
+  }
+
+  /**
+   * Forgets everything: the move, the order and the keys. For the end of the turn, after which nothing sent before it
+   * is answered: an order sent as the turn ended never is, as the worker has stopped listening.
+   */
+  release(): void {
+    this.#order = null;
+
+    this.clear();
+  }
+
+  /** Whether `action`, which the engine says it has handled, is the order on its way (#543). */
+  orderAnsweredBy({
+    name,
+    id,
+    unitAction,
+    target,
+  }: TransportHandledAction): boolean {
+    const order = this.#order;
+
+    return (
+      order !== null &&
+      name === 'ActiveUnit' &&
+      id === order.id &&
+      unitAction === order.unitAction &&
+      target === order.target
+    );
+  }
+
+  /**
+   * An order has been sent: keys are kept until it is answered (`orderAnsweredBy`, `settleOrder`). One sent before
+   * then, from a window that was already open, replaces it: its answer is the one waited for, and every order is
+   * answered. `keysForUnit` for an order towards another tile: the keys typed after it are forgotten if another unit
+   * becomes active, as they are behind a move.
+   */
+  sent(order: Order, keysForUnit = false): void {
+    this.#order = order;
+    this.#orderKeysForUnit = keysForUnit;
+  }
+
+  /** The order has been answered: the keys kept are played against whichever unit is up now. */
+  settleOrder(): void {
+    this.#order = null;
   }
 
   /**
