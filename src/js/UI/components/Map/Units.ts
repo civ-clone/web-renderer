@@ -33,35 +33,53 @@ export class Units extends Map implements IMap {
       image = this.renderUnit(unit);
 
     if (units.length > 1) {
-      this.putImage(image, offsetX - this.scale(), offsetY - this.scale());
+      const [stackX, stackY] = this.stackOffset();
+
+      this.putImage(image, offsetX + stackX, offsetY + stackY);
     }
 
     this.putImage(image, offsetX, offsetY);
 
+    this.drawStatus(unit, offsetX, offsetY);
+  }
+
+  /** Writes `unit`'s busy letter over it, drawn at `offsetX`/`offsetY`. */
+  protected drawStatus(unit: Unit, offsetX: number, offsetY: number): void {
     drawUnitStatus(
       this.context(),
       unit,
       offsetX,
       offsetY,
       this.scale(),
-      this.tileSize() / this.scale()
+      this.tileSize() / this.scale(),
+      this.tileset()
     );
   }
 
-  // The copy behind a stack is drawn a scale step up and left of the tile.
+  // The copy behind a stack reaches past the tile on the sides the tileset moves it to (Civ1's, a scale step up and
+  //  left).
   protected reach(): Reach {
     const reach = super.reach(),
-      scale = this.scale();
+      [stackX, stackY] = this.stackOffset();
 
     return {
-      ...reach,
-      top: reach.top + scale,
-      left: reach.left + scale,
+      top: reach.top + Math.max(0, -stackY),
+      right: reach.right + Math.max(0, stackX),
+      bottom: reach.bottom + Math.max(0, stackY),
+      left: reach.left + Math.max(0, -stackX),
     };
   }
 
   protected renderUnit(unit: Unit): CanvasImageSource {
-    return renderUnit(unit);
+    return renderUnit(unit, this.tileset());
+  }
+
+  /** Where the copy behind a stack is drawn from the unit, in px at this scale, as the tileset says. */
+  protected stackOffset(): [number, number] {
+    const { x, y } = this.tileset().units.stackOffset,
+      scale = this.scale();
+
+    return [x * scale, y * scale];
   }
 
   hasActiveUnit(): boolean {

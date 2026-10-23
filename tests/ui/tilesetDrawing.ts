@@ -1,18 +1,27 @@
-// The map's scenery is drawn the way the tileset says (#56, #92): `Landscape` and `Fog` take every sprite name, which
-//  neighbours each family looks at, how the directions are written, which terrains join up, the coast's bit order,
-//  the lone road's dot and where specials go from the descriptor, and the directions themselves from the world's
-//  topology. Drawn with Civ1's descriptor they ask for Civ1's sprites; drawn with a descriptor that renames and
-//  rearranges all of it they ask for that one's, with no change to the code. The Civ1 expectations here are written by
-//  hand; that Civ1's map is drawn exactly as it was before is tests/ui/renderGeometry.ts's to prove.
+// The map is drawn the way the tileset says (#56, #92). `Landscape` and `Fog` take every sprite name, which neighbours
+//  each family looks at, how the directions are written, which terrains join up, the coast's bit order, the lone
+//  road's dot and where specials go from the descriptor, and the directions themselves from the world's topology.
+//  `renderUnit`, `Units`, `Cities` and `CityNames` take the unit and city sprites, which colours are swapped for which
+//  of the player's, the fortified overlay, where the copy behind a stack goes, the city's box, and where the labels and
+//  the busy letter go (#56 d3). Drawn with Civ1's descriptor they draw what Civ1 does; drawn with a descriptor that
+//  renames and rearranges all of it they draw that one's, with no change to the code. The Civ1 expectations here are
+//  written by hand from what the code drew before. That everything is still drawn where it was is
+//  tests/ui/renderGeometry.ts's to prove; it leaves out the units' and cities' colours, which these checks cover.
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
-import { preloadImage } from './lib/fakeCanvas';
+import { FakeImage, preloadImage } from './lib/fakeCanvas';
 
+import Cities from '../../src/js/UI/components/Map/Cities';
+import CityNames from '../../src/js/UI/components/Map/CityNames';
 import Fog from '../../src/js/UI/components/Map/Fog';
 import Landscape from '../../src/js/UI/components/Map/Landscape';
+import Units from '../../src/js/UI/components/Map/Units';
+import i18next from 'i18next';
 import { Tile } from '../../src/js/UI/types';
 import { TilesetDescriptor } from '../../src/js/UI/tilesets/TilesetDescriptor';
 import World from '../../src/js/UI/components/World';
+import { drawUnitActionIcon } from '../../src/js/UI/lib/unitActionIcon';
+import renderUnit from '../../src/js/UI/lib/renderUnit';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import currentTileset from '../../src/js/UI/lib/tilesets';
 
@@ -35,30 +44,79 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 // A suite that stops before its checks would otherwise pass in silence (#473).
 process.on('exit', (code: number): void => {
   if (code === 0 && !finished) {
-    process.stderr.write(`FAIL tileFamilies: stopped after ${checks} checks\n`);
+    process.stderr.write(
+      `FAIL tilesetDrawing: stopped after ${checks} checks\n`
+    );
     process.exitCode = 1;
   }
 });
 
-// Every call a canvas's context is given, and every property set on it, as one line each.
-const recordingCanvas = (width: number, height: number) => {
-  const calls: string[] = [],
-    context = new Proxy({} as { [key: string]: unknown }, {
-      get: (target, name: string) =>
-        name in target
-          ? target[name]
-          : (...args: unknown[]) =>
-              calls.push(
-                `${name}(${args
-                  .map((arg) => (typeof arg === 'number' ? arg : typeof arg))
-                  .join(',')})`
-              ),
-      set: (target, name: string, value: unknown) => {
-        calls.push(`${name}=${value}`);
+// The colours of each preloaded sprite's pixels, left to right, by its path: `replaceColours` reads them back from the
+//  canvas it drew the sprite on.
+const pixels: { [path: string]: string[] } = {};
 
-        return true;
-      },
-    });
+const hex = (data: ArrayLike<number>, offset: number): string =>
+  `#${Array.from({ length: 3 }, (_, index) =>
+    data[offset + index].toString(16).padStart(2, '0')
+  ).join('')}`;
+
+// Every call a canvas's context is given, and every property set on it, as one line each. A canvas a sprite was drawn
+//  on gives back that sprite's pixels, and the pixels put back on it are written as their colours.
+const recordingCanvas = (width: number, height: number) => {
+  const calls: string[] = [];
+  let source: string[] = [];
+
+  const context = new Proxy({} as { [key: string]: unknown }, {
+    get: (target, name: string) => {
+      if (name in target) {
+        return target[name];
+      }
+
+      if (name === 'getImageData') {
+        return () => ({
+          data: Uint8ClampedArray.from(
+            source.flatMap((colour) => [
+              ...[1, 3, 5].map((at) => parseInt(colour.slice(at, at + 2), 16)),
+              255,
+            ])
+          ),
+        });
+      }
+
+      if (name === 'putImageData') {
+        return ({ data }: { data: Uint8ClampedArray }) =>
+          calls.push(
+            `putImageData(${Array.from(
+              { length: data.length / 4 },
+              (_, index) => hex(data, index * 4)
+            ).join(',')})`
+          );
+      }
+
+      return (...args: unknown[]) => {
+        if (name === 'drawImage' && args[0] instanceof FakeImage) {
+          source = pixels[(args[0] as FakeImage).path] ?? [];
+        }
+
+        calls.push(
+          `${name}(${args
+            .map((arg) =>
+              typeof arg === 'number'
+                ? arg
+                : arg instanceof FakeImage
+                ? arg.path
+                : typeof arg
+            )
+            .join(',')})`
+        );
+      };
+    },
+    set: (target, name: string, value: unknown) => {
+      calls.push(`${name}=${value}`);
+
+      return true;
+    },
+  });
 
   return {
     calls,
@@ -102,7 +160,7 @@ const civ1 = currentTileset(),
     names: {
       terrain: { Hills: 'hl' },
       special: { 'Forest:Game': 'deer' },
-      unit: {},
+      unit: { Settlers: 'colonists' },
     },
     families: {
       base: { land: 'ground/land', ocean: 'ground/sea' },
@@ -154,6 +212,32 @@ const civ1 = currentTileset(),
       },
       hut: { sprite: 'spec/hut' },
     },
+    units: {
+      sprite: 'troops/{unit}',
+      // The keys the other way round, and both swapped for the player's second colour.
+      colouring: {
+        mode: 'replaceColours',
+        keys: ['#2C7800', '#60E064'],
+        colours: [1, 1],
+      },
+      fortified: 'troops/dug-in',
+      stackOffset: { x: 2, y: 1 },
+      status: { x: 0.25, baseline: 0.5, fontSize: 6 },
+    },
+    cities: {
+      mode: 'box',
+      sprite: 'towns/city',
+      inset: 3,
+      occupied: '#444444',
+      colouring: { mode: 'replaceColours', keys: ['#abcdef'], colours: [0] },
+      labels: {
+        x: 0.25,
+        sizeBaseline: 0.5,
+        nameBaseline: 1.25,
+        fontSize: 6,
+        disorderIcon: { x: 2, y: 3 },
+      },
+    },
   };
 
 // Only the coast strips are preloaded: the other sprites are looked for and missed, which is all this needs to see, so
@@ -164,12 +248,40 @@ console.error = () => {};
 preloadImage('terrain/coast_sprite', 128, 16);
 preloadImage('ground/shore', 128, 16);
 
+// The units and cities, each pixel a colour key or one that is left alone, and the overlays.
+(
+  [
+    ['units/settlers', ['#60E064', '#2C7800', '#123456']],
+    ['troops/colonists', ['#60E064', '#2C7800', '#123456']],
+    ['map/city', ['#000000', '#123456']],
+    ['towns/city', ['#abcdef', '#123456']],
+  ] as [string, string[]][]
+).forEach(([path, colours]) => {
+  preloadImage(path, colours.length, 1);
+  pixels[path] = colours;
+});
+preloadImage('map/fortify', 3, 1);
+preloadImage('troops/dug-in', 3, 1);
+preloadImage('city/people_unhappy_m', 3, 3);
+
+// No translations: a busy state's letter is the capitals of its name.
+i18next.init({ lng: 'en', resources: {}, initImmediate: false } as any);
+
+// A player whose civilization's colours are red and blue.
+const player = {
+  id: 'Player-1',
+  civilization: {
+    attributes: [{ name: 'colors', value: ['#ff0000', '#0000ff'] }],
+  },
+};
+
 type TileChanges = {
   terrain?: string;
   features?: string[];
   improvements?: string[];
   goodyHut?: boolean;
-  city?: boolean;
+  city?: boolean | { size: number; disorder?: boolean };
+  units?: { _: string; busy?: string; fortified?: boolean }[];
 };
 
 const water = ['Ocean'];
@@ -193,6 +305,7 @@ const makeWorld = (
           improvements = [],
           goodyHut = false,
           city = false,
+          units = [],
         } = changes[`${x},${y}`] ?? {},
         isLand = isLandAt(x, y);
 
@@ -201,7 +314,23 @@ const makeWorld = (
         id: `Tile-${x}-${y}`,
         x,
         y,
-        city: city ? { id: `City-${x}-${y}` } : null,
+        city: city
+          ? {
+              id: `City-${x}-${y}`,
+              name: `City ${x} ${y}`,
+              player,
+              civilDisorderDeclared: city !== true && !!city.disorder,
+              growth: { size: city === true ? 1 : city.size },
+            }
+          : null,
+        units: units.map(({ _, busy, fortified }, index) => ({
+          id: `Unit-${x}-${y}-${index}`,
+          _,
+          player,
+          busy: busy ? { _: busy } : null,
+          defence: { value: 1 },
+          improvements: fortified ? [{ _: 'Fortified' }] : [],
+        })),
         goodyHut: goodyHut ? {} : null,
         improvements: improvements.map((_) => ({ _ })),
         isCoast:
@@ -224,7 +353,12 @@ const makeWorld = (
 // What a layer draws for one tile at 0,0 at 2×: each sprite with where it goes, and anything else it does to the
 //  canvas.
 const drawn = (
-  Layer: typeof Landscape | typeof Fog,
+  Layer:
+    | typeof Landscape
+    | typeof Fog
+    | typeof Units
+    | typeof Cities
+    | typeof CityNames,
   tileset: TilesetDescriptor,
   world: World,
   x: number,
@@ -269,7 +403,12 @@ const drawn = (
 
 // Both descriptors over the same tile: what each draws.
 const both = (
-  Layer: typeof Landscape | typeof Fog,
+  Layer:
+    | typeof Landscape
+    | typeof Fog
+    | typeof Units
+    | typeof Cities
+    | typeof CityNames,
   world: World,
   x: number,
   y: number
@@ -626,15 +765,280 @@ expect(
   hexDirections.map((direction) => `improvements/road_${direction}@0,0`)
 );
 
+// What the canvases a draw made had put on them: the sprites drawn on them and the pixels recoloured on them.
+const madeDraws = (draw: () => unknown): string[] => {
+  madeCanvases.length = 0;
+
+  draw();
+
+  return madeCanvases
+    .flat()
+    .filter(
+      (call) =>
+        call.startsWith('putImageData') ||
+        /^drawImage\([a-z-]+\/[a-z_-]+,/.test(call)
+    );
+};
+
+const stackWorld = () =>
+  makeWorld(5, 5, {
+    '2,2': {
+      units: [
+        { _: 'Settlers', busy: 'Fortified', fortified: true },
+        { _: 'Settlers' },
+      ],
+    },
+  });
+
+// At 2× on 16px tiles: Civ1's copy behind a stack goes a step up and left, and the letter is centred three quarters of
+//  the way down in 16px; the stub's copy goes two steps right and one down, and its letter a quarter across and half
+//  way down in 12px.
+expect(
+  'a stack: the copy behind it where the tileset moves it, the unit, and its busy letter where the tileset puts it',
+  both(Units, stackWorld(), 2, 2),
+  [
+    [
+      'drawImage(object,-2,-2,6,2)',
+      'drawImage(object,0,0,6,2)',
+      'font=bold 16px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,18,24)',
+      'fillStyle=white',
+      'fillText(string,16,22)',
+    ],
+    [
+      'drawImage(object,4,2,6,2)',
+      'drawImage(object,0,0,6,2)',
+      'font=bold 12px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,10,16)',
+      'fillStyle=white',
+      'fillText(string,8,14)',
+    ],
+  ]
+);
+
+// A player of its own, green and yellow, so these are drawn afresh rather than found in the cache the stack above
+//  filled.
+const fortifiedSettlers = {
+  _: 'Settlers',
+  player: {
+    ...player,
+    civilization: {
+      attributes: [{ name: 'colors', value: ['#00ff00', '#ffff00'] }],
+    },
+  },
+  improvements: [{ _: 'Fortified' }],
+} as any;
+
+expect(
+  "a unit is the tileset's sprite, its keys swapped for the player's colours the tileset names, under its overlay",
+  [civ1, stub].map((tileset) =>
+    madeDraws(() => renderUnit(fortifiedSettlers, tileset))
+  ),
+  [
+    [
+      'drawImage(units/settlers,0,0,3,1)',
+      // Civ1's keys take the player's colours in order.
+      'putImageData(#00ff00,#ffff00,#123456)',
+      'drawImage(map/fortify,0,0)',
+    ],
+    [
+      'drawImage(troops/colonists,0,0,3,1)',
+      // Both of the stub's take the second.
+      'putImageData(#ffff00,#ffff00,#123456)',
+      'drawImage(troops/dug-in,0,0)',
+    ],
+  ]
+);
+
+expect(
+  'and the copy behind a stack reaches past the tile on the sides the tileset moves it to',
+  [civ1, stub].map((tileset) => {
+    class Reaching extends Units {
+      tileset(): TilesetDescriptor {
+        return tileset;
+      }
+
+      reachNow() {
+        return this.reach();
+      }
+    }
+
+    return new Reaching(
+      stackWorld(),
+      2,
+      16,
+      recordingCanvas(200, 200).canvas
+    ).reachNow();
+  }),
+  [
+    { top: 2, right: 0, bottom: 0, left: 2 },
+    { top: 0, right: 4, bottom: 2, left: 0 },
+  ]
+);
+
+// A player of their own each, so nothing is found in a cache an earlier check filled.
+const playerWith = (colours: string[]) => ({
+  ...player,
+  civilization: { attributes: [{ name: 'colors', value: colours }] },
+});
+
+expect(
+  'a civilization with fewer colours than the keys take, or a key taking a colour past its last, gets its first',
+  [
+    madeDraws(() =>
+      renderUnit(
+        {
+          _: 'Settlers',
+          player: playerWith(['#00ffff']),
+          improvements: [],
+        } as any,
+        civ1
+      )
+    ),
+    madeDraws(() =>
+      renderUnit(
+        {
+          _: 'Settlers',
+          player: playerWith(['#ff00ff', '#888888']),
+          improvements: [],
+        } as any,
+        {
+          ...stub,
+          id: 'past-the-end',
+          units: {
+            ...stub.units,
+            colouring: {
+              mode: 'replaceColours',
+              keys: ['#60E064', '#2C7800'],
+              colours: [5, 1],
+            },
+          },
+        }
+      )
+    ),
+  ].map((draws) => draws.filter((call) => call.startsWith('putImageData'))),
+  [
+    ['putImageData(#00ffff,#00ffff,#123456)'],
+    ['putImageData(#ff00ff,#888888,#123456)'],
+  ]
+);
+
+// The city in the action buttons is drawn as the map draws it: on the civilization's first colour, a pixel in, with
+//  its black swapped for the second.
+expect(
+  "the action buttons' city: the civilization's first colour inset as the tileset says, and its keys swapped",
+  (() => {
+    const { calls, canvas } = recordingCanvas(16, 16);
+
+    Object.assign(canvas, { clientWidth: 16 });
+    (globalThis as any).devicePixelRatio = 1;
+
+    const made = madeDraws(() =>
+      drawUnitActionIcon(canvas, [
+        { type: 'city', text: null, colours: ['#00ff00', '#ff00ff'] },
+      ])
+    );
+
+    return [
+      calls.filter((call) => /^(fillStyle|fillRect|drawImage)/.test(call)),
+      made.filter((call) => call.startsWith('putImageData')),
+    ];
+  })(),
+  [
+    ['fillStyle=#00ff00', 'fillRect(1,1,14,14)', 'drawImage(object,1,1)'],
+    ['putImageData(#ff00ff,#123456)'],
+  ]
+);
+
+const cityWorld = (disorder = false) =>
+  makeWorld(5, 5, {
+    '2,2': { city: { size: 3, disorder }, units: [{ _: 'Settlers' }] },
+  });
+
+madeCanvases.length = 0;
+
+// Civ1's city is on black when it has units, in a box of the player's first colour a pixel in, with its black swapped
+//  for the player's second colour; the stub's is on grey, three pixels in, with its key swapped for the first.
+expect(
+  "a city with units in it: the tileset's occupied colour, the player's box inset as it says, and its sprite",
+  both(Cities, cityWorld(), 2, 2),
+  [
+    [
+      'map/city@2,2',
+      'fillStyle=#000',
+      'fillRect(0,0,32,32)',
+      'fillStyle=#ff0000',
+      'fillRect(2,2,28,28)',
+      'drawImage(object,2,2,4,2)',
+    ],
+    [
+      'towns/city@6,6',
+      'fillStyle=#444444',
+      'fillRect(0,0,32,32)',
+      'fillStyle=#ff0000',
+      'fillRect(6,6,20,20)',
+      'drawImage(object,6,6,4,2)',
+    ],
+  ]
+);
+expect(
+  "with the city's colour keys swapped for the player's colours the tileset names",
+  madeCanvases.flat().filter((call) => call.startsWith('putImageData')),
+  ['putImageData(#0000ff,#123456)', 'putImageData(#ff0000,#123456)']
+);
+
+// Civ1's size is centred three quarters of the way down and its name hangs 1.6 tiles down, in 16px; the stub's are a
+//  quarter across, half way and a tile and a quarter down, in 12px.
+expect(
+  "a city's labels go where the tileset puts them, in its font size",
+  both(CityNames, cityWorld(), 2, 2),
+  [
+    [
+      'font=bold 16px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,18,24)',
+      'fillText(string,18,51.2)',
+      'fillStyle=white',
+      'fillText(string,16,22)',
+      'fillText(string,16,49.2)',
+    ],
+    [
+      'font=bold 12px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,10,16)',
+      'fillText(string,10,40)',
+      'fillStyle=white',
+      'fillText(string,8,14)',
+      'fillText(string,8,38)',
+    ],
+  ]
+);
+expect(
+  "and a city in disorder's unhappy citizen goes where the tileset puts it, in place of the size",
+  both(CityNames, cityWorld(true), 2, 2).map((calls) =>
+    calls.filter((call) => call.startsWith('drawImage'))
+  ),
+  [
+    ['drawImage(city/people_unhappy_m,10,2,6,6)'],
+    ['drawImage(city/people_unhappy_m,4,6,6,6)'],
+  ]
+);
+
 finished = true;
 
 if (failures.length > 0) {
   process.stderr.write(
-    `FAIL tileFamilies (${
+    `FAIL tilesetDrawing (${
       failures.length
     } of ${checks} checks)\n  ${failures.join('\n  ')}\n`
   );
   process.exit(1);
 }
 
-process.stdout.write(`PASS tileFamilies (${checks} checks)\n`);
+process.stdout.write(`PASS tilesetDrawing (${checks} checks)\n`);

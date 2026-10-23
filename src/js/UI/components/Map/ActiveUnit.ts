@@ -1,7 +1,6 @@
 import { IMap } from '../Map';
 import { Rect } from '../../lib/viewport';
 import Units from './Units';
-import { drawUnitStatus } from '../../lib/renderUnit';
 
 export class ActiveUnit extends Units implements IMap {
   // This layer only ever holds the one unit, so it can clear just what it drew
@@ -29,29 +28,22 @@ export class ActiveUnit extends Units implements IMap {
     const tile = this.world().get(activeTile.x, activeTile.y),
       { width, height } = this.projection().footprint(),
       reach = this.reach(),
-      scale = this.scale(),
+      [stackX, stackY] = this.stackOffset(),
       image = this.renderUnit(activeUnit),
       // Not yet listed on a tile it is moving to, and still listed on its own.
       stacked = this.otherUnits(tile).length > 0;
 
     this.placements(tile).forEach(([offsetX, offsetY]) => {
       if (stacked) {
-        this.putImage(image, offsetX - scale, offsetY - scale);
+        this.putImage(image, offsetX + stackX, offsetY + stackY);
       }
 
       this.putImage(image, offsetX, offsetY);
 
-      drawUnitStatus(
-        this.context(),
-        activeUnit,
-        offsetX,
-        offsetY,
-        scale,
-        this.tileSize() / scale
-      );
+      this.drawStatus(activeUnit, offsetX, offsetY);
 
       // The tile's box and as far past it as a unit is drawn: the stacked
-      // copy one scale step up and left, and whatever the projection's
+      // copy where the tileset moves it, and whatever the projection's
       // sprites reach.
       const drawn = {
         x: offsetX - reach.left,

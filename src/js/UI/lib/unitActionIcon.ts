@@ -1,8 +1,10 @@
 import { Tile, Unit, UnitAction } from '../types';
 import getPreloadedImage from './getPreloadedImage';
 import { imageSize, isDrawable } from './imageSize';
+import { Colouring } from '../tilesets/TilesetDescriptor';
+import currentTileset from './tilesets';
 import replaceColours from './replaceColours';
-import renderUnit from './renderUnit';
+import renderUnit, { replacementColours } from './renderUnit';
 
 // What a unit action's button shows (#348), as layers drawn one over another. `unitActionIconLayers` decides it from
 //  the action alone, so it can be checked without a canvas; `drawUnitActionIcon` paints it.
@@ -189,22 +191,37 @@ export const drawUnitActionIcon = (
     }
 
     if (layer.type === 'city') {
-      const [background, outline] = layer.colours ?? [];
+      // As the map does (`Cities`): the civilization's first colour behind the city, inset as the tileset says, and
+      //  the city's colour keys swapped for the ones the tileset names. Only colour keys can be drawn yet (#152).
+      const { sprite, inset, colouring } = currentTileset().cities,
+        replaceKeys = colouring as Extract<
+          Colouring,
+          { mode: 'replaceColours' }
+        >,
+        colours = layer.colours ?? [],
+        [background] = colours;
 
-      // As the map does: the civilization's colour behind the city, and its second colour for the city itself.
       if (background) {
         context.fillStyle = background;
-        context.fillRect(1, 1, iconSize - 2, iconSize - 2);
+        context.fillRect(
+          inset,
+          inset,
+          iconSize - inset * 2,
+          iconSize - inset * 2
+        );
       }
 
-      const city = getPreloadedImage('map/city');
+      const city = getPreloadedImage(sprite),
+        // Recoloured only when the civilization has every colour the keys take.
+        replacements = replacementColours(replaceKeys, colours);
 
-      // Where the map puts it: a pixel in, over the colour.
       if (isDrawable(city)) {
         context.drawImage(
-          outline ? replaceColours(city, ['#000'], [outline]) : city,
-          1,
-          1
+          replacements.every(Boolean)
+            ? replaceColours(city, replaceKeys.keys, replacements)
+            : city,
+          inset,
+          inset
         );
       }
 

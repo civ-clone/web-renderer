@@ -9,8 +9,6 @@
 // Must stay first: `AssetStore` opens its database as it loads, and `Window` reads `document.body`.
 import './lib/dom';
 
-import * as fs from 'fs';
-import * as path from 'path';
 import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
@@ -318,47 +316,14 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
 
-  // The units layer still asks for its sprites by the name its template gives: the template, with its placeholders as
-  //  `${…}`, is in the code (#56 d3 moves it to the descriptor). `Landscape` and `Fog` draw from the descriptor itself,
-  //  as tests/ui/tileFamilies.ts shows.
-  const source = (file: string): string =>
-      fs.readFileSync(
-        path.join(process.cwd(), 'src', 'js', 'UI', ...file.split('/')),
-        'utf8'
-      ),
-    asCode = (template: string): RegExp =>
-      new RegExp(
-        template
-          .split(/\{[a-z]+\}/i)
-          .map((part) => part.replace(/[.*+?^$()|[\]\\]/g, '\\$&'))
-          .join('\\$\\{[^}]+\\}')
-      ),
-    renderUnit = source('lib/renderUnit.ts');
-
+  // The layers draw from the descriptor itself, as tests/ui/tilesetDrawing.ts shows: these are Civ1's colour keys,
+  //  and which of the player's colours each takes (the city's black takes the second).
   expect(
-    "the units layer's code builds the name the template gives",
-    [
-      asCode(units.sprite).test(renderUnit),
-      // And a template the code does not use is not found.
-      asCode('units/{unit}-{dirs}').test(renderUnit),
-    ],
-    [true, false]
-  );
-  expect(
-    'and the colour keys are the ones the code swaps',
-    [
-      units.colouring,
-      renderUnit.includes(
-        `[${(units.colouring as { keys: string[] }).keys
-          .map((key) => `'${key}'`)
-          .join(', ')}]`
-      ),
-      cities.colouring,
-    ],
+    "Civ1's colour keys",
+    [units.colouring, cities.colouring],
     [
       { mode: 'replaceColours', keys: ['#60E064', '#2C7800'] },
-      true,
-      { mode: 'replaceColours', keys: ['#000'] },
+      { mode: 'replaceColours', keys: ['#000'], colours: [1] },
     ]
   );
 
@@ -654,8 +619,8 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       }),
     ].map((json) => thrown(() => validateDescriptor(json))),
     [
-      'Tileset "civ1": families.terrain.sprite has {dir}, but the map only fills {terrain}, {dirs} here.',
-      'Tileset "civ1": families.special.sprite has {terrain}, but the map only fills {special} here.',
+      'Tileset "civ1": families.terrain.sprite has {dir}, but the map fills only {terrain}, {dirs} here.',
+      'Tileset "civ1": families.special.sprite has {terrain}, but the map fills only {special} here.',
       'Tileset "civ1": families.terrain.isolated must name a sprite with no placeholders but {terrain}.',
       'Tileset "civ1": families.fog.method must be "bitmask" or "edges": it joins its neighbours.',
       'Tileset "civ1": families.mine is one sprite, drawn whatever its neighbours: it has no method.',
@@ -683,6 +648,104 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       'Tileset "civ1": families.terrain.skip must list terrain names.',
       'Tileset "civ1": families.terrain.matches must list, for each terrain, what joins it.',
       'Tileset "civ1": families.special.anchors must give a whole x and y in px for each name.',
+    ]
+  );
+  expect(
+    'units and cities the map cannot draw are refused',
+    [
+      withUnits({ ...civ1.units, sprite: 'units/{terrain}' }),
+      withUnits({ ...civ1.units, fortified: '' }),
+      withUnits({
+        ...civ1.units,
+        colouring: {
+          mode: 'overlay',
+          sprite: 'units/shield',
+          key: '#f00',
+          anchor: 'sprite',
+        },
+      }),
+      withUnits({
+        ...civ1.units,
+        colouring: { mode: 'replaceColours', keys: [] },
+      }),
+      withUnits({
+        ...civ1.units,
+        colouring: { mode: 'replaceColours', keys: ['#000'], colours: [0, 1] },
+      }),
+      withUnits({
+        ...civ1.units,
+        colouring: { mode: 'replaceColours', keys: ['#000'], colours: [-1] },
+      }),
+      withUnits({ ...civ1.units, stackOffset: { x: -1, y: 0.5 } }),
+      withUnits({
+        ...civ1.units,
+        status: { ...civ1.units.status, baseline: '0.75' },
+      }),
+      withCities({ ...civ1.cities, mode: 'styles' }),
+      withCities({ ...civ1.cities, sprite: 'map/{size}' }),
+      withCities({ ...civ1.cities, inset: -1 }),
+      withCities({ ...civ1.cities, occupied: '' }),
+      withCities({
+        ...civ1.cities,
+        labels: { ...civ1.cities.labels, nameBaseline: undefined },
+      }),
+      withCities({
+        ...civ1.cities,
+        labels: { ...civ1.cities.labels, disorderIcon: { x: 5 } },
+      }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": units.sprite has {terrain}, but the map fills only {unit} here.',
+      'Tileset "civ1": units.fortified must name a sprite.',
+      'Tileset "civ1": units.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
+      'Tileset "civ1": units.colouring.keys must list the colours to replace.',
+      'Tileset "civ1": units.colouring.colours must give a player\'s colour, by whole index, for each key.',
+      'Tileset "civ1": units.colouring.colours must give a player\'s colour, by whole index, for each key.',
+      'Tileset "civ1": units.stackOffset must have a whole x and y in px.',
+      'Tileset "civ1": units.status must have an x and a baseline, as parts of the tile.',
+      'Tileset "civ1": cities.mode "styles" cannot be drawn yet: only box.',
+      'Tileset "civ1": cities.sprite has {size}, but the map fills none here.',
+      'Tileset "civ1": cities.inset must be a whole number of px, 0 or more.',
+      'Tileset "civ1": cities.occupied must be a colour.',
+      'Tileset "civ1": cities.labels must have an x, a sizeBaseline and a nameBaseline, as parts of the tile.',
+      'Tileset "civ1": cities.labels.disorderIcon must have a whole x and y in px, within the tile.',
+    ]
+  );
+  expect(
+    'and so are colours the recolouring cannot read, and labels outside the tile their region is redrawn in',
+    [
+      withUnits({
+        ...civ1.units,
+        colouring: { mode: 'replaceColours', keys: ['black', '#2C7800'] },
+      }),
+      withCities({ ...civ1.cities, occupied: 'black' }),
+      withFamily('road', {
+        ...civ1.families.road,
+        isolated: { dot: 'brown', size: 2 },
+      }),
+      withCities({
+        ...civ1.cities,
+        labels: { ...civ1.cities.labels, x: 1.5 },
+      }),
+      withCities({
+        ...civ1.cities,
+        labels: { ...civ1.cities.labels, disorderIcon: { x: 5, y: -1 } },
+      }),
+      withCities({
+        ...civ1.cities,
+        labels: { ...civ1.cities.labels, disorderIcon: { x: 16, y: 1 } },
+      }),
+      // And the formats it does read are read.
+      withCities({ ...civ1.cities, occupied: 'rgb(0, 0, 0)' }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": units.colouring.keys must list the colours to replace.',
+      'Tileset "civ1": cities.occupied must be a colour.',
+      'Tileset "civ1": families.road.isolated must be a sprite, or a dot with a colour and a whole size of 1 px or more.',
+      'Tileset "civ1": cities.labels.x must be within the tile, from 0 to 1.',
+      'Tileset "civ1": cities.labels.disorderIcon must have a whole x and y in px, within the tile.',
+      'Tileset "civ1": cities.labels.disorderIcon must have a whole x and y in px, within the tile.',
+      null,
     ]
   );
   expect(
