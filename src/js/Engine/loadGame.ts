@@ -5,6 +5,7 @@ import Difficulty from '@civ-clone/core-difficulty/Difficulty';
 import Player from '@civ-clone/core-player/Player';
 import { ClientDescriptor, SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import { Seat } from './lib/seats';
+import { seatFromDescriptor } from './lib/savedSeats';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { hydrate } from '@civ-clone/core-save-game/hydrate';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -25,40 +26,6 @@ declare global {
     'choose-difficulty': typeof Difficulty;
   }
 }
-
-/**
- * The class name `save` records for the human player's client.
- *
- * `core-save-game` writes a descriptor per client — the player's id and the
- * class that was serving them — because a client is a live connection and
- * cannot be saved. It cannot know which of them is a person. A save made since
- * #608 says so itself (`kind: 'human'`, and the person's name); one made before
- * has `kind: 'ai'` throughout, and this class name is what tells, since only
- * one class ever served a person.
- */
-export const HUMAN_CLIENT = 'DataTransferClient';
-
-/** Whether a saved client was a person's: as the file says, or by class name for a file written before it could. */
-export const isHumanDescriptor = ({
-  kind,
-  module,
-}: Pick<ClientDescriptor, 'kind' | 'module'>): boolean =>
-  kind === 'human' || module === HUMAN_CLIENT;
-
-/**
- * The seat a saved client was played from (#608): a person's, with their name, or a computer's with the AI client
- * that served it, by class name, as a seat names one (`lib/seats.ts`). The class is what the save has of the AI
- * package, and a build without it falls back to its default (`Game.load`).
- */
-export const seatFromDescriptor = (
-  descriptor: Pick<ClientDescriptor, 'kind' | 'module' | 'name'>
-): Seat =>
-  isHumanDescriptor(descriptor)
-    ? {
-        kind: 'human',
-        ...(descriptor.name === undefined ? {} : { name: descriptor.name }),
-      }
-    : { kind: 'computer', ai: descriptor.module };
 
 /**
  * Release any tile still worked by a destroyed city.

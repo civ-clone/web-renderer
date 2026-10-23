@@ -120,4 +120,15 @@
   .actions {
     margin: 0 0.5rem;
   }
+
+  // The resume window (#608): the question above the seats, and Resume below them.
+  &.resume-game {
+    p {
+      margin: 0.5rem;
+    }
+
+    button.resume {
+      margin: 0.5rem;
+    }
+  }
 }

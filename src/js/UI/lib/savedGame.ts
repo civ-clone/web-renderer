@@ -1,4 +1,9 @@
 import { Store } from '../Store';
+import {
+  SeatChanges,
+  isSeatChanges,
+  savedSeats,
+} from '../../Engine/lib/savedSeats';
 import { allowLeaving } from './leaveGuard';
 import { isSupportedTopology } from './supportedTopologies';
 import { t } from 'i18next';
@@ -17,7 +22,23 @@ import { t } from 'i18next';
  * using, so a game cannot be loaded over the top of one that is in progress. A
  * reload gives a new worker, with nothing in it.
  */
-const PENDING = 'civ-clone:pending-save';
+const PENDING = 'civ-clone:pending-save',
+  // The seats reassigned before the load (#608), small enough for `sessionStorage` beside the marker.
+  PENDING_SEATS = 'civ-clone:pending-save-seats';
+
+/** A save handed over for loading: the file, and the seats reassigned on the way. */
+export type PendingLoad = { data: string; seats: SeatChanges };
+
+/**
+ * How the seats of a save are offered for reassigning before it loads (#608): the resume window on the page. Settles
+ * with the seats changed, or `null` for a load called off. Given, rather than imported, so that this file stays free
+ * of the page's windows.
+ */
+export type AskSeats = (
+  save: Parameters<typeof savedSeats>[0]
+) => Promise<SeatChanges | null>;
+
+const keepSeats: AskSeats = async () => ({});
 
 /**
  * The hand-over: a marker in `sessionStorage`, the save itself in IndexedDB.
@@ -57,6 +78,7 @@ const pendingSaveStore = (): Store<PendingSave> => {
 const discardPendingSave = async (): Promise<void> => {
   try {
     sessionStorage.removeItem(PENDING);
+    sessionStorage.removeItem(PENDING_SEATS);
 
     await pendingSaveStore().clear();
   } catch {
@@ -160,8 +182,14 @@ export const savedTopologyId = (save: {
 export const gridName = (topologyId: string): string =>
   t(`Grid.${topologyId}`, { defaultValue: topologyId });
 
-/** Reads a save the player chose, and reloads into it. */
-export const loadSaveFromFile = async (file: File): Promise<void> => {
+/**
+ * Reads a save the player chose, shows its seats for reassigning (#608), and reloads into it. Closing the seats
+ * window instead loads nothing.
+ */
+export const loadSaveFromFile = async (
+  file: File,
+  askSeats: AskSeats = keepSeats
+): Promise<void> => {
   let data: string, parsed: any;
 
   try {
@@ -192,10 +220,29 @@ export const loadSaveFromFile = async (file: File): Promise<void> => {
     throw new Error(message);
   }
 
+  let seats: SeatChanges | null;
+
+  try {
+    seats = await askSeats(parsed);
+  } catch (error) {
+    // A file whose seats can't be read, or a worker that won't say what AI clients there are: said, as a file that
+    //  can't be read is, rather than loading nothing in silence.
+    window.alert(
+      t('SavedGame.could-not-read', { error: (error as Error).message })
+    );
+
+    throw error;
+  }
+
+  if (seats === null) {
+    return;
+  }
+
   try {
     await pendingSaveStore().set(data, PENDING);
 
     sessionStorage.setItem(PENDING, 'waiting');
+    sessionStorage.setItem(PENDING_SEATS, JSON.stringify(seats));
   } catch (error) {
     // The reload *is* the load: with nothing handed over there would be
     // nothing on the other side of it, so say so and stay where we are rather
@@ -214,21 +261,25 @@ export const loadSaveFromFile = async (file: File): Promise<void> => {
   window.location.reload();
 };
 
-/** The save waiting to be loaded, taken rather than read: one reload, one go. */
-export const takePendingSave = async (): Promise<string | null> => {
+/** The save waiting to be loaded, with its seats, taken rather than read: one reload, one go. */
+export const takePendingSave = async (): Promise<PendingLoad | null> => {
   // The marker first, and only then the store: it is what says the save
   // waiting on this origin is this tab's, and it means a page load that is not
   // a hand-over never opens the database at all.
   if (sessionStorage.getItem(PENDING) === null) {
+    // Seats left from a load that never happened are nobody's: gone, so they never go with a later save.
+    sessionStorage.removeItem(PENDING_SEATS);
+
     return null;
   }
 
   try {
-    const data = (await pendingSaveStore().get(PENDING)) ?? null;
+    const data = (await pendingSaveStore().get(PENDING)) ?? null,
+      seats = parseSeats(sessionStorage.getItem(PENDING_SEATS));
 
     await discardPendingSave();
 
-    return data;
+    return data === null ? null : { data, seats };
   } catch (error) {
     await discardPendingSave();
 
@@ -240,8 +291,19 @@ export const takePendingSave = async (): Promise<string | null> => {
   }
 };
 
+// The seats handed over, or none: anything else in the slot is not ours to read.
+const parseSeats = (stored: string | null): SeatChanges => {
+  try {
+    const parsed = stored === null ? null : JSON.parse(stored);
+
+    return isSeatChanges(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
 /** A file picker, for a menu item to hang off. */
-export const chooseSaveFile = (): void => {
+export const chooseSaveFile = (askSeats: AskSeats): void => {
   const input = document.createElement('input');
 
   input.type = 'file';
@@ -252,7 +314,7 @@ export const chooseSaveFile = (): void => {
     if (file) {
       // The player has already been told by the time this rejects; it is
       // rethrown for callers that want it, and there is no caller here.
-      loadSaveFromFile(file).catch((): void => {});
+      loadSaveFromFile(file, askSeats).catch((): void => {});
     }
   });
 

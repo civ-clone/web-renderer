@@ -21,6 +21,7 @@ import Transport from '../Transport';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSaveFile } from '../lib/savedGame';
+import ResumeGameWindow from './ResumeGameWindow';
 import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
@@ -332,7 +333,11 @@ export class GameMenu extends Element {
                   new ConfirmationWindow(
                     t('GameMenu.load-game'),
                     t('GameMenu.load-game-confirm'),
-                    () => chooseSaveFile()
+                    // Its seats are shown first, to reassign (#608).
+                    () =>
+                      chooseSaveFile((save) =>
+                        ResumeGameWindow.ask(this.#transport, save)
+                      )
                   );
                 },
               },
