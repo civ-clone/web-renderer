@@ -82,6 +82,8 @@ const objectMap: ObjectMap = {
     'Unit-1': unit('Unit-1'),
     'Unit-3': unit('Unit-3'),
     'Treasury-1': { _: 'Treasury', id: 'Treasury-1', value: 10 },
+    // In the map, but nothing built refers to it: removing it refills nothing.
+    'Unit-9': unit('Unit-9'),
   },
 };
 
@@ -157,6 +159,7 @@ watch('rome and its units', () => [
   ...rome.units.map((unit: any) => unit.id),
 ]);
 watch('unit 3', () => ['Unit-3']);
+watch('unit 9', () => ['Unit-9']);
 
 // A changed id.
 reset();
@@ -236,7 +239,22 @@ check(
   !lastChanged.has('City-2') && lastFilled.has('City-2')
 );
 
-// A removed id.
+// A removed id, which nothing built refers to, so nothing else is refilled and only its own watcher can wake.
+reset();
+update([{ 'Unit-9': { type: 'remove' } }]);
+render();
+
+check(
+  `a watcher wakes for its removed id, alone (${[...wakes.keys()].join()})`,
+  woke('unit 9') === 1 && wakes.size === 1
+);
+check(
+  'through the patch, not filledIds',
+  lastChanged.has('Unit-9') && lastFilled.size === 0
+);
+
+// One the player's list refers to: the rebuild refills everything that reached it, so every watcher wakes, and the
+//  check is only that its own wakes through its id.
 reset();
 update([{ 'Unit-3': { type: 'remove' } }]);
 render();
@@ -254,7 +272,7 @@ render();
 
 check(
   `a full rebuild wakes every watcher (${[...wakes.keys()].join()})`,
-  ['rome', 'veii', 'treasury', 'rome and its units', 'unit 3'].every(
+  ['rome', 'veii', 'treasury', 'rome and its units', 'unit 3', 'unit 9'].every(
     (name) => woke(name) === 1
   )
 );

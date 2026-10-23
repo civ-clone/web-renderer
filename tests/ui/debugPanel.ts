@@ -1,6 +1,8 @@
 // The `?debug=1` panel's notices (#344, step 8): the stress harness says whether its windows are on in the
 //  notification bar, for 4 seconds, when the panel starts it and each time Alt+Shift+S turns it back on. They used to
 //  be sent to the worker as `notification`, which only the worker sends, so they never showed.
+// Its exports: Alt+Shift+J downloads the debug JSON (the switches, the open windows, what the game says now and the
+//  memory samples) and Alt+Shift+X the memory samples as CSV, each through a link clicked and taken away again.
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -155,19 +157,129 @@ expect(
   []
 );
 
-panel.dispose();
+// The exports (Alt+Shift+J, Alt+Shift+X): each downloads a file through a link clicked and taken away again, its
+//  object URL let go of.
+type Download = { name: string; type: string; text: Promise<string> };
 
-expect('dispose stops the stress runner', flags.uiStressRunner, null);
+const downloads: Download[] = [],
+  urls = new Map<string, Blob>(),
+  revoked: string[] = [];
 
-finished = true;
+Object.assign(URL, {
+  createObjectURL: (blob: Blob): string => {
+    const url = `blob:${urls.size + 1}`;
 
-if (failures.length > 0) {
-  process.stderr.write(
-    `FAIL debugPanel: ${
-      failures.length
-    } of ${checks} checks failed\n  ${failures.join('\n  ')}\n`
+    urls.set(url, blob);
+
+    return url;
+  },
+  revokeObjectURL: (url: string): void => {
+    revoked.push(url);
+  },
+});
+
+document.addEventListener('click', (event) => {
+  const anchor = event.target as HTMLAnchorElement,
+    blob = urls.get(anchor.getAttribute('href') ?? '');
+
+  if (blob) {
+    downloads.push({
+      name: anchor.getAttribute('download') ?? '',
+      type: blob.type,
+      text: blob.text(),
+    });
+  }
+});
+
+const exports = async (): Promise<void> => {
+  const dialog = document.createElement('dialog');
+
+  dialog.className = 'window';
+  dialog.setAttribute('open', '');
+  dialog.innerHTML = '<h3>Rome</h3>';
+  document.body.append(dialog);
+
+  altShift('J');
+
+  expect(
+    'Alt+Shift+J downloads the debug JSON',
+    downloads.map(({ name, type }) => [
+      /^civ-debug-\d+\.json$/.test(name),
+      type,
+    ]),
+    [[true, 'application/json']]
   );
-  process.exit(1);
-}
 
-process.stdout.write(`PASS debugPanel: ${checks} checks\n`);
+  const json = JSON.parse(await downloads[0].text);
+
+  expect(
+    'with the switches, the open windows and what the game says now',
+    [
+      json.debug,
+      json.runtime.dialogs,
+      json.runtime.turn,
+      json.runtime.objectCount,
+      json.runtime.tilesPendingRender,
+      json.stressRunner === null,
+      json.memory.sampleCount,
+    ],
+    [
+      {
+        automatePlayerEnabled: true,
+        stressUiEnabled: true,
+        stressUiWindowsEnabled: true,
+      },
+      [{ className: 'window', id: null, open: true, title: 'Rome' }],
+      1,
+      0,
+      0,
+      false,
+      1,
+    ]
+  );
+
+  altShift('X');
+
+  expect(
+    'Alt+Shift+X downloads the memory samples',
+    downloads
+      .slice(1)
+      .map(({ name, type }) => [/^civ-memory-\d+\.csv$/.test(name), type]),
+    [[true, 'text/csv']]
+  );
+  expect(
+    'as CSV, a header and the one sample taken',
+    (await downloads[1].text).split('\n').map((line) => line.split(',')[1]),
+    ['turn', '1']
+  );
+  expect(
+    'each link is taken away again, and its object URL let go of',
+    [document.querySelectorAll('a[download]').length, revoked],
+    [0, ['blob:1', 'blob:2']]
+  );
+
+  dialog.remove();
+};
+
+exports()
+  .catch((error) => {
+    failures.push(`the exports threw: ${error?.stack ?? error}`);
+  })
+  .then(() => {
+    panel.dispose();
+
+    expect('dispose stops the stress runner', flags.uiStressRunner, null);
+
+    finished = true;
+
+    if (failures.length > 0) {
+      process.stderr.write(
+        `FAIL debugPanel: ${
+          failures.length
+        } of ${checks} checks failed\n  ${failures.join('\n  ')}\n`
+      );
+      process.exit(1);
+    }
+
+    process.stdout.write(`PASS debugPanel: ${checks} checks\n`);
+  });

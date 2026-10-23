@@ -7,7 +7,8 @@
 // the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
 // tells the world whether its tiles were refilled; that a `PlayerTile` a patch
 // carries is queued, and the square of a unit (#487) or a city (#578) whose
-// look it changes; that what changed reaches `DataChanges`; that a second
+// look it changes; that what changed reaches `DataChanges`, the owners of refs
+// that have just arrived included, once per update; that a second
 // `gameData` is the map later patches apply to; that the map is pruned on
 // schedule and the pruned ids forgotten; and that the object count is kept as
 // patches go, without counting the whole map (#480).
@@ -696,6 +697,16 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
 
   check('a changed id wakes its watcher alone', woken.join(',') === 'Unit-1');
 
+  // What one update collected is not collected again by the next.
+  woken.length = 0;
+  state.update();
+  changes.notify(state.data());
+
+  check(
+    'the next update, with nothing changed, wakes nobody',
+    woken.length === 0
+  );
+
   woken.length = 0;
 
   state.setWaiting(true);
@@ -722,6 +733,44 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   check(
     'a replaced map wakes every watcher',
     woken.join(',') === 'Unit-1,Unit-2'
+  );
+}
+
+// The owner of a ref that has just arrived wakes too: the patch names only
+//  the id that arrived, and the rebuild's `filledIds` adds the owner.
+{
+  const objectMap = makeMap();
+
+  (objectMap.objects['Player-1'] as PlainObject).units = [
+    ref('Unit-1'),
+    ref('Unit-2'),
+    ref('Unit-3'),
+  ];
+
+  // The ref missing until it arrives is logged by the rebuild; here it is expected.
+  const consoleError = console.error;
+
+  console.error = () => {};
+
+  const { changes, state } = setup(objectMap),
+    woken: string[] = [];
+
+  console.error = consoleError;
+
+  changes.watch(
+    () => ['Player-1'],
+    () => woken.push('Player-1')
+  );
+
+  state.update();
+  changes.notify(state.data());
+  state.applyPatches([update('Unit-3', unit('Unit-3'))]);
+  changes.notify(state.data());
+
+  check(
+    'a ref arriving wakes the watcher of the object that holds it',
+    woken.join(',') === 'Player-1' &&
+      (state.data().player.units as PlainObject[]).length === 3
   );
 }
 

@@ -367,7 +367,9 @@ const sentActions: string[] = [],
   unacknowledged: TransportHandledAction[] = [],
   pendingMove = new PendingMove<Tile>(),
   // The tiles the controller has the units layer draw again.
-  layerTiles: Tile[] = [];
+  layerTiles: Tile[] = [],
+  // The units whose actions the controller asked the worker for (#323).
+  actionsAskedFor: string[] = [];
 
 let gameData: any = null;
 
@@ -437,6 +439,10 @@ const topology = topologyFor({ width: 10, height: 1 }),
     // The action as the renderer sends it, and the worker acknowledges it.
     transport: {
       send: ((name: string, action: TransportHandledAction) => {
+        if (name === 'unitActions') {
+          actionsAskedFor.push(action as unknown as string);
+        }
+
         if (name !== 'action') {
           return;
         }
@@ -666,11 +672,26 @@ expect(
 );
 
 // The Militia's actions are still on their way.
+expect(
+  'a unit made active without its actions has them asked for',
+  actionsAskedFor.includes('Militia-1'),
+  true
+);
+
 sentActions.splice(0);
 press('ArrowLeft');
 
 expect(
   'keys for a unit whose orders are on their way are kept',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '0 true'
+);
+
+// Another patch, the actions still not in: the keys wait for them, rather than being read against none.
+update('Militia-1');
+
+expect(
+  'and stay kept through an update that does not bring them',
   `${sentActions.length} ${pendingMove.queued()}`,
   '0 true'
 );
@@ -967,6 +988,60 @@ expect(
   'the keys kept behind a move are forgotten when another unit is up',
   `${sentActions.join(' / ')} ${pendingMove.queued()} ${pendingMove.pending()}`,
   'Chariot-1 Move 4 false false'
+);
+
+// After an update with several units that can act, the one that was active stays so, though it is not the first
+//  listed (#189).
+const updateWith = (...ids: string[]) => {
+  gameData = gameReconstituter.rebuild(game, null);
+
+  controller.next(
+    ids.map((id) => ({ _: 'ActiveUnit', value: find(id) } as any)),
+    false
+  );
+};
+
+place('Chariot-1', 4);
+updateWith('Chariot-1', 'Militia-1');
+
+expect(
+  'the unit that was active stays active after an update, though another is listed first',
+  current().id,
+  'Militia-1'
+);
+
+// A window the answer opened has the keys kept behind it, as it would a key typed now: a modal one, or one with the
+//  focus.
+const page = document as any,
+  querySelector = page.querySelector;
+
+sentActions.splice(0);
+press('ArrowLeft', 'ArrowLeft', 'ArrowLeft');
+place('Militia-1', 3);
+page.querySelector = (selector: string) =>
+  selector === 'dialog.window.modal[open]' ? {} : querySelector(selector);
+respond('Militia-1');
+page.querySelector = querySelector;
+
+expect(
+  'a modal window the answer opened takes the keys kept behind the move: they are forgotten',
+  `${sentActions.join(' / ')} ${pendingMove.queued()}`,
+  'Militia-1 Move 3 false'
+);
+
+sentActions.splice(0);
+press('ArrowLeft', 'ArrowLeft');
+place('Militia-1', 2);
+page.activeElement = {
+  closest: (selector: string) => selector === 'dialog.window',
+};
+respond('Militia-1');
+delete page.activeElement;
+
+expect(
+  'and so does a window with the focus',
+  `${sentActions.join(' / ')} ${pendingMove.queued()}`,
+  'Militia-1 Move 2 false'
 );
 
 const limited = new PendingMove();
