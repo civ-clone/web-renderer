@@ -51,6 +51,8 @@ import {
 import Notification from '../../src/js/Engine/Notification';
 import { PlayerResearch } from '../../src/js/UI/types';
 import Tile from '@civ-clone/core-world/Tile';
+import Barbarian from '@civ-clone/base-civilization-barbarian/Barbarian';
+import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import type Player from '@civ-clone/core-player/Player';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
@@ -638,6 +640,40 @@ const expect = (description: string, actual: string, expected: string) => {
     'advanceName',
     advanceName('CeremonialBurial', 4),
     'Ceremonial Burial'
+  );
+
+  // #588: the line along the top of the page while the other civilizations move, as `Game` sends it and
+  //  `NotificationBar` translates it, in a loaded game and a new one alike. Each key is there (they are sent from the
+  //  worker, so the scan of the UI's keys above doesn't see them), and a civilization not yet met isn't named.
+  const progress = (notice: { key: string; data: object } | null): string =>
+      notice === null
+        ? 'no line'
+        : String(t(notice.key, { ...notice.data, skipOnVariables: false })),
+    playerOf = (civilization: object): Player =>
+      ({ civilization: () => civilization } as unknown as Player),
+    reader = playerOf(new Babylonian()),
+    met = () => true;
+
+  expect('Game.progress.turn', progress(turnProgress(42)), 'Turn 42');
+  expect(
+    'Game.progress.player',
+    progress(playerProgress(playerOf(new Mongol()), reader, met)),
+    'The Mongols are moving…'
+  );
+  expect(
+    'Game.progress.player (the barbarians)',
+    progress(playerProgress(playerOf(new Barbarian()), reader, met)),
+    'The Barbarians are moving…'
+  );
+  expect(
+    'Game.progress.unmet-player',
+    progress(playerProgress(playerOf(new Indian()), reader, () => false)),
+    'An unknown civilization is moving…'
+  );
+  expect(
+    "the player's own turn has no line",
+    progress(playerProgress(reader, reader, met)),
+    'no line'
   );
 
   if (failures.length) {

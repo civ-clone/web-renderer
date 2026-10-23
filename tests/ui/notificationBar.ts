@@ -1,11 +1,14 @@
 // The worker's `notification` messages are shown as text, not markup (#469): a loaded save's name and the reason a
 //  save couldn't be loaded reach the bar, so a save holding `<img onerror>` would otherwise run script on the page.
+//  One sent as a key, as the turn and whose turn it is are (#588), is translated, and shown as text too.
 
 // Must stay first: the components read `document` as they load.
 import { document } from './lib/dom';
 
 import NotificationBar from '../../src/js/UI/app/NotificationBar';
 import Transport from '../../src/js/UI/Transport';
+import i18next from 'i18next';
+import i18nOptions from '../../src/js/UI/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0;
@@ -53,13 +56,34 @@ expect(
   ["loaded '<b>Rome</b>'", 0]
 );
 
-if (failures.length) {
-  console.error(`FAIL notification-bar\n  ${failures.join('\n  ')}`);
+(async () => {
+  await i18next.init(i18nOptions);
+  await import('../../translations/local/en');
+  await import('../../translations/civ1-civilization/en');
 
-  process.exit(1);
-}
+  listeners.notification({ key: 'Game.progress.turn', data: { turn: 42 } });
 
-console.log(`PASS notification-bar (${checks} checks)`);
+  expect('a key is translated', area.textContent, 'Turn 42');
 
-// The bar's 4-second timer would keep node waiting.
-process.exit(0);
+  listeners.notification({
+    key: 'Game.progress.player',
+    data: { civilization: 'Babylonian' },
+  });
+
+  expect(
+    "with the civilization's name",
+    [area.textContent, area.children.length],
+    ['The Babylonians are moving…', 0]
+  );
+
+  if (failures.length) {
+    console.error(`FAIL notification-bar\n  ${failures.join('\n  ')}`);
+
+    process.exit(1);
+  }
+
+  console.log(`PASS notification-bar (${checks} checks)`);
+
+  // The bar's 4-second timer would keep node waiting.
+  process.exit(0);
+})();
