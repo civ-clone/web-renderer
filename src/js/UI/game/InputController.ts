@@ -2,6 +2,7 @@ import { GameData, Tile, Unit } from '../types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
 import CityStatus from '../components/CityStatus';
+import Civilopedia from '../components/Civilopedia';
 import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GamePortal from '../components/GamePortal';
 import HappinessReport from '../components/HappinessReport';
@@ -22,8 +23,9 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
       : key.toLowerCase()
     : key;
 
-// The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), a key passed on to a modal window, the unit keys,
-//  Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`, and the Shift+5, Shift+6 cheat sequence.
+// The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), the Civilopedia (`?`), a key passed on to a modal
+//  window, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`, and the Shift+5,
+//  Shift+6 cheat sequence.
 //
 // Registered on `document` in the bubble phase, after `ReloadGuard` (which must stay the first bubble listener: it
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
@@ -75,6 +77,9 @@ export class InputController {
       F6: () => new ScienceReport(data().player),
       F8: () => new TopCitiesReport(transport),
       F9: () => new CivilizationScoreReport(transport),
+      // Civ1 opened its Civilopedia from the menu alone (#183). F2 and F7 are free, but they are Civ1's Military
+      //  Advisor and Wonders of the World, still to come.
+      '?': () => Civilopedia.open(transport),
     };
 
     on(document, 'keydown', this.#listener);
@@ -106,16 +111,17 @@ export class InputController {
 
     const key = withoutCapsLock(mappedKeyFromEvent(event), event);
 
-    if (key in leaderScreensMap) {
-      leaderScreensMap[event.key]();
-
-      event.preventDefault();
-    }
-
     // The open one on top, the last in the page: a closed one isn't drawn, and shouldn't take the keys (#351).
     const modalWindow = Array.from(
       document.querySelectorAll('dialog.window.modal[open]')
     ).pop();
+
+    // Not over a modal window, which would leave the screen drawn but out of reach until the modal one closes (#183).
+    if (key in leaderScreensMap && !modalWindow) {
+      leaderScreensMap[event.key]();
+
+      event.preventDefault();
+    }
 
     if (document.activeElement === document.body && modalWindow) {
       event.preventDefault();

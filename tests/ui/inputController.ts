@@ -1,8 +1,8 @@
 // The game's keyboard, out of `Renderer.ts` (#344): Enter ends the turn only when EndTurn is mandatory and the game is
 //  not waiting for the next turn; a key typed while the body has the focus goes to an open modal window; unit keys go
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
-//  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other; and
-//  `dispose` removes the listener. Driven with stub dependencies.
+//  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other, but not over
+//  a modal window; `?` opens the Civilopedia, once; and `dispose` removes the listener. Driven with stub dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
@@ -459,6 +459,52 @@ const run = async (): Promise<void> => {
     [pressed, calls],
     [['%', 'F8', '^'], []]
   );
+
+  // The Civilopedia (`?`, #183): it opens, and `?` again finds the one already open rather than another.
+  reset();
+  event = press({ code: 'Slash', key: '?', shiftKey: true });
+  press({ code: 'Slash', key: '?', shiftKey: true });
+
+  expect(
+    '? opens the Civilopedia, once however often it is pressed',
+    [
+      document.querySelectorAll('dialog.civilopedia').length,
+      event.defaultPrevented,
+    ],
+    [1, true]
+  );
+
+  document
+    .querySelectorAll('dialog.civilopedia')
+    .forEach((dialog) => dialog.remove());
+
+  // Over a modal window a leader screen would be drawn out of reach: the key goes to the modal window instead.
+  const notice = document.createElement('dialog');
+
+  notice.className = 'window modal';
+  notice.setAttribute('open', '');
+  document.body.append(notice);
+
+  const forwarded: string[] = [];
+
+  notice.addEventListener('keydown', (event) =>
+    forwarded.push((event as KeyboardEvent).key)
+  );
+
+  press({ code: 'Slash', key: '?', shiftKey: true });
+  press({ code: 'F8', key: 'F8' });
+
+  expect(
+    'not over a modal window, which gets the keys',
+    [
+      document.querySelectorAll('dialog.civilopedia, dialog.top-cities-report')
+        .length,
+      forwarded,
+    ],
+    [0, ['?', 'F8']]
+  );
+
+  notice.remove();
 
   // `dispose`.
 

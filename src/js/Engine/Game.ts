@@ -20,6 +20,7 @@ import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import requirementsData from './lib/requirements';
+import civilopediaData from './lib/civilopedia';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import {
   Seat,
@@ -200,6 +201,9 @@ export class Game implements IGame {
 
     // What the ruleset's things need, make obsolete and are replaced by, for the civilopedia (#37, #183).
     answer(transport, 'getRequirements', () => requirementsData());
+
+    // Every entry the civilopedia shows, with the requirement entries about it and a unit's numbers (#183).
+    answer(transport, 'getCivilopedia', () => civilopediaData());
 
     answer(transport, 'getOptions', (values: string[]) =>
       values.reduce((options, optionName) => {

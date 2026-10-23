@@ -6,6 +6,7 @@ import { ObserverChoice } from './ObserverViews';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { RequirementData } from './lib/requirements';
+import { CivilopediaEntry, UnavailableBuildItem } from './lib/civilopedia';
 import { CivilizationScore } from './lib/civilizationScore';
 import { GameOverDetails } from './lib/gameOver';
 import { TopCitiesRow } from './lib/topCities';
@@ -109,6 +110,8 @@ declare global {
     cheatUnitTypes: TransportData<string[], null>;
     // What a city can build (#324): the reply is standalone, so it resolves without the game data.
     cityBuildAvailable: TransportData<ObjectMap, string>;
+    // What a city can't build, and the ids of the rules that refuse each item (#183).
+    cityBuildUnavailable: TransportData<UnavailableBuildItem[], string>;
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     // The player's Civilization Score (#149).
     civilizationScore: TransportData<CivilizationScore, null>;
@@ -143,6 +146,8 @@ declare global {
     investigateCity: TransportData<ObjectMap, never>;
     // Every requirement entry (#37), for the civilopedia (#183).
     getRequirements: TransportData<RequirementData[], null>;
+    // Every entry the civilopedia shows (#183).
+    getCivilopedia: TransportData<CivilopediaEntry[], null>;
     getOptions: TransportData<
       {
         [key: string]: any;

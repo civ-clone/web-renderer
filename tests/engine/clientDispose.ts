@@ -255,6 +255,7 @@ const run = async (): Promise<void> => {
         'topCities',
         'civilizationScore',
         'cityBuildAvailable',
+        'cityBuildUnavailable',
         'unitActions',
         'intelligence',
         'retire',
