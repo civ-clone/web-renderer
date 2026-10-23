@@ -222,6 +222,8 @@ export class GameSession {
           portal,
           secondaryActionArea,
           transport,
+          unitAction: (unitId, unitAction): void =>
+            void unitController.act(unitId, unitAction),
           unitActionArea,
           world,
         }),
@@ -361,7 +363,8 @@ export class GameSession {
         scheduleRender();
 
         // Keys kept while the unit's orders were on their way. Those kept
-        // behind a move wait for its `actionHandled` (#326).
+        // behind a move or another order wait for its `actionHandled`
+        // (#326, #543).
         unitController.drain();
 
         if (
@@ -397,8 +400,8 @@ export class GameSession {
         })
       );
 
-      // The move drawn before its answer (#326), settled by its own
-      // acknowledgement.
+      // The move drawn before its answer (#326), or any other order
+      // (#543), settled by its own acknowledgement.
       transportDisposers.push(
         transport.receive('actionHandled', (action): void => {
           // Answered: the turn ends (`turnEnded` follows at once), or it goes on, as when talks are open (#491), and End
@@ -425,6 +428,9 @@ export class GameSession {
           // A new turn: an End Turn sent before it was handed over is never answered, as the worker wasn't listening
           //  (#151).
           endTurnSent = false;
+
+          // Nor is any unit's order sent while waiting: the keys are free for the new turn (#543).
+          unitController.turnStarted();
 
           // Drops the rebuild deferred while waiting: this one replaces
           // it.

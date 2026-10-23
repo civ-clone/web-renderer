@@ -13,6 +13,10 @@
 //
 // And a move shown before the engine has answered it, with the keys typed
 // while it is kept and played once it has been (#326).
+//
+// And any other order, from a key or a button, waited for the same way, the
+// keys typed meanwhile played once it is answered against whichever unit is up
+// then (#543).
 
 // Must stay first: it gives the map layers a canvas and a `document` to draw
 // with.
@@ -320,14 +324,12 @@ const place = (
     ...(actions === null
       ? {}
       : {
-          actions: [
-            {
-              _: 'Fortify',
-              id: `Fortify-${id}`,
-              from: tileRef(x),
-              to: tileRef(x),
-            },
-          ],
+          actions: ['Fortify', 'NoOrders'].map((name) => ({
+            _: name,
+            id: `${name}-${id}`,
+            from: tileRef(x),
+            to: tileRef(x),
+          })),
           actionsForNeighbours: Object.fromEntries(
             Object.entries(actions).map(([direction, name]) => {
               const to = x + (direction === 'e' ? 1 : -1);
@@ -474,11 +476,20 @@ const find = (id: string | null) =>
   // The worker's `actionHandled`, after the patch with the action's result.
   acknowledge = (action: TransportHandledAction) =>
     controller.actionHandled(action),
+  // The acknowledgement of the oldest action sent, if any is waiting: a key
+  // sent when it should have been kept leaves fewer than the checks expect.
+  acknowledgeOldest = () => {
+    const action = unacknowledged.shift();
+
+    if (action) {
+      acknowledge(action);
+    }
+  },
   // The answer to the oldest action sent: its patch, then its acknowledgement.
   respond = (activeId: string | null) => {
     update(activeId);
 
-    acknowledge(unacknowledged.shift()!);
+    acknowledgeOldest();
   },
   drawnAt = (): number =>
     (pendingMove.destination(current().id) ?? current().tile).x,
@@ -643,19 +654,20 @@ expect(
 );
 expect('and the key after it waits', pendingMove.queued(), true);
 
-// Fortified, and the Militia is up: the Legion's last key isn't for it.
+// Fortified, and the Militia is up: the key typed after the order is kept for
+// it, the unit up once the order is answered (#543).
 place('Militia-1', 3, null);
 respond('Militia-1');
 
 expect(
-  'the keys are forgotten when another unit is active',
+  'the keys typed after an order are kept for the unit up once it is answered',
   `${sentActions.length} ${pendingMove.queued()}`,
-  '2 false'
+  '2 true'
 );
 
 // The Militia's actions are still on their way.
 sentActions.splice(0);
-press('ArrowLeft', 'ArrowLeft');
+press('ArrowLeft');
 
 expect(
   'keys for a unit whose orders are on their way are kept',
@@ -738,6 +750,223 @@ expect(
   'and once the talks are over and the move answered, nothing more is played',
   `${sentActions.join(' / ')} ${pendingMove.pending()}`,
   'Militia-1 Move 4 false'
+);
+
+// Any other order is waited for too (#543): until its acknowledgement the
+// page holds the unit as it was before it, and a key read against it would be
+// sent for a unit that has already acted. The keys typed meanwhile go to
+// whichever unit is up once it is answered.
+sentActions.splice(0);
+press(' ', 'ArrowLeft');
+
+expect(
+  'an order is sent at once',
+  sentActions.join(' / '),
+  'Militia-1 NoOrders'
+);
+expect(
+  'the key typed after it is kept, not sent for the unit that has just acted',
+  `${sentActions.length} ${pendingMove.pending()} ${pendingMove.queued()}`,
+  '1 true true'
+);
+
+// Its patch: the Militia is done, and the Legion is up, with its actions.
+place('Legion-1', 8);
+update('Legion-1');
+
+expect(
+  'the patch before the acknowledgement does not play it',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '1 true'
+);
+
+acknowledgeOldest();
+
+expect(
+  'the acknowledgement plays it, against the unit now up',
+  sentActions.join(' / '),
+  'Militia-1 NoOrders / Legion-1 Move 7'
+);
+
+place('Legion-1', 7);
+respond('Legion-1');
+
+// An order after which the same unit is still up: the keys are its own.
+sentActions.splice(0);
+press('f', 'ArrowLeft');
+update('Legion-1');
+acknowledgeOldest();
+
+expect(
+  'the keys after an order that leaves the unit up are played against it',
+  sentActions.join(' / '),
+  'Legion-1 Fortify / Legion-1 Move 6'
+);
+
+place('Legion-1', 6);
+respond('Legion-1');
+
+// A button is an order too, sent for the active unit as it is now: the Legion
+// has moved, so it is aimed at the tile it is on.
+sentActions.splice(0);
+
+expect(
+  'a button drawn for a unit no longer up does nothing',
+  `${controller.act('Militia-1', 'Fortify')} ${sentActions.length}`,
+  'false 0'
+);
+expect(
+  'a button sends its action for the unit as it is now',
+  `${controller.act('Legion-1', 'Fortify')} ${sentActions.join()} ${
+    unacknowledged[0]?.target
+  }`,
+  'true Legion-1 Fortify Tile-6'
+);
+expect(
+  'a second click before it is answered does nothing',
+  `${controller.act('Legion-1', 'NoOrders')} ${sentActions.length}`,
+  'false 1'
+);
+
+press('ArrowLeft');
+
+expect(
+  'a key after a button is kept',
+  `${sentActions.length} ${pendingMove.queued()}`,
+  '1 true'
+);
+
+update('Legion-1');
+acknowledgeOldest();
+
+expect(
+  'and played once its order is answered',
+  sentActions.join(' / '),
+  'Legion-1 Fortify / Legion-1 Move 5'
+);
+
+place('Legion-1', 5);
+respond('Legion-1');
+
+// A window opened before the order is answered (talks it started): the
+// renderer's `chooseFromList` receiver forgets the keys, and the order is still
+// waited for.
+sentActions.splice(0);
+press('f', 'ArrowLeft', 'ArrowLeft');
+controller.clearKeys();
+
+expect(
+  'a window forgets the keys kept behind an order',
+  `${sentActions.length} ${pendingMove.queued()} ${pendingMove.pending()}`,
+  '1 false true'
+);
+
+update('Legion-1');
+acknowledgeOldest();
+
+expect(
+  'and its answer plays nothing more, and is waited for no longer',
+  `${sentActions.join(' / ')} ${pendingMove.pending()}`,
+  'Legion-1 Fortify false'
+);
+
+// The turn ends with an order on its way, sent as End Turn was: the worker
+// has stopped listening, so it is never answered.
+sentActions.splice(0);
+press('f', 'ArrowLeft');
+controller.next([], true);
+unacknowledged.splice(0);
+
+expect(
+  'the end of the turn waits for it no longer, and forgets the keys',
+  `${pendingMove.pending()} ${pendingMove.queued()}`,
+  'false false'
+);
+
+// The next turn.
+update('Legion-1');
+press('ArrowLeft');
+
+expect(
+  "so the next turn's keys go at once",
+  sentActions.join(' / '),
+  'Legion-1 Fortify / Legion-1 Move 4'
+);
+
+place('Legion-1', 4);
+respond('Legion-1');
+
+// An attack is waited for too, but its keys are the attacker's, as a move's
+// are (#326): played against it if it is still up once the attack is
+// answered, forgotten if another unit is up.
+const attacker = (actions: { [direction: string]: string }) => {
+  place('Legion-1', 4, actions);
+  game.objects['Legion-1'].player = { '#ref': 'Player-2' };
+};
+
+attacker({ e: 'Attack' });
+update('Legion-1');
+sentActions.splice(0);
+press('ArrowRight', 'ArrowLeft');
+
+expect(
+  'an attack is waited for',
+  `${sentActions.join(' / ')} ${pendingMove.queued()}`,
+  'Legion-1 Attack true'
+);
+
+// Won, and the Legion has a move left.
+attacker({ e: 'Attack', w: 'Move' });
+update('Legion-1');
+acknowledgeOldest();
+
+expect(
+  'the key typed after an attack the unit survived is played against it',
+  sentActions.join(' / '),
+  'Legion-1 Attack / Legion-1 Move 3'
+);
+
+attacker({ e: 'Attack' });
+respond('Legion-1');
+sentActions.splice(0);
+press('ArrowRight', 'ArrowLeft');
+
+// Lost in its own attack: the Chariot is up.
+delete game.objects['Legion-1'];
+game.objects['Player-2'].units = game.objects['Player-2'].units.filter(
+  (ref: { '#ref': string }) => ref['#ref'] !== 'Legion-1'
+);
+place('Chariot-1', 6);
+update('Chariot-1');
+
+expect(
+  'the keys typed after an attack are forgotten when another unit is up',
+  `${sentActions.join(' / ')} ${pendingMove.queued()}`,
+  'Legion-1 Attack false'
+);
+
+acknowledgeOldest();
+
+expect(
+  'and its answer plays nothing for the next unit',
+  `${sentActions.join(' / ')} ${pendingMove.pending()}`,
+  'Legion-1 Attack false'
+);
+
+// A plain move is waited for as it was (#326): the keys kept behind it are
+// forgotten when its answer leaves another unit up.
+place('Chariot-1', 5);
+update('Chariot-1');
+sentActions.splice(0);
+press('ArrowLeft', 'ArrowLeft');
+place('Chariot-1', 4, {});
+place('Militia-1', 4);
+respond('Militia-1');
+
+expect(
+  'the keys kept behind a move are forgotten when another unit is up',
+  `${sentActions.join(' / ')} ${pendingMove.queued()} ${pendingMove.pending()}`,
+  'Chariot-1 Move 4 false false'
 );
 
 const limited = new PendingMove();

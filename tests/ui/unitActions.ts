@@ -1,5 +1,5 @@
-// The active unit's actions as buttons (#348): one for each of its own-tile actions, a click sending what the key
-// would, a picture for each as the issue lays out, and the terrain a Clear or Plant action leaves coming from the
+// The active unit's actions as buttons (#348): one for each of its own-tile actions, a click asking for what the key
+// would (the controller sends it, `tests/ui/activeUnit.ts`), a picture for each as the issue lays out, and the terrain a Clear or Plant action leaves coming from the
 // action class rather than the renderer.
 
 // Must stay first: it gives the component a `document`.
@@ -190,7 +190,7 @@ const sent: any[] = [],
   container = document.createElement('div'),
   buttons = new UnitActions(
     container,
-    { send: (...args: any[]) => sent.push(args) } as any,
+    (unitId: string, unitAction: string) => sent.push([unitId, unitAction]),
     () => {}
   ),
   settlers = unitOf('Settlers', [
@@ -218,16 +218,8 @@ expect(
 
 (container.querySelectorAll('button')[1] as HTMLElement).click();
 
-expect('a click sends what the hotkey sends', sent, [
-  [
-    'action',
-    {
-      name: 'ActiveUnit',
-      id: 'Settlers-1',
-      unitAction: 'BuildRoad',
-      target: 'Tile-1',
-    },
-  ],
+expect('a click asks for its action, for its unit', sent, [
+  ['Settlers-1', 'BuildRoad'],
 ]);
 
 const before = container.firstElementChild;
@@ -250,10 +242,11 @@ sent.length = 0;
 buttons.build(moved, null);
 (container.querySelectorAll('button')[1] as HTMLElement).click();
 
+// The controller sends the action the unit has now, aimed at its new tile.
 expect(
-  'a unit that moved has its buttons aimed at its new tile',
-  sent.map(([, message]) => message.target),
-  ['Tile-2']
+  'a unit that moved has its buttons drawn again',
+  `${container.firstElementChild !== before} ${JSON.stringify(sent)}`,
+  `true ${JSON.stringify([['Settlers-1', 'BuildRoad']])}`
 );
 
 buttons.build(null, null);

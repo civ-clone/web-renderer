@@ -5,7 +5,6 @@ import {
 } from '../lib/unitActionIcon';
 import { Tile, Unit } from '../types';
 import { Element, s } from '@dom111/element';
-import Transport from '../Transport';
 import { keyForAction } from '../lib/unitActionKeys';
 import { t } from 'i18next';
 import { unitActions } from '../lib/unitActions';
@@ -13,15 +12,16 @@ import { unitActions } from '../lib/unitActions';
 const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 
 // The active unit's own-tile actions as picture buttons (#348), for finding what Explore, Automate and the Workers'
-//  actions do without knowing the keys. A click sends what the key would.
+//  actions do without knowing the keys. A click asks for the action as the key would, through `act`: the active unit's
+//  controller, which sends it and keeps the keys typed after it until it is answered (#543).
 export class UnitActions extends Element {
+  #act: (unitId: string, unitAction: string) => void;
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
-  #transport: Transport;
 
   constructor(
     container: HTMLElement,
-    transport: Transport,
+    act: (unitId: string, unitAction: string) => void,
     draw: (
       canvas: HTMLCanvasElement,
       layers: IconLayer[]
@@ -29,8 +29,8 @@ export class UnitActions extends Element {
   ) {
     super(container);
 
+    this.#act = act;
     this.#draw = draw;
-    this.#transport = transport;
   }
 
   /**
@@ -93,14 +93,7 @@ export class UnitActions extends Element {
       button.title = label;
       button.setAttribute('aria-label', label);
 
-      button.addEventListener('click', () => {
-        this.#transport.send('action', {
-          name: 'ActiveUnit',
-          id: unit.id,
-          unitAction: action._,
-          target: action.to.id,
-        });
-      });
+      button.addEventListener('click', () => this.#act(unit.id, action._));
 
       this.element().append(button);
 

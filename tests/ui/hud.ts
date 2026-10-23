@@ -119,6 +119,7 @@ const run = async (): Promise<void> => {
       send: () => {},
       receive: () => () => {},
     } as unknown as Transport,
+    unitAction: () => {},
     unitActionArea,
     world: {
       get: (x: number, y: number): Tile => {
