@@ -9,7 +9,7 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import answer, { describeError } from './answer';
-import loadGame, { HUMAN_CLIENT } from './loadGame';
+import loadGame, { isHumanDescriptor } from './loadGame';
 import Observer from './Observer';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
@@ -17,7 +17,7 @@ import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
-import { save } from '@civ-clone/core-save-game/save';
+import { DescribedClient, save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import requirementsData from './lib/requirements';
 import civilopediaData from './lib/civilopedia';
@@ -49,6 +49,9 @@ export class Game implements IGame {
   #eventsBound: boolean = false;
   #observer: Observer | null = null;
   #localPlayerClient: DataTransferClient | null = null;
+  // The seat each client was made from (#608), for a save to record: who played it, and a person's name. Weak, so
+  //  that the clients of a game before this one in the same worker aren't kept for it.
+  #seats: WeakMap<Client, Seat> = new WeakMap();
   #transport: Transport<TransportDataMap>;
 
   constructor(transport: Transport<TransportDataMap>) {
@@ -105,7 +108,13 @@ export class Game implements IGame {
       try {
         this.#transport.send('saveGame', {
           name,
-          data: JSON.stringify(save(defaultGame, { name })),
+          data: JSON.stringify(
+            save(defaultGame, {
+              name,
+              describeClient: (client: unknown): DescribedClient =>
+                this.#describeClient(client as Client),
+            })
+          ),
         });
       } catch (error) {
         // Reported rather than thrown: the worker would otherwise die silently
@@ -364,7 +373,54 @@ export class Game implements IGame {
     return Paced;
   }
 
+  // What a save records of a client (#608): a person's seat, with their name, or a program by class name, as the
+  //  file always had it.
+  #describeClient(client: Client): DescribedClient {
+    const seat = this.#seats.get(client);
+
+    return {
+      kind: seat?.kind === 'human' ? 'human' : 'ai',
+      // As `#aiClientType` names one, so that a load finds the same class.
+      module: typeNameOf(client.constructor as { name: string }),
+      ...(seat?.name === undefined ? {} : { name: seat.name }),
+    };
+  }
+
+  // A seat from a save (#608) whose AI client this build doesn't have plays with the default instead, as every
+  //  computer player in a loaded game did before the file said which.
+  #seatAvailableHere(player: Player, seat: Seat): Seat {
+    if (
+      seat.kind !== 'computer' ||
+      seat.ai === undefined ||
+      isBarbarian(player)
+    ) {
+      return seat;
+    }
+
+    try {
+      this.#aiClientType(seat.ai);
+
+      return seat;
+    } catch (error) {
+      // Said on the page, not only the console: the player plays on, differently from how it was saved.
+      this.#transport.send(
+        'notification',
+        `The AI client '${seat.ai}' that played a computer seat is not available here; the default plays it instead.`
+      );
+
+      return { ...seat, ai: undefined };
+    }
+  }
+
   #createClient(player: Player, seat: Seat, paced: boolean = false): Client {
+    const client = this.#makeClient(player, seat, paced);
+
+    this.#seats.set(client, seat);
+
+    return client;
+  }
+
+  #makeClient(player: Player, seat: Seat, paced: boolean): Client {
     // The barbarians (#169) are never the human's: `civ1-barbarians` spawns their player, and it asks for a client
     //  with `player:spawned` like any player added mid-game.
     if (isBarbarian(player)) {
@@ -405,9 +461,15 @@ export class Game implements IGame {
     // A save with no human in it is watched, as a game set up without one is (#607): the observer sees it as its
     //  first civilization once it is back, since a loaded game doesn't start. A file with no clients at all is left
     //  to the load to refuse (#470).
-    const observed =
-      Array.isArray(file.clients) &&
-      !file.clients.some(({ module }) => module === HUMAN_CLIENT);
+    // Of the players the file has: a client listed for a player the game no longer has makes nobody human.
+    const players = new Set<string>(file.registries?.players ?? []),
+      observed =
+        Array.isArray(file.clients) &&
+        !file.clients.some(
+          (descriptor) =>
+            (players.size === 0 || players.has(descriptor.playerId)) &&
+            isHumanDescriptor(descriptor)
+        );
 
     this.#observer?.dispose();
     this.#observer = observed ? new Observer(this.#transport) : null;
@@ -416,12 +478,13 @@ export class Game implements IGame {
       .then(() => {
         this.#stopAtEnding(observed);
 
+        // Each client from the seat the save records (#608): a person's again, or the AI that served it.
         return loadGame(
           file,
-          (player: Player, human: boolean): Client =>
+          (player: Player, seat: Seat): Client =>
             this.#createClient(
               player,
-              { kind: human ? 'human' : 'computer' },
+              this.#seatAvailableHere(player, seat),
               observed
             ),
           () => this.#observer?.observeFirst()

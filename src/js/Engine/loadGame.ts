@@ -3,7 +3,8 @@ import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Client from '@civ-clone/core-client/Client';
 import Difficulty from '@civ-clone/core-difficulty/Difficulty';
 import Player from '@civ-clone/core-player/Player';
-import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
+import { ClientDescriptor, SaveGame } from '@civ-clone/core-save-game/SaveGame';
+import { Seat } from './lib/seats';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { hydrate } from '@civ-clone/core-save-game/hydrate';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -30,10 +31,34 @@ declare global {
  *
  * `core-save-game` writes a descriptor per client — the player's id and the
  * class that was serving them — because a client is a live connection and
- * cannot be saved. It cannot know which of them is a person; this build can,
- * because only one class ever is.
+ * cannot be saved. It cannot know which of them is a person. A save made since
+ * #608 says so itself (`kind: 'human'`, and the person's name); one made before
+ * has `kind: 'ai'` throughout, and this class name is what tells, since only
+ * one class ever served a person.
  */
 export const HUMAN_CLIENT = 'DataTransferClient';
+
+/** Whether a saved client was a person's: as the file says, or by class name for a file written before it could. */
+export const isHumanDescriptor = ({
+  kind,
+  module,
+}: Pick<ClientDescriptor, 'kind' | 'module'>): boolean =>
+  kind === 'human' || module === HUMAN_CLIENT;
+
+/**
+ * The seat a saved client was played from (#608): a person's, with their name, or a computer's with the AI client
+ * that served it, by class name, as a seat names one (`lib/seats.ts`). The class is what the save has of the AI
+ * package, and a build without it falls back to its default (`Game.load`).
+ */
+export const seatFromDescriptor = (
+  descriptor: Pick<ClientDescriptor, 'kind' | 'module' | 'name'>
+): Seat =>
+  isHumanDescriptor(descriptor)
+    ? {
+        kind: 'human',
+        ...(descriptor.name === undefined ? {} : { name: descriptor.name }),
+      }
+    : { kind: 'computer', ai: descriptor.module };
 
 /**
  * Release any tile still worked by a destroyed city.
@@ -110,7 +135,9 @@ export const restoreTransportRegistries = (game = defaultGame): void =>
  */
 export const restoreGame = (
   file: SaveGame,
-  createClient: (player: Player, human: boolean) => Client
+  // Each player's client, from the seat the save records for it (#608): a computer seat with the host's default AI
+  //  for a player the file lists no client for.
+  createClient: (player: Player, seat: Seat) => Client
 ): void => {
   // Before hydrating, and before any player claims a civilisation: `civ1-player`
   // unregisters one as it is claimed, so a registry read afterwards is missing
@@ -129,15 +156,16 @@ export const restoreGame = (
   releaseTilesOfDestroyedCities(defaultGame);
   restoreTransportRegistries(defaultGame);
 
-  const humanPlayerIds = new Set(
-    file.clients
-      .filter(({ module }) => module === HUMAN_CLIENT)
-      .map(({ playerId }) => playerId)
+  const seats = new Map<string, Seat>(
+    file.clients.map((descriptor: ClientDescriptor): [string, Seat] => [
+      descriptor.playerId,
+      seatFromDescriptor(descriptor),
+    ])
   );
 
   defaultGame.players.entries().forEach((player: Player): void => {
     clientRegistryInstance.register(
-      createClient(player, humanPlayerIds.has(player.id()))
+      createClient(player, seats.get(player.id()) ?? { kind: 'computer' })
     );
   });
 
@@ -206,7 +234,7 @@ export const chooseDifficulty = async (game = defaultGame): Promise<void> => {
 
 export const loadGame = async (
   file: SaveGame,
-  createClient: (player: Player, human: boolean) => Client,
+  createClient: (player: Player, seat: Seat) => Client,
   // Once the game is back and before it moves: an observer (#607) sends its first view from here.
   beforeResume: () => void = () => {}
 ): Promise<void> => {

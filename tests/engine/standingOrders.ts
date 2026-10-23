@@ -26,6 +26,7 @@ import './lib/spawnedClients';
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import { readFileSync, writeFileSync } from 'fs';
 import { restoreGame, resumeGame } from '../../src/js/Engine/loadGame';
+import { Seat } from '../../src/js/Engine/lib/seats';
 import Busy from '@civ-clone/core-unit/Rules/Busy';
 import City from '@civ-clone/core-city/City';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
@@ -701,8 +702,8 @@ if (mode === 'load') {
   // No `engine.start()`: that is what generates a world. Plugins are imported for their rules, as the worker does.
   import('../../src/js/plugins')
     .then((): void => {
-      restoreGame(game, (player: Player, human: boolean) =>
-        human ? humanClient(player) : new SimpleAIClient(player)
+      restoreGame(game, (player: Player, seat: Seat) =>
+        seat.kind === 'human' ? humanClient(player) : new SimpleAIClient(player)
       );
 
       if (!humanPlayer) {
