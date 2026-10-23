@@ -17,6 +17,14 @@ i18next.addResources('en-GB', 'default', {
     'Retiring ends the game now, and you see your Civilisation Score. You can keep playing afterwards, but nothing more is scored.',
   'GameMenu.civilization-score': 'Civilisation Score',
 
+  'Civilopedia.section.advance': 'Civilisation Advances',
+  'Civilopedia.kind.advance': 'Civilisation Advance',
+  'Civilopedia.stats':
+    'Attack: {{attack, number}} · Defence: {{defense, number}} · Moves: {{movement, number}}',
+  'Civilopedia.world.requires': '{{line}}, built by any civilisation',
+  'Civilopedia.world.obsoletedBy': '{{line}}, once any civilisation has it',
+  'Civilopedia.world.other': '{{line}}, for any civilisation',
+
   'GameSetup.civilization': 'Civilisation',
 
   'ImportAssetsWindow.brave':

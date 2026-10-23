@@ -1,5 +1,5 @@
 // What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities and intelligence reports,
-//  the Civilization Score, what a city can build and a unit's actions, each answered on the channel it was asked on.
+//  the Civilization Score, what a city can and can't build and a unit's actions, each answered on the channel it was asked on.
 //  The client's `topCities` and `civilizationScore` are two of these: `topCities` for its test (`topCities.ts`), and
 //  `civilizationScore` for the ending window (`gameEnd.ts`).
 
@@ -20,6 +20,7 @@ import {
 import { ClientContext, Registries } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
+import { unavailableBuildItems } from '../lib/civilopedia';
 import { standalone } from './refs';
 import answer from '../answer';
 
@@ -112,6 +113,18 @@ export const registerRequests = (
       return cityBuild && ctx.view.owns(cityBuild.city().player())
         ? cityBuildAvailable(ctx.dataFilter, cityBuild)
         : { hierarchy: [], objects: {} };
+    })
+  );
+
+  // Why a city can't build each item, for the build list's Can't build window (#183). The local player's own cities
+  //  only, like `cityBuildAvailable`.
+  disposers.push(
+    answer(transport, 'cityBuildUnavailable', (cityBuildId) => {
+      const [cityBuild] = ctx.cityBuilds.getBy('id', cityBuildId);
+
+      return cityBuild && cityBuild.city().player() === ctx.player()
+        ? unavailableBuildItems(cityBuild)
+        : [];
     })
   );
 

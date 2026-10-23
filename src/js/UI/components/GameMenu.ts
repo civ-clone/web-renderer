@@ -5,6 +5,7 @@ import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
 import CityStatus from './CityStatus';
+import Civilopedia from './Civilopedia';
 import CivilizationScoreReport from './CivilizationScoreReport';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
@@ -400,6 +401,12 @@ export class GameMenu extends Element {
                 label: t('GameMenu.civilization-score'),
                 action: () => {
                   new CivilizationScoreReport(this.#transport);
+                },
+              },
+              {
+                label: t('GameMenu.civilopedia'),
+                action: () => {
+                  Civilopedia.open(this.#transport);
                 },
               },
               ...(this.#cheatsEnabled

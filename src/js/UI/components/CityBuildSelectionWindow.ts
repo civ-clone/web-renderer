@@ -1,5 +1,6 @@
 import { BuildItem, CityBuild } from '../types';
 import { ActionWindowActions } from './ActionWindow';
+import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
 import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
 import {
@@ -64,6 +65,13 @@ export class CityBuildSelectionWindow extends SelectionWindow {
               toggleAuto(cityBuild, transport);
 
               (window as CityBuildSelectionWindow).close(true);
+            },
+          },
+          // What the city can't build, and why (#183). The list stays open behind it.
+          unavailable: {
+            label: t('City.Build.unavailable'),
+            action: () => {
+              new CityBuildUnavailableWindow(cityBuild, transport);
             },
           },
         },
