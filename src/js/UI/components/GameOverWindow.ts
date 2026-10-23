@@ -65,8 +65,13 @@ const goToMainMenu = (): void => {
  * works it all out; this only draws it.
  */
 export class GameOverWindow extends Window {
-  constructor(details: GameOverDetails, transport: Transport) {
-    const entry = hallOfFameEntry(details, Date.now()),
+  constructor(
+    details: GameOverDetails,
+    transport: Transport,
+    // A watched game's ending (#607) is nobody's own: no Hall of Fame entry, and no keeping playing.
+    { observer = false }: { observer?: boolean } = {}
+  ) {
+    const entry = observer ? null : hallOfFameEntry(details, Date.now()),
       hallOfFame = entry === null ? null : enterHallOfFame(entry),
       keepPlaying = h(s(`<button>${t('GameOver.keep-playing')}</button>`), {
         click: () => {
@@ -127,7 +132,7 @@ export class GameOverWindow extends Window {
             ]),
         s(
           '<footer></footer>',
-          ...(details.keepPlaying ? [keepPlaying] : []),
+          ...(details.keepPlaying && !observer ? [keepPlaying] : []),
           mainMenu
         )
       ),

@@ -30,3 +30,47 @@
     display: none;
   }
 }
+
+// Watching a game nobody here plays (#607): the view and the pace, along the top of the map, after the waiting line in
+//  the document so it paints over the canvas without a stacking order of its own.
+#map .observer-bar {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.6);
+  border-radius: 0.5rem;
+  color: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  left: 1rem;
+  padding: 0.5rem 1rem;
+  // The map beneath still takes the pointer; only the controls take it here.
+  pointer-events: none;
+  position: absolute;
+  right: 1rem;
+  top: 4rem;
+
+  button,
+  input,
+  label {
+    pointer-events: auto;
+  }
+
+  .players {
+    border: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    padding: 0;
+
+    legend {
+      float: left;
+      margin-right: 1rem;
+      padding: 0;
+    }
+  }
+
+  .status:empty {
+    display: none;
+  }
+}

@@ -62,7 +62,9 @@ export const gameOver = (
 //  that order.
 export const registerGameEnd = (
   engine: Pick<Engine, 'on' | 'off' | 'emit'>,
-  ctx: GameEndContext
+  ctx: GameEndContext,
+  // An observer's client (#607) is told how the game ended, but can neither retire nor keep playing.
+  { readOnly = false }: { readOnly?: boolean } = {}
 ): Disposer => {
   const { transport } = ctx,
     disposers: TransportDisposer[] = [],
@@ -75,34 +77,36 @@ export const registerGameEnd = (
 
   // Game → Retire: the game ends now, with your score (#176, #362).
   //  Once the game has ended, the ending shows again instead.
-  disposers.push(
-    transport.receive('retire', () => {
-      const gameResult =
-        endGame('retired', null, ctx.gameResults, ctx.rules, ctx.turn) ??
-        ctx.gameResults.get();
+  if (!readOnly) {
+    disposers.push(
+      transport.receive('retire', () => {
+        const gameResult =
+          endGame('retired', null, ctx.gameResults, ctx.rules, ctx.turn) ??
+          ctx.gameResults.get();
 
-      // A new result has already been sent, by `game:over`.
-      if (gameResult !== null && gameResult.scoringComplete()) {
-        transport.send('gameOver', gameOver(ctx, gameResult));
-      }
-    })
-  );
+        // A new result has already been sent, by `game:over`.
+        if (gameResult !== null && gameResult.scoringComplete()) {
+          transport.send('gameOver', gameOver(ctx, gameResult));
+        }
+      })
+    );
 
-  // Keep playing after the game has ended: the score is final, and a turn loop waiting at the end of the turn goes on
-  //  (#176).
-  disposers.push(
-    transport.receive('gameContinue', () => {
-      const gameResult = ctx.gameResults.get();
+    // Keep playing after the game has ended: the score is final, and a turn loop waiting at the end of the turn goes
+    //  on (#176).
+    disposers.push(
+      transport.receive('gameContinue', () => {
+        const gameResult = ctx.gameResults.get();
 
-      if (gameResult === null || gameResult.reason() === 'destroyed') {
-        return;
-      }
+        if (gameResult === null || gameResult.reason() === 'destroyed') {
+          return;
+        }
 
-      gameResult.completeScoring();
+        gameResult.completeScoring();
 
-      engine.emit('game:continue');
-    })
-  );
+        engine.emit('game:continue');
+      })
+    );
+  }
 
   // However the game ends, the ending window says so (#176). Our own destruction is one of the endings.
   on('game:over', (gameResult: GameResult) =>

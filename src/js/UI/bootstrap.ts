@@ -2,6 +2,7 @@ import { t } from 'i18next';
 import { ObjectMap } from './lib/reconstituteData';
 import GameSession from './game/GameSession';
 import GameOverWindow from './components/GameOverWindow';
+import { ObserverState } from '../Engine/Observer';
 import MainMenu from './components/MainMenu';
 import { downloadSave, takePendingSave } from './lib/savedGame';
 import Notices from './components/Notices';
@@ -82,12 +83,25 @@ export class Renderer {
         })
       );
 
+      // A game nobody here plays is watched (#607): the worker says so, with the players to see it as, before the first
+      //  `gameData`. Kept for the session to build on, and for the ending, which is then nobody's own.
+      let observerState: ObserverState | null = null;
+
+      transportDisposers.push(
+        transport.receive('observer', (state): void => {
+          observerState = state;
+        })
+      );
+
       // However the game ends (#176). Listened for from the start: a game loaded at its ending says so before its map
       //  arrives.
       transportDisposers.push(
         transport.receive(
           'gameOver',
-          (details): void => void new GameOverWindow(details, transport)
+          (details): void =>
+            void new GameOverWindow(details, transport, {
+              observer: observerState !== null,
+            })
         )
       );
 
@@ -122,6 +136,7 @@ export class Renderer {
             notificationBar,
             pendingSave,
             cheatsEnabled: parseBooleanParam(queryParams.get('cheat'), false),
+            observer: (): ObserverState | null => observerState,
             setGameStarted: (): void => {
               gameStarted = true;
             },
