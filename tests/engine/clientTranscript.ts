@@ -6,7 +6,9 @@
 // a fixed script: units move, Settlers found a city, a city's production changes, research and a government are
 // chosen, the trade rates change and there is a revolution. Along the way it uses each cheat the UI offers (RevealMap,
 // GrantGold, CreateUnit) and asks each question the UI asks (topCities, civilizationScore, intelligence,
-// cityBuildAvailable, unitActions). Every choice it is asked to make is answered with the first option.
+// cityBuildAvailable, unitActions). Then Diplomats the cheat makes go to a rival's city (#503): one on GoTo, which
+// meets the city's Warrior on the way, stops next to it and establishes an embassy, one that investigates it, and one
+// that meets its king. Every choice it is asked to make is answered with the first option.
 //
 // Every `send(channel, payload)` is recorded as JSON of what a `ParentTransport` would post, with what JSON would lose
 // marked (see `marked`), and the recording is
@@ -31,6 +33,7 @@ import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction'
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
+import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { createHash } from 'crypto';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
@@ -66,8 +69,9 @@ let stopped = false,
   // The human's turns handed over so far.
   handovers = 0,
   turnEnded = false,
-  // How the action under way is told it has been handled.
-  pendingAction: (() => void) | null = null;
+  // How the action under way is told it has been handled, and what it is.
+  pendingAction: (() => void) | null = null,
+  acting: string | null = null;
 
 const receivers = new Map<string, (...args: any[]) => void>(),
   // Each message as [channel, the JSON a `ParentTransport` would post].
@@ -128,6 +132,11 @@ const transport = {
 
       did('chooseFromList');
 
+      // A step of talks, and the action that started them.
+      if (meta.key() === 'negotiation.next-step') {
+        did(`negotiation in ${acting ?? 'no action'}`);
+      }
+
       // `receiveOnce` is registered after the send, so answer on the next tick, with the first option.
       setTimeout(() => (pendingChoice ?? respond)!(meta.choices()[0]?.id()));
 
@@ -149,6 +158,12 @@ const transport = {
       turnEnded = true;
 
       return;
+    }
+
+    if (
+      ['unitHalted', 'embassyEstablished', 'investigateCity'].includes(channel)
+    ) {
+      did(channel);
     }
 
     if (channel === 'actionHandled' && pendingAction !== null) {
@@ -184,7 +199,9 @@ const act = (action: { name: string; [key: string]: any }): Promise<void> =>
 
     did(label);
 
+    acting = label;
     pendingAction = () => {
+      acting = null;
       clearTimeout(timeout);
       resolve();
     };
@@ -242,6 +259,104 @@ const unitAction = (
   }
 
   return null;
+};
+
+// A square that a unit can be put on: land, with no city and no units.
+const free = (tile: Tile): boolean =>
+  tile.isLand() &&
+  cityRegistryInstance.getByTile(tile) === null &&
+  unitRegistryInstance.getByTile(tile).length === 0;
+
+// One of ours made by the CreateUnit cheat, as the UI sends it.
+const created = (unitType: string, tile: Tile): Unit => {
+  cheat('CreateUnit', { unitType, x: tile.x(), y: tile.y() });
+
+  const [unit] = unitRegistryInstance
+    .getByTile(tile)
+    .filter(
+      (unit) =>
+        unit.player() === humanPlayer && unit.constructor.name === unitType
+    );
+
+  if (!unit) {
+    fail(`CreateUnit made no ${unitType} at ${tile.x()},${tile.y()}`);
+  }
+
+  return unit;
+};
+
+// A unit's action on a square, as the UI sends it.
+const actOn = (unit: Unit, unitAction: string, tile: Tile): Promise<void> =>
+  act({
+    name: 'ActiveUnit',
+    id: unit.id(),
+    unitAction,
+    target: playerWorldRegistryInstance
+      .getByPlayer(humanPlayer!)
+      .getByTile(tile)!
+      .id(),
+  });
+
+// Diplomats sent to the first rival city with room for them (#503), once the map is revealed: one from two squares
+//  away on GoTo, which meets the Warrior the cheat puts in the city as it gets next to it, stops there with the city's
+//  choices to make (#357) and establishes an embassy; then one beside it that investigates it, and one that meets its
+//  king.
+const diplomacy = async (): Promise<void> => {
+  const twoAway = (tile: Tile): Tile[] =>
+      tile
+        .getSurroundingArea(2)
+        .entries()
+        .filter(
+          (start) =>
+            free(start) &&
+            start !== tile &&
+            !start.isNeighbourOf(tile) &&
+            start
+              .getNeighbours()
+              .some((step: Tile) => free(step) && step.isNeighbourOf(tile))
+        ),
+    [city] = cityRegistryInstance
+      .entries()
+      .filter(
+        (city) =>
+          city.player() !== humanPlayer &&
+          twoAway(city.tile()).length > 0 &&
+          city.tile().getNeighbours().filter(free).length >= 3
+      );
+
+  if (!city) {
+    fail('no rival city has room for the Diplomats');
+  }
+
+  const site = city.tile(),
+    [start] = twoAway(site);
+
+  // Someone at home to meet on the way, made by the cheat, which makes a rival's units as well.
+  cheat('CreateUnit', {
+    unitType: 'Warrior',
+    x: site.x(),
+    y: site.y(),
+    player: city.player().id(),
+  });
+
+  const envoy = created('Diplomat', start);
+
+  await actOn(envoy, 'GoTo', site);
+
+  if (!envoy.tile().isNeighbourOf(site)) {
+    fail(
+      `the Diplomat on GoTo stopped at ${envoy.tile().x()},${envoy
+        .tile()
+        .y()}, not next to ${city.name()}`
+    );
+  }
+
+  await actOn(envoy, 'EstablishEmbassy', site);
+
+  const [beside, besideToo] = site.getNeighbours().filter(free);
+
+  await actOn(created('Diplomat', beside), 'InvestigateCity', site);
+  await actOn(created('Diplomat', besideToo), 'MeetWithKing', site);
 };
 
 // What the UI does besides what it must, by which of the human's turns it is.
@@ -333,6 +448,12 @@ const extras = async (): Promise<void> => {
     if (unit) {
       request('unitActions', unit.id());
     }
+
+    return;
+  }
+
+  if (handovers === 4) {
+    await diplomacy();
   }
 };
 
@@ -548,6 +669,15 @@ const finish = (): void => {
     'intelligence',
     'cityBuildAvailable',
     'unitActions',
+    'ActiveUnit GoTo',
+    'negotiation in ActiveUnit GoTo',
+    'unitHalted',
+    'ActiveUnit EstablishEmbassy',
+    'embassyEstablished',
+    'ActiveUnit InvestigateCity',
+    'investigateCity',
+    'ActiveUnit MeetWithKing',
+    'negotiation in ActiveUnit MeetWithKing',
   ].filter((what) => !done.has(what));
 
   if (expected.length > 0) {
