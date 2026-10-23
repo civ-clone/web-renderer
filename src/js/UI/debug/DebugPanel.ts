@@ -8,6 +8,7 @@ import Minimap from '../components/Minimap';
 import NotificationBar from '../app/NotificationBar';
 import Transport from '../Transport';
 import UIStressRunner from '../lib/UIStressRunner';
+import { exportDebugCsv, exportDebugJson } from './debugExport';
 import Units from '../components/Map/Units';
 import Yields from '../components/Map/Yields';
 import { h } from '../lib/html';
@@ -40,8 +41,8 @@ export type DebugPanelDeps = {
 // `flags.stressUiEnabled` says so (which is only ever set by debug).
 //
 // Reaches into the document beyond its own panel: `closeOpenDialogs` and
-// `exportDebugJson` sweep every `dialog.window`, and the hotkeys listen on
-// `document` in the capture phase.
+// `exportDebugJson` (`debugExport.ts`) sweep every `dialog.window`, and the
+// hotkeys listen on `document` in the capture phase.
 export class DebugPanel {
   #debugControls: HTMLDivElement | null = null;
   #debugKeyListener: ((event: KeyboardEvent) => void) | null = null;
@@ -138,11 +139,11 @@ export class DebugPanel {
         }
 
         if (key === 'j') {
-          this.#exportDebugJson();
+          exportDebugJson(this.#flags, this.#memoryTestbed, this.#deps);
         }
 
         if (key === 'x') {
-          this.#exportDebugCsv();
+          exportDebugCsv(this.#memoryTestbed, this.#deps.notificationBar);
         }
 
         this.#renderDebugControls();
@@ -186,121 +187,6 @@ export class DebugPanel {
           console.warn('Failed to close dialog', error);
         }
       });
-  }
-
-  #downloadDebugFile(
-    fileName: string,
-    content: string,
-    mimeType: string
-  ): void {
-    // Direct creation rather than `s`: the `href` is an object
-    // URL that has to be assigned as a property, and putting one
-    // through `s` would mean interpolating it into markup for no
-    // gain. The anchor never enters the tree for longer than the
-    // click.
-    const blob = new Blob([content], { type: mimeType }),
-      url = URL.createObjectURL(blob),
-      anchor = document.createElement('a');
-
-    anchor.href = url;
-    anchor.download = fileName;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  #exportDebugJson(): void {
-    const dialogs = Array.from(
-        document.querySelectorAll('dialog.window, dialog.window.modal')
-      ).map((dialogElement) => {
-        const dialog = dialogElement as HTMLDialogElement,
-          titleElement = dialog.querySelector(
-            '.title, h1, h2, h3, legend'
-          ) as HTMLElement | null;
-
-        return {
-          className: dialog.className,
-          id: dialog.id || null,
-          open: !!dialog.open,
-          title: titleElement?.innerText?.trim() || null,
-        };
-      }),
-      memory = (performance as any).memory,
-      samples = this.#memoryTestbed?.samples ?? [],
-      sampleCount = samples.length,
-      heapValues = samples
-        .map((sample) => sample.usedJSHeapSize)
-        .filter((value): value is number => typeof value === 'number'),
-      firstSample = sampleCount > 0 ? samples[0] : null,
-      lastSample = sampleCount > 0 ? samples[sampleCount - 1] : null;
-
-    const payload = {
-        exportedAt: Date.now(),
-        debug: {
-          automatePlayerEnabled: this.#flags.automatePlayerEnabled,
-          stressUiEnabled: this.#flags.stressUiEnabled,
-          stressUiWindowsEnabled: this.#flags.stressUiWindowsEnabled,
-        },
-        stressRunner: this.#flags.uiStressRunner?.getDebugState() ?? null,
-        runtime: {
-          canvasCount: document.querySelectorAll('canvas').length,
-          dialogCount: dialogs.length,
-          dialogs,
-          domNodeCount: document.querySelectorAll('*').length,
-          imageCount: document.querySelectorAll('img').length,
-          objectCount: this.#deps.currentObjectCount(),
-          tilesPendingRender: this.#deps.tilesPendingRender(),
-          turn: this.#deps.currentTurn(),
-        },
-        heap: {
-          currentUsedJSHeapSize:
-            memory && typeof memory.usedJSHeapSize === 'number'
-              ? memory.usedJSHeapSize
-              : null,
-          jsHeapSizeLimit:
-            memory && typeof memory.jsHeapSizeLimit === 'number'
-              ? memory.jsHeapSizeLimit
-              : null,
-          totalJSHeapSize:
-            memory && typeof memory.totalJSHeapSize === 'number'
-              ? memory.totalJSHeapSize
-              : null,
-        },
-        memory: this.#memoryTestbed
-          ? {
-              firstSample,
-              heapMax: heapValues.length > 0 ? Math.max(...heapValues) : null,
-              heapMin: heapValues.length > 0 ? Math.min(...heapValues) : null,
-              lastSample,
-              sampleCount,
-              samples,
-            }
-          : null,
-      },
-      json = JSON.stringify(payload, null, 2);
-
-    this.#downloadDebugFile(
-      `civ-debug-${Date.now()}.json`,
-      json,
-      'application/json'
-    );
-  }
-
-  #exportDebugCsv(): void {
-    if (!this.#memoryTestbed) {
-      this.#deps.notificationBar.show(
-        'No memory sampler active for CSV export.'
-      );
-
-      return;
-    }
-
-    this.#downloadDebugFile(
-      `civ-memory-${Date.now()}.csv`,
-      this.#memoryTestbed.exportCsv(),
-      'text/csv'
-    );
   }
 
   #startStressRunner(): void {
@@ -455,11 +341,11 @@ export class DebugPanel {
     );
 
     const exportJsonButton = debugButton('Export debug JSON', '#224', () =>
-      this.#exportDebugJson()
+      exportDebugJson(this.#flags, this.#memoryTestbed, this.#deps)
     );
 
     const exportCsvButton = debugButton('Export memory CSV', '#224', () =>
-      this.#exportDebugCsv()
+      exportDebugCsv(this.#memoryTestbed, this.#deps.notificationBar)
     );
 
     // The last button in the panel, so no bottom margin.

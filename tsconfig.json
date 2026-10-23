@@ -16,6 +16,7 @@
     "src/js/preload.ts",
     "src/js/UI/lib/applyDataPatches.ts",
     "src/js/UI/debug/DebugFlags.ts",
+    "src/js/UI/debug/debugExport.ts",
     "src/js/UI/lib/parseBooleanParam.ts",
     "src/js/UI/app/options.ts",
     "src/js/UI/lib/DataChanges.ts",

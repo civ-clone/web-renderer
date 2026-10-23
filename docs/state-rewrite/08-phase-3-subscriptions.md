@@ -41,11 +41,14 @@ Lines from `wc -l` on `main` at `7d3086e`. "Checked" means in `tsconfig.json`'s 
 | app | `app/elements.ts`, `i18n.ts`, `assets.ts`, `options.ts`, `ReloadGuard.ts` | 59 + 15 + 40 + 14 + 43 = 171 | 155 | yes | #506 |
 | input | `game/InputController.ts` | 204 | 180 | no | #527 |
 | debug | `debug/DebugFlags.ts` | 43 | 40 | yes | #499 |
-| debug | `debug/DebugPanel.ts` | 491 | 340 | no | #499, #535 |
+| debug | `debug/DebugPanel.ts` | 380 | 340 | no | #499, #535, #503 |
+| debug | `debug/debugExport.ts` | 132 | — | yes | #503 |
 | session | `game/GameSession.ts` | 476 | 240 | no | #532 |
 | boot | `bootstrap.ts` | 149 | 110 | no | #533 |
 
-The 24 files come to 3,328 lines, against the plan's estimate of about 2,300. Track A added two helpers the table
+The 24 files come to 3,328 lines, against the plan's estimate of about 2,300. The rows marked #503 give the lines
+after the #503 tidy-up moved code out of the modules over the cap: `DebugPanel`'s exports to `debug/debugExport.ts`
+(`DebugPanel` was 494 lines at `dddbc18`). Track A added two helpers the table
 does not list: `components/lib/watchCity.ts` (78 lines, #513) and `components/lib/watchPlayer.ts` (51, #517), both
 checked.
 
@@ -62,10 +65,10 @@ What the shipped APIs look like where they differ from the table: `NotificationB
   (#519), and `tests/ui/incrementalReconstitute.ts` and `tests/engine/patchRefs.ts` import `lib/applyDataPatches.ts`
   (#497); `DebugFlags` and `GameState` are checked.
 - **Not met, line counts:** `bootstrap.ts` is 149 lines, not about 110 (153 at `dddbc18`). Three of the new modules
-  are over the 350-line cap: `DebugPanel` (488 when it moved, 491 after #535, 494 at `dddbc18`; its four export
-  functions could go to `debug/debugExport.ts`), `ActiveUnitController` (443 when it moved, 449 at `dddbc18`;
-  `playUnitKey` could go to `lib/playUnitKey.ts`) and `GameSession` (475 when it moved, 520 at `dddbc18`; the plan's
-  240 was wrong, as what was left of the `gameData` handler was about 390 lines on its own). Two older `lib/` files
+  are over the 350-line cap: `DebugPanel` (488 when it moved, 491 after #535, 494 at `dddbc18`, and 380 once #503
+  moved its three export functions to `debug/debugExport.ts`), `ActiveUnitController` (443 when it moved, 449 at
+  `dddbc18`; `playUnitKey` could go to `lib/playUnitKey.ts`) and `GameSession` (475 when it moved, 520 at `dddbc18`;
+  the plan's 240 was wrong, as what was left of the `gameData` handler was about 390 lines on its own). Two older `lib/` files
   the plan did not touch are over it too: `lib/UIStressRunner.ts` (495) and `lib/IncrementalReconstituter.ts` (423).
   `MapView` (248 at `dddbc18`) is under the cap but well over its estimate.
 - **Not met, type-checking:** `lib/UIStressRunner.ts` and `lib/savedGame.ts` stay outside `tsconfig.json` (#339).
