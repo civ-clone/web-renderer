@@ -20,7 +20,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import { choosers } from '@civ-clone/simple-ai-client/lib/Diplomacy/negotiate';
 import mayNegotiate from '@civ-clone/library-diplomacy/lib/mayNegotiate';
 import Automation from './Automation';
-import { ClientContext, Disposer } from './ClientContext';
+import { ClientContext, Disposer, Registries } from './ClientContext';
 import Timeout from '../Error/Timeout';
 import { awaitTimeout } from './refs';
 import { describeError } from '../answer';
@@ -30,16 +30,17 @@ export type TalksContext = Pick<
   | 'player'
   // Whose client chooses each step: ours, or a computer player's.
   | 'clients'
-  | 'interactions'
   // The player's treasuries and research, which the talks can change without an event to say so (#492).
   | 'patches'
-  | 'rules'
   // Talks given up on are said, as `workerError` (#470).
   | 'transport'
+  // Each handed whole to a negotiation and the rules that say whether players may talk.
+  | 'interactions'
+  | 'rules'
   | 'turn'
+> &
   // The units next to one of ours that has moved.
-  | 'units'
->;
+  Registries<{ units: 'getByTile' }>;
 
 // How many rounds in a row the talks may go without a step before they are ended (see `#negotiate`).
 export const maxStalledRounds = 3;

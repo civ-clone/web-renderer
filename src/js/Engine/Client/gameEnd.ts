@@ -9,7 +9,7 @@ import Player from '@civ-clone/core-player/Player';
 import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import { ClientContext, Disposer } from './ClientContext';
+import { ClientContext, Disposer, Registries } from './ClientContext';
 import { TransportDisposer } from '../Transport';
 import { GameOverDetails, gameOverDetails } from '../lib/gameOver';
 
@@ -22,13 +22,13 @@ export type GameEndContext = Pick<
   | 'hasMet'
   // Our Civilization Score, as `civilizationScore` sends it.
   | 'civilizationScore'
+  // Each handed whole to the difficulty's level or to `endGame`.
   | 'difficulties'
   | 'gameResults'
-  | 'playerResearches'
   | 'rules'
   | 'turn'
-  | 'year'
->;
+> &
+  Registries<{ playerResearches: 'getByPlayer'; year: 'value' }>;
 
 // How the game ended, for the ending window (#176).
 export const gameOver = (

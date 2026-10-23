@@ -16,7 +16,7 @@ import Tile from '@civ-clone/core-world/Tile';
 import TransferObject from '../TransferObject';
 import { TransportDisposer, TransportHandledAction } from '../Transport';
 import Unit from '@civ-clone/core-unit/Unit';
-import { ClientContext, Disposer } from './ClientContext';
+import { ClientContext, Disposer, Registries } from './ClientContext';
 import { filterToReference } from './refs';
 import { describeError } from '../answer';
 
@@ -33,11 +33,11 @@ export type TurnHandoverContext = Pick<
   | 'automation'
   // Acts on what the UI sends on `action` and says whether the turn is over: the client's own `handleAction`.
   | 'handleAction'
-  | 'difficulties'
-  | 'playerWorlds'
+  // Both sent whole, in the initial data.
   | 'turn'
   | 'year'
->;
+> &
+  Registries<{ difficulties: 'entries'; playerWorlds: 'getByPlayer' }>;
 
 export class TurnHandover {
   // Stops the `action` receiver, for `dispose`.

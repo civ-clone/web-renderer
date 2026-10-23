@@ -20,12 +20,9 @@ import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import Yield from '@civ-clone/core-yield/Yield';
-import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
-import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
-import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import Automation from '../Automation';
 import { CityNewsCollector } from '../cityNews';
-import { ClientContext, Disposer } from '../ClientContext';
+import { ClientContext, Disposer, Registries } from '../ClientContext';
 import { filterToReference, filterToReferenceAllExcept } from '../refs';
 import { knownUnknownCity } from '../standIns';
 
@@ -36,12 +33,18 @@ export type PatchEventsContext = Pick<
   | 'patches'
   // What the player may see, which a rival's city, a build or research goes through when it changes.
   | 'dataFilter'
-> & {
-  // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
-  automation: Pick<Automation, 'automatedTurn'>;
-  // What happened to each city during the engine call under way: a city captured from us, or destroyed.
-  cityNews: Pick<CityNewsCollector, 'of'>;
-};
+> &
+  // What the player knows of a square, the city on one and the units on one.
+  Registries<{
+    cities: 'getByTile';
+    playerWorlds: 'getByPlayer';
+    units: 'getByTile';
+  }> & {
+    // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
+    automation: Pick<Automation, 'automatedTurn'>;
+    // What happened to each city during the engine call under way: a city captured from us, or destroyed.
+    cityNews: Pick<CityNewsCollector, 'of'>;
+  };
 
 export const registerPatchEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
@@ -59,7 +62,7 @@ export const registerPatchEvents = (
       return;
     }
 
-    const playerWorld = playerWorldRegistryInstance.getByPlayer(ctx.player()),
+    const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
       playerTile = playerWorld.getByTile(tile);
 
     // A square newly seen in one of our cities' areas is one of its `tiles` from now on, where it was undiscovered
@@ -84,7 +87,7 @@ export const registerPatchEvents = (
 
   ['unit:created', 'unit:defeated', 'unit:lost-at-sea'].forEach((event) => {
     on(event, (unit) => {
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(ctx.player()),
+      const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
         playerTile = playerWorld.getByTile(unit.tile());
 
       if (!playerTile) {
@@ -126,7 +129,7 @@ export const registerPatchEvents = (
 
   ['unit:moved'].forEach((event) => {
     on(event, (unit: Unit, action: UnitAction) => {
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(ctx.player()),
+      const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
         fromTile = playerWorld.getByTile(action.from()),
         toTile = playerWorld.getByTile(action.to());
 
@@ -140,7 +143,7 @@ export const registerPatchEvents = (
       // A Settlers joining a city makes it grow, so the city goes out in full, as `city:grow` sends it. In the tile
       //  patch alone the city is a ref, and would keep the size the UI already has (#243).
       if (action instanceof JoinCity) {
-        const city = cityRegistryInstance.getByTile(action.to());
+        const city = ctx.cities.getByTile(action.to());
 
         if (city !== null) {
           ctx.patches.city(city);
@@ -201,7 +204,7 @@ export const registerPatchEvents = (
     destroyed: boolean = false,
     listChanged: boolean = false
   ): void => {
-    const playerWorld = playerWorldRegistryInstance.getByPlayer(ctx.player()),
+    const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
       playerTile = playerWorld.getByTile(city.tile());
 
     if (!playerTile) {
@@ -294,7 +297,7 @@ export const registerPatchEvents = (
   on('unit:nuclear-detonation', (_unit: Unit, tile: Tile) => {
     const area = [tile, ...tile.getNeighbours()],
       cities = area
-        .map((areaTile) => cityRegistryInstance.getByTile(areaTile))
+        .map((areaTile) => ctx.cities.getByTile(areaTile))
         .filter((city): city is City => city !== null);
 
     area.forEach((areaTile) => ctx.patches.tile(areaTile));
@@ -304,7 +307,7 @@ export const registerPatchEvents = (
     if (
       cities.some((city) => city.player() === ctx.player()) ||
       area.some((areaTile) =>
-        unitRegistryInstance
+        ctx.units
           .getByTile(areaTile)
           .some((areaUnit) => areaUnit.player() === ctx.player())
       )
