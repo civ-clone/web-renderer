@@ -1,9 +1,11 @@
 import Transport from '../Transport';
+import { TransportTranslatedNotice } from '../../Engine/Transport';
+import { t } from 'i18next';
 
 // The line along the top of the page that shows a message for 4 seconds: the worker's `notification` messages, the
 //  cheats notice from the game's `keydown` handler, and the `?debug=1` panel's notices. A new message replaces the
 //  one showing and restarts the timer. Set as text: a loaded save's name and errors reach it, and none of it is
-//  markup (#469).
+//  markup (#469). A message sent as a key is translated first (#588).
 export class NotificationBar {
   #notificationArea: HTMLElement;
   #timer: number | undefined;
@@ -28,8 +30,14 @@ export class NotificationBar {
 
   // Returns the disposer for `Renderer`'s `transportDisposers`.
   listen(transport: Transport): () => void {
-    return transport.receive('notification', (data: string): void =>
-      this.show(data)
+    return transport.receive(
+      'notification',
+      (data: string | TransportTranslatedNotice): void =>
+        this.show(
+          typeof data === 'string'
+            ? data
+            : String(t(data.key, { ...data.data, skipOnVariables: false }))
+        )
     );
   }
 }

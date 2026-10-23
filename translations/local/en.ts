@@ -190,6 +190,10 @@ i18next.addResources('en', 'default', {
   'DifficultyWindow.level_toughest': '{{level}} (toughest)',
   'DifficultyWindow.title': 'Difficulty level',
 
+  'Game.progress.player':
+    'The $t({{civilization}}.plural, { "defaultValue": "{{civilization}}", "ns": "civilization" }) are moving…',
+  'Game.progress.turn': 'Turn {{turn, number}}',
+  'Game.progress.unmet-player': 'An unknown civilization is moving…',
   'Game.waiting': 'Waiting for the other civilizations…',
   'GameDetails.difficulty': '{{difficulty}} level',
   'GameDetails.turn': '{{turn, number}}',

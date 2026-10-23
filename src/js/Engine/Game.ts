@@ -18,6 +18,9 @@ import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import hasMet from './lib/hasMet';
+import { playerProgress, turnProgress } from './lib/progress';
+import registries from './Client/registries';
 
 export interface IGame {
   start(): void;
@@ -47,6 +50,31 @@ export class Game implements IGame {
     engine.on('player:turn-start', (): void =>
       this.#transport.send('alive', null)
     );
+
+    // The turn and whose turn it is, for the line along the top of the page (#588). Bound here, with the sign of life,
+    //  so a loaded game says so too, where `bindEvents` only runs for a new one.
+    engine.on('turn:start', (turn: number): void =>
+      this.#transport.send('notification', turnProgress(turn))
+    );
+
+    engine.on('player:turn-start', (player: Player | null): void => {
+      if (!player) {
+        console.warn('Empty player object returned.');
+
+        return;
+      }
+
+      const notice = playerProgress(
+        player,
+        this.#localPlayerClient?.player() ?? null,
+        (reader: Player, other: Player): boolean =>
+          hasMet(reader, other, registries)
+      );
+
+      if (notice !== null) {
+        this.#transport.send('notification', notice);
+      }
+    });
 
     transport.receive('save', ({ name }: { name: string }): void => {
       try {
@@ -146,6 +174,8 @@ export class Game implements IGame {
     });
   }
 
+  // What a new game says as it starts up, which a loaded one, never `start`ed, has nothing of. The turn and whose turn
+  //  it is are bound in the constructor, for both (#588).
   private bindEvents(): void {
     this.#transport.send('notification', `binding events`);
 
@@ -176,23 +206,6 @@ export class Game implements IGame {
     engine.on('game:start', (): void =>
       this.#transport.send('notification', `game start`)
     );
-
-    engine.on('turn:start', (turn): void =>
-      this.#transport.send('notification', `turn start ${turn}`)
-    );
-
-    engine.on('player:turn-start', (player): void => {
-      if (!player) {
-        console.warn('Empty player object returned.');
-
-        return;
-      }
-
-      this.#transport.send(
-        'notification',
-        `player turn-start: ${player.civilization().constructor.name}`
-      );
-    });
   }
 
   #createClient(player: Player, human: boolean): Client {

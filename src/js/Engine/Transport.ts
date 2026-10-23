@@ -62,6 +62,13 @@ export type TransportWorkerError = {
   notAnswering?: boolean;
 };
 
+// A `notification` the page translates (#588): the key, in the default namespace, and what its text reads. The others
+//  on that channel are text as it is shown.
+export type TransportTranslatedNotice = {
+  key: string;
+  data: { [key: string]: unknown };
+};
+
 // An action the worker has handled, as the UI sent it: enough to tell which one it was (#326).
 export type TransportHandledAction = {
   name: string;
@@ -124,7 +131,8 @@ declare global {
     // The UI asks for a save and gets the file back to hand to the player;
     // `load` goes the other way, into a worker that has not started a game.
     load: TransportData<null, { data: string }>;
-    notification: TransportData<string, never>;
+    // The line along the top of the page (`NotificationBar`): text, or a key for the page to translate (#588).
+    notification: TransportData<string | TransportTranslatedNotice, never>;
     // A unit's GoTo stopped next to its destination, which offers more than a move (#357): the unit and the tile, to
     //  choose what to do there as the arrow keys would.
     unitHalted: TransportData<{ target: string; unit: string }, never>;
