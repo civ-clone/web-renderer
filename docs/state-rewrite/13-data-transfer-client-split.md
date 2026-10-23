@@ -73,19 +73,20 @@ times), so after step 14 the file was still 398 lines: about 200 of them buildin
 The shared `ClientContext` the plan sketches under Target modules was not introduced by any move; it is a design
 change that alters every registrar's signature, so it was paired with step 16's disposers (#537 review). Step 16
 (#541) builds one context object once, which took the file to 253 lines, and `dispose()` brought it to 281. What is
-left is about 50 import lines, the context literal, and the one-line delegations (`setAutomationEnabled` for `Game.ts`; `flush()`,
-`initialData()`, the serialisers and `topCities` for tests). Each module
-still declares what it reads as a `Pick<ClientContext, …>` (`CheatsContext`, `RequestsContext`, …), so its unit
-tests can hand it a plain object.
+left is about 50 import lines, the context literal, and the one-line delegations (`setAutomationEnabled` for
+`Game.ts`; `flush()`, `initialData()`, the serialisers and `topCities` for tests). Each module still declares what
+it reads as a `Pick<ClientContext, …>` (`CheatsContext`, `RequestsContext`, …), so its unit tests can hand it a
+plain object.
 
 ### "Done when", against what landed
 
-- **Not met:** `DataTransferClient.ts` is 281 lines, not about 220 (see above).
-- **Met:** no file under `Client/` is over 450 lines (the largest is `PlayerPatches.ts`, 422); `test:client-transcript`
-  exists and no step changed its fixture; `tests/engine/clientNotifications.ts` covers every key the notification
-  tables can send (the four city-news notices are covered by `tests/engine/clientCityNews.ts`); no test reaches a
-  `private` member through `as any` (the one cast left, in `clientTurnHandover.ts`, passes a truthy non-boolean to
-  the public `setAutomationEnabled`); `tsconfig.json` includes `src/js/Engine/**/*` (#498).
+- **Not met:** `DataTransferClient.ts` is 281 lines, not about 220 (see above; 282 at `dddbc18`). Since the split,
+  #488 (`31378e5`) has taken `PlayerPatches.ts` to 495 lines, over the 450 below.
+- **Met:** no file under `Client/` was over 450 lines (the largest was `PlayerPatches.ts`, 422);
+  `test:client-transcript` exists and no step changed its fixture; `tests/engine/clientNotifications.ts` covers every
+  key the notification tables can send (the four city-news notices are covered by `tests/engine/clientCityNews.ts`);
+  no test reaches a `private` member through `as any` (the one cast left, in `clientTurnHandover.ts`, passes a truthy
+  non-boolean to the public `setAutomationEnabled`); `tsconfig.json` includes `src/js/Engine/**/*` (#498).
 
 ### Corrections to the plan
 
@@ -106,8 +107,8 @@ tests can hand it a plain object.
    behaviour: the gap is explained above the `hold` call in `TurnHandover.ts` and pinned at 4 and 2 (#537).
 5. **Constraint 9 and step 17: `Retryable` was deleted rather than caught** (#539, #478), with `Error/RetryFailed`.
    Its only use was the `playerTile === null` branch of `player:visibility-changed`, which cannot run: the engine
-   adds the `PlayerTile` before it processes the `VisibilityChanged` rule. The branch now warns and returns (#539). Step 17's
-   `resolveCheatPlayer` comment item was already done in step 11.
+   adds the `PlayerTile` before it processes the `VisibilityChanged` rule. The branch now warns and returns (#539).
+   Step 17's `resolveCheatPlayer` comment item was already done in step 11.
 6. **Step 11: `validCreateUnit(value, world, unitTypes)`** takes the unit types as a third parameter.
 7. **Step 13: the dispatcher.** `ReassignWorkers` is matched by name, with End Turn, before the lookup, not through
    the class table. The "13 branches" are 12 branches over 13 classes (`CityBuild` and `ChangeProduction` share
@@ -176,9 +177,10 @@ AdditionalData providers as a side effect.
 1. **The class name is part of the save format.** `loadGame.HUMAN_CLIENT = 'DataTransferClient'` is matched against
    `client.constructor.name` written by `core-save-game`; `esbuild.js` sets `keepNames: true` for it. Do not rename
    the class, subclass it, or move the `Client` inheritance into a helper.
-2. **Tests reach TS-`private` members by name** *(as built: correction 1)*: `sendPatchData` (10 call sites in 8 files), `sendInitialData`
-   (`patchRefs.ts:833`), `serialiseCity` (`sellImprovement.ts:147`), `topCities`. They work because these are TS
-   `private`, not `#`. Converting them breaks ten test files; keep them as named delegations until step 15.
+2. **Tests reach TS-`private` members by name** *(as built: correction 1)*: `sendPatchData` (10 call sites in 8
+   files), `sendInitialData` (`patchRefs.ts:833`), `serialiseCity` (`sellImprovement.ts:147`), `topCities`. They work
+   because these are TS `private`, not `#`. Converting them breaks ten test files; keep them as named delegations
+   until step 15.
 3. **Registration stays synchronous in the constructor.** `loadGame` emits `game:loaded` straight after
    `createClient`, and the game-end listener must already be there.
 4. **Patch pairs are enqueued by one call into one queue.** `#sendActions` queues `actions` then `mandatoryActions`,
@@ -197,9 +199,9 @@ AdditionalData providers as a side effect.
    answer it. `sendNotification` sends an already-plain object. Keep both.
 8. **`Automation` is passed by reference, never copied.** It is toggled mid-game (`Game.ts` `setOption`;
    `patchRefs` automates every fourth turn) and gates behaviour in nine places.
-9. **Timers** *(as built: corrections 4 and 5)*. The hand-over `setTimeout(1)`, the resolve `setTimeout(10)`, `Retryable` (20 ms × 2, with an unhandled
-   rejection after two failures) and the city-news `queueMicrotask`. `turnHandover` asserts notices arrive after
-   `turnStarted`; `cityNews` asserts one notice per city per engine call.
+9. **Timers** *(as built: corrections 4 and 5)*. The hand-over `setTimeout(1)`, the resolve `setTimeout(10)`,
+   `Retryable` (20 ms × 2, with an unhandled rejection after two failures) and the city-news `queueMicrotask`.
+   `turnHandover` asserts notices arrive after `turnStarted`; `cityNews` asserts one notice per city per engine call.
 
 ## Target modules
 

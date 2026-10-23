@@ -41,7 +41,7 @@ Loading a saved game takes a different path. The player picks a file, `src/js/UI
 - `src/js/UI/game/*`
   - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView` the map layers and minimap; `Hud` the action panels and details; `InputController` the hotkeys and leader screens.
 - `src/js/UI/app/*`, `src/js/UI/debug/*`
-  - The page's elements, i18n, assets, options, reload guard, notification bar and choice windows; the `?debug=1` flags and panel.
+  - The page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (#470); the `?debug=1` flags and panel.
 - `src/js/UI/components/*`
   - Window and UI primitives for reports, city/unit views, menu flows, and overlays.
 - `src/js/UI/components/Map/*`, `Portal.ts`, `GamePortal.ts`, `Minimap.ts`

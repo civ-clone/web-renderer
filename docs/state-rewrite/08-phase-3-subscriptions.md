@@ -15,8 +15,8 @@ gaps, stale comments) are collected in #503.
   17 #528, 18 #527, 19 #532, 20 #533.
 
 `grep -rn "dataupdated\|patchdatareceived\|DataObserver" src tests tools` is empty, `Renderer.ts` (2,166 lines) is
-`src/js/UI/bootstrap.ts` (149 lines, still the `Renderer` class `frontend.ts` starts), and one game lives in
-`src/js/UI/game/`.
+`src/js/UI/bootstrap.ts` (149 lines when it was renamed, still the `Renderer` class `frontend.ts` starts), and one
+game lives in `src/js/UI/game/`.
 
 ### The modules, as they are
 
@@ -61,20 +61,24 @@ What the shipped APIs look like where they differ from the table: `NotificationB
 - **Met:** the `grep` is empty; `Renderer.ts` is gone; `tests/ui/activeUnit.ts` drives `ActiveUnitController`
   (#519), and `tests/ui/incrementalReconstitute.ts` and `tests/engine/patchRefs.ts` import `lib/applyDataPatches.ts`
   (#497); `DebugFlags` and `GameState` are checked.
-- **Not met, line counts:** `bootstrap.ts` is 149 lines, not about 110. Three of the new modules are over the
-  350-line cap: `DebugPanel` (488 when it moved, 491 since #535; its four export functions could go to
-  `debug/debugExport.ts`), `ActiveUnitController` (443; `playUnitKey` could go to `lib/playUnitKey.ts`) and
-  `GameSession` (475 when it moved, 476 now; the plan's 240 was wrong, as what was left of the `gameData` handler
-  was about 390 lines on its own). Two older `lib/` files the plan did not touch are over it too:
-  `lib/UIStressRunner.ts` (495) and `lib/IncrementalReconstituter.ts` (423). `MapView` is under the cap but
-  well over its estimate.
+- **Not met, line counts:** `bootstrap.ts` is 149 lines, not about 110 (153 at `dddbc18`). Three of the new modules
+  are over the 350-line cap: `DebugPanel` (488 when it moved, 491 after #535, 494 at `dddbc18`; its four export
+  functions could go to `debug/debugExport.ts`), `ActiveUnitController` (443 when it moved, 449 at `dddbc18`;
+  `playUnitKey` could go to `lib/playUnitKey.ts`) and `GameSession` (475 when it moved, 520 at `dddbc18`; the plan's
+  240 was wrong, as what was left of the `gameData` handler was about 390 lines on its own). Two older `lib/` files
+  the plan did not touch are over it too: `lib/UIStressRunner.ts` (495) and `lib/IncrementalReconstituter.ts` (423).
+  `MapView` (248 at `dddbc18`) is under the cap but well over its estimate.
 - **Not met, type-checking:** `lib/UIStressRunner.ts` and `lib/savedGame.ts` stay outside `tsconfig.json` (#339).
   `UIStressRunner`'s imports reach the #339 errors in `components/City.ts` and `LocaleProvider.ts`; `savedGame`
   has errors of its own (`CompressionStream`/`DecompressionStream` are missing from this TypeScript's `dom` lib, and
-  a `FileList` spread needs `dom.iterable`). The plan did not ask for the rest, but for the record `MapView`,
-  `InputController`, `Hud`, `DebugPanel`, `GameSession` and `bootstrap.ts` are also outside, because their imports
-  reach those errors (and `Map/Overview.ts`, `Notices.ts`, `GameMenu.ts`); the `feather-icons` svg errors behind
-  `Hud` are only `src/js/UI/modules.d.ts` missing from `include` (#533).
+  destructuring a `FileList`, `const [file] = input.files ?? []`, needs `dom.iterable`). The plan did not ask for the
+  rest, but for the record `MapView`, `InputController`, `Hud`, `DebugPanel`, `GameSession` and `bootstrap.ts` are
+  also outside, because their imports reach those errors (and `Map/Overview.ts`, `Notices.ts`, `GameMenu.ts`, and for
+  `bootstrap.ts` also `ImportAssetsWindow.ts`, `MainMenu.ts` and the asset extractor's `canvas` types). `Hud` and
+  `GameSession` also have an error of their own: `Hud` passes `PlayerAction<Notice>[]` to `partitionActions` (the
+  #339 error that #508 moved there), and `GameSession`'s `pagehide` listener takes a `PageTransitionEvent` where
+  `on()` expects a `CustomEvent`. The `feather-icons` svg errors behind `Hud` were only `src/js/UI/modules.d.ts`
+  missing from `include` (#533); it has been in `include` since `6dc72db`.
 
 ### Corrections to the plan
 
@@ -248,10 +252,10 @@ which a change to gold alone no longer refreshes the city screen's Buy prices.
   calling `render()` directly.
 - Windows hold objects, not ids. Because the reconstituter refills in place, a held `city` stays current between full
   rebuilds. `refillAll` (when an id is dropped or an alias moves) refills every object in place too, so a held object
-  survives it *(as built: correction 4, the exceptions)*; only a full rebuild (a second `gameData`, or a rebuild of everything, which resets the reconstituter)
-  replaces objects and leaves the held one stale. Handlers keep re-finding by id from `data`, as `City` does above.
-  `HappinessReport` L127–130 re-subscribes from its constructor's `player`, which is correct only because of in-place
-  refill; the `watch` version reads `data.player`.
+  survives it *(as built: correction 4, the exceptions)*; only a full rebuild (a second `gameData`, or a rebuild of
+  everything, which resets the reconstituter) replaces objects and leaves the held one stale. Handlers keep
+  re-finding by id from `data`, as `City` does above. `HappinessReport` L127–130 re-subscribes from its constructor's
+  `player`, which is correct only because of in-place refill; the `watch` version reads `data.player`.
 - `collect` must accumulate across rebuilds, because `refilled()`/`filledIds()` are last-call only and the arrival
   window's `close` handler (L1662–1668) re-enters `updateState`.
 

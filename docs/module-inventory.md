@@ -29,7 +29,7 @@ Quick reference map of key code areas.
   - `PlayerPatches.ts`: the patch queue (a `DataQueue`), the helpers that queue each part of the game once per flush, the player's actions, and the flush itself, held while an action is handled (#321).
   - `Notifier.ts`: notifications, each serialised as it is given and sent at once or held until the turn is handed over (#130).
   - `cityNews.ts`: what happened to each city during one engine call (captured, destroyed, famine), told once the call is over.
-  - `notifications/*`: pure handler tables (`city`, `unit`, `diplomat`, `player`) that turn an engine event into a notice; `registerNotifications.ts` registers them after the patch listeners, and `NotificationContext.ts` is what the handlers read.
+  - `notifications/*`: pure handler tables (`city`, `unit`, `diplomat`, `player`, `barbarians`) that turn an engine event into a notice; `registerNotifications.ts` registers them after the patch listeners, and `NotificationContext.ts` is what the handlers read.
   - `events/patchEvents.ts`: the engine events that queue patches for what they changed; every `unit:moved` flushes, which is how the AI's moves reach the UI.
   - `Talks.ts`: talks with other players (those met on the way, a Diplomat's Meet with King, each negotiation step), one promise chain the action that started them waits for.
   - `ChoicePrompt.ts`: sends a choice to the UI and listens once for the answer; one prompt pending per client (#491).
@@ -46,8 +46,8 @@ Quick reference map of key code areas.
 - `DataQueue.ts`: patch queue and transfer serialization, owned by `Client/PlayerPatches.ts`.
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
-- `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CheatAdvances`, `CheatPlayers`).
-- `AdditionalData/*`: extra fields added to engine objects for the UI (`anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `tradeRoutes`).
+- `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
+- `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
 - `lib/*`: worker-side helpers: report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
@@ -56,7 +56,7 @@ Quick reference map of key code areas.
 
 - `bootstrap.ts`: page start-up, the `Renderer` class `frontend.ts` starts; hands each game to `game/GameSession`.
 - `game/*`: one game: `GameSession`, `GameState` (patches and rebuilds), `ActiveUnitController`, `MapView`, `Hud`, `InputController`.
-- `app/*`: the page's elements, i18n, assets, options, reload guard, notification bar and choice windows.
+- `app/*`: the page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (`WorkerFailures`, #470).
 - `debug/*`: the `?debug=1` flags and panel.
 - `Transport.ts`: UI-oriented transport type mapping.
 - `AssetStore.ts`: IndexedDB + image caches.
