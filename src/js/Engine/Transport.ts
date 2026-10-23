@@ -1,4 +1,5 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
+import { SeatChanges } from './lib/savedSeats';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
 import { ObserverState } from './Observer';
@@ -156,7 +157,8 @@ declare global {
     >;
     // The UI asks for a save and gets the file back to hand to the player;
     // `load` goes the other way, into a worker that has not started a game.
-    load: TransportData<null, { data: string }>;
+    // A save to load, and the seats reassigned on the page before it loads (#608), by player id.
+    load: TransportData<null, { data: string; seats?: SeatChanges }>;
     // The line along the top of the page (`NotificationBar`): text, or a key for the page to translate (#588).
     notification: TransportData<string | TransportTranslatedNotice, never>;
     // A unit's GoTo stopped next to its destination, which offers more than a move (#357): the unit and the tile, to

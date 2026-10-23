@@ -9,7 +9,12 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import answer, { describeError } from './answer';
-import loadGame, { isHumanDescriptor } from './loadGame';
+import loadGame from './loadGame';
+import {
+  SeatChanges,
+  isSeatChanges,
+  seatFromDescriptor,
+} from './lib/savedSeats';
 import Observer from './Observer';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
@@ -125,22 +130,34 @@ export class Game implements IGame {
       }
     });
 
-    transport.receive('load', ({ data }: { data: string }): void => {
-      this.#transport.send('notification', 'loading saved game...');
+    transport.receive(
+      'load',
+      ({ data, seats }: { data: string; seats?: SeatChanges }): void => {
+        this.#transport.send('notification', 'loading saved game...');
 
-      let file: SaveGame;
+        let file: SaveGame;
 
-      try {
-        file = JSON.parse(data) as SaveGame;
-      } catch (error) {
-        // As any other failed load (#470).
-        this.#transport.send('loadFailed', { message: describeError(error) });
+        try {
+          file = JSON.parse(data) as SaveGame;
 
-        return;
+          // The seats reassigned before loading (#608), by player id: a wrong shape is refused as a wrong file is.
+          if (seats !== undefined && !isSeatChanges(seats)) {
+            throw new TypeError(
+              "The seats to load with must be { [playerId]: { kind: 'human' | 'computer', … } }."
+            );
+          }
+        } catch (error) {
+          // As any other failed load (#470).
+          this.#transport.send('loadFailed', {
+            message: describeError(error),
+          });
+
+          return;
+        }
+
+        this.load(file, seats ?? {});
       }
-
-      this.load(file);
-    });
+    );
 
     // The levels come from the rules rather than a list here, so a ruleset with other levels needs no change to the menu
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
@@ -455,18 +472,22 @@ export class Game implements IGame {
    * `engine:start` never fires and the rules that build a world and spawn
    * settlers never run. See `loadGame`.
    */
-  load(file: SaveGame): void {
+  load(file: SaveGame, changes: SeatChanges = {}): void {
     // A save with no human in it is watched, as a game set up without one is (#607): the observer sees it as its
     //  first civilization once it is back, since a loaded game doesn't start. A file with no clients at all is left
     //  to the load to refuse (#470).
-    // Of the players the file has: a client listed for a player the game no longer has makes nobody human.
-    const players = new Set<string>(file.registries?.players ?? []),
+    // Of the players the file has, as the page reassigned them (#608): a client listed for a player the game no
+    //  longer has makes nobody human.
+    // The changes as own entries only: a file names the ids, and `constructor` is one a plain object answers to.
+    const changed = new Map<string, Seat>(Object.entries(changes)),
+      players = new Set<string>(file.registries?.players ?? []),
       observed =
         Array.isArray(file.clients) &&
         !file.clients.some(
           (descriptor) =>
             (players.size === 0 || players.has(descriptor.playerId)) &&
-            isHumanDescriptor(descriptor)
+            (changed.get(descriptor.playerId) ?? seatFromDescriptor(descriptor))
+              .kind === 'human'
         );
 
     this.#observer?.dispose();
@@ -476,13 +497,14 @@ export class Game implements IGame {
       .then(() => {
         this.#stopAtEnding(observed);
 
-        // Each client from the seat the save records (#608): a person's again, or the AI that served it.
+        // Each client from the seat the save records, or the one the page reassigned it to (#608): a person's
+        //  again, or the AI that served it.
         return loadGame(
           file,
           (player: Player, seat: Seat): Client =>
             this.#createClient(
               player,
-              this.#seatAvailableHere(player, seat),
+              this.#seatAvailableHere(player, changed.get(player.id()) ?? seat),
               observed
             ),
           () => this.#observer?.observeFirst()

@@ -165,9 +165,9 @@ const reset = () => {
   );
 
   expect(
-    'the save comes back after the reload',
-    await takePendingSave(),
-    large
+    'the save comes back after the reload, with no seat changed',
+    JSON.stringify(await takePendingSave()),
+    JSON.stringify({ data: large, seats: {} })
   );
   expect(
     'once, and only once — one reload, one go',
@@ -194,7 +194,92 @@ const reset = () => {
 
   await loadSaveFromFile(new File([small], 'small.civ-clone.json'));
 
-  expect('an uncompressed save reads too', await takePendingSave(), small);
+  expect(
+    'an uncompressed save reads too',
+    (await takePendingSave())?.data,
+    small
+  );
+
+  // The seats reassigned before the load go over with it (#608), and a load called off at the seats loads nothing.
+  reset();
+
+  await loadSaveFromFile(
+    new File([small], 'small.civ-clone.json'),
+    async () => ({
+      'Player-2': { kind: 'human', name: 'Pat' },
+    })
+  );
+
+  expect(
+    'the seats reassigned come back with the save',
+    JSON.stringify((await takePendingSave())?.seats),
+    JSON.stringify({ 'Player-2': { kind: 'human', name: 'Pat' } })
+  );
+
+  reset();
+
+  await loadSaveFromFile(
+    new File([small], 'small.civ-clone.json'),
+    async () => null
+  );
+
+  expect(
+    'a load called off at the seats hands nothing over',
+    storedRecords().size,
+    0
+  );
+  expect('and does not reload', reloads, 0);
+  expect('and says nothing', alerts.length, 0);
+
+  // Asking for the seats failing (the worker not saying what AI clients there are) is said, as a file that can't be
+  //  read is, and nothing loads.
+  reset();
+
+  let askFailed: Error | null = null;
+
+  await loadSaveFromFile(
+    new File([small], 'small.civ-clone.json'),
+    async () => {
+      throw new Error('no answer');
+    }
+  ).catch((error: Error) => (askFailed = error));
+
+  expect(
+    'a failure asking for the seats is reported',
+    alerts[0],
+    t('SavedGame.could-not-read', { error: 'no answer' })
+  );
+  expect('and rejects', askFailed !== null, true);
+  expect('and nothing is handed over', storedRecords().size, 0);
+
+  // Seats left in the slot from a load that never happened, or not ours, count for nothing.
+  reset();
+
+  await loadSaveFromFile(new File([small], 'small.civ-clone.json'));
+  sessionStorage.setItem('civ-clone:pending-save-seats', 'not json');
+
+  expect(
+    'seats that cannot be read come back as none',
+    JSON.stringify((await takePendingSave())?.seats),
+    '{}'
+  );
+
+  reset();
+  sessionStorage.setItem(
+    'civ-clone:pending-save-seats',
+    JSON.stringify({ 'Player-1': { kind: 'human' } })
+  );
+
+  expect(
+    'seats with no save waiting are nothing to take',
+    await takePendingSave(),
+    null
+  );
+  expect(
+    'and are gone with it',
+    sessionStorage.getItem('civ-clone:pending-save-seats'),
+    null
+  );
 
   // Storage refused: the page must not reload, because there would be nothing
   // on the other side of it.
@@ -305,7 +390,11 @@ const reset = () => {
 
     expect(
       `a save on ${topologyId ?? 'no recorded'} grid loads`,
-      JSON.stringify([alerts.length, reloads, await takePendingSave()]),
+      JSON.stringify([
+        alerts.length,
+        reloads,
+        (await takePendingSave())?.data ?? null,
+      ]),
       JSON.stringify([0, 1, onGrid(topologyId)])
     );
   }

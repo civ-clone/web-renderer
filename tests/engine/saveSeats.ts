@@ -8,6 +8,8 @@
 //   --scenario load <file>       load <file>, save again
 //   --scenario load-old <file>   the same, with the file's clients rewritten as a file before #608 wrote them
 //   --scenario load-unknown-ai <file>   the same, with a computer seat's AI client one this build doesn't have
+//   --scenario load-reassigned <file>   the same, with the person's seat handed to the computer and the second taken
+//   --scenario load-two-humans <file>   the same, with a second seat made a person's, which the load refuses
 
 // Must stay first: seeds `Math.random` before any engine module evaluates.
 import './lib/seed';
@@ -23,8 +25,9 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import Game from '../../src/js/Engine/Game';
 import {
   isHumanDescriptor,
+  savedSeats,
   seatFromDescriptor,
-} from '../../src/js/Engine/loadGame';
+} from '../../src/js/Engine/lib/savedSeats';
 
 type Bound = { player: string; client: string | null }[];
 
@@ -170,8 +173,26 @@ const play = (name: string, path: string): void => {
       );
     }
 
+    // The seats reassigned on the page before the load (#608): by player id, the person's seat handed to the computer
+    //  and the next one taken, or a second person, which the load refuses.
+    const [first, second] = read.clients.map(
+        ({ playerId }: ClientDescriptor) => playerId
+      ),
+      seats =
+        name === 'load-reassigned'
+          ? {
+              [first]: { kind: 'computer' },
+              [second]: { kind: 'human', name: 'Pat' },
+            }
+          : name === 'load-two-humans'
+          ? { [second]: { kind: 'human', name: 'Pat' } }
+          : undefined;
+
     receivers.get('setOption')!({ name: 'automateLocalPlayer', value: true });
-    receivers.get('load')!({ data: JSON.stringify(read) });
+    receivers.get('load')!({
+      data: JSON.stringify(read),
+      ...(seats === undefined ? {} : { seats }),
+    });
 
     const loaded = await until(
       () =>
@@ -208,7 +229,14 @@ const play = (name: string, path: string): void => {
 
 if (scenario !== null) {
   if (
-    !['save', 'load', 'load-old', 'load-unknown-ai'].includes(scenario) ||
+    ![
+      'save',
+      'load',
+      'load-old',
+      'load-unknown-ai',
+      'load-reassigned',
+      'load-two-humans',
+    ].includes(scenario) ||
     !file
   ) {
     process.stderr.write(`FAIL saveSeats: bad scenario '${scenario}'\n`);
@@ -376,6 +404,65 @@ if (scenario !== null) {
       { kind: 'ai', module: 'SimpleAIClient' },
       { kind: 'ai', module: 'SimpleAIClient' },
     ]
+  );
+
+  // The page's list of a file's seats (#608): every client but the barbarians', with its player's civilization and
+  //  leader by class.
+  const listed = savedSeats(JSON.parse(readFileSync(path, 'utf8')));
+
+  expect(
+    'the page lists the seats from the file, with civilization and leader',
+    listed.map(({ playerId, seat, civilization, leader }) => [
+      playerId === saved.clients[0].playerId,
+      seat,
+      typeof civilization === 'string' && civilization !== '',
+      typeof leader === 'string' && leader !== '',
+    ]),
+    [
+      [true, { kind: 'human', name: 'Dom' }, true, true],
+      [false, { kind: 'computer', ai: 'SimpleAIClient' }, true, true],
+      [false, { kind: 'computer', ai: 'SimpleAIClient' }, true, true],
+    ]
+  );
+
+  const reassigned = run('load-reassigned', path),
+    [firstPlayer, secondPlayer] = saved.clients.map(({ playerId }) => playerId);
+
+  expect('a file loads with its seats reassigned', reassigned.loadFailed, null);
+  expect(
+    "the person's old seat is the computer's and the one taken is theirs",
+    boundOf(reassigned.bound).map(({ player, client }) => [
+      player === firstPlayer
+        ? 'first'
+        : player === secondPlayer
+        ? 'second'
+        : 'other',
+      client,
+    ]),
+    [
+      ['first', 'SimpleAIClient'],
+      ['second', 'DataTransferClient'],
+      ['other', 'SimpleAIClient'],
+    ]
+  );
+  expect(
+    'and saving again records the seats as reassigned',
+    seatsOf(reassigned.clients),
+    [
+      { kind: 'ai', module: 'SimpleAIClient' },
+      { kind: 'human', module: 'DataTransferClient', name: 'Pat' },
+      { kind: 'ai', module: 'SimpleAIClient' },
+    ]
+  );
+
+  const twoHumans = run('load-two-humans', path);
+
+  expect(
+    'a second person is refused, as the page can play one for now (#161)',
+    typeof twoHumans.loadFailed === 'object' &&
+      twoHumans.loadFailed !== null &&
+      /one human/i.test(String((twoHumans.loadFailed as any).message)),
+    true
   );
 
   finished = true;

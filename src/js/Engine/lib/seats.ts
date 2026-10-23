@@ -36,7 +36,7 @@ export type TakenCivilizations = Set<IConstructor<Civilization>>;
 
 const KINDS: SeatKind[] = ['human', 'computer'];
 
-const isSeat = (value: unknown): value is Seat =>
+export const isSeat = (value: unknown): value is Seat =>
   typeof value === 'object' &&
   value !== null &&
   KINDS.includes((value as Seat).kind) &&

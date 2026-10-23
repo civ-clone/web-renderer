@@ -331,6 +331,11 @@ i18next.addResources('en', 'default', {
   'GameSetup.seats': 'Seats',
   'GameSetup.start': 'Start',
   'GameSetup.title': 'Game setup',
+
+  'ResumeGame.intro':
+    'Who plays each civilization? Take over a computer seat, or hand yours to the computer, before the game goes on.',
+  'ResumeGame.resume': 'Resume',
+  'ResumeGame.title': 'Resume game',
   'Grid.hex-odd-r': 'Hex',
   'Grid.square': 'Square',
   'Grid.staggered-iso': 'Isometric',

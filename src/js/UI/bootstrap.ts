@@ -59,7 +59,8 @@ export class Renderer {
         notices = new Notices(),
         // Taken, not read: one reload loads one save. Read here so the welcome
         // window can be skipped — a loaded game is not a new one.
-        pendingSave = await takePendingSave(),
+        pendingLoad = await takePendingSave(),
+        pendingSave = pendingLoad === null ? null : pendingLoad.data,
         mainMenu = new MainMenu(elements.mainMenuElement, this.#transport),
         // Units whose GoTo stopped next to a choice (#357).
         haltedUnits = new HaltedUnits();
@@ -151,14 +152,17 @@ export class Renderer {
       // the first `gameData` follows immediately: every handler above has to be
       // listening before that. There is no `start` for a loaded game — that is
       // what generates a world.
-      if (pendingSave !== null) {
+      if (pendingLoad !== null) {
         mainMenu.remove();
 
         // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes
         //  (#325).
         performance.mark('civ:load-sent');
 
-        transport.send('load', { data: pendingSave });
+        transport.send('load', {
+          data: pendingLoad.data,
+          seats: pendingLoad.seats,
+        });
       }
     } catch (e) {
       console.error(e);

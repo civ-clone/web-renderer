@@ -27,6 +27,9 @@ i18next.addResources('en-GB', 'default', {
 
   'GameSetup.civilization': 'Civilisation',
 
+  'ResumeGame.intro':
+    'Who plays each civilisation? Take over a computer seat, or hand yours to the computer, before the game goes on.',
+
   'ImportAssetsWindow.brave':
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
   'ImportAssetsWindow.done':

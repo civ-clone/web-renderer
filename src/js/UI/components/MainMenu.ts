@@ -8,6 +8,7 @@ import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
 import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
 import { chooseSaveFile } from '../lib/savedGame';
+import ResumeGameWindow from './ResumeGameWindow';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { version } from '../../../../build.json';
@@ -101,7 +102,11 @@ export class MainMenu extends Element {
               )}</button>`
             ),
             {
-              click: () => chooseSaveFile(),
+              // Its seats are shown first, to reassign (#608).
+              click: () =>
+                chooseSaveFile((save) =>
+                  ResumeGameWindow.ask(this.#transport, save)
+                ),
             }
           ),
           h(s(`<button>${t('MainMenu.hall-of-fame')}</button>`), {

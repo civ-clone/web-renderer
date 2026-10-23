@@ -23,6 +23,13 @@ import {
   rememberDifficulty,
 } from '../lib/difficulty';
 import { elementId, h } from '../lib/html';
+import {
+  cell,
+  civilizationName,
+  leaderName,
+  option,
+  select,
+} from '../lib/setupControls';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '../lib/supportedTopologies';
 import { t } from 'i18next';
@@ -55,40 +62,14 @@ type SetupData = {
 
 export const RANDOM = 'random';
 
-const civilizationName = (name: string): string =>
-    t(`${name}.name`, { defaultValue: name, ns: 'civilization' }),
-  leaderName = (name: string): string =>
-    t(`Leader.${name}.name`, { defaultValue: name, ns: 'civilization' }),
-  // An `<option>` with its text set as text, so a name with a quote or a bracket is safe (#3).
-  option = (
-    value: string,
-    label: string,
-    { disabled = false, selected = false } = {}
-  ): HTMLOptionElement => {
-    const element = document.createElement('option');
-
-    element.value = value;
-    element.textContent = label;
-    element.disabled = disabled;
-    element.selected = selected;
-
-    return element;
-  },
-  select = (name: string, options: HTMLOptionElement[]): HTMLSelectElement => {
-    const element = s<HTMLSelectElement>(`<select name="${name}"></select>`);
-
-    element.append(...options);
-
-    return element;
-  },
-  numberInput = (
-    name: string,
-    value: unknown,
-    attributes: string
-  ): HTMLInputElement =>
-    s<HTMLInputElement>(
-      `<input name="${name}" type="number" value="${value}" ${attributes}>`
-    );
+const numberInput = (
+  name: string,
+  value: unknown,
+  attributes: string
+): HTMLInputElement =>
+  s<HTMLInputElement>(
+    `<input name="${name}" type="number" value="${value}" ${attributes}>`
+  );
 
 /**
  * The game setup (#605): the world at the top, and below it the seats, each a human or a computer player with a
@@ -600,14 +581,7 @@ export class GameSetupWindow extends Window {
                 this.#renderSeats();
               },
             }
-          ),
-          cell = (...children: Node[]): HTMLTableCellElement => {
-            const element = document.createElement('td');
-
-            element.append(...children);
-
-            return element;
-          };
+          );
 
         nameInput.value = seat.name;
         leaderSelect.hidden = !civilization;
