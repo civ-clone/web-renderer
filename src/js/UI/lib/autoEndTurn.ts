@@ -18,7 +18,8 @@ export const shouldAutoEndTurn = (
 
   return (
     !waiting &&
-    options.get('autoEndOfTurn') &&
+    // The option's own value, or `null` when it is unset: either way a yes or a no here.
+    !!options.get('autoEndOfTurn') &&
     player.mandatoryActions.length === 1 &&
     player.mandatoryActions.every((action) => action._ === 'EndTurn') &&
     !player.actions.some((action) => autoEndOfTurnExceptions.includes(action._))

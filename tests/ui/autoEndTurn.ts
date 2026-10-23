@@ -1,7 +1,8 @@
 // Whether the turn ends by itself after an update (#344): `shouldAutoEndTurn`,
-// as `GameSession` calls it after each update. Checks each condition on its own: the
-// `autoEndOfTurn` option, waiting for the other civilizations, End Turn being
-// the one mandatory action, and the `autoEndOfTurnExceptions` option.
+// as `GameSession` calls it after each update. Checks each condition on its
+// own: the `autoEndOfTurn` option, waiting for the other civilizations, End
+// Turn being the one mandatory action, and the `autoEndOfTurnExceptions`
+// option; and that the answer is a boolean whatever the option holds.
 
 import shouldAutoEndTurn, {
   AutoEndTurnOptions,
@@ -118,6 +119,31 @@ check(
     false
   )
 );
+
+// A yes or a no, whatever the option holds: `null` when it is unset, or a value other than `true`.
+{
+  const answers = [
+    shouldAutoEndTurn(player(['EndTurn']), optionsWith({}), false),
+    shouldAutoEndTurn(
+      player(['EndTurn']),
+      optionsWith({ autoEndOfTurn: 0 }),
+      false
+    ),
+    shouldAutoEndTurn(
+      player(['EndTurn']),
+      optionsWith({ autoEndOfTurn: 'yes' }),
+      false
+    ),
+    shouldAutoEndTurn(player(['EndTurn']), on, false),
+  ];
+
+  check(
+    `the answer is always true or false (${answers.map((answer) =>
+      JSON.stringify(answer)
+    )})`,
+    JSON.stringify(answers) === '[false,false,true,true]'
+  );
+}
 
 // The exceptions are read first, whatever else decides it, as `Renderer`'s `updateState` did.
 {
