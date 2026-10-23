@@ -4,7 +4,6 @@ import {
 } from '@civ-clone/core-client/ChoiceMeta';
 import { Client, IClient } from '@civ-clone/core-client/Client';
 import City from '@civ-clone/core-city/City';
-import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import registries from './Client/registries';
 import Player from '@civ-clone/core-player/Player';
@@ -34,7 +33,6 @@ import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
 import registerCheats from './Client/cheats';
 import registerRequests, {
-  cityBuildAvailable as cityBuildAvailableFor,
   civilizationScore as civilizationScoreFor,
   topCities as topCitiesFor,
 } from './Client/requests';
@@ -233,7 +231,7 @@ export class DataTransferClient extends Client implements IClient {
   /**
    * Send the player's whole state, as the first hand-over does (see `Client/TurnHandover.ts`).
    *
-   * For tests and `Game.ts`: the UI can't ask for it.
+   * For tests (`patchRefs.ts`): the UI can't ask for it.
    */
   initialData(): void {
     // A client done with sends nothing more (`dispose`).
@@ -245,16 +243,12 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   /**
-   * Send the patches queued for the player, unless an action is being handled (see `PlayerPatches#flush`).
+   * Send the patches queued for the player, unless an action is being handled (see `PlayerPatches.flush()`).
    *
-   * For tests and `Game.ts`: the UI can't ask for it, but the engine flushes after every action and turn.
+   * For tests: the UI can't ask for it, and the client flushes itself after each action, each move and each hand-over.
    */
   flush(): void {
     this.#context.patches.flush();
-  }
-
-  cityBuildAvailable(cityBuild: CityBuildItem): ObjectMap {
-    return cityBuildAvailableFor(this.#context.dataFilter, cityBuild);
   }
 
   civilizationScore(): CivilizationScore {

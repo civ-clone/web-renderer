@@ -1,6 +1,7 @@
 // What the client's modules share (#449): one object, made once by `DataTransferClient`'s constructor, which every
 //  registrar and every module that reads the game is given. Each module still says what it reads of it, as a `Pick` of
-//  this (`CheatsContext`, `RequestsContext`, …), so that a test can hand it a plain object with only those.
+//  this with the registries it calls narrowed by `Registries` (`CheatsContext`, `RequestsContext`, …), so that a test
+//  can hand it a plain object with only those.
 
 import { AdvanceRegistry } from '@civ-clone/core-science/AdvanceRegistry';
 import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
@@ -38,11 +39,11 @@ import PlayerPatches from './PlayerPatches';
 import Talks from './Talks';
 
 // The engine's registries the client reads (see `registries.ts`), typed as narrowly as its modules read them: the union
-//  of what each one picks.
+//  of what each one reads (see `Registries` below).
 export interface ClientRegistries {
   advances: Pick<AdvanceRegistry, 'entries' | 'filter'>;
   availableCityBuildItems: Pick<AvailableCityBuildItemsRegistry, 'entries'>;
-  cities: Pick<CityRegistry, 'entries' | 'getBy' | 'getByPlayer'>;
+  cities: Pick<CityRegistry, 'entries' | 'getBy' | 'getByPlayer' | 'getByTile'>;
   cityBuilds: Pick<CityBuildRegistry, 'getBy'>;
   cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
   cityImprovements: Pick<CityImprovementRegistry, 'getByCity'>;
@@ -97,6 +98,21 @@ export interface ClientContext extends ClientRegistries {
   // Acts on what the UI sends on `action` and says whether the turn is over: the client's own `handleAction`.
   handleAction(...args: any[]): Promise<boolean>;
 }
+
+// The registries a module reads, each narrowed to the methods it calls of it, as `Registries<{ units: 'getBy' }>`
+//  (#503). Picked whole from `ClientRegistries`, a registry is the union of what every module reads of it, so a module
+//  that reads one method would ask a test's stand-in for all of them. A registry handed whole to something else (the
+//  rules to a `Negotiation`, say) is picked from `ClientContext` as it is.
+export type Registries<
+  Reads extends {
+    [Name in keyof ClientRegistries]?: keyof ClientRegistries[Name];
+  }
+> = {
+  [Name in keyof Reads & keyof ClientRegistries]: Pick<
+    ClientRegistries[Name],
+    Extract<Reads[Name], keyof ClientRegistries[Name]>
+  >;
+};
 
 // Undoes what a registrar registered: its engine listeners and its transport receivers.
 export type Disposer = () => void;

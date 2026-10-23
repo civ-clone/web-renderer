@@ -259,7 +259,7 @@ const turnHandover = new TurnHandover({
 
     return handled;
   },
-  difficulties: { entries: () => [] } as any,
+  difficulties: { entries: () => [] },
   playerWorlds: {
     getByPlayer: () => ({
       getByTile: (target: any) => (target === tile ? playerTile : null),

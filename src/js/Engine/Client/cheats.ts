@@ -7,7 +7,7 @@ import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import Transport, { TransportDisposer } from '../Transport';
-import { ClientContext } from './ClientContext';
+import { ClientContext, Registries } from './ClientContext';
 import { filterToReference } from './refs';
 import answer from '../answer';
 
@@ -17,14 +17,16 @@ export type CheatsContext = Pick<
   | 'patches'
   // What the player may see, which their research, treasury or a unit goes through when a cheat changes it.
   | 'dataFilter'
-  | 'advances'
-  | 'availableCityBuildItems'
-  | 'players'
-  | 'playerResearches'
-  | 'playerTreasuries'
-  | 'playerWorlds'
-  | 'units'
->;
+> &
+  Registries<{
+    advances: 'entries' | 'filter';
+    availableCityBuildItems: 'entries';
+    players: 'entries';
+    playerResearches: 'getByPlayer';
+    playerTreasuries: 'getByPlayerAndType';
+    playerWorlds: 'getByPlayer';
+    units: 'getBy';
+  }>;
 
 export type CreateUnitValue = CheatDataMap['CreateUnit'];
 

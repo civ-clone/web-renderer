@@ -9,7 +9,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import UnknownCity from '../UnknownObjects/City';
 import UnknownUnit from '../UnknownObjects/Unit';
-import { ClientContext, Disposer } from './ClientContext';
+import { ClientContext, Disposer, Registries } from './ClientContext';
 
 export type DiplomatEventsContext = Pick<
   ClientContext,
@@ -17,8 +17,8 @@ export type DiplomatEventsContext = Pick<
   | 'transport'
   // What the player may see, which an investigated city's tiles go through.
   | 'dataFilter'
-  | 'playerWorlds'
->;
+> &
+  Registries<{ playerWorlds: 'getByPlayer' }>;
 
 export const registerDiplomatEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
