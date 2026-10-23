@@ -22,7 +22,7 @@ i18next.addResources(
     'Improvement.Palace.name': 'Palace',
     'Improvement.PowerPlant.name': 'Power Plant',
     'Improvement.RecyclingCenter.name': 'Recycling Center',
-    'Improvement.SdiDefence.name': 'SDI Defence',
+    'Improvement.SdiDefence.name': 'SDI Defense',
     'Improvement.Temple.name': 'Temple',
     'Improvement.University.name': 'University',
   }

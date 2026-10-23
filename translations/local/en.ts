@@ -246,7 +246,7 @@ i18next.addResources('en', 'default', {
   'GameSetup.add-seat': 'Add a seat',
   'GameSetup.advanced': 'Advanced',
   'GameSetup.ai': 'AI',
-  'GameSetup.civilization': 'Civilisation',
+  'GameSetup.civilization': 'Civilization',
   'GameSetup.computer': 'Computer',
   'GameSetup.custom': 'Custom ({{width}} × {{height}})',
   'GameSetup.difficulty': '$t(DifficultyWindow.title)',
@@ -273,9 +273,9 @@ i18next.addResources('en', 'default', {
     '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
 
   'ImportAssetsWindow.brave':
-    '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any colour-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
+    '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any color-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
   'ImportAssetsWindow.done':
-    'Done! Please reload the page to utilise the fresh assets.',
+    'Done! Please reload the page to utilize the fresh assets.',
   'ImportAssetsWindow.instructions':
     'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
@@ -297,7 +297,7 @@ i18next.addResources('en', 'default', {
   'LockedSlider.lock': 'Lock',
 
   'MainMenu.customize-world': '$t(CustomizeWorld.title)',
-  'MainMenu.customise': 'Customise…',
+  'MainMenu.customise': 'Customize…',
   'MainMenu.earth': 'Earth',
   'MainMenu.hall-of-fame': '$t(HallOfFame.title)',
   'MainMenu.import-assets': '$t(ImportAssetsWindow.title)',
@@ -536,7 +536,7 @@ i18next.addResources('en', 'default', {
   'GameOver.spaceship.body_unknown':
     'A civilization we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
   'GameOver.spaceship.body_you':
-    'Our colonists have landed on Alpha Centauri! The name of {{leader}} of the {{nation}} will live for ever.',
+    'Our colonists have landed on Alpha Centauri! The name of {{leader}} of the {{nation}} will live forever.',
 
   'FamousLeader.CharlesDeGaulle': 'Charles de Gaulle',
   'FamousLeader.Cleopatra': 'Cleopatra',
@@ -607,7 +607,7 @@ i18next.addResources('en', 'notification', {
   'City.civil-disorder.title': 'Civil disorder',
   'City.leader-celebration.body': `Leader celebration in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
   'City.leader-celebration.title': 'Leader celebration',
-  'City.leader-celebration-ended.body': `Leader celebration cancelled in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
+  'City.leader-celebration-ended.body': `Leader celebration canceled in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
   'City.leader-celebration-ended.title': 'Leader celebration',
   'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
   'City.order-restored.title': 'Order restored!',
@@ -639,7 +639,7 @@ i18next.addResources('en', 'notification', {
   'GoodyHut.action-performed.Unit.title': 'Exploration',
 
   'Player.declaration-expired.body':
-    'Our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }) has been cancelled!',
+    'Our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }) has been canceled!',
   'Player.declaration-expired.title':
     'Sneak attack by $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" })!',
   'Player.defeated.by.body':
@@ -658,16 +658,16 @@ i18next.addResources('en', 'notification', {
     'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
   'Barbarians.landing.title': 'Barbarians!',
   'Barbarians.uprising.body':
-    'Travellers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+    'Travelers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
   'Barbarians.uprising.title': 'Barbarian uprising',
   'Barbarians.uprising.guerrilla.body':
-    'Travellers report: Guerrilla uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+    'Travelers report: Guerrilla uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
   'Barbarians.uprising.guerrilla.title': 'Guerrilla uprising',
   'Player.respawned.body':
     'Where $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) once stood, a new civilization has arisen.',
   'Player.respawned.title': 'A new civilization',
   'Player.respawned.unmet.body':
-    'Travellers tell of a new civilization arising in a distant land.',
+    'Travelers tell of a new civilization arising in a distant land.',
   'Player.respawned.unmet.title': 'A new civilization',
   'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
   'Player.government-collapsed.title': 'Government falls!',
@@ -686,8 +686,8 @@ i18next.addResources('en', 'notification', {
     'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
   'Spaceship.part-built.unmet.title': 'Spaceship built',
   'Spaceship.cancelled.body':
-    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship construction cancelled.',
-  'Spaceship.cancelled.title': 'Spaceship cancelled',
+    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship construction canceled.',
+  'Spaceship.cancelled.title': 'Spaceship canceled',
   'Spaceship.returned.body':
     '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship returns to Earth.',
   'Spaceship.returned.title': 'Spaceship returns',
