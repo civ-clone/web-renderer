@@ -1,18 +1,27 @@
-// What units and advances need is data the game holds (#37): with every plugin loaded, `defaultGame.requirements` has an
-//  entry for each of the unit build rules and advance research rules that `civ1-unit` and `civ1-science` register,
+// What the ruleset's things need is data the game holds (#37): with every plugin loaded, `defaultGame.requirements` has
+//  an entry for each rule made from one (units, advances, Wonders, city improvements, governments and spaceship parts),
 //  and each of those rules was made from its entry. The graph reads both ways: what Musketmen need, what Gunpowder leads
-//  to, and that a Trireme, being a ship, needs a coastal city.
+//  to, and that a Trireme, being a ship, needs a coastal city. Entries come in the order they were registered. The page
+//  gets them with `getRequirements`, classes named as saves name them, and a city says which rules refuse each item it
+//  can't build, by the ids the entries share.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
 
-import { Musketman, Trireme } from '@civ-clone/civ1-unit/Units';
+import { Gunpowder, Railroad } from '@civ-clone/civ1-science/Advances';
+import { Musketman, Trireme, Warrior } from '@civ-clone/civ1-unit/Units';
+import Availability from '@civ-clone/core-government/Rules/Availability';
 import Build from '@civ-clone/core-city-build/Rules/Build';
-import { Gunpowder } from '@civ-clone/civ1-science/Advances';
+import CityBuild from '@civ-clone/core-city-build/CityBuild';
+import Complete from '@civ-clone/core-science/Rules/Complete';
+import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import { Requirement } from '@civ-clone/core-requirement/Requirement';
 import Requirements from '@civ-clone/core-science/Rules/Requirements';
 import Rule from '@civ-clone/core-rule/Rule';
+import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import requirementsData from '../../src/js/Engine/lib/requirements';
+import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
 const failures: string[] = [];
 let finished = false;
@@ -38,39 +47,36 @@ process.on('exit', (code: number): void => {
 const ids = (entries: Requirement[]): string[] =>
   entries.map((entry: Requirement): string => entry.id);
 
-const check = (): void => {
+// The ids of the rules made from entries, by the prefixes the packages give them; hand-written rules have others.
+const derivedId =
+  /^civ1-(unit:city\/build\/(requires-advance|obsolete)|science:research\/requirements|wonder:(city\/build\/requires-(advance|wonder)|wonder\/obsolete)|city-improvement:city\/build\/(requires-advance|requires-improvement|excluded-by)|government:governments\/availability|spaceship:city\/build\/requires-(advance|wonder))\//;
+
+const check = async (): Promise<void> => {
   const { requirements, rules } = defaultGame,
-    // The rules each package makes from its entries: every one of them, and nothing else, has an entry.
-    derived = [
-      ...rules
-        .get(Build)
-        .filter((rule: Rule) =>
-          /^civ1-unit:city\/build\/(requires-advance|obsolete)\//.test(
-            rule.id() ?? ''
-          )
-        ),
-      ...rules
-        .get(Requirements)
-        .filter(
-          (rule: Rule) =>
-            rule.id() !== 'civ1-science:research/requirements/FutureTechnology'
-        ),
-    ],
+    derived = [Build, Requirements, Complete, Availability]
+      .flatMap((RuleType) => rules.get(RuleType as typeof Rule))
+      .filter(
+        (rule: Rule): boolean =>
+          derivedId.test(rule.id() ?? '') &&
+          rule.id() !== 'civ1-science:research/requirements/FutureTechnology'
+      ),
     derivedIds = derived.map((rule: Rule): string | null => rule.id());
 
   expect(
-    'how many rules are made from entries: 26 + 13 units, 60 advances',
+    'how many rules are made from entries: units 26 + 13, advances 60, Wonders 21 + 1 + 11, improvements 20 + 3 + 5, governments 5, spaceship parts 6 + 1',
     derived.length,
-    99
+    26 + 13 + 60 + 21 + 1 + 11 + 20 + 3 + 5 + 5 + 6 + 1
   );
   expect(
     'each of those rules has an entry, and is the rule made from it',
-    derived.filter(
-      (rule: Rule): boolean =>
-        requirements.getById(rule.id() ?? '') === null ||
-        !requirements.rulesFor(rule.id()!).includes(rule)
-    ).length,
-    0
+    derived
+      .filter(
+        (rule: Rule): boolean =>
+          requirements.getById(rule.id() ?? '') === null ||
+          !requirements.rulesFor(rule.id()!).includes(rule)
+      )
+      .map((rule: Rule) => rule.id()),
+    []
   );
   expect(
     'and every entry that makes a rule made one of those',
@@ -95,7 +101,7 @@ const check = (): void => {
     ]
   );
   expect(
-    'what Gunpowder leads to',
+    'what Gunpowder leads to, the Great Wall going obsolete included',
     ids(requirements.leadsTo(Gunpowder)).sort(),
     [
       'civ1-unit:city/build/requires-advance/Musketman',
@@ -103,6 +109,7 @@ const check = (): void => {
       'civ1-unit:city/build/obsolete/Warrior',
       'civ1-science:research/requirements/Explosives',
       'civ1-science:research/requirements/Metallurgy',
+      'civ1-wonder:wonder/obsolete/GreatWall',
     ].sort()
   );
   expect(
@@ -119,6 +126,75 @@ const check = (): void => {
       ['civ1-unit:city/build/naval-needs-coast', ['civ1-unit:coastal-city']],
       ['civ1-unit:unit/replaced-by/Trireme', ['Sail']],
     ]
+  );
+
+  // As the page gets them: every entry, classes named as saves name them (Railroad the advance is `RailroadAdvance`).
+  const data = requirementsData();
+
+  expect(
+    'getRequirements answers with every entry',
+    data.length,
+    requirements.length
+  );
+  expect(
+    'naming classes as saves do, and conditions by their ids',
+    [
+      data.find(
+        ({ id }) => id === 'civ1-science:research/requirements/Railroad'
+      ),
+      data.find(({ id }) => id === 'civ1-unit:city/build/naval-needs-coast')
+        ?.targets,
+    ],
+    [
+      {
+        id: 'civ1-science:research/requirements/Railroad',
+        subject: (Railroad as unknown as { type: string }).type,
+        relation: 'requires',
+        targets: [{ class: 'BridgeBuilding' }, { class: 'SteamEngine' }],
+        mode: 'all',
+        range: 'player',
+      },
+      [{ condition: 'civ1-unit:coastal-city' }],
+    ]
+  );
+
+  // An inland city of a player who knows nothing yet: the build rules from every plugin, and what each refuses.
+  const cityRules = new RuleRegistry(),
+    city = await setUpCity({ ruleRegistry: cityRules }),
+    research = new PlayerResearch(city.player(), defaultGame.advances, rules),
+    cityBuild = new CityBuild(
+      city,
+      defaultGame.availableCityBuildItems,
+      cityRules
+    ),
+    refusedBy = (Item: Function): (string | null)[] =>
+      cityBuild
+        .unavailable()
+        .find(({ item }) => item === Item)
+        ?.refusedBy.filter((id) => id !== null) ?? [];
+
+  defaultGame.playerResearch.register(research);
+  cityRules.register(...rules.get(Build));
+
+  expect(
+    "an inland city can't build Musketmen without Gunpowder, or a Trireme without Map Making or a coast",
+    [refusedBy(Musketman), refusedBy(Trireme), refusedBy(Warrior)],
+    [
+      ['civ1-unit:city/build/requires-advance/Musketman'],
+      [
+        'civ1-unit:city/build/naval-needs-coast',
+        'civ1-unit:city/build/requires-advance/Trireme',
+      ],
+      [],
+    ]
+  );
+
+  research.addAdvance(Gunpowder);
+
+  expect(
+    'and once its player has Gunpowder, Musketmen are buildable and Warriors are obsolete',
+    [refusedBy(Musketman), refusedBy(Warrior)],
+    [[], ['civ1-unit:city/build/obsolete/Warrior']]
   );
 
   finished = true;

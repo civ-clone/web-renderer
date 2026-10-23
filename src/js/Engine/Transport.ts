@@ -3,6 +3,7 @@ import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
+import { RequirementData } from './lib/requirements';
 import { CivilizationScore } from './lib/civilizationScore';
 import { GameOverDetails } from './lib/gameOver';
 import { TopCitiesRow } from './lib/topCities';
@@ -127,6 +128,8 @@ declare global {
     intelligence: TransportData<IntelligenceRow[], null>;
     // A city a Diplomat has investigated (#58), to show read-only.
     investigateCity: TransportData<ObjectMap, never>;
+    // Every requirement entry (#37), for the civilopedia (#183).
+    getRequirements: TransportData<RequirementData[], null>;
     getOptions: TransportData<
       {
         [key: string]: any;
