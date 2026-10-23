@@ -297,11 +297,14 @@ export class GameState {
   /**
    * A `gameData` after the first: a map that did not come from patches, whose changes are not known. It becomes the
    * map later patches apply to and later updates rebuild from; rebuilding from it once while patching the old one
-   * undid it at the next patch.
+   * undid it at the next patch. The prunes start again from it, as they did from the first map: its size is the new
+   * baseline (measured against the old map's, a bigger one was pruned straight away for having grown), and the turn
+   * last pruned is forgotten too, so on a 5th turn already pruned a map over 5,000 objects is pruned once more.
    */
   replace(objectMap: ObjectMap): void {
     this.#objectMap = objectMap;
     this.#objectCount = Object.keys(objectMap.objects).length;
+    this.#pruneSchedule = new PruneSchedule(this.#objectCount);
 
     this.#update(objectMap, true);
   }
