@@ -1,5 +1,5 @@
 // The units the player can move and those deferred with `w` (wait) (#344):
-// `UnitQueue`, as `Renderer` calls it. `update` after every rebuild, `wait`
+// `UnitQueue`, as `ActiveUnitController` calls it. `update` after every rebuild, `wait`
 // from the `w` key, `activated` for each unit made active (`setActiveUnit`
 // follows every `wait` that returns a unit, so the checks do too).
 
@@ -130,7 +130,7 @@ const unit = (id: string): Unit =>
 
     seen.push(next.id);
     current = next;
-    // `updateState` runs after each unit change.
+    // An update follows each unit change.
     queue.update(actions, false);
   }
 

@@ -1,5 +1,5 @@
 // Which of the player's actions reach the primary and secondary panels (#344):
-// `partitionActions`, as `Renderer`'s `render()` calls it. Checks the priority
+// `partitionActions`, as `Hud#build` calls it. Checks the priority
 // order of the primary panel, that the secondary panel holds only what neither
 // list names, that the ignored actions reach neither, that waiting empties the
 // player's actions but not the notices, and that a missing action is skipped.

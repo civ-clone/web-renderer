@@ -1,5 +1,5 @@
-// When the object map is pruned (#344): `PruneSchedule`, as `Renderer`'s
-// `updateState` uses it. Checks the 5th-turn schedule (once per turn), the
+// When the object map is pruned (#344): `PruneSchedule`, as `GameState`'s
+// update uses it. Checks the 5th-turn schedule (once per turn), the
 // 1.5× growth since the last prune, and that neither prunes at 5,000 objects
 // or fewer.
 

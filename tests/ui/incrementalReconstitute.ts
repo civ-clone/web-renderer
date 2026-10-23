@@ -125,7 +125,7 @@ type Patch = {
   };
 };
 
-// Through the same code as the `gameDataPatch` handler in `Renderer.ts`, collecting the ids it changed.
+// Through the same code as `GameState#applyPatches`, collecting the ids it changed.
 const applyPatches = (patches: Patch[], changedIds: Set<string>): void =>
   applyDataPatches(objectMap, patches, {
     changed: (id) => changedIds.add(id),

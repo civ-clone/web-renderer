@@ -1,4 +1,4 @@
-// When the game's data is rebuilt (#344): `GameState`, as `Renderer` drives it,
+// When the game's data is rebuilt (#344): `GameState`, as `GameSession` drives it,
 // with its frame scheduler faked so the test says when a frame comes. Checks
 // that during the player's turn each patch flush rebuilds at once; that while
 // waiting for the turn the flushes coalesce to one rebuild per frame; that

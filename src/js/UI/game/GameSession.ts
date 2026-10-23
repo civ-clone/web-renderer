@@ -298,10 +298,10 @@ export class GameSession {
         document.removeEventListener('endturn', endTurnListener)
       );
 
-      // The display work — both `Actions` panels, detail panels, the
-      // windows watching `dataChanges`, and the full `portal` composite —
-      // reads only the latest `data`/`activeUnit`, so it is safe to run at
-      // most once per animation frame however many patch flushes arrive.
+      // The display work — the windows watching `dataChanges`, `hud`'s
+      // panels, the active unit and the full `portal` composite — reads only
+      // the latest `data`/`activeUnit`, so it is safe to run at most once per
+      // animation frame however many patch flushes arrive.
       let firstRender = true;
 
       const render = (): void => {
