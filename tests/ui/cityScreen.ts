@@ -518,19 +518,25 @@ expect(
     findCity = (id: string): City =>
       data.player.cities.find((city) => city.id === id)!;
 
-  // What the screen did since the last `reset`, as `City` would: redraw with the city given, or close.
-  const updated: City[] = [];
+  // What the screen did since the last `reset`, as `City` would: redraw with the city given, or close. And whether each
+  //  redraw was for the player's gold alone, when the screen leaves the focus where it is.
+  const updated: City[] = [],
+    goldOnly: boolean[] = [];
   let closes = 0;
 
   const reset = (): void => {
     updated.length = 0;
+    goldOnly.length = 0;
     closes = 0;
   };
 
   // `City.close` calls what `watchCity` returned as well, but `watchCity` has stopped by then: the handlers here leave it
   //  to, so that a watch left going would show.
   watchCity(findCity('City-1'), {
-    update: (city) => updated.push(city),
+    update: (city, _data, gold) => {
+      updated.push(city);
+      goldOnly.push(gold);
+    },
     close: () => {
       closes++;
     },
@@ -541,8 +547,8 @@ expect(
 
   expect(
     'the screen redraws when its city changes, with the city as it is now',
-    updated.map(({ name }) => name),
-    ['Roma']
+    [updated.map(({ name }) => name), goldOnly],
+    [['Roma'], [false]]
   );
 
   // A change to gold alone, after that first redraw: the old re-subscription dropped the treasury here.
@@ -551,9 +557,20 @@ expect(
   render();
 
   expect(
-    'after a first redraw, a change to gold alone still redraws it',
-    [updated.length, closes, updated[0]?.player.treasuries[0].value],
-    [1, 0, 35]
+    'after a first redraw, a change to gold alone still redraws it, saying it is for gold alone',
+    [updated.length, closes, updated[0]?.player.treasuries[0].value, goldOnly],
+    [1, 0, 35, [true]]
+  );
+
+  reset();
+  update([replace('Treasury-1', { value: 30 })]);
+  update([replace('CityGrowth-1', { size: 2 })]);
+  render();
+
+  expect(
+    'gold and the city changing in the same render is not for gold alone',
+    goldOnly,
+    [false]
   );
 
   reset();
@@ -620,9 +637,9 @@ expect(
   render();
 
   expect(
-    'a rebuild of everything redraws it with the rebuilt city',
-    [updated.length, closes, updated[0] === findCity('City-1')],
-    [1, 0, true]
+    'a rebuild of everything redraws it with the rebuilt city, not for gold alone',
+    [updated.length, closes, updated[0] === findCity('City-1'), goldOnly],
+    [1, 0, true, [false]]
   );
 
   reset();
@@ -631,8 +648,8 @@ expect(
 
   expect(
     'and it still follows gold after that',
-    [updated.length, closes],
-    [1, 0]
+    [updated.length, closes, goldOnly],
+    [1, 0, [true]]
   );
 
   // Captured: the player's list of cities loses it, in a patch keyed on the player, with nothing of the city's own.

@@ -1,16 +1,16 @@
 // Which watchers wake for a change (#344). Patches go through the shipped
 // `applyDataPatches`, the data is rebuilt by a real `IncrementalReconstituter`,
-// and each rebuild is `collect`ed as `GameState`'s update does it: the
-// ids the patches changed plus the ids the rebuild filled, or `null` for a
-// rebuild of everything. A "render" is a `notify`. Checks that a watcher wakes
-// for a changed id, for a child id its getter reads live, for a late ref
-// arriving at what it watches, for a `remove` and for a full rebuild; not for
-// unrelated ids; once per render however many rebuilds came before it; and that
-// unwatching or watching during a render is honoured. Then the same for a
-// watcher on the module's shared `instance`, as the city screen, the reports and
-// the unit stack window use it: added with no `document` (this runs in Node),
-// woken by a change or a `remove` with the new data, following its ids as they
-// are when read, and stopped by unwatching.
+// and each rebuild is `collect`ed as `GameState`'s update does it: the ids the
+// patches changed plus the ids the rebuild filled, or `null` for a rebuild of
+// everything. A "render" is a `notify`. Checks that a watcher wakes for a
+// changed id, for a child id its getter reads live, for a late ref arriving at
+// what it watches, for a `remove` and for a full rebuild; not for unrelated
+// ids; that it is told which ids changed; once per render however many rebuilds
+// came before it; and that unwatching or watching during a render is honoured.
+// Then the same for a watcher on the module's shared `instance`, as the city
+// screen, the reports and the unit stack window use it: added with no
+// `document` (this runs in Node), woken by a change or a `remove` with the new
+// data, following its ids as they are when read, and stopped by unwatching.
 
 import DataChanges, {
   instance as sharedChanges,
@@ -276,6 +276,29 @@ check(
     (name) => woke(name) === 1
   )
 );
+
+// A watcher is told what changed, to tell one of its ids from another: the ids since the last render, or `null` after
+//  a rebuild of everything.
+{
+  const told: Array<string[] | null> = [],
+    unwatch = dataChanges.watch(
+      () => ['Treasury-1'],
+      (_data, changed) => told.push(changed === null ? null : [...changed])
+    );
+
+  update([replace('Treasury-1', { ...objectMap.objects['Treasury-1'] })]);
+  render();
+  update([], true);
+  render();
+  unwatch();
+
+  check(
+    `a watcher is told the ids that changed, or null for everything (${JSON.stringify(
+      told
+    )})`,
+    JSON.stringify(told) === '[["Treasury-1"],null]'
+  );
+}
 
 // Patch after patch, as during the player's turn, then one render.
 reset();
