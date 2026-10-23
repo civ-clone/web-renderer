@@ -8,7 +8,8 @@
 // GrantGold, CreateUnit) and asks each question the UI asks (topCities, civilizationScore, intelligence,
 // cityBuildAvailable, unitActions). Every choice it is asked to make is answered with the first option.
 //
-// Every `send(channel, payload)` is recorded as the JSON a `ParentTransport` would post, and the recording is
+// Every `send(channel, payload)` is recorded as JSON of what a `ParentTransport` would post, with what JSON would lose
+// marked (see `marked`), and the recording is
 // compared with tests/engine/fixtures/client-transcript.json: a hash per channel, a hash of the whole sequence, and a
 // hash and summary of each message, so that a difference says which message changed first and how. Ids are counters
 // per class and the engine's random source is seeded, so two runs send the same thing.
@@ -118,7 +119,7 @@ const transport = {
     // As `ParentTransport` and `postMessage` would: a reply to a request carries its id (#470).
     transcript.push([
       channel,
-      JSON.stringify(id === undefined ? plain : { data: plain, id }),
+      JSON.stringify(id === undefined ? plain : { data: plain, id }, marked),
     ]);
 
     if (channel === 'chooseFromList') {
@@ -159,6 +160,16 @@ const transport = {
     }
   },
 };
+
+// What `postMessage` keeps and JSON doesn't (#503): JSON leaves out a key whose value is `undefined` (and makes one in
+//  an array `null`), and makes `NaN` and the infinities `null`, so a difference in any of them would not be seen. Each
+//  is recorded as a marker of its own instead.
+const marked = (_key: string, value: unknown): unknown =>
+  value === undefined
+    ? '[undefined]'
+    : typeof value === 'number' && !Number.isFinite(value)
+    ? `[${value}]`
+    : value;
 
 // Sends an action as the UI does, and waits for it to be handled.
 const act = (action: { name: string; [key: string]: any }): Promise<void> =>
