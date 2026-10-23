@@ -6,11 +6,11 @@
 // does) drops the deferred rebuild and rebuilds once; that each update runs in
 // the order the input handlers rely on (rebuild, tiles, then `onUpdated`) and
 // tells the world whether its tiles were refilled; that a `PlayerTile` a patch
-// carries is queued, and the square of a unit whose look it changes (#487);
-// that what changed reaches `DataChanges`; that a second `gameData` is the map
-// later patches apply to; that the map is pruned on schedule and the pruned
-// ids forgotten; and that the object count is kept as patches go, without
-// counting the whole map (#480).
+// carries is queued, and the square of a unit (#487) or a city (#578) whose
+// look it changes; that what changed reaches `DataChanges`; that a second
+// `gameData` is the map later patches apply to; that the map is pruned on
+// schedule and the pruned ids forgotten; and that the object count is kept as
+// patches go, without counting the whole map (#480).
 
 import GameState, {
   FrameScheduler,
@@ -491,6 +491,185 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   ]);
 
   check('what is not a unit queues nothing', queuedIds() === '');
+}
+
+// The square of a city a patch changes the look of is queued, though no tile
+// comes with it (#578): its size, its owner, its name, or civil disorder. The
+// worker sends the tile with each of these today; the map relies on that only
+// for a city changing hands to or from the player, which changes its id.
+{
+  // Your own city, as the worker sends it: its size in its growth, which goes
+  // in the side-table with it, and its square and owner as refs.
+  const city = (
+    id: string,
+    {
+      civilDisorderDeclared = false,
+      name = 'Rome',
+      player = 'Player-1',
+      yields = [] as PlainObject[],
+    } = {}
+  ): PlainObject => ({
+    _: 'City',
+    __: ['City', 'DataObject'],
+    id,
+    civilDisorderDeclared,
+    growth: ref(`${id}-growth`),
+    name,
+    player: ref(player),
+    tile: ref('Tile-1'),
+    yields,
+  });
+
+  const growth = (id: string, size: number): PlainObject => ({
+    _: 'CityGrowth',
+    __: ['CityGrowth', 'DataObject'],
+    id: `${id}-growth`,
+    size,
+  });
+
+  // A rival's city, the stand-in the player is sent: its size inline.
+  const rivalCity = (
+    id: string,
+    { size = 3, player = 'Player-2' } = {}
+  ): PlainObject => ({
+    _: 'City',
+    __: ['City', 'DataObject'],
+    id,
+    civilDisorderDeclared: false,
+    growth: { size },
+    name: 'Babylon',
+    player: ref(player),
+    tile: ref('Tile-2'),
+  });
+
+  const sent = (
+    id: string,
+    hierarchy: PlainObject,
+    objects: PlainObject = {}
+  ): DataPatch => update(id, ref(id), { [id]: hierarchy, ...objects });
+
+  const objectMap = makeMap();
+
+  Object.assign(objectMap.objects, {
+    'City-1': city('City-1'),
+    'City-1-growth': growth('City-1', 1),
+    'City-2': rivalCity('City-2'),
+    'Player-2': { _: 'Player', id: 'Player-2' },
+  });
+  (objectMap.objects['Player-1'] as PlainObject).cities = [ref('City-1')];
+
+  const { queued, state } = setup(objectMap),
+    queuedIds = (): string =>
+      queued
+        .splice(0)
+        .map((tile) => tile.id)
+        .join(',');
+
+  state.update();
+
+  // Its yields change often; the map draws none of them.
+  state.applyPatches([
+    sent('City-1', city('City-1', { yields: [ref('Food-1')] }), {
+      'City-1-growth': growth('City-1', 1),
+      'Food-1': { _: 'Food', id: 'Food-1', value: 2 },
+    }),
+  ]);
+
+  check('a city that looks the same queues nothing', queuedIds() === '');
+
+  // It grows: the city in full, its growth in the side-table.
+  state.applyPatches([
+    sent('City-1', city('City-1'), { 'City-1-growth': growth('City-1', 2) }),
+  ]);
+
+  check('a city that grows queues its square', queuedIds() === 'Tile-1');
+
+  // Its growth ahead of it in the side-table.
+  state.applyPatches([
+    update('City-1', ref('City-1'), {
+      'City-1-growth': growth('City-1', 1),
+      'City-1': city('City-1'),
+    }),
+  ]);
+
+  check(
+    'a city that shrinks queues its square, its growth sent first',
+    queuedIds() === 'Tile-1'
+  );
+
+  // Its growth on its own.
+  state.applyPatches([sent('City-1-growth', growth('City-1', 2))]);
+
+  check(
+    "a city's growth on its own queues the city's square",
+    queuedIds() === 'Tile-1'
+  );
+  check(
+    'and the size is in the data',
+    (state.data().player.cities as PlainObject[])[0].growth.size === 2
+  );
+
+  state.applyPatches([
+    sent('City-1', city('City-1', { civilDisorderDeclared: true })),
+  ]);
+
+  check('a city in disorder queues its square', queuedIds() === 'Tile-1');
+
+  // Each change below keeps the disorder, so each check pins its own field.
+  state.applyPatches([
+    sent(
+      'City-1',
+      city('City-1', { civilDisorderDeclared: true, name: 'Roma' })
+    ),
+  ]);
+
+  check('a city renamed queues its square', queuedIds() === 'Tile-1');
+
+  // Captured: its owner, and so its colours, change, and with them the list
+  // its name is looked up in.
+  state.applyPatches([
+    sent(
+      'City-1',
+      city('City-1', {
+        civilDisorderDeclared: true,
+        name: 'Roma',
+        player: 'Player-2',
+      })
+    ),
+  ]);
+
+  check('a city captured queues its square', queuedIds() === 'Tile-1');
+
+  // A rival's city grows, then is captured by the player.
+  state.applyPatches([sent('City-2', rivalCity('City-2', { size: 4 }))]);
+
+  check(
+    "a rival's city that grows queues its square",
+    queuedIds() === 'Tile-2'
+  );
+
+  state.applyPatches([
+    sent('City-2', rivalCity('City-2', { size: 4, player: 'Player-1' })),
+  ]);
+
+  check("a rival's city captured queues its square", queuedIds() === 'Tile-2');
+
+  // A new city, as one founded arrives.
+  state.applyPatches([
+    sent(
+      'Player-1',
+      {
+        ...(objectMap.objects['Player-1'] as PlainObject),
+        cities: [ref('City-1'), ref('City-3')],
+      },
+      {
+        'City-3': { ...city('City-3'), tile: ref('Tile-2') },
+        'City-3-growth': growth('City-3', 1),
+      }
+    ),
+  ]);
+
+  check('a new city queues its square', queuedIds() === 'Tile-2');
 }
 
 // What changed reaches `DataChanges`.
