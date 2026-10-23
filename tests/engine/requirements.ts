@@ -1,14 +1,23 @@
 // What the ruleset's things need is data the game holds (#37): with every plugin loaded, `defaultGame.requirements` has
-//  an entry for each rule made from one (units, advances, Wonders, city improvements, governments and spaceship parts),
-//  and each of those rules was made from its entry. The graph reads both ways: what Musketmen need, what Gunpowder leads
-//  to, and that a Trireme, being a ship, needs a coastal city. Entries come in the order they were registered. The page
-//  gets them with `getRequirements`, classes named as saves name them, and a city says which rules refuse each item it
-//  can't build, by the ids the entries share.
+//  an entry for each rule made from one (units, advances, Wonders, city improvements, governments, spaceship parts and
+//  tile improvements), and each of those rules was made from its entry. The graph reads both ways: what Musketmen need,
+//  what Gunpowder leads to, and that a Trireme, being a ship, needs a coastal city. Entries come in the order they were
+//  registered. The page gets them with `getRequirements`, classes named as saves name them, and a city says which rules
+//  refuse each item it can't build, by the ids the entries share.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
 
-import { Gunpowder, Railroad } from '@civ-clone/civ1-science/Advances';
+import {
+  BridgeBuilding,
+  Gunpowder,
+  Mysticism,
+  Railroad,
+} from '@civ-clone/civ1-science/Advances';
+import { Irrigation } from '@civ-clone/civ1-world/TileImprovements';
+import { Temple } from '@civ-clone/civ1-city-improvement/CityImprovements';
+import { Oracle } from '@civ-clone/civ1-wonder/Wonders';
+import Available from '@civ-clone/core-tile-improvement/Rules/Available';
 import { Musketman, Trireme, Warrior } from '@civ-clone/civ1-unit/Units';
 import Availability from '@civ-clone/core-government/Rules/Availability';
 import Build from '@civ-clone/core-city-build/Rules/Build';
@@ -49,11 +58,11 @@ const ids = (entries: Requirement[]): string[] =>
 
 // The ids of the rules made from entries, by the prefixes the packages give them; hand-written rules have others.
 const derivedId =
-  /^civ1-(unit:city\/build\/(requires-advance|obsolete)|science:research\/requirements|wonder:(city\/build\/requires-(advance|wonder)|wonder\/obsolete)|city-improvement:city\/build\/(requires-advance|requires-improvement|excluded-by)|government:governments\/availability|spaceship:city\/build\/requires-(advance|wonder))\//;
+  /^civ1-(unit:city\/build\/(requires-advance|obsolete)|science:research\/requirements|wonder:(city\/build\/requires-(advance|wonder)|wonder\/obsolete)|city-improvement:city\/build\/(requires-advance|requires-improvement|excluded-by)|government:governments\/availability|spaceship:city\/build\/requires-(advance|wonder)|world:tile-improvement\/available)\//;
 
 const check = async (): Promise<void> => {
   const { requirements, rules } = defaultGame,
-    derived = [Build, Requirements, Complete, Availability]
+    derived = [Build, Requirements, Complete, Availability, Available]
       .flatMap((RuleType) => rules.get(RuleType as typeof Rule))
       .filter(
         (rule: Rule): boolean =>
@@ -63,9 +72,9 @@ const check = async (): Promise<void> => {
     derivedIds = derived.map((rule: Rule): string | null => rule.id());
 
   expect(
-    'how many rules are made from entries: units 26 + 13, advances 60, Wonders 21 + 1 + 11, improvements 20 + 3 + 5, governments 5, spaceship parts 6 + 1',
+    'how many rules are made from entries: units 26 + 13, advances 60, Wonders 21 + 1 + 11, improvements 20 + 3 + 5, governments 5, spaceship parts 6 + 1, tile improvements 5',
     derived.length,
-    26 + 13 + 60 + 21 + 1 + 11 + 20 + 3 + 5 + 5 + 6 + 1
+    26 + 13 + 60 + 21 + 1 + 11 + 20 + 3 + 5 + 5 + 6 + 1 + 5
   );
   expect(
     'each of those rules has an entry, and is the rule made from it',
@@ -153,8 +162,59 @@ const check = async (): Promise<void> => {
         targets: [{ class: 'BridgeBuilding' }, { class: 'SteamEngine' }],
         mode: 'all',
         range: 'player',
+        where: null,
       },
       [{ condition: 'civ1-unit:coastal-city' }],
+    ]
+  );
+  expect(
+    "and where a tile improvement can go, as the terrains' keys",
+    data.find(
+      ({ id }) => id === 'civ1-world:tile-improvement/available/Irrigation'
+    )?.where,
+    ['Desert', 'Grassland', 'Hills', 'Plains', 'River']
+  );
+
+  // Tile improvements, the Worker's own conditions, and what makes things work better (step 10).
+  expect(
+    'what Bridge Building leads to: Railroad the advance, and a road on a River',
+    ids(requirements.leadsTo(BridgeBuilding)).sort(),
+    [
+      'civ1-science:research/requirements/Railroad',
+      'civ1-world:tile-improvement/available/bridge/Road',
+    ]
+  );
+  expect(
+    'Irrigation goes on five terrains, and a Worker needs water nearby to dig it',
+    requirements
+      .for(Irrigation)
+      .map((entry: Requirement) => [
+        entry.id,
+        entry.targets.map((target: any): string => target.id ?? target.name),
+      ])
+      .sort(),
+    [
+      [
+        'civ1-unit:unit/action/improvement/Irrigation/water-nearby',
+        ['civ1-unit:water-nearby'],
+      ],
+      ['civ1-world:tile-improvement/available/Irrigation', []],
+    ]
+  );
+  expect(
+    'a Temple and the Oracle are enhanced by Mysticism',
+    [
+      ids(requirements.for(Temple, 'enhancedBy')),
+      ids(requirements.for(Oracle, 'enhancedBy')),
+      requirements
+        .leadsTo(Mysticism, 'enhancedBy')
+        .map((entry: Requirement): string => entry.subject.name)
+        .sort(),
+    ],
+    [
+      ['civ1-city-happiness:city/cost/enhanced-by/Temple'],
+      ['civ1-wonder:wonder/enhanced-by/Oracle'],
+      ['Oracle', 'Temple'],
     ]
   );
 

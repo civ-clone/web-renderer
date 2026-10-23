@@ -23,6 +23,8 @@ export interface RequirementData {
   targets: RequirementTargetData[];
   mode: 'all' | 'any';
   range: Range;
+  /** Where the subject must be, e.g. the terrains a tile improvement can go on, or `null` for anywhere. */
+  where: string[] | null;
 }
 
 const targetData = (target: Target): RequirementTargetData =>
@@ -42,6 +44,10 @@ export const requirementsData = (
       targets: entry.targets.map(targetData),
       mode: entry.mode,
       range: entry.range,
+      where:
+        entry.where?.map((Class) =>
+          typeNameOf(Class as { type?: string; name: string })
+        ) ?? null,
     })
   );
 
