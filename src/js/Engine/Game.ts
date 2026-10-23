@@ -18,6 +18,7 @@ import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import requirementsData from './lib/requirements';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import {
   Seat,
@@ -192,6 +193,9 @@ export class Game implements IGame {
       this.#transport.send('notification', `setting ${name} to ${value}`);
       engine.setOption(name, value);
     });
+
+    // What the ruleset's things need, make obsolete and are replaced by, for the civilopedia (#37, #183).
+    answer(transport, 'getRequirements', () => requirementsData());
 
     answer(transport, 'getOptions', (values: string[]) =>
       values.reduce((options, optionName) => {
