@@ -26,7 +26,7 @@ export type FrameScheduler = {
 
 /** Where the map's tiles go: `MapView`'s `world` and its queue of tiles to draw. */
 export type GameStateTiles = {
-  /** Each `PlayerTile` a patch carries, and the tile of each unit it changes the look of, once they are in the map. */
+  /** Each `PlayerTile` a patch carries, and the tile of each unit and city it changes the look of, once they are in the map. */
   queueTile(tile: Tile): void;
   /** After each rebuild, with whether the world's tiles were refilled. */
   setTiles(tiles: Tile[], changed: boolean): void;
@@ -56,6 +56,29 @@ const drawnUnit = (value: PlainObject | undefined): string | null =>
         value.tile,
         value.busy,
         value.improvements,
+      ])
+    : null;
+
+// What the map draws of a city, as the map holds it, given its growth: its
+//  owner, whose colours it is drawn in and whose list its name is looked up in,
+//  its name, its square, its size and whether the engine has declared it in
+//  disorder. Your own city's size is in its growth, a separate object; a
+//  rival's, the stand-in you are sent, holds it inline. No layer draws a city's
+//  improvements, such as its walls, so they are left out. `null` for anything
+//  that is not a city. A city that changes hands to or from you changes id (your
+//  city or a rival's stand-in), so that, and a city destroyed, still rely on the
+//  worker sending the tile with it.
+const drawnCity = (
+  value: PlainObject | undefined,
+  growth: PlainObject | undefined
+): string | null =>
+  value?.__?.includes('City')
+    ? JSON.stringify([
+        value.player,
+        value.name,
+        value.tile,
+        value.civilDisorderDeclared,
+        (growth ?? value.growth)?.size,
       ])
     : null;
 
@@ -147,12 +170,25 @@ export class GameState {
 
   /** A `gameDataPatch`: applied to the map, then rebuilt now, or next frame while waiting for the turn. */
   applyPatches(patches: DataPatch[]): void {
-    // The squares of the units whose look a patch changed, where they are and
-    //  where they were. A unit can come on its own, as one that finishes
-    //  fortifying does at the start of the turn, with no tile to say its
-    //  square needs drawing again (#487). Looked up once the patches are in,
-    //  as the tile can come after the unit.
-    const unitTileIds = new Set<string>();
+    // The squares of the units and cities whose look a patch changed, where
+    //  they are and where they were. A unit can come on its own, as one that
+    //  finishes fortifying does at the start of the turn, with no tile to say
+    //  its square needs drawing again (#487), and so can a city (#578). Looked
+    //  up once the patches are in, as the tile can come after the unit.
+    const tileIds = new Set<string>(),
+      queueTiles = (...tiles: (PlainObject | undefined)[]): void =>
+        tiles.forEach((tile) => {
+          if (tile?.['#ref']) {
+            tileIds.add(tile['#ref']);
+          }
+        }),
+      // The cities and growths the patches replaced, each as the map held it
+      //  before the first of them. A city's size is in its growth, which can
+      //  come before the city, after it, or alone, so cities are compared once
+      //  the patches are in.
+      before = new Map<string, PlainObject | undefined>(),
+      cityIds = new Set<string>(),
+      growthIds = new Set<string>();
 
     applyDataPatches(this.#objectMap, patches, {
       changed: (id) => this.#changedIds.add(id),
@@ -161,24 +197,87 @@ export class GameState {
           this.#objectCount++;
         }
 
+        const ids = value.__?.includes('City')
+          ? cityIds
+          : value.__?.includes('CityGrowth')
+          ? growthIds
+          : null;
+
+        if (ids !== null) {
+          ids.add(id);
+
+          if (!before.has(id)) {
+            before.set(id, previous);
+          }
+
+          return;
+        }
+
         const drawn = drawnUnit(value);
 
         if (drawn === null || drawn === drawnUnit(previous)) {
           return;
         }
 
-        [value.tile, previous?.tile].forEach((tile) => {
-          if (tile?.['#ref']) {
-            unitTileIds.add(tile['#ref']);
-          }
-        });
+        queueTiles(value.tile, previous?.tile);
       },
       removed: () => this.#objectCount--,
       // Since we only use the queued tiles for x and y this should be fine...
       tile: (tile) => this.#tiles.queueTile(tile as Tile),
     });
 
-    unitTileIds.forEach((id) => {
+    const objects = this.#objectMap.objects,
+      growthId = (city: PlainObject | undefined): string | undefined =>
+        city?.growth?.['#ref'],
+      growthNow = (city: PlainObject | undefined): PlainObject | undefined => {
+        const id = growthId(city);
+
+        return id === undefined ? undefined : objects[id];
+      },
+      growthBefore = (
+        city: PlainObject | undefined
+      ): PlainObject | undefined => {
+        const id = growthId(city);
+
+        return id !== undefined && before.has(id)
+          ? before.get(id)
+          : growthNow(city);
+      };
+
+    // A growth sent without its city: the city is found among your own, as
+    //  only theirs have a growth of their own.
+    cityIds.forEach((cityId) => {
+      const id = growthId(objects[cityId]);
+
+      if (id !== undefined) {
+        growthIds.delete(id);
+      }
+    });
+
+    if (growthIds.size > 0) {
+      (this.#data.player?.cities ?? []).forEach((city) => {
+        if (growthIds.has(city?.growth?.id)) {
+          cityIds.add(city.id);
+        }
+      });
+    }
+
+    cityIds.forEach((id) => {
+      const city = objects[id],
+        previous = before.has(id) ? before.get(id) : city,
+        drawn = drawnCity(city, growthNow(city));
+
+      if (
+        drawn === null ||
+        drawn === drawnCity(previous, growthBefore(previous))
+      ) {
+        return;
+      }
+
+      queueTiles(city.tile, previous?.tile);
+    });
+
+    tileIds.forEach((id) => {
       const tile = this.#objectMap.objects[id];
 
       if (typeof tile?.x === 'number' && typeof tile?.y === 'number') {
