@@ -58,6 +58,8 @@ export class DataTransferClient extends Client implements IClient {
   // What the client's modules share: the player, the transport, the patches, the notifications, automation, the talks
   //  and the registries (see `Client/ClientContext.ts`). Made once, in the constructor.
   #context: ClientContext;
+  // Set by `dispose`: a choice or the initial data asked for from then on is never sent.
+  #disposed: boolean = false;
   // What undoes each registration below: the engine listeners and the transport receivers (`dispose`).
   #disposers: Disposer[] = [];
   // The turn handed to the UI and back, and each `action` it sends acted on (see `Client/TurnHandover.ts`).
@@ -169,12 +171,21 @@ export class DataTransferClient extends Client implements IClient {
   /**
    * Stop listening: to every engine event and every message from the UI, the `action`s of the turn under way, and the
    * answers to the choices pending. From then on an engine event sends the player nothing and a message is ignored; a
-   * turn under way never ends, and a choice pending never settles.
+   * turn under way played by hand never ends, and a choice pending never settles. A hand-over still to come is called
+   * off, and a turn, a choice or the initial data asked of the client afterwards sends nothing (and the turn and the
+   * choice never settle).
    *
-   * Not undone: what was queued before (sent by a later `flush()`), the hand-over's timer and the news of the engine
-   * call under way, if either is pending, and the client's place in the `ClientRegistry`, which is its owner's.
+   * Not undone:
+   * - what was queued before, which a later `flush()` still sends;
+   * - the notifications held until the hand-over, which stay held;
+   * - a turn's end 10 ms after `turnEnded`, an action being handled, the talks under way and the news of the engine
+   *   call under way, if any of these is pending;
+   * - an automated turn under way, which still sends its whole-player patch and ends once automation has played it;
+   * - the stand-ins and the AdditionalData providers, which every client shares;
+   * - the client's place in the `ClientRegistry`, which is its owner's.
    */
   dispose(): void {
+    this.#disposed = true;
     this.#disposers.splice(0).forEach((dispose) => dispose());
     this.#choicePrompt.cancel();
     this.#turnHandover.dispose();
@@ -187,6 +198,11 @@ export class DataTransferClient extends Client implements IClient {
   async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
     meta: ChoiceMeta<Name>
   ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
+    // A client done with asks nothing more (`dispose`).
+    if (this.#disposed) {
+      return new Promise(() => {});
+    }
+
     if (this.#context.automation.enabled) {
       return this.#context.automation.client.chooseFromList(meta) as Promise<
         DataForChoiceMeta<ChoiceMeta<Name>>
@@ -220,6 +236,11 @@ export class DataTransferClient extends Client implements IClient {
    * For tests and `Game.ts`: the UI can't ask for it.
    */
   initialData(): void {
+    // A client done with sends nothing more (`dispose`).
+    if (this.#disposed) {
+      return;
+    }
+
     this.#turnHandover.sendInitialData();
   }
 

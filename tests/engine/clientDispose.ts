@@ -4,11 +4,12 @@
 //  - an engine event that queues a patch (a trade route: both cities), whose patch goes at the next flush;
 //  - an engine event the player is told of (`game:retirement-warning`);
 //  - the UI's `cheat` (GrantGold) and a request (`topCities`), each acted on and answered;
-//  - the UI's `action` in a turn under way (the client's `handleAction` is called, and the turn ends);
-//  - the UI's answer to a choice pending, which settles it (after, one pending as the client is disposed of; a choice
-//    asked of a client already disposed of is its caller's to avoid).
-// Then that a second `dispose()` is harmless, and that every engine listener and transport receiver the client added
-//  is gone.
+//  - a turn taken, handed over a ms later (its patch and `turnStarted`), and the UI's `action` in it (the client's
+//    `handleAction` is called, and the turn ends);
+//  - the UI's answer to a choice pending, which settles it (after, one pending as the client is disposed of, and one
+//    asked of it afterwards, which is not sent at all).
+// Then that a second `dispose()` is harmless, that every engine listener and transport receiver the client added is
+//  gone, and, with a second client, that a hand-over still to come when it is disposed of is called off (#503).
 
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
@@ -17,6 +18,7 @@ import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import TurnHandover from '../../src/js/Engine/Client/TurnHandover';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
+import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
@@ -186,7 +188,6 @@ const observe = async (): Promise<{ [check: string]: unknown }> => {
   engine.emit('game:retirement-warning');
   results['the retirement warning'] = taken();
   // A cheat sends its patch itself, with the player's actions, as what can be bought turns on the gold there is (#494).
-  // A cheat sends its patch itself.
   deliver('cheat', { name: 'GrantGold', value: { amount: 10 } });
   results['GrantGold'] = [taken(), granted.splice(0)];
 
@@ -197,7 +198,7 @@ const observe = async (): Promise<{ [check: string]: unknown }> => {
   const turn = client.takeTurn();
 
   await wait(20);
-  taken();
+  results['the hand-over'] = taken();
   deliver('action', { name: 'EndTurn' });
   results['an action in the turn under way'] = [
     handled.splice(0),
@@ -227,6 +228,10 @@ const run = async (): Promise<void> => {
     'the retirement warning': ['gameNotification(Game.retirement-warning)'],
     GrantGold: [['gameDataPatch(treasury,Player-1,Player-1)'], [10]],
     topCities: ['topCities'],
+    'the hand-over': [
+      `gameDataPatch(${turnInstance.id()},${yearInstance.id()})`,
+      'turnStarted',
+    ],
     'an action in the turn under way': [[{ name: 'EndTurn' }], undefined],
   });
   expect('before dispose(): a choice is answered', await choose(), [
@@ -236,9 +241,11 @@ const run = async (): Promise<void> => {
 
   expect(
     'before dispose(): it listens on the engine and receives on the transport',
-    [added > 0, receivedOn],
+    [added, receivedOn],
     [
-      true,
+      // 1 for a plugin that fails to load, 2 for the talks, 1 for a halted GoTo, 27 for the patches, 2 for a Diplomat's
+      //  reports, 1 for famine, 3 for the game's end, and 31 notifications.
+      68,
       [
         'action',
         'cheat',
@@ -296,17 +303,44 @@ const run = async (): Promise<void> => {
     'the retirement warning': [],
     GrantGold: [[], []],
     topCities: [],
+    'the hand-over': [],
   });
   expect('after dispose(): a new turn is not acted on either', action, [
     [],
     'unsettled',
   ]);
 
+  const late = client.chooseFromList(meta());
+
+  expect(
+    'after dispose(): a choice asked is not sent, nor its answer listened for',
+    [taken(), receiving()],
+    [[], []]
+  );
+  deliver('chooseFromList', 'b');
+  expect(
+    'after dispose(): nor does it settle',
+    await settled(late),
+    'unsettled'
+  );
+
   client.dispose();
   expect(
     'a second dispose() is harmless',
     [listening.size, receiving(), taken()],
     [0, [], []]
+  );
+
+  // A client disposed of between taking its turn and handing it over, a ms later: the hand-over is called off.
+  const second = new DataTransferClient(player, transport),
+    secondTurn = second.takeTurn();
+
+  second.dispose();
+  await wait(20);
+  expect(
+    'a hand-over still to come when the client is disposed of sends nothing',
+    [taken(), await settled(secondTurn)],
+    [[], 'unsettled']
   );
 
   finished = true;

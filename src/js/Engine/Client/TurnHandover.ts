@@ -43,11 +43,15 @@ export class TurnHandover {
   // Stops the `action` receiver, for `dispose`.
   #actionDisposer: TransportDisposer | null;
   #context: TurnHandoverContext;
+  // Set by `dispose`: a turn taken from then on is never handed over.
+  #disposed: boolean = false;
   // Each `action` the UI sends, relayed to the listener of the turn under way.
   #eventEmitter: EventEmitter = new EventEmitter();
   // Whether the UI has been handed this player's turn: `turnStarted` is sent and `action`s are listened for. Until then,
   //  our own notifications are held (see `holdsNotifications`).
   #handedOver: boolean = false;
+  // The hand-over 1 ms after the turn is taken, until it runs, for `dispose` to stop.
+  #handOverTimer: ReturnType<typeof setTimeout> | null = null;
   // GoTos that stopped next to a choice (#357), sent once the patch with the unit's move has gone, or with
   //  `turnStarted` for one carried on at the start of the turn.
   #heldHalts: { target: string; unit: string }[] = [];
@@ -64,9 +68,18 @@ export class TurnHandover {
     );
   }
 
-  // Stops listening for the UI's `action`s, and the turn under way stops acting on them, so it never ends. What is
-  //  already under way (the hand-over's timer, an action being handled) goes on.
+  // Stops listening for the UI's `action`s, and a turn under way played by hand stops acting on them, so it never ends.
+  //  A hand-over still to come is called off, and a turn taken from then on sends nothing and never ends either. What
+  //  is already under way goes on: an action being handled, a turn's end 10 ms after `turnEnded`, and an automated turn,
+  //  which still sends its whole-player patch and ends once automation's client has played it.
   dispose(): void {
+    this.#disposed = true;
+
+    if (this.#handOverTimer !== null) {
+      clearTimeout(this.#handOverTimer);
+      this.#handOverTimer = null;
+    }
+
     this.#actionDisposer?.();
     this.#actionDisposer = null;
 
@@ -186,6 +199,11 @@ export class TurnHandover {
     const { automation, patches, turn, year } = this.#context;
 
     return new Promise<void>((resolve, reject): void => {
+      // A client done with sends nothing more (`dispose`).
+      if (this.#disposed) {
+        return;
+      }
+
       // The first turn after a load or a new game: the initial data is the player's whole state, so the hand-over
       //  below has no need to queue and send it a second time.
       const playerJustSent = !this.#sentInitialData;
@@ -216,7 +234,9 @@ export class TurnHandover {
         return;
       }
 
-      setTimeout(() => {
+      this.#handOverTimer = setTimeout(() => {
+        this.#handOverTimer = null;
+
         patches.update(turn.id(), () => turn.toPlainObject());
         patches.update(year.id(), () => year.toPlainObject());
 
@@ -272,6 +292,10 @@ export class TurnHandover {
             ended = true;
 
             this.#eventEmitter.off('action', listener);
+
+            if (this.#listener === listener) {
+              this.#listener = null;
+            }
 
             this.#handedOver = false;
 
