@@ -10,7 +10,9 @@
 // A polluted square's halved yields are drawn as what each nets to, or the city map runs out of icon slots (#32).
 // An open city screen follows what it shows through `watchCity` (#344): its city, build, growth, supported units (a
 // new one without re-subscribing) and the player's gold, redrawing for each, and closes, watching nothing more, when
-// a patch keyed on the player takes the city out of the player's list, as a capture or a destruction does (#483).
+// a patch keyed on the player takes the city out of the player's list, as a capture or a destruction does, whether
+// the patch sends the player's list of cities or the whole player (#483). The watch stops itself when it closes the
+// screen.
 // Patches go through the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is
 // collected into the shared `DataChanges` instance as `Renderer` does; a "render" is a `notify`.
 
@@ -525,12 +527,12 @@ expect(
     closes = 0;
   };
 
-  // `City.close` calls what `watchCity` returned, as here.
-  const unwatch = watchCity(findCity('City-1'), {
+  // `City.close` calls what `watchCity` returned as well, but `watchCity` has stopped by then: the handlers here leave it
+  //  to, so that a watch left going would show.
+  watchCity(findCity('City-1'), {
     update: (city) => updated.push(city),
     close: () => {
       closes++;
-      unwatch();
     },
   });
 
@@ -658,12 +660,43 @@ expect(
     [0, 0]
   );
 
-  // Gone while one of its own ids changes too, as when a unit it supported is lost with it.
-  const unwatchVeii = watchCity(findCity('City-2'), {
+  // Captured, and the player sent whole, as when its cities change along with everything else: the patch is keyed on
+  //  the player, and still names nothing of the city's own.
+  update([replacePlayerKey('cities', [ref('City-1'), ref('City-2')])]);
+  render();
+  watchCity(findCity('City-1'), {
     update: (city) => updated.push(city),
     close: () => {
       closes++;
-      unwatchVeii();
+    },
+  });
+  reset();
+  update([replace('Player-1', { cities: [ref('City-2')] })]);
+  render();
+
+  expect(
+    'the whole player sent without the city closes the screen too',
+    [updated.length, closes],
+    [0, 1]
+  );
+
+  reset();
+  update([replace('City-1', { name: 'Roma' })]);
+  render();
+  update([], true);
+  render();
+
+  expect(
+    'and nothing wakes it after that either',
+    [updated.length, closes],
+    [0, 0]
+  );
+
+  // Gone while one of its own ids changes too, as when a unit it supported is lost with it.
+  watchCity(findCity('City-2'), {
+    update: (city) => updated.push(city),
+    close: () => {
+      closes++;
     },
   });
 

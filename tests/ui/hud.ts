@@ -1,13 +1,15 @@
 // The panels around the map, out of `Renderer.ts` (#344): `Hud#build` splits the player's actions and the notices
 //  into the end-turn panel, in priority order, and the secondary panel; empties both of the player's actions while
 //  waiting; moves the end-turn panel to the end of the game area every time; follows the active unit with its action
-//  buttons (none while waiting); and rebuilds the game and player details from the data it is given.
+//  buttons (none while waiting); and rebuilds the game and player details from the data it is given. The notices are
+//  the page's real `Notices`, which the end of a turn clears.
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 
 import { GameData, PlayerAction, Tile, Unit } from '../../src/js/UI/types';
 import Hud from '../../src/js/UI/game/Hud';
+import Notices from '../../src/js/UI/components/Notices';
 import Portal from '../../src/js/UI/components/Portal';
 import Transport from '../../src/js/UI/Transport';
 import { assetStore } from '../../src/js/UI/AssetStore';
@@ -88,30 +90,23 @@ const run = async (): Promise<void> => {
     playerInfo = element('player-info'),
     noticesReadWith: GameData[] = [],
     tilesLookedUp: string[] = [],
-    unitTile = { id: 'Tile-3-4', x: 3, y: 4 } as unknown as Tile;
+    unitTile = { id: 'Tile-3-4', x: 3, y: 4 } as unknown as Tile,
+    // The page's own: held until the turn they were shown in ends.
+    notices = new Notices(),
+    noticeActions = notices.actions.bind(notices);
+
+  notices.actions = (data: GameData) => {
+    noticesReadWith.push(data);
+
+    return noticeActions(data);
+  };
+  notices.add({ bubble: true, key: 'SomethingHappened', data: {} });
 
   const hud = new Hud({
     actionArea,
     gameArea,
     gameInfo,
-    notices: {
-      actions: (data: GameData): PlayerAction<any>[] => {
-        noticesReadWith.push(data);
-
-        return [
-          {
-            _: 'Notice',
-            id: 'notice-0',
-            value: {
-              city: null,
-              colours: null,
-              dismiss: () => {},
-              notification: { key: 'SomethingHappened', data: {} },
-            },
-          } as unknown as PlayerAction<any>,
-        ];
-      },
-    },
+    notices,
     playerInfo,
     portal: {} as Portal,
     secondaryActionArea,
@@ -268,10 +263,18 @@ const run = async (): Promise<void> => {
     'PlayerDetails.Treasury.title45 gold'
   );
 
+  // The turn ends: the notices shown in it go with it.
+  document.dispatchEvent(new CustomEvent('endturn'));
+
   hud.build(gameData(3, 45), null, false);
 
   await settle();
 
+  expect(
+    'once the turn has ended, its notice is gone from the end-turn panel',
+    panel(actionArea).flat().includes('notice'),
+    false
+  );
   expect('no active unit, no buttons', unitButtons(), []);
   expect('no active unit, no tile looked up', tilesLookedUp, ['3,4', '3,4']);
   expect(

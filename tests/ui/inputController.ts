@@ -1,7 +1,8 @@
 // The game's keyboard, out of `Renderer.ts` (#344): Enter ends the turn only when EndTurn is mandatory and the game is
 //  not waiting for the next turn; a key typed while the body has the focus goes to an open modal window; unit keys go
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
-//  Shift+6 turns the cheats on; and `dispose` removes the listener. Driven with stub dependencies.
+//  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other; and
+//  `dispose` removes the listener. Driven with stub dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
@@ -109,6 +110,8 @@ const controller = new InputController({
   },
   portal: {} as GamePortal,
   transport: {
+    // The leader screens ask the worker for what they show; never answered here.
+    request: () => new Promise(() => {}),
     send: (name: string, data: unknown): void => {
       sent.push([name, data]);
     },
@@ -401,6 +404,14 @@ const run = async (): Promise<void> => {
   expect('Shift+5 then Shift+6 turns the cheats on', calls, ['enableCheats']);
   expect('and says so', shown, ['GameMenu.cheat.enabled']);
 
+  // The match leaves Shift+5 as the last key: Shift+6 again turns them on again, which changes nothing.
+  press({ code: 'Digit6', key: '^', shiftKey: true });
+
+  expect('a second Shift+6 straight after still counts', calls, [
+    'enableCheats',
+    'enableCheats',
+  ]);
+
   reset();
   press({ code: 'Digit5', key: '%', shiftKey: true });
   press({ code: 'KeyA', key: 'a' });
@@ -424,6 +435,30 @@ const run = async (): Promise<void> => {
   expect('Shift pressed again in between still counts', calls, [
     'enableCheats',
   ]);
+
+  // A leader screen (F8, the Top Cities): it opens, and the key goes on through the rest of the handler as any other
+  //  does, so it is the last key typed, which breaks the Shift+5, Shift+6 sequence.
+  reset();
+  unitKeys = [];
+  press({ code: 'Digit5', key: '%', shiftKey: true });
+  event = press({ code: 'F8', key: 'F8' });
+
+  const topCities = document.querySelector('dialog.top-cities-report');
+
+  expect(
+    'F8 opens the Top Cities',
+    [topCities !== null, event.defaultPrevented],
+    [true, true]
+  );
+
+  topCities?.remove();
+  press({ code: 'Digit6', key: '^', shiftKey: true });
+
+  expect(
+    'and goes on through the handler: it is offered as a unit key, and a key between Shift+5 and Shift+6',
+    [pressed, calls],
+    [['%', 'F8', '^'], []]
+  );
 
   // `dispose`.
 

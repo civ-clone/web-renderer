@@ -1,7 +1,8 @@
 // The map's upkeep, out of `Renderer.ts` (#344): a tile a patch changed is drawn only once the world has it
-//  (`releaseTiles`), whether by the next render or the blink tick; the yields start hidden and `t`/`y` toggle the
-//  layers; `c` centres; the minimap marker reads the active unit live; and `dispose` stops the tick and the resize
-//  handler.
+//  (`releaseTiles`), whether by the next render or the blink tick, each compositing the map and redrawing the minimap;
+//  the yields start hidden and `t`/`y` toggle the layers and composite the map; `c` centres; the minimap marker reads
+//  the active unit live; a tick with no blink and no tile draws nothing, nor does a resize that changes no size; and
+//  `dispose` stops the tick and the resize handler.
 
 // Must stay first: it gives the map a `document`.
 import './lib/dom';
@@ -138,6 +139,31 @@ portal.build = (updated: Tile[]): void => {
 
 const builtTiles = () => built.flat();
 
+// How often the map is composited and the minimap redrawn, since the last `counted()`.
+const counts = { renders: 0, minimapUpdates: 0 },
+  render = portal.render.bind(portal),
+  updateMinimap = mapView.minimap.update.bind(mapView.minimap);
+
+portal.render = (): void => {
+  counts.renders++;
+
+  render();
+};
+mapView.minimap.update = (): void => {
+  counts.minimapUpdates++;
+
+  updateMinimap();
+};
+
+const counted = (): [number, number] => {
+  const taken: [number, number] = [counts.renders, counts.minimapUpdates];
+
+  counts.renders = 0;
+  counts.minimapUpdates = 0;
+
+  return taken;
+};
+
 // The queue.
 
 mapView.queueTile(tiles[9]);
@@ -162,9 +188,15 @@ expect(
   2
 );
 
+counted();
 mapView.flush();
 
 expect('the next render builds them', builtTiles(), ['1,1', '2,1']);
+expect(
+  'and composites the map and redraws the minimap, once each',
+  counted(),
+  [1, 1]
+);
 expect('and takes them', mapView.tilesPending(), 0);
 
 built.length = 0;
@@ -177,10 +209,12 @@ tick();
 
 expect('the tick leaves a tile that is not released', builtTiles(), []);
 
+counted();
 mapView.releaseTiles();
 tick();
 
 expect('the tick builds a released tile', builtTiles(), ['4,2']);
+expect('and draws it, with the minimap', counted(), [1, 1]);
 expect('and takes it', mapView.tilesPending(), 0);
 
 expect('the queue is empty after the release', mapView.takeTiles(), []);
@@ -189,15 +223,23 @@ expect('the queue is empty after the release', mapView.takeTiles(), []);
 
 expect('the yields start hidden', mapView.yieldsLayer.isVisible(), false);
 
+counted();
 mapView.toggleYields();
 
-expect('y shows the yields', mapView.yieldsLayer.isVisible(), true);
+expect(
+  'y shows the yields, and composites the map',
+  [mapView.yieldsLayer.isVisible(), counted()[0]],
+  [true, 1]
+);
 
 mapView.toggleYields();
 
 expect('y hides them again', mapView.yieldsLayer.isVisible(), false);
 
+counted();
 mapView.toggleUnits();
+
+expect('t composites the map', counted()[0], 1);
 
 expect(
   't hides the units, cities and city names',
@@ -293,6 +335,7 @@ expect('a unit picked on the map is handed on', activated, ['Unit-2']);
 
 mapView.activeUnitLayer.setActiveUnit(activeUnit);
 mapView.activeUnitLayer.setVisible(true);
+counted();
 tick();
 
 expect(
@@ -300,12 +343,14 @@ expect(
   mapView.activeUnitLayer.isVisible(),
   false
 );
+expect('and draws the blink, on the map and the minimap', counted(), [1, 1]);
 
 tick();
 
 expect('and back', mapView.activeUnitLayer.isVisible(), true);
 
 mapView.activeUnitLayer.setActiveUnit(null);
+counted();
 tick();
 
 expect(
@@ -313,6 +358,7 @@ expect(
   mapView.activeUnitLayer.isVisible(),
   true
 );
+expect('and, with no tile to draw, draws nothing', counted(), [0, 0]);
 
 // Resizing, and the teardown.
 
@@ -321,6 +367,7 @@ const parent = mapPortal.parentElement as HTMLElement;
 Object.defineProperty(parent, 'offsetWidth', { value: 320 });
 Object.defineProperty(parent, 'offsetHeight', { value: 200 });
 
+counted();
 window.dispatchEvent(new Event('resize'));
 
 expect(
@@ -328,6 +375,26 @@ expect(
   [mapPortal.width, mapPortal.height],
   [320, 200]
 );
+expect('and draws it again, with the minimap', counted(), [1, 1]);
+
+// Setting a canvas's size clears it, even to the size it already is.
+let canvasCleared = 0;
+
+Object.defineProperty(mapPortal, 'width', {
+  configurable: true,
+  get: () => 320,
+  set: () => canvasCleared++,
+});
+
+window.dispatchEvent(new Event('resize'));
+
+expect(
+  'a resize that changes nothing leaves the canvas alone, and draws nothing',
+  [canvasCleared, counted()],
+  [0, [0, 0]]
+);
+
+delete (mapPortal as any).width;
 
 mapView.dispose();
 

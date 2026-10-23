@@ -162,6 +162,9 @@ const open = (ids: string[]) => {
     window = new UnitSelectionWindow(units, transport),
     redraws: number[] = [],
     update = window.update.bind(window);
+  let closes = 0;
+
+  window.on('close', () => closes++);
 
   window.update = (content: string | Node): void => {
     redraws.push((content as HTMLElement).querySelectorAll('canvas').length);
@@ -173,6 +176,9 @@ const open = (ids: string[]) => {
     window,
     redraws,
     isOpen: () => window.element().isConnected,
+    // A window that closes itself through `Window#close` rather than its own `close` leaves its watcher behind, and a
+    //  later wake closes it again.
+    closes: () => closes,
   };
 };
 
@@ -235,8 +241,8 @@ render();
 
 expect(
   'closed, it watches nothing more, even for a rebuild of everything',
-  [stack.isOpen(), stack.redraws],
-  [false, [2, 2, 1, 1]]
+  [stack.isOpen(), stack.redraws, stack.closes()],
+  [false, [2, 2, 1, 1], 1]
 );
 
 // A window whose units are all lost closes itself, and stops watching.
@@ -258,7 +264,11 @@ render();
 update([], true);
 render();
 
-expect('and then it watches nothing more', last.redraws, []);
+expect(
+  'and then it watches nothing more: it is not closed again',
+  [last.redraws, last.closes()],
+  [[], 1]
+);
 
 // Clicking a unit chooses it, awake or not, and closes the window (#482).
 const sent: Array<{ name: string; id: string }> = [],

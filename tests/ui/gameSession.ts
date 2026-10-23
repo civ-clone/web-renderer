@@ -1,7 +1,8 @@
 // One game's start, out of `Renderer.ts` (#344): `GameSession#start` registers every game receiver before it returns
 //  (so a `gameDataPatch` or `turnStarted` the worker sends straight after `gameData` is never lost), in the order
 //  `Renderer` always registered them; a patch that arrives straight after `gameData` is applied; `turnStarted`
-//  renders at once rather than next frame; the welcome window opens only for a new game; and `pagehide` runs every
+//  renders at once rather than next frame; the welcome window opens only for a new game; `clearKeys`, which the
+//  choice windows call, reaches the game's active unit controller once there is one; and `pagehide` runs every
 //  disposer, the page's first, and leaves the session alone when the page is kept in the back/forward cache.
 
 // Must stay first: the components read `document` as they load.
@@ -9,6 +10,7 @@ import './lib/dom';
 
 import { DataPatch } from '../../src/js/UI/types';
 import i18next from 'i18next';
+import ActiveUnitController from '../../src/js/UI/game/ActiveUnitController';
 import GameSession from '../../src/js/UI/game/GameSession';
 import DebugFlags from '../../src/js/UI/debug/DebugFlags';
 import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
@@ -272,7 +274,30 @@ const run = async (): Promise<void> => {
 
   console.error = (...args: unknown[]) => errors.push(args);
 
+  // What reaches the active unit's controller of the keys `clearKeys` forgets.
+  const controllerClearKeys = ActiveUnitController.prototype.clearKeys;
+  let keysCleared = 0;
+
+  ActiveUnitController.prototype.clearKeys = function (
+    this: ActiveUnitController
+  ): void {
+    keysCleared++;
+
+    controllerClearKeys.call(this);
+  };
+
+  // A choice window can open before any game: there is no controller yet.
+  session.clearKeys();
+
+  expect('clearKeys before the game has started does nothing', keysCleared, 0);
+
   session.start(makeMap(1));
+
+  session.clearKeys();
+
+  expect("clearKeys reaches the game's active unit controller", keysCleared, 1);
+
+  ActiveUnitController.prototype.clearKeys = controllerClearKeys;
 
   // Synchronously, before anything else runs.
   expect(

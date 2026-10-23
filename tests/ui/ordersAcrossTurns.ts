@@ -2,6 +2,8 @@
 // stops listening when the turn ends and starts again only once the next one is handed over. So an order sent from a
 // window left open over End Turn (the Caravan's "Will you?", say) is never answered, and must not hold the next turn's
 // keys and buttons; nor must one sent just before the turn was handed over.
+// And the window a unit whose GoTo stopped next to a choice is offered (#357), through the same controller: offered
+// once, its answer sent and waited for as an order, and its closing told on.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -40,6 +42,8 @@ process.on('exit', (code: number): void => {
   }
 });
 
+let arrivalsClosed = 0;
+
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
 
@@ -62,13 +66,14 @@ process.on('exit', (code: number): void => {
     sent: string[] = [],
     unacknowledged: TransportHandledAction[] = [],
     pendingMove = new PendingMove<Tile>(),
+    haltedUnits = new HaltedUnits(),
     layer = { render() {}, setActiveUnit() {}, setVisible() {}, update() {} },
     topology = topologyFor({ width: 3, height: 1 }),
     controller = new ActiveUnitController({
       activeUnitLayer: layer,
-      arrivalClosed: () => {},
+      arrivalClosed: () => arrivalsClosed++,
       data: () => ({ player: { units: [caravan] } } as any),
-      haltedUnits: new HaltedUnits(),
+      haltedUnits,
       options: { get: (key: string, defaultValue: any = null) => defaultValue },
       pendingMove,
       portal: {
@@ -187,6 +192,44 @@ process.on('exit', (code: number): void => {
     'so a key goes at once',
     sent.join(' / '),
     'Caravan-1 Fortify / Caravan-1 Sleep'
+  );
+
+  acknowledgeOldest();
+
+  // A GoTo that stopped next to the city (#357): the next update makes the Caravan active and offers it the window the
+  //  arrow key would have, once, and the window's answer is an order like any other.
+  sent.splice(0);
+  haltedUnits.add({ unit: 'Caravan-1', target: 'Tile-2' });
+  rebuild(false);
+
+  expect(
+    "a halted unit is offered its arrival's window, which sends nothing yet",
+    [document.querySelectorAll('dialog[open]').length, sent],
+    [1, []]
+  );
+
+  rebuild(false);
+
+  expect('once', document.querySelectorAll('dialog[open]').length, 1);
+
+  // Chosen with its OK button: Enter in the list closes the window twice, once for the list and once for the window
+  //  (`NotificationWindow#bindClose`), which tells the controller twice.
+  const arrival = document.querySelector('dialog[open]');
+
+  arrival
+    ?.querySelectorAll('option')
+    .forEach((option) =>
+      option.toggleAttribute(
+        'selected',
+        option.getAttribute('value') === 'EstablishTradeRoute'
+      )
+    );
+  arrival?.querySelector('footer button')?.dispatchEvent(new Event('click'));
+
+  expect(
+    'its answer is sent, and waited for, and its closing told on',
+    `${sent.join()} ${pendingMove.pending()} ${arrivalsClosed}`,
+    'Caravan-1 EstablishTradeRoute true 1'
   );
 
   finished = true;

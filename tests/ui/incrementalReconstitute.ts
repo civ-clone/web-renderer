@@ -12,7 +12,8 @@
 //
 // Then, one at a time: a changed list is the same array with new contents, an
 // id that arrives after something referred to it is found there, a removed id
-// is let go of, and an id whose object becomes a list is rebuilt as one.
+// is let go of, a removed list element is spliced out rather than deleted, and
+// an id whose object becomes a list is rebuilt as one.
 
 import {
   ObjectMap,
@@ -528,6 +529,45 @@ check(
   !reconstituter.trackedIds().has(late) &&
     waitingObject.ref === undefined &&
     waitingObject.list.length === 0
+);
+
+// A list element removed is spliced out, so the list closes up. Deleted, it would leave a hole, which a fresh
+//  `reconstituteData` keeps as well, so the random patches above cannot tell.
+const spliced = newId();
+
+update({
+  [spliced]: {
+    type: 'add',
+    value: {
+      hierarchy: { ...makeThing(spliced), list: [ref(a), ref(b)] },
+      objects: {},
+    },
+  },
+});
+update({
+  'List-0': {
+    type: 'update',
+    value: { hierarchy: [ref(c), ref(waiting), ref(spliced)], objects: {} },
+  },
+});
+update({
+  [spliced]: {
+    type: 'remove',
+    index: 'list[0]',
+  },
+});
+
+const splicedObject = objectsById(result).get(spliced);
+
+check(
+  'a removed list element is spliced out of the map, not deleted',
+  objectMap.objects[spliced].list.length === 1 &&
+    objectMap.objects[spliced].list[0]['#ref'] === b
+);
+check(
+  'and the rebuilt list closes up',
+  splicedObject.list.length === 1 &&
+    splicedObject.list[0] === objectsById(result).get(b)
 );
 
 // An object that becomes a list cannot be refilled as one.
