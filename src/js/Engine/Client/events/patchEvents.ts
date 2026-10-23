@@ -169,10 +169,18 @@ export const registerPatchEvents = (
   on(
     'city:captured',
     (city: City, capturingPlayer: Player, originalPlayer: Player) => {
+      // A city lost or won can take the capital our other cities' corruption is measured from, or bring or take a
+      //  wonder that works in all of them, so they all go in full (#515): nothing else in this flush sends them in full
+      //  (for a city lost, the whole player below sends them as refs), and the next turn's hand-over, which does, is
+      //  too late for a city screen open until then. A size 1 city that its capture destroys is already the
+      //  capturer's when `city:destroyed` is raised, so that loss is sent from here.
+      if ([capturingPlayer, originalPlayer].includes(ctx.player())) {
+        ctx.patches.cities();
+      }
+
       // Our capture of it is told in `Client/notifications/city.ts`.
       if (originalPlayer === ctx.player()) {
-        // The city already belongs to the capturing player here, so resend ours: the city is gone from our list,
-        //  and losing the capital changes every remaining city's corruption.
+        // The city already belongs to the capturing player here, so resend ours: the city is gone from our list.
         ctx.patches.wholePlayer(
           filterToReferenceAllExcept(Player, PlayerAction, Civilization)
         );
@@ -246,6 +254,11 @@ export const registerPatchEvents = (
 
   on('city:destroyed', (city: City, player: Player | null) => {
     cityChanged(city, true, true);
+
+    // Our other cities, as for one captured from us (#515): it may have been the capital, or held a wonder.
+    if (city.player() === ctx.player()) {
+      ctx.patches.cities();
+    }
 
     Object.assign(ctx.cityNews.of(city), {
       destroyed: true,

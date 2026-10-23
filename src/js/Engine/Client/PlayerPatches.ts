@@ -152,6 +152,15 @@ export class PlayerPatches {
     );
   }
 
+  // Every one of the player's cities in full, for a change that reaches them all: a change of government (#488), or a
+  //  city lost or won, which can take the capital the others' corruption is measured from, or a wonder that works in
+  //  every city, with it (#515).
+  cities(): void {
+    cityRegistryInstance
+      .getByPlayer(this.#player())
+      .forEach((city) => this.city(city));
+  }
+
   // What one of the player's cities is building, for a change to that alone: a new choice, or a purchase (#411). The
   //  city in full is several times the size, with all of its yields.
   cityBuild(cityBuild: CityBuildItem): void {
@@ -459,7 +468,7 @@ export class PlayerPatches {
       });
     });
 
-    cityRegistryInstance.getByPlayer(player).forEach((city) => this.city(city));
+    this.cities();
   }
 
   // Holds every flush while `fn` runs, as the action listener does while an action is handled, awaited talks and all,
