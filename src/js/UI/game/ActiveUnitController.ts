@@ -6,24 +6,21 @@ import {
   Unit,
   UnitAction,
 } from '../types';
-import { t } from 'i18next';
 import { TransportHandledAction } from '../../Engine/Transport';
 import Transport from '../Transport';
 import { directionKeys, keyToActionsMap } from '../lib/unitActionKeys';
-import NotificationWindow from '../components/NotificationWindow';
-import { cityNameText } from '../components/lib/city';
 import chooseActiveUnit from '../lib/chooseActiveUnit';
 import UnitQueue from '../lib/UnitQueue';
-import { chooseUnitAction, openArrivalWindow } from '../lib/unitActionPrompts';
+import { openArrivalWindow } from '../lib/unitActionPrompts';
 import HaltedUnits from '../lib/haltedUnits';
 import {
   UnitActionsRequest,
   hasUnitActions,
-  neighbourActions,
   unitActions,
 } from '../lib/unitActions';
 import ActiveUnitTiles from '../lib/ActiveUnitTiles';
-import PendingMove, { plainMove } from '../lib/PendingMove';
+import PendingMove from '../lib/PendingMove';
+import playUnitKey, { PlayedKey } from '../lib/playUnitKey';
 import { Topology } from '../lib/topologyFor';
 
 // The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key or one
@@ -401,99 +398,19 @@ export class ActiveUnitController {
     }
   }
 
-  // What a unit key does to the active unit, typed now or kept while
-  // a move was answered (#326): 'sent' when it sent an action,
-  // 'prompted' when it opened a window to choose or confirm first,
-  // and `null` when it does nothing.
-  #playUnitKey(key: string): 'sent' | 'prompted' | null {
-    const { scheduleRender, transport, world } = this.#deps,
-      unit = this.#activeUnit;
+  // What a unit key does to the active unit, typed now or kept while a move or an order was answered (#326, #543).
+  #playUnitKey(key: string): PlayedKey {
+    const { scheduleRender, transport, world } = this.#deps;
 
-    if (unit === null) {
-      return null;
-    }
-
-    if (key in keyToActionsMap) {
-      const actions = [...keyToActionsMap[key]];
-
-      while (actions.length) {
-        const actionName = actions.shift(),
-          [unitAction] = unitActions(unit).filter(
-            (action): boolean => action._ === actionName
-          );
-
-        if (unitAction) {
-          this.#send(unit.id, unitAction);
-
-          return 'sent';
-        }
-      }
-    }
-
-    // Where the engine refuses a join, it says why, so the key
-    // doesn't do nothing and say nothing.
-    if (key === 'b' && unit.joinCityRefusal) {
-      const { reason, ...details } = unit.joinCityRefusal,
-        city = world.get(unit.tile.x, unit.tile.y).city;
-
-      new NotificationWindow(
-        t(`JoinCity.${reason}.title`),
-        document.createTextNode(
-          t(`JoinCity.${reason}.body`, {
-            ...details,
-            city: city ? cityNameText(city) : '',
-          })
-        )
-      );
-
-      return 'prompted';
-    }
-
-    const keyDirections = directionKeys(world.topology());
-
-    if (!(key in keyDirections)) {
-      return null;
-    }
-
-    const directionActions = neighbourActions(unit, keyDirections[key]),
-      // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
-      //  (#57).
-      unitId = unit.id,
-      move = plainMove(directionActions);
-
-    // Drawn on the tile it is moving to now, rather than once the
-    // engine has answered and the frame after that has drawn it, and
-    // waited for as that, not as an order.
-    if (move !== null) {
-      transport.send('action', {
-        name: 'ActiveUnit',
-        id: unitId,
-        unitAction: move._,
-        target: move.to.id,
-      });
-
-      this.#pendingMove.start(unitId, move.to);
-
-      this.apply(unit);
-
-      scheduleRender();
-
-      return 'sent';
-    }
-
-    if (directionActions.length === 0) {
-      return null;
-    }
-
-    let sent = false;
-
-    chooseUnitAction(unit, directionActions, (chosen) => {
-      sent = true;
-
-      this.#send(unitId, chosen, true);
+    return playUnitKey(key, this.#activeUnit, {
+      apply: (unit) => this.apply(unit),
+      pendingMove: this.#pendingMove,
+      scheduleRender,
+      send: (unitId, action, towardsTile) =>
+        this.#send(unitId, action, towardsTile),
+      transport,
+      world,
     });
-
-    return sent ? 'sent' : 'prompted';
   }
 
   // Sends `action` for `unitId`, and keeps the keys typed after it until

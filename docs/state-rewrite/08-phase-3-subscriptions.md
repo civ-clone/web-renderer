@@ -32,8 +32,9 @@ Lines from `wc -l` on `main` at `7d3086e`. "Checked" means in `tsconfig.json`'s 
 | lib | `lib/autoEndTurn.ts` | 28 | 30 | yes | #508 |
 | lib | `lib/PruneSchedule.ts` | 33 | 45 | yes | #508 |
 | lib | `lib/UnitQueue.ts` | 92 | 90 | yes | #516 |
+| lib | `lib/playUnitKey.ts` | 134 | — | yes | #503 |
 | state | `game/GameState.ts` | 232 | 190 | yes | #524 |
-| state | `game/ActiveUnitController.ts` | 443 | 280 | yes | #519 |
+| state | `game/ActiveUnitController.ts` | 436 | 280 | yes | #519, #503 |
 | view | `game/MapView.ts` | 247 | 190 | no | #522 |
 | view | `game/Hud.ts` | 93 | 90 | no | #528 |
 | app | `app/NotificationBar.ts` | 36 | 35 | yes | #512 |
@@ -46,11 +47,12 @@ Lines from `wc -l` on `main` at `7d3086e`. "Checked" means in `tsconfig.json`'s 
 | session | `game/GameSession.ts` | 476 | 240 | no | #532 |
 | boot | `bootstrap.ts` | 149 | 110 | no | #533 |
 
-The 24 files come to 3,328 lines, against the plan's estimate of about 2,300. The rows marked #503 give the lines
-after the #503 tidy-up moved code out of the modules over the cap: `DebugPanel`'s exports to `debug/debugExport.ts`
-(`DebugPanel` was 494 lines at `dddbc18`). Track A added two helpers the table
-does not list: `components/lib/watchCity.ts` (78 lines, #513) and `components/lib/watchPlayer.ts` (51, #517), both
-checked.
+At `7d3086e` the 24 files came to 3,328 lines, against the plan's estimate of about 2,300. The rows marked #503 give
+the lines after the #503 tidy-up moved code out of the modules over the cap: `DebugPanel`'s exports to
+`debug/debugExport.ts` (`DebugPanel` was 494 lines at `dddbc18`), and `ActiveUnitController`'s `playUnitKey` to
+`lib/playUnitKey.ts` (`ActiveUnitController` was 449 lines at `dddbc18`, and 519 after #543 (#595) gave it the
+orders' keys). With them, the table's 26 files come to 3,476 lines. Track A added two helpers the table does not
+list: `components/lib/watchCity.ts` (78 lines, #513) and `components/lib/watchPlayer.ts` (51, #517), both checked.
 
 What the shipped APIs look like where they differ from the table: `NotificationBar` is a class,
 `new NotificationBar(area)` with `show(html)` and `listen(transport)`; `ChoiceHandler` is an object with
@@ -67,10 +69,10 @@ What the shipped APIs look like where they differ from the table: `NotificationB
 - **Not met, line counts:** `bootstrap.ts` is 149 lines, not about 110 (153 at `dddbc18`). Three of the new modules
   are over the 350-line cap: `DebugPanel` (488 when it moved, 491 after #535, 494 at `dddbc18`, and 380 once #503
   moved its three export functions to `debug/debugExport.ts`), `ActiveUnitController` (443 when it moved, 449 at
-  `dddbc18`; `playUnitKey` could go to `lib/playUnitKey.ts`) and `GameSession` (475 when it moved, 520 at `dddbc18`;
-  the plan's 240 was wrong, as what was left of the `gameData` handler was about 390 lines on its own). Two older `lib/` files
-  the plan did not touch are over it too: `lib/UIStressRunner.ts` (495) and `lib/IncrementalReconstituter.ts` (423).
-  `MapView` (248 at `dddbc18`) is under the cap but well over its estimate.
+  `dddbc18`, 519 after #543, and 436 once #503 moved `playUnitKey` to `lib/playUnitKey.ts`) and `GameSession` (475
+  when it moved, 520 at `dddbc18`; the plan's 240 was wrong, as what was left of the `gameData` handler was about 390
+  lines on its own). Two older `lib/` files the plan did not touch are over it too: `lib/UIStressRunner.ts` (495) and
+  `lib/IncrementalReconstituter.ts` (423). `MapView` (248 at `dddbc18`) is under the cap but well over its estimate.
 - **Not met, type-checking:** `lib/UIStressRunner.ts` and `lib/savedGame.ts` stay outside `tsconfig.json` (#339).
   `UIStressRunner`'s imports reach the #339 errors in `components/City.ts` and `LocaleProvider.ts`; `savedGame`
   has errors of its own (`CompressionStream`/`DecompressionStream` are missing from this TypeScript's `dom` lib, and
