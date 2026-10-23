@@ -1,7 +1,7 @@
 import { DataPatch, PlainObject } from '../types';
 import { ObjectMap } from './reconstituteData';
 
-// Applies `gameDataPatch` batches to the object map the page holds, in place. Shared by `Renderer` and the tests that
+// Applies `gameDataPatch` batches to the object map the page holds, in place. Shared by `GameState` and the tests that
 //  check what a patch does to the map, so they exercise the same code.
 
 const pathToParts = (path: string) => path.replace(/]/g, '').split(/[.[]/),

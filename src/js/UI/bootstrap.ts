@@ -139,7 +139,8 @@ export class Renderer {
       if (pendingSave !== null) {
         mainMenu.remove();
 
-        // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes (#325).
+        // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes
+        //  (#325).
         performance.mark('civ:load-sent');
 
         transport.send('load', { data: pendingSave });

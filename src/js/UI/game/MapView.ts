@@ -20,6 +20,11 @@ import currentTileset, { nativeTileSize } from '../lib/tilesets';
 //
 // Reaches beyond its own canvases in one place: the `window` `resize` handler sizes the map's canvas to its parent
 //  (`#map`), as the game sizes it once at the start.
+//
+// The `resize` handler, the portal's `focus-changed` and `activate-unit` and the blink tick are live from the
+//  constructor on. If `GameSession#start` throws after building this, before it has made the active unit's controller,
+//  they stay live against a game that never started, reading a controller that was never set: the game is dead either
+//  way, and nothing disposes them.
 
 export type MapViewDeps = {
   // The portal's `activate-unit`: a unit picked on the map.
@@ -52,7 +57,7 @@ export class MapView {
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
   // coordinates up in `world`, so a patched tile is only ready to render
-  // once `updateState` has refreshed `world`: until then it waits in
+  // once `GameState`'s update has refreshed `world`: until then it waits in
   // `#incomingTiles`. While waiting for the turn that can be a frame or
   // more, and a render in between would draw the tile as it was.
   #incomingTiles = new Map<string, Tile>();

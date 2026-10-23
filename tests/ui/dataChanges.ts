@@ -1,6 +1,6 @@
 // Which watchers wake for a change (#344). Patches go through the shipped
 // `applyDataPatches`, the data is rebuilt by a real `IncrementalReconstituter`,
-// and each rebuild is `collect`ed as `Renderer`'s `updateState` does it: the
+// and each rebuild is `collect`ed as `GameState`'s update does it: the
 // ids the patches changed plus the ids the rebuild filled, or `null` for a
 // rebuild of everything. A "render" is a `notify`. Checks that a watcher wakes
 // for a changed id, for a child id its getter reads live, for a late ref
@@ -96,7 +96,7 @@ let data = reconstituter.rebuild(objectMap, null) as GameData;
 let lastChanged = new Set<string>(),
   lastFilled: ReadonlySet<string> = new Set();
 
-// As `updateState` does: rebuild, then collect.
+// As `GameState`'s update does: rebuild, then collect.
 const update = (patches: DataPatch[], rebuildAll = false): void => {
   const changedIds = new Set<string>();
 
@@ -112,7 +112,7 @@ const update = (patches: DataPatch[], rebuildAll = false): void => {
     changed === null ? null : [...changed, ...reconstituter.filledIds()];
 
   dataChanges.collect(collected);
-  // Where `Renderer` collects, for the shared watcher at the end.
+  // Where `GameState` collects, for the shared watcher at the end.
   sharedChanges.collect(collected);
 
   lastChanged = changedIds;

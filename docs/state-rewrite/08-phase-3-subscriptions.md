@@ -79,10 +79,10 @@ What the shipped APIs look like where they differ from the table: `NotificationB
   destructuring a `FileList`, `const [file] = input.files ?? []`, needs `dom.iterable`). The plan did not ask for the
   rest, but for the record `MapView`, `InputController`, `Hud`, `DebugPanel`, `GameSession` and `bootstrap.ts` are
   also outside, because their imports reach those errors (and `Map/Overview.ts`, `Notices.ts`, `GameMenu.ts`, and for
-  `bootstrap.ts` also `ImportAssetsWindow.ts`, `MainMenu.ts` and the asset extractor's `canvas` types). `Hud` and
-  `GameSession` also have an error of their own: `Hud` passes `PlayerAction<Notice>[]` to `partitionActions` (the
-  #339 error that #508 moved there), and `GameSession`'s `pagehide` listener takes a `PageTransitionEvent` where
-  `on()` expects a `CustomEvent`. The `feather-icons` svg errors behind `Hud` were only `src/js/UI/modules.d.ts`
+  `bootstrap.ts` also `ImportAssetsWindow.ts`, `MainMenu.ts` and the asset extractor's `canvas` types). `GameSession`
+  also has an error of its own: its `pagehide` listener takes a `PageTransitionEvent` where `on()` expects a
+  `CustomEvent`. `Hud` had one too, passing `PlayerAction<Notice>[]` to `partitionActions` (the #339 error that #508
+  moved there), until #503 had `partitionActions` take the notices as `PlayerAction<unknown>[]`. The `feather-icons` svg errors behind `Hud` were only `src/js/UI/modules.d.ts`
   missing from `include` (#533); it has been in `include` since `6dc72db`.
 
 ### Corrections to the plan

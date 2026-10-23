@@ -43,7 +43,9 @@ const allExcludedActions = new Set([
  */
 export const partitionActions = (
   actions: (PlayerAction | null | undefined)[],
-  notices: PlayerAction[],
+  // A notice's value is a `Notice` (`components/Notices.ts`), which no player action holds: the panels take it as one
+  //  all the same, and `Actions/Notice.ts` reads its value back as a `Notice`.
+  notices: PlayerAction<unknown>[],
   waiting: boolean
 ): { primary: PlayerAction[]; secondary: PlayerAction[] } => {
   // Still last turn's actions while waiting, and the worker isn't
@@ -51,7 +53,7 @@ export const partitionActions = (
   const playerActions = waiting
       ? []
       : actions.filter((action): action is PlayerAction => !!action),
-    primaryActionCandidates = [...playerActions, ...notices]
+    primaryActionCandidates = [...playerActions, ...(notices as PlayerAction[])]
       .sort(
         (a, b) =>
           (primaryActionPriority[a._] ?? 0) - (primaryActionPriority[b._] ?? 0)

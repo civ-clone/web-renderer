@@ -357,7 +357,7 @@ const place = (
   });
 };
 
-// The renderer's half, through the `ActiveUnitController` that `Renderer`
+// The renderer's half, through the `ActiveUnitController` that `GameSession`
 // drives: a unit key goes through `pressKey`, a plain Move is sent and drawn on
 // its tile at once, each update makes the next unit active and plays the keys
 // kept for its orders, and the move's own acknowledgement settles it and plays
@@ -465,8 +465,8 @@ const find = (id: string | null) =>
   press = (...keys: string[]) =>
     keys.forEach((key) => controller.pressKey(key)),
   // A patch: the answer to an action, or to a `unitActions` request. The
-  // player's actions name the unit that can act, as `Renderer`'s
-  // `updateState` passes them on.
+  // player's actions name the unit that can act, as `GameSession`'s
+  // `onUpdated` passes them on.
   update = (activeId: string | null) => {
     gameData = gameReconstituter.rebuild(game, null);
 

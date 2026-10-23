@@ -8,8 +8,8 @@ import pruneObjectMap from '../lib/pruneObjectMap';
 
 // The game's data on the page (#344): the object map the worker's patches are
 //  applied to, the data rebuilt from it, and when it is rebuilt. Moved out of
-//  `Renderer`'s `gameData` handler; `Renderer` still decides what an update
-//  means for the screen, in the `onUpdated` callback.
+//  `Renderer`'s `gameData` handler; `GameSession` decides what an update means
+//  for the screen, in the `onUpdated` callback.
 //
 // During the player's own turn every update is synchronous, in the same call
 //  stack as the patch: the input handlers read the active unit straight after,

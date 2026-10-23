@@ -351,8 +351,10 @@ export class IncrementalReconstituter {
   // Every id the last `rebuild` filled, afresh or in place: the changed ids it
   //  holds, new ids found inside them, the owners of refs that have just
   //  arrived, and on a full rebuild every id it reached. Not a changed id
-  //  nothing has reached, nor one removed, nor an alias. Replaced, not
-  //  cleared, by the next call, so a set taken from here stays as it was.
+  //  nothing has reached, nor one the patches removed, nor an alias. Replaced,
+  //  not cleared, by the next call, so a set taken from here stays as it was:
+  //  `forget` leaves it alone, so after a prune it can still list an id the
+  //  prune has just removed, as `refilled` can still say so of one.
   filledIds(): ReadonlySet<string> {
     return this.#filled;
   }

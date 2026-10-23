@@ -5,7 +5,7 @@
 // window (#482).
 // The real `UnitSelectionWindow` is built under linkedom, with a canvas context that draws nothing. Patches go through
 // the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is collected into the shared
-// `DataChanges` instance as `Renderer` does; a "render" is a `notify`.
+// `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -105,7 +105,7 @@ const reconstituter = new IncrementalReconstituter();
 
 let data = reconstituter.rebuild(objectMap, null) as GameData;
 
-// As `updateState` does: rebuild, then collect.
+// As `GameState`'s update does: rebuild, then collect.
 const update = (patches: DataPatch[], rebuildAll = false): void => {
     const changedIds = new Set<string>();
 

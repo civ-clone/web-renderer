@@ -14,7 +14,7 @@
 // the patch sends the player's list of cities or the whole player (#483). The watch stops itself when it closes the
 // screen.
 // Patches go through the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is
-// collected into the shared `DataChanges` instance as `Renderer` does; a "render" is a `notify`.
+// collected into the shared `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
 import {
   citizenMoods,
@@ -478,7 +478,7 @@ expect(
 
   let data = reconstituter.rebuild(objectMap, null) as GameData;
 
-  // As `updateState` does: rebuild, then collect.
+  // As `GameState`'s update does: rebuild, then collect.
   const update = (patches: DataPatch[], rebuildAll = false): void => {
       const changedIds = new Set<string>();
 

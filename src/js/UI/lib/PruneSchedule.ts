@@ -1,5 +1,5 @@
-// When `Renderer`'s `updateState` prunes the object map: every 5th turn, or when the map has grown by half since the
-//  last prune, and only once it holds over 5,000 objects. `pruneObjectMap` does the pruning; this keeps the counters.
+// When `GameState`'s update prunes the object map: every 5th turn, or when the map has grown by half since the last
+//  prune, and only once it holds over 5,000 objects. `pruneObjectMap` does the pruning; this keeps the counters.
 
 export class PruneSchedule {
   #lastPrunedTurn = -1;

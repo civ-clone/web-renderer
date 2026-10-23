@@ -1,5 +1,5 @@
 // Whether the turn ends by itself after an update (#344): `shouldAutoEndTurn`,
-// as `Renderer`'s `updateState` calls it. Checks each condition on its own: the
+// as `GameSession` calls it after each update. Checks each condition on its own: the
 // `autoEndOfTurn` option, waiting for the other civilizations, End Turn being
 // the one mandatory action, and the `autoEndOfTurnExceptions` option.
 
@@ -119,7 +119,7 @@ check(
   )
 );
 
-// The exceptions are read first, whatever else decides it, as `updateState` did.
+// The exceptions are read first, whatever else decides it, as `Renderer`'s `updateState` did.
 {
   const asked: string[] = [];
 

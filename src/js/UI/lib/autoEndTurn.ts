@@ -1,8 +1,8 @@
 import { Player } from '../types';
 
-// Whether `Renderer` ends the turn by itself after an update: the `autoEndOfTurn` option is on, the only thing left to
-//  do is end the turn, and the player has none of the actions named in `autoEndOfTurnExceptions`. Never while waiting
-//  for the other civilizations.
+// Whether `GameSession` ends the turn by itself after an update: the `autoEndOfTurn` option is on, the only thing left
+//  to do is end the turn, and the player has none of the actions named in `autoEndOfTurnExceptions`. Never while
+//  waiting for the other civilizations.
 
 /** The part of `GameOptionsRegistry` this reads. */
 export interface AutoEndTurnOptions {

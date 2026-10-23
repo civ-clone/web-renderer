@@ -6,7 +6,8 @@ import { t } from 'i18next';
 //  `chooseFromList` receiver (`app/ChoiceHandler.ts`).
 
 // The wording can depend on what kind of proposal it is (a demand for gold or for an advance, say) and on whether
-//  it's one of our own choices: i18next's `context` picks `key_own-gold` over `key_gold` over `key` (#427).
+//  it's one of our own choices (#427). i18next's `context` picks `key_own-gold`, or failing that `key` itself: it does
+//  not try `key_gold` on the way, so one of our own choices that reads differently for each kind needs a key for each.
 export const interactionContext = (
     interaction: Interactions,
     own: boolean
