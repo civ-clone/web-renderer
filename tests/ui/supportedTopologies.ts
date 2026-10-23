@@ -2,7 +2,7 @@
 // a projection (#92). While that is only Civ1's square the question answers itself and is never shown, so New Game
 // opens on the world sizes as it always has; the grid still goes to the engine as `topologyId`, and Earth (square only)
 // never asks. Each grid has its own sizes: square's are New Game's own, isometric's are half as wide and twice as tall,
-// hex's are as tabled, and both of those have even heights. Customize World refuses a size the grid cannot be. The UI
+// hex's are as tabled, and both of those have even heights. The game setup refuses a size the grid cannot be. The UI
 // builds a world's topology from the grid it says it is on, square when it does not say.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -20,8 +20,8 @@ import worldSizes, {
 import supportedTopologies, {
   isSupportedTopology,
 } from '../../src/js/UI/lib/supportedTopologies';
-import CustomiseWorldWindow from '../../src/js/UI/components/CustomiseWorldWindow';
 import EarthWindow from '../../src/js/UI/components/EarthWindow';
+import GameSetupWindow from '../../src/js/UI/components/GameSetupWindow';
 import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
 import MapGridWindow from '../../src/js/UI/components/MapGridWindow';
 import NewGameWindow from '../../src/js/UI/components/NewGameWindow';
@@ -517,7 +517,9 @@ const text = (element: Element | null): string =>
   requests.length = 0;
   sent.length = 0;
 
-  // Customize World: no grid question, and the grid sent with the rest.
+  // Game setup, opened on Advanced as Customize world does: no grid question, and the grid sent with the rest. (The
+  //  grid select is shown only for more than one grid, which the bundled tests cannot stub in: `gameSetupWindow`
+  //  covers the square-only case too, and `MapGridWindow` the question itself, above.)
   const validity: string[] = [];
 
   Object.assign((globalThis as any).HTMLInputElement.prototype, {
@@ -529,29 +531,58 @@ const text = (element: Element | null): string =>
     reportValidity: () => false,
   });
 
-  CustomiseWorldWindow.ask(transport, () => {});
+  const setupTransport = {
+      request: (request: Request): Promise<unknown> => {
+        const [args] = request.args();
 
-  await settle();
+        requests.push([request.channel(), args]);
 
-  const form = latest(),
+        switch (request.channel()) {
+          case 'civilizations':
+            return Promise.resolve([
+              { name: 'Babylonian', leaders: ['Hammurabi'] },
+              { name: 'Roman', leaders: ['JuliusCaesar'] },
+              { name: 'Zulu', leaders: ['Shaka'] },
+            ]);
+          case 'aiClients':
+            return Promise.resolve(['SimpleAIClient']);
+          case 'difficulties':
+            return Promise.resolve([{ name: 'Prince', level: 2 }]);
+          default:
+            return Promise.resolve({});
+        }
+      },
+      send: (channel: string, data: unknown): void => {
+        sent.push([channel, data]);
+      },
+    } as unknown as Transport,
+    setup = await GameSetupWindow.ask(setupTransport, () => {}, {
+      advanced: true,
+    }),
+    form = setup.element(),
     input = (name: string) =>
       form.querySelector(`input[name="${name}"]`) as HTMLInputElement,
-    build = () =>
-      (
-        Array.from(form.querySelectorAll('button')).find(
-          (button) => text(button) === 'Build'
-        ) as HTMLElement
-      ).dispatchEvent(new Event('click', { bubbles: true }));
+    start = () =>
+      (form.querySelector('button.start') as HTMLElement).dispatchEvent(
+        new Event('click', { bubbles: true })
+      );
 
   expect(
-    'Customize World opens on the form',
+    'Game setup opens on the form',
     text(form.querySelector('header')).replace(/Close$/, ''),
-    'Customize world'
+    'Game setup'
   );
+  expect(
+    'with no grid select, as there is one grid',
+    form.querySelector('select[name=topologyId]'),
+    null
+  );
+  expect('and no map grid question', openDialogs().length, 1);
 
   // linkedom's `value` follows the attribute.
   input('height').setAttribute('value', '0');
-  build();
+  input('height').dispatchEvent(new Event('input', { bubbles: true }));
+  start();
 
   await settle();
 
@@ -565,26 +596,19 @@ const text = (element: Element | null): string =>
   );
 
   input('height').setAttribute('value', '25');
-  build();
+  input('height').dispatchEvent(new Event('input', { bubbles: true }));
+  start();
 
   await settle();
 
+  const setOptions = requests.find(([channel]) => channel === 'setOptions');
+
   expect(
-    'Customize World sends the square grid with the rest',
-    requests.find(([channel]) => channel === 'setOptions'),
-    [
-      'setOptions',
-      {
-        players: '7',
-        height: '25',
-        width: '80',
-        landCoverage: '0.4',
-        landSize: '0.2',
-        maxIterations: '20',
-        topologyId: 'square',
-        difficulty: '',
-      },
-    ]
+    'Game setup sends the square grid with the size',
+    (({ topologyId, width, height }: any) => ({ topologyId, width, height }))(
+      setOptions?.[1]
+    ),
+    { topologyId: 'square', width: 80, height: 25 }
   );
   expect('then starts', sent, [['start', null]]);
 

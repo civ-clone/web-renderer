@@ -64,7 +64,9 @@ coalesced to one run per animation frame.
 - `NewGameWindow`: world size, then `PlayerCountWindow` for the number of
   civilizations.
 - `EarthWindow`: Earth is a fixed map, so it asks only for the player count.
-- `CustomiseWorldWindow`: editable world generation options.
+- `GameSetupWindow`: the game setup, opened by Customise world. It asks for the
+  map, the difficulty, the Advanced world options (exact size and land) and the
+  seat table.
 - `ImportAssetsWindow`: see [`asset-system.md`](asset-system.md).
 
 ### Saving and loading
