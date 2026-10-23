@@ -173,8 +173,8 @@ importers:
         specifier: ^0.1.4
         version: 0.1.6
       '@civ-clone/core-save-game':
-        specifier: ^0.1.18
-        version: 0.1.18
+        specifier: ^0.1.19
+        version: 0.1.19
       '@civ-clone/core-science':
         specifier: ^0.1.7
         version: 0.1.7
@@ -1334,8 +1334,8 @@ packages:
   '@civ-clone/core-rule@0.1.6':
     resolution: {integrity: sha512-Hys5vpXeO/g9QrYFb5i/suuTE+N212zhhMyjIlsd2nQh/987vU88lwLIsbnXfKSI93C73N1o/34M83SPuLzxrQ==}
 
-  '@civ-clone/core-save-game@0.1.18':
-    resolution: {integrity: sha512-8Abww+PEZMp0yIa9sYb8XSEtfNxhEXde1EwL3qwZxBElFGSLIeJ/OG7JTNxXSOABTYJbCtkUrsE/2xrK+Xpp2w==}
+  '@civ-clone/core-save-game@0.1.19':
+    resolution: {integrity: sha512-GtdBkAFNG0+NhXaWHMjqetg+Mp4CvwN/fAc6fz6FXR4eJ5siPVY2/piqQLUvmoaSX+Tssq72yRIM+scsS8O50w==}
 
   '@civ-clone/core-science@0.1.7':
     resolution: {integrity: sha512-huUIZyKzdQAACNxH0xax5W9fRg059F3ePbzh6jjF8D9FkQ/7Mo5GXaXwsMcIScHSE4CzaNLg5uAc+2izbCjPjg==}
@@ -4447,7 +4447,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-registry': 0.1.6
 
-  '@civ-clone/core-save-game@0.1.18':
+  '@civ-clone/core-save-game@0.1.19':
     dependencies:
       '@civ-clone/core-city': 0.1.23
       '@civ-clone/core-city-build': 0.1.15
