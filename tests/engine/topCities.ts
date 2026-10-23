@@ -183,6 +183,8 @@ const checkEntries = (): void => {
         []
       ),
       city('Ulundi', unmet, unmet, seenTile, 1, [], [], []),
+      // A second city of an owner already asked about, so that asking once per owner takes a cache (#503).
+      city('Antium', met, met, seenTile, 2, [], [], []),
     ],
     asked: string[] = [],
     dependencies = {
@@ -243,6 +245,16 @@ const checkEntries = (): void => {
         wonders: [],
         seen: true,
         met: false,
+      },
+      {
+        name: 'Antium',
+        originalCivilization: 'Roman',
+        owner: { civilization: 'Roman', colors: null },
+        size: 2,
+        citizens: { happy: 0, content: 2, unhappy: 0, specialists: [] },
+        wonders: [],
+        seen: true,
+        met: true,
       },
     ];
 

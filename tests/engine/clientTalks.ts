@@ -1,6 +1,7 @@
 // Talks with another player (#449), checked with a stub transport, the real `PlayerPatches` and an empty rule registry,
 //  in which every negotiation is over at its first step: gold given or taken in the talks is sent once they are over,
-//  as nothing else would send it (#492), whether the talks end or fail.
+//  as nothing else would send it (#492), whether the talks end or fail. Then, counted in microtasks (#503), when the
+//  talks a Meet with King starts and those the hand-over starts settle for an action that waits for them.
 
 import ActionsState from '../../src/js/Engine/Client/ActionsState';
 import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
@@ -221,6 +222,74 @@ playerResearchRegistryInstance.register(new PlayerResearch(ours));
       sent.filter(([channel]) => channel === 'workerError'),
     ],
     [3, true, []]
+  );
+
+  // Counted in microtasks from the call, with the negotiation, or the talks with the players met, over at once (#503):
+  //  an action waits for `pending` before it offers its own talks, inside the hold on flushes, so a link more or less
+  //  on the chain moves its patch and `actionHandled` with it (`clientHandleAction.ts`, `clientTurnHandover.ts`).
+  let tick = 0,
+    pumping = false;
+
+  const timeline: string[] = [],
+    record = (name: string) => timeline.push(`${name}@${tick}`),
+    pump = (): void => {
+      if (!pumping) {
+        return;
+      }
+
+      tick++;
+
+      if (tick > 50) {
+        pumping = false;
+
+        return;
+      }
+
+      queueMicrotask(pump);
+    },
+    counted = (start: (talks: Talks) => void): Promise<string[]> => {
+      const chained = new Talks({
+        player: () => ours,
+      } as unknown as TalksContext);
+
+      Object.assign(chained, {
+        handleNegotiation: async (): Promise<string> => {
+          record('handleNegotiation');
+
+          return 'the negotiation';
+        },
+        talkToPlayersMet: async (): Promise<void> => {
+          record('talkToPlayersMet');
+        },
+      });
+
+      timeline.splice(0);
+      tick = 0;
+      pumping = true;
+      queueMicrotask(pump);
+
+      start(chained);
+      chained.pending.then((value) =>
+        record(`pending settled(${String(value)})`)
+      );
+
+      return new Promise((resolve) =>
+        setTimeout(() => {
+          pumping = false;
+          resolve(timeline.splice(0));
+        })
+      );
+    };
+
+  expect(
+    "a Meet with King's talks are over, with nothing, for what waits for them on the 5th microtask",
+    await counted((chained) => chained.meetWithKing(rival)),
+    ['handleNegotiation@1', 'pending settled(undefined)@5']
+  );
+  expect(
+    "the hand-over's talks are over, with nothing, for what waits for them on the 5th microtask",
+    await counted((chained) => chained.handOver()),
+    ['talkToPlayersMet@1', 'pending settled(undefined)@5']
   );
 
   finished = true;

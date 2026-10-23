@@ -28,12 +28,16 @@ import {
 import { Anarchy } from '@civ-clone/civ1-government/Governments';
 import { Barracks } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
+import Part from '@civ-clone/core-spaceship/Part';
+import Unit from '@civ-clone/core-unit/Unit';
 import Notification from '../../src/js/Engine/Notification';
 import { Pyramids } from '@civ-clone/civ1-wonder/Wonders';
 import { Structural } from '@civ-clone/civ1-spaceship/Parts';
 import { buildingCompleteKind } from '../../src/js/Engine/Client/notifications/city';
 import cityNotifications from '../../src/js/Engine/Client/notifications/city';
-import diplomatNotifications from '../../src/js/Engine/Client/notifications/diplomat';
+import diplomatNotifications, {
+  sabotagedBuildKind,
+} from '../../src/js/Engine/Client/notifications/diplomat';
 import i18next from 'i18next';
 import playerNotifications from '../../src/js/Engine/Client/notifications/player';
 import unitNotifications from '../../src/js/Engine/Client/notifications/unit';
@@ -188,6 +192,12 @@ const contextOf = ({
   expect(
     "a rival's capture of another's city",
     city('city:captured', [rivalCity, rival, other]),
+    null
+  );
+  // Taken from ourselves, which only the guard on whose it was keeps quiet (#503).
+  expect(
+    'a city of ours captured by us',
+    city('city:captured', [ourCity, us, us]),
     null
   );
 
@@ -484,6 +494,38 @@ const contextOf = ({
         { city: 'Babylon', build: { _: (BuildType as Function).name } },
       ]
     )
+  );
+  // What a sabotaged city was building, as the kind its name is translated under (#503): a class of a unit, a wonder (a
+  //  `CityImprovement` too, so it is asked about first), an improvement or a spaceship part, and nothing for anything
+  //  else, the classes those are made from and an instance included.
+  expect(
+    'the kind of build sabotaged',
+    [
+      Settlers,
+      Pyramids,
+      Barracks,
+      Structural,
+      Unit,
+      CityImprovement,
+      Part,
+      Object.create(Settlers.prototype),
+      'Settlers',
+      null,
+      undefined,
+    ].map((target) => sabotagedBuildKind(target)),
+    [
+      '.unit',
+      '.wonder',
+      '.city-improvement',
+      '.spaceship-part',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+      '',
+    ]
   );
   expect(
     'production of nothing sabotaged',
@@ -823,10 +865,43 @@ const contextOf = ({
       },
     });
 
+  // As a list of its own, so that two swapped in `registrationOrder` are told (#503).
   expect(
     'one listener per event, in the order the client registered them',
     listening.map(([event]) => event),
-    registrationOrder
+    [
+      'city:captured',
+      'unit:nuclear-detonation',
+      'city:polluted',
+      'city:sdi-protected',
+      'unit:lost-at-sea',
+      'unit:unsupported',
+      'city:unsupported-improvement',
+      'unit:trade-route-established',
+      'player:advance-stolen',
+      'city:sabotaged',
+      'city:incited',
+      'unit:bribed',
+      'city:building-complete',
+      'player:research-complete',
+      'wonder:obsolete',
+      'city-improvement:obsolete',
+      'goody-hut:action-performed',
+      'game:retirement-warning',
+      'player:defeated',
+      'city:civil-disorder',
+      'city:order-restored',
+      'player:government:collapsed',
+      'city:leader-celebration',
+      'city:leader-celebration-ended',
+      'player:respawned',
+      'player:spaceship:part-built',
+      'player:spaceship:lost',
+      'player:spaceship:landed',
+      'player:declaration-expired',
+      'barbarians:landed',
+      'barbarians:uprising',
+    ]
   );
 
   emit('city:polluted', ourCity);

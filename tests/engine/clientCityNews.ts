@@ -1,7 +1,7 @@
 // The client's city news and notifications (#400, #420, #449), checked with plain data and a stub transport: what each
 //  city's news in one engine call says, and which outcome wins when several happened; that the news of one engine call
-//  goes out once it is over, one notice per city; and that notifications are held while the hold says so, and sent in
-//  order when released.
+//  goes out once it is over, one notice per city, and news heard while it is told is told next; and that notifications
+//  go through the filter, are held while the hold says so, and are sent in order when released.
 
 import CityNewsCollector, {
   CityNews,
@@ -213,6 +213,33 @@ const us = { name: 'us' } as unknown as Player,
     ['City.destroyed', true, { city: 'Antium' }],
   ]);
 
+  told.splice(0);
+
+  // News heard while the last is told, as when telling it makes something else happen (#503): it is told next, not
+  //  dropped with what was told.
+  let reentered = false;
+
+  const reentrant = new CityNewsCollector(
+    () => us,
+    (notification) => {
+      told.push(describe(notification));
+
+      if (!reentered) {
+        reentered = true;
+        reentrant.of(antium).destroyed = true;
+      }
+    }
+  );
+
+  reentrant.of(rome).famine = true;
+
+  await tick();
+
+  expect('news heard while news is told is told after it', told, [
+    ['City.food-storage-exhausted', false, { city: 'Rome' }],
+    ['City.destroyed', true, { city: 'Antium' }],
+  ]);
+
   // Notifier
 
   const sent: [string, unknown][] = [],
@@ -220,11 +247,12 @@ const us = { name: 'us' } as unknown as Player,
       send: (channel: string, data: unknown) => sent.push([channel, data]),
     },
     localFilters: unknown[] = [],
-    // Nothing here is filtered: each value is plain already.
+    // Everything here is plain already, but for a secret, which the filter stands in for.
     dataFilter = ((localFilter: unknown) => {
       localFilters.push(localFilter);
 
-      return (object: any) => object;
+      return (object: any) =>
+        object?.secret === true ? { standIn: true } : object;
     }) as unknown as DataFilter,
     notifier = new Notifier(transport as any, dataFilter),
     keyOf = ([channel, payload]: [string, any]) => [
@@ -251,6 +279,18 @@ const us = { name: 'us' } as unknown as Player,
     'filtered to stand-alone references',
     localFilters.map((filter) => filter === standalone),
     [true]
+  );
+
+  sent.splice(0);
+
+  notifier.notify(new Notification('Secret', { who: { secret: true } }));
+
+  const [[, secret]] = sent as [string, any][];
+
+  expect(
+    "what a notification refers to goes as the filter's stand-in",
+    secret.objects[secret.hierarchy['#ref']].data,
+    { who: { standIn: true } }
   );
 
   sent.splice(0);

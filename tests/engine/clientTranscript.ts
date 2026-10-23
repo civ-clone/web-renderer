@@ -13,7 +13,8 @@
 // hash and summary of each message, so that a difference says which message changed first and how. Ids are counters
 // per class and the engine's random source is seeded, so two runs send the same thing.
 //
-// `--update` rewrites the fixture. Set `CLIENT_TRANSCRIPT_DUMP` to a path to write the whole recording there.
+// `--update` (`npm run test:client-transcript:update`) rewrites the fixture, as a bump of the engine's packages can
+// need. Set `CLIENT_TRANSCRIPT_DUMP` to a path to write the whole recording there.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -575,7 +576,9 @@ const finish = (): void => {
   }
 
   if (!fs.existsSync(fixturePath)) {
-    fail(`there is no fixture at ${fixturePath}: run with --update`);
+    fail(
+      `there is no fixture at ${fixturePath}: run \`npm run test:client-transcript:update\``
+    );
   }
 
   const differences = compare(
@@ -591,10 +594,12 @@ const finish = (): void => {
 
     dump(file);
 
+    // A change in what the engine does changes what the client sends with it, so a bump of the `@civ-clone` packages
+    //  can fail this with no change here (#503).
     fail(
       `what the client sent changed (the whole of it is in ${file}):\n${differences.join(
         '\n'
-      )}`
+      )}\nIf this follows a bump of the engine's packages and the change is theirs, not the client's, record it again with \`npm run test:client-transcript:update\` and commit the fixture with the bump.`
     );
   }
 

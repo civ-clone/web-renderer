@@ -4,7 +4,7 @@
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
 // test founds a city, gives it a Temple and a Library, then sells the Temple and tries to sell the Library. Then it
-// launches a spaceship, the one `LaunchSpaceship` any suite sends.
+// launches a spaceship with the parts to make it, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -29,6 +29,15 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import {
+  Fuel,
+  Habitation,
+  LifeSupport,
+  Power,
+  Propulsion,
+  Structural,
+} from '@civ-clone/civ1-spaceship/Parts';
+import Part from '@civ-clone/core-spaceship/Part';
 import Spaceship from '@civ-clone/core-spaceship/Spaceship';
 import { instance as layoutRegistryInstance } from '@civ-clone/core-spaceship/LayoutRegistry';
 import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
@@ -196,12 +205,44 @@ const run = async (): Promise<void> => {
     fail('the city sold a second improvement in the same turn');
   }
 
-  // Launching a spaceship (#449: no other suite sends a `LaunchSpaceship`). Put there directly, as the Apollo Program
-  //  would, with no parts: the ship launches and the player goes out again.
+  // Launching a spaceship (#449: no other suite sends a `LaunchSpaceship`). Put there directly, on the layout the Apollo
+  //  Program gives every civilization a ship on, and built from the city with the parts of the smallest ship that can
+  //  make it (#503), as `civ1-spaceship`'s own test builds it: the ship launches and the player goes out again.
   const [LayoutType] = layoutRegistryInstance.entries() as any[],
     spaceship = new Spaceship(humanPlayer!, new LayoutType());
 
   spaceshipRegistryInstance.register(spaceship);
+
+  (
+    [
+      [Structural, 34],
+      [Fuel, 8],
+      [Propulsion, 8],
+      [Habitation, 4],
+      [LifeSupport, 4],
+      [Power, 4],
+    ] as [typeof Part, number][]
+  ).forEach(([PartType, count]) => {
+    for (let i = 0; i < count; i++) {
+      spaceship.add(new PartType(city));
+    }
+  });
+
+  const chance = spaceship.chanceOfSuccess(),
+    flightTime = spaceship.flightTime();
+
+  if (
+    spaceship.activeParts().length !== 62 ||
+    chance !== 1 ||
+    !(flightTime > 0 && flightTime < Infinity)
+  ) {
+    fail(
+      `the spaceship has ${
+        spaceship.activeParts().length
+      } parts working, a chance of ${chance} and a flight of ${flightTime} years, not 62, 1 and a flight that ends`
+    );
+  }
+
   flush();
   objectsSent = [];
 
@@ -226,7 +267,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS sellImprovement (the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship launches and the player goes out again)'
+    'PASS sellImprovement (the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship of 62 parts launches and the player goes out again)'
   );
 
   process.exit(0);

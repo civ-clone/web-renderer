@@ -279,13 +279,20 @@ units.setUnitWithActions(ready, (unit) => previous.push(unit));
 
 expect('the same unit again hands back none', previous.length, 0);
 
-units.setUnitWithActions(other, (unit) => previous.push(unit));
+// Which unit has the actions while the one that had them is handed back: the new one already (#503).
+let withActionsMeanwhile: unknown = null;
+
+units.setUnitWithActions(other, (unit) => {
+  previous.push(unit);
+  withActionsMeanwhile = units.unitWithActions;
+});
 
 expect(
   'another unit hands back the one that had them',
   previous.length === 1 && previous[0] === ready,
   true
 );
+expect('having taken them from it first', withActionsMeanwhile === other, true);
 expect('which no longer goes with them', units.sendsUnitActions(ready), false);
 
 units.setUnitWithActions(done, (unit) => previous.push(unit));
