@@ -140,9 +140,7 @@ export const handleChangeWorkedTile: ActionHandler<ChangeWorkedTile> = async (
   playerAction
 ) => {
   const city = playerAction.value(),
-    [playerTile] = ctx.playerWorlds
-      .getByPlayer(ctx.player())
-      .filter((tile) => tile.id() === action.tile);
+    [playerTile] = ctx.view.world().filter((tile) => tile.id() === action.tile);
 
   if (!playerTile) {
     console.log(`tile not found: ${action.tile}`);

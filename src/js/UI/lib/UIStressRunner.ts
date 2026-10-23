@@ -5,8 +5,8 @@ import {
   Unit,
   UnitAction,
 } from '../types';
-import City from '../components/City';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
+import City from '../components/City';
 import CityStatus from '../components/CityStatus';
 import HappinessReport from '../components/HappinessReport';
 import Portal from '../components/Portal';

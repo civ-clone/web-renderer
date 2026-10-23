@@ -9,6 +9,7 @@ import './lib/dom';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
 import MapView from '../../src/js/UI/game/MapView';
+import { playerCityOpener } from '../../src/js/UI/lib/cityOpeners';
 import Transport from '../../src/js/UI/Transport';
 
 const failures: string[] = [];
@@ -111,6 +112,7 @@ let activeUnit: Unit | null = null,
 
 const mapView = new MapView({
   activateUnit: (unit) => activated.push(unit.id),
+  cityOpener: playerCityOpener(),
   activeUnit: () => {
     activeUnitReads++;
 

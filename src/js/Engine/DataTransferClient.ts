@@ -10,6 +10,7 @@ import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
+import { View, playerView } from './Client/View';
 import { filterToReference } from './Client/refs';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Transport from './Transport';
@@ -22,7 +23,6 @@ import { TopCitiesRow, defaultTopCitiesLimit } from './lib/topCities';
 import { CivilizationScore } from './lib/civilizationScore';
 import { GameOverDetails } from './lib/gameOver';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
-import hasMet from './lib/hasMet';
 import {
   makeDataFilter,
   serialiseCity,
@@ -44,6 +44,7 @@ import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
 import ChoicePrompt from './Client/ChoicePrompt';
 import registerDiplomatEvents from './Client/diplomatEvents';
+import registerObserveCity from './Client/observeCity';
 import TurnHandover, {
   registerTurnHandoverEvents,
 } from './Client/TurnHandover';
@@ -71,8 +72,12 @@ export class DataTransferClient extends Client implements IClient {
     {
       automationEnabled = false,
       readOnly = false,
+      view: givenView,
     }: {
       automationEnabled?: boolean;
+      // Whose game the client sends (#613): the player's own view unless the observer gives it one of several
+      //  civilisations, or of the whole map, with this player as its primary.
+      view?: View;
       // An observer's view of the player (#607): everything the player is sent, nothing the UI could do as them. No
       //  cheats, no `action`s, no talks, no retiring or keeping playing, and the notifications are never held for a
       //  hand-over that never comes. The client isn't the player's in the `ClientRegistry`: their own client plays.
@@ -84,26 +89,24 @@ export class DataTransferClient extends Client implements IClient {
     // The player's actions as the frontend was last sent them (#411, #323), and what the player may see, which every
     //  payload goes through (see `Client/visibilityFilter.ts`), made with them.
     const actions = new ActionsState(),
-      dataFilter = makeDataFilter(() => this.player(), actions),
-      notifier = new Notifier(transport, dataFilter),
+      view = givenView ?? playerView(() => this.player(), registries),
+      dataFilter = makeDataFilter(() => view, actions),
+      notifier = new Notifier(transport, dataFilter, { noticesOnly: readOnly }),
       context = {
-        player: () => this.player(),
+        player: () => view.primary(),
+        view,
         transport,
         actions,
         dataFilter,
-        patches: new PlayerPatches(transport, dataFilter, actions, () =>
-          this.player()
-        ),
+        patches: new PlayerPatches(transport, dataFilter, actions, () => view),
         notifier,
         cityNews: new CityNewsCollector(
           () => this.player(),
-          (notification) => notifier.notify(notification)
+          (notification) => notifier.notify(notification),
+          (other: Player) => view.owns(other)
         ),
-        hasMet: (other: Player) => hasMet(this.player(), other, this.#context),
-        hasSeen: (tile: Tile) =>
-          Boolean(
-            registries.playerWorlds.getByPlayer(this.player()).getByTile(tile)
-          ),
+        hasMet: (other: Player) => view.hasMet(other),
+        hasSeen: (tile: Tile) => view.hasSeen(tile),
         unitsOn: (tile: Tile) => registries.units.getByTile(tile),
         government: (player: Player) =>
           playerGovernmentRegistryInstance.getByPlayer(player),
@@ -167,11 +170,14 @@ export class DataTransferClient extends Client implements IClient {
 
     this.#disposers.push(registerPatchEvents(engineInstance, this.#context));
 
-    // A Diplomat's report opens a window on the page: not for a watcher.
+    // A Diplomat's report opens a window on the page: not for a watcher, who opens a city of their own accord instead
+    //  (#613), for the same read-only screen.
     if (!readOnly) {
       this.#disposers.push(
         registerDiplomatEvents(engineInstance, this.#context)
       );
+    } else {
+      this.#disposers.push(registerObserveCity(transport, this.#context));
     }
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
@@ -182,9 +188,15 @@ export class DataTransferClient extends Client implements IClient {
     });
 
     this.#disposers.push(
-      registerGameEnd(engineInstance, this.#context, { readOnly }),
-      registerNotifications(engineInstance, this.#context)
+      registerGameEnd(engineInstance, this.#context, { readOnly })
     );
+
+    // A view of nobody's own (the whole map, #613) has nobody to be told: the notices are the primary player's.
+    if (view.owners().length > 0) {
+      this.#disposers.push(
+        registerNotifications(engineInstance, this.#context)
+      );
+    }
   }
 
   /**
@@ -273,14 +285,20 @@ export class DataTransferClient extends Client implements IClient {
       return;
     }
 
-    const { patches, turn, year } = this.#context;
+    const { patches, turn, year, view } = this.#context;
 
     patches.update(turn.id(), () => turn.toPlainObject());
     patches.update(year.id(), () => year.toPlainObject());
-    patches.wholePlayer(
-      filterToReference(PlayerWorld, PlayerTile, Tile),
-      'add'
-    );
+
+    // A view of nobody's own (the whole map, #613) shows nothing of the primary player but its turn and year: it is
+    //  not sent whole, nor are its actions.
+    if (view.owners().length > 0) {
+      patches.wholePlayer(
+        filterToReference(PlayerWorld, PlayerTile, Tile),
+        'add'
+      );
+    }
+
     patches.flush();
   }
 

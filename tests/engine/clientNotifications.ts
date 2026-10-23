@@ -29,8 +29,10 @@ import { Anarchy } from '@civ-clone/civ1-government/Governments';
 import { Barracks } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Part from '@civ-clone/core-spaceship/Part';
+import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import Notification from '../../src/js/Engine/Notification';
+import { stubView } from './lib/view';
 import { Pyramids } from '@civ-clone/civ1-wonder/Wonders';
 import { Structural } from '@civ-clone/civ1-spaceship/Parts';
 import { buildingCompleteKind } from '../../src/js/Engine/Client/notifications/city';
@@ -143,6 +145,7 @@ const contextOf = ({
   }: Partial<World> = {}): NotificationContext =>
     ({
       player: () => us,
+      view: stubView(() => us as unknown as Player),
       hasMet: (player: unknown) => met.includes(player),
       hasSeen: (tile: unknown) => seen.includes(tile),
       unitsOn: (tile: string) => unitsOn[tile] ?? [],

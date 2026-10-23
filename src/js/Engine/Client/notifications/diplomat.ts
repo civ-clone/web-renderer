@@ -38,7 +38,7 @@ export const diplomatNotifications: NotificationTable = [
       victim: Player,
       AdvanceType: typeof Advance
     ) =>
-      ![thief, victim].includes(ctx.player())
+      ![thief, victim].some((candidate) => ctx.view.owns(candidate))
         ? null
         : new Notification('Diplomat.advance-stolen', {
             advance: AdvanceType.name,
@@ -49,7 +49,7 @@ export const diplomatNotifications: NotificationTable = [
   [
     'city:sabotaged',
     (ctx: NotificationContext, city: City, saboteur: Player, target: unknown) =>
-      ![saboteur, city.player()].includes(ctx.player())
+      ![saboteur, city.player()].some((candidate) => ctx.view.owns(candidate))
         ? null
         : target instanceof CityImprovement
         ? new Notification('Diplomat.sabotaged.improvement', {
@@ -76,7 +76,7 @@ export const diplomatNotifications: NotificationTable = [
       inciter: Player,
       originalPlayer: Player
     ) =>
-      ![inciter, originalPlayer].includes(ctx.player())
+      ![inciter, originalPlayer].some((candidate) => ctx.view.owns(candidate))
         ? null
         : new Notification('Diplomat.incited', {
             city,
@@ -94,7 +94,7 @@ export const diplomatNotifications: NotificationTable = [
       briber: Player,
       previousOwner: Player
     ) =>
-      previousOwner !== ctx.player()
+      !ctx.view.owns(previousOwner)
         ? null
         : new Notification('Diplomat.unit-bribed', {
             briber,

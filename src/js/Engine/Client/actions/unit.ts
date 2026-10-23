@@ -14,9 +14,7 @@ export const handleActiveUnit: ActionHandler<ActiveUnit> = async (
 ) => {
   const { unitAction, target } = action,
     unit: Unit = playerAction.value(),
-    [playerTile] = ctx.playerWorlds
-      .getByPlayer(ctx.player())
-      .filter((tile) => tile.id() === target);
+    [playerTile] = ctx.view.world().filter((tile) => tile.id() === target);
 
   if (!playerTile) {
     console.log(`tile not found: ${target}`);

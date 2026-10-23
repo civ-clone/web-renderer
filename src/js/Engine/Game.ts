@@ -86,10 +86,12 @@ export class Game implements IGame {
         return;
       }
 
+      // Read as the local player, or as the observer's view, which may know everyone (#613).
       const notice = playerProgress(
         player,
         this.#localPlayerClient?.player() ?? this.#observer?.player() ?? null,
         (reader: Player, other: Player): boolean =>
+          this.#observer?.view()?.hasMet(other) ??
           hasMet(reader, other, registries)
       );
 

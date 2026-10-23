@@ -20,7 +20,9 @@ export type CityNews = {
 // A lost city waits beside End Turn, as an improvement going obsolete does (#420). Famine stops play, as in Civ1.
 export const cityNewsNotifications = (
   entries: [City, CityNews][],
-  player: Player
+  player: Player,
+  // Whose cities are ours: the player's, unless a view of several says otherwise (#613).
+  owns: (other: Player) => boolean = (other) => other === player
 ): Notification[] => {
   const notifications: Notification[] = [];
 
@@ -29,7 +31,7 @@ export const cityNewsNotifications = (
       city,
       { ours, capturedBy, capturedFrom, destroyed, destroyedBy, famine },
     ]) => {
-      if (capturedFrom === player) {
+      if (capturedFrom !== null && owns(capturedFrom)) {
         notifications.push(
           destroyed
             ? new Notification(
@@ -85,22 +87,25 @@ export const cityNewsNotifications = (
 export class CityNewsCollector {
   #news: Map<City, CityNews> = new Map();
   #notify: (notification: Notification) => void;
+  #owns: (other: Player) => boolean;
   #player: () => Player;
   #queued = false;
 
   constructor(
     player: () => Player,
-    notify: (notification: Notification) => void
+    notify: (notification: Notification) => void,
+    owns: (other: Player) => boolean = (other) => other === player()
   ) {
     this.#player = player;
     this.#notify = notify;
+    this.#owns = owns;
   }
 
   // The news of `city` in the engine call under way, sent once it is over.
   of(city: City): CityNews {
     if (!this.#news.has(city)) {
       this.#news.set(city, {
-        ours: city.player() === this.#player(),
+        ours: this.#owns(city.player()),
         capturedBy: null,
         capturedFrom: null,
         destroyed: false,
@@ -125,8 +130,8 @@ export class CityNewsCollector {
     this.#news.clear();
     this.#queued = false;
 
-    cityNewsNotifications(news, this.#player()).forEach((notification) =>
-      this.#notify(notification)
+    cityNewsNotifications(news, this.#player(), this.#owns).forEach(
+      (notification) => this.#notify(notification)
     );
   }
 }

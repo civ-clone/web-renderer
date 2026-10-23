@@ -1,7 +1,6 @@
 import { City as CityData, Player } from '../types';
 import { groupIcons } from '../lib/yieldMap';
 import { turnsLeft, yieldData } from './lib/cityYields';
-import City from './City';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
@@ -89,7 +88,6 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
 export class CityStatus extends Window {
   #cities: CityData[];
   #portal: Portal;
-  #transport: Transport;
   #unwatch: () => void;
 
   constructor(player: Player, portal: Portal, transport: Transport) {
@@ -104,7 +102,6 @@ export class CityStatus extends Window {
       this.update();
     });
     this.#portal = portal;
-    this.#transport = transport;
 
     this.update();
   }
@@ -141,8 +138,7 @@ export class CityStatus extends Window {
             );
 
             return h(row, {
-              click: () =>
-                new City(this.#cities[index], this.#portal, this.#transport),
+              click: () => this.#portal.openCity(this.#cities[index]),
             });
           })
         )

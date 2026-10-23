@@ -15,6 +15,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
 import { isUnitWithoutActions } from '../../src/js/Engine/lib/unitWithoutActions';
 import ActionsState from '../../src/js/Engine/Client/ActionsState';
+import { stubView } from './lib/view';
 import {
   filterPlayerTile,
   makeDataFilter,
@@ -80,8 +81,10 @@ const me = make(Player, { civilization: () => 'ours' }),
   them = make(Player, { civilization: () => 'theirs' });
 let current = me;
 
-const actions = new ActionsState(),
-  dataFilter = makeDataFilter(() => current, actions),
+// Only who is ours is read here: the filter's player is read as it is now, so the view is of whoever `current` is.
+const view = stubView(() => current),
+  actions = new ActionsState(),
+  dataFilter = makeDataFilter(() => view, actions),
   calledWith: any[] = [],
   recording = (object: any) => {
     calledWith.push(object);

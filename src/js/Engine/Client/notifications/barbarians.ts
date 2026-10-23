@@ -11,7 +11,7 @@ export const barbarianNotifications: NotificationTable = [
   [
     'barbarians:landed',
     (ctx: NotificationContext, player: Player, city: City, tile: Tile) =>
-      city.player() === ctx.player() && ctx.hasSeen(tile)
+      ctx.view.owns(city.player()) && ctx.hasSeen(tile)
         ? new Notification('Barbarians.landing', { city })
         : null,
   ],
@@ -25,7 +25,7 @@ export const barbarianNotifications: NotificationTable = [
       tile: Tile,
       guerrilla: boolean
     ) =>
-      city.player() === ctx.player() && ctx.hasSeen(tile)
+      ctx.view.owns(city.player()) && ctx.hasSeen(tile)
         ? new Notification(
             guerrilla ? 'Barbarians.uprising.guerrilla' : 'Barbarians.uprising',
             { city }

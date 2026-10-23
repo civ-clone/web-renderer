@@ -20,12 +20,11 @@ import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
-import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import DataQueue from '../DataQueue';
 import Transport from '../Transport';
-import playerWithoutActions from '../lib/playerWithoutActions';
 import ActionsState, { diffActions } from './ActionsState';
+import { View } from './View';
 import {
   actionKey,
   filterToReference,
@@ -72,7 +71,6 @@ export class PlayerPatches {
   // Set while an action is handled, so the several flushes an action causes (the moved unit's tiles, then the player)
   //  go out as a single patch once it is done (#321). See `hold`.
   #holdingFlushes = false;
-  #player: () => Player;
   // The ids of the units, cities and parts of the player in the queue, each sent once a flush (#411).
   #queued: Set<string> = new Set();
   // The tiles in the queue, each sent once a flush (#138).
@@ -80,17 +78,19 @@ export class PlayerPatches {
   // The tiles a change of government queued, sent only if their yields changed (#488). See `governmentChanged`.
   #governmentTiles: Set<PlayerTile> = new Set();
   #transport: Transport<TransportDataMap>;
+  // Whose units and cities are own, and what is known of each square, asked for on every use (#613).
+  #view: () => View;
 
   constructor(
     transport: Transport<TransportDataMap>,
     dataFilter: DataFilter,
     actions: ActionsState,
-    player: () => Player
+    view: () => View
   ) {
     this.#transport = transport;
     this.#dataFilter = dataFilter;
     this.#actions = actions;
-    this.#player = player;
+    this.#view = view;
   }
 
   // A patch of anything else, queued as it is given: a value, or a function that builds it when it is sent.
@@ -115,12 +115,7 @@ export class PlayerPatches {
   // The frontend redraws a tile only when it arrives in a patch, so every change that alters one sends it (#138). Once
   //  per flush: the patch is only built when it's sent, so a later change to the same tile is in it all the same.
   tile(tile: Tile | PlayerTile | null): void {
-    const playerTile =
-      tile instanceof Tile
-        ? playerWorldRegistryInstance
-            .getByPlayer(this.#player())
-            .getByTile(tile)
-        : tile;
+    const playerTile = tile instanceof Tile ? this.#view().tile(tile) : tile;
 
     if (!playerTile || this.#queuedTiles.has(playerTile)) {
       return;
@@ -139,7 +134,7 @@ export class PlayerPatches {
   city(city: City | null): void {
     if (
       city === null ||
-      city.player() !== this.#player() ||
+      !this.#view().owns(city.player()) ||
       this.#queued.has(city.id())
     ) {
       return;
@@ -157,7 +152,7 @@ export class PlayerPatches {
   //  every city, with it (#515).
   cities(): void {
     cityRegistryInstance
-      .getByPlayer(this.#player())
+      .getByPlayer(this.#view().primary())
       .forEach((city) => this.city(city));
   }
 
@@ -165,7 +160,7 @@ export class PlayerPatches {
   //  city in full is several times the size, with all of its yields.
   cityBuild(cityBuild: CityBuildItem): void {
     if (
-      cityBuild.city().player() !== this.#player() ||
+      !this.#view().owns(cityBuild.city().player()) ||
       this.#queued.has(cityBuild.id())
     ) {
       return;
@@ -187,7 +182,7 @@ export class PlayerPatches {
   unit(unit: Unit | null): void {
     if (
       unit === null ||
-      unit.player() !== this.#player() ||
+      !this.#view().owns(unit.player()) ||
       this.#queued.has(unit.id())
     ) {
       return;
@@ -226,7 +221,7 @@ export class PlayerPatches {
 
         if (
           city !== null &&
-          city.player() === this.#player() &&
+          this.#view().owns(city.player()) &&
           city.tiles().entries().includes(tile)
         ) {
           this.city(city);
@@ -237,22 +232,22 @@ export class PlayerPatches {
   // One of the player's keys on its own, as an update of that key (#411): the list of its units or cities when one is
   //  added, which go as refs, as each is sent on its own.
   playerKey(key: 'cities' | 'units'): void {
-    if (this.#queued.has(`${this.#player().id()} ${key}`)) {
+    if (this.#queued.has(`${this.#view().primary().id()} ${key}`)) {
       return;
     }
 
-    this.#queued.add(`${this.#player().id()} ${key}`);
+    this.#queued.add(`${this.#view().primary().id()} ${key}`);
 
     this.#dataQueue.update(
-      this.#player().id(),
+      this.#view().primary().id(),
       () =>
         serialisePlayerPart(
           this.#dataFilter,
-          this.#player(),
+          this.#view().primary(),
           additionalDataRegistryInstance
             .getByType(Player)
             .find((additionalData) => additionalData.key() === key)!
-            .data(this.#player()),
+            .data(this.#view().primary()),
           filterToReferenceAllExcept()
         ),
       key
@@ -272,10 +267,11 @@ export class PlayerPatches {
     let mandatoryActions: ObjectMap | undefined;
 
     this.#dataQueue.update(
-      this.#player().id(),
+      this.#view().primary().id(),
       () => {
         const held = this.#actions.held,
-          actions = this.#player()
+          actions = this.#view()
+            .primary()
             .actions()
             .map((action) => held?.get(actionKey(action)) ?? action),
           mandatory = actions.filter(
@@ -294,7 +290,7 @@ export class PlayerPatches {
             try {
               return serialisePlayerPart(
                 this.#dataFilter,
-                this.#player(),
+                this.#view().primary(),
                 list,
                 filter
               );
@@ -321,7 +317,7 @@ export class PlayerPatches {
     );
 
     this.#dataQueue.update(
-      this.#player().id(),
+      this.#view().primary().id(),
       () => mandatoryActions,
       'mandatoryActions'
     );
@@ -343,10 +339,10 @@ export class PlayerPatches {
     localFilter: (object: any) => any,
     type: 'add' | 'update' = 'update'
   ): void {
-    const player = this.#player();
+    const player = this.#view().primary();
 
     this.#dataQueue[type](player.id(), () => {
-      const standIn = playerWithoutActions(player),
+      const standIn = this.#view().payload(true),
         filter = this.#dataFilter(localFilter);
 
       this.#actions.heldKeys = undefined;
@@ -365,12 +361,12 @@ export class PlayerPatches {
   //  bribe, cheaply enough to compare before and after each one (#411).
   playerState(): Map<PlayerResearch | PlayerTreasury, string> {
     const playerResearch = playerResearchRegistryInstance.getByPlayer(
-      this.#player()
+      this.#view().primary()
     );
 
     return new Map<PlayerResearch | PlayerTreasury, string>([
       ...playerTreasuryRegistryInstance
-        .getByPlayer(this.#player())
+        .getByPlayer(this.#view().primary())
         .map((playerTreasury): [PlayerTreasury, string] => [
           playerTreasury,
           String(playerTreasury.value()),
@@ -424,49 +420,51 @@ export class PlayerPatches {
    *  from there. A second change in the same flush keeps the yields from before the first, which the frontend holds.
    */
   governmentChanged(): void {
-    const player = this.#player();
+    const player = this.#view().primary();
 
-    playerWorldRegistryInstance.getByPlayer(player).forEach((playerTile) => {
-      if (
-        this.#queuedTiles.has(playerTile) ||
-        this.#governmentTiles.has(playerTile)
-      ) {
-        return;
-      }
-
-      // Worked out now, as the yields themselves could be changed in place before the patch is built.
-      let before: string | undefined;
-
-      try {
-        const cached = cachedYields(playerTile.tile(), player);
-
-        before = cached === undefined ? undefined : yieldsKey(cached);
-      } catch {
-        before = undefined;
-      }
-
-      this.#governmentTiles.add(playerTile);
-
-      this.#dataQueue.update(playerTile.id(), () => {
-        if (this.#queuedTiles.has(playerTile)) {
-          return undefined;
+    this.#view()
+      .world()
+      .forEach((playerTile) => {
+        if (
+          this.#queuedTiles.has(playerTile) ||
+          this.#governmentTiles.has(playerTile)
+        ) {
+          return;
         }
 
-        // Anything that goes wrong comparing them sends the square, rather than leaving the frontend's as it was.
+        // Worked out now, as the yields themselves could be changed in place before the patch is built.
+        let before: string | undefined;
+
         try {
-          if (
-            before !== undefined &&
-            before === yieldsKey(playerTile.yields())
-          ) {
+          const cached = cachedYields(playerTile.tile(), player);
+
+          before = cached === undefined ? undefined : yieldsKey(cached);
+        } catch {
+          before = undefined;
+        }
+
+        this.#governmentTiles.add(playerTile);
+
+        this.#dataQueue.update(playerTile.id(), () => {
+          if (this.#queuedTiles.has(playerTile)) {
             return undefined;
           }
-        } catch {
-          // Sent in full, below.
-        }
 
-        return serialiseTile(this.#dataFilter, playerTile);
+          // Anything that goes wrong comparing them sends the square, rather than leaving the frontend's as it was.
+          try {
+            if (
+              before !== undefined &&
+              before === yieldsKey(playerTile.yields())
+            ) {
+              return undefined;
+            }
+          } catch {
+            // Sent in full, below.
+          }
+
+          return serialiseTile(this.#dataFilter, playerTile);
+        });
       });
-    });
 
     this.cities();
   }

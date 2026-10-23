@@ -5,20 +5,18 @@
 import City from '@civ-clone/core-city/City';
 import Engine from '@civ-clone/core-engine/Engine';
 import Player from '@civ-clone/core-player/Player';
-import Unit from '@civ-clone/core-unit/Unit';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import UnknownCity from '../UnknownObjects/City';
-import UnknownUnit from '../UnknownObjects/Unit';
-import { ClientContext, Disposer, Registries } from './ClientContext';
+import { ClientContext, Disposer } from './ClientContext';
+import cityInFull from './cityInFull';
 
 export type DiplomatEventsContext = Pick<
   ClientContext,
-  | 'player'
+  // Which players are our own, and what is known of each square.
+  | 'view'
   | 'transport'
   // What the player may see, which an investigated city's tiles go through.
   | 'dataFilter'
-> &
-  Registries<{ playerWorlds: 'getByPlayer' }>;
+>;
 
 export const registerDiplomatEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
@@ -33,7 +31,7 @@ export const registerDiplomatEvents = (
 
   // The report opens on the civilization the embassy is with, as v474.05 opens it.
   on('player:embassy-established', (holder: Player, host: Player) => {
-    if (holder !== ctx.player()) {
+    if (!ctx.view.owns(holder)) {
       return;
     }
 
@@ -43,58 +41,13 @@ export const registerDiplomatEvents = (
     );
   });
 
-  // The city is sent once, in full, as its owner would see it. Nothing else of its owner's goes with it: players are
-  //  sent as their civilization, and other cities and every unit as the wrappers the map has for them.
+  // The city is sent once, in full, as its owner would see it (`cityInFull`).
   on('city:investigated', (city: City, player: Player) => {
-    if (player !== ctx.player()) {
+    if (!ctx.view.owns(player)) {
       return;
     }
 
-    const playerWorld = ctx.playerWorlds.getByPlayer(ctx.player()),
-      // Tiles as the player knows them, in full, as nothing else is sent with it, and `Busy` by name.
-      otherwise = ctx.dataFilter(undefined, { tilesInFull: true }),
-      // One wrapper per unit and city, so each is the same object wherever it appears.
-      wrappers = new Map<Unit | City, UnknownUnit | UnknownCity>(),
-      wrap = (object: Unit | City, make: () => UnknownUnit | UnknownCity) => {
-        if (!wrappers.has(object)) {
-          wrappers.set(object, make());
-        }
-
-        return wrappers.get(object)!;
-      };
-
-    ctx.transport.send(
-      'investigateCity',
-      city.toPlainObject((object: any) => {
-        if (object === city) {
-          return object;
-        }
-
-        if (object instanceof Player) {
-          return {
-            _: 'Player',
-            id: object.id(),
-            civilization: object.civilization(),
-            // The city screen's map is laid out in the world's dimensions, on its grid.
-            world: {
-              height: playerWorld.height(),
-              topologyId: playerWorld.topologyId(),
-              width: playerWorld.width(),
-            },
-          };
-        }
-
-        if (object instanceof Unit) {
-          return wrap(object, () => UnknownUnit.fromUnit(object));
-        }
-
-        if (object instanceof City) {
-          return wrap(object, () => UnknownCity.fromCity(object));
-        }
-
-        return otherwise(object);
-      }) as never
-    );
+    ctx.transport.send('investigateCity', cityInFull(city, ctx) as never);
   });
 
   return (): void =>

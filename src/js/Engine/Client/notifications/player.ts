@@ -19,7 +19,7 @@ export const playerNotifications: NotificationTable = [
       playerResearch: PlayerResearch,
       advance: Advance
     ) =>
-      playerResearch.player() !== ctx.player()
+      !ctx.view.owns(playerResearch.player())
         ? null
         : new Notification('Player.research-complete', {
             playerResearch,
@@ -50,7 +50,7 @@ export const playerNotifications: NotificationTable = [
       defeatedPlayer: Player,
       player: Player | null
     ) => {
-      if (defeatedPlayer === ctx.player()) {
+      if (ctx.view.owns(defeatedPlayer)) {
         return null;
       }
 
@@ -79,7 +79,7 @@ export const playerNotifications: NotificationTable = [
   [
     'player:government:collapsed',
     (ctx: NotificationContext, player: Player, city: City) =>
-      player !== ctx.player()
+      !ctx.view.owns(player)
         ? null
         : new Notification(
             ctx.government(player).is(Anarchy)
@@ -104,7 +104,7 @@ export const playerNotifications: NotificationTable = [
   [
     'player:spaceship:part-built',
     (ctx: NotificationContext, player: Player) =>
-      ctx.player() === player
+      ctx.view.owns(player)
         ? null
         : ctx.hasMet(player)
         ? new Notification('Spaceship.part-built', {
@@ -118,7 +118,7 @@ export const playerNotifications: NotificationTable = [
   [
     'player:spaceship:lost',
     (ctx: NotificationContext, player: Player, launched: boolean) =>
-      ctx.player() !== player && !ctx.hasMet(player)
+      !ctx.view.owns(player) && !ctx.hasMet(player)
         ? null
         : new Notification(
             launched ? 'Spaceship.returned' : 'Spaceship.cancelled',
@@ -131,7 +131,7 @@ export const playerNotifications: NotificationTable = [
   [
     'player:spaceship:landed',
     (ctx: NotificationContext, player: Player) =>
-      ctx.player() !== player
+      !ctx.view.owns(player)
         ? null
         : new Notification('Player.spaceship-landed', {
             player,
@@ -141,7 +141,7 @@ export const playerNotifications: NotificationTable = [
   [
     'player:declaration-expired',
     (ctx: NotificationContext, player: Player, declaration: Declaration) =>
-      player !== ctx.player()
+      !ctx.view.owns(player)
         ? null
         : new Notification('Player.declaration-expired', {
             player,

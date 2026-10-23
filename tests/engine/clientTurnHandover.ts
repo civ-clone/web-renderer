@@ -19,6 +19,7 @@ import Automation from '../../src/js/Engine/Client/Automation';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import Notifier from '../../src/js/Engine/Client/Notifier';
+import { stubView } from './lib/view';
 import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TurnHandover, {
@@ -211,8 +212,12 @@ const automationClient: any = {
       record('automation.takeTurn');
     },
   },
+  view = stubView(() => player, {
+    getByTile: (target: any) => (target === tile ? playerTile : null),
+    filter: (filter: (tile: any) => boolean) => [playerTile].filter(filter),
+  }),
   automation = new Automation(automationClient, false, {
-    player: () => player,
+    view,
     currentPlayers: { entries: () => currentPlayers },
   });
 
@@ -220,6 +225,7 @@ const automationClient: any = {
 //  players met try to flush, which the hold keeps back.
 const actionContext: any = {
   player: () => player,
+  view,
   patches,
   actions: new ActionsState(),
   talks: {
@@ -232,7 +238,6 @@ const actionContext: any = {
   cities: { getBy: () => [], getByPlayer: () => [] },
   cityImprovements: { getByCity: () => [] },
   playerTreasuries: { getBy: () => [] },
-  playerWorlds: { getByPlayer: () => [playerTile] },
   rules: {},
 };
 
@@ -241,6 +246,7 @@ let throwing = false;
 // Its context, which a check below changes after the hand-over is made, as the client's `handleAction` can be.
 const handoverContext = {
   player: () => player,
+  view,
   transport,
   dataFilter,
   actions: new ActionsState(),
@@ -261,11 +267,6 @@ const handoverContext = {
     return handled;
   },
   difficulties: { entries: () => [] },
-  playerWorlds: {
-    getByPlayer: () => ({
-      getByTile: (target: any) => (target === tile ? playerTile : null),
-    }),
-  } as any,
   turn: { id: () => 'turn' } as any,
   year: { id: () => 'year' } as any,
 };

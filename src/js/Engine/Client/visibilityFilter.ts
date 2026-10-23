@@ -11,9 +11,10 @@ import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Tile from '@civ-clone/core-world/Tile';
+import UndiscoveredTile from '@civ-clone/core-player-world/UndiscoveredTile';
 import Unit from '@civ-clone/core-unit/Unit';
-import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import ActionsState from './ActionsState';
+import { View } from './View';
 import {
   isUnitWithoutActions,
   unitWithoutActions,
@@ -59,10 +60,10 @@ export const filterPlayerTile = (
 //  an investigated city. Everywhere else the frontend already holds every tile the player knows, and a tile that
 //  changes is sent on its own, so a tile in full there is only payload.
 //
-// `player` is asked for on every object, as the client's player is read wherever it is used, and `actions` is the
-//  client's own, which serialising a `PlayerAction` outside `serialising` forgets.
+// `view` is asked for on every object, as the client's view is read wherever it is used, and `actions` is the client's
+//  own, which serialising a `PlayerAction` outside `serialising` forgets.
 export const makeDataFilter =
-  (player: () => Player, actions: ActionsState): DataFilter =>
+  (view: () => View, actions: ActionsState): DataFilter =>
   (localFilter = (object: any) => object, { tilesInFull = false } = {}) =>
   (object: DataObject | Busy) => {
     // The player's actions are going out some other way, made afresh, and the frontend will hold those instead.
@@ -70,31 +71,39 @@ export const makeDataFilter =
       actions.forget();
     }
 
-    if (object instanceof Player && object !== player()) {
-      return unknownPlayerOf(object);
+    if (object instanceof Player) {
+      if (!view().owns(object)) {
+        return unknownPlayerOf(object);
+      }
+
+      // An owner other than the primary goes as the view has it (#613): with the view's world, not its own.
+      if (object !== view().primary()) {
+        return view().member(object);
+      }
     }
 
-    if (object instanceof Unit && object.player() !== player()) {
+    if (object instanceof Unit && !view().owns(object.player())) {
       return unknownUnitOf(object);
     }
 
     // The player's units go out without their actions, but for the one the UI has them for (#323).
     if (
       object instanceof Unit &&
-      object.player() === player() &&
+      view().owns(object.player()) &&
       !isUnitWithoutActions(object) &&
       !actions.sendsUnitActions(object)
     ) {
       return localFilter(unitWithoutActions(object));
     }
 
-    if (object instanceof City && object.player() !== player()) {
+    if (object instanceof City && !view().owns(object.player())) {
       return unknownCityOf(object);
     }
 
     if (object instanceof Tile) {
-      const playerWorld = playerWorldRegistryInstance.getByPlayer(player()),
-        playerTile = playerWorld.get(object.x(), object.y());
+      const playerTile =
+        view().tile(object) ??
+        new UndiscoveredTile(object.x(), object.y(), object.map());
 
       // The caller's filter applies to the tile that is actually sent (#130). Only a tile the player knows can be a
       //  ref: an undiscovered one is made up afresh, with a new id, on every call, so it goes inline.

@@ -29,6 +29,8 @@ i18next.addResources('en-GB', 'default', {
   'NewGameWindow.civilizations_one': '1 civilisation',
   'NewGameWindow.civilizations_other': '{{count}} civilisations',
 
+  'Observer.civilizations': 'As these civilisations see it',
+
   'IntelligenceReport.empty': 'We have not met any other civilisations yet.',
   'IntelligenceReport.no-foreign-affairs':
     'No contact with other civilisations.',

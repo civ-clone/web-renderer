@@ -27,6 +27,7 @@ import DebugPanel from '../debug/DebugPanel';
 import { AppElements } from '../app/elements';
 import NotificationBar from '../app/NotificationBar';
 import ObserverBar from '../components/ObserverBar';
+import { observerCityOpener, playerCityOpener } from '../lib/cityOpeners';
 import { ObserverState } from '../../Engine/Observer';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug
@@ -123,6 +124,8 @@ export class GameSession {
         },
       });
 
+      const turn = (): number => Number(gameState.data()?.turn?.value ?? 0);
+
       // A world on a grid that can't be drawn here (#89). Loading a save checks first, so this is for any other way in:
       //  say so and go back to the menu, rather than draw a map of nonsense.
       const { topologyId } = gameState.data().player.world;
@@ -195,6 +198,10 @@ export class GameSession {
             unitController.set(unit);
           },
           activeUnit: () => unitController.active(),
+          // A watcher opens any city of a civilisation watched, read-only (#613).
+          cityOpener: observing
+            ? observerCityOpener(transport, observer)
+            : playerCityOpener(),
           mapPortal,
           minimapCanvas,
           options,
@@ -246,7 +253,7 @@ export class GameSession {
           () => gameState.data().player,
           // Same reason: the turn a save is named after is the turn it
           // was taken on.
-          () => Number(gameState.data()?.turn?.value ?? 0),
+          turn,
           portal,
           transport,
           cheatsEnabled
@@ -363,7 +370,18 @@ export class GameSession {
       // here — deferring any of it (tried 2026-07-02) left `activeUnit`
       // stale for ~1 frame and broke consecutive moves of multi-move
       // units. Only `render()` is coalesced to one run per frame.
+      // A watcher's notices are the turn's, as a player's are, but no End Turn clears them (#607): a new turn in the
+      //  rebuilt data rolls them, before the render that would show them, and the last turn's stay while the game is
+      //  paused between turns.
+      let turnShown = turn();
+
       gameState.onUpdated((): void => {
+        if (observing && turn() !== turnShown) {
+          turnShown = turn();
+
+          notices.rollTurn();
+        }
+
         mapView.releaseTiles();
 
         unitController.next(
@@ -408,6 +426,18 @@ export class GameSession {
           unitController.dataReceived();
 
           gameState.replace(rawData);
+
+          // A whole new game's data, as an observer's change of view sends (#613): every square is drawn again, since
+          //  what was unknown may now be known, which no patch has said, and the notices were the old view's.
+          if (observing) {
+            notices.clear();
+          }
+
+          gameState
+            .data()
+            .player.world.tiles.forEach((tile) => mapView.queueTile(tile));
+          mapView.releaseTiles();
+          scheduleRender();
         })
       );
 
@@ -501,12 +531,18 @@ export class GameSession {
       // The observer's bar (#607), redrawn as the worker's `observer` state changes: a new view's `gameData` follows,
       //  and replaces the game's data as a load does.
       if (observing) {
-        const observerBar = new ObserverBar(mapWrapper, transport, observer()!);
+        const observerBar = new ObserverBar(mapWrapper, transport, observer()!),
+          // The whole map is nobody's game (#613): the player's panel would show whoever shapes the payload.
+          showPlayer = (state: ObserverState): void => {
+            playerInfo.hidden = state.view.kind === 'world';
+          };
 
+        showPlayer(observer()!);
         transportDisposers.push(
-          transport.receive('observer', (state): void =>
-            observerBar.update(state)
-          )
+          transport.receive('observer', (state): void => {
+            observerBar.update(state);
+            showPlayer(state);
+          })
         );
       }
 
