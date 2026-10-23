@@ -2,8 +2,11 @@ import { City, GameData } from '../../types';
 import DataChanges, { instance } from '../../lib/DataChanges';
 
 export type CityWatchHandlers = {
-  /** The city changed: `city` is it as `data` holds it now. */
-  update(city: City, data: GameData): void;
+  /**
+   * The city changed: `city` is it as `data` holds it now. `goldOnly` when the player's gold changed and nothing of
+   * the city's own did.
+   */
+  update(city: City, data: GameData, goldOnly: boolean): void;
   /** The city is no longer the player's: captured or destroyed. The watch has already stopped. */
   close(): void;
 };
@@ -26,7 +29,13 @@ export const watchCity = (
   const cityId = city.id,
     playerId = city.player.id,
     find = (data: GameData): City | undefined =>
-      (data.player?.cities ?? []).find(({ id }) => id === cityId);
+      (data.player?.cities ?? []).find(({ id }) => id === cityId),
+    ownIds = (city: City): string[] => [
+      city.id,
+      city.build.id,
+      city.growth.id,
+      ...city.units.map((unit) => unit.id),
+    ];
 
   // Held to read the ids from: refilled in place by each rebuild, replaced by the one `data` holds after each update,
   //  as a rebuild of everything leaves it stale.
@@ -35,15 +44,12 @@ export const watchCity = (
   const unwatchers = [
       changes.watch(
         () => [
-          current.id,
-          current.build.id,
-          current.growth.id,
-          ...current.units.map((unit) => unit.id),
+          ...ownIds(current),
           ...current.player.treasuries
             .filter((treasury) => treasury.yield._ === 'Gold')
             .map((treasury) => treasury.id),
         ],
-        (data) => {
+        (data, changed) => {
           const updatedCity = find(data);
 
           if (!updatedCity) {
@@ -55,7 +61,12 @@ export const watchCity = (
 
           current = updatedCity;
 
-          update(updatedCity, data);
+          update(
+            updatedCity,
+            data,
+            changed !== null &&
+              !ownIds(updatedCity).some((id) => changed.has(id))
+          );
         }
       ),
       changes.watch(

@@ -11,7 +11,11 @@ import { GameData } from '../types';
 
 /** The ids a watcher shows, read at notify time, after the refill. */
 export type WatchedIds = () => Iterable<string>;
-export type ChangeHandler = (data: GameData) => void;
+/** `changed` is every id that changed since the last render, or `null` after a rebuild of everything. */
+export type ChangeHandler = (
+  data: GameData,
+  changed: ReadonlySet<string> | null
+) => void;
 
 type Watcher = {
   ids: WatchedIds;
@@ -75,7 +79,7 @@ export class DataChanges {
       //  others or the dispatch, so the render goes on.
       try {
         if (everything || intersects(watcher.ids(), changed)) {
-          watcher.handler(data);
+          watcher.handler(data, everything ? null : changed);
         }
       } catch (error) {
         console.error(error);

@@ -573,7 +573,11 @@ export class City extends Window {
 
     if (!readOnly) {
       this.#unwatch = watchCity(city, {
-        update: (updatedCity) => {
+        update: (updatedCity, _data, goldOnly) => {
+          // Read before the redraw, which takes away whatever had the focus inside the screen.
+          const focusedWindow =
+            document.activeElement?.closest('dialog.window') ?? null;
+
           this.#city = updatedCity;
 
           this.update(
@@ -593,12 +597,13 @@ export class City extends Window {
           // The specialists drawn now are the city's latest, so they can be changed again.
           this.#specialistChanging = false;
 
-          // Not from a window open over the screen, a production picker or a confirmation, where the next Enter is
-          //  meant for that window (#484).
-          const focusedWindow =
-            document.activeElement?.closest('dialog.window') ?? null;
-
-          if (focusedWindow === null || focusedWindow === this.element()) {
+          // Back to the screen if the redraw took it from inside it. Not from a window open over the screen, a
+          //  production picker or a confirmation, where the next Enter is meant for that window (#484); and for a
+          //  change to the player's gold alone, which can come at any time, not from anywhere else either (#503).
+          if (
+            focusedWindow === this.element() ||
+            (focusedWindow === null && !goldOnly)
+          ) {
             this.element().focus();
           }
 

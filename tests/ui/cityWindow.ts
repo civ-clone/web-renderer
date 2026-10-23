@@ -1,8 +1,9 @@
 // The open city screen's own handling of keys, clicks and updates (#484), with the real `City` window built under
 //  linkedom: Enter on a focused button doesn't close the screen; a second specialist change before the city is updated
 //  is not sent, naming a specialist the city no longer has; an update doesn't take the focus from a window open over
-//  the screen; and the production picker opens once however often it is asked for while the worker answers, and not
-//  at all once the screen has closed. The production action's picker opens once too.
+//  the screen, nor a change to the player's gold alone from anywhere but the screen itself; and the production picker
+//  opens once however often it is asked for while the worker answers, and not at all once the screen has closed. The
+//  production action's picker opens once too.
 // The turns the screen says growth or production will take (#489): never, for a city with nothing to spare or short.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
@@ -81,7 +82,7 @@ const player = {
       attributes: [{ name: 'colors', value: ['#ffffff', '#000000'] }],
     },
     world: { width: 10, height: 10, tiles: [] },
-    treasuries: [],
+    treasuries: [{ id: 'Treasury-1', yield: { _: 'Gold' }, value: 10 }],
     government: { _: 'Despotism' },
   },
   // A city of size 4 with two entertainers, as the screen reads it.
@@ -119,9 +120,9 @@ const player = {
       build: { ...city.build, city },
     }) as unknown as CityData;
   },
-  // The city as an update leaves it, drawn on the next render.
-  update = (city: CityData): void => {
-    dataChanges.collect([city.id]);
+  // The city as an update leaves it, drawn on the next render: one of the city's own, or one to the player's gold alone.
+  update = (city: CityData, changedIds: string[] = [city.id]): void => {
+    dataChanges.collect(changedIds);
     dataChanges.notify({ player: { cities: [city] } } as unknown as GameData);
   };
 
@@ -234,6 +235,38 @@ const run = async (): Promise<void> => {
   update(cityData(['S-3', 'S-5']));
 
   expect('and takes it back from the page', focusTaken, 1);
+
+  // A change to the player's gold alone, which can come at any time: the screen keeps the focus it had, and takes it
+  //  from nowhere else, the map or the rest of the page (#503). Each check counts the focus taken by its own update.
+  const focusesTaken = (
+    focus: Element | null,
+    changedIds?: string[]
+  ): number => {
+    const before = focusTaken;
+
+    focused = focus;
+    update(cityData(['S-3', 'S-5']), changedIds);
+
+    return focusTaken - before;
+  };
+
+  expect(
+    'a change to the gold alone does not take the focus from the page',
+    focusesTaken(document.body, ['Treasury-1']),
+    0
+  );
+  expect(
+    'but gives it back to the screen when the redraw took it from inside',
+    focusesTaken(screen.element().querySelector('div.build button'), [
+      'Treasury-1',
+    ]),
+    1
+  );
+  expect(
+    'while a change of its own takes it from the page',
+    focusesTaken(document.body),
+    1
+  );
 
   picker.remove();
   screen.close();
