@@ -318,8 +318,9 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
 
-  // The layers still ask for the sprites by the names these templates give: each template, with its placeholders as
-  //  `${…}`, is in the layer's code.
+  // The units layer still asks for its sprites by the name its template gives: the template, with its placeholders as
+  //  `${…}`, is in the code (#56 d3 moves it to the descriptor). `Landscape` and `Fog` draw from the descriptor itself,
+  //  as tests/ui/tileFamilies.ts shows.
   const source = (file: string): string =>
       fs.readFileSync(
         path.join(process.cwd(), 'src', 'js', 'UI', ...file.split('/')),
@@ -332,24 +333,16 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
           .map((part) => part.replace(/[.*+?^$()|[\]\\]/g, '\\$&'))
           .join('\\$\\{[^}]+\\}')
       ),
-    landscape = source('components/Map/Landscape.ts'),
-    fog = source('components/Map/Fog.ts'),
     renderUnit = source('lib/renderUnit.ts');
 
   expect(
-    "the layers' code builds the names the templates give",
+    "the units layer's code builds the name the template gives",
     [
-      asCode(families.terrain.sprite).test(landscape),
-      asCode(families.terrain.isolated as string).test(landscape),
-      asCode(families.riverMouth.sprite).test(landscape),
-      asCode(families.road.sprite).test(landscape),
-      asCode(families.railroad.sprite).test(landscape),
-      asCode(families.fog.sprite).test(fog),
       asCode(units.sprite).test(renderUnit),
       // And a template the code does not use is not found.
-      asCode('terrain/{terrain}-{dirs}').test(landscape),
+      asCode('units/{unit}-{dirs}').test(renderUnit),
     ],
-    [true, true, true, true, true, true, true, false]
+    [true, false]
   );
   expect(
     'and the colour keys are the ones the code swaps',
@@ -577,6 +570,120 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       )
     ),
     'Tileset "civ1": families.coast must have a strip: only a coast cut from one strip can be drawn yet.'
+  );
+  const withFamily = (key: string, family: unknown) =>
+    civ1With({ families: { ...civ1.families, [key]: family } });
+
+  expect(
+    "a coast whose order is not a square tile's eight neighbours, once each, is refused",
+    [
+      withCoast({ ...civ1.families.coast, order: undefined }),
+      withCoast({
+        ...civ1.families.coast,
+        order: ['w', 'nw', 'n', 'ne', 'e', 'se', 's', 's'],
+      }),
+      withCoast({
+        ...civ1.families.coast,
+        order: ['ne', 'e', 'se', 'sw', 'w', 'nw'],
+      }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    Array(3).fill(
+      `Tileset "civ1": families.coast.order must list each of a square tile's eight neighbours (n, ne, e, se, s, sw, w, nw) once, as a coast strip is cut for them.`
+    )
+  );
+  expect(
+    'and a coast in another order is read',
+    thrown(() =>
+      validateDescriptor(
+        withCoast({
+          ...civ1.families.coast,
+          order: [...civ1.families.coast.order].reverse(),
+        })
+      )
+    ),
+    null
+  );
+  expect(
+    'a map family the map cannot draw is refused',
+    [
+      civ1With({ families: { ...civ1.families, base: { land: 'x' } } }),
+      withFamily('fog', undefined),
+      withFamily('hut', { sprite: '' }),
+      withFamily('terrain', { ...civ1.families.terrain, method: 'corners' }),
+      withFamily('road', { ...civ1.families.road, method: 'dither' }),
+      withFamily('riverMouth', {
+        ...civ1.families.riverMouth,
+        neighbours: undefined,
+      }),
+      withFamily('railroad', {
+        ...civ1.families.railroad,
+        isolated: { dot: '#000', size: 0 },
+      }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": families.base must name the land and ocean sprites.',
+      'Tileset "civ1": families.fog must be an object.',
+      'Tileset "civ1": families.hut.sprite must name a sprite.',
+      'Tileset "civ1": families.terrain.method "corners" cannot be drawn yet (#92).',
+      'Tileset "civ1": families.road.method "dither" cannot be drawn yet (#92).',
+      'Tileset "civ1": families.riverMouth.neighbours must be "edges" or "all".',
+      'Tileset "civ1": families.railroad.isolated must be a sprite, or a dot with a colour and a whole size of 1 px or more.',
+    ]
+  );
+  expect(
+    'and so is a family whose names or method the map cannot fill or follow, rather than failing on every tile',
+    [
+      // `{dir}` is for `edges`; a bitmask's directions are `{dirs}`.
+      withFamily('terrain', {
+        ...civ1.families.terrain,
+        sprite: 'terrain/{terrain}_{dir}',
+      }),
+      withFamily('special', {
+        ...civ1.families.special,
+        sprite: 'x/{terrain}',
+      }),
+      withFamily('terrain', {
+        ...civ1.families.terrain,
+        isolated: 'terrain/{terrain}_{dirs}',
+      }),
+      withFamily('fog', { sprite: 'map/fog' }),
+      withFamily('mine', { ...civ1.families.mine, method: 'edges' }),
+      withFamily('road', {
+        ...civ1.families.road,
+        isolated: { dot: '', size: 2 },
+      }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": families.terrain.sprite has {dir}, but the map only fills {terrain}, {dirs} here.',
+      'Tileset "civ1": families.special.sprite has {terrain}, but the map only fills {special} here.',
+      'Tileset "civ1": families.terrain.isolated must name a sprite with no placeholders but {terrain}.',
+      'Tileset "civ1": families.fog.method must be "bitmask" or "edges": it joins its neighbours.',
+      'Tileset "civ1": families.mine is one sprite, drawn whatever its neighbours: it has no method.',
+      'Tileset "civ1": families.road.isolated must be a sprite, or a dot with a colour and a whole size of 1 px or more.',
+    ]
+  );
+  expect(
+    'and so are words, skips, joins and anchors that are not what the map reads',
+    [
+      civ1With({ names: { ...civ1.names, terrain: undefined } }),
+      civ1With({ names: { ...civ1.names, special: { 'Forest:Game': 1 } } }),
+      withFamily('terrain', { ...civ1.families.terrain, skip: 'Ocean' }),
+      withFamily('terrain', {
+        ...civ1.families.terrain,
+        matches: { River: 'River' },
+      }),
+      withFamily('special', {
+        ...civ1.families.special,
+        anchors: { Shield: { x: 4 } },
+      }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": names.terrain must map engine names to words in sprite names.',
+      'Tileset "civ1": names.special must map engine names to words in sprite names.',
+      'Tileset "civ1": families.terrain.skip must list terrain names.',
+      'Tileset "civ1": families.terrain.matches must list, for each terrain, what joins it.',
+      'Tileset "civ1": families.special.anchors must give a whole x and y in px for each name.',
+    ]
   );
   expect(
     'a placeholder only takes a value it was given',

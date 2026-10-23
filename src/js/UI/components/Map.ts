@@ -12,6 +12,7 @@ import {
   setPreloadContainer,
 } from '../lib/getPreloadedImage';
 import World from './World';
+import { TilesetDescriptor } from '../tilesets/TilesetDescriptor';
 import currentTileset from '../lib/tilesets';
 import { imageSize } from '../lib/imageSize';
 import projectionFor from '../lib/projectionFor';
@@ -242,6 +243,11 @@ export class Map implements IMap {
     return this.#tileSize * this.#scale;
   }
 
+  /** The tileset this layer draws with: where its tiles go, and the sprites and how they are put together (#56). */
+  protected tileset(): TilesetDescriptor {
+    return currentTileset();
+  }
+
   update(tilesToUpdate: Tile[]): void {
     if (this.#byRegion()) {
       this.redrawTiles(tilesToUpdate);
@@ -291,7 +297,7 @@ export class Map implements IMap {
   }
 
   protected getPreloadedImage(path: string): CanvasImageSource {
-    return getPreloadedImage(path);
+    return getPreloadedImage(path, this.tileset());
   }
 
   protected markDirty(
@@ -425,7 +431,7 @@ export class Map implements IMap {
   protected projection(): Projection {
     if (this.#projection === null) {
       this.#projection = projectionFor(
-        currentTileset(),
+        this.tileset(),
         this.#world,
         this.tileSize(),
         this.#wrapVertical

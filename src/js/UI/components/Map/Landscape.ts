@@ -1,7 +1,6 @@
 import { EntityInstance, NeighbourDirection, Tile } from '../../types';
 import { CoastStrip } from '../../tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
-import currentTileset from '../../lib/tilesets';
 import { isDrawable } from '../../lib/imageSize';
 import { onPreloadedImagesChanged } from '../../lib/getPreloadedImage';
 import { s } from '@dom111/element';
@@ -10,13 +9,6 @@ type Improvement = 'Mine' | 'Pollution' | 'Railroad' | 'Road';
 
 type ImprovementLookup = {
   [key in Improvement]: boolean;
-};
-
-// Civ1 gives Forest and Tundra the same special, Game, but draws it as a doe on
-// Forest and an antlered beast on Tundra (#69). Keyed on `Terrain:Feature`;
-// anything not listed uses the sprite named after the feature.
-const specialSprites: { [key: string]: string } = {
-  'Forest:Game': 'doe',
 };
 
 // The composed coast tile is a pure function of the tileset and the 8-neighbour
@@ -129,8 +121,11 @@ export class Landscape extends TerrainAbstract {
   }
 
   protected renderLand(tile: Tile, offsetX: number, offsetY: number): void {
+    const tileset = this.tileset(),
+      { base, coast, riverMouth } = tileset.families;
+
     if (tile.isLand) {
-      this.drawImage('terrain/land', offsetX, offsetY);
+      this.drawImage(base.land, offsetX, offsetY);
 
       return;
     }
@@ -139,39 +134,35 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    this.drawImage('terrain/ocean', offsetX, offsetY);
+    this.drawImage(base.ocean, offsetX, offsetY);
 
     if (!tile.isCoast) {
       return;
     }
 
-    const sprite = this.getPreloadedImage(
-        'terrain/coast_sprite'
-      ) as HTMLImageElement,
+    const { order, strip } = coast,
+      sprite = strip
+        ? (this.getPreloadedImage(strip.sprite) as HTMLImageElement)
+        : null,
       // formula from: http://forums.civfanatics.com/showpost.php?p=13507808&postcount=40
       // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
-      // ocean tile. Starting with the tile to the left as the least significant bit and
-      // going clockwise. This order is how Civ1's coast sprite is laid out, not the
-      // topology's, so it is spelled out here: the tileset's sprites decide it (#92).
-      bitmask =
-        (this.world().getNeighbour(tile, 'w').isLand ? 1 : 0) |
-        (this.world().getNeighbour(tile, 'nw').isLand ? 2 : 0) |
-        (this.world().getNeighbour(tile, 'n').isLand ? 4 : 0) |
-        (this.world().getNeighbour(tile, 'ne').isLand ? 8 : 0) |
-        (this.world().getNeighbour(tile, 'e').isLand ? 16 : 0) |
-        (this.world().getNeighbour(tile, 'se').isLand ? 32 : 0) |
-        (this.world().getNeighbour(tile, 's').isLand ? 64 : 0) |
-        (this.world().getNeighbour(tile, 'sw').isLand ? 128 : 0);
-
-    const tileset = currentTileset(),
-      { strip } = tileset.families.coast;
+      // ocean tile, in the order the tileset gives, least significant first. Civ1's starts
+      // with the tile to the left and goes clockwise, as its coast sprite is laid out.
+      bitmask = order.reduce(
+        (bitmask: number, direction: string, bit: number): number =>
+          this.world().getNeighbour(tile, direction as NeighbourDirection)
+            .isLand
+            ? bitmask | (1 << bit)
+            : bitmask,
+        0
+      );
 
     // There is at least one surrounding tile that is not ocean, so we need
     // to render coast. The sprite check covers an early render reaching an
     // image that has not decoded yet, which would be an empty coast tile
     // cached for the rest of the session. Only a coast cut from one strip, as
     // Civ1's is, can be drawn yet (#92).
-    if (bitmask > 0 && strip && isDrawable(sprite)) {
+    if (bitmask > 0 && strip && sprite && isDrawable(sprite)) {
       this.putImage(
         buildCoastTile(sprite, bitmask, tileset.id, strip),
         offsetX,
@@ -179,11 +170,16 @@ export class Landscape extends TerrainAbstract {
       );
     }
 
-    this.filterNeighbours(
-      tile,
-      (tile: Tile): boolean => tile.terrain._ === 'River'
-    ).forEach((direction) =>
-      this.drawImage(`terrain/river_mouth_${direction}`, offsetX, offsetY)
+    this.drawFamily(
+      riverMouth,
+      this.filterNeighbours(
+        tile,
+        (tile: Tile): boolean => tile.terrain._ === 'River',
+        this.familyDirections(riverMouth)
+      ),
+      {},
+      offsetX,
+      offsetY
     );
   }
 
@@ -200,33 +196,46 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    this.drawImage(`improvements/irrigation`, offsetX, offsetY);
+    this.drawFamily(
+      this.tileset().families.irrigation,
+      [],
+      {},
+      offsetX,
+      offsetY
+    );
   }
 
   protected renderTerrain(tile: Tile, offsetX: number, offsetY: number): void {
-    // Ocean is covered with the land/ocean stuff above and if we re-do here, we lose the coastline
-    if (tile.terrain._ === 'Ocean') {
+    const {
+        families: { terrain },
+        names,
+      } = this.tileset(),
+      name = tile.terrain._;
+
+    // The terrains the base and the coast already draw (Civ1's Ocean): drawn again here, they would hide the coastline.
+    if (terrain.skip?.includes(name)) {
       return;
     }
 
-    const adjoining = this.filterNeighbours(
-      tile,
-      (adjoiningTile: Tile): boolean =>
-        (tile.terrain._ === 'River' && adjoiningTile.isWater) ||
-        tile.terrain._ === adjoiningTile.terrain._
-    ).join('');
+    // What joins up with this terrain: the same terrain, unless the tileset says otherwise (`@water` is any water).
+    const matches = terrain.matches?.[name] ?? [name];
 
-    if (adjoining) {
-      this.drawImage(
-        `terrain/${tile.terrain._.toLowerCase()}_${adjoining}`,
-        offsetX,
-        offsetY
-      );
-
-      return;
-    }
-
-    this.drawImage(`terrain/${tile.terrain._.toLowerCase()}`, offsetX, offsetY);
+    this.drawFamily(
+      terrain,
+      this.filterNeighbours(
+        tile,
+        (adjoiningTile: Tile): boolean =>
+          matches.some((match) =>
+            match === '@water'
+              ? adjoiningTile.isWater
+              : adjoiningTile.terrain._ === match
+          ),
+        this.familyDirections(terrain)
+      ),
+      { terrain: names.terrain[name] ?? name.toLowerCase() },
+      offsetX,
+      offsetY
+    );
   }
 
   protected renderImprovements(
@@ -257,33 +266,31 @@ export class Landscape extends TerrainAbstract {
       }
     );
 
-    (['Mine', 'Pollution'] as (keyof ImprovementLookup)[]).forEach(
-      (improvementName: keyof ImprovementLookup) => {
-        if (improvements[improvementName]) {
-          this.drawImage(
-            `improvements/${improvementName.toLowerCase()}`,
-            offsetX,
-            offsetY
-          );
-        }
-      }
-    );
+    const { mine, pollution, road, railroad } = this.tileset().families;
+
+    if (improvements.Mine) {
+      this.drawFamily(mine, [], {}, offsetX, offsetY);
+    }
+
+    if (improvements.Pollution) {
+      this.drawFamily(pollution, [], {}, offsetX, offsetY);
+    }
 
     // Can't have Railroad without Road!
     if (!improvements.Road) {
       return;
     }
 
-    // A road or railroad joins its neighbours every way the world's topology has (#88).
-    const directions = this.world().topology().directions(),
-      neighbouringRoad = this.filterNeighbours(
+    // A road or railroad joins its neighbours every way the tileset says, as the world's topology names them (#88).
+    const neighbouringRoad = this.filterNeighbours(
         tile,
         (adjoiningTile: Tile): boolean =>
           adjoiningTile.improvements.some(
             (improvement: EntityInstance): boolean => improvement._ === 'Road'
           ),
-        directions
+        this.familyDirections(road)
       ),
+      // Looked for on a road too: a road beside a railroad or a city is not on its own.
       neighbouringRailroad = this.filterNeighbours(
         tile,
         (adjoiningTile: Tile): boolean =>
@@ -292,56 +299,69 @@ export class Landscape extends TerrainAbstract {
             (improvement: EntityInstance): boolean =>
               improvement._ === 'Railroad'
           ),
-        directions
+        this.familyDirections(railroad)
       );
 
-    neighbouringRoad.forEach((direction: NeighbourDirection): void => {
-      if (!improvements.Railroad || !neighbouringRailroad.includes(direction)) {
-        this.drawImage(`improvements/road_${direction}`, offsetX, offsetY);
-      }
-    });
+    // No road is drawn under a railroad going the same way.
+    this.drawFamily(
+      road,
+      neighbouringRoad.filter(
+        (direction: NeighbourDirection): boolean =>
+          !improvements.Railroad || !neighbouringRailroad.includes(direction)
+      ),
+      {},
+      offsetX,
+      offsetY,
+      false
+    );
 
     if (improvements.Railroad) {
-      neighbouringRailroad.forEach((direction: NeighbourDirection): void =>
-        this.drawImage(`improvements/railroad_${direction}`, offsetX, offsetY)
+      this.drawFamily(
+        railroad,
+        neighbouringRailroad,
+        {},
+        offsetX,
+        offsetY,
+        false
       );
     }
 
-    if (neighbouringRoad.length === 0 && neighbouringRailroad.length === 0) {
-      const center = Math.floor(this.tileSize() / 2) - this.scale();
-
-      this.context().fillStyle = improvements.Railroad ? '#000' : '#8c5828';
-      // `rect()` without a `beginPath()` appends to the path the last tile
-      // left behind, so every `fill()` used to re-fill every isolated road
-      // drawn so far.
-      this.context().beginPath();
-      this.context().rect(
-        offsetX + center,
-        offsetY + center,
-        this.scale() * 2,
-        this.scale() * 2
-      );
-      this.context().fill();
+    // A road or railroad that joins nothing is drawn on its own.
+    if (neighbouringRoad.length > 0 || neighbouringRailroad.length > 0) {
+      return;
     }
+
+    this.drawFamily(
+      improvements.Railroad ? railroad : road,
+      [],
+      {},
+      offsetX,
+      offsetY
+    );
   }
 
   protected renderFeatures(tile: Tile, offsetX: number, offsetY: number): void {
+    const {
+      families: { special },
+      names,
+    } = this.tileset();
+
     tile.terrain.features.forEach((feature) => {
-      const image = `terrain/${
-        specialSprites[`${tile.terrain._}:${feature._}`] ??
-        feature._.toLowerCase()
-      }`;
+      // Civ1 gives Forest and Tundra the same special, Game, but draws it as a doe on Forest and an antlered beast on
+      //  Tundra (#69): the tileset names the ones not named after the feature, by `Terrain:Feature`.
+      const anchor = special.anchors?.[feature._];
 
-      if (feature._ === 'Shield') {
-        this.drawImage(image, offsetX, offsetY, {
-          offsetX: 4 * this.scale(),
-          offsetY: 4 * this.scale(),
-        });
-
-        return;
-      }
-
-      this.drawImage(image, offsetX, offsetY);
+      this.drawFamily(
+        special,
+        [],
+        {
+          special:
+            names.special[`${tile.terrain._}:${feature._}`] ??
+            feature._.toLowerCase(),
+        },
+        offsetX + (anchor?.x ?? 0) * this.scale(),
+        offsetY + (anchor?.y ?? 0) * this.scale()
+      );
     });
   }
 
@@ -350,7 +370,7 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    this.drawImage('map/hut', offsetX, offsetY);
+    this.drawFamily(this.tileset().families.hut, [], {}, offsetX, offsetY);
   }
 }
 

@@ -7,8 +7,18 @@ export class Fog extends TerrainAbstract {
       return;
     }
 
-    this.filterNeighbours(tile, (tile) => tile.terrain._ === 'Unknown').forEach(
-      (direction) => this.drawImage(`map/fog_${direction}`, offsetX, offsetY)
+    const { fog } = this.tileset().families;
+
+    this.drawFamily(
+      fog,
+      this.filterNeighbours(
+        tile,
+        (tile) => tile.terrain._ === 'Unknown',
+        this.familyDirections(fog)
+      ),
+      {},
+      offsetX,
+      offsetY
     );
   }
 }

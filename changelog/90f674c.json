@@ -1,0 +1,1 @@
+{"version":"0.1.0@90f674c","date":"2026-10-23T10:08:26.000Z","localChanges":["chore: the worker's client modules ask only for the registry methods they call, with their comments brought up to date"],"externalChanges":{}}

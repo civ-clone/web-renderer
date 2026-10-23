@@ -1,4 +1,8 @@
-import { TopologyId, topologyIds } from '@civ-clone/core-world/topologies';
+import {
+  TopologyId,
+  createTopology,
+  topologyIds,
+} from '@civ-clone/core-world/topologies';
 
 // What a tileset says about itself (#56, #92): the grid it is drawn for, its native tile size, the map scales it can be
 //  shown at, the sprites it has, how the sprites for each kind of thing are named and put together, and how player
@@ -82,7 +86,7 @@ export interface CornersFamily {
   sprite?: string;
   corners?: string[];
   /** The order of the neighbours in the bitmask, least significant first. */
-  order?: string[];
+  order: string[];
 }
 
 export interface TilesetFamilies {
@@ -178,6 +182,29 @@ export interface TilesetDescriptor {
   cities: TilesetCities;
 }
 
+/**
+ * The families the map draws with `drawFamily`, besides the base and the coast: whether each joins its neighbours, and
+ * the placeholders the map fills in its names besides the directions (`{dir}` for `edges`, `{dirs}` for `bitmask`).
+ */
+const mapFamilies: {
+  [key in keyof TilesetFamilies]?: { joins: boolean; values: string[] };
+} = {
+  terrain: { joins: true, values: ['terrain'] },
+  riverMouth: { joins: true, values: [] },
+  road: { joins: true, values: [] },
+  railroad: { joins: true, values: [] },
+  fog: { joins: true, values: [] },
+  irrigation: { joins: false, values: [] },
+  mine: { joins: false, values: [] },
+  pollution: { joins: false, values: [] },
+  special: { joins: false, values: ['special'] },
+  hut: { joins: false, values: [] },
+};
+
+/** The placeholders in a sprite name: `terrain/{terrain}_{dirs}` has `terrain` and `dirs`. */
+const placeholders = (template: string): string[] =>
+  Array.from(template.matchAll(/\{([a-z]+)\}/gi), ([, name]) => name);
+
 const isObject = (value: unknown): value is { [key: string]: unknown } =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -186,6 +213,11 @@ const isWholeNumber = (value: unknown, minimum: number): value is number =>
 
 const isStringList = (value: unknown): value is string[] =>
   Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+const isObjectOf = (
+  value: unknown,
+  isItem: (item: unknown) => boolean
+): boolean => isObject(value) && Object.values(value).every(isItem);
 
 /**
  * `json` as a tileset descriptor, once it is one this renderer can draw from: the schema it reads, a grid the engine
@@ -394,8 +426,170 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
     );
   }
 
+  // The coast's bitmask has one bit per neighbour, and a strip's columns are cut for a square tile's eight (Civ1's),
+  //  so the order names each of those once. Coasts for other grids come with their packs (#94/#97).
+  const squareDirections = createTopology('square', 2, 2).directions(),
+    { order } = coast as { order?: unknown };
+
+  if (
+    !isStringList(order) ||
+    order.length !== squareDirections.length ||
+    !squareDirections.every((direction) => order.includes(direction))
+  ) {
+    refuse(
+      `families.coast.order must list each of a square tile's eight neighbours (${squareDirections.join(
+        ', '
+      )}) once, as a coast strip is cut for them.`
+    );
+  }
+
+  if (!isObject(families.base)) {
+    refuse('families.base must name the land and ocean sprites.');
+  }
+
+  const base = families.base as { [key: string]: unknown };
+
+  if (
+    typeof base.land !== 'string' ||
+    base.land === '' ||
+    typeof base.ocean !== 'string' ||
+    base.ocean === ''
+  ) {
+    refuse('families.base must name the land and ocean sprites.');
+  }
+
+  const names = json.names as { [key: string]: unknown };
+
+  // The words the map puts in sprite names, by engine name.
+  (['terrain', 'special', 'unit'] as const).forEach((kind) => {
+    if (!isObjectOf(names[kind], (word) => typeof word === 'string')) {
+      refuse(`names.${kind} must map engine names to words in sprite names.`);
+    }
+  });
+
+  // The families the map draws as `drawFamily` puts them together: one sprite, one per neighbour, or one for all of
+  //  them. `corners` and `dither` are typed for other packs, but cannot be drawn for these yet (#92). The map fills only
+  //  the placeholders it has for a family, so a name with any other is refused here rather than failing on every tile.
+  (
+    Object.entries(mapFamilies) as [
+      string,
+      { joins: boolean; values: string[] }
+    ][]
+  ).forEach(([key, { joins, values }]) => {
+    const family = families[key],
+      where = `families.${key}`;
+
+    if (!isObject(family)) {
+      refuse(`${where} must be an object.`);
+    }
+
+    const { method, neighbours, sprite, isolated, skip, matches, anchors } =
+      family as { [key: string]: unknown };
+
+    if (typeof sprite !== 'string' || sprite === '') {
+      refuse(`${where}.sprite must name a sprite.`);
+    }
+
+    if (method === 'corners' || method === 'dither') {
+      refuse(`${where}.method "${method}" cannot be drawn yet (#92).`);
+    }
+
+    if (joins && method !== 'bitmask' && method !== 'edges') {
+      refuse(
+        `${where}.method must be "bitmask" or "edges": it joins its neighbours.`
+      );
+    }
+
+    if (!joins && method !== undefined) {
+      refuse(
+        `${where} is one sprite, drawn whatever its neighbours: it has no method.`
+      );
+    }
+
+    if (joins && neighbours !== 'edges' && neighbours !== 'all') {
+      refuse(`${where}.neighbours must be "edges" or "all".`);
+    }
+
+    const given = [
+        ...values,
+        ...(method === 'bitmask'
+          ? ['dirs']
+          : method === 'edges'
+          ? ['dir']
+          : []),
+      ],
+      unknown = (template: string): string[] =>
+        placeholders(template).filter((name) => !given.includes(name));
+
+    if (unknown(sprite as string).length > 0) {
+      refuse(
+        `${where}.sprite has {${unknown(sprite as string).join(
+          '}, {'
+        )}}, but the map only fills ${
+          given.length > 0 ? `{${given.join('}, {')}}` : 'nothing'
+        } here.`
+      );
+    }
+
+    if (typeof isolated === 'string') {
+      const missing = placeholders(isolated).filter(
+        (name) => !values.includes(name)
+      );
+
+      if (isolated === '' || missing.length > 0) {
+        refuse(
+          `${where}.isolated must name a sprite with no placeholders but ${
+            values.length > 0 ? `{${values.join('}, {')}}` : 'none'
+          }.`
+        );
+      }
+    }
+
+    if (
+      isolated !== undefined &&
+      typeof isolated !== 'string' &&
+      !(
+        isObject(isolated) &&
+        typeof isolated.dot === 'string' &&
+        isolated.dot !== '' &&
+        isWholeNumber(isolated.size, 1)
+      )
+    ) {
+      refuse(
+        `${where}.isolated must be a sprite, or a dot with a colour and a whole size of 1 px or more.`
+      );
+    }
+
+    if (skip !== undefined && !isStringList(skip)) {
+      refuse(`${where}.skip must list terrain names.`);
+    }
+
+    if (matches !== undefined && !isObjectOf(matches, isStringList)) {
+      refuse(`${where}.matches must list, for each terrain, what joins it.`);
+    }
+
+    if (
+      anchors !== undefined &&
+      !isObjectOf(
+        anchors,
+        (anchor) =>
+          isObject(anchor) &&
+          Number.isInteger(anchor.x) &&
+          Number.isInteger(anchor.y)
+      )
+    ) {
+      refuse(`${where}.anchors must give a whole x and y in px for each name.`);
+    }
+  });
+
   return json as unknown as TilesetDescriptor;
 };
+
+// Each template split once into its text and its placeholders, `['terrain/', 'terrain', '_', 'dirs', '']`: the map
+//  names a sprite this way for every one it draws, and a regular expression each time cost several times the draw.
+//  Keyed by the descriptors' own templates, a few dozen of them, so it stays small: never pass it a name built at
+//  draw time.
+const templateParts = new Map<string, string[]>();
 
 /**
  * `template` with each `{placeholder}` replaced from `values`: `expandName('terrain/{terrain}_{dirs}', { terrain:
@@ -405,14 +599,28 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
 export const expandName = (
   template: string,
   values: { [placeholder: string]: string }
-): string =>
-  template.replace(/\{([a-z]+)\}/gi, (match, placeholder: string) => {
+): string => {
+  let parts = templateParts.get(template);
+
+  if (parts === undefined) {
+    parts = template.split(/\{([a-z]+)\}/i);
+    templateParts.set(template, parts);
+  }
+
+  let name = parts[0];
+
+  for (let i = 1; i < parts.length; i += 2) {
+    const placeholder = parts[i];
+
     if (!Object.prototype.hasOwnProperty.call(values, placeholder)) {
-      throw new Error(`No value for ${match} in "${template}".`);
+      throw new Error(`No value for {${placeholder}} in "${template}".`);
     }
 
-    return values[placeholder];
-  });
+    name += values[placeholder] + parts[i + 1];
+  }
+
+  return name;
+};
 
 /**
  * Where `tileset` keeps the sprite it calls `name`: `prefix + name + ext`, the record's `name` in the asset store and
