@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
-import CustomiseWorldWindow from './CustomiseWorldWindow';
 import EarthWindow from './EarthWindow';
+import GameSetupWindow from './GameSetupWindow';
 import HallOfFameWindow from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import NewGameWindow from './NewGameWindow';
@@ -38,17 +38,32 @@ export class MainMenu extends Element {
       h(
         s(
           '<nav></nav>',
-          h(
-            s(
-              `<button autofocus${hasAssets ? '' : ' hidden'}>${t(
-                'MainMenu.new-game'
-              )}</button>`
+          // New Game as it has always been, and beside it the game setup (#605), for seats, civilizations and the rest.
+          s(
+            `<div class="row"></div>`,
+            h(
+              s(
+                `<button autofocus${hasAssets ? '' : ' hidden'}>${t(
+                  'MainMenu.new-game'
+                )}</button>`
+              ),
+              {
+                click: () => {
+                  NewGameWindow.ask(this.#transport, () => this.remove());
+                },
+              }
             ),
-            {
-              click: () => {
-                NewGameWindow.ask(this.#transport, () => this.remove());
-              },
-            }
+            h(
+              s(
+                `<button class="secondary"${hasAssets ? '' : ' hidden'}>${t(
+                  'MainMenu.customise'
+                )}</button>`
+              ),
+              {
+                click: () =>
+                  GameSetupWindow.ask(this.#transport, () => this.remove()),
+              }
+            )
           ),
           h(
             s(
@@ -68,8 +83,11 @@ export class MainMenu extends Element {
               )}</button>`
             ),
             {
+              // The same setup, with the world's exact size and land to hand (#605).
               click: () =>
-                CustomiseWorldWindow.ask(this.#transport, () => this.remove()),
+                GameSetupWindow.ask(this.#transport, () => this.remove(), {
+                  advanced: true,
+                }),
             }
           ),
           h(
@@ -101,12 +119,17 @@ export class MainMenu extends Element {
               return;
             }
 
-            if (key === 'ArrowDown' && currentTarget.nextElementSibling) {
-              (currentTarget.nextElementSibling as HTMLElement).focus();
-            }
+            // In the order shown, whichever row a button is in.
+            const buttons = Array.from(
+                document.querySelectorAll<HTMLElement>(
+                  '#mainmenu nav button:not([hidden])'
+                )
+              ),
+              index = buttons.indexOf(currentTarget as HTMLElement),
+              step = key === 'ArrowDown' ? 1 : key === 'ArrowUp' ? -1 : 0;
 
-            if (key === 'ArrowUp' && currentTarget.previousElementSibling) {
-              (currentTarget.previousElementSibling as HTMLElement).focus();
+            if (step !== 0 && buttons[index + step]) {
+              buttons[index + step].focus();
             }
           },
         }
