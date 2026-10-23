@@ -1,5 +1,6 @@
 import { Request, RequestArgs, RequestReturn } from './Request';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
+import { CivilizationOption } from './Requests/Civilizations';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
 import { CivilizationScore } from './lib/civilizationScore';
@@ -97,6 +98,8 @@ declare global {
     // An action has been handled and the patch with its result has gone, so the UI can settle a move it drew ahead of
     //  the answer (#326).
     actionHandled: TransportData<TransportHandledAction, never>;
+    // The AI clients a computer seat can be given, for the game setup (#604).
+    aiClients: TransportData<string[], null>;
     cheat: TransportData<never, TransportCheatData>;
     cheatAdvances: TransportData<string[], string | null>;
     cheatPlayers: TransportData<CheatPlayersResult[], null>;
@@ -106,6 +109,8 @@ declare global {
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     // The player's Civilization Score (#149).
     civilizationScore: TransportData<CivilizationScore, null>;
+    // The civilizations still to be chosen, with their leaders, for the game setup (#604).
+    civilizations: TransportData<CivilizationOption[], null>;
     // The difficulty levels the rules offer, for the new game menu (#173).
     difficulties: TransportData<DifficultyOption[], null>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.

@@ -18,6 +18,15 @@ import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { save } from '@civ-clone/core-save-game/save';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
+import {
+  Seat,
+  SeatChoice,
+  TakenCivilizations,
+  applySeatChoice,
+  resolveSeatChoice,
+  seatsFromOptions,
+} from './lib/seats';
 import hasMet from './lib/hasMet';
 import { playerProgress, turnProgress } from './lib/progress';
 import registries from './Client/registries';
@@ -26,8 +35,15 @@ export interface IGame {
   start(): void;
 }
 
+// A seat with its choices resolved and its AI client checked, ready to make a player and a client from.
+type ResolvedSeat = {
+  seat: Seat;
+  choice: SeatChoice;
+};
+
 export class Game implements IGame {
   #automateLocalPlayer: boolean = false;
+  #eventsBound: boolean = false;
   #localPlayerClient: DataTransferClient | null = null;
   #transport: Transport<TransportDataMap>;
 
@@ -41,7 +57,10 @@ export class Game implements IGame {
         return;
       }
 
-      clientRegistryInstance.register(this.#createClient(player, false));
+      // The host's default AI, whatever the seats chose (#604): a player brought in mid-game has no seat.
+      clientRegistryInstance.register(
+        this.#createClient(player, { kind: 'computer' })
+      );
     });
 
     // A sign of life as each player's turn starts (#470), so that the page, waiting on a request while the AI players
@@ -122,8 +141,34 @@ export class Game implements IGame {
       )
     );
 
+    // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer
+    //  seat can be given. Answered as `difficulties` is, with the plugins imported first.
+    answer(transport, 'civilizations', () =>
+      import('../plugins').then(() =>
+        defaultGame.civilizations.entries().map((CivilizationType) => ({
+          name: typeNameOf(CivilizationType),
+          leaders: defaultGame.leaders
+            .getByCivilization(CivilizationType)
+            .map((LeaderType) => typeNameOf(LeaderType)),
+        }))
+      )
+    );
+
+    answer(transport, 'aiClients', () =>
+      import('../plugins').then(() =>
+        this.#availableAIClients().map((AIClientType) =>
+          typeNameOf(AIClientType)
+        )
+      )
+    );
+
     transport.receive('start', () => {
-      this.bindEvents();
+      // Once: a start refused for its seats (#604) can be tried again on the same game.
+      if (!this.#eventsBound) {
+        this.#eventsBound = true;
+        this.bindEvents();
+      }
+
       this.start();
     });
 
@@ -208,15 +253,87 @@ export class Game implements IGame {
     );
   }
 
-  #createClient(player: Player, human: boolean): Client {
+  // The AI clients a computer seat can be given (#604): the host's own default first, then the rest registered with
+  //  core-ai-client, leaving out the barbarians' and any base another one extends (core-strategy-ai-client registers
+  //  `StrategyAIClient`). What the `aiClients` request lists, and all `#aiClientType` accepts.
+  #availableAIClients(): (new (player: Player) => Client)[] {
+    const registered = aiClientRegistryInstance.entries();
+
+    return [
+      SimpleAIClient,
+      ...registered.filter(
+        (AIClientType) =>
+          AIClientType !== SimpleAIClient &&
+          AIClientType !== BarbarianClient &&
+          !registered.some(
+            (Other) =>
+              Other !== AIClientType && Other.prototype instanceof AIClientType
+          )
+      ),
+    ] as unknown as (new (player: Player) => Client)[];
+  }
+
+  // The AI client a computer seat asked for, by class name; the host's own default when it asked for none.
+  #aiClientType(name?: string): new (player: Player) => Client {
+    if (name === undefined) {
+      return SimpleAIClient;
+    }
+
+    const AIClientType = this.#availableAIClients().find(
+      (Available) => typeNameOf(Available) === name
+    );
+
+    if (!AIClientType) {
+      throw new TypeError(`There is no AI client called '${name}'.`);
+    }
+
+    return AIClientType;
+  }
+
+  // Every seat resolved before any player exists (#604): a seat that can't be filled stops the game before it starts,
+  //  and says why, rather than leaving a partly set up game running (#470).
+  #resolveSeats(): ResolvedSeat[] {
+    const seats = seatsFromOptions(
+        engine.option('seats'),
+        engine.option('players')
+      ),
+      taken: TakenCivilizations = new Set();
+
+    if (
+      seats.filter((seat: Seat): boolean => seat.kind === 'human').length > 1
+    ) {
+      throw new TypeError(
+        'Only one human seat can be played here for now (civ-clone/web-renderer#161).'
+      );
+    }
+
+    return seats.map((seat: Seat): ResolvedSeat => {
+      if (seat.kind === 'computer') {
+        // Checked now, so that a wrong name is refused before anything starts; `#createClient` looks it up again.
+        this.#aiClientType(seat.ai);
+      }
+
+      return { seat, choice: resolveSeatChoice(seat, defaultGame, taken) };
+    });
+  }
+
+  #createClient(player: Player, seat: Seat): Client {
     // The barbarians (#169) are never the human's: `civ1-barbarians` spawns their player, and it asks for a client
     //  with `player:spawned` like any player added mid-game.
     if (isBarbarian(player)) {
       return new BarbarianClient(player);
     }
 
-    if (!human) {
-      return new SimpleAIClient(player);
+    if (seat.kind !== 'human') {
+      return new (this.#aiClientType(seat.ai))(player);
+    }
+
+    // One human player on this transport until each seat has its own (#161): a second one, in a seat list or a
+    //  save, is refused rather than quietly taking the page over.
+    if (this.#localPlayerClient !== null) {
+      throw new TypeError(
+        'Only one human player can be played here for now (civ-clone/web-renderer#161).'
+      );
     }
 
     const client = new DataTransferClient(player, this.#transport, {
@@ -241,7 +358,7 @@ export class Game implements IGame {
         loadGame(
           file,
           (player: Player, human: boolean): Client =>
-            this.#createClient(player, human)
+            this.#createClient(player, { kind: human ? 'human' : 'computer' })
         )
       )
       .then((): void =>
@@ -256,6 +373,18 @@ export class Game implements IGame {
   }
 
   start(): void {
+    let seats: ResolvedSeat[];
+
+    try {
+      seats = this.#resolveSeats();
+    } catch (error: unknown) {
+      console.error(error);
+
+      this.#transport.send('workerError', { message: describeError(error) });
+
+      return;
+    }
+
     engine.on('engine:start', (): void => {
       // The manifest is what `save` writes into the file and `hydrate` checks
       // it against, and the class registry is what turns a saved `type` back
@@ -280,19 +409,19 @@ export class Game implements IGame {
     });
 
     engine.on('engine:start', (): void => {
-      new Array(parseInt(engine.option('players'), 10))
-        .fill(0)
-        .forEach((value: 0, i: number) => {
-          // TODO: This is pretty basic.
-          const player = new Player(),
-            client = this.#createClient(player, i === 0);
+      // The seats the game was set up with (#604), or the `players` count as one human and the rest computers.
+      seats.forEach(({ seat, choice }: ResolvedSeat): void => {
+        const player = new Player(),
+          client = this.#createClient(player, seat);
 
-          // The client first, so the rules that run as the player is added know whether a person plays it.
-          clientRegistryInstance.register(client);
-          playerRegistryInstance.register(player);
+        applySeatChoice(player, choice, defaultGame);
 
-          this.#transport.send('notification', `generating world...`);
-        });
+        // The client first, so the rules that run as the player is added know whether a person plays it.
+        clientRegistryInstance.register(client);
+        playerRegistryInstance.register(player);
+      });
+
+      this.#transport.send('notification', `generating world...`);
     });
 
     // we don't want to try and use FS objects so replace this call with the direct events instead.
