@@ -1,17 +1,23 @@
 import { Player, Unit as UnitData, UnitAction } from '../types';
 import ActionWindow from '../components/ActionWindow';
 import ConfirmationWindow from '../components/ConfirmationWindow';
+import NotificationWindow from '../components/NotificationWindow';
 import SelectionWindow from '../components/SelectionWindow';
+import Window from '../components/Window';
 import { t } from 'i18next';
 
-// The windows a unit action can need before it's sent: a sneak attack's confirmation, a Caravan's "Will you?" (#57),
-//  a Diplomat's arrival, incite and bribe windows (#58). Shared by the arrow keys and the unit action menu.
+// The windows a unit action can need before it's sent: a sneak attack's confirmation, a treaty partner's land (#287),
+//  a Caravan's "Will you?" (#57), a Diplomat's arrival, incite and bribe windows (#58). Shared by the arrow keys and
+//  the unit action menu.
 
 type Perform = (action: UnitAction) => void;
 
 export type CostedAction = UnitAction & { cost: number };
 
 export type EnemyAction = UnitAction & { enemy: Player };
+
+// Offered in place of an action that would break a treaty, under a Senate (#133): `action` is what was asked for.
+export type OverruledAction = UnitAction & { action: EnemyAction };
 
 const sneakActions = [
     'SneakAttack',
@@ -20,6 +26,8 @@ const sneakActions = [
     'SneakStealTechnology',
     'SneakInciteRevolt',
   ],
+  // Onto, or pillaging, a treaty partner's land (#287).
+  treatyActions = ['SneakMove', 'SneakPillage'],
   caravanActions = ['EstablishTradeRoute', 'HelpBuildWonder'],
   inciteActions = ['InciteRevolt', 'SneakInciteRevolt', 'SubvertCity'],
   // The Diplomat's arrival popup, in Civ1's order, each option standing for the actions that do it.
@@ -50,30 +58,91 @@ const cityName = (action: UnitAction): string => {
   });
 };
 
+// The action `action` stands for: what was asked for, if a Senate overrules it (#133), and otherwise itself.
+const asked = (action: UnitAction): UnitAction =>
+  action._ === 'Overruled' ? (action as OverruledAction).action : action;
+
+export const nameOf = (action: UnitAction): string => asked(action)._;
+
+// Sends `action` once the treaty is to be broken: an overruled one says so first, and is sent for the moves it spends.
+const breakTreaty = (action: UnitAction, perform: Perform): void => {
+  if (action._ !== 'Overruled') {
+    perform(action);
+
+    return;
+  }
+
+  new NotificationWindow(t('Senate.title'), t('Senate.overruled'));
+
+  perform(action);
+};
+
 export const goldOf = (player: Player): number =>
   player.treasuries?.find((treasury) => treasury.yield._ === 'Gold')?.value ??
   0;
 
-const confirmSneak = (action: EnemyAction, perform: Perform): void => {
+const confirmSneak = (action: UnitAction, perform: Perform): void => {
+  const { _: name, enemy } = asked(action) as EnemyAction;
+
   new ConfirmationWindow(
     t('SneakAttack.title'),
-    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(action._)
+    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? t('Diplomat.peace-treaty', {
-          nation: civilization(action.enemy, 'plural'),
+          nation: civilization(enemy, 'plural'),
         })
       : t('SneakAttack.body', {
-          nation: t(`${action.enemy.civilization._}.nation`, {
-            defaultValue: action.enemy.civilization._,
+          nation: t(`${enemy.civilization._}.nation`, {
+            defaultValue: enemy.civilization._,
             ns: 'civilization',
           }),
         }),
-    () => perform(action),
-    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(action._)
+    () => breakTreaty(action, perform),
+    ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? {
           okLabel: 'Diplomat.break-treaty',
           cancelLabel: 'Diplomat.cancel-action',
         }
       : {}
+  );
+};
+
+// "We have signed a peace treaty with the Babylonians! Cancel action. Break treaty." (v474.05 `F0_29f3_0c9e`): moving
+//  onto, or pillaging, a treaty partner's land (#287). The player must choose: Cancel sends the tile's `AbortMove`,
+//  which spends the move's cost as Civ1 does, if there is one.
+const treatyWindow = (
+  action: UnitAction,
+  actionsOnTile: UnitAction[],
+  perform: Perform
+): ActionWindow => {
+  const { enemy } = asked(action) as EnemyAction,
+    abort = actionsOnTile.find((tileAction) => tileAction._ === 'AbortMove');
+
+  return new ActionWindow(
+    t('Treaty.title'),
+    t('Diplomat.peace-treaty', { nation: civilization(enemy, 'plural') }),
+    {
+      canClose: false,
+      actions: {
+        primary: {
+          label: t('Diplomat.cancel-action'),
+          action: (window) => {
+            window.close();
+
+            if (abort) {
+              perform(abort);
+            }
+          },
+        },
+        break: {
+          label: t('Diplomat.break-treaty'),
+          action: (window) => {
+            window.close();
+
+            breakTreaty(action, perform);
+          },
+        },
+      },
+    }
   );
 };
 
@@ -85,12 +154,12 @@ const inciteWindow = (
   perform: Perform
 ): void => {
   const [incite] = actionsOnTile.filter((action) =>
-      ['InciteRevolt', 'SneakInciteRevolt'].includes(action._)
-    ) as CostedAction[],
+      ['InciteRevolt', 'SneakInciteRevolt'].includes(nameOf(action))
+    ),
     [subvert] = actionsOnTile.filter(
       (action) => action._ === 'SubvertCity'
     ) as CostedAction[],
-    { cost } = incite ?? subvert,
+    { cost } = (incite ? asked(incite) : subvert) as CostedAction,
     city = cityName(incite ?? subvert);
 
   new ActionWindow(
@@ -102,15 +171,15 @@ const inciteWindow = (
           label: t('Diplomat.incite.forget'),
           action: (window) => window.close(),
         },
-        ...(incite && gold >= incite.cost
+        ...(incite && gold >= cost
           ? {
               incite: {
                 label: t('Diplomat.incite.incite'),
                 action: (window) => {
                   window.close();
 
-                  incite._ === 'SneakInciteRevolt'
-                    ? confirmSneak(incite as unknown as EnemyAction, perform)
+                  nameOf(incite) === 'SneakInciteRevolt'
+                    ? confirmSneak(incite, perform)
                     : perform(incite);
                 },
               },
@@ -186,22 +255,29 @@ export const performWithPrompts = (
   actionsOnTile: UnitAction[],
   perform: Perform
 ): void => {
-  const gold = goldOf(unit.player);
+  const name = nameOf(action);
 
-  if (inciteActions.includes(action._)) {
-    inciteWindow(actionsOnTile, gold, perform);
+  // Read only for the windows that offer a price: the own-tile keys come through here too (#287).
+  if (inciteActions.includes(name)) {
+    inciteWindow(actionsOnTile, goldOf(unit.player), perform);
 
     return;
   }
 
   if (action._ === 'BribeUnit') {
-    bribeWindow(action as CostedAction, gold, perform);
+    bribeWindow(action as CostedAction, goldOf(unit.player), perform);
 
     return;
   }
 
-  if (sneakActions.includes(action._)) {
-    confirmSneak(action as EnemyAction, perform);
+  if (treatyActions.includes(name)) {
+    treatyWindow(action, actionsOnTile, perform);
+
+    return;
+  }
+
+  if (sneakActions.includes(name)) {
+    confirmSneak(action, perform);
 
     return;
   }
@@ -211,20 +287,27 @@ export const performWithPrompts = (
 
 /**
  * The window a unit arriving at a tile chooses from, if it gets one: a Diplomat arriving at a rival city chooses what
- * to do there (#58), a Caravan entering one of your cities chooses whether to stop (#57). Returns the window, or
- * `null` when there is no choice to offer, without performing anything.
+ * to do there (#58), a Caravan entering one of your cities chooses whether to stop (#57), a unit next to a treaty
+ * partner's land chooses whether to break the treaty (#287). Returns the window, or `null` when there is no choice to
+ * offer, without performing anything.
  */
 export const openArrivalWindow = (
   unit: UnitData,
   actionsOnTile: UnitAction[],
   perform: Perform
-): SelectionWindow | null => {
+): Window | null => {
+  const treaty = actionsOnTile.find((action) => nameOf(action) === 'SneakMove');
+
+  if (treaty) {
+    return treatyWindow(treaty, actionsOnTile, perform);
+  }
+
   const move = actionsOnTile.find((action) => action._ === 'Move'),
     caravan = actionsOnTile.filter((action) =>
       caravanActions.includes(action._)
     ),
     diplomat = diplomatOptions.filter(([, names]) =>
-      actionsOnTile.some((action) => names.includes(action._))
+      actionsOnTile.some((action) => names.includes(nameOf(action)))
     );
 
   if (diplomat.length > 0) {
@@ -232,7 +315,9 @@ export const openArrivalWindow = (
       t('Diplomat.arrives', {
         nation: civilization(unit.player, 'name'),
         city: cityName(
-          actionsOnTile.find((action) => diplomat[0][1].includes(action._))!
+          actionsOnTile.find((action) =>
+            diplomat[0][1].includes(nameOf(action))
+          )!
         ),
       }),
       diplomat.map(([option]) => ({
@@ -241,7 +326,9 @@ export const openArrivalWindow = (
       })),
       (choice) => {
         const [, names] = diplomat.find(([option]) => option === choice)!,
-          action = actionsOnTile.find((action) => names.includes(action._))!;
+          action = actionsOnTile.find((action) =>
+            names.includes(nameOf(action))
+          )!;
 
         performWithPrompts(unit, action, actionsOnTile, perform);
       },

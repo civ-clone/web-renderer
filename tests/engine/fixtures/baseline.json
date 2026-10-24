@@ -114,9 +114,9 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1088,
+        "total": 1099,
         "byType": {
-          "Action": 64,
+          "Action": 74,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -168,6 +168,7 @@
           "GameOver": 2,
           "Grow": 8,
           "Halted": 1,
+          "Impassable": 1,
           "Interaction": 2,
           "KingMet": 1,
           "Landed": 2,
@@ -393,9 +394,9 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1088,
+        "total": 1099,
         "byType": {
-          "Action": 64,
+          "Action": 74,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -447,6 +448,7 @@
           "GameOver": 2,
           "Grow": 8,
           "Halted": 1,
+          "Impassable": 1,
           "Interaction": 2,
           "KingMet": 1,
           "Landed": 2,
@@ -860,9 +862,9 @@
       "randomCalls": 8795,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1088,
+        "total": 1099,
         "byType": {
-          "Action": 64,
+          "Action": 74,
           "ActionPerformed": 1,
           "Activate": 3,
           "Active": 3,
@@ -914,6 +916,7 @@
           "GameOver": 2,
           "Grow": 8,
           "Halted": 1,
+          "Impassable": 1,
           "Interaction": 2,
           "KingMet": 1,
           "Landed": 2,

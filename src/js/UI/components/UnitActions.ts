@@ -6,6 +6,7 @@ import {
 import { Tile, Unit } from '../types';
 import { Element, s } from '@dom111/element';
 import { keyForAction } from '../lib/unitActionKeys';
+import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
 import { unitActions } from '../lib/unitActions';
 
@@ -46,7 +47,7 @@ export class UnitActions extends Element {
                 action,
                 unit,
                 tile,
-                t(`Action.${action._}.icon`, {
+                t(`Action.${nameOf(action)}.icon`, {
                   defaultValue: '',
                   ns: 'unit',
                 })
@@ -80,11 +81,11 @@ export class UnitActions extends Element {
     }
 
     actions.forEach((action, index) => {
-      const name = t(`Action.${action._}.name`, {
-          defaultValue: action._,
+      const name = t(`Action.${nameOf(action)}.name`, {
+          defaultValue: nameOf(action),
           ns: 'unit',
         }),
-        key = keyForAction(action._),
+        key = keyForAction(nameOf(action)),
         button = s<HTMLButtonElement>(
           `<button type="button" class="unit-action ${action._}"><canvas width="16" height="16"></canvas></button>`
         ),
@@ -93,7 +94,12 @@ export class UnitActions extends Element {
       button.title = label;
       button.setAttribute('aria-label', label);
 
-      button.addEventListener('click', () => this.#act(unit.id, action._));
+      // Through the same windows as the keys: pillaging a treaty partner's land asks first (#287).
+      button.addEventListener('click', () =>
+        performWithPrompts(unit, action, actions, (chosen) =>
+          this.#act(unit.id, chosen._)
+        )
+      );
 
       this.element().append(button);
 
