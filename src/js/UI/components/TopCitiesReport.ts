@@ -5,6 +5,7 @@ import Window from './Window';
 import { renderCitizenCounts } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // Up to ten rather than Civ1's five (#124): there are fewer early in the game.
 const limit = 10;
@@ -83,7 +84,15 @@ export class TopCitiesReport extends Window {
             ? s(`<p>${t('TopCitiesReport.empty')}</p>`)
             : s('<div></div>', ...rows.map(buildRow))
         )
-      );
+      )
+      // Not answered: the player has been told, and an empty report would only be in the way (#580).
+      .catch((error) => {
+        if (this.element().isConnected) {
+          this.close();
+        }
+
+        unlessRequestFailed(error);
+      });
   }
 }
 

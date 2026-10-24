@@ -8,6 +8,7 @@ import ObserveCity from '../../Engine/Requests/ObserveCity';
 import { ObserverState } from '../../Engine/Observer';
 import Portal from '../components/Portal';
 import Transport from '../Transport';
+import { unlessRequestFailed } from './unlessRequestFailed';
 
 export type CityOpener = {
   // Whether `city` is one that opens: the map's click moves on to the square's units otherwise.
@@ -43,5 +44,7 @@ export const observerCityOpener = (
         if (full !== null) {
           new City(full, portal, transport, { readOnly: true });
         }
-      }),
+      })
+      // Not answered: the player has been told, and no city opens (#580).
+      .catch(unlessRequestFailed),
 });

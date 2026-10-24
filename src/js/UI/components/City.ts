@@ -48,6 +48,7 @@ import isAnarchy from './lib/government';
 import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The yield rows the city screen draws. This is the screen's layout, not a rule: the groups themselves come from the
 //  engine's class ancestry.
@@ -701,6 +702,11 @@ export class City extends Window {
       available = await this.#transport.request(
         new CityBuildAvailable(this.#city.build.id)
       );
+    } catch (error) {
+      // Not answered: the player has been told, and can ask again (#580).
+      unlessRequestFailed(error);
+
+      return;
     } finally {
       this.#choosingProduction = false;
     }

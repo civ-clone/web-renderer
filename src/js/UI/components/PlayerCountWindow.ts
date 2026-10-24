@@ -2,6 +2,7 @@ import MandatorySelection from './MandatorySelection';
 import Transport from '../Transport';
 import Request from '../../Engine/Request';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 export type FinishedHandler = () => void;
 
@@ -28,12 +29,19 @@ export class PlayerCountWindow extends MandatorySelection {
       async (selection) => {
         this.close();
 
-        await transport.request(
-          new Request('setOptions', {
-            ...worldOptions,
-            players: parseInt(selection, 10),
-          })
-        );
+        try {
+          await transport.request(
+            new Request('setOptions', {
+              ...worldOptions,
+              players: parseInt(selection, 10),
+            })
+          );
+        } catch (error) {
+          // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
+          unlessRequestFailed(error);
+
+          return;
+        }
 
         if (onFinished) {
           await onFinished();

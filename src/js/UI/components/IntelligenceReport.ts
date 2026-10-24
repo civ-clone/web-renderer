@@ -8,6 +8,7 @@ import Window from './Window';
 import { advanceNames } from './lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The intelligence report (F3, #58), after v474.05's (`Overlay_14.cs` `F14_0000_1164`): every civilization you've
 //  met, with what an embassy tells you about it.
@@ -150,6 +151,14 @@ export class IntelligenceReport extends Window {
             ? s(`<p>${t('IntelligenceReport.empty')}</p>`)
             : s('<div></div>', ...shown.map(renderIntelligenceRow))
         );
+      })
+      // Not answered: the player has been told, and an empty report would only be in the way (#580).
+      .catch((error) => {
+        if (this.element().isConnected) {
+          this.close();
+        }
+
+        unlessRequestFailed(error);
       });
   }
 }
