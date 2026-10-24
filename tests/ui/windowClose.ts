@@ -138,6 +138,17 @@ const run = async (): Promise<void> => {
 
   expect('closing one says so once', heardClosed.count, 1);
 
+  // Closed again, as a list's caller does from its choice once the list has closed itself: nothing more is said
+  //  (#599). Shown again, it can be closed again.
+  closed.close();
+
+  expect('closing it again says nothing', heardClosed.count, 1);
+
+  closed.display();
+  closed.close();
+
+  expect('one shown again says so when it closes', heardClosed.count, 2);
+
   // Three notices together. Escape on the first opens the second at once; if the browser closes that one too, the
   //  third is still shown, and nothing is left in the page.
   const notifications = new Notifications(document.body),
