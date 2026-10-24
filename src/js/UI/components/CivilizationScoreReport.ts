@@ -7,6 +7,7 @@ import Transport from '../Transport';
 import Window from './Window';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // Built with `createElement`: a `<tr>` parsed on its own, outside a table, loses its cells.
 const buildRow = (
@@ -102,7 +103,15 @@ export class CivilizationScoreReport extends Window {
             scoreTable(score)
           )
         )
-      );
+      )
+      // Not answered: the player has been told, and an empty report would only be in the way (#580).
+      .catch((error) => {
+        if (this.element().isConnected) {
+          this.close();
+        }
+
+        unlessRequestFailed(error);
+      });
   }
 }
 

@@ -9,6 +9,7 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../../lib/unlessRequestFailed';
 
 export class CityBuild extends Action {
   // Whether the picker is waiting for what the city can build (#484).
@@ -35,6 +36,11 @@ export class CityBuild extends Action {
       available = await this.transport().request(
         new CityBuildAvailable(this.value().id)
       );
+    } catch (error) {
+      // Not answered: the player has been told, and can press it again (#580).
+      unlessRequestFailed(error);
+
+      return;
     } finally {
       this.#opening = false;
     }

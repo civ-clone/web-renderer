@@ -7,6 +7,7 @@ import Difficulties from '../../Engine/Requests/Difficulties';
 import MandatorySelection from './MandatorySelection';
 import Transport from '../Transport';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 /**
  * The difficulty level, asked after the size of the world and before the number of civilizations, as Civ1 asks it
@@ -55,7 +56,8 @@ export class DifficultyWindow extends MandatorySelection {
           onChoose
         );
       })
-      .catch((error: Error) => console.error(error));
+      // Not answered: the player has been told, and nothing more is asked (#580).
+      .catch(unlessRequestFailed);
   }
 }
 

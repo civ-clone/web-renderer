@@ -12,6 +12,7 @@ import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { version } from '../../../../build.json';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -60,8 +61,11 @@ export class MainMenu extends Element {
                 )}</button>`
               ),
               {
+                // Not answered: the player has been told, and the menu is still here (#580).
                 click: () =>
-                  GameSetupWindow.ask(this.#transport, () => this.remove()),
+                  GameSetupWindow.ask(this.#transport, () =>
+                    this.remove()
+                  ).catch(unlessRequestFailed),
               }
             )
           ),
@@ -87,7 +91,7 @@ export class MainMenu extends Element {
               click: () =>
                 GameSetupWindow.ask(this.#transport, () => this.remove(), {
                   advanced: true,
-                }),
+                }).catch(unlessRequestFailed),
             }
           ),
           h(

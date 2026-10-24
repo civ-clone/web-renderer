@@ -15,6 +15,7 @@ import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import endTurn from './endTurn';
 import { hasUnitActions, unitActions } from './unitActions';
+import { unlessRequestFailed } from './unlessRequestFailed';
 
 interface WindowLike {
   close(): void;
@@ -173,7 +174,9 @@ export class UIStressRunner {
           id: cityBuild.id,
           chosen: available[turn % available.length].item._,
         });
-      });
+      })
+      // Not answered: the page has said so, and the run goes on (#580).
+      .catch(unlessRequestFailed);
 
     return true;
   }

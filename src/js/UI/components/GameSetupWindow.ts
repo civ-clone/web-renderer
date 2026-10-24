@@ -26,6 +26,7 @@ import { elementId, h } from '../lib/html';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '../lib/supportedTopologies';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 type FinishedHandler = () => void | Promise<void>;
 
@@ -723,19 +724,26 @@ export class GameSetupWindow extends Window {
 
     this.close();
 
-    await this.#transport.request(
-      new Request('setOptions', {
-        topologyId: this.#topologyId,
-        earth: this.#earth,
-        width: this.#width,
-        height: this.#height,
-        landCoverage,
-        landSize,
-        maxIterations,
-        difficulty,
-        seats,
-      })
-    );
+    try {
+      await this.#transport.request(
+        new Request('setOptions', {
+          topologyId: this.#topologyId,
+          earth: this.#earth,
+          width: this.#width,
+          height: this.#height,
+          landCoverage,
+          landSize,
+          maxIterations,
+          difficulty,
+          seats,
+        })
+      );
+    } catch (error) {
+      // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
+      unlessRequestFailed(error);
+
+      return;
+    }
 
     if (this.#onFinished) {
       await this.#onFinished();

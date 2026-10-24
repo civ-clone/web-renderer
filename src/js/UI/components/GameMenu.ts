@@ -24,6 +24,7 @@ import { chooseSaveFile } from '../lib/savedGame';
 import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
+import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The local player comes first, labelled "You" with an empty value so leaving
 // the select alone sends no `player` at all; every other player follows,
@@ -43,6 +44,13 @@ const cheatPlayerSelect = (players: CheatPlayersResult[]): HTMLSelectElement =>
         ),
     ].join('')}</select>`
   );
+
+// A menu item that asks the worker before it opens its window: one that isn't answered opens nothing, the player
+//  having been told (#580).
+const whenAnswered =
+  (action: () => Promise<void>): (() => void) =>
+  (): void =>
+    void action().catch(unlessRequestFailed);
 
 // Both grant cheats share one form: who receives it, then what they receive.
 // The Grant button or Enter submits. `onPlayerChange` refills `control` for
@@ -86,12 +94,23 @@ const cheatGrantWindow = (
       window.close();
     };
 
+  // The player `control` was last filled for.
+  let filledFor = select.value;
+
   h(select, {
     change: async () => {
       select.disabled = true;
 
       try {
         await onPlayerChange(select.value || null);
+
+        filledFor = select.value;
+      } catch (error) {
+        // Not answered: the player has been told, and `control` still holds the last player's, so that player is
+        //  chosen again, rather than granting them to this one (#580).
+        select.value = filledFor;
+
+        unlessRequestFailed(error);
       } finally {
         select.disabled = false;
       }
@@ -422,7 +441,7 @@ export class GameMenu extends Element {
                     },
                     {
                       label: t('GameMenu.cheat.grant-advance'),
-                      action: async () => {
+                      action: whenAnswered(async () => {
                         const advances = s<HTMLSelectElement>(
                             '<select multiple size="10"></select>'
                           ),
@@ -480,11 +499,11 @@ export class GameMenu extends Element {
                           },
                           showAdvances
                         );
-                      },
+                      }),
                     },
                     {
                       label: t('GameMenu.cheat.create-unit'),
-                      action: async () => {
+                      action: whenAnswered(async () => {
                         const [players, unitTypes] = await Promise.all([
                           this.#transport.request(new CheatPlayers()),
                           this.#transport.request(new CheatUnitTypes()),
@@ -506,11 +525,11 @@ export class GameMenu extends Element {
                               },
                             })
                         );
-                      },
+                      }),
                     },
                     {
                       label: t('GameMenu.cheat.grant-gold'),
-                      action: async () => {
+                      action: whenAnswered(async () => {
                         const amount = s<HTMLInputElement>(
                           '<input type="number" step="1">'
                         );
@@ -536,7 +555,7 @@ export class GameMenu extends Element {
                             });
                           }
                         );
-                      },
+                      }),
                     },
                   ]
                 : []),
