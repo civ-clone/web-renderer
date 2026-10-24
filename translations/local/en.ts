@@ -504,9 +504,12 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.no-foreign-affairs':
     'No contact with other civilizations.',
   'IntelligenceReport.no-technologies': 'None.',
+  'IntelligenceReport.relations-peace': 'We are at PEACE with them.',
+  'IntelligenceReport.relations-war': 'We are at WAR with them.',
   'IntelligenceReport.subject': 'Subject: the {{nation}}',
   'IntelligenceReport.technologies': 'Technologies:',
   'IntelligenceReport.the': 'the {{nation}}',
+  'IntelligenceReport.their-embassy': 'They have an embassy with us.',
   'IntelligenceReport.title': 'Intelligence Report',
   'IntelligenceReport.trait.Aggressive': 'Aggressive',
   'IntelligenceReport.trait.Civilized': 'Civilized',

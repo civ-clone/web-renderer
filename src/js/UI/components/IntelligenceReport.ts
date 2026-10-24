@@ -21,16 +21,10 @@ const plural = (civilization: string): string =>
 
 const line = (html: string): HTMLElement => s(`<p>${html}</p>`);
 
-const renderDetails = ({
-  leader,
-  traits,
-  capital,
-  government,
-  gold,
-  units,
-  foreignAffairs,
-  advances,
-}: IntelligenceDetails): HTMLElement[] => [
+const leaderLine = (
+  leader: string | null,
+  traits: string[] = []
+): HTMLElement =>
   line(
     t('IntelligenceReport.leader', {
       leader:
@@ -47,7 +41,17 @@ const renderDetails = ({
         )
         .join(', '),
     })
-  ),
+  );
+
+// What only an embassy tells you; the leader's line comes before it, with the leader's personality.
+const renderDetails = ({
+  capital,
+  government,
+  gold,
+  units,
+  foreignAffairs,
+  advances,
+}: IntelligenceDetails): HTMLElement[] => [
   line(
     capital === null
       ? t('IntelligenceReport.no-capital')
@@ -105,6 +109,10 @@ export const renderIntelligenceRow = (row: IntelligenceRow): HTMLElement => {
     }"><h3>${t('IntelligenceReport.subject', {
       nation: plural(row.civilization),
     })}</h3></section>`,
+    // What you know of anyone you've met, embassy or not (#419).
+    leaderLine(row.leader, row.details?.traits),
+    line(t(`IntelligenceReport.relations-${row.atPeace ? 'peace' : 'war'}`)),
+    ...(row.theirEmbassy ? [line(t('IntelligenceReport.their-embassy'))] : []),
     ...(row.details === null
       ? [line(t('IntelligenceReport.no-embassy'))]
       : renderDetails(row.details))

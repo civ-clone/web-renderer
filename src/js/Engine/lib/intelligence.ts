@@ -1,5 +1,6 @@
 // The intelligence report (F3, #58), worked out in the worker so the UI only ever sees what the report shows: full
-//  details for a civilization the player holds an embassy with, and only the name of any other it has met.
+//  details for a civilization the player holds an embassy with, and for any other it has met only what the player
+//  knows without one: its leader, and the player's own dealings with it (#419).
 
 import {
   CityImprovementRegistry,
@@ -53,7 +54,6 @@ export type IntelligenceAffair = {
 };
 
 export type IntelligenceDetails = {
-  leader: string | null;
   // The leader's personality: the traits that aren't the normal one, as v474.05 lists them.
   traits: string[];
   capital: {
@@ -71,6 +71,12 @@ export type IntelligenceDetails = {
 export type IntelligenceRow = {
   civilization: string;
   colors: [string, string] | null;
+  // Known to anyone who has met them, as v474.05 shows it without an embassy (#419).
+  leader: string | null;
+  // The player's own dealings with them, embassy or not: at peace, or at war, as `atPeace` below counts it.
+  atPeace: boolean;
+  // Whether they hold an embassy with the player.
+  theirEmbassy: boolean;
   // Only for a civilization the player holds an embassy with.
   details: IntelligenceDetails | null;
 };
@@ -113,6 +119,25 @@ export const hasEmbassy = (
         (interaction as unknown as Embassy).holder() === holder
     );
 
+// At peace while a `Peace` between the two is in force; otherwise at war, as v474.05 has it for any two who have met.
+const atPeace = (
+  player: Player,
+  other: Player,
+  interactionRegistry: InteractionRegistry
+): boolean =>
+  interactionRegistry
+    .getByPlayers(player, other)
+    .some(
+      (interaction) =>
+        interaction instanceof Peace && (interaction as Peace).active()
+    );
+
+const leaderOf = (player: Player): string | null => {
+  const leader = player.civilization().leader();
+
+  return leader === null ? null : typeNameOf(leader.sourceClass());
+};
+
 // Each lookup tolerates a player without the registry entry (as a test may make them) rather than throwing.
 const attempt = <T>(lookup: () => T, fallback: T): T => {
   try {
@@ -154,7 +179,6 @@ const details = (
     );
 
   return {
-    leader: leader === null ? null : typeNameOf(leader.sourceClass()),
     traits: (leader?.traits() ?? [])
       .filter(
         (trait) =>
@@ -189,12 +213,7 @@ const details = (
       .map((other) => ({
         civilization:
           other === reader || hasMet(other) ? civilizationOf(other) : null,
-        atPeace: interactionRegistry
-          .getByPlayers(subject, other)
-          .some(
-            (interaction) =>
-              interaction instanceof Peace && (interaction as Peace).active()
-          ),
+        atPeace: atPeace(subject, other, interactionRegistry),
       })),
     advances: attempt(
       () =>
@@ -229,6 +248,13 @@ export const intelligenceRows = (
       return {
         civilization: civilizationOf(player),
         colors: colors ? (colors.value() as [string, string]) : null,
+        leader: leaderOf(player),
+        atPeace: atPeace(reader, player, dependencies.interactionRegistry),
+        theirEmbassy: hasEmbassy(
+          player,
+          reader,
+          dependencies.interactionRegistry
+        ),
         details: hasEmbassy(reader, player, dependencies.interactionRegistry)
           ? details(reader, player, hasMet, dependencies)
           : null,

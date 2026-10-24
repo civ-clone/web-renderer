@@ -1,7 +1,9 @@
 // The intelligence report (F3, #58) is worked out in the worker and sent as finished rows. This checks, with plain
 //  data, what a row tells the player: full details only for a civilization the player holds an embassy with; just the
 //  name of any other it has met; nothing about one it hasn't; foreign affairs at peace or at war, with a third party
-//  the player hasn't met left unnamed (#59); and the leader's personality without the normal traits.
+//  the player hasn't met left unnamed (#59); and the leader's personality without the normal traits. Without an
+//  embassy, a row still has what the player knows of anyone it has met: the leader's name, whether we're at peace or
+//  at war, and whether they hold an embassy with us (#419).
 
 import {
   Babylonian,
@@ -30,7 +32,10 @@ import {
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import InteractionRegistry from '@civ-clone/core-diplomacy/InteractionRegistry';
-import { JuliusCaesar } from '@civ-clone/civ1-civilization/Leaders';
+import {
+  AlexanderTheGreat,
+  JuliusCaesar,
+} from '@civ-clone/civ1-civilization/Leaders';
 import { Monarchy } from '@civ-clone/civ1-government/Governments';
 import { Palace } from '@civ-clone/library-city/CityImprovements';
 import Player from '@civ-clone/core-player/Player';
@@ -81,6 +86,7 @@ const reader = player(Babylonian),
 player(Zulu);
 
 rival.civilization().setLeader(new JuliusCaesar(traitRegistry));
+metOnly.civilization().setLeader(new AlexanderTheGreat(traitRegistry));
 
 interactionRegistry.register(
   new Embassy(reader, rival, ruleRegistry) as never,
@@ -140,8 +146,20 @@ expect(
   null
 );
 
+expect(
+  'what we know of anyone we have met: the leader, peace or war, and their embassy with us',
+  rows.map(({ leader, atPeace, theirEmbassy }) => ({
+    leader,
+    atPeace,
+    theirEmbassy,
+  })),
+  [
+    { leader: 'JuliusCaesar', atPeace: true, theirEmbassy: false },
+    { leader: 'AlexanderTheGreat', atPeace: false, theirEmbassy: true },
+  ]
+);
+
 expect('the details an embassy gives', rows[0].details, {
-  leader: 'JuliusCaesar',
   // Julius Caesar is NormalAggression, Expansionist and Civilized: the normal trait isn't listed.
   traits: ['Expansionist', 'Civilized'],
   capital: { name: 'Rome', civilization: 'Roman' },
