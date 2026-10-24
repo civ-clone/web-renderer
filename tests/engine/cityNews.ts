@@ -1,7 +1,8 @@
 // What a player is told about their cities (#400, #420). A city that grows or shrinks goes out to the UI with its new
 //  size, and says nothing more: it shrinks for Settlers built and for want of an Aqueduct as well. Famine is announced.
 //  A city lost to a rival, captured or (at size 1) destroyed by the capture, leaves one bubble notice beside End Turn,
-//  and so does one destroyed some other way. A rival's city tells us nothing.
+//  and so does one destroyed some other way. A rival's city tells us nothing, and nor does one we capture beyond
+//  the capture itself (#501).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
 // test founds a city with the starting Settlers, then builds more cities directly and makes things happen to them.
@@ -302,8 +303,35 @@ const run = async (): Promise<void> => {
 
   expectNotifications("a rival's city", []);
 
+  // A rival's city we capture: that we captured it, and no notice of a city lost (#501). At size 1 the capture
+  //  destroys it, by which time it is already ours.
+  const taken = [3, 1].map((size) => {
+    const city = new City(rival, site(capital.tile()), `Taken${size}`);
+
+    growTo(city, size);
+
+    return city;
+  });
+
+  await settle();
+  clear();
+
+  taken.forEach((city) => city.capture(humanPlayer!));
+  await settle();
+  flush();
+
+  // A capture can bring an advance with it, which is told as well.
+  notificationsSent = notificationsSent.filter(
+    ({ key }) => key !== 'Player.research-complete'
+  );
+
+  expectNotifications("rivals' cities we capture", [
+    { key: 'City.captured-by-us', bubble: false },
+    { key: 'City.captured-by-us', bubble: false },
+  ]);
+
   console.log(
-    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, a city lost leaves one notice, a rival's city says nothing)"
+    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, a city lost leaves one notice, a rival's city says nothing, nor one we capture)"
   );
 
   process.exit(0);
