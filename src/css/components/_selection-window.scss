@@ -1,12 +1,30 @@
 .selectionWindow {
+  // The list shrinks to fit the window and is what scrolls (#634), inside the content `_window.scss` lays out for an
+  //  action window.
+  .action-window-content > div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  // In a column of flex items, margins don't collapse, so an empty paragraph would leave a gap.
+  p:empty {
+    display: none;
+  }
+
   select {
     background: transparent;
     border: 0;
     display: block;
+    flex: 1 1 auto;
     margin: 1em;
-    max-height: calc(60vh - 8.5em);
+    min-height: 3em;
     outline: 0;
     overflow: auto;
     width: calc(100% - 2em);
+  }
+
+  // The paragraph's margin is gap enough.
+  p:not(:empty) + select {
+    margin-top: 0;
   }
 }

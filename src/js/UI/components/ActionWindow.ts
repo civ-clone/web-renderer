@@ -42,7 +42,8 @@ export class ActionWindow extends NotificationWindow {
     super(
       title,
       s(
-        '<div></div>',
+        // Laid out in `_window.scss`, so the buttons stay in view and only the content scrolls (#634).
+        '<div class="action-window-content"></div>',
         ...(body instanceof Node
           ? [body]
           : body === null
