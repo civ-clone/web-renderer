@@ -1,0 +1,1 @@
+{"version":"0.1.0@0b4a1b7","date":"2026-10-24T10:48:46.000Z","localChanges":["When the game can't answer a report, a list or a button, you're told so as before, and now nothing is left half open: the report closes, the button or list can be used again, and the new game windows leave you at the main menu (closes #580)."],"externalChanges":{}}

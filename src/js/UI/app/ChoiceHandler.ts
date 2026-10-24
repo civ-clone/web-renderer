@@ -14,6 +14,7 @@ import ActionWindow from '../components/ActionWindow';
 import DebugFlags from '../debug/DebugFlags';
 import SelectionWindow from '../components/SelectionWindow';
 import Transport from '../Transport';
+import instanceOf from '../lib/instanceOf';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {
@@ -23,6 +24,20 @@ export interface ChoiceHandlerDeps {
   //  copied when this starts listening.
   debugFlags: DebugFlags;
 }
+
+// A step of the talks lists Good bye first, so the option preselected, and taken by Enter, leaves the talks rather
+//  than demanding tribute after a hand-over (#502). Only the list shown changes: the engine's order is the one an
+//  automated seat picks from.
+const goodbyeFirst = <Choice extends { value: unknown }>(
+  choices: Choice[]
+): Choice[] => [
+  ...choices.filter(({ value }) =>
+    instanceOf(value as Interactions, 'Terminate')
+  ),
+  ...choices.filter(
+    ({ value }) => !instanceOf(value as Interactions, 'Terminate')
+  ),
+];
 
 // Every list the engine asks the player to choose from (`chooseFromList`): a step of the talks with one answer as an
 //  `ActionWindow`, anything else as a `SelectionWindow`, with Random among the civilizations (#15) and the difficulty
@@ -127,7 +142,10 @@ export const ChoiceHandler = {
                 },
               ]
             : []),
-          ...choices.map(({ id, value }, index) => {
+          ...(key === 'negotiation.next-step'
+            ? goodbyeFirst(choices)
+            : choices
+          ).map(({ id, value }, index) => {
             const label =
               key === 'negotiation.next-step'
                 ? interactionLabel(value as Interactions, true)
@@ -175,6 +193,7 @@ export const ChoiceHandler = {
         }
       }
 
+      // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
       if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
         selectionWindow.selectionList().value = choices[0].id;
         debugFlags.uiStressRunner.automateChoice(
