@@ -193,6 +193,13 @@ export const registerPatchEvents = (
           capturedFrom: originalPlayer,
         });
       }
+
+      // A size 1 city that our capture destroyed was already ours when that was heard of (`capture()` hands it over
+      //  before the rules that destroy it run), but it is no loss of ours (#501): the capture is told in
+      //  `Client/notifications/city.ts`.
+      if (ctx.view.owns(capturingPlayer) && !ctx.view.owns(originalPlayer)) {
+        ctx.cityNews.of(city).ours = false;
+      }
     }
   );
 

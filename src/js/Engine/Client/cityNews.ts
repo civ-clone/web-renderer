@@ -8,7 +8,7 @@ import Player from '@civ-clone/core-player/Player';
 
 // What happened to a city during one engine call (#400, #420).
 export type CityNews = {
-  // Whose it was when it was first heard of.
+  // Whose it was when it was first heard of, unless we captured it (#501).
   ours: boolean;
   capturedBy: Player | null;
   capturedFrom: Player | null;
