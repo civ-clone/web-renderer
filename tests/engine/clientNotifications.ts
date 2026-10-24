@@ -737,6 +737,24 @@ const contextOf = ({
     player('player:declaration-expired', [rival, peace]),
     null
   );
+  expect(
+    'our declaration broken by the rival',
+    player('player:declaration-expired', [us, peace, rival]),
+    [
+      'Player.declaration-expired',
+      false,
+      { player: 'us', declaration: 'Peace', enemy: 'rival' },
+    ]
+  );
+  expect(
+    'our declaration broken by us (#641)',
+    player('player:declaration-expired', [us, peace, us]),
+    [
+      'Player.declaration-broken',
+      false,
+      { player: 'us', declaration: 'Peace', enemy: 'rival' },
+    ]
+  );
 
   // Every key the tables can make was made above.
 
@@ -770,6 +788,7 @@ const contextOf = ({
     'GoodyHut.action-performed.City',
     'GoodyHut.action-performed.Gold',
     'GoodyHut.action-performed.Unit',
+    'Player.declaration-broken',
     'Player.declaration-expired',
     'Player.defeated.by',
     'Player.defeated.unknown',

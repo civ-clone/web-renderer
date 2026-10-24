@@ -752,6 +752,9 @@ i18next.addResources('en', 'notification', {
     'You have discovered a friendly tribe of skilled mercenaries...',
   'GoodyHut.action-performed.Unit.title': 'Exploration',
 
+  'Player.declaration-broken.body':
+    'We have broken our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }).',
+  'Player.declaration-broken.title': 'Treaty broken',
   'Player.declaration-expired.body':
     'Our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }) has been canceled!',
   'Player.declaration-expired.title':

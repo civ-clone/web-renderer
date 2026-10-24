@@ -34,6 +34,7 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
 import { unknownPlayerOf } from '../../src/js/Engine/Client/standIns';
 import { instance as workedTileRegistryInstance } from '@civ-clone/core-city/WorkedTileRegistry';
 
@@ -45,8 +46,9 @@ let started = false,
   unitActionsHandler: ((unitId: string) => unknown) | null = null,
   pendingChoice: ((value: any) => void) | null = null;
 
-// Every `gameDataPatch`, round-tripped as `postMessage` would.
-const patches: any[] = [];
+// Every `gameDataPatch`, round-tripped as `postMessage` would, and the key of every `gameNotification`.
+const patches: any[] = [],
+  notifications: string[] = [];
 
 const fail = (reason: string, error?: unknown): never => {
   process.stderr.write(
@@ -314,7 +316,10 @@ const run = async (): Promise<void> => {
   work();
 
   await flush();
+  const notifiedBefore = notifications.length;
+
   await unitAction(warrior, 'SneakMove', land);
+  await flush();
 
   if (warrior.tile() !== land || atPeace()) {
     fail(
@@ -324,8 +329,18 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // We broke it, so we're told so, not that we were attacked (#641).
+  const told = notifications.slice(notifiedBefore);
+
+  if (
+    !told.includes('Player.declaration-broken') ||
+    told.includes('Player.declaration-expired')
+  ) {
+    fail(`breaking the treaty told the player ${JSON.stringify(told)}`);
+  }
+
   console.log(
-    `PASS treaty (onto a partner's worked land: Break treaty and Cancel sent with the partner, Cancel spends the move; under Democracy Overruled is sent with the SneakMove it stands for and spends the move; Break treaty moves and ends the treaty)`
+    `PASS treaty (onto a partner's worked land: Break treaty and Cancel sent with the partner, Cancel spends the move; under Democracy Overruled is sent with the SneakMove it stands for and spends the move; Break treaty moves, ends the treaty and tells the player they broke it)`
   );
 
   process.exit(0);
@@ -355,6 +370,14 @@ const transport = {
   send: (channel: string, data: any): void => {
     if (channel === 'gameDataPatch') {
       patches.push(JSON.parse(JSON.stringify(data)));
+
+      return;
+    }
+
+    if (channel === 'gameNotification') {
+      notifications.push(
+        reconstituteData(JSON.parse(JSON.stringify(data))).key
+      );
 
       return;
     }

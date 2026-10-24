@@ -140,16 +140,27 @@ export const playerNotifications: NotificationTable = [
 
   [
     'player:declaration-expired',
-    (ctx: NotificationContext, player: Player, declaration: Declaration) =>
+    // `by` is who ended it (#641): a treaty we broke ourselves isn't the other side's sneak attack.
+    (
+      ctx: NotificationContext,
+      player: Player,
+      declaration: Declaration,
+      by: Player | null = null
+    ) =>
       !ctx.view.owns(player)
         ? null
-        : new Notification('Player.declaration-expired', {
-            player,
-            declaration,
-            enemy: declaration
-              .players()
-              .filter((declarationPlayer) => declarationPlayer !== player)[0],
-          }),
+        : new Notification(
+            by !== null && ctx.view.owns(by)
+              ? 'Player.declaration-broken'
+              : 'Player.declaration-expired',
+            {
+              player,
+              declaration,
+              enemy: declaration
+                .players()
+                .filter((declarationPlayer) => declarationPlayer !== player)[0],
+            }
+          ),
   ],
 ];
 
