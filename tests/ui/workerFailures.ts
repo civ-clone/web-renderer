@@ -1,7 +1,8 @@
 // What went wrong in the worker, said to the player (#470): `workerError` opens a window that says so, with the
 //  worker's message as text (it can hold text from a save file), or that the game has stopped answering, and
-//  `loadFailed` says so and goes back to the main menu, by reloading the page. A request the worker could not answer
-//  reaches it as a `workerError` from `WorkerTransport` (tests/engine/requestIds.ts).
+//  `loadFailed` says so and goes back to the main menu, by reloading the page, and `saveFailed` says so and the game
+//  goes on (#581). A request the worker could not answer reaches it as a `workerError` from `WorkerTransport`
+//  (tests/engine/requestIds.ts).
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -61,7 +62,10 @@ const run = async (): Promise<void> => {
     resources: {
       en: {
         translation: {
-          SavedGame: { 'could-not-load': 'Not loaded: {{error}}' },
+          SavedGame: {
+            'could-not-load': 'Not loaded: {{error}}',
+            'could-not-write': 'Not saved: {{error}}',
+          },
           WorkerFailure: {
             body: 'Something went wrong.',
             'not-answering': 'The game has stopped answering.',
@@ -81,9 +85,9 @@ const run = async (): Promise<void> => {
   });
 
   expect(
-    'it listens for errors and failed loads, and not for failed requests, which come as errors',
+    'it listens for errors, failed loads and failed saves, and not for failed requests, which come as errors',
     Array.from(receivers.keys()),
-    ['workerError', 'loadFailed']
+    ['workerError', 'loadFailed', 'saveFailed']
   );
 
   deliver('workerError', { message: '<img src=x> broke' });
@@ -134,6 +138,15 @@ const run = async (): Promise<void> => {
     [["Not loaded: needs <plugin> 'x'"], 1]
   );
 
+  alerts.splice(0);
+  deliver('saveFailed', { message: "can't <copy> 'x'" });
+
+  expect(
+    "a save the worker can't build is said as one the page can't write, unescaped, and the game goes on (#581)",
+    [alerts, reloads, windows()],
+    [["Not saved: can't <copy> 'x'"], 1, []]
+  );
+
   // The page's side of the `Worker`: an error it raises, or a message it can't read, reaches the `workerError`
   //  listeners, as one the worker sent would.
   //  A stand-in for one: linkedom's events aren't node's, and node's `EventTarget` won't take them.
@@ -172,6 +185,7 @@ const run = async (): Promise<void> => {
   expect('every receiver is disposed of', disposed, [
     'workerError',
     'loadFailed',
+    'saveFailed',
   ]);
 
   finished = true;

@@ -185,6 +185,8 @@ declare global {
     requestFailed: TransportData<TransportFailure, never>;
     // A load that failed (#470): the page says so and goes back to the main menu.
     loadFailed: TransportData<{ message: string }, never>;
+    // A save the worker could not build (#581): the page says so, as it does one it could not write.
+    saveFailed: TransportData<{ message: string }, never>;
     // The Top Cities in the World report (#124): the UI asks for up to this many rows.
     topCities: TransportData<TopCitiesRow[], number>;
     // The worker has accepted `EndTurn`: nothing the UI sends is listened for until `turnStarted`.

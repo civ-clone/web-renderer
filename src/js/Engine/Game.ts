@@ -119,11 +119,9 @@ export class Game implements IGame {
       } catch (error) {
         // Reported rather than thrown: the worker would otherwise die silently
         // mid-game, and a save that cannot be written is not a reason to lose
-        // the game it was taken from.
-        this.#transport.send(
-          'notification',
-          `could not save: ${(error as Error).message}`
-        );
+        // the game it was taken from. Said by the page as one it can't write
+        // is, not as a passing notification that is easily missed (#581).
+        this.#transport.send('saveFailed', { message: describeError(error) });
       }
     });
 

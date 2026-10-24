@@ -11,8 +11,9 @@ export interface WorkerFailuresDeps {
 // What went wrong in the worker (#470), which the player would otherwise never hear of: an error or a rejection nothing
 //  handled, a game that could not start, an action that threw, a request it could not answer, or a worker that has
 //  said nothing for a while with a request waiting on it (`workerError`, the last two from `WorkerTransport`), each
-//  said in a window, and a load that failed (`loadFailed`), said, then back to the main menu. The worker's message
-//  goes as text: it can hold text from a save file. Returns the disposer for `Renderer`'s `transportDisposers`.
+//  said in a window, a load that failed (`loadFailed`), said, then back to the main menu, and a save that could not
+//  be built (`saveFailed`), said. The worker's message goes as text: it can hold text from a save file. Returns the
+//  disposer for `Renderer`'s `transportDisposers`.
 export const WorkerFailures = {
   listen(
     transport: Transport,
@@ -54,6 +55,16 @@ export const WorkerFailures = {
 
           reload();
         }),
+        // A save the worker could not build, said as one the page could not write is (`bootstrap`'s `saveGame`), so
+        //  that it isn't missed (#581). The game goes on.
+        transport.receive('saveFailed', ({ message }): void =>
+          alert(
+            t('SavedGame.could-not-write', {
+              error: message,
+              interpolation: { escapeValue: false },
+            })
+          )
+        ),
       ];
 
     return (): void => disposers.forEach((dispose) => dispose());
