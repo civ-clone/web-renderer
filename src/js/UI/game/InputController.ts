@@ -24,8 +24,8 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
     : key;
 
 // The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), the Civilopedia (`?`), a key passed on to a modal
-//  window, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`, and the Shift+5,
-//  Shift+6 cheat sequence.
+//  window, Shift+S to save, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`,
+//  and the Shift+5, Shift+6 cheat sequence.
 //
 // Registered on `document` in the bubble phase, after `ReloadGuard` (which must stay the first bubble listener: it
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
@@ -40,7 +40,7 @@ export type InputControllerDeps = {
   actionArea: HTMLElement;
   // Read on every key press, so always the latest rebuild.
   data: () => GameData;
-  gameMenu: { enableCheats(): void };
+  gameMenu: { enableCheats(): void; saveGame(): void };
   mapView: {
     centre(tile: Tile): void;
     toggleUnits(): void;
@@ -121,6 +121,21 @@ export class InputController {
       leaderScreensMap[event.key]();
 
       event.preventDefault();
+    }
+
+    // Save Game, as the game menu's, and not over a modal window either. `S`, as `s` is Sleep. Once for a key held
+    //  down, not a file for each repeat.
+    if (key === 'S' && !modalWindow) {
+      if (!event.repeat) {
+        gameMenu.saveGame();
+      }
+
+      // Not part of the Shift+5, Shift+6 sequence below.
+      this.#lastShiftedCode = '';
+
+      event.preventDefault();
+
+      return;
     }
 
     if (document.activeElement === document.body && modalWindow) {
