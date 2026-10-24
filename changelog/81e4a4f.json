@@ -1,0 +1,1 @@
+{"version":"0.1.0@81e4a4f","date":"2026-10-24T07:05:53.000Z","localChanges":["When you capture a rival's size 1 city, which the capture destroys, you're told you captured it, without a \"City destroyed!\" notice beside End Turn that showed it as one of your own cities (closes #501)."],"externalChanges":{}}

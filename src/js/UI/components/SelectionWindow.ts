@@ -87,6 +87,10 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
               chooseHandler(selectionList.value);
 
               event.preventDefault();
+
+              // Or `bindClose` hears it too and closes the window a second time, so its close listeners run twice
+              //  (#599).
+              event.stopPropagation();
             }
 
             if (

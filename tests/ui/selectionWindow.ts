@@ -3,7 +3,8 @@
 // `singleChoice` helper (#258): nothing is added to the page, and `selection`
 // and `onChoose` follow once the constructor has returned, because `onChoose`
 // usually closes the window its caller is still constructing. A list with
-// several options, or one that opts out, is shown and nothing is chosen.
+// several options, or one that opts out, is shown and nothing is chosen. Enter
+// in a shown list closes it once (#599).
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -136,6 +137,26 @@ const open = (
   shown.parent.removeEventListener('keydown', listener);
 
   expect('keys pressed in a shown list stay in the window', reached, []);
+
+  // Enter chooses and closes, and the window's own Enter-to-close doesn't close it again, so its close listeners run
+  //  once (#599).
+  const entered = open([option('a'), option('b')]);
+  let closes = 0;
+
+  entered.window.on('close', () => closes++);
+
+  entered.parent
+    .querySelector('select')!
+    .dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
+    );
+
+  // The events only: linkedom's `<select>` has no `value`.
+  expect(
+    'Enter in a shown list chooses once and closes the window once',
+    [entered.events.map((event) => event.split(':')[0]), closes],
+    [['selection', 'onChoose'], 1]
+  );
 
   if (failures.length > 0) {
     process.stderr.write(

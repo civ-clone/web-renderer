@@ -51,6 +51,8 @@ export class Window
 {
   private options: WindowSettings;
   #body: string | Node;
+  // Closed and not shown since: a second `close()` does nothing.
+  #closed: boolean = false;
   #title: string;
 
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
@@ -243,6 +245,14 @@ export class Window
   }
 
   close(): void {
+    // Once is enough: a list chosen from closes itself, and the caller often closes it again from its choice, and its
+    //  close listeners would run again (#599).
+    if (this.#closed) {
+      return;
+    }
+
+    this.#closed = true;
+
     this.element().close();
     this.remove();
 
@@ -258,6 +268,8 @@ export class Window
   }
 
   display(focus = this.options.autofocus): void {
+    this.#closed = false;
+
     super.display();
 
     this.bindClose();
