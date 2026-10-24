@@ -1,5 +1,5 @@
 import { ActionWindow, ActionWindowOptions } from './ActionWindow';
-import { off, on, s } from '@dom111/element';
+import { s } from '@dom111/element';
 import { INotificationWindow } from './NotificationWindow';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
@@ -7,7 +7,6 @@ import { singleChoice } from '../lib/singleChoice';
 import { t } from 'i18next';
 
 export interface ISelectionWindow extends INotificationWindow {
-  resize(): void;
   selectionList(): HTMLSelectElement;
 }
 
@@ -26,7 +25,6 @@ export interface SelectionWindowOptions extends ActionWindowOptions {
 
 export class SelectionWindow extends ActionWindow implements ISelectionWindow {
   #autoChosen: boolean = false;
-  #resizeHandler = () => this.resize();
   #selectionList: HTMLSelectElement;
 
   constructor(
@@ -168,10 +166,6 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
       return;
     }
 
-    this.resize();
-
-    on(window, 'resize', this.#resizeHandler);
-
     this.on('focus', () => this.selectionList().focus());
   }
 
@@ -183,8 +177,6 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
 
       return;
     }
-
-    off(window, 'resize', this.#resizeHandler);
 
     super.close();
   }
@@ -207,24 +199,6 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
         select.focus();
       }
     });
-  }
-
-  resize(): void {
-    // TODO: I'd like to have this height scaled automatically.
-    //  Feels like it should be possible using CSS flexbox, but can't get it to work...
-    try {
-      this.selectionList().style.maxHeight = 'none';
-      this.selectionList().style.maxHeight = `calc(${
-        this.element().offsetHeight -
-        (this.element().firstElementChild! as HTMLElement).offsetHeight -
-        ((this.selectionList().previousElementSibling as HTMLElement)
-          ?.offsetHeight ?? 0) -
-        ((this.selectionList().parentElement?.nextElementSibling as HTMLElement)
-          ?.offsetHeight ?? 0)
-      }px - 2.1em)`;
-    } catch (e) {
-      console.warn(e);
-    }
   }
 
   selectionList(): HTMLSelectElement {

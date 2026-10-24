@@ -98,10 +98,32 @@
   }
 
   p {
-    overflow-y: auto;
     margin: 1em 0.5em;
     padding: 0;
-    max-height: 20em;
+  }
+
+  // A window with buttons: its content is the one part that scrolls, and the buttons stay in view, rather than the
+  //  text scrolling inside a body that scrolls too (#634).
+  > .body:has(> .action-window-content) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .action-window-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+
+    > :not(footer) {
+      flex: 1 1 auto;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    > footer {
+      flex: none;
+    }
   }
 
   :not(header) button {
