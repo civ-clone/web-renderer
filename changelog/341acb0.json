@@ -1,0 +1,1 @@
+{"version":"0.1.0@341acb0","date":"2026-10-24T10:45:08.000Z","localChanges":["Choosing from a list with Enter, such as the one a unit stops at partway along its journey, now closes the window once, so what follows it happens once rather than twice (closes #599)."],"externalChanges":{}}

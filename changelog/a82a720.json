@@ -1,0 +1,1 @@
+{"version":"0.1.0@a82a720","date":"2026-10-24T10:46:10.000Z","localChanges":["When a game can't be saved, you're now told so in a message that waits for you, the same one shown when the file can't be written, instead of a few seconds of text along the top of the screen (closes #581)."],"externalChanges":{}}

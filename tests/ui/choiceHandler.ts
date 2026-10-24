@@ -5,7 +5,8 @@
 //  own, Random offered among the civilizations (#15) and answered with one of those offered, and the difficulty
 //  levels of a save from before there were any labelled easiest first, the last one chosen preselected, and the one
 //  chosen remembered (#173). With the `?debug=1` stress runner on and its windows off, a choice it is automating is
-//  answered at once, with no window; with its windows on, it is handed the window to answer.
+//  answered at once, with no window; with its windows on, it is handed the window to answer. A step of the talks lists
+//  Good bye first, so Enter leaves them (#502).
 // The engine's side of the same lists, `ChoicePrompt`, is `tests/engine/choosePrompts.ts`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -223,6 +224,37 @@ const run = async (): Promise<void> => {
     'and sends the one chosen',
     [open().length, sent],
     [0, [['chooseFromList', 'decline']]]
+  );
+
+  // After a hand-over the engine offers the demand first: Good bye is listed first, so Enter leaves the talks (#502).
+  reset();
+  ask(
+    'negotiation.next-step',
+    [
+      {
+        id: 'demand',
+        value: {
+          _: 'DemandTribute',
+          __: ['DemandTribute', 'Proposal', 'Interaction'],
+          kind: 'gold',
+        },
+      },
+      { id: 'goodbye', value: terminate },
+    ],
+    negotiation
+  );
+
+  expect('Good bye is listed before the demand', labels(), [
+    'Good bye!',
+    'Demand tribute.',
+  ]);
+
+  choose();
+
+  expect(
+    'and Enter with nothing moved sends it',
+    [open().length, sent],
+    [0, [['chooseFromList', 'goodbye']]]
   );
 
   // Any other list, Random among the civilizations.
