@@ -1,16 +1,41 @@
 import Window from './Window';
 import { s } from '@dom111/element';
 import { instance as localeProvider } from '../LocaleProvider';
-import { marked } from 'marked';
+import { Marked } from 'marked';
 import { Release, byDay } from '../lib/releaseDays';
 import { t } from 'i18next';
+
+const escapeHtml = (text: string): string =>
+  text.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;',
+      }[character]!)
+  );
+
+// The notes' Markdown, with any HTML in them shown as text, as marked's `sanitize` did before marked removed it (#583).
+//  Links and images are shown as their text, so a note can't load or link to anything.
+const notes = new Marked({
+  renderer: {
+    html: ({ text }) => escapeHtml(text),
+    image: ({ text }) => escapeHtml(text),
+    link({ tokens }) {
+      return this.parser.parseInline(tokens);
+    },
+  },
+});
 
 const bullets = (changes: string[], indent: string): string =>
   changes
     .map(
       (change) =>
-        `<li>${marked(change.replace(/^\s*-\s*/, '').trim(), {
-          sanitize: true,
+        `<li>${notes.parse(change.replace(/^\s*-\s*/, '').trim(), {
+          async: false,
         })}</li>`
     )
     .join(`\n${indent}`);

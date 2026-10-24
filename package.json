@@ -161,7 +161,6 @@
   },
   "devDependencies": {
     "@types/feather-icons": "^4.29.1",
-    "@types/marked": "^4.0.8",
     "@types/node": "^14.0.0",
     "esbuild": "^0.14.32",
     "esbuild-sass-plugin": "^2.4.0",
@@ -243,6 +242,6 @@
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^8.2.1",
     "idb": "^7.1.1",
-    "marked": "^4.2.5"
+    "marked": "^18.1.1"
   }
 }
