@@ -1,0 +1,1 @@
+{"version":"0.1.0@c4323be","date":"2026-10-22T11:24:52.000Z","localChanges":["In Adjust Trade Rates, clearing a rate's number box to type a new value no longer jumps its slider to 50 and rebalances the other rates before you've typed anything, and the value you type is kept instead of being nudged by the other sliders (closes #485)."],"externalChanges":{}}

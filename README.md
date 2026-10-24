@@ -1,61 +1,69 @@
 # web-renderer
 
-## Project documentation
+The browser game of [civ-clone](https://github.com/civ-clone/civ-clone): an open
+source, plugin-driven clone of Sid Meier's Civilization (1991), written in
+TypeScript. This repository is the page you play on, the map and windows it
+draws, and the Web Worker that runs the engine behind them.
 
-Detailed repository documentation for rewrite planning is available in [`docs/README.md`](./docs/README.md).
+**Play it at [civ.one](https://civ.one).** Every push to `main` deploys there.
 
-## Current state
+## Playing
 
-The game is currently reasonably playable. You can perform almost all actions available in the game engine.
+The game needs the graphics from an original copy of Civilization: on the main
+menu choose **Import assets** and give it `TER257.PIC` and `SP257.PIC`. They are
+read in your browser and kept in its storage; nothing is uploaded. (On Brave,
+put Shields down for importing and playing, or the images come out "farbled".)
 
-The AI is relatively primitive, but it does do stuff and will attack you and try to capture your cities, etc. I'm
-working on the modular version of the [`simple-ai-client`](https://github.com/civ-clone/simple-ai-client)
-([`simple-ai-strategy-client`](https://github.com/civ-clone/simple-ai-strategy-client)) which will (hopefully!) mean
-that adding new functionality (added via other plugins for example) is possible and that the existing mechanisms can be
-somewhat refined in the process.
+What's there, in brief: the whole of Civilization's rules as far as we know them
+from v474.05, with Civ 5-style notifications for the choices that can wait and a
+modern interface over the top. You can set a game up seat by seat (human or
+computer, civilization and leader or Random, which AI plays a computer seat),
+watch a game with no human player as any of its civilizations or the whole map,
+pausing it between turns, play on Earth at three sizes with all of the
+original's civilizations and the world's, save and load (the file remembers who
+played each seat, and lets you reassign them on loading), read a Civilopedia,
+and see what changed in each release from the version in the corner of the menu.
+The AI is simple but plays the whole game, including war, diplomacy, barbarians,
+pollution, the space race and conquest. Open problems and ideas are the
+[issues](https://github.com/civ-clone/web-renderer/issues).
 
-## Generating assets
+## Running and changing it
 
-To be able to see anything you need asset data. This can currently only be generated from the original game's files
-(`TER257.PIC` and `SP257.PIC`) through the UI, select `Import Assets` at the main menu. This will be your only option
-when first navigating to the game.
+[`docs/quick-start.md`](./docs/quick-start.md) is the place to start: how to run
+the game locally (Node 24, pnpm, `npm run build`, any static server), how the
+code is laid out, how to run the tests, and how to make and ship a change to one
+of the engine packages with `./tools/civ`.
 
-I'm looking at adding the ability to add asset-packs and a mechanism for managing these, so they can also be plugins,
-and I'd like to collate some open-source/royalty free image to make a default pack that doesn't necessitate the original
-game.
+In short:
 
-__NOTE__: If generating the assets on Brave,
-[be aware that the data might get "farbled"](https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good)
-and not look quite correct. Ensure you put shields down for importing the assets and when playing, or at least disable
-the fingerprinting protection.
+```bash
+git clone https://github.com/civ-clone/web-renderer.git
+cd web-renderer
+pnpm install --frozen-lockfile
+npm run build        # or build:dev, or watch
+docker compose up    # serves on http://127.0.0.1:8080; or any static server
+npm test             # about five minutes
+```
 
-## Known issues
+The rest of [`docs/`](./docs/README.md) describes the implementation: the
+architecture, the worker and the page, how data flows between them, the asset
+system, the build and release, the AI arena, and the dated performance and
+memory reviews.
 
-- Some `Civilization`'s colours are terrible.
-- Sometimes the map portal doesn't re-center correctly.
-- Sometimes the `AdjustTradeRates` slider widget doesn't quite work as expected.
-- In very large late games the other civilizations' turns and loading a save still take a second or two (see #320 and #333).
+Commit messages on `main` are the game's release notes, shown to players, so
+each commit body says what a player will notice; `CLAUDE.md` has the rule and
+`generate-changelog.mjs` applies it.
 
-## TODO
+## Third-party libraries
 
-- Split out the UI functions into separate packages
-- Add the concept of asset-packs so that open source tilesets can be used
-- i18n + l10n
-
-See also the wider `TODO`s:
-
-- All of the above `Known issues`
-- Continue to build the modular AI (see [`core-strategy`](https://github.com/civ-clone/core-strategy),
-  [`simple-ai-strategy-client`](https://github.com/civ-clone/simple-ai-strategy-client) and
-  [`base-strategy-build-city`](https://github.com/civ-clone/base-strategy-build-city) for details.)
-- Everything in [`TODO.md` in the parent repo](https://github.com/civ-clone/civ-clone/blob/master/TODO.md)
-
-## Third-party libraries used
-
-- [idb](https://github.com/jakearchibald/idb) for abstracting `IndexedDb` interactions.
-- [esbuild](https://esbuild.github.io/) for the build process
-- [TypeScript](https://www.typescriptlang.org/) for the whole project
-- [prettier](https://prettier.io/) to help make the code readable...
+- [esbuild](https://esbuild.github.io/) for the build, with
+  [esbuild-sass-plugin](https://github.com/glromeo/esbuild-sass-plugin) for the styles
+- [TypeScript](https://www.typescriptlang.org/) throughout
+- [i18next](https://www.i18next.com/) for the text
+- [idb](https://github.com/jakearchibald/idb) for `IndexedDB`
+- [marked](https://marked.js.org/) for the release notes
+- [linkedom](https://github.com/WebReflection/linkedom) for the UI tests
+- [Prettier](https://prettier.io/) to keep it readable
 
 ### Images
 

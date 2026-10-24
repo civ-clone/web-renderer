@@ -1,0 +1,1 @@
+{"version":"0.1.0@5a0b543","date":"2026-10-24T12:37:32.000Z","localChanges":["A list in a window, such as choosing your civilisation or what a city builds, now has one scrollbar, and the window's buttons stay in view. Long text scrolls with its window rather than inside it (closes #634)."],"externalChanges":{}}
