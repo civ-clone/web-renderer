@@ -91,6 +91,47 @@ const run = async () => {
 
   pending.close();
 
+  // A note's Markdown is rendered, but any HTML in it is shown as text, and a link or image as its text (#583).
+  const marked = new ReleaseWindow(() =>
+    Promise.resolve([
+      {
+        version: '0.1.0@eeeeeee',
+        date: '2026-10-23T12:00:00.000Z',
+        localChanges: [
+          'Each `<Government>` is **listed**.',
+          'A <b>bold</b> <img src=x onerror="alert(1)"> note.',
+          'See [the issue](javascript:alert(1)) and ![a picture](https://example.com/x.png).',
+        ],
+        externalChanges: {},
+      },
+    ])
+  );
+
+  await marked.loaded();
+
+  const items = [...marked.element().querySelectorAll('.release li')];
+
+  expect(
+    'code and bold are rendered, HTML in code kept as text',
+    [
+      items[0].querySelector('code')?.textContent,
+      items[0].querySelector('strong')?.textContent,
+    ],
+    ['<Government>', 'listed']
+  );
+  expect(
+    'HTML in a note is shown as text, and makes no element',
+    [items[1].textContent?.trim(), items[1].querySelectorAll('b, img').length],
+    ['A <b>bold</b> <img src=x onerror="alert(1)"> note.', 0]
+  );
+  expect(
+    'a link or an image is shown as its text',
+    [items[2].textContent?.trim(), items[2].querySelectorAll('a, img').length],
+    ['See the issue and a picture.', 0]
+  );
+
+  marked.close();
+
   const failed = new ReleaseWindow(() =>
     Promise.reject(new Error('404 Not Found'))
   );
