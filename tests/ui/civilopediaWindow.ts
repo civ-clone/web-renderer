@@ -108,7 +108,7 @@ const requirements = [
         'musketman/replaced',
       ],
       cost: 30,
-      stats: { attack: 2, defence: 3, movement: 1 },
+      stats: { attack: 2, defence: 3, movement: 1, visibility: 1 },
     }),
     entry('Trireme', 'unit', { requires: ['naval/coast'] }),
     entry('Gunpowder', 'advance', { leadsTo: ['musketman/requires'] }),

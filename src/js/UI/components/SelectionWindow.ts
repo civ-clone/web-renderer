@@ -11,6 +11,8 @@ export interface ISelectionWindow extends INotificationWindow {
 }
 
 export interface SelectionWindowOption {
+  // A heading, already translated: options next to each other with the same `group` are listed under it (#432).
+  group?: string;
   label?: string;
   value: any;
 }
@@ -68,14 +70,33 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
           // Labels are already translated by the caller, so they're used as-is: passing them through `t()` again
           //  lets i18next read any `:` as a namespace separator (#3). Only an unlabelled value is translated here.
           // Set as text rather than markup, so names containing `'`, `<` or `&` display literally.
-          ...optionList.map((option) => {
-            const optionElement = document.createElement('option');
+          ...optionList.reduce(
+            (elements: HTMLElement[], option, index): HTMLElement[] => {
+              const optionElement = document.createElement('option');
 
-            optionElement.value = String(option.value);
-            optionElement.textContent = option.label ?? t(option.value);
+              optionElement.value = String(option.value);
+              optionElement.textContent = option.label ?? t(option.value);
 
-            return optionElement;
-          })
+              if (option.group === undefined) {
+                elements.push(optionElement);
+
+                return elements;
+              }
+
+              // A native heading, which the list's keys and type-ahead pass over as they move between options.
+              if (optionList[index - 1]?.group !== option.group) {
+                const groupElement = document.createElement('optgroup');
+
+                groupElement.label = option.group;
+                elements.push(groupElement);
+              }
+
+              elements[elements.length - 1].append(optionElement);
+
+              return elements;
+            },
+            []
+          )
         ),
         {
           keydown: (event: KeyboardEvent) => {
@@ -128,7 +149,13 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
       );
 
     if (options.displayAll && optionList.length > 1) {
-      selectionList.setAttribute('size', optionList.length.toString());
+      // Each heading takes a row too.
+      selectionList.setAttribute(
+        'size',
+        (
+          optionList.length + selectionList.querySelectorAll('optgroup').length
+        ).toString()
+      );
     }
 
     if (options.autoFocus && optionList.length > 1) {

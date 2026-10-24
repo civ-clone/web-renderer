@@ -4,7 +4,8 @@
 // and `onChoose` follow once the constructor has returned, because `onChoose`
 // usually closes the window its caller is still constructing. A list with
 // several options, or one that opts out, is shown and nothing is chosen. Enter
-// in a shown list closes it once (#599).
+// in a shown list closes it once (#599). Grouped options are listed under
+// headings (#432).
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -157,6 +158,48 @@ const open = (
     [entered.events.map((event) => event.split(':')[0]), closes],
     [['selection', 'onChoose'], 1]
   );
+
+  // Options with a `group` are listed under a heading for it, in a native `<optgroup>`; each heading takes a row of
+  //  a list shown in full, and the arrow keys move between options, over the headings (#432).
+  const grouped = new SelectionWindow(
+      'Build',
+      [
+        { group: 'Units', label: 'Warriors', value: 'Warrior' },
+        { group: 'Units', label: 'Settlers', value: 'Settlers' },
+        { group: 'Improvements', label: 'Barracks', value: 'Barracks' },
+        { label: 'Nothing', value: 'Nothing' },
+      ],
+      () => {},
+      null,
+      { displayAll: true }
+    ),
+    groupedList = grouped.selectionList();
+
+  expect(
+    'grouped options: a heading over each run of a group, and ungrouped options outside them',
+    Array.from(groupedList.children).map((child) =>
+      child.tagName === 'OPTGROUP'
+        ? [
+            (child as HTMLOptGroupElement).label,
+            Array.from(child.children).map(
+              (option) => (option as HTMLOptionElement).value
+            ),
+          ]
+        : (child as HTMLOptionElement).value
+    ),
+    [
+      ['Units', ['Warrior', 'Settlers']],
+      ['Improvements', ['Barracks']],
+      'Nothing',
+    ]
+  );
+  expect(
+    'grouped options: a list shown in full has a row for each option and heading',
+    groupedList.getAttribute('size'),
+    '6'
+  );
+
+  grouped.close();
 
   if (failures.length > 0) {
     process.stderr.write(

@@ -29,16 +29,24 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       t('Actions.CityBuildSelectionWindow.title', {
         city: cityBuild.city,
       }),
+      // In the engine's order, a heading over each section (#432), and a unit's numbers on its line (#381).
       available.map((buildItem) => ({
-        label: t('City.Build.build-item', {
-          item: getLabelForBuildable(buildItem),
-          cost: buildItem.cost.value,
-          turns: turnsLeft(
-            { ...cityBuild, ...buildItem } as unknown as CityBuild,
-            cityBuild.city.yields,
-            'Production'
-          ),
-        }) as string,
+        ...(buildItem.group
+          ? { group: t(`City.Build.group.${buildItem.group}`) as string }
+          : {}),
+        label: t(
+          buildItem.stats ? 'City.Build.build-unit' : 'City.Build.build-item',
+          {
+            item: getLabelForBuildable(buildItem),
+            cost: buildItem.cost.value,
+            turns: turnsLeft(
+              { ...cityBuild, ...buildItem } as unknown as CityBuild,
+              cityBuild.city.yields,
+              'Production'
+            ),
+            ...(buildItem.stats ?? {}),
+          }
+        ) as string,
         value: buildItem.item._,
       })),
       (selection) => {

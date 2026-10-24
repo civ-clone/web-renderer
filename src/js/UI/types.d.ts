@@ -64,6 +64,14 @@ export interface ItemCost extends EntityInstance<'ItemCost'> {
 export interface BuildItem extends EntityInstance<'BuildItem'> {
   item: Entity;
   cost: ItemCost;
+  // Only in a city's build list (`CityBuildAvailable`): the item's section (#432) and a unit's numbers (#381).
+  group?: 'unit' | 'improvement' | 'spaceship' | 'wonder' | null;
+  stats?: {
+    attack: number;
+    defence: number;
+    movement: number;
+    visibility: number;
+  } | null;
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {
