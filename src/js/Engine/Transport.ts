@@ -6,6 +6,7 @@ import { ObserverState } from './Observer';
 import { ObserverChoice } from './ObserverViews';
 import { DifficultyOption } from './Requests/Difficulties';
 import { IntelligenceRow } from './lib/intelligence';
+import { MilitaryReport } from './lib/military';
 import { RequirementData } from './lib/requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './lib/civilopedia';
 import { CivilizationScore } from './lib/civilizationScore';
@@ -143,6 +144,8 @@ declare global {
     gameOver: TransportData<GameOverDetails, never>;
     // The intelligence report (F3, #58).
     intelligence: TransportData<IntelligenceRow[], null>;
+    // The Military report (F2, #405).
+    military: TransportData<MilitaryReport, null>;
     // A city a Diplomat has investigated (#58), to show read-only.
     investigateCity: TransportData<ObjectMap, never>;
     // Every requirement entry (#37), for the civilopedia (#183).

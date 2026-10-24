@@ -258,6 +258,7 @@ const run = async (): Promise<void> => {
         'cityBuildUnavailable',
         'unitActions',
         'intelligence',
+        'military',
         'retire',
         'gameContinue',
       ],

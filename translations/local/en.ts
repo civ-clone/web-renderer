@@ -295,6 +295,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.load-game': 'Load Game',
   'GameMenu.load-game-confirm':
     'Loading a saved game will end the game in progress. Any unsaved progress will be lost.',
+  'GameMenu.military-report': 'Military Report',
   'GameMenu.options': 'Options',
   'GameMenu.quit': 'Quit',
   'GameMenu.quit-confirm':
@@ -515,6 +516,20 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.trait.Perfectionist': 'Perfectionist',
   'IntelligenceReport.treasury': 'Treasury: ${{gold, number}}',
   'IntelligenceReport.unknown': 'Unknown',
+
+  'MilitaryReport.active_one': '{{count, number}} active',
+  'MilitaryReport.active_other': '{{count, number}} active',
+  'MilitaryReport.in-production_one': '{{count, number}} in production',
+  'MilitaryReport.in-production_other': '{{count, number}} in production',
+  'MilitaryReport.lost_one': '{{count, number}} lost',
+  'MilitaryReport.lost_other': '{{count, number}} lost',
+  'MilitaryReport.losses': 'Military Losses',
+  'MilitaryReport.no-losses': 'We have lost no units.',
+  'MilitaryReport.no-units': 'We have no units.',
+  'MilitaryReport.stats':
+    '({{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}})',
+  'MilitaryReport.status': 'Military Status',
+  'MilitaryReport.title': 'Military Report',
 
   'CivilizationScoreReport.term.citizens': 'Citizens',
   'CivilizationScoreReport.term.citizens.detail':

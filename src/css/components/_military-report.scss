@@ -1,0 +1,26 @@
+.military-report {
+  section {
+    margin-bottom: 0.5rem;
+  }
+
+  h3 {
+    margin: 0.25rem 0.5rem;
+  }
+
+  table {
+    border-collapse: collapse;
+    margin: 0 0.5rem;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+    padding: 0.15rem 0.75rem 0.15rem 0;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    font-weight: normal;
+  }
+}

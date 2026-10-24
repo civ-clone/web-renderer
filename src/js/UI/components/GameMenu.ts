@@ -11,6 +11,7 @@ import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
 import IntelligenceReport from './IntelligenceReport';
+import MilitaryReport from './MilitaryReport';
 import { Player } from '../types';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
@@ -385,6 +386,12 @@ export class GameMenu extends Element {
                     this.#portal,
                     this.#transport
                   );
+                },
+              },
+              {
+                label: t('GameMenu.military-report'),
+                action: () => {
+                  new MilitaryReport(this.#transport);
                 },
               },
               {

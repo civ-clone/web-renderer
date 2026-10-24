@@ -7,6 +7,7 @@ import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GamePortal from '../components/GamePortal';
 import HappinessReport from '../components/HappinessReport';
 import IntelligenceReport from '../components/IntelligenceReport';
+import MilitaryReport from '../components/MilitaryReport';
 import ScienceReport from '../components/ScienceReport';
 import TopCitiesReport from '../components/TopCitiesReport';
 import TradeReport from '../components/TradeReport';
@@ -71,14 +72,15 @@ export class InputController {
 
     this.#leaderScreensMap = {
       F1: () => new CityStatus(data().player, portal, transport),
+      F2: () => new MilitaryReport(transport),
       F3: () => new IntelligenceReport(transport),
       F4: () => new HappinessReport(data().player, portal, transport),
       F5: () => new TradeReport(data().player, portal, transport),
       F6: () => new ScienceReport(data().player),
       F8: () => new TopCitiesReport(transport),
       F9: () => new CivilizationScoreReport(transport),
-      // Civ1 opened its Civilopedia from the menu alone (#183). F2 and F7 are free, but they are Civ1's Military
-      //  Advisor and Wonders of the World, still to come.
+      // Civ1 opened its Civilopedia from the menu alone (#183). F7 is free, but it is Civ1's Wonders of the World,
+      //  still to come.
       '?': () => Civilopedia.open(transport),
     };
 
