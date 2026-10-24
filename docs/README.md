@@ -2,6 +2,11 @@
 
 This folder documents the current implementation of `@civ-clone/web-renderer`. The descriptions of the current system were checked against the code on 2026-10-08.
 
+New here? [`quick-start.md`](./quick-start.md) is the practical guide: running
+the game locally, where the code is, the checks to run, and how a change to one
+of the engine packages is tested here and shipped with `./tools/civ`. The rest
+of this folder describes how the code works.
+
 ## The rewrite plan
 
 The plan for converting the renderer to a state-based architecture lives in
