@@ -2,7 +2,7 @@
   "turns": 21,
   "sequence": {
     "count": 275,
-    "hash": "b8224fbd0bd5f6b41ffafec71ef71f561322844a3ad89518479d39f0eefc7d58"
+    "hash": "64fd82324bc1c7ebd2c3cf3b830586c660a23d806b5eace2d6943acccf2f1a25"
   },
   "channels": {
     "actionHandled": {
@@ -39,7 +39,7 @@
     },
     "intelligence": {
       "count": 2,
-      "hash": "de3ea27db7b53ff76dcc64241bd3c3a7d6343c46b7e14b7dd3aa593a4d4b41ab"
+      "hash": "0bbc9f6f9cc13a729904421f1216ad02fa0f45817e80a961ae94407b4cd3057d"
     },
     "investigateCity": {
       "count": 1,
@@ -101,7 +101,7 @@
     "actionHandled f9ebe7ac8a48 {\"name\":\"Revolution\",\"id\":\"PlayerGovernment-1\",\"unitAction\":\"[undefined]\",\"ta...",
     "topCities f3eaa331e389 {\"data\":[{\"rank\":1,\"size\":1,\"citizens\":{\"happy\":0,\"content\":1,\"unhappy\":0,\"sp...",
     "civilizationScore b1f47c71a7bb {\"data\":{\"terms\":[{\"term\":\"citizens\",\"value\":1},{\"term\":\"wonders\",\"value\":0},...",
-    "intelligence 99646f17fef6 {\"data\":[{\"civilization\":\"German\",\"colors\":[\"#FFCC00\",\"#000000\"],\"details\":nu...",
+    "intelligence c6f828c3fcc7 {\"data\":[{\"civilization\":\"German\",\"colors\":[\"#FFCC00\",\"#000000\"],\"leader\":\"Fr...",
     "cityBuildAvailable 9c1a94b1c02f {\"data\":{\"hierarchy\":[{\"#ref\":\"BuildItem-2k\"},{\"#ref\":\"BuildItem-2l\"},{\"#ref\"...",
     "gameDataPatch 3e66d45dbdec update Warrior-1",
     "gameDataPatch 20956e47e978 update PlayerTile-4, update PlayerTile-21, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
