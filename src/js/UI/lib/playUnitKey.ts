@@ -4,7 +4,11 @@ import Transport from '../Transport';
 import { directionKeys, keyToActionsMap } from './unitActionKeys';
 import NotificationWindow from '../components/NotificationWindow';
 import { cityNameText } from '../components/lib/city';
-import { chooseUnitAction } from './unitActionPrompts';
+import {
+  chooseUnitAction,
+  nameOf,
+  performWithPrompts,
+} from './unitActionPrompts';
 import { neighbourActions, unitActions } from './unitActions';
 import PendingMove, { plainMove } from './PendingMove';
 import { Topology } from './topologyFor';
@@ -51,14 +55,23 @@ export const playUnitKey = (
 
     while (actions.length) {
       const actionName = actions.shift(),
-        [unitAction] = unitActions(unit).filter(
-          (action): boolean => action._ === actionName
+        ownActions = unitActions(unit),
+        // An action a Senate overrules goes by the name of what was asked for (#133).
+        [unitAction] = ownActions.filter(
+          (action): boolean => nameOf(action) === actionName
         );
 
       if (unitAction) {
-        send(unit.id, unitAction);
+        // Through the same windows as the arrow keys: pillaging a treaty partner's land asks first (#287).
+        let sent = false;
 
-        return 'sent';
+        performWithPrompts(unit, unitAction, ownActions, (chosen) => {
+          sent = true;
+
+          send(unit.id, chosen);
+        });
+
+        return sent ? 'sent' : 'prompted';
       }
     }
   }

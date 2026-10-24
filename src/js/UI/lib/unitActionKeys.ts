@@ -12,7 +12,7 @@ export const keyToActionsMap: { [key: string]: string[] } = {
   i: ['BuildIrrigation', 'ClearForest', 'ClearSwamp', 'ClearJungle'],
   m: ['BuildMine', 'PlantForest'],
   p: ['CleanPollution'],
-  P: ['Pillage'],
+  P: ['Pillage', 'SneakPillage'],
   r: ['BuildRoad', 'BuildRailroad'],
   s: ['Sleep'],
   u: ['Unload'],

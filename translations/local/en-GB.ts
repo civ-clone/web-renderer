@@ -61,6 +61,8 @@ i18next.addResources('en-GB', 'default', {
     'A civilisation we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
 
   'HallOfFame.column.civilization': 'Civilisation',
+
+  'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
 });
 
 i18next.addResources('en-GB', 'notification', {

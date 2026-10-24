@@ -4,7 +4,7 @@ import Transport from '../Transport';
 import { off, on } from '@dom111/element';
 import { hasUnitActions, unitActions } from '../lib/unitActions';
 import distantActions from '../lib/distantActions';
-import { performWithPrompts } from '../lib/unitActionPrompts';
+import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
 
 const buildActions = (
@@ -46,23 +46,27 @@ const buildActions = (
     actions = distantActions(unit, tile);
   }
 
-  return actions.map((action) => ({
-    label: t(`Action.${action._}.name`, {
-      defaultValue: action._,
-      ns: 'unit',
-    }),
-    // Through the same windows as the arrow keys: a confirmation that would break a treaty, a Diplomat's incite and
-    //  bribe windows (#58).
-    action: () =>
-      performWithPrompts(unit, action, actions, (chosen) =>
-        transport.send('action', {
-          name: 'ActiveUnit',
-          id: unit.id,
-          unitAction: chosen._,
-          target: chosen.to.id,
-        })
-      ),
-  }));
+  // Calling off a move onto a treaty partner's land is the Cancel of the window its move opens (#287), and an action a
+  //  Senate overrules is listed as what was asked for (#133).
+  return actions
+    .filter((action) => action._ !== 'AbortMove')
+    .map((action) => ({
+      label: t(`Action.${nameOf(action)}.name`, {
+        defaultValue: nameOf(action),
+        ns: 'unit',
+      }),
+      // Through the same windows as the arrow keys: a confirmation that would break a treaty, a Diplomat's incite and
+      //  bribe windows (#58).
+      action: () =>
+        performWithPrompts(unit, action, actions, (chosen) =>
+          transport.send('action', {
+            name: 'ActiveUnit',
+            id: unit.id,
+            unitAction: chosen._,
+            target: chosen.to.id,
+          })
+        ),
+    }));
 };
 
 // TODO: This won't work as a private property of UnitActionMenu... Why?

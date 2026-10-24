@@ -12,6 +12,7 @@ import {
   performWithPrompts,
 } from '../../src/js/UI/lib/unitActionPrompts';
 import { Unit as UnitData, UnitAction } from '../../src/js/UI/types';
+import playUnitKey from '../../src/js/UI/lib/playUnitKey';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -184,6 +185,215 @@ const latest = () => {
     options: [],
     buttons: ['Break treaty', 'Cancel action'],
   });
+
+  // Onto a treaty partner's land (#287): Civ1's question, and Cancel spends the move with `AbortMove`.
+  const landTile = { id: 'tile-land', city: null, units: [] },
+    ontoLand = [
+      action('SneakMove', { enemy: babylonian }, landTile),
+      action('AbortMove', { partner: babylonian }, landTile),
+    ];
+
+  chooseUnitAction(roman(0), ontoLand, perform);
+
+  expect("a partner's land asks first", shown(), {
+    title: 'Peace treaty',
+    body: 'We have signed a peace treaty with the Babylonians!',
+    options: [],
+    buttons: ['Cancel action', 'Break treaty'],
+  });
+  expect('and must be answered', latest().querySelector('header button'), null);
+
+  press('Cancel action');
+
+  expect('Cancel sends AbortMove', sent.slice(-1), ['AbortMove']);
+
+  chooseUnitAction(roman(0), ontoLand, perform);
+  press('Break treaty');
+
+  expect('Break treaty sends SneakMove', sent.slice(-1), ['SneakMove']);
+
+  performWithPrompts(
+    roman(0),
+    action('SneakPillage', { enemy: babylonian }, landTile),
+    [],
+    perform
+  );
+
+  expect('pillaging there asks too', shown().buttons, [
+    'Cancel action',
+    'Break treaty',
+  ]);
+
+  const sentBeforePillage = sent.length;
+
+  press('Cancel action');
+
+  expect('Cancel on pillaging sends nothing', sent.length, sentBeforePillage);
+
+  // A GoTo that stopped next to the partner's land (#357) is offered the same window.
+  const halted = openArrivalWindow(roman(0), ontoLand, perform);
+
+  expect(
+    'a GoTo stopped next to a partner’s land asks',
+    [halted !== null, shown().title],
+    [true, 'Peace treaty']
+  );
+
+  press('Cancel action');
+
+  expect('and Cancel sends AbortMove', sent.slice(-1), ['AbortMove']);
+
+  // Pillaging from the keys asks too, rather than sending at once or doing nothing.
+  const keySent: string[] = [],
+    keyContext = {
+      apply: () => {},
+      pendingMove: { start: () => {} },
+      scheduleRender: () => {},
+      send: (unitId: string, chosen: UnitAction) => keySent.push(chosen._),
+      transport: { send: () => {} },
+      world: {} as any,
+    },
+    onLand = (actions: UnitAction[]) =>
+      ({ ...roman(0), actions } as unknown as UnitData);
+
+  expect(
+    'P on a partner’s land asks first',
+    [
+      playUnitKey(
+        'P',
+        onLand([action('SneakPillage', { enemy: babylonian }, landTile)]),
+        keyContext as any
+      ),
+      shown().title,
+      keySent,
+    ],
+    ['prompted', 'Peace treaty', []]
+  );
+
+  press('Break treaty');
+
+  expect('and Break treaty sends SneakPillage', keySent, ['SneakPillage']);
+
+  expect(
+    'P under a Senate asks first too',
+    playUnitKey(
+      'P',
+      onLand([
+        action(
+          'Overruled',
+          { action: { _: 'SneakPillage', enemy: babylonian }, moves: 0 },
+          landTile
+        ),
+      ]),
+      keyContext as any
+    ),
+    'prompted'
+  );
+
+  press('Break treaty');
+
+  expect('then is overruled', shown().title, 'The Senate');
+  expect('and sends Overruled', keySent.slice(-1), ['Overruled']);
+
+  expect(
+    'P elsewhere pillages at once',
+    playUnitKey(
+      'P',
+      onLand([action('Pillage', {}, landTile)]),
+      keyContext as any
+    ),
+    'sent'
+  );
+
+  // Under a Senate (#133), Break treaty is overruled: it says so, and sends `Overruled` for the moves it spends.
+  const overruledMove = [
+    action(
+      'Overruled',
+      { action: { _: 'SneakMove', enemy: babylonian }, moves: 1 },
+      landTile
+    ),
+    action('AbortMove', { partner: babylonian }, landTile),
+  ];
+
+  chooseUnitAction(roman(0), overruledMove, perform);
+
+  expect('an overruled move asks the same question', shown().buttons, [
+    'Cancel action',
+    'Break treaty',
+  ]);
+
+  press('Break treaty');
+
+  expect('Break treaty is overruled', shown(), {
+    title: 'The Senate',
+    body: 'Overruled by the Senate. Action canceled.',
+    options: [],
+    buttons: [],
+  });
+  expect('and sends Overruled', sent.slice(-1), ['Overruled']);
+
+  chooseUnitAction(
+    roman(0),
+    [
+      action(
+        'Overruled',
+        { action: { _: 'SneakAttack', enemy: babylonian }, moves: 0 },
+        unitTile
+      ),
+    ],
+    perform
+  );
+
+  expect(
+    'an overruled sneak attack asks as one does',
+    shown().title,
+    'Sneak attack?'
+  );
+
+  press('OK');
+
+  expect('then is overruled', shown().title, 'The Senate');
+  expect('and sends Overruled', sent.slice(-1), ['Overruled']);
+
+  // An overruled Diplomat is offered what it asked for, at its price.
+  const overruledDiplomat = [
+    action('Overruled', {
+      action: { _: 'SneakStealTechnology', enemy: babylonian },
+      moves: 0,
+    }),
+    action('Overruled', {
+      action: { _: 'SneakInciteRevolt', cost: 900, enemy: babylonian },
+      moves: 0,
+    }),
+    action('SubvertCity', { cost: 1800 }),
+  ];
+
+  chooseUnitAction(roman(1000), overruledDiplomat, perform);
+
+  expect('an overruled Diplomat keeps its options', shown().options, [
+    'Steal Technology',
+    'Incite a Revolt',
+  ]);
+
+  choose('incite-revolt');
+
+  expect(
+    'and its price',
+    shown().body,
+    'Dissidents in Ur will revolt for 900 coins.'
+  );
+
+  press('Incite revolt');
+
+  expect('inciting asks first', shown().buttons, [
+    'Break treaty',
+    'Cancel action',
+  ]);
+
+  press('Break treaty');
+
+  expect('then is overruled', shown().title, 'The Senate');
+  expect('and sends Overruled', sent.slice(-1), ['Overruled']);
 
   // Bribing a lone unit.
   performWithPrompts(

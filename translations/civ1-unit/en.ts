@@ -43,6 +43,7 @@ i18next.addResources('en', 'unit', {
   'Yield.Visibility.name': 'Visibility',
 
   // Actions
+  'Action.AbortMove.name': 'Cancel action',
   'Action.Activate.name': 'Activate',
   'Action.Attack.name': 'Attack',
   'Action.Automate.name': 'Automate',
@@ -74,6 +75,7 @@ i18next.addResources('en', 'unit', {
   'Action.Move.name': 'Move',
   'Action.NoOrders.name': 'No orders',
   'Action.NuclearAttack.name': 'Nuclear attack',
+  'Action.Overruled.name': 'Overruled',
   'Action.Pillage.name': 'Pillage',
   'Action.PlantForest.name': 'Plant forest',
   'Action.RailroadTo.name': 'Railroad to',
@@ -83,7 +85,9 @@ i18next.addResources('en', 'unit', {
   'Action.SneakAttack.name': 'Sneak attack',
   'Action.SneakCaptureCity.name': 'Sneak attack',
   'Action.SneakInciteRevolt.name': 'Incite a revolt',
+  'Action.SneakMove.name': 'Move',
   'Action.SneakNuclearAttack.name': 'Sneak attack',
+  'Action.SneakPillage.name': 'Pillage',
   'Action.SneakStealTechnology.name': 'Steal technology',
   'Action.StealTechnology.name': 'Steal technology',
   'Action.SubvertCity.name': 'Subvert city',
@@ -97,6 +101,7 @@ i18next.addResources('en', 'unit', {
   'Action.HelpBuildWonder.icon': 'H',
   'Action.LandAircraft.icon': 'L',
   'Action.Pillage.icon': 'P',
+  'Action.SneakPillage.icon': 'P',
   'Action.Fortify.icon': 'F',
   'Action.SetHomeCity.icon': 'H',
   'Action.Sleep.icon': 'S',

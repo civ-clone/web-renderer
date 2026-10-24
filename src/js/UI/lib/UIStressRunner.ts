@@ -67,6 +67,12 @@ const blockedUnitActions = new Set([
   // A nuke destroys everything around its target, the stress runner's own units too (#129).
   'NuclearAttack',
   'SneakNuclearAttack',
+  // Onto, or pillaging, a treaty partner's land; and what a Senate overrules or a move called off, which only spend
+  //  moves (#287, #133).
+  'SneakMove',
+  'SneakPillage',
+  'Overruled',
+  'AbortMove',
 ]);
 
 export class UIStressRunner {

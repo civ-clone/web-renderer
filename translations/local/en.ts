@@ -560,8 +560,15 @@ i18next.addResources('en', 'default', {
 
   'SelectionWindow.default-body': 'Please choose one of the following:',
 
+  // A Republic or Democracy choosing to break a peace treaty (#133).
+  'Senate.overruled': 'Overruled by the Senate. Action canceled.',
+  'Senate.title': 'The Senate',
+
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
+
+  // Moving onto, or pillaging, a treaty partner's land (#287).
+  'Treaty.title': 'Peace treaty',
 
   'TopCitiesReport.empty': 'No cities have been founded yet.',
   'TopCitiesReport.row': '{{rank, number}}. {{city}} ({{civilization}})',
