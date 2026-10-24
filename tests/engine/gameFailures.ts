@@ -1,6 +1,6 @@
 // What the worker's `Game` says when it can't do what the page asked (#470), over a stub transport: a save that can't
 //  be loaded (one that needs a plugin that isn't there) is answered on `loadFailed`, not as a passing `notification`,
-//  so the page can say so and go back to its menu. And a game that was never started, as a loaded one isn't, still
+//  so the page can say so and go back to its menu, and one that can't be built on `saveFailed` (#581). And a game that was never started, as a loaded one isn't, still
 //  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
 
 import Game from '../../src/js/Engine/Game';
@@ -110,6 +110,28 @@ engine.on = on;
     'a save that is not JSON is answered on loadFailed too',
     sent.filter(([channel]) => channel === 'loadFailed').length,
     1
+  );
+
+  // A save that can't be built is answered on `saveFailed`, for the page to say as it does one it can't write, and
+  //  not as a passing notification (#581). Made to fail where the file is written out.
+  sent.splice(0);
+
+  const stringify = JSON.stringify;
+
+  JSON.stringify = (() => {
+    throw new Error('too big');
+  }) as typeof JSON.stringify;
+
+  try {
+    receivers.get('save')!({ name: 'a save' });
+  } finally {
+    JSON.stringify = stringify;
+  }
+
+  expect(
+    "a save that can't be built is answered on saveFailed, with why, and nothing else",
+    sent,
+    [['saveFailed', { message: 'too big' }]]
   );
 
   // A loaded game is never `start`ed, so `bindEvents` never runs for it: the sign of life is bound without it.
