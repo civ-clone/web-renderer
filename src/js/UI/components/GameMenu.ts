@@ -288,6 +288,20 @@ export class GameMenu extends Element {
     this.#cheatsEnabled = true;
   }
 
+  // Save Game, from the menu or Shift+S.
+  saveGame(): void {
+    this.#transport.send('save', {
+      name: t('GameMenu.save-name', {
+        // Plain parts: i18next escapes interpolated values for HTML, so a
+        // localised date came through as `16&#x2F;09&#x2F;2026` and left
+        // `16x2F09x2F2026` in the file name once the punctuation was stripped.
+        date: new Date().toISOString().slice(0, 10),
+        player: this.#getPlayer().civilization._,
+        turn: this.#getTurn(),
+      }),
+    });
+  }
+
   build(): void {
     const button = s(`<button><img src="${menuIcon}"></button>`);
 
@@ -307,17 +321,7 @@ export class GameMenu extends Element {
                 action: (menu) => {
                   menu.remove();
 
-                  this.#transport.send('save', {
-                    name: t('GameMenu.save-name', {
-                      // Plain parts: i18next escapes interpolated values for
-                      // HTML, so a localised date came through as
-                      // `16&#x2F;09&#x2F;2026` and left `16x2F09x2F2026` in the
-                      // file name once the punctuation was stripped.
-                      date: new Date().toISOString().slice(0, 10),
-                      player: this.#getPlayer().civilization._,
-                      turn: this.#getTurn(),
-                    }),
-                  });
+                  this.saveGame();
                 },
               },
               {

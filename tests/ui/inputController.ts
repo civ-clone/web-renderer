@@ -2,7 +2,8 @@
 //  not waiting for the next turn; a key typed while the body has the focus goes to an open modal window; unit keys go
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
 //  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other, but not over
-//  a modal window; `?` opens the Civilopedia, once; and `dispose` removes the listener. Driven with stub dependencies.
+//  a modal window; `?` opens the Civilopedia, once; Shift+S saves, but not over a modal window; and `dispose` removes
+//  the listener. Driven with stub dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
@@ -90,6 +91,9 @@ const controller = new InputController({
   gameMenu: {
     enableCheats: (): void => {
       calls.push('enableCheats');
+    },
+    saveGame: (): void => {
+      calls.push('saveGame');
     },
   },
   mapView: {
@@ -270,6 +274,53 @@ const run = async (): Promise<void> => {
 
   modal.remove();
   focused = document.body;
+
+  // Shift+S.
+
+  reset();
+  event = press({ key: 'S', shiftKey: true });
+
+  expect(
+    'Shift+S saves the game',
+    [calls, pressed, event.defaultPrevented],
+    [['saveGame'], [], true]
+  );
+
+  reset();
+  press({ key: 's' });
+
+  expect("s is still the unit's", [calls, pressed], [[], ['s']]);
+
+  reset();
+  event = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'S',
+  });
+  Object.defineProperties(event, {
+    repeat: { value: true },
+    shiftKey: { value: true },
+  });
+  document.dispatchEvent(event);
+
+  expect(
+    'Shift+S held down saves once, not for each repeat',
+    [calls, event.defaultPrevented],
+    [[], true]
+  );
+
+  reset();
+  modalKeys.splice(0);
+  document.body.append(modal);
+  press({ key: 'S', shiftKey: true });
+
+  expect(
+    'not over a modal window, which gets the key instead',
+    [calls, modalKeys],
+    [[], ['S']]
+  );
+
+  modal.remove();
 
   // Unit keys.
 
