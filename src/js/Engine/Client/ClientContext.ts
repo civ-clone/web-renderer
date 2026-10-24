@@ -25,6 +25,7 @@ import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
 import Tile from '@civ-clone/core-world/Tile';
 import { Turn } from '@civ-clone/core-turn-based-game/Turn';
 import Unit from '@civ-clone/core-unit/Unit';
+import { UnitLossRegistry } from '@civ-clone/core-unit/UnitLossRegistry';
 import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { Year } from '@civ-clone/core-game-year/Year';
@@ -63,7 +64,8 @@ export interface ClientRegistries {
   rules: RuleRegistry;
   specialists: SpecialistRegistry;
   turn: Turn;
-  units: Pick<UnitRegistry, 'getBy' | 'getByTile'>;
+  unitLosses: Pick<UnitLossRegistry, 'getByPlayer'>;
+  units: Pick<UnitRegistry, 'getBy' | 'getByPlayer' | 'getByTile'>;
   wonders: Pick<WonderRegistry, 'getByCity'>;
   year: Year;
 }

@@ -19,6 +19,7 @@ import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as specialistRegistryInstance } from '@civ-clone/core-city/SpecialistRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
+import { instance as unitLossRegistryInstance } from '@civ-clone/core-unit/UnitLossRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';
@@ -43,6 +44,7 @@ export const registries: ClientRegistries = {
   rules: ruleRegistryInstance,
   specialists: specialistRegistryInstance,
   turn: turnInstance,
+  unitLosses: unitLossRegistryInstance,
   units: unitRegistryInstance,
   wonders: wonderRegistryInstance,
   year: yearInstance,

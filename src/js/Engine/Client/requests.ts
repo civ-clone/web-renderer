@@ -20,6 +20,7 @@ import {
 import { ClientContext, Registries } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
+import { militaryReport } from '../lib/military';
 import { buildListDetails, inBuildListOrder } from '../lib/buildList';
 import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { unavailableBuildItems } from '../lib/civilopedia';
@@ -46,8 +47,15 @@ export type RequestsContext = Pick<
   | 'rules'
   | 'specialists'
   | 'wonders'
+  // The Military report's (#405).
+  | 'availableCityBuildItems'
 > &
-  Registries<{ cityBuilds: 'getBy'; units: 'getBy' }>;
+  Registries<{
+    cities: 'getByPlayer';
+    cityBuilds: 'getBy';
+    unitLosses: 'getByPlayer';
+    units: 'getBy' | 'getByPlayer';
+  }>;
 
 export const topCities = (
   ctx: RequestsContext,
@@ -180,6 +188,11 @@ export const registerRequests = (
     answer(transport, 'intelligence', () =>
       intelligenceRows(ctx.player(), (player) => ctx.hasMet(player))
     )
+  );
+
+  // The Military report (F2, #405): our own units and losses only.
+  disposers.push(
+    answer(transport, 'military', () => militaryReport(ctx.player(), ctx))
   );
 
   return () => disposers.forEach((dispose) => dispose());
