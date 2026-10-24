@@ -1067,7 +1067,8 @@ const act = (action: { name: string; [key: string]: any }): Promise<void> =>
 // The unit actions the human never chooses: a GoTo, exploring or automating hands the unit to the client, which then
 //  sends its actions with no one asking, and a nuclear attack takes everything around it. And Pillage, for now: when
 //  it completes, `base-unit-action-pillage` takes the improvement off the square itself rather than through the
-//  `Pillaged` rules, so the square's yields aren't worked out again and nothing says the square changed.
+//  `Pillaged` rules, so the square's yields aren't worked out again and nothing says the square changed. The same goes
+//  for pillaging a treaty partner's land (#287).
 const unitActionsNotChosen = new Set([
   'Automate',
   'Explore',
@@ -1075,6 +1076,7 @@ const unitActionsNotChosen = new Set([
   'NuclearAttack',
   'Pillage',
   'SneakNuclearAttack',
+  'SneakPillage',
 ]);
 
 // One of a unit's actions, on its own square or a neighbour the player knows. Settlers found a city wherever they can,
