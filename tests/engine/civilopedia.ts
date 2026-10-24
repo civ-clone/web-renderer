@@ -2,7 +2,9 @@
 //  name has an entry, keyed as saves key it, so Railroad the advance and the Railroad tile improvement are two. Each
 //  entry says something. Musketmen need Gunpowder, go obsolete with Conscription, give way to Riflemen, and are 2/3/1
 //  for 30 shields, all read from the ruleset's rules. A Trireme needs a coastal city through `Naval`, the registry's
-//  own walk. And a city says which requirement entries refuse what it can't build, for its own player only.
+//  own walk. And a city says which requirement entries refuse what it can't build, for its own player only. Its build
+//  list comes in sections, units, improvements, spaceship parts then Wonders, with a unit's numbers on its line
+//  (#381, #432).
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -19,7 +21,11 @@ import civilopediaData, {
   unavailableBuildItems,
 } from '../../src/js/Engine/lib/civilopedia';
 import requirementsData from '../../src/js/Engine/lib/requirements';
-import { registerRequests } from '../../src/js/Engine/Client/requests';
+import {
+  cityBuildAvailable,
+  registerRequests,
+} from '../../src/js/Engine/Client/requests';
+import { inBuildListOrder } from '../../src/js/Engine/lib/buildList';
 import Player from '@civ-clone/core-player/Player';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
@@ -116,7 +122,7 @@ const check = async (): Promise<void> => {
       'civ1-unit:unit/replaced-by/Warrior',
     ],
     cost: 30,
-    stats: { attack: 2, defence: 3, movement: 1 },
+    stats: { attack: 2, defence: 3, movement: 1, visibility: 1 },
   });
   expect(
     'a Trireme needs a coastal city, through Naval',
@@ -236,6 +242,61 @@ const check = async (): Promise<void> => {
       asked(new Player()),
     ],
     [true, [[]]]
+  );
+
+  // Given in registry order, Wonders first, as a city's build list was before #432.
+  const buildable = (name: string) =>
+    (defaultGame.availableCityBuildItems.entries() as Function[]).find(
+      (Item) => Item.name === name
+    )!;
+
+  expect(
+    'the build list is in sections, each in the order it was given in',
+    inBuildListOrder(
+      ['Pyramids', 'Musketman', 'Barracks', 'Structural', 'Warrior', 'Temple'],
+      buildable
+    ),
+    ['Musketman', 'Warrior', 'Barracks', 'Temple', 'Structural', 'Pyramids']
+  );
+
+  const available = cityBuildAvailable(
+      () => (object: any) => object,
+      cityBuild,
+      defaultGame.rules
+    ),
+    availableItems = (available.hierarchy as { '#ref': string }[]).map(
+      ({ '#ref': id }) => available.objects[id]
+    ),
+    groups = availableItems.map((item) => item.group);
+
+  expect(
+    'a city’s build list has each item’s section, units first',
+    [
+      groups.length > 0,
+      groups.every((group) =>
+        ['unit', 'improvement', 'spaceship', 'wonder'].includes(group)
+      ),
+      groups.every(
+        (group, index) =>
+          index === 0 ||
+          ['unit', 'improvement', 'spaceship', 'wonder'].indexOf(group) >=
+            ['unit', 'improvement', 'spaceship', 'wonder'].indexOf(
+              groups[index - 1]
+            )
+      ),
+      groups[0],
+    ],
+    [true, true, true, 'unit']
+  );
+  expect(
+    'and a unit’s numbers, and none for anything else',
+    availableItems
+      .filter((item) => ['Warrior', 'Barracks'].includes(item.item._))
+      .map((item) => [item.item._, item.stats]),
+    [
+      ['Warrior', { attack: 1, defence: 1, movement: 1, visibility: 1 }],
+      ['Barracks', null],
+    ]
   );
 
   research.addAdvance(Gunpowder);

@@ -4,11 +4,11 @@ i18next.addResources(
   'en',
   'spaceship',
   {
-    'Fuel.name': 'Fuel',
-    'Habitation.name': 'Habitation',
-    'LifeSupport.name': 'LifeSupport',
-    'Power.name': 'Power',
-    'Propulsion.name': 'Propulsion',
-    'Structural.name': 'Structural',
+    'Fuel.name': 'SS Fuel',
+    'Habitation.name': 'SS Habitation',
+    'LifeSupport.name': 'SS Life Support',
+    'Power.name': 'SS Power',
+    'Propulsion.name': 'SS Propulsion',
+    'Structural.name': 'SS Structural',
   }
 );

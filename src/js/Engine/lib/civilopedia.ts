@@ -4,7 +4,12 @@
 //  knows no rules: which entries apply through a base class (`Naval`, `CityImprovement`) is the registry's own walk,
 //  and a unit's numbers and an item's cost come from the ruleset's rules. Definitions, the same for every player.
 
-import { Attack, Defence, Movement } from '@civ-clone/core-unit/Yields';
+import {
+  Attack,
+  Defence,
+  Movement,
+  Visibility,
+} from '@civ-clone/core-unit/Yields';
 import Advance from '@civ-clone/core-science/Advance';
 import { BaseYield } from '@civ-clone/core-unit/Rules/Yield';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
@@ -13,6 +18,7 @@ import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Game from '@civ-clone/core-game/Game';
 import Government from '@civ-clone/core-government/Government';
 import Part from '@civ-clone/core-spaceship/Part';
+import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { Requirement } from '@civ-clone/core-requirement/Requirement';
 import Terrain from '@civ-clone/core-terrain/Terrain';
 import TileImprovement from '@civ-clone/core-tile-improvement/TileImprovement';
@@ -44,8 +50,15 @@ export interface CivilopediaEntry {
   leadsTo: string[];
   /** What a city pays to build it, or `null` for what isn't built in a city. */
   cost: number | null;
-  /** A unit's attack, defence and movement before anything modifies them. */
-  stats: { attack: number; defence: number; movement: number } | null;
+  /** A unit's attack, defence, movement and visibility before anything modifies them. */
+  stats: UnitStats | null;
+}
+
+export interface UnitStats {
+  attack: number;
+  defence: number;
+  movement: number;
+  visibility: number;
 }
 
 type Class = Function & { name: string; type?: string };
@@ -58,7 +71,7 @@ const kinds: [CivilopediaKind, Class][] = [
   ['unit', Unit],
 ];
 
-const kindOf = (Item: Class): CivilopediaKind | null =>
+export const kindOf = (Item: Class): CivilopediaKind | null =>
   kinds.find(([, Base]) => Item.prototype instanceof Base)?.[0] ?? null;
 
 const ids = (entries: Requirement[]): string[] =>
@@ -75,13 +88,25 @@ const costOf = (Item: Class, game: Game): number | null => {
   }
 };
 
-const baseYield = (UnitType: Class, YieldType: typeof Yield, game: Game) => {
+const baseYield = (
+  UnitType: Class,
+  YieldType: typeof Yield,
+  rules: RuleRegistry
+) => {
   const unitYield = new YieldType();
 
-  game.rules.process(BaseYield, UnitType as typeof Unit, unitYield);
+  rules.process(BaseYield, UnitType as typeof Unit, unitYield);
 
   return unitYield.value();
 };
+
+/** A unit's numbers before anything modifies them, from the ruleset's `BaseYield` rules. */
+export const unitStats = (UnitType: Class, rules: RuleRegistry): UnitStats => ({
+  attack: baseYield(UnitType, Attack, rules),
+  defence: baseYield(UnitType, Defence, rules),
+  movement: baseYield(UnitType, Movement, rules),
+  visibility: baseYield(UnitType, Visibility, rules),
+});
 
 export const civilopediaData = (
   game: Game = defaultGame
@@ -97,14 +122,7 @@ export const civilopediaData = (
     requires: ids(game.requirements.for(Item as any)),
     leadsTo: ids(game.requirements.leadsTo(Item as any)),
     cost: buildable ? costOf(Item, game) : null,
-    stats:
-      kind === 'unit'
-        ? {
-            attack: baseYield(Item, Attack, game),
-            defence: baseYield(Item, Defence, game),
-            movement: baseYield(Item, Movement, game),
-          }
-        : null,
+    stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
   });
 
   return [

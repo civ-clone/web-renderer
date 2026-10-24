@@ -20,6 +20,8 @@ import {
 import { ClientContext, Registries } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
+import { buildListDetails, inBuildListOrder } from '../lib/buildList';
+import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 import { unavailableBuildItems } from '../lib/civilopedia';
 import { standalone } from './refs';
 import answer from '../answer';
@@ -72,16 +74,32 @@ export const civilizationScore = (ctx: RequestsContext): CivilizationScore =>
 
 export const cityBuildAvailable = (
   dataFilter: DataFilter,
-  cityBuild: CityBuildItem
+  cityBuild: CityBuildItem,
+  rules: RuleRegistry
 ): ObjectMap => {
-  const available = cityBuild.available(),
+  // By section, for the picker's headings (#432).
+  const available = inBuildListOrder(cityBuild.available(), (buildItem) =>
+      buildItem.item()
+    ),
     filter = dataFilter(standalone);
 
   // `toPlainObject` is a method on `DataObject`, and it is the only way in: the filter is applied to what it is called
   //  on first, so handing it the list in place of the build gets the list serialised, as the `hierarchy`.
-  return cityBuild.toPlainObject((object: any) =>
+  const objectMap = cityBuild.toPlainObject((object: any) =>
     object === cityBuild ? available : filter(object)
   );
+
+  // Each item's section and a unit's numbers (#381), added here rather than as `AdditionalData` on `BuildItem`, which
+  //  would add them to the `building` in every `CityBuild` patch too.
+  available.forEach((buildItem) => {
+    const plainObject = objectMap.objects[buildItem.id()];
+
+    if (plainObject) {
+      Object.assign(plainObject, buildListDetails(buildItem.item(), rules));
+    }
+  });
+
+  return objectMap;
 };
 
 export const registerRequests = (
@@ -111,7 +129,7 @@ export const registerRequests = (
       const [cityBuild] = ctx.cityBuilds.getBy('id', cityBuildId);
 
       return cityBuild && ctx.view.owns(cityBuild.city().player())
-        ? cityBuildAvailable(ctx.dataFilter, cityBuild)
+        ? cityBuildAvailable(ctx.dataFilter, cityBuild, ctx.rules)
         : { hierarchy: [], objects: {} };
     })
   );

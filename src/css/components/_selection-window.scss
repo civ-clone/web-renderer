@@ -27,4 +27,8 @@
   p:not(:empty) + select {
     margin-top: 0;
   }
+
+  optgroup {
+    font-style: normal;
+  }
 }

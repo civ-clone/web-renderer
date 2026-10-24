@@ -175,7 +175,13 @@ i18next.addResources('en', 'default', {
   'City.Build.auto-stop': 'Stop Auto',
   'City.Build.build-item':
     '{{- item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+  'City.Build.build-unit':
+    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.buy': 'Buy',
+  'City.Build.group.improvement': 'City Improvements',
+  'City.Build.group.spaceship': 'Spaceship Parts',
+  'City.Build.group.unit': 'Units (A/D/M/V)',
+  'City.Build.group.wonder': 'Wonders of the World',
   'City.Build.unavailable': 'Can’t build…',
   // This can include the resource being using to buy with via {{spendCost}} which allows support for `Faith`, etc used in later games.
   // 'City.Build.buy-with': 'Buy with $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })',
