@@ -389,13 +389,16 @@ i18next.addResources('en', 'default', {
   'LoadGame.could-not-delete': 'That save could not be deleted: {{- error}}',
   'LoadGame.delete': 'Delete',
   'LoadGame.delete-confirm': 'Delete “{{name}}”? This cannot be undone.',
+  'LoadGame.delete-save': 'Delete {{- name}}',
   'LoadGame.download': 'Download',
+  'LoadGame.download-save': 'Download {{- name}}',
   'LoadGame.empty': 'There are no saved games left in this browser.',
   'LoadGame.from-file': 'Load from a file…',
   'LoadGame.kind.autosave': 'Autosave',
-  'LoadGame.kind.player': 'Saved',
+  'LoadGame.kind.player': 'Your save',
   'LoadGame.kind.start': 'Game start',
   'LoadGame.load': 'Load',
+  'LoadGame.load-save': 'Load {{- name}}',
   'LoadGame.title': '$t(GameMenu.load-game)',
   'LockedSlider.lock': 'Lock',
 
@@ -458,7 +461,7 @@ i18next.addResources('en', 'default', {
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
-  'SavedGame.saved': 'Saved: {{- name}}',
+  'SavedGame.saved': 'Saved in this browser: {{- name}}',
 
   'PlayerDetails.Government.body_anarchy': `{{government}} ($t(Progress.turns-left, { "count": {{turns}} }))`,
   'PlayerDetails.Government.body_choosing':
