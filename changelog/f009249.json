@@ -1,0 +1,1 @@
+{"version":"0.1.0@f009249","date":"2026-10-25T10:43:05.000Z","localChanges":["chore: the page no longer handles remove patches, which the game never sends, and pruning keeps its object map small (closes #68)"],"externalChanges":{}}
