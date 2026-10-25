@@ -167,8 +167,17 @@ declare global {
     // A unit's GoTo stopped next to its destination, which offers more than a move (#357): the unit and the tile, to
     //  choose what to do there as the arrow keys would.
     unitHalted: TransportData<{ target: string; unit: string }, never>;
-    save: TransportData<null, { name: string }>;
+    // `autosave` (#653), a new game's first turn or a later one: the file comes back compressed, on `autosaveGame`.
+    save: TransportData<
+      null,
+      { name: string; autosave?: 'start' | 'autosave' }
+    >;
     saveGame: TransportData<{ name: string; data: string }, never>;
+    // A save taken as a turn started (#653), gzipped in the worker where it can be, as the page would a download.
+    autosaveGame: TransportData<
+      { name: string; kind: 'start' | 'autosave'; data: Blob },
+      never
+    >;
     // Game → Retire (#176, #362).
     retire: TransportData<never, null>;
     setOption: TransportData<

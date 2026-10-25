@@ -57,6 +57,10 @@ export class Store<Types extends DBSchema> {
     ]);
   }
 
+  async delete(key: StoreKey<Types, StoreNames<Types>>) {
+    return (await this.#connection).delete(this.#store, key);
+  }
+
   async clear() {
     return (await this.#connection).clear(this.#store);
   }

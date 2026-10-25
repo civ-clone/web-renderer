@@ -1,0 +1,23 @@
+// Load Game's saves kept in the browser (#653), each with its actions.
+.saved-games {
+  border-collapse: collapse;
+  width: 100%;
+
+  td {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  .actions {
+    white-space: nowrap;
+
+    button + button {
+      margin-left: 0.25rem;
+    }
+  }
+}
+
+.load-game-window footer {
+  margin-top: 0.5rem;
+}

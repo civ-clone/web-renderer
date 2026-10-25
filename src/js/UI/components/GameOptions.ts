@@ -1,3 +1,4 @@
+import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
 import { IPortal } from './Portal';
 import Window from './Window';
 import currentTileset from '../lib/tilesets';
@@ -93,6 +94,25 @@ export class GameOptions extends Window {
                 options.set('lockVerticalEdges', input.checked);
                 portal.setLockVerticalEdges(input.checked);
               },
+            });
+          })()
+        ),
+        s(
+          `<label>${t('GameOptions.autosave')}</label>`,
+          (() => {
+            // How often the game is kept in the browser (#653).
+            const current = options.get('autosave', '5'),
+              select = s<HTMLSelectElement>(
+                `<select>${AUTOSAVE_CHOICES.map(
+                  (choice) =>
+                    `<option value="${choice}"${
+                      choice === current ? ' selected' : ''
+                    }>${t(`GameOptions.autosave-choice.${choice}`)}</option>`
+                ).join('')}</select>`
+              );
+
+            return h(select, {
+              change: () => options.set('autosave', select.value),
             });
           })()
         )

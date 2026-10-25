@@ -109,26 +109,84 @@ export class Game implements IGame {
       }
     });
 
-    transport.receive('save', ({ name }: { name: string }): void => {
-      try {
-        this.#transport.send('saveGame', {
-          name,
-          data: JSON.stringify(
+    transport.receive(
+      'save',
+      ({
+        name,
+        autosave,
+      }: {
+        name: string;
+        autosave?: 'start' | 'autosave';
+      }): void => {
+        let data: string;
+
+        try {
+          data = JSON.stringify(
             save(defaultGame, {
               name,
               describeClient: (client: unknown): DescribedClient =>
                 this.#describeClient(client as Client),
             })
-          ),
-        });
-      } catch (error) {
-        // Reported rather than thrown: the worker would otherwise die silently
-        // mid-game, and a save that cannot be written is not a reason to lose
-        // the game it was taken from. Said by the page as one it can't write
-        // is, not as a passing notification that is easily missed (#581).
-        this.#transport.send('saveFailed', { message: describeError(error) });
+          );
+        } catch (error) {
+          // Reported rather than thrown: the worker would otherwise die silently
+          // mid-game, and a save that cannot be written is not a reason to lose
+          // the game it was taken from. Said by the page as one it can't write
+          // is, not as a passing notification that is easily missed (#581). An
+          // autosave nobody asked for is only mentioned: the turn goes on (#653).
+          if (autosave !== undefined) {
+            this.#transport.send('notification', {
+              key: 'SavedGame.autosave-failed',
+              data: { error: describeError(error) },
+            });
+
+            return;
+          }
+
+          this.#transport.send('saveFailed', { message: describeError(error) });
+
+          return;
+        }
+
+        if (autosave === undefined) {
+          this.#transport.send('saveGame', { name, data });
+
+          return;
+        }
+
+        // Compressed here rather than on the page (#653): late in a game the JSON is 15–30MB, and a Blob crosses to the
+        //  page without a copy. Plain where the browser can't compress, as a download is. Read from `globalThis`: the
+        //  TypeScript this builds with has no type for it yet.
+        const Compression = (
+          globalThis as {
+            CompressionStream?: new (format: 'gzip') => TransformStream<
+              Uint8Array,
+              Uint8Array
+            >;
+          }
+        ).CompressionStream;
+
+        (Compression === undefined
+          ? Promise.resolve(new Blob([data], { type: 'application/json' }))
+          : new Response(
+              new Blob([data]).stream().pipeThrough(new Compression('gzip'))
+            ).blob()
+        )
+          .then((blob: Blob): void =>
+            this.#transport.send('autosaveGame', {
+              name,
+              kind: autosave,
+              data: blob,
+            })
+          )
+          .catch((error: Error): void =>
+            this.#transport.send('notification', {
+              key: 'SavedGame.autosave-failed',
+              data: { error: describeError(error) },
+            })
+          );
       }
-    });
+    );
 
     transport.receive(
       'load',

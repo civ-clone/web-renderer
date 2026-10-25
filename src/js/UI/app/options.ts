@@ -9,6 +9,8 @@ export const setOptionDefaults = (): void => {
     unitEdgeMargin: 2,
     mapScale: currentTileset().defaultScale,
     lockVerticalEdges: false,
+    // As a new game starts, and then every 5 turns (#653): see `AUTOSAVE_CHOICES`.
+    autosave: '5',
   });
 };
 

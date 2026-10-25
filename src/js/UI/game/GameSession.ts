@@ -6,6 +6,7 @@ import City from '../components/City';
 import GameMenu from '../components/GameMenu';
 import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
 import { gridName } from '../lib/savedGame';
+import { autosaveDue } from '../lib/browserSaves';
 import { isSupportedTopology } from '../lib/supportedTopologies';
 import NotificationWindow from '../components/NotificationWindow';
 import Notices from '../components/Notices';
@@ -466,6 +467,9 @@ export class GameSession {
         })
       );
 
+      // The first turn handed over is saved only for a new game (#653): see `autosaveDue`.
+      let firstTurnStarted = true;
+
       transportDisposers.push(
         transport.receive('turnStarted', (): void => {
           // A new turn: an End Turn sent before it was handed over is never answered, as the worker wasn't listening
@@ -481,6 +485,21 @@ export class GameSession {
           waitingBanner.textContent = '';
 
           gameState.update();
+
+          // Kept in the browser (#653), now that the worker has nothing to do until the player does something. Never
+          //  for a game being watched: nobody's turn here is handed over.
+          const autosave = observing
+            ? null
+            : autosaveDue(turn(), options.get('autosave', '5'), {
+                firstOfSession: firstTurnStarted,
+                newGame: pendingSave === null,
+              });
+
+          if (autosave !== null) {
+            gameMenuItem.autosave(autosave);
+          }
+
+          firstTurnStarted = false;
 
           // Now rather than next frame: the turn's messages follow
           // straight away, and should open over the new turn, not the

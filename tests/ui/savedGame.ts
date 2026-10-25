@@ -200,6 +200,17 @@ const reset = () => {
     small
   );
 
+  // An autosave (#653) is the gzipped file kept as a Blob, with no file name, and loads as a file does.
+  reset();
+
+  await loadSaveFromFile(new Blob([await gzipped(small)]));
+
+  expect(
+    'an autosave, a Blob rather than a File, loads as a file does',
+    (await takePendingSave())?.data,
+    small
+  );
+
   // The seats reassigned before the load go over with it (#608), and a load called off at the seats loads nothing.
   reset();
 

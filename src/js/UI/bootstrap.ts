@@ -4,7 +4,8 @@ import GameSession from './game/GameSession';
 import GameOverWindow from './components/GameOverWindow';
 import { ObserverState } from '../Engine/Observer';
 import MainMenu from './components/MainMenu';
-import { downloadSave, takePendingSave } from './lib/savedGame';
+import { downloadFile, saveFile, takePendingSave } from './lib/savedGame';
+import { keepSave } from './lib/browserSaves';
 import Notices from './components/Notices';
 import Notifications from './components/Notifications';
 import HaltedUnits from './lib/haltedUnits';
@@ -24,6 +25,10 @@ import WorkerFailures from './app/WorkerFailures';
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
 //  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+// An error's message, for saying: anything thrown, `Error` or not.
+const describe = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 export class Renderer {
   #transport: Transport;
@@ -74,16 +79,6 @@ export class Renderer {
 
       const transportDisposers: Array<() => void> = [];
 
-      transportDisposers.push(
-        transport.receive('saveGame', ({ name, data }): void => {
-          downloadSave(name, data).catch((error: Error): void =>
-            window.alert(
-              t('SavedGame.could-not-write', { error: error.message })
-            )
-          );
-        })
-      );
-
       // A game nobody here plays is watched (#607): the worker says so, with the players to see it as, before the first
       //  `gameData`. Kept for the session to build on, and for the ending, which is then nobody's own.
       let observerState: ObserverState | null = null;
@@ -107,6 +102,52 @@ export class Renderer {
       );
 
       const notificationBar = new NotificationBar(elements.notificationArea);
+
+      // Saves are kept in the browser (#653), and downloaded from Load Game. One the browser won't keep is downloaded
+      //  now instead, so it isn't lost.
+      transportDisposers.push(
+        transport.receive('saveGame', ({ name, data }): void => {
+          saveFile(data)
+            .then(async (file: Blob): Promise<void> => {
+              let refused: Error | null = null;
+
+              if (
+                await keepSave(name, file, 'player', (error: Error): void => {
+                  refused = error;
+                })
+              ) {
+                notificationBar.show(t('SavedGame.saved', { name }));
+
+                return;
+              }
+
+              await downloadFile(name, file);
+
+              notificationBar.show(
+                t('SavedGame.downloaded-instead', {
+                  error: describe(refused),
+                })
+              );
+            })
+            .catch((error: Error): void =>
+              window.alert(
+                t('SavedGame.could-not-write', { error: describe(error) })
+              )
+            );
+        })
+      );
+
+      // A new game's first turn, and every few after (#653). Storage that is full or refused is said, and the game goes
+      //  on.
+      transportDisposers.push(
+        transport.receive('autosaveGame', ({ name, kind, data }): void => {
+          void keepSave(name, data, kind, (error: Error): void =>
+            notificationBar.show(
+              t('SavedGame.autosave-failed', { error: describe(error) })
+            )
+          );
+        })
+      );
 
       transportDisposers.push(notificationBar.listen(transport));
 
