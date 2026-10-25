@@ -1,6 +1,6 @@
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 
-type DataPatchType = 'add' | 'remove' | 'update';
+type DataPatchType = 'add' | 'update';
 
 type DataPatchContents = {
   type: DataPatchType;
@@ -56,7 +56,7 @@ export class DataQueue {
               return;
             }
 
-            if (type !== 'remove' && built === undefined) {
+            if (built === undefined) {
               return;
             }
 

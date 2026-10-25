@@ -134,7 +134,7 @@ const update = (patches: DataPatch[], rebuildAll = false): void => {
       },
     },
   }),
-  // A unit lost: gone from the player's list, then removed.
+  // A unit lost, as the worker sends it (#459): once more, marked destroyed, then gone from the player's list.
   lose = (id: string): DataPatch[] => {
     const units = (objectMap.objects['Player-1'].units as PlainObject[]).filter(
       (unit) => unit['#ref'] !== id
@@ -144,13 +144,21 @@ const update = (patches: DataPatch[], rebuildAll = false): void => {
 
     return [
       {
+        [id]: {
+          type: 'update' as const,
+          value: {
+            hierarchy: { ...objectMap.objects[id], destroyed: true },
+            objects: {},
+          },
+        },
+      },
+      {
         'Player-1': {
           type: 'update' as const,
           index: 'units',
           value: { hierarchy: units, objects: {} },
         },
       },
-      { [id]: { type: 'remove' as const } },
     ];
   };
 

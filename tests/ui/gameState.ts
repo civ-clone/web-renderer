@@ -864,8 +864,8 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   );
 }
 
-// The object count is kept as patches add and remove objects, not counted
-// on every update (#480): a late game's map holds ~120k.
+// The object count is kept as patches add objects and prunes take them out,
+// not counted on every update (#480): a late game's map holds ~120k.
 {
   const objectMap = makeMap();
   let enumerations = 0;
@@ -895,15 +895,12 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
       units: [ref('Unit-1')],
       world: ref('World-1'),
     }),
-    { 'Unit-2': { type: 'remove' } },
-    // Not in the map: nothing to count.
-    { 'Unit-9': { type: 'remove' } },
   ]);
 
   check('a patch does not enumerate the map', enumerations === 0);
   check(
-    'a new object is counted, a removed one uncounted',
-    state.currentObjectCount() === size
+    'a new object is counted, and one no longer referred to is still held',
+    state.currentObjectCount() === size + 1
   );
 
   state.applyPatches([
@@ -926,7 +923,7 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
 
   check(
     "a side-table's new objects are counted",
-    state.currentObjectCount() === size + 2
+    state.currentObjectCount() === size + 3
   );
   check('nor does the next patch', enumerations === 0);
 

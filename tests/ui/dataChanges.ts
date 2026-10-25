@@ -4,12 +4,12 @@
 // patches changed plus the ids the rebuild filled, or `null` for a rebuild of
 // everything. A "render" is a `notify`. Checks that a watcher wakes for a
 // changed id, for a child id its getter reads live, for a late ref arriving at
-// what it watches, for a `remove` and for a full rebuild; not for unrelated
+// what it watches and for a full rebuild; not for unrelated
 // ids; that it is told which ids changed; once per render however many rebuilds
 // came before it; and that unwatching or watching during a render is honoured.
 // Then the same for a watcher on the module's shared `instance`, as the city
 // screen, the reports and the unit stack window use it: added with no
-// `document` (this runs in Node), woken by a change or a `remove` with the new
+// `document` (this runs in Node), woken by a change with the new
 // data, following its ids as they are when read, and stopped by unwatching.
 
 import DataChanges, {
@@ -237,32 +237,6 @@ check(
 check(
   'through filledIds, not the patch',
   !lastChanged.has('City-2') && lastFilled.has('City-2')
-);
-
-// A removed id, which nothing built refers to, so nothing else is refilled and only its own watcher can wake.
-reset();
-update([{ 'Unit-9': { type: 'remove' } }]);
-render();
-
-check(
-  `a watcher wakes for its removed id, alone (${[...wakes.keys()].join()})`,
-  woke('unit 9') === 1 && wakes.size === 1
-);
-check(
-  'through the patch, not filledIds',
-  lastChanged.has('Unit-9') && lastFilled.size === 0
-);
-
-// One the player's list refers to: the rebuild refills everything that reached it, so every watcher wakes, and the
-//  check is only that its own wakes through its id.
-reset();
-update([{ 'Unit-3': { type: 'remove' } }]);
-render();
-
-check('a watcher wakes for its removed id', woke('unit 3') === 1);
-check(
-  'through the patch, not filledIds',
-  lastChanged.has('Unit-3') && !lastFilled.has('Unit-3')
 );
 
 // A rebuild of everything.
@@ -524,11 +498,11 @@ check(
   );
 
   received.length = 0;
-  update([{ 'Unit-1': { type: 'remove' } }]);
+  update([replace('Unit-1', { ...objectMap.objects['Unit-1'] })]);
   render();
 
   check(
-    `a shared watcher wakes for a removed id (${received.length})`,
+    `a shared watcher wakes for its other id (${received.length})`,
     received.length === 1
   );
 

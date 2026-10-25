@@ -19,7 +19,7 @@ marked as such, with the commit or issue that fixed them.
     - The frontend rebuilds only the objects a patch changed, with `src/js/UI/lib/IncrementalReconstituter.ts`, instead of the whole graph (e70f65a, #322; f5633a0, #327).
     - Patches no longer carry every unit's actions (4ae9bbd, #323) or every city's build list (4732149, #324), and the page is sent only the player's own map (9ae604f, #328).
   - Still open: #326 (show a move straight away, keep keypresses typed during the lag), #333 (the initial game data is rebuilt twice on load) and #151 (turn handover refinements).
-  - `Renderer` had TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `GameState`'s rebuild (`src/js/UI/game/GameState.ts`): reconstituting in a worker thread. The object map is still pruned by `src/js/UI/lib/pruneObjectMap.ts`, and #68 asks whether the backend should send `remove` patches instead.
+  - `Renderer` had TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `GameState`'s rebuild (`src/js/UI/game/GameState.ts`): reconstituting in a worker thread. The object map is pruned by `src/js/UI/lib/pruneObjectMap.ts`, which keeps it bounded, so the backend sends no `remove` patches (#68).
   - `DataQueue` includes TODO to chunk data transfer but currently sends full queue each flush. Still true.
 - **Protocol drift risk in transport channels**
   - `restart` is declared in `TransportDataMap`, but has no receiver on the opposite side (sent by the backend, no frontend handler). `quit` was removed with the main menu's Quit button, an Electron leftover (#340).

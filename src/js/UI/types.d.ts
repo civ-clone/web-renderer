@@ -296,7 +296,7 @@ export interface Notification {
   message: string;
 }
 
-type DataPatchType = 'add' | 'remove' | 'update';
+type DataPatchType = 'add' | 'update';
 
 type DataPatchContents = {
   type: DataPatchType;

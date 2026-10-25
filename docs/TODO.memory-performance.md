@@ -33,11 +33,10 @@ Last updated: 2026-10-08
 - [x] Add growth-based prune trigger (1.5× since last prune) alongside the
       5-turn cadence.
   - File: `src/js/UI/Renderer.ts`
-- [ ] Emit backend `remove` patches for destroyed entities (object map
-      self-maintenance). Open as a question in #68: whether they are still
-      needed now that #46 turned out to be something else. The frontend applies
-      `remove` patches, but no backend code sends one; the commented-out call in
-      the `city:captured` handler was dropped in 2315225.
+- [x] ~~Emit backend `remove` patches for destroyed entities~~. Not needed
+      (#68): over a 300-turn game the prune kept the map under 6,500 objects,
+      at ~2 ms a prune. The frontend's unused `remove` handling was dropped,
+      and `test:patch-refs` now prunes as the page does.
 - [x] Coalesce full-graph reconstitution (per frame/turn instead of per patch
       flush). Done differently from this plan. Rendering runs at most once a
       frame (cc4a87d). While waiting for the other civilizations the rebuild
@@ -86,12 +85,12 @@ Last updated: 2026-10-08
    - Typed, but still unwired: nothing on the frontend receives `restart`, and
      nothing in the worker receives `quit`. #176 plans to replace `restart`
      with a `gameOver` message.
-- [ ] Measure prune cadence impact on frame time in late game and tune thresholds.
+- [x] Measure prune cadence impact on frame time in late game and tune thresholds.
    - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/pruneObjectMap.ts`
-   - Still open. The prune now runs in `updateState()` and hands the ids it
+   - Done. The prune now runs in `updateState()` and hands the ids it
      removed to `IncrementalReconstituter.forget()`; the thresholds are
-     unchanged (over 5,000 objects, every 5 turns or on 1.5× growth). #68
-     suggests measuring this before deciding on `remove` patches.
+     unchanged (over 5,000 objects, every 5 turns or on 1.5× growth). Measured
+     in #68: ~2 ms a prune (max 3.6 ms), so no tuning is needed.
 - [ ] Consider moving reconstitution and patch application off main thread.
    - Files: `src/js/UI/Renderer.ts`, `src/js/UI/lib/IncrementalReconstituter.ts`
    - Still open, with no issue of its own. Incremental rebuilding (#322) made

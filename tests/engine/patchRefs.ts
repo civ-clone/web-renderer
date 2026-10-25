@@ -19,6 +19,10 @@
 // `PlayerTile` the frontend holds is compared with what the client would send for it now. Only a tile patch may carry
 // a tile in full, and only its own.
 //
+// And that the page's prune keeps up (#68): the worker never removes an id, so the object map is pruned of what nothing
+// reaches, on `GameState`'s schedule, and every check above runs against the map as pruned. A ref to something a prune
+// let go of shows as a missing ref.
+//
 // And that an action sends what it changed (#411). An action's patch no longer carries the whole player, only what the
 // action and the events it raised sent, so the human plays most of its turns by hand, as the UI does: it sends the
 // actions the UI sends, for its units, cities, research, rates and government, chosen at random, and every fourth turn
@@ -45,6 +49,8 @@ import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-buil
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import reconstituteData from '../../src/js/UI/lib/reconstituteData';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
+import pruneObjectMap from '../../src/js/UI/lib/pruneObjectMap';
+import PruneSchedule from '../../src/js/UI/lib/PruneSchedule';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
@@ -74,6 +80,9 @@ const receivers = new Map<string, (...args: any[]) => void>(),
   // `CityBuild`s that went out with `available`, or without what the UI reads (#410), with the channel, the key of the
   //  patch or notification, and the path from its root to the build, so the code that sent it can be found.
   badCityBuilds = new Map<string, string>();
+
+// As `GameState` keeps it, and what it did: how many prunes, and the most objects the map held.
+const prunes = { schedule: null as PruneSchedule | null, count: 0, peak: 0 };
 
 let stopped = false,
   batches = 0,
@@ -1017,6 +1026,24 @@ const transport = {
       checkTilesFresh(
         `batch ${batches}${human.pending ? `, ${human.pending.label}` : ''}`
       );
+
+      // Then pruned, as `GameState` prunes after a rebuild.
+      const objects = Object.keys(objectMap.objects).length,
+        turn = turnInstance.value();
+
+      if (channel === 'gameData') {
+        prunes.schedule = new PruneSchedule(objects);
+      }
+
+      prunes.peak = Math.max(prunes.peak, objects);
+
+      if (prunes.schedule!.due(turn, objects)) {
+        prunes.count++;
+        prunes.schedule!.pruned(
+          turn,
+          objects - pruneObjectMap(objectMap).length
+        );
+      }
     }
 
     if (channel === 'gameDataPatch') {
@@ -1514,6 +1541,14 @@ engine.on('turn:start', (turn: number): void => {
     process.exit(1);
   }
 
+  if (prunes.count === 0) {
+    console.error(
+      `FAIL patchRefs: the object map was never pruned (it peaked at ${prunes.peak} objects), so no check ran against a pruned map (#68)`
+    );
+
+    process.exit(1);
+  }
+
   if (tilesCompared === 0) {
     console.error(
       'FAIL patchRefs: no PlayerTile the frontend holds was compared with the engine'
@@ -1607,7 +1642,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   console.log(
-    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${tilesCompared} comparisons found every tile the frontend holds up to date; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about or the last to act, ${unitActions.carried} later patch(es) kept them; ${human.actions} actions by hand over ${human.turns} turns, after each of which, and each hand-over, ${playerComparisons} comparisons found the player the frontend holds up to date; ${actionLists.sent} lists of its actions sent, with ${actionLists.held} actions the frontend held as refs)`
+    `PASS patchRefs (${batches} batches and ${notifications} notifications over ${turn} turns, every reachable ref resolves, with the map pruned ${prunes.count} time(s) and never above ${prunes.peak} objects; the player's own PlayerWorld and ${reachablePlayerTiles} PlayerTile(s) are all the page can reach; ${tilesCompared} comparisons found every tile the frontend holds up to date; ${unitActions.answers} unitActions answered, actions only ever for the unit asked about or the last to act, ${unitActions.carried} later patch(es) kept them; ${human.actions} actions by hand over ${human.turns} turns, after each of which, and each hand-over, ${playerComparisons} comparisons found the player the frontend holds up to date; ${actionLists.sent} lists of its actions sent, with ${actionLists.held} actions the frontend held as refs)`
   );
 
   process.exit(0);
