@@ -85,6 +85,27 @@ const cases = [
     ['Fixed.'],
   ],
   [
+    "a squash of several commits drops each commit's trailers",
+    'feat: a thing (#35)\n' +
+      '\n' +
+      '* feat: a thing\n' +
+      '\n' +
+      'It does a thing.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' +
+      '\n' +
+      '* perf: faster\n' +
+      '\n' +
+      'It is faster.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' +
+      '\n' +
+      '---------\n' +
+      '\n' +
+      'Co-authored-by: Claude Opus 5 <noreply@anthropic.com>',
+    ['feat: a thing', 'It does a thing.', 'perf: faster', 'It is faster.'],
+  ],
+  [
     'a last paragraph such as `Note: …` is part of the notes',
     'fix: a thing\n' +
       '\n' +

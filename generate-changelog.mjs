@@ -39,7 +39,9 @@ const git = (...args) =>
 //
 // Trailers (`Co-Authored-By:` and the like) are not changes and are dropped,
 // wherever they sit at the end of the message: after one blank line, several,
-// or none (#475). Only the keys in `TRAILERS` count: `Note: …` or `Warning: …`
+// or none (#475). A paragraph of nothing but trailers is dropped wherever it is:
+// GitHub's squash of several commits leaves one after each of them, and a
+// `---------` rule before its own trailers, which goes too. Only the keys in `TRAILERS` count: `Note: …` or `Warning: …`
 // closing a body is a sentence for the player, and every conventional-commit
 // subject (`release: …`, `docs: …`) has the same shape as a trailer too.
 //
@@ -84,6 +86,13 @@ export const toBullets = (message) => {
         }
 
         paragraphs.pop();
+    }
+
+    // A paragraph of trailers (or a squash's `---------` rule) between others; never the subject.
+    for (let index = paragraphs.length - 1; index > 0; index--) {
+        if (paragraphs[index].every((line) => isTrailer(line) || /^-{3,}$/.test(line.trim()))) {
+            paragraphs.splice(index, 1);
+        }
     }
 
     if (paragraphs.length === 1) {
