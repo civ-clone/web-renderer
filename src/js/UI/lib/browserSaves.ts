@@ -81,40 +81,75 @@ export const deleteSave = async (savedAt: number): Promise<void> => {
   await savesStore().delete(savedAt);
 };
 
+/** Whether storage refused a write for want of room, rather than for any other reason. */
+const isQuotaError = (error: unknown): boolean =>
+  error instanceof Error &&
+  (error.name === 'QuotaExceededError' ||
+    (error as Error & { code?: number }).code === 22);
+
+// One save at a time: an autosave and the player's own landing together would otherwise each prune with the other
+//  half-written, and could reach for the same key.
+let queue: Promise<unknown> = Promise.resolve();
+
 /**
  * Keeps a save, and lets go of all but the newest `KEEP_AUTOSAVES` autosaves. Storage that is full or refused is said
  * through `report` rather than thrown, and the save is not kept: it settles `false`.
  */
-export const keepSave = async (
+export const keepSave = (
   name: string,
   data: Blob,
   kind: SaveKind,
   report: (error: Error) => void,
   now: () => number = Date.now
 ): Promise<boolean> => {
+  const kept = queue.then(() => write(name, data, kind, report, now));
+
+  queue = kept;
+
+  return kept;
+};
+
+const write = async (
+  name: string,
+  data: Blob,
+  kind: SaveKind,
+  report: (error: Error) => void,
+  now: () => number
+): Promise<boolean> => {
+  const saves = savesStore();
+
+  // The autosaves past the newest `keep` let go. The rest are the player's to delete.
+  const prune = async (keep: number): Promise<void> => {
+    const autosaves = (await saves.getAll())
+      .filter(({ kind }) => kind === 'autosave')
+      .sort((a, b) => b.savedAt - a.savedAt);
+
+    await Promise.all(
+      autosaves.slice(keep).map(({ savedAt }) => saves.delete(savedAt))
+    );
+  };
+
   try {
-    const saves = savesStore(),
-      savedAt = now(),
-      save: BrowserSave = { name, savedAt, kind, data };
+    // A key no other save has: two in the same millisecond, or a clock put back, would otherwise replace one.
+    let savedAt = now();
 
-    // The autosaves past the newest `keep` let go. The rest are the player's to delete.
-    const prune = async (keep: number): Promise<void> => {
-      const autosaves = (await saves.getAll())
-        .filter(({ kind }) => kind === 'autosave')
-        .sort((a, b) => b.savedAt - a.savedAt);
+    while ((await saves.get(savedAt)) !== undefined) {
+      savedAt++;
+    }
 
-      await Promise.all(
-        autosaves.slice(keep).map(({ savedAt }) => saves.delete(savedAt))
-      );
-    };
+    const save: BrowserSave = { name, savedAt, kind, data };
 
     await requestPersistence();
 
     try {
       await saves.set(save, savedAt);
-    } catch {
-      // Storage that is full stays full if the oldest autosave is only let go once the newest save is in: let it go
-      //  first, and try once more. The newer autosaves are still kept meanwhile.
+    } catch (error) {
+      // Only for want of room. Storage that is full stays full if the oldest autosave is only let go once the newest
+      //  save is in: let it go first, and try once more. The newer autosaves are still kept meanwhile.
+      if (!isQuotaError(error)) {
+        throw error;
+      }
+
       const autosaves = (await saves.getAll()).filter(
         ({ kind }) => kind === 'autosave'
       ).length;
@@ -122,15 +157,20 @@ export const keepSave = async (
       await prune(Math.max(0, autosaves - 1));
       await saves.set(save, savedAt);
     }
-
-    await prune(KEEP_AUTOSAVES);
-
-    return true;
   } catch (error) {
     report(error as Error);
 
     return false;
   }
+
+  // Kept, whatever happens now: an autosave left over is let go next time.
+  try {
+    await prune(KEEP_AUTOSAVES);
+  } catch {
+    // Nothing to tell the player: their save is in.
+  }
+
+  return true;
 };
 
 /**

@@ -18,6 +18,13 @@
   }
 }
 
+// On a narrow screen the actions wrap rather than run off the side.
+@media (max-width: 40em) {
+  .saved-games .actions {
+    white-space: normal;
+  }
+}
+
 .load-game-window footer {
   margin-top: 0.5rem;
 }

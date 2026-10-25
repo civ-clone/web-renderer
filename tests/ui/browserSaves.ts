@@ -148,6 +148,61 @@ Object.defineProperty(globalThis, 'navigator', {
     'turn 1 (start)',
   ]);
 
+  // A write refused for any other reason than room: said, and the autosave is not let go for it.
+  resetStore();
+  reported.length = 0;
+
+  await keep('turn 25', 'autosave', 1025);
+
+  failStore(new Error('could not be cloned'), ['set']);
+
+  expect(
+    'a write refused for another reason is not kept',
+    await keep('turn 26', 'player', 1026),
+    false
+  );
+  expect('and is reported', reported, ['could not be cloned']);
+
+  failStore(null);
+
+  expect('and the autosave is still there', await listed(), [
+    'turn 25 (autosave)',
+  ]);
+
+  // Kept, but the autosave before it can't be let go: still kept, and nothing said.
+  await keep('turn 28', 'autosave', 1028);
+
+  reported.length = 0;
+  failStore(new Error('could not delete'), ['delete']);
+
+  expect(
+    'a save that is in is kept, whatever the tidying after',
+    await keep('turn 30', 'autosave', 1030),
+    true
+  );
+  expect('and nothing is said of it', reported, []);
+
+  failStore(null);
+
+  await keep('turn 35', 'autosave', 1035);
+
+  expect('and the next autosave lets both go', await listed(), [
+    'turn 35 (autosave)',
+  ]);
+
+  // Two saves at once, in the same millisecond: both kept, neither in place of the other.
+  resetStore();
+
+  await Promise.all([
+    keep('turn 40', 'autosave', 1040),
+    keep('turn 40, by hand', 'player', 1040),
+  ]);
+
+  expect('two saves in the same millisecond are both kept', await listed(), [
+    'turn 40, by hand (player)',
+    'turn 40 (autosave)',
+  ]);
+
   resetStore();
 
   // Which turns are saved: a new game's first, kept as its start, then an autosave every 5, 10 or 20 turns where that
