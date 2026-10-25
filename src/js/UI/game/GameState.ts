@@ -90,7 +90,7 @@ export class GameState {
   //  all accounted for.
   #changedIds = new Set<string>();
   #currentObjectCount: number;
-  // How many objects the map holds, kept as patches add and remove them:
+  // How many objects the map holds, kept as patches add them and prunes take them out:
   //  counting the keys of a late game's map on every update cost ~12 ms
   //  (#480).
   #objectCount: number;
@@ -221,7 +221,6 @@ export class GameState {
 
         queueTiles(value.tile, previous?.tile);
       },
-      removed: () => this.#objectCount--,
       // Since we only use the queued tiles for x and y this should be fine...
       tile: (tile) => this.#tiles.queueTile(tile as Tile),
     });
@@ -349,8 +348,7 @@ export class GameState {
 
     // Accumulated until the next render's `notify`: several rebuilds can come
     //  between two renders, and `filledIds` is the last one's alone. It adds
-    //  the owners of refs that have just arrived; `changed` adds the ids
-    //  removed.
+    //  the owners of refs that have just arrived.
     this.#changes.collect(
       changed === null ? null : [...changed, ...this.#reconstituter.filledIds()]
     );

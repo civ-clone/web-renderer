@@ -36,10 +36,9 @@ The findings below are kept as written. Checked against the code on
   objects a patch changed (e70f65a, #322; f5633a0, #327). Patches are smaller
   too (4ae9bbd, #323; 4732149, #324; 9ae604f, #328). Moving the rebuild into
   a worker is not done.
-- **A3, backend `remove` patches: still open**, as a question in #68. No
-  backend code sends a `remove` patch; the commented-out one in the
-  `city:captured` handler was dropped in 2315225. The prune is unchanged apart
-  from handing the ids it removes to `IncrementalReconstituter`.
+- **A3, backend `remove` patches: not needed** (#68). Over a 300-turn game
+  the prune kept the map under 6,500 objects (164k unpruned), at ~2 ms a
+  prune, so the frontend's unused `remove` handling was dropped instead.
 - **D1, the restart flow: still unwired.** The backend still sends `restart`
   on the human's defeat with no frontend receiver, and `quit` has no backend
   receiver. #176 plans to replace `restart` with a `gameOver` message.
@@ -53,10 +52,9 @@ The findings below are kept as written. Checked against the code on
 
 Implemented the same day as the analysis (see per-finding status notes and the
 fix-order table below): A1, A2, A4, A5, B1, C1, C3, C4, the adaptive-prune part
-of A3, and the in-place sort cleanups from section D. Still open: backend
-`remove` patches (rest of A3), coalesced reconstitution (C2), viewport-sized
-main-portal layers (B2), the restart-flow wiring (D1), and per-draw clone
-reduction (C5).
+of A3, and the in-place sort cleanups from section D. Still open: coalesced
+reconstitution (C2), viewport-sized main-portal layers (B2), the restart-flow
+wiring (D1), and per-draw clone reduction (C5).
 
 ---
 
@@ -357,7 +355,7 @@ heap high-water marks elevated, and make the leaks above bite sooner.
 | 5 | B1 city mini-map canvas sizing/reuse | Medium | Medium | Removes ~160 MB/open canvas spikes | ✅ 2026-07-01 |
 | 6 | C4 filtered notification payloads | Small | Low | Shrinks transport payload churn | ✅ 2026-07-01 |
 | 7 | A4 `receiveOnce` disposers + `takeTurn` cleanup | Medium | Medium | Prevents listener stranding/double-processing | ✅ 2026-07-01 |
-| 8 | A3 backend `remove` patches + adaptive prune | Medium | Medium | Keeps object map bounded without cliff-edge prunes | ◐ prune part done; `remove` patches open (#68) |
+| 8 | A3 backend `remove` patches + adaptive prune | Medium | Medium | Keeps object map bounded without cliff-edge prunes | ✓ prune part done; `remove` patches not needed (#68) |
 | 9 | C2 coalesced reconstitution | Medium–large | Medium | Cuts steady-state allocation rate substantially | Largely fixed 2026-10-08 (#321, #322, #327) |
 | 10 | B2 viewport-sized layers | Large | High | Lowers baseline; part of rewrite track | Fixed 2026-09-22 |
 

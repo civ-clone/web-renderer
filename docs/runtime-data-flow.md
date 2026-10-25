@@ -54,7 +54,7 @@ Only silence is detected: a worker that keeps sending other messages but never a
 
 `DataQueue` patch shape:
 
-- `type`: `add | update | remove`
+- `type`: `add | update`. There is no `remove`: an object nothing refers to any more is pruned on the frontend (#68)
 - `index`: optional object path string (`foo.bar[3]` style)
 - `value`: object payload, or a function on the backend that is called when the queue is flushed
 
@@ -80,15 +80,13 @@ Frontend patch handling in `game/GameState.ts`, through `lib/applyDataPatches.ts
   - Else replace root object entry.
   - Merge any `value.objects` references into object map.
   - Record every id touched in `changedIds`, and queue any `PlayerTile` in the patch to be redrawn.
-- `remove`
-  - Remove nested path or root object.
 - Then `GameState` hands `changedIds` to `IncrementalReconstituter.rebuild()`, which refills only those ids' objects in place (#322, #327). Anything holding one of those objects sees the new contents without being rebuilt itself.
 
 During the player's turn `GameState` rebuilds synchronously on every patch, so input handlers always read the post-move state. While waiting for the other civilizations it rebuilds at most once per animation frame (#61). Rendering (`render()`) always runs at most once per frame.
 
 ## How open windows learn of changes
 
-- After each rebuild, `GameState` `collect`s into `lib/DataChanges.ts` the ids the patches changed (removed ones included) and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
+- After each rebuild, `GameState` `collect`s into `lib/DataChanges.ts` the ids the patches changed and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
 - At the start of each render, `notify` runs, once, each watcher whose ids (read then, so they can follow what the window shows) were among those collected since the last render, or every watcher after a rebuild of everything.
 - A window `watch`es the ids it shows and unwatches when it closes: the city screen through `components/lib/watchCity.ts`, the four reports through `components/lib/watchPlayer.ts`, and the unit stack window directly. There are no `document` events for this any more.
 
@@ -123,6 +121,6 @@ The worker also sends `embassyEstablished` (opens the intelligence report) and `
 
 - `game/GameState.ts` still has a TODO about reconstituting in a worker thread. Rebuilds are now incremental, but `gameData` is reconstituted twice: once by `WorkerTransport` (used for the welcome window) and once by `IncrementalReconstituter`.
 - Patch application relies on manual string-path mutation logic.
-- The backend never emits `remove` patches (`DataQueue` has no `remove` since #539), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The ids it removes are passed to `IncrementalReconstituter.forget()`.
+- There are no `remove` patches (`DataQueue` has had no `remove` since #539, and the frontend dropped its handling in #68), so the frontend object map only shrinks via `pruneObjectMap`, which compacts unreachable entries every 5 turns — or on 1.5× growth since the last prune — once the map exceeds 5,000 objects. The ids it removes are passed to `IncrementalReconstituter.forget()`. Measured in #68 over a 300-turn `test:patch-refs` game: pruned, the map peaked at 6,457 objects (164k unpruned) and each prune took ~2 ms.
 
 See [`memory-growth-analysis-2026-07.md`](./memory-growth-analysis-2026-07.md) for a detailed analysis of these paths.

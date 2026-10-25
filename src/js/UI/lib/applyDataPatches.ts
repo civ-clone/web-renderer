@@ -39,106 +39,67 @@ export const setObjectPath = (
   tmpObj[lastPart] = value;
 };
 
-/** Removes `path` of `object`: splices an array index out, deletes anything else. Warns if it leads nowhere. */
-export const removeObjectPath = (object: PlainObject, path: string): void => {
-  const [tmpObj, lastPart] = getPenultimateObject(object, path);
-
-  if (!tmpObj || !lastPart) {
-    console.warn(`unable to set ${path} of ${object} (${lastPart})`);
-    return;
-  }
-
-  if (Array.isArray(tmpObj) && /^\d+$/.test(lastPart)) {
-    tmpObj.splice(parseInt(lastPart, 10), 1);
-
-    return;
-  }
-
-  delete tmpObj[lastPart];
-};
-
 export type DataPatchCallbacks = {
-  /** Each id an entry adds, updates or removes, and each id in an add or update's side-table, in the order applied. */
+  /** Each id an entry adds or updates, and each id in its side-table, in the order applied. */
   changed(id: string): void;
   /** Each `PlayerTile` in a side-table, once it is in the map and `changed`. */
   tile?(tile: PlainObject): void;
   /** Each whole object an add or update puts in the map, its own or in its side-table, with the one it replaced. */
   set?(id: string, value: PlainObject, previous: PlainObject | undefined): void;
-  /** Each id a remove takes out of the map, if the map held it. A remove with an `index` takes out a path, not an id. */
-  removed?(id: string): void;
 };
 
 /**
  * Applies `patches` to `objectMap` in order. An add or update sets the whole id, or with `index` the path inside it,
- * then copies its side-table of objects in; a remove deletes the id, or the path inside it. An add or update without
- * a `hierarchy` is skipped whole, side-table included.
+ * then copies its side-table of objects in. One without a `hierarchy` is skipped whole, side-table included. The
+ * worker never removes an id: objects nothing reaches any more are pruned (`pruneObjectMap`).
  */
 export const applyDataPatches = (
   objectMap: ObjectMap,
   patches: DataPatch[],
-  { changed, tile, set, removed }: DataPatchCallbacks
+  { changed, tile, set }: DataPatchCallbacks
 ): void =>
   patches.forEach((patch) =>
-    Object.entries(patch).forEach(([key, { type, index, value }]) => {
-      if (type === 'add' || type === 'update') {
-        if (!value!.hierarchy) {
-          console.error('No hierarchy');
-          console.error(value);
+    Object.entries(patch).forEach(([key, { index, value }]) => {
+      if (!value!.hierarchy) {
+        console.error('No hierarchy');
+        console.error(value);
 
-          return;
-        }
-
-        const patchKey = key,
-          original = objectMap.objects[key],
-          // The worker sends an object as a ref to itself, with the object in the side-table: `set` hears of it once,
-          //  from the side-table, with what the map held before the ref.
-          selfRef =
-            !index &&
-            value!.hierarchy['#ref'] === key &&
-            key in (value!.objects as PlainObject);
-
-        if (index) {
-          setObjectPath(objectMap.objects[key], index, value!.hierarchy);
-        } else {
-          objectMap.objects[key] = value!.hierarchy;
-
-          if (!selfRef) {
-            set?.(key, value!.hierarchy, original);
-          }
-        }
-
-        changed(key);
-
-        Object.entries(value!.objects as PlainObject).forEach(
-          ([key, value]) => {
-            const previous =
-              selfRef && key === patchKey ? original : objectMap.objects[key];
-
-            objectMap.objects[key] = value;
-            set?.(key, value, previous);
-            changed(key);
-
-            if (value._ === 'PlayerTile') {
-              tile?.(value);
-            }
-          }
-        );
+        return;
       }
 
-      if (type === 'remove') {
-        changed(key);
+      const patchKey = key,
+        original = objectMap.objects[key],
+        // The worker sends an object as a ref to itself, with the object in the side-table: `set` hears of it once,
+        //  from the side-table, with what the map held before the ref.
+        selfRef =
+          !index &&
+          value!.hierarchy['#ref'] === key &&
+          key in (value!.objects as PlainObject);
 
-        if (index) {
-          removeObjectPath(objectMap.objects[key], index);
+      if (index) {
+        setObjectPath(objectMap.objects[key], index, value!.hierarchy);
+      } else {
+        objectMap.objects[key] = value!.hierarchy;
 
-          return;
-        }
-
-        if (key in objectMap.objects) {
-          delete objectMap.objects[key];
-          removed?.(key);
+        if (!selfRef) {
+          set?.(key, value!.hierarchy, original);
         }
       }
+
+      changed(key);
+
+      Object.entries(value!.objects as PlainObject).forEach(([key, value]) => {
+        const previous =
+          selfRef && key === patchKey ? original : objectMap.objects[key];
+
+        objectMap.objects[key] = value;
+        set?.(key, value, previous);
+        changed(key);
+
+        if (value._ === 'PlayerTile') {
+          tile?.(value);
+        }
+      });
     })
   );
 
