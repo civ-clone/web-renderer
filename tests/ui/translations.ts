@@ -28,12 +28,21 @@
 //
 // English is all there is, so it's what a French browser sees too: everything
 // here is checked with the app's own options and `fr-FR` (#471).
+//
+// A nation that opens a sentence is capitalised ("The Sioux Nation has been
+// defeated …"), and keeps its lower-case article anywhere else in the sentence
+// ("… by the Aztec Empire"). A city's name comes from its founder's list
+// wherever it's shown, the map's `cityName` included (#359).
 
+import * as Civ1Civilizations from '@civ-clone/civ1-civilization/Civilizations';
+import * as WorldCivilizations from '@civ-clone/civ1-world-civilizations/Civilizations';
 import {
+  Aztec,
   Babylonian,
   Indian,
   Mongol,
 } from '@civ-clone/civ1-civilization/Civilizations';
+import { cityName, cityNameText } from '../../src/js/UI/components/lib/city';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
 import {
@@ -56,7 +65,7 @@ import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import type Player from '@civ-clone/core-player/Player';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
-import { cityNameText } from '../../src/js/UI/components/lib/city';
+import addFormatters from '../../src/js/UI/app/i18nFormatters';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { join } from 'path';
 import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
@@ -80,6 +89,7 @@ const expect = (description: string, actual: string, expected: string) => {
 
 (async () => {
   await i18next.init({ ...i18nOptions, lng: 'fr-FR' });
+  addFormatters(i18next);
   await import('../../translations/local/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
@@ -248,12 +258,16 @@ const expect = (description: string, actual: string, expected: string) => {
     )
   );
 
+  const aztec = unknownPlayer(new Aztec()),
+    sioux = unknownPlayer(new WorldCivilizations.Sioux()),
+    barbarians = unknownPlayer(new Barbarian());
+
   const colossus = { _: 'Colossus' },
     notifications: [string, any, string][] = [
       [
         'City.captured-from-us',
         { city: asansol, capturingPlayer: babylon, originalPlayer: india },
-        'Babylon have captured our city Asansol!',
+        'Our city Asansol has been captured by Babylon!',
       ],
       [
         'City.captured-by-us',
@@ -277,7 +291,7 @@ const expect = (description: string, actual: string, expected: string) => {
       [
         'Player.defeated.by',
         { defeatedPlayer: india, player: babylon },
-        'Babylon has defeated India!',
+        'India has been defeated by Babylon!',
       ],
       [
         'Player.defeated.unknown',
@@ -287,12 +301,64 @@ const expect = (description: string, actual: string, expected: string) => {
       [
         'Player.defeated.unmet-by',
         { player: babylon },
-        'Babylon has defeated an unknown civilization!',
+        'An unknown civilization has been defeated by Babylon!',
       ],
       [
         'Player.defeated.unmet',
         { player: null },
         'News reaches us that an unknown civilization has been defeated!',
+      ],
+      // #359: a nation that opens a sentence is capitalised; one later on keeps its article in lower case. The nation
+      //  that acts comes after the verb, which then agrees whichever it is: "Barbarians" is plural.
+      [
+        'Player.defeated.by',
+        { defeatedPlayer: sioux, player: aztec },
+        'The Sioux Nation has been defeated by the Aztec Empire!',
+      ],
+      [
+        'Player.defeated.by',
+        { defeatedPlayer: aztec, player: babylon },
+        'The Aztec Empire has been defeated by Babylon!',
+      ],
+      [
+        'Player.defeated.by',
+        { defeatedPlayer: sioux, player: barbarians },
+        'The Sioux Nation has been defeated by Barbarians!',
+      ],
+      [
+        'Player.defeated.unknown',
+        { defeatedPlayer: aztec, player: null },
+        'The Aztec Empire defeated!',
+      ],
+      [
+        'Player.defeated.unmet-by',
+        { player: aztec },
+        'An unknown civilization has been defeated by the Aztec Empire!',
+      ],
+      [
+        'Player.respawned',
+        { defeatedPlayer: aztec },
+        'Where the Aztec Empire once stood, a new civilization has arisen.',
+      ],
+      [
+        'City.captured-from-us',
+        { city: asansol, capturingPlayer: aztec, originalPlayer: india },
+        'Our city Asansol has been captured by the Aztec Empire!',
+      ],
+      [
+        'City.captured-by-us',
+        { city: asansol, capturingPlayer: babylon, originalPlayer: aztec },
+        'We have captured Asansol from the Aztec Empire',
+      ],
+      [
+        'City.destroyed-by',
+        { city: asansol, player: barbarians },
+        'Our city Asansol has been destroyed by Barbarians!',
+      ],
+      [
+        'Unit.nuclear-attack',
+        { player: aztec },
+        'Nuclear weapons have been used by the Aztec Empire!',
       ],
       [
         'Spaceship.part-built.unmet',
@@ -674,6 +740,89 @@ const expect = (description: string, actual: string, expected: string) => {
     "the player's own turn has no line",
     progress(playerProgress(reader, reader, met)),
     'no line'
+  );
+
+  // #359: every civilization opens a sentence with a capital, and keeps its own article later in the same sentence.
+  //  The barbarians are never the ones defeated.
+  const civilizations = [
+    ...Object.values(Civ1Civilizations),
+    ...Object.values(WorldCivilizations),
+    Barbarian,
+  ];
+
+  civilizations.forEach((Civilization) => {
+    const name = Civilization.name,
+      nation = t(`${name}.nation`, { ns: 'civilization' }),
+      player = { civilization: { _: name } },
+      [first, ...rest] = nation;
+
+    if (nation === `${name}.nation`) {
+      failures.push(`${name}.nation: missing`);
+
+      return;
+    }
+
+    if (Civilization === Barbarian) {
+      return;
+    }
+
+    expect(
+      `Player.defeated.by.body (${name})`,
+      t('Player.defeated.by.body', {
+        defeatedPlayer: player,
+        ns: 'notification',
+        player,
+      }),
+      `${first.toLocaleUpperCase('en')}${rest.join(
+        ''
+      )} has been defeated by ${nation}!`
+    );
+  });
+
+  // #359: a string opening a sentence with a nation uses `nation-start`, whose first letter is capitalised; `.nation`
+  //  and `Generic.unknown-civilization` start with "the" or "an" there.
+  const sentenceStart = (directory: string): void =>
+    readdirSync(directory).forEach((name) => {
+      const path = join(directory, name);
+
+      if (statSync(path).isDirectory()) {
+        sentenceStart(path);
+
+        return;
+      }
+
+      readFileSync(path, 'utf8')
+        .split('\n')
+        .forEach((line, index) => {
+          // `Generic.civilization-name.nation`, `nation-start` and `Generic.unknown-civilization-start` are defined by
+          //  lookups that open their own values. A one-line entry opens after its key's colon.
+          if (
+            /((^\s*|:\s*)['`"]|[.!?:]\s+)\$t\((Generic\.civilization-name\.nation(?![-\w]|, capitalise\))|\{\{(?!- civilization\}\})[^}]+\}\}\.nation|Generic\.unknown-civilization(?![-\w]|, capitalise\)))/.test(
+              line
+            )
+          ) {
+            failures.push(
+              `${path}:${
+                index + 1
+              }: a sentence opens with a lower-case nation; use Generic.civilization-name.nation-start`
+            );
+          }
+        });
+    });
+
+  sentenceStart('translations');
+
+  // #359: the city's name on the map and in the city screen comes from its founder's list, as `Generic.city-name` does.
+  i18next.addResource('en', 'city', 'Mongol.Ulaanbaatar.name', 'Ulan Bator');
+
+  expect(
+    'cityName (captured)',
+    cityName({
+      name: 'Ulaanbaatar',
+      originalPlayer: { civilization: { _: 'Mongol' } },
+      player: { civilization: { _: 'Aztec' } },
+    } as unknown as Parameters<typeof cityName>[0]),
+    'Ulan Bator'
   );
 
   if (failures.length) {

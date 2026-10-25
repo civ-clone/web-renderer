@@ -30,7 +30,8 @@ import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The local player comes first, labelled "You" with an empty value so leaving
 // the select alone sends no `player` at all; every other player follows,
-// including civilizations we haven't met, labelled with their civilization.
+// including civilizations we haven't met, labelled with their civilization, capitalised as a label ("The Aztec
+// Empire", #359).
 const cheatPlayerSelect = (players: CheatPlayersResult[]): HTMLSelectElement =>
   s<HTMLSelectElement>(
     `<select>${[
@@ -39,10 +40,10 @@ const cheatPlayerSelect = (players: CheatPlayersResult[]): HTMLSelectElement =>
         .filter((player) => !player.isLocal)
         .map(
           (player) =>
-            `<option value="${player.id}">${t(`${player.civilization}.nation`, {
-              defaultValue: player.civilization,
-              ns: 'civilization',
-            })}</option>`
+            `<option value="${player.id}">${t(
+              'Generic.civilization-name.nation-start',
+              { civilization: player.civilization }
+            )}</option>`
         ),
     ].join('')}</select>`
   );

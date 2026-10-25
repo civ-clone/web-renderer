@@ -318,6 +318,7 @@ const makeWorld = (
           ? {
               id: `City-${x}-${y}`,
               name: `City ${x} ${y}`,
+              originalPlayer: player,
               player,
               civilDisorderDeclared: city !== true && !!city.disorder,
               growth: { size: city === true ? 1 : city.size },

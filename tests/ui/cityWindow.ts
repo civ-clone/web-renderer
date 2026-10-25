@@ -91,6 +91,7 @@ const player = {
       _: 'City',
       id: 'City-1',
       name: 'Babylon',
+      originalPlayer: player,
       player,
       tile: { x: 2, y: 2, units: [] },
       tiles: [],
