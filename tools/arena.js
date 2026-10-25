@@ -25,6 +25,13 @@ const END = 'arena>>>';
 // its own rather than the game-wide registry's.
 const MINIMUM = 'd660d9b';
 const WORKING_TREE = 'working-tree';
+// The sizes there is an Earth map for, with the number of civilizations New
+// Game offers on each (src/js/UI/lib/worldSizes.ts).
+const EARTH_SIZES = [
+  { width: 80, height: 50, players: 7 },
+  { width: 104, height: 65, players: 9 },
+  { width: 128, height: 80, players: 12 },
+];
 const fixturePath = path.join(
   webRenderer,
   'tests',
@@ -127,9 +134,15 @@ const usage = `usage: node tools/arena.js [options]
   --games <n>            games to play: seeds 1, 1, 2, 2, ... (default: 20)
   --seeds <a,b,...>      play each of these seeds twice instead
   --turns <n>            stop at the start of this turn (default: 150)
-  --players <n>          (default: 4)
-  --width <n>            (default: 60)
-  --height <n>           (default: 40)
+  --players <n>          (default: 4; on Earth, as many as New Game offers
+                         for that size: 7, 9 or 12)
+  --width <n>            (default: 60; on Earth, 80)
+  --height <n>           (default: 40; on Earth, 50)
+  --earth                play on the Earth map; --width and --height pick its
+                         size: 80x50, 104x65 or 128x80
+  --civilizations <a,b,...>
+                         seat 0 plays the first, seat 1 the second, ... by
+                         class name (English, Japanese); other seats choose
   --jobs <n>             games at once (default: ${defaultJobs()})
   --timeout <seconds>    give up on a game after this long (default: 600)
   --out <file>           also write the whole result as JSON
@@ -154,9 +167,11 @@ const parseArguments = (argv) => {
     games: 20,
     seeds: null,
     turns: 150,
-    players: 4,
-    width: 60,
-    height: 40,
+    players: null,
+    width: null,
+    height: null,
+    earth: false,
+    civilizations: null,
     jobs: defaultJobs(),
     timeout: 600,
     out: null,
@@ -185,7 +200,7 @@ const parseArguments = (argv) => {
       process.exit(0);
     }
 
-    if (['selfCheck', 'verbose', 'keep'].includes(name)) {
+    if (['selfCheck', 'verbose', 'keep', 'earth'].includes(name)) {
       options[name] = true;
 
       continue;
@@ -217,7 +232,67 @@ const parseArguments = (argv) => {
       continue;
     }
 
+    if (name === 'civilizations') {
+      options.civilizations = value.split(',').map((entry) => entry.trim());
+
+      if (options.civilizations.some((entry) => entry === '')) {
+        throw new Error(`--civilizations has an empty name: ${value}`);
+      }
+
+      const repeated = options.civilizations.find(
+        (entry, index) => options.civilizations.indexOf(entry) !== index
+      );
+
+      if (repeated) {
+        throw new Error(`--civilizations names ${repeated} twice`);
+      }
+
+      continue;
+    }
+
     options[name] = value;
+  }
+
+  if (options.earth) {
+    const size = EARTH_SIZES.find(
+      ({ width, height }) =>
+        width === (options.width ?? 80) && height === (options.height ?? 50)
+    );
+
+    if (!size) {
+      throw new Error(
+        `there is no Earth map ${options.width}x${
+          options.height
+        }: ${EARTH_SIZES.map(({ width, height }) => `${width}x${height}`).join(
+          ', '
+        )}`
+      );
+    }
+
+    Object.assign(options, {
+      width: size.width,
+      height: size.height,
+      players: options.players ?? size.players,
+    });
+  }
+
+  options.players ??= 4;
+  options.width ??= 60;
+  options.height ??= 40;
+
+  if ((options.civilizations?.length ?? 0) > options.players) {
+    throw new Error(`--civilizations names more than ${options.players} seats`);
+  }
+
+  // Each named civilization is played by both AIs only when every seed is played twice.
+  if (options.civilizations && !options.seeds && options.games % 2 === 1) {
+    console.warn(
+      `warning: --games ${options.games} is odd, so seed ${Math.ceil(
+        options.games / 2
+      )}'s ${options.civilizations.join(
+        ', '
+      )} are played by one AI only; the pairs leave that game out`
+    );
   }
 
   return options;
@@ -641,6 +716,8 @@ const play = (outfile, game, options, checkpoints = []) =>
           width: options.width,
         }),
         ARENA_CONFIG: JSON.stringify({
+          civilizations: options.civilizations,
+          earth: options.earth,
           seating: game.seating,
           verbose: options.verbose,
         }),
@@ -959,7 +1036,15 @@ const conformanceCheck = async (outfile, options) => {
   const result = await play(
     outfile,
     { index: 0, seed, seating: seatingFor(0, players) },
-    { ...options, turns, players, width, height },
+    {
+      ...options,
+      turns,
+      players,
+      width,
+      height,
+      earth: false,
+      civilizations: null,
+    },
     checkpoints
   );
 
@@ -1064,6 +1149,8 @@ const main = async () => {
         players: options.players,
         width: options.width,
         height: options.height,
+        earth: options.earth,
+        civilizations: options.civilizations,
       },
       bundle: bundled,
     };
@@ -1100,12 +1187,33 @@ const main = async () => {
     const planned = schedule(options);
 
     console.log(
-      `\nplaying ${planned.length} games of ${options.turns} turns, ${options.players} players, ${options.width}x${options.height}, ${options.jobs} at a time`
+      `\nplaying ${planned.length} games of ${options.turns} turns, ${
+        options.players
+      } players, ${options.width}x${options.height}${
+        options.earth ? ' Earth' : ''
+      }${
+        options.civilizations
+          ? ` (${options.civilizations.join(', ')} in seats 0–${
+              options.civilizations.length - 1
+            })`
+          : ''
+      }, ${options.jobs} at a time`
     );
 
     let done = 0;
     const games = await pool(planned, options.jobs, async (game) => {
       const result = await play(outfile, game, options);
+
+      // Each named civilization took its seat: the arena answered its choice, but a ruleset could still change it.
+      (options.civilizations ?? []).forEach((name, seat) => {
+        const played = result.seats?.find(
+          (entry) => entry.seat === seat
+        )?.civilization;
+
+        if (!result.error && played !== name) {
+          result.error = `seat ${seat} played ${played}, not ${name}`;
+        }
+      });
 
       done += 1;
       console.log(
