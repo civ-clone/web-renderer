@@ -324,6 +324,7 @@ const makeCity = (x: number, y: number) => ({
   name: `City ${x} ${y}`,
   civilDisorderDeclared: false,
   growth: { size: 3 },
+  originalPlayer: player,
   player,
 });
 

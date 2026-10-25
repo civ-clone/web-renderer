@@ -331,6 +331,7 @@ const makeTiles = (width: number, height: number): Tile[] => {
                 name: `City ${x} ${y}`,
                 civilDisorderDeclared: (x + y) % 3 === 0,
                 growth: { size: ((x + y) % 9) + 1 },
+                originalPlayer: player,
                 player,
               }
             : null,
@@ -405,6 +406,7 @@ const makeLandscapeTiles = (width: number, height: number): Tile[] => {
               name: `City ${x} ${y}`,
               civilDisorderDeclared: (x + y) % 3 === 0,
               growth: { size: ((x + y) % 9) + 1 },
+              originalPlayer: player,
               player,
             }
           : null,

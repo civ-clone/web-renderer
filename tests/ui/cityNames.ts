@@ -45,6 +45,7 @@ const unhappy = preloadImage('city/people_unhappy_m', 8, 16),
           civilDisorder,
           civilDisorderDeclared,
           growth: { size: 3 },
+          originalPlayer: { civilization: { _: 'Babylonian' } },
           player: { civilization: { _: 'Babylonian' } },
         },
       } as unknown as Tile;

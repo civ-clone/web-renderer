@@ -18,7 +18,11 @@ i18next.addResources('en', 'default', {
   'Generic.civilization-name.name':
     '$t({{- civilization}}.name, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
   'Generic.civilization-name.nation':
-    '$t({{- civilization}}.nation, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
+    '$t({{- civilization}}.nation, { "defaultValue": "{{- civilization}}", "ns": "civilization" })',
+  // For a nation that opens a sentence: `.nation` carries its own article ("the Aztec Empire"), lower case for
+  //  anywhere else in a sentence (#359).
+  'Generic.civilization-name.nation-start':
+    '$t(Generic.civilization-name.nation, capitalise)',
   'Generic.civilization-name.plural':
     '$t({{- civilization}}.plural, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
   'Generic.leader-name':
@@ -26,6 +30,8 @@ i18next.addResources('en', 'default', {
   'Generic.view-city':
     'View $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
   'Generic.unknown-civilization': 'an unknown civilization',
+  'Generic.unknown-civilization-start':
+    '$t(Generic.unknown-civilization, capitalise)',
   'Generic.width': 'Width',
   'Generic.yes': 'Yes',
 
@@ -97,7 +103,7 @@ i18next.addResources('en', 'default', {
   'ChooseFromList.default.body': 'Please choose from the following options:',
   'ChooseFromList.default.title': 'Choose an option',
   'ChooseFromList.diplomacy.exchange-knowledge.body':
-    'Please choose from the advances that $t({{data.proposal.by.civilization._}}.nation, { "defaultValue": "{{data.proposal.by.civilization._}}", "ns": "civilization" }) have discovered:',
+    'Please choose from the advances that $t({{data.proposal.by.civilization._}}.nation, { "defaultValue": "{{data.proposal.by.civilization._}}", "ns": "civilization" }) has discovered:',
   'ChooseFromList.diplomacy.exchange-knowledge.choice':
     '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
   'ChooseFromList.diplomacy.exchange-knowledge.title': 'Exchanging Knowledge',
@@ -710,12 +716,12 @@ i18next.addResources('en', 'notification', {
     'We have captured $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) from $t({{originalPlayer.civilization._}}.nation, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" })',
   'City.captured-by-us.title': 'City captured!',
   'City.captured-from-us.body':
-    '$t({{capturingPlayer.civilization._}}.nation, { "defaultValue": "{{capturingPlayer.civilization._}}", "ns": "civilization" }) have captured our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+    'Our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been captured by $t(Generic.civilization-name.nation, { "civilization": "{{capturingPlayer.civilization._}}", "ns": "default" })!',
   'City.captured-from-us.title': 'City captured!',
   'City.destroyed.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been destroyed!`,
   'City.destroyed.title': 'City destroyed!',
   'City.destroyed-by.body':
-    '$t({{player.civilization._}}.nation, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" }) have destroyed our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
+    'Our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been destroyed by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
   'City.destroyed-by.title': 'City destroyed!',
   'City.civil-disorder.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). Mayor flees in panic!`,
   'City.civil-disorder.title': 'Civil disorder',
@@ -760,16 +766,16 @@ i18next.addResources('en', 'notification', {
   'Player.declaration-expired.title':
     'Sneak attack by $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" })!',
   'Player.defeated.by.body':
-    '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" })!',
+    '$t(Generic.civilization-name.nation-start, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) has been defeated by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
   'Player.defeated.by.title': 'Defeated!',
   'Player.defeated.unknown.body':
-    '$t({{defeatedPlayer.civilization._}}.nation, { "defaultValue": "{{defeatedPlayer.civilization._}}", "ns": "civilization" }) defeated!',
+    '$t(Generic.civilization-name.nation-start, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) defeated!',
   'Player.defeated.unknown.title': 'Defeated!',
   'Player.defeated.unmet.body':
     'News reaches us that $t(Generic.unknown-civilization, { "ns": "default" }) has been defeated!',
   'Player.defeated.unmet.title': 'Defeated!',
   'Player.defeated.unmet-by.body':
-    '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) has defeated $t(Generic.unknown-civilization, { "ns": "default" })!',
+    '$t(Generic.unknown-civilization-start, { "ns": "default" }) has been defeated by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
   'Player.defeated.unmet-by.title': 'Defeated!',
   'Barbarians.landing.body':
     'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
@@ -837,7 +843,7 @@ i18next.addResources('en', 'notification', {
   'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{- home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,
   'Unit.trade-route-established.title': 'Trade route established',
   'Unit.nuclear-attack.body':
-    '$t({{player.civilization._}}.nation, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" }) use nuclear weapons!',
+    'Nuclear weapons have been used by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
   'Unit.nuclear-attack.title': 'Nuclear attack!',
   'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
   'Unit.out-of-fuel.title': 'Out of fuel!',
