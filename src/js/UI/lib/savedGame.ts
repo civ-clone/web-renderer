@@ -11,9 +11,9 @@ import { t } from 'i18next';
 /**
  * Saving and loading, from the player's side.
  *
- * A save leaves the browser as a file. It is the player's, it outlives a
- * cleared cache, and it can be moved between machines — none of which is true
- * of anything kept in browser storage.
+ * A save is kept in the browser (`browserSaves.ts`, #653), and leaves it as a
+ * file when the player downloads it from Load Game: a file is the player's,
+ * it outlives a cleared cache, and it can be moved between machines.
  *
  * Loading reloads the page, and the save is handed over in browser storage on
  * the way through. That is not a detail of the storage; it is how the engine
@@ -128,33 +128,41 @@ export const fileName = (name: string, extension: string): string =>
       .trim() || 'civ-clone'
   }.civ-clone.${extension}`;
 
-export const downloadSave = async (
-  name: string,
-  data: string
-): Promise<void> => {
-  const compress = canCompress(),
-    blob = compress
-      ? await compressed(data)
-      : new Blob([data], { type: 'application/json' }),
-    url = URL.createObjectURL(blob),
+/** A save as a file holds it: gzipped where the browser can compress, plain JSON where it can't. */
+export const saveFile = async (data: string): Promise<Blob> =>
+  canCompress()
+    ? compressed(data)
+    : new Blob([data], { type: 'application/json' });
+
+const isGzipped = async (file: Blob): Promise<boolean> => {
+  const header = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+
+  return GZIP_MAGIC.every((byte, index) => header[index] === byte);
+};
+
+/** Hands a save to the player as a file: one kept in the browser (#653), or one made for the download. */
+export const downloadFile = async (name: string, file: Blob): Promise<void> => {
+  const url = URL.createObjectURL(file),
     anchor = document.createElement('a');
 
   // Not `s()`: this needs an object URL on `href`, and it is never in the
   // document — it is clicked and dropped.
   anchor.href = url;
-  anchor.download = fileName(name, compress ? 'json.gz' : 'json');
+  anchor.download = fileName(
+    name,
+    (await isGzipped(file)) ? 'json.gz' : 'json'
+  );
   anchor.click();
 
   // After the click, so the download has the URL it was given.
   setTimeout((): void => URL.revokeObjectURL(url), 10000);
 };
 
-/** Gzipped or not, as written by any build. */
-const readSave = async (file: File): Promise<string> => {
-  const buffer = await file.arrayBuffer(),
-    header = new Uint8Array(buffer.slice(0, 2));
+/** Gzipped or not, as written by any build: a file the player chose, or an autosave (#653). */
+const readSave = async (file: Blob): Promise<string> => {
+  const buffer = await file.arrayBuffer();
 
-  if (!GZIP_MAGIC.every((byte, index) => header[index] === byte)) {
+  if (!(await isGzipped(file))) {
     return new TextDecoder().decode(buffer);
   }
 
@@ -183,11 +191,11 @@ export const gridName = (topologyId: string): string =>
   t(`Grid.${topologyId}`, { defaultValue: topologyId });
 
 /**
- * Reads a save the player chose, shows its seats for reassigning (#608), and reloads into it. Closing the seats
- * window instead loads nothing.
+ * Reads a save the player chose, or an autosave (#653), shows its seats for reassigning (#608), and reloads into it.
+ * Closing the seats window instead loads nothing.
  */
 export const loadSaveFromFile = async (
-  file: File,
+  file: Blob,
   askSeats: AskSeats = keepSeats
 ): Promise<void> => {
   let data: string, parsed: any;

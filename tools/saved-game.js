@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 // Runs tests/ui/savedGame.ts — what crosses the reload when a save is loaded,
-// and what the player is told when it cannot (#5).
+// and what the player is told when it cannot (#5) — or, named as the argument,
+// another suite over browser storage: tests/ui/browserSaves.ts (#653).
 //
 // `src/js/UI/Store.ts` is resolved to `tests/ui/lib/FakeStore.ts` for this
 // bundle: node has no `indexedDB`, and `idb` checks its own wrappers with
@@ -16,7 +17,7 @@ const { webRenderer } = require('./lib/paths');
 
 const fakeStore = path.join(webRenderer, 'tests', 'ui', 'lib', 'FakeStore.ts');
 
-runSuite('ui', 'savedGame', {
+runSuite('ui', process.argv[2] ?? 'savedGame', {
   esbuild: {
     plugins: [
       {

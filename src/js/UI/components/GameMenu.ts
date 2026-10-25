@@ -21,8 +21,7 @@ import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
-import { chooseSaveFile } from '../lib/savedGame';
-import ResumeGameWindow from './ResumeGameWindow';
+import { chooseSave } from './LoadGameWindow';
 import { elementId, h } from '../lib/html';
 import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
@@ -291,18 +290,26 @@ export class GameMenu extends Element {
     this.#cheatsEnabled = true;
   }
 
+  // The name a save is given, and downloaded under.
+  #saveName(): string {
+    return t('GameMenu.save-name', {
+      // Plain parts: i18next escapes interpolated values for HTML, so a
+      // localised date came through as `16&#x2F;09&#x2F;2026` and left
+      // `16x2F09x2F2026` in the file name once the punctuation was stripped.
+      date: new Date().toISOString().slice(0, 10),
+      player: this.#getPlayer().civilization._,
+      turn: this.#getTurn(),
+    });
+  }
+
   // Save Game, from the menu or Shift+S.
   saveGame(): void {
-    this.#transport.send('save', {
-      name: t('GameMenu.save-name', {
-        // Plain parts: i18next escapes interpolated values for HTML, so a
-        // localised date came through as `16&#x2F;09&#x2F;2026` and left
-        // `16x2F09x2F2026` in the file name once the punctuation was stripped.
-        date: new Date().toISOString().slice(0, 10),
-        player: this.#getPlayer().civilization._,
-        turn: this.#getTurn(),
-      }),
-    });
+    this.#transport.send('save', { name: this.#saveName() });
+  }
+
+  // As a turn starts (#653): a new game's first, or every few turns after.
+  autosave(kind: 'start' | 'autosave'): void {
+    this.#transport.send('save', { name: this.#saveName(), autosave: kind });
   }
 
   build(): void {
@@ -335,11 +342,8 @@ export class GameMenu extends Element {
                   new ConfirmationWindow(
                     t('GameMenu.load-game'),
                     t('GameMenu.load-game-confirm'),
-                    // Its seats are shown first, to reassign (#608).
-                    () =>
-                      chooseSaveFile((save) =>
-                        ResumeGameWindow.ask(this.#transport, save)
-                      )
+                    // An autosave (#653) or a file, its seats shown first, to reassign (#608).
+                    () => void chooseSave(this.#transport)
                   );
                 },
               },

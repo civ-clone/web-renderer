@@ -15,11 +15,19 @@ export const failStore = (error: Error | null): void => {
   failure = error;
 };
 
+// How many records fit before a new one is refused, as full storage refuses it, or `null` for no limit.
+let capacity: number | null = null;
+
+export const limitStore = (records: number | null): void => {
+  capacity = records;
+};
+
 export const storedRecords = (): Map<string, any> => records;
 
 export const resetStore = (): void => {
   records.clear();
   failure = null;
+  capacity = null;
 };
 
 export class Store<Types> {
@@ -44,9 +52,25 @@ export class Store<Types> {
       throw failure;
     }
 
+    if (
+      capacity !== null &&
+      !records.has(key as string) &&
+      records.size >= capacity
+    ) {
+      throw new Error('the quota has been exceeded');
+    }
+
     records.set(key as string, record);
 
     return key;
+  }
+
+  async delete(key: string) {
+    if (failure) {
+      throw failure;
+    }
+
+    records.delete(key);
   }
 
   async clear() {

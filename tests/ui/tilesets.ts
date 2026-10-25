@@ -792,10 +792,13 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
 
   expect(
     "the Options window offers the tileset's scales, 2× chosen",
-    Array.from(optionsWindow.element().querySelectorAll('option')).map(
-      (option) =>
-        `${option.textContent}${option.hasAttribute('selected') ? '*' : ''}`
-    ),
+    // The scale's own list: the window has others, such as how often to autosave (#653).
+    Array.from(optionsWindow.element().querySelectorAll('option'))
+      .filter((option) => option.textContent?.endsWith('×'))
+      .map(
+        (option) =>
+          `${option.textContent}${option.hasAttribute('selected') ? '*' : ''}`
+      ),
     ['1×', '2×*', '3×', '4×']
   );
 

@@ -319,6 +319,12 @@ i18next.addResources('en', 'default', {
 
   'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
+  'GameOptions.autosave': 'Autosave',
+  'GameOptions.autosave-choice.10': 'Game start, then every 10 turns',
+  'GameOptions.autosave-choice.20': 'Game start, then every 20 turns',
+  'GameOptions.autosave-choice.5': 'Game start, then every 5 turns',
+  'GameOptions.autosave-choice.off': 'Off',
+  'GameOptions.autosave-choice.start': 'Game start',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
   'GameOptions.unit-edge-margin':
@@ -380,6 +386,17 @@ i18next.addResources('en', 'default', {
     'Leaving this page will end the game in progress. Any unsaved progress will be lost.',
   'LeaveGuard.title': 'Leave the game?',
 
+  'LoadGame.could-not-delete': 'That save could not be deleted: {{- error}}',
+  'LoadGame.delete': 'Delete',
+  'LoadGame.delete-confirm': 'Delete “{{name}}”? This cannot be undone.',
+  'LoadGame.download': 'Download',
+  'LoadGame.empty': 'There are no saved games left in this browser.',
+  'LoadGame.from-file': 'Load from a file…',
+  'LoadGame.kind.autosave': 'Autosave',
+  'LoadGame.kind.player': 'Saved',
+  'LoadGame.kind.start': 'Game start',
+  'LoadGame.load': 'Load',
+  'LoadGame.title': '$t(GameMenu.load-game)',
   'LockedSlider.lock': 'Lock',
 
   'MainMenu.customize-world': '$t(CustomizeWorld.title)',
@@ -426,6 +443,7 @@ i18next.addResources('en', 'default', {
   'ReloadGuard.body': 'Are you sure you want to reload?',
   'ReloadGuard.title': 'Reload',
 
+  'SavedGame.autosave-failed': 'This turn could not be autosaved: {{- error}}',
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',
   'SavedGame.could-not-load':
@@ -433,11 +451,14 @@ i18next.addResources('en', 'default', {
   'SavedGame.could-not-read': 'That save could not be read: {{- error}}',
 
   'SavedGame.could-not-write': 'That save could not be written: {{- error}}',
+  'SavedGame.downloaded-instead':
+    'The browser would not keep your save ({{- error}}), so it has been downloaded instead.',
   'SavedGame.needs-grid':
     'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
+  'SavedGame.saved': 'Saved: {{- name}}',
 
   'PlayerDetails.Government.body_anarchy': `{{government}} ($t(Progress.turns-left, { "count": {{turns}} }))`,
   'PlayerDetails.Government.body_choosing':
