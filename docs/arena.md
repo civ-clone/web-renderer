@@ -74,6 +74,27 @@ every seat. Every start position is played once by each AI. `--seeds 3,7,9`
 plays each listed seed twice in the same way. The seed list, and so the whole
 run, is deterministic.
 
+## Earth
+
+`--earth` plays on the Earth map, every civilization starting on its own start
+tile, as New Game's Earth does. `--width` and `--height` pick the size, 80×50
+(the default), 104×65 or 128×80, and `--players` defaults to the number New
+Game offers for it: 7, 9 or 12. The map is the same in every game, so the seed
+only changes the dice and which civilizations play.
+
+`--civilizations English,Japanese` has seat 0 play the English and seat 1 the
+Japanese, by class name, so a civilization can be watched from game to game;
+the other seats choose as usual. It works on any map. Seats still alternate
+between the variants, so each AI plays each named civilization once per seed:
+an odd `--games` gets a warning, as its last seed is played by one AI only. An
+empty or repeated name is refused, and a game in which a named civilization
+didn't take its seat counts as failed. On Earth, `--players` can't be more than
+there are start tiles.
+
+```sh
+npm run arena -- --candidate fix/a --earth --civilizations English,Japanese
+```
+
 ## What is measured
 
 Per player, at the start of the last turn:
