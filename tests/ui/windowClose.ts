@@ -105,6 +105,31 @@ const run = async (): Promise<void> => {
   );
   expect('and leaves it open', inPage(fixed), [true, true]);
 
+  // A window's cancel is what Escape does, whether or not it can be closed (#659).
+  [Window, NotificationWindow].forEach((Type) => {
+    const cancelled = { count: 0 },
+      cancellable = new Type('Choose', 'Body', {
+        canClose: false,
+        cancel: () => {
+          cancelled.count++;
+
+          cancellable.close();
+        },
+        modal: true,
+      });
+
+    expect(
+      `Escape on a ${Type.name} with a cancel is cancelled`,
+      press(cancellable.element(), 'Escape').defaultPrevented,
+      true
+    );
+    expect(
+      'and runs its cancel',
+      [cancelled.count, inPage(cancellable)],
+      [1, [false, false]]
+    );
+  });
+
   // Closed by the browser.
   const heardFixed = closesHeard(fixed);
 

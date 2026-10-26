@@ -207,6 +207,26 @@ const latest = () => {
 
   expect('Cancel sends AbortMove', sent.slice(-1), ['AbortMove']);
 
+  // Escape is Cancel (#659).
+  chooseUnitAction(roman(0), ontoLand, perform);
+
+  const treaty = latest(),
+    sentBeforeEscape = sent.length;
+
+  treaty.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Escape',
+    })
+  );
+
+  expect(
+    'Escape sends AbortMove and closes it',
+    [sent.slice(sentBeforeEscape), treaty.isConnected],
+    [['AbortMove'], false]
+  );
+
   chooseUnitAction(roman(0), ontoLand, perform);
   press('Break treaty');
 

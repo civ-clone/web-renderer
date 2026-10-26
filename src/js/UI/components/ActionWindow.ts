@@ -10,6 +10,8 @@ import { t } from 'i18next';
 export interface ActionWindowAction {
   label: string;
   action: (window: INotificationWindow) => void;
+  // Escape chooses this one (#659).
+  cancel?: boolean;
 }
 
 export interface ActionWindowActions {
@@ -38,6 +40,14 @@ export class ActionWindow extends NotificationWindow {
         ...options.actions,
       },
     };
+
+    const cancel = Object.values(options.actions!).find(
+      (action) => action.cancel
+    );
+
+    if (cancel) {
+      options.cancel = () => cancel.action(this);
+    }
 
     super(
       title,
