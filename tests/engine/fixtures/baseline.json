@@ -16,7 +16,7 @@
   "checksums": {
     "1": "3656a7b5",
     "10": "1d418270",
-    "50": "bbea7435"
+    "50": "0a2f53df"
   },
   "snapshots": {
     "1": {
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1099,
+        "total": 1103,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -127,6 +127,7 @@
           "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
+          "Barbarians": 1,
           "BaseYield": 112,
           "Build": 105,
           "BuildCost": 76,
@@ -139,7 +140,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 13,
+          "Captured": 14,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -151,7 +152,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 13,
-          "Destroyed": 18,
+          "Destroyed": 19,
           "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
@@ -177,7 +178,7 @@
           "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
-          "Moved": 14,
+          "Moved": 15,
           "MovementCost": 18,
           "Obsolete": 1,
           "OverseasSettlers": 1,
@@ -394,7 +395,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1099,
+        "total": 1103,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -407,6 +408,7 @@
           "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
+          "Barbarians": 1,
           "BaseYield": 112,
           "Build": 105,
           "BuildCost": 76,
@@ -419,7 +421,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 13,
+          "Captured": 14,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -431,7 +433,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 13,
-          "Destroyed": 18,
+          "Destroyed": 19,
           "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
@@ -457,7 +459,7 @@
           "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
-          "Moved": 14,
+          "Moved": 15,
           "MovementCost": 18,
           "Obsolete": 1,
           "OverseasSettlers": 1,
@@ -513,19 +515,19 @@
     "50": {
       "turn": 50,
       "state": {
-        "entities": 2509,
-        "fields": 10036,
-        "hash": "3ab15aeb"
+        "entities": 2512,
+        "fields": 10027,
+        "hash": "1707ecd4"
       },
       "dto": {
-        "objects": 48005,
-        "bytes": 8173404,
-        "hash": "41a461fc"
+        "objects": 45912,
+        "bytes": 7829424,
+        "hash": "63d64b8f"
       },
       "registries": {
-        "cities": 5,
-        "cityBuilds": 5,
-        "cityGrowth": 5,
+        "cities": 6,
+        "cityBuilds": 6,
+        "cityGrowth": 6,
         "cityImprovements": 4,
         "goodyHuts": 26,
         "playerGovernments": 4,
@@ -533,8 +535,8 @@
         "playerTreasuries": 4,
         "playerWorlds": 4,
         "players": 4,
-        "tileImprovements": 15,
-        "units": 28
+        "tileImprovements": 18,
+        "units": 25
       },
       "world": {
         "width": 60,
@@ -600,39 +602,20 @@
           "City-5",
           "City",
           "Player-4",
-          "Dunkirk",
+          "Saint-Martin-d'Hères",
           "1",
           "26"
+        ],
+        [
+          "City-6",
+          "City",
+          "Player-4",
+          "Châtillon",
+          "1",
+          "16"
         ]
       ],
       "units": [
-        [
-          "Horseman-1",
-          "Horseman",
-          "Player-4",
-          "4",
-          "21",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-2",
-          "Horseman",
-          "Player-4",
-          "4",
-          "24",
-          "false",
-          "false"
-        ],
-        [
-          "Horseman-3",
-          "Horseman",
-          "Player-1",
-          "12",
-          "36",
-          "false",
-          "false"
-        ],
         [
           "Settlers-1",
           "Settlers",
@@ -691,8 +674,8 @@
           "Settlers-7",
           "Settlers",
           "Player-3",
-          "38",
-          "25",
+          "37",
+          "24",
           "false",
           "false"
         ],
@@ -727,8 +710,8 @@
           "Warrior-3",
           "Warrior",
           "Player-4",
-          "3",
-          "18",
+          "6",
+          "20",
           "false",
           "false"
         ],
@@ -736,8 +719,8 @@
           "Warrior-4",
           "Warrior",
           "Player-1",
-          "14",
-          "33",
+          "18",
+          "37",
           "false",
           "false"
         ],
@@ -745,9 +728,9 @@
           "Warrior-5",
           "Warrior",
           "Player-3",
-          "44",
-          "35",
-          "false",
+          "43",
+          "34",
+          "true",
           "false"
         ],
         [
@@ -755,7 +738,7 @@
           "Warrior",
           "Player-2",
           "39",
-          "23",
+          "24",
           "false",
           "false"
         ],
@@ -763,8 +746,8 @@
           "Warrior-7",
           "Warrior",
           "Player-4",
-          "4",
-          "12",
+          "1",
+          "16",
           "false",
           "false"
         ],
@@ -772,8 +755,8 @@
           "Warrior-8",
           "Warrior",
           "Player-2",
-          "43",
-          "28",
+          "41",
+          "25",
           "false",
           "false"
         ],
@@ -781,8 +764,8 @@
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "42",
-          "21",
+          "38",
+          "18",
           "false",
           "false"
         ],
@@ -790,8 +773,8 @@
           "Warrior-a",
           "Warrior",
           "Player-4",
-          "5",
-          "11",
+          "58",
+          "12",
           "false",
           "false"
         ],
@@ -799,7 +782,7 @@
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "19",
+          "12",
           "36",
           "false",
           "false"
@@ -808,8 +791,8 @@
           "Warrior-c",
           "Warrior",
           "Player-2",
-          "44",
-          "31",
+          "43",
+          "28",
           "false",
           "false"
         ],
@@ -817,8 +800,8 @@
           "Warrior-d",
           "Warrior",
           "Player-3",
-          "42",
-          "16",
+          "38",
+          "17",
           "false",
           "true"
         ],
@@ -844,10 +827,10 @@
           "Warrior-g",
           "Warrior",
           "Player-4",
-          "6",
-          "27",
+          "2",
+          "18",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-h",
@@ -859,10 +842,10 @@
           "false"
         ]
       ],
-      "randomCalls": 8795,
+      "randomCalls": 8778,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1099,
+        "total": 1103,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -875,6 +858,7 @@
           "AttackConfidence": 2,
           "Availability": 6,
           "Available": 5,
+          "Barbarians": 1,
           "BaseYield": 112,
           "Build": 105,
           "BuildCost": 76,
@@ -887,7 +871,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 13,
+          "Captured": 14,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -899,7 +883,7 @@
           "Cost": 42,
           "Created": 17,
           "Defeated": 13,
-          "Destroyed": 18,
+          "Destroyed": 19,
           "Detonated": 5,
           "Discovered": 3,
           "Distribution": 15,
@@ -925,7 +909,7 @@
           "MayNegotiate": 3,
           "MilitaryStrength": 1,
           "MilitaryUnhappinessTolerance": 2,
-          "Moved": 14,
+          "Moved": 15,
           "MovementCost": 18,
           "Obsolete": 1,
           "OverseasSettlers": 1,

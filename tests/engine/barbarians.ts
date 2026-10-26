@@ -1,15 +1,23 @@
 // The barbarians (#169), in a seeded game driven through a human `DataTransferClient`: civ1-barbarians' sea-landing
 //  rule brings the barbarian player into the game at a turn past Emperor's gate, the host gives it a `BarbarianClient`,
 //  the client takes a turn (a ship put beside the human's city lands its raiders, who move the turn after), the human
-//  is told of a landing and an uprising next to their city (and not of one they
-//  can't see), the barbarians are named but kept out of the intelligence report and the cheat list, and a save names
-//  classes a load can resolve.
+//  is told of a landing and an uprising next to their city (and not of one they can't see), a barbarian leader killed
+//  in a stack pays the human a ransom (#171), the barbarians are named but kept out of the intelligence report and the
+//  cheat list, and a save names classes a load can resolve.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
-import { Sail, Settlers, Swordman } from '@civ-clone/civ1-unit/Units';
+import {
+  Diplomat,
+  Horseman,
+  Sail,
+  Settlers,
+  Swordman,
+} from '@civ-clone/civ1-unit/Units';
+import Defeated from '@civ-clone/core-unit/Rules/Defeated';
+import Gold from '@civ-clone/base-city-yield-gold/Gold';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import DataTransferClient from '../../src/js/Engine/DataTransferClient';
@@ -20,7 +28,9 @@ import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
 import TurnStart from '@civ-clone/core-player/Rules/TurnStart';
 import Unit from '@civ-clone/core-unit/Unit';
-import spawnUnits, { createUnit } from '@civ-clone/civ1-barbarians/lib/spawnUnits';
+import spawnUnits, {
+  createUnit,
+} from '@civ-clone/civ1-barbarians/lib/spawnUnits';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import { gameForLoad } from '@civ-clone/core-save-game/gameForLoad';
 import { hydrate } from '@civ-clone/core-save-game/hydrate';
@@ -154,8 +164,9 @@ const run = async (): Promise<void> => {
       .entries()
       .find(
         (tile: Tile) =>
-          playerWorldRegistryInstance.getByPlayer(humanPlayer!).getByTile(tile) ===
-          null
+          playerWorldRegistryInstance
+            .getByPlayer(humanPlayer!)
+            .getByTile(tile) === null
       );
 
   if (!unseen) {
@@ -179,6 +190,54 @@ const run = async (): Promise<void> => {
     seen
   );
 
+  // 3b. A barbarian Horseman beaten outside a city takes its stack with it (`civ1-unit`'s destroy-stack), and the
+  //     leader in it pays the human 100 gold all the same (#171): the stacked leader is only destroyed, not defeated.
+  const stackAt = seen
+      .getNeighbours()
+      .find(
+        (tile: Tile) =>
+          tile.isLand() &&
+          cityRegistryInstance.getByTile(tile) === null &&
+          unitRegistryInstance.getByTile(tile).length === 0
+      ),
+    treasury = defaultGame.playerTreasuries.getByPlayerAndType(
+      humanPlayer!,
+      Gold
+    ),
+    goldBefore = treasury.value();
+
+  if (!stackAt) {
+    fail('there is no free land next to the human city');
+  }
+
+  const [raider, leader] = spawnUnits(
+      barbarians!,
+      stackAt!,
+      [Horseman, Diplomat],
+      ruleRegistryInstance
+    ),
+    attacker = createUnit(Swordman, humanPlayer!, seen, ruleRegistryInstance);
+
+  ruleRegistryInstance.process(Defeated, raider, attacker, {
+    unit: () => attacker,
+  } as any);
+
+  await settle();
+
+  if (!leader.destroyed() || !raider.destroyed()) {
+    fail('the barbarian stack outlived its defender');
+  }
+
+  if (treasury.value() !== goldBefore + 100) {
+    fail(
+      `the ransom paid ${
+        treasury.value() - goldBefore
+      }, not 100, for a leader killed in a stack`
+    );
+  }
+
+  attacker.destroy();
+
   await settle();
 
   const told = notices()
@@ -188,6 +247,7 @@ const run = async (): Promise<void> => {
       'Barbarians.landing',
       'Barbarians.uprising',
       'Barbarians.uprising.guerrilla',
+      'Barbarians.ransom',
     ];
 
   if (JSON.stringify(told) !== JSON.stringify(expected)) {
@@ -240,21 +300,30 @@ const run = async (): Promise<void> => {
         (tile: Tile) =>
           tile.isWater() &&
           tile.distanceFrom(capital) <= 4 &&
-          tile.getNeighbours().some(
-            (neighbour: Tile) =>
-              neighbour.isLand() &&
-              neighbour !== capital &&
-              cityRegistryInstance.getByTile(neighbour) === null &&
-              unitRegistryInstance.getByTile(neighbour).length === 0
-          )
+          tile
+            .getNeighbours()
+            .some(
+              (neighbour: Tile) =>
+                neighbour.isLand() &&
+                neighbour !== capital &&
+                cityRegistryInstance.getByTile(neighbour) === null &&
+                unitRegistryInstance.getByTile(neighbour).length === 0
+            )
       )
-      .sort((a: Tile, b: Tile) => a.distanceFrom(capital) - b.distanceFrom(capital))[0];
+      .sort(
+        (a: Tile, b: Tile) => a.distanceFrom(capital) - b.distanceFrom(capital)
+      )[0];
 
   if (!shore) {
     fail('no sea within 4 of the capital to put a raiding ship on');
   }
 
-  const raidingShip = createUnit(Sail as unknown as typeof Unit, barbarians!, shore!, ruleRegistryInstance),
+  const raidingShip = createUnit(
+      Sail as unknown as typeof Unit,
+      barbarians!,
+      shore!,
+      ruleRegistryInstance
+    ),
     raiders = spawnUnits(
       barbarians!,
       shore!,
@@ -287,7 +356,11 @@ const run = async (): Promise<void> => {
   const [landed] = landings;
 
   if (!landed || landed[1] !== city || !landed[2].isNeighbourOf(shore!)) {
-    fail(`the raiders beside the capital did not land: ${JSON.stringify(landings.length)} landing(s)`);
+    fail(
+      `the raiders beside the capital did not land: ${JSON.stringify(
+        landings.length
+      )} landing(s)`
+    );
   }
 
   if (raiders.some((unit) => unit.tile() !== landed[2] || unit.destroyed())) {
@@ -304,7 +377,7 @@ const run = async (): Promise<void> => {
   try {
     await client.takeTurn();
   } catch (error) {
-    fail('the barbarian client failed the raiders\' turn', error);
+    fail("the barbarian client failed the raiders' turn", error);
   }
 
   if (
@@ -361,7 +434,11 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    `PASS barbarians (player made on turn 41 with a ${ship!.constructor.name}, played by BarbarianClient; a ship beside the capital landed ${raiders.length} raiders who moved the turn after; landing, uprising and guerrilla notices; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact)`
+    `PASS barbarians (player made on turn 41 with a ${
+      ship!.constructor.name
+    }, played by BarbarianClient; a ship beside the capital landed ${
+      raiders.length
+    } raiders who moved the turn after; landing, uprising and guerrilla notices; a leader killed in a stack paid 100 ransom; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact)`
   );
 
   process.exit(0);

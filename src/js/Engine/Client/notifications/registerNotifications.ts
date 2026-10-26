@@ -58,6 +58,7 @@ export const registrationOrder: string[] = [
   'player:declaration-expired',
   'barbarians:landed',
   'barbarians:uprising',
+  'barbarians:ransom',
 ];
 
 export const registerNotifications = (
