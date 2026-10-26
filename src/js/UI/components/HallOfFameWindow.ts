@@ -1,7 +1,7 @@
 import { HallOfFameEntry, hallOfFame } from '../lib/hallOfFame';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 
 // A year as the status window shows it: 4000 BCE, 1 CE.
 export const yearLabel = (year: number): string =>
@@ -101,7 +101,7 @@ export const hallOfFameTable = (
 };
 
 // The Hall of Fame from the main menu (#179).
-export class HallOfFameWindow extends Window {
+export class HallOfFameWindow extends FilterableWindow {
   constructor() {
     const entries = hallOfFame();
 
@@ -112,6 +112,8 @@ export class HallOfFameWindow extends Window {
         : hallOfFameTable(entries),
       {
         classes: 'hall-of-fame-window',
+        // Not the header row.
+        rowSelector: 'tr + tr',
       }
     );
   }

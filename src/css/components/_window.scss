@@ -16,6 +16,26 @@
     flex-direction: column;
   }
 
+  // Above the body, so it stays in view as the list scrolls (#661).
+  > .window-filter {
+    flex: none;
+    padding: 0.33em 0.5em;
+
+    input {
+      box-sizing: border-box;
+      width: 100%;
+    }
+
+    p {
+      margin: 0.5em 0 0;
+    }
+  }
+
+  // Rows a filter hides, whatever layout a window gives its rows.
+  .filtered-out {
+    display: none !important;
+  }
+
   > .body {
     flex: 1 1 auto;
     min-height: 0;

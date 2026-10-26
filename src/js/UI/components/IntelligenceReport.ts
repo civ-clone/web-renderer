@@ -4,7 +4,7 @@ import {
 } from '../../Engine/lib/intelligence';
 import Intelligence from '../../Engine/Requests/Intelligence';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { advanceNames } from './lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -128,7 +128,7 @@ export const renderIntelligenceRow = (row: IntelligenceRow): HTMLElement => {
   return element;
 };
 
-export class IntelligenceReport extends Window {
+export class IntelligenceReport extends FilterableWindow {
   #civilization: string | null;
   #transport: Transport;
 
@@ -136,6 +136,7 @@ export class IntelligenceReport extends Window {
   constructor(transport: Transport, civilization: string | null = null) {
     super(t('IntelligenceReport.title'), s('<div></div>'), {
       classes: 'intelligence-report',
+      rowSelector: 'section.civilization',
     });
 
     this.#civilization = civilization;

@@ -6,7 +6,7 @@ import {
 } from '../types';
 import Portal from './Portal';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
@@ -18,7 +18,7 @@ import { t } from 'i18next';
 import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 import { yieldData } from './lib/cityYields';
 
-export class TradeReport extends Window {
+export class TradeReport extends FilterableWindow {
   #cities: CityData[];
   #player: Player;
   #portal: Portal;
@@ -27,6 +27,7 @@ export class TradeReport extends Window {
   constructor(player: Player, portal: Portal, transport: Transport) {
     super(t('TradeReport.title'), s('<div class="loading"></div>'), {
       classes: 'trade-report',
+      rowSelector: 'tr',
     });
 
     this.#cities = player.cities;
