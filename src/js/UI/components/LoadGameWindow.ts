@@ -179,6 +179,9 @@ export class LoadGameWindow extends FilterableWindow {
 
                   this.#empty.hidden = this.#body.rows.length > 0;
 
+                  // So "nothing matches" is said if the save was the only one the filter showed.
+                  this.refilter();
+
                   // Focus would otherwise fall back to the window, with the button it was on gone.
                   this.#focusRow(index, 2);
                 })
