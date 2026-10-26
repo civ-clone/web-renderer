@@ -48,7 +48,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/130e55aee712fdf4e51dccb0a6a0cfcceda817a3
       '@civ-clone/civ1-barbarians':
         specifier: github:civ-clone/civ1-barbarians
-        version: https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/95a2bf17e3193ed5ff45fd4b9aae51238358d673
+        version: https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14
       '@civ-clone/civ1-city':
         specifier: github:civ-clone/civ1-city
         version: https://codeload.github.com/civ-clone/civ1-city/tar.gz/e5228ac6e79852dbe15b76af46abfc9d23efe143
@@ -78,7 +78,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a
       '@civ-clone/civ1-goody-hut':
         specifier: github:civ-clone/civ1-goody-hut
-        version: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/11906d3ca0d82aa618097dcc147069763f878218
+        version: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442
       '@civ-clone/civ1-government':
         specifier: github:civ-clone/civ1-government
         version: https://codeload.github.com/civ-clone/civ1-government/tar.gz/85d8e1707c4a883e811f44d05264679ca307fc7d
@@ -201,7 +201,7 @@ importers:
         version: 0.1.14
       '@civ-clone/simple-ai-client':
         specifier: github:civ-clone/simple-ai-client
-        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/40f1b5c325153c2818250267c0ce7eab8da282a6
+        version: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/88aacbb8db0381e47edc54577c6c3c54749b3de2
       '@civ-clone/simple-world-generator':
         specifier: github:civ-clone/simple-world-generator
         version: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790
@@ -1156,9 +1156,9 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-mQwm/6FWJWmAKnhSC4MwaiOuUyEyWpVbzs3d7Sz6vNICc6pAA00dzD8RGk+yjHNReb5QM/rIqjb0PftQJynPkw==, tarball: https://codeload.github.com/civ-clone/civ1-asset-extractor/tar.gz/130e55aee712fdf4e51dccb0a6a0cfcceda817a3}
     version: 0.1.1
 
-  '@civ-clone/civ1-barbarians@https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/95a2bf17e3193ed5ff45fd4b9aae51238358d673':
-    resolution: {gitHosted: true, integrity: sha512-vCwupCmWLEKeMIDF0+yGNVLlLZaKkiN/dY/QAdfbh3/lXnAA8ugwMdXgYpBwl+tKHzsprfIMHchfQwqte6L55w==, tarball: https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/95a2bf17e3193ed5ff45fd4b9aae51238358d673}
-    version: 0.1.2
+  '@civ-clone/civ1-barbarians@https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14':
+    resolution: {gitHosted: true, integrity: sha512-uMsAOkXN/BqO14p4yxT+X6iY/HAsRtnKRkZfjjzUYQgI3tf8RtXBsTeTVfTY+vo18994zSlvNSYLhzuZunRdQw==, tarball: https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14}
+    version: 0.1.3
 
   '@civ-clone/civ1-city-happiness@https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/4d572bcce4bc72212c15718746f954bd1b49c0a0':
     resolution: {gitHosted: true, integrity: sha512-qpaww63cwH/1OnV/Gd4ChefvGu0k5RGfQkWdblJ4BXyIzDNimSKpIZ8aESfpSbaaSIgMPNVGv35LdVLEhhQG6Q==, tarball: https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/4d572bcce4bc72212c15718746f954bd1b49c0a0}
@@ -1204,9 +1204,9 @@ packages:
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec}
     version: 0.1.1
 
-  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/11906d3ca0d82aa618097dcc147069763f878218':
-    resolution: {gitHosted: true, integrity: sha512-1HDXDBDUuxcyGgN8yf8kzqaoS1qL3Gf1E11675pH10ZCwQKdBRP33+lhTChQIFnJqv7dTCWyzUrvytpt3rvkcA==, tarball: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/11906d3ca0d82aa618097dcc147069763f878218}
-    version: 0.1.5
+  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442':
+    resolution: {gitHosted: true, integrity: sha512-34UoiD93p2XUFY5WVaB+1UGiyQG8/46VmSObU6t+QMVhG8/4EArVLSZS4jh2wWuSBsXmlrNIywoYQbRx80+7/A==, tarball: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442}
+    version: 0.1.6
 
   '@civ-clone/civ1-government@https://codeload.github.com/civ-clone/civ1-government/tar.gz/85d8e1707c4a883e811f44d05264679ca307fc7d':
     resolution: {gitHosted: true, integrity: sha512-dl0C3MsrFuy2WMbsc7qCc5D4PoOQEChSMCg86WPVw8ZQm9Z0q+0pAfWZKk+3KRMl9fgOkM87qf8TK3fMdTCRyQ==, tarball: https://codeload.github.com/civ-clone/civ1-government/tar.gz/85d8e1707c4a883e811f44d05264679ca307fc7d}
@@ -1412,9 +1412,9 @@ packages:
   '@civ-clone/library-world@0.1.0':
     resolution: {integrity: sha512-OSd1jsJiN+/MQtA56spokVxsTDt5bQN34utkK+ZZ6jUhKE06sYtyjXf5D8qP9BVxEwc8qv+J3weM3GCUvaQVbw==}
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/40f1b5c325153c2818250267c0ce7eab8da282a6':
-    resolution: {gitHosted: true, integrity: sha512-SdV6T1oJFnP0y4Soi1QRk9FmohKx2VlZxakEYXBSQ28jKSSp+IQjpaP+wvio++Kc6SkL6W1gWgJQlSj5Cfh6fQ==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/40f1b5c325153c2818250267c0ce7eab8da282a6}
-    version: 0.1.22
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/88aacbb8db0381e47edc54577c6c3c54749b3de2':
+    resolution: {gitHosted: true, integrity: sha512-iUl/s6qITkEsY85R5doJ71c3o2xTf590bYqB5vm/cNwuBy5JUt8iQeKPNw5ymJfya1bAccJWyMbN6Lg7vPntRA==, tarball: https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/88aacbb8db0381e47edc54577c6c3c54749b3de2}
+    version: 0.1.23
 
   '@civ-clone/simple-world-generator@https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790':
     resolution: {gitHosted: true, integrity: sha512-wsKaE4iUWcFzxALKJMOVFt9hDj9mLVCX8FGnrkrEIic/qlhd7+ZW0SlWNaadgohqUuUOE4QZa0qhW+jNv8wlCA==, tarball: https://codeload.github.com/civ-clone/simple-world-generator/tar.gz/15a7fdc268702f605c7fd38c21dda6e438658790}
@@ -3576,7 +3576,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-barbarians@https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/95a2bf17e3193ed5ff45fd4b9aae51238358d673':
+  '@civ-clone/civ1-barbarians@https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-civilization-barbarian': 0.1.0
@@ -3586,18 +3586,22 @@ snapshots:
       '@civ-clone/base-unit-action-embark': 0.1.6
       '@civ-clone/base-unit-type-naval-transport': 0.1.3
       '@civ-clone/civ1-difficulty': https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
+      '@civ-clone/civ1-goody-hut': https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442
       '@civ-clone/civ1-government': https://codeload.github.com/civ-clone/civ1-government/tar.gz/85d8e1707c4a883e811f44d05264679ca307fc7d
       '@civ-clone/civ1-player': https://codeload.github.com/civ-clone/civ1-player/tar.gz/3664b20ece92ba1f77306db774122ef7e15deb9b
       '@civ-clone/civ1-unit': https://codeload.github.com/civ-clone/civ1-unit/tar.gz/81be174baec6ad24bdc3ee528f26091578d6b231
+      '@civ-clone/civ1-world': https://codeload.github.com/civ-clone/civ1-world/tar.gz/0f2cf14a726b1dc8118d9277a48bd69317463af1
       '@civ-clone/core-city': 0.1.23
       '@civ-clone/core-city-build': 0.1.15
       '@civ-clone/core-city-growth': 0.1.6
       '@civ-clone/core-difficulty': 0.1.0
       '@civ-clone/core-game': 0.1.15
+      '@civ-clone/core-goody-hut': 0.1.7
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-registry': 0.1.6
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-science': 0.1.7
+      '@civ-clone/core-tile-improvement': 0.1.6
       '@civ-clone/core-treasury': 0.1.9
       '@civ-clone/core-turn-based-game': 0.1.10
       '@civ-clone/core-unit': 0.1.29
@@ -3848,7 +3852,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/11906d3ca0d82aa618097dcc147069763f878218':
+  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442':
     dependencies:
       '@civ-clone/base-civilization-barbarian': 0.1.0
       '@civ-clone/base-goody-hut-advance': 0.1.3
@@ -4913,7 +4917,7 @@ snapshots:
       '@civ-clone/base-tile-improvement-railroad': 0.1.0
       '@civ-clone/base-tile-improvement-road': 0.1.0
 
-  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/40f1b5c325153c2818250267c0ce7eab8da282a6':
+  '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/88aacbb8db0381e47edc54577c6c3c54749b3de2':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
       '@civ-clone/base-civilization-barbarian': 0.1.0
@@ -4929,7 +4933,7 @@ snapshots:
       '@civ-clone/base-trade-rate-tax': 0.1.0
       '@civ-clone/base-unit-action-join-city': 0.1.0
       '@civ-clone/base-unit-type-naval-transport': 0.1.3
-      '@civ-clone/civ1-barbarians': https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/95a2bf17e3193ed5ff45fd4b9aae51238358d673
+      '@civ-clone/civ1-barbarians': https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14
       '@civ-clone/civ1-city': https://codeload.github.com/civ-clone/civ1-city/tar.gz/e5228ac6e79852dbe15b76af46abfc9d23efe143
       '@civ-clone/civ1-city-happiness': https://codeload.github.com/civ-clone/civ1-city-happiness/tar.gz/4d572bcce4bc72212c15718746f954bd1b49c0a0
       '@civ-clone/civ1-city-improvement': https://codeload.github.com/civ-clone/civ1-city-improvement/tar.gz/3311221615aaa0cc00f95f8822d908d929163abf
