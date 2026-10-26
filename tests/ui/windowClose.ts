@@ -105,11 +105,18 @@ const run = async (): Promise<void> => {
   );
   expect('and leaves it open', inPage(fixed), [true, true]);
 
-  // A window's cancel is what Escape does, whether or not it can be closed (#659).
-  [Window, NotificationWindow].forEach((Type) => {
+  // A window's cancel is what Escape does, whether or not it can be closed (#659), and in place of closing it.
+  (
+    [
+      [Window, false],
+      [Window, true],
+      [NotificationWindow, false],
+      [NotificationWindow, true],
+    ] as [typeof Window, boolean][]
+  ).forEach(([Type, canClose]) => {
     const cancelled = { count: 0 },
       cancellable = new Type('Choose', 'Body', {
-        canClose: false,
+        canClose,
         cancel: () => {
           cancelled.count++;
 
@@ -119,12 +126,12 @@ const run = async (): Promise<void> => {
       });
 
     expect(
-      `Escape on a ${Type.name} with a cancel is cancelled`,
+      `Escape on a ${Type.name} with a cancel (canClose: ${canClose}) is cancelled`,
       press(cancellable.element(), 'Escape').defaultPrevented,
       true
     );
     expect(
-      'and runs its cancel',
+      'and runs its cancel once, which closes it',
       [cancelled.count, inPage(cancellable)],
       [1, [false, false]]
     );

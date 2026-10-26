@@ -213,13 +213,16 @@ const latest = () => {
   const treaty = latest(),
     sentBeforeEscape = sent.length;
 
-  treaty.dispatchEvent(
-    new KeyboardEvent('keydown', {
-      bubbles: true,
-      cancelable: true,
-      key: 'Escape',
-    })
-  );
+  // Pressed with Break treaty focused, as it would be: the key reaches the window from its button.
+  Array.from(treaty.querySelectorAll('footer button'))
+    .find((button) => text(button) === 'Break treaty')!
+    .dispatchEvent(
+      new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Escape',
+      })
+    );
 
   expect(
     'Escape sends AbortMove and closes it',
