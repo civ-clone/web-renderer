@@ -108,7 +108,7 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
 
 // "We have signed a peace treaty with the Babylonians! Cancel action. Break treaty." (v474.05 `F0_29f3_0c9e`): moving
 //  onto, or pillaging, a treaty partner's land (#287). The player must choose: Cancel sends the tile's `AbortMove`,
-//  which spends the move's cost as Civ1 does, if there is one.
+//  which spends the move's cost as Civ1 does, if there is one. Escape is Cancel (#659).
 const treatyWindow = (
   action: UnitAction,
   actionsOnTile: UnitAction[],
@@ -125,6 +125,7 @@ const treatyWindow = (
       actions: {
         primary: {
           label: t('Diplomat.cancel-action'),
+          cancel: true,
           action: (window) => {
             window.close();
 

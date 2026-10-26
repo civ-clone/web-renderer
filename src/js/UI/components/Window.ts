@@ -20,6 +20,8 @@ export type WindowSettings = {
   canClose: boolean;
   canMaximise: boolean;
   canResize: boolean;
+  // Run on Escape, whether or not the window can be closed: the window's own way out, such as a "Cancel" button's.
+  cancel: (() => void) | null;
   classes: string | string[];
   modal: boolean;
   parent: HTMLElement;
@@ -34,6 +36,7 @@ const defaultOptions: WindowSettings = {
   canClose: true,
   canMaximise: false,
   canResize: false,
+  cancel: null,
   classes: '',
   modal: false,
   parent: document.body,
@@ -234,7 +237,9 @@ export class Window
         // Or the browser closes the dialog too, and Chromium closes the next one along (#351).
         event.preventDefault();
 
-        if (this.options.canClose) {
+        if (this.options.cancel) {
+          this.options.cancel();
+        } else if (this.options.canClose) {
           this.close();
         }
       }

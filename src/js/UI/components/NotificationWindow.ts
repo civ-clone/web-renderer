@@ -32,6 +32,14 @@ export class NotificationWindow extends Window implements INotificationWindow {
       //  close: one that can't would be closed by it, and only shown again.
       if (event.key === 'Escape') {
         event.preventDefault();
+
+        if (this.#options.cancel) {
+          event.stopPropagation();
+
+          this.#options.cancel();
+
+          return;
+        }
       }
 
       if (['Enter', 'Escape'].includes(event.key) && this.#options.canClose) {
