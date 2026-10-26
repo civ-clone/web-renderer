@@ -5,7 +5,7 @@ import {
 } from '../../Engine/lib/military';
 import Military from '../../Engine/Requests/Military';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
@@ -62,12 +62,14 @@ export const renderMilitaryReport = ({
     )}</div>`
   );
 
-export class MilitaryReport extends Window {
+export class MilitaryReport extends FilterableWindow {
   #transport: Transport;
 
   constructor(transport: Transport) {
     super(t('MilitaryReport.title'), s('<div></div>'), {
       classes: 'military-report',
+      groupSelector: 'section',
+      rowSelector: 'tbody tr',
     });
 
     this.#transport = transport;

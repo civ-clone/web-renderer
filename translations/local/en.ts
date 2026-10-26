@@ -648,6 +648,8 @@ i18next.addResources('en', 'default', {
   'Window.maximize': 'Maximize',
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
+  'Window.filter': 'Filter',
+  'Window.filter-empty': 'Nothing matches.',
 
   'WorkerFailure.body':
     'Something went wrong in the game. It may carry on; if nothing happens, reload the page.',

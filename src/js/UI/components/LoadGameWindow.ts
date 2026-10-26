@@ -8,7 +8,8 @@ import { BrowserSave, deleteSave, listSaves } from '../lib/browserSaves';
 import ConfirmationWindow from './ConfirmationWindow';
 import ResumeGameWindow from './ResumeGameWindow';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
+import { filteredOutClass } from '../lib/filterRows';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -48,7 +49,7 @@ const button = (
  * download as a file or delete, and a file the player chooses. Either way the save's seats are shown first, to
  * reassign (#608).
  */
-export class LoadGameWindow extends Window {
+export class LoadGameWindow extends FilterableWindow {
   #askSeats: AskSeats;
   #body: HTMLTableSectionElement;
   #empty: HTMLParagraphElement;
@@ -67,6 +68,7 @@ export class LoadGameWindow extends Window {
     super(t('LoadGame.title'), s('<div></div>', table, empty, footer), {
       classes: 'load-game-window',
       modal: true,
+      rowSelector: 'tbody tr',
     });
 
     this.#askSeats = askSeats;
@@ -100,7 +102,7 @@ export class LoadGameWindow extends Window {
           return;
         }
 
-        const rows = Array.from(this.#body.rows),
+        const rows = this.#rows(),
           column = Array.from(row.querySelectorAll('button')).indexOf(target),
           next = rows[rows.indexOf(row) + step];
 
@@ -118,13 +120,20 @@ export class LoadGameWindow extends Window {
 
   // The `index`th save's button in `column`, or the last save's, or loading from a file when there are none left.
   #focusRow(index: number, column: number = 0): void {
-    const rows = this.#body.rows,
+    const rows = this.#rows(),
       row = rows[Math.min(index, rows.length - 1)];
 
     (
       row?.querySelectorAll('button')[column] ??
       this.#footer.querySelector('button')
     )?.focus();
+  }
+
+  // The saves the filter shows.
+  #rows(): HTMLTableRowElement[] {
+    return Array.from(this.#body.rows).filter(
+      (row) => !row.classList.contains(filteredOutClass)
+    );
   }
 
   // Built with `createElement`: a `<tr>` parsed on its own, outside a table, loses its cells.
@@ -164,7 +173,7 @@ export class LoadGameWindow extends Window {
             (): void => {
               deleteSave(save.savedAt)
                 .then((): void => {
-                  const index = row.sectionRowIndex;
+                  const index = this.#rows().indexOf(row);
 
                   row.remove();
 

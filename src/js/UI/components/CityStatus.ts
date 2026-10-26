@@ -3,7 +3,7 @@ import { groupIcons } from '../lib/yieldMap';
 import { turnsLeft, yieldData } from './lib/cityYields';
 import Portal from './Portal';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
@@ -85,7 +85,7 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   ];
 };
 
-export class CityStatus extends Window {
+export class CityStatus extends FilterableWindow {
   #cities: CityData[];
   #portal: Portal;
   #unwatch: () => void;
@@ -93,6 +93,7 @@ export class CityStatus extends Window {
   constructor(player: Player, portal: Portal, transport: Transport) {
     super(t('CityStatus.title'), s('<div class="loading"></div>'), {
       classes: 'city-status',
+      rowSelector: 'tr',
     });
 
     this.#cities = player.cities;

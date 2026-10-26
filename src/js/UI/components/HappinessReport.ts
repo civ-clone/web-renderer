@@ -11,7 +11,7 @@ import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
 import Transport from '../Transport';
 import Unit from './Unit';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
@@ -100,7 +100,7 @@ const buildCityRow = async (
   );
 };
 
-export class HappinessReport extends Window {
+export class HappinessReport extends FilterableWindow {
   #player: Player;
   #portal: Portal;
   #transport: Transport;
@@ -109,6 +109,7 @@ export class HappinessReport extends Window {
   constructor(player: Player, portal: Portal, transport: Transport) {
     super(t('HappinessReport.title'), s('<div></div>'), {
       classes: 'happiness-report',
+      rowSelector: '.city',
     });
 
     this.element().setAttribute(

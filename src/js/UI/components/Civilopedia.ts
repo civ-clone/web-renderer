@@ -15,7 +15,7 @@ import CivilopediaRequest from '../../Engine/Requests/Civilopedia';
 import { RequirementData } from '../../Engine/lib/requirements';
 import Requirements from '../../Engine/Requests/Requirements';
 import Transport from '../Transport';
-import Window from './Window';
+import FilterableWindow from './FilterableWindow';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -186,7 +186,7 @@ export const indexHtml = ({ entries }: CivilopediaData): string =>
 // The one open, which the menu, the `?` key and a Can't build window's links reuse rather than piling up another.
 let open: Civilopedia | null = null;
 
-export class Civilopedia extends Window {
+export class Civilopedia extends FilterableWindow {
   #data: CivilopediaData | null = null;
   #entry: HTMLElement = s('<article class="entry"></article>');
   #pending: string | null = null;
@@ -197,6 +197,8 @@ export class Civilopedia extends Window {
   constructor(transport: Transport, key: string | null = null) {
     super(t('Civilopedia.title'), s(`<p>${t('Civilopedia.loading')}</p>`), {
       classes: 'civilopedia',
+      groupSelector: '.index-section',
+      rowSelector: '.index li',
     });
 
     open = this;
