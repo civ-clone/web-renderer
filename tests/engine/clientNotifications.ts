@@ -923,6 +923,7 @@ const contextOf = ({
       'player:declaration-expired',
       'barbarians:landed',
       'barbarians:uprising',
+      'barbarians:ransom',
     ]
   );
 

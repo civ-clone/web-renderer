@@ -772,6 +772,9 @@ i18next.addResources('en', 'notification', {
   'GoodyHut.action-performed.Advance.body':
     'You have discovered scrolls of ancient wisdom...',
   'GoodyHut.action-performed.Advance.title': 'Exploration',
+  'GoodyHut.action-performed.Barbarians.body':
+    'You have unleashed a horde of barbarians!',
+  'GoodyHut.action-performed.Barbarians.title': 'Exploration',
   'GoodyHut.action-performed.City.body':
     'You have discovered an advanced tribe...',
   'GoodyHut.action-performed.City.title': 'Exploration',
@@ -804,6 +807,9 @@ i18next.addResources('en', 'notification', {
   'Barbarians.landing.body':
     'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
   'Barbarians.landing.title': 'Barbarians!',
+  'Barbarians.ransom.body':
+    'Barbarian leader captured! {{amount}} Gold ransom paid.',
+  'Barbarians.ransom.title': 'Ransom',
   'Barbarians.uprising.body':
     'Travelers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
   'Barbarians.uprising.title': 'Barbarian uprising',

@@ -244,8 +244,8 @@ const run = async (): Promise<void> => {
     [added, receivedOn],
     [
       // 1 for a plugin that fails to load, 2 for the talks, 1 for a halted GoTo, 27 for the patches, 2 for a Diplomat's
-      //  reports, 1 for famine, 3 for the game's end, and 31 notifications.
-      68,
+      //  reports, 1 for famine, 3 for the game's end, and 32 notifications.
+      69,
       [
         'action',
         'cheat',
