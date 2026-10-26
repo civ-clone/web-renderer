@@ -80,6 +80,16 @@ const run = async (): Promise<void> => {
     false
   );
   expect('an empty query matches anything', matches('', 'anything'), true);
+  expect(
+    'letters of their own fold too',
+    fold('Łódź Ærø Straße'),
+    'lodz aero strasse'
+  );
+  expect(
+    'and columns, a tab apart in a row, are a space apart, as typed',
+    matches(fold('moscow  musk'), fold('Moscow\tMusketmen\n')),
+    true
+  );
 
   // A window.
   const window = new FilterableWindow(
@@ -190,7 +200,35 @@ const run = async (): Promise<void> => {
     [false, 'ky']
   );
 
-  press(input(), 'Escape');
+  // Down from the box goes to the first row shown, to act on it.
+  let focused = '';
+
+  dialog.querySelectorAll('.body tr').forEach((row) => {
+    const rowButton = document.createElement('button');
+
+    rowButton.textContent = row.querySelector('th')!.textContent!;
+    (rowButton as unknown as HTMLElement).focus = () => {
+      focused = rowButton.textContent!;
+    };
+    row.querySelector('td')!.append(rowButton);
+  });
+
+  const down = press(input(), 'ArrowDown');
+
+  expect(
+    'Down in the box moves to the first row shown',
+    [down.defaultPrevented, focused],
+    [true, 'Kyiv']
+  );
+
+  // Escape with text clears the filter wherever the focus is, not only in the box.
+  press(button as unknown as HTMLElement, 'Escape');
+
+  expect(
+    'Escape from elsewhere in the window clears the filter too',
+    [input().value, dialog.isConnected],
+    ['', true]
+  );
 
   // Escape on an empty box is the window's again.
   press(input(), 'Escape');
