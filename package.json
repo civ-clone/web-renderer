@@ -218,7 +218,7 @@
     "@civ-clone/core-client": "^0.1.4",
     "@civ-clone/core-data-object": "^0.1.14",
     "@civ-clone/core-difficulty": "^0.1.0",
-    "@civ-clone/core-diplomacy": "^0.1.7",
+    "@civ-clone/core-diplomacy": "^0.1.8",
     "@civ-clone/core-engine": "^0.1.6",
     "@civ-clone/core-game": "^0.1.15",
     "@civ-clone/core-game-year": "^0.1.3",

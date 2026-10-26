@@ -140,8 +140,8 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0
       '@civ-clone/core-diplomacy':
-        specifier: ^0.1.7
-        version: 0.1.7
+        specifier: ^0.1.8
+        version: 0.1.8
       '@civ-clone/core-engine':
         specifier: ^0.1.6
         version: 0.1.6
@@ -1289,8 +1289,8 @@ packages:
   '@civ-clone/core-difficulty@0.1.0':
     resolution: {integrity: sha512-1K195FaeRDApGLWrSR2cgK3RQK/HGiYV1BKub0eylvQAVLqXCDNEzwTPmZOyxG1ykBQrgwuvCagL+bEXlXv3WA==}
 
-  '@civ-clone/core-diplomacy@0.1.7':
-    resolution: {integrity: sha512-Hc9kztk5jop7qH9Uo0ggKMjdwUI57XWw6WZ7QVe+JJXUCDxvVQymoxAYZHO5WcRRLf2Fxc6SjFNcGntJhqbPjA==}
+  '@civ-clone/core-diplomacy@0.1.8':
+    resolution: {integrity: sha512-HWSvEtxpXmUa1YaYRHMsZ5wSo8TsUBqhkAFdr0U+nJPeYOCj1oeMF1GpskvQA3gBycPFo8hJD3UQWlALp64zgQ==}
 
   '@civ-clone/core-engine@0.1.6':
     resolution: {integrity: sha512-VtkEBcCPOO2QPXk8FnG+PB4gZ1iNRQ2VL9fb8kRcZ6I+eTuYmqHQH5+gyxfRxpbsPbXcAvv2vb6WTkeRKpKTcw==}
@@ -2354,15 +2354,15 @@ snapshots:
 
   '@civ-clone/base-diplomacy-declaration-peace@0.1.0':
     dependencies:
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
 
   '@civ-clone/base-diplomacy-declaration-war@0.1.0':
     dependencies:
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
 
   '@civ-clone/base-diplomacy-interaction-contact@0.1.0':
     dependencies:
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-unit': 0.1.29
 
@@ -2817,7 +2817,7 @@ snapshots:
       '@civ-clone/core-city-improvement': 0.1.7
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-client': 0.1.4
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-goody-hut': 0.1.7
@@ -3160,7 +3160,7 @@ snapshots:
   '@civ-clone/base-unit-action-establish-embassy@0.1.0':
     dependencies:
       '@civ-clone/core-city': 0.1.23
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-turn-based-game': 0.1.10
@@ -3313,7 +3313,7 @@ snapshots:
   '@civ-clone/base-unit-action-steal-technology@0.1.0':
     dependencies:
       '@civ-clone/core-city': 0.1.23
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-turn-based-game': 0.1.10
@@ -3662,7 +3662,7 @@ snapshots:
       '@civ-clone/core-city-improvement': 0.1.7
       '@civ-clone/core-data-object': 0.1.17
       '@civ-clone/core-difficulty': 0.1.0
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-player': 0.1.10
@@ -3768,7 +3768,7 @@ snapshots:
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-client': 0.1.4
       '@civ-clone/core-difficulty': 0.1.0
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-government': 0.1.6
@@ -4121,7 +4121,7 @@ snapshots:
       '@civ-clone/core-city-improvement': 0.1.7
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-data-object': 0.1.17
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-government': 0.1.6
@@ -4329,7 +4329,7 @@ snapshots:
       '@civ-clone/core-data-object': 0.1.17
       '@civ-clone/core-registry': 0.1.6
 
-  '@civ-clone/core-diplomacy@0.1.7':
+  '@civ-clone/core-diplomacy@0.1.8':
     dependencies:
       '@civ-clone/core-client': 0.1.4
       '@civ-clone/core-data-object': 0.1.17
@@ -4360,7 +4360,7 @@ snapshots:
       '@civ-clone/core-client': 0.1.4
       '@civ-clone/core-data-object': 0.1.17
       '@civ-clone/core-difficulty': 0.1.0
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game-year': 0.1.4
       '@civ-clone/core-goody-hut': 0.1.7
@@ -4455,7 +4455,7 @@ snapshots:
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-data-object': 0.1.17
       '@civ-clone/core-difficulty': 0.1.0
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-goody-hut': 0.1.7
@@ -4709,7 +4709,7 @@ snapshots:
       '@civ-clone/base-diplomacy-declaration-peace': 0.1.0
       '@civ-clone/base-diplomacy-declaration-war': 0.1.0
       '@civ-clone/base-diplomacy-interaction-contact': 0.1.0
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-rule': 0.1.6
       '@civ-clone/core-science': 0.1.7
@@ -4953,7 +4953,7 @@ snapshots:
       '@civ-clone/core-city-improvement': 0.1.7
       '@civ-clone/core-civilization': 0.1.7
       '@civ-clone/core-client': 0.1.4
-      '@civ-clone/core-diplomacy': 0.1.7
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.15
       '@civ-clone/core-goody-hut': 0.1.7
