@@ -1,15 +1,21 @@
 // Selling an improvement (#31): the city goes out with each improvement's sale value, a `SellImprovement` action sells
 //  one for its cost in shields, 1 gold each, and the city then goes out without it. A city sells one improvement a
-//  turn, so a second sale that turn is refused and the rest of its improvements go out with no sale value.
+//  turn, so a second sale that turn is refused and the rest of its improvements go out with no sale value. The
+//  production picker, asked as the page asks, offers a sold improvement again (#652), and offers what two advances
+//  gained at once unlock (#302).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
-// test founds a city, gives it a Temple and a Library, then sells the Temple and tries to sell the Library. Then it
+// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple and tries to sell the Library. Then it
 // launches a spaceship with the parts to make it, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import {
+  BronzeWorking,
+  CeremonialBurial,
+} from '@civ-clone/civ1-science/Advances';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import {
   Library,
@@ -21,11 +27,13 @@ import { Gold } from '@civ-clone/civ1-treasury/Yields';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Settlers } from '@civ-clone/civ1-unit/Units';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
+import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
@@ -48,6 +56,8 @@ let started = false,
   humanClient: DataTransferClient | null = null,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => unknown) | null = null,
+  buildListHandler: ((cityBuildId: string) => unknown) | null = null,
+  buildListSent: any = null,
   pendingChoice: ((value: any) => void) | null = null,
   // Every object the patches sent since the last `flush()`.
   objectsSent: any[] = [];
@@ -115,6 +125,17 @@ const sell = (city: City, improvementId: string): Promise<void> =>
     })
   ).then(settle);
 
+// What the production picker gets when it opens for the city, asked as the page asks (#324).
+const buildList = (city: City): string[] => {
+  buildListSent = null;
+
+  buildListHandler!(cityBuildRegistryInstance.getByCity(city).id());
+
+  return (buildListSent.hierarchy as { '#ref': string }[]).map(
+    ({ '#ref': id }) => buildListSent.objects[id].item._
+  );
+};
+
 const run = async (): Promise<void> => {
   const [founder] = unitRegistryInstance
     .getByPlayer(humanPlayer!)
@@ -140,6 +161,30 @@ const run = async (): Promise<void> => {
 
   if (!city) {
     fail('the starting Settlers could not found a city');
+  }
+
+  // Two advances at once (#302): what each unlocks is in the picker straight away.
+  const listedBefore = buildList(city),
+    playerResearch = playerResearchRegistryInstance.getByPlayer(humanPlayer!);
+
+  if (listedBefore.includes('Temple') || listedBefore.includes('Spearman')) {
+    fail(
+      `expected no Temple or Spearman before Ceremonial Burial and Bronze Working, got ${listedBefore}`
+    );
+  }
+
+  playerResearch.addAdvance(CeremonialBurial);
+  playerResearch.addAdvance(BronzeWorking);
+
+  const listedAfterAdvances = buildList(city);
+
+  if (
+    !listedAfterAdvances.includes('Temple') ||
+    !listedAfterAdvances.includes('Spearman')
+  ) {
+    fail(
+      `expected the Temple and Spearman once both advances were gained, got ${listedAfterAdvances}`
+    );
   }
 
   const temple = new Temple(city),
@@ -168,6 +213,10 @@ const run = async (): Promise<void> => {
 
   objectsSent = [];
 
+  if (buildList(city).includes('Temple')) {
+    fail('the picker offered a Temple to a city that has one');
+  }
+
   await sell(city, temple.id());
   flush();
 
@@ -176,6 +225,15 @@ const run = async (): Promise<void> => {
       `selling the Temple left it ${
         temple.destroyed() ? 'gone' : 'standing'
       } and the treasury at ${treasury.value()}, not 40`
+    );
+  }
+
+  // A sold improvement can be built again (#652).
+  if (!buildList(city).includes('Temple')) {
+    fail(
+      `the picker left out the Temple the city had just sold: ${buildList(
+        city
+      )}`
     );
   }
 
@@ -267,7 +325,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS sellImprovement (the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship of 62 parts launches and the player goes out again)'
+    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship of 62 parts launches and the player goes out again)'
   );
 
   process.exit(0);
@@ -277,6 +335,10 @@ const transport = {
   receive: (channel: string, handler: (...args: any[]) => unknown) => {
     if (channel === 'action') {
       actionHandler = handler;
+    }
+
+    if (channel === 'cityBuildAvailable') {
+      buildListHandler = handler;
     }
 
     return () => false;
@@ -308,6 +370,12 @@ const transport = {
           })
           .catch((error) => fail('the helper could not choose', error))
       );
+
+      return;
+    }
+
+    if (channel === 'cityBuildAvailable') {
+      buildListSent = data;
 
       return;
     }
