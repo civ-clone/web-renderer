@@ -251,6 +251,17 @@ const run = async (): Promise<void> => {
     `the computer doesn't pay more on Chieftain (${computerCost} against our ${playerCost})`
   );
 
+  // One we have seen, so the page holds the city before it changes hands.
+  playerWorldRegistryInstance
+    .getByPlayer(humanPlayer!)
+    .register(...taken.tile().getSurroundingArea(1).entries());
+  await flush();
+
+  check(
+    held(ref(heldTile(taken.tile())?.city)) !== undefined,
+    "the computer's city never reached the page before the capture"
+  );
+
   taken.capture(humanPlayer!);
   await flush();
 
@@ -265,12 +276,22 @@ const run = async (): Promise<void> => {
       .value()} for its Warrior, not our ${playerCost} (the computer's is ${computerCost})`
   );
 
-  const heldBuild = held(ref(held(taken.id())?.build)),
-    heldCost = held(ref(heldBuild?.cost))?.value ?? heldBuild?.cost?.value;
+  const heldBuild = held(ref(held(taken.id())?.build));
 
   check(
-    heldCost === playerCost,
-    `the page holds the captured city's Warrior at ${heldCost}, not our ${playerCost}`
+    heldBuild !== undefined,
+    'the page holds no build for the captured city'
+  );
+
+  // The Production box reads the build's cost; the item carries its own.
+  const valueOf = (value: any): unknown =>
+      held(ref(value))?.value ?? value?.value,
+    heldCost = valueOf(heldBuild?.cost),
+    heldItemCost = valueOf(held(ref(heldBuild?.building))?.cost);
+
+  check(
+    heldCost === playerCost && heldItemCost === playerCost,
+    `the page holds the captured city's Warrior at ${heldCost} (the item at ${heldItemCost}), not our ${playerCost}`
   );
 
   console.log(
