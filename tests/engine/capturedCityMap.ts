@@ -5,6 +5,8 @@
 //    a new owner redraws its square; this checks that the patch is sent.
 // - A unit our captured city supported, away from the city, is disbanded: it is gone from the game, from its square
 //    and from our units, in the map the page holds as well (#286).
+// - A city we take from a computer player stops building what the computer chose, in the city the page holds as
+//    well, so we choose, and what we choose costs our price, not the computer's difficulty-inflated one (#670, #500).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `lostCityCorruption` does, and applies what it sends to
 //  an object map with the page's own `applyDataPatches`.
@@ -13,6 +15,7 @@
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataObject from '@civ-clone/core-data-object/DataObject';
@@ -23,10 +26,13 @@ import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import Tile from '@civ-clone/core-world/Tile';
 import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
+import { Chieftain } from '@civ-clone/civ1-difficulty/Difficulties';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
+import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
@@ -227,8 +233,84 @@ const run = async (): Promise<void> => {
     'the page still lists the disbanded unit among ours'
   );
 
+  // A computer's city captured part way through a build, on a level where the computer pays more (#670, #500).
+  gameDifficultyRegistryInstance.set(Chieftain);
+
+  const taken = new City(firstRival, site(capital.tile()), 'Taken'),
+    takenBuild = cityBuildRegistryInstance.getByCity(taken);
+
+  growTo(taken, 3);
+  takenBuild.build(Warrior);
+
+  // What a Warrior costs in a city of ours.
+  const computerCost = takenBuild.cost().value(),
+    playerCost = new BuildItem(Warrior, capital).cost().value();
+
+  check(
+    computerCost > playerCost,
+    `the computer doesn't pay more on Chieftain (${computerCost} against our ${playerCost})`
+  );
+
+  // One we have seen, so the page holds the city before it changes hands.
+  playerWorldRegistryInstance
+    .getByPlayer(humanPlayer!)
+    .register(...taken.tile().getSurroundingArea(1).entries());
+  await flush();
+
+  check(
+    held(ref(heldTile(taken.tile())?.city)) !== undefined,
+    "the computer's city never reached the page before the capture"
+  );
+
+  taken.capture(humanPlayer!);
+  await flush();
+
+  check(
+    takenBuild.building() === null,
+    `the captured city carries on building the computer's ${
+      takenBuild.building()?.item().name
+    }`
+  );
+
+  const heldBuild = (): any => held(ref(held(taken.id())?.build));
+
+  check(
+    heldBuild() !== undefined,
+    'the page holds no build for the captured city'
+  );
+  check(
+    !heldBuild()?.building,
+    'the page still shows the captured city building what the computer chose'
+  );
+
+  // Our choice, through the action the page sends, which only a city with nothing to build offers: at our price.
+  //  The Production box reads the build's cost; the item carries its own.
+  await Promise.resolve(
+    actionHandler!({
+      name: 'CityBuild',
+      id: takenBuild.id(),
+      chosen: 'Warrior',
+    })
+  ).then(settle);
+  await flush();
+
+  check(
+    takenBuild.building()?.item() === Warrior,
+    'choosing a Warrior in the captured city did nothing'
+  );
+
+  const valueOf = (value: any): unknown =>
+      held(ref(value))?.value ?? value?.value,
+    heldCost = valueOf(heldBuild()?.cost),
+    heldItemCost = valueOf(held(ref(heldBuild()?.building))?.cost);
+
+  check(
+    heldCost === playerCost && heldItemCost === playerCost,
+    `the page holds our Warrior in the captured city at ${heldCost} (the item at ${heldItemCost}), not our ${playerCost} (the computer's is ${computerCost})`
+  );
+
   console.log(
-    `PASS capturedCityMap (${checks} checks: a captured city is drawn as its new owner's, and the units it supported leave the map)`
+    `PASS capturedCityMap (${checks} checks: a captured city is drawn as its new owner's, the units it supported leave the map, and it stops building what its old owner chose)`
   );
 
   process.exit(0);

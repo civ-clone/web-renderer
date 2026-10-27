@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1103,
+        "total": 1104,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -140,7 +140,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 14,
+          "Captured": 15,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -395,7 +395,7 @@
       "randomCalls": 8630,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1103,
+        "total": 1104,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -421,7 +421,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 14,
+          "Captured": 15,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
@@ -845,7 +845,7 @@
       "randomCalls": 8778,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1103,
+        "total": 1104,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -871,7 +871,7 @@
           "CanBeWorked": 3,
           "CanJoinCity": 1,
           "CanStow": 2,
-          "Captured": 14,
+          "Captured": 15,
           "CelebrateLeader": 1,
           "ChanceOfSuccess": 1,
           "Changed": 2,
