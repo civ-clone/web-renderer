@@ -86,6 +86,16 @@ export class ActiveUnitController {
   #unitActionsRequest: UnitActionsRequest;
   // The units that can act this turn, and those deferred with `w` (wait).
   #unitQueue = new UnitQueue();
+  // A transport sent `Unload`, the square it was on and the units that could already act there, until an update shows
+  //  the units it unloaded (#590).
+  #unloaded: {
+    alreadyActive: string[];
+    id: string;
+    x: number;
+    y: number;
+  } | null = null;
+  // Ids of the units a transport unloaded, taken before any other while one of them can act (#590).
+  #upNext: string[] = [];
   // Whether the turn has been ended and the game is waiting for the next one, as the last rebuild said.
   #waiting = false;
 
@@ -146,6 +156,11 @@ export class ActiveUnitController {
   actionHandled(action: TransportHandledAction): void {
     const pendingMove = this.#pendingMove;
 
+    // Its patch came before this: the units it woke are in `#upNext` now, if it woke any.
+    if (action.unitAction === 'Unload' && action.id === this.#unloaded?.id) {
+      this.#unloaded = null;
+    }
+
     if (pendingMove.orderAnsweredBy(action)) {
       pendingMove.settleOrder();
 
@@ -201,6 +216,11 @@ export class ActiveUnitController {
     if (unit !== null) {
       this.#lastUnit = unit;
       this.#unitQueue.activated(unit.id);
+    }
+
+    // Another unit chosen (a click, Wait, or the units unloaded have all gone): they are not taken first any more.
+    if (unit === null || !this.#upNext.includes(unit.id)) {
+      this.#upNext = [];
     }
 
     // Every way a unit becomes active comes through here: the next unit after an update, a click, the stack
@@ -274,7 +294,25 @@ export class ActiveUnitController {
 
     unitQueue.update(actions, waiting);
 
-    const selectableActiveUnits = unitQueue.selectable();
+    const selectableActiveUnits = unitQueue.selectable(),
+      unloaded = this.#unloaded;
+
+    // The units a transport has just unloaded, on its square and able to act, are up next, in the engine's order
+    //  (#590). The engine lists the transport itself after them, as `Unload` has it wait.
+    if (unloaded !== null) {
+      const cargo = selectableActiveUnits.filter(
+        (unit): boolean =>
+          unit.id !== unloaded.id &&
+          !unloaded.alreadyActive.includes(unit.id) &&
+          unit.tile.x === unloaded.x &&
+          unit.tile.y === unloaded.y
+      );
+
+      if (cargo.length > 0) {
+        this.#unloaded = null;
+        this.#upNext = cargo.map((unit): string => unit.id);
+      }
+    }
 
     // A unit whose GoTo stopped next to a choice goes first, and is offered it once its actions are in.
     const halted = haltedUnits.next(unitQueue.units()),
@@ -283,7 +321,8 @@ export class ActiveUnitController {
         chooseActiveUnit(
           selectableActiveUnits,
           this.#lastUnit?.id ?? null,
-          (x, y) => portal.isVisible(x, y)
+          (x, y) => portal.isVisible(x, y),
+          this.#upNext
         );
 
     if (halted?.actions?.length) {
@@ -379,6 +418,8 @@ export class ActiveUnitController {
    */
   turnStarted(): void {
     this.#waiting = false;
+    this.#unloaded = null;
+    this.#upNext = [];
 
     this.#pendingMove.release();
   }
@@ -426,6 +467,20 @@ export class ActiveUnitController {
     const order = { id: unitId, unitAction: action._, target: action.to.id };
 
     this.#deps.transport.send('action', { name: 'ActiveUnit', ...order });
+
+    if (action._ === 'Unload') {
+      const { x, y } = action.from;
+
+      this.#unloaded = {
+        alreadyActive: this.#unitQueue
+          .units()
+          .filter((unit): boolean => unit.tile.x === x && unit.tile.y === y)
+          .map((unit): string => unit.id),
+        id: unitId,
+        x,
+        y,
+      };
+    }
 
     if (!this.#waiting) {
       this.#pendingMove.sent(order, towardsTile);

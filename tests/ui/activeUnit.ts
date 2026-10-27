@@ -97,6 +97,28 @@ expect(
 );
 expect('no units, no active unit', chooseActiveUnit([], 'c', isVisible), null);
 
+// Units up next (#590) go before the last unit, unless it is one of them.
+expect(
+  'a unit up next goes before the last unit',
+  chooseActiveUnit(units, onScreen.id, isVisible, ['c']),
+  moved
+);
+expect(
+  'the last unit keeps the focus when it is up next itself',
+  chooseActiveUnit(units, offScreen.id, isVisible, ['c', 'a']),
+  offScreen
+);
+expect(
+  'one up next that can no longer act is passed over for the next',
+  chooseActiveUnit([onScreen, moved], 'a', isVisible, ['a', 'c']),
+  moved
+);
+expect(
+  'with none up next left, as before',
+  chooseActiveUnit([offScreen, onScreen], 'c', isVisible, ['c']),
+  onScreen
+);
+
 // The game data as the frontend holds it: a player whose units came without
 // their actions, as every patch now sends them.
 const objectMap: ObjectMap = {
@@ -1042,6 +1064,85 @@ expect(
   'and so does a window with the focus',
   `${sentActions.join(' / ')} ${pendingMove.queued()}`,
   'Militia-1 Move 2 false'
+);
+
+// Unload (#590): the units it woke are up next, in the engine's order, ahead of the transport, though it could still
+//  move and was the last unit. The Legion, lost above, is back as cargo.
+game.objects['Player-2'].units.push({ '#ref': 'Legion-1' });
+place('Chariot-1', 4);
+game.objects['Chariot-1'].actions.push({
+  _: 'Unload',
+  id: 'Unload-Chariot-1',
+  from: tileRef(4),
+  to: tileRef(4),
+});
+place('Militia-1', 1);
+place('Legion-1', 8);
+updateWith('Chariot-1');
+sentActions.splice(0);
+
+expect(
+  'Unload is sent for the transport',
+  `${controller.act('Chariot-1', 'Unload')} ${sentActions.join()}`,
+  'true Chariot-1 Unload'
+);
+
+// The engine has woken the cargo on the transport's square, and lists the transport after them.
+place('Chariot-1', 4);
+place('Militia-1', 4);
+place('Legion-1', 4);
+updateWith('Legion-1', 'Militia-1', 'Chariot-1');
+acknowledgeOldest();
+
+expect(
+  'after Unload, the first unit unloaded is up, not the transport',
+  current().id,
+  'Legion-1'
+);
+
+place('Legion-1', 5);
+updateWith('Chariot-1', 'Legion-1', 'Militia-1');
+
+expect(
+  'an unloaded unit keeps the focus while it can move',
+  current().id,
+  'Legion-1'
+);
+
+updateWith('Chariot-1', 'Militia-1');
+
+expect(
+  'once it has no moves left, the next unit unloaded is up, though the transport is listed first',
+  current().id,
+  'Militia-1'
+);
+
+updateWith('Chariot-1');
+
+expect('and once they have all gone, the transport', current().id, 'Chariot-1');
+
+// A unit that could already act on the transport's square was not unloaded: it is not taken first.
+place('Chariot-1', 4);
+game.objects['Chariot-1'].actions.push({
+  _: 'Unload',
+  id: 'Unload-Chariot-1-again',
+  from: tileRef(4),
+  to: tileRef(4),
+});
+place('Militia-1', 4);
+place('Legion-1', 8);
+updateWith('Chariot-1', 'Militia-1');
+controller.set(find('Chariot-1'));
+sentActions.splice(0);
+controller.act('Chariot-1', 'Unload');
+place('Legion-1', 4);
+updateWith('Militia-1', 'Legion-1', 'Chariot-1');
+acknowledgeOldest();
+
+expect(
+  'a unit already able to act on the square is not up next, the one unloaded is',
+  current().id,
+  'Legion-1'
 );
 
 const limited = new PendingMove();
