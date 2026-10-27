@@ -56,7 +56,8 @@ export class FilterableWindow extends Window {
     Object.entries({
       'aria-label': t('Window.filter'),
       autocomplete: 'off',
-      placeholder: t('Window.filter'),
+      // The shortcut, where it's seen; a screen reader hears just "Filter".
+      placeholder: t('Window.filter-placeholder'),
       spellcheck: 'false',
       type: 'search',
     }).forEach(([name, value]) => this.#input.setAttribute(name, value));
