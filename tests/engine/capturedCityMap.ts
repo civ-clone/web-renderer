@@ -5,6 +5,8 @@
 //    a new owner redraws its square; this checks that the patch is sent.
 // - A unit our captured city supported, away from the city, is disbanded: it is gone from the game, from its square
 //    and from our units, in the map the page holds as well (#286).
+// - A city we take from a computer player is charged our price for what it is building, not the computer's
+//    difficulty-inflated one, in the city the page holds as well (#500).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `lostCityCorruption` does, and applies what it sends to
 //  an object map with the page's own `applyDataPatches`.
@@ -13,6 +15,7 @@
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataObject from '@civ-clone/core-data-object/DataObject';
@@ -23,10 +26,13 @@ import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import Tile from '@civ-clone/core-world/Tile';
 import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
+import { Chieftain } from '@civ-clone/civ1-difficulty/Difficulties';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
+import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
@@ -227,8 +233,48 @@ const run = async (): Promise<void> => {
     'the page still lists the disbanded unit among ours'
   );
 
+  // A computer's city captured part way through a build, on a level where the computer pays more for it (#500).
+  gameDifficultyRegistryInstance.set(Chieftain);
+
+  const taken = new City(firstRival, site(capital.tile()), 'Taken'),
+    takenBuild = cityBuildRegistryInstance.getByCity(taken);
+
+  growTo(taken, 3);
+  takenBuild.build(Warrior);
+
+  // What a Warrior costs in a city of ours.
+  const computerCost = takenBuild.cost().value(),
+    playerCost = new BuildItem(Warrior, capital).cost().value();
+
+  check(
+    computerCost > playerCost,
+    `the computer doesn't pay more on Chieftain (${computerCost} against our ${playerCost})`
+  );
+
+  taken.capture(humanPlayer!);
+  await flush();
+
+  check(
+    takenBuild.building()?.item() === Warrior,
+    'the captured city stopped building its Warrior'
+  );
+  check(
+    takenBuild.cost().value() === playerCost,
+    `the captured city charges ${takenBuild
+      .cost()
+      .value()} for its Warrior, not our ${playerCost} (the computer's is ${computerCost})`
+  );
+
+  const heldBuild = held(ref(held(taken.id())?.build)),
+    heldCost = held(ref(heldBuild?.cost))?.value ?? heldBuild?.cost?.value;
+
+  check(
+    heldCost === playerCost,
+    `the page holds the captured city's Warrior at ${heldCost}, not our ${playerCost}`
+  );
+
   console.log(
-    `PASS capturedCityMap (${checks} checks: a captured city is drawn as its new owner's, and the units it supported leave the map)`
+    `PASS capturedCityMap (${checks} checks: a captured city is drawn as its new owner's, the units it supported leave the map, and it builds at its new owner's prices)`
   );
 
   process.exit(0);
