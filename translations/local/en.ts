@@ -650,6 +650,7 @@ i18next.addResources('en', 'default', {
   'Window.close': '$t(Generic.close)',
   'Window.filter': 'Filter',
   'Window.filter-empty': 'Nothing matches.',
+  'Window.filter-placeholder': 'Filter (press /)',
 
   'WorkerFailure.body':
     'Something went wrong in the game. It may carry on; if nothing happens, reload the page.',
