@@ -75,34 +75,36 @@
   }
 }
 
+// The map's grid area's full height, at its right (#697): the full height less the top bar, so the oldest actions
+//  fade out under the bar rather than part way down. Positioned, as the map is, so the two paint in document order and
+//  this, after the map, is on top without a stacking order. The column itself lets the pointer through to the map;
+//  only its buttons take it.
 #actions {
-  bottom: 0;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
+  grid-area: map;
+  justify-self: end;
   // Newest at the bottom; when there are more than fit, the oldest run off
-  // the top behind a short fade instead of spilling over the game menu. The
-  // stack stops short of the game menu (its 1rem padding, 3.1rem button and
-  // 1rem padding) rather than sitting over it, so no stacking order or
-  // pointer-events trickery is needed to keep the menu clickable.
-  height: calc(100vh - 5.1rem);
+  // the top behind a short fade.
   justify-content: flex-end;
   -webkit-mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
   mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
+  min-height: 0;
   overflow: hidden;
-  position: absolute;
-  right: 0;
+  pointer-events: none;
+  position: relative;
 
   .action {
     margin: 0 1rem 1rem;
+    pointer-events: auto;
   }
 }
 
+// In the top bar, before the game menu (#697).
 #other-actions {
-  position: absolute;
-  right: 4rem;
   display: flex;
   flex-direction: row;
-  padding: 1em;
 
   .action {
     margin: 0 0 0 0.5em;
@@ -116,17 +118,21 @@
 
 // The active unit's own actions, opposite the mandatory ones (#348).
 #unit-actions {
-  bottom: 0;
+  align-self: end;
   display: flex;
   flex-flow: row wrap;
   gap: 0.25rem;
-  // Clear of the sidebar.
-  left: 13em;
+  // In the map's grid area, at its bottom left (#697), so clear of the sidebar; positioned to paint over the map, as
+  //  `#actions` is, and like it letting the pointer through to the map except on its buttons.
+  grid-area: map;
+  justify-self: start;
   max-width: 40vw;
   padding: 1rem;
-  position: absolute;
+  pointer-events: none;
+  position: relative;
 
   .unit-action {
+    pointer-events: auto;
     background: #222;
     border: 2px solid #aaa;
     border-radius: 4px;

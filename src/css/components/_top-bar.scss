@@ -1,0 +1,59 @@
+@use 'panel';
+
+// The year, the empire's numbers and the game menu, across the top of the map (#697).
+#top-bar {
+  @include panel.bevel();
+  align-items: center;
+  background: var(--panel-bg);
+  box-sizing: border-box;
+  color: var(--panel-text);
+  column-gap: 1.25em;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.9em;
+  min-width: 0;
+  padding: 0.25em 0.5em;
+  row-gap: 0.25em;
+
+  h3 {
+    font-size: 1em;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  #gameDetails {
+    .year {
+      font-weight: bold;
+    }
+
+    .turn {
+      color: var(--panel-muted);
+      font-size: 0.85em;
+      font-weight: normal;
+
+      &::before {
+        content: ' (turn ';
+      }
+
+      &::after {
+        content: ')';
+      }
+    }
+
+    .difficulty {
+      color: var(--panel-muted);
+      font-size: 0.8em;
+    }
+  }
+
+  #playerDetails {
+    align-items: center;
+    column-gap: 1.25em;
+    display: flex;
+    flex-wrap: wrap;
+    row-gap: 0.25em;
+  }
+}

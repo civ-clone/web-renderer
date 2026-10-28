@@ -1,13 +1,14 @@
 @use 'action-button';
 
+// At the end of the top bar, in its flow (#697).
 #game-menu {
-  padding: 1rem;
-  position: absolute;
-  right: 0;
-  top: 0;
+  display: flex;
+  gap: 0.5rem;
 
   button {
     @include action-button.main();
+    height: 2.5rem;
+    width: 2.5rem;
     @include action-button.background-gradient-silver-ring();
     @include action-button.white-child-svg();
   }

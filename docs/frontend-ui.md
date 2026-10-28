@@ -96,6 +96,22 @@ ask before leaving a game in progress.
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).
 - Details: `UnitDetails`, `PlayerDetails`, `GameDetails`.
+- Layout (#697): `#game` is a grid. `#top-bar` runs across the full width
+  and holds `GameDetails`, `PlayerDetails` (the empire block, #698), the
+  secondary actions and the game menu, in its flow. The map fills the rest,
+  and the sidebar's `SidebarSection`s (the minimap, the active unit) float
+  over its top left; the sidebar itself has no panel and passes the pointer
+  through. `MapView` measures the sections and tells the portal
+  (`Portal.setCovered`), so `isVisible` counts a tile under one (or within
+  the edge margin of one) as out of view and the active unit is recentred out
+  from under them, as from an edge. `#actions` fills the map's height at its
+  right and `#unit-actions` sits at its bottom left; like the sidebar they are
+  positioned and after the map in the document, so they paint over it without
+  a `z-index`. Each section collapses from its heading button, with the
+  collapsed keys kept in the `sidebarCollapsed` client option. Below 48em wide,
+  the bar, the sections and the map stack instead, and the map keeps the whole
+  width. Their colours are the `--panel-*` tokens on `:root`, with a dark set
+  under `prefers-color-scheme: dark` (#706 adds a choice in the options).
 - Generic window primitives: `Window`, `SelectionWindow`, `MandatorySelection`,
   `ConfirmationWindow`, `NotificationWindow`, `PopupMenu`. A list with one
   option is chosen for the player rather than shown (`lib/singleChoice.ts`).
@@ -176,9 +192,10 @@ Moving around the map:
 
 ## Local client state helpers
 
-- `GameOptionsRegistry`: in-memory options, set to defaults in `app/options.ts` on every page load
-  and not persisted: `autoEndOfTurn`, `autoEndOfTurnExceptions`,
-  `unitEdgeMargin`, `mapScale`, `lockVerticalEdges`.
+- `GameOptionsRegistry`: the client options, with their defaults in `app/options.ts`; the
+  values a player changes are kept in `localStorage` (#343): `autoEndOfTurn`, `autoEndOfTurnExceptions`,
+  `unitEdgeMargin`, `mapScale`, `lockVerticalEdges`, `autosave`,
+  `sidebarCollapsed`.
 - `lib/DataChanges.ts`: watchers by object id, run once per render when an id
   they watch changed (#344).
 - `Store` wrapper around IndexedDB via `idb` (used by `AssetStore` and the

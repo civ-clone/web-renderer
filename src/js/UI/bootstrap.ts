@@ -21,6 +21,7 @@ import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
 import WorkerFailures from './app/WorkerFailures';
+import buildSidebar from './app/sidebar';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -71,6 +72,12 @@ export class Renderer {
         haltedUnits = new HaltedUnits();
 
       preloadAssets(elements.preloadContainer);
+
+      const sidebar = document.getElementById('sidebar');
+
+      if (sidebar) {
+        buildSidebar(sidebar, elements);
+      }
 
       // Made once the game data, and the map it draws on, have arrived. The
       //  choice windows' receiver below, registered before then, forgets the

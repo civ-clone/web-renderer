@@ -594,6 +594,10 @@ i18next.addResources('en', 'default', {
   'Senate.overruled': 'Overruled by the Senate. Action canceled.',
   'Senate.title': 'The Senate',
 
+  // The sidebar's sections, which can be collapsed (#697).
+  'Sidebar.unit': 'Active Unit',
+  'Sidebar.world': 'World',
+
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
 
