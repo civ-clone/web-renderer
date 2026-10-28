@@ -58,8 +58,9 @@ import Unit from '@civ-clone/core-unit/Unit';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 
-// Long enough for the human, playing by hand, to have founded a few cities and have units to move about (#411).
-const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 120);
+// Long enough for the human, playing by hand, to have founded a few cities and have units to move about (#411), and
+//  short of the turn the default seed's game is won (118 since #401): the checks are of a game in progress.
+const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 115);
 
 const objectMap: ObjectMap = { hierarchy: {}, objects: {} },
   missing = new Map<string, number>(),
@@ -1480,6 +1481,15 @@ engine.emit = (event: string, ...args: any[]): void => {
 
   emit(event, ...args);
 };
+
+// A game won before `TURNS` ends its loop, which would otherwise leave the suite to exit without a word.
+engine.on('game:over', (): void => {
+  if (!stopped) {
+    fail(
+      `the game was won on turn ${turnInstance.value()}, before the ${TURNS} turns the checks run after: set PATCH_REFS_TURNS lower`
+    );
+  }
+});
 
 engine.on('turn:start', (turn: number): void => {
   if (stopped || turn < TURNS) {

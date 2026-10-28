@@ -14,9 +14,9 @@
   },
   "note": "Stage 4 checksum: every non-transient field of every saveable entity, via stateKeys(). The Stage 0 numbers (7d6b6b04 / 73a0cc05 / 3431063b) held unchanged through Stages 1-3 and are NOT comparable with these — the widening is what ended that comparability, and it was done in a commit of its own so the discontinuity has exactly one cause. snapshots.*.state carries the entity and field counts beside the hash, so a drift says how much moved as well as that something did. Regenerated once in Stage 5: tagging `base-trade-rate-research` as `ResearchTradeRate` changed that entity`s id prefix, since ids key on the tag. Verified to be the only difference by normalising ids out of both DTO dumps and comparing — `_` still reports `Research`, so nothing the renderer reads moved. Regenerated again in Stage 6: `Rule` gained an `_id` field, and a rule is reachable through `Unit._busy`, so `_id: null` now appears in the DTO for every fortified unit. Turn 1 is unchanged because nothing is fortified yet. That leak is what fixing `_busy` removes, which will move these numbers once more and shrink them. Since then it has been regenerated whenever a change was meant to alter play (each such PR says so). #253 widened it again, in a commit of its own: the city builds and city growth registries are now hashed too, so all three checkpoints moved with play unchanged. #194 then changed play (Auto, and computer players choosing improvements by need), regenerated in the lockfile commit that brought it in, and #378 again (computer players ranking units with improvements and Wonders), likewise, as did #30 (the Great Wall and the United Nations keeping other leaders peaceful towards their owner), #31 (the terrain, City Walls and fortified defence bonuses of Civ1 in combat), #115 with #236 (Isaac Newton's College and Hoover Dam taking effect, Michelangelo's Chapel and J.S. Bach's Cathedral as in v474.05), and #241 with #380 (buy prices as in v474.05, and no unit purchases in civil disorder: one Spend rule fewer, and the prices in the DTO change, but play does not). #31 (selling an improvement: a Sell and a Sold rule more, and each improvement's saleValue in the DTO) changes no play, though turn 50's state hash moves: the sale values built for the turn-10 DTO take ids, so entities created after it are numbered differently. Random calls and entity and field counts are unchanged. #459 shrinks the DTO: a player's units no longer include its destroyed ones. Play does not change.",
   "checksums": {
-    "1": "3656a7b5",
-    "10": "1d418270",
-    "50": "0a2f53df"
+    "1": "2b9ecb87",
+    "10": "4a7d96bb",
+    "50": "63a01c7f"
   },
   "snapshots": {
     "1": {
@@ -24,12 +24,12 @@
       "state": {
         "entities": 2459,
         "fields": 9730,
-        "hash": "eefbf9cf"
+        "hash": "be56c072"
       },
       "dto": {
-        "objects": 778,
-        "bytes": 134713,
-        "hash": "8d9c3aa7"
+        "objects": 782,
+        "bytes": 136739,
+        "hash": "86ff6877"
       },
       "registries": {
         "cities": 0,
@@ -78,8 +78,8 @@
           "Settlers-1",
           "Settlers",
           "Player-1",
-          "14",
-          "33",
+          "36",
+          "36",
           "true",
           "false"
         ],
@@ -87,8 +87,8 @@
           "Settlers-2",
           "Settlers",
           "Player-2",
-          "37",
-          "30",
+          "21",
+          "38",
           "true",
           "false"
         ],
@@ -96,8 +96,8 @@
           "Settlers-3",
           "Settlers",
           "Player-3",
-          "38",
-          "25",
+          "36",
+          "24",
           "true",
           "false"
         ],
@@ -105,8 +105,8 @@
           "Settlers-4",
           "Settlers",
           "Player-4",
-          "6",
-          "27",
+          "47",
+          "29",
           "true",
           "false"
         ]
@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1104,
+        "total": 1095,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -226,22 +226,22 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
-          "YieldModifier": 19
+          "Yield": 189,
+          "YieldModifier": 25
         }
       }
     },
     "10": {
       "turn": 10,
       "state": {
-        "entities": 2487,
-        "fields": 9842,
-        "hash": "953003eb"
+        "entities": 2483,
+        "fields": 9806,
+        "hash": "7e08d937"
       },
       "dto": {
-        "objects": 3362,
-        "bytes": 576359,
-        "hash": "3652457e"
+        "objects": 2330,
+        "bytes": 400304,
+        "hash": "4155df89"
       },
       "registries": {
         "cities": 4,
@@ -255,7 +255,7 @@
         "playerWorlds": 4,
         "players": 4,
         "tileImprovements": 8,
-        "units": 8
+        "units": 4
       },
       "world": {
         "width": 60,
@@ -290,32 +290,32 @@
           "City",
           "Player-1",
           "London",
-          "14",
-          "33"
+          "36",
+          "36"
         ],
         [
           "City-2",
           "City",
           "Player-4",
           "Paris",
-          "6",
-          "27"
+          "47",
+          "29"
         ],
         [
           "City-3",
           "City",
-          "Player-2",
-          "Babilim",
-          "36",
-          "31"
+          "Player-3",
+          "Anadyr",
+          "35",
+          "23"
         ],
         [
           "City-4",
           "City",
-          "Player-3",
-          "Anadyr",
-          "39",
-          "25"
+          "Player-2",
+          "Babilim",
+          "18",
+          "39"
         ]
       ],
       "units": [
@@ -323,8 +323,8 @@
           "Settlers-1",
           "Settlers",
           "Player-1",
-          "14",
-          "33",
+          "36",
+          "36",
           "false",
           "true"
         ],
@@ -332,8 +332,8 @@
           "Settlers-2",
           "Settlers",
           "Player-2",
-          "36",
-          "31",
+          "18",
+          "39",
           "false",
           "true"
         ],
@@ -341,8 +341,8 @@
           "Settlers-3",
           "Settlers",
           "Player-3",
-          "39",
-          "25",
+          "35",
+          "23",
           "false",
           "true"
         ],
@@ -350,52 +350,16 @@
           "Settlers-4",
           "Settlers",
           "Player-4",
-          "6",
-          "27",
+          "47",
+          "29",
           "false",
           "true"
-        ],
-        [
-          "Spearman-1",
-          "Spearman",
-          "Player-2",
-          "36",
-          "31",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-1",
-          "Warrior",
-          "Player-4",
-          "6",
-          "27",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-2",
-          "Warrior",
-          "Player-3",
-          "39",
-          "25",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-3",
-          "Warrior",
-          "Player-4",
-          "5",
-          "27",
-          "false",
-          "false"
         ]
       ],
-      "randomCalls": 8630,
+      "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1104,
+        "total": 1095,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -507,8 +471,8 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
-          "YieldModifier": 19
+          "Yield": 189,
+          "YieldModifier": 25
         }
       }
     },
@@ -516,27 +480,27 @@
       "turn": 50,
       "state": {
         "entities": 2512,
-        "fields": 10027,
-        "hash": "1707ecd4"
+        "fields": 10016,
+        "hash": "8ea1aa0a"
       },
       "dto": {
-        "objects": 45912,
-        "bytes": 7829424,
-        "hash": "63d64b8f"
+        "objects": 62405,
+        "bytes": 10653128,
+        "hash": "1632d3cd"
       },
       "registries": {
-        "cities": 6,
-        "cityBuilds": 6,
-        "cityGrowth": 6,
+        "cities": 5,
+        "cityBuilds": 5,
+        "cityGrowth": 5,
         "cityImprovements": 4,
-        "goodyHuts": 26,
-        "playerGovernments": 4,
-        "playerResearch": 4,
-        "playerTreasuries": 4,
-        "playerWorlds": 4,
-        "players": 4,
-        "tileImprovements": 18,
-        "units": 25
+        "goodyHuts": 29,
+        "playerGovernments": 5,
+        "playerResearch": 5,
+        "playerTreasuries": 5,
+        "playerWorlds": 5,
+        "players": 5,
+        "tileImprovements": 14,
+        "units": 24
       },
       "world": {
         "width": 60,
@@ -563,6 +527,11 @@
           "Player-4",
           "French",
           "NapoleonI"
+        ],
+        [
+          "Player-5",
+          "Barbarian",
+          "Attila"
         ]
       ],
       "cities": [
@@ -571,57 +540,67 @@
           "City",
           "Player-1",
           "London",
-          "14",
-          "33"
+          "36",
+          "36"
         ],
         [
           "City-2",
           "City",
           "Player-4",
           "Paris",
-          "6",
-          "27"
+          "47",
+          "29"
         ],
         [
           "City-3",
           "City",
-          "Player-2",
-          "Babilim",
-          "36",
-          "31"
+          "Player-3",
+          "Anadyr",
+          "35",
+          "23"
         ],
         [
           "City-4",
           "City",
-          "Player-3",
-          "Anadyr",
-          "39",
-          "25"
+          "Player-2",
+          "Babilim",
+          "18",
+          "39"
         ],
         [
           "City-5",
           "City",
-          "Player-4",
-          "Saint-Martin-d'Hères",
-          "1",
-          "26"
-        ],
-        [
-          "City-6",
-          "City",
-          "Player-4",
-          "Châtillon",
-          "1",
-          "16"
+          "Player-1",
+          "Luton",
+          "39",
+          "30"
         ]
       ],
       "units": [
         [
+          "Horseman-1",
+          "Horseman",
+          "Player-5",
+          "48",
+          "30",
+          "false",
+          "true"
+        ],
+        [
+          "Horseman-2",
+          "Horseman",
+          "Player-5",
+          "54",
+          "38",
+          "false",
+          "true"
+        ],
+        [
           "Settlers-1",
           "Settlers",
           "Player-1",
-          "14",
-          "33",
+          "36",
+          "36",
           "false",
           "true"
         ],
@@ -629,8 +608,8 @@
           "Settlers-2",
           "Settlers",
           "Player-2",
-          "36",
-          "31",
+          "18",
+          "39",
           "false",
           "true"
         ],
@@ -638,8 +617,8 @@
           "Settlers-3",
           "Settlers",
           "Player-3",
-          "39",
-          "25",
+          "35",
+          "23",
           "false",
           "true"
         ],
@@ -647,71 +626,62 @@
           "Settlers-4",
           "Settlers",
           "Player-4",
-          "6",
-          "27",
+          "47",
+          "29",
           "false",
           "true"
         ],
         [
           "Settlers-5",
           "Settlers",
-          "Player-4",
-          "1",
-          "26",
+          "Player-1",
+          "36",
+          "38",
           "false",
-          "true"
+          "false"
         ],
         [
           "Settlers-6",
           "Settlers",
-          "Player-2",
-          "37",
-          "32",
+          "Player-4",
+          "48",
+          "30",
           "false",
-          "false"
-        ],
-        [
-          "Settlers-7",
-          "Settlers",
-          "Player-3",
-          "37",
-          "24",
-          "false",
-          "false"
+          "true"
         ],
         [
           "Spearman-1",
           "Spearman",
           "Player-2",
+          "18",
           "39",
-          "29",
           "false",
           "false"
         ],
         [
           "Warrior-1",
           "Warrior",
-          "Player-4",
-          "6",
-          "27",
+          "Player-1",
+          "36",
+          "36",
           "false",
           "false"
         ],
         [
           "Warrior-2",
           "Warrior",
-          "Player-3",
-          "39",
-          "25",
+          "Player-4",
+          "50",
+          "34",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-3",
           "Warrior",
-          "Player-4",
-          "6",
-          "20",
+          "Player-3",
+          "35",
+          "23",
           "false",
           "false"
         ],
@@ -719,62 +689,62 @@
           "Warrior-4",
           "Warrior",
           "Player-1",
-          "18",
-          "37",
+          "39",
+          "30",
           "false",
           "false"
         ],
         [
           "Warrior-5",
           "Warrior",
-          "Player-3",
-          "43",
-          "34",
-          "true",
+          "Player-4",
+          "47",
+          "29",
+          "false",
           "false"
         ],
         [
           "Warrior-6",
           "Warrior",
           "Player-2",
-          "39",
-          "24",
-          "false",
+          "21",
+          "38",
+          "true",
           "false"
         ],
         [
           "Warrior-7",
           "Warrior",
-          "Player-4",
-          "1",
-          "16",
+          "Player-1",
+          "41",
+          "28",
           "false",
           "false"
         ],
         [
           "Warrior-8",
           "Warrior",
-          "Player-2",
-          "41",
-          "25",
+          "Player-4",
+          "42",
+          "31",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-9",
           "Warrior",
           "Player-3",
-          "38",
-          "18",
+          "43",
+          "31",
           "false",
           "false"
         ],
         [
           "Warrior-a",
           "Warrior",
-          "Player-4",
-          "58",
-          "12",
+          "Player-2",
+          "14",
+          "38",
           "false",
           "false"
         ],
@@ -782,17 +752,17 @@
           "Warrior-b",
           "Warrior",
           "Player-1",
-          "12",
-          "36",
+          "39",
+          "33",
           "false",
-          "false"
+          "true"
         ],
         [
           "Warrior-c",
           "Warrior",
-          "Player-2",
-          "43",
-          "28",
+          "Player-4",
+          "39",
+          "32",
           "false",
           "false"
         ],
@@ -800,52 +770,34 @@
           "Warrior-d",
           "Warrior",
           "Player-3",
-          "38",
-          "17",
+          "41",
+          "20",
           "false",
-          "true"
+          "false"
         ],
         [
           "Warrior-e",
           "Warrior",
-          "Player-1",
-          "6",
-          "0",
+          "Player-2",
+          "21",
+          "32",
           "false",
           "false"
         ],
         [
           "Warrior-f",
           "Warrior",
-          "Player-1",
-          "14",
-          "33",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-g",
-          "Warrior",
-          "Player-4",
-          "2",
-          "18",
-          "false",
-          "false"
-        ],
-        [
-          "Warrior-h",
-          "Warrior",
-          "Player-2",
-          "36",
-          "31",
+          "Player-3",
+          "42",
+          "26",
           "false",
           "false"
         ]
       ],
-      "randomCalls": 8778,
+      "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1104,
+        "total": 1095,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -957,8 +909,8 @@
           "WantedAdvances": 4,
           "WonderHelped": 1,
           "Year": 5,
-          "Yield": 204,
-          "YieldModifier": 19
+          "Yield": 189,
+          "YieldModifier": 25
         }
       }
     }

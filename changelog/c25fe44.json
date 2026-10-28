@@ -1,0 +1,1 @@
+{"version":"0.1.0@c25fe44","date":"2026-10-28T13:11:17.000Z","localChanges":["chore: civ publish --pending still points at the lockfile step after a partial publish, and civ watch ignores checkouts' node_modules"],"externalChanges":{}}
