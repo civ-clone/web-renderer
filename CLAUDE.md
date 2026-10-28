@@ -2,7 +2,7 @@
 
 ## Commit messages are the release notes
 
-Every commit message on `main` is shown to players as civ.one's release notes. `generate-changelog.mjs` (`toBullets`) keeps the subject only when there is no body. Otherwise it drops the subject, turns each body paragraph into a bullet, and drops trailers such as `Co-Authored-By:`.
+Every commit message on `main` is shown to players as civ.one's release notes. `generate-changelog.mjs` (`toBullets`) keeps the subject only when there is no body. Otherwise it drops the subject, turns each body paragraph into a bullet, and drops trailers such as `Co-Authored-By:`. A squash merge works the same way: each squashed commit's `* type: subject` line is dropped where that commit has a body, and kept where it doesn't.
 
 So write each message for a player when you commit, not at release time. Once commits are on `main` they can't be reworded without rewriting history.
 

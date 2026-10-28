@@ -15,6 +15,10 @@ export interface AppElements {
   playerInfo: HTMLElement;
   minimapCanvas: HTMLCanvasElement;
   unitInfo: HTMLCanvasElement;
+  // The sidebar's lists of cities (#700) and scores (#701). Only these may be missing: a page without them goes without
+  //  the lists.
+  citiesList: HTMLElement | null;
+  scoresList: HTMLElement | null;
   preloadContainer: HTMLDivElement;
 }
 
@@ -36,6 +40,8 @@ export const appElements = (): AppElements => {
     playerInfo = document.getElementById('playerDetails') as HTMLElement,
     minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement,
     unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
+    citiesList = document.getElementById('citiesList'),
+    scoresList = document.getElementById('scoresList'),
     preloadContainer = document.getElementById('preload') as HTMLDivElement;
 
   return {
@@ -52,6 +58,8 @@ export const appElements = (): AppElements => {
     playerInfo,
     minimapCanvas,
     unitInfo,
+    citiesList,
+    scoresList,
     preloadContainer,
   };
 };

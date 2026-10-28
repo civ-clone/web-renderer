@@ -32,3 +32,54 @@
     font-style: normal;
   }
 }
+
+// The units on a square, one row each: the icon, the name and state, and the city that supports it under them (#694).
+.unit-selection-window .unit-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+
+  .unit-row {
+    align-items: center;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    font: inherit;
+    gap: 0.5em;
+    // Not the margin a window gives its buttons: these are rows, and the list's gap spaces them.
+    margin: 0;
+    padding: 0.25em;
+    text-align: left;
+
+    &:hover .label {
+      text-decoration: underline;
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: -2px;
+    }
+
+    // A pressed button shifts 2px (`_buttons.scss`), which takes a full-width row past the list and shows a scrollbar.
+    &:active {
+      transform: none;
+    }
+
+    canvas {
+      flex: none;
+    }
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .city {
+    font-size: 0.85em;
+    opacity: 0.8;
+  }
+}

@@ -76,7 +76,7 @@ Receives frontend events over transport:
 - `action`: all player actions (unit movement, end turn, city actions, etc.).
 - `cheat`: ad-hoc debug operations (`RevealMap`, `GrantAdvance`, `GrantGold`, `ModifyUnit`, `CreateUnit`). `GrantAdvance` and `GrantGold` can target any player.
 - `unitActions`: the UI asks for the actions of the unit it has made active.
-- Requests answered on the same channel: `cityBuildAvailable`, `topCities`, `civilizationScore`, `intelligence`, `cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`.
+- Requests answered on the same channel: `cityBuildAvailable`, `topCities`, `civilizationScore`, `civilizationScores`, `intelligence`, `cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`.
 - `retire`, `gameContinue`: Game → Retire, and keeping playing after the game has ended.
 
 ### Output handling

@@ -85,7 +85,7 @@ const cases = [
     ['Fixed.'],
   ],
   [
-    "a squash of several commits drops each commit's trailers",
+    "a squash of several commits drops each commit's trailers, and each subject its body says again",
     'feat: a thing (#35)\n' +
       '\n' +
       '* feat: a thing\n' +
@@ -103,7 +103,41 @@ const cases = [
       '---------\n' +
       '\n' +
       'Co-authored-by: Claude Opus 5 <noreply@anthropic.com>',
-    ['feat: a thing', 'It does a thing.', 'perf: faster', 'It is faster.'],
+    ['It does a thing.', 'It is faster.'],
+  ],
+  [
+    'a squashed commit with no body keeps its subject, as it would unsquashed',
+    'feat: things (#36)\n' +
+      '\n' +
+      '* feat: a thing\n' +
+      '\n' +
+      'It does a thing.\n' +
+      '\n' +
+      'Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n' +
+      '\n' +
+      '* test: cover the thing\n' +
+      '\n' +
+      '* chore: tidy\n' +
+      '\n' +
+      '---------\n' +
+      '\n' +
+      'Co-authored-by: Claude Opus 5 <noreply@anthropic.com>',
+    ['It does a thing.', 'test: cover the thing', 'chore: tidy'],
+  ],
+  [
+    'a squashed commit with no body keeps its subject when the next one has a body',
+    'feat: x (#1)\n\n* chore: a\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n* feat: b\n\nB happens.',
+    ['chore: a', 'B happens.'],
+  ],
+  [
+    'a squashed commit whose body only closes an issue keeps its subject',
+    'feat: x (#1)\n\n* fix: a\n\nCloses #12.\n\n* chore: b',
+    ['fix: a', 'chore: b'],
+  ],
+  [
+    "a body's own list of changes is kept, prefix or not",
+    'feat: things\n\n* One change.\n\nAnother paragraph.',
+    ['One change.', 'Another paragraph.'],
   ],
   [
     'a last paragraph such as `Note: …` is part of the notes',

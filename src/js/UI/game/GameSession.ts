@@ -3,6 +3,8 @@ import { on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from '../lib/reconstituteData';
 import City from '../components/City';
+import CitiesList from '../components/CitiesList';
+import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GameMenu from '../components/GameMenu';
 import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
 import { gridName } from '../lib/savedGame';
@@ -11,6 +13,7 @@ import { isSupportedTopology } from '../lib/supportedTopologies';
 import NotificationWindow from '../components/NotificationWindow';
 import Notices from '../components/Notices';
 import Notifications from '../components/Notifications';
+import ScoresList from '../components/ScoresList';
 import IntelligenceReport from '../components/IntelligenceReport';
 import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
@@ -96,6 +99,8 @@ export class GameSession {
         playerInfo,
         minimapCanvas,
         unitInfo,
+        citiesList: citiesListElement,
+        scoresList: scoresListElement,
       },
       transport,
       notifications,
@@ -217,6 +222,29 @@ export class GameSession {
           world: gameState.data().player.world,
         }),
         { portal, world } = mapView,
+        // The active unit's card (#699), kept for the game: it redraws only what has changed.
+        unitDetails = new UnitDetails(unitInfo, {
+          portal,
+          transport,
+          // As the map's stack window does: nothing while waiting for the turn.
+          setActiveUnit: (unit): void => {
+            if (gameState.waiting()) {
+              return;
+            }
+
+            unitController.set(unit);
+          },
+        }),
+        // The sidebar's cities (#700), following them through `dataChanges`, and scores (#701), told the turn by the HUD.
+        citiesList = citiesListElement
+          ? new CitiesList(citiesListElement, gameState.data().player, portal)
+          : null,
+        scoresList = scoresListElement
+          ? new ScoresList(scoresListElement, transport, {
+              key: 'F9',
+              open: (): void => void new CivilizationScoreReport(transport),
+            })
+          : null,
         unitController = new ActiveUnitController({
           activeUnitLayer: mapView.activeUnitLayer,
           arrivalClosed: (): void => {
@@ -230,9 +258,7 @@ export class GameSession {
           portal,
           scheduleRender: (): void => scheduleRender(),
           showUnitDetails: (unit): void => {
-            const unitDetails = new UnitDetails(unitInfo, unit);
-
-            unitDetails.build();
+            unitDetails.update(unit);
 
             // With no unit active, its section goes rather than standing empty over the map (#697).
             const section = unitInfo.closest<HTMLElement>('.sidebar-section');
@@ -255,6 +281,7 @@ export class GameSession {
           notices,
           playerInfo,
           portal,
+          scores: scoresList,
           secondaryActionArea,
           transport,
           unitAction: (unitId, unitAction): void =>
@@ -277,6 +304,10 @@ export class GameSession {
         );
 
       this.#unitController = unitController;
+
+      if (citiesList) {
+        transportDisposers.push((): void => citiesList.dispose());
+      }
 
       gameMenuItem.build();
 

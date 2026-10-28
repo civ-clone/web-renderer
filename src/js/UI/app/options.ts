@@ -13,6 +13,8 @@ export const setOptionDefaults = (): void => {
     autosave: '5',
     // The keys of the sidebar sections the player has collapsed (#697).
     sidebarCollapsed: [],
+    // The keys of those that start collapsed which the player has opened (#700, #701).
+    sidebarExpanded: [],
   });
 };
 
