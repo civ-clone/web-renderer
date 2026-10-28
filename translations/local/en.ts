@@ -676,7 +676,7 @@ i18next.addResources('en', 'default', {
   'GameOver.rating_none': 'Sire, your Civilization Rating is {{rating}}%.',
   'GameOver.retired.body': '{{leader}} of the {{nation}} retires in {{year}}.',
   'GameOver.retired.title': 'Retired',
-  'GameOver.score': 'Civilization Score: {{score}}',
+  'GameOver.score': 'Civilization Score: {{score, number}}',
   'GameOver.spaceship.title': 'Alpha Centauri',
   'GameOver.spaceship.body_known':
     'The {{winner}} have reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
@@ -811,7 +811,7 @@ i18next.addResources('en', 'notification', {
     'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
   'Barbarians.landing.title': 'Barbarians!',
   'Barbarians.ransom.body':
-    'Barbarian leader captured! {{amount}} Gold ransom paid.',
+    'Barbarian leader captured! {{amount, number}} Gold ransom paid.',
   'Barbarians.ransom.title': 'Ransom',
   'Barbarians.uprising.body':
     'Travelers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
