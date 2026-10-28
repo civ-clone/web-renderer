@@ -185,6 +185,21 @@ const expect = (description: string, actual: string, expected: string) => {
     '1,234 (no taxes during Anarchy)'
   );
 
+  expect(
+    'GameOver.score formats large scores',
+    t('GameOver.score', { score: 1234, lng: 'en-US' }),
+    'Civilization Score: 1,234'
+  );
+  expect(
+    'Barbarians.ransom.body formats large amounts',
+    t('Barbarians.ransom.body', {
+      amount: 1234,
+      ns: 'notification',
+      lng: 'en-US',
+    }),
+    'Barbarian leader captured! 1,234 Gold ransom paid.'
+  );
+
   // Asansol is an Indian city name, now held by Babylon: the name has to come
   //  from the founder, not the current owner.
   // An `UnknownCity` takes the stand-ins for players as the client builds them, which aren't core `Player`s.
