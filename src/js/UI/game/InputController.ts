@@ -12,8 +12,10 @@ import ScienceReport from '../components/ScienceReport';
 import TopCitiesReport from '../components/TopCitiesReport';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
+import { PlayerTradeRates } from '../types';
 import endTurn from '../lib/endTurn';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
+import { openTradeRates } from '../components/Actions/AdjustTradeRates';
 
 // A letter as typed with Shift alone deciding its case, so Caps Lock doesn't turn `p` (CleanPollution) into `P`
 //  (Pillage), or `d` into `D` (Disband) (#479).
@@ -26,7 +28,7 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
 
 // The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), the Civilopedia (`?`), a key passed on to a modal
 //  window, Shift+S to save, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`,
-//  and the Shift+5, Shift+6 cheat sequence.
+//  `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
 //
 // Registered on `document` in the bubble phase, after `ReloadGuard` (which must stay the first bubble listener: it
 //  reads whether the game has started, as F5 is the Trade Report once it has) and after `DebugPanel`'s capture-phase
@@ -223,6 +225,24 @@ export class InputController {
       mapView.toggleYields();
 
       return;
+    }
+
+    // Adjust trade rates, when the engine offers it (#274), and not over a modal window (#183). On the key typed, so
+    //  Shift+= and the numeric keypad's both count, on any layout (#662). Once for a key held down.
+    if ((key === '+' || key === '-') && !modalWindow) {
+      const adjustTradeRates = data().player.actions.find(
+        (action) => action._ === 'AdjustTradeRates'
+      );
+
+      if (adjustTradeRates) {
+        if (!event.repeat) {
+          openTradeRates(adjustTradeRates.value as PlayerTradeRates, transport);
+        }
+
+        event.preventDefault();
+
+        return;
+      }
     }
 
     // Shift+5 then Shift+6, as in Civ1: turns on the game menu's

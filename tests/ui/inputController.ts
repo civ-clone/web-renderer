@@ -2,8 +2,8 @@
 //  not waiting for the next turn; a key typed while the body has the focus goes to an open modal window; unit keys go
 //  through the active unit's `pressKey`; Escape blurs; Tab focuses the first action; `c`/`w`/`t`/`y`; Shift+5 then
 //  Shift+6 turns the cheats on; a leader screen opens, its key going on through the handler as any other, but not over
-//  a modal window; `?` opens the Civilopedia, once; Shift+S saves, but not over a modal window; and `dispose` removes
-//  the listener. Driven with stub dependencies.
+//  a modal window; `?` opens the Civilopedia, once; `+` and `-` open the trade rates window, once, when the engine
+//  offers it; Shift+S saves, but not over a modal window; and `dispose` removes the listener. Driven with stub dependencies.
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
@@ -74,7 +74,8 @@ const tile = { x: 3, y: 4 } as Tile,
 
 let activeUnit: Unit | null = unit,
   waiting = false,
-  mandatoryActions: Array<{ _: string }> = [{ _: 'EndTurn' }];
+  mandatoryActions: Array<{ _: string }> = [{ _: 'EndTurn' }],
+  actions: Array<{ _: string; value?: unknown }> = [];
 
 const actionArea = document.createElement('div');
 
@@ -85,6 +86,7 @@ const controller = new InputController({
   data: () =>
     ({
       player: {
+        actions,
         mandatoryActions,
       },
     } as unknown as GameData),
@@ -529,6 +531,99 @@ const run = async (): Promise<void> => {
     .querySelectorAll('dialog.civilopedia')
     .forEach((dialog) => dialog.remove());
 
+  // `+` and `-` open the Adjust trade rates window (#662), when the engine offers it.
+  const tradeRatesWindows = (): number =>
+    document.querySelectorAll('dialog.adjust-trade-rates').length;
+
+  reset();
+  event = press({ code: 'Equal', key: '+', shiftKey: true });
+
+  expect(
+    'without an AdjustTradeRates action, + opens nothing',
+    [tradeRatesWindows(), event.defaultPrevented],
+    [0, false]
+  );
+
+  actions = [
+    {
+      _: 'AdjustTradeRates',
+      value: {
+        id: 'trade-rates-1',
+        all: [
+          { _: 'Tax', value: 0.5 },
+          { _: 'Research', value: 0.5 },
+        ],
+      },
+    },
+  ];
+
+  reset();
+  event = press({ code: 'Equal', key: '+', shiftKey: true });
+  press({ code: 'Equal', key: '+', shiftKey: true });
+
+  expect(
+    '+ opens the trade rates window, once however often it is pressed',
+    [tradeRatesWindows(), event.defaultPrevented, pressed],
+    [1, true, ['+', '+']]
+  );
+
+  (
+    document.querySelector(
+      'dialog.adjust-trade-rates button.close'
+    ) as HTMLButtonElement | null
+  )?.click();
+
+  expect(
+    'closing it sends the rates',
+    [
+      tradeRatesWindows(),
+      sent.map(([name, data]) => [name, (data as { id: string }).id]),
+    ],
+    [0, [['action', 'trade-rates-1']]]
+  );
+
+  document
+    .querySelectorAll('dialog.adjust-trade-rates')
+    .forEach((dialog) => dialog.remove());
+
+  for (const init of [
+    { code: 'Minus', key: '-' },
+    { code: 'NumpadAdd', key: '+', location: 3 },
+    { code: 'NumpadSubtract', key: '-', location: 3 },
+  ]) {
+    press(init);
+
+    expect(`${init.code} opens it too`, tradeRatesWindows(), 1);
+
+    document
+      .querySelectorAll('dialog.adjust-trade-rates')
+      .forEach((dialog) => dialog.remove());
+  }
+
+  reset();
+  press({ code: 'Equal', key: '+', shiftKey: true, ctrlKey: true });
+  press({ code: 'Minus', key: '-', metaKey: true });
+
+  expect('not with Ctrl or Cmd: those zoom the page', tradeRatesWindows(), 0);
+
+  const held = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: '+',
+  });
+
+  Object.defineProperty(held, 'repeat', { value: true });
+  document.dispatchEvent(held);
+
+  expect('nor for a key held down', tradeRatesWindows(), 0);
+
+  unitKeys = ['+'];
+  press({ code: 'Equal', key: '+', shiftKey: true });
+
+  expect('a unit key comes first', tradeRatesWindows(), 0);
+
+  unitKeys = [];
+
   // Over a modal window a leader screen would be drawn out of reach: the key goes to the modal window instead.
   const notice = document.createElement('dialog');
 
@@ -544,17 +639,35 @@ const run = async (): Promise<void> => {
 
   press({ code: 'Slash', key: '?', shiftKey: true });
   press({ code: 'F8', key: 'F8' });
+  press({ code: 'Equal', key: '+', shiftKey: true });
 
   expect(
     'not over a modal window, which gets the keys',
     [
-      document.querySelectorAll('dialog.civilopedia, dialog.top-cities-report')
-        .length,
+      document.querySelectorAll(
+        'dialog.civilopedia, dialog.top-cities-report, dialog.adjust-trade-rates'
+      ).length,
       forwarded,
     ],
-    [0, ['?', 'F8']]
+    [0, ['?', 'F8', '+']]
   );
 
+  // With the focus inside the modal window, as `showModal()` leaves it, the key isn't passed on, and still opens
+  //  nothing behind it.
+  const noticeButton = document.createElement('button');
+
+  notice.append(noticeButton);
+  focused = noticeButton;
+  press({ code: 'Equal', key: '+', shiftKey: true });
+
+  expect(
+    'nor with the focus inside the modal window',
+    document.querySelectorAll('dialog.adjust-trade-rates').length,
+    0
+  );
+
+  focused = document.body;
+  actions = [];
   notice.remove();
 
   // `dispose`.

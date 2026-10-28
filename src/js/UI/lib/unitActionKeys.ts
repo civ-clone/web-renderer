@@ -9,6 +9,7 @@ export const keyToActionsMap: { [key: string]: string[] } = {
   D: ['Disband'],
   e: ['Explore'],
   f: ['Fortify', 'BuildFortress'],
+  h: ['SetHomeCity'],
   i: ['BuildIrrigation', 'ClearForest', 'ClearSwamp', 'ClearJungle'],
   m: ['BuildMine', 'PlantForest'],
   p: ['CleanPollution'],

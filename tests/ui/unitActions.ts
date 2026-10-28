@@ -197,6 +197,7 @@ const sent: any[] = [],
     action('FoundCity'),
     action('BuildRoad'),
     action('Fortify'),
+    action('SetHomeCity'),
   ]);
 
 buttons.build(settlers, null);
@@ -206,14 +207,14 @@ expect(
   Array.from(container.querySelectorAll('button')).map((button) =>
     button.className.replace('unit-action ', '')
   ),
-  ['FoundCity', 'BuildRoad', 'Fortify']
+  ['FoundCity', 'BuildRoad', 'Fortify', 'SetHomeCity']
 );
 expect(
-  'the tooltip has the hotkey',
+  'the tooltip has the hotkey, h for Set home city (#662)',
   Array.from(container.querySelectorAll('button')).map(
     (button) => /\((.)\)$/.exec(button.title)?.[1]
   ),
-  ['b', 'r', 'f']
+  ['b', 'r', 'f', 'h']
 );
 
 (container.querySelectorAll('button')[1] as HTMLElement).click();
