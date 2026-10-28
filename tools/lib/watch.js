@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 const { checkoutPath } = require('./paths');
 const { read } = require('./audit');
@@ -23,11 +24,13 @@ const run = (args) => {
     let timer = null;
 
     fs.watch(checkoutPath(name), { recursive: true }, (event, fileName) => {
-      // What sync copies: `.ts` source and JSON data (#140).
+      // What sync copies: `.ts` source and JSON data (#140). A checkout's own
+      // install writes nothing sync reads.
       if (
         !fileName ||
         !/\.(ts|json)$/.test(fileName) ||
-        fileName.endsWith('.d.ts')
+        fileName.endsWith('.d.ts') ||
+        fileName.split(path.sep).includes('node_modules')
       ) {
         return;
       }

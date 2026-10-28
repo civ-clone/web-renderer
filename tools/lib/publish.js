@@ -825,6 +825,7 @@ const runPending = (manifest, args) => {
   const problems = [];
   const skipped = [];
   const notes = [];
+  let published = 0;
 
   Object.keys(byWave)
     .map(Number)
@@ -864,6 +865,7 @@ const runPending = (manifest, args) => {
 
         const version = release(name, resolutionOf(name), otp);
 
+        published += 1;
         console.log(`  ${name.padEnd(38)} published ${version}`);
       });
     });
@@ -881,11 +883,11 @@ const runPending = (manifest, args) => {
   if (problems.length > 0) {
     console.log(`\n${problems.join('\n')}`);
     process.exitCode = 1;
-
-    return;
   }
 
-  if (!dryRun) {
+  // A later wave can fail after earlier ones went out, and those still need
+  // the lockfile.
+  if (published > 0) {
     console.log(NEXT_STEPS);
   }
 };
