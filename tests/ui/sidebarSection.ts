@@ -1,6 +1,6 @@
 // A sidebar section collapses and expands from its heading, a button (so Enter and Space work as a click does), and
 //  a collapsed section is still collapsed after a reload, from the client options in browser storage (#697). A section
-//  collapsed by default (the cities and scores, #700, #701) starts collapsed, and once opened stays open after a
+//  collapsed by default (the cities and power, #700, #701) starts collapsed, and once opened stays open after a
 //  reload, kept in an option of its own so the stored `sidebarCollapsed` means what it did.
 
 // Must stay first: the components read `document` as they load.
@@ -134,7 +134,7 @@ const items: { [key: string]: string } = {},
 
 {
   const options = pageLoad(),
-    scores = new SidebarSection('scores', 'Scores', [], options, {
+    scores = new SidebarSection('power', 'Power', [], options, {
       collapsedByDefault: true,
     });
   let toggled = 0;
@@ -154,7 +154,7 @@ const items: { [key: string]: string } = {},
   });
   expect('and says so', toggled, 1);
   expect('which is stored as opened', options.get('sidebarExpanded'), [
-    'scores',
+    'power',
   ]);
   expect(
     'leaving the collapsed sections as they were',
@@ -165,7 +165,7 @@ const items: { [key: string]: string } = {},
 
 {
   const options = pageLoad(),
-    scores = new SidebarSection('scores', 'Scores', [], options, {
+    scores = new SidebarSection('power', 'Power', [], options, {
       collapsedByDefault: true,
     }),
     cities = new SidebarSection('cities', 'Cities', [], options, {

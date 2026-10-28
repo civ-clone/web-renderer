@@ -4,7 +4,6 @@ import { t } from 'i18next';
 import { ObjectMap } from '../lib/reconstituteData';
 import City from '../components/City';
 import CitiesList from '../components/CitiesList';
-import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GameMenu from '../components/GameMenu';
 import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
 import { gridName } from '../lib/savedGame';
@@ -13,7 +12,7 @@ import { isSupportedTopology } from '../lib/supportedTopologies';
 import NotificationWindow from '../components/NotificationWindow';
 import Notices from '../components/Notices';
 import Notifications from '../components/Notifications';
-import ScoresList from '../components/ScoresList';
+import PowerList from '../components/PowerList';
 import IntelligenceReport from '../components/IntelligenceReport';
 import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
@@ -100,7 +99,7 @@ export class GameSession {
         minimapCanvas,
         unitInfo,
         citiesList: citiesListElement,
-        scoresList: scoresListElement,
+        powerList: powerListElement,
       },
       transport,
       notifications,
@@ -235,15 +234,12 @@ export class GameSession {
             unitController.set(unit);
           },
         }),
-        // The sidebar's cities (#700), following them through `dataChanges`, and scores (#701), told the turn by the HUD.
+        // The sidebar's cities (#700), following them through `dataChanges`, and power (#701, #708), told the turn by the HUD.
         citiesList = citiesListElement
           ? new CitiesList(citiesListElement, gameState.data().player, portal)
           : null,
-        scoresList = scoresListElement
-          ? new ScoresList(scoresListElement, transport, {
-              key: 'F9',
-              open: (): void => void new CivilizationScoreReport(transport),
-            })
+        powerList = powerListElement
+          ? new PowerList(powerListElement, transport)
           : null,
         unitController = new ActiveUnitController({
           activeUnitLayer: mapView.activeUnitLayer,
@@ -281,7 +277,7 @@ export class GameSession {
           notices,
           playerInfo,
           portal,
-          scores: scoresList,
+          power: powerList,
           secondaryActionArea,
           transport,
           unitAction: (unitId, unitAction): void =>

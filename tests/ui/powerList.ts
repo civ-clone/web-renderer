@@ -1,16 +1,13 @@
-// The sidebar's scores (#701) draw the rows the worker ranks (`tests/engine/civilizationScores.ts`): the rank, the
-//  civilization (or "Unknown" for one not met, with no colours), and the score, with the player's own row
-//  marked, which opens the Civilization Score report as F9 does. They're asked for once a turn, only while the section
-//  is open, and opening it asks for the turn's.
+// The sidebar's Power list (#701, #708) draws the rows the worker ranks (`tests/engine/civilizationPower.ts`): the
+//  rank, the civilization (or "Unknown" for one not met, with no colours), and the power, with the player's own row
+//  marked. They're asked for once a turn, only while the section is open, and opening it asks for the turn's.
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 
-import { CivilizationScoresRow } from '../../src/js/Engine/lib/civilizationScores';
+import { CivilizationPowerRow } from '../../src/js/Engine/lib/civilizationPower';
 import GameOptionsRegistry from '../../src/js/UI/GameOptionsRegistry';
-import ScoresList, {
-  scoresWindow,
-} from '../../src/js/UI/components/ScoresList';
+import PowerList, { powerWindow } from '../../src/js/UI/components/PowerList';
 import SidebarSection from '../../src/js/UI/components/SidebarSection';
 import { RequestFailed } from '../../src/js/Engine/AbstractTransport';
 import Transport from '../../src/js/UI/Transport';
@@ -36,25 +33,25 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 // A suite that stops before its checks would otherwise pass in silence (#473).
 process.on('exit', (code: number): void => {
   if (code === 0 && !finished) {
-    process.stderr.write(`FAIL scores-list: stopped after ${checks} checks\n`);
+    process.stderr.write(`FAIL power-list: stopped after ${checks} checks\n`);
     process.exitCode = 1;
   }
 });
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const rows: CivilizationScoresRow[] = [
+const rows: CivilizationPowerRow[] = [
     {
       rank: 1,
-      score: 1250,
+      power: 1250,
       own: false,
       civilization: 'Greek',
       colors: ['#00ffff', '#0000ff'],
     },
-    { rank: 2, score: 40, own: false, civilization: null, colors: null },
+    { rank: 2, power: 40, own: false, civilization: null, colors: null },
     {
       rank: 3,
-      score: 30,
+      power: 30,
       own: true,
       civilization: 'Roman',
       colors: ['#ffffff', '#000000'],
@@ -69,8 +66,7 @@ const rows: CivilizationScoresRow[] = [
 
       return (answers.shift() ?? (() => Promise.resolve(rows)))();
     },
-  } as unknown as Transport,
-  opened: string[] = [];
+  } as unknown as Transport;
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
@@ -82,17 +78,14 @@ const run = async (): Promise<void> => {
   options.defaults({ sidebarCollapsed: [], sidebarExpanded: [] });
 
   const element = document.createElement('div'),
-    section = new SidebarSection('scores', 'Scores', [element], options, {
+    section = new SidebarSection('power', 'Power', [element], options, {
       collapsedByDefault: true,
     }),
-    scores = new ScoresList(element, transport, {
-      key: 'F9',
-      open: () => opened.push('score'),
-    });
+    power = new PowerList(element, transport);
 
   document.body.append(section.element());
 
-  scores.turn(1);
+  power.turn(1);
   await settle();
 
   expect('collapsed, nothing is asked for', requests, []);
@@ -100,7 +93,7 @@ const run = async (): Promise<void> => {
   section.setCollapsed(false);
   await settle();
 
-  expect('opening it asks for the scores', requests, ['civilizationScores']);
+  expect('opening it asks for the rows', requests, ['civilizationPower']);
 
   const shown = Array.from(element.querySelectorAll('li')).map((item) => [
     item.querySelector('.rank')?.textContent,
@@ -108,7 +101,7 @@ const run = async (): Promise<void> => {
     item.querySelector('.value')?.textContent,
   ]);
 
-  expect('a row each, ranked: rank, civilization and score', shown, [
+  expect('a row each, ranked: rank, civilization and power', shown, [
     ['1.', 'Greeks', '1,250'],
     ['2.', 'Unknown', '40'],
     ['3.', 'Romans', '30'],
@@ -143,31 +136,22 @@ const run = async (): Promise<void> => {
     ],
     [true, 'true', ' (you)', 1]
   );
-  expect(
-    'only our own row is a button',
-    Array.from(element.querySelectorAll('button')).map((button) =>
-      button.getAttribute('title')
-    ),
-    ['Civilization Score (F9)']
-  );
+  // Not a way into the Civilization Score report (F9): it shows a different number.
+  expect('no row is a button', element.querySelectorAll('button').length, 0);
 
-  (own.querySelector('button') as HTMLButtonElement).click();
-
-  expect('which opens the Civilization Score report', opened, ['score']);
-
-  scores.turn(1);
-  scores.turn(1);
+  power.turn(1);
+  power.turn(1);
   await settle();
 
   expect('every render of the same turn asks nothing more', requests.length, 1);
 
-  scores.turn(2);
+  power.turn(2);
   await settle();
 
   expect('a new turn asks again', requests.length, 2);
 
   section.setCollapsed(true);
-  scores.turn(3);
+  power.turn(3);
   await settle();
 
   expect('collapsed again, a new turn asks nothing', requests.length, 2);
@@ -178,16 +162,16 @@ const run = async (): Promise<void> => {
   expect('until it is opened', requests.length, 3);
 
   // A watcher switching whom they watch mid-turn sees someone else's rows (#607): the same turn asks again.
-  scores.turn(3, 'Player-2');
+  power.turn(3, 'Player-2');
   await settle();
 
   expect('a new view in the same turn asks again', requests.length, 4);
 
   // Not answered: asked again the next time the section is opened, rather than waiting for the next turn.
   answers.push(() =>
-    Promise.reject(new RequestFailed('civilizationScores', 'not answered'))
+    Promise.reject(new RequestFailed('civilizationPower', 'not answered'))
   );
-  scores.turn(4, 'Player-2');
+  power.turn(4, 'Player-2');
   await settle();
   section.setCollapsed(true);
   section.setCollapsed(false);
@@ -199,8 +183,8 @@ const run = async (): Promise<void> => {
   let late: (value: unknown) => void = () => {};
 
   answers.push(() => new Promise((resolve) => (late = resolve)));
-  scores.turn(5, 'Player-2');
-  scores.turn(6, 'Player-2');
+  power.turn(5, 'Player-2');
+  power.turn(6, 'Player-2');
   await settle();
   late([{ ...rows[0], civilization: 'Stale' }]);
   await settle();
@@ -215,16 +199,16 @@ const run = async (): Promise<void> => {
 
   // A big game shows five rows around the player's own (two either side), or the top or the foot five near either end,
   //  with a link to the rest. Six or fewer are all shown.
-  const ranked = (count: number, own: number): CivilizationScoresRow[] =>
+  const ranked = (count: number, own: number): CivilizationPowerRow[] =>
       Array.from({ length: count }, (_, index) => ({
         rank: index + 1,
-        score: 100 - index,
+        power: 100 - index,
         own: index + 1 === own,
         civilization: 'Roman',
         colors: null,
       })),
     window = (count: number, own: number) =>
-      scoresWindow(ranked(count, own)).map(({ rank }) => rank);
+      powerWindow(ranked(count, own)).map(({ rank }) => rank);
 
   expect('six or fewer: all of them', window(6, 6), [1, 2, 3, 4, 5, 6]);
   expect('first: the top five', window(8, 1), [1, 2, 3, 4, 5]);
@@ -240,7 +224,7 @@ const run = async (): Promise<void> => {
       ),
     link = () => element.querySelector('.show-all') as HTMLButtonElement | null;
 
-  scores.build(ranked(8, 6));
+  power.build(ranked(8, 6));
 
   expect('a big game shows five', ranks(), ['4.', '5.', '6.', '7.', '8.']);
   expect('and links to the rest', link()?.textContent, 'Show all (8)');
@@ -250,12 +234,12 @@ const run = async (): Promise<void> => {
   expect('which shows them all', ranks().length, 8);
   expect('and then fewer', link()?.textContent, 'Show fewer');
 
-  scores.build(ranked(8, 6));
+  power.build(ranked(8, 6));
 
   expect('a new turn keeps them all shown', ranks().length, 8);
 
   link()?.click();
-  scores.build(rows);
+  power.build(rows);
 
   expect('a small game has no link', link(), null);
 
@@ -263,18 +247,18 @@ const run = async (): Promise<void> => {
 
   if (failures.length) {
     process.stderr.write(
-      `FAIL scores-list (${
+      `FAIL power-list (${
         failures.length
       } of ${checks} checks)\n  ${failures.join('\n  ')}\n`
     );
     process.exit(1);
   }
 
-  process.stdout.write(`PASS scores-list (${checks} checks)\n`);
+  process.stdout.write(`PASS power-list (${checks} checks)\n`);
   process.exit(0);
 };
 
 run().catch((error) => {
-  process.stderr.write(`FAIL scores-list: ${error.stack ?? error}\n`);
+  process.stderr.write(`FAIL power-list: ${error.stack ?? error}\n`);
   process.exit(1);
 });

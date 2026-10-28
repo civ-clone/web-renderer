@@ -106,7 +106,7 @@ Some data is fetched on demand rather than kept in the game data. The UI calls `
 
 - `cityBuildAvailable`: what a city can build, for the production picker.
 - `topCities`: finished rows for the Top Cities report.
-- `civilizationScores`: every civilization's score, ranked, for the sidebar (#701); an unmet civilization's row has no name or colours.
+- `civilizationPower`: every civilization's ranking score (`civ1-power`'s `Rank` rules), ranked, for the sidebar (#701, #708); an unmet civilization's row has no name or colours.
 - `intelligence`: finished rows for the intelligence report.
 - `getOptions`, `cheatAdvances`, `cheatPlayers`: options and cheat menu lists.
 

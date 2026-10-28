@@ -608,16 +608,15 @@ i18next.addResources('en', 'default', {
   'CivilizationScoreReport.title': 'Civilization Score',
   'CivilizationScoreReport.total': 'Total',
 
-  // The sidebar's scores (#701).
-  'ScoresList.empty': 'No scores yet.',
-  'ScoresList.open': '$t(CivilizationScoreReport.title) ({{key}})',
-  'ScoresList.rank': '{{rank, number}}.',
-  'ScoresList.score': '{{score, number}}',
-  'ScoresList.show-all': 'Show all ({{count, number}})',
-  'ScoresList.show-fewer': 'Show fewer',
+  // The sidebar's Power list (#701, #708).
+  'PowerList.empty': 'No rankings yet.',
+  'PowerList.power': '{{power, number}}',
+  'PowerList.rank': '{{rank, number}}.',
+  'PowerList.show-all': 'Show all ({{count, number}})',
+  'PowerList.show-fewer': 'Show fewer',
   // An unmet civilization's row: the sidebar is too narrow for more.
-  'ScoresList.unknown': 'Unknown',
-  'ScoresList.you': '(you)',
+  'PowerList.unknown': 'Unknown',
+  'PowerList.you': '(you)',
 
   'SelectionWindow.default-body': 'Please choose one of the following:',
 
@@ -627,7 +626,7 @@ i18next.addResources('en', 'default', {
 
   // The sidebar's sections, which can be collapsed (#697).
   'Sidebar.cities': 'Cities',
-  'Sidebar.scores': 'Scores',
+  'Sidebar.power': 'Power',
   'Sidebar.unit': 'Active Unit',
   'Sidebar.world': 'World',
 

@@ -227,7 +227,7 @@
 
 // The cities, by what they're building and how soon it's done (#700).
 .cities-list,
-.scores-list {
+.power-list {
   display: flex;
   flex-direction: column;
   gap: 0.1em;
@@ -284,9 +284,8 @@
   text-decoration: underline;
 }
 
-// Every civilization's score, your own marked (#701).
-.scores-list {
-  // The same box for every row, a button (your own) or not, so the scores' right edges line up.
+// Every civilization's power, your own marked (#701, #708).
+.power-list {
   .row {
     align-items: center;
     box-sizing: border-box;
@@ -294,15 +293,6 @@
     gap: 0.4em;
     padding: 0.15em 0.2em;
     width: 100%;
-  }
-
-  button.row {
-    @include plain-button();
-    padding: 0.15em 0.2em;
-
-    &:hover {
-      background: var(--panel-bg);
-    }
   }
 
   .rank {

@@ -1,7 +1,7 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
-import CivilizationScores from '../../Engine/Requests/CivilizationScores';
-import { CivilizationScoresRow } from '../../Engine/lib/civilizationScores';
+import CivilizationPower from '../../Engine/Requests/CivilizationPower';
+import { CivilizationPowerRow } from '../../Engine/lib/civilizationPower';
 import Transport from '../Transport';
 import { toggleEvent } from './SidebarSection';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
@@ -13,17 +13,17 @@ const text = (key: string, options: TOptions = {}): string =>
 
 // The rows shown before "Show all", and the most there can be with every row shown anyway: one more than shown isn't
 //  worth a link.
-export const scoresShown = 5;
-export const scoresShownWhole = 6;
+export const powerShown = 5;
+export const powerShownWhole = 6;
 
 /**
  * The rows to show: all of them in a small game, otherwise five around the player's own, two either side, or the
  *  first or last five when the player is near the top or the foot. Without a row of their own (an observer), the top.
  */
-export const scoresWindow = (
-  rows: CivilizationScoresRow[]
-): CivilizationScoresRow[] => {
-  if (rows.length <= scoresShownWhole) {
+export const powerWindow = (
+  rows: CivilizationPowerRow[]
+): CivilizationPowerRow[] => {
+  if (rows.length <= powerShownWhole) {
     return rows;
   }
 
@@ -32,41 +32,29 @@ export const scoresWindow = (
       0
     ),
     start = Math.min(
-      Math.max(own - Math.floor(scoresShown / 2), 0),
-      rows.length - scoresShown
+      Math.max(own - Math.floor(powerShown / 2), 0),
+      rows.length - powerShown
     );
 
-  return rows.slice(start, start + scoresShown);
-};
-
-// What opens the Civilization Score report, as F9 does: the player's own row opens it.
-export type ScoresReport = {
-  key: string;
-  open: () => void;
+  return rows.slice(start, start + powerShown);
 };
 
 /**
- * Every civilization's score in the sidebar (#701), ranked, with the player's own marked and the unmet unnamed. The
- *  worker ranks them and decides what may be shown; this only draws the rows. Asked for once a turn, and only while
+ * Every civilization's power in the sidebar (#701, #708), ranked, with the player's own marked and the unmet unnamed.
+ *  The worker ranks them and decides what may be shown; this only draws the rows. Asked for once a turn, and only while
  *  the section is open: opening it asks for the turn's, if it hasn't been.
  */
-export class ScoresList extends Element {
+export class PowerList extends Element {
   // The view and turn last asked about, as `viewer:turn`.
   #asked: string | null = null;
-  #report: ScoresReport;
-  #rows: CivilizationScoresRow[] = [];
+  #rows: CivilizationPowerRow[] = [];
   #showAll = false;
   #transport: Transport;
   #turn: number | null = null;
 
-  constructor(
-    element: HTMLElement,
-    transport: Transport,
-    report: ScoresReport
-  ) {
+  constructor(element: HTMLElement, transport: Transport) {
     super(element);
 
-    this.#report = report;
     this.#transport = transport;
 
     element
@@ -77,7 +65,7 @@ export class ScoresList extends Element {
   #viewer = '';
 
   /**
-   * The turn now and whose view it is, given every render: a new turn asks for the scores again, and so does an
+   * The turn now and whose view it is, given every render: a new turn asks for the rows again, and so does an
    *  observer switching whom they watch mid-turn (#607), whose rows are someone else's.
    */
   turn(turn: number, viewer: string = ''): void {
@@ -87,12 +75,7 @@ export class ScoresList extends Element {
     this.#refresh();
   }
 
-  build(rows: CivilizationScoresRow[] = this.#rows): void {
-    // The keyboard on the player's own row, to put it back there once the list is rebuilt.
-    const ownFocused =
-      (document.activeElement as HTMLElement | null)?.closest('.own') !==
-        null && this.element().contains(document.activeElement);
-
+  build(rows: CivilizationPowerRow[] = this.#rows): void {
     this.#rows = rows;
 
     this.empty();
@@ -100,34 +83,28 @@ export class ScoresList extends Element {
     if (rows.length === 0) {
       const empty = s('<p class="empty"></p>');
 
-      empty.textContent = text('ScoresList.empty');
+      empty.textContent = text('PowerList.empty');
 
       this.append(empty);
 
       return;
     }
 
-    const list = s('<ol class="scores-list"></ol>');
+    const list = s('<ol class="power-list"></ol>');
 
     list.append(
-      ...(this.#showAll ? rows : scoresWindow(rows)).map((row) =>
-        this.#row(row)
-      )
+      ...(this.#showAll ? rows : powerWindow(rows)).map((row) => this.#row(row))
     );
 
     this.append(list);
 
-    if (ownFocused) {
-      (list.querySelector('.own button') as HTMLElement | null)?.focus();
-    }
-
-    if (rows.length > scoresShownWhole) {
+    if (rows.length > powerShownWhole) {
       const more = s<HTMLButtonElement>(
         '<button type="button" class="show-all"></button>'
       );
 
       more.textContent = text(
-        this.#showAll ? 'ScoresList.show-fewer' : 'ScoresList.show-all',
+        this.#showAll ? 'PowerList.show-fewer' : 'PowerList.show-all',
         { count: rows.length }
       );
       more.setAttribute('aria-expanded', this.#showAll ? 'true' : 'false');
@@ -161,14 +138,14 @@ export class ScoresList extends Element {
     this.#asked = key;
 
     this.#transport
-      .request(new CivilizationScores())
-      .then((rows: CivilizationScoresRow[]) => {
+      .request(new CivilizationPower())
+      .then((rows: CivilizationPowerRow[]) => {
         // An answer overtaken by a newer question is the old view's or the old turn's.
         if (this.#asked === key) {
           this.build(rows);
         }
       })
-      // Not answered: the player has been told (#580), and the last turn's scores are better than none. Asked again
+      // Not answered: the player has been told (#580), and the last turn's rows are better than none. Asked again
       //  the next time the section is opened.
       .catch((error) => {
         if (this.#asked === key) {
@@ -179,31 +156,27 @@ export class ScoresList extends Element {
       });
   }
 
-  #row(row: CivilizationScoresRow): HTMLElement {
+  #row(row: CivilizationPowerRow): HTMLElement {
     const item = s(
-        `<li class="score${row.own ? ' own' : ''}${
+        `<li class="power${row.own ? ' own' : ''}${
           row.civilization === null ? ' unknown' : ''
         }"></li>`
       ),
-      content = s(
-        row.own
-          ? '<button type="button" class="row"></button>'
-          : '<span class="row"></span>'
-      ),
+      content = s('<span class="row"></span>'),
       rank = s('<span class="rank"></span>'),
       swatch = s('<span class="swatch" aria-hidden="true"></span>'),
       name = s('<span class="name"></span>'),
-      score = s('<span class="value"></span>');
+      power = s('<span class="value"></span>');
 
-    rank.textContent = text('ScoresList.rank', { rank: row.rank });
+    rank.textContent = text('PowerList.rank', { rank: row.rank });
     name.textContent =
       row.civilization === null
-        ? text('ScoresList.unknown')
+        ? text('PowerList.unknown')
         : text('Generic.civilization-name.plural', {
             civilization: row.civilization,
             player: { civilization: { _: row.civilization } },
           });
-    score.textContent = text('ScoresList.score', { score: row.score });
+    power.textContent = text('PowerList.power', { power: row.power });
 
     // The civilization's own colours, as the Top Cities report shows them (#124). None for one not met.
     if (row.colors) {
@@ -218,24 +191,16 @@ export class ScoresList extends Element {
     if (row.own) {
       const you = s('<span class="visually-hidden"></span>');
 
-      you.textContent = ` ${text('ScoresList.you')}`;
+      you.textContent = ` ${text('PowerList.you')}`;
       content.append(you);
-
-      content.setAttribute(
-        'title',
-        text('ScoresList.open', {
-          key: this.#report.key,
-        })
-      );
-      content.addEventListener('click', () => this.#report.open());
       item.setAttribute('aria-current', 'true');
     }
 
-    content.append(score);
+    content.append(power);
     item.append(content);
 
     return item;
   }
 }
 
-export default ScoresList;
+export default PowerList;

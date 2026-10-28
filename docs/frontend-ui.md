@@ -104,15 +104,18 @@ ask before leaving a game in progress.
 - Sidebar lists: `CitiesList` (#700), the player's cities by build and turns
   left, soonest first, with nothing to build first and disorder (the player's
   `CivilDisorder` actions) and starving flagged, following them through
-  `DataChanges`; `ScoresList` (#701), every civilization's score from the
-  worker's `civilizationScores` rows, asked for once a turn while its section
-  is open, with your row opening the Civilization Score report (F9).
+  `DataChanges`; `PowerList` (#701, #708), every civilization's ranking score
+  (gold, citizens, advances and units, not the Civilization Score, whose
+  pollution term leaves most rivals at 0) from the worker's
+  `civilizationPower` rows, asked for once a turn while its section is open,
+  five around your own in a game of more than six.
 - Layout (#697): `#game` is a grid. `#top-bar` runs across the full width
   and holds `GameDetails`, `PlayerDetails` (the empire block, #698), the
   secondary actions and the game menu, in its flow. The map fills the rest,
   and the sidebar's `SidebarSection`s (the minimap, the active unit, the
-  cities and the scores) float over its top left; the sidebar itself has no
-  panel and passes the pointer through. `MapView` measures the sections and tells the portal
+  cities and the power list) float over its top left; the sidebar itself has
+  no panel, and is only as tall as its sections so it can take the pointer
+  for its scrollbar. `MapView` measures the sections and tells the portal
   (`Portal.setCovered`), so `isVisible` counts a tile under one (or within
   the edge margin of one) as out of view and the active unit is recentred out
   from under them, as from an edge. `#actions` fills the map's height at its
@@ -120,7 +123,7 @@ ask before leaving a game in progress.
   positioned and after the map in the document, so they paint over it without
   a `z-index`. Each section collapses from its heading button, with the
   collapsed keys kept in the `sidebarCollapsed` client option. The cities and
-  scores start collapsed (`collapsedByDefault`), and the keys of those opened
+  power start collapsed (`collapsedByDefault`), and the keys of those opened
   are kept in `sidebarExpanded` instead. Below 48em wide,
   the bar, the sections and the map stack instead, and the map keeps the whole
   width. Their colours are the `--panel-*` tokens on `:root`, with a dark set
