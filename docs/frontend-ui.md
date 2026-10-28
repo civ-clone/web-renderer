@@ -95,20 +95,33 @@ ask before leaving a game in progress.
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).
-- Details: `UnitDetails`, `PlayerDetails`, `GameDetails`.
+- Details: `UnitDetails`, `PlayerDetails`, `GameDetails`. `UnitDetails` is the
+  active unit's card (#699): its icon, name and state (`lib/unitLabel.ts`, as
+  the stack window's rows say it, #694), its moves as pips, attack, defence and
+  visibility, its home city (a button that opens it), the square, and the other
+  units there as a strip that opens `UnitSelectionWindow`. It is kept for the
+  game and redraws only when something it shows changes.
+- Sidebar lists: `CitiesList` (#700), the player's cities by build and turns
+  left, soonest first, with nothing to build first and disorder (the player's
+  `CivilDisorder` actions) and starving flagged, following them through
+  `DataChanges`; `ScoresList` (#701), every civilization's score from the
+  worker's `civilizationScores` rows, asked for once a turn while its section
+  is open, with your row opening the Civilization Score report (F9).
 - Layout (#697): `#game` is a grid. `#top-bar` runs across the full width
   and holds `GameDetails`, `PlayerDetails` (the empire block, #698), the
   secondary actions and the game menu, in its flow. The map fills the rest,
-  and the sidebar's `SidebarSection`s (the minimap, the active unit) float
-  over its top left; the sidebar itself has no panel and passes the pointer
-  through. `MapView` measures the sections and tells the portal
+  and the sidebar's `SidebarSection`s (the minimap, the active unit, the
+  cities and the scores) float over its top left; the sidebar itself has no
+  panel and passes the pointer through. `MapView` measures the sections and tells the portal
   (`Portal.setCovered`), so `isVisible` counts a tile under one (or within
   the edge margin of one) as out of view and the active unit is recentred out
   from under them, as from an edge. `#actions` fills the map's height at its
   right and `#unit-actions` sits at its bottom left; like the sidebar they are
   positioned and after the map in the document, so they paint over it without
   a `z-index`. Each section collapses from its heading button, with the
-  collapsed keys kept in the `sidebarCollapsed` client option. Below 48em wide,
+  collapsed keys kept in the `sidebarCollapsed` client option. The cities and
+  scores start collapsed (`collapsedByDefault`), and the keys of those opened
+  are kept in `sidebarExpanded` instead. Below 48em wide,
   the bar, the sections and the map stack instead, and the map keeps the whole
   width. Their colours are the `--panel-*` tokens on `:root`, with a dark set
   under `prefers-color-scheme: dark` (#706 adds a choice in the options).
@@ -195,7 +208,7 @@ Moving around the map:
 - `GameOptionsRegistry`: the client options, with their defaults in `app/options.ts`; the
   values a player changes are kept in `localStorage` (#343): `autoEndOfTurn`, `autoEndOfTurnExceptions`,
   `unitEdgeMargin`, `mapScale`, `lockVerticalEdges`, `autosave`,
-  `sidebarCollapsed`.
+  `sidebarCollapsed`, `sidebarExpanded`.
 - `lib/DataChanges.ts`: watchers by object id, run once per render when an id
   they watch changed (#344).
 - `Store` wrapper around IndexedDB via `idb` (used by `AssetStore` and the

@@ -240,6 +240,14 @@ i18next.addResources('en', 'default', {
 
   'City.Yield.deficit': '{{amount, number}} {{- yield}} short',
 
+  // The sidebar's list of cities (#700).
+  'CitiesList.disorder': 'Civil disorder',
+  'CitiesList.empty': 'No cities yet.',
+  'CitiesList.no-build': 'Nothing to build',
+  'CitiesList.show-all': 'Show all ({{count, number}})',
+  'CitiesList.show-fewer': 'Show fewer',
+  'CitiesList.starving': 'Starving',
+
   'CityStatus.build_empty':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) $t(Buildable.label-empty)',
   'CityStatus.build_nonempty':
@@ -467,7 +475,8 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Government.body_choosing':
     '{{government}} (choose a new government)',
   'PlayerDetails.Government.body_settled': '{{government}}',
-  'PlayerDetails.Government.revolution': '{{title}} ($t(Actions.Revolution.title))',
+  'PlayerDetails.Government.revolution':
+    '{{title}} ($t(Actions.Revolution.title))',
   'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
   'PlayerDetails.opens': '{{title}} ({{opens}}, {{key}})',
@@ -483,7 +492,8 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Researching.value_notresearching': 'Nothing',
   'PlayerDetails.Researching.value_researching': '{{researching}}',
   'PlayerDetails.TradeRates.rate': '{{name}} {{value, number}}%',
-  'PlayerDetails.TradeRates.title': '$t(Actions.AdjustTradeRates.title) ({{key}})',
+  'PlayerDetails.TradeRates.title':
+    '$t(Actions.AdjustTradeRates.title) ({{key}})',
   'PlayerDetails.Treasury.detail':
     '{{perTurn, number(signDisplay: exceptZero)}} / turn',
   'PlayerDetails.Treasury.detail_anarchy': 'no taxes during Anarchy',
@@ -598,6 +608,15 @@ i18next.addResources('en', 'default', {
   'CivilizationScoreReport.title': 'Civilization Score',
   'CivilizationScoreReport.total': 'Total',
 
+  // The sidebar's scores (#701).
+  'ScoresList.empty': 'No scores yet.',
+  'ScoresList.open': '$t(CivilizationScoreReport.title) ({{key}})',
+  'ScoresList.rank': '{{rank, number}}.',
+  'ScoresList.score': '{{score, number}}',
+  // An unmet civilization's row: the sidebar is too narrow for more.
+  'ScoresList.unknown': 'Unknown',
+  'ScoresList.you': '(you)',
+
   'SelectionWindow.default-body': 'Please choose one of the following:',
 
   // A Republic or Democracy choosing to break a peace treaty (#133).
@@ -605,6 +624,8 @@ i18next.addResources('en', 'default', {
   'Senate.title': 'The Senate',
 
   // The sidebar's sections, which can be collapsed (#697).
+  'Sidebar.cities': 'Cities',
+  'Sidebar.scores': 'Scores',
   'Sidebar.unit': 'Active Unit',
   'Sidebar.world': 'World',
 
@@ -641,17 +662,25 @@ i18next.addResources('en', 'default', {
   'TradeReport.ImprovementList.cost-title': 'Total cost',
   'TradeReport.ImprovementList.surplus-title': 'Total surplus',
 
-  'UnitDetails.header':
-    '{{unitName}} ($t(Generic.coordinates, { "x": {{x}}, "y": {{y}} }))',
-  'UnitDetails.improvements': '{{improvements, list}}',
+  // The active unit's card in the sidebar (#699).
+  'UnitDetails.attack': 'A',
+  'UnitDetails.defence': 'D',
+  'UnitDetails.home-city': 'Home city: {{city}} (opens the city)',
   'UnitDetails.moves':
     '{{remaining, number(minimumFractionDigits: 0; maximumFractionDigits: 2)}} / {{total, number}} moves',
-  'UnitDetails.stats':
-    'A: {{attack, number}} / D: {{defence, number}} / V: {{visibility, number}}',
-  'UnitDetails.terrain': `{{terrain}} {{features, list}} {{improvements, list}}`,
+  'UnitDetails.tile':
+    '{{parts, list(type: unit)}} ($t(Generic.coordinates, { "x": {{x}}, "y": {{y}} }))',
+  'UnitDetails.tile-units_one':
+    '{{count, number}} other unit here (choose a unit)',
+  'UnitDetails.tile-units_other':
+    '{{count, number}} other units here (choose a unit)',
+  'UnitDetails.value': '{{value, number}}',
+  'UnitDetails.visibility': 'V',
 
-  'UnitSelectionWindow.status_busy': '{{unit}} [{{city}}] ({{busy}})',
-  'UnitSelectionWindow.status_notbusy': '{{unit}} [{{city}}]',
+  // A unit's name, then its state, in the stack window and the active unit's card (#694).
+  'UnitLabel.label': '{{unit}}',
+  'UnitLabel.label_state': '{{unit}} ({{states, list(type: unit)}})',
+
   'UnitSelectionWindow.title': 'Activate unit',
 
   'Welcome.you-have-risen':

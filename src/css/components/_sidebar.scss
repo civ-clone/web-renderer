@@ -109,3 +109,229 @@
     }
   }
 }
+
+// A button in a section that reads as part of it: the unit's home city and the units on its square (#699), a city in
+//  the list (#700), and your own score (#701).
+@mixin plain-button() {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+
+  &:focus-visible {
+    outline: 2px solid var(--panel-text);
+    outline-offset: 1px;
+  }
+}
+
+// The active unit's card (#699).
+#unitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+
+  p {
+    margin: 0;
+  }
+
+  .unit-header {
+    align-items: center;
+    display: flex;
+    font-weight: bold;
+    gap: 0.4em;
+
+    canvas {
+      flex: none;
+    }
+  }
+
+  // A pip a move, the moves left lit.
+  .moves {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2em;
+
+    .pip {
+      background: var(--panel-sunken);
+      border: 1px solid var(--panel-bevel-dark);
+      box-sizing: border-box;
+      display: inline-block;
+      height: 0.6em;
+      overflow: hidden;
+      width: 1.2em;
+    }
+
+    .fill {
+      background: var(--panel-positive);
+      display: block;
+      height: 100%;
+    }
+  }
+
+  .stats {
+    display: flex;
+    gap: 0.75em;
+
+    abbr {
+      color: var(--panel-muted);
+      margin-right: 0.2em;
+      text-decoration: none;
+    }
+
+    .value {
+      font-weight: bold;
+    }
+  }
+
+  .home-city {
+    @include plain-button();
+    color: var(--panel-accent);
+    text-decoration: underline;
+  }
+
+  .tile {
+    color: var(--panel-muted);
+    font-size: 0.85em;
+  }
+
+  // The other units on the square, which open the stack window.
+  .tile-units {
+    @include plain-button();
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.1em;
+
+    &:hover canvas {
+      filter: brightness(1.15);
+    }
+  }
+}
+
+// The cities, by what they're building and how soon it's done (#700).
+.cities-list,
+.scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1em;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cities-list .city-row {
+  @include plain-button();
+  display: flex;
+  flex-direction: column;
+  padding: 0.15em 0.2em;
+  width: 100%;
+
+  &:hover {
+    background: var(--panel-bg);
+  }
+
+  .name {
+    font-weight: bold;
+  }
+
+  .build {
+    display: flex;
+    font-size: 0.85em;
+    gap: 0.5em;
+    justify-content: space-between;
+  }
+
+  .turns {
+    color: var(--panel-muted);
+    white-space: nowrap;
+  }
+
+  .flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3em;
+  }
+
+  .flag {
+    color: var(--panel-negative);
+    font-size: 0.85em;
+    font-weight: bold;
+  }
+}
+
+.show-all {
+  @include plain-button();
+  color: var(--panel-accent);
+  font-size: 0.85em;
+  margin-top: 0.3em;
+  text-decoration: underline;
+}
+
+// Every civilization's score, your own marked (#701).
+.scores-list {
+  // The same box for every row, a button (your own) or not, so the scores' right edges line up.
+  .row {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    gap: 0.4em;
+    padding: 0.15em 0.2em;
+    width: 100%;
+  }
+
+  button.row {
+    @include plain-button();
+    padding: 0.15em 0.2em;
+
+    &:hover {
+      background: var(--panel-bg);
+    }
+  }
+
+  .rank {
+    color: var(--panel-muted);
+    min-width: 1.5em;
+    text-align: right;
+  }
+
+  // The civilization's colours, as the Top Cities report shows them, or a blank for one not met.
+  .swatch {
+    background: var(--civilization-primary, var(--panel-sunken));
+    border: 2px solid var(--civilization-secondary, var(--panel-bevel-dark));
+    box-sizing: border-box;
+    flex: none;
+    height: 0.8em;
+    width: 0.8em;
+  }
+
+  .name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .unknown .name {
+    color: var(--panel-muted);
+    font-style: italic;
+  }
+
+  .own .row {
+    background: var(--panel-sunken);
+    font-weight: bold;
+  }
+
+  .value {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.sidebar-section .empty {
+  color: var(--panel-muted);
+  font-size: 0.85em;
+  margin: 0;
+}

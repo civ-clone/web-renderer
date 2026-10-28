@@ -2,7 +2,8 @@
 // opened with through the shared `DataChanges` instance: it redraws on the render after one of them changes, showing
 // those still in the player's list, does nothing for a unit it doesn't show, closes once none of its units are left,
 // and stops watching when it closes. Clicking a unit chooses it, waking it first if it is asleep, and closes the
-// window (#482).
+// window (#482). Each unit is a row: its name and state, and the city that supports it, with no city line for a
+// free unit (#694).
 // The real `UnitSelectionWindow` is built under linkedom, with a canvas context that draws nothing. Patches go through
 // the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is collected into the shared
 // `DataChanges` instance as `GameState` does; a "render" is a `notify`.
@@ -11,6 +12,7 @@
 import { document } from './lib/dom';
 
 import i18next from 'i18next';
+import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { DataPatch, GameData, Unit } from '../../src/js/UI/types';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
 import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
@@ -289,10 +291,9 @@ const sent: Array<{ name: string; id: string }> = [],
     (unit: Unit) => chosen.push(unit.id)
   ),
   click = (window: UnitSelectionWindow, index: number): void => {
-    window
-      .element()
-      .querySelectorAll('canvas')
-      [index].dispatchEvent(new Event('click'));
+    (
+      window.element().querySelectorAll('.unit-row')[index] as HTMLElement
+    ).click();
   };
 
 objectMap.objects['Unit-1'].active = true;
@@ -324,21 +325,125 @@ expect(
 );
 expect('and closes the window too', clicking.element().isConnected, false);
 
-expect(
-  'nothing but the missing sprites was logged',
-  logged.filter((error) => !String(error).startsWith('Missing image:')),
-  []
-);
+// Each unit is a row (#694): its name and state, then the city that supports it, or no city line for a free unit.
+const rowText = async (): Promise<void> => {
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  await import('../../translations/local/en');
+  await import('../../translations/civ1-unit/en');
+  await import('../../translations/civ1-city/en');
 
-finished = true;
+  const rome = {
+      name: 'Roma',
+      originalPlayer: { civilization: { _: 'Roman' } },
+    },
+    plain = (fields: { [key: string]: unknown }): Unit =>
+      ({
+        _: 'Musketman',
+        id: 'Unit-9',
+        active: false,
+        busy: null,
+        city: rome,
+        improvements: [],
+        player: data.player,
+        ...fields,
+      } as unknown as Unit),
+    rows = (units: Unit[]) =>
+      Array.from(
+        new UnitSelectionWindow(units, transport)
+          .element()
+          .querySelectorAll('.unit-row')
+      ).map((row) => ({
+        label: row.querySelector('.label')?.textContent,
+        city: row.querySelector('.city')?.textContent ?? null,
+        icon: row.querySelectorAll('canvas').length,
+      }));
 
-if (failures.length > 0) {
-  process.stderr.write(
-    `FAIL unitSelectionWindow (${
-      failures.length
-    } of ${checks} checks)\n  ${failures.slice(0, 20).join('\n  ')}\n`
+  expect(
+    'a row names the unit and its state, and the city that supports it',
+    rows([
+      plain({
+        busy: { _: 'Fortifying' },
+        improvements: [{ _: 'Fortified' }, { _: 'Veteran' }],
+      }),
+    ]),
+    [
+      {
+        label: 'Musketman (Fortifying, Fortified, Veteran)',
+        city: 'Roma',
+        icon: 1,
+      },
+    ]
   );
-  process.exit(1);
-}
+  // Once fortified, the engine sends both a `Fortified` activity and the `Fortified` improvement.
+  expect(
+    'a fortified veteran says Fortified once',
+    rows([
+      plain({
+        busy: { _: 'Fortified' },
+        improvements: [{ _: 'Fortified' }, { _: 'Veteran' }],
+      }),
+    ]),
+    [{ label: 'Musketman (Fortified, Veteran)', city: 'Roma', icon: 1 }]
+  );
+  expect(
+    'a state is said once, however many times it comes',
+    rows([plain({ improvements: [{ _: 'Fortified' }, { _: 'Fortified' }] })]),
+    [{ label: 'Musketman (Fortified)', city: 'Roma', icon: 1 }]
+  );
+  expect(
+    'an activity with nothing else is the state',
+    rows([plain({ _: 'Settlers', busy: { _: 'BuildingRoad' } })]),
+    [{ label: 'Settlers (Building road)', city: 'Roma', icon: 1 }]
+  );
+  expect(
+    'a unit doing nothing in particular has no brackets',
+    rows([plain({})]),
+    [{ label: 'Musketman', city: 'Roma', icon: 1 }]
+  );
+  expect(
+    'a free unit has no city line, and no placeholder for one',
+    rows([plain({ _: 'Warrior', city: null })]),
+    [{ label: 'Warrior', city: null, icon: 1 }]
+  );
+  expect(
+    'a name is shown as written, not escaped',
+    rows([plain({ _: "Rock & Roll's", city: null })]),
+    [{ label: "Rock & Roll's", city: null, icon: 1 }]
+  );
 
-process.stdout.write(`PASS unitSelectionWindow (${checks} checks)\n`);
+  const window = new UnitSelectionWindow([plain({})], transport);
+
+  expect(
+    'a row is a button, so the keyboard reaches it',
+    window.element().querySelector('.unit-row')?.tagName,
+    'BUTTON'
+  );
+
+  window.close();
+};
+
+rowText()
+  .then(() => {
+    expect(
+      'nothing but the missing sprites was logged',
+      logged.filter((error) => !String(error).startsWith('Missing image:')),
+      []
+    );
+
+    finished = true;
+
+    if (failures.length > 0) {
+      process.stderr.write(
+        `FAIL unitSelectionWindow (${
+          failures.length
+        } of ${checks} checks)\n  ${failures.slice(0, 20).join('\n  ')}\n`
+      );
+      process.exit(1);
+    }
+
+    process.stdout.write(`PASS unitSelectionWindow (${checks} checks)\n`);
+  })
+  .catch((error) => {
+    process.stderr.write(`FAIL unitSelectionWindow: ${error.stack ?? error}\n`);
+    process.exit(1);
+  });

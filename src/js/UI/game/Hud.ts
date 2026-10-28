@@ -5,6 +5,7 @@ import Notices from '../components/Notices';
 import PlayerDetails from '../components/PlayerDetails';
 import Portal from '../components/Portal';
 import ScienceReport from '../components/ScienceReport';
+import ScoresList from '../components/ScoresList';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
@@ -12,7 +13,8 @@ import partitionActions from '../lib/playerActionPanels';
 import { t } from 'i18next';
 
 // The panels around the map: the player's actions (the end-turn area and the secondary panel), the active unit's
-//  action buttons, and the game and player details. Rebuilt from the latest data on every render.
+//  action buttons, and the game and player details. Rebuilt from the latest data on every render. The sidebar's scores
+//  are told the turn, and ask for themselves on a new one (#701).
 //
 // Reaches beyond its own panels in one place: `build` appends the primary panel to `gameArea` every time, which moves
 //  it to the end of the game area.
@@ -25,6 +27,8 @@ export type HudDeps = {
   notices: Pick<Notices, 'actions'>;
   playerInfo: HTMLElement;
   portal: Portal;
+  // The sidebar's scores (#701), when the page has them.
+  scores?: Pick<ScoresList, 'turn'> | null;
   secondaryActionArea: HTMLElement;
   transport: Transport;
   // A unit's action button clicked: the active unit's controller sends it, as its key would (#543).
@@ -68,6 +72,7 @@ export class Hud {
       notices,
       playerInfo,
       portal,
+      scores,
       transport,
       world,
     } = this.#deps;
@@ -117,6 +122,8 @@ export class Hud {
     );
 
     playerDetails.build();
+
+    scores?.turn(Number(data.turn?.value ?? 0), data.player.id);
   }
 }
 

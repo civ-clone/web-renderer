@@ -10,6 +10,7 @@ import { MilitaryReport } from './lib/military';
 import { RequirementData } from './lib/requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './lib/civilopedia';
 import { CivilizationScore } from './lib/civilizationScore';
+import { CivilizationScoresRow } from './lib/civilizationScores';
 import { GameOverDetails } from './lib/gameOver';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
@@ -117,6 +118,8 @@ declare global {
     chooseFromList: TransportData<ChoiceMeta<keyof ChoiceMetaDataMap>, string>;
     // The player's Civilization Score (#149).
     civilizationScore: TransportData<CivilizationScore, null>;
+    // Every civilization's score, ranked, the unmet unnamed (#701).
+    civilizationScores: TransportData<CivilizationScoresRow[], null>;
     // Watching a game nobody here plays (#607): the players to see it as, the one seen as, and whether the turns are
     //  held. Sent whenever any of that changes, before the viewed player's `gameData`.
     observer: TransportData<ObserverState, never>;

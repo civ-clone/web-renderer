@@ -1,5 +1,7 @@
 // A sidebar section collapses and expands from its heading, a button (so Enter and Space work as a click does), and
-//  a collapsed section is still collapsed after a reload, from the client options in browser storage (#697).
+//  a collapsed section is still collapsed after a reload, from the client options in browser storage (#697). A section
+//  collapsed by default (the cities and scores, #700, #701) starts collapsed, and once opened stays open after a
+//  reload, kept in an option of its own so the stored `sidebarCollapsed` means what it did.
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -34,7 +36,7 @@ const items: { [key: string]: string } = {},
   pageLoad = () => {
     const registry = new GameOptionsRegistry(() => storage);
 
-    registry.defaults({ sidebarCollapsed: [] });
+    registry.defaults({ sidebarCollapsed: [], sidebarExpanded: [] });
 
     return registry;
   },
@@ -128,6 +130,64 @@ const items: { [key: string]: string } = {},
   world.setCollapsed(true);
 
   expect('with no storage, it still collapses', world.collapsed(), true);
+}
+
+{
+  const options = pageLoad(),
+    scores = new SidebarSection('scores', 'Scores', [], options, {
+      collapsedByDefault: true,
+    });
+  let toggled = 0;
+
+  scores.element().addEventListener('sidebar-section-toggle', () => toggled++);
+
+  expect('a section collapsed by default starts collapsed', state(scores), {
+    expanded: 'false',
+    hidden: true,
+  });
+
+  (scores.element().querySelector('button') as HTMLButtonElement).click();
+
+  expect('a click opens it', state(scores), {
+    expanded: 'true',
+    hidden: false,
+  });
+  expect('and says so', toggled, 1);
+  expect('which is stored as opened', options.get('sidebarExpanded'), [
+    'scores',
+  ]);
+  expect(
+    'leaving the collapsed sections as they were',
+    options.get('sidebarCollapsed'),
+    ['unit']
+  );
+}
+
+{
+  const options = pageLoad(),
+    scores = new SidebarSection('scores', 'Scores', [], options, {
+      collapsedByDefault: true,
+    }),
+    cities = new SidebarSection('cities', 'Cities', [], options, {
+      collapsedByDefault: true,
+    });
+
+  expect('after a reload, the one opened is still open', state(scores), {
+    expanded: 'true',
+    hidden: false,
+  });
+  expect('and the other still collapsed', state(cities), {
+    expanded: 'false',
+    hidden: true,
+  });
+
+  scores.setCollapsed(true);
+
+  expect(
+    'collapsed again, it is no longer stored as opened',
+    options.get('sidebarExpanded'),
+    []
+  );
 }
 
 if (failures.length) {
