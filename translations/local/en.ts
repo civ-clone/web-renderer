@@ -180,9 +180,9 @@ i18next.addResources('en', 'default', {
   'City.Build.auto-marker': 'Auto',
   'City.Build.auto-stop': 'Stop Auto',
   'City.Build.build-item':
-    '{{- item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+    '{{- item}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.build-unit':
-    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.buy': 'Buy',
   'City.Build.group.improvement': 'City Improvements',
   'City.Build.group.spaceship': 'Spaceship Parts',
@@ -476,8 +476,8 @@ i18next.addResources('en', 'default', {
     'Nothing ($t(Progress.per-turn, { "count": {{perTurn}} }))',
   'PlayerDetails.Researching.body_researching': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) ($t(Progress.per-turn, { "count": {{perTurn}} }) - $t(Progress.turns, { "count": {{turns}} }))`,
   'PlayerDetails.Researching.title': 'Researching',
-  'PlayerDetails.Treasury.body': `{{value}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
-  'PlayerDetails.Treasury.body_anarchy': '{{value}} (no taxes during Anarchy)',
+  'PlayerDetails.Treasury.body': `{{value, number}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
+  'PlayerDetails.Treasury.body_anarchy': '{{value, number}} (no taxes during Anarchy)',
   'PlayerDetails.Treasury.title': 'Treasury',
 
   'Progress.body':

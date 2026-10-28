@@ -131,6 +131,27 @@ const expect = (description: string, actual: string, expected: string) => {
       `${item} (Cost: 400 / 80 turns)`
     );
 
+    expect(
+      'City.Build.build-item formats large costs',
+      t('City.Build.build-item', { item, cost: 1234, turns: 80, lng: 'en-US' }),
+      `${item} (Cost: 1,234 / 80 turns)`
+    );
+
+    expect(
+      'City.Build.build-unit formats large costs',
+      t('City.Build.build-unit', {
+        item,
+        attack: 1,
+        defence: 1,
+        movement: 1,
+        visibility: 1,
+        cost: 1234,
+        turns: 80,
+        lng: 'en-US',
+      }),
+      `${item} 1/1/1/1 (Cost: 1,234 / 80 turns)`
+    );
+
     const body = t('City.CompleteProduction.body', {
       item,
       spendCost: { value: 10, resource: { _: 'Gold' } },
@@ -152,6 +173,17 @@ const expect = (description: string, actual: string, expected: string) => {
       `Do you want to sell your ${item} for 40 Gold?`
     );
   });
+
+  expect(
+    'PlayerDetails.Treasury.body formats large balances',
+    t('PlayerDetails.Treasury.body', { value: 1234, perTurn: 56, lng: 'en-US' }),
+    '1,234 (56 / turn)'
+  );
+  expect(
+    'PlayerDetails.Treasury.body_anarchy formats large balances',
+    t('PlayerDetails.Treasury.body_anarchy', { value: 1234, lng: 'en-US' }),
+    '1,234 (no taxes during Anarchy)'
+  );
 
   // Asansol is an Indian city name, now held by Babylon: the name has to come
   //  from the founder, not the current owner.
