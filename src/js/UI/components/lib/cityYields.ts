@@ -223,6 +223,22 @@ export const yieldData = (city: CityData, yieldName: string) =>
     [0, 0, 0]
   );
 
+/**
+ * One icon for a group of yields (`Gold`, `Research`, `Trade` and so on, see `groupIcons`), drawn once its picture has
+ *  loaded. Decorative: wherever an amount is shown, its number is there as text too (#683).
+ */
+export const yieldIcon = (group: string): HTMLElement => {
+  const icon = s('<span class="yield-icon"></span>');
+
+  assetStore
+    .getScaled(`./assets/${groupIcons[group]}`, 2)
+    .then((image) =>
+      icon.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
+    );
+
+  return icon;
+};
+
 export const yieldImages = (
   cityYield: { _: string; value: number; __?: string[] },
   absolute: boolean = false
@@ -233,17 +249,7 @@ export const yieldImages = (
     )
   )
     .fill(0)
-    .map(() => {
-      const icon = s('<span class="yield-icon"></span>');
-
-      assetStore
-        .getScaled(`./assets/${groupIcons[yieldGroup(cityYield)]}`, 2)
-        .then((image) =>
-          icon.append(s(`<img src="${image.toDataURL('image/png')}">`))
-        );
-
-      return icon;
-    });
+    .map(() => yieldIcon(yieldGroup(cityYield)));
 
 export const yieldLabel = (cityYield: Yield) =>
   t(`${cityYield._}.name`, {

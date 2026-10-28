@@ -166,3 +166,15 @@
     }
   }
 }
+
+// A trade route: the city, then one Trade icon a point (#683).
+.trade-route {
+  .name {
+    margin-right: 0.25em;
+  }
+
+  .yield-icon {
+    display: inline-block;
+    vertical-align: middle;
+  }
+}

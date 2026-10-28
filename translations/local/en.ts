@@ -547,7 +547,7 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.trait.Friendly': 'Friendly',
   'IntelligenceReport.trait.Militaristic': 'Militaristic',
   'IntelligenceReport.trait.Perfectionist': 'Perfectionist',
-  'IntelligenceReport.treasury': 'Treasury: ${{gold, number}}',
+  'IntelligenceReport.treasury': 'Treasury: {{gold, number}}',
   'IntelligenceReport.unknown': 'Unknown',
 
   'MilitaryReport.active_one': '{{count, number}} active',
