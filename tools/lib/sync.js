@@ -3,7 +3,7 @@ const path = require('path');
 
 const { checkoutPath, scope } = require('./paths');
 const { read } = require('./audit');
-const { sourceFiles } = require('./scan');
+const { dataFiles, sourceFiles } = require('./scan');
 
 // `buildPluginList.js` checks that each package's `main` exists and writes an
 // absolute import of it into `src/js/plugins.ts`, so the entrypoint `.js` is the
@@ -98,7 +98,9 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
 
   const main = entrypoint(to);
 
-  sourceFiles(from).forEach((fullPath) => {
+  // Writes one checkout file over its installed copy, and says whether it
+  // changed.
+  const copy = (fullPath) => {
     const relative = path.relative(from, fullPath);
     const target = path.join(to, relative);
     const source = fs.readFileSync(fullPath);
@@ -112,7 +114,7 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
     } catch (e) {}
 
     if (existing && existing.equals(source)) {
-      return;
+      return null;
     }
 
     if (existing) {
@@ -136,6 +138,22 @@ const syncPackage = (name, { quiet = false, into = scope } = {}) => {
     fs.rmSync(target, { force: true });
     fs.writeFileSync(target, source);
     result.changed.push(relative);
+
+    return relative;
+  };
+
+  // Data has no compiled siblings to look after. It was left out entirely
+  // until #140: civ1-asset-extractor's `extract-data.json` changed in its
+  // checkout, sync reported a change, and the renderer kept reading the old
+  // slices.
+  dataFiles(from).forEach(copy);
+
+  sourceFiles(from).forEach((fullPath) => {
+    const relative = copy(fullPath);
+
+    if (!relative) {
+      return;
+    }
 
     const base = relative.replace(/\.ts$/, '');
 

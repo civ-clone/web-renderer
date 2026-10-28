@@ -11,10 +11,10 @@ shaped this way; this file is what to type.
 | ------- | ------------ |
 | `civ audit [--write]` | Recompute `packages.json` from `node_modules`: dependency graph, cycles (Tarjan), publish waves, per-stage surface. Run it first, and after every wave. |
 | `civ clone [--stage N]` | Clone every manifest package missing from `~/Code/civ-clone`. |
-| `civ sync [package…]` | Copy `.ts` from each checkout into `web-renderer/node_modules`. |
+| `civ sync [package…]` | Copy `.ts` and JSON data from each checkout into `web-renderer/node_modules`. |
 | `civ watch [package…]` | `civ sync` on change. Pair with `npm run watch`. |
 | `civ collisions` | Find classes declaring a private field an ancestor also declares. |
-| `civ check-dts [package…]` | Diff each package's `.d.ts` against the commit before its refactor. |
+| `civ check-dts [--baseline \| --published] [package…]` | Diff each package's `.d.ts` against the commit before its refactor. `--baseline` snapshots the installed `.d.ts`; `--published` diffs against that snapshot. |
 | `civ publish --pending [--dry-run] [--otp CODE]` | Verify, version, publish and push everything outstanding, in dependency order. |
 | `civ publish --wave N [--dry-run]` | The same for one wave of one stage. |
 
@@ -87,7 +87,8 @@ it — `pnpm install` reports "Already up to date" because its state file says
 so and it does not check that the hoisted links still exist. Recovery is
 `rm -rf node_modules && pnpm install`.
 
-`civ sync --into` copies rather than links precisely so this cannot happen.
+`syncPackage`'s `into` option (`tools/lib/sync.js`, not a CLI flag) copies
+rather than links precisely so this cannot happen.
 Where a package's own toolchain is unavailable, the publish gate falls back
 to the renderer's `tsc` and `prettier` by path, which needs no symlink at all.
 

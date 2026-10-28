@@ -35,20 +35,27 @@ const USAGE = `civ <command> [options]
                                made outside a publish wave; \`civ sync\` any
                                dependency changed alongside it first.
 
-  sync [package...]            Copy .ts source from each checkout into
-                               web-renderer/node_modules. No argument syncs every
-                               checked-out manifest package.
+  sync [package...]            Copy .ts source and JSON data from each checkout
+                               into web-renderer/node_modules. No argument syncs
+                               every checked-out manifest package.
 
   watch [package...]           Run sync on change. Pair with \`npm run watch\`.
 
+  publish --pending [--dry-run] [--otp CODE]
+                               Verify, version, publish and push every checkout
+                               with unpushed commits or an unpublished version,
+                               in dependency order. The usual route. Refuses to
+                               run against a tree with duplicated packages, or
+                               with a rule registered inside an Effect.
+
   publish --wave N [--stage N] [--dry-run] [--otp CODE]
-                               Verify, version, publish and push a wave.
+                               The same for one wave of one stage.
                                Refuses a partial cycle group. Safe to re-run: a
                                version already bumped is not bumped again, and a
                                version already on the registry is not republished.
                                --otp passes a 2FA code, which covers one publish
                                before its window closes - use an automation token
-                               for a whole wave.
+                               for more than one package.
 
   duplicates [package...]      Find @civ-clone packages installed more than once
                                in a tree. Two copies are two distinct classes, so
@@ -92,11 +99,14 @@ const USAGE = `civ <command> [options]
                                error once both are 'private _x', and invisible to
                                the compiler until the base package publishes.
 
-  check-dts [--baseline] [package...]
-                               --baseline snapshots the installed .d.ts files;
-                               without it, diffs the checkouts' compiled .d.ts
-                               against that snapshot and fails on any change
-                               beyond an added \`private _x;\`.
+  check-dts [--baseline | --published] [package...]
+                               Diff each checkout's compiled .d.ts against the
+                               commit before its \`refactor: use TypeScript
+                               private\` commit, and fail on any change beyond
+                               an added \`private _x;\`. --baseline snapshots
+                               the installed .d.ts files; --published diffs
+                               against that snapshot instead, which also shows
+                               drift between npm and each repo's master.
 `;
 
 const [, , command, ...args] = process.argv;

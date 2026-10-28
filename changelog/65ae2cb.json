@@ -1,0 +1,1 @@
+{"version":"0.1.0@65ae2cb","date":"2026-10-28T10:30:39.000Z","localChanges":["The h key now makes the city a unit is in its home city, when it can be rehomed there (#662).","The + and - keys, on the main keyboard or the keypad, now open the Adjust trade rates window, and its button's tooltip shows the key (closes #662)."],"externalChanges":{}}
