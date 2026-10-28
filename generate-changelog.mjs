@@ -68,6 +68,9 @@ const isTrailer = (line) => {
 
 const CLOSES_ONLY = /^(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?) #\d+\.?$/i;
 
+// One squashed commit's subject, as GitHub lists it: `* feat: …`, `* fix(scope)!: …`.
+const isSquashedSubject = (lines) => lines.length === 1 && /^\* [a-z]+(?:\([^)]*\))?!?: \S/.test(lines[0].trim());
+
 export const toBullets = (message) => {
     const paragraphs = message.replace(/\r/g, '').trim().split(/\n(?:[ \t]*\n)+/)
         .map((paragraph) => paragraph.split('\n').filter((line) => line.trim() !== ''))
@@ -91,6 +94,27 @@ export const toBullets = (message) => {
     // A paragraph of trailers (or a squash's `---------` rule) between others; never the subject.
     for (let index = paragraphs.length - 1; index > 0; index--) {
         if (paragraphs[index].every((line) => isTrailer(line) || /^-{3,}$/.test(line.trim()))) {
+            paragraphs.splice(index, 1);
+        }
+    }
+
+    // A GitHub squash lists each commit as `* <type>: <subject>` and then its body. Where a body follows that says
+    //  something, it is the player's note and the subject only says the same thing again, so the subject goes. A
+    //  commit with no body, or one that only closes an issue, keeps its subject, as it would unsquashed.
+    //  Each subject is judged by what followed it in the message, before any is taken out, so taking one out never
+    //  makes the next commit's body look like the one before's.
+    const restated = paragraphs.map((lines, index) => {
+        const next = paragraphs[index + 1];
+
+        return index > 0 &&
+            isSquashedSubject(lines) &&
+            next !== undefined &&
+            !isSquashedSubject(next) &&
+            !next.every((line) => CLOSES_ONLY.test(line.trim()));
+    });
+
+    for (let index = paragraphs.length - 1; index > 0; index--) {
+        if (restated[index]) {
             paragraphs.splice(index, 1);
         }
     }
