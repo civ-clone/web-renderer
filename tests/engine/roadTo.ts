@@ -19,6 +19,7 @@ import Player from '@civ-clone/core-player/Player';
 import { Road } from '@civ-clone/civ1-world/TileImprovements';
 import { Settlers } from '@civ-clone/civ1-unit/Units';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
+import { River } from '@civ-clone/civ1-world/Terrains';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -142,10 +143,16 @@ const order = async (): Promise<void> => {
 };
 
 const finish = (): void => {
-  const missing = squares.filter((tile) => !hasRoad(tile));
+  // A River takes a Road only once Bridge Building is known, which no one knows at the start: the order passes over it.
+  const roadable = squares.filter((tile) => !(tile.terrain() instanceof River)),
+    missing = roadable.filter((tile) => !hasRoad(tile));
 
   if (note()) {
     fail(`the order was still under way after ${TURNS} turns`);
+  }
+
+  if (roadable.length < 2) {
+    fail(`only ${roadable.length} square(s) of the way could take a Road`);
   }
 
   if (missing.length > 0) {
@@ -159,7 +166,7 @@ const finish = (): void => {
   }
 
   process.stdout.write(
-    `PASS roadTo: Roads on ${squares
+    `PASS roadTo: Roads on ${roadable
       .map(at)
       .join(' ')} in ${turns} turns; routeOrders sent\n`
   );
