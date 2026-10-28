@@ -63,6 +63,11 @@
       outline-offset: -2px;
     }
 
+    // A pressed button shifts 2px (`_buttons.scss`), which takes a full-width row past the list and shows a scrollbar.
+    &:active {
+      transform: none;
+    }
+
     canvas {
       flex: none;
     }
