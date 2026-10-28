@@ -1,8 +1,11 @@
 @use 'panel';
 
-// No panel of its own: its sections float over the top left of the map, which runs underneath (#697). The map keeps
-//  the pointer everywhere but on the sections. Positioned, as the map is, so the two paint in document order and this,
-//  after the map, is on top without a stacking order. Short of the map's foot, so it clears the unit's actions.
+// No panel of its own: its sections float over the top left of the map, which runs underneath (#697). Positioned, as
+//  the map is, so the two paint in document order and this, after the map, is on top without a stacking order. Short
+//  of the map's foot, so it clears the unit's actions.
+// It takes the pointer, so its scrollbar can be dragged, but only as tall as its sections and with its space around
+//  them as margin, which takes no clicks: the map keeps the pointer everywhere but on the sections, the gaps between
+//  them and the scrollbar.
 #sidebar {
   align-self: start;
   box-sizing: border-box;
@@ -11,17 +14,26 @@
   flex-direction: column;
   gap: 0.5em;
   justify-self: start;
-  max-height: calc(100% - 6rem);
+  margin: 0.5em;
+  max-height: calc(100% - 7rem);
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding: 0.5em;
-  pointer-events: none;
   position: relative;
-  width: 13em;
+  // Over the map, a thin bar in the panels' light edge, with no track of its own.
+  scrollbar-color: var(--panel-bevel-light) transparent;
+  scrollbar-width: thin;
+  width: 12em;
 
-  > .sidebar-section {
-    pointer-events: auto;
+  // Where `scrollbar-color` isn't supported (Safari).
+  &::-webkit-scrollbar {
+    background: transparent;
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--panel-bevel-light);
+    border-radius: 3px;
   }
 
   #minimap {
@@ -41,7 +53,9 @@
     flex-direction: row;
     flex-wrap: wrap;
     justify-self: stretch;
+    margin: 0;
     max-height: 35vh;
+    padding: 0.5em;
     width: auto;
 
     > .sidebar-section {

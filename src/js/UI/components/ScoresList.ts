@@ -11,6 +11,34 @@ import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
 
+// The rows shown before "Show all", and the most there can be with every row shown anyway: one more than shown isn't
+//  worth a link.
+export const scoresShown = 5;
+export const scoresShownWhole = 6;
+
+/**
+ * The rows to show: all of them in a small game, otherwise five around the player's own, two either side, or the
+ *  first or last five when the player is near the top or the foot. Without a row of their own (an observer), the top.
+ */
+export const scoresWindow = (
+  rows: CivilizationScoresRow[]
+): CivilizationScoresRow[] => {
+  if (rows.length <= scoresShownWhole) {
+    return rows;
+  }
+
+  const own = Math.max(
+      rows.findIndex((row) => row.own),
+      0
+    ),
+    start = Math.min(
+      Math.max(own - Math.floor(scoresShown / 2), 0),
+      rows.length - scoresShown
+    );
+
+  return rows.slice(start, start + scoresShown);
+};
+
 // What opens the Civilization Score report, as F9 does: the player's own row opens it.
 export type ScoresReport = {
   key: string;
@@ -26,6 +54,8 @@ export class ScoresList extends Element {
   // The view and turn last asked about, as `viewer:turn`.
   #asked: string | null = null;
   #report: ScoresReport;
+  #rows: CivilizationScoresRow[] = [];
+  #showAll = false;
   #transport: Transport;
   #turn: number | null = null;
 
@@ -57,11 +87,13 @@ export class ScoresList extends Element {
     this.#refresh();
   }
 
-  build(rows: CivilizationScoresRow[]): void {
+  build(rows: CivilizationScoresRow[] = this.#rows): void {
     // The keyboard on the player's own row, to put it back there once the list is rebuilt.
     const ownFocused =
       (document.activeElement as HTMLElement | null)?.closest('.own') !==
         null && this.element().contains(document.activeElement);
+
+    this.#rows = rows;
 
     this.empty();
 
@@ -77,12 +109,40 @@ export class ScoresList extends Element {
 
     const list = s('<ol class="scores-list"></ol>');
 
-    list.append(...rows.map((row) => this.#row(row)));
+    list.append(
+      ...(this.#showAll ? rows : scoresWindow(rows)).map((row) =>
+        this.#row(row)
+      )
+    );
 
     this.append(list);
 
     if (ownFocused) {
       (list.querySelector('.own button') as HTMLElement | null)?.focus();
+    }
+
+    if (rows.length > scoresShownWhole) {
+      const more = s<HTMLButtonElement>(
+        '<button type="button" class="show-all"></button>'
+      );
+
+      more.textContent = text(
+        this.#showAll ? 'ScoresList.show-fewer' : 'ScoresList.show-all',
+        { count: rows.length }
+      );
+      more.setAttribute('aria-expanded', this.#showAll ? 'true' : 'false');
+      more.addEventListener('click', () => {
+        this.#showAll = !this.#showAll;
+
+        this.build();
+
+        // Rebuilt, so the button the keyboard was on is a new one.
+        (
+          this.element().querySelector('.show-all') as HTMLElement | null
+        )?.focus();
+      });
+
+      this.append(more);
     }
   }
 

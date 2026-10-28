@@ -613,6 +613,8 @@ i18next.addResources('en', 'default', {
   'ScoresList.open': '$t(CivilizationScoreReport.title) ({{key}})',
   'ScoresList.rank': '{{rank, number}}.',
   'ScoresList.score': '{{score, number}}',
+  'ScoresList.show-all': 'Show all ({{count, number}})',
+  'ScoresList.show-fewer': 'Show fewer',
   // An unmet civilization's row: the sidebar is too narrow for more.
   'ScoresList.unknown': 'Unknown',
   'ScoresList.you': '(you)',

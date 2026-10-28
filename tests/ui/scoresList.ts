@@ -8,7 +8,9 @@ import './lib/dom';
 
 import { CivilizationScoresRow } from '../../src/js/Engine/lib/civilizationScores';
 import GameOptionsRegistry from '../../src/js/UI/GameOptionsRegistry';
-import ScoresList from '../../src/js/UI/components/ScoresList';
+import ScoresList, {
+  scoresWindow,
+} from '../../src/js/UI/components/ScoresList';
 import SidebarSection from '../../src/js/UI/components/SidebarSection';
 import { RequestFailed } from '../../src/js/Engine/AbstractTransport';
 import Transport from '../../src/js/UI/Transport';
@@ -210,6 +212,52 @@ const run = async (): Promise<void> => {
     ),
     false
   );
+
+  // A big game shows five rows around the player's own (two either side), or the top or the foot five near either end,
+  //  with a link to the rest. Six or fewer are all shown.
+  const ranked = (count: number, own: number): CivilizationScoresRow[] =>
+      Array.from({ length: count }, (_, index) => ({
+        rank: index + 1,
+        score: 100 - index,
+        own: index + 1 === own,
+        civilization: 'Roman',
+        colors: null,
+      })),
+    window = (count: number, own: number) =>
+      scoresWindow(ranked(count, own)).map(({ rank }) => rank);
+
+  expect('six or fewer: all of them', window(6, 6), [1, 2, 3, 4, 5, 6]);
+  expect('first: the top five', window(8, 1), [1, 2, 3, 4, 5]);
+  expect('second: the top five', window(8, 2), [1, 2, 3, 4, 5]);
+  expect('in the middle: two either side', window(8, 4), [2, 3, 4, 5, 6]);
+  expect('second to last: the foot five', window(8, 7), [4, 5, 6, 7, 8]);
+  expect('last: the foot five', window(8, 8), [4, 5, 6, 7, 8]);
+  expect('no row of our own: the top five', window(8, 0), [1, 2, 3, 4, 5]);
+
+  const ranks = () =>
+      Array.from(element.querySelectorAll('.rank')).map(
+        (rank) => rank.textContent
+      ),
+    link = () => element.querySelector('.show-all') as HTMLButtonElement | null;
+
+  scores.build(ranked(8, 6));
+
+  expect('a big game shows five', ranks(), ['4.', '5.', '6.', '7.', '8.']);
+  expect('and links to the rest', link()?.textContent, 'Show all (8)');
+
+  link()?.click();
+
+  expect('which shows them all', ranks().length, 8);
+  expect('and then fewer', link()?.textContent, 'Show fewer');
+
+  scores.build(ranked(8, 6));
+
+  expect('a new turn keeps them all shown', ranks().length, 8);
+
+  link()?.click();
+  scores.build(rows);
+
+  expect('a small game has no link', link(), null);
 
   finished = true;
 
