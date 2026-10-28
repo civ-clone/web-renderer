@@ -3,17 +3,17 @@ import SidebarSection from '../components/SidebarSection';
 import { t } from 'i18next';
 
 // Wraps the sidebar's panels in sections that can be collapsed (#697). Once a page: the panels are the page's own, and
-//  each game draws into them. The cities (#700) and scores (#701) start collapsed, until the player opens them.
+//  each game draws into them. The cities (#700) and power (#701, #708) start collapsed, until the player opens them.
 export const buildSidebar = (
   sidebar: HTMLElement,
   {
     minimapCanvas,
     unitInfo,
     citiesList,
-    scoresList,
+    powerList,
   }: Pick<
     AppElements,
-    'minimapCanvas' | 'unitInfo' | 'citiesList' | 'scoresList'
+    'minimapCanvas' | 'unitInfo' | 'citiesList' | 'powerList'
   >
 ): void => {
   sidebar.append(
@@ -35,17 +35,11 @@ export const buildSidebar = (
     );
   }
 
-  if (scoresList) {
+  if (powerList) {
     sidebar.append(
-      new SidebarSection(
-        'scores',
-        t('Sidebar.scores'),
-        [scoresList],
-        undefined,
-        {
-          collapsedByDefault: true,
-        }
-      ).element()
+      new SidebarSection('power', t('Sidebar.power'), [powerList], undefined, {
+        collapsedByDefault: true,
+      }).element()
     );
   }
 };

@@ -10,11 +10,11 @@ export const collapsedOption = 'sidebarCollapsed';
 //  `sidebarCollapsed`, which players already have stored, so neither changes what the other means.
 export const expandedOption = 'sidebarExpanded';
 
-// Fired on the section when it's collapsed or expanded, for content that waits to be seen (the scores, #701).
+// Fired on the section when it's collapsed or expanded, for content that waits to be seen (the Power list, #701).
 export const toggleEvent = 'sidebar-section-toggle';
 
 export type SidebarSectionSettings = {
-  // Collapsed until the player opens it, as the Cities and Scores sections are (#700, #701).
+  // Collapsed until the player opens it, as the Cities and Power sections are (#700, #701).
   collapsedByDefault?: boolean;
 };
 

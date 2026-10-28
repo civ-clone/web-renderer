@@ -1,5 +1,5 @@
 // What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities and intelligence reports,
-//  the Civilization Score and the sidebar's scores (#701), what a city can and can't build and a unit's actions, each
+//  the Civilization Score and the sidebar's Power list (#701, #708), what a city can and can't build and a unit's actions, each
 //  answered on the channel it was asked on.
 //  The client's `topCities` and `civilizationScore` are two of these: `topCities` for its test (`topCities.ts`), and
 //  `civilizationScore` for the ending window (`gameEnd.ts`).
@@ -19,9 +19,9 @@ import {
   civilizationScore as civilizationScoreOf,
 } from '../lib/civilizationScore';
 import {
-  CivilizationScoresRow,
-  civilizationScoresRows,
-} from '../lib/civilizationScores';
+  CivilizationPowerRow,
+  civilizationPowerRows,
+} from '../lib/civilizationPower';
 import { ClientContext, Registries } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';
@@ -48,7 +48,7 @@ export type RequestsContext = Pick<
   | 'cities'
   | 'cityGrowths'
   | 'gameResults'
-  // Every civilization still in the game, for the sidebar's scores (#701).
+  // Every civilization still in the game, for the sidebar's Power list (#701, #708).
   | 'players'
   | 'playerWorlds'
   | 'rules'
@@ -87,17 +87,15 @@ export const civilizationScore = (ctx: RequestsContext): CivilizationScore =>
     rules: ctx.rules,
   });
 
-export const civilizationScores = (
+export const civilizationPower = (
   ctx: RequestsContext
-): CivilizationScoresRow[] =>
-  civilizationScoresRows(ctx.player(), {
+): CivilizationPowerRow[] =>
+  civilizationPowerRows(ctx.player(), {
     players: ctx.players,
     rules: ctx.rules,
     hasMet: (player: Player) => ctx.hasMet(player),
     // An observer's view owns its group, or nobody (#607).
     owns: (player: Player) => ctx.view.owns(player),
-    gameResults: ctx.gameResults,
-    playerWorlds: ctx.playerWorlds,
   });
 
 export const cityBuildAvailable = (
@@ -149,7 +147,7 @@ export const registerRequests = (
 
   // And everyone's, ranked, for the sidebar (#701): an unmet civilization's row says nothing of who it is.
   disposers.push(
-    answer(transport, 'civilizationScores', () => civilizationScores(ctx))
+    answer(transport, 'civilizationPower', () => civilizationPower(ctx))
   );
 
   // Each request is answered with `answer`, so one that throws is answered with a `requestFailed` rather than never, and
