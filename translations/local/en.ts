@@ -180,9 +180,9 @@ i18next.addResources('en', 'default', {
   'City.Build.auto-marker': 'Auto',
   'City.Build.auto-stop': 'Stop Auto',
   'City.Build.build-item':
-    '{{- item}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+    '{{- item}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.build-unit':
-    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost}} / $t(Progress.turns, {"count": {{turns}} }))',
+    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.buy': 'Buy',
   'City.Build.group.improvement': 'City Improvements',
   'City.Build.group.spaceship': 'Spaceship Parts',
@@ -476,8 +476,8 @@ i18next.addResources('en', 'default', {
     'Nothing ($t(Progress.per-turn, { "count": {{perTurn}} }))',
   'PlayerDetails.Researching.body_researching': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) ($t(Progress.per-turn, { "count": {{perTurn}} }) - $t(Progress.turns, { "count": {{turns}} }))`,
   'PlayerDetails.Researching.title': 'Researching',
-  'PlayerDetails.Treasury.body': `{{value}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
-  'PlayerDetails.Treasury.body_anarchy': '{{value}} (no taxes during Anarchy)',
+  'PlayerDetails.Treasury.body': `{{value, number}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
+  'PlayerDetails.Treasury.body_anarchy': '{{value, number}} (no taxes during Anarchy)',
   'PlayerDetails.Treasury.title': 'Treasury',
 
   'Progress.body':
@@ -676,7 +676,7 @@ i18next.addResources('en', 'default', {
   'GameOver.rating_none': 'Sire, your Civilization Rating is {{rating}}%.',
   'GameOver.retired.body': '{{leader}} of the {{nation}} retires in {{year}}.',
   'GameOver.retired.title': 'Retired',
-  'GameOver.score': 'Civilization Score: {{score}}',
+  'GameOver.score': 'Civilization Score: {{score, number}}',
   'GameOver.spaceship.title': 'Alpha Centauri',
   'GameOver.spaceship.body_known':
     'The {{winner}} have reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
@@ -811,7 +811,7 @@ i18next.addResources('en', 'notification', {
     'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
   'Barbarians.landing.title': 'Barbarians!',
   'Barbarians.ransom.body':
-    'Barbarian leader captured! {{amount}} Gold ransom paid.',
+    'Barbarian leader captured! {{amount, number}} Gold ransom paid.',
   'Barbarians.ransom.title': 'Ransom',
   'Barbarians.uprising.body':
     'Travelers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
