@@ -467,18 +467,28 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Government.body_choosing':
     '{{government}} (choose a new government)',
   'PlayerDetails.Government.body_settled': '{{government}}',
+  'PlayerDetails.Government.revolution': '{{title}} ($t(Actions.Revolution.title))',
   'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
-  'PlayerDetails.Researching.body_researching-anarchy': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) (no research during Anarchy)`,
-  'PlayerDetails.Researching.body_notresearching-anarchy':
-    'Nothing (no research during Anarchy)',
-  'PlayerDetails.Researching.body_notresearching':
-    'Nothing ($t(Progress.per-turn, { "count": {{perTurn}} }))',
-  'PlayerDetails.Researching.body_researching': `{{researching}} $t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) ($t(Progress.per-turn, { "count": {{perTurn}} }) - $t(Progress.turns, { "count": {{turns}} }))`,
+  'PlayerDetails.opens': '{{title}} ({{opens}}, {{key}})',
+  'PlayerDetails.Researching.detail_notresearching': 'choose an advance',
+  'PlayerDetails.Researching.detail_notresearching-anarchy':
+    'no research during Anarchy',
+  'PlayerDetails.Researching.detail_researching':
+    '$t(Progress.turns, { "count": {{turns}} })',
+  'PlayerDetails.Researching.detail_researching-anarchy':
+    'no research during Anarchy',
+  'PlayerDetails.Researching.progress': `$t(Progress.data, { "progress": {{progress}}, "total": {{cost}} }) ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
   'PlayerDetails.Researching.title': 'Researching',
-  'PlayerDetails.Treasury.body': `{{value, number}} ($t(Progress.per-turn, { "count": {{perTurn}} }))`,
-  'PlayerDetails.Treasury.body_anarchy': '{{value, number}} (no taxes during Anarchy)',
+  'PlayerDetails.Researching.value_notresearching': 'Nothing',
+  'PlayerDetails.Researching.value_researching': '{{researching}}',
+  'PlayerDetails.TradeRates.rate': '{{name}} {{value, number}}%',
+  'PlayerDetails.TradeRates.title': '$t(Actions.AdjustTradeRates.title) ({{key}})',
+  'PlayerDetails.Treasury.detail':
+    '{{perTurn, number(signDisplay: exceptZero)}} / turn',
+  'PlayerDetails.Treasury.detail_anarchy': 'no taxes during Anarchy',
   'PlayerDetails.Treasury.title': 'Treasury',
+  'PlayerDetails.Treasury.value': '{{value, number}}',
 
   'Progress.body':
     'Progress $t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) ($t(Progress.turns, {"count": {{turns}} }))',

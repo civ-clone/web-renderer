@@ -61,7 +61,7 @@ const run = async (): Promise<void> => {
           PlayerDetails: {
             header: '{{leader}} of the {{nation}}',
             Treasury: {
-              body: '{{value}} gold',
+              value: '{{value}} gold',
             },
           },
         },
@@ -133,7 +133,13 @@ const run = async (): Promise<void> => {
         player: {
           id: 'Player-1',
           actions: [
-            action('AdjustTradeRates'),
+            action('AdjustTradeRates', {
+              all: [
+                { _: 'Tax', value: 30 },
+                { _: 'Luxuries', value: 0 },
+                { _: 'Research', value: 70 },
+              ],
+            }),
             action('EndTurn'),
             action('ActiveUnit'),
             action('CityBuild', { city: { name: 'Thebes' } }),
@@ -223,9 +229,9 @@ const run = async (): Promise<void> => {
     'the player details are built from the data given',
     [
       playerInfo.querySelector('h3')?.textContent,
-      playerInfo.querySelector('p:last-child')?.textContent,
+      playerInfo.querySelector('.gold .value')?.textContent,
     ],
-    ['RamessesII of the Egyptian', 'PlayerDetails.Treasury.title30 gold']
+    ['RamessesII of the Egyptian', '30 gold']
   );
 
   // Something else is appended after it, as the map does, and the next build moves it back to the end.
@@ -259,8 +265,8 @@ const run = async (): Promise<void> => {
   );
   expect(
     'the player details follow the data',
-    playerInfo.querySelector('p:last-child')?.textContent,
-    'PlayerDetails.Treasury.title45 gold'
+    playerInfo.querySelector('.gold .value')?.textContent,
+    '45 gold'
   );
 
   // The turn ends: the notices shown in it go with it.
