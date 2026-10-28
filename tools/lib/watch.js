@@ -23,7 +23,12 @@ const run = (args) => {
     let timer = null;
 
     fs.watch(checkoutPath(name), { recursive: true }, (event, fileName) => {
-      if (!fileName || !fileName.endsWith('.ts') || fileName.endsWith('.d.ts')) {
+      // What sync copies: `.ts` source and JSON data (#140).
+      if (
+        !fileName ||
+        !/\.(ts|json)$/.test(fileName) ||
+        fileName.endsWith('.d.ts')
+      ) {
         return;
       }
 

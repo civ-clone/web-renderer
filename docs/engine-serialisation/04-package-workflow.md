@@ -202,9 +202,10 @@ touches. Skips existing checkouts, reports dirty ones.
 
 ### `civ sync [package…]`
 
-The heart of the loop. For each package, copies `**/*.ts` (excluding `tests/`,
-`node_modules/`) from the local checkout into
-`web-renderer/node_modules/@civ-clone/<name>/`.
+The heart of the loop. For each package, copies `**/*.ts` and any JSON data
+beside it, such as `civ1-asset-extractor`'s `extract-data.json` (excluding
+`tests/`, `node_modules/`, `package-lock.json` and `tsconfig*.json`), from the
+local checkout into `web-renderer/node_modules/@civ-clone/<name>/`.
 
 ```
 civ sync core-data-object core-registry
@@ -399,8 +400,8 @@ re-resolved one.
 > 5–7 differ for the GitHub-resolved packages (`civ1-*`, `simple-*`): they are
 > not on npm, so the release is the version bump and the push. The `civ
 > duplicates` and `civ lint` refusals described in this document run on the
-> `--pending` path only. And `--wave` still prints `pnpm update '@civ-clone/*'`
-> as its next step when it finishes; use the reinstall above instead.
+> `--pending` path only. Both paths finish by pointing back here for the
+> lockfile, rather than at `pnpm update '@civ-clone/*'`.
 
 **Cycle handling.** `core-player`, `core-world` and `core-world-generator` are
 one wave-4 unit. Publish all three back to back with no range changes; since each

@@ -709,11 +709,17 @@ const run = (args) => {
     console.log(`  ${entry.name.padEnd(42)} published ${version}`);
   });
 
-  console.log(
-    "\nNext: `pnpm update '@civ-clone/*'` in web-renderer, run the conformance " +
-      'suite, smoke test, then commit pnpm-lock.yaml.'
-  );
+  console.log(NEXT_STEPS);
 };
+
+// Not `pnpm update '@civ-clone/*'`, which this used to say: a partial update
+// leaves every parent it does not name on the old copy. How the lockfile is
+// brought up to date is 04-package-workflow.md's to say, so point there.
+const NEXT_STEPS =
+  '\nNext, in web-renderer: update the lockfile as ' +
+  'docs/engine-serialisation/04-package-workflow.md (`civ publish`) ' +
+  'describes,\nthen `civ duplicates`, `civ stale`, `civ typecheck` and ' +
+  '`npm test`, and commit pnpm-lock.yaml.';
 
 // Publish everything outstanding, in dependency order, without needing a stage
 // or a wave number.
@@ -875,6 +881,12 @@ const runPending = (manifest, args) => {
   if (problems.length > 0) {
     console.log(`\n${problems.join('\n')}`);
     process.exitCode = 1;
+
+    return;
+  }
+
+  if (!dryRun) {
+    console.log(NEXT_STEPS);
   }
 };
 

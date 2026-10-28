@@ -9,7 +9,7 @@ const SKIP_DIRS = new Set(['node_modules', '.git', 'tests', 'test', '.dist']);
 // The trailing group tells a field (`: T`, `= v`, `;`, EOL) from a method (`(`).
 const DECLARATION = /^([ \t]*)(static\s+)?(readonly\s+)?(#[A-Za-z_$][\w$]*)\s*(.?)/;
 
-const sourceFiles = (dir, found = []) => {
+const walk = (dir, matches, found = []) => {
   let entries;
 
   try {
@@ -23,19 +23,31 @@ const sourceFiles = (dir, found = []) => {
 
     if (entry.isDirectory()) {
       if (!SKIP_DIRS.has(entry.name)) {
-        sourceFiles(fullPath, found);
+        walk(fullPath, matches, found);
       }
 
       return;
     }
 
-    if (entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) {
+    if (matches(entry.name)) {
       found.push(fullPath);
     }
   });
 
   return found;
 };
+
+const sourceFiles = (dir) =>
+  walk(dir, (name) => name.endsWith('.ts') && !name.endsWith('.d.ts'));
+
+// JSON a package ships beside its sources, such as civ1-asset-extractor's
+// `extract-data.json`, which the renderer imports directly. None of the
+// checkouts restricts its pack list, so whatever is here is published too.
+// `package.json` is synced on its own, and the rest are build configuration.
+const NOT_DATA = /^(package(-lock)?\.json|tsconfig.*\.json)$/;
+
+const dataFiles = (dir) =>
+  walk(dir, (name) => name.endsWith('.json') && !NOT_DATA.test(name));
 
 const scanSource = (dir) => {
   const result = {
@@ -135,4 +147,4 @@ const installedPackages = () => {
   return packages;
 };
 
-module.exports = { installedPackages, scanSource, sourceFiles };
+module.exports = { dataFiles, installedPackages, scanSource, sourceFiles };
