@@ -233,7 +233,8 @@ const run = async (): Promise<void> => {
     'the page still lists the disbanded unit among ours'
   );
 
-  // A computer's city captured part way through a build, on a level where the computer pays more (#670, #500).
+  // A computer's city captured part way through a build, on a level where the computer pays more (#670, #500). The
+  //  difficulty isn't set back, so this stays the last scenario or one added after it runs on Chieftain.
   gameDifficultyRegistryInstance.set(Chieftain);
 
   const taken = new City(firstRival, site(capital.tile()), 'Taken'),
