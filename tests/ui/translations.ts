@@ -175,14 +175,24 @@ const expect = (description: string, actual: string, expected: string) => {
   });
 
   expect(
-    'PlayerDetails.Treasury.body formats large balances',
-    t('PlayerDetails.Treasury.body', { value: 1234, perTurn: 56, lng: 'en-US' }),
-    '1,234 (56 / turn)'
+    'PlayerDetails.Treasury.value formats large balances',
+    t('PlayerDetails.Treasury.value', { value: 1234, lng: 'en-US' }),
+    '1,234'
   );
   expect(
-    'PlayerDetails.Treasury.body_anarchy formats large balances',
-    t('PlayerDetails.Treasury.body_anarchy', { value: 1234, lng: 'en-US' }),
-    '1,234 (no taxes during Anarchy)'
+    'PlayerDetails.Treasury.detail signs a gain',
+    t('PlayerDetails.Treasury.detail', { perTurn: 1234, lng: 'en-US' }),
+    '+1,234 / turn'
+  );
+  expect(
+    'PlayerDetails.Treasury.detail signs a loss',
+    t('PlayerDetails.Treasury.detail', { perTurn: -5, lng: 'en-US' }),
+    '-5 / turn'
+  );
+  expect(
+    'PlayerDetails.Treasury.detail leaves nothing unsigned',
+    t('PlayerDetails.Treasury.detail', { perTurn: 0, lng: 'en-US' }),
+    '0 / turn'
   );
 
   expect(

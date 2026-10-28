@@ -19,8 +19,11 @@ import currentTileset, { nativeTileSize } from '../lib/tilesets';
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
 //
-// Reaches beyond its own canvases in one place: the `window` `resize` handler sizes the map's canvas to its parent
-//  (`#map`), as the game sizes it once at the start.
+// Reaches beyond its own canvases in one place: the `window` `resize` handler, and an observer of the map's parent
+//  (`#map`), size the map's canvas to that parent, as the game sizes it once at the start. The observer is for the
+//  parent changing size on its own: the top bar above it is filled in after the game sizes the canvas, and grows or
+//  shrinks as its contents wrap (#697). Without it the canvas is drawn taller than its box, squashed to fit, and a
+//  click lands on the wrong tile.
 //
 // The `resize` handler, the portal's `focus-changed` and `activate-unit` and the blink tick are live from the
 //  constructor on. If `GameSession#start` throws after building this, before it has made the active unit's controller,
@@ -34,6 +37,8 @@ export type MapViewDeps = {
   activeUnit: () => Unit | null;
   // How a city opens from the map (`lib/cityOpeners.ts`): the player's own, or a watcher's.
   cityOpener: CityOpener;
+  // What floats over the map (the sidebar's sections, #697): the active unit is kept out from under them.
+  coveredBy?: HTMLElement[];
   mapPortal: HTMLCanvasElement;
   minimapCanvas: HTMLCanvasElement;
   options: { get(key: string, defaultValue?: any): any };
@@ -53,9 +58,13 @@ export class MapView {
   readonly world: World;
   readonly yieldsLayer: Yields;
 
+  #coveredBy: HTMLElement[];
   #intervalHandler: IntervalHandler;
   #mapPortal: HTMLCanvasElement;
+  #measureHandler = (): void => this.measureCovered();
   #resizeHandler = (): void => this.#resize();
+  #scrollers: HTMLElement[] = [];
+  #resizeObserver: ResizeObserver | null = null;
 
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
@@ -70,6 +79,7 @@ export class MapView {
     activateUnit,
     activeUnit,
     cityOpener,
+    coveredBy = [],
     mapPortal,
     minimapCanvas,
     options,
@@ -77,6 +87,7 @@ export class MapView {
     transport,
     world: worldData,
   }: MapViewDeps) {
+    this.#coveredBy = coveredBy;
     this.#mapPortal = mapPortal;
 
     const world = new World(worldData),
@@ -139,6 +150,29 @@ export class MapView {
     intervalHandler.on(() => this.#tick());
 
     on(window, 'resize', this.#resizeHandler);
+
+    // Not everywhere the map is built has one (the tests' DOM doesn't).
+    if (typeof ResizeObserver !== 'undefined' && mapPortal.parentElement) {
+      this.#resizeObserver = new ResizeObserver(this.#resizeHandler);
+      this.#resizeObserver.observe(mapPortal.parentElement);
+
+      // A section collapsing changes what it covers.
+      coveredBy.forEach((element) => this.#resizeObserver!.observe(element));
+    }
+
+    // Scrolling the sidebar moves what it covers without resizing anything.
+    this.#scrollers = [
+      ...new Set(
+        coveredBy
+          .map((element) => element.parentElement)
+          .filter((parent): parent is HTMLElement => parent !== null)
+      ),
+    ];
+    this.#scrollers.forEach((scroller) =>
+      on(scroller, 'scroll', this.#measureHandler)
+    );
+
+    this.measureCovered();
   }
 
   /** Centres the map on `tile` and redraws it (`c`). */
@@ -151,6 +185,10 @@ export class MapView {
 
   dispose(): void {
     off(window, 'resize', this.#resizeHandler);
+    this.#resizeObserver?.disconnect();
+    this.#scrollers.forEach((scroller) =>
+      off(scroller, 'scroll', this.#measureHandler)
+    );
     this.#intervalHandler.dispose();
   }
 
@@ -206,6 +244,41 @@ export class MapView {
     this.portal.render();
   }
 
+  /**
+   * Where the floating parts of the interface sit on the canvas, in its px, for the portal to keep the active unit out
+   *  from under. None, in a layout that puts them beside the map rather than over it. Each is cut to its container's
+   *  box, as the sidebar scrolls what doesn't fit. Called again whenever they may have changed: a resize, the sidebar
+   *  scrolling, and the unit's section being filled in or hidden, before its unit is checked (#697).
+   */
+  measureCovered(): void {
+    const mapPortal = this.#mapPortal,
+      canvas = mapPortal.getBoundingClientRect(),
+      scaleX = canvas.width > 0 ? mapPortal.width / canvas.width : 1,
+      scaleY = canvas.height > 0 ? mapPortal.height / canvas.height : 1;
+
+    this.portal.setCovered(
+      this.#coveredBy
+        .map((element) => {
+          const box = element.getBoundingClientRect(),
+            container = element.parentElement?.getBoundingClientRect() ?? box;
+
+          return {
+            left: Math.max(box.left, container.left, canvas.left),
+            top: Math.max(box.top, container.top, canvas.top),
+            right: Math.min(box.right, container.right, canvas.right),
+            bottom: Math.min(box.bottom, container.bottom, canvas.bottom),
+          };
+        })
+        .filter(({ left, top, right, bottom }) => right > left && bottom > top)
+        .map(({ left, top, right, bottom }) => ({
+          x: (left - canvas.left) * scaleX,
+          y: (top - canvas.top) * scaleY,
+          width: (right - left) * scaleX,
+          height: (bottom - top) * scaleY,
+        }))
+    );
+  }
+
   #resize(): void {
     const mapPortal = this.#mapPortal,
       width = (mapPortal.parentElement as HTMLElement).offsetWidth,
@@ -216,11 +289,16 @@ export class MapView {
     // rather than everything, so a resize that resizes nothing
     // would wipe the map and put nothing back.
     if (mapPortal.width === width && mapPortal.height === height) {
+      // A section collapsing changes what is covered, but not the map.
+      this.measureCovered();
+
       return;
     }
 
     mapPortal.width = width;
     mapPortal.height = height;
+
+    this.measureCovered();
 
     // The layers are the size of the portal, so resizing them is
     // part of rendering now.

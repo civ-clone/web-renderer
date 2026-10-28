@@ -1,0 +1,1 @@
+{"version":"0.1.0@85e80c9","date":"2026-10-28T15:23:53.000Z","localChanges":["Your treasury, build costs, final score and barbarian ransoms now use your language's number format, so 1234 gold reads 1,234 (closes #682)."],"externalChanges":{}}

@@ -1,15 +1,32 @@
+@use 'panel';
+
+// No panel of its own: its sections float over the top left of the map, which runs underneath (#697). The map keeps
+//  the pointer everywhere but on the sections. Positioned, as the map is, so the two paint in document order and this,
+//  after the map, is on top without a stacking order. Short of the map's foot, so it clears the unit's actions.
 #sidebar {
-  background: #8a8a8e;
+  align-self: start;
   box-sizing: border-box;
-  flex-grow: 0;
-  max-height: 100vh;
+  color: var(--panel-text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  justify-self: start;
+  max-height: calc(100% - 6rem);
+  min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
   padding: 0.5em;
+  pointer-events: none;
+  position: relative;
   width: 13em;
+
+  > .sidebar-section {
+    pointer-events: auto;
+  }
 
   #minimap {
     background: #000;
+    display: block;
     // The overview layer is drawn at a whole number of pixels per tile, so it
     // is upscaled to fill the sidebar rather than drawn at a fractional size.
     // `pixelated` keeps the tiles as tiles instead of smearing them.
@@ -18,20 +35,77 @@
     width: 100%;
   }
 
-  .difficulty {
-    font-size: 0.8em;
-    margin: 0 0 0.5em;
-  }
+  // Beside the map rather than over it: a row of its own, the full width.
+  @media (max-width: 48em) {
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-self: stretch;
+    max-height: 35vh;
+    width: auto;
 
-  .turn {
-    font-size: 0.8em;
-
-    &:before {
-      content: ' (turn ';
+    > .sidebar-section {
+      flex: 1 1 12em;
     }
 
-    &:after {
-      content: ')';
+    #minimap {
+      max-width: 16em;
+    }
+  }
+}
+
+// A part of the sidebar that can be collapsed (#697), floating over the map as a window does.
+.sidebar-section {
+  @include panel.bevel();
+  background: var(--panel-raised);
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
+
+  > h2 {
+    font-size: 0.85em;
+    margin: 0;
+
+    button {
+      align-items: center;
+      appearance: none;
+      background: var(--panel-heading-bg);
+      border: 0;
+      color: var(--panel-heading-text);
+      cursor: pointer;
+      display: flex;
+      font: inherit;
+      font-weight: bold;
+      gap: 0.4em;
+      padding: 0.25em 0.5em;
+      text-align: left;
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+      width: 100%;
+
+      &::before {
+        content: '▾';
+        display: inline-block;
+        transition: transform 0.15s;
+      }
+
+      &[aria-expanded='false']::before {
+        transform: rotate(-90deg);
+      }
+
+      &:focus-visible {
+        outline: 2px solid var(--panel-text);
+        outline-offset: -2px;
+      }
+    }
+  }
+
+  > .body {
+    padding: 0.4em;
+
+    > p:first-child {
+      margin-top: 0;
+    }
+
+    > p:last-child {
+      margin-bottom: 0;
     }
   }
 }

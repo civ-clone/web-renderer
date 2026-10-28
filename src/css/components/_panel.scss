@@ -1,0 +1,7 @@
+// The sidebar and top bar's edge, lit from the top left as Civ1's panels are (#697).
+@mixin bevel() {
+  border-color: var(--panel-bevel-light) var(--panel-bevel-dark)
+    var(--panel-bevel-dark) var(--panel-bevel-light);
+  border-style: solid;
+  border-width: 2px;
+}

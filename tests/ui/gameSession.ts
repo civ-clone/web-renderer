@@ -246,7 +246,7 @@ const run = async (): Promise<void> => {
     <canvas id="minimap" width="190"></canvas>
     <div id="gameDetails"></div>
     <div id="playerDetails"></div>
-    <div id="unitInfo"></div>
+    <section class="sidebar-section" data-section="unit"><div id="unitInfo"></div></section>
   </div>
   <div id="map"><canvas></canvas></div>
   <div id="game-menu"></div>
@@ -385,6 +385,11 @@ const run = async (): Promise<void> => {
   );
   expect('and cancels the frame it replaces', cancelledFrames, [1]);
   expect('so no frame is left', frames.size, 0);
+  expect(
+    "with no unit active, the unit's section is hidden rather than empty",
+    (document.querySelector('[data-section="unit"]') as HTMLElement).hidden,
+    true
+  );
 
   deliver('turnEnded');
 

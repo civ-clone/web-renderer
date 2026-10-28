@@ -1,0 +1,188 @@
+@use 'panel';
+
+// The year, the empire's numbers and the game menu, across the top of the map (#697).
+#top-bar {
+  @include panel.bevel();
+  align-items: center;
+  background: var(--panel-bg);
+  box-sizing: border-box;
+  color: var(--panel-text);
+  column-gap: 2em;
+  display: flex;
+  font-size: 0.9em;
+  min-width: 0;
+  padding: 0.25em 0.5em;
+  row-gap: 0.25em;
+
+  h3 {
+    font-size: 1em;
+    margin: 0;
+  }
+
+  p {
+    margin: 0;
+  }
+
+  // The empire block wraps within itself, so the actions and the game menu stay at the end of the first line.
+  #gameDetails,
+  #other-actions,
+  #game-menu {
+    flex: none;
+  }
+
+  // Too narrow for both: the year, the actions and the menu on the first line, the empire block below them.
+  @media (max-width: 48em) {
+    flex-wrap: wrap;
+
+    #gameDetails {
+      margin-right: auto;
+    }
+
+    #playerDetails {
+      flex-basis: 100%;
+      order: 1;
+    }
+  }
+
+  #gameDetails {
+    .year {
+      font-weight: bold;
+    }
+
+    .turn {
+      color: var(--panel-muted);
+      font-size: 0.85em;
+      font-weight: normal;
+
+      &::before {
+        content: ' (turn ';
+      }
+
+      &::after {
+        content: ')';
+      }
+    }
+
+    .difficulty {
+      color: var(--panel-muted);
+      font-size: 0.8em;
+    }
+  }
+
+  // Takes the spare width, so the actions and the game menu sit at the end.
+  #playerDetails {
+    align-items: center;
+    column-gap: 2em;
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
+    row-gap: 0.25em;
+
+    .nation {
+      font-size: 0.95em;
+    }
+  }
+
+  // The empire block (#698): an icon, a value and a detail after it.
+  .stat {
+    align-items: center;
+    display: flex;
+    gap: 0.4em;
+    white-space: nowrap;
+
+    .value {
+      font-weight: bold;
+    }
+
+    .detail {
+      color: var(--panel-muted);
+      font-size: 0.85em;
+
+      &:empty {
+        display: none;
+      }
+    }
+
+    &.gold.positive .detail {
+      color: var(--panel-positive);
+    }
+
+    &.gold.negative .detail {
+      color: var(--panel-negative);
+      font-weight: bold;
+    }
+
+    .yield-amount {
+      align-items: center;
+      display: flex;
+      gap: 0.25em;
+    }
+  }
+
+  // The research progress and the tax split are the same size, so they line up (#698).
+  .progress,
+  .trade-rates .bar {
+    box-sizing: border-box;
+    height: 0.75em;
+    width: 6em;
+  }
+
+  .progress {
+    background: var(--panel-sunken);
+    border: 1px solid var(--panel-bevel-dark);
+    display: inline-block;
+    overflow: hidden;
+
+    .fill {
+      background: var(--panel-accent);
+      display: block;
+      height: 100%;
+    }
+  }
+
+  // Items that open a window: the government (a revolution) and the tax split (the trade rates) (#698).
+  button.stat {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+
+    &:hover .value,
+    &:hover .bar {
+      filter: brightness(1.15);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--panel-text);
+      outline-offset: 2px;
+    }
+  }
+
+  .trade-rates .bar {
+    background: var(--panel-sunken);
+    border: 1px solid var(--panel-bevel-dark);
+    display: flex;
+    overflow: hidden;
+
+    .segment {
+      flex-basis: 0;
+      min-width: 0;
+
+      &.tax {
+        background: var(--panel-tax);
+      }
+
+      &.luxury {
+        background: var(--panel-luxury);
+      }
+
+      &.science {
+        background: var(--panel-science);
+      }
+    }
+  }
+}

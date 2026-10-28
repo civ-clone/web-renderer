@@ -2,7 +2,8 @@
 //  (`releaseTiles`), whether by the next render or the blink tick, each compositing the map and redrawing the minimap;
 //  the yields start hidden and `t`/`y` toggle the layers and composite the map; `c` centres; the minimap marker reads
 //  the active unit live; a tick with no blink and no tile draws nothing, nor does a resize that changes no size; and
-//  `dispose` stops the tick and the resize handler.
+//  `dispose` stops the tick and the resize handler. The canvas also follows its parent when that changes size alone,
+//  as when the top bar above it fills in (#697).
 
 // Must stay first: it gives the map a `document`.
 import './lib/dom';
@@ -103,9 +104,69 @@ document.body.insertAdjacentHTML(
   '<div id="map"><canvas></canvas></div><canvas id="minimap"></canvas>'
 );
 
+// The DOM here has no `ResizeObserver`: this one records what it watches, so the test can say when it changed size.
+const observed: Array<{ callback: () => void; targets: Element[] }> = [];
+
+(globalThis as any).ResizeObserver = class {
+  #entry: { callback: () => void; targets: Element[] };
+
+  constructor(callback: () => void) {
+    this.#entry = { callback, targets: [] };
+    observed.push(this.#entry);
+  }
+
+  observe(target: Element): void {
+    this.#entry.targets.push(target);
+  }
+
+  disconnect(): void {
+    this.#entry.targets = [];
+  }
+};
+
 const mapPortal = document.querySelector('#map canvas') as HTMLCanvasElement,
   minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement,
   activated: string[] = [];
+
+// A section floating over the map, in the sidebar that scrolls it (#697). The DOM here has no layout, so each says
+//  where it is: nowhere, until the test places it.
+type Box = { left: number; top: number; right: number; bottom: number };
+
+const boxes = new Map<Element, Box>(),
+  place = (element: Element, box: Box | null): void => {
+    if (box === null) {
+      boxes.delete(element);
+
+      return;
+    }
+
+    boxes.set(element, box);
+  },
+  sidebar = document.createElement('div'),
+  section = document.createElement('section');
+
+sidebar.append(section);
+document.body.append(sidebar);
+
+[mapPortal, sidebar, section].forEach((element) => {
+  (element as any).getBoundingClientRect = () => {
+    const { left, top, right, bottom } = boxes.get(element) ?? {
+      left: 0,
+      top: 0,
+      right: 0,
+      bottom: 0,
+    };
+
+    return {
+      left,
+      top,
+      right,
+      bottom,
+      width: right - left,
+      height: bottom - top,
+    };
+  };
+});
 
 let activeUnit: Unit | null = null,
   activeUnitReads = 0;
@@ -113,6 +174,7 @@ let activeUnit: Unit | null = null,
 const mapView = new MapView({
   activateUnit: (unit) => activated.push(unit.id),
   cityOpener: playerCityOpener(),
+  coveredBy: [section],
   activeUnit: () => {
     activeUnitReads++;
 
@@ -366,8 +428,10 @@ expect('and, with no tile to draw, draws nothing', counted(), [0, 0]);
 
 const parent = mapPortal.parentElement as HTMLElement;
 
+let parentHeight = 200;
+
 Object.defineProperty(parent, 'offsetWidth', { value: 320 });
-Object.defineProperty(parent, 'offsetHeight', { value: 200 });
+Object.defineProperty(parent, 'offsetHeight', { get: () => parentHeight });
 
 counted();
 window.dispatchEvent(new Event('resize'));
@@ -398,7 +462,151 @@ expect(
 
 delete (mapPortal as any).width;
 
+// The top bar above the map filling in, or wrapping, makes the map shorter with no window resize (#697).
+expect(
+  "the map's parent is watched for its own size",
+  observed.flatMap(({ targets }) => targets).includes(parent),
+  true
+);
+
+parentHeight = 160;
+observed.forEach(({ callback, targets }) => targets.length && callback());
+
+expect(
+  'so the canvas follows it when it changes alone',
+  [mapPortal.width, mapPortal.height],
+  [320, 160]
+);
+
+// The sidebar's sections float over the map (#697): a tile under one is in view but hidden, so the active unit is
+//  brought out from under it as from an edge.
+{
+  const { portal } = mapView,
+    size = portal.tileSize(),
+    // Six tiles square, smaller than the eight-tile world, so each tile is shown once.
+    side = size * 6;
+
+  mapPortal.width = side;
+  mapPortal.height = side;
+  portal.setCenter(4, 4);
+
+  const under = portal.tileAt(Math.floor(side / 4), Math.floor(side / 2))!,
+    clear = portal.tileAt(Math.floor((side * 3) / 4), Math.floor(side / 2))!;
+
+  expect(
+    'with nothing over the map, a tile in view is visible',
+    [portal.isVisible(under.x, under.y), portal.isVisible(clear.x, clear.y)],
+    [true, true]
+  );
+
+  portal.setCovered([{ x: 0, y: 0, width: side / 2, height: side }]);
+
+  expect(
+    'under a section, it is not',
+    [portal.isVisible(under.x, under.y), portal.isVisible(clear.x, clear.y)],
+    [false, true]
+  );
+
+  portal.setCovered([{ x: 0, y: 0, width: size, height: side }]);
+
+  expect(
+    'and within the edge margin of one, it is not either',
+    [portal.isVisible(under.x, under.y), portal.isVisible(under.x, under.y, 1)],
+    [true, false]
+  );
+
+  // Covering only the tile's edge, 2px of it, still covers it: the tile's box is what's compared.
+  let leftEdge = Math.floor(side / 4);
+
+  while (leftEdge > 0) {
+    const tile = portal.tileAt(leftEdge - 1, Math.floor(side / 2));
+
+    if (tile?.x !== under.x || tile?.y !== under.y) {
+      break;
+    }
+
+    leftEdge--;
+  }
+
+  portal.setCovered([
+    { x: leftEdge - size + 2, y: 0, width: size, height: side },
+  ]);
+
+  expect(
+    'a section over just the edge of a tile covers it',
+    portal.isVisible(under.x, under.y),
+    false
+  );
+
+  portal.setCovered([{ x: 0, y: 0, width: side, height: side }]);
+
+  expect(
+    'a section over the middle of the map hides nothing, as recentring could not help',
+    portal.isVisible(under.x, under.y),
+    true
+  );
+
+  // Measured from where the section is on the page, against the map's canvas there.
+  place(mapPortal, {
+    left: 100,
+    top: 50,
+    right: 100 + side,
+    bottom: 50 + side,
+  });
+  place(sidebar, { left: 0, top: 0, right: 1000, bottom: 1000 });
+  place(section, {
+    left: 100,
+    top: 50,
+    right: 100 + side / 2,
+    bottom: 50 + side,
+  });
+  mapView.measureCovered();
+
+  expect(
+    'a section measured over the left of the map covers the tile there',
+    [portal.isVisible(under.x, under.y), portal.isVisible(clear.x, clear.y)],
+    [false, true]
+  );
+
+  place(sidebar, { left: 0, top: 0, right: 100, bottom: 1000 });
+  mapView.measureCovered();
+
+  expect(
+    'a section scrolled out of its sidebar covers nothing',
+    portal.isVisible(under.x, under.y),
+    true
+  );
+
+  place(sidebar, { left: 0, top: 0, right: 1000, bottom: 1000 });
+  place(section, null);
+  mapView.measureCovered();
+
+  expect('nor does a hidden one', portal.isVisible(under.x, under.y), true);
+
+  place(mapPortal, null);
+  place(sidebar, null);
+
+  // The whole world in view, and more: another copy of the tile is in sight.
+  mapPortal.width = size * 20;
+  mapPortal.height = size * 20;
+  portal.setCovered([{ x: 0, y: 0, width: size * 10, height: size * 20 }]);
+
+  expect(
+    'a view bigger than the world shows the tile again, so a section hides nothing',
+    portal.isVisible(under.x, under.y),
+    true
+  );
+
+  portal.setCovered([]);
+}
+
 mapView.dispose();
+
+expect(
+  'dispose stops watching it',
+  observed.flatMap(({ targets }) => targets),
+  []
+);
 
 expect('dispose stops the tick', cleared.length, 1);
 

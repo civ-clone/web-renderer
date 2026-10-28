@@ -66,6 +66,7 @@ setPreloadContainer(document.querySelector('#preload') as HTMLElement);
 // No assets: the citizens and the action's button are drawn without their images.
 assetStore.firstImported = () => new Promise(() => {});
 assetStore.get = () => new Promise(() => {});
+assetStore.getScaled = () => new Promise(() => {});
 
 // linkedom has no focus: what has it is set by hand.
 let focused: Element | null = document.body;
@@ -362,6 +363,29 @@ const run = async (): Promise<void> => {
     ),
     1
   );
+
+  // A trade route is its city and one Trade icon a point, with the words for a screen reader (#683).
+  {
+    const city = cityData([]);
+
+    city.tradeRoutes = [{ civilization: 'Babylonian', name: 'Ur', trade: 3 }];
+
+    const tradeScreen = new City(city, portal, transport),
+      route = tradeScreen.element().querySelector('.trade-route');
+
+    expect(
+      'a trade route draws a Trade icon a point',
+      route?.querySelectorAll('.yield-icon').length,
+      3
+    );
+    expect(
+      'and keeps its words for a screen reader',
+      route?.querySelector('.visually-hidden')?.textContent,
+      'City.trade-route'
+    );
+
+    tradeScreen.close();
+  }
 
   finished = true;
 

@@ -1,12 +1,14 @@
 // Text a player reads in the Trade report and on the Civil Disorder button (#472): the report names each improvement
 //  ("2 × City Walls", not "2 × CityWalls"), and the button's tooltip names the city rather than showing its
-//  placeholder ("Civil disorder in {{- city.name}}!").
+//  placeholder ("Civil disorder in {{- city.name}}!"). The Intelligence Report's treasury is the amount and the Gold
+//  icon (#683).
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 
 import { City, Player, PlayerAction } from '../../src/js/UI/types';
 import CivilDisorder from '../../src/js/UI/components/Actions/CivilDisorder';
+import { renderIntelligenceRow } from '../../src/js/UI/components/IntelligenceReport';
 import Portal from '../../src/js/UI/components/Portal';
 import TradeReport from '../../src/js/UI/components/TradeReport';
 import Transport from '../../src/js/UI/Transport';
@@ -102,6 +104,39 @@ const run = async (): Promise<void> => {
     'the Civil Disorder button names the city',
     disorder.element().querySelector('button')?.getAttribute('title'),
     'Civil disorder in Karakorum!'
+  );
+
+  // The treasury is an amount and the Gold icon, not a `$` (#683).
+  const treasury = Array.from(
+    renderIntelligenceRow({
+      civilization: 'Mongol',
+      colors: null,
+      leader: null,
+      atPeace: true,
+      theirEmbassy: false,
+      details: {
+        traits: [],
+        capital: null,
+        government: null,
+        gold: 1234,
+        units: 0,
+        foreignAffairs: [],
+        advances: [],
+      },
+    }).querySelectorAll('p')
+  ).find((line) => line.textContent?.startsWith('Treasury'));
+
+  await settle();
+
+  expect(
+    'the Intelligence Report treasury has no $',
+    treasury?.textContent?.trim(),
+    'Treasury: 1,234'
+  );
+  expect(
+    'and shows the Gold icon',
+    treasury?.querySelectorAll('.yield-icon img').length,
+    1
   );
 
   finished = true;

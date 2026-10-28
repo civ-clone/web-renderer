@@ -4,9 +4,12 @@ import GameDetails from '../components/GameDetails';
 import Notices from '../components/Notices';
 import PlayerDetails from '../components/PlayerDetails';
 import Portal from '../components/Portal';
+import ScienceReport from '../components/ScienceReport';
+import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
 import partitionActions from '../lib/playerActionPanels';
+import { t } from 'i18next';
 
 // The panels around the map: the player's actions (the end-turn area and the secondary panel), the active unit's
 //  action buttons, and the game and player details. Rebuilt from the latest data on every render.
@@ -59,7 +62,15 @@ export class Hud {
   }
 
   build(data: GameData, activeUnit: Unit | null, waiting: boolean): void {
-    const { gameArea, gameInfo, notices, playerInfo, world } = this.#deps;
+    const {
+      gameArea,
+      gameInfo,
+      notices,
+      playerInfo,
+      portal,
+      transport,
+      world,
+    } = this.#deps;
 
     const { primary, secondary } = partitionActions(
       data.player.actions,
@@ -87,7 +98,23 @@ export class Hud {
 
     gameDetails.build();
 
-    const playerDetails = new PlayerDetails(playerInfo, data.player);
+    const playerDetails = new PlayerDetails(
+      playerInfo,
+      data.player,
+      transport,
+      {
+        science: {
+          key: 'F6',
+          open: () => new ScienceReport(data.player),
+          title: t('ScienceReport.title'),
+        },
+        trade: {
+          key: 'F5',
+          open: () => new TradeReport(data.player, portal, transport),
+          title: t('TradeReport.title'),
+        },
+      }
+    );
 
     playerDetails.build();
   }

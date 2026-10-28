@@ -9,7 +9,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 // The key the button's tooltip shows. `-` opens the window too (#662).
-const tradeRatesKey = '+';
+export const tradeRatesKey = '+';
 
 let open: Window | null = null;
 

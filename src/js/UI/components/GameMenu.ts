@@ -318,13 +318,14 @@ export class GameMenu extends Element {
     this.append(
       h(button, {
         click: () => {
-          const { offsetLeft: parentX, offsetTop: parentY } = this.element(),
-            { offsetLeft: x, offsetTop: y } = button;
+          // Where the button is on the page: the menu is appended to the body, and the button is in the top bar's
+          //  flow, not placed by the game menu itself (#697).
+          const { left, top } = button.getBoundingClientRect();
 
           new PopupMenu(
             this,
-            parentX + x,
-            parentY + y,
+            left + window.scrollX,
+            top + window.scrollY,
             [
               {
                 label: t('GameMenu.save-game'),

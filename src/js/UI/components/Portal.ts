@@ -32,6 +32,7 @@ export interface IPortal {
   scale(): number;
   scrollBy(deltaX: number, deltaY: number): void;
   setCenter(x: number, y: number): void;
+  setCovered(covered: Rect[]): void;
   setLockVerticalEdges(lock: boolean): void;
   setScale(scale: number): void;
   tileSize(): number;
@@ -86,6 +87,9 @@ export class Portal
   #center: Coordinate = { x: 0, y: 0 };
   #cityOpener: CityOpener | null;
   #context: CanvasRenderingContext2D;
+  // The parts of the canvas, in its px, that the interface floats over (the sidebar's sections, #697): a tile under
+  //  one is in view but can't be seen.
+  #covered: Rect[] = [];
   // Nothing has been composited yet, so the first render cannot be a partial
   // one however little the layers claim to have changed.
   #fullRender: boolean = true;
@@ -212,7 +216,84 @@ export class Portal
         // Near a locked edge the view cannot get any closer to centring the
         // tile than it already is, and asking it to would recentre forever.
         (this.#lockVerticalEdges &&
-          this.clampedCenterY(y, 0)[0] === this.#center.y))
+          this.clampedCenterY(y, 0)[0] === this.#center.y)) &&
+      !this.#isCovered(x, y, margin)
+    );
+  }
+
+  /**
+   * Whether the tile at `x`, `y` is under a part of the interface floating over the canvas, or within `margin` tiles of
+   *  one: in view, but hidden. Its sprite box on the canvas (the copy nearest the middle, on a wrapping world) against
+   *  each covered area, so it holds for any projection. Only where the view is smaller than the world, so each tile is
+   *  shown once, and never when the middle of the canvas is covered too, where recentring couldn't help.
+   */
+  #isCovered(x: number, y: number, margin: number): boolean {
+    if (this.#covered.length === 0) {
+      return false;
+    }
+
+    const { width, height } = this.#projection.footprint(),
+      canvasWidth = this.#canvas.width,
+      canvasHeight = this.#canvas.height;
+
+    // A view as big as the world shows each tile more than once, so one copy under the interface leaves another in
+    //  sight.
+    if (
+      Math.floor(canvasWidth / width) >= this.#world.width() ||
+      Math.floor(canvasHeight / height) >= this.#world.height()
+    ) {
+      return false;
+    }
+
+    const reachX = Math.max(0, margin) * width,
+      reachY = Math.max(0, margin) * height,
+      areas = this.#covered.map((rect) => ({
+        left: rect.x - reachX,
+        top: rect.y - reachY,
+        right: rect.x + rect.width + reachX,
+        bottom: rect.y + rect.height + reachY,
+      })),
+      middleX = canvasWidth / 2,
+      middleY = canvasHeight / 2;
+
+    if (
+      areas.some(
+        ({ left, top, right, bottom }) =>
+          middleX >= left &&
+          middleX < right &&
+          middleY >= top &&
+          middleY < bottom
+      )
+    ) {
+      return false;
+    }
+
+    this.syncViewport();
+
+    const [pixelX, pixelY] = this.#projection.tileToPixel(x, y),
+      period = this.#projection.wrapPeriod(),
+      // The copy of the tile nearest the middle of the canvas.
+      nearest = (
+        position: number,
+        size: number,
+        middle: number,
+        span: number | null
+      ) =>
+        span === null
+          ? position
+          : position +
+            Math.round((middle - (position + size / 2)) / span) * span,
+      left = nearest(pixelX - this.#viewport.x, width, middleX, period.x),
+      top = nearest(pixelY - this.#viewport.y, height, middleY, period.y),
+      right = left + width,
+      bottom = top + height;
+
+    return areas.some(
+      (area) =>
+        left < area.right &&
+        right > area.left &&
+        top < area.bottom &&
+        bottom > area.top
     );
   }
 
@@ -514,6 +595,11 @@ export class Portal
     this.render();
 
     this.emit('focus-changed', this.#center.x, this.#center.y);
+  }
+
+  /** The parts of the canvas, in its px, that the interface floats over, which `isVisible` counts as out of view. */
+  setCovered(covered: Rect[]): void {
+    this.#covered = covered;
   }
 
   setCenter(x: number, y: number): void {

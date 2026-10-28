@@ -6,6 +6,7 @@ import Intelligence from '../../Engine/Requests/Intelligence';
 import Transport from '../Transport';
 import FilterableWindow from './FilterableWindow';
 import { advanceNames } from './lib/advances';
+import { yieldIcon } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
@@ -70,7 +71,8 @@ const renderDetails = ({
             }),
     })
   ),
-  line(t('IntelligenceReport.treasury', { gold })),
+  // The Gold icon after the amount, rather than a `$` (#683).
+  s(`<p>${t('IntelligenceReport.treasury', { gold })} </p>`, yieldIcon('Gold')),
   line(t('IntelligenceReport.military', { count: units })),
   s(
     `<div class="foreign-affairs"><h4>${t(

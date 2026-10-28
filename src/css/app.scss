@@ -1,5 +1,42 @@
 :root {
   --scale: 2;
+
+  // The sidebar and top bar (#697). Only these colours are used there, so a theme (#167) can set them.
+  --panel-bg: #a9a9ad;
+  --panel-raised: #c6c6ca;
+  --panel-sunken: #8f8f94;
+  --panel-text: #123;
+  --panel-muted: #3d4452;
+  --panel-bevel-light: #e2e2e6;
+  --panel-bevel-dark: #5a5a5f;
+  --panel-heading-bg: #38e;
+  --panel-heading-text: #edc;
+  --panel-positive: #17641b;
+  --panel-negative: #a82929;
+  --panel-accent: #2966a8;
+  --panel-tax: #c9a227;
+  --panel-luxury: #b0459e;
+  --panel-science: #2966a8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --panel-bg: #2c2e35;
+    --panel-raised: #3b3e47;
+    --panel-sunken: #1e2025;
+    --panel-text: #edc;
+    --panel-muted: #b9b3a5;
+    --panel-bevel-light: #4f535e;
+    --panel-bevel-dark: #121317;
+    --panel-heading-bg: #2a5fae;
+    --panel-heading-text: #edc;
+    --panel-positive: #7dd27f;
+    --panel-negative: #ff8273;
+    --panel-accent: #6aa6e8;
+    --panel-tax: #e0bb45;
+    --panel-luxury: #d777c6;
+    --panel-science: #6aa6e8;
+  }
 }
 
 body {
@@ -60,6 +97,7 @@ input {
 @import 'components/sidebar';
 @import 'components/spaceship-window';
 @import 'components/supported-unit';
+@import 'components/top-bar';
 @import 'components/top-cities-report';
 @import 'components/trade-report';
 @import 'components/window';

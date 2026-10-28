@@ -438,19 +438,26 @@ const renderYields = (city: CityData): Node => {
           `<div class="trade-routes"><header>${t(
             'City.trade-routes'
           )}</header></div>`,
-          ...city.tradeRoutes.map((route) =>
-            s(
-              `<p>${t('City.trade-route', {
-                // Already escaped by `Generic.city-name`, so not again (as `TopCitiesReport` does).
-                city: t('Generic.city-name', {
-                  civilization: route.civilization,
-                  name: route.name,
-                }),
-                trade: route.trade,
-                interpolation: { escapeValue: false },
-              })}</p>`
-            )
-          )
+          ...city.tradeRoutes.map((route) => {
+            // Already escaped by `Generic.city-name`, so not again (as `TopCitiesReport` does).
+            const name = t('Generic.city-name', {
+              civilization: route.civilization,
+              name: route.name,
+            });
+
+            // One Trade icon a point, as the city's own yields are drawn (#683), with the words for a screen reader.
+            return s(
+              `<p class="trade-route"><span class="visually-hidden">${t(
+                'City.trade-route',
+                {
+                  city: name,
+                  trade: route.trade,
+                  interpolation: { escapeValue: false },
+                }
+              )}</span><span class="name" aria-hidden="true">${name}</span></p>`,
+              ...yieldImages({ _: 'Trade', value: route.trade })
+            );
+          })
         )
       : '',
   renderSupportedUnits = (city: CityData): Node => {
