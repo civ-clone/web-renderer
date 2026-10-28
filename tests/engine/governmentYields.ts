@@ -3,7 +3,9 @@
 //  add 1 trade to a square that has any, as do Monarchy and Communism while the city celebrates.
 //
 // A city on irrigated Grassland with a road (3 food, 1 trade), working only its own square, with civ1-world's tile
-//  rules, civ1-city's worked squares and civ1-city-happiness's celebration rule.
+//  rules, civ1-city's worked squares and civ1-city-happiness's celebration rule: once with those rules on their own,
+//  and once with each package's rules registered into a `Game` as the plugins register them, so the wiring (which
+//  registry each rule is given) is checked too.
 
 import {
   Anarchy,
@@ -34,7 +36,11 @@ import WorkedTileRegistry from '@civ-clone/core-city/WorkedTileRegistry';
 import Yield from '@civ-clone/core-yield/Yield';
 import celebrationYield from '@civ-clone/civ1-city-happiness/Rules/City/celebration-yield';
 import cityYield from '@civ-clone/civ1-city/Rules/City/yield';
+import { Game } from '@civ-clone/civ1-game';
 import { reduceYield } from '@civ-clone/core-yield/lib/reduceYields';
+import { register as registerCity } from '@civ-clone/civ1-city/registerRules';
+import { register as registerCityHappiness } from '@civ-clone/civ1-city-happiness/registerRules';
+import { register as registerWorld } from '@civ-clone/civ1-world/registerRules';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 import tileYield from '@civ-clone/civ1-world/Rules/Tile/yield';
 import tileYieldModifier from '@civ-clone/civ1-world/Rules/Tile/yield-modifier';
@@ -42,6 +48,7 @@ import tileYieldModifier from '@civ-clone/civ1-world/Rules/Tile/yield-modifier';
 // [government, celebrating, food, trade]
 const cases: [typeof Government, boolean, number, number][] = [
   [Anarchy, false, 2, 1],
+  [Anarchy, true, 3, 1],
   [Despotism, false, 2, 1],
   [Despotism, true, 3, 1],
   [Monarchy, false, 3, 1],
@@ -122,14 +129,92 @@ const run = async (): Promise<number> => {
   return failures;
 };
 
-run().then((failures) => {
+// The same city in a `Game` with civ1-world's, civ1-city's and civ1-city-happiness's rules registered as the plugins
+//  register them. The city's other yields need more than this sets up, so only its own square's are counted: the
+//  worked square's and the celebration's, which carry the square's id.
+const runRegistered = async (): Promise<number> => {
+  let failures = 0;
+
+  for (const [GovernmentType, celebrating, food, trade] of cases) {
+    const game = new Game();
+
+    registerWorld(game);
+    registerCity(game);
+    registerCityHappiness(game);
+
+    const player = new Player(game.rules),
+      playerGovernment = new PlayerGovernment(
+        player,
+        game.availableGovernments,
+        game.rules
+      );
+
+    game.playerGovernments.register(playerGovernment);
+    playerGovernment.set(new GovernmentType());
+
+    const city = await setUpCity({
+      ruleRegistry: game.rules,
+      player,
+      cityGrowthRegistry: game.cityGrowth,
+      playerWorldRegistry: game.playerWorlds,
+      tileImprovementRegistry: game.tileImprovements,
+      workedTileRegistry: game.workedTiles,
+    });
+
+    if (!game.workedTiles.tileIsWorked(city.tile())) {
+      game.workedTiles.register(new WorkedTile(city.tile(), city));
+    }
+
+    if (celebrating) {
+      game.pendingEffects.register(new PendingEffect(LEADER_CELEBRATION, city));
+    }
+
+    const own = (YieldType: typeof Yield): number =>
+        city
+          .yields()
+          .filter(
+            (cityYield) =>
+              cityYield instanceof YieldType &&
+              cityYield
+                .values()
+                .every(([, provider]) =>
+                  provider.startsWith(`${city.tile().id()}: `)
+                )
+          )
+          .reduce((total, cityYield) => total + cityYield.value(), 0),
+      actual = [own(Food), own(Trade)],
+      label = `${GovernmentType.name}${
+        celebrating ? ', celebrating' : ''
+      } (registered)`;
+
+    if (actual[0] !== food || actual[1] !== trade) {
+      failures++;
+
+      console.error(
+        `  FAIL ${label.padEnd(36)} ${actual[0]} food, ${
+          actual[1]
+        } trade (expected ${food}, ${trade})`
+      );
+
+      continue;
+    }
+
+    console.log(`  ok   ${label.padEnd(36)} ${food} food, ${trade} trade`);
+  }
+
+  return failures;
+};
+
+Promise.all([run(), runRegistered()]).then(([own, registered]) => {
+  const failures = own + registered;
+
   if (failures > 0) {
-    console.error(`FAIL governmentYields: ${failures} of ${cases.length}`);
+    console.error(`FAIL governmentYields: ${failures} of ${cases.length * 2}`);
 
     process.exit(1);
   }
 
   console.log(
-    `PASS governmentYields (${cases.length} governments, celebrating or not)`
+    `PASS governmentYields (${cases.length} cases, celebrating or not, with the rules on their own and as the plugins register them)`
   );
 });
