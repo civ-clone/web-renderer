@@ -2,51 +2,84 @@ import Action from './Action';
 import LockedSlider from '../LockedSlider';
 import LockedSliderGroup from '../LockedSliderGroup';
 import { PlayerTradeRates } from '../../types';
+import Transport from '../../Transport';
 import Window from '../Window';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
-export class AdjustTradeRates extends Action {
-  #sliderGroup: LockedSliderGroup | undefined;
+// The key the button's tooltip shows. `-` opens the window too (#662).
+const tradeRatesKey = '+';
 
-  activate(): void {
-    const sliders: LockedSlider[] = [];
+let open: Window | null = null;
 
-    const window = new Window(
-      t('Actions.AdjustTradeRates.title'),
-      s(
-        '<div></div>',
-        ...this.value().all.map((tradeRate) => {
-          const slider = new LockedSlider(
-            tradeRate._,
-            tradeRate.value,
-            t(`${tradeRate._}.name`, {
-              defaultValue: tradeRate._,
-              ns: 'trade',
-            })
-          );
+/**
+ * Opens the Adjust trade rates window for the player's `tradeRates`, which sends the rates chosen when it closes, for
+ * the button and the `+` and `-` keys alike (#662). The window isn't modal, so one already open is brought forward
+ * rather than a second one opened, whose close would send its own rates over the first's.
+ */
+export const openTradeRates = (
+  tradeRates: PlayerTradeRates,
+  transport: Transport
+): Window => {
+  if (open !== null && open.element().isConnected) {
+    open.element().focus();
 
-          sliders.push(slider);
+    return open;
+  }
 
-          return slider;
-        })
-      )
-    );
+  const sliders: LockedSlider[] = [];
 
-    window.on('close', () => {
-      const value = this.#sliderGroup!.sliders().map(
-        (slider): [string, number] => [slider.key(), slider.value()]
-      );
+  const window = new Window(
+    t('Actions.AdjustTradeRates.title'),
+    s(
+      '<div></div>',
+      ...tradeRates.all.map((tradeRate) => {
+        const slider = new LockedSlider(
+          tradeRate._,
+          tradeRate.value,
+          t(`${tradeRate._}.name`, {
+            defaultValue: tradeRate._,
+            ns: 'trade',
+          })
+        );
 
-      this.transport().send('action', {
-        name: 'AdjustTradeRates',
-        id: this.value().id,
-        value,
-      });
+        sliders.push(slider);
+
+        return slider;
+      })
+    ),
+    {
+      classes: 'adjust-trade-rates',
+    }
+  );
+
+  const sliderGroup = new LockedSliderGroup(...sliders);
+
+  window.on('close', () => {
+    if (open === window) {
+      open = null;
+    }
+
+    const value = sliderGroup
+      .sliders()
+      .map((slider): [string, number] => [slider.key(), slider.value()]);
+
+    transport.send('action', {
+      name: 'AdjustTradeRates',
+      id: tradeRates.id,
+      value,
     });
+  });
 
-    this.#sliderGroup = new LockedSliderGroup(...sliders);
+  open = window;
+
+  return window;
+};
+
+export class AdjustTradeRates extends Action {
+  activate(): void {
+    openTradeRates(this.value(), this.transport());
   }
 
   build(): void {
@@ -57,7 +90,7 @@ export class AdjustTradeRates extends Action {
           s(
             `<button class="adjustTradeRates small" title="${t(
               'Actions.AdjustTradeRates.title'
-            )}"><img src="${asset!.uri}"></button>`
+            )} (${tradeRatesKey})"><img src="${asset!.uri}"></button>`
           )
         )
       );
