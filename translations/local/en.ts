@@ -389,6 +389,8 @@ i18next.addResources('en', 'default', {
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any color-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
   'ImportAssetsWindow.done':
     'Done! Please reload the page to utilize the fresh assets.',
+  'ImportAssetsWindow.failed':
+    'Importing the assets failed ({{error}}). Try again, and check that the browser lets this site store data.',
   'ImportAssetsWindow.instructions':
     'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
@@ -398,6 +400,8 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.progress-writing': 'Writing to database...',
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.title': 'Import assets',
+  'ImportAssetsWindow.unsupported-file':
+    "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
 
   'JoinCity.too-large.body':
     '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
