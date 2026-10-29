@@ -523,6 +523,82 @@ const run = async (): Promise<void> => {
 
   expect('a throw rejects', [threw, rejected], [false, 'no actions']);
 
+  // Renaming a city (#676): looked for by name, for the player's own city, with a name of 1 to 12 letters.
+  {
+    const rival: any = {},
+      cityOf = (id: string, owner: any) => {
+        let name = 'Babylon';
+
+        return {
+          id: () => id,
+          name: () => name,
+          player: () => owner,
+          setName: (newName: string) => {
+            name = newName;
+          },
+        };
+      },
+      own = cityOf('city-own', player),
+      theirs = cityOf('city-theirs', rival),
+      cities = [own, theirs],
+      rename = async (id: string, cityName: unknown): Promise<string[]> => {
+        patchesCalls.length = 0;
+
+        await handleAction(
+          plainContext({
+            cities: {
+              getBy: (_: string, value: string) =>
+                cities.filter((city) => city.id() === value),
+              getByPlayer: (owner: any) =>
+                cities.filter((city) => city.player() === owner),
+            } as any,
+          }),
+          { name: 'RenameCity', id, cityName }
+        );
+
+        return patchesCalls.splice(0);
+      };
+
+    player.actions = () => [];
+
+    expect(
+      'a new name for the player’s city patches its cities',
+      await rename('city-own', '  Akkad '),
+      ['city']
+    );
+    expect('and the name is set, trimmed', own.name(), 'Akkad');
+    expect(
+      'a rival’s city is not renamed',
+      [await rename('city-theirs', 'Akkad'), theirs.name()],
+      [[], 'Babylon']
+    );
+    expect(
+      'nor to an empty name',
+      [await rename('city-own', '   '), own.name()],
+      [[], 'Akkad']
+    );
+    expect(
+      'nor to 13 letters',
+      [await rename('city-own', 'Mesopotamians'), own.name()],
+      [[], 'Akkad']
+    );
+    expect(
+      'but 12 are enough',
+      [await rename('city-own', 'Mesopotamian'), own.name()],
+      [['city'], 'Mesopotamian']
+    );
+    expect(
+      'nor to something that isn’t a name',
+      [await rename('city-own', 42), own.name()],
+      [[], 'Mesopotamian']
+    );
+    expect(
+      'nor a city that isn’t there',
+      await rename('city-gone', 'Akkad'),
+      []
+    );
+  }
+
   finished = true;
   console.log = log;
 

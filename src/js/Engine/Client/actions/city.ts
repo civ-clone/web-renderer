@@ -40,6 +40,37 @@ export const handleReassignWorkers = async (
   return false;
 };
 
+// The longest name a city can be given, as Civ1's "City name" box allows (#676).
+export const cityNameMaxLength = 12;
+
+// Renaming one of the player's cities (#676). Not one of the player's actions either, so looked for by name. A rival's
+//  city, an empty name or one too long changes nothing.
+export const handleRenameCity = async (
+  ctx: ActionContext,
+  action: any
+): Promise<boolean> => {
+  const [city] = ctx.cities.getBy('id', action.id),
+    name = typeof action.cityName === 'string' ? action.cityName.trim() : '';
+
+  if (
+    !city ||
+    city.player() !== ctx.player() ||
+    name === '' ||
+    name.length > cityNameMaxLength
+  ) {
+    return false;
+  }
+
+  city.setName(name);
+
+  // Every city of the player's, for the trade routes that name it.
+  ctx.cities
+    .getByPlayer(ctx.player())
+    .forEach((city) => ctx.patches.city(city));
+
+  return false;
+};
+
 export const handleCityBuild: ActionHandler<
   CityBuild | ChangeProduction
 > = async (ctx, action, playerAction) => {

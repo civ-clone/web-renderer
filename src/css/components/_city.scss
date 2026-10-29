@@ -146,24 +146,35 @@
     border-width: 0 1px;
   }
 
-  .improvements .yield-icon:first-child {
+  .improvements .name > :first-child + .yield-icon {
     margin-left: 0.5rem;
   }
 
-  // An improvement that can be sold reads as the others do, and is clicked to sell it (#31).
-  .improvements button.sell {
-    all: unset;
-    display: block;
-    cursor: pointer;
+  // Each improvement, with a Sell button at the right when it can be sold (#684).
+  .improvements .improvement {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+    min-height: 1.75rem;
 
-    &:hover,
-    &:focus-visible {
-      text-decoration: underline;
+    .name {
+      align-items: center;
+      display: flex;
+      flex: 1 1;
     }
 
-    &:focus-visible {
-      outline: 1px dotted currentColor;
+    button.sell {
+      flex: 0 0 auto;
     }
+  }
+
+  // The previous and next city, and renaming this one (#676, #678).
+  .city-actions {
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0.25rem;
   }
 }
 

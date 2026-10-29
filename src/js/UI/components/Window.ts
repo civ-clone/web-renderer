@@ -334,6 +334,17 @@ export class Window
     this.element().style.setProperty('left', currentLeft + x + 'px');
   }
 
+  // The title as HTML, as the constructor takes it, for a window that shows something else now (#678).
+  setTitle(title: string): void {
+    this.#title = title;
+
+    const heading = this.element().querySelector(':scope > header > h3');
+
+    if (heading) {
+      heading.innerHTML = title;
+    }
+  }
+
   // Replaces what's inside the `.body` wrapper, which stays so the body is still the part that scrolls (#283).
   update(content: string | Node): void {
     this.#body = content;

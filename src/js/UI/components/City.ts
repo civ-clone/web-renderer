@@ -27,6 +27,7 @@ import {
 import Cities from './Map/Cities';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
+import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from './ConfirmationWindow';
 import Fog from './Map/Fog';
 import Landscape from './Map/Landscape';
@@ -41,6 +42,7 @@ import Window from './Window';
 import World from './World';
 import Yields from './Map/Yields';
 import { cityName } from './lib/city';
+import { escape } from './lib/requirements';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
@@ -364,16 +366,16 @@ const renderYields = (city: CityData): Node => {
         `<div></div>`,
         ...city.improvements.map((improvement) => {
           const [saleValue] = readOnly
-              ? []
-              : (improvement.saleValue ?? []).filter(
-                  (saleValue) => saleValue.resource._ === 'Gold'
-                ),
-            row = s(
-              saleValue
-                ? `<button class="sell">${getLabelForBuildableEntity(
-                    improvement
-                  )}</button>`
-                : `<div>${getLabelForBuildableEntity(improvement)}</div>`,
+            ? []
+            : (improvement.saleValue ?? []).filter(
+                (saleValue) => saleValue.resource._ === 'Gold'
+              );
+
+          return s(
+            '<div class="improvement"></div>',
+            s(
+              '<span class="name"></span>',
+              s(`<span>${getLabelForBuildableEntity(improvement)}</span>`),
               ...city.yields
                 .filter(
                   (
@@ -383,16 +385,23 @@ const renderYields = (city: CityData): Node => {
                     cityYield.cityImprovement.id === improvement.id
                 )
                 .flatMap((cityYield) => yieldImages(cityYield, true))
-            );
-
-          // Selling an improvement, as clicking it in Civ1's list does (#31).
-          return saleValue
-            ? h(row, {
-                click() {
-                  sellImprovement(improvement, saleValue);
-                },
-              })
-            : row;
+            ),
+            // Selling it (#31), from a button of its own that says what it fetches, as Buy says its price (#684).
+            saleValue
+              ? h(
+                  s(
+                    `<button class="sell">${t('City.SellImprovement.sell', {
+                      saleValue,
+                    })}</button>`
+                  ),
+                  {
+                    click() {
+                      sellImprovement(improvement, saleValue);
+                    },
+                  }
+                )
+              : ''
+          );
         })
       )
     );
@@ -482,7 +491,8 @@ const renderYields = (city: CityData): Node => {
       saleValue: SpendCost
     ) => void,
     changeSpecialist: (specialist: Specialist) => void,
-    readOnly: boolean
+    readOnly: boolean,
+    cityActions: Node | string = ''
   ) => {
     return s(
       '<div class="city-screen"></div>',
@@ -516,8 +526,48 @@ const renderYields = (city: CityData): Node => {
         renderBuild(city, chooseProduction, completeProduction, readOnly, () =>
           toggleAuto(city.build, transport)
         )
-      )
+      ),
+      cityActions
     );
+  },
+  // The player's other cities, either side of this one (#678), and renaming it (#676). With one city there is nowhere
+  //  to step to.
+  renderCityActions = (
+    cityCount: number,
+    step: (by: number) => void,
+    rename: () => void
+  ): Node =>
+    s(
+      '<div class="city-actions"></div>',
+      h(
+        s(
+          `<button class="previous"${cityCount < 2 ? ' disabled' : ''}>${t(
+            'City.previous'
+          )}</button>`
+        ),
+        { click: () => step(-1) }
+      ),
+      h(s(`<button class="rename">${t('City.rename')}</button>`), {
+        click: () => rename(),
+      }),
+      h(
+        s(
+          `<button class="next"${cityCount < 2 ? ' disabled' : ''}>${t(
+            'City.next'
+          )}</button>`
+        ),
+        { click: () => step(1) }
+      )
+    ),
+  // The step through the player's cities, in the order the engine lists them, wrapping at either end (#678).
+  steppedCity = (cities: CityData[], city: CityData, by: number): CityData => {
+    const index = cities.findIndex(({ id }) => id === city.id);
+
+    if (index === -1 || cities.length < 2) {
+      return city;
+    }
+
+    return cities[(index + by + cities.length) % cities.length];
   },
   // Enter or X closes the screen, but Enter on a focused button presses that button instead (#484).
   closesScreen = (event: KeyboardEvent): boolean =>
@@ -535,6 +585,7 @@ export class City extends Window {
   // Whether the city screen is waiting for what the city can build, to open the production picker (#484).
   #choosingProduction = false;
   #portal: Portal;
+  #readOnly: boolean;
   // Whether a specialist has been changed and the city not yet updated with it. Changing one replaces it, so a second
   //  change sent before then would name a specialist the city no longer has, and be lost (#484).
   #specialistChanging = false;
@@ -553,7 +604,8 @@ export class City extends Window {
     { readOnly = false }: { readOnly?: boolean } = {}
   ) {
     super(
-      cityName(city),
+      // The title is HTML, and a name the player typed (#676) is text.
+      escape(cityName(city)),
       cityDetails(
         city,
         portal,
@@ -563,7 +615,14 @@ export class City extends Window {
         (improvement: CityImprovement, saleValue: SpendCost) =>
           this.sellImprovement(improvement, saleValue),
         (specialist: Specialist) => this.#changeSpecialist(specialist),
+        readOnly,
         readOnly
+          ? ''
+          : renderCityActions(
+              (city.player.cities ?? []).length,
+              (by: number) => this.step(by),
+              () => this.rename()
+            )
       ),
       {
         canResize: true,
@@ -577,49 +636,11 @@ export class City extends Window {
 
     this.#city = city;
     this.#portal = portal;
+    this.#readOnly = readOnly;
     this.#transport = transport;
 
     if (!readOnly) {
-      this.#unwatch = watchCity(city, {
-        update: (updatedCity, _data, goldOnly) => {
-          // Read before the redraw, which takes away whatever had the focus inside the screen.
-          const focusedWindow =
-            document.activeElement?.closest('dialog.window') ?? null;
-
-          this.#city = updatedCity;
-
-          this.update(
-            cityDetails(
-              updatedCity,
-              this.#portal,
-              transport,
-              () => this.changeProduction(),
-              (spendCost: SpendCost) => this.completeProduction(spendCost),
-              (improvement: CityImprovement, saleValue: SpendCost) =>
-                this.sellImprovement(improvement, saleValue),
-              (specialist: Specialist) => this.#changeSpecialist(specialist),
-              false
-            )
-          );
-
-          // The specialists drawn now are the city's latest, so they can be changed again.
-          this.#specialistChanging = false;
-
-          // Back to the screen if the redraw took it from inside it. Not from a window open over the screen, a
-          //  production picker or a confirmation, where the next Enter is meant for that window (#484); and for a
-          //  change to the player's gold alone, which can come at any time, not from anywhere else either (#503).
-          if (
-            focusedWindow === this.element() ||
-            (focusedWindow === null && !goldOnly)
-          ) {
-            this.element().focus();
-          }
-
-          setTimeout(() => resizeYields(this.element()), 200);
-        },
-        // Captured or destroyed.
-        close: () => this.close(),
-      });
+      this.#watch();
     }
 
     this.on('keydown', (event) => {
@@ -664,6 +685,25 @@ export class City extends Window {
         event.stopPropagation();
       }
 
+      // The previous or next city (#678). Not inside a field, where they move the caret.
+      if (
+        ['ArrowLeft', 'ArrowRight'].includes(event.key) &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        !(
+          event.target instanceof HTMLElement &&
+          event.target.closest('input, select, textarea') !== null
+        )
+      ) {
+        this.step(event.key === 'ArrowLeft' ? -1 : 1);
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        return;
+      }
+
       if (!event.ctrlKey && !event.altKey && !event.metaKey) {
         const specialist = specialistForKey(
           event.key,
@@ -695,6 +735,114 @@ export class City extends Window {
     this.on('resize', resizeHandler);
   }
 
+  #details(city: CityData): Node {
+    return cityDetails(
+      city,
+      this.#portal,
+      this.#transport,
+      () => this.changeProduction(),
+      (spendCost: SpendCost) => this.completeProduction(spendCost),
+      (improvement: CityImprovement, saleValue: SpendCost) =>
+        this.sellImprovement(improvement, saleValue),
+      (specialist: Specialist) => this.#changeSpecialist(specialist),
+      this.#readOnly,
+      this.#readOnly
+        ? ''
+        : renderCityActions(
+            this.#cities().length,
+            (by: number) => this.step(by),
+            () => this.rename()
+          )
+    );
+  }
+
+  // The player's cities as the page holds them now, which a step goes through (#678).
+  #cities(): CityData[] {
+    return this.#city.player.cities ?? [this.#city];
+  }
+
+  #watch(): void {
+    this.#unwatch = watchCity(this.#city, {
+      update: (updatedCity, _data, goldOnly) => {
+        // Read before the redraw, which takes away whatever had the focus inside the screen.
+        const focusedWindow =
+          document.activeElement?.closest('dialog.window') ?? null;
+
+        this.#city = updatedCity;
+
+        // A name changed (#676) shows at once.
+        this.setTitle(escape(cityName(updatedCity)));
+        this.update(this.#details(updatedCity));
+
+        // The specialists drawn now are the city's latest, so they can be changed again.
+        this.#specialistChanging = false;
+
+        // Back to the screen if the redraw took it from inside it. Not from a window open over the screen, a
+        //  production picker or a confirmation, where the next Enter is meant for that window (#484); and for a
+        //  change to the player's gold alone, which can come at any time, not from anywhere else either (#503).
+        if (
+          focusedWindow === this.element() ||
+          (focusedWindow === null && !goldOnly)
+        ) {
+          this.element().focus();
+        }
+
+        setTimeout(() => resizeYields(this.element()), 200);
+      },
+      // Captured or destroyed.
+      close: () => this.close(),
+    });
+  }
+
+  /**
+   * Shows the player's city `by` places along from this one, wrapping at either end (#678). The screen is filled
+   * again for it rather than closed and opened, and starts afresh: watching that city, with no specialist change or
+   * production picker of the last one's outstanding.
+   */
+  step(by: number): void {
+    if (this.#readOnly) {
+      return;
+    }
+
+    const city = steppedCity(this.#cities(), this.#city, by);
+
+    if (city === this.#city || city.id === this.#city.id) {
+      return;
+    }
+
+    this.#unwatch?.();
+
+    this.#city = city;
+    this.#choosingProduction = false;
+    this.#specialistChanging = false;
+
+    this.setTitle(escape(cityName(city)));
+    this.update(this.#details(city));
+    this.#watch();
+
+    // The buttons it was pressed with have gone with the redraw.
+    this.element().focus();
+
+    setTimeout(() => resizeYields(this.element()), 200);
+  }
+
+  // The "City name" box, and the name it gives sent to the worker, which decides whether it stands (#676).
+  rename(): void {
+    if (this.#readOnly) {
+      return;
+    }
+
+    const city = this.#city;
+
+    new CityNameWindow(cityName(city), (name) =>
+      this.#transport.send('action', {
+        name: 'RenameCity',
+        id: city.id,
+        cityName: name,
+      })
+    );
+  }
+
   async changeProduction(): Promise<void> {
     // Asked again before the first answer came: one picker is enough (#484).
     if (this.#choosingProduction) {
@@ -703,11 +851,13 @@ export class City extends Window {
 
     this.#choosingProduction = true;
 
+    const cityBuild = this.#city.build;
+
     let available;
 
     try {
       available = await this.#transport.request(
-        new CityBuildAvailable(this.#city.build.id)
+        new CityBuildAvailable(cityBuild.id)
       );
     } catch (error) {
       // Not answered: the player has been told, and can ask again (#580).
@@ -718,8 +868,9 @@ export class City extends Window {
       this.#choosingProduction = false;
     }
 
-    // Closed while waiting: the picker would open over the map (#484).
-    if (!this.element().isConnected) {
+    // Closed while waiting: the picker would open over the map (#484). Or moved on to another city (#678), which the
+    //  list isn't for.
+    if (!this.element().isConnected || this.#city.build.id !== cityBuild.id) {
       return;
     }
 

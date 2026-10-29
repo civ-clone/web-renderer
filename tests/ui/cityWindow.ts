@@ -61,6 +61,9 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
     }
   );
 
+// Nor does it select a field's text.
+(globalThis as any).HTMLInputElement.prototype.select = () => {};
+
 setPreloadContainer(document.querySelector('#preload') as HTMLElement);
 
 // No assets: the citizens and the action's button are drawn without their images.
@@ -385,6 +388,219 @@ const run = async (): Promise<void> => {
     );
 
     tradeScreen.close();
+  }
+
+  // Previous and Next step through the player's cities in the order they're sent, wrapping at either end (#678).
+  {
+    const named = (id: string, name: string, owner = player): CityData => {
+        const city = cityData([]) as any;
+
+        Object.assign(city, {
+          id,
+          name,
+          player: owner,
+          originalPlayer: owner,
+        });
+        city.build = { ...city.build, id: `CityBuild-${id}`, city };
+        city.growth = { ...city.growth, id: `CityGrowth-${id}` };
+
+        return city;
+      },
+      owner = { ...player, cities: [] as CityData[] },
+      [first, second, third] = [
+        named('City-A', 'Babylon', owner as any),
+        named('City-B', 'Ur', owner as any),
+        named('City-C', 'Nineveh', owner as any),
+      ];
+
+    owner.cities.push(first, second, third);
+
+    const stepping = new City(first, portal, transport),
+      title = () =>
+        stepping.element().querySelector(':scope > header > h3')?.textContent,
+      click = (selector: string) =>
+        stepping
+          .element()
+          .querySelector(selector)!
+          .dispatchEvent(new Event('click'));
+
+    click('.city-actions button.next');
+
+    expect('Next shows the next city', title(), 'Ur');
+
+    key(stepping.element(), 'ArrowRight');
+
+    expect('and so does Right', title(), 'Nineveh');
+
+    key(stepping.element(), 'ArrowRight');
+
+    expect('past the last is the first', title(), 'Babylon');
+
+    key(stepping.element(), 'ArrowLeft');
+
+    expect('and Left before the first is the last', title(), 'Nineveh');
+
+    click('.city-actions button.previous');
+
+    expect('as Previous steps back', title(), 'Ur');
+
+    const arrow = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'ArrowLeft',
+    });
+
+    stepping.element().dispatchEvent(arrow);
+
+    expect(
+      'the screen keeps the arrow to itself',
+      arrow.defaultPrevented,
+      true
+    );
+
+    // Now on Babylon: an update to Ur, the city left behind, doesn't redraw the screen, and one to Babylon does.
+    const updatedUr = named('City-B', 'Ur', owner as any),
+      updatedBabylon = named('City-A', 'Babil', owner as any);
+
+    (updatedUr.build as any).building = {
+      item: { _: 'Temple', __: ['Temple'] },
+    };
+    dataChanges.collect(['City-B']);
+    dataChanges.notify({ player: owner } as unknown as GameData);
+
+    expect('the city left behind is no longer watched', title(), 'Babylon');
+
+    owner.cities.splice(0, 1, updatedBabylon);
+    sent = [];
+    dataChanges.collect(['City-A']);
+    dataChanges.notify({ player: owner } as unknown as GameData);
+
+    expect(
+      'the city stepped to is, and a new name shows at once',
+      title(),
+      'Babil'
+    );
+
+    click('.city-actions button.rename');
+
+    const nameWindow = document.querySelector('.city-name-window')!,
+      input = nameWindow.querySelector('input')! as HTMLInputElement;
+
+    expect('Rename fills the box with the name', input.value, 'Babil');
+    expect(
+      'and allows Civ1’s 12 letters',
+      input.getAttribute('maxlength'),
+      '12'
+    );
+
+    input.value = '  Akkad ';
+    key(input, 'Enter');
+
+    expect('Enter sends the name, trimmed, for that city', sent, [
+      { name: 'RenameCity', id: 'City-A', cityName: 'Akkad' },
+    ]);
+    expect(
+      'and closes the box',
+      document.querySelectorAll('.city-name-window').length,
+      0
+    );
+
+    click('.city-actions button.rename');
+
+    const emptied = document.querySelector('.city-name-window input')!;
+
+    (emptied as HTMLInputElement).value = '   ';
+    key(emptied, 'Enter');
+
+    expect('an empty name sends nothing', sent.length, 1);
+
+    // A name the player typed is text, not HTML, in the title.
+    stepping.close();
+
+    const tagged = new City(
+      named('City-D', '<b>Kish</b>', owner as any),
+      portal,
+      transport
+    );
+
+    expect(
+      'a name with < shows as typed',
+      tagged.element().querySelector(':scope > header > h3')?.textContent,
+      '<b>Kish</b>'
+    );
+
+    tagged.close();
+
+    // A single city has nowhere to step to; a rival's city has none of the buttons.
+    const alone = new City(
+      named('City-E', 'Lagash', { ...player, cities: [] } as any),
+      portal,
+      transport
+    );
+
+    expect(
+      'with one city, Previous and Next are disabled',
+      Array.from(
+        alone.element().querySelectorAll('.city-actions button[disabled]')
+      ).map((button) => button.className),
+      ['previous', 'next']
+    );
+
+    alone.close();
+
+    const rival = new City(first, portal, transport, { readOnly: true });
+
+    expect(
+      'a read-only screen has no city buttons',
+      rival.element().querySelectorAll('.city-actions').length,
+      0
+    );
+
+    rival.close();
+  }
+
+  // A sellable improvement has a Sell button naming what it fetches; one that can't be sold has none (#684).
+  {
+    const city = cityData([]) as any;
+
+    city.improvements = [
+      {
+        _: 'Barracks',
+        id: 'Improvement-1',
+        saleValue: [{ resource: { _: 'Gold' }, value: 40 }],
+      },
+      { _: 'Palace', id: 'Improvement-2', saleValue: [] },
+    ];
+
+    sent = [];
+
+    const selling = new City(city, portal, transport),
+      rows = selling.element().querySelectorAll('.improvements .improvement');
+
+    expect('each improvement has a row', rows.length, 2);
+    expect(
+      'the sellable one has a Sell button',
+      rows[0].querySelector('button.sell')?.textContent,
+      'City.SellImprovement.sell'
+    );
+    expect(
+      'the other has none',
+      rows[1].querySelectorAll('button.sell').length,
+      0
+    );
+
+    rows[0].querySelector('button.sell')!.dispatchEvent(new Event('click'));
+
+    expect(
+      'Sell asks first',
+      document.querySelectorAll('.confirmationWindow').length,
+      1
+    );
+
+    document
+      .querySelectorAll('.confirmationWindow')
+      .forEach((window) => window.remove());
+    selling.close();
   }
 
   finished = true;
