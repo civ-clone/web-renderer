@@ -1,6 +1,7 @@
 import {
   Definition,
   ExtractData,
+  ImageMap,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
 import Window from './Window';
@@ -75,12 +76,8 @@ export class ImportAssetsWindow extends Window {
         filenames.some((filename) => filename.match(expectedMatch))
       )
     ) {
-      this.#progressInformation.style.color = '#f00';
-      this.#progressInformation.innerText = t(
-        'ImportAssetsWindow.missing-files',
-        {
-          files: expectedFilenames,
-        }
+      this.#fail(
+        t('ImportAssetsWindow.missing-files', { files: expectedFilenames })
       );
 
       return;
@@ -91,87 +88,46 @@ export class ImportAssetsWindow extends Window {
       'ImportAssetsWindow.progress-building'
     );
 
-    const results: { name: string; uri: string }[] = [],
-      existingKeys = await assetStore.keys(),
+    const existingKeys = await assetStore.keys(),
       replaceExisting = this.#replaceExistingInput.checked;
 
-    // Wait for...
-    await Promise.all(
-      // ...all files...
-      files.map(
-        (file: File) =>
-          // ...to have been...
-          new Promise<void>(async (resolve) => {
-            const allDefinitions = (extractData as ExtractData).files[
-              file.name.toUpperCase()
-            ];
+    // A file still being extracted after another has failed would write its
+    //  progress over the reason the import stopped.
+    let stopped = false;
 
-            if (!allDefinitions) {
-              console.warn(`No definitions found for ${file.name}, skipping.`);
+    const progress = (message: string): void => {
+      if (!stopped) {
+        this.#progressInformation.innerText = message;
+      }
+    };
 
-              resolve();
+    let results: ImageMap[];
 
-              return;
-            }
+    try {
+      // Every file, read and its sprites extracted.
+      results = (
+        await Promise.all(
+          files.map((file) =>
+            this.#extract(file, existingKeys, replaceExisting, progress)
+          )
+        )
+      ).flat();
+    } catch (error) {
+      // A file the extractor can't read (not a Civilization sheet, or one
+      //  cut differently from the originals) used to throw inside the
+      //  reader's `load` listener, where nothing caught it: the promise never
+      //  settled and the window sat on "Building image assets..." for good.
+      stopped = true;
+      console.error(error);
 
-            const definitions = Object.keys(allDefinitions).reduce(
-                (object, key) => {
-                  const filenamesForObject = Object.entries(
-                    allDefinitions[key]
-                  ).reduce((paths, [path, definition]) => {
-                    definition.contents.forEach((entry) =>
-                      paths.push(`./assets/${path + entry.name}.png`)
-                    );
+      this.#fail(
+        t('ImportAssetsWindow.unsupported-file', {
+          file: (error as UnsupportedFile).file ?? '',
+        })
+      );
 
-                    return paths;
-                  }, [] as string[]);
-
-                  if (
-                    filenamesForObject.every((path) =>
-                      existingKeys.includes(path)
-                    ) &&
-                    !replaceExisting
-                  ) {
-                    return object;
-                  }
-
-                  object[key] = allDefinitions[key];
-
-                  return object;
-                },
-                {} as Definition
-              ),
-              reader = new FileReader();
-
-            // ...loaded...
-            reader.addEventListener('load', async (event) => {
-              // ...and the sprites extracted.
-              extractSprites(
-                event.target!.result as string,
-                definitions as Definition,
-                extractData.defaults,
-                (width, height) => {
-                  const canvas = document.createElement(
-                    'canvas'
-                  ) as HTMLCanvasElement;
-
-                  canvas.width = width;
-                  canvas.height = height;
-
-                  return canvas;
-                },
-                (message) => {
-                  this.#progressInformation.innerText = message;
-                }
-              ).forEach((record) => results.push(record));
-
-              resolve();
-            });
-
-            reader.readAsBinaryString(file);
-          })
-      )
-    );
+      return;
+    }
 
     this.#progressInformation.innerText = t(
       'ImportAssetsWindow.progress-writing'
@@ -183,15 +139,11 @@ export class ImportAssetsWindow extends Window {
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');
 
-      this.#progressInformation.style.color = '#f00';
-      this.#progressInformation.innerText = t(
-        'ImportAssetsWindow.missing-data',
-        {
+      this.#fail(
+        t('ImportAssetsWindow.missing-data', {
           files: await assetStore.missingAssets(),
-        }
+        })
       );
-
-      this.#fileInput.removeAttribute('disabled');
 
       return;
     }
@@ -203,6 +155,104 @@ export class ImportAssetsWindow extends Window {
 
     location.reload();
   }
+
+  /**
+   * Reads `file` and cuts out the sprites it holds that are wanted: all of
+   * them with `replaceExisting`, otherwise only the groups with a sprite the
+   * store doesn't have yet (so a re-import picks up sprites added to the
+   * extractor since). Rejects, naming the file, when it can't be read.
+   */
+  #extract(
+    file: File,
+    existingKeys: string[],
+    replaceExisting: boolean,
+    progress: (message: string) => void
+  ): Promise<ImageMap[]> {
+    const allDefinitions = (extractData as ExtractData).files[
+      file.name.toUpperCase()
+    ];
+
+    if (!allDefinitions) {
+      console.warn(`No definitions found for ${file.name}, skipping.`);
+
+      return Promise.resolve([]);
+    }
+
+    const definitions = Object.keys(allDefinitions).reduce((object, key) => {
+      const filenamesForObject = Object.entries(allDefinitions[key]).reduce(
+        (paths, [path, definition]) => {
+          definition.contents.forEach((entry) =>
+            paths.push(`./assets/${path + entry.name}.png`)
+          );
+
+          return paths;
+        },
+        [] as string[]
+      );
+
+      if (
+        filenamesForObject.every((path) => existingKeys.includes(path)) &&
+        !replaceExisting
+      ) {
+        return object;
+      }
+
+      object[key] = allDefinitions[key];
+
+      return object;
+    }, {} as Definition);
+
+    return new Promise<ImageMap[]>((resolve, reject) => {
+      const reader = new FileReader(),
+        failed = (cause: unknown) =>
+          reject(
+            Object.assign(
+              new Error(`Could not extract sprites from ${file.name}`, {
+                cause,
+              }),
+              { file: file.name }
+            ) as UnsupportedFile
+          );
+
+      reader.addEventListener('error', () => failed(reader.error));
+      reader.addEventListener('load', () => {
+        try {
+          resolve(
+            extractSprites(
+              reader.result as string,
+              definitions,
+              extractData.defaults,
+              (width, height) => {
+                const canvas = document.createElement('canvas');
+
+                canvas.width = width;
+                canvas.height = height;
+
+                return canvas;
+              },
+              progress
+            )
+          );
+        } catch (error) {
+          failed(error);
+        }
+      });
+
+      reader.readAsBinaryString(file);
+    });
+  }
+
+  /** Shows `message` as the reason the import stopped, and lets the player choose files again. */
+  #fail(message: string): void {
+    this.#progressInformation.style.color = '#f00';
+    this.#progressInformation.innerText = message;
+    this.#fileInput.removeAttribute('disabled');
+    // So choosing the same files again counts as a change.
+    this.#fileInput.value = '';
+  }
 }
+
+/** The error `#extract` rejects with: which file it was that couldn't be read. */
+type UnsupportedFile = Error & { file: string };
 
 export default ImportAssetsWindow;

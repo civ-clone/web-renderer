@@ -394,6 +394,8 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.progress-writing': 'Writing to database...',
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.title': 'Import assets',
+  'ImportAssetsWindow.unsupported-file':
+    "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
 
   'JoinCity.too-large.body':
     '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
