@@ -79,6 +79,18 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
   auto: boolean;
   building: BuildItem | null;
   city: City;
+  // Why it's building nothing (#716): it finished `item`, stopped building it, or can no longer build it, or the city is
+  //  new or has changed hands. `null` while it builds something, or when it isn't known, as in an older save.
+  cleared: {
+    reason:
+      | 'cancelled'
+      | 'captured'
+      | 'completed'
+      | 'created'
+      | 'unavailable'
+      | string;
+    item: Entity | null;
+  } | null;
   cost: Yield;
   progress: Yield;
   spendCost: SpendCost[];
