@@ -32,6 +32,7 @@ import NotificationBar from '../app/NotificationBar';
 import ObserverBar from '../components/ObserverBar';
 import { observerCityOpener, playerCityOpener } from '../lib/cityOpeners';
 import { ObserverState } from '../../Engine/Observer';
+import sendBuildPreferences from '../lib/buildPreferences';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug
 //  panel and the keyboard, the render pair, the order each update runs in, and the game's receivers.
@@ -150,6 +151,9 @@ export class GameSession {
 
       if (!observing) {
         guardLeaving();
+
+        // What the player has asked their cities to choose by themselves, before they found any (#690, #691).
+        sendBuildPreferences(transport);
       }
 
       // Only for a new game: "you have risen" is an introduction, and a

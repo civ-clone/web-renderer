@@ -252,6 +252,8 @@ const run = async (): Promise<void> => {
         'cheatUnitTypes',
         'cheatAdvances',
         'cheatPlayers',
+        // The player's build options (#690, #691).
+        'buildPreferences',
         'topCities',
         'civilizationScore',
         'civilizationPower',

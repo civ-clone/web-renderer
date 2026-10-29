@@ -101,6 +101,15 @@ export const cityNotifications: NotificationTable = [
         return null;
       }
 
+      // Already building another, as the player who keeps building military units asked (#690): told every few turns,
+      //  it would only be noise. The rule that starts it runs before the completion is announced.
+      if (
+        build instanceof Unit &&
+        cityBuild.building()?.item() === build.constructor
+      ) {
+        return null;
+      }
+
       return new Notification(
         'City.building-complete.' + buildingCompleteKind(build),
         {

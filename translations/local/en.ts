@@ -352,8 +352,10 @@ i18next.addResources('en', 'default', {
   'GameOptions.autosave-choice.5': 'Game start, then every 5 turns',
   'GameOptions.autosave-choice.off': 'Off',
   'GameOptions.autosave-choice.start': 'Game start',
+  'GameOptions.keep-building-military-units': 'Keep building military units',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
+  'GameOptions.new-cities-build-defender': 'New cities build a defender',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 
