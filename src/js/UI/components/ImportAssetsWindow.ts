@@ -88,18 +88,45 @@ export class ImportAssetsWindow extends Window {
       'ImportAssetsWindow.progress-building'
     );
 
+    try {
+      await this.#import(files);
+    } catch (error) {
+      // A file the extractor can't read (not a Civilization sheet, or one
+      //  cut differently from the originals) used to throw inside the
+      //  reader's `load` listener, where nothing caught it: the promise never
+      //  settled and the window sat on "Building image assets..." for good.
+      //  The store refusing to open or write left it the same way.
+      console.error(error);
+
+      this.#fail(
+        isUnsupportedFile(error)
+          ? t('ImportAssetsWindow.unsupported-file', { file: error.file })
+          : t('ImportAssetsWindow.failed', {
+              error: error instanceof Error ? error.message : String(error),
+            })
+      );
+    }
+  }
+
+  /**
+   * Extracts the sprites from `files`, stores them, and reloads the page to
+   * use them. Rejects with what went wrong, which `handleFileUpload` shows.
+   */
+  async #import(files: File[]): Promise<void> {
     const existingKeys = await assetStore.keys(),
       replaceExisting = this.#replaceExistingInput.checked;
 
-    // A file still being extracted after another has failed would write its
-    //  progress over the reason the import stopped.
-    let stopped = false;
+    // Only while the files are being extracted: one still being extracted
+    //  after another has failed would write its progress over the reason the
+    //  import stopped, and needn't be cut up at all.
+    let extracting = true;
 
     const progress = (message: string): void => {
-      if (!stopped) {
-        this.#progressInformation.innerText = message;
-      }
-    };
+        if (extracting) {
+          this.#progressInformation.innerText = message;
+        }
+      },
+      wanted = (): boolean => extracting;
 
     let results: ImageMap[];
 
@@ -108,25 +135,12 @@ export class ImportAssetsWindow extends Window {
       results = (
         await Promise.all(
           files.map((file) =>
-            this.#extract(file, existingKeys, replaceExisting, progress)
+            this.#extract(file, existingKeys, replaceExisting, progress, wanted)
           )
         )
       ).flat();
-    } catch (error) {
-      // A file the extractor can't read (not a Civilization sheet, or one
-      //  cut differently from the originals) used to throw inside the
-      //  reader's `load` listener, where nothing caught it: the promise never
-      //  settled and the window sat on "Building image assets..." for good.
-      stopped = true;
-      console.error(error);
-
-      this.#fail(
-        t('ImportAssetsWindow.unsupported-file', {
-          file: (error as UnsupportedFile).file ?? '',
-        })
-      );
-
-      return;
+    } finally {
+      extracting = false;
     }
 
     this.#progressInformation.innerText = t(
@@ -160,13 +174,15 @@ export class ImportAssetsWindow extends Window {
    * Reads `file` and cuts out the sprites it holds that are wanted: all of
    * them with `replaceExisting`, otherwise only the groups with a sprite the
    * store doesn't have yet (so a re-import picks up sprites added to the
-   * extractor since). Rejects, naming the file, when it can't be read.
+   * extractor since). Rejects, naming the file, when it can't be read, and
+   * resolves with nothing once the file is no longer `wanted`.
    */
   #extract(
     file: File,
     existingKeys: string[],
     replaceExisting: boolean,
-    progress: (message: string) => void
+    progress: (message: string) => void,
+    wanted: () => boolean
   ): Promise<ImageMap[]> {
     const allDefinitions = (extractData as ExtractData).files[
       file.name.toUpperCase()
@@ -216,6 +232,13 @@ export class ImportAssetsWindow extends Window {
 
       reader.addEventListener('error', () => failed(reader.error));
       reader.addEventListener('load', () => {
+        // The import failed on another file while this one was being read.
+        if (!wanted()) {
+          resolve([]);
+
+          return;
+        }
+
         try {
           resolve(
             extractSprites(
@@ -254,5 +277,8 @@ export class ImportAssetsWindow extends Window {
 
 /** The error `#extract` rejects with: which file it was that couldn't be read. */
 type UnsupportedFile = Error & { file: string };
+
+const isUnsupportedFile = (error: unknown): error is UnsupportedFile =>
+  error instanceof Error && typeof (error as UnsupportedFile).file === 'string';
 
 export default ImportAssetsWindow;

@@ -5,7 +5,8 @@
 //
 // A file still being extracted when another fails must not write its progress over the reason the import stopped: the
 //  files are read side by side, and in the browser the custom TER257.PIC that showed this failed while SP257.PIC was
-//  still being cut up.
+//  still being cut up. Nor is it cut up at all, now that nothing will come of it. A file the browser can't read, and
+//  a store that won't open or write, stop the import the same way, with their own reasons.
 //
 // linkedom has no `FileReader`, so a small one is played here, and no canvas: a fake one takes the extractor's drawing,
 //  so a sheet that decodes is cut up as in the browser, logging each sprite, and one that doesn't throws as it would.
@@ -48,17 +49,31 @@ process.on('exit', (code: number): void => {
   }
 });
 
-// How long after it is asked each file's reader takes, so the order the files finish in is the test's to choose.
-const readDelays: { [name: string]: number } = {};
+// How long after it is asked each file's reader takes, so the order the files finish in is the test's to choose, and
+//  the files the reader fails on, as a browser does one it can't open.
+const readDelays: { [name: string]: number } = {},
+  readFailures: { [name: string]: Error } = {};
 
-// Enough of a `FileReader` for the window: `readAsBinaryString` sets `result` and fires `load`.
+// Enough of a `FileReader` for the window: `readAsBinaryString` sets `result` and fires `load`, or `error` with the
+//  reason in `error`. Each listener gets an event with the reader as its target, as the window once read it, and one
+//  that throws is reported and the rest carry on, as in a browser, which is how the import came to hang.
 class FakeFileReader {
-  #listeners: { [type: string]: (() => void)[] } = {};
+  #listeners: { [type: string]: ((event: Event) => void)[] } = {};
   result: string | null = null;
   error: Error | null = null;
 
-  addEventListener(type: string, listener: () => void): void {
+  addEventListener(type: string, listener: (event: Event) => void): void {
     (this.#listeners[type] ??= []).push(listener);
+  }
+
+  #fire(type: string): void {
+    (this.#listeners[type] ?? []).forEach((listener) => {
+      try {
+        listener({ target: this } as unknown as Event);
+      } catch (error) {
+        console.error(error);
+      }
+    });
   }
 
   readAsBinaryString(file: File): void {
@@ -67,15 +82,25 @@ class FakeFileReader {
         String.fromCharCode(byte)
       ).join('');
 
-      setTimeout(
-        () => (this.#listeners.load ?? []).forEach((listener) => listener()),
-        readDelays[file.name] ?? 0
-      );
+      setTimeout(() => {
+        if (file.name in readFailures) {
+          this.error = readFailures[file.name];
+          this.#fire('error');
+
+          return;
+        }
+
+        this.#fire('load');
+      }, readDelays[file.name] ?? 0);
     });
   }
 }
 
 (globalThis as any).FileReader = FakeFileReader;
+
+// A browser reports a promise nobody caught and carries on; node would stop here. It is how an import that never
+//  finished got that far.
+process.on('unhandledRejection', (error) => console.error(error));
 
 // A canvas that takes what the extractor draws and reads back blank pixels. A sheet the extractor couldn't decode is
 //  drawn as nothing at all, which a browser's canvas refuses to read back, and this one does too.
@@ -103,9 +128,16 @@ const fakeCanvas = (): HTMLCanvasElement => {
     width: 0,
     height: 0,
     getContext: () => context,
-    toDataURL: () => 'data:image/png;base64,',
+    toDataURL: () => {
+      spritesCut++;
+
+      return 'data:image/png;base64,';
+    },
   } as unknown as HTMLCanvasElement;
 };
+
+// How many sprites the extractor has cut out: each one is read back as a data URL.
+let spritesCut = 0;
 
 const createElement = document.createElement.bind(document);
 
@@ -197,9 +229,19 @@ Object.defineProperty((globalThis as any).HTMLElement.prototype, 'innerText', {
   },
 });
 
-// There is no IndexedDB (see lib/dom.ts): nothing is stored yet, and nothing is.
-(assetStore as any).keys = async (): Promise<string[]> => [];
-(assetStore as any).setAll = async (): Promise<void> => {};
+// There is no IndexedDB (see lib/dom.ts): nothing is stored yet, nothing is, and what's stored falls short.
+const store = assetStore as any;
+
+const storeWorks = (): void => {
+  store.keys = async (): Promise<string[]> => [];
+  store.setAll = async (): Promise<void> => {};
+  store.hasAllAssets = async (): Promise<boolean> => false;
+  store.missingAssets = async (): Promise<string[]> => [
+    './assets/units/warrior.png',
+  ];
+};
+
+storeWorks();
 
 const logged: unknown[][] = [],
   consoleError = console.error;
@@ -214,10 +256,16 @@ const notASheet = (name: string): File =>
   upload = (window: ImportAssetsWindow, files: File[]): Promise<void> =>
     window.handleFileUpload({ target: { files } } as unknown as InputEvent),
   // The bug was an import that never finished; a check that waits for it would wait with it.
-  settles = (promise: Promise<void>, ms: number): Promise<boolean> =>
+  settles = (
+    promise: Promise<void>,
+    ms: number
+  ): Promise<'resolved' | 'rejected' | 'hung'> =>
     Promise.race([
-      promise.then(() => true),
-      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
+      promise.then(
+        () => 'resolved' as const,
+        () => 'rejected' as const
+      ),
+      new Promise<'hung'>((resolve) => setTimeout(() => resolve('hung'), ms)),
     ]),
   progress = (window: ImportAssetsWindow): HTMLParagraphElement =>
     window.element().querySelector('p.loading') as HTMLParagraphElement,
@@ -230,7 +278,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/local/en');
 
   // A file that can't be read: the import stops, says which file, and the player can choose again. The other file,
-  //  which reads fine but finishes later, doesn't write over that.
+  //  which reads fine but finishes later, doesn't write over that, and isn't cut up.
   {
     readDelays['SP257.PIC'] = 50;
 
@@ -238,7 +286,7 @@ const run = async (): Promise<void> => {
       files = [notASheet('TER257.PIC'), sheet('SP257.PIC')],
       settled = await settles(upload(window, files), 5000);
 
-    expect('an unreadable file: the import finishes', settled, true);
+    expect('an unreadable file: the import finishes', settled, 'resolved');
 
     // Long enough for the other file to be read and cut up.
     await new Promise((resolve) => setTimeout(resolve, 200));
@@ -286,6 +334,116 @@ const run = async (): Promise<void> => {
       error?.cause instanceof Error,
       true
     );
+    expect(
+      'an unreadable file: the other file is not cut up once the import has failed',
+      spritesCut,
+      0
+    );
+  }
+
+  // A file the browser can't read: the same, with the reader's reason.
+  {
+    logged.length = 0;
+    delete readDelays['SP257.PIC'];
+    readFailures['SP257.PIC'] = Object.assign(
+      new Error('The file is locked.'),
+      {
+        name: 'NotReadableError',
+      }
+    );
+
+    const window = new ImportAssetsWindow(),
+      files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
+      settled = await settles(upload(window, files), 5000);
+
+    delete readFailures['SP257.PIC'];
+
+    expect(
+      'a file the reader fails on: the import finishes',
+      settled,
+      'resolved'
+    );
+    expect(
+      'a file the reader fails on: the message names the file',
+      progress(window).innerText.startsWith('SP257.PIC '),
+      true
+    );
+    expect(
+      "a file the reader fails on: the console has the reader's reason",
+      (
+        logged
+          .map(([first]) => first as { cause?: { name?: string } })
+          .find((first) => first?.cause !== undefined)?.cause ?? {}
+      ).name,
+      'NotReadableError'
+    );
+    expect(
+      'a file the reader fails on: the file input takes files again',
+      fileInput(window).hasAttribute('disabled'),
+      false
+    );
+  }
+
+  // The store won't open: the import stops with that reason, not blamed on a file.
+  {
+    logged.length = 0;
+    store.keys = async (): Promise<string[]> => {
+      throw new Error('The database is blocked.');
+    };
+
+    const window = new ImportAssetsWindow(),
+      files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
+      settled = await settles(upload(window, files), 5000);
+
+    storeWorks();
+
+    expect('the store fails: the import finishes', settled, 'resolved');
+    expect(
+      'the store fails: the message gives the reason',
+      progress(window).innerText,
+      'Importing the assets failed (The database is blocked.). Try again, and check that the browser lets this site store data.'
+    );
+    expect(
+      'the store fails: the message is shown as an error',
+      progress(window).style.color,
+      '#f00'
+    );
+    expect(
+      'the store fails: the file input takes files again',
+      fileInput(window).hasAttribute('disabled'),
+      false
+    );
+  }
+
+  // Both files read, but the store ends up short: it says what is missing, and the player can choose again.
+  {
+    logged.length = 0;
+    spritesCut = 0;
+
+    const window = new ImportAssetsWindow(),
+      files = [sheet('TER257.PIC'), sheet('SP257.PIC')],
+      settled = await settles(upload(window, files), 5000);
+
+    expect(
+      'sprites missing after writing: the import finishes',
+      settled,
+      'resolved'
+    );
+    expect(
+      'sprites missing after writing: both files were cut up',
+      spritesCut > 0,
+      true
+    );
+    expect(
+      'sprites missing after writing: the message names what is missing',
+      progress(window).innerText.includes('warrior.png'),
+      true
+    );
+    expect(
+      'sprites missing after writing: the file input takes files again',
+      fileInput(window).hasAttribute('disabled'),
+      false
+    );
   }
 
   // Not every expected file: the import doesn't start, and says which files it needs.
@@ -293,7 +451,7 @@ const run = async (): Promise<void> => {
     const window = new ImportAssetsWindow(),
       settled = await settles(upload(window, [notASheet('SP257.PIC')]), 5000);
 
-    expect('a file missing: the import finishes', settled, true);
+    expect('a file missing: the import finishes', settled, 'resolved');
     expect(
       'a file missing: the message lists the files needed',
       progress(window).innerText.includes('TER257.PIC'),
