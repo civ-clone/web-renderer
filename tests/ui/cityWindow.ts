@@ -7,6 +7,7 @@
 // The turns the screen says growth or production will take (#489): never, for a city with nothing to spare or short.
 // The food and shield meters (#686, #687): the stored part, next turn's part or a shortfall's, no more than the cost,
 //  and the shields kept for the next item when none is chosen.
+// The yields (#719): a row each, drawn to one scale, with what's used, spare and short, and said in words.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -827,6 +828,141 @@ const run = async (): Promise<void> => {
       renderMeter('Production', NaN, Infinity, 10).hidden,
       true
     );
+  }
+
+  // The yields (#719): a row a group, each bar drawn to the most any row makes or uses, with its figures, and the
+  //  pollution as one more row.
+  {
+    const city = cityData([]),
+      yieldOf = (_: string, value: number) => ({ _, __: [_, 'Yield'], value });
+
+    city.yields = [
+      yieldOf('Food', 10),
+      yieldOf('Food', -12),
+      yieldOf('Production', 6),
+      yieldOf('Production', -2),
+      yieldOf('Trade', 8),
+      yieldOf('Luxuries', 2),
+      yieldOf('Gold', 3),
+      yieldOf('Gold', -1),
+      yieldOf('Research', 3),
+    ] as CityData['yields'];
+    (city as { pollution?: number }).pollution = 4;
+
+    // The summaries as the game words them, from its own translations.
+    await import('../../translations/local/en');
+
+    i18next.addResources(
+      'en',
+      'translation',
+      Object.fromEntries(
+        [
+          'City.Yield.summary',
+          'City.Yield.summary_made',
+          'City.Yield.summary_short',
+        ].map((key) => [key, i18next.getResource('en', 'default', key)])
+      )
+    );
+
+    const screen = new City(city, portal, transport),
+      rows = [
+        ...screen.element().querySelectorAll('.yields-detail .yield-row'),
+      ],
+      bar = (row: Element) =>
+        ['used', 'free', 'deficit'].map(
+          (part) =>
+            (row.querySelector(`.bar .${part}`) as HTMLElement).style.width
+        ),
+      figures = (row: Element) =>
+        [...row.querySelectorAll('.figures > span')].map(
+          (span) => `${span.className} ${span.textContent}`
+        );
+
+    expect(
+      'a row for each yield, then the pollution',
+      rows.map((row) => row.getAttribute('data-yield')),
+      [
+        'Food',
+        'Production',
+        'Trade',
+        'Luxuries',
+        'Gold',
+        'Research',
+        'Pollution',
+      ]
+    );
+    expect(
+      'a city short of food: all it makes is used, and the shortfall is past the end',
+      [bar(rows[0]), figures(rows[0])],
+      [
+        [`${(10 / 12) * 100}%`, '0%', `${(2 / 12) * 100}%`],
+        ['total 10', 'net negative -2'],
+      ]
+    );
+    expect(
+      'every bar is drawn to the same scale, the most any row makes or uses',
+      [bar(rows[1]), bar(rows[6])],
+      [
+        [`${(2 / 12) * 100}%`, `${(4 / 12) * 100}%`, '0%'],
+        ['0%', `${(4 / 12) * 100}%`, '0%'],
+      ]
+    );
+    expect(
+      'what is made and the signed spare, or just what is made when none is used',
+      [figures(rows[1]), figures(rows[2]), figures(rows[4])],
+      [['total 6', 'net +4'], ['net 8'], ['total 3', 'net +2']]
+    );
+    expect(
+      'a tick for each one, at this size',
+      (rows[0].querySelector('.bar') as HTMLElement).style.getPropertyValue(
+        '--tick'
+      ),
+      `${(1 / 12) * 100}%`
+    );
+    expect(
+      'each row is said in words',
+      rows
+        .slice(0, 3)
+        .map((row) => row.querySelector('.visually-hidden')?.textContent),
+      [
+        'Food: 10, 12 used, 2 short',
+        'Production: 6, 2 used, 4 spare',
+        'Trade: 8',
+      ]
+    );
+
+    expect(
+      'and given as the row’s tooltip, as text',
+      rows[0].getAttribute('title'),
+      'Food: 10, 12 used, 2 short'
+    );
+
+    screen.close();
+
+    // A larger city's ticks are further apart, and a city that doesn't pollute, or whose pollution isn't a count, has
+    //  no pollution row.
+    city.yields = [yieldOf('Food', 40)] as CityData['yields'];
+    (city as { pollution?: number }).pollution = NaN;
+
+    const large = new City(city, portal, transport),
+      largeRows = [
+        ...large.element().querySelectorAll('.yields-detail .yield-row'),
+      ];
+
+    expect(
+      'a tick every 5 past 30, and no pollution row for a pollution that isn’t a count',
+      [
+        (
+          largeRows[0].querySelector('.bar') as HTMLElement
+        ).style.getPropertyValue('--tick'),
+        largeRows
+          .map((row) => row.getAttribute('data-yield'))
+          .includes('Pollution'),
+      ],
+      [`${(5 / 40) * 100}%`, false]
+    );
+
+    large.close();
   }
 
   finished = true;

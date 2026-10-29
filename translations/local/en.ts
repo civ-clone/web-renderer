@@ -247,7 +247,11 @@ i18next.addResources('en', 'default', {
 
   'City.SupportedUnits.title': 'Supported units',
 
-  'City.Yield.deficit': '{{amount, number}} {{- yield}} short',
+  'City.Yield.summary':
+    '{{- yield}}: {{made, number}}, {{used, number}} used, {{spare, number}} spare',
+  'City.Yield.summary_made': '{{- yield}}: {{made, number}}',
+  'City.Yield.summary_short':
+    '{{- yield}}: {{made, number}}, {{used, number}} used, {{short, number}} short',
 
   // The sidebar's list of cities (#700).
   'CitiesList.disorder': 'Civil disorder',
