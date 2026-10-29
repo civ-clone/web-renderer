@@ -207,6 +207,7 @@ i18next.addResources('en', 'default', {
     'Do you want to sell your {{- item}} for {{saleValue.value, number}} $t({{saleValue.resource._}}.name, { "defaultValue": "{{saleValue.resource._}}", "ns": "yield" })?',
 
   'City.GarrisonedUnits.title': 'Garrisoned units',
+  'City.Progress.per-turn': '{{count, number(signDisplay: exceptZero)}} / turn',
   'City.Growth.size': 'Size {{size, number}}',
 
   'City.Growth.title': 'Growth',

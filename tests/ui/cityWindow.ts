@@ -5,8 +5,8 @@
 //  opens once however often it is asked for while the worker answers, and not at all once the screen has closed. The
 //  production action's picker opens once too.
 // The turns the screen says growth or production will take (#489): never, for a city with nothing to spare or short.
-// The food and shield stores (#686, #687): an icon for each point held, no more than the box holds, and the shields kept
-//  for the next item when none is chosen.
+// The food and shield meters (#686, #687): the stored part, next turn's part or a shortfall's, no more than the cost,
+//  and the shields kept for the next item when none is chosen.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -17,7 +17,7 @@ import i18next from 'i18next';
 import City from '../../src/js/UI/components/City';
 import CityBuildAction from '../../src/js/UI/components/Actions/CityBuild';
 import {
-  renderStore,
+  renderMeter,
   turnsLeft,
 } from '../../src/js/UI/components/lib/cityYields';
 import Portal from '../../src/js/UI/components/Portal';
@@ -661,35 +661,38 @@ const run = async (): Promise<void> => {
     selling.close();
   }
 
-  // The food and shield stores (#686, #687): an icon for each point held, in a box sized to what's needed.
+  // The food and shield meters (#686, #687): what's stored, then what next turn brings or a shortfall takes.
   {
-    const getScaled = assetStore.getScaled;
-
-    // The icons are added once their image has loaded, so here it loads at once.
-    assetStore.getScaled = () =>
-      Promise.resolve({
-        toDataURL: () => 'data:,',
-      } as unknown as HTMLCanvasElement);
-
-    const storeOf = (screen: City, area: string) =>
-        screen.element().querySelector(`.${area} .store`) as HTMLElement | null,
-      layout = (store: HTMLElement | null) =>
-        store && {
-          icons: store.querySelectorAll('img').length,
-          columns: store.style.getPropertyValue('--columns'),
-          rows: store.style.getPropertyValue('grid-template-rows'),
+    const meterOf = (screen: City, area: string) =>
+        screen.element().querySelector(`.${area} .meter`) as HTMLElement | null,
+      widths = (meter: HTMLElement | null) =>
+        meter && {
+          fill: (meter.querySelector('.fill') as HTMLElement).style.width,
+          next: (meter.querySelector('.next') as HTMLElement).style.width,
+          loss: meter.querySelector('.next')!.classList.contains('loss'),
+          tick: meter.style.getPropertyValue('--tick'),
         },
-      storeCity = (build: object, growth: object): CityData => {
+      yieldOf = (_: string, value: number) => ({
+        _,
+        __: [_, 'Yield'],
+        value,
+      }),
+      meterCity = (
+        build: object,
+        growth: object,
+        yields: object[] = []
+      ): CityData => {
         const city = cityData([]);
 
         city.build = { ...city.build, ...build };
         city.growth = { ...city.growth, ...growth };
+        city.yields = yields as CityData['yields'];
 
         return city;
       };
 
-    let stores = new City(
-      storeCity(
+    let meters = new City(
+      meterCity(
         {
           building: {
             item: { _: 'Barracks', __: ['Barracks'] },
@@ -698,114 +701,118 @@ const run = async (): Promise<void> => {
           progress: { value: 12 },
           cost: { value: 40 },
         },
-        { progress: { value: 23 }, cost: { value: 50 }, size: 4 }
+        { progress: { value: 20 }, cost: { value: 50 }, size: 4 },
+        [yieldOf('Food', 5), yieldOf('Production', 4)]
       ),
       portal,
       transport
     );
 
-    try {
-      await settle();
+    expect(
+      'the food meter shows the store and next turn’s food',
+      widths(meterOf(meters, 'growth')),
+      { fill: '40%', next: '10%', loss: false, tick: '20%' }
+    );
+    expect(
+      'the shield meter shows the shields and next turn’s',
+      widths(meterOf(meters, 'build')),
+      { fill: '30%', next: '10%', loss: false, tick: '25%' }
+    );
+    expect(
+      'the figures say the store, the cost, each turn’s and the turns left',
+      [...meters.element().querySelectorAll('.growth .figures > span')].map(
+        (span) => span.className
+      ),
+      ['stored', 'per-turn', 'turns']
+    );
+    meters.close();
 
-      expect(
-        'the food box has an icon for each food stored',
-        layout(storeOf(stores, 'growth')),
+    meters = new City(
+      meterCity(
         {
-          icons: 23,
-          columns: '5',
-          rows: 'repeat(10, var(--cell))',
-        }
-      );
-      expect(
-        'the shield box has a shield for each one built up',
-        layout(storeOf(stores, 'build')),
-        {
-          icons: 12,
-          columns: '10',
-          rows: 'repeat(4, var(--cell))',
-        }
-      );
-      expect(
-        'the progress is still said in words',
-        stores.element().querySelectorAll('.build p, .growth p').length,
-        3
-      );
-      stores.close();
-
-      stores = new City(
-        storeCity(
-          {
-            building: {
-              item: { _: 'Pyramids', __: ['Pyramids'] },
-              cost: { value: 300 },
-            },
-            progress: { value: 340 },
-            cost: { value: 300 },
+          building: {
+            item: { _: 'Pyramids', __: ['Pyramids'] },
+            cost: { value: 600 },
           },
-          { progress: { value: 70 }, cost: { value: 50 } }
-        ),
-        portal,
-        transport
-      );
+          progress: { value: 590 },
+          cost: { value: 600 },
+        },
+        { progress: { value: 70 }, cost: { value: 50 } },
+        [yieldOf('Food', 5), yieldOf('Production', 30)]
+      ),
+      portal,
+      transport
+    );
 
-      await settle();
-
-      expect(
-        'a store holding more than its box draws only a boxful',
+    expect(
+      'a meter goes no further than the cost, and a large cost has fewer ticks',
+      [widths(meterOf(meters, 'growth')), widths(meterOf(meters, 'build'))].map(
+        (meter) => meter && [meter.fill, meter.next, meter.tick]
+      ),
+      [
+        ['100%', '0%', '20%'],
         [
-          layout(storeOf(stores, 'growth'))?.icons,
-          layout(storeOf(stores, 'build')),
+          `${(590 / 600) * 100}%`,
+          `${(10 / 600) * 100}%`,
+          `${(20 / 600) * 100}%`,
         ],
-        [50, { icons: 300, columns: '30', rows: 'repeat(10, var(--cell))' }]
-      );
-      stores.close();
+      ]
+    );
+    meters.close();
 
-      stores = new City(
-        storeCity({ progress: { value: 17 } }, {}),
-        portal,
-        transport
-      );
+    meters = new City(
+      meterCity({}, { progress: { value: 20 }, cost: { value: 40 } }, [
+        yieldOf('Food', -4),
+      ]),
+      portal,
+      transport
+    );
 
-      await settle();
+    expect(
+      'a shortfall is taken from the store, in red',
+      widths(meterOf(meters, 'growth')),
+      { fill: '40%', next: '10%', loss: true, tick: '25%' }
+    );
+    expect(
+      'and its figure is marked as short',
+      meters.element().querySelectorAll('.growth .per-turn.negative').length,
+      1
+    );
+    meters.close();
 
-      expect(
-        'with no item, the shields stored are still drawn',
-        layout(storeOf(stores, 'build')),
-        { icons: 17, columns: '10', rows: 'repeat(2, var(--cell))' }
-      );
-      expect(
-        'and kept for the next item',
-        stores.element().querySelector('.build p')?.textContent,
-        'City.Build.stored'
-      );
-      stores.close();
+    meters = new City(
+      meterCity({ progress: { value: 17 } }, {}),
+      portal,
+      transport
+    );
 
-      stores = new City(storeCity({}, {}), portal, transport);
+    expect(
+      'with no item, the shields stored are said, with no meter',
+      [
+        meterOf(meters, 'build'),
+        meters.element().querySelector('.build .figures')?.textContent,
+      ],
+      [null, 'City.Build.stored']
+    );
+    meters.close();
 
-      await settle();
+    meters = new City(meterCity({}, {}), portal, transport);
 
-      expect(
-        'with no item and nothing stored, there is no box and no line',
-        [
-          storeOf(stores, 'build'),
-          stores.element().querySelectorAll('.build p').length,
-        ],
-        [null, 0]
-      );
-      stores.close();
+    expect(
+      'with no item and nothing stored, there is no meter and no line',
+      [
+        meterOf(meters, 'build'),
+        meters.element().querySelectorAll('.build .figures').length,
+      ],
+      [null, 0]
+    );
+    meters.close();
 
-      const unsized = renderStore('Production', NaN, Infinity, 10);
-
-      await settle();
-
-      expect(
-        'a store with no countable size is hidden and empty',
-        [unsized.hidden, unsized.querySelectorAll('img').length],
-        [true, 0]
-      );
-    } finally {
-      assetStore.getScaled = getScaled;
-    }
+    expect(
+      'a meter with no countable size is hidden',
+      renderMeter('Production', NaN, Infinity, 10).hidden,
+      true
+    );
   }
 
   finished = true;

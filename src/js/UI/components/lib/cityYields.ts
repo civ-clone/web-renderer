@@ -166,17 +166,6 @@ export const renderCitizenCounts = (
     seed
   );
 
-export const renderProgress = (
-  cityData: CityGrowth | CityBuild | PlayerResearch,
-  yields: Yield[],
-  yieldName: string
-) =>
-  t('Progress.body', {
-    progress: cityData.progress.value,
-    total: cityData.cost.value,
-    turns: turnsLeft(cityData, yields, yieldName),
-  });
-
 export const turnsLeft = (
   data: CityGrowth | CityBuild | PlayerResearch,
   yields: Yield[],
@@ -240,66 +229,75 @@ export const yieldIcon = (group: string): HTMLElement => {
 };
 
 /**
- * A store of a yield as Civ1 draws it, a box of `capacity` cells with one icon for each of the `stored` (#686, #687):
- *  the food a city has towards growing, or the shields towards its build. The grid is `columns` wide and as tall as the
- *  capacity needs, and its cells shrink to fit the area, so a large store's icons overlap as Civ1's do. Decorative: the
- *  progress is said in words alongside.
+ * How far a city is towards growing or finishing its build, as a bar (#686, #687): the part already stored, then a
+ *  striped part for what comes in next turn, or a red one for what a shortfall takes away. A tick marks every 10, as
+ *  Civ1's food box has a column for each 10 (every 20 or more for a large cost, so they stay apart). Decorative: the
+ *  figures are said in words alongside.
  */
-export const renderStore = (
+export const renderMeter = (
   group: string,
   stored: number,
   capacity: number,
-  columns: number
+  perTurn: number
 ): HTMLElement => {
-  // Whole cells only, and none for a capacity that isn't a count (an item's cost is `Infinity` until one is chosen).
-  capacity = Number.isFinite(capacity) ? Math.max(0, Math.ceil(capacity)) : 0;
+  // None for a capacity that isn't a count (an item's cost is `Infinity` until one is chosen).
+  capacity = Number.isFinite(capacity) ? Math.max(0, capacity) : 0;
 
-  const count = Number.isFinite(stored)
-      ? Math.max(0, Math.min(Math.trunc(stored), capacity))
-      : 0,
-    store = s(
-      `<div class="store" data-yield="${group}" aria-hidden="true"></div>`
-    );
+  const meter = s(
+    `<div class="meter" data-yield="${group}" aria-hidden="true"><span class="fill"></span><span class="next"></span></div>`
+  );
 
-  // The last column keeps a whole icon's width, so a squeezed row's last icon stays inside the box.
   if (capacity === 0) {
-    store.hidden = true;
+    meter.hidden = true;
 
-    return store;
+    return meter;
   }
 
-  store.style.setProperty('--columns', `${columns}`);
-  store.style.setProperty(
-    'grid-template-columns',
-    columns > 1
-      ? `repeat(${columns - 1}, minmax(0, var(--cell))) var(--cell)`
-      : 'var(--cell)'
-  );
-  store.style.setProperty(
-    'grid-template-rows',
-    `repeat(${Math.ceil(capacity / columns)}, var(--cell))`
-  );
+  const clamp = (value: number, max: number) =>
+      Number.isFinite(value) ? Math.max(0, Math.min(value, max)) : 0,
+    percent = (value: number) => `${(value / capacity) * 100}%`,
+    loss = perTurn < 0 ? clamp(-perTurn, clamp(stored, capacity)) : 0,
+    done = clamp(stored, capacity) - loss,
+    next = loss > 0 ? loss : clamp(perTurn, capacity - done),
+    tick = 10 * Math.ceil(capacity / 300),
+    [fill, coming] = Array.from(meter.children) as HTMLElement[];
 
-  // One image for the whole box: a Wonder's store can hold hundreds of shields.
-  assetStore
-    .getScaled(`./assets/${groupIcons[group]}`, 2)
-    .then((image) => image.toDataURL('image/png'))
-    .then((source) =>
-      store.append(
-        ...new Array(count).fill(0).map(() => s(`<img src="${source}" alt="">`))
-      )
-    );
+  fill.style.width = percent(done);
+  coming.style.width = percent(next);
+  coming.classList.toggle('loss', loss > 0);
 
-  return store;
+  meter.style.setProperty('--tick', percent(Math.min(tick, capacity)));
+
+  return meter;
 };
 
-// Civ1 lays its food store out in 10 rows, a column for each 10 food the city needs to grow (`size + 1` columns).
-export const foodStoreColumns = (capacity: number): number =>
-  Math.max(1, Math.ceil(capacity / 10));
-
-// And its shields 10 to a row, widening by 10 for each 100 shields, so the box is never more than 10 rows tall.
-export const shieldStoreColumns = (capacity: number): number =>
-  10 * Math.max(1, Math.ceil(capacity / 100));
+/**
+ * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left.
+ */
+export const renderFigures = (
+  group: string,
+  data: CityGrowth | CityBuild,
+  perTurn: number,
+  turns: number
+): HTMLElement =>
+  s(
+    `<p class="figures"></p>`,
+    s(
+      `<span class="stored"></span>`,
+      yieldIcon(group),
+      t('Progress.data', {
+        progress: data.progress.value,
+        total: data.cost.value,
+      }) as string
+    ),
+    s(
+      `<span class="per-turn${perTurn < 0 ? ' negative' : ''}">${t(
+        'City.Progress.per-turn',
+        { count: perTurn }
+      )}</span>`
+    ),
+    s(`<span class="turns">${turnsText(turns)}</span>`)
+  );
 
 export const yieldImages = (
   cityYield: { _: string; value: number; __?: string[] },
