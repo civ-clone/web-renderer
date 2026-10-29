@@ -155,7 +155,10 @@
     align-items: center;
     display: flex;
     gap: 0.5rem;
-    min-height: 1.75rem;
+
+    & + .improvement {
+      margin-top: 2px;
+    }
 
     .name {
       align-items: center;
@@ -163,8 +166,11 @@
       flex: 1 1;
     }
 
+    // Not the space a window gives its buttons, which spread the list out: the row stays as tall as its text.
     button.sell {
       flex: 0 0 auto;
+      margin: 0;
+      padding-block: 0;
     }
   }
 
