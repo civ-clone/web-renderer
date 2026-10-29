@@ -34,9 +34,13 @@
     .tabbed-details,
     .build {
       flex: 1 1;
-      // So a wide food or shield store squeezes its icons rather than widening its column (#686, #687).
-      min-width: 0;
       padding: 0.25rem;
+    }
+
+    // So a wide food or shield store squeezes its icons rather than widening its column (#686, #687).
+    .growth,
+    .build {
+      min-width: 0;
     }
 
     .build {

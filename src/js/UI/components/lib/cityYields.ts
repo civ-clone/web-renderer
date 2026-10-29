@@ -251,12 +251,23 @@ export const renderStore = (
   capacity: number,
   columns: number
 ): HTMLElement => {
-  const count = Math.max(0, Math.min(Math.trunc(stored), capacity)),
+  // Whole cells only, and none for a capacity that isn't a count (an item's cost is `Infinity` until one is chosen).
+  capacity = Number.isFinite(capacity) ? Math.max(0, Math.ceil(capacity)) : 0;
+
+  const count = Number.isFinite(stored)
+      ? Math.max(0, Math.min(Math.trunc(stored), capacity))
+      : 0,
     store = s(
       `<div class="store" data-yield="${group}" aria-hidden="true"></div>`
     );
 
   // The last column keeps a whole icon's width, so a squeezed row's last icon stays inside the box.
+  if (capacity === 0) {
+    store.hidden = true;
+
+    return store;
+  }
+
   store.style.setProperty('--columns', `${columns}`);
   store.style.setProperty(
     'grid-template-columns',
