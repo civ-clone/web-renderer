@@ -195,6 +195,8 @@ i18next.addResources('en', 'default', {
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
   'City.Build.nothing': 'Nothing',
+  'City.Build.stored_one': '{{count, number}} shield kept for the next item',
+  'City.Build.stored_other': '{{count, number}} shields kept for the next item',
   'City.Build.title': '{{- item}}',
 
   'City.CompleteProduction.body':
@@ -205,6 +207,7 @@ i18next.addResources('en', 'default', {
     'Do you want to sell your {{- item}} for {{saleValue.value, number}} $t({{saleValue.resource._}}.name, { "defaultValue": "{{saleValue.resource._}}", "ns": "yield" })?',
 
   'City.GarrisonedUnits.title': 'Garrisoned units',
+  'City.Progress.per-turn': '{{count, number(signDisplay: exceptZero)}} / turn',
   'City.Growth.size': 'Size {{size, number}}',
 
   'City.Growth.title': 'Growth',

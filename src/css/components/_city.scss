@@ -37,6 +37,35 @@
       padding: 0.25rem;
     }
 
+    // The growth and the build side by side: a heading, the meter, its figures (#686, #687).
+    .growth,
+    .build {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .growth header {
+      display: flex;
+      justify-content: space-between;
+
+      .size {
+        opacity: 0.75;
+      }
+    }
+
+    .build-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+
+      button {
+        margin: 0.25rem;
+      }
+    }
+
     .build {
       text-align: center;
 
@@ -87,6 +116,92 @@
       // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
       width: 14px;
       image-rendering: pixelated;
+    }
+  }
+
+  // How far the city is towards growing or finishing its build (#686, #687): the stored part, then a striped part
+  //  for next turn's (red for a shortfall), over a tick every `--tick`. The ticks are drawn after the fill, so over it.
+  .meter {
+    --colour: #8a7a5a;
+    --tick: 100%;
+
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 2px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex: none;
+    height: 0.875rem;
+    overflow: hidden;
+    position: relative;
+
+    &[data-yield='Food'] {
+      --colour: #c98a1b;
+    }
+
+    &[data-yield='Production'] {
+      --colour: #3f6fb0;
+    }
+
+    .fill {
+      background: var(--colour);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+
+    .next {
+      background: repeating-linear-gradient(
+        -45deg,
+        var(--colour) 0 3px,
+        transparent 3px 6px
+      );
+      opacity: 0.6;
+
+      &.loss {
+        background: #a82929;
+        opacity: 1;
+      }
+    }
+
+    &::after {
+      background: linear-gradient(
+          to right,
+          transparent calc(100% - 1px),
+          rgba(0, 0, 0, 0.25) 0
+        )
+        0 0 / var(--tick) 100% repeat-x;
+      content: '';
+      inset: 0;
+      pointer-events: none;
+      position: absolute;
+    }
+  }
+
+  .figures {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    font-size: 0.85em;
+    gap: 0 0.75em;
+    justify-content: space-between;
+    margin: 0;
+
+    .stored {
+      align-items: center;
+      display: flex;
+      gap: 0.125em;
+    }
+
+    .per-turn {
+      opacity: 0.75;
+
+      &.negative {
+        color: #a82929;
+        opacity: 1;
+      }
+    }
+
+    .turns {
+      margin-left: auto;
     }
   }
 

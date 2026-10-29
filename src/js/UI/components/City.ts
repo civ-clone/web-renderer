@@ -16,12 +16,14 @@ import {
   getLabelForBuildableEntity,
   toggleAuto,
 } from './lib/cityBuild';
-import { splitYield, yieldGroup } from '../lib/yieldMap';
+import { reduceKnownYield, splitYield, yieldGroup } from '../lib/yieldMap';
 import cityMapLayout from '../lib/cityMapLayout';
 import { tileBounds } from '../lib/projection';
 import {
+  renderFigures,
+  renderMeter,
   renderPopulation,
-  renderProgress,
+  turnsLeft,
   yieldImages,
 } from './lib/cityYields';
 import Cities from './Map/Cities';
@@ -301,57 +303,101 @@ const renderYields = (city: CityData): Node => {
           ? s(`<span class="auto">${t('City.Build.auto-marker')}</span>`)
           : ''
       ),
+      ...renderBuildProgress(city),
       readOnly
         ? ''
-        : h(
-            s(
-              `<button>${t(
-                city.build.building ? 'City.Build.change' : 'City.Build.choose'
-              )}</button>`
-            ),
-            {
-              click() {
-                chooseProduction();
-              },
-            }
-          ),
-      readOnly
-        ? ''
-        : h(s(`<button class="auto">${getAutoLabel(city.build)}</button>`), {
-            click() {
-              toggleAutoProduction();
-            },
-          }),
-      ...(readOnly ? [] : city.build.spendCost).map((spendCost) =>
-        h(
-          s(
-            `<button class="buy" data-resource="${spendCost.resource._}">${t(
-              'City.Build.buy-with',
+        : s(
+            '<div class="build-actions"></div>',
+            h(
+              s(
+                `<button>${t(
+                  city.build.building
+                    ? 'City.Build.change'
+                    : 'City.Build.choose'
+                )}</button>`
+              ),
               {
-                spendCost,
+                click() {
+                  chooseProduction();
+                },
               }
-            )}</button>`
-          ),
-          {
-            click() {
-              completeProduction(spendCost);
-            },
-          }
-        )
+            ),
+            h(s(`<button class="auto">${getAutoLabel(city.build)}</button>`), {
+              click() {
+                toggleAutoProduction();
+              },
+            }),
+            ...city.build.spendCost.map((spendCost) =>
+              h(
+                s(
+                  `<button class="buy" data-resource="${
+                    spendCost.resource._
+                  }">${t('City.Build.buy-with', {
+                    spendCost,
+                  })}</button>`
+                ),
+                {
+                  click() {
+                    completeProduction(spendCost);
+                  },
+                }
+              )
+            )
+          )
+    ),
+  // The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
+  //  next, so they are said on their own.
+  renderBuildProgress = (city: CityData): Node[] => {
+    const progress = city.build.progress.value;
+
+    if (city.build.building) {
+      const perTurn = reduceKnownYield(city.yields, 'Production');
+
+      return [
+        renderMeter('Production', progress, city.build.cost.value, perTurn),
+        renderFigures(
+          'Production',
+          city.build,
+          perTurn,
+          turnsLeft(city.build, city.yields, 'Production')
+        ),
+      ];
+    }
+
+    if (progress <= 0) {
+      return [];
+    }
+
+    return [
+      s(
+        `<p class="figures">${t('City.Build.stored', { count: progress })}</p>`
       ),
-      city.build.building
-        ? s(`<p>${renderProgress(city.build, city.yields, 'Production')}</p>`)
-        : ''
-    ),
-  renderGrowth = (city: CityData): Node =>
-    s(
-      `<div class="growth"><header>${t('City.Growth.title')}</header><p>${t(
-        'City.Growth.size',
-        {
-          size: localeProvider.number(city.growth.size),
-        }
-      )}</p><p>${renderProgress(city.growth, city.yields, 'Food')}</p></div>`
-    ),
+    ];
+  },
+  // The food stored towards the next size (#686).
+  renderGrowth = (city: CityData): Node => {
+    const perTurn = reduceKnownYield(city.yields, 'Food');
+
+    return s(
+      `<div class="growth"><header><span>${t(
+        'City.Growth.title'
+      )}</span><span class="size">${t('City.Growth.size', {
+        size: localeProvider.number(city.growth.size),
+      })}</span></header></div>`,
+      renderMeter(
+        'Food',
+        city.growth.progress.value,
+        city.growth.cost.value,
+        perTurn
+      ),
+      renderFigures(
+        'Food',
+        city.growth,
+        perTurn,
+        turnsLeft(city.growth, city.yields, 'Food')
+      )
+    );
+  },
   renderImprovements = (
     city: CityData,
     sellImprovement: (
