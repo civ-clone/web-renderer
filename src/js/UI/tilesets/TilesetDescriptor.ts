@@ -69,6 +69,8 @@ export interface SpriteFamily {
   matches?: { [terrain: string]: string[] };
   /** Where sprites smaller than a tile go in it, by engine name. */
   anchors?: { [name: string]: Point };
+  /** Drawn over the terrain instead of under it: irrigation, for a tileset whose terrain covers the land. */
+  overTerrain?: boolean;
 }
 
 /** Civ1's coast: one strip of `cell`-wide columns, each two `quarter`-sized corners across and down. */
@@ -498,8 +500,23 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
       refuse(`${where} must be an object.`);
     }
 
-    const { method, neighbours, sprite, isolated, skip, matches, anchors } =
-      family as { [key: string]: unknown };
+    const {
+      method,
+      neighbours,
+      sprite,
+      isolated,
+      skip,
+      matches,
+      anchors,
+      overTerrain,
+    } = family as { [key: string]: unknown };
+
+    if (
+      overTerrain !== undefined &&
+      (key !== 'irrigation' || typeof overTerrain !== 'boolean')
+    ) {
+      refuse(`${where}.overTerrain is for irrigation only: true or false.`);
+    }
 
     if (typeof sprite !== 'string' || sprite === '') {
       refuse(`${where}.sprite must name a sprite.`);

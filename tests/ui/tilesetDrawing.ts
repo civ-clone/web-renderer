@@ -595,6 +595,28 @@ expect(
   ]
 );
 
+// A tileset whose terrain covers the land (rather than leaving most of it showing, as Civ1's does) draws irrigation
+//  over its terrain, or the terrain would hide it.
+expect(
+  'irrigation goes over the terrain when the tileset says so',
+  drawn(
+    Landscape,
+    {
+      ...stub,
+      families: {
+        ...stub.families,
+        irrigation: { sprite: 'imp/water', overTerrain: true },
+      },
+    },
+    makeWorld(5, 5, {
+      '2,2': { terrain: 'Grassland', improvements: ['Irrigation'] },
+    }),
+    2,
+    2
+  ),
+  ['ground/land@0,0', 'land/grassland/n-e-s-w@0,0', 'imp/water@0,0']
+);
+
 expect(
   'roads and railroads join the neighbours each family looks at, no road under a railroad going the same way',
   both(

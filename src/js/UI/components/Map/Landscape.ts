@@ -112,9 +112,22 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
+    // Under the terrain, as Civ1's terrain leaves most of the land showing, unless the tileset's terrain covers it.
+    const irrigationOverTerrain =
+      this.tileset().families.irrigation.overTerrain === true;
+
     this.renderLand(tile, offsetX, offsetY);
-    this.renderIrrigation(tile, offsetX, offsetY);
+
+    if (!irrigationOverTerrain) {
+      this.renderIrrigation(tile, offsetX, offsetY);
+    }
+
     this.renderTerrain(tile, offsetX, offsetY);
+
+    if (irrigationOverTerrain) {
+      this.renderIrrigation(tile, offsetX, offsetY);
+    }
+
     this.renderImprovements(tile, offsetX, offsetY);
     this.renderFeatures(tile, offsetX, offsetY);
     this.renderGoodyHut(tile, offsetX, offsetY);
