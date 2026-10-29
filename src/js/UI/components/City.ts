@@ -531,33 +531,20 @@ const renderYields = (city: CityData): Node => {
     );
   },
   // The player's other cities, either side of this one (#678), and renaming it (#676). With one city there is nowhere
-  //  to step to.
-  renderCityActions = (
-    cityCount: number,
-    step: (by: number) => void,
-    rename: () => void
-  ): Node =>
+  //  to step to, and the buttons do nothing: the list is read when one is pressed, as a city can be gained or lost
+  //  while the screen is open.
+  renderCityActions = (step: (by: number) => void, rename: () => void): Node =>
     s(
       '<div class="city-actions"></div>',
-      h(
-        s(
-          `<button class="previous"${cityCount < 2 ? ' disabled' : ''}>${t(
-            'City.previous'
-          )}</button>`
-        ),
-        { click: () => step(-1) }
-      ),
+      h(s(`<button class="previous">${t('City.previous')}</button>`), {
+        click: () => step(-1),
+      }),
       h(s(`<button class="rename">${t('City.rename')}</button>`), {
         click: () => rename(),
       }),
-      h(
-        s(
-          `<button class="next"${cityCount < 2 ? ' disabled' : ''}>${t(
-            'City.next'
-          )}</button>`
-        ),
-        { click: () => step(1) }
-      )
+      h(s(`<button class="next">${t('City.next')}</button>`), {
+        click: () => step(1),
+      })
     ),
   // The step through the player's cities, in the order the engine lists them, wrapping at either end (#678).
   steppedCity = (cities: CityData[], city: CityData, by: number): CityData => {
@@ -619,7 +606,6 @@ export class City extends Window {
         readOnly
           ? ''
           : renderCityActions(
-              (city.player.cities ?? []).length,
               (by: number) => this.step(by),
               () => this.rename()
             )
@@ -749,7 +735,6 @@ export class City extends Window {
       this.#readOnly
         ? ''
         : renderCityActions(
-            this.#cities().length,
             (by: number) => this.step(by),
             () => this.rename()
           )
@@ -832,15 +817,21 @@ export class City extends Window {
       return;
     }
 
-    const city = this.#city;
+    const city = this.#city,
+      shown = cityName(city);
 
-    new CityNameWindow(cityName(city), (name) =>
+    // The name as shown, which a translation may have changed: left as it is, it is not a new name.
+    new CityNameWindow(shown, (name) => {
+      if (name === shown) {
+        return;
+      }
+
       this.#transport.send('action', {
         name: 'RenameCity',
         id: city.id,
         cityName: name,
-      })
-    );
+      });
+    });
   }
 
   async changeProduction(): Promise<void> {
@@ -865,7 +856,10 @@ export class City extends Window {
 
       return;
     } finally {
-      this.#choosingProduction = false;
+      // Not once the screen has stepped on, which has cleared it already, and may be asking for the next city (#678).
+      if (this.#city.build.id === cityBuild.id) {
+        this.#choosingProduction = false;
+      }
     }
 
     // Closed while waiting: the picker would open over the map (#484). Or moved on to another city (#678), which the
@@ -902,16 +896,15 @@ export class City extends Window {
   }
 
   completeProduction(spendCost: SpendCost): void {
-    const cityBuild = this.#city.build;
+    // The city the confirmation is for, whichever the screen has stepped to by the time it's answered (#678).
+    const city = this.#city,
+      cityBuild = city.build;
 
     if (!cityBuild.building) {
       return;
     }
 
-    const treasury = getTreasuryForYield(
-      this.#city.player,
-      spendCost.resource._
-    );
+    const treasury = getTreasuryForYield(city.player, spendCost.resource._);
 
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),
@@ -923,17 +916,16 @@ export class City extends Window {
       () =>
         this.#transport.send('action', {
           name: 'CompleteProduction',
-          id: this.#city.build.id,
+          id: cityBuild.id,
           treasury: treasury.id,
         })
     );
   }
 
   sellImprovement(improvement: CityImprovement, saleValue: SpendCost): void {
-    const treasury = getTreasuryForYield(
-      this.#city.player,
-      saleValue.resource._
-    );
+    // As for buying: the city it was opened for (#678).
+    const city = this.#city,
+      treasury = getTreasuryForYield(city.player, saleValue.resource._);
 
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),
@@ -944,7 +936,7 @@ export class City extends Window {
       () =>
         this.#transport.send('action', {
           name: 'SellImprovement',
-          id: this.#city.id,
+          id: city.id,
           improvement: improvement.id,
           treasury: treasury.id,
         })

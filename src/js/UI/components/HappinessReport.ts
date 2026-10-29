@@ -14,6 +14,7 @@ import Unit from './Unit';
 import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
 import { cityName } from './lib/city';
+import { escape } from './lib/requirements';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
@@ -70,7 +71,7 @@ const buildCityRow = async (
     s(
       `<div class="city${city.celebrateLeader ? ' celebrateLeader' : ''}${
         city.civilDisorder ? ' civilDisorder' : ''
-      }"><div class="name">${cityName(city)}</div></div>`,
+      }"><div class="name">${escape(cityName(city))}</div></div>`,
       renderPopulation(city),
       h(
         s(

@@ -505,6 +505,55 @@ const run = async (): Promise<void> => {
       0
     );
 
+    // OK pressed with Enter, from the button rather than the field.
+    click('.city-actions button.rename');
+    (
+      document.querySelector('.city-name-window input') as HTMLInputElement
+    ).value = 'Uruk';
+    key(
+      document.querySelector('.city-name-window')!,
+      'Enter',
+      [...document.querySelectorAll('.city-name-window footer button')][0]
+    );
+
+    expect('Enter on OK sends the name too', sent.slice(1), [
+      { name: 'RenameCity', id: 'City-A', cityName: 'Uruk' },
+    ]);
+
+    sent.splice(1);
+
+    // OK on the name as it was shown is no new name.
+    click('.city-actions button.rename');
+    key(document.querySelector('.city-name-window input')!, 'Enter');
+
+    expect('the name left as it was sends nothing', sent.length, 1);
+
+    // A confirmation answered after a step is for the city it was opened for.
+    (updatedBabylon.build as any).building = {
+      item: { _: 'Temple', __: ['Temple'] },
+    };
+    stepping.completeProduction({
+      resource: { _: 'Gold' },
+      value: 10,
+    } as any);
+    key(stepping.element(), 'ArrowRight');
+    sent = [];
+    (
+      [
+        ...document.querySelectorAll('.confirmationWindow footer button'),
+      ][0] as HTMLElement
+    ).dispatchEvent(new Event('click'));
+
+    expect('a purchase confirmed after a step buys the first city’s', sent, [
+      {
+        name: 'CompleteProduction',
+        id: 'CityBuild-City-A',
+        treasury: 'Treasury-1',
+      },
+    ]);
+
+    sent = [{ name: 'RenameCity', id: 'City-A' }];
+
     click('.city-actions button.rename');
 
     const emptied = document.querySelector('.city-name-window input')!;
@@ -538,12 +587,16 @@ const run = async (): Promise<void> => {
       transport
     );
 
+    alone
+      .element()
+      .querySelector('.city-actions button.next')!
+      .dispatchEvent(new Event('click'));
+    key(alone.element(), 'ArrowLeft');
+
     expect(
-      'with one city, Previous and Next are disabled',
-      Array.from(
-        alone.element().querySelectorAll('.city-actions button[disabled]')
-      ).map((button) => button.className),
-      ['previous', 'next']
+      'with one city, Next and Left do nothing',
+      alone.element().querySelector(':scope > header > h3')?.textContent,
+      'Lagash'
     );
 
     alone.close();

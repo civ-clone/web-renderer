@@ -11,6 +11,21 @@ export const cityNameMaxLength = 12;
  * The "City name" box the city screen's Rename opens (#676), filled with the city's name. `onOK` has the name typed,
  * trimmed, and isn't called for an empty one, which leaves the name as it was, as Cancel does.
  */
+// Enter or Space on a button presses it. The window's own Enter would only close it, as `ConfirmationWindow`'s buttons
+//  say too.
+const pressed =
+  (press: () => void) =>
+  (event: KeyboardEvent): void => {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    press();
+  };
+
 export class CityNameWindow extends NotificationWindow {
   constructor(name: string, onOK: (name: string) => void) {
     const input = s<HTMLInputElement>(
@@ -35,9 +50,13 @@ export class CityNameWindow extends NotificationWindow {
         s(`<label><p>${t('City.Rename.label')}</p></label>`, input),
         s(
           '<footer></footer>',
-          h(s(`<button>${t('Generic.ok')}</button>`), { click: ok }),
+          h(s(`<button>${t('Generic.ok')}</button>`), {
+            click: ok,
+            keydown: pressed(ok),
+          }),
           h(s(`<button>${t('Generic.cancel')}</button>`), {
             click: () => this.close(),
+            keydown: pressed(() => this.close()),
           })
         )
       ),
