@@ -5,6 +5,8 @@
 //  opens once however often it is asked for while the worker answers, and not at all once the screen has closed. The
 //  production action's picker opens once too.
 // The turns the screen says growth or production will take (#489): never, for a city with nothing to spare or short.
+// The food and shield stores (#686, #687): an icon for each point held, no more than the box holds, and the shields kept
+//  for the next item when none is chosen.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -654,6 +656,141 @@ const run = async (): Promise<void> => {
       .querySelectorAll('.confirmationWindow')
       .forEach((window) => window.remove());
     selling.close();
+  }
+
+  // The food and shield stores (#686, #687): an icon for each point held, in a box sized to what's needed.
+  {
+    const getScaled = assetStore.getScaled;
+
+    // The icons are added once their image has loaded, so here it loads at once.
+    assetStore.getScaled = () =>
+      Promise.resolve({
+        toDataURL: () => 'data:,',
+      } as unknown as HTMLCanvasElement);
+
+    const storeOf = (screen: City, area: string) =>
+        screen.element().querySelector(`.${area} .store`) as HTMLElement | null,
+      layout = (store: HTMLElement | null) =>
+        store && {
+          icons: store.querySelectorAll('img').length,
+          columns: store.style.getPropertyValue('--columns'),
+          rows: store.style.getPropertyValue('grid-template-rows'),
+        },
+      storeCity = (build: object, growth: object): CityData => {
+        const city = cityData([]);
+
+        city.build = { ...city.build, ...build };
+        city.growth = { ...city.growth, ...growth };
+
+        return city;
+      };
+
+    let stores = new City(
+      storeCity(
+        {
+          building: {
+            item: { _: 'Barracks', __: ['Barracks'] },
+            cost: { value: 40 },
+          },
+          progress: { value: 12 },
+          cost: { value: 40 },
+        },
+        { progress: { value: 23 }, cost: { value: 50 }, size: 4 }
+      ),
+      portal,
+      transport
+    );
+
+    await settle();
+
+    expect(
+      'the food box has an icon for each food stored',
+      layout(storeOf(stores, 'growth')),
+      {
+        icons: 23,
+        columns: '5',
+        rows: 'repeat(10, var(--cell))',
+      }
+    );
+    expect(
+      'the shield box has a shield for each one built up',
+      layout(storeOf(stores, 'build')),
+      {
+        icons: 12,
+        columns: '10',
+        rows: 'repeat(4, var(--cell))',
+      }
+    );
+    expect(
+      'the progress is still said in words',
+      stores.element().querySelectorAll('.build p, .growth p').length,
+      3
+    );
+    stores.close();
+
+    stores = new City(
+      storeCity(
+        {
+          building: {
+            item: { _: 'Pyramids', __: ['Pyramids'] },
+            cost: { value: 300 },
+          },
+          progress: { value: 340 },
+          cost: { value: 300 },
+        },
+        { progress: { value: 70 }, cost: { value: 50 } }
+      ),
+      portal,
+      transport
+    );
+
+    await settle();
+
+    expect(
+      'a store holding more than its box draws only a boxful',
+      [
+        layout(storeOf(stores, 'growth'))?.icons,
+        layout(storeOf(stores, 'build')),
+      ],
+      [50, { icons: 300, columns: '30', rows: 'repeat(10, var(--cell))' }]
+    );
+    stores.close();
+
+    stores = new City(
+      storeCity({ progress: { value: 17 } }, {}),
+      portal,
+      transport
+    );
+
+    await settle();
+
+    expect(
+      'with no item, the shields stored are still drawn',
+      layout(storeOf(stores, 'build')),
+      { icons: 17, columns: '10', rows: 'repeat(2, var(--cell))' }
+    );
+    expect(
+      'and kept for the next item',
+      stores.element().querySelector('.build p')?.textContent,
+      'City.Build.stored'
+    );
+    stores.close();
+
+    stores = new City(storeCity({}, {}), portal, transport);
+
+    await settle();
+
+    expect(
+      'with no item and nothing stored, there is no box and no line',
+      [
+        storeOf(stores, 'build'),
+        stores.element().querySelectorAll('.build p').length,
+      ],
+      [null, 0]
+    );
+    stores.close();
+
+    assetStore.getScaled = getScaled;
   }
 
   finished = true;

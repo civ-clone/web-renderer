@@ -34,6 +34,8 @@
     .tabbed-details,
     .build {
       flex: 1 1;
+      // So a wide food or shield store squeezes its icons rather than widening its column (#686, #687).
+      min-width: 0;
       padding: 0.25rem;
     }
 
@@ -86,6 +88,25 @@
     img {
       // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
       width: 14px;
+      image-rendering: pixelated;
+    }
+  }
+
+  // The food and shield stores (#686, #687): a box with a cell for each point it holds, at most a 14px icon wide. A
+  //  store wider than its area squeezes its cells, and each icon overlaps the next, as Civ1 draws a large store.
+  .store {
+    // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
+    --cell: 14px;
+
+    border: 1px solid rgba(0, 0, 0, 0.3);
+    display: grid;
+    margin: 0.25rem auto;
+    max-width: calc(100% - 4px);
+    padding: 1px;
+    width: calc(var(--columns) * var(--cell));
+
+    img {
+      width: var(--cell);
       image-rendering: pixelated;
     }
   }

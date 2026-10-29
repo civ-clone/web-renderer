@@ -195,6 +195,8 @@ i18next.addResources('en', 'default', {
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
   'City.Build.nothing': 'Nothing',
+  'City.Build.stored_one': '{{count, number}} shield kept for the next item',
+  'City.Build.stored_other': '{{count, number}} shields kept for the next item',
   'City.Build.title': '{{- item}}',
 
   'City.CompleteProduction.body':

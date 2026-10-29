@@ -239,6 +239,57 @@ export const yieldIcon = (group: string): HTMLElement => {
   return icon;
 };
 
+/**
+ * A store of a yield as Civ1 draws it, a box of `capacity` cells with one icon for each of the `stored` (#686, #687):
+ *  the food a city has towards growing, or the shields towards its build. The grid is `columns` wide and as tall as the
+ *  capacity needs, and its cells shrink to fit the area, so a large store's icons overlap as Civ1's do. Decorative: the
+ *  progress is said in words alongside.
+ */
+export const renderStore = (
+  group: string,
+  stored: number,
+  capacity: number,
+  columns: number
+): HTMLElement => {
+  const count = Math.max(0, Math.min(Math.trunc(stored), capacity)),
+    store = s(
+      `<div class="store" data-yield="${group}" aria-hidden="true"></div>`
+    );
+
+  // The last column keeps a whole icon's width, so a squeezed row's last icon stays inside the box.
+  store.style.setProperty('--columns', `${columns}`);
+  store.style.setProperty(
+    'grid-template-columns',
+    columns > 1
+      ? `repeat(${columns - 1}, minmax(0, var(--cell))) var(--cell)`
+      : 'var(--cell)'
+  );
+  store.style.setProperty(
+    'grid-template-rows',
+    `repeat(${Math.ceil(capacity / columns)}, var(--cell))`
+  );
+
+  // One image for the whole box: a Wonder's store can hold hundreds of shields.
+  assetStore
+    .getScaled(`./assets/${groupIcons[group]}`, 2)
+    .then((image) => image.toDataURL('image/png'))
+    .then((source) =>
+      store.append(
+        ...new Array(count).fill(0).map(() => s(`<img src="${source}" alt="">`))
+      )
+    );
+
+  return store;
+};
+
+// Civ1 lays its food store out in 10 rows, a column for each 10 food the city needs to grow (`size + 1` columns).
+export const foodStoreColumns = (capacity: number): number =>
+  Math.max(1, Math.ceil(capacity / 10));
+
+// And its shields 10 to a row, widening by 10 for each 100 shields, so the box is never more than 10 rows tall.
+export const shieldStoreColumns = (capacity: number): number =>
+  10 * Math.max(1, Math.ceil(capacity / 100));
+
 export const yieldImages = (
   cityYield: { _: string; value: number; __?: string[] },
   absolute: boolean = false

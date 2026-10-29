@@ -20,8 +20,11 @@ import { splitYield, yieldGroup } from '../lib/yieldMap';
 import cityMapLayout from '../lib/cityMapLayout';
 import { tileBounds } from '../lib/projection';
 import {
+  foodStoreColumns,
   renderPopulation,
   renderProgress,
+  renderStore,
+  shieldStoreColumns,
   yieldImages,
 } from './lib/cityYields';
 import Cities from './Map/Cities';
@@ -339,10 +342,36 @@ const renderYields = (city: CityData): Node => {
           }
         )
       ),
-      city.build.building
-        ? s(`<p>${renderProgress(city.build, city.yields, 'Production')}</p>`)
-        : ''
+      ...renderBuildProgress(city)
     ),
+  // The shields built up, with the item's cost as the box (#687). With no item chosen they are still there, kept for
+  //  whatever is chosen next, so they are shown on their own.
+  renderBuildProgress = (city: CityData): Node[] => {
+    const progress = city.build.progress.value;
+
+    if (city.build.building) {
+      const cost = city.build.cost.value;
+
+      return [
+        s(`<p>${renderProgress(city.build, city.yields, 'Production')}</p>`),
+        renderStore('Production', progress, cost, shieldStoreColumns(cost)),
+      ];
+    }
+
+    if (progress <= 0) {
+      return [];
+    }
+
+    return [
+      s(`<p>${t('City.Build.stored', { count: progress })}</p>`),
+      renderStore(
+        'Production',
+        progress,
+        progress,
+        shieldStoreColumns(progress)
+      ),
+    ];
+  },
   renderGrowth = (city: CityData): Node =>
     s(
       `<div class="growth"><header>${t('City.Growth.title')}</header><p>${t(
@@ -350,7 +379,13 @@ const renderYields = (city: CityData): Node => {
         {
           size: localeProvider.number(city.growth.size),
         }
-      )}</p><p>${renderProgress(city.growth, city.yields, 'Food')}</p></div>`
+      )}</p><p>${renderProgress(city.growth, city.yields, 'Food')}</p></div>`,
+      renderStore(
+        'Food',
+        city.growth.progress.value,
+        city.growth.cost.value,
+        foodStoreColumns(city.growth.cost.value)
+      )
     ),
   renderImprovements = (
     city: CityData,
