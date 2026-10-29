@@ -24,6 +24,7 @@ import {
   renderMeter,
   renderPopulation,
   turnsLeft,
+  yieldIcon,
   yieldImages,
 } from './lib/cityYields';
 import Cities from './Map/Cities';
@@ -54,79 +55,121 @@ import { t } from 'i18next';
 import watchCity from './lib/watchCity';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
-// The yield rows the city screen draws. This is the screen's layout, not a rule: the groups themselves come from the
-//  engine's class ancestry.
+// The yield rows the city screen draws, one a group. This is the screen's layout, not a rule: the groups themselves come
+//  from the engine's class ancestry.
 const yieldRows = [
-  ['Food'],
-  ['Production'],
-  ['Trade'],
-  ['Luxuries', 'Gold', 'Research'],
+  'Food',
+  'Production',
+  'Trade',
+  'Luxuries',
+  'Gold',
+  'Research',
 ];
 
 // The groups drawn elsewhere on the screen: the rows above, and the citizens, which show Happiness and Unhappiness.
-const drawnYieldGroups = [...yieldRows.flat(), 'Happiness', 'Unhappiness'];
+const drawnYieldGroups = [...yieldRows, 'Happiness', 'Unhappiness'];
+
+const yieldName = (group: string): string =>
+  t(`${group}.name`, {
+    defaultValue: group,
+    ns: 'yield',
+  });
+
+// A tick every one of a yield, as Civ1 draws an icon each, while they stay apart: every 5 or 10 for a large city.
+const yieldTick = (scale: number): number =>
+  scale <= 30 ? 1 : scale <= 150 ? 5 : 10;
+
+/**
+ * One yield as a row (#719): its icon, a bar of what the city makes, and the figures. The bar's first part is what the
+ *  city uses of it (the food eaten, the shields supporting units, the trade lost to corruption, the gold for upkeep),
+ *  then what's left over, or, past the end of what it makes, a red part for what it's short. Every row is drawn to
+ *  `scale`, so the bars compare.
+ */
+const renderYieldRow = (
+  group: string,
+  { used, deficit, free }: { used: number; deficit: number; free: number },
+  scale: number,
+  summary: string
+): HTMLElement => {
+  const row = s(
+      `<div class="yield-row" data-yield="${group}" title="${summary}"><span class="visually-hidden">${summary}</span></div>`
+    ),
+    percent = (value: number) => `${(value / scale) * 100}%`,
+    bar = s(
+      `<span class="bar" aria-hidden="true"><span class="used"></span><span class="free"></span><span class="deficit"></span></span>`
+    ),
+    [usedPart, freePart, deficitPart] = Array.from(
+      bar.children
+    ) as HTMLElement[];
+
+  usedPart.style.width = percent(used);
+  freePart.style.width = percent(free);
+  deficitPart.style.width = percent(deficit);
+  bar.style.setProperty('--tick', percent(Math.min(yieldTick(scale), scale)));
+
+  const icon = yieldIcon(group);
+
+  icon.setAttribute('aria-hidden', 'true');
+
+  row.append(
+    icon,
+    bar,
+    s(
+      `<span class="figures" aria-hidden="true">${
+        used + deficit > 0
+          ? `<span class="total">${localeProvider.number(used + free)}</span>`
+          : ''
+      }<span class="net${
+        deficit > 0 ? ' negative' : ''
+      }">${localeProvider.number(
+        deficit > 0 ? -deficit : free,
+        used + deficit > 0 ? { signDisplay: 'exceptZero' } : {}
+      )}</span></span>`
+    )
+  );
+
+  return row;
+};
 
 const renderYields = (city: CityData): Node => {
+    const rows = yieldRows.map(
+        (group) => [group, splitYield(group, city.yields)] as const
+      ),
+      pollution = Math.max(0, city.pollution ?? 0),
+      // Wide enough for the most any row makes or uses, so the bars compare, and never nothing.
+      scale = Math.max(
+        1,
+        pollution,
+        ...rows.map(([, { used, deficit, free }]) => used + deficit + free)
+      );
+
     return s(
       '<div class="yields-detail"></div>',
-      ...yieldRows.map((cityYieldNames) =>
-        s(
-          `<div class="yields" data-yields="${cityYieldNames.join(
-            ' '
-          )}"></div>`,
-          ...cityYieldNames.map((cityYieldName) =>
-            s(
-              `<span class="yield" data-yield="${cityYieldName}"></span>`,
-              ...Object.entries(splitYield(cityYieldName, city.yields)).map(
-                ([part, value]) => {
-                  const span = s(
-                    `<span class="${part}"></span>`,
-                    ...yieldImages({
-                      _: cityYieldName,
-                      value,
-                    })
-                  );
-
-                  // Colour alone doesn't say that the city is short.
-                  if (part === 'deficit' && value > 0) {
-                    const label = t('City.Yield.deficit', {
-                      amount: value,
-                      yield: t(`${cityYieldName}.name`, {
-                        defaultValue: cityYieldName,
-                        ns: 'yield',
-                      }),
-                    });
-
-                    span.setAttribute('title', label);
-                    span.setAttribute('role', 'img');
-                    span.setAttribute('aria-label', label);
-                  }
-
-                  return span;
-                }
-              )
-            )
-          )
+      ...rows.map(([group, split]) =>
+        renderYieldRow(
+          group,
+          split,
+          scale,
+          t('City.Yield.summary', {
+            context:
+              split.deficit > 0 ? 'short' : split.used > 0 ? undefined : 'made',
+            yield: yieldName(group),
+            made: split.used + split.free,
+            used: split.used + split.deficit,
+            spare: split.free,
+            short: split.deficit,
+          })
         )
       ),
       // How much the city pollutes, from the engine's `pollution` data (#402), below the yields as one more row. Civ1
       //  draws it as smokestacks at the bottom of its info panel.
-      ...((city.pollution ?? 0) > 0
+      ...(pollution > 0
         ? [
-            s(
-              '<div class="yields" data-yields="Pollution"></div>',
-              s(
-                `<span class="yield" data-yield="Pollution" role="img" title="${t(
-                  'City.pollution',
-                  { count: city.pollution }
-                )}" aria-label="${t('City.pollution', {
-                  count: city.pollution,
-                })}"></span>`,
-                s(
-                  '<span class="free"></span>',
-                  ...yieldImages({ _: 'Pollution', value: city.pollution! })
-                )
-              )
+            renderYieldRow(
+              'Pollution',
+              { used: 0, deficit: 0, free: pollution },
+              scale,
+              t('City.pollution', { count: pollution })
             ),
           ]
         : []),
@@ -150,39 +193,12 @@ const renderYields = (city: CityData): Node => {
           }, {} as PlainObject)
       ).map(([key, value]) =>
         s(
-          `<div><div>${t(`${key}.name`, {
-            defaultValue: key,
-            ns: 'yield',
-          })}</div><div>${value}</div></div>`
+          `<div class="other-yield"><span>${yieldName(
+            key
+          )}</span><span>${localeProvider.number(value)}</span></div>`
         )
       )
     );
-  },
-  resizeYields = (element: HTMLElement) => {
-    const yieldWrappers = element.querySelectorAll('.yields-detail .yield')!;
-
-    Array.from(yieldWrappers).forEach((container) => {
-      const parts = Array.from(container.children);
-
-      while (
-        parts.reduce((width, part) => width + part.scrollWidth, 0) >
-        container.clientWidth
-      ) {
-        const currentMaxWidth = parseInt(
-          container.getAttribute('data-max-width') || '14',
-          10
-        );
-
-        if (currentMaxWidth === 0) {
-          break;
-        }
-
-        container.setAttribute(
-          'data-max-width',
-          (currentMaxWidth - 1).toString()
-        );
-      }
-    });
   },
   renderMap = (
     portal: Portal,
@@ -664,8 +680,6 @@ export class City extends Window {
       }
     );
 
-    setTimeout(() => resizeYields(this.element()), 200);
-
     this.#city = city;
     this.#portal = portal;
     this.#readOnly = readOnly;
@@ -754,17 +768,6 @@ export class City extends Window {
         this.close();
       }
     });
-
-    const resizeHandler = () =>
-      setTimeout(() => resizeYields(this.element()), 200);
-
-    this.on('close', () => window.removeEventListener('resize', resizeHandler));
-
-    window.addEventListener('resize', resizeHandler);
-
-    this.on('close', () => this.off('resize', resizeHandler));
-
-    this.on('resize', resizeHandler);
   }
 
   #details(city: CityData): Node {
@@ -817,8 +820,6 @@ export class City extends Window {
         ) {
           this.element().focus();
         }
-
-        setTimeout(() => resizeYields(this.element()), 200);
       },
       // Captured or destroyed.
       close: () => this.close(),
@@ -853,8 +854,6 @@ export class City extends Window {
 
     // The buttons it was pressed with have gone with the redraw.
     this.element().focus();
-
-    setTimeout(() => resizeYields(this.element()), 200);
   }
 
   // The "City name" box, and the name it gives sent to the worker, which decides whether it stands (#676).

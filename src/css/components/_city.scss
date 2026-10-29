@@ -8,9 +8,27 @@
 }
 
 .city-screen {
+  // One colour a yield, for its bar in the yields and its meter below them (#686, #687, #719).
+  --yield-food: #c98a1b;
+  --yield-production: #3f6fb0;
+  --yield-trade: #2f9a8a;
+  --yield-luxuries: #b0459e;
+  --yield-gold: #d4ac0d;
+  --yield-research: #7a5cc4;
+  --yield-pollution: #6f6a4f;
+  --yield-short: #a82929;
+
   display: flex;
   flex: 1;
   flex-direction: column;
+
+  @each $group in 'Food', 'Production', 'Trade', 'Luxuries', 'Gold', 'Research',
+    'Pollution'
+  {
+    [data-yield='#{$group}'] {
+      --colour: var(--yield-#{to-lower-case($group)});
+    }
+  }
 
   .city-map {
     min-width: 160px;
@@ -87,7 +105,6 @@
     }
   }
 
-  .yield-details .yield,
   .population {
     display: flex;
 
@@ -122,7 +139,6 @@
   // How far the city is towards growing or finishing its build (#686, #687): the stored part, then a striped part
   //  for next turn's (red for a shortfall), over a tick every `--tick`. The ticks are drawn after the fill, so over it.
   .meter {
-    --colour: #8a7a5a;
     --tick: 100%;
 
     background: rgba(0, 0, 0, 0.12);
@@ -134,14 +150,6 @@
     height: 0.875rem;
     overflow: hidden;
     position: relative;
-
-    &[data-yield='Food'] {
-      --colour: #c98a1b;
-    }
-
-    &[data-yield='Production'] {
-      --colour: #3f6fb0;
-    }
 
     .fill {
       background: var(--colour);
@@ -157,7 +165,7 @@
       opacity: 0.6;
 
       &.loss {
-        background: #a82929;
+        background: var(--yield-short);
         opacity: 1;
       }
     }
@@ -195,7 +203,7 @@
       opacity: 0.75;
 
       &.negative {
-        color: #a82929;
+        color: var(--yield-short);
         opacity: 1;
       }
     }
@@ -205,54 +213,103 @@
     }
   }
 
-  // The pollution sprite is 16px, not 7px like the other yields', so it's drawn at the same 2x scale (#402).
-  .yield[data-yield='Pollution'] .yield-icon img {
-    width: 32px;
+  // The city's yields, a row each (#719): the icon, a bar of what it makes (what it uses, then what's spare, then in red
+  //  what it's short), and the figures. The ticks are drawn after the parts, so over them.
+  .yields-detail {
+    display: grid;
+    gap: 2px 0.375rem;
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+    margin: 0.25rem 0;
   }
 
-  .yield-details .yield {
-    display: flex;
+  .yield-row {
+    align-items: center;
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
 
-    .used {
-      flex: 0 1;
-
-      img {
-        filter: sepia(1) grayscale(1) brightness(0.5);
-      }
-    }
-
-    .deficit {
-      flex: 0 1;
-
-      img {
-        // Darkened first: the icons are near-white, and a tint barely shows on white.
-        filter: brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(6)
-          brightness(0.6);
-      }
-    }
-
-    .free {
-      flex: 1 1;
-    }
-
-    .used,
-    .deficit,
-    .free {
+    .yield-icon {
       display: flex;
+      padding: 0;
     }
 
-    &:not(:last-child),
-    .used:not(:empty) {
-      margin-right: 0.5em;
+    // The pollution sprite is 16px, not 7px like the other yields', so it's squeezed into the same 14px.
+    .yield-icon img {
+      height: 14px;
+      width: 14px;
     }
 
-    @for $i from 0 through 14 {
-      &[data-max-width='#{$i}'] {
-        .yield-icon {
-          max-width: #{$i}px;
-        }
+    .bar {
+      align-self: center;
+      background: rgba(0, 0, 0, 0.08);
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-radius: 2px;
+      display: flex;
+      height: 0.625rem;
+      overflow: hidden;
+      position: relative;
+
+      // Faded, and parted from what's spare by a line, so a used part reads as the same yield, spent.
+      .used {
+        background: color-mix(in srgb, var(--colour) 45%, transparent);
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.35);
+      }
+
+      .free {
+        background: var(--colour);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      }
+
+      .deficit {
+        background: repeating-linear-gradient(
+          -45deg,
+          var(--yield-short) 0 3px,
+          transparent 3px 6px
+        );
+      }
+
+      &::after {
+        background: linear-gradient(
+            to right,
+            transparent calc(100% - 1px),
+            rgba(0, 0, 0, 0.18) 0
+          )
+          0 0 / var(--tick) 100% repeat-x;
+        content: '';
+        inset: 0;
+        pointer-events: none;
+        position: absolute;
       }
     }
+
+    .figures {
+      align-items: baseline;
+      display: flex;
+      font-size: 0.8em;
+      gap: 0.375em;
+      justify-content: flex-end;
+      min-width: 3.5em;
+
+      .total {
+        opacity: 0.6;
+      }
+
+      .negative {
+        color: var(--yield-short);
+      }
+    }
+  }
+
+  .yields-detail .anarchy,
+  .yields-detail .other-yield {
+    font-size: 0.85em;
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .yields-detail .other-yield {
+    display: flex;
+    justify-content: space-between;
   }
 
   .tabbed-details,
