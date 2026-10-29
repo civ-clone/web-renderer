@@ -10,6 +10,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { getLabelForBuildable } from './lib/cityBuild';
 import { cityName } from './lib/city';
+import { escape } from './lib/requirements';
 import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
@@ -38,7 +39,7 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
     );
 
   return [
-    s(`<header>${cityName(city)}</header>`),
+    s(`<header>${escape(cityName(city))}</header>`),
     s(
       `<div class="growth"><strong>${t('City.size', {
         size: city.growth.size,

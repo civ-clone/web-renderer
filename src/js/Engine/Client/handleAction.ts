@@ -29,6 +29,7 @@ import {
   handleCityBuild,
   handleCompleteProduction,
   handleReassignWorkers,
+  handleRenameCity,
   handleSellImprovement,
 } from './actions/city';
 import { ActionContext, ActionHandler } from './actions/ActionContext';
@@ -89,6 +90,10 @@ const dispatchAction = (
 
   if (name === 'ReassignWorkers') {
     return handleReassignWorkers(ctx, action);
+  }
+
+  if (name === 'RenameCity') {
+    return handleRenameCity(ctx, action);
   }
 
   if (name === 'EndTurn') {

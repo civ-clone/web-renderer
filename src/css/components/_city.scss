@@ -146,24 +146,41 @@
     border-width: 0 1px;
   }
 
-  .improvements .yield-icon:first-child {
+  .improvements .name > :first-child + .yield-icon {
     margin-left: 0.5rem;
   }
 
-  // An improvement that can be sold reads as the others do, and is clicked to sell it (#31).
-  .improvements button.sell {
-    all: unset;
-    display: block;
-    cursor: pointer;
+  // Each improvement, with a Sell button at the right when it can be sold (#684).
+  .improvements .improvement {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
 
-    &:hover,
-    &:focus-visible {
-      text-decoration: underline;
+    & + .improvement {
+      margin-top: 2px;
     }
 
-    &:focus-visible {
-      outline: 1px dotted currentColor;
+    .name {
+      align-items: center;
+      display: flex;
+      flex: 1 1;
     }
+
+    // Not the space a window gives its buttons, which spread the list out: the row stays as tall as its text.
+    button.sell {
+      flex: 0 0 auto;
+      margin: 0;
+      padding-block: 0;
+    }
+  }
+
+  // The previous and next city, and renaming this one (#676, #678).
+  .city-actions {
+    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    padding: 0.25rem;
   }
 }
 
@@ -176,5 +193,20 @@
   .yield-icon {
     display: inline-block;
     vertical-align: middle;
+  }
+}
+
+// The "City name" box (#676): about as wide as its text, not the 40em a window of text is at least, with the field
+//  across it inside the text's margins.
+.window.size-auto.city-name-window {
+  max-width: calc(100% - 2rem);
+  min-width: 0;
+  width: 18rem;
+
+  input {
+    box-sizing: border-box;
+    display: block;
+    margin: 0 0.5em;
+    width: calc(100% - 1em);
   }
 }

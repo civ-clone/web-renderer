@@ -1,0 +1,1 @@
+{"version":"0.1.0@eabfc3c","date":"2026-10-28T22:10:41.000Z","localChanges":["The sidebar's Scores section is now Power: it ranks civilizations by their gold, citizens, advances and units, as Civ1 ranks them, rather than by Civilization Score, which pollution anywhere took off everyone's and left most rivals at 0 (closes #708)."],"externalChanges":{}}

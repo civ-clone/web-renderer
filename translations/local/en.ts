@@ -200,6 +200,7 @@ i18next.addResources('en', 'default', {
   'City.CompleteProduction.body':
     'Do you want to rush building of {{- item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available.',
 
+  'City.SellImprovement.sell': 'Sell',
   'City.SellImprovement.body':
     'Do you want to sell your {{- item}} for {{saleValue.value, number}} $t({{saleValue.resource._}}.name, { "defaultValue": "{{saleValue.resource._}}", "ns": "yield" })?',
 
@@ -208,6 +209,11 @@ i18next.addResources('en', 'default', {
 
   'City.Growth.title': 'Growth',
 
+  'City.next': 'Next city',
+  'City.previous': 'Previous city',
+  'City.rename': 'Rename',
+  'City.Rename.label': 'The name of your city',
+  'City.Rename.title': 'City name',
   'City.anarchy': 'No taxes or research are collected during Anarchy.',
   'City.size': '{{size, number}}',
   'City.pollution':
