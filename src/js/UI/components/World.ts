@@ -25,21 +25,32 @@ export class World {
     yields: [],
   });
   #lookup = new Map<string, Tile>();
+  #neighbours = new Map<string, Tile>();
   #tiles: Tile[];
   #height: number;
   #topology: Topology;
   #width: number;
 
-  constructor(world: WorldData) {
+  // `neighbours` are tiles that are only ever a tile's neighbour, never drawn themselves: the squares round a city's on
+  //  the city screen's map, so its edges are drawn as their real neighbours call for (#685).
+  constructor(world: WorldData, neighbours: Tile[] = []) {
     this.#height = world.height;
     this.#width = world.width;
     this.#tiles = world.tiles || [];
     this.#topology = topologyFor(world);
 
+    neighbours.forEach((tile) =>
+      this.#neighbours.set([tile.x, tile.y].toString(), tile)
+    );
+
     this.rebuildLookup();
   }
 
   get(x: number, y: number): Tile {
+    return this.#find(x, y, false);
+  }
+
+  #find(x: number, y: number, asNeighbour: boolean): Tile {
     while (x < 0) {
       x += this.#width;
     }
@@ -58,11 +69,11 @@ export class World {
 
     const key = [x, y].toString();
 
-    if (!this.#lookup.has(key)) {
-      return this.#unknown(x, y);
-    }
-
-    return this.#lookup.get(key)!;
+    return (
+      this.#lookup.get(key) ??
+      (asNeighbour ? this.#neighbours.get(key) : undefined) ??
+      this.#unknown(x, y)
+    );
   }
 
   // The tile next to `tile` in `direction`, as the world's topology says. A tile off an edge that does not wrap is
@@ -76,7 +87,7 @@ export class World {
       return this.#unknown(tile.x + dx, tile.y + dy);
     }
 
-    return this.get(neighbour[0], neighbour[1]);
+    return this.#find(neighbour[0], neighbour[1], true);
   }
 
   height(): number {
