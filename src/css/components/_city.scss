@@ -22,12 +22,32 @@
   flex: 1;
   flex-direction: column;
 
-  @each $group in 'Food', 'Production', 'Trade', 'Luxuries', 'Gold', 'Research',
-    'Pollution'
-  {
-    [data-yield='#{$group}'] {
-      --colour: var(--yield-#{to-lower-case($group)});
-    }
+  [data-yield='Food'] {
+    --colour: var(--yield-food);
+  }
+
+  [data-yield='Production'] {
+    --colour: var(--yield-production);
+  }
+
+  [data-yield='Trade'] {
+    --colour: var(--yield-trade);
+  }
+
+  [data-yield='Luxuries'] {
+    --colour: var(--yield-luxuries);
+  }
+
+  [data-yield='Gold'] {
+    --colour: var(--yield-gold);
+  }
+
+  [data-yield='Research'] {
+    --colour: var(--yield-research);
+  }
+
+  [data-yield='Pollution'] {
+    --colour: var(--yield-pollution);
   }
 
   .city-map {

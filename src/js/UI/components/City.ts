@@ -92,7 +92,7 @@ const renderYieldRow = (
   summary: string
 ): HTMLElement => {
   const row = s(
-      `<div class="yield-row" data-yield="${group}" title="${summary}"><span class="visually-hidden">${summary}</span></div>`
+      `<div class="yield-row" data-yield="${group}"><span class="visually-hidden"></span></div>`
     ),
     percent = (value: number) => `${(value / scale) * 100}%`,
     bar = s(
@@ -106,6 +106,10 @@ const renderYieldRow = (
   freePart.style.width = percent(free);
   deficitPart.style.width = percent(deficit);
   bar.style.setProperty('--tick', percent(Math.min(yieldTick(scale), scale)));
+
+  // Set as text, not markup: a yield's name can be whatever the engine calls it.
+  row.setAttribute('title', summary);
+  row.firstElementChild!.textContent = summary;
 
   const icon = yieldIcon(group);
 
@@ -135,7 +139,9 @@ const renderYields = (city: CityData): Node => {
     const rows = yieldRows.map(
         (group) => [group, splitYield(group, city.yields)] as const
       ),
-      pollution = Math.max(0, city.pollution ?? 0),
+      pollution = Number.isFinite(city.pollution)
+        ? Math.max(0, city.pollution!)
+        : 0,
       // Wide enough for the most any row makes or uses, so the bars compare, and never nothing.
       scale = Math.max(
         1,
@@ -191,13 +197,18 @@ const renderYields = (city: CityData): Node => {
 
             return yieldObject;
           }, {} as PlainObject)
-      ).map(([key, value]) =>
-        s(
-          `<div class="other-yield"><span>${yieldName(
-            key
-          )}</span><span>${localeProvider.number(value)}</span></div>`
-        )
-      )
+      ).map(([key, value]) => {
+        const other = s(
+          '<div class="other-yield"><span></span><span></span></div>'
+        );
+
+        other.firstElementChild!.textContent = yieldName(key);
+        other.lastElementChild!.textContent = localeProvider.number(
+          Number(value)
+        );
+
+        return other;
+      })
     );
   },
   renderMap = (

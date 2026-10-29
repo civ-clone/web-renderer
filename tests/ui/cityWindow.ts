@@ -849,13 +849,20 @@ const run = async (): Promise<void> => {
     ] as CityData['yields'];
     (city as { pollution?: number }).pollution = 4;
 
-    i18next.addResources('en', 'translation', {
-      'City.Yield.summary':
-        '{{- yield}}: {{made, number}}, {{used, number}} used, {{spare, number}} spare',
-      'City.Yield.summary_made': '{{- yield}}: {{made, number}}',
-      'City.Yield.summary_short':
-        '{{- yield}}: {{made, number}}, {{used, number}} used, {{short, number}} short',
-    });
+    // The summaries as the game words them, from its own translations.
+    await import('../../translations/local/en');
+
+    i18next.addResources(
+      'en',
+      'translation',
+      Object.fromEntries(
+        [
+          'City.Yield.summary',
+          'City.Yield.summary_made',
+          'City.Yield.summary_short',
+        ].map((key) => [key, i18next.getResource('en', 'default', key)])
+      )
+    );
 
     const screen = new City(city, portal, transport),
       rows = [
@@ -924,7 +931,38 @@ const run = async (): Promise<void> => {
       ]
     );
 
+    expect(
+      'and given as the row’s tooltip, as text',
+      rows[0].getAttribute('title'),
+      'Food: 10, 12 used, 2 short'
+    );
+
     screen.close();
+
+    // A larger city's ticks are further apart, and a city that doesn't pollute, or whose pollution isn't a count, has
+    //  no pollution row.
+    city.yields = [yieldOf('Food', 40)] as CityData['yields'];
+    (city as { pollution?: number }).pollution = NaN;
+
+    const large = new City(city, portal, transport),
+      largeRows = [
+        ...large.element().querySelectorAll('.yields-detail .yield-row'),
+      ];
+
+    expect(
+      'a tick every 5 past 30, and no pollution row for a pollution that isn’t a count',
+      [
+        (
+          largeRows[0].querySelector('.bar') as HTMLElement
+        ).style.getPropertyValue('--tick'),
+        largeRows
+          .map((row) => row.getAttribute('data-yield'))
+          .includes('Pollution'),
+      ],
+      [`${(5 / 40) * 100}%`, false]
+    );
+
+    large.close();
   }
 
   finished = true;
