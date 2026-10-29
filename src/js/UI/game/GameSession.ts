@@ -475,6 +475,11 @@ export class GameSession {
 
           gameState.replace(rawData);
 
+          // A new client's whole game: it knows nothing of the build options yet (#690, #691).
+          if (!observing) {
+            sendBuildPreferences(transport);
+          }
+
           // A whole new game's data, as an observer's change of view sends (#613): every square is drawn again, since
           //  what was unknown may now be known, which no patch has said, and the notices were the old view's.
           if (observing) {
