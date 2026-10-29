@@ -5,6 +5,8 @@ import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 /**
  * Asks before starting a revolution, and sends it once confirmed: for the button and the top bar's government alike
@@ -38,7 +40,7 @@ export class Revolution extends Action {
 
   build(): void {
     assetStore
-      .get('./assets/city/sad.png')
+      .get(spriteKey(currentTileset(), 'city/sad'))
       .then((asset) =>
         this.append(
           s(

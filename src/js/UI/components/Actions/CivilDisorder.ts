@@ -8,6 +8,8 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 export class CivilDisorder extends Action {
   #portal: Portal;
@@ -40,18 +42,20 @@ export class CivilDisorder extends Action {
   build() {
     const city = this.value() as City;
 
-    assetStore.get('./assets/city/people_unhappy_m.png').then((asset) =>
-      this.append(
-        s(
-          `<button class="civilDisorder" title="${t(
-            'Actions.CivilDisorder.title',
-            {
-              city,
-            }
-          )}"><img src="${asset!.uri}"></button>`
+    assetStore
+      .get(spriteKey(currentTileset(), 'city/people_unhappy_m'))
+      .then((asset) =>
+        this.append(
+          s(
+            `<button class="civilDisorder" title="${t(
+              'Actions.CivilDisorder.title',
+              {
+                city,
+              }
+            )}"><img src="${asset!.uri}"></button>`
+          )
         )
-      )
-    );
+      );
   }
 }
 

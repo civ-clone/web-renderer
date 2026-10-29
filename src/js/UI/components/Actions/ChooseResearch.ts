@@ -8,6 +8,8 @@ import { advanceName, held } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from '../lib/cityYields';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 export class ChooseResearch extends Action {
   #player: Player | null;
@@ -79,7 +81,7 @@ export class ChooseResearch extends Action {
 
   build(): void {
     assetStore
-      .get('./assets/city/bulb.png')
+      .get(spriteKey(currentTileset(), 'city/bulb'))
       .then((asset) =>
         this.append(
           s(
