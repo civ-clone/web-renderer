@@ -195,3 +195,18 @@
     vertical-align: middle;
   }
 }
+
+// The "City name" box (#676): about as wide as its text, not the 40em a window of text is at least, with the field
+//  across it inside the text's margins.
+.window.size-auto.city-name-window {
+  max-width: calc(100% - 2rem);
+  min-width: 0;
+  width: 18rem;
+
+  input {
+    box-sizing: border-box;
+    display: block;
+    margin: 0 0.5em;
+    width: calc(100% - 1em);
+  }
+}

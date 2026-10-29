@@ -386,13 +386,13 @@ const renderYields = (city: CityData): Node => {
                 )
                 .flatMap((cityYield) => yieldImages(cityYield, true))
             ),
-            // Selling it (#31), from a button of its own that says what it fetches, as Buy says its price (#684).
+            // Selling it (#31), from a button of its own (#684). The confirmation says what it fetches.
             saleValue
               ? h(
                   s(
-                    `<button class="sell">${t('City.SellImprovement.sell', {
-                      saleValue,
-                    })}</button>`
+                    `<button class="sell">${t(
+                      'City.SellImprovement.sell'
+                    )}</button>`
                   ),
                   {
                     click() {
