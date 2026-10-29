@@ -691,6 +691,14 @@ const run = async (): Promise<void> => {
         return city;
       };
 
+    // The signed figure is the one wording this checks: `+` for a surplus, `-` for a shortfall.
+    i18next.addResource(
+      'en',
+      'translation',
+      'City.Progress.per-turn',
+      '{{count, number(signDisplay: exceptZero)}} / turn'
+    );
+
     let meters = new City(
       meterCity(
         {
@@ -719,11 +727,15 @@ const run = async (): Promise<void> => {
       { fill: '30%', next: '10%', loss: false, tick: '25%' }
     );
     expect(
-      'the figures say the store, the cost, each turn’s and the turns left',
+      'the figures name the yield, and say the store, the cost, each turn’s and the turns left',
       [...meters.element().querySelectorAll('.growth .figures > span')].map(
-        (span) => span.className
+        (span) => [span.className, span.textContent]
       ),
-      ['stored', 'per-turn', 'turns']
+      [
+        ['stored', 'Food: Progress.data'],
+        ['per-turn', '+5 / turn'],
+        ['turns', 'Progress.turns'],
+      ]
     );
     meters.close();
 
@@ -775,8 +787,10 @@ const run = async (): Promise<void> => {
     );
     expect(
       'and its figure is marked as short',
-      meters.element().querySelectorAll('.growth .per-turn.negative').length,
-      1
+      [...meters.element().querySelectorAll('.growth .per-turn.negative')].map(
+        (span) => span.textContent
+      ),
+      ['-4 / turn']
     );
     meters.close();
 

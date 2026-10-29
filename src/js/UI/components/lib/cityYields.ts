@@ -272,7 +272,8 @@ export const renderMeter = (
 };
 
 /**
- * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left.
+ * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left. The icon
+ *  is decorative, so the yield is named for a screen reader.
  */
 export const renderFigures = (
   group: string,
@@ -284,6 +285,12 @@ export const renderFigures = (
     `<p class="figures"></p>`,
     s(
       `<span class="stored"></span>`,
+      s(
+        `<span class="visually-hidden">${t(`${group}.name`, {
+          defaultValue: group,
+          ns: 'yield',
+        })}: </span>`
+      ),
       yieldIcon(group),
       t('Progress.data', {
         progress: data.progress.value,
