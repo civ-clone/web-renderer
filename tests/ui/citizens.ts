@@ -37,7 +37,7 @@ const drawn: string[] = [],
 
 (assetStore as any).get = (path: string) =>
   Promise.resolve(missing.test(path) ? undefined : { name: path, uri: '' });
-(assetStore as any).getScaled = (path: string) => {
+(assetStore as any).getShownAt = (path: string) => {
   drawn.push(path);
 
   return Promise.resolve({ toDataURL: () => 'data:,' });

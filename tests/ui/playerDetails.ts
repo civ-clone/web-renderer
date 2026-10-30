@@ -43,7 +43,7 @@ process.on('exit', (code: number): void => {
 // No IndexedDB under node: every picture is its path.
 (assetStore as any).get = (path: string) =>
   Promise.resolve({ name: path, uri: path });
-(assetStore as any).getScaled = (path: string) =>
+(assetStore as any).getShownAt = (path: string) =>
   Promise.resolve({ toDataURL: () => path });
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));

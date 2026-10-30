@@ -77,7 +77,7 @@ setPreloadContainer(document.querySelector('#preload') as HTMLElement);
 // No assets: the citizens and the action's button are drawn without their images.
 assetStore.firstImported = () => new Promise(() => {});
 assetStore.get = () => new Promise(() => {});
-assetStore.getScaled = () => new Promise(() => {});
+assetStore.getShownAt = () => new Promise(() => {});
 
 // linkedom has no focus: what has it is set by hand.
 let focused: Element | null = document.body;

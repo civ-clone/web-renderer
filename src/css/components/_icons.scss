@@ -14,8 +14,7 @@
   vertical-align: middle;
 
   img {
-    // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
     image-rendering: pixelated;
-    width: 14px;
+    width: var(--tileset-icon);
   }
 }

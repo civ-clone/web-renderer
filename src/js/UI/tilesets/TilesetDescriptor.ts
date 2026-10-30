@@ -159,6 +159,24 @@ export interface TilesetCities {
   };
 }
 
+/**
+ * The sizes the interface shows the tileset's sprites at outside the map, in CSS px (#729): a yield's icon, a citizen
+ * (`step` apart, so they overlap where `step` is less than `width`) and the cursor. Each sprite is enlarged a whole
+ * number of times to at least this width, then CSS shows it at this size.
+ */
+export interface TilesetUi {
+  icon: number;
+  citizen: { width: number; step: number };
+  cursor: number;
+}
+
+/** Civ1's sizes, its 7px icons, 8px citizens and 13px torch doubled: what a tileset without `ui` is shown at. */
+export const defaultUi: TilesetUi = {
+  icon: 14,
+  citizen: { width: 16, step: 12 },
+  cursor: 26,
+};
+
 export interface TilesetDescriptor {
   schema: typeof TILESET_SCHEMA;
   kind: 'tileset';
@@ -193,6 +211,8 @@ export interface TilesetDescriptor {
   families: TilesetFamilies;
   units: TilesetUnits;
   cities: TilesetCities;
+  /** Optional in the JSON: `validateDescriptor` fills in Civ1's sizes for any it leaves out. */
+  ui: TilesetUi;
 }
 
 /**
@@ -739,7 +759,53 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
     );
   }
 
-  return json as unknown as TilesetDescriptor;
+  return {
+    ...json,
+    ui: checkUi(json.ui, refuse),
+  } as unknown as TilesetDescriptor;
+};
+
+// `ui` with Civ1's size for each one it leaves out, once every size it gives is a whole number of px.
+const checkUi = (
+  ui: unknown,
+  refuse: (problem: string) => never
+): TilesetUi => {
+  if (ui === undefined) {
+    return defaultUi;
+  }
+
+  if (!isObject(ui) || (ui.citizen !== undefined && !isObject(ui.citizen))) {
+    refuse('ui must be an object, and its citizen too.');
+  }
+
+  const {
+      icon,
+      citizen = {},
+      cursor,
+    } = ui as {
+      [key: string]: unknown;
+      citizen?: { [key: string]: unknown };
+    },
+    size = (path: string, value: unknown, fallback: number): number => {
+      if (value === undefined) {
+        return fallback;
+      }
+
+      if (!isWholeNumber(value, 1)) {
+        refuse(`${path} must be a whole number of px, 1 or more.`);
+      }
+
+      return value as number;
+    };
+
+  return {
+    icon: size('ui.icon', icon, defaultUi.icon),
+    citizen: {
+      width: size('ui.citizen.width', citizen.width, defaultUi.citizen.width),
+      step: size('ui.citizen.step', citizen.step, defaultUi.citizen.step),
+    },
+    cursor: size('ui.cursor', cursor, defaultUi.cursor),
+  };
 };
 
 // Each template split once into its text and its placeholders, `['terrain/', 'terrain', '_', 'dirs', '']`: the map

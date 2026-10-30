@@ -129,13 +129,12 @@
     display: flex;
 
     .citizen {
-      // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
-      max-width: 12px;
+      // The tileset's step between citizens (#729): less than their width, so they overlap.
+      max-width: var(--tileset-citizen-step);
       min-width: 0;
 
       img {
-        // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
-        width: 16px;
+        width: var(--tileset-citizen-width);
         image-rendering: pixelated;
       }
 
@@ -150,8 +149,7 @@
     padding-right: 2px;
 
     img {
-      // TODO: this shouldn't be hard-coded and should instead be provided by the asset-pack
-      width: 14px;
+      width: var(--tileset-icon);
       image-rendering: pixelated;
     }
   }
@@ -238,7 +236,7 @@
   .yields-detail {
     display: grid;
     gap: 2px 0.375rem;
-    grid-template-columns: 14px minmax(0, 1fr) auto;
+    grid-template-columns: var(--tileset-icon) minmax(0, 1fr) auto;
     margin: 0.25rem 0;
   }
 
@@ -253,10 +251,10 @@
       padding: 0;
     }
 
-    // The pollution sprite is 16px, not 7px like the other yields', so it's squeezed into the same 14px.
+    // Square, so a sprite of another shape (Civ1's 16px pollution, beside its 7px yields) fits the same column.
     .yield-icon img {
-      height: 14px;
-      width: 14px;
+      height: var(--tileset-icon);
+      width: var(--tileset-icon);
     }
 
     .bar {

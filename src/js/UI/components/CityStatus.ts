@@ -35,7 +35,10 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'].map(
         (yieldName) =>
           assetStore
-            .getScaled(spriteKey(currentTileset(), groupIcons[yieldName]), 2)
+            .getShownAt(
+              spriteKey(currentTileset(), groupIcons[yieldName]),
+              currentTileset().ui.icon
+            )
             .then((image) => `<img src="${image.toDataURL('image/png')}">`)
       )
     );

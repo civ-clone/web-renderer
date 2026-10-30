@@ -15,7 +15,7 @@ import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
 import appElements from './app/elements';
 import initI18n from './app/i18n';
-import { preloadAssets, setCursor } from './app/assets';
+import { preloadAssets, setCursor, setTilesetSizes } from './app/assets';
 import setOptionDefaults from './app/options';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -50,6 +50,7 @@ export class Renderer {
     // not a reload; only Ctrl/Cmd+R stays a reload from that point on.
     let gameStarted = false;
 
+    setTilesetSizes();
     await setCursor();
     await initI18n();
 

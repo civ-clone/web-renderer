@@ -42,7 +42,10 @@ const buildCityRow = async (
       const luxuriesElement = s(`<span></span>`);
 
       assetStore
-        .getScaled(spriteKey(currentTileset(), groupIcons.Luxuries), 2)
+        .getShownAt(
+          spriteKey(currentTileset(), groupIcons.Luxuries),
+          currentTileset().ui.icon
+        )
         .then((image) =>
           luxuriesElement.append(
             s(`<img src="${image.toDataURL('image/png')}">`),

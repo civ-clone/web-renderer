@@ -1,8 +1,12 @@
 import { Record, Store } from './Store';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
 import currentTileset from './lib/tilesets';
-import { isDrawable } from './lib/imageSize';
+import { imageSize, isDrawable } from './lib/imageSize';
 import scaleImage from './lib/scaleImage';
+
+/** How many times a sprite `spriteWidth` px wide is enlarged to be shown `width` px wide: 1 for one that isn't loaded. */
+export const shownAtScale = (spriteWidth: number, width: number): number =>
+  spriteWidth > 0 ? Math.max(1, Math.ceil(width / spriteWidth)) : 1;
 
 interface Asset extends Record {
   name: string;
@@ -125,6 +129,17 @@ export class AssetStore extends Store<{
     }
 
     return this.#cachedScaledImages.get(key)!;
+  }
+
+  /**
+   * The sprite at `path` enlarged to be shown `width` CSS px wide (#729): by the whole number of times that reaches it,
+   *  and not at all when it is already that wide or wider, for CSS to show at `width`.
+   */
+  async getShownAt(path: string, width: number): Promise<HTMLCanvasElement> {
+    return this.getScaled(
+      path,
+      shownAtScale(imageSize(await this.getImage(path))[0], width)
+    );
   }
 
   async hasAllAssets(): Promise<boolean> {
