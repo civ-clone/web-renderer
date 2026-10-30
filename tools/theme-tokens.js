@@ -55,9 +55,14 @@ const { css } = sass.compile(path.join(webRenderer, 'src', 'css', 'app.scss'), {
   ]),
   isTokenRule = (selector) => selector.startsWith(':root'),
   isFontFace = (selector) => selector === '@font-face',
+  // A face only through a token with no fallback, a bold weight only through a token, and the `font` shorthand only to
+  //  inherit, since it sets both.
   typeLiteral = (property, value) =>
-    (property === 'font-family' && !/^(var\(|inherit$)/.test(value)) ||
-    (property === 'font-weight' && /^(bold|bolder|[5-9]00)$/.test(value)),
+    (property === 'font-family' &&
+      !/^(var\(--[\w-]+\)|inherit)$/.test(value)) ||
+    (property === 'font-weight' &&
+      (/^bold(er)?$/.test(value) || Number(value) >= 500)) ||
+    (property === 'font' && value !== 'inherit'),
   namedColours =
     /\b(black|white|red|green|blue|yellow|orange|purple|pink|gr[ae]y|silver|gold|brown|cyan|magenta|navy|teal|maroon|olive|lime|aqua|fuchsia)\b/i,
   colourLiteral = (value) => {
