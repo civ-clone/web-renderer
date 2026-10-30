@@ -84,8 +84,32 @@
   --ui-shadow-orb: 0 2px 6px rgba(13, 16, 20, 0.5);
   --ui-text-shadow-title: none;
 
-  --font-ui: sans-serif;
-  --font-display: sans-serif;
+  --font-ui: 'Source Sans 3', system-ui, sans-serif;
+  --font-display: 'Cinzel', Georgia, serif;
+  --font-mono: ui-monospace, Menlo, monospace;
+
+  // Type by role (#737), from one scale: 11 / 12 / 13 / 15 / 18 px at the browser's default text size, in rem so a
+  //  player's larger text still applies.
+  --type-body-size: 0.9375rem;
+  --type-bar-size: 0.8125rem;
+  --type-detail-size: 0.8125rem;
+  --type-caption-size: 0.75rem;
+  --type-title-family: var(--font-display);
+  --type-title-size: 1.125rem;
+  --type-title-weight: 600;
+  --type-title-tracking: 0.04em;
+  --type-heading-family: var(--font-display);
+  --type-heading-size: 0.8125rem;
+  --type-heading-weight: 600;
+  --type-heading-tracking: 0.04em;
+  --type-heading-transform: none;
+  --type-eyebrow-size: 0.6875rem;
+  --type-eyebrow-weight: 600;
+  --type-eyebrow-tracking: 0.08em;
+  --type-eyebrow-transform: uppercase;
+  --type-eyebrow-colour: var(--ui-fg-muted);
+  --type-strong-weight: 600;
+  --type-figures: tabular-nums;
 }
 
 @mixin dark() {

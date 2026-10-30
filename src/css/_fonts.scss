@@ -1,0 +1,29 @@
+// The faces a theme may name (#737), bundled so nothing loads from elsewhere. Latin only. A browser fetches a face only
+//  when something on the page uses it, so a theme that doesn't name these costs nothing.
+
+@font-face {
+  font-display: swap;
+  font-family: 'Cinzel';
+  font-style: normal;
+  font-weight: 600;
+  src: url('@fontsource/cinzel/files/cinzel-latin-600-normal.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400;
+  src: url('@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2')
+    format('woff2');
+}
+
+@font-face {
+  font-display: swap;
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 600;
+  src: url('@fontsource/source-sans-3/files/source-sans-3-latin-600-normal.woff2')
+    format('woff2');
+}

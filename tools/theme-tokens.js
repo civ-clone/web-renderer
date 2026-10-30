@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 
-// Every colour in the interface comes from a theme's tokens (#736), so a theme is only a set of tokens. Compiles
-// `src/css/app.scss` and checks that:
+// Every colour and type face in the interface comes from a theme's tokens (#736, #737), so a theme is only a set of
+// tokens. Compiles `src/css/app.scss` and checks that:
 //
 // - no declaration outside a theme's token blocks (the rules on `:root`, and a theme's `.window` under it) has a colour
 //   literal: a hex colour, `rgb()`/`hsl()` of plain numbers, or a named colour;
+// - none outside them names a type face or sets a bold weight: type comes by role (`--type-*`), and `@font-face` only
+//   declares the faces a theme may name;
 // - Civ1 classic (`:root`) and slate and brass (`:root[data-ui-theme='slate']`) define the same tokens, and each dark
 //   set only overrides tokens its light set defines;
-// - every `--ui-*`, `--y-*` and `--font-*` token a component reads is defined.
+// - every `--ui-*`, `--y-*`, `--font-*` and `--type-*` token a component reads is defined.
 
 const path = require('path');
 
@@ -32,7 +34,9 @@ const { css } = sass.compile(path.join(webRenderer, 'src', 'css', 'app.scss'), {
   }),
   // `[selector, declarations]` for each rule, inside `@media` or not. Comments go first.
   rules = [
-    ...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}@;]+)\{([^{}]*)\}/g),
+    ...css
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .matchAll(/(@?[^{}@;]+)\{([^{}]*)\}/g),
   ].map(([, selector, body]) => [
     // Sass drops the quotes in `[data-theme='dark']`; so do the selectors here.
     selector.trim().replace(/\s+/g, ' ').replace(/['"]/g, ''),
@@ -50,6 +54,10 @@ const { css } = sass.compile(path.join(webRenderer, 'src', 'css', 'app.scss'), {
       }),
   ]),
   isTokenRule = (selector) => selector.startsWith(':root'),
+  isFontFace = (selector) => selector === '@font-face',
+  typeLiteral = (property, value) =>
+    (property === 'font-family' && !/^(var\(|inherit$)/.test(value)) ||
+    (property === 'font-weight' && /^(bold|bolder|[5-9]00)$/.test(value)),
   namedColours =
     /\b(black|white|red|green|blue|yellow|orange|purple|pink|gr[ae]y|silver|gold|brown|cyan|magenta|navy|teal|maroon|olive|lime|aqua|fuchsia)\b/i,
   colourLiteral = (value) => {
@@ -76,14 +84,18 @@ const { css } = sass.compile(path.join(webRenderer, 'src', 'css', 'app.scss'), {
     );
 
 rules
-  .filter(([selector]) => !isTokenRule(selector))
+  .filter(([selector]) => !isTokenRule(selector) && !isFontFace(selector))
   .forEach(([selector, declarations]) =>
-    declarations.forEach(([property, value]) =>
+    declarations.forEach(([property, value]) => {
       expect(
         `${selector} { ${property}: ${value} } has a colour literal: use a theme token`,
         !colourLiteral(value)
-      )
-    )
+      );
+      expect(
+        `${selector} { ${property}: ${value} } sets type directly: use a --type-* or --font-* token`,
+        !typeLiteral(property, value)
+      );
+    })
   );
 
 const classic = defined(':root'),
@@ -127,7 +139,9 @@ Object.entries(sets).forEach(([name, [light, dark]]) => {
 });
 
 new Set(
-  [...css.matchAll(/var\((--(?:ui|y|font)-[\w-]+)/g)].map(([, token]) => token)
+  [...css.matchAll(/var\((--(?:ui|y|font|type)-[\w-]+)/g)].map(
+    ([, token]) => token
+  )
 ).forEach((token) =>
   expect(`${token} is read but no theme defines it`, classic.has(token))
 );

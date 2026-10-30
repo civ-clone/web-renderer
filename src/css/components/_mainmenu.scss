@@ -44,7 +44,7 @@
       border: 0;
       color: var(--ui-overlay-fg);
       cursor: pointer;
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
       outline: 0;
       padding: 0.5em;
       text-shadow: 0 0 2px color-mix(in srgb, var(--ui-shade) 40%, transparent);

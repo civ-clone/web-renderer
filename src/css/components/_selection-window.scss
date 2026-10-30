@@ -79,7 +79,7 @@
   }
 
   .city {
-    font-size: 0.85em;
+    font-size: var(--type-detail-size);
     opacity: 0.8;
   }
 }

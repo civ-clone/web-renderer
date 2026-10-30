@@ -230,6 +230,12 @@ importers:
         specifier: ^18.1.1
         version: 18.1.1
     devDependencies:
+      '@fontsource/cinzel':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource/source-sans-3':
+        specifier: 5.3.1
+        version: 5.3.1
       '@types/feather-icons':
         specifier: ^4.29.1
         version: 4.29.4
@@ -1435,6 +1441,12 @@ packages:
     engines: {node: '>=12'}
     cpu: [loong64]
     os: [linux]
+
+  '@fontsource/cinzel@5.3.0':
+    resolution: {integrity: sha512-KEOYTsrRppW0uRIPWBDPrQgunCS6f8u4nzZxYRBfo9SCknKojLYjK7B0ZoVmJhyVLefz271ZQRF9EOpHZlfhRw==}
+
+  '@fontsource/source-sans-3@5.3.1':
+    resolution: {integrity: sha512-O3YxvbotUOgYI2Zx0bBcEMNjnwitRf9P2+9pd54sMoux1NHrdXnMwZusw2P78lFhEzOPN4glOEQmX0ASaS68uA==}
 
   '@mapbox/node-pre-gyp@1.0.11':
     resolution: {integrity: sha512-Yhlar6v9WQgUp/He7BdgzOz8lqMQ8sU+jkCq7Wx8Myc5YFJLbEe7lgui/V7G1qB1DJykHSGwreceSaD60Y0PUQ==}
@@ -5012,6 +5024,10 @@ snapshots:
 
   '@esbuild/linux-loong64@0.14.54':
     optional: true
+
+  '@fontsource/cinzel@5.3.0': {}
+
+  '@fontsource/source-sans-3@5.3.1': {}
 
   '@mapbox/node-pre-gyp@1.0.11':
     dependencies:

@@ -67,12 +67,16 @@
     color: var(--ui-title-fg);
     display: flex;
     flex: none;
-    font-weight: bold;
+    font-weight: var(--type-title-weight);
     padding: 0.5em;
     text-shadow: var(--ui-text-shadow-title);
 
     h3 {
       flex-grow: 1;
+      font-family: var(--type-title-family);
+      font-size: var(--type-title-size);
+      font-weight: var(--type-title-weight);
+      letter-spacing: var(--type-title-tracking);
       margin: 0;
     }
 
@@ -120,6 +124,24 @@
   p {
     margin: 1em 0.5em;
     padding: 0;
+  }
+
+  // A window's own section headings, at the sizes each window gives them (#737).
+  > .body :is(h2, h3, h4) {
+    font-family: var(--type-heading-family);
+    font-weight: var(--type-heading-weight);
+    letter-spacing: var(--type-heading-tracking);
+    text-transform: var(--type-heading-transform);
+  }
+
+  // Column headings, the second level of the type below a title (#737): a header row's cells, not a row's own heading
+  //  beside its data (City Status, the Military report).
+  tr:not(:has(td)) > th {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    text-transform: var(--type-eyebrow-transform);
   }
 
   // A window with buttons: its content is the one part that scrolls, and the buttons stay in view, rather than the

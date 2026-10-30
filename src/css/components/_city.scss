@@ -199,7 +199,7 @@
     align-items: center;
     display: flex;
     flex-wrap: wrap;
-    font-size: 0.85em;
+    font-size: var(--type-detail-size);
     gap: 0 0.75em;
     justify-content: space-between;
     margin: 0;
@@ -297,7 +297,7 @@
     .figures {
       align-items: baseline;
       display: flex;
-      font-size: 0.8em;
+      font-size: var(--type-caption-size);
       gap: 0.375em;
       justify-content: flex-end;
       min-width: 3.5em;
@@ -314,7 +314,7 @@
 
   .yields-detail .anarchy,
   .yields-detail .other-yield {
-    font-size: 0.85em;
+    font-size: var(--type-detail-size);
     grid-column: 1 / -1;
     margin: 0;
   }
