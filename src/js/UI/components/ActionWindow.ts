@@ -3,6 +3,7 @@ import {
   NotificationWindow,
   NotificationWindowOptions,
 } from './NotificationWindow';
+import { ButtonVariant, button } from '../lib/button';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -12,6 +13,8 @@ export interface ActionWindowAction {
   action: (window: INotificationWindow) => void;
   // Escape chooses this one (#659).
   cancel?: boolean;
+  // Its look (#740): by default `primary` for the window's primary action, `quiet` for the cancel one, `secondary` else.
+  variant?: ButtonVariant;
 }
 
 export interface ActionWindowActions {
@@ -61,15 +64,28 @@ export class ActionWindow extends NotificationWindow {
           : [s(`<p>${body}</p>`)]),
         s(
           '<footer></footer>',
-          ...Object.entries(options.actions!).map(([, { label, action }]) =>
-            h(s(`<button>${label}</button>`), {
-              click: () => action(this),
-              keydown: (event) => {
-                if (event.key === 'Enter') {
-                  action(this);
+          ...Object.entries(options.actions!).map(
+            ([key, { label, action, cancel = false, variant }]) =>
+              h(
+                button(label, {
+                  variant:
+                    variant ??
+                    (cancel
+                      ? 'quiet'
+                      : key === 'primary'
+                      ? 'primary'
+                      : 'secondary'),
+                  hotkey: cancel ? 'Escape' : null,
+                }),
+                {
+                  click: () => action(this),
+                  keydown: (event) => {
+                    if (event.key === 'Enter') {
+                      action(this);
+                    }
+                  },
                 }
-              },
-            })
+              )
           )
         )
       ),

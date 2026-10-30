@@ -289,7 +289,7 @@ export class Civilopedia extends FilterableWindow {
     }
 
     this.#entry.dataset.key = key;
-    this.#entry.innerHTML = `<button class="back">${t(
+    this.#entry.innerHTML = `<button class="btn-quiet back">${t(
       'Civilopedia.back'
     )}</button>${entryHtml(entry, this.#data)}`;
 

@@ -163,7 +163,7 @@ export class Spaceship extends Action {
             '<footer></footer>',
             h(
               s<HTMLButtonElement>(
-                `<button${
+                `<button class="btn-primary"${
                   spaceship.launched || spaceship.chanceOfSuccess === 0
                     ? ' disabled'
                     : ''
@@ -194,7 +194,7 @@ export class Spaceship extends Action {
   build(): void {
     this.append(
       s(
-        `<button class="spaceship" title="${t(
+        `<button class="btn-bare spaceship" title="${t(
           'Actions.Spaceship.title'
         )}"><img src="${globeIcon}"/></button>`
       )

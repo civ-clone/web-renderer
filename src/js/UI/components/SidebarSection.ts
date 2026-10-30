@@ -40,7 +40,7 @@ export class SidebarSection extends Element {
 
     super(
       s(
-        `<section class="sidebar-section" data-section="${key}"><h2><button type="button" aria-controls="${bodyId}"></button></h2><div class="body" id="${bodyId}"></div></section>`
+        `<section class="sidebar-section" data-section="${key}"><h2><button type="button" class="btn-bare" aria-controls="${bodyId}"></button></h2><div class="body" id="${bodyId}"></div></section>`
       )
     );
 

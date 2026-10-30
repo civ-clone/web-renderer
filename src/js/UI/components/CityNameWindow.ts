@@ -1,5 +1,6 @@
 import { NotificationWindow } from './NotificationWindow';
 import { escape } from './lib/requirements';
+import { button } from '../lib/button';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -50,14 +51,17 @@ export class CityNameWindow extends NotificationWindow {
         s(`<label><p>${t('City.Rename.label')}</p></label>`, input),
         s(
           '<footer></footer>',
-          h(s(`<button>${t('Generic.ok')}</button>`), {
+          h(button(t('Generic.ok'), { variant: 'primary' }), {
             click: ok,
             keydown: pressed(ok),
           }),
-          h(s(`<button>${t('Generic.cancel')}</button>`), {
-            click: () => this.close(),
-            keydown: pressed(() => this.close()),
-          })
+          h(
+            button(t('Generic.cancel'), { variant: 'quiet', hotkey: 'Escape' }),
+            {
+              click: () => this.close(),
+              keydown: pressed(() => this.close()),
+            }
+          )
         )
       ),
       {

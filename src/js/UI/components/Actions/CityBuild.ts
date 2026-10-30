@@ -71,7 +71,7 @@ export class CityBuild extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="large cityBuild" title="${t(
+            `<button class="btn-bare large cityBuild" title="${t(
               'Actions.CityBuildSelectionWindow.title',
               {
                 city: cityBuild.city,

@@ -39,10 +39,13 @@ export class ObserverBar {
       '<input type="radio" name="observe-kind" value="players">'
     );
     this.#players = s('<span class="players"></span>');
-    this.#pace = h(s<HTMLButtonElement>('<button class="pace"></button>'), {
-      click: () =>
-        this.#transport.send(this.#paused ? 'resume' : 'pause', null),
-    });
+    this.#pace = h(
+      s<HTMLButtonElement>('<button class="btn-secondary pace"></button>'),
+      {
+        click: () =>
+          this.#transport.send(this.#paused ? 'resume' : 'pause', null),
+      }
+    );
     this.#status = s('<span class="status" role="status"></span>');
 
     h(this.#worldRadio, {

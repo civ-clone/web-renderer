@@ -2,6 +2,7 @@ import {
   NotificationWindow,
   NotificationWindowOptions,
 } from './NotificationWindow';
+import { button } from '../lib/button';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -19,7 +20,7 @@ export class ConfirmationWindow extends NotificationWindow {
     options: ConfirmationWindowOptions = {}
   ) {
     const confirmationButton = h(
-      s(`<button>${t(options.okLabel ?? 'Generic.ok')}</button>`),
+      button(t(options.okLabel ?? 'Generic.ok'), { variant: 'primary' }),
       {
         click: () => {
           onOK();
@@ -47,7 +48,10 @@ export class ConfirmationWindow extends NotificationWindow {
           '<footer></footer>',
           confirmationButton,
           h(
-            s(`<button>${t(options.cancelLabel ?? 'Generic.cancel')}</button>`),
+            button(t(options.cancelLabel ?? 'Generic.cancel'), {
+              variant: 'quiet',
+              hotkey: 'Escape',
+            }),
             {
               click: () => this.close(),
               keydown: (event) => {

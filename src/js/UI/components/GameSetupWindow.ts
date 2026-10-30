@@ -273,7 +273,9 @@ export class GameSetupWindow extends Window {
     ];
     this.#seatsBody = document.createElement('tbody');
     this.#addSeat = h(
-      s<HTMLButtonElement>(`<button>${t('GameSetup.add-seat')}</button>`),
+      s<HTMLButtonElement>(
+        `<button class="btn-secondary">${t('GameSetup.add-seat')}</button>`
+      ),
       {
         click: () => {
           this.#seats.push({
@@ -394,7 +396,7 @@ export class GameSetupWindow extends Window {
         s('<div class="actions"></div>', this.#addSeat),
         (this.#startButton = h(
           s<HTMLButtonElement>(
-            `<button class="start">${t('GameSetup.start')}</button>`
+            `<button class="btn-primary start">${t('GameSetup.start')}</button>`
           ),
           {
             click: () => this.#start(difficultySelect.value),
@@ -570,7 +572,7 @@ export class GameSetupWindow extends Window {
           ),
           remove = h(
             s<HTMLButtonElement>(
-              `<button class="remove" title="${t(
+              `<button class="btn-icon remove" title="${t(
                 'GameSetup.remove-seat'
               )}">×</button>`
             ),

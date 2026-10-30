@@ -100,7 +100,7 @@ export class PowerList extends Element {
 
     if (rows.length > powerShownWhole) {
       const more = s<HTMLButtonElement>(
-        '<button type="button" class="show-all"></button>'
+        '<button type="button" class="btn-bare show-all"></button>'
       );
 
       more.textContent = text(

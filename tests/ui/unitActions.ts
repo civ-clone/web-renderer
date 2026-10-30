@@ -228,7 +228,7 @@ buttons.build(settlers, null);
 expect(
   'a button for each action',
   Array.from(container.querySelectorAll('button')).map((button) =>
-    button.className.replace('unit-action ', '')
+    button.className.replace(/\bbtn-\S+ |unit-action /g, '')
   ),
   ['FoundCity', 'BuildRoad', 'Fortify', 'SetHomeCity']
 );

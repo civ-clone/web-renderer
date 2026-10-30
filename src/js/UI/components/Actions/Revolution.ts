@@ -44,7 +44,7 @@ export class Revolution extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="revolution small" title="${t(
+            `<button class="btn-bare revolution small" title="${t(
               'Actions.Revolution.title'
             )}"><img src="${url}"></button>`
           )

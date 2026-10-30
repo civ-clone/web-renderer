@@ -47,7 +47,7 @@ export class CivilDisorder extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="civilDisorder" title="${t(
+            `<button class="btn-bare civilDisorder" title="${t(
               'Actions.CivilDisorder.title',
               {
                 city,

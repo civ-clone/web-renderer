@@ -134,7 +134,7 @@ export class CitiesList extends Element {
 
     if (rows.length > citiesShown) {
       const more = s<HTMLButtonElement>(
-        '<button type="button" class="show-all"></button>'
+        '<button type="button" class="btn-bare show-all"></button>'
       );
 
       more.textContent = text(
@@ -164,7 +164,7 @@ export class CitiesList extends Element {
   #row({ city, turns, disorder, starving }: CityRow): HTMLElement {
     const item = s('<li></li>'),
       button = s<HTMLButtonElement>(
-        '<button type="button" class="city-row"><span class="name"></span><span class="build"><span class="item"></span><span class="turns"></span></span></button>'
+        '<button type="button" class="btn-bare city-row"><span class="name"></span><span class="build"><span class="item"></span><span class="turns"></span></span></button>'
       );
 
     button.dataset.city = city.id;

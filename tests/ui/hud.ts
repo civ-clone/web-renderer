@@ -179,12 +179,14 @@ const run = async (): Promise<void> => {
   const panel = (area: HTMLElement) =>
       Array.from(area.children).map((child) =>
         Array.from(child.querySelector('button')?.classList ?? []).filter(
-          (name) => !['large', 'small', 'gradient'].includes(name)
+          (name) =>
+            !['large', 'small', 'gradient'].includes(name) &&
+            !name.startsWith('btn-')
         )
       ),
     unitButtons = () =>
       Array.from(unitActionArea.querySelectorAll('button')).map((button) =>
-        button.className.replace('unit-action ', '')
+        button.className.replace(/\bbtn-\S+ |unit-action /g, '')
       );
 
   // The end-turn panel is appended to the game area on every build, so it starts somewhere else.

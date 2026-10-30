@@ -51,7 +51,7 @@ export class Notice extends Action {
     // A city we've lost is one of our cities on the map, with no size (#420).
     if (cityNotices.includes(notification.key)) {
       const button = s(
-        `<button class="notice" title="${this.text(
+        `<button class="btn-bare notice" title="${this.text(
           'title'
         )}"><canvas width="16" height="16"></canvas></button>`
       );
@@ -72,7 +72,7 @@ export class Notice extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="notice" title="${this.text(
+            `<button class="btn-bare notice" title="${this.text(
               'title'
             )}"><img src="${url}"></button>`
           )

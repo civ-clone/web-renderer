@@ -67,7 +67,7 @@ const statButton = (
   ...before: Node[]
 ): HTMLButtonElement => {
   const element = s<HTMLButtonElement>(
-    `<button type="button" class="stat ${className}"><span class="visually-hidden"></span><span class="yield-amount"><span class="value"></span></span><span class="detail"></span></button>`
+    `<button type="button" class="btn-bare stat ${className}"><span class="visually-hidden"></span><span class="yield-amount"><span class="value"></span></span><span class="detail"></span></button>`
   );
 
   element.addEventListener('click', onClick);
@@ -290,7 +290,7 @@ export class PlayerDetails extends Element {
 
     const tradeRates = action.value as PlayerTradeRates,
       button = s<HTMLButtonElement>(
-        '<button type="button" class="stat trade-rates"><span class="bar"></span><span class="visually-hidden"></span></button>'
+        '<button type="button" class="btn-bare stat trade-rates"><span class="bar"></span><span class="visually-hidden"></span></button>'
       ),
       bar = button.querySelector('.bar') as HTMLElement,
       labels = [...tradeRates.all]

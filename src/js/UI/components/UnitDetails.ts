@@ -192,7 +192,7 @@ export class UnitDetails extends Element {
     if (unit.city) {
       const city = unit.city,
         button = s<HTMLButtonElement>(
-          '<button type="button" class="home-city"></button>'
+          '<button type="button" class="btn-bare home-city"></button>'
         );
 
       button.textContent = cityName(city);
@@ -210,7 +210,7 @@ export class UnitDetails extends Element {
 
     if (others.length) {
       const strip = s<HTMLButtonElement>(
-        '<button type="button" class="tile-units"><span class="visually-hidden"></span></button>'
+        '<button type="button" class="btn-bare tile-units"><span class="visually-hidden"></span></button>'
       );
 
       strip.title = text('UnitDetails.tile-units', { count: others.length });

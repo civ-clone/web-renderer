@@ -8,9 +8,26 @@
   font-size: 12px;
   height: 3.1rem;
   image-rendering: pixelated;
-  outline: none;
   padding: 0;
   width: 3.1rem;
+
+  // Their own feedback, now the button system no longer gives every button a glow and a shove (#740).
+  &:hover:not(:disabled) {
+    filter: brightness(115%);
+  }
+
+  &:active:not(:disabled) {
+    filter: brightness(85%);
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: 2px;
+  }
 
   img {
     filter: drop-shadow(0 0 2px var(--ui-orb-highlight));
