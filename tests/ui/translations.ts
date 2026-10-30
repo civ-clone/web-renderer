@@ -55,6 +55,7 @@ import i18next, { t } from 'i18next';
 import {
   advanceName,
   advanceNames,
+  researchClearedLabel,
   researchingName,
 } from '../../src/js/UI/components/lib/advances';
 import Notification from '../../src/js/Engine/Notification';
@@ -763,6 +764,41 @@ const expect = (description: string, actual: string, expected: string) => {
     'advanceName',
     advanceName('CeremonialBurial', 4),
     'Ceremonial Burial'
+  );
+
+  // #726: why the research choice has opened, the advance numbered as the one just gained.
+  const cleared = (reason: string | null, advance = 'Writing'): string =>
+    researchClearedLabel({
+      ...research,
+      researching: null,
+      cleared:
+        reason === null ? undefined : { reason, advance: { _: advance } },
+    } as unknown as PlayerResearch) ?? 'no line';
+
+  expect(
+    'research complete',
+    cleared('completed'),
+    'Research complete: Writing'
+  );
+  expect(
+    'research complete, a repeatable advance',
+    cleared('completed', 'FutureTechnology'),
+    'Research complete: Future Technology 2'
+  );
+  expect(
+    'research acquired some other way',
+    cleared('acquired'),
+    'Writing was acquired before its research finished'
+  );
+  expect('no reason known', cleared(null), 'no line');
+  expect('a reason with no words', cleared('stolen'), 'no line');
+  expect(
+    'none while researching',
+    researchClearedLabel({
+      ...research,
+      cleared: { reason: 'completed', advance: { _: 'Writing' } },
+    } as unknown as PlayerResearch) ?? 'no line',
+    'no line'
   );
 
   // #588: the line along the top of the page while the other civilizations move, as `Game` sends it and

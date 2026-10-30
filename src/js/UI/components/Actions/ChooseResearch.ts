@@ -4,7 +4,7 @@ import SelectionWindow from '../SelectionWindow';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
 import { combinedYields } from '../lib/playerYields';
-import { advanceName, held } from '../lib/advances';
+import { advanceName, held, researchClearedLabel } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from '../lib/cityYields';
@@ -70,7 +70,24 @@ export class ChooseResearch extends Action {
 
         chooseWindow.close();
       },
-      t('Actions.ChooseResearch.body'),
+      // What was just researched, when that's why it has opened (#726), above the question.
+      (() => {
+        const body = s('<div></div>'),
+          cleared = researchClearedLabel(playerResearch),
+          question = s('<p></p>');
+
+        if (cleared !== null) {
+          const reason = s('<p class="research-cleared"></p>');
+
+          reason.textContent = cleared;
+          body.append(reason);
+        }
+
+        question.textContent = t('Actions.ChooseResearch.body');
+        body.append(question);
+
+        return body;
+      })(),
       {
         displayAll: true,
       }
