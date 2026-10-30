@@ -22,6 +22,8 @@ import { TilesetDescriptor } from '../../src/js/UI/tilesets/TilesetDescriptor';
 import World from '../../src/js/UI/components/World';
 import { drawUnitActionIcon } from '../../src/js/UI/lib/unitActionIcon';
 import renderUnit from '../../src/js/UI/lib/renderUnit';
+import replaceColours from '../../src/js/UI/lib/replaceColours';
+import { setSprites } from '../../src/js/UI/lib/getPreloadedImage';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import currentTileset from '../../src/js/UI/lib/tilesets';
 
@@ -1051,6 +1053,25 @@ expect(
     ['drawImage(city/people_unhappy_m,10,2,6,6)'],
     ['drawImage(city/people_unhappy_m,4,6,6,6)'],
   ]
+);
+
+// The sprites are bitmaps since #730, not `<img>`s: a recoloured one is still drawn once and then taken from the cache,
+//  until a load replaces the sprites.
+const bitmap = { width: 3, height: 1 } as unknown as CanvasImageSource,
+  recoloured = replaceColours(bitmap, ['#abcdef'], ['#ffffff']),
+  again = replaceColours(bitmap, ['#abcdef'], ['#ffffff']),
+  otherColours = replaceColours(bitmap, ['#abcdef'], ['#000000']);
+
+setSprites(new Map());
+
+expect(
+  'a bitmap recoloured is cached by the bitmap and the colours, until the sprites are loaded again',
+  [
+    again === recoloured,
+    otherColours === recoloured,
+    replaceColours(bitmap, ['#abcdef'], ['#ffffff']) === recoloured,
+  ],
+  [true, false, false]
 );
 
 finished = true;

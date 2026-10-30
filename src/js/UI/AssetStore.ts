@@ -54,16 +54,32 @@ export const decodeSprite = async (
   blob: Blob,
   timeout: number = 5000
 ): Promise<CanvasImageSource> => {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer: ReturnType<typeof setTimeout> | undefined,
+    timedOut = false;
 
-  const late = new Promise<null>((resolve) => {
-      timer = setTimeout(() => resolve(null), timeout);
+  // Called inside a promise, so a browser that throws at once (no support) rejects like a failed decode.
+  const decoding = Promise.resolve().then(() => createImageBitmap(blob)),
+    late = new Promise<null>((resolve) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        resolve(null);
+      }, timeout);
     }),
-    bitmap = await Promise.race([createImageBitmap(blob), late]).finally(() =>
+    bitmap = await Promise.race([decoding, late]).finally(() =>
       clearTimeout(timer)
     );
 
-  return bitmap ?? imageFrom(blob);
+  if (bitmap !== null) {
+    return bitmap;
+  }
+
+  // A bitmap that comes after all isn't used: its memory is given back.
+  decoding.then(
+    (lateBitmap) => timedOut && lateBitmap.close(),
+    () => {}
+  );
+
+  return imageFrom(blob);
 };
 
 /** A sprite the extractor gave as a data URI, as the store keeps it. */
@@ -86,6 +102,7 @@ export class AssetStore extends Store<{
   #cachedURLs = new Map<string, string>();
   #loaded = new Map<string, CanvasImageSource>();
   #optionalAssets: string[];
+  #loads = 0;
   #ready: Promise<void> = Promise.resolve();
   #requiredAssets: string[];
   #tileset: TilesetDescriptor;
@@ -128,51 +145,66 @@ export class AssetStore extends Store<{
    * cannot be decoded is left out and drawn as missing, rather than holding the game up.
    */
   load(): Promise<void> {
-    this.#ready = this.#load();
+    // Never rejects: if the store can't be read, the game goes on without the sprites, so the main menu and the import
+    //  are still there, and whatever waits on `ready` isn't failed by it.
+    this.#ready = this.#load().catch((error) =>
+      console.error('Could not load the assets.', error)
+    );
 
     return this.#ready;
   }
 
   async #load(): Promise<void> {
-    const records = (
+    const load = ++this.#loads,
+      records = (
         await Promise.all(
           [...this.#requiredAssets, ...this.#optionalAssets].map((key) =>
             super.get(key)
           )
         )
       ).filter((record): record is Asset => record !== undefined),
-      // Imported before #730, as a data URI: kept as its PNG from now on.
-      migrated = await Promise.all(
-        records
-          .filter(({ blob, uri }) => blob === undefined && uri !== undefined)
-          .map(({ name, uri }) => assetFromURI(name, uri!))
-      );
+      // Imported before #730, as a data URI: kept as its PNG from now on. One that can't be read is left out, and drawn
+      //  as missing, rather than stopping the game before the player can import again.
+      migrated = (
+        await Promise.all(
+          records
+            .filter(({ blob, uri }) => blob === undefined && uri !== undefined)
+            .map(({ name, uri }) =>
+              assetFromURI(name, uri!).catch((error) => {
+                console.error(`Could not read ${name}.`, error);
+
+                return null;
+              })
+            )
+        )
+      ).filter((asset): asset is Asset => asset !== null);
 
     if (migrated.length > 0) {
-      await this.setAll(migrated);
+      // Still drawn from this time if they can't be stored: they are converted again next time.
+      await this.setAll(migrated).catch((error) =>
+        console.error('Could not store the converted assets.', error)
+      );
     }
 
-    const blobs = new Map<string, Blob | undefined>([
-        ...records.map(({ name, blob }): [string, Blob | undefined] => [
-          name,
-          blob,
-        ]),
-        ...migrated.map(({ name, blob }): [string, Blob | undefined] => [
-          name,
-          blob,
-        ]),
-      ]),
+    const blobs = [...records, ...migrated].filter(
+        (record): record is Asset & { blob: Blob } => record.blob !== undefined
+      ),
       loaded = new Map<string, CanvasImageSource>();
 
     await Promise.all(
-      [...blobs].map(async ([name, blob]) => {
+      blobs.map(async ({ name, blob }) => {
         try {
-          loaded.set(name, await decodeSprite(blob!));
+          loaded.set(name, await decodeSprite(blob));
         } catch (error) {
           console.error(`Could not decode ${name}.`, error);
         }
       })
     );
+
+    // A later load has started since: its sprites are the ones to draw (#152 loads another tileset on a switch).
+    if (load !== this.#loads) {
+      return;
+    }
 
     this.#cachedAssets.clear();
     this.#cachedScaledImages.clear();

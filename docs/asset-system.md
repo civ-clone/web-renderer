@@ -71,8 +71,10 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
   `src/js/UI/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
 - `load()`: reads the tileset's own required and optional sprites, and no other pack's, decodes each with
   `createImageBitmap` (or, if a bitmap hasn't come within 5 seconds, loads it as an `<img>`, whose `load` event comes
-  in a background tab too: `decodeSprite`), and hands them to the map's lookup (`setSprites`). A sprite that will not decode is reported and
-  left out, so it is drawn as missing rather than holding the game up. `Renderer.init` awaits it before anything is
+  in a background tab too: `decodeSprite`), and hands them to the map's lookup (`setSprites`). A sprite that will not decode, or an old record
+  that cannot be read, is reported and left out, so it is drawn as missing rather than holding the game up. `load`
+  never rejects: if the store cannot be read at all, the game goes on without the sprites, so the main menu and the
+  import are still there. Of two loads at once, the later one's sprites are kept. `Renderer.init` awaits it before anything is
   drawn, so drawing code finds a sprite or its absence, never one still on its way. `ready` is the last load.
 - `firstImported(paths)` for optional assets (see above).
 - For the interface: `getScaled(path, scale)` and `getShownAt(path, width)` canvases from the decoded sprites, and

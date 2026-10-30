@@ -158,6 +158,98 @@ onPreloadedImagesChanged(() => changed++);
     [2, ['Missing image: city/trade.']]
   );
 
+  // An old record that can't be read, and a store that won't take the converted ones: the rest still load.
+  records.set(key('city/bulb'), {
+    name: key('city/bulb'),
+    uri: 'data:image/png;base64,%%%',
+  });
+  records.set(key('city/gold'), {
+    name: key('city/gold'),
+    uri: `data:image/png;base64,${Buffer.from('gold').toString('base64')}`,
+  });
+  logged.length = 0;
+
+  const setAll = Store.prototype.setAll;
+
+  Store.prototype.setAll = async () => {
+    throw new Error('QuotaExceededError');
+  };
+  (globalThis as any).fetch = (
+    (fetch) => (url: string) =>
+      url.endsWith('%%%')
+        ? Promise.reject(new TypeError('Bad URL'))
+        : fetch(url)
+  )(fetch);
+
+  await store.load();
+
+  Store.prototype.setAll = setAll;
+
+  expect(
+    "an old record that can't be read is left out, and converted ones the store won't take are still drawn",
+    [
+      (getPreloadedImage('city/gold') as any).text,
+      (getPreloadedImage('city/food') as any).text,
+      logged.filter((message) => /^Could not (read|store)/.test(message)),
+    ],
+    [
+      'gold',
+      'food',
+      [
+        `Could not read ${key('city/bulb')}.`,
+        'Could not store the converted assets.',
+      ],
+    ]
+  );
+
+  // A store that can't be read at all: the game goes on without the sprites.
+  const get = Store.prototype.get;
+
+  Store.prototype.get = async () => {
+    throw new Error('The database connection is closing.');
+  };
+  logged.length = 0;
+
+  const failed = await store.load().then(
+    () => 'resolved',
+    () => 'rejected'
+  );
+
+  Store.prototype.get = get;
+
+  expect(
+    "a store that can't be read doesn't fail the load, it says so",
+    [failed, logged],
+    ['resolved', ['Could not load the assets.']]
+  );
+
+  // Two loads at once, the first slower: the later one's sprites are the ones drawn.
+  let release: () => void = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+
+  Store.prototype.get = async function (name: any) {
+    await held;
+
+    return records.get(name);
+  };
+
+  const first = store.load();
+
+  Store.prototype.get = get;
+  records.set(key('city/food'), { name: key('city/food'), blob: png('newer') });
+
+  await store.load();
+  release();
+  await first;
+
+  expect(
+    'of two loads at once, the later one is drawn from, however they finish',
+    (getPreloadedImage('city/food') as any).text,
+    'newer'
+  );
+
   // The interface's URL for a sprite at a size, made once.
   let made = 0;
 
