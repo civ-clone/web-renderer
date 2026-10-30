@@ -1,0 +1,1 @@
+{"version":"0.1.0@71f0f96","date":"2026-10-30T17:38:30.000Z","localChanges":["A tileset can now say the size the city screen, the reports and the cursor show its icons and citizens at, so a tileset drawn at another size than Civ1's is no longer shown doubled or squashed (closes #729)."],"externalChanges":{}}

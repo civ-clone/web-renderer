@@ -15,7 +15,8 @@ import DebugPanel from './debug/DebugPanel';
 import parseBooleanParam from './lib/parseBooleanParam';
 import appElements from './app/elements';
 import initI18n from './app/i18n';
-import { preloadAssets, setCursor, setTilesetSizes } from './app/assets';
+import { setCursor, setTilesetSizes } from './app/assets';
+import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -51,6 +52,8 @@ export class Renderer {
     let gameStarted = false;
 
     setTilesetSizes();
+    // Every sprite of the tileset in use, decoded before anything is drawn from them (#730).
+    await assetStore.load();
     await setCursor();
     await initI18n();
 
@@ -71,8 +74,6 @@ export class Renderer {
         mainMenu = new MainMenu(elements.mainMenuElement, this.#transport),
         // Units whose GoTo stopped next to a choice (#357).
         haltedUnits = new HaltedUnits();
-
-      preloadAssets(elements.preloadContainer);
 
       const sidebar = document.getElementById('sidebar');
 

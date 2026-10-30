@@ -395,7 +395,7 @@ const drawn = (
 
   new Recording(world, 2, 16, canvas).draw(world.get(x, y));
 
-  // A sprite that is not in the preload container draws nothing, so only the dots and the coast reach the canvas.
+  // A sprite that is not loaded draws nothing, so only the dots and the coast reach the canvas.
   return [
     ...sprites,
     ...calls.filter((call) => !call.startsWith('imageSmoothingEnabled')),

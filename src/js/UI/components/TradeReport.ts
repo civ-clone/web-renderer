@@ -53,11 +53,11 @@ export class TradeReport extends FilterableWindow {
 
   async update() {
     const goldIcon = await assetStore
-        .getShownAt(
+        .shownAtURL(
           spriteKey(currentTileset(), groupIcons.Gold),
           currentTileset().ui.icon
         )
-        .then((image) => `<img src="${image.toDataURL('image/png')}">`),
+        .then((url) => `<img src="${url}">`),
       cityList = s(`<table class="city-list"></table>`),
       improvementList = s(`<table class="improvement-list"></table>`),
       improvements: {

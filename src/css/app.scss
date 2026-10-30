@@ -65,13 +65,6 @@ input {
   width: 1px;
 }
 
-#preload {
-  height: 0;
-  position: absolute;
-  width: 0;
-  overflow: hidden;
-}
-
 @import 'buttons';
 @import 'components/actions';
 @import 'components/city';

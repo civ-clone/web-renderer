@@ -42,13 +42,13 @@ export class ChooseGovernment extends Action {
 
   build(): void {
     assetStore
-      .get(spriteKey(currentTileset(), 'city/people_content_m'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/people_content_m'))
+      .then((url) =>
         this.append(
           s(
             `<button class="large chooseGovernment" title="${t(
               'Actions.ChooseGovernment.title'
-            )}"><img src="${asset!.uri}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );

@@ -42,6 +42,7 @@ process.on('exit', (code: number): void => {
 // No IndexedDB under node: every action's picture is its path, so the buttons appear once the promise settles.
 (assetStore as any).get = (path: string) =>
   Promise.resolve({ name: path, uri: path });
+(assetStore as any).spriteURL = (path: string) => Promise.resolve(path);
 
 // linkedom's canvas has no context, so the unit action pictures are skipped.
 (globalThis as any).HTMLCanvasElement.prototype.getContext = () => null;

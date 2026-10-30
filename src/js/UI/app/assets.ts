@@ -1,8 +1,6 @@
 import { assetStore } from '../AssetStore';
 import currentTileset from '../lib/tilesets';
 import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
-import { h } from '../lib/html';
-import { s } from '@dom111/element';
 
 /**
  * The sizes `tileset` shows its sprites at outside the map (#729), as custom properties on `:root` for the stylesheets:
@@ -24,34 +22,11 @@ export const setCursor = async (): Promise<void> => {
   const hasAllAssets = await assetStore.hasAllAssets();
 
   if (hasAllAssets) {
-    const scaledCursor = await assetStore.getShownAt(
+    const cursor = await assetStore.shownAtURL(
       spriteKey(currentTileset(), 'cursor/torch'),
       currentTileset().ui.cursor
     );
 
-    document.body.style.cursor = `url('${scaledCursor.toDataURL(
-      'image/png'
-    )}'), default`;
+    document.body.style.cursor = `url('${cursor}'), default`;
   }
-};
-
-// preloaded the images as they could be remote
-export const preloadAssets = (preloadContainer: HTMLElement): void => {
-  assetStore.getAll().then((records) =>
-    records.forEach((record) =>
-      preloadContainer.append(
-        h(
-          s<HTMLImageElement>(
-            `<img src="${record.uri}" data-path="${record.name}">`
-          ),
-          {
-            error: () =>
-              console.error(
-                `There was a problem preloading '${record.name}', you may have some missing details.`
-              ),
-          }
-        )
-      )
-    )
-  );
 };

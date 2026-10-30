@@ -1,6 +1,8 @@
 // Just enough of the DOM for a map layer to draw under node: a canvas whose
-// context records each call, and a `#preload` container holding images of a
-// given size. Imported before anything that reaches for `document`.
+// context records each call, and loaded sprites of a given size. Imported
+// before anything that reaches for `document`.
+
+import { setSprites } from '../../../src/js/UI/lib/getPreloadedImage';
 
 export type Call = [string, ...any[]];
 
@@ -12,9 +14,23 @@ export class FakeImage {
   ) {}
 }
 
-const images: FakeImage[] = [];
+const images: FakeImage[] = [],
+  asked: string[] = [];
 
-/** Puts an image at `./assets/<path>.png` in the preload container. */
+// The sprites the layers draw from, as `AssetStore.load` leaves them (#730), noting every key a lookup asks for.
+class Sprites extends Map<string, CanvasImageSource> {
+  get(key: string): CanvasImageSource | undefined {
+    asked.push(key);
+
+    return super.get(key);
+  }
+}
+
+const sprites = new Sprites();
+
+setSprites(sprites);
+
+/** Loads an image as the sprite `./assets/<path>.png`. */
 export const preloadImage = (
   path: string,
   width: number,
@@ -23,6 +39,7 @@ export const preloadImage = (
   const image = new FakeImage(path, width, height);
 
   images.push(image);
+  sprites.set(`./assets/${path}.png`, image as unknown as CanvasImageSource);
 
   return image;
 };
@@ -59,34 +76,15 @@ export const fakeCanvas = (width: number, height: number) => {
   };
 };
 
-const asked: string[] = [];
-
-/** Every key a lookup has asked the preload container for, in the order asked. */
+/** Every key a lookup has asked for, in the order asked. */
 export const askedFor = (): string[] => [...asked];
 
-/** The paths of the images put in the preload container. */
+/** The paths of the images loaded. */
 export const preloaded = (): string[] => images.map(({ path }) => path);
-
-// Looked up as the page does, by the whole key in `data-path`: nothing else matches.
-const preload = {
-  querySelectorAll: () => [],
-  querySelector: (selector: string) => {
-    const key = selector.match(/^img\[data-path="(.*)"\]$/)?.[1] ?? null;
-
-    if (key === null) {
-      throw new Error(`The preload container cannot answer ${selector}.`);
-    }
-
-    asked.push(key);
-
-    return images.find(({ path }) => `./assets/${path}.png` === key) ?? null;
-  },
-};
 
 Object.assign(globalThis, {
   document: {
-    querySelector: (selector: string) =>
-      selector === '#preload' ? preload : null,
+    querySelector: () => null,
   },
   HTMLImageElement: FakeImage,
 });

@@ -1,17 +1,79 @@
 import { Record, Store } from './Store';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
 import currentTileset from './lib/tilesets';
-import { imageSize, isDrawable } from './lib/imageSize';
+import { imageSize } from './lib/imageSize';
 import scaleImage from './lib/scaleImage';
+import { setSprites } from './lib/getPreloadedImage';
 
 /** How many times a sprite `spriteWidth` px wide is enlarged to be shown `width` px wide: 1 for one that isn't loaded. */
 export const shownAtScale = (spriteWidth: number, width: number): number =>
   spriteWidth > 0 ? Math.max(1, Math.ceil(width / spriteWidth)) : 1;
 
-interface Asset extends Record {
+/**
+ * An imported sprite, kept as its PNG (#730). Imports from before that kept it as a data URI in `uri`, which `load`
+ * turns into a `blob` the first time it reads one.
+ */
+export interface Asset extends Record {
   name: string;
-  uri: string;
+  blob?: Blob;
+  uri?: string;
 }
+
+// `blob` as an `<img>`, once it has loaded: the `load` event comes in a hidden tab too, where an `<img>`'s `decode()`
+//  never settles.
+const imageFrom = (blob: Blob): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
+    const image = document.createElement('img'),
+      url = URL.createObjectURL(blob);
+
+    image.addEventListener(
+      'load',
+      () => {
+        URL.revokeObjectURL(url);
+        resolve(image);
+      },
+      { once: true }
+    );
+    image.addEventListener(
+      'error',
+      () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('The image could not be loaded.'));
+      },
+      { once: true }
+    );
+    image.src = url;
+  });
+
+/**
+ * `blob` decoded to draw from: a bitmap, or, if one hasn't come within `timeout` ms, an `<img>`. `Renderer.init` waits
+ *  for every sprite, so a decode that never settled, as `decode()` doesn't in a background tab, would stop the game
+ *  starting there (#730).
+ */
+export const decodeSprite = async (
+  blob: Blob,
+  timeout: number = 5000
+): Promise<CanvasImageSource> => {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const late = new Promise<null>((resolve) => {
+      timer = setTimeout(() => resolve(null), timeout);
+    }),
+    bitmap = await Promise.race([createImageBitmap(blob), late]).finally(() =>
+      clearTimeout(timer)
+    );
+
+  return bitmap ?? imageFrom(blob);
+};
+
+/** A sprite the extractor gave as a data URI, as the store keeps it. */
+export const assetFromURI = async (
+  name: string,
+  uri: string
+): Promise<Asset> => ({
+  name,
+  blob: await (await fetch(uri)).blob(),
+});
 
 export class AssetStore extends Store<{
   assets: {
@@ -20,10 +82,13 @@ export class AssetStore extends Store<{
   };
 }> {
   #cachedAssets = new Map<string, Asset>();
-  #cachedImages = new Map<string, HTMLImageElement>();
   #cachedScaledImages = new Map<string, HTMLCanvasElement>();
+  #cachedURLs = new Map<string, string>();
+  #loaded = new Map<string, CanvasImageSource>();
   #optionalAssets: string[];
+  #ready: Promise<void> = Promise.resolve();
   #requiredAssets: string[];
+  #tileset: TilesetDescriptor;
 
   /**
    * The store for `tileset`'s sprites: it is ready when every sprite the tileset requires has been imported, and keeps
@@ -34,6 +99,7 @@ export class AssetStore extends Store<{
       keyPath: 'name',
     });
 
+    this.#tileset = tileset;
     this.#requiredAssets = tileset.assets.required.map((name) =>
       spriteKey(tileset, name)
     );
@@ -50,6 +116,69 @@ export class AssetStore extends Store<{
   /** The keys of the sprites drawn when there, which an import from before they existed may not have. */
   get optionalAssets(): string[] {
     return [...this.#optionalAssets];
+  }
+
+  /** Settles once the last `load` has decoded every sprite it could: until then, nothing is drawn from them. */
+  get ready(): Promise<void> {
+    return this.#ready;
+  }
+
+  /**
+   * Decodes the tileset's sprites, and only its own (#730), for the map and the interface to draw from. One that
+   * cannot be decoded is left out and drawn as missing, rather than holding the game up.
+   */
+  load(): Promise<void> {
+    this.#ready = this.#load();
+
+    return this.#ready;
+  }
+
+  async #load(): Promise<void> {
+    const records = (
+        await Promise.all(
+          [...this.#requiredAssets, ...this.#optionalAssets].map((key) =>
+            super.get(key)
+          )
+        )
+      ).filter((record): record is Asset => record !== undefined),
+      // Imported before #730, as a data URI: kept as its PNG from now on.
+      migrated = await Promise.all(
+        records
+          .filter(({ blob, uri }) => blob === undefined && uri !== undefined)
+          .map(({ name, uri }) => assetFromURI(name, uri!))
+      );
+
+    if (migrated.length > 0) {
+      await this.setAll(migrated);
+    }
+
+    const blobs = new Map<string, Blob | undefined>([
+        ...records.map(({ name, blob }): [string, Blob | undefined] => [
+          name,
+          blob,
+        ]),
+        ...migrated.map(({ name, blob }): [string, Blob | undefined] => [
+          name,
+          blob,
+        ]),
+      ]),
+      loaded = new Map<string, CanvasImageSource>();
+
+    await Promise.all(
+      [...blobs].map(async ([name, blob]) => {
+        try {
+          loaded.set(name, await decodeSprite(blob!));
+        } catch (error) {
+          console.error(`Could not decode ${name}.`, error);
+        }
+      })
+    );
+
+    this.#cachedAssets.clear();
+    this.#cachedScaledImages.clear();
+    this.#cachedURLs.clear();
+    this.#loaded = loaded;
+    setSprites(loaded);
   }
 
   async get(path: string): Promise<Asset> {
@@ -72,59 +201,26 @@ export class AssetStore extends Store<{
     return paths[paths.length - 1];
   }
 
-  async getImage(path: string): Promise<HTMLImageElement> {
-    if (!this.#cachedImages.has(path)) {
-      const asset = await this.get(path),
-        image = document.createElement('img')!;
-
-      image.src = asset.uri;
-
-      // This element is never appended, so it is never rendered and its
-      // intrinsic size only arrives once it has loaded — and callers size
-      // canvases from it. Without the wait, `scaleImage` reads a width of 0.
-      //
-      // Deliberately the `load` event rather than `decode()`: for an element
-      // that is not in the document, `decode()` never settles while the page
-      // is hidden, and this is awaited during `Renderer.init`, so using it
-      // stops the app starting at all in a background tab.
-      const loaded = await new Promise<boolean>((resolve) => {
-        if (image.complete) {
-          resolve(image.naturalWidth > 0);
-
-          return;
-        }
-
-        image.addEventListener('load', () => resolve(true), { once: true });
-        image.addEventListener('error', () => resolve(false), { once: true });
-      });
-
-      if (!loaded) {
-        // Leave a broken image uncached so a later import can replace it,
-        // rather than serving the failure for the rest of the session.
-        return image;
-      }
-
-      this.#cachedImages.set(path, image);
-    }
-
-    return this.#cachedImages.get(path)!;
-  }
-
   async getScaled(path: string, scale: number): Promise<HTMLCanvasElement> {
+    await this.#ready;
+
     // Keyed on the scale as well as the path: the same asset at a different
     // scale is a different canvas, and keying on the path alone silently
     // served the first scale asked for to every later caller.
-    const key = `${path}@${scale}`;
+    const key = `${path}@${scale}`,
+      image = this.#loaded.get(path);
+
+    if (image === undefined) {
+      // Not imported: something drawable and minimal, and not kept, so an import is used once it is loaded.
+      const missing = document.createElement('canvas');
+
+      missing.width = 1;
+      missing.height = 1;
+
+      return missing;
+    }
 
     if (!this.#cachedScaledImages.has(key)) {
-      const image = await this.getImage(path);
-
-      if (!isDrawable(image)) {
-        // Scaling an undecoded image gives a blank canvas; caching that would
-        // serve it for the rest of the session instead of retrying.
-        return scaleImage(image, scale);
-      }
-
       this.#cachedScaledImages.set(key, scaleImage(image, scale));
     }
 
@@ -136,10 +232,38 @@ export class AssetStore extends Store<{
    *  and not at all when it is already that wide or wider, for CSS to show at `width`.
    */
   async getShownAt(path: string, width: number): Promise<HTMLCanvasElement> {
+    await this.#ready;
+
+    const image = this.#loaded.get(path);
+
     return this.getScaled(
       path,
-      shownAtScale(imageSize(await this.getImage(path))[0], width)
+      shownAtScale(image === undefined ? 0 : imageSize(image)[0], width)
     );
+  }
+
+  /**
+   * `getShownAt`'s canvas as a URL for an `<img>`, made once per sprite and width (#730): the city screen and the
+   *  reports draw the same icons on every render.
+   */
+  async shownAtURL(path: string, width: number): Promise<string> {
+    const key = `${path}@${width}`;
+
+    if (!this.#cachedURLs.has(key)) {
+      const url = (await this.getShownAt(path, width)).toDataURL('image/png');
+
+      if (!this.#loaded.has(path)) {
+        return url;
+      }
+
+      this.#cachedURLs.set(key, url);
+    }
+
+    return this.#cachedURLs.get(key)!;
+  }
+  /** The sprite at `path` at its own size, as a URL for an `<img>`, made once: the action panels' buttons. */
+  spriteURL(path: string): Promise<string> {
+    return this.shownAtURL(path, 1);
   }
 
   async hasAllAssets(): Promise<boolean> {

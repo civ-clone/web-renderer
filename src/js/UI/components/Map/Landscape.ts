@@ -25,7 +25,7 @@ onPreloadedImagesChanged(() => coastTileCache.clear());
 // result are our column offsets into the strip (ter257.pic in Civ1), each column
 // `cell` px wide.
 const buildCoastTile = (
-  sprite: HTMLImageElement,
+  sprite: CanvasImageSource,
   bitmask: number,
   tilesetId: string,
   { cell, quarter }: CoastStrip
@@ -154,9 +154,7 @@ export class Landscape extends TerrainAbstract {
     }
 
     const { order, strip } = coast,
-      sprite = strip
-        ? (this.getPreloadedImage(strip.sprite) as HTMLImageElement)
-        : null,
+      sprite = strip ? this.getPreloadedImage(strip.sprite) : null,
       // formula from: http://forums.civfanatics.com/showpost.php?p=13507808&postcount=40
       // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
       // ocean tile, in the order the tileset gives, least significant first. Civ1's starts
@@ -171,10 +169,9 @@ export class Landscape extends TerrainAbstract {
       );
 
     // There is at least one surrounding tile that is not ocean, so we need
-    // to render coast. The sprite check covers an early render reaching an
-    // image that has not decoded yet, which would be an empty coast tile
-    // cached for the rest of the session. Only a coast cut from one strip, as
-    // Civ1's is, can be drawn yet (#92).
+    // to render coast. The sprite check covers a strip that is missing, which
+    // would be an empty coast tile cached for the rest of the session. Only a
+    // coast cut from one strip, as Civ1's is, can be drawn yet (#92).
     if (bitmask > 0 && strip && sprite && isDrawable(sprite)) {
       this.putImage(
         buildCoastTile(sprite, bitmask, tileset.id, strip),

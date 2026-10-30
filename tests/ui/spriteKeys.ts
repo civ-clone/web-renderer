@@ -7,7 +7,7 @@
 //  Civ1 terrain, special and unit, from the sprites drawn by name in the layers, and from the tileset's own lists. Each
 //  is looked up the old way, by the end of the key, and the new way, over everything the import stores.
 
-// Must stay first: it gives the test a `document` with a `#preload` container.
+// Must stay first: it gives the test a `document`.
 import { document } from './lib/dom';
 
 import * as fs from 'fs';
@@ -16,7 +16,7 @@ import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
 import getPreloadedImage, {
-  setPreloadContainer,
+  setSprites,
 } from '../../src/js/UI/lib/getPreloadedImage';
 import validateDescriptor, {
   expandName,
@@ -186,6 +186,17 @@ const container = (keys: string[]): HTMLElement => {
   return element as unknown as HTMLElement;
 };
 
+// The sprites `AssetStore.load` would decode from `preload`'s images, by their keys (#730).
+const load = (preload: HTMLElement): void =>
+  setSprites(
+    new Map(
+      [...preload.children].map((image): [string, CanvasImageSource] => [
+        image.getAttribute('data-path')!,
+        image as unknown as CanvasImageSource,
+      ])
+    )
+  );
+
 const keyOf = (image: unknown): string | null =>
   image instanceof (globalThis as any).HTMLImageElement
     ? (image as HTMLImageElement).getAttribute('data-path')
@@ -206,13 +217,12 @@ const after = (
       : getPreloadedImage(name, tileset)
   );
 
-// Everything the import stores, preloaded before the map looks (found by the container's index) and after it has
-//  started to look (found as the images arrive).
+// Everything the import stores, loaded before the map looks.
 const civ1Preload = container(imported),
   results = (preload: HTMLElement) =>
     asked.map((name) => [name, before(preload, name), after(name)]);
 
-setPreloadContainer(civ1Preload);
+load(civ1Preload);
 
 const indexed = results(civ1Preload);
 
@@ -220,17 +230,6 @@ const indexed = results(civ1Preload);
 absent.forEach((name) => [after(name), after(name)]);
 
 const reported = logged.splice(0),
-  lateArrivals = container([]);
-
-setPreloadContainer(lateArrivals);
-imported.forEach((key) => {
-  const image = document.createElement('img');
-
-  image.setAttribute('data-path', key);
-  lateArrivals.append(image as unknown as HTMLElement);
-});
-
-const arrived = results(lateArrivals),
   differing = (rows: (string | null)[][]) =>
     rows.filter(([, old, now]) => old !== now),
   count = (rows: (string | null)[][], found: boolean) =>
@@ -238,8 +237,8 @@ const arrived = results(lateArrivals),
 
 expect(
   'every sprite the map asks for is found as it was: the same image, or the same miss',
-  [differing(indexed), differing(arrived)],
-  [[], []]
+  differing(indexed),
+  []
 );
 expect(
   'which is every sprite the import stores, each by its own key, and none of the names that are not sprites',
@@ -251,7 +250,6 @@ expect(
       .filter(([, , now]) => now !== null)
       .every(([name, , now]) => now === spriteKey(civ1, name!)),
     indexed.filter(([, , now]) => now === null).map(([name]) => name),
-    count(arrived, true),
   ],
   [
     imported.length + absent.length,
@@ -259,7 +257,6 @@ expect(
     absent.length,
     true,
     [...absent].sort(),
-    imported.length,
   ]
 );
 expect(
@@ -284,19 +281,17 @@ expect(
   ['./assets/terrain/land.png', null]
 );
 
-// A miss is not kept: a sprite that arrives after it was asked for is found.
+// A miss is not kept: a sprite a later load brings is found.
 logged.length = 0;
 
-const waiting = container([]);
-
-setPreloadContainer(waiting);
+load(container([]));
 
 const missed = [after('units/settlers'), after('units/settlers')];
 
-waiting.append(container(['./assets/units/settlers.png']).firstChild as any);
+load(container(['./assets/units/settlers.png']));
 
 expect(
-  'a sprite asked for before it arrives is reported once, and found once it is there',
+  'a sprite missing from one load is reported once, and found once a load brings it',
   [missed, after('units/settlers'), logged],
   [
     [null, null],
@@ -317,8 +312,7 @@ const other = validateDescriptor({
     ...imported,
   ],
   sprites = asked.filter((name) => !absent.includes(name)),
-  bothIndexed = container(bothKeys),
-  bothArriving = container([]);
+  bothIndexed = container(bothKeys);
 
 expect(
   "by the end of the key, Civ1's sprites would have been the other pack's",
@@ -331,7 +325,7 @@ expect(
   [[], './assets/other/terrain/x.png']
 );
 
-// Found both ways: from the container's index, and as the images arrive.
+// Found by the whole key once both are loaded.
 const twoPacks = (when: string): void => {
   expect(
     `by the whole key, Civ1's sprites are Civ1's, and the other pack's its own (${when})`,
@@ -348,14 +342,8 @@ const twoPacks = (when: string): void => {
   );
 };
 
-setPreloadContainer(bothIndexed);
-twoPacks('preloaded');
-
-setPreloadContainer(bothArriving);
-[...bothIndexed.children].forEach((image) =>
-  bothArriving.append(image.cloneNode() as HTMLElement)
-);
-twoPacks('arriving');
+load(bothIndexed);
+twoPacks('loaded');
 
 // The renderer's own source files.
 const sources = (directory: string): string[] =>
@@ -417,6 +405,19 @@ const handBuilt = sources(path.resolve('src/js'))
   );
 
 expect('no sprite key is built by hand', handBuilt, []);
+
+// A record keeps its sprite as a PNG `blob` since #730, and only an import from before that has a data URI: the
+//  interface asks the store for a URL (`spriteURL`, `shownAtURL`) rather than reading a record's `uri`. Only the store,
+//  which turns an old one into a blob, and the import, which turns the extractor's, read it.
+const readsUri = sources(path.resolve('src/js'))
+  .filter(
+    (file) =>
+      !file.endsWith('AssetStore.ts') && !file.endsWith('ImportAssetsWindow.ts')
+  )
+  .filter((file) => /\.uri\b/.test(fs.readFileSync(file, 'utf8')))
+  .map((file) => path.relative(process.cwd(), file));
+
+expect("no part of the interface reads a record's uri", readsUri, []);
 
 finished = true;
 

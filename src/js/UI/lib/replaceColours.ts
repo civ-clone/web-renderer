@@ -35,9 +35,8 @@ export const replaceColours = (
   const canvas = s<HTMLCanvasElement>('<canvas></canvas>'),
     context = canvas.getContext('2d')!;
 
-  // The preload is asynchronous, so a render can reach here before the image has
-  // decoded. Hand back something drawable rather than throwing on the zero-sized
-  // `getImageData`, and don't cache it — the next render has the decoded image.
+  // A missing sprite is the blank placeholder, which has no size. Hand back something drawable rather than throwing on
+  //  the zero-sized `getImageData`, and don't cache it, so a sprite imported later is drawn once it is loaded.
   if (!isDrawable(image)) {
     canvas.width = 1;
     canvas.height = 1;

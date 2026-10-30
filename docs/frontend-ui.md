@@ -30,13 +30,14 @@ rest for each game.
 1. Read query parameters (`?debug=1` turns on local-player automation and the UI
    stress runner, see [`ui-stress-harness.md`](ui-stress-harness.md); `?cheat=1`
    shows the cheat menu items).
-2. Verify assets via `assetStore.hasAllAssets()` and configure cursor.
+2. Decode the tileset's sprites (`assetStore.load()`, #730), so nothing is drawn
+   before they are there, then verify assets via `assetStore.hasAllAssets()` and
+   configure cursor.
 3. Initialize i18n (`i18next` + browser language detector).
 4. Bind global key handlers: Ctrl/Cmd+R asks before reloading, and so does F5
    until a game starts (in a game F5 is the Trade report).
 5. Set the default client options (see below), take any save waiting to be
-   loaded (`takePendingSave`), build `MainMenu`, and preload every stored asset
-   into `#preload`.
+   loaded (`takePendingSave`), and build `MainMenu`.
 6. Receive initial `gameData`: show the welcome window (new games only), turn on
    the leave guard, and build `World`, `GamePortal` with its layers, `Minimap`,
    the action panels, `GameMenu` and the details panels.

@@ -13,11 +13,11 @@ import watchPlayer, { researchIds } from './lib/watchPlayer';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
-    .getShownAt(
+    .shownAtURL(
       spriteKey(currentTileset(), groupIcons.Research),
       currentTileset().ui.icon
     )
-    .then((image) => `<img src="${image.toDataURL('image/png')}">`);
+    .then((url) => `<img src="${url}">`);
 
   return s(
     `<div><p><strong>${t('ScienceReport.researching', {

@@ -37,10 +37,10 @@ const drawn: string[] = [],
 
 (assetStore as any).get = (path: string) =>
   Promise.resolve(missing.test(path) ? undefined : { name: path, uri: '' });
-(assetStore as any).getShownAt = (path: string) => {
+(assetStore as any).shownAtURL = (path: string) => {
   drawn.push(path);
 
-  return Promise.resolve({ toDataURL: () => 'data:,' });
+  return Promise.resolve('data:,');
 };
 
 const settle = () => new Promise((resolve) => setTimeout(resolve));
