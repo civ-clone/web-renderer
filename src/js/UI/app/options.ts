@@ -18,6 +18,8 @@ export const setOptionDefaults = (): void => {
     // Sent to the game, whose rules act on them (#690, #691): see `sendBuildPreferences`.
     keepBuildingMilitaryUnits: false,
     newCitiesBuildDefender: false,
+    // Light, dark or the system's (#706): see `COLOUR_SCHEMES`.
+    colourScheme: 'system',
   });
 };
 

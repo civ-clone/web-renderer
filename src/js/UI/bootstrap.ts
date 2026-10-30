@@ -18,7 +18,8 @@ import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
 import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
-import { applyUiTheme } from './lib/theme';
+import { instance as options } from './GameOptionsRegistry';
+import { applyColourScheme, applyUiTheme } from './lib/theme';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
@@ -44,8 +45,11 @@ export class Renderer {
     const transport = this.#transport;
     const queryParams = new URLSearchParams(window.location.search);
 
-    // Before anything is drawn, so nothing shows in the wrong colours first (#736).
+    // The options first, and the look from them before anything is drawn, so nothing shows in the wrong colours
+    //  first (#736, #706).
+    setOptionDefaults();
     applyUiTheme(queryParams.get('theme'));
+    applyColourScheme(options.get('colourScheme', 'system'));
 
     const debugFlags = new DebugFlags(
       parseBooleanParam(queryParams.get('debug'), false)
@@ -62,8 +66,6 @@ export class Renderer {
     await initI18n();
 
     new ReloadGuard(() => gameStarted);
-
-    setOptionDefaults();
 
     DebugPanel.automateLocalPlayer(debugFlags, transport);
 

@@ -1,4 +1,5 @@
 import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
+import { COLOUR_SCHEMES, applyColourScheme } from '../lib/theme';
 import { IPortal } from './Portal';
 import Transport from '../Transport';
 import Window from './Window';
@@ -138,6 +139,30 @@ export class GameOptions extends Window {
 
             return h(select, {
               change: () => options.set('autosave', select.value),
+            });
+          })()
+        ),
+        s(
+          `<label>${t('GameOptions.colour-scheme')}</label>`,
+          (() => {
+            // The interface's colours (#706), applied as they are chosen.
+            const current = options.get('colourScheme', 'system'),
+              select = s<HTMLSelectElement>(
+                `<select>${COLOUR_SCHEMES.map(
+                  (choice) =>
+                    `<option value="${choice}"${
+                      choice === current ? ' selected' : ''
+                    }>${t(
+                      `GameOptions.colour-scheme-choice.${choice}`
+                    )}</option>`
+                ).join('')}</select>`
+              );
+
+            return h(select, {
+              change: () => {
+                options.set('colourScheme', select.value);
+                applyColourScheme(select.value);
+              },
             });
           })()
         ),
