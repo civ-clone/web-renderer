@@ -158,7 +158,7 @@ export class Window
           this.options.canMaximise,
           h(
             s(
-              `<button class="maximise" aria-label="${t(
+              `<button class="btn-icon maximise" aria-label="${t(
                 'Window.maximize'
               )}">${t('Window.maximize')}</button>`
             ),
@@ -171,9 +171,9 @@ export class Window
           this.options.canClose,
           h(
             s(
-              `<button class="close" aria-label="${t('Window.close')}">${t(
+              `<button class="btn-icon close" aria-label="${t(
                 'Window.close'
-              )}</button>`
+              )}">${t('Window.close')}</button>`
             ),
             {
               click: () => this.close(),

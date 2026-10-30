@@ -342,7 +342,7 @@ const renderYields = (city: CityData): Node => {
             '<div class="build-actions"></div>',
             h(
               s(
-                `<button>${t(
+                `<button class="btn-secondary">${t(
                   city.build.building
                     ? 'City.Build.change'
                     : 'City.Build.choose'
@@ -354,15 +354,22 @@ const renderYields = (city: CityData): Node => {
                 },
               }
             ),
-            h(s(`<button class="auto">${getAutoLabel(city.build)}</button>`), {
-              click() {
-                toggleAutoProduction();
-              },
-            }),
+            h(
+              s(
+                `<button class="btn-secondary auto">${getAutoLabel(
+                  city.build
+                )}</button>`
+              ),
+              {
+                click() {
+                  toggleAutoProduction();
+                },
+              }
+            ),
             ...city.build.spendCost.map((spendCost) =>
               h(
                 s(
-                  `<button class="buy" data-resource="${
+                  `<button class="btn-secondary buy" data-resource="${
                     spendCost.resource._
                   }">${t('City.Build.buy-with', {
                     spendCost,
@@ -468,7 +475,7 @@ const renderYields = (city: CityData): Node => {
             saleValue
               ? h(
                   s(
-                    `<button class="sell">${t(
+                    `<button class="btn-danger sell">${t(
                       'City.SellImprovement.sell'
                     )}</button>`
                   ),
@@ -614,13 +621,23 @@ const renderYields = (city: CityData): Node => {
   renderCityActions = (step: (by: number) => void, rename: () => void): Node =>
     s(
       '<div class="city-actions"></div>',
-      h(s(`<button class="previous">${t('City.previous')}</button>`), {
-        click: () => step(-1),
-      }),
-      h(s(`<button class="rename">${t('City.rename')}</button>`), {
-        click: () => rename(),
-      }),
-      h(s(`<button class="next">${t('City.next')}</button>`), {
+      h(
+        s(
+          `<button class="btn-secondary previous">${t(
+            'City.previous'
+          )}</button>`
+        ),
+        {
+          click: () => step(-1),
+        }
+      ),
+      h(
+        s(`<button class="btn-secondary rename">${t('City.rename')}</button>`),
+        {
+          click: () => rename(),
+        }
+      ),
+      h(s(`<button class="btn-secondary next">${t('City.next')}</button>`), {
         click: () => step(1),
       })
     ),

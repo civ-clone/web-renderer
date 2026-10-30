@@ -10,6 +10,7 @@ import ResumeGameWindow from './ResumeGameWindow';
 import Transport from '../Transport';
 import FilterableWindow from './FilterableWindow';
 import { filteredOutClass } from '../lib/filterRows';
+import { ButtonVariant, button as systemButton } from '../lib/button';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -31,11 +32,10 @@ const cell = (text: string, className: string = ''): HTMLTableCellElement => {
 const button = (
   label: string,
   action: () => void,
-  name: string | null = null
+  name: string | null = null,
+  variant: ButtonVariant = 'secondary'
 ): HTMLButtonElement => {
-  const element = document.createElement('button');
-
-  element.textContent = label;
+  const element = systemButton(label, { variant });
 
   if (name !== null) {
     element.setAttribute('aria-label', name);
@@ -195,7 +195,8 @@ export class LoadGameWindow extends FilterableWindow {
             { modal: true }
           );
         },
-        t('LoadGame.delete-save', { name: save.name })
+        t('LoadGame.delete-save', { name: save.name }),
+        'danger'
       )
     );
 

@@ -210,7 +210,10 @@ const run = async (): Promise<void> => {
     expect(
       'research comes before the treasury',
       Array.from(element.querySelectorAll('.stat')).map(
-        (item) => item.className.split(' ')[1]
+        (item) =>
+          item.className
+            .split(' ')
+            .filter((name) => !name.startsWith('btn-'))[1]
       ),
       ['research', 'gold', 'government', 'trade-rates']
     );

@@ -77,6 +77,46 @@
   );
   --ui-orb-highlight: rgba(255, 255, 255, 0.25);
 
+  // Buttons (#740): brass for the one primary action, a raised slate face for the rest, none for the quiet ones.
+  --ui-btn-bg: var(--ui-bg-1);
+  --ui-btn-bg-hover: color-mix(in srgb, var(--ui-bg-1), var(--ui-fg) 8%);
+  --ui-btn-bg-pressed: color-mix(in srgb, var(--ui-bg-1), var(--ui-fg) 14%);
+  --ui-btn-edge: var(--ui-line);
+  --ui-btn-fg: var(--ui-fg);
+  --ui-btn-primary-bg: var(--ui-accent);
+  --ui-btn-primary-bg-hover: color-mix(
+    in srgb,
+    var(--ui-accent),
+    var(--ui-light) 14%
+  );
+  --ui-btn-primary-bg-pressed: color-mix(
+    in srgb,
+    var(--ui-accent),
+    var(--ui-shade) 14%
+  );
+  --ui-btn-primary-edge: var(--ui-accent);
+  --ui-btn-primary-fg: var(--ui-accent-ink);
+  --ui-btn-quiet-bg: transparent;
+  --ui-btn-quiet-bg-hover: color-mix(in srgb, transparent, var(--ui-fg) 8%);
+  --ui-btn-quiet-edge: transparent;
+  --ui-btn-quiet-fg: var(--ui-fg-muted);
+  --ui-btn-danger-fg: var(--ui-negative);
+  --ui-btn-shadow-pressed: inset 0 1px 3px rgba(13, 16, 20, 0.35);
+  --ui-btn-focus-outline: 2px solid var(--ui-focus);
+  --ui-btn-focus-offset: 2px;
+  --ui-btn-disabled-opacity: 0.45;
+  --ui-btn-family: var(--font-ui);
+  --ui-btn-size: 0.8125rem;
+  --ui-btn-weight: 600;
+  --ui-btn-height: 2rem;
+  --ui-btn-padding: 0 0.75rem;
+  --ui-btn-icon-size: 2rem;
+  --ui-btn-icon-padding: 0;
+  --ui-kbd-display: inline-block;
+  --ui-kbd-bg: var(--ui-sunken);
+  --ui-kbd-edge: var(--ui-line);
+  --ui-kbd-fg: var(--ui-fg-muted);
+
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;
   --ui-shadow-panel: 0 2px 8px rgba(13, 16, 20, 0.35);

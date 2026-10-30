@@ -1,15 +1,99 @@
-button {
-  &:hover {
-    box-shadow: 0 0 2px var(--ui-glow);
-  }
+// The button system (#740). Every button names its variant: the filled ones and `btn-icon` are drawn here from the
+//  theme's `--ui-btn-*` tokens; `btn-bare` is a button its own component draws (the round action buttons, sidebar rows,
+//  menus), which this leaves alone.
 
-  &:focus,
-  &:focus-visible {
-    filter: brightness(120%);
+.btn-primary,
+.btn-secondary,
+.btn-quiet,
+.btn-danger,
+.btn-icon {
+  align-items: center;
+  appearance: none;
+  background-color: var(--ui-btn-bg);
+  border: 1px solid var(--ui-btn-edge);
+  border-radius: var(--ui-radius-control);
+  color: var(--ui-btn-fg);
+  cursor: pointer;
+  display: inline-flex;
+  font-family: var(--ui-btn-family);
+  font-size: var(--ui-btn-size);
+  font-weight: var(--ui-btn-weight);
+  gap: 0.5em;
+  justify-content: center;
+  line-height: normal;
+  min-height: var(--ui-btn-height);
+  padding: var(--ui-btn-padding);
+  transition: background-color 80ms;
+
+  &:hover {
+    background-color: var(--ui-btn-bg-hover);
   }
 
   &:active {
-    filter: brightness(80%);
-    transform: translate(2px, 2px);
+    background-color: var(--ui-btn-bg-pressed);
+    box-shadow: var(--ui-btn-shadow-pressed);
+  }
+
+  &:focus-visible {
+    outline: var(--ui-btn-focus-outline);
+    outline-offset: var(--ui-btn-focus-offset);
+  }
+
+  &:disabled {
+    background-color: var(--ui-btn-bg);
+    box-shadow: none;
+    cursor: default;
+    opacity: var(--ui-btn-disabled-opacity);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+.btn-primary {
+  --ui-btn-bg: var(--ui-btn-primary-bg);
+  --ui-btn-bg-hover: var(--ui-btn-primary-bg-hover);
+  --ui-btn-bg-pressed: var(--ui-btn-primary-bg-pressed);
+  --ui-btn-edge: var(--ui-btn-primary-edge);
+  --ui-btn-fg: var(--ui-btn-primary-fg);
+}
+
+.btn-quiet {
+  --ui-btn-bg: var(--ui-btn-quiet-bg);
+  --ui-btn-bg-hover: var(--ui-btn-quiet-bg-hover);
+  --ui-btn-edge: var(--ui-btn-quiet-edge);
+  --ui-btn-fg: var(--ui-btn-quiet-fg);
+}
+
+.btn-danger {
+  --ui-btn-fg: var(--ui-btn-danger-fg);
+}
+
+.btn-icon {
+  min-width: var(--ui-btn-icon-size);
+  min-height: var(--ui-btn-icon-size);
+  padding: var(--ui-btn-icon-padding);
+}
+
+// A button's key, after its label ("Cancel Esc"), so its tooltip is free for what it does. Shown as the theme says, and
+//  not read out: the button has it as its shortcut.
+.btn-primary,
+.btn-secondary,
+.btn-quiet,
+.btn-danger {
+  &[data-hotkey]::after {
+    background: var(--ui-kbd-bg);
+    border: 1px solid var(--ui-kbd-edge);
+    border-radius: 3px;
+    color: var(--ui-kbd-fg);
+    content: attr(data-hotkey);
+    content: attr(data-hotkey) / '';
+    display: var(--ui-kbd-display);
+    font-family: var(--font-mono);
+    font-size: 0.75em;
+    font-weight: normal;
+    line-height: 1.4;
+    padding: 0 0.3em;
   }
 }

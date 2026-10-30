@@ -74,7 +74,7 @@ export class PopupMenu extends Element {
 
     this.append(
       ...actions.map(({ action, label }) => {
-        const button = s(`<button>${label}</button>`);
+        const button = s(`<button class="btn-bare">${label}</button>`);
 
         on(button, 'pointerup', () => {
           action(this);
@@ -86,7 +86,7 @@ export class PopupMenu extends Element {
       }),
       h(
         s(
-          `<button class="close" aria-label="${t(
+          `<button class="btn-bare close" aria-label="${t(
             'Generic.close'
           )}">&times;</button>`
         ),

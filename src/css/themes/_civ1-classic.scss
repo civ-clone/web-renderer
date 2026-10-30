@@ -79,6 +79,39 @@
   );
   --ui-orb-highlight: rgba(255, 255, 255, 0.3);
 
+  // Buttons (#740): close to the browser's own (Chrome draws them in 13.33px Arial), every variant alike, as they were
+  //  before the button system.
+  --ui-btn-bg: #efefef;
+  --ui-btn-bg-hover: #e5e5e5;
+  --ui-btn-bg-pressed: #d6d6d6;
+  --ui-btn-edge: #767676;
+  --ui-btn-fg: #000;
+  --ui-btn-primary-bg: #efefef;
+  --ui-btn-primary-bg-hover: #e5e5e5;
+  --ui-btn-primary-bg-pressed: #d6d6d6;
+  --ui-btn-primary-edge: #767676;
+  --ui-btn-primary-fg: #000;
+  --ui-btn-quiet-bg: #efefef;
+  --ui-btn-quiet-bg-hover: #e5e5e5;
+  --ui-btn-quiet-edge: #767676;
+  --ui-btn-quiet-fg: #000;
+  --ui-btn-danger-fg: #000;
+  --ui-btn-shadow-pressed: none;
+  --ui-btn-focus-outline: auto;
+  --ui-btn-focus-offset: 0;
+  --ui-btn-disabled-opacity: 0.5;
+  --ui-btn-family: Arial, sans-serif;
+  --ui-btn-size: 13.3333px;
+  --ui-btn-weight: normal;
+  --ui-btn-height: 0;
+  --ui-btn-padding: 1px 6px;
+  --ui-btn-icon-size: 0;
+  --ui-btn-icon-padding: 1px 6px;
+  --ui-kbd-display: none;
+  --ui-kbd-bg: #e5e5e5;
+  --ui-kbd-edge: #767676;
+  --ui-kbd-fg: #000;
+
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;
   --ui-shadow-panel: 1px 1px 5px rgba(0, 0, 0, 0.6);

@@ -68,7 +68,7 @@ const cheatGrantWindow = (
 ): Window => {
   const select = cheatPlayerSelect(players),
     button = s<HTMLButtonElement>(
-      `<button>${t('GameMenu.cheat.grant')}</button>`
+      `<button class="btn-secondary">${t('GameMenu.cheat.grant')}</button>`
     ),
     window = new Window(
       title,
@@ -179,7 +179,7 @@ const cheatCreateUnitWindow = (
       `<input type="number" step="1" min="0" value="${start.y}">`
     ),
     button = s<HTMLButtonElement>(
-      `<button>${t('GameMenu.cheat.create')}</button>`
+      `<button class="btn-secondary">${t('GameMenu.cheat.create')}</button>`
     ),
     window = new Window(
       t('GameMenu.cheat.create-unit'),
@@ -313,7 +313,9 @@ export class GameMenu extends Element {
   }
 
   build(): void {
-    const button = s(`<button><img src="${menuIcon}"></button>`);
+    const button = s(
+      `<button class="btn-bare"><img src="${menuIcon}"></button>`
+    );
 
     this.append(
       h(button, {

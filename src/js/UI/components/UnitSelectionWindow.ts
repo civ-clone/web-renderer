@@ -15,7 +15,7 @@ type OnComplete = (unit: UnitData) => void;
 //  as a barbarian's, has no city, so no second line.
 export const unitRow = (unit: UnitData): HTMLButtonElement => {
   const row = s<HTMLButtonElement>(
-      '<button type="button" class="unit-row"><span class="text"><span class="label"></span></span></button>'
+      '<button type="button" class="btn-bare unit-row"><span class="text"><span class="label"></span></span></button>'
     ),
     text = row.querySelector('.text') as HTMLElement;
 

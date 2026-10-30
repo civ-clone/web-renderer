@@ -44,9 +44,9 @@ export class MainMenu extends Element {
             `<div class="row"></div>`,
             h(
               s(
-                `<button autofocus${hasAssets ? '' : ' hidden'}>${t(
-                  'MainMenu.new-game'
-                )}</button>`
+                `<button class="btn-bare" autofocus${
+                  hasAssets ? '' : ' hidden'
+                }>${t('MainMenu.new-game')}</button>`
               ),
               {
                 click: () => {
@@ -56,9 +56,9 @@ export class MainMenu extends Element {
             ),
             h(
               s(
-                `<button class="secondary"${hasAssets ? '' : ' hidden'}>${t(
-                  'MainMenu.customise'
-                )}</button>`
+                `<button class="btn-bare secondary"${
+                  hasAssets ? '' : ' hidden'
+                }>${t('MainMenu.customise')}</button>`
               ),
               {
                 // Not answered: the player has been told, and the menu is still here (#580).
@@ -71,7 +71,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
                 'MainMenu.earth'
               )}</button>`
             ),
@@ -82,7 +82,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
                 'MainMenu.customize-world'
               )}</button>`
             ),
@@ -96,7 +96,7 @@ export class MainMenu extends Element {
           ),
           h(
             s(
-              `<button${hasAssets ? '' : ' hidden'}>${t(
+              `<button class="btn-bare"${hasAssets ? '' : ' hidden'}>${t(
                 'MainMenu.load-game'
               )}</button>`
             ),
@@ -105,12 +105,22 @@ export class MainMenu extends Element {
               click: () => void chooseSave(this.#transport),
             }
           ),
-          h(s(`<button>${t('MainMenu.hall-of-fame')}</button>`), {
-            click: () => new HallOfFameWindow(),
-          }),
-          h(s(`<button>${t('MainMenu.import-assets')}</button>`), {
-            click: () => new ImportAssetsWindow(),
-          })
+          h(
+            s(
+              `<button class="btn-bare">${t('MainMenu.hall-of-fame')}</button>`
+            ),
+            {
+              click: () => new HallOfFameWindow(),
+            }
+          ),
+          h(
+            s(
+              `<button class="btn-bare">${t('MainMenu.import-assets')}</button>`
+            ),
+            {
+              click: () => new ImportAssetsWindow(),
+            }
+          )
         ),
         {
           keydown(event: KeyboardEvent) {

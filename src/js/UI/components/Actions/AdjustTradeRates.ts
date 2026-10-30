@@ -90,7 +90,7 @@ export class AdjustTradeRates extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="adjustTradeRates small" title="${t(
+            `<button class="btn-bare adjustTradeRates small" title="${t(
               'Actions.AdjustTradeRates.title'
             )} (${tradeRatesKey})"><img src="${url}"></button>`
           )

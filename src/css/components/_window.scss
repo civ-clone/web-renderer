@@ -89,6 +89,9 @@
       font-size: 0;
       height: 1.3rem;
       margin-right: 0.33rem;
+      // The header's own size, not the icon button's: the glyph is a picture here until #741.
+      min-height: 0;
+      min-width: 0;
       padding: 0;
       width: 1.3rem;
 

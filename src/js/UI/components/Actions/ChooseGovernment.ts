@@ -46,7 +46,7 @@ export class ChooseGovernment extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="large chooseGovernment" title="${t(
+            `<button class="btn-bare large chooseGovernment" title="${t(
               'Actions.ChooseGovernment.title'
             )}"><img src="${url}"></button>`
           )

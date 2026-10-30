@@ -80,7 +80,7 @@ const buildCityRow = async (
       renderPopulation(city),
       h(
         s(
-          `<button>${t('HappinessReport.view-city', {
+          `<button class="btn-secondary">${t('HappinessReport.view-city', {
             city,
           })}</button>`
         ),

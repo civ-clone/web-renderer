@@ -133,7 +133,9 @@ export class ResumeGameWindow extends Window {
         table,
         h(
           s<HTMLButtonElement>(
-            `<button class="resume">${t('ResumeGame.resume')}</button>`
+            `<button class="btn-primary resume">${t(
+              'ResumeGame.resume'
+            )}</button>`
           ),
           { click: () => this.#resume() }
         )

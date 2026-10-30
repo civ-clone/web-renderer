@@ -4,6 +4,7 @@ import {
 } from '../../Engine/lib/gameOver';
 import { enterHallOfFame, hallOfFameEntry } from '../lib/hallOfFame';
 import { allowLeaving } from '../lib/leaveGuard';
+import { button } from '../lib/button';
 import { h } from '../lib/html';
 import { hallOfFameTable, yearLabel } from './HallOfFameWindow';
 import { s } from '@dom111/element';
@@ -73,14 +74,17 @@ export class GameOverWindow extends Window {
   ) {
     const entry = observer ? null : hallOfFameEntry(details, Date.now()),
       hallOfFame = entry === null ? null : enterHallOfFame(entry),
-      keepPlaying = h(s(`<button>${t('GameOver.keep-playing')}</button>`), {
-        click: () => {
-          transport.send('gameContinue', null);
+      keepPlaying = h(
+        button(t('GameOver.keep-playing'), { variant: 'primary' }),
+        {
+          click: () => {
+            transport.send('gameContinue', null);
 
-          this.close();
-        },
-      }),
-      mainMenu = h(s(`<button>${t('GameOver.main-menu')}</button>`), {
+            this.close();
+          },
+        }
+      ),
+      mainMenu = h(button(t('GameOver.main-menu')), {
         click: goToMainMenu,
       });
 

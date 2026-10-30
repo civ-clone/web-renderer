@@ -87,7 +87,7 @@ export class UnitActions extends Element {
         }),
         key = keyForAction(nameOf(action)),
         button = s<HTMLButtonElement>(
-          `<button type="button" class="unit-action ${action._}"><canvas width="16" height="16"></canvas></button>`
+          `<button type="button" class="btn-bare unit-action ${action._}"><canvas width="16" height="16"></canvas></button>`
         ),
         label = key ? `${name} (${keyName(key)})` : name;
 

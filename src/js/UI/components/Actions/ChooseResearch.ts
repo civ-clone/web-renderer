@@ -102,7 +102,7 @@ export class ChooseResearch extends Action {
       .then((url) =>
         this.append(
           s(
-            `<button class="large chooseResearch" title="${t(
+            `<button class="btn-bare large chooseResearch" title="${t(
               'Actions.ChooseResearch.title'
             )}"><img src="${url}"></button>`
           )
