@@ -29,9 +29,11 @@
     margin-bottom: 0.5rem;
     padding: 0.25rem 0.5rem;
 
-    &:hover {
+    &:hover,
+    &:focus-visible {
       background: var(--ui-overlay-bg);
       color: var(--ui-overlay-fg);
+      outline: none;
     }
 
     &:last-child {

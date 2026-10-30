@@ -14,7 +14,7 @@ const ui = path.join(webRenderer, 'src', 'js', 'UI'),
   skipped = [path.join(ui, 'debug')],
   helper = path.join(ui, 'lib', 'button.ts'),
   variant =
-    /\bclass="[^"]*\bbtn-(primary|secondary|quiet|danger|icon|bare|\$\{)/,
+    /\sclass="(?:[^"]*\s)?btn-(primary|secondary|quiet|danger|icon|bare|\$\{)/,
   failures = [];
 let checks = 0;
 
