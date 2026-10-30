@@ -13,7 +13,10 @@ import watchPlayer, { researchIds } from './lib/watchPlayer';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
-    .getScaled(spriteKey(currentTileset(), groupIcons.Research), 2)
+    .getShownAt(
+      spriteKey(currentTileset(), groupIcons.Research),
+      currentTileset().ui.icon
+    )
     .then((image) => `<img src="${image.toDataURL('image/png')}">`);
 
   return s(

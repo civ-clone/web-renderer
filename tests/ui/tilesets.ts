@@ -22,7 +22,12 @@ import Portal from '../../src/js/UI/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import { Tile } from '../../src/js/UI/types';
 import World from '../../src/js/UI/components/World';
-import { AssetStore, assetStore } from '../../src/js/UI/AssetStore';
+import {
+  AssetStore,
+  assetStore,
+  shownAtScale,
+} from '../../src/js/UI/AssetStore';
+import { setTilesetSizes } from '../../src/js/UI/app/assets';
 import i18next from 'i18next';
 import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
 import setOptionDefaults from '../../src/js/UI/app/options';
@@ -1019,6 +1024,94 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       ),
     ].map((portal) => [portal.scale(), portal.tileSize()]),
     [[2, 32]]
+  );
+
+  // The sizes the interface shows the tileset's sprites at outside the map (#729).
+  expect(
+    "Civ1's descriptor gives today's sizes: 14px icons, 16px citizens 12px apart, a 26px cursor",
+    civ1.ui,
+    { icon: 14, citizen: { width: 16, step: 12 }, cursor: 26 }
+  );
+
+  const withoutUi = JSON.parse(JSON.stringify(civ1Json));
+
+  delete withoutUi.ui;
+
+  expect(
+    "a descriptor without ui is shown at Civ1's sizes",
+    validateDescriptor(withoutUi).ui,
+    civ1.ui
+  );
+  expect(
+    'and gets its own copy of them, not one every such tileset shares',
+    validateDescriptor(withoutUi).ui !== validateDescriptor(withoutUi).ui &&
+      validateDescriptor(withoutUi).ui.citizen !==
+        validateDescriptor(withoutUi).ui.citizen,
+    true
+  );
+  expect(
+    "one that gives only some of them gets Civ1's for the rest",
+    validateDescriptor(civ1With({ ui: { icon: 32, citizen: { step: 20 } } }))
+      .ui,
+    { icon: 32, citizen: { width: 16, step: 20 }, cursor: 26 }
+  );
+  expect(
+    'a size that is not a whole number of px, 1 or more, is refused, saying which',
+    [
+      { icon: 0 },
+      { icon: -14 },
+      { icon: 14.5 },
+      { icon: '14' },
+      { citizen: { width: null } },
+      { cursor: 0 },
+    ].map((ui) => thrown(() => validateDescriptor(civ1With({ ui })))),
+    [
+      'Tileset "civ1": ui.icon must be a whole number of px, 1 or more.',
+      'Tileset "civ1": ui.icon must be a whole number of px, 1 or more.',
+      'Tileset "civ1": ui.icon must be a whole number of px, 1 or more.',
+      'Tileset "civ1": ui.icon must be a whole number of px, 1 or more.',
+      'Tileset "civ1": ui.citizen.width must be a whole number of px, 1 or more.',
+      'Tileset "civ1": ui.cursor must be a whole number of px, 1 or more.',
+    ]
+  );
+  expect(
+    'so is a ui, or a citizen, that is not an object',
+    [{ ui: 14 }, { ui: { citizen: 16 } }].map(
+      (changes) => thrown(() => validateDescriptor(civ1With(changes))) !== null
+    ),
+    [true, true]
+  );
+
+  setTilesetSizes(
+    validateDescriptor(
+      civ1With({ ui: { icon: 32, citizen: { width: 24, step: 18 } } })
+    )
+  );
+
+  expect(
+    "the tileset's sizes are set on :root for the stylesheets",
+    ['--tileset-icon', '--tileset-citizen-width', '--tileset-citizen-step'].map(
+      (property) => document.documentElement.style.getPropertyValue(property)
+    ),
+    ['32px', '24px', '18px']
+  );
+  expect(
+    "a sprite is enlarged the whole number of times that reaches the size it's shown at, never less than once",
+    [
+      // Civ1's 7px icons, 8px citizens and 13px torch, doubled as before.
+      [7, 14],
+      [8, 16],
+      [13, 26],
+      // Already that size, or larger: CSS shows it at the size.
+      [14, 14],
+      [32, 14],
+      // Civ1's 16px pollution among its 14px icons.
+      [16, 14],
+      [5, 14],
+      // Not loaded.
+      [0, 14],
+    ].map(([spriteWidth, width]) => shownAtScale(spriteWidth, width)),
+    [2, 2, 2, 1, 1, 1, 3, 1]
   );
 
   finished = true;
