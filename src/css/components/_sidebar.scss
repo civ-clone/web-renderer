@@ -75,7 +75,7 @@
   box-shadow: var(--ui-shadow-panel);
 
   > h2 {
-    font-size: 0.85em;
+    font-size: var(--type-heading-size);
     margin: 0;
 
     button {
@@ -87,11 +87,14 @@
       cursor: pointer;
       display: flex;
       font: inherit;
-      font-weight: bold;
+      font-family: var(--type-heading-family);
+      font-weight: var(--type-heading-weight);
       gap: 0.4em;
+      letter-spacing: var(--type-heading-tracking);
       padding: 0.25em 0.5em;
       text-align: left;
       text-shadow: var(--ui-text-shadow-title);
+      text-transform: var(--type-heading-transform);
       width: 100%;
 
       &::before {
@@ -155,7 +158,7 @@
   .unit-header {
     align-items: center;
     display: flex;
-    font-weight: bold;
+    font-weight: var(--type-strong-weight);
     gap: 0.4em;
 
     canvas {
@@ -197,7 +200,7 @@
     }
 
     .value {
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
     }
   }
 
@@ -209,7 +212,7 @@
 
   .tile {
     color: var(--ui-fg-muted);
-    font-size: 0.85em;
+    font-size: var(--type-detail-size);
   }
 
   // The other units on the square, which open the stack window.
@@ -248,12 +251,12 @@
   }
 
   .name {
-    font-weight: bold;
+    font-weight: var(--type-strong-weight);
   }
 
   .build {
     display: flex;
-    font-size: 0.85em;
+    font-size: var(--type-detail-size);
     gap: 0.5em;
     justify-content: space-between;
   }
@@ -271,15 +274,15 @@
 
   .flag {
     color: var(--ui-negative);
-    font-size: 0.85em;
-    font-weight: bold;
+    font-size: var(--type-detail-size);
+    font-weight: var(--type-strong-weight);
   }
 }
 
 .show-all {
   @include plain-button();
   color: var(--ui-accent);
-  font-size: 0.85em;
+  font-size: var(--type-detail-size);
   margin-top: 0.3em;
   text-decoration: underline;
 }
@@ -326,7 +329,7 @@
 
   .own .row {
     background: var(--ui-sunken);
-    font-weight: bold;
+    font-weight: var(--type-strong-weight);
   }
 
   .value {
@@ -336,6 +339,6 @@
 
 .sidebar-section .empty {
   color: var(--ui-fg-muted);
-  font-size: 0.85em;
+  font-size: var(--type-detail-size);
   margin: 0;
 }

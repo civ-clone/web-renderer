@@ -7,13 +7,13 @@
     grid-template-columns: 1fr 8fr 1fr;
 
     &.celebrateLeader .name {
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
       text-shadow: 0 0 5px var(--y-happy);
     }
 
     &.civilDisorder .name {
       color: var(--y-unhappy);
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
     }
 
     .name {
@@ -30,7 +30,7 @@
       &::before {
         content: var(--i18n-breakdown);
         display: block;
-        font-weight: bold;
+        font-weight: var(--type-strong-weight);
         margin: 0.5rem;
       }
 

@@ -88,6 +88,29 @@
 
   --font-ui: sans-serif;
   --font-display: sans-serif;
+  --font-mono: monospace;
+
+  // Type by role (#737), each at the size and weight that place had before, relative to where it sits.
+  --type-body-size: 1rem;
+  --type-bar-size: 0.9em;
+  --type-detail-size: 0.85em;
+  --type-caption-size: 0.8em;
+  --type-title-family: var(--font-display);
+  --type-title-size: 1.17em;
+  --type-title-weight: bold;
+  --type-title-tracking: normal;
+  --type-heading-family: var(--font-display);
+  --type-heading-size: 0.85em;
+  --type-heading-weight: bold;
+  --type-heading-tracking: normal;
+  --type-heading-transform: none;
+  --type-eyebrow-size: 1em;
+  --type-eyebrow-weight: bold;
+  --type-eyebrow-tracking: normal;
+  --type-eyebrow-transform: none;
+  --type-eyebrow-colour: currentColor;
+  --type-strong-weight: bold;
+  --type-figures: normal;
 }
 
 // Only the sidebar and top bar change.

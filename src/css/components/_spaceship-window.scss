@@ -5,7 +5,7 @@
 
     dd {
       box-sizing: border-box;
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
       margin: 0;
       padding-right: 0.5rem;
       text-align: right;
@@ -17,7 +17,7 @@
 
       span.inactive {
         color: var(--ui-warn);
-        font-weight: bold;
+        font-weight: var(--type-strong-weight);
       }
     }
   }

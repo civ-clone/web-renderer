@@ -1,6 +1,8 @@
 @use 'themes/civ1-classic';
 @use 'themes/slate';
 
+@import 'fonts';
+
 :root {
   --scale: 2;
 
@@ -40,6 +42,8 @@ body {
   color: var(--ui-page-fg);
   display: grid;
   font-family: var(--font-ui);
+  font-size: var(--type-body-size);
+  font-variant-numeric: var(--type-figures);
   margin: 0;
   min-height: 100vh;
   min-width: 100vw;

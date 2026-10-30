@@ -19,7 +19,9 @@
       loader: {
         '.jpg': 'file',
         '.png': 'dataurl',
-        '.svg': 'dataurl'
+        '.svg': 'dataurl',
+        // The interface's faces (#737), as files beside the stylesheet.
+        '.woff2': 'file'
       },
       entryNames: '[name]',
     };

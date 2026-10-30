@@ -9,7 +9,7 @@
   color: var(--ui-fg);
   column-gap: 2em;
   display: flex;
-  font-size: 0.9em;
+  font-size: var(--type-bar-size);
   min-width: 0;
   padding: 0.25em 0.5em;
   row-gap: 0.25em;
@@ -46,12 +46,14 @@
 
   #gameDetails {
     .year {
-      font-weight: bold;
+      font-family: var(--type-title-family);
+      font-weight: var(--type-title-weight);
+      letter-spacing: var(--type-title-tracking);
     }
 
     .turn {
       color: var(--ui-fg-muted);
-      font-size: 0.85em;
+      font-size: var(--type-detail-size);
       font-weight: normal;
 
       &::before {
@@ -65,7 +67,7 @@
 
     .difficulty {
       color: var(--ui-fg-muted);
-      font-size: 0.8em;
+      font-size: var(--type-caption-size);
     }
   }
 
@@ -92,12 +94,12 @@
     white-space: nowrap;
 
     .value {
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
     }
 
     .detail {
       color: var(--ui-fg-muted);
-      font-size: 0.85em;
+      font-size: var(--type-detail-size);
 
       &:empty {
         display: none;
@@ -110,7 +112,7 @@
 
     &.gold.negative .detail {
       color: var(--ui-negative);
-      font-weight: bold;
+      font-weight: var(--type-strong-weight);
     }
 
     .yield-amount {
