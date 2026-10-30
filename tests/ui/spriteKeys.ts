@@ -11,6 +11,7 @@
 import { document } from './lib/dom';
 
 import * as fs from 'fs';
+import * as path from 'path';
 import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
@@ -25,6 +26,11 @@ import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import civ1Json from '../../src/js/UI/tilesets/civ1.json';
 import currentTileset from '../../src/js/UI/lib/tilesets';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
+import {
+  citizenSprites,
+  specialistSprites,
+} from '../../src/js/UI/lib/citizens';
+import { groupIcons } from '../../src/js/UI/lib/yieldMap';
 
 const failures: string[] = [];
 let checks = 0,
@@ -350,6 +356,51 @@ setPreloadContainer(bothArriving);
   bothArriving.append(image.cloneNode() as HTMLElement)
 );
 twoPacks('arriving');
+
+// Outside the map, the yield icons and the citizens are asked for by the tileset's names too (#728), so another pack's
+//  are shown, not Civ1's. Every name they use is one the tileset has.
+const tilesetSprites = [...civ1.assets.required, ...civ1.assets.optional],
+  uiSprites = [
+    ...Object.values(groupIcons),
+    ...citizenSprites(['happy', 'content', 'unhappy'], 'Rome'),
+    ...citizenSprites(['happy', 'content', 'unhappy'], 'Babylon'),
+    ...specialistSprites(['tax', 'science', 'luxury'], 0, 'Rome').flat(),
+    ...specialistSprites(['tax', 'science', 'luxury'], 0, 'Babylon').flat(),
+  ];
+
+expect(
+  'every sprite the UI asks for by name is one the tileset has',
+  uiSprites.filter((name) => !tilesetSprites.includes(name)),
+  []
+);
+
+// And nothing builds Civ1's key by hand (`'./assets/city/food.png'`), which finds Civ1's sprite under any tileset.
+//  Civ1's import is the exception: it stores what it extracts under the extractor's own paths.
+const sources = (directory: string): string[] =>
+    fs
+      .readdirSync(directory, { withFileTypes: true })
+      .flatMap((entry) =>
+        entry.isDirectory()
+          ? sources(path.join(directory, entry.name))
+          : /\.ts$/.test(entry.name)
+          ? [path.join(directory, entry.name)]
+          : []
+      ),
+  handBuilt = sources(path.resolve('src/js'))
+    .filter((file) => !file.endsWith('ImportAssetsWindow.ts'))
+    .flatMap((file) =>
+      fs
+        .readFileSync(file, 'utf8')
+        .split('\n')
+        .map((line, index) => ({ line, at: `${file}:${index + 1}` }))
+        .filter(
+          ({ line }) =>
+            !/^\s*(\/\/|\*|\/\*)/.test(line) && /['"`]\.\/assets\//.test(line)
+        )
+        .map(({ at }) => path.relative(process.cwd(), at))
+    );
+
+expect('no sprite key is built by hand', handBuilt, []);
 
 finished = true;
 

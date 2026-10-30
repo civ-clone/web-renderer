@@ -5,6 +5,8 @@ import Portal from './Portal';
 import Transport from '../Transport';
 import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
+import currentTileset from '../lib/tilesets';
+import { spriteKey } from '../tilesets/TilesetDescriptor';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -33,7 +35,7 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'].map(
         (yieldName) =>
           assetStore
-            .getScaled(`./assets/${groupIcons[yieldName]}`, 2)
+            .getScaled(spriteKey(currentTileset(), groupIcons[yieldName]), 2)
             .then((image) => `<img src="${image.toDataURL('image/png')}">`)
       )
     );

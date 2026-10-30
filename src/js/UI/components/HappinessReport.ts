@@ -13,6 +13,8 @@ import Transport from '../Transport';
 import Unit from './Unit';
 import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
+import currentTileset from '../lib/tilesets';
+import { spriteKey } from '../tilesets/TilesetDescriptor';
 import { cityName } from './lib/city';
 import { escape } from './lib/requirements';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
@@ -40,7 +42,7 @@ const buildCityRow = async (
       const luxuriesElement = s(`<span></span>`);
 
       assetStore
-        .getScaled(`./assets/${groupIcons.Luxuries}`, 2)
+        .getScaled(spriteKey(currentTileset(), groupIcons.Luxuries), 2)
         .then((image) =>
           luxuriesElement.append(
             s(`<img src="${image.toDataURL('image/png')}">`),
