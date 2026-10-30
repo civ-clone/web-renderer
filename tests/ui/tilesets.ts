@@ -1043,6 +1043,13 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     civ1.ui
   );
   expect(
+    'and gets its own copy of them, not one every such tileset shares',
+    validateDescriptor(withoutUi).ui !== validateDescriptor(withoutUi).ui &&
+      validateDescriptor(withoutUi).ui.citizen !==
+        validateDescriptor(withoutUi).ui.citizen,
+    true
+  );
+  expect(
     "one that gives only some of them gets Civ1's for the rest",
     validateDescriptor(civ1With({ ui: { icon: 32, citizen: { step: 20 } } }))
       .ui,

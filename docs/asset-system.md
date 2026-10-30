@@ -92,9 +92,12 @@ when the preload container changes.
 ## Runtime usage patterns
 
 - Main menu checks `assetStore.hasAllAssets()` to gate gameplay options (new game, Earth, customise world, load game).
-- Renderer sets custom cursor using scaled imported asset (`cursor/torch` at scale 2).
+- Renderer sets custom cursor using scaled imported asset (`cursor/torch`, enlarged to the tileset's `ui.cursor`).
 - Windows and reports (city screen, City Status, Happiness, Trade and Science reports, the action buttons) resolve
-  images from `AssetStore` by canonical path, mostly through `getScaled(path, 2)`.
+  images from `AssetStore` by canonical path, mostly through `getShownAt(path, width)`. The width is the tileset's
+  `ui` size (#729): `ui.icon` for a yield's icon, `ui.citizen.width` for a citizen. `getShownAt` enlarges the sprite a
+  whole number of times to at least that width, and the stylesheets show it at that size through `--tileset-icon`,
+  `--tileset-citizen-width` and `--tileset-citizen-step`, which `setTilesetSizes` sets on `:root` at start-up.
 - Map layers resolve images from the preload container (see above).
 
 ## Edge cases and current behavior

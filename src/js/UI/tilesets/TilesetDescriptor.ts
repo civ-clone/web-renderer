@@ -162,7 +162,8 @@ export interface TilesetCities {
 /**
  * The sizes the interface shows the tileset's sprites at outside the map, in CSS px (#729): a yield's icon, a citizen
  * (`step` apart, so they overlap where `step` is less than `width`) and the cursor. Each sprite is enlarged a whole
- * number of times to at least this width, then CSS shows it at this size.
+ * number of times to at least this width, then CSS shows it at this size; except the cursor, which CSS cannot resize, so
+ * is shown at the enlarged size (Civ1's 13px torch at 26).
  */
 export interface TilesetUi {
   icon: number;
@@ -765,15 +766,12 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
   } as unknown as TilesetDescriptor;
 };
 
-// `ui` with Civ1's size for each one it leaves out, once every size it gives is a whole number of px.
+// `ui` with Civ1's size for each one it leaves out, all of them when there is none, once every size it gives is a whole
+//  number of px. A new object each time, so no two tilesets share one.
 const checkUi = (
-  ui: unknown,
+  ui: unknown = {},
   refuse: (problem: string) => never
 ): TilesetUi => {
-  if (ui === undefined) {
-    return defaultUi;
-  }
-
   if (!isObject(ui) || (ui.citizen !== undefined && !isObject(ui.citizen))) {
     refuse('ui must be an object, and its citizen too.');
   }
