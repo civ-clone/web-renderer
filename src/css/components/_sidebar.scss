@@ -9,7 +9,7 @@
 #sidebar {
   align-self: start;
   box-sizing: border-box;
-  color: var(--panel-text);
+  color: var(--ui-fg);
   display: flex;
   flex-direction: column;
   gap: 0.5em;
@@ -21,7 +21,7 @@
   overflow-y: auto;
   position: relative;
   // Over the map, a thin bar in the panels' light edge, with no track of its own.
-  scrollbar-color: var(--panel-bevel-light) transparent;
+  scrollbar-color: var(--ui-bevel-light) transparent;
   scrollbar-width: thin;
   width: 12em;
 
@@ -32,12 +32,12 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--panel-bevel-light);
+    background: var(--ui-bevel-light);
     border-radius: 3px;
   }
 
   #minimap {
-    background: #000;
+    background: var(--ui-page-bg);
     display: block;
     // The overview layer is drawn at a whole number of pixels per tile, so it
     // is upscaled to fill the sidebar rather than drawn at a fractional size.
@@ -71,8 +71,8 @@
 // A part of the sidebar that can be collapsed (#697), floating over the map as a window does.
 .sidebar-section {
   @include panel.bevel();
-  background: var(--panel-raised);
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
+  background: var(--ui-bg-1);
+  box-shadow: var(--ui-shadow-panel);
 
   > h2 {
     font-size: 0.85em;
@@ -81,9 +81,9 @@
     button {
       align-items: center;
       appearance: none;
-      background: var(--panel-heading-bg);
+      background: var(--ui-title-bg);
       border: 0;
-      color: var(--panel-heading-text);
+      color: var(--ui-title-fg);
       cursor: pointer;
       display: flex;
       font: inherit;
@@ -91,7 +91,7 @@
       gap: 0.4em;
       padding: 0.25em 0.5em;
       text-align: left;
-      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+      text-shadow: var(--ui-text-shadow-title);
       width: 100%;
 
       &::before {
@@ -105,7 +105,7 @@
       }
 
       &:focus-visible {
-        outline: 2px solid var(--panel-text);
+        outline: 2px solid var(--ui-fg);
         outline-offset: -2px;
       }
     }
@@ -137,7 +137,7 @@
   text-align: left;
 
   &:focus-visible {
-    outline: 2px solid var(--panel-text);
+    outline: 2px solid var(--ui-fg);
     outline-offset: 1px;
   }
 }
@@ -170,8 +170,8 @@
     gap: 0.2em;
 
     .pip {
-      background: var(--panel-sunken);
-      border: 1px solid var(--panel-bevel-dark);
+      background: var(--ui-sunken);
+      border: 1px solid var(--ui-bevel-dark);
       box-sizing: border-box;
       display: inline-block;
       height: 0.6em;
@@ -180,7 +180,7 @@
     }
 
     .fill {
-      background: var(--panel-positive);
+      background: var(--ui-positive);
       display: block;
       height: 100%;
     }
@@ -191,7 +191,7 @@
     gap: 0.75em;
 
     abbr {
-      color: var(--panel-muted);
+      color: var(--ui-fg-muted);
       margin-right: 0.2em;
       text-decoration: none;
     }
@@ -203,12 +203,12 @@
 
   .home-city {
     @include plain-button();
-    color: var(--panel-accent);
+    color: var(--ui-accent);
     text-decoration: underline;
   }
 
   .tile {
-    color: var(--panel-muted);
+    color: var(--ui-fg-muted);
     font-size: 0.85em;
   }
 
@@ -244,7 +244,7 @@
   width: 100%;
 
   &:hover {
-    background: var(--panel-bg);
+    background: var(--ui-bg-0);
   }
 
   .name {
@@ -259,7 +259,7 @@
   }
 
   .turns {
-    color: var(--panel-muted);
+    color: var(--ui-fg-muted);
     white-space: nowrap;
   }
 
@@ -270,7 +270,7 @@
   }
 
   .flag {
-    color: var(--panel-negative);
+    color: var(--ui-negative);
     font-size: 0.85em;
     font-weight: bold;
   }
@@ -278,7 +278,7 @@
 
 .show-all {
   @include plain-button();
-  color: var(--panel-accent);
+  color: var(--ui-accent);
   font-size: 0.85em;
   margin-top: 0.3em;
   text-decoration: underline;
@@ -296,15 +296,15 @@
   }
 
   .rank {
-    color: var(--panel-muted);
+    color: var(--ui-fg-muted);
     min-width: 1.5em;
     text-align: right;
   }
 
   // The civilization's colours, as the Top Cities report shows them, or a blank for one not met.
   .swatch {
-    background: var(--civilization-primary, var(--panel-sunken));
-    border: 2px solid var(--civilization-secondary, var(--panel-bevel-dark));
+    background: var(--civilization-primary, var(--ui-sunken));
+    border: 2px solid var(--civilization-secondary, var(--ui-bevel-dark));
     box-sizing: border-box;
     flex: none;
     height: 0.8em;
@@ -320,12 +320,12 @@
   }
 
   .unknown .name {
-    color: var(--panel-muted);
+    color: var(--ui-fg-muted);
     font-style: italic;
   }
 
   .own .row {
-    background: var(--panel-sunken);
+    background: var(--ui-sunken);
     font-weight: bold;
   }
 
@@ -335,7 +335,7 @@
 }
 
 .sidebar-section .empty {
-  color: var(--panel-muted);
+  color: var(--ui-fg-muted);
   font-size: 0.85em;
   margin: 0;
 }

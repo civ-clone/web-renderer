@@ -1,0 +1,120 @@
+// Civ1 classic (#736): the interface as it looked before the tokens, kept as a theme. The default, on `:root` with no
+//  `data-ui-theme`. The sidebar and top bar follow light and dark, as they did since #697; every window stays light
+//  whichever is chosen, so the dark set gives `.window` the light values back.
+
+@mixin light() {
+  --ui-page-bg: #000;
+  --ui-page-fg: #edc;
+
+  --ui-bg-0: #a9a9ad;
+  --ui-bg-1: #c6c6ca;
+  --ui-bg-2: #edc;
+  --ui-sunken: #8f8f94;
+  --ui-title-bg: #38e;
+  --ui-title-fg: #edc;
+
+  --ui-fg: #123;
+  --ui-fg-muted: #3d4452;
+
+  --ui-line: rgba(0, 0, 0, 0.3);
+  --ui-line-soft: rgba(0, 0, 0, 0.15);
+  --ui-bevel-light: #e2e2e6;
+  --ui-bevel-dark: #5a5a5f;
+  --ui-bevel-width: 2px;
+  --ui-window-edge: #ccc;
+  --ui-control-edge: #444;
+
+  --ui-accent: #2966a8;
+  --ui-accent-ink: #edc;
+  --ui-focus: #123;
+
+  --ui-positive: #17641b;
+  --ui-negative: #a82929;
+  --ui-warn: #932;
+
+  --ui-rate-tax: #c9a227;
+  --ui-rate-luxury: #b0459e;
+  --ui-rate-science: #2966a8;
+
+  --y-food: #c98a1b;
+  --y-shield: #3f6fb0;
+  --y-trade: #2f9a8a;
+  --y-gold: #d4ac0d;
+  --y-science: #7a5cc4;
+  --y-luxury: #b0459e;
+  --y-pollution: #6f6a4f;
+  --y-short: #a82929;
+  --y-happy: #0ce0e8;
+  --y-unhappy: #7e2727;
+
+  --ui-shade: #000;
+  --ui-light: #fff;
+  --ui-glow: #fff;
+  --ui-overlay-bg: rgba(0, 0, 0, 0.6);
+  --ui-overlay-fg: #fff;
+  --ui-backdrop: rgba(0, 0, 0, 0.3);
+
+  // A civilization whose colours aren't known, in the reports that frame each one in its colours.
+  --ui-unknown-owner: #888;
+  --ui-unknown-owner-edge: #555;
+
+  --ui-chip-bg: #222;
+  --ui-chip-edge: #aaa;
+
+  --ui-action: #150d40;
+  --ui-action-research: #2966a8;
+  --ui-action-build: #ffa109;
+  --ui-action-disorder: #a82929;
+  --ui-action-notice: #c9a227;
+  --ui-action-end-turn: #25b906;
+  --ui-orb-ring: radial-gradient(
+    circle,
+    transparent 60%,
+    #7c8889 60%,
+    #0d0d0d 61%,
+    #b2c2c2 62%,
+    #b3c2c7 65%,
+    #828282 66%,
+    #7d7f7f 70%
+  );
+  --ui-orb-highlight: rgba(255, 255, 255, 0.3);
+
+  --ui-radius-control: 3px;
+  --ui-radius-window: 3px;
+  --ui-shadow-panel: 1px 1px 5px rgba(0, 0, 0, 0.6);
+  --ui-shadow-window: 1px 1px 5px rgba(0, 0, 0, 0.6);
+  --ui-shadow-orb: 2px 2px 2px rgba(0, 0, 0, 0.4);
+  --ui-text-shadow-title: 1px 1px 0 rgba(0, 0, 0, 0.6);
+
+  --font-ui: sans-serif;
+  --font-display: sans-serif;
+}
+
+// Only the sidebar and top bar change.
+@mixin dark() {
+  --ui-bg-0: #2c2e35;
+  --ui-bg-1: #3b3e47;
+  --ui-sunken: #1e2025;
+  --ui-title-bg: #2a5fae;
+  --ui-title-fg: #edc;
+
+  --ui-fg: #edc;
+  --ui-fg-muted: #b9b3a5;
+
+  --ui-bevel-light: #4f535e;
+  --ui-bevel-dark: #121317;
+
+  --ui-accent: #6aa6e8;
+  --ui-focus: #edc;
+
+  --ui-positive: #7dd27f;
+  --ui-negative: #ff8273;
+
+  --ui-rate-tax: #e0bb45;
+  --ui-rate-luxury: #d777c6;
+  --ui-rate-science: #6aa6e8;
+
+  .window {
+    @include light();
+  }
+}

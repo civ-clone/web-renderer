@@ -9,15 +9,19 @@
     @include action-button.background-gradient-silver-ring();
 
     &.chooseResearch {
-      @include action-button.background-gradient-silver-ring(#2966a8);
+      @include action-button.background-gradient-silver-ring(
+        var(--ui-action-research)
+      );
     }
 
     &.cityBuild {
-      @include action-button.background-gradient-tinted(#ffa109);
+      @include action-button.background-gradient-tinted(var(--ui-action-build));
     }
 
     &.civilDisorder {
-      @include action-button.background-gradient-silver-ring(#a82929);
+      @include action-button.background-gradient-silver-ring(
+        var(--ui-action-disorder)
+      );
 
       img {
         width: calc(8px * var(--scale));
@@ -25,7 +29,9 @@
     }
 
     &.notice {
-      @include action-button.background-gradient-silver-ring(#c9a227);
+      @include action-button.background-gradient-silver-ring(
+        var(--ui-action-notice)
+      );
 
       canvas,
       img {
@@ -39,13 +45,15 @@
     }
 
     &.endTurn {
-      @include action-button.background-gradient-silver-ring(#25b906);
+      @include action-button.background-gradient-silver-ring(
+        var(--ui-action-end-turn)
+      );
       @include action-button.white-child-svg();
       position: relative;
 
       &::before {
         animation: glow 2s infinite;
-        background: #fff;
+        background: var(--ui-glow);
         border-radius: 50%;
         content: '';
         display: block;
@@ -88,8 +96,12 @@
   // Newest at the bottom; when there are more than fit, the oldest run off
   // the top behind a short fade.
   justify-content: flex-end;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
-  mask-image: linear-gradient(to bottom, transparent 8%, black 12%);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 8%,
+    var(--ui-shade) 12%
+  );
+  mask-image: linear-gradient(to bottom, transparent 8%, var(--ui-shade) 12%);
   min-height: 0;
   overflow: hidden;
   pointer-events: none;
@@ -133,8 +145,8 @@
 
   .unit-action {
     pointer-events: auto;
-    background: #222;
-    border: 2px solid #aaa;
+    background: var(--ui-chip-bg);
+    border: 2px solid var(--ui-chip-edge);
     border-radius: 4px;
     cursor: pointer;
     height: 2.5rem;
@@ -143,7 +155,7 @@
 
     &:hover,
     &:focus-visible {
-      border-color: #fff;
+      border-color: var(--ui-glow);
     }
 
     canvas {

@@ -62,7 +62,7 @@ export class ImportAssetsWindow extends Window {
 
   async handleFileUpload(event: InputEvent) {
     this.#progressInformation.removeAttribute('hidden');
-    this.#progressInformation.style.color = 'inherit';
+    this.#progressInformation.classList.remove('failed');
 
     const files = Array.from(
         (event.target as HTMLInputElement).files ?? []
@@ -270,7 +270,7 @@ export class ImportAssetsWindow extends Window {
 
   /** Shows `message` as the reason the import stopped, and lets the player choose files again. */
   #fail(message: string): void {
-    this.#progressInformation.style.color = '#f00';
+    this.#progressInformation.classList.add('failed');
     this.#progressInformation.innerText = message;
     this.#fileInput.removeAttribute('disabled');
     // So choosing the same files again counts as a change.

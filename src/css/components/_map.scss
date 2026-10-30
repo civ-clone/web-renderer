@@ -14,9 +14,9 @@
 
 // Shown from ending the turn until the next one is ready.
 #map .waiting {
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--ui-overlay-bg);
   border-radius: 0.5rem;
-  color: #fff;
+  color: var(--ui-overlay-fg);
   left: 50%;
   padding: 0.5rem 1rem;
   pointer-events: none;
@@ -34,9 +34,9 @@
 //  the document so it paints over the canvas without a stacking order of its own.
 #map .observer-bar {
   align-items: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--ui-overlay-bg);
   border-radius: 0.5rem;
-  color: #fff;
+  color: var(--ui-overlay-fg);
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem 1rem;

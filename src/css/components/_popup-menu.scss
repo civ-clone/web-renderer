@@ -1,5 +1,5 @@
 .popup-menu {
-  background: rgba(0, 0, 0, 0.4);
+  background: color-mix(in srgb, var(--ui-shade) 40%, transparent);
   border-radius: 1rem;
   display: flex;
   flex-direction: column;
@@ -21,17 +21,17 @@
   }
 
   button {
-    background: rgba(255, 255, 255, 0.85);
+    background: color-mix(in srgb, var(--ui-light) 85%, transparent);
     border: 0;
     border-radius: 0.66rem;
-    color: #000;
+    color: var(--ui-shade);
     cursor: pointer;
     margin-bottom: 0.5rem;
     padding: 0.25rem 0.5rem;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.6);
-      color: #fff;
+      background: var(--ui-overlay-bg);
+      color: var(--ui-overlay-fg);
     }
 
     &:last-child {

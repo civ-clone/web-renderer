@@ -4,9 +4,9 @@
 #top-bar {
   @include panel.bevel();
   align-items: center;
-  background: var(--panel-bg);
+  background: var(--ui-bg-0);
   box-sizing: border-box;
-  color: var(--panel-text);
+  color: var(--ui-fg);
   column-gap: 2em;
   display: flex;
   font-size: 0.9em;
@@ -50,7 +50,7 @@
     }
 
     .turn {
-      color: var(--panel-muted);
+      color: var(--ui-fg-muted);
       font-size: 0.85em;
       font-weight: normal;
 
@@ -64,7 +64,7 @@
     }
 
     .difficulty {
-      color: var(--panel-muted);
+      color: var(--ui-fg-muted);
       font-size: 0.8em;
     }
   }
@@ -96,7 +96,7 @@
     }
 
     .detail {
-      color: var(--panel-muted);
+      color: var(--ui-fg-muted);
       font-size: 0.85em;
 
       &:empty {
@@ -105,11 +105,11 @@
     }
 
     &.gold.positive .detail {
-      color: var(--panel-positive);
+      color: var(--ui-positive);
     }
 
     &.gold.negative .detail {
-      color: var(--panel-negative);
+      color: var(--ui-negative);
       font-weight: bold;
     }
 
@@ -129,13 +129,13 @@
   }
 
   .progress {
-    background: var(--panel-sunken);
-    border: 1px solid var(--panel-bevel-dark);
+    background: var(--ui-sunken);
+    border: 1px solid var(--ui-bevel-dark);
     display: inline-block;
     overflow: hidden;
 
     .fill {
-      background: var(--panel-accent);
+      background: var(--ui-accent);
       display: block;
       height: 100%;
     }
@@ -157,14 +157,14 @@
     }
 
     &:focus-visible {
-      outline: 2px solid var(--panel-text);
+      outline: 2px solid var(--ui-fg);
       outline-offset: 2px;
     }
   }
 
   .trade-rates .bar {
-    background: var(--panel-sunken);
-    border: 1px solid var(--panel-bevel-dark);
+    background: var(--ui-sunken);
+    border: 1px solid var(--ui-bevel-dark);
     display: flex;
     overflow: hidden;
 
@@ -173,15 +173,15 @@
       min-width: 0;
 
       &.tax {
-        background: var(--panel-tax);
+        background: var(--ui-rate-tax);
       }
 
       &.luxury {
-        background: var(--panel-luxury);
+        background: var(--ui-rate-luxury);
       }
 
       &.science {
-        background: var(--panel-science);
+        background: var(--ui-rate-science);
       }
     }
   }

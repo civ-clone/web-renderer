@@ -2,7 +2,7 @@
   appearance: none;
   border-radius: 50%;
   border: none;
-  box-shadow: 2px 2px 2px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--ui-shadow-orb);
   box-sizing: border-box;
   cursor: pointer;
   font-size: 12px;
@@ -13,7 +13,7 @@
   width: 3.1rem;
 
   img {
-    filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+    filter: drop-shadow(0 0 2px var(--ui-orb-highlight));
     width: calc(11px * var(--scale));
   }
 
@@ -37,72 +37,72 @@
   }
 }
 
+// A colour shifted as Sass's `adjust-color` would, but at run time, so the colour can be a theme token (#736).
+@function adjust($colour, $hue: 0, $saturation: 0, $lightness: 0) {
+  @return hsl(
+    from #{$colour} calc(h + #{$hue}) calc(s + #{$saturation}) calc(l + #{$lightness})
+  );
+}
+
 @mixin background-gradient(
   $primary,
-  $ring-1,
-  $ring-2,
-  $ring-3,
-  $ring-4,
-  $ring-5,
-  $ring-6,
-  $highlight:
-    adjust-color($primary, $lightness: 29%, $hue: 6deg, $saturation: -40%)
+  $ring,
+  $highlight: adjust($primary, $lightness: 29, $hue: 6, $saturation: -40)
 ) {
-  background:
-          // outside ring highlight
-    radial-gradient(
-      circle at 25% 25%,
-      rgba(255, 255, 255, 0.3) 0%,
-      transparent 80%
+  // Without relative colour, the shaded stops would leave the button with no background at all: the tint and the
+  //  plain ring instead.
+  background: radial-gradient(
+      circle,
+      $primary 0%,
+      $primary 60%,
+      transparent 61%
     ),
-    // outside ring
-    radial-gradient(
-        circle,
-        transparent 60%,
-        $ring-1 60%,
-        $ring-2 61%,
-        $ring-3 62%,
-        $ring-4 65%,
-        $ring-5 66%,
-        $ring-6 70%
+    var(--ui-orb-ring);
+
+  @supports (color: hsl(from red h s l)) {
+    background:
+          // outside ring highlight
+      radial-gradient(
+        circle at 25% 25%,
+        var(--ui-orb-highlight) 0%,
+        transparent 80%
       ),
-    // center highlight
-    radial-gradient(circle at 50% 15%, $highlight 0%, transparent 50%),
-    // inner circle
+      // outside ring
+      #{$ring},
+      // center highlight
+      radial-gradient(circle at 50% 15%, $highlight 0%, transparent 50%),
+      // inner circle
+      radial-gradient(
+          circle,
+          $primary 0%,
+          adjust($primary, $lightness: -14, $hue: -5) 60%,
+          transparent 61%
+        );
+  }
+}
+
+@mixin background-gradient-tinted($primary: var(--ui-action)) {
+  @include background-gradient(
+    $primary,
     radial-gradient(
-        circle,
-        $primary 0%,
-        adjust-color($primary, $lightness: -14%, $hue: 355deg) 60%,
-        transparent 61%
-      );
-}
-
-@mixin background-gradient-tinted($primary: #150d40) {
-  @include background-gradient(
-    $primary,
-    adjust-color($primary, $lightness: -19%, $hue: 6deg, $saturation: -35%),
-    adjust-color($primary, $lightness: -40%, $hue: 3deg, $saturation: -40%),
-    adjust-color($primary, $lightness: 31%, $hue: 16deg, $saturation: -20%),
-    adjust-color($primary, $lightness: -5%, $hue: 5deg, $saturation: -65%),
-    adjust-color($primary, $lightness: -7%, $hue: 5deg, $saturation: -65%),
-    adjust-color($primary, $lightness: -6%, $hue: 5deg, $saturation: -65%)
+      circle,
+      transparent 60%,
+      adjust($primary, $lightness: -19, $hue: 6, $saturation: -35) 60%,
+      adjust($primary, $lightness: -40, $hue: 3, $saturation: -40) 61%,
+      adjust($primary, $lightness: 31, $hue: 16, $saturation: -20) 62%,
+      adjust($primary, $lightness: -5, $hue: 5, $saturation: -65) 65%,
+      adjust($primary, $lightness: -7, $hue: 5, $saturation: -65) 66%,
+      adjust($primary, $lightness: -6, $hue: 5, $saturation: -65) 70%
+    )
   );
 }
 
-@mixin background-gradient-silver-ring($primary: #150d40) {
-  @include background-gradient(
-    $primary,
-    #7c8889,
-    #0d0d0d,
-    #b2c2c2,
-    #b3c2c7,
-    #828282,
-    #7d7f7f
-  );
+@mixin background-gradient-silver-ring($primary: var(--ui-action)) {
+  @include background-gradient($primary, var(--ui-orb-ring));
 }
 
 @mixin white-child-svg() {
   img {
-    filter: invert(1) drop-shadow(0 0 2px #000);
+    filter: invert(1) drop-shadow(0 0 2px var(--ui-shade));
   }
 }

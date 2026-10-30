@@ -8,46 +8,37 @@
 }
 
 .city-screen {
-  // One colour a yield, for its bar in the yields and its meter below them (#686, #687, #719).
-  --yield-food: #c98a1b;
-  --yield-production: #3f6fb0;
-  --yield-trade: #2f9a8a;
-  --yield-luxuries: #b0459e;
-  --yield-gold: #d4ac0d;
-  --yield-research: #7a5cc4;
-  --yield-pollution: #6f6a4f;
-  --yield-short: #a82929;
-
+  // One colour a yield, for its bar in the yields and its meter below them (#686, #687, #719), from the theme (#736).
   display: flex;
   flex: 1;
   flex-direction: column;
 
   [data-yield='Food'] {
-    --colour: var(--yield-food);
+    --colour: var(--y-food);
   }
 
   [data-yield='Production'] {
-    --colour: var(--yield-production);
+    --colour: var(--y-shield);
   }
 
   [data-yield='Trade'] {
-    --colour: var(--yield-trade);
+    --colour: var(--y-trade);
   }
 
   [data-yield='Luxuries'] {
-    --colour: var(--yield-luxuries);
+    --colour: var(--y-luxury);
   }
 
   [data-yield='Gold'] {
-    --colour: var(--yield-gold);
+    --colour: var(--y-gold);
   }
 
   [data-yield='Research'] {
-    --colour: var(--yield-research);
+    --colour: var(--y-science);
   }
 
   [data-yield='Pollution'] {
-    --colour: var(--yield-pollution);
+    --colour: var(--y-pollution);
   }
 
   .city-map {
@@ -58,7 +49,7 @@
 
   .bottom-row {
     align-items: stretch;
-    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--ui-line);
     flex: 1 1;
   }
 
@@ -159,10 +150,11 @@
   .meter {
     --tick: 100%;
 
-    background: rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(0, 0, 0, 0.35);
+    background: color-mix(in srgb, var(--ui-shade) 12%, transparent);
+    border: 1px solid color-mix(in srgb, var(--ui-shade) 35%, transparent);
     border-radius: 2px;
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0 1px 2px
+      color-mix(in srgb, var(--ui-shade) 20%, transparent);
     display: flex;
     flex: none;
     height: 0.875rem;
@@ -171,7 +163,8 @@
 
     .fill {
       background: var(--colour);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      box-shadow: inset 0 1px 0
+        color-mix(in srgb, var(--ui-light) 30%, transparent);
     }
 
     .next {
@@ -183,7 +176,7 @@
       opacity: 0.6;
 
       &.loss {
-        background: var(--yield-short);
+        background: var(--y-short);
         opacity: 1;
       }
     }
@@ -192,7 +185,7 @@
       background: linear-gradient(
           to right,
           transparent calc(100% - 1px),
-          rgba(0, 0, 0, 0.25) 0
+          color-mix(in srgb, var(--ui-shade) 25%, transparent) 0
         )
         0 0 / var(--tick) 100% repeat-x;
       content: '';
@@ -221,7 +214,7 @@
       opacity: 0.75;
 
       &.negative {
-        color: var(--yield-short);
+        color: var(--y-short);
         opacity: 1;
       }
     }
@@ -259,8 +252,8 @@
 
     .bar {
       align-self: center;
-      background: rgba(0, 0, 0, 0.08);
-      border: 1px solid rgba(0, 0, 0, 0.25);
+      background: color-mix(in srgb, var(--ui-shade) 8%, transparent);
+      border: 1px solid color-mix(in srgb, var(--ui-shade) 25%, transparent);
       border-radius: 2px;
       display: flex;
       height: 0.625rem;
@@ -270,18 +263,19 @@
       // Faded, and parted from what's spare by a line, so a used part reads as the same yield, spent.
       .used {
         background: color-mix(in srgb, var(--colour) 45%, transparent);
-        box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.35);
+        box-shadow: inset -1px 0 0 color-mix(in srgb, var(--ui-shade) 35%, transparent);
       }
 
       .free {
         background: var(--colour);
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        box-shadow: inset 0 1px 0
+          color-mix(in srgb, var(--ui-light) 30%, transparent);
       }
 
       .deficit {
         background: repeating-linear-gradient(
           -45deg,
-          var(--yield-short) 0 3px,
+          var(--y-short) 0 3px,
           transparent 3px 6px
         );
       }
@@ -290,7 +284,7 @@
         background: linear-gradient(
             to right,
             transparent calc(100% - 1px),
-            rgba(0, 0, 0, 0.18) 0
+            color-mix(in srgb, var(--ui-shade) 18%, transparent) 0
           )
           0 0 / var(--tick) 100% repeat-x;
         content: '';
@@ -313,7 +307,7 @@
       }
 
       .negative {
-        color: var(--yield-short);
+        color: var(--y-short);
       }
     }
   }
@@ -332,7 +326,7 @@
 
   .tabbed-details,
   .city-map {
-    border: 1px solid rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--ui-line);
     border-width: 0 1px;
   }
 
@@ -366,7 +360,7 @@
 
   // The previous and next city, and renaming this one (#676, #678).
   .city-actions {
-    border-top: 1px solid rgba(0, 0, 0, 0.3);
+    border-top: 1px solid var(--ui-line);
     display: flex;
     gap: 0.5rem;
     justify-content: center;

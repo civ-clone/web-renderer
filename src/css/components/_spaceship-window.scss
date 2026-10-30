@@ -16,7 +16,7 @@
       width: 66%;
 
       span.inactive {
-        color: #932;
+        color: var(--ui-warn);
         font-weight: bold;
       }
     }

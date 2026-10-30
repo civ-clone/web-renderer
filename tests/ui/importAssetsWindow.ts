@@ -306,8 +306,8 @@ const run = async (): Promise<void> => {
     );
     expect(
       'an unreadable file: the message is shown as an error',
-      progress(window).style.color,
-      '#f00'
+      progress(window).classList.contains('failed'),
+      true
     );
     expect(
       'an unreadable file: the message is not hidden',
@@ -405,8 +405,8 @@ const run = async (): Promise<void> => {
     );
     expect(
       'the store fails: the message is shown as an error',
-      progress(window).style.color,
-      '#f00'
+      progress(window).classList.contains('failed'),
+      true
     );
     expect(
       'the store fails: the file input takes files again',

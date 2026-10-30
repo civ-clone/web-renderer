@@ -10,6 +10,8 @@ i18next.addResources('en-GB', 'default', {
 
   'CustomizeWorld.title': 'Customise world',
 
+  'GameOptions.colour-scheme': 'Colours',
+
   'Game.progress.unmet-player': 'An unknown civilisation is moving…',
   'Game.waiting': 'Waiting for the other civilisations…',
 
