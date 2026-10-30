@@ -1,7 +1,7 @@
 import { Tile, Unit, UnitAction } from '../types';
 import getPreloadedImage from './getPreloadedImage';
 import { imageSize, isDrawable } from './imageSize';
-import { Colouring } from '../tilesets/TilesetDescriptor';
+import { Colouring, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
 import currentTileset from './tilesets';
 import replaceColours from './replaceColours';
 import renderUnit, { replacementColours } from './renderUnit';
@@ -48,7 +48,8 @@ export const unitActionIconLayers = (
   action: UnitAction,
   unit: Unit,
   tile: Tile | null,
-  status: string
+  status: string,
+  tileset: TilesetDescriptor = currentTileset()
 ): IconLayer[] => {
   const fallback = [unitLayer(unit, status)];
 
@@ -86,13 +87,17 @@ export const unitActionIconLayers = (
           ]
         : fallback;
 
-    case 'BuildIrrigation':
-      // Irrigation is drawn beneath the terrain on the map.
+    case 'BuildIrrigation': {
+      // As the map draws it (`Landscape`): beneath the terrain, or over it when the tileset says so.
+      const { sprite, overTerrain } = tileset.families.irrigation,
+        irrigation: IconLayer = { type: 'image', path: sprite },
+        grassland: IconLayer = { type: 'image', path: 'terrain/grassland' };
+
       return [
         { type: 'image', path: 'terrain/land' },
-        { type: 'image', path: 'improvements/irrigation' },
-        { type: 'image', path: 'terrain/grassland' },
+        ...(overTerrain ? [grassland, irrigation] : [irrigation, grassland]),
       ];
+    }
 
     case 'BuildMine':
       return square('improvements/mine');

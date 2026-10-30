@@ -357,17 +357,43 @@ setPreloadContainer(bothArriving);
 );
 twoPacks('arriving');
 
-// Outside the map, the yield icons and the citizens are asked for by the tileset's names too (#728), so another pack's
-//  are shown, not Civ1's. Every name they use is one the tileset has.
+// The renderer's own source files.
+const sources = (directory: string): string[] =>
+  fs
+    .readdirSync(directory, { withFileTypes: true })
+    .flatMap((entry) =>
+      entry.isDirectory()
+        ? sources(path.join(directory, entry.name))
+        : /\.ts$/.test(entry.name)
+        ? [path.join(directory, entry.name)]
+        : []
+    );
+
+// Outside the map, the yield icons, the citizens, the cursor and the action panels are asked for by the tileset's
+//  names too (#728), so another pack's are shown, not Civ1's. Every name they use is one the tileset has: those the
+//  lists give, and those written out as `spriteKey(currentTileset(), 'city/bulb')`.
 const tilesetSprites = [...civ1.assets.required, ...civ1.assets.optional],
+  writtenOut = sources(path.resolve('src/js')).flatMap((file) =>
+    [
+      ...fs
+        .readFileSync(file, 'utf8')
+        .matchAll(/spriteKey\(\s*currentTileset\(\),\s*'([^']+)'\s*\)/g),
+    ].map(([, name]) => name)
+  ),
   uiSprites = [
     ...Object.values(groupIcons),
     ...citizenSprites(['happy', 'content', 'unhappy'], 'Rome'),
     ...citizenSprites(['happy', 'content', 'unhappy'], 'Babylon'),
     ...specialistSprites(['tax', 'science', 'luxury'], 0, 'Rome').flat(),
     ...specialistSprites(['tax', 'science', 'luxury'], 0, 'Babylon').flat(),
+    ...writtenOut,
   ];
 
+expect(
+  'the sprites written out by name are found (the cursor and the action panels)',
+  writtenOut.length >= 8,
+  true
+);
 expect(
   'every sprite the UI asks for by name is one the tileset has',
   uiSprites.filter((name) => !tilesetSprites.includes(name)),
@@ -376,29 +402,19 @@ expect(
 
 // And nothing builds Civ1's key by hand (`'./assets/city/food.png'`), which finds Civ1's sprite under any tileset.
 //  Civ1's import is the exception: it stores what it extracts under the extractor's own paths.
-const sources = (directory: string): string[] =>
+const handBuilt = sources(path.resolve('src/js'))
+  .filter((file) => !file.endsWith('ImportAssetsWindow.ts'))
+  .flatMap((file) =>
     fs
-      .readdirSync(directory, { withFileTypes: true })
-      .flatMap((entry) =>
-        entry.isDirectory()
-          ? sources(path.join(directory, entry.name))
-          : /\.ts$/.test(entry.name)
-          ? [path.join(directory, entry.name)]
-          : []
-      ),
-  handBuilt = sources(path.resolve('src/js'))
-    .filter((file) => !file.endsWith('ImportAssetsWindow.ts'))
-    .flatMap((file) =>
-      fs
-        .readFileSync(file, 'utf8')
-        .split('\n')
-        .map((line, index) => ({ line, at: `${file}:${index + 1}` }))
-        .filter(
-          ({ line }) =>
-            !/^\s*(\/\/|\*|\/\*)/.test(line) && /['"`]\.\/assets\//.test(line)
-        )
-        .map(({ at }) => path.relative(process.cwd(), at))
-    );
+      .readFileSync(file, 'utf8')
+      .split('\n')
+      .map((line, index) => ({ line, at: `${file}:${index + 1}` }))
+      .filter(
+        ({ line }) =>
+          !/^\s*(\/\/|\*|\/\*)/.test(line) && /['"`]\.\/assets\//.test(line)
+      )
+      .map(({ at }) => path.relative(process.cwd(), at))
+  );
 
 expect('no sprite key is built by hand', handBuilt, []);
 
