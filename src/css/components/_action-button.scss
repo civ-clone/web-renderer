@@ -49,24 +49,36 @@
   $ring,
   $highlight: adjust($primary, $lightness: 29, $hue: 6, $saturation: -40)
 ) {
-  background:
-          // outside ring highlight
-    radial-gradient(
-      circle at 25% 25%,
-      var(--ui-orb-highlight) 0%,
-      transparent 80%
+  // Without relative colour, the shaded stops would leave the button with no background at all: the tint and the
+  //  plain ring instead.
+  background: radial-gradient(
+      circle,
+      $primary 0%,
+      $primary 60%,
+      transparent 61%
     ),
-    // outside ring
-    #{$ring},
-    // center highlight
-    radial-gradient(circle at 50% 15%, $highlight 0%, transparent 50%),
-    // inner circle
-    radial-gradient(
-        circle,
-        $primary 0%,
-        adjust($primary, $lightness: -14, $hue: -5) 60%,
-        transparent 61%
-      );
+    var(--ui-orb-ring);
+
+  @supports (color: hsl(from red h s l)) {
+    background:
+          // outside ring highlight
+      radial-gradient(
+        circle at 25% 25%,
+        var(--ui-orb-highlight) 0%,
+        transparent 80%
+      ),
+      // outside ring
+      #{$ring},
+      // center highlight
+      radial-gradient(circle at 50% 15%, $highlight 0%, transparent 50%),
+      // inner circle
+      radial-gradient(
+          circle,
+          $primary 0%,
+          adjust($primary, $lightness: -14, $hue: -5) 60%,
+          transparent 61%
+        );
+  }
 }
 
 @mixin background-gradient-tinted($primary: var(--ui-action)) {

@@ -54,6 +54,10 @@
   --ui-overlay-fg: #fff;
   --ui-backdrop: rgba(0, 0, 0, 0.3);
 
+  // A civilization whose colours aren't known, in the reports that frame each one in its colours.
+  --ui-unknown-owner: #888;
+  --ui-unknown-owner-edge: #555;
+
   --ui-chip-bg: #222;
   --ui-chip-edge: #aaa;
 
