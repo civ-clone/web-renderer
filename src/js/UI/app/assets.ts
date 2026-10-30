@@ -1,4 +1,6 @@
 import { assetStore } from '../AssetStore';
+import currentTileset from '../lib/tilesets';
+import { spriteKey } from '../tilesets/TilesetDescriptor';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 
@@ -8,7 +10,7 @@ export const setCursor = async (): Promise<void> => {
 
   if (hasAllAssets) {
     const scaledCursor = await assetStore.getScaled(
-      './assets/cursor/torch.png',
+      spriteKey(currentTileset(), 'cursor/torch'),
       2
     );
 

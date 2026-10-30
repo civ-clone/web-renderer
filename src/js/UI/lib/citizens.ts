@@ -26,8 +26,7 @@ const isWoman = (seed: string, index: number): boolean => {
 // The sprite for each mood, in order, with the face (woman or man) taken from the seed's mask.
 export const citizenSprites = (moods: CitizenMood[], seed: string): string[] =>
   moods.map(
-    (mood, index) =>
-      `./assets/city/people_${mood}_${isWoman(seed, index) ? 'f' : 'm'}.png`
+    (mood, index) => `city/people_${mood}_${isWoman(seed, index) ? 'f' : 'm'}`
   );
 
 /**
@@ -40,10 +39,8 @@ export const specialistSprites = (
   seed: string
 ): string[][] =>
   sprites.map((sprite, index) => [
-    ...(isWoman(seed, workers + index)
-      ? [`./assets/city/people_${sprite}_f.png`]
-      : []),
-    `./assets/city/people_${sprite}.png`,
+    ...(isWoman(seed, workers + index) ? [`city/people_${sprite}_f`] : []),
+    `city/people_${sprite}`,
   ]);
 
 /**

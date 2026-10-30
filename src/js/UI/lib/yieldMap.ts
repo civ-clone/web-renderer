@@ -71,14 +71,14 @@ export const tileYieldIcons = (
 };
 
 export const groupIcons: { [key: string]: string } = {
-  Food: 'city/food.png',
-  Production: 'city/production.png',
-  Trade: 'city/trade.png',
-  Gold: 'city/gold.png',
-  Luxuries: 'city/luxury.png',
-  Pollution: 'city/pollution.png',
-  Research: 'city/bulb.png',
-  Unhappiness: 'city/sad.png',
+  Food: 'city/food',
+  Production: 'city/production',
+  Trade: 'city/trade',
+  Gold: 'city/gold',
+  Luxuries: 'city/luxury',
+  Pollution: 'city/pollution',
+  Research: 'city/bulb',
+  Unhappiness: 'city/sad',
 };
 
 /**

@@ -10,6 +10,8 @@ import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../../lib/unlessRequestFailed';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 export class CityBuild extends Action {
   // Whether the picker is waiting for what the city can build (#484).
@@ -64,18 +66,20 @@ export class CityBuild extends Action {
   build(): void {
     const cityBuild = this.value();
 
-    assetStore.get('./assets/city/production.png').then((asset) =>
-      this.append(
-        s(
-          `<button class="large cityBuild" title="${t(
-            'Actions.CityBuildSelectionWindow.title',
-            {
-              city: cityBuild.city,
-            }
-          )}"><img src="${asset!.uri}"></button>`
+    assetStore
+      .get(spriteKey(currentTileset(), 'city/production'))
+      .then((asset) =>
+        this.append(
+          s(
+            `<button class="large cityBuild" title="${t(
+              'Actions.CityBuildSelectionWindow.title',
+              {
+                city: cityBuild.city,
+              }
+            )}"><img src="${asset!.uri}"></button>`
+          )
         )
-      )
-    );
+      );
   }
 
   value(): CityBuildObject {

@@ -4,6 +4,8 @@ import SelectionWindow from '../SelectionWindow';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 export class ChooseGovernment extends Action {
   activate(): void {
@@ -40,7 +42,7 @@ export class ChooseGovernment extends Action {
 
   build(): void {
     assetStore
-      .get('./assets/city/people_content_m.png')
+      .get(spriteKey(currentTileset(), 'city/people_content_m'))
       .then((asset) =>
         this.append(
           s(

@@ -7,6 +7,8 @@ import Window from '../Window';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 // The key the button's tooltip shows. `-` opens the window too (#662).
 export const tradeRatesKey = '+';
@@ -84,7 +86,7 @@ export class AdjustTradeRates extends Action {
 
   build(): void {
     assetStore
-      .get('./assets/city/trade.png')
+      .get(spriteKey(currentTileset(), 'city/trade'))
       .then((asset) =>
         this.append(
           s(

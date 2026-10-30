@@ -10,6 +10,8 @@ import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 const cityNotices = [
   'City.captured-from-us',
@@ -66,7 +68,7 @@ export class Notice extends Action {
 
     // TODO: an icon per notice, e.g. the Wonder's own, once those are extracted (#64).
     assetStore
-      .get('./assets/city/luxury.png')
+      .get(spriteKey(currentTileset(), 'city/luxury'))
       .then((asset) =>
         this.append(
           s(

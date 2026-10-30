@@ -10,6 +10,8 @@ import {
 } from '../../types';
 import { groupIcons, reduceKnownYield, yieldGroup } from '../../lib/yieldMap';
 import { assetStore } from '../../AssetStore';
+import currentTileset from '../../lib/tilesets';
+import { spriteKey } from '../../tilesets/TilesetDescriptor';
 import {
   citizenMoods,
   citizenSprites,
@@ -32,8 +34,8 @@ const specialistIcons: { [key: string]: string } = {
   Scientist: 'science',
 };
 
-// Draws the first of `paths` that has been imported.
-const renderCitizen = (paths: string[], title?: string): HTMLElement => {
+// Draws the first of the tileset's `sprites` (`city/people_tax_f`, `city/people_tax`) that has been imported.
+const renderCitizen = (sprites: string[], title?: string): HTMLElement => {
   const citizen = s('<span class="citizen"></span>');
 
   if (title) {
@@ -41,7 +43,7 @@ const renderCitizen = (paths: string[], title?: string): HTMLElement => {
   }
 
   assetStore
-    .firstImported(paths)
+    .firstImported(sprites.map((sprite) => spriteKey(currentTileset(), sprite)))
     .then((path) => assetStore.getScaled(path, 2))
     .then((image) =>
       // Decorative: the population as a whole is summarised in words (#272).
@@ -220,7 +222,7 @@ export const yieldIcon = (group: string): HTMLElement => {
   const icon = s('<span class="yield-icon"></span>');
 
   assetStore
-    .getScaled(`./assets/${groupIcons[group]}`, 2)
+    .getScaled(spriteKey(currentTileset(), groupIcons[group]), 2)
     .then((image) =>
       icon.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
     );

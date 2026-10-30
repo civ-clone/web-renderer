@@ -3,6 +3,8 @@ import { advanceNames, researchingName } from './lib/advances';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
+import currentTileset from '../lib/tilesets';
+import { spriteKey } from '../tilesets/TilesetDescriptor';
 import { combinedYields } from './lib/playerYields';
 import { turnsLeft } from './lib/cityYields';
 import { s } from '@dom111/element';
@@ -11,7 +13,7 @@ import watchPlayer, { researchIds } from './lib/watchPlayer';
 
 const template = async (playerResearch: PlayerResearch, yields: Yield[]) => {
   const researchIcon = await assetStore
-    .getScaled(`./assets/${groupIcons.Research}`, 2)
+    .getScaled(spriteKey(currentTileset(), groupIcons.Research), 2)
     .then((image) => `<img src="${image.toDataURL('image/png')}">`);
 
   return s(

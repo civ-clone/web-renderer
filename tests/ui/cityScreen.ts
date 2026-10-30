@@ -262,7 +262,7 @@ expect(
 expect(
   'each mood gets its own sprite, in order',
   citizenSprites(moods, 'Rome').map(
-    (path) => /people_(\w+?)_[fm]\.png$/.exec(path)?.[1]
+    (path) => /people_(\w+?)_[fm]$/.exec(path)?.[1]
   ),
   moods
 );
@@ -277,7 +277,7 @@ expect('no moods give no sprites', citizenSprites([], 'Rome'), []);
 
 // Specialists carry on the city's pattern of women and men after the workers (#334).
 const specialistSeeds = ['Rome', 'Babylon', 'Zimbabwe', 'Thebes'],
-  face = (path: string) => (/_f\.png$/.test(path) ? 'f' : 'm');
+  face = (path: string) => (/_f$/.test(path) ? 'f' : 'm');
 
 specialistSeeds.forEach((seed) => {
   const sprites = specialistSprites(['tax', 'science', 'luxury'], 3, seed);
@@ -290,11 +290,7 @@ specialistSeeds.forEach((seed) => {
   expect(
     `${seed}: every specialist falls back to the man's sprite`,
     sprites.map((paths) => paths[paths.length - 1]),
-    [
-      './assets/city/people_tax.png',
-      './assets/city/people_science.png',
-      './assets/city/people_luxury.png',
-    ]
+    ['city/people_tax', 'city/people_science', 'city/people_luxury']
   );
 });
 
@@ -316,7 +312,7 @@ expect(
   specialistSprites(new Array(8).fill('science'), 0, 'Rome').find(
     (paths) => paths.length === 2
   ),
-  ['./assets/city/people_science_f.png', './assets/city/people_science.png']
+  ['city/people_science_f', 'city/people_science']
 );
 
 // What toggling Auto sends: the `CityBuild` action while the city builds nothing, `ChangeProduction` otherwise.

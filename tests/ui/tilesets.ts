@@ -651,6 +651,25 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
   expect(
+    'irrigation may be drawn over the terrain, said with true or false, and nothing else may',
+    [
+      withFamily('irrigation', {
+        ...civ1.families.irrigation,
+        overTerrain: true,
+      }),
+      withFamily('irrigation', {
+        ...civ1.families.irrigation,
+        overTerrain: 'yes',
+      }),
+      withFamily('mine', { ...civ1.families.mine, overTerrain: true }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      null,
+      'Tileset "civ1": families.irrigation.overTerrain is for irrigation only: true or false.',
+      'Tileset "civ1": families.mine.overTerrain is for irrigation only: true or false.',
+    ]
+  );
+  expect(
     'units and cities the map cannot draw are refused',
     [
       withUnits({ ...civ1.units, sprite: 'units/{terrain}' }),

@@ -8,6 +8,8 @@ import Portal from './Portal';
 import Transport from '../Transport';
 import FilterableWindow from './FilterableWindow';
 import { assetStore } from '../AssetStore';
+import currentTileset from '../lib/tilesets';
+import { spriteKey } from '../tilesets/TilesetDescriptor';
 import { cityName } from './lib/city';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { h } from '../lib/html';
@@ -51,7 +53,7 @@ export class TradeReport extends FilterableWindow {
 
   async update() {
     const goldIcon = await assetStore
-        .getScaled(`./assets/${groupIcons.Gold}`, 2)
+        .getScaled(spriteKey(currentTileset(), groupIcons.Gold), 2)
         .then((image) => `<img src="${image.toDataURL('image/png')}">`),
       cityList = s(`<table class="city-list"></table>`),
       improvementList = s(`<table class="improvement-list"></table>`),
