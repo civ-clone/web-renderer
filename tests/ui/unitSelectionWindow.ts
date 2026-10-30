@@ -9,7 +9,7 @@
 // `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
-import { document } from './lib/dom';
+import './lib/dom';
 
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
@@ -20,7 +20,6 @@ import Transport from '../../src/js/UI/Transport';
 import UnitSelectionWindow from '../../src/js/UI/components/UnitSelectionWindow';
 import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
 import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
-import { setPreloadContainer } from '../../src/js/UI/lib/getPreloadedImage';
 
 const failures: string[] = [];
 let checks = 0,
@@ -66,8 +65,6 @@ console.error = (error: unknown) => logged.push(error);
       },
     }
   );
-
-setPreloadContainer(document.querySelector('#preload') as HTMLElement);
 
 i18next.init({ lng: 'en', resources: {}, initImmediate: false } as any);
 

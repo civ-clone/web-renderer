@@ -11,7 +11,6 @@ import Transport from '../../src/js/UI/Transport';
 import UnitDetails from '../../src/js/UI/components/UnitDetails';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
-import { setPreloadContainer } from '../../src/js/UI/lib/getPreloadedImage';
 
 const failures: string[] = [];
 let checks = 0,
@@ -53,8 +52,6 @@ console.error = () => {};
       },
     }
   );
-
-setPreloadContainer(document.querySelector('#preload') as HTMLElement);
 
 const player = {
     id: 'Player-1',

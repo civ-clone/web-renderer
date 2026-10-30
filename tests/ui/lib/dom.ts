@@ -8,9 +8,7 @@
 
 import { parseHTML } from 'linkedom';
 
-const dom = parseHTML(
-  '<!doctype html><html><head></head><body><div id="preload"></div></body></html>'
-);
+const dom = parseHTML('<!doctype html><html><head></head><body></body></html>');
 
 // linkedom has no `HTMLDialogElement`: a `<dialog>` is a plain `HTMLElement`,
 //  so that's where the dialog methods go.

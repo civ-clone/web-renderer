@@ -151,8 +151,7 @@ export const renderUnit = (
     }
   }
 
-  // Caching a unit drawn from an image that had not decoded yet would leave the
-  // missing sprite in place for the rest of the session.
+  // Caching a unit drawn without its sprite would leave it missing after the sprite is loaded.
   if (isDrawable(source)) {
     renderedUnitCache.set(key, unitCanvas);
   }

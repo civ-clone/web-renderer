@@ -61,7 +61,7 @@ export class CityNames extends Map {
   //  the name, which hangs below the tile. Generous rather than measured: the text is taken to rise a scale step more
   //  than the font size, and to fall two below its baseline, with a pixel more each way for rounding, so the region
   //  never crops a glyph. The unhappy citizen in place of the size, a citizen no taller than the tile drawn a scale
-  //  step down, ends well above the name; its image isn't looked at here, as it is only loaded for a city in disorder.
+  //  step down, ends well above the name; its image isn't looked at here, as it is only drawn for a city in disorder.
   protected reach(): Reach {
     const reach = super.reach(),
       overhang = this.overhang(),

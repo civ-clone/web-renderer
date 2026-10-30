@@ -2,9 +2,17 @@ import { imageSize, isDrawable } from './imageSize';
 import { onPreloadedImagesChanged } from './getPreloadedImage';
 import { s } from '@dom111/element';
 
-const recolouredImageCache = new Map<string, HTMLCanvasElement>();
+// By the image recoloured, then by the colours: weak, so an image dropped (a canvas made for one draw, or the sprites a
+//  load replaced) takes its entries with it, and keyed by the image itself, which every source has, where `src` is
+//  only an `<img>`'s (#730: the sprites are bitmaps).
+let recolouredImageCache = new WeakMap<
+  object,
+  Map<string, HTMLCanvasElement>
+>();
 
-onPreloadedImagesChanged(() => recolouredImageCache.clear());
+onPreloadedImagesChanged(() => {
+  recolouredImageCache = new WeakMap();
+});
 
 /**
  * Recolours `image`, mapping each colour in `source` to the one at the same
@@ -18,26 +26,20 @@ export const replaceColours = (
   source: string[],
   replacement: string[]
 ) => {
-  // Only image elements have a stable identity (`src`) to key the cache by;
-  // caching canvas sources under a random key would insert a new entry on
-  // every call without ever hitting, growing the cache unboundedly.
-  // `source` is part of the key too: the same image recoloured with the same
-  // replacement but a different set of source colours is a different result.
-  const key =
-    image instanceof HTMLImageElement
-      ? [image.src, source.toString(), replacement.toString()].join('|')
-      : null;
+  // `source` is part of the key: the same image recoloured with the same replacement but a different set of source
+  //  colours is a different result.
+  const key = [source.toString(), replacement.toString()].join('|'),
+    cached = recolouredImageCache.get(image)?.get(key);
 
-  if (key !== null && recolouredImageCache.has(key)) {
-    return recolouredImageCache.get(key)!;
+  if (cached !== undefined) {
+    return cached;
   }
 
   const canvas = s<HTMLCanvasElement>('<canvas></canvas>'),
     context = canvas.getContext('2d')!;
 
-  // The preload is asynchronous, so a render can reach here before the image has
-  // decoded. Hand back something drawable rather than throwing on the zero-sized
-  // `getImageData`, and don't cache it — the next render has the decoded image.
+  // A missing sprite is the blank placeholder, which has no size. Hand back something drawable rather than throwing on
+  //  the zero-sized `getImageData`, and don't cache it, so a sprite imported later is drawn once it is loaded.
   if (!isDrawable(image)) {
     canvas.width = 1;
     canvas.height = 1;
@@ -143,9 +145,11 @@ export const replaceColours = (
 
   context.putImageData(imageData, 0, 0);
 
-  if (key !== null) {
-    recolouredImageCache.set(key, canvas);
+  if (!recolouredImageCache.has(image)) {
+    recolouredImageCache.set(image, new Map());
   }
+
+  recolouredImageCache.get(image)!.set(key, canvas);
 
   return canvas;
 };

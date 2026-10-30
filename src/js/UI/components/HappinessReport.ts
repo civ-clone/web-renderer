@@ -42,13 +42,13 @@ const buildCityRow = async (
       const luxuriesElement = s(`<span></span>`);
 
       assetStore
-        .getShownAt(
+        .shownAtURL(
           spriteKey(currentTileset(), groupIcons.Luxuries),
           currentTileset().ui.icon
         )
-        .then((image) =>
+        .then((url) =>
           luxuriesElement.append(
-            s(`<img src="${image.toDataURL('image/png')}">`),
+            s(`<img src="${url}">`),
             localeProvider.number(reduceKnownYield(city.yields, 'Luxuries'))
           )
         );

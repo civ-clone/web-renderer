@@ -98,13 +98,13 @@ export class ChooseResearch extends Action {
 
   build(): void {
     assetStore
-      .get(spriteKey(currentTileset(), 'city/bulb'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/bulb'))
+      .then((url) =>
         this.append(
           s(
             `<button class="large chooseResearch" title="${t(
               'Actions.ChooseResearch.title'
-            )}"><img src="${asset!.uri}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );

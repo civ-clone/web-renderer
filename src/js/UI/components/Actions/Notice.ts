@@ -68,13 +68,13 @@ export class Notice extends Action {
 
     // TODO: an icon per notice, e.g. the Wonder's own, once those are extracted (#64).
     assetStore
-      .get(spriteKey(currentTileset(), 'city/luxury'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/luxury'))
+      .then((url) =>
         this.append(
           s(
-            `<button class="notice" title="${this.text('title')}"><img src="${
-              asset!.uri
-            }"></button>`
+            `<button class="notice" title="${this.text(
+              'title'
+            )}"><img src="${url}"></button>`
           )
         )
       );

@@ -19,7 +19,6 @@ export interface AppElements {
   //  the lists.
   citiesList: HTMLElement | null;
   powerList: HTMLElement | null;
-  preloadContainer: HTMLDivElement;
 }
 
 export const appElements = (): AppElements => {
@@ -41,8 +40,7 @@ export const appElements = (): AppElements => {
     minimapCanvas = document.getElementById('minimap') as HTMLCanvasElement,
     unitInfo = document.getElementById('unitInfo') as HTMLCanvasElement,
     citiesList = document.getElementById('citiesList'),
-    powerList = document.getElementById('powerList'),
-    preloadContainer = document.getElementById('preload') as HTMLDivElement;
+    powerList = document.getElementById('powerList');
 
   return {
     notificationArea,
@@ -60,7 +58,6 @@ export const appElements = (): AppElements => {
     unitInfo,
     citiesList,
     powerList,
-    preloadContainer,
   };
 };
 

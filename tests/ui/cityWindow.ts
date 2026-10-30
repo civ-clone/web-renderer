@@ -27,7 +27,6 @@ import Portal from '../../src/js/UI/components/Portal';
 import Transport from '../../src/js/UI/Transport';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
-import { setPreloadContainer } from '../../src/js/UI/lib/getPreloadedImage';
 
 const failures: string[] = [];
 let checks = 0,
@@ -72,12 +71,11 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 // Nor does it select a field's text.
 (globalThis as any).HTMLInputElement.prototype.select = () => {};
 
-setPreloadContainer(document.querySelector('#preload') as HTMLElement);
-
 // No assets: the citizens and the action's button are drawn without their images.
 assetStore.firstImported = () => new Promise(() => {});
 assetStore.get = () => new Promise(() => {});
-assetStore.getShownAt = () => new Promise(() => {});
+assetStore.shownAtURL = () => new Promise(() => {});
+assetStore.spriteURL = () => new Promise(() => {});
 
 // linkedom has no focus: what has it is set by hand.
 let focused: Element | null = document.body;

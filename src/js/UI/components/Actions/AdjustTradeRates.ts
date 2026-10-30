@@ -86,13 +86,13 @@ export class AdjustTradeRates extends Action {
 
   build(): void {
     assetStore
-      .get(spriteKey(currentTileset(), 'city/trade'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/trade'))
+      .then((url) =>
         this.append(
           s(
             `<button class="adjustTradeRates small" title="${t(
               'Actions.AdjustTradeRates.title'
-            )} (${tradeRatesKey})"><img src="${asset!.uri}"></button>`
+            )} (${tradeRatesKey})"><img src="${url}"></button>`
           )
         )
       );

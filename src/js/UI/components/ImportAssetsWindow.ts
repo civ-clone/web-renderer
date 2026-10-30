@@ -6,7 +6,7 @@ import {
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
-import { assetStore } from '../AssetStore';
+import { assetFromURI, assetStore } from '../AssetStore';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
 import { s, t as textNode } from '@dom111/element';
@@ -147,8 +147,11 @@ export class ImportAssetsWindow extends Window {
       'ImportAssetsWindow.progress-writing'
     );
 
-    // ...and all results stored in IDB, in a single transaction.
-    await assetStore.setAll(results);
+    // ...and all results stored in IDB, in a single transaction, each as its PNG rather than the data URI the
+    //  extractor gives (#730).
+    await assetStore.setAll(
+      await Promise.all(results.map(({ name, uri }) => assetFromURI(name, uri)))
+    );
 
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');

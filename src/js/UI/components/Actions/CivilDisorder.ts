@@ -43,8 +43,8 @@ export class CivilDisorder extends Action {
     const city = this.value() as City;
 
     assetStore
-      .get(spriteKey(currentTileset(), 'city/people_unhappy_m'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/people_unhappy_m'))
+      .then((url) =>
         this.append(
           s(
             `<button class="civilDisorder" title="${t(
@@ -52,7 +52,7 @@ export class CivilDisorder extends Action {
               {
                 city,
               }
-            )}"><img src="${asset!.uri}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );

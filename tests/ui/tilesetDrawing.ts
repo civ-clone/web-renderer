@@ -22,6 +22,8 @@ import { TilesetDescriptor } from '../../src/js/UI/tilesets/TilesetDescriptor';
 import World from '../../src/js/UI/components/World';
 import { drawUnitActionIcon } from '../../src/js/UI/lib/unitActionIcon';
 import renderUnit from '../../src/js/UI/lib/renderUnit';
+import replaceColours from '../../src/js/UI/lib/replaceColours';
+import { setSprites } from '../../src/js/UI/lib/getPreloadedImage';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import currentTileset from '../../src/js/UI/lib/tilesets';
 
@@ -395,7 +397,7 @@ const drawn = (
 
   new Recording(world, 2, 16, canvas).draw(world.get(x, y));
 
-  // A sprite that is not in the preload container draws nothing, so only the dots and the coast reach the canvas.
+  // A sprite that is not loaded draws nothing, so only the dots and the coast reach the canvas.
   return [
     ...sprites,
     ...calls.filter((call) => !call.startsWith('imageSmoothingEnabled')),
@@ -1051,6 +1053,25 @@ expect(
     ['drawImage(city/people_unhappy_m,10,2,6,6)'],
     ['drawImage(city/people_unhappy_m,4,6,6,6)'],
   ]
+);
+
+// The sprites are bitmaps since #730, not `<img>`s: a recoloured one is still drawn once and then taken from the cache,
+//  until a load replaces the sprites.
+const bitmap = { width: 3, height: 1 } as unknown as CanvasImageSource,
+  recoloured = replaceColours(bitmap, ['#abcdef'], ['#ffffff']),
+  again = replaceColours(bitmap, ['#abcdef'], ['#ffffff']),
+  otherColours = replaceColours(bitmap, ['#abcdef'], ['#000000']);
+
+setSprites(new Map());
+
+expect(
+  'a bitmap recoloured is cached by the bitmap and the colours, until the sprites are loaded again',
+  [
+    again === recoloured,
+    otherColours === recoloured,
+    replaceColours(bitmap, ['#abcdef'], ['#ffffff']) === recoloured,
+  ],
+  [true, false, false]
 );
 
 finished = true;

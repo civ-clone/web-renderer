@@ -7,10 +7,7 @@ import {
   repeatOffsets,
   wrapIndices,
 } from '../lib/viewport';
-import {
-  getPreloadedImage,
-  setPreloadContainer,
-} from '../lib/getPreloadedImage';
+import { getPreloadedImage } from '../lib/getPreloadedImage';
 import World from './World';
 import { TilesetDescriptor } from '../tilesets/TilesetDescriptor';
 import currentTileset from '../lib/tilesets';
@@ -96,7 +93,6 @@ export class Map implements IMap {
     this.#scale = scale;
 
     this.#context = this.#canvas.getContext('2d') as CanvasRenderingContext2D;
-    setPreloadContainer(document.querySelector('#preload')!);
   }
 
   canvas(): HTMLCanvasElement {
@@ -448,8 +444,7 @@ export class Map implements IMap {
   ): void {
     const [width, height] = imageSize(image);
 
-    // The preload is asynchronous, so an early render can reach an image that
-    // has not decoded; `drawImage` throws on a zero-sized source.
+    // A missing sprite is the blank placeholder, which has no size; `drawImage` throws on a zero-sized source.
     if (width === 0 || height === 0) {
       return;
     }

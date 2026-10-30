@@ -40,13 +40,13 @@ export class Revolution extends Action {
 
   build(): void {
     assetStore
-      .get(spriteKey(currentTileset(), 'city/sad'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/sad'))
+      .then((url) =>
         this.append(
           s(
             `<button class="revolution small" title="${t(
               'Actions.Revolution.title'
-            )}"><img src="${asset!.uri}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );

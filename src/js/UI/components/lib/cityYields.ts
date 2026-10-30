@@ -45,11 +45,11 @@ const renderCitizen = (sprites: string[], title?: string): HTMLElement => {
   assetStore
     .firstImported(sprites.map((sprite) => spriteKey(currentTileset(), sprite)))
     .then((path) =>
-      assetStore.getShownAt(path, currentTileset().ui.citizen.width)
+      assetStore.shownAtURL(path, currentTileset().ui.citizen.width)
     )
-    .then((image) =>
+    .then((url) =>
       // Decorative: the population as a whole is summarised in words (#272).
-      citizen.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
+      citizen.append(s(`<img src="${url}" alt="">`))
     );
 
   return citizen;
@@ -224,13 +224,11 @@ export const yieldIcon = (group: string): HTMLElement => {
   const icon = s('<span class="yield-icon"></span>');
 
   assetStore
-    .getShownAt(
+    .shownAtURL(
       spriteKey(currentTileset(), groupIcons[group]),
       currentTileset().ui.icon
     )
-    .then((image) =>
-      icon.append(s(`<img src="${image.toDataURL('image/png')}" alt="">`))
-    );
+    .then((url) => icon.append(s(`<img src="${url}" alt="">`)));
 
   return icon;
 };

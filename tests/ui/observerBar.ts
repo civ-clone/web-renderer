@@ -56,6 +56,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 // No IndexedDB under node: every picture is its path.
 (assetStore as any).get = (path: string) =>
   Promise.resolve({ name: path, uri: path });
+(assetStore as any).spriteURL = (path: string) => Promise.resolve(path);
 
 // linkedom's canvas has no context: one that ignores everything.
 (globalThis as any).HTMLCanvasElement.prototype.getContext = () =>
@@ -297,7 +298,7 @@ const makeMap = (turn: number): ObjectMap => {
 // The game's markup, fresh for each session.
 const mount = (): ReturnType<typeof appElements> => {
   document.body
-    .querySelectorAll(':scope > :not(#preload)')
+    .querySelectorAll(':scope > *')
     .forEach((element) => element.remove());
 
   document.body.insertAdjacentHTML(

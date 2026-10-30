@@ -67,8 +67,8 @@ export class CityBuild extends Action {
     const cityBuild = this.value();
 
     assetStore
-      .get(spriteKey(currentTileset(), 'city/production'))
-      .then((asset) =>
+      .spriteURL(spriteKey(currentTileset(), 'city/production'))
+      .then((url) =>
         this.append(
           s(
             `<button class="large cityBuild" title="${t(
@@ -76,7 +76,7 @@ export class CityBuild extends Action {
               {
                 city: cityBuild.city,
               }
-            )}"><img src="${asset!.uri}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );
