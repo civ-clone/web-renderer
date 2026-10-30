@@ -5,9 +5,11 @@ import SelectionWindow from './SelectionWindow';
 import Transport from '../Transport';
 import {
   getAutoLabel,
+  getClearedLabel,
   getLabelForBuildable,
   toggleAuto,
 } from './lib/cityBuild';
+import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from './lib/cityYields';
 
@@ -62,7 +64,20 @@ export class CityBuildSelectionWindow extends SelectionWindow {
 
         this.close(true);
       },
-      null,
+      // Why it has opened (#716), when the city is building nothing and that's known.
+      (() => {
+        const cleared = getClearedLabel(cityBuild);
+
+        if (cleared === null) {
+          return null;
+        }
+
+        const reason = s('<p class="build-cleared"></p>');
+
+        reason.textContent = cleared;
+
+        return reason;
+      })(),
       {
         actions: {
           ...additionalActions,

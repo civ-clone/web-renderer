@@ -1,16 +1,41 @@
 import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
 import { IPortal } from './Portal';
+import Transport from '../Transport';
 import Window from './Window';
 import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
+import sendBuildPreferences from '../lib/buildPreferences';
 import { t } from 'i18next';
 
 export class GameOptions extends Window {
   // The map's options take effect as they are changed, so the window is given
-  // the portal to apply them to.
-  constructor(portal: IPortal) {
+  // the portal to apply them to, and the build options the transport to send them to the game on (#690, #691).
+  constructor(portal: IPortal, transport: Transport | null = null) {
+    // A checkbox for a build option the game's rules act on.
+    const buildOption = (key: string, label: string): HTMLElement =>
+      s(
+        `<label>${label}</label>`,
+        (() => {
+          const input = s<HTMLInputElement>(
+            `<input type="checkbox"${
+              options.get(key, false) ? ' checked' : ''
+            }>`
+          );
+
+          return h(input, {
+            change: () => {
+              options.set(key, input.checked);
+
+              if (transport !== null) {
+                sendBuildPreferences(transport);
+              }
+            },
+          });
+        })()
+      );
+
     super(
       t('GameOptions.title'),
       s(
@@ -115,6 +140,14 @@ export class GameOptions extends Window {
               change: () => options.set('autosave', select.value),
             });
           })()
+        ),
+        buildOption(
+          'keepBuildingMilitaryUnits',
+          t('GameOptions.keep-building-military-units')
+        ),
+        buildOption(
+          'newCitiesBuildDefender',
+          t('GameOptions.new-cities-build-defender')
         )
       )
     );

@@ -351,7 +351,7 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.options'),
                 action: () => {
-                  new GameOptions(this.#portal);
+                  new GameOptions(this.#portal, this.#transport);
                 },
               },
               // Retire ends the game with your score (#176); Quit leaves it for the main menu, reloading for a fresh

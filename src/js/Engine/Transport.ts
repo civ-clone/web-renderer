@@ -105,6 +105,11 @@ declare global {
     // An action has been handled and the patch with its result has gone, so the UI can settle a move it drew ahead of
     //  the answer (#326).
     actionHandled: TransportData<TransportHandledAction, never>;
+    // What the player has asked their cities to choose by themselves (#690, #691).
+    buildPreferences: TransportData<
+      never,
+      { firstBuild: boolean; repeat: boolean }
+    >;
     // The AI clients a computer seat can be given, for the game setup (#604).
     aiClients: TransportData<string[], null>;
     cheat: TransportData<never, TransportCheatData>;

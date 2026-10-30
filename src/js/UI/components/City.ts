@@ -222,6 +222,7 @@ const renderYields = (city: CityData): Node => {
     // `World` here allocated ~10 world-sized canvases per open/update).
     const {
         center,
+        context,
         height: localHeight,
         tiles: localTiles,
         tilesWorked: localTilesWorked,
@@ -229,12 +230,16 @@ const renderYields = (city: CityData): Node => {
       } = cityMapLayout(city),
       portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
       cityPortal = new Portal(
-        new World({
-          ...city.player.world,
-          width: localWidth,
-          height: localHeight,
-          tiles: localTiles,
-        }),
+        new World(
+          {
+            ...city.player.world,
+            width: localWidth,
+            height: localHeight,
+            tiles: localTiles,
+          },
+          // The squares round the city's, as their neighbours only: they aren't drawn (#685).
+          context
+        ),
         transport,
         portalCanvas,
         {

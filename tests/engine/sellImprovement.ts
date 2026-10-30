@@ -36,6 +36,7 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import {
   Fuel,
@@ -47,6 +48,8 @@ import {
 } from '@civ-clone/civ1-spaceship/Parts';
 import Part from '@civ-clone/core-spaceship/Part';
 import Spaceship from '@civ-clone/core-spaceship/Spaceship';
+import Spend from '@civ-clone/core-treasury/Rules/Spend';
+import SpendCost from '@civ-clone/core-treasury/SpendCost';
 import { instance as layoutRegistryInstance } from '@civ-clone/core-spaceship/LayoutRegistry';
 import { instance as spaceshipRegistryInstance } from '@civ-clone/core-spaceship/SpaceshipRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
@@ -263,6 +266,27 @@ const run = async (): Promise<void> => {
     fail('the city sold a second improvement in the same turn');
   }
 
+  // One price for a spaceship part (#713), from every rule the game has: civ1-treasury's 4 gold a shield left, doubled
+  //  with none stored. civ1-spaceship priced parts too, and the city screen had two Buy buttons.
+  const partPrices = ruleRegistryInstance.process(Spend, {
+    building: () => ({ item: () => Habitation }),
+    city: () => city,
+    progress: () => ({ value: () => 0 }),
+    remaining: () => 160,
+  } as any) as SpendCost[];
+
+  if (
+    partPrices.length !== 1 ||
+    partPrices[0].resource() !== Gold ||
+    partPrices[0].value() !== 1280
+  ) {
+    fail(
+      `a city building a spaceship part should have one price, 1280 Gold, got ${JSON.stringify(
+        partPrices.map((price) => [price.resource().name, price.value()])
+      )}`
+    );
+  }
+
   // Launching a spaceship (#449: no other suite sends a `LaunchSpaceship`). Put there directly, on the layout the Apollo
   //  Program gives every civilization a ship on, and built from the city with the parts of the smallest ship that can
   //  make it (#503), as `civ1-spaceship`'s own test builds it: the ship launches and the player goes out again.
@@ -325,7 +349,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship of 62 parts launches and the player goes out again)'
+    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship part has one price; a spaceship of 62 parts launches and the player goes out again)'
   );
 
   process.exit(0);

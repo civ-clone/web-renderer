@@ -28,6 +28,7 @@ import { City, PlayerTile, Tile } from '../../src/js/UI/types';
 import Units from '../../src/js/UI/components/Map/Units';
 import Unworkable from '../../src/js/UI/components/Map/Unworkable';
 import World from '../../src/js/UI/components/World';
+import topologyFor from '../../src/js/UI/lib/topologyFor';
 import Yields from '../../src/js/UI/components/Map/Yields';
 import cityMapLayout from '../../src/js/UI/lib/cityMapLayout';
 import { tileBounds } from '../../src/js/UI/lib/projection';
@@ -894,9 +895,75 @@ const record = (): { [key: string]: unknown } => {
         tilesWorked: cityTiles.filter((tile, index) => index % 3 === 0),
       } as unknown as City;
 
+      // The squares round the city's (#685): the rest of the box, each the world's square at that place, across the
+      //  seam where the world wraps, and none past an edge that doesn't.
+      {
+        const {
+            center,
+            context,
+            height: boxHeight,
+            tiles,
+            width: boxWidth,
+          } = cityMapLayout(city),
+          wraps = topologyFor(worldData).wrapsY(),
+          offWorld = (y: number) =>
+            !wraps &&
+            (cityY + y - center.y < 0 || cityY + y - center.y >= height),
+          places = new Set(
+            [...tiles, ...context].map(({ x, y }) => `${x},${y}`)
+          );
+        let expected = 0;
+
+        for (let y = 0; y < boxHeight; y++) {
+          expected += offWorld(y) ? 0 : boxWidth;
+        }
+
+        if (
+          places.size !== tiles.length + context.length ||
+          tiles.length + context.length !== expected ||
+          context.some(
+            ({ id, x, y }) =>
+              offWorld(y) ||
+              id !== at(cityX + x - center.x, cityY + y - center.y).id
+          )
+        ) {
+          fail(
+            `the city screen map's squares round a city at ${cityX},${cityY} in ${width}x${height} aren't the world's`
+          );
+        }
+
+        // They're only neighbours: the small world has none of them as a square to draw, and finds each one as the
+        //  neighbour of the city's square beside it.
+        const small = new World(
+            {
+              ...city.player.world,
+              width: boxWidth,
+              height: boxHeight,
+              tiles: tiles as PlayerTile[],
+            },
+            context
+          ),
+          // The square in the border west of the city's westernmost.
+          border = context.find(
+            ({ x, y }) => x === center.x - 3 && y === center.y
+          );
+
+        if (
+          context.some(({ x, y }) => small.get(x, y).terrain._ !== 'Unknown') ||
+          !border ||
+          small.getNeighbour(small.get(center.x - 2, center.y), 'w').id !==
+            border.id
+        ) {
+          fail(
+            `the city screen map's squares round a city at ${cityX},${cityY} in ${width}x${height} are drawn, or aren't its neighbours`
+          );
+        }
+      }
+
       [1, 2, 3].forEach((scale) => {
         const {
             center,
+            context,
             height: localHeight,
             tiles: localTiles,
             tilesWorked: localTilesWorked,
@@ -904,12 +971,15 @@ const record = (): { [key: string]: unknown } => {
           } = cityMapLayout(city),
           portalCanvas = recordingCanvas('portal', 0, 0),
           cityPortal = new TestPortal(
-            new World({
-              ...city.player.world,
-              width: localWidth,
-              height: localHeight,
-              tiles: localTiles as PlayerTile[],
-            }),
+            new World(
+              {
+                ...city.player.world,
+                width: localWidth,
+                height: localHeight,
+                tiles: localTiles as PlayerTile[],
+              },
+              context
+            ),
             {} as any,
             portalCanvas,
             { playerId: city.player.id, scale, tileSize: 16 },

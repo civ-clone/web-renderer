@@ -248,8 +248,8 @@ const contextOf = ({
     null
   );
 
-  const buildOf = (buildCity: unknown) =>
-      named('build', { city: () => buildCity }),
+  const buildOf = (buildCity: unknown, building: unknown = null) =>
+      named('build', { city: () => buildCity, building: () => building }),
     pyramids = named('Pyramids', {}, Pyramids.prototype),
     builds: [string, unknown][] = [
       ['unit', unitOf(us)],
@@ -271,6 +271,33 @@ const contextOf = ({
     );
     expect(`the kind of ${kind}`, buildingCompleteKind(build), kind);
   });
+
+  // A unit built again without asking (#690) isn't told of; another unit next, or a unit chosen by hand, still is.
+  {
+    const unit = unitOf(us, Trireme.prototype),
+      buildingOf = (item: unknown) => ({ item: () => item });
+
+    expect(
+      'our city carrying on with the same unit',
+      city('city:building-complete', [
+        buildOf(ourCity, buildingOf((unit as object).constructor)),
+        unit,
+      ]),
+      null
+    );
+    expect(
+      'our city going on to something else',
+      city('city:building-complete', [
+        buildOf(ourCity, buildingOf(Barracks)),
+        unit,
+      ]),
+      [
+        'City.building-complete.unit',
+        false,
+        { cityBuild: 'build', build: (unit as { name: string }).name },
+      ]
+    );
+  }
 
   expect(
     "a rival's wonder in a city we have seen",

@@ -33,6 +33,7 @@ import {
 import PlayerPatches from './Client/PlayerPatches';
 import Notifier from './Client/Notifier';
 import CityNewsCollector from './Client/cityNews';
+import registerBuildPreferences from './Client/buildPreferences';
 import registerCheats from './Client/cheats';
 import registerRequests, {
   civilizationScore as civilizationScoreFor,
@@ -151,7 +152,10 @@ export class DataTransferClient extends Client implements IClient {
     };
 
     if (!readOnly) {
-      this.#disposers.push(registerCheats(transport, this.#context));
+      this.#disposers.push(
+        registerCheats(transport, this.#context),
+        registerBuildPreferences(transport, this.#context)
+      );
     }
 
     this.#disposers.push(registerRequests(transport, this.#context));

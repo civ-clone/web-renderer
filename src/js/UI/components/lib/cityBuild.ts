@@ -1,4 +1,4 @@
-import { t } from 'i18next';
+import i18next, { t } from 'i18next';
 import { BuildItem, CityBuild, Entity } from '../../types';
 import Transport from '../../Transport';
 
@@ -19,6 +19,28 @@ export const getLabelForBuildableEntity = (buildable: Entity): string =>
       defaultValue: buildable._,
     }
   );
+
+// Why a city building nothing is asked what to build (#716), or `null` when it is building something, the reason isn't
+//  known (an older save), or it's one with no words here.
+export const getClearedLabel = (cityBuild: CityBuild): string | null => {
+  const { building, cleared } = cityBuild;
+
+  if (building !== null || !cleared) {
+    return null;
+  }
+
+  const key = `City.Build.cleared.${cleared.reason}`;
+
+  if (!i18next.exists(key)) {
+    return null;
+  }
+
+  return t(key, {
+    item: cleared.item
+      ? getLabelForBuildableEntity(cleared.item)
+      : t('City.Build.nothing'),
+  });
+};
 
 // The label for the button that puts a city on Auto, or takes it off (#194).
 export const getAutoLabel = (cityBuild: CityBuild): string =>

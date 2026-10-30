@@ -43,6 +43,11 @@ i18next.addResources('en', 'default', {
 
   'Actions.ChooseResearch.body':
     'Which advance would you like to research next?',
+  // Why the research picker has opened (#726).
+  'Actions.ChooseResearch.cleared.acquired':
+    '{{- advance}} was acquired before its research finished',
+  'Actions.ChooseResearch.cleared.completed':
+    'Research complete: {{- advance}}',
   'Actions.ChooseResearch.choice':
     '{{- advance}} ($t(Progress.turns, { "count": {{turns}} }))',
   'Actions.ChooseResearch.title': 'Choose research',
@@ -194,6 +199,12 @@ i18next.addResources('en', 'default', {
   'City.Build.buy-with': 'Buy',
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
+  // Why the production picker has opened (#716).
+  'City.Build.cleared.cancelled': 'Production cancelled: {{- item}}',
+  'City.Build.cleared.captured': 'City captured',
+  'City.Build.cleared.completed': 'Production complete: {{- item}}',
+  'City.Build.cleared.created': 'City founded',
+  'City.Build.cleared.unavailable': '{{- item}} can no longer be built',
   'City.Build.nothing': 'Nothing',
   'City.Build.stored_one': '{{count, number}} shield kept for the next item',
   'City.Build.stored_other': '{{count, number}} shields kept for the next item',
@@ -346,8 +357,10 @@ i18next.addResources('en', 'default', {
   'GameOptions.autosave-choice.5': 'Game start, then every 5 turns',
   'GameOptions.autosave-choice.off': 'Off',
   'GameOptions.autosave-choice.start': 'Game start',
+  'GameOptions.keep-building-military-units': 'Keep building military units',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
+  'GameOptions.new-cities-build-defender': 'New cities build a defender',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 
@@ -389,6 +402,8 @@ i18next.addResources('en', 'default', {
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any color-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
   'ImportAssetsWindow.done':
     'Done! Please reload the page to utilize the fresh assets.',
+  'ImportAssetsWindow.failed':
+    'Importing the assets failed ({{error}}). Try again, and check that the browser lets this site store data.',
   'ImportAssetsWindow.instructions':
     'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
@@ -398,6 +413,8 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.progress-writing': 'Writing to database...',
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
   'ImportAssetsWindow.title': 'Import assets',
+  'ImportAssetsWindow.unsupported-file':
+    "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
 
   'JoinCity.too-large.body':
     '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',

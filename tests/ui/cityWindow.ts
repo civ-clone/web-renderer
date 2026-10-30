@@ -8,6 +8,8 @@
 // The food and shield meters (#686, #687): the stored part, next turn's part or a shortfall's, no more than the cost,
 //  and the shields kept for the next item when none is chosen.
 // The yields (#719): a row each, drawn to one scale, with what's used, spare and short, and said in words.
+// Why the production picker has opened (#716): the item finished or no longer buildable, a new or captured city, or
+//  nothing for a reason it has no words for, or one an older save doesn't know.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -963,6 +965,80 @@ const run = async (): Promise<void> => {
     );
 
     large.close();
+  }
+
+  // Why the production picker has opened (#716).
+  {
+    i18next.addResources(
+      'en',
+      'translation',
+      Object.fromEntries(
+        [
+          'City.Build.cleared.cancelled',
+          'City.Build.cleared.captured',
+          'City.Build.cleared.completed',
+          'City.Build.cleared.created',
+          'City.Build.cleared.unavailable',
+        ].map((key) => [key, i18next.getResource('en', 'default', key)])
+      )
+    );
+
+    const reasonShown = async (cleared: unknown): Promise<string | null> => {
+      document
+        .querySelectorAll('.build-cleared')
+        .forEach((element) => element.remove());
+
+      new CityBuildAction(
+        {
+          _: 'CityBuild',
+          value: { ...cityData([]).build, cleared },
+        } as any,
+        portal,
+        transport
+      ).activate();
+
+      requests.shift()!([]);
+      await settle();
+
+      return document.querySelector('.build-cleared')?.textContent ?? null;
+    };
+
+    expect(
+      'a build finished',
+      await reasonShown({
+        reason: 'completed',
+        item: { _: 'Spearman', __: ['Spearman', 'Unit'] },
+      }),
+      'Production complete: Spearman'
+    );
+    expect(
+      'a build that can no longer be made',
+      await reasonShown({
+        reason: 'unavailable',
+        item: { _: 'Spearman', __: ['Spearman', 'Unit'] },
+      }),
+      'Spearman can no longer be built'
+    );
+    expect(
+      'a new city',
+      await reasonShown({ reason: 'created', item: null }),
+      'City founded'
+    );
+    expect(
+      'a captured city',
+      await reasonShown({ reason: 'captured', item: null }),
+      'City captured'
+    );
+    expect(
+      'a reason it has no words for',
+      await reasonShown({ reason: 'disbanded', item: null }),
+      null
+    );
+    expect(
+      'none known, as in an older save',
+      await reasonShown(undefined),
+      null
+    );
   }
 
   finished = true;
