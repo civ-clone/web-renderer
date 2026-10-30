@@ -1,8 +1,8 @@
 .top-cities-report {
   .city {
     align-items: center;
-    border: 2px solid var(--owner-primary, #888);
-    box-shadow: inset 0 0 0 1px var(--owner-secondary, #555);
+    border: 2px solid var(--owner-primary, var(--ui-line));
+    box-shadow: inset 0 0 0 1px var(--owner-secondary, var(--ui-bevel-dark));
     display: grid;
     gap: 0.25rem 1rem;
     grid-template-columns: auto 1fr;

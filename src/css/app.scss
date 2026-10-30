@@ -1,51 +1,45 @@
+@use 'themes/civ1-classic';
+@use 'themes/slate';
+
 :root {
   --scale: 2;
 
-  // The sidebar and top bar (#697). Only these colours are used there, so a theme (#167) can set them.
-  --panel-bg: #a9a9ad;
-  --panel-raised: #c6c6ca;
-  --panel-sunken: #8f8f94;
-  --panel-text: #123;
-  --panel-muted: #3d4452;
-  --panel-bevel-light: #e2e2e6;
-  --panel-bevel-dark: #5a5a5f;
-  --panel-heading-bg: #38e;
-  --panel-heading-text: #edc;
-  --panel-positive: #17641b;
-  --panel-negative: #a82929;
-  --panel-accent: #2966a8;
-  --panel-tax: #c9a227;
-  --panel-luxury: #b0459e;
-  --panel-science: #2966a8;
+  @include civ1-classic.light();
+}
+
+// Light or dark follows the system unless the player chose one (#706): `data-theme` on `<html>`.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-ui-theme]):not([data-theme='light']) {
+    @include civ1-classic.dark();
+  }
+}
+
+:root:not([data-ui-theme])[data-theme='dark'] {
+  @include civ1-classic.dark();
+}
+
+// The theme in use (#736), until #167's manifests: Civ1 classic unless `data-ui-theme` names another.
+:root[data-ui-theme='slate'] {
+  @include slate.light();
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --panel-bg: #2c2e35;
-    --panel-raised: #3b3e47;
-    --panel-sunken: #1e2025;
-    --panel-text: #edc;
-    --panel-muted: #b9b3a5;
-    --panel-bevel-light: #4f535e;
-    --panel-bevel-dark: #121317;
-    --panel-heading-bg: #2a5fae;
-    --panel-heading-text: #edc;
-    --panel-positive: #7dd27f;
-    --panel-negative: #ff8273;
-    --panel-accent: #6aa6e8;
-    --panel-tax: #e0bb45;
-    --panel-luxury: #d777c6;
-    --panel-science: #6aa6e8;
+  :root[data-ui-theme='slate']:not([data-theme='light']) {
+    @include slate.dark();
   }
+}
+
+:root[data-ui-theme='slate'][data-theme='dark'] {
+  @include slate.dark();
 }
 
 body {
   // TODO: look into why this doesn't work like I'd expect!
   //--scale: attr(data-scale number, 2);
-  background: #000;
-  color: #edc;
+  background: var(--ui-page-bg);
+  color: var(--ui-page-fg);
   display: grid;
-  font-family: sans-serif;
+  font-family: var(--font-ui);
   margin: 0;
   min-height: 100vh;
   min-width: 100vw;
@@ -76,6 +70,7 @@ input {
 @import 'components/game-options';
 @import 'components/happiness-report';
 @import 'components/icons';
+@import 'components/import-assets';
 @import 'components/intelligence-report';
 @import 'components/load-game';
 @import 'components/mainmenu';

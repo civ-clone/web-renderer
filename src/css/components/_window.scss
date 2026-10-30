@@ -1,9 +1,9 @@
 .window {
-  background: #edc;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
-  color: #123;
+  background: var(--ui-bg-2);
+  border: 1px solid var(--ui-window-edge);
+  border-radius: var(--ui-radius-window);
+  box-shadow: var(--ui-shadow-window);
+  color: var(--ui-fg);
   margin: 0;
   outline: 0;
   overflow: hidden;
@@ -46,7 +46,7 @@
     z-index: 10;
 
     &::backdrop {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--ui-backdrop);
     }
   }
 
@@ -63,13 +63,13 @@
   }
 
   > header {
-    background: #38e;
-    color: #edc;
+    background: var(--ui-title-bg);
+    color: var(--ui-title-fg);
     display: flex;
     flex: none;
     font-weight: bold;
     padding: 0.5em;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+    text-shadow: var(--ui-text-shadow-title);
 
     h3 {
       flex-grow: 1;
@@ -80,8 +80,8 @@
       background-position: center;
       background-repeat: no-repeat;
       background-size: 95%;
-      border: 1px solid #444;
-      border-radius: 3px;
+      border: 1px solid var(--ui-control-edge);
+      border-radius: var(--ui-radius-control);
       font-size: 0;
       height: 1.3rem;
       margin-right: 0.33rem;

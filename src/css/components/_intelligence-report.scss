@@ -1,7 +1,7 @@
 .intelligence-report {
   .civilization {
-    border: 2px solid var(--owner-primary, #888);
-    box-shadow: inset 0 0 0 1px var(--owner-secondary, #555);
+    border: 2px solid var(--owner-primary, var(--ui-line));
+    box-shadow: inset 0 0 0 1px var(--owner-secondary, var(--ui-bevel-dark));
     margin-bottom: 0.5rem;
     padding: 0.25rem 0.5rem;
 

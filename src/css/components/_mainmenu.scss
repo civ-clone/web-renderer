@@ -42,21 +42,21 @@
       appearance: none;
       background: none;
       border: 0;
-      color: #fff;
+      color: var(--ui-overlay-fg);
       cursor: pointer;
       font-weight: bold;
       outline: 0;
       padding: 0.5em;
-      text-shadow: 0 0 2px rgba(0, 0, 0, 0.4);
+      text-shadow: 0 0 2px color-mix(in srgb, var(--ui-shade) 40%, transparent);
       width: 100%;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: color-mix(in srgb, var(--ui-light) 20%, transparent);
       }
 
       &:focus {
-        background: rgba(255, 255, 255, 0.4);
-        color: #000;
+        background: color-mix(in srgb, var(--ui-light) 40%, transparent);
+        color: var(--ui-shade);
       }
     }
   }
@@ -67,7 +67,7 @@
     position: absolute;
 
     a {
-      color: #fff;
+      color: var(--ui-overlay-fg);
     }
   }
 }

@@ -1,6 +1,6 @@
 button {
   &:hover {
-    box-shadow: 0 0 2px #fff;
+    box-shadow: 0 0 2px var(--ui-glow);
   }
 
   &:focus,

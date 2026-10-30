@@ -18,6 +18,7 @@ import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
 import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
+import { applyUiTheme } from './lib/theme';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
@@ -42,6 +43,9 @@ export class Renderer {
   async init() {
     const transport = this.#transport;
     const queryParams = new URLSearchParams(window.location.search);
+
+    // Before anything is drawn, so nothing shows in the wrong colours first (#736).
+    applyUiTheme(queryParams.get('theme'));
 
     const debugFlags = new DebugFlags(
       parseBooleanParam(queryParams.get('debug'), false)

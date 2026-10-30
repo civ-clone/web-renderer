@@ -1,0 +1,125 @@
+// Slate and brass (#735, #736): cool slate neutrals with one warm brass accent, flat rather than bevelled, and the
+//  windows on the same surfaces as the panels. On trial, with `?theme=slate`.
+
+@mixin light() {
+  --ui-page-bg: #0d1014;
+  --ui-page-fg: #e9e5d9;
+
+  --ui-bg-0: #e4e7eb;
+  --ui-bg-1: #f2f4f6;
+  --ui-bg-2: #f7f6f1;
+  --ui-sunken: #d3d8df;
+  --ui-title-bg: #2b313b;
+  --ui-title-fg: #f1e6c8;
+
+  --ui-fg: #1d222a;
+  --ui-fg-muted: #586170;
+
+  --ui-line: #bcc3cc;
+  --ui-line-soft: #dde1e6;
+  --ui-bevel-light: #ffffff;
+  --ui-bevel-dark: #a6aeb9;
+  --ui-bevel-width: 1px;
+  --ui-window-edge: #a6aeb9;
+  --ui-control-edge: #8b94a1;
+
+  --ui-accent: #a8812f;
+  --ui-accent-ink: #ffffff;
+  --ui-focus: #a8812f;
+
+  --ui-positive: #2f7d3e;
+  --ui-negative: #b03a2e;
+  --ui-warn: #a86a12;
+
+  --ui-rate-tax: #b98d16;
+  --ui-rate-luxury: #a2449a;
+  --ui-rate-science: #3d6fb4;
+
+  --y-food: #c98a1b;
+  --y-shield: #3f6fb0;
+  --y-trade: #2f9a8a;
+  --y-gold: #b98d16;
+  --y-science: #3d6fb4;
+  --y-luxury: #a2449a;
+  --y-pollution: #6f6a4f;
+  --y-short: #b03a2e;
+  --y-happy: #1fb8c2;
+  --y-unhappy: #9a2f2f;
+
+  --ui-shade: #0d1014;
+  --ui-light: #ffffff;
+  --ui-glow: #f1e6c8;
+  --ui-overlay-bg: rgba(13, 16, 20, 0.72);
+  --ui-overlay-fg: #f1e6c8;
+  --ui-backdrop: rgba(13, 16, 20, 0.35);
+
+  --ui-chip-bg: #2b313b;
+  --ui-chip-edge: #6b7482;
+
+  --ui-action: #2b313b;
+  --ui-action-research: #3d6fb4;
+  --ui-action-build: #c98a1b;
+  --ui-action-disorder: #b03a2e;
+  --ui-action-notice: #a8812f;
+  --ui-action-end-turn: #2f8a3e;
+  --ui-orb-ring: radial-gradient(
+    circle,
+    transparent 60%,
+    #8a6a26 60%,
+    #3a2c10 61%,
+    #e3c77e 62%,
+    #c9a24a 65%,
+    #8a6a26 66%,
+    #6e5420 70%
+  );
+  --ui-orb-highlight: rgba(255, 255, 255, 0.25);
+
+  --ui-radius-control: 4px;
+  --ui-radius-window: 6px;
+  --ui-shadow-panel: 0 2px 8px rgba(13, 16, 20, 0.35);
+  --ui-shadow-window: 0 8px 28px rgba(13, 16, 20, 0.45);
+  --ui-shadow-orb: 0 2px 6px rgba(13, 16, 20, 0.5);
+  --ui-text-shadow-title: none;
+
+  --font-ui: sans-serif;
+  --font-display: sans-serif;
+}
+
+@mixin dark() {
+  --ui-bg-0: #1d222b;
+  --ui-bg-1: #272d38;
+  --ui-bg-2: #20252e;
+  --ui-sunken: #151920;
+  --ui-title-bg: #2b313b;
+  --ui-title-fg: #f1e6c8;
+
+  --ui-fg: #e9e5d9;
+  --ui-fg-muted: #9aa2ae;
+
+  --ui-line: #3b4350;
+  --ui-line-soft: #2c333e;
+  --ui-bevel-light: #3b4350;
+  --ui-bevel-dark: #0e1116;
+  --ui-window-edge: #3b4350;
+  --ui-control-edge: #59626f;
+
+  --ui-accent: #c9a24a;
+  --ui-accent-ink: #1d1a12;
+  --ui-focus: #e0bf6a;
+
+  --ui-positive: #7cc58a;
+  --ui-negative: #ef7b6c;
+  --ui-warn: #e3a64a;
+
+  --ui-rate-tax: #e0bb45;
+  --ui-rate-luxury: #d777c6;
+  --ui-rate-science: #6aa6e8;
+
+  --y-gold: #e0bb45;
+  --y-science: #6aa6e8;
+  --y-luxury: #d777c6;
+  --y-short: #ef7b6c;
+  --y-unhappy: #ef7b6c;
+
+  --ui-shade: #000;
+}

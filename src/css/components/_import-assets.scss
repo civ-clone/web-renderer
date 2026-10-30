@@ -1,0 +1,4 @@
+// Why the import stopped (#736: the theme's colour for something gone wrong).
+.import-assets .loading.failed {
+  color: var(--ui-negative);
+}

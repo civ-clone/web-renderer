@@ -8,11 +8,11 @@
 
     &.celebrateLeader .name {
       font-weight: bold;
-      text-shadow: 0 0 5px #0ce0e8;
+      text-shadow: 0 0 5px var(--y-happy);
     }
 
     &.civilDisorder .name {
-      color: #7e2727;
+      color: var(--y-unhappy);
       font-weight: bold;
     }
 
