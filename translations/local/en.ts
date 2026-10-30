@@ -194,6 +194,12 @@ i18next.addResources('en', 'default', {
   'City.Build.buy-with': 'Buy',
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
+  // Why the production picker has opened (#716).
+  'City.Build.cleared.cancelled': 'Production cancelled: {{- item}}',
+  'City.Build.cleared.captured': 'City captured',
+  'City.Build.cleared.completed': 'Production complete: {{- item}}',
+  'City.Build.cleared.created': 'City founded',
+  'City.Build.cleared.unavailable': '{{- item}} can no longer be built',
   'City.Build.nothing': 'Nothing',
   'City.Build.stored_one': '{{count, number}} shield kept for the next item',
   'City.Build.stored_other': '{{count, number}} shields kept for the next item',
@@ -346,8 +352,10 @@ i18next.addResources('en', 'default', {
   'GameOptions.autosave-choice.5': 'Game start, then every 5 turns',
   'GameOptions.autosave-choice.off': 'Off',
   'GameOptions.autosave-choice.start': 'Game start',
+  'GameOptions.keep-building-military-units': 'Keep building military units',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
+  'GameOptions.new-cities-build-defender': 'New cities build a defender',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 

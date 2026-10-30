@@ -15,6 +15,9 @@ export const setOptionDefaults = (): void => {
     sidebarCollapsed: [],
     // The keys of those that start collapsed which the player has opened (#700, #701).
     sidebarExpanded: [],
+    // Sent to the game, whose rules act on them (#690, #691): see `sendBuildPreferences`.
+    keepBuildingMilitaryUnits: false,
+    newCitiesBuildDefender: false,
   });
 };
 
