@@ -22,6 +22,7 @@ import {
   directionKeys,
   keyToActionsMap,
 } from '../../src/js/UI/lib/unitActionKeys';
+import currentTileset from '../../src/js/UI/lib/tilesets';
 import topologyFor from '../../src/js/UI/lib/topologyFor';
 
 const failures: string[] = [];
@@ -113,6 +114,28 @@ expect(
   'BuildIrrigation draws the irrigation beneath the terrain',
   names(layersFor('BuildIrrigation')),
   ['terrain/land', 'improvements/irrigation', 'terrain/grassland']
+);
+
+const civ1 = currentTileset();
+
+expect(
+  'BuildIrrigation draws the irrigation over the terrain when the tileset says so, as the map does',
+  names(
+    unitActionIconLayers(
+      action('BuildIrrigation'),
+      unitOf('Settlers', []),
+      null,
+      'S',
+      {
+        ...civ1,
+        families: {
+          ...civ1.families,
+          irrigation: { ...civ1.families.irrigation, overTerrain: true },
+        },
+      }
+    )
+  ),
+  ['terrain/land', 'terrain/grassland', 'improvements/irrigation']
 );
 expect('BuildRoad shows a road', names(layersFor('BuildRoad')).slice(2), [
   'improvements/road_w',
