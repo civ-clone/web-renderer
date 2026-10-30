@@ -43,6 +43,11 @@ i18next.addResources('en', 'default', {
 
   'Actions.ChooseResearch.body':
     'Which advance would you like to research next?',
+  // Why the research picker has opened (#726).
+  'Actions.ChooseResearch.cleared.acquired':
+    '{{- advance}} was acquired before its research finished',
+  'Actions.ChooseResearch.cleared.completed':
+    'Research complete: {{- advance}}',
   'Actions.ChooseResearch.choice':
     '{{- advance}} ($t(Progress.turns, { "count": {{turns}} }))',
   'Actions.ChooseResearch.title': 'Choose research',
