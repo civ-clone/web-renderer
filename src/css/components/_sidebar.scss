@@ -97,13 +97,13 @@
       text-transform: var(--type-heading-transform);
       width: 100%;
 
-      &::before {
-        content: '▾';
-        display: inline-block;
+      .glyph-disclosure {
+        height: 0.75em;
         transition: transform 0.15s;
+        width: 0.75em;
       }
 
-      &[aria-expanded='false']::before {
+      &[aria-expanded='false'] .glyph-disclosure {
         transform: rotate(-90deg);
       }
 

@@ -1,6 +1,7 @@
 import { TransientElement, ITransientElement } from './TransientElement';
 import { off, on, s } from '@dom111/element';
 import { Coordinate } from '../types';
+import { glyph } from '../lib/glyphs';
 import { h } from '../lib/html';
 import { t } from 'i18next';
 
@@ -160,7 +161,7 @@ export class Window
             s(
               `<button class="btn-icon maximise" aria-label="${t(
                 'Window.maximize'
-              )}">${t('Window.maximize')}</button>`
+              )}">${glyph('maximise')}${glyph('minimise')}</button>`
             ),
             {
               click: () => this.maximise(),
@@ -173,7 +174,7 @@ export class Window
             s(
               `<button class="btn-icon close" aria-label="${t(
                 'Window.close'
-              )}">${t('Window.close')}</button>`
+              )}">${glyph('close')}</button>`
             ),
             {
               click: () => this.close(),

@@ -20,6 +20,7 @@ import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
 import { applyColourScheme, applyUiTheme } from './lib/theme';
+import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
@@ -50,6 +51,8 @@ export class Renderer {
     setOptionDefaults();
     applyUiTheme(queryParams.get('theme'));
     applyColourScheme(options.get('colourScheme', 'system'));
+    // The interface's glyphs, for every `glyph()` to refer to (#741).
+    installGlyphs();
 
     const debugFlags = new DebugFlags(
       parseBooleanParam(queryParams.get('debug'), false)

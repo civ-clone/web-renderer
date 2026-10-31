@@ -34,11 +34,21 @@
     width: calc(11px * var(--scale));
   }
 
+  .glyph {
+    height: calc(11px * var(--scale));
+    width: calc(11px * var(--scale));
+  }
+
   &.small {
     height: 2rem !important;
     width: 2rem !important;
 
     img {
+      width: calc(8px * var(--scale));
+    }
+
+    .glyph {
+      height: calc(8px * var(--scale));
       width: calc(8px * var(--scale));
     }
   }
@@ -49,6 +59,11 @@
     width: 4rem !important;
 
     img {
+      width: calc(14px * var(--scale));
+    }
+
+    .glyph {
+      height: calc(14px * var(--scale));
       width: calc(14px * var(--scale));
     }
   }
@@ -121,5 +136,10 @@
 @mixin white-child-svg() {
   img {
     filter: invert(1) drop-shadow(0 0 2px var(--ui-shade));
+  }
+
+  .glyph {
+    color: var(--ui-light);
+    filter: drop-shadow(0 0 2px var(--ui-shade));
   }
 }

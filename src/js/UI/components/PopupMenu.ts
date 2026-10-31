@@ -1,5 +1,6 @@
 import { Element, off, on, s } from '@dom111/element';
 import { h } from '../lib/html';
+import { glyph } from '../lib/glyphs';
 import { t } from 'i18next';
 
 // WeakMap so a menu whose launcher is dropped without an explicit `remove()`
@@ -88,7 +89,7 @@ export class PopupMenu extends Element {
         s(
           `<button class="btn-bare close" aria-label="${t(
             'Generic.close'
-          )}">&times;</button>`
+          )}">${glyph('close')}</button>`
         ),
         {
           pointerup: () => this.remove(),

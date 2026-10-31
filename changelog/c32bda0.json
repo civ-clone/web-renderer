@@ -1,0 +1,1 @@
+{"version":"0.1.0@c32bda0","date":"2026-10-30T22:23:43.000Z","localChanges":["Buttons no longer glow when hovered or jump when pressed, and they look alike in every window. With ?theme=slate, a window's main action is brass, Cancel is quiet and shows its Esc key, and actions that can't be undone, such as Sell, are red (closes #740)."],"externalChanges":{}}
