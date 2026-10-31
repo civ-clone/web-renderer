@@ -50,6 +50,7 @@ process.on('exit', (code: number): void => {
 const action = (_: string, id: string, value: unknown = null) =>
     ({ _, id, value } as unknown as PlayerAction),
   city = (name: string) => ({
+    id: name,
     name,
     originalPlayer: { civilization: { _: 'Babylonian' } },
   }),
@@ -72,9 +73,9 @@ const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('../../translations/local/en');
 
-  const research = action('ChooseResearch', 'r'),
-    buildKish = action('CityBuild', 'b1', { city: city('Kish') }),
-    buildUr = action('CityBuild', 'b2', { city: city('Ur') }),
+  const research = action('ChooseResearch', 'r', { id: 'research' }),
+    buildKish = action('CityBuild', 'b1', { id: 'b1', city: city('Kish') }),
+    buildUr = action('CityBuild', 'b2', { id: 'b2', city: city('Ur') }),
     disorder = action('CivilDisorder', 'c', city('Lagash')),
     end = action('EndTurn', 'e'),
     unitActions = [action('ActiveUnit', 'u1'), action('ActiveUnit', 'u2')];
@@ -90,7 +91,13 @@ const run = async (): Promise<void> => {
   expect(
     'the questions first (research, then each city in the order given), the units as one item, then the notices',
     queue.map((item) => item.id),
-    ['r', 'b1', 'b2', 'units', 'c']
+    [
+      'ChooseResearch:research',
+      'CityBuild:b1',
+      'CityBuild:b2',
+      'units',
+      'CivilDisorder:Lagash',
+    ]
   );
   expect(
     'the units item counts them',
@@ -206,13 +213,51 @@ const run = async (): Promise<void> => {
     dialog.remove();
   });
 
-  next.build(nextTurnQueue([disorder, end], [end], false), false, player);
+  // The engine sends the list again whenever it changes (a unit moved): the same disorder, under a new id.
+  next.build(
+    nextTurnQueue(
+      [action('CivilDisorder', 'c-again', city('Lagash')), end],
+      [end],
+      false
+    ),
+    false,
+    player
+  );
 
   expect(
-    'and stays out of it when the actions come again',
+    'and stays out of it when the actions come again, under new ids',
     shown()[0],
     'End turn'
   );
+
+  let dismissed = 0;
+
+  const notice = action('Notice', 'notice-1', {
+    city: null,
+    colours: null,
+    dismiss: () => dismissed++,
+    notification: { key: 'Test.notice', data: {} },
+  });
+
+  next.build(nextTurnQueue([notice, end], [end], false), false, player);
+  // Still on End turn, where it was: back round to the notice.
+  next.skip();
+
+  expect('a notice is named by its title', shown()[0], 'Notification');
+
+  next.press();
+  await settle();
+
+  expect(
+    'a notice, opened, is dismissed and leaves the queue at once',
+    [dismissed, shown()[0], document.querySelectorAll('dialog[open]').length],
+    [1, 'End turn', 1]
+  );
+
+  document.querySelectorAll('dialog[open]').forEach((dialog) => {
+    (dialog as HTMLDialogElement).close();
+    dialog.remove();
+  });
 
   next.build(nextTurnQueue([end], [end], false), false, player);
 
@@ -240,7 +285,15 @@ const run = async (): Promise<void> => {
     true
   );
 
-  next.build(nextTurnQueue([end], [end], true), true, player);
+  next.build(nextTurnQueue([end], [end], false), false, player, 2);
+
+  expect(
+    'a new turn starts afresh, even with no waiting build between',
+    shown()[3],
+    false
+  );
+
+  next.build(nextTurnQueue([end], [end], true), true, player, 2);
 
   expect('waiting: disabled, saying so', shown(), [
     'Waiting for the other civilizations…',

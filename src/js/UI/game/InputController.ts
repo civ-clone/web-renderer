@@ -194,6 +194,8 @@ export class InputController {
       (key === 'Enter' || (event.key === 'Enter' && event.shiftKey)) &&
       !modalWindow &&
       !waiting() &&
+      // Once for a key held down: not a run through the queue.
+      !event.repeat &&
       (!takesEnter(event.target) ||
         (event.shiftKey && isNextTurn(event.target)))
     ) {

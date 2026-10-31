@@ -36,6 +36,8 @@ export class NextTurn extends Element {
   #seen = new Set<string>();
   // End turn pressed: nothing more until the next turn's queue (#11).
   #sent = false;
+  // The turn the queue is for: a new one starts it afresh, even if no waiting build came between (#702).
+  #turn: number | null = null;
   #waiting = false;
 
   constructor(element: HTMLElement, deps: NextTurnDeps) {
@@ -44,9 +46,21 @@ export class NextTurn extends Element {
     this.#deps = deps;
   }
 
-  build(queue: NextTurnItem[], waiting: boolean, player: Player): void {
-    if (waiting) {
+  build(
+    queue: NextTurnItem[],
+    waiting: boolean,
+    player: Player,
+    turn: number | null = null
+  ): void {
+    if (waiting || turn !== this.#turn) {
       this.#seen.clear();
+    }
+
+    if (turn !== this.#turn) {
+      this.#index = 0;
+      this.#items = [];
+      this.#sent = false;
+      this.#turn = turn;
     }
 
     const items = queue.filter((item) => !this.#seen.has(item.id)),
@@ -65,9 +79,13 @@ export class NextTurn extends Element {
       this.#sent = false;
     }
 
-    // Only the items still waiting keep their `Action`, so a picker that's opening isn't opened twice (#484).
+    // Only the actions still waiting keep their `Action`, so a picker that's opening isn't opened twice (#484). By the
+    //  action's own id, as the orbs are: one sent again is a new action, with what it holds now.
     Array.from(this.#actions.keys())
-      .filter((id) => !items.some((item) => item.id === id))
+      .filter(
+        (id) =>
+          !items.some((item) => item.kind === 'action' && item.action.id === id)
+      )
       .forEach((id) => this.#actions.delete(id));
 
     this.#draw();
@@ -98,8 +116,9 @@ export class NextTurn extends Element {
 
     this.#action(item)?.activate();
 
-    // Seen, and gone from the queue now: opening its window changes nothing the engine would send.
-    if (item.action._ === 'CivilDisorder') {
+    // Seen, and gone from the queue for the turn: opening a notice's window dismisses it, and civil disorder stays an
+    //  action until it's put right, and doesn't hold up the turn. Now, as nothing the engine sends may follow.
+    if (['CivilDisorder', 'Notice'].includes(item.action._)) {
       this.#seen.add(item.id);
       this.#items = this.#items.filter((other) => other !== item);
       this.#index = Math.min(this.#index, Math.max(0, this.#items.length - 1));
@@ -132,7 +151,9 @@ export class NextTurn extends Element {
       return null;
     }
 
-    if (!this.#actions.has(item.id)) {
+    const id = item.action.id;
+
+    if (!this.#actions.has(id)) {
       const action = createAction(
         item.action,
         this.#deps.portal,
@@ -144,10 +165,10 @@ export class NextTurn extends Element {
         return null;
       }
 
-      this.#actions.set(item.id, action);
+      this.#actions.set(id, action);
     }
 
-    return this.#actions.get(item.id)!;
+    return this.#actions.get(id)!;
   }
 
   #label(item: NextTurnItem | undefined): string {
@@ -210,6 +231,13 @@ export class NextTurn extends Element {
 
     next.addEventListener('click', () => this.press());
 
+    const focused = this.element().contains(document.activeElement);
+
+    // In the page before its tooltip is given, so an open one moves to it from the button it replaces.
+    this.element().replaceChildren(
+      s('<div class="ui-next-turn-holder"></div>', next)
+    );
+
     tooltip(
       next,
       () => ({
@@ -229,9 +257,10 @@ export class NextTurn extends Element {
       { key: 'next-turn' }
     );
 
-    this.element().replaceChildren(
-      s('<div class="ui-next-turn-holder"></div>', next)
-    );
+    // Focus stays on the button through a redraw, for Space as well as Enter.
+    if (focused && document.activeElement !== next && !next.disabled) {
+      next.focus();
+    }
   }
 }
 

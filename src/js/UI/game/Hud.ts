@@ -107,7 +107,8 @@ export class Hud {
     this.#nextTurn?.build(
       nextTurnQueue(primary, data.player.actions, waiting),
       waiting,
-      data.player
+      data.player,
+      Number(data.turn?.value ?? 0)
     );
 
     this.#secondaryActions.build(secondary);

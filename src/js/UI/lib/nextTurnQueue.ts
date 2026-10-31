@@ -20,6 +20,13 @@ const order = [
 
 const unitsAt = order.indexOf('CivilDisorder');
 
+// What an item is, across turns' worth of rebuilds: an action's own id is new each time the engine sends the list
+//  again, so it's the kind and what it's about (the city, the research) instead. A notice's id is its own, and kept.
+const itemId = (action: PlayerAction): string =>
+  action._ === 'Notice'
+    ? action.id
+    : `${action._}:${(action.value as { id?: string } | null)?.id ?? ''}`;
+
 /**
  * The queue from the primary panel's actions (`partitionActions`'s `primary`) and the player's own, whose
  *  `ActiveUnit`s are the units awaiting orders. Empty while waiting: the actions are still last turn's.
@@ -38,7 +45,7 @@ export const nextTurnQueue = (
     units = playerActions.filter((action) => action?._ === 'ActiveUnit').length,
     items: NextTurnItem[] = primary
       .filter((action) => order.includes(action._))
-      .map((action) => ({ id: action.id, kind: 'action', action }));
+      .map((action) => ({ id: itemId(action), kind: 'action', action }));
 
   if (units > 0) {
     items.push({ id: 'units', kind: 'units', count: units });

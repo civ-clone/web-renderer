@@ -703,6 +703,19 @@ const run = async (): Promise<void> => {
 
   reset();
 
+  const heldEnter = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'Enter',
+  });
+
+  Object.defineProperty(heldEnter, 'repeat', { value: true });
+  document.dispatchEvent(heldEnter);
+
+  expect('a held Enter presses it once, not again for each repeat', calls, []);
+
+  reset();
+
   const sidebarButton = document.createElement('button'),
     report = document.createElement('dialog'),
     reportText = document.createElement('p'),
