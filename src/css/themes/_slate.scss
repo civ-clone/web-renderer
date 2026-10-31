@@ -185,6 +185,13 @@
   --ui-tooltip-title-bg: color-mix(in srgb, var(--ui-title-bg), #000 18%);
   --ui-tooltip-title-fg: var(--ui-title-fg);
 
+  // The new window chrome (#738): a brass rule under the slate title, and the footer on a band of its own.
+  --ui-title-rule: var(--ui-accent);
+  --ui-footer-bg: var(--ui-bg-1);
+  --ui-footer-edge: var(--ui-line);
+  --ui-window-motion-in: 120ms;
+  --ui-window-motion-out: 80ms;
+
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;
   --ui-shadow-panel: 0 2px 8px rgba(13, 16, 20, 0.35);

@@ -176,6 +176,13 @@
   --ui-tooltip-title-bg: #38e;
   --ui-tooltip-title-fg: #edc;
 
+  // The new window chrome (#738): the Civ1 window still, with a thin rule under the title and no footer band.
+  --ui-title-rule: var(--ui-accent);
+  --ui-footer-bg: transparent;
+  --ui-footer-edge: var(--ui-line-soft);
+  --ui-window-motion-in: 120ms;
+  --ui-window-motion-out: 80ms;
+
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;
   --ui-shadow-panel: 1px 1px 5px rgba(0, 0, 0, 0.6);

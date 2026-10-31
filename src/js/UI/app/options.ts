@@ -20,6 +20,8 @@ export const setOptionDefaults = (): void => {
     newCitiesBuildDefender: false,
     // Light, dark or the system's (#706): see `COLOUR_SCHEMES`.
     colourScheme: 'system',
+    // The classic interface or the new one (#735): see `INTERFACES`. Not offered in Options until there's more of it.
+    interface: 'classic',
   });
 };
 
