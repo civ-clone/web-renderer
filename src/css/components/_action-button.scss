@@ -9,6 +9,8 @@
   height: 3.1rem;
   image-rendering: pixelated;
   padding: 0;
+  // Off the text's baseline, which would leave room for a descender under it.
+  vertical-align: top;
   width: 3.1rem;
 
   // Their own feedback, now the button system no longer gives every button a glow and a shove (#740).
@@ -34,8 +36,11 @@
     width: calc(11px * var(--scale));
   }
 
+  // A block, centred, rather than inline on the text's baseline, which sat it low and to the left of the orb's middle.
   .glyph {
+    display: block;
     height: calc(11px * var(--scale));
+    margin: auto;
     width: calc(11px * var(--scale));
   }
 
