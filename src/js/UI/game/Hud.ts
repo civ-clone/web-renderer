@@ -1,6 +1,7 @@
 import { GameData, Tile, Unit } from '../types';
 import Actions from '../components/Actions';
 import GameDetails from '../components/GameDetails';
+import NextTurn from '../components/NextTurn';
 import Notices from '../components/Notices';
 import PlayerDetails from '../components/PlayerDetails';
 import Portal from '../components/Portal';
@@ -9,6 +10,8 @@ import PowerList from '../components/PowerList';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
+import { interfaceMode } from '../lib/interfaceMode';
+import nextTurnQueue from '../lib/nextTurnQueue';
 import partitionActions from '../lib/playerActionPanels';
 import { t } from 'i18next';
 
@@ -21,6 +24,8 @@ import { t } from 'i18next';
 
 export type HudDeps = {
   actionArea: HTMLElement;
+  // The Next Turn button's units item (#702): the map centred on the active unit.
+  centreActiveUnit?: () => void;
   gameArea: HTMLElement;
   gameInfo: HTMLElement;
   // Page-scoped, and cleared by the `document` `endturn` event: its notices are added to the primary panel each time.
@@ -40,7 +45,9 @@ export type HudDeps = {
 
 export class Hud {
   #deps: HudDeps;
-  #primaryActions: Actions;
+  // Under the new interface (#735), the Next Turn button (#702) takes the primary panel's place.
+  #nextTurn: NextTurn | null = null;
+  #primaryActions: Actions | null = null;
   #secondaryActions: Actions;
   #unitActionButtons: UnitActions;
 
@@ -56,13 +63,26 @@ export class Hud {
       unitActionArea,
     } = deps;
 
-    this.#primaryActions = new Actions(actionArea, portal, transport);
+    if (interfaceMode() === 'new') {
+      this.#nextTurn = new NextTurn(actionArea, {
+        centreActiveUnit: deps.centreActiveUnit ?? (() => {}),
+        portal,
+        transport,
+      });
+    } else {
+      this.#primaryActions = new Actions(actionArea, portal, transport);
+    }
     this.#secondaryActions = new Actions(
       secondaryActionArea,
       portal,
       transport
     );
     this.#unitActionButtons = new UnitActions(unitActionArea, unitAction);
+  }
+
+  /** The Next Turn button, under the new interface: Enter and Shift+Enter press and skip it (`InputController`). */
+  nextTurn(): NextTurn | null {
+    return this.#nextTurn;
   }
 
   build(data: GameData, activeUnit: Unit | null, waiting: boolean): void {
@@ -83,7 +103,12 @@ export class Hud {
       waiting
     );
 
-    this.#primaryActions.build(primary, data.player);
+    this.#primaryActions?.build(primary, data.player);
+    this.#nextTurn?.build(
+      nextTurnQueue(primary, data.player.actions, waiting),
+      waiting,
+      data.player
+    );
 
     this.#secondaryActions.build(secondary);
 
@@ -92,7 +117,7 @@ export class Hud {
       activeUnit ? world.get(activeUnit.tile.x, activeUnit.tile.y) : null
     );
 
-    gameArea.append(this.#primaryActions.element());
+    gameArea.append(this.#deps.actionArea);
 
     const gameDetails = new GameDetails(
       gameInfo,

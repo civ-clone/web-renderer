@@ -1,0 +1,54 @@
+// The Next Turn button (#702), under the new interface (#735): a button of the button system (#740), primary when the
+//  turn is ready to end and secondary while something needs the player first, with what it is on one line and its
+//  place in the queue under it. Where the orbs were, at the bottom right of the map.
+// Not an `.action`, whose orb rules it would take: its own place in the column, taking the pointer as the orbs do.
+.ui-next-turn-holder {
+  margin: 0 1rem 1rem;
+  pointer-events: auto;
+  text-align: right;
+}
+
+.ui-next-turn {
+  align-items: flex-start;
+  box-shadow: var(--ui-shadow-orb);
+  display: inline-flex;
+  flex-direction: column;
+  gap: 0.1em;
+  max-width: 20rem;
+  min-height: 3.1rem;
+  min-width: 14rem;
+  padding: 0.5em 0.9em;
+  text-align: left;
+
+  // End turn: its glyph before the label, on one line.
+  &.btn-primary {
+    align-items: center;
+    flex-direction: row;
+    gap: 0.5em;
+  }
+
+  .glyph {
+    flex: none;
+    height: 1.4em;
+    width: 1.4em;
+  }
+
+  // The key's chip, at the end of the button.
+  &[data-hotkey]::after {
+    align-self: flex-end;
+  }
+
+  &.btn-primary[data-hotkey]::after {
+    align-self: center;
+    margin-left: auto;
+  }
+}
+
+.ui-next-turn-label {
+  font-weight: var(--type-strong-weight);
+}
+
+.ui-next-turn-place {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-caption-size);
+}

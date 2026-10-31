@@ -480,6 +480,13 @@ i18next.addResources('en', 'default', {
   'Observer.whole-map': 'The whole map',
   'Observer.watching': 'Watching: the computer players are taking their turns…',
 
+  'NextTurn.CityBuild':
+    'Choose production in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
+  'NextTurn.Keys.press': 'Do this',
+  'NextTurn.Keys.skip': 'Skip to the next',
+  'NextTurn.place': '{{place, number}} of {{count, number}}',
+  'NextTurn.units_one': '{{count, number}} unit needs orders',
+  'NextTurn.units_other': '{{count, number}} units need orders',
   'Notification.title': 'Notification',
 
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',

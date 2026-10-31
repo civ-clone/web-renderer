@@ -80,7 +80,8 @@ export class Notice extends Action {
       );
   }
 
-  private text(part: 'body' | 'title'): string {
+  // Its title and body, as the notice's window shows them: the Next Turn button names it by its title (#702).
+  text(part: 'body' | 'title'): string {
     const { notification } = this.value() as unknown as NoticeData;
 
     return t(`${notification.key}.${part}`, {

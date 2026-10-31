@@ -276,6 +276,13 @@ export class GameSession {
         }),
         hud = new Hud({
           actionArea,
+          centreActiveUnit: (): void => {
+            const unit = unitController.active();
+
+            if (unit !== null) {
+              mapView.centre(unit.tile);
+            }
+          },
           gameArea,
           gameInfo,
           notices,
@@ -643,6 +650,7 @@ export class GameSession {
         data: () => gameState.data(),
         gameMenu: gameMenuItem,
         mapView,
+        nextTurn: () => hud.nextTurn(),
         notificationBar,
         portal,
         transport,
