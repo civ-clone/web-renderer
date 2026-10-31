@@ -206,6 +206,85 @@ const run = async () => {
     expect('but not one about something else', shown(), null);
   }
 
+  // The review of #759: nothing left open over an anchor that's gone, and Escape elsewhere left to do its own thing.
+  {
+    const element = anchor();
+
+    tooltip(element, () => ({ title: 'Late', rows: [] }), { delay: 20 });
+    element.dispatchEvent(new Event('mouseenter'));
+    element.remove();
+    await wait(40);
+
+    expect(
+      'a pointer delay that ends after the anchor went opens nothing',
+      shown(),
+      null
+    );
+  }
+
+  {
+    const research = anchor();
+
+    tooltip(research, () => ({ title: 'Steam Engine', rows: [] }), {
+      key: 'research',
+    });
+    research.dispatchEvent(new Event('focus'));
+    research.remove();
+
+    // The top bar rebuilt with research done: only the treasury comes back.
+    tooltip(anchor(), () => ({ title: 'Treasury', rows: [] }), {
+      key: 'treasury',
+    });
+    await wait(10);
+
+    expect(
+      "one open over an anchor that's gone, with nothing in its place, closes",
+      shown(),
+      null
+    );
+  }
+
+  {
+    const element = anchor(),
+      elsewhere = anchor('button');
+
+    tooltip(element, () => ({ title: 'Treasury', rows: [] }));
+    element.dispatchEvent(new Event('focus'));
+
+    const pressed = escape(elsewhere);
+
+    expect(
+      'Escape pressed elsewhere closes it and goes on to do its own thing',
+      [shown(), pressed.defaultPrevented, pressed.cancelBubble],
+      [null, false, false]
+    );
+  }
+
+  {
+    const before = anchor();
+
+    tooltip(before, () => ({ title: 'Gold 120', rows: [] }), {
+      key: 'treasury',
+    });
+    before.dispatchEvent(new Event('focus'));
+    before.remove();
+
+    const after = anchor();
+    let focused = false;
+
+    after.addEventListener('focus', () => (focused = true));
+    tooltip(after, () => ({ title: 'Gold 95', rows: [] }), { key: 'treasury' });
+    await wait(10);
+
+    expect(
+      'opened by focus, it takes the focus with it to the new anchor',
+      [shown(), focused],
+      ['Gold 95', true]
+    );
+
+    hideTooltip();
+  }
+
   if (failures.length) {
     process.stderr.write(
       `FAIL tooltip\n${failures.map((failure) => `  ${failure}`).join('\n')}\n`

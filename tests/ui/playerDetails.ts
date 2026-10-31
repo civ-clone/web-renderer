@@ -129,6 +129,9 @@ const transport = {
     const element = document.createElement('div'),
       details = new PlayerDetails(element, data, withTransport, withReports);
 
+    // On the page, as the top bar is: a tooltip opens only over an item that is (#742).
+    document.body.append(element);
+
     details.build();
 
     return element;

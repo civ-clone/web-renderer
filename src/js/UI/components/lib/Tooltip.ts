@@ -21,6 +21,8 @@ interface Open {
   anchor: HTMLElement;
   content: () => TooltipContent;
   key: string | null;
+  // How it was opened, which says how it moves to an anchor that replaced its own.
+  via: 'hover' | 'focus';
 }
 
 const panelId = 'tooltip',
@@ -41,6 +43,19 @@ const panel = (): HTMLElement => {
   }
 
   return element;
+};
+
+// A selector a browser knows but the test DOM may not (`:hover`, `:focus-visible`), with what to assume without it.
+const matches = (
+  element: HTMLElement,
+  selector: string,
+  otherwise: boolean
+) => {
+  try {
+    return element.matches(selector);
+  } catch {
+    return otherwise;
+  }
 };
 
 // Set as text, not markup: the figures come with names in them.
@@ -67,8 +82,11 @@ const fill = (element: HTMLElement, { title, rows, total }: TooltipContent) => {
   element.replaceChildren(heading, list);
 };
 
-// Below the anchor, or above it where there's no room below, and kept inside the window.
+// Below the anchor, or above it where there's no room below, and kept inside the window. Measured from the corner,
+//  so where it was last time doesn't squeeze it.
 const place = (element: HTMLElement, anchor: HTMLElement) => {
+  element.style.left = element.style.top = '0';
+
   const box = anchor.getBoundingClientRect(),
     width = element.offsetWidth,
     height = element.offsetHeight,
@@ -90,14 +108,24 @@ const onEscape = (event: KeyboardEvent) => {
     return;
   }
 
-  // Only this: Escape that closes a tooltip doesn't close the window under it too.
-  event.preventDefault();
-  event.stopPropagation();
+  // Pressed on the item the tooltip is about, Escape closes only the tooltip; pressed anywhere else (in a window),
+  //  it does that too, and then whatever it does there.
+  if (event.target instanceof Node && open.anchor.contains(event.target)) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
 
   hideTooltip();
 };
 
+// Placed once, so it closes rather than drift from what it's about.
+const onMove = () => hideTooltip();
+
 const show = (current: Open) => {
+  if (!current.anchor.isConnected) {
+    return;
+  }
+
   const element = panel();
 
   if (open && open.anchor !== current.anchor) {
@@ -114,6 +142,8 @@ const show = (current: Open) => {
 
   current.anchor.setAttribute('aria-describedby', panelId);
   document.addEventListener('keydown', onEscape, true);
+  window.addEventListener('scroll', onMove, true);
+  window.addEventListener('resize', onMove);
 };
 
 /** Closes the tooltip that's open, if one is. */
@@ -127,6 +157,8 @@ export const hideTooltip = (): void => {
 
   panel().hidden = true;
   document.removeEventListener('keydown', onEscape, true);
+  window.removeEventListener('scroll', onMove, true);
+  window.removeEventListener('resize', onMove);
 };
 
 const focusable = (element: HTMLElement) =>
@@ -141,8 +173,10 @@ export const tooltip = (
   content: () => TooltipContent,
   { delay = 400, key = null }: TooltipOptions = {}
 ): HTMLElement => {
-  const current: Open = { anchor, content, key };
-  let timer: ReturnType<typeof setTimeout> | null = null;
+  const byHover: Open = { anchor, content, key, via: 'hover' },
+    byFocus: Open = { anchor, content, key, via: 'focus' };
+  let timer: ReturnType<typeof setTimeout> | null = null,
+    hovering = false;
 
   const cancel = () => {
     if (timer !== null) {
@@ -158,34 +192,70 @@ export const tooltip = (
   }
 
   anchor.addEventListener('mouseenter', () => {
+    hovering = true;
     cancel();
-    timer = setTimeout(() => show(current), delay);
+    timer = setTimeout(() => {
+      timer = null;
+
+      // Still there and still pointed at: the bar may have been rebuilt in the meantime.
+      if (hovering && anchor.isConnected) {
+        show(byHover);
+      }
+    }, delay);
   });
   anchor.addEventListener('mouseleave', () => {
+    hovering = false;
     cancel();
 
     if (open?.anchor === anchor) {
       hideTooltip();
     }
   });
-  anchor.addEventListener('focus', () => show(current));
+  // From the keyboard: a click focuses it too, and that shouldn't open it at once.
+  anchor.addEventListener('focus', () => {
+    if (matches(anchor, ':focus-visible', true)) {
+      show(byFocus);
+    }
+  });
   anchor.addEventListener('blur', () => {
     if (open?.anchor === anchor) {
       hideTooltip();
     }
   });
 
-  // The anchor it was open over has gone, and this one has taken its place: open over this instead, with what it says
-  //  now.
-  if (
-    key !== null &&
-    open !== null &&
-    open.key === key &&
-    !open.anchor.isConnected
-  ) {
-    queueMicrotask(() => {
-      if (anchor.isConnected && open?.key === key) {
-        show(current);
+  if (open !== null && !open.anchor.isConnected) {
+    const was = open;
+
+    // This anchor took the place of the one it was open over: open over this instead, with what it says now. Focus
+    //  goes back where it was; a pointer has to still be over it.
+    if (key !== null && was.key === key) {
+      queueMicrotask(() => {
+        if (open !== was || !anchor.isConnected) {
+          return;
+        }
+
+        if (was.via === 'focus') {
+          anchor.focus();
+          show(byFocus);
+
+          return;
+        }
+
+        show(byHover);
+
+        // The browser says what's under the pointer once it has laid the new anchor out.
+        setTimeout(() => {
+          if (open?.anchor === anchor && !matches(anchor, ':hover', true)) {
+            hideTooltip();
+          }
+        }, 50);
+      });
+    }
+
+    // Gone, with nothing in its place: after every anchor rebuilt with it has had its chance to take it over.
+    setTimeout(() => {
+      if (open === was) {
+        hideTooltip();
       }
     });
   }
