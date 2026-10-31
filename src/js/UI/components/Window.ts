@@ -270,8 +270,8 @@ export class Window
   }
 
   /**
-   * The new chrome (#738): an eyebrow over the title, the body, which is the part that scrolls, and a footer with a
-   *  hint and the window's actions, the primary last. A window's own footer, at the end of its body, is moved into it,
+   * The new chrome (#738): an eyebrow over the title, the body, which is the part that scrolls, and a footer with the
+   *  window's actions, the primary last, showing Enter. A window's own footer, at the end of its body, is moved into it,
    *  so no window needs to know which chrome it's in; one with none gets a quiet Close.
    */
   #buildNew(): void {
@@ -304,7 +304,7 @@ export class Window
         this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
       ),
       s(
-        '<footer class="ui-window-footer"><p class="ui-window-hint"></p><div class="ui-window-actions"></div></footer>'
+        '<footer class="ui-window-footer"><div class="ui-window-actions"></div></footer>'
       )
     );
 
@@ -313,7 +313,7 @@ export class Window
 
   // Moves the body's own footer (one that holds only buttons), or the primary button the body ends in, into the
   //  chrome's. The footer itself moves, so a window that keeps it and adds to it later still has it. What it then
-  //  holds is put in order, and the hint written, once the window has finished building (#738).
+  //  holds is put in order, and Enter shown on the primary, once the window has finished building (#738).
   #adoptFooter(): void {
     const footer = this.element().querySelector(':scope > .ui-window-footer'),
       actions = footer?.querySelector('.ui-window-actions');
@@ -358,7 +358,7 @@ export class Window
   }
 
   // The footer's buttons in order, the quiet first and the primary last, focus kept where it was, a quiet Close where
-  //  there are none, and the hint of what Enter and Escape do.
+  //  there are none, and Enter shown on the primary.
   #settleFooter(): void {
     const footer = this.element().querySelector(':scope > .ui-window-footer'),
       actions = footer?.querySelector(
@@ -419,22 +419,13 @@ export class Window
       );
     }
 
-    const primary = actions.querySelector('.btn-primary')?.textContent?.trim(),
-      cancel = actions
-        .querySelector('[aria-keyshortcuts="Escape"]')
-        ?.textContent?.trim(),
-      hint = footer.querySelector('.ui-window-hint') as HTMLElement;
+    // The primary's key on it, as Cancel has Esc.
+    const primary = actions.querySelector('.btn-primary');
 
-    hint.textContent =
-      primary || cancel
-        ? t('Window.hint', {
-            primary,
-            cancel,
-            context:
-              primary && cancel ? 'both' : primary ? 'primary' : 'cancel',
-            interpolation: { escapeValue: false },
-          })
-        : '';
+    if (primary instanceof HTMLElement && !primary.dataset.hotkey) {
+      primary.dataset.hotkey = 'Enter';
+      primary.setAttribute('aria-keyshortcuts', 'Enter');
+    }
   }
 
   // Enter runs the primary action, unless it's pressed on something that takes Enter itself. Caught on the way in,

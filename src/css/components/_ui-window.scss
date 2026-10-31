@@ -1,5 +1,5 @@
 // The new window chrome (#738), behind the interface flag (#735): an eyebrow over the title and a rule under it, the
-//  filter as part of the header, the body as the one part that scrolls, and a footer with a hint and the actions.
+//  filter as part of the header, the body as the one part that scrolls, and a footer with the actions.
 //  Beside `_window.scss`, which stays as it is until the switch-over; everything here is drawn from the theme.
 .window.ui-window {
   // To its content, between a floor and a ceiling, rather than a fixed minimum.
@@ -57,16 +57,6 @@
     flex: none;
     gap: 0.75em;
     padding: 0.5em 0.75em;
-  }
-
-  .ui-window-hint {
-    color: var(--ui-fg-muted);
-    font-size: var(--type-caption-size);
-    margin: 0 auto 0 0;
-
-    &:empty {
-      display: none;
-    }
   }
 
   .ui-window-actions {

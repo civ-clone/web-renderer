@@ -1,5 +1,5 @@
 // The new window chrome (#738), behind the interface flag (#735): the eyebrow over the title, the footer with its
-//  hint and the actions (a window's own footer moved there, the primary last, a quiet Close where there are none),
+//  actions (a window's own footer moved there, the primary last, a quiet Close where there are none),
 //  Enter for the primary, Escape for the cancel action, focus back where it was, and a copy that fades as the window
 //  closes. With the flag off, an action window is built exactly as before.
 
@@ -148,9 +148,15 @@ const run = async (): Promise<void> => {
       [['Cancel', 'Auto', 'Build'], null]
     );
     expect(
-      'with a hint of what Enter and Escape do',
-      window.element().querySelector('.ui-window-hint')?.textContent,
-      'Enter: Build · Esc: Cancel'
+      'with Enter shown on the primary',
+      (
+        window
+          .element()
+          .querySelector(
+            '.ui-window-actions .btn-primary'
+          ) as HTMLElement | null
+      )?.dataset.hotkey,
+      'Enter'
     );
 
     const enter = press(window.element(), 'Enter');
@@ -191,9 +197,15 @@ const run = async (): Promise<void> => {
       'a confirmation built with its own footer gets the same footer',
       [
         labels(window),
-        window.element().querySelector('.ui-window-hint')?.textContent,
+        (
+          window
+            .element()
+            .querySelector(
+              '.ui-window-actions .btn-primary'
+            ) as HTMLElement | null
+        )?.dataset.hotkey,
       ],
-      [['Cancel', 'OK'], 'Enter: OK · Esc: Cancel']
+      [['Cancel', 'OK'], 'Enter']
     );
 
     window.close();
@@ -218,9 +230,15 @@ const run = async (): Promise<void> => {
       [
         labels(window),
         form.contains(start),
-        window.element().querySelector('.ui-window-hint')?.textContent,
+        (
+          window
+            .element()
+            .querySelector(
+              '.ui-window-actions .btn-primary'
+            ) as HTMLElement | null
+        )?.dataset.hotkey,
       ],
-      [['Start'], false, 'Enter: Start']
+      [['Start'], false, 'Enter']
     );
 
     press(window.element(), 'Enter');
