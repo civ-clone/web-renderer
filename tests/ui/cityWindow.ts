@@ -19,10 +19,8 @@ import { City as CityData, GameData } from '../../src/js/UI/types';
 import i18next from 'i18next';
 import City from '../../src/js/UI/components/City';
 import CityBuildAction from '../../src/js/UI/components/Actions/CityBuild';
-import {
-  renderMeter,
-  turnsLeft,
-} from '../../src/js/UI/components/lib/cityYields';
+import progressBar from '../../src/js/UI/components/lib/ProgressBar';
+import { turnsLeft } from '../../src/js/UI/components/lib/cityYields';
 import Portal from '../../src/js/UI/components/Portal';
 import Transport from '../../src/js/UI/Transport';
 import { assetStore } from '../../src/js/UI/AssetStore';
@@ -665,7 +663,9 @@ const run = async (): Promise<void> => {
   // The food and shield meters (#686, #687): what's stored, then what next turn brings or a shortfall takes.
   {
     const meterOf = (screen: City, area: string) =>
-        screen.element().querySelector(`.${area} .meter`) as HTMLElement | null,
+        screen
+          .element()
+          .querySelector(`.${area} .progress-bar`) as HTMLElement | null,
       widths = (meter: HTMLElement | null) =>
         meter && {
           fill: (meter.querySelector('.fill') as HTMLElement).style.width,
@@ -825,7 +825,12 @@ const run = async (): Promise<void> => {
 
     expect(
       'a meter with no countable size is hidden',
-      renderMeter('Production', NaN, Infinity, 10).hidden,
+      progressBar({
+        group: 'Production',
+        stored: NaN,
+        capacity: Infinity,
+        perTurn: 10,
+      }).hidden,
       true
     );
   }

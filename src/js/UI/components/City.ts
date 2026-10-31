@@ -21,7 +21,6 @@ import cityMapLayout from '../lib/cityMapLayout';
 import { tileBounds } from '../lib/projection';
 import {
   renderFigures,
-  renderMeter,
   renderPopulation,
   turnsLeft,
   yieldIcon,
@@ -50,6 +49,7 @@ import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
 import isAnarchy from './lib/government';
+import progressBar from './lib/ProgressBar';
 import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';
@@ -393,7 +393,12 @@ const renderYields = (city: CityData): Node => {
       const perTurn = reduceKnownYield(city.yields, 'Production');
 
       return [
-        renderMeter('Production', progress, city.build.cost.value, perTurn),
+        progressBar({
+          group: 'Production',
+          stored: progress,
+          capacity: city.build.cost.value,
+          perTurn,
+        }),
         renderFigures(
           'Production',
           city.build,
@@ -423,12 +428,12 @@ const renderYields = (city: CityData): Node => {
       )}</span><span class="size">${t('City.Growth.size', {
         size: localeProvider.number(city.growth.size),
       })}</span></header></div>`,
-      renderMeter(
-        'Food',
-        city.growth.progress.value,
-        city.growth.cost.value,
-        perTurn
-      ),
+      progressBar({
+        group: 'Food',
+        stored: city.growth.progress.value,
+        capacity: city.growth.cost.value,
+        perTurn,
+      }),
       renderFigures(
         'Food',
         city.growth,

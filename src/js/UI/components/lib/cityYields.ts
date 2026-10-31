@@ -234,49 +234,6 @@ export const yieldIcon = (group: string): HTMLElement => {
 };
 
 /**
- * How far a city is towards growing or finishing its build, as a bar (#686, #687): the part already stored, then a
- *  striped part for what comes in next turn, or a red one for what a shortfall takes away. A tick marks every 10, as
- *  Civ1's food box has a column for each 10 (every 20 or more for a large cost, so they stay apart). Decorative: the
- *  figures are said in words alongside.
- */
-export const renderMeter = (
-  group: string,
-  stored: number,
-  capacity: number,
-  perTurn: number
-): HTMLElement => {
-  // None for a capacity that isn't a count (an item's cost is `Infinity` until one is chosen).
-  capacity = Number.isFinite(capacity) ? Math.max(0, capacity) : 0;
-
-  const meter = s(
-    `<div class="meter" data-yield="${group}" aria-hidden="true"><span class="fill"></span><span class="next"></span></div>`
-  );
-
-  if (capacity === 0) {
-    meter.hidden = true;
-
-    return meter;
-  }
-
-  const clamp = (value: number, max: number) =>
-      Number.isFinite(value) ? Math.max(0, Math.min(value, max)) : 0,
-    percent = (value: number) => `${(value / capacity) * 100}%`,
-    loss = perTurn < 0 ? clamp(-perTurn, clamp(stored, capacity)) : 0,
-    done = clamp(stored, capacity) - loss,
-    next = loss > 0 ? loss : clamp(perTurn, capacity - done),
-    tick = 10 * Math.ceil(capacity / 300),
-    [fill, coming] = Array.from(meter.children) as HTMLElement[];
-
-  fill.style.width = percent(done);
-  coming.style.width = percent(next);
-  coming.classList.toggle('loss', loss > 0);
-
-  meter.style.setProperty('--tick', percent(Math.min(tick, capacity)));
-
-  return meter;
-};
-
-/**
  * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left. The icon
  *  is decorative, so the yield is named for a screen reader.
  */

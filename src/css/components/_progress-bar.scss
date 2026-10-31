@@ -1,0 +1,65 @@
+// How far something is towards its goal (#686, #687, #742): the stored part, then a striped part for next turn's (red
+//  for a shortfall), over a tick every `--tick`, which `progressBar()` sets. The ticks are drawn after the fill, so over
+//  it. Its size is where it's used; everything else is the theme's.
+.progress-bar {
+  --tick: 100%;
+
+  background: var(--ui-bar-track);
+  border: 1px solid var(--ui-bar-edge);
+  border-radius: var(--ui-bar-radius);
+  box-shadow: var(--ui-bar-inset);
+  display: flex;
+  flex: none;
+  height: 0.875rem;
+  overflow: hidden;
+  position: relative;
+
+  .fill {
+    background: var(--colour);
+    box-shadow: var(--ui-bar-gloss);
+  }
+
+  .next {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--colour) 0 3px,
+      transparent 3px 6px
+    );
+    opacity: var(--ui-bar-next-opacity);
+
+    &.loss {
+      background: var(--y-short);
+      opacity: 1;
+    }
+  }
+
+  &::after {
+    background: linear-gradient(
+        to right,
+        transparent calc(100% - 1px),
+        var(--ui-bar-tick) 0
+      )
+      0 0 / var(--tick) 100% repeat-x;
+    content: '';
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  // The fill's colour: the yield's, from the theme.
+  &[data-yield='Food'] {
+    --colour: var(--y-food);
+  }
+
+  &[data-yield='Production'] {
+    --colour: var(--y-shield);
+  }
+
+  &[data-yield='Research'] {
+    --colour: var(--y-science);
+  }
+
+  &[data-yield='Gold'] {
+    --colour: var(--y-gold);
+  }
+}

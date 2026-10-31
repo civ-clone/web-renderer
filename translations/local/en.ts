@@ -517,6 +517,9 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Government.title': 'Government',
   'PlayerDetails.header': '{{leader}} of the {{nation}}',
   'PlayerDetails.opens': '{{title}} ({{opens}}, {{key}})',
+  'PlayerDetails.Researching.Breakdown.per-turn': 'Per turn',
+  'PlayerDetails.Researching.Breakdown.progress': 'Progress',
+  'PlayerDetails.Researching.Breakdown.turns': 'Done in',
   'PlayerDetails.Researching.detail_notresearching': 'choose an advance',
   'PlayerDetails.Researching.detail_notresearching-anarchy':
     'no research during Anarchy',
@@ -531,6 +534,10 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.TradeRates.rate': '{{name}} {{value, number}}%',
   'PlayerDetails.TradeRates.title':
     '$t(Actions.AdjustTradeRates.title) ({{key}})',
+  'PlayerDetails.Treasury.Breakdown.income': 'Income',
+  'PlayerDetails.Treasury.Breakdown.net': 'Net',
+  'PlayerDetails.Treasury.Breakdown.treasury': 'In the treasury',
+  'PlayerDetails.Treasury.Breakdown.upkeep': 'Upkeep',
   'PlayerDetails.Treasury.detail':
     '{{perTurn, number(signDisplay: exceptZero)}} / turn',
   'PlayerDetails.Treasury.detail_anarchy': 'no taxes during Anarchy',

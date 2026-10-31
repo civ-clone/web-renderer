@@ -145,56 +145,6 @@
     }
   }
 
-  // How far the city is towards growing or finishing its build (#686, #687): the stored part, then a striped part
-  //  for next turn's (red for a shortfall), over a tick every `--tick`. The ticks are drawn after the fill, so over it.
-  .meter {
-    --tick: 100%;
-
-    background: color-mix(in srgb, var(--ui-shade) 12%, transparent);
-    border: 1px solid color-mix(in srgb, var(--ui-shade) 35%, transparent);
-    border-radius: 2px;
-    box-shadow: inset 0 1px 2px
-      color-mix(in srgb, var(--ui-shade) 20%, transparent);
-    display: flex;
-    flex: none;
-    height: 0.875rem;
-    overflow: hidden;
-    position: relative;
-
-    .fill {
-      background: var(--colour);
-      box-shadow: inset 0 1px 0
-        color-mix(in srgb, var(--ui-light) 30%, transparent);
-    }
-
-    .next {
-      background: repeating-linear-gradient(
-        -45deg,
-        var(--colour) 0 3px,
-        transparent 3px 6px
-      );
-      opacity: 0.6;
-
-      &.loss {
-        background: var(--y-short);
-        opacity: 1;
-      }
-    }
-
-    &::after {
-      background: linear-gradient(
-          to right,
-          transparent calc(100% - 1px),
-          color-mix(in srgb, var(--ui-shade) 25%, transparent) 0
-        )
-        0 0 / var(--tick) 100% repeat-x;
-      content: '';
-      inset: 0;
-      pointer-events: none;
-      position: absolute;
-    }
-  }
-
   .figures {
     align-items: center;
     display: flex;

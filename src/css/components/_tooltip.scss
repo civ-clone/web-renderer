@@ -1,0 +1,56 @@
+// A tooltip with a breakdown (#742): a titled panel, the rows as a definition list, the total under a rule. Placed by
+//  `Tooltip.ts`; drawn over the rest by coming last in the document, with no stacking order of its own.
+.tooltip {
+  background: var(--ui-tooltip-bg);
+  border: 1px solid var(--ui-tooltip-edge);
+  border-radius: var(--ui-tooltip-radius);
+  box-shadow: var(--ui-tooltip-shadow);
+  color: var(--ui-tooltip-fg);
+  font-family: var(--font-ui);
+  font-size: var(--type-detail-size);
+  max-width: 20rem;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+
+  h4 {
+    background: var(--ui-tooltip-title-bg);
+    color: var(--ui-tooltip-title-fg);
+    font-family: var(--type-title-family);
+    font-size: 1em;
+    font-weight: var(--type-title-weight);
+    letter-spacing: var(--type-title-tracking);
+    margin: 0;
+    padding: 0.3em 0.6em;
+  }
+
+  dl {
+    column-gap: 1.5em;
+    display: grid;
+    grid-template-columns: auto auto;
+    margin: 0;
+    padding: 0.4em 0.6em;
+    row-gap: 0.15em;
+  }
+
+  dt {
+    color: var(--ui-tooltip-muted);
+  }
+
+  dd {
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+    text-align: right;
+  }
+
+  .total {
+    border-top: 1px solid var(--ui-tooltip-rule);
+    font-weight: var(--type-strong-weight);
+    margin-top: 0.2em;
+    padding-top: 0.2em;
+  }
+
+  dt.total {
+    color: inherit;
+  }
+}
