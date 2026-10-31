@@ -217,6 +217,12 @@ export class NextTurn extends Element {
 
     if (ready) {
       next.insertAdjacentHTML('afterbegin', glyph('end-turn'));
+    } else if (item && !this.#waiting) {
+      // A small orb in the tint the item's own orb has, so each kind has its colour (#702).
+      next.dataset.kind = item.kind === 'units' ? 'units' : item.action._;
+      next.prepend(
+        s('<span class="ui-next-turn-swatch" aria-hidden="true"></span>')
+      );
     }
 
     if (!ready && !this.#waiting && count > 0) {

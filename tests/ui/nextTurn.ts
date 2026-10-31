@@ -137,6 +137,15 @@ const run = async (): Promise<void> => {
     false,
   ]);
 
+  expect(
+    'each kind is marked for its tint, beside a swatch',
+    [
+      area.querySelector<HTMLElement>('.ui-next-turn')!.dataset.kind,
+      area.querySelector('.ui-next-turn-swatch') !== null,
+    ],
+    ['ChooseResearch', true]
+  );
+
   next.skip();
   next.skip();
 
@@ -260,6 +269,16 @@ const run = async (): Promise<void> => {
   });
 
   next.build(nextTurnQueue([end], [end], false), false, player);
+
+  expect(
+    'End turn has its glyph, not a swatch',
+    [
+      area.querySelector<HTMLElement>('.ui-next-turn')!.dataset.kind ?? null,
+      area.querySelector('.ui-next-turn-swatch'),
+      area.querySelector('.ui-next-turn .glyph') !== null,
+    ],
+    [null, null, true]
+  );
 
   expect('with nothing left, End turn, as the primary button', shown(), [
     'End turn',
