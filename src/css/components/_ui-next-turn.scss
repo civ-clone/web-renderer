@@ -55,6 +55,14 @@
     border-left: 4px solid var(--next-turn-tint);
   }
 
+  // Waiting: nothing to mark, so no room kept for it.
+  &:not([data-kind]):not(.btn-primary) {
+    grid-template-areas:
+      'label key'
+      'place key';
+    grid-template-columns: 1fr auto;
+  }
+
   // End turn: its glyph where the orb would be, the label alone beside it.
   &.btn-primary {
     grid-template-areas: 'mark label key';

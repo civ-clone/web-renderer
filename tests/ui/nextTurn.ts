@@ -193,6 +193,44 @@ const run = async (): Promise<void> => {
     false,
   ]);
 
+  // An item answered (its `Action` completes) goes at once, before the engine's update: Enter can't open it again.
+  {
+    const answeredArea = document.createElement('div'),
+      answered = new NextTurn(answeredArea, {
+        centreActiveUnit: () => {},
+        portal,
+        transport,
+      }),
+      government = action('ChooseGovernment', 'g', {
+        id: 'government',
+        available: [{ _: 'Monarchy' }],
+      });
+
+    document.body.append(answeredArea);
+    answered.build(
+      nextTurnQueue([government, research], [government, research], false),
+      false,
+      player
+    );
+    sent = [];
+    // One government to choose from: the list chooses it itself (a one-option list picks it).
+    answered.press();
+    await settle();
+
+    expect(
+      'an item answered leaves the queue at once, before the engine sends the actions again',
+      [
+        sent.map((message) => (message as [string, { name: string }])[1].name),
+        answeredArea.querySelector('.ui-next-turn-label')?.textContent,
+      ],
+      [['ChooseGovernment'], 'Choose research']
+    );
+
+    sent = [];
+    document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
+    answeredArea.remove();
+  }
+
   // Civil disorder doesn't hold up the turn: the engine offers End turn beside it.
   next.build(nextTurnQueue([disorder, end], [end], false), false, player);
 

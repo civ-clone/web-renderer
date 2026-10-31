@@ -119,11 +119,28 @@ export class NextTurn extends Element {
     // Seen, and gone from the queue for the turn: opening a notice's window dismisses it, and civil disorder stays an
     //  action until it's put right, and doesn't hold up the turn. Now, as nothing the engine sends may follow.
     if (['CivilDisorder', 'Notice'].includes(item.action._)) {
-      this.#seen.add(item.id);
-      this.#items = this.#items.filter((other) => other !== item);
-      this.#index = Math.min(this.#index, Math.max(0, this.#items.length - 1));
-      this.#draw();
+      this.#drop(item.id);
     }
+  }
+
+  // Out of the queue for the rest of the turn, and the button on to what took its place.
+  #drop(id: string): void {
+    const index = this.#items.findIndex((item) => item.id === id);
+
+    this.#seen.add(id);
+
+    if (index === -1) {
+      return;
+    }
+
+    this.#items = this.#items.filter((item) => item.id !== id);
+
+    if (index < this.#index) {
+      this.#index--;
+    }
+
+    this.#index = Math.min(this.#index, Math.max(0, this.#items.length - 1));
+    this.#draw();
   }
 
   /** On to the next item, back to the first after the last. End turn is one of them when it's offered, which is when
@@ -164,6 +181,10 @@ export class NextTurn extends Element {
       if (action === null) {
         return null;
       }
+
+      // Answered (a build or an advance chosen): gone at once, as its orb would be, rather than there to open again
+      //  until the engine's next update arrives.
+      action.element().addEventListener('actioned', () => this.#drop(item.id));
 
       this.#actions.set(id, action);
     }
