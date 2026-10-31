@@ -106,6 +106,12 @@ const tile = (unit: UnitData): HTMLElement => {
   return row;
 };
 
+// The player's other units on the unit's square.
+const othersOf = (unit: UnitData): UnitData[] =>
+  unit.tile.units.filter(
+    (other) => other.id !== unit.id && other.player?.id === unit.player?.id
+  );
+
 const isVeteran = (unit: UnitData): boolean =>
   unit.improvements.some(({ _ }) => _ === 'Veteran');
 
@@ -148,6 +154,8 @@ export class UnitCard extends Element {
   #actions = s('<div class="ui-unit-card-actions"></div>');
   // How many portraits a row was drawn with, so a card that's wider or narrower than it was redraws them (#743).
   #drawnPerRow: number | null = null;
+  #othersSection: HTMLElement | null = null;
+  #resizePending = false;
   #deps: UnitCardDeps;
   #shown: string | null = null;
   #unit: UnitData | null = null;
@@ -170,13 +178,24 @@ export class UnitCard extends Element {
           return;
         }
 
-        if (
-          this.#drawnPerRow !== null &&
-          this.#perRow(nativeTileSize(currentTileset()) * 2) !==
-            this.#drawnPerRow
-        ) {
-          this.build();
+        // On the next frame, not in this callback: redrawing changes the card's height, which this is watching.
+        if (this.#resizePending) {
+          return;
         }
+
+        this.#resizePending = true;
+
+        requestAnimationFrame((): void => {
+          this.#resizePending = false;
+
+          if (
+            this.#drawnPerRow !== null &&
+            this.#perRow(nativeTileSize(currentTileset()) * 2) !==
+              this.#drawnPerRow
+          ) {
+            this.#redrawOthers();
+          }
+        });
       });
 
       observer.observe(element);
@@ -212,6 +231,7 @@ export class UnitCard extends Element {
       .forEach((child) => child.remove());
 
     this.#drawnPerRow = null;
+    this.#othersSection = null;
 
     if (unit === null) {
       return;
@@ -270,13 +290,28 @@ export class UnitCard extends Element {
     element.insertBefore(movePips(unit), this.#actions);
     element.insertBefore(tile(unit), this.#actions);
 
-    const others = unit.tile.units.filter(
-      (other) => other.id !== unit.id && other.player?.id === unit.player?.id
-    );
+    const others = othersOf(unit);
 
     if (others.length) {
-      element.append(this.#others(unit, others));
+      this.#othersSection = this.#others(unit, others);
+
+      element.append(this.#othersSection);
     }
+  }
+
+  // Only the other units, so the focus anywhere else on the card stays where it is.
+  #redrawOthers(): void {
+    const unit = this.#unit,
+      previous = this.#othersSection;
+
+    if (unit === null || previous === null || !previous.isConnected) {
+      return;
+    }
+
+    const next = this.#others(unit, othersOf(unit));
+
+    previous.replaceWith(next);
+    this.#othersSection = next;
   }
 
   // The other units on the square at the portrait's size (#721), two rows at most and a "+N" for the rest, under an

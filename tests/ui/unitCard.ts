@@ -207,6 +207,19 @@ const run = async (): Promise<void> => {
     ).click();
 
     expect('which opens the city', opened, ['Roma']);
+
+    details.update({
+      ...active,
+      city: { ...rome, name: "Smith's & Sons" },
+    } as unknown as Unit);
+
+    expect(
+      'a name with & or an apostrophe is shown as it is',
+      text(element, 'button.ui-unit-card-home'),
+      "Smith's & Sons"
+    );
+
+    details.update(active);
     expect(
       'the square: its terrain, features, improvements and where it is',
       text(element, '.ui-unit-card-tile'),
