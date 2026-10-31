@@ -9,7 +9,7 @@ import UnitSelectionWindow from './UnitSelectionWindow';
 import { cityName } from './lib/city';
 import glyph, { GlyphName } from '../lib/glyphs';
 import statPill from './lib/StatPill';
-import tooltip from './lib/Tooltip';
+import tooltip, { hideTooltipWithin } from './lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
@@ -283,7 +283,17 @@ export class UnitCard extends Element {
 
   build(): void {
     const element = this.element(),
-      unit = this.#unit;
+      unit = this.#unit,
+      // A keyboard player reading the defence bonus keeps their place on it.
+      bonusFocused =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement.classList.contains(
+          'ui-unit-card-defence-bonus'
+        ) &&
+        element.contains(document.activeElement);
+
+    // Its anchor is about to go, which fires no `blur` or `mouseleave` to close it.
+    hideTooltipWithin(element);
 
     Array.from(element.children)
       .filter((child) => child !== this.#actions)
@@ -358,6 +368,12 @@ export class UnitCard extends Element {
       this.#othersSection = this.#others(unit, others);
 
       element.append(this.#othersSection);
+    }
+
+    if (bonusFocused) {
+      element
+        .querySelector<HTMLElement>('.ui-unit-card-defence-bonus')
+        ?.focus();
     }
   }
 

@@ -684,6 +684,44 @@ const run = async (): Promise<void> => {
       element.contains(document.activeElement),
       false
     );
+
+    // The defence bonus: its tooltip closes when the card is redrawn under it, and the focus stays on it.
+    const { element: bonusCard, details: bonusDetails } = card(),
+      fortified = (moves: number) =>
+        unit('Unit-1', {
+          moves: value(moves),
+          defenceBonus: {
+            multiplier: 2,
+            sources: [{ name: 'Hills', multiplier: 2 }],
+          },
+        }),
+      panel = () => document.getElementById('tooltip');
+
+    bonusDetails.update(fortified(1));
+
+    const bonusAnchor = bonusCard.querySelector(
+      '.ui-unit-card-defence-bonus'
+    ) as HTMLElement;
+
+    bonusAnchor.focus();
+    bonusAnchor.dispatchEvent(new Event('focus'));
+
+    expect('the bonus tooltip is open', panel()?.hidden, false);
+
+    bonusDetails.update(fortified(0));
+
+    expect(
+      'a redraw closes it, and the focus moves to the new bonus',
+      [
+        panel()?.hidden ?? true,
+        (document.activeElement as HTMLElement | null)?.classList.contains(
+          'ui-unit-card-defence-bonus'
+        ),
+        bonusCard.contains(document.activeElement),
+      ],
+      [true, true, true]
+    );
+
     HTMLElement.prototype.focus = focus;
     delete (document as any).activeElement;
   }
