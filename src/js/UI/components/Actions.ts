@@ -13,6 +13,7 @@ import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
 import Transport from '../Transport';
 import { getClosestAncestorMatching } from '../lib/html';
+import { hideTooltipWithin } from './lib/Tooltip';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 
 declare global {
@@ -148,6 +149,9 @@ export class Actions extends Element implements IActions {
 
   build(actions: PlayerAction[], player?: Player): void {
     this.unbindEvents();
+
+    // An action's tooltip goes with it (#703).
+    hideTooltipWithin(this.element());
 
     this.empty();
 

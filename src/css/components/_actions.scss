@@ -62,6 +62,12 @@
         position: absolute;
         top: 0;
         width: 100%;
+
+        // Without the pulse, a steady glow, so it still stands out (#703).
+        @media (prefers-reduced-motion: reduce) {
+          animation: none;
+          opacity: 0.25;
+        }
       }
     }
 
@@ -122,8 +128,7 @@
     margin: 0 0 0 0.5em;
 
     button {
-      height: 2rem;
-      width: 2rem;
+      --orb-size: 2rem;
     }
   }
 }

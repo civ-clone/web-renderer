@@ -6,9 +6,8 @@
   gap: 0.5rem;
 
   button {
+    --orb-size: 2.5rem;
     @include action-button.main();
-    height: 2.5rem;
-    width: 2.5rem;
     @include action-button.background-gradient-silver-ring();
     @include action-button.white-child-svg();
   }

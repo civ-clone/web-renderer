@@ -161,6 +161,14 @@ export const hideTooltip = (): void => {
   window.removeEventListener('resize', onMove);
 };
 
+/** Closes the tooltip that's open, if its anchor is in `container`: for an anchor about to go, which fires no `mouseleave`
+ *  or `blur` as it does. */
+export const hideTooltipWithin = (container: Node): void => {
+  if (open !== null && container.contains(open.anchor)) {
+    hideTooltip();
+  }
+};
+
 const focusable = (element: HTMLElement) =>
   element.matches('a[href], button, input, select, textarea, [tabindex]');
 

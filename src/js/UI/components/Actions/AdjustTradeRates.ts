@@ -85,14 +85,15 @@ export class AdjustTradeRates extends Action {
   }
 
   build(): void {
+    // `Plus` is `tradeRatesKey` as `aria-keyshortcuts` writes it, where `+` joins keys.
     assetStore
       .spriteURL(spriteKey(currentTileset(), 'city/trade'))
       .then((url) =>
         this.append(
           s(
-            `<button class="btn-bare adjustTradeRates small" title="${t(
+            `<button class="btn-bare adjustTradeRates small" aria-keyshortcuts="Plus" title="${t(
               'Actions.AdjustTradeRates.title'
-            )} (${tradeRatesKey})"><img src="${url}"></button>`
+            )}"><img src="${url}"></button>`
           )
         )
       );
