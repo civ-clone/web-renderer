@@ -75,6 +75,10 @@
     gap: 0.5em;
     justify-content: flex-end;
     margin-left: auto;
+    // A window's own footer, moved here whole: its buttons lie among the rest.
+    > footer {
+      display: contents;
+    }
   }
 }
 

@@ -8,6 +8,7 @@ import './lib/dom';
 
 import ActionWindow from '../../src/js/UI/components/ActionWindow';
 import ConfirmationWindow from '../../src/js/UI/components/ConfirmationWindow';
+import LoadGameWindow from '../../src/js/UI/components/LoadGameWindow';
 import Window from '../../src/js/UI/components/Window';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 import i18next from 'i18next';
@@ -27,6 +28,9 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
     );
   }
 };
+
+// The footer is put in order once the window has finished building: a tick later.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 const press = (target: EventTarget, key: string): KeyboardEvent => {
     const event = new KeyboardEvent('keydown', {
@@ -54,6 +58,7 @@ const run = async (): Promise<void> => {
     const window = new ActionWindow('Notice', 'Body', {
       actions: { cancel: { label: 'Cancel', action: () => {}, cancel: true } },
     });
+    await settle();
 
     expect(
       'with the flag off, an action window is built as before',
@@ -78,6 +83,7 @@ const run = async (): Promise<void> => {
     const window = new Window('Trade report', 'Body', {
       classes: 'trade-report',
     });
+    await settle();
 
     expect(
       'a report says what it is and its key over its title',
@@ -110,6 +116,7 @@ const run = async (): Promise<void> => {
 
   {
     const window = new Window('Plain', 'Body');
+    await settle();
 
     expect(
       'a window with no eyebrow has none',
@@ -133,6 +140,7 @@ const run = async (): Promise<void> => {
         },
       },
     });
+    await settle();
 
     expect(
       "the window's own buttons move into the footer, the quiet first and the primary last",
@@ -177,6 +185,7 @@ const run = async (): Promise<void> => {
     let confirmed = 0;
 
     const window = new ConfirmationWindow('Retire', 'Sure?', () => confirmed++);
+    await settle();
 
     expect(
       'a confirmation built with its own footer gets the same footer',
@@ -202,6 +211,7 @@ const run = async (): Promise<void> => {
     form.append(document.createElement('table'), start);
 
     const window = new Window('Game setup', form);
+    await settle();
 
     expect(
       'a window that ends in its primary button alone has it moved into the footer, with no Close',
@@ -224,6 +234,7 @@ const run = async (): Promise<void> => {
     restart.textContent = 'Start';
     again.append(restart);
     window.update(again);
+    await settle();
 
     expect(
       'a body drawn again replaces the buttons moved from it',
@@ -249,8 +260,10 @@ const run = async (): Promise<void> => {
 
     const window = new Window('Opened', 'Body');
 
-    window.close();
+    // As the window closes, focus has gone from the page with it.
     delete (document as any).activeElement;
+    await settle();
+    window.close();
 
     expect(
       'closing gives focus back to what had it as the window opened',
@@ -264,6 +277,7 @@ const run = async (): Promise<void> => {
     await new Promise((resolve) => setTimeout(resolve, 250));
 
     const window = new Window('Fading', 'Body');
+    await settle();
 
     window.close();
 
@@ -283,6 +297,162 @@ const run = async (): Promise<void> => {
     await new Promise((resolve) => setTimeout(resolve, 250));
 
     expect('and goes', document.querySelector('.ui-window-ghost'), null);
+  }
+
+  // The review of #760.
+  {
+    // Load game keeps its footer and adds to it once the window is built.
+    const footer = document.createElement('footer'),
+      body = document.createElement('div');
+
+    body.append(document.createElement('table'), footer);
+
+    const window = new Window('Load a game', body);
+    const fromFile = document.createElement('button');
+
+    fromFile.className = 'btn-secondary';
+    fromFile.textContent = 'From a file';
+    footer.append(fromFile);
+    await settle();
+
+    expect(
+      'a footer added to after the window is built keeps its buttons, with no Close beside them',
+      [
+        labels(window),
+        footer.isConnected,
+        window.element().querySelector('.ui-window-close'),
+      ],
+      [['From a file'], true, null]
+    );
+
+    window.close();
+  }
+
+  {
+    // The real one: it adds its From a file button to its footer once built, and with no saves focuses it. It reads a
+    //  table body's `rows`, which the test DOM doesn't have, so it's given them here.
+    const section = Object.getPrototypeOf(document.createElement('tbody'));
+
+    if (!('rows' in section)) {
+      Object.defineProperty(section, 'rows', {
+        configurable: true,
+        get(this: HTMLElement) {
+          return Array.from(this.querySelectorAll('tr'));
+        },
+      });
+    }
+
+    const window = new LoadGameWindow([], async () => null);
+
+    await settle();
+
+    expect(
+      'Load game keeps its From a file button, with no Close beside it',
+      labels(window),
+      ['Load from a file…']
+    );
+
+    window.close();
+  }
+
+  {
+    const card = document.createElement('div'),
+      note = document.createElement('footer');
+
+    note.textContent = 'From the Civilopedia';
+    card.append(note);
+
+    const window = new Window('Entry', card);
+
+    await settle();
+
+    expect(
+      "a footer that isn't buttons stays where it is",
+      [card.contains(note), labels(window)],
+      [true, ['Close']]
+    );
+
+    window.close();
+  }
+
+  {
+    let started = 0;
+
+    const form = document.createElement('div'),
+      details = document.createElement('details'),
+      summary = document.createElement('summary'),
+      start = document.createElement('button');
+
+    details.append(summary);
+    start.className = 'btn-primary';
+    start.textContent = 'Start';
+    start.addEventListener('click', () => started++);
+    form.append(details, start);
+
+    const window = new Window('Game setup', form);
+
+    await settle();
+    press(summary, 'Enter');
+
+    const repeat = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'Enter',
+      repeat: true,
+    });
+
+    // Not every DOM takes `repeat` from the options.
+    Object.defineProperty(repeat, 'repeat', { value: true });
+
+    window.element().dispatchEvent(repeat);
+
+    expect(
+      'Enter on a summary opens it, and a held Enter presses nothing',
+      started,
+      0
+    );
+
+    window.update(document.createElement('p'));
+    await settle();
+
+    expect(
+      'a body drawn again without its Start leaves none behind',
+      labels(window),
+      ['Close']
+    );
+
+    window.close();
+  }
+
+  {
+    const opener = document.createElement('button'),
+      next = document.createElement('button');
+    let focused = 0;
+
+    document.body.append(opener, next);
+    opener.addEventListener('focus', () => focused++);
+
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => opener,
+    });
+
+    const window = new Window('Notice', 'Body');
+
+    // Closing it opens the next notice, which takes focus.
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => next,
+    });
+    await settle();
+    window.close();
+    delete (document as any).activeElement;
+
+    expect(
+      'focus that has gone somewhere new as it closes stays there',
+      focused,
+      0
+    );
   }
 
   applyInterface('classic', null);

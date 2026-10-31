@@ -67,6 +67,9 @@ export class Window
   #newChrome: boolean = interfaceMode() === 'new';
   // What had focus as the window opened, to have it back as it closes (#738).
   #opener: HTMLElement | null = null;
+  // What the new chrome moved out of the body into its footer, and where from: put back before the window is built
+  //  again, so the body it's built from is whole (#738).
+  #adopted: [Element, Element][] = [];
   #title: string;
 
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
@@ -166,6 +169,7 @@ export class Window
   }
 
   build(): void {
+    this.#restoreAdopted();
     this.empty();
 
     if (this.#newChrome) {
@@ -307,54 +311,111 @@ export class Window
     this.#adoptFooter();
   }
 
-  // Moves the body's own footer, or the primary button it ends in, into the chrome's, the quiet buttons first and the
-  //  primary last, and says what Enter and Escape do. With nothing to move, a window that can close gets a quiet Close.
+  // Moves the body's own footer (one that holds only buttons), or the primary button the body ends in, into the
+  //  chrome's. The footer itself moves, so a window that keeps it and adds to it later still has it. What it then
+  //  holds is put in order, and the hint written, once the window has finished building (#738).
   #adoptFooter(): void {
     const footer = this.element().querySelector(':scope > .ui-window-footer'),
-      actions = footer?.querySelector('.ui-window-actions'),
-      own = this.element().querySelector(
-        ':scope > .body > footer:last-child, :scope > .body > :last-child > footer:last-child'
-      );
+      actions = footer?.querySelector('.ui-window-actions');
 
     if (!footer || !actions) {
       return;
     }
 
-    // A window that ends in its primary button alone (Game setup's Start, Resume) has that moved too.
-    const lone = this.element().querySelector(
-      ':scope > .body > button.btn-primary:last-child, :scope > .body > :last-child > button.btn-primary:last-child'
+    const own = Array.from(
+        this.element().querySelectorAll(
+          ':scope > .body > footer:last-child, :scope > .body > :last-child > footer:last-child'
+        )
+      ).find((candidate) =>
+        // Buttons, or nothing yet: not a footer of words.
+        Array.from(candidate.childNodes).every((node) =>
+          node instanceof Element
+            ? node.matches('button')
+            : !node.textContent?.trim()
+        )
+      ),
+      lone = this.element().querySelector(
+        ':scope > .body > button.btn-primary:last-child, :scope > .body > :last-child > button.btn-primary:last-child'
+      );
+
+    this.#adopted = [own, lone]
+      .filter((item): item is Element => item !== null && item !== undefined)
+      .map((item) => [item, item.parentElement!]);
+
+    // A body drawn again brings its own buttons, or none: what the last one gave goes either way.
+    actions.replaceChildren(
+      ...([own, lone].filter(
+        (item) => item !== null && item !== undefined
+      ) as Element[])
     );
 
-    // A body drawn again brings its buttons again: they replace the ones moved from it before.
-    if (own || lone) {
-      actions.replaceChildren();
+    queueMicrotask(() => this.#settleFooter());
+  }
+
+  #restoreAdopted(): void {
+    this.#adopted.forEach(([element, parent]) => parent.append(element));
+    this.#adopted = [];
+  }
+
+  // The footer's buttons in order, the quiet first and the primary last, focus kept where it was, a quiet Close where
+  //  there are none, and the hint of what Enter and Escape do.
+  #settleFooter(): void {
+    const footer = this.element().querySelector(':scope > .ui-window-footer'),
+      actions = footer?.querySelector(
+        '.ui-window-actions'
+      ) as HTMLElement | null;
+
+    if (!footer || !actions) {
+      return;
     }
+
+    const rank = (element: Element) =>
+        element.classList.contains('btn-quiet')
+          ? 0
+          : element.classList.contains('btn-primary')
+          ? 2
+          : 1,
+      focused = document.activeElement;
+
+    [
+      actions,
+      ...Array.from(actions.querySelectorAll(':scope > footer')),
+    ].forEach((holder) => {
+      const buttons = Array.from(holder.children).filter((child) =>
+        child.matches('button')
+      );
+
+      buttons
+        .sort((a, b) => rank(a) - rank(b))
+        .forEach((button) => holder.append(button));
+    });
+
+    // Moving a button takes focus off it.
+    if (focused instanceof HTMLElement && actions.contains(focused)) {
+      focused.focus();
+    }
+
+    // The window's own footer before its lone primary, which goes last.
+    const lone = actions.querySelector(':scope > button.btn-primary');
 
     if (lone) {
       actions.append(lone);
     }
 
-    if (own) {
-      const rank = (element: Element) =>
-        element.classList.contains('btn-quiet')
-          ? 0
-          : element.classList.contains('btn-primary')
-          ? 2
-          : 1;
+    actions.querySelector(':scope > .ui-window-close')?.remove();
 
-      actions.replaceChildren(
-        ...[...Array.from(own.children), ...Array.from(actions.children)].sort(
-          (a, b) => rank(a) - rank(b)
-        )
-      );
-      own.remove();
-    }
-
-    if (actions.children.length === 0 && this.options.canClose) {
+    if (!actions.querySelector('button') && this.options.canClose) {
       actions.append(
-        h(button(t('Window.close'), { variant: 'quiet', hotkey: 'Escape' }), {
-          click: () => this.close(),
-        })
+        h(
+          button(t('Window.close'), {
+            variant: 'quiet',
+            hotkey: 'Escape',
+            className: 'ui-window-close',
+          }),
+          {
+            click: () => this.close(),
+          }
+        )
       );
     }
 
@@ -384,10 +445,12 @@ export class Window
       (event: KeyboardEvent) => {
         if (
           event.key !== 'Enter' ||
+          event.repeat ||
+          event.isComposing ||
           (event.target instanceof Element &&
             event.target !== this.element() &&
             event.target.closest(
-              'button, a[href], input, select, textarea, [contenteditable]'
+              'button, a[href], input, select, textarea, summary, [contenteditable], [role="button"]'
             ))
         ) {
           return;
@@ -397,7 +460,7 @@ export class Window
           ':scope > .ui-window-footer .btn-primary'
         ) as HTMLButtonElement | null;
 
-        if (!primary || primary.disabled) {
+        if (!primary || primary.disabled || primary.closest('[hidden]')) {
           return;
         }
 
@@ -446,11 +509,24 @@ export class Window
 
     this.emit(new CustomEvent('close'));
 
-    // Back to what had focus as it opened, where that's still there (#738).
-    if (this.#opener?.isConnected) {
-      this.#opener.focus();
+    if (this.#newChrome) {
+      const active = document.activeElement;
 
-      return;
+      // Something has focus already: the window that closing this one opened (the next notice).
+      if (
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        active.isConnected
+      ) {
+        return;
+      }
+
+      // Back to what had focus as it opened, where that can take it (#738); not behind a modal window, say.
+      this.#opener?.focus();
+
+      if (this.#opener !== null && document.activeElement === this.#opener) {
+        return;
+      }
     }
 
     const windows = document.querySelectorAll('dialog.window');
@@ -465,7 +541,8 @@ export class Window
   display(focus = this.options.autofocus): void {
     this.#closed = false;
 
-    if (this.#newChrome) {
+    // Once: shown again, it would find its own focus.
+    if (this.#newChrome && this.#opener === null) {
       const active = document.activeElement;
 
       this.#opener =
@@ -494,6 +571,8 @@ export class Window
     if (
       !this.element().isConnected ||
       this.hasClass('maximised') ||
+      // A copy of a canvas is blank.
+      this.element().querySelector('canvas') ||
       window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
     ) {
       return;
@@ -503,7 +582,14 @@ export class Window
       ghost = this.element().cloneNode(true) as HTMLElement,
       shell = document.createElement('div');
 
-    ghost.removeAttribute('id');
+    // Not a second element of the same id, nor anything that can take focus.
+    [ghost, ...Array.from(ghost.querySelectorAll('[id], [for]'))].forEach(
+      (element) => {
+        element.removeAttribute('id');
+        element.removeAttribute('for');
+      }
+    );
+    shell.setAttribute('inert', '');
     // Drawn as the window was, where it was: without the classes that place it or lift it into a stacking order.
     shell.className = [
       ...Array.from(this.element().classList).filter(
