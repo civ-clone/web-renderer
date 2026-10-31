@@ -9,6 +9,7 @@ import UnitSelectionWindow from './UnitSelectionWindow';
 import { cityName } from './lib/city';
 import glyph, { GlyphName } from '../lib/glyphs';
 import statPill from './lib/StatPill';
+import tooltip from './lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
@@ -77,11 +78,55 @@ const stats = (unit: UnitData): HTMLElement =>
     )
   );
 
-// The square: its terrain, then its features and improvements, and where it is.
-const tile = (unit: UnitData): HTMLElement => {
-  const row = s('<p class="ui-unit-card-tile"></p>');
+// What gives a defence bonus, as the engine names it (#743): a terrain, City Walls or Fortified.
+const sourceName = (name: string): string =>
+  t(
+    [
+      `world:${name}.name`,
+      `city:Improvement.${name}.name`,
+      `unit:Improvement.${name}.name`,
+    ],
+    { defaultValue: name, interpolation: { escapeValue: false } }
+  );
 
-  row.textContent = text('UnitDetails.tile', {
+// The unit's defence bonus where it stands, from the engine (#743, #274), with what gives it in the tooltip.
+const defenceBonus = (unit: UnitData): HTMLElement | null => {
+  const bonus = unit.defenceBonus;
+
+  if (!bonus) {
+    return null;
+  }
+
+  const element = s('<span class="ui-unit-card-defence-bonus"></span>');
+
+  element.textContent = text('UnitCard.defence-bonus', {
+    bonus: bonus.multiplier - 1,
+  });
+
+  tooltip(element, () => ({
+    title: text('UnitCard.defence-bonus.title'),
+    rows: bonus.sources.map(({ name, multiplier }) => [
+      sourceName(name),
+      text('UnitCard.multiplier', { value: multiplier }),
+    ]),
+  }));
+
+  return element;
+};
+
+// The square: its terrain, then its features and improvements, and where it is, then the defence bonus it gives.
+const tile = (unit: UnitData): HTMLElement => {
+  const row = s('<p class="ui-unit-card-tile"></p>'),
+    where = s('<span></span>'),
+    bonus = defenceBonus(unit);
+
+  row.append(where);
+
+  if (bonus) {
+    row.append(bonus);
+  }
+
+  where.textContent = text('UnitDetails.tile', {
     parts: [
       text(`${unit.tile.terrain._}.name`, {
         defaultValue: unit.tile.terrain._,
@@ -129,6 +174,7 @@ const shown = (unit: UnitData | null): string =>
         unit.movement.value,
         unit.attack.value,
         unit.defence.value,
+        unit.defenceBonus ?? null,
         unit.visibility.value,
         unit.city?.id,
         unit.city?.name,

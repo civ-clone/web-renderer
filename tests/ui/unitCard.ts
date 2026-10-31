@@ -146,6 +146,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-world/en');
+  await import('../../translations/civ1-city-improvement/en');
 
   const active = unit('Unit-1', {
       busy: { _: 'Fortifying' },
@@ -225,6 +226,77 @@ const run = async (): Promise<void> => {
       text(element, '.ui-unit-card-tile'),
       'Grassland, Shield, Road (12, 34)'
     );
+    expect(
+      'no defence bonus, so none shown',
+      element.querySelector('.ui-unit-card-defence-bonus'),
+      null
+    );
+
+    details.update({
+      ...active,
+      defenceBonus: {
+        multiplier: 3,
+        sources: [
+          { name: 'Hills', multiplier: 2 },
+          { name: 'Fortified', multiplier: 1.5 },
+        ],
+      },
+    } as unknown as Unit);
+
+    const bonus = element.querySelector(
+      '.ui-unit-card-defence-bonus'
+    ) as HTMLElement;
+
+    expect(
+      'the defence bonus the engine sends, after the square',
+      [
+        text(element, '.ui-unit-card-tile'),
+        bonus?.parentElement?.classList.contains('ui-unit-card-tile'),
+      ],
+      ['Grassland, Shield, Road (12, 34)+200% defense', true]
+    );
+
+    bonus.dispatchEvent(new Event('focus'));
+
+    const panel = document.getElementById('tooltip')!;
+
+    expect(
+      'what gives it, in its tooltip',
+      [
+        panel.hidden,
+        panel.querySelector('h4')?.textContent,
+        Array.from(panel.querySelectorAll('dt, dd')).map(
+          (cell) => cell.textContent
+        ),
+      ],
+      [false, 'Defense bonus', ['Hills', '×2', 'Fortified', '×1.5']]
+    );
+
+    bonus.dispatchEvent(new Event('blur'));
+
+    details.update({
+      ...active,
+      defenceBonus: {
+        multiplier: 3,
+        sources: [{ name: 'CityWalls', multiplier: 3 }],
+      },
+    } as unknown as Unit);
+
+    (
+      element.querySelector('.ui-unit-card-defence-bonus') as HTMLElement
+    ).dispatchEvent(new Event('focus'));
+
+    expect(
+      'City Walls by name, and the card redrawn when only the bonus changed',
+      Array.from(panel.querySelectorAll('dt')).map((cell) => cell.textContent),
+      ['City Walls']
+    );
+
+    (
+      element.querySelector('.ui-unit-card-defence-bonus') as HTMLElement
+    ).dispatchEvent(new Event('blur'));
+
+    details.update(active);
 
     const strip = element.querySelector(
       'button.ui-unit-card-others'
