@@ -75,6 +75,9 @@
     #6e5420 70%
   );
   --ui-orb-highlight: rgba(255, 255, 255, 0.25);
+  // A short ease between states, and a little give when pressed (#703).
+  --ui-orb-motion: 100ms ease-out;
+  --ui-orb-press: scale(0.94);
 
   // Buttons (#740): brass for the one primary action, a raised slate face for the rest, none for the quiet ones.
   --ui-btn-bg: var(--ui-bg-1);

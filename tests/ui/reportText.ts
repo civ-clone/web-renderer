@@ -100,8 +100,8 @@ const run = async (): Promise<void> => {
   await settle();
 
   expect(
-    'the Civil Disorder button names the city',
-    disorder.element().querySelector('button')?.getAttribute('title'),
+    'the Civil Disorder button names the city (its tooltip, #703, takes the title)',
+    disorder.element().querySelector('button')?.getAttribute('aria-label'),
     'Civil disorder in Karakorum!'
   );
 

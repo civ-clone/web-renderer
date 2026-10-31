@@ -25,7 +25,7 @@ export class EndTurn extends Action {
   build(): void {
     this.append(
       s(
-        `<button class="btn-bare large gradient endTurn" title="${t(
+        `<button class="btn-bare large gradient endTurn" aria-keyshortcuts="Enter" title="${t(
           'Actions.EndTurn.title'
         )}">${glyph('end-turn')}</button>`
       )

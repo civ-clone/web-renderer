@@ -77,6 +77,9 @@
     #7d7f7f 70%
   );
   --ui-orb-highlight: rgba(255, 255, 255, 0.3);
+  // As today: no easing between states, and no give when pressed.
+  --ui-orb-motion: 0s;
+  --ui-orb-press: none;
 
   // Buttons (#740): close to the browser's own (Chrome draws them in 13.33px Arial), every variant alike, as they were
   //  before the button system.
