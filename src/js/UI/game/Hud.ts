@@ -1,7 +1,9 @@
-import { GameData, Tile, Unit } from '../types';
+import { GameData, PlayerAction, Tile, Unit } from '../types';
 import Actions from '../components/Actions';
 import GameDetails from '../components/GameDetails';
+import Dismissals from '../lib/dismissals';
 import NextTurn from '../components/NextTurn';
+import NotificationRows from '../components/NotificationRows';
 import Notices from '../components/Notices';
 import PlayerDetails from '../components/PlayerDetails';
 import Portal from '../components/Portal';
@@ -11,21 +13,28 @@ import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
 import { interfaceMode } from '../lib/interfaceMode';
-import nextTurnQueue from '../lib/nextTurnQueue';
+import nextTurnQueue, { actionKey } from '../lib/nextTurnQueue';
 import partitionActions from '../lib/playerActionPanels';
+import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 // The panels around the map: the player's actions (the end-turn area and the secondary panel), the active unit's
 //  action buttons, and the game and player details. Rebuilt from the latest data on every render. The sidebar's Power
 //  list is told the turn, and asks for itself on a new one (#701, #708).
 //
-// Reaches beyond its own panels in one place: `build` appends the primary panel to `gameArea` every time, which moves
-//  it to the end of the game area.
+// Reaches beyond its own panels in one place: `build` moves the primary panel to the end of `gameArea` when it isn't
+//  there already. Not every time: a panel put back in the page plays its rows' entrance again (#416).
 
 export type HudDeps = {
   actionArea: HTMLElement;
   // The Next Turn button's units item (#702): the map centred on the active unit.
   centreActiveUnit?: () => void;
+  // A notification dismissed (#416): drawn again, and auto end turn looked at again, now rather than at the next update.
+  changed?: () => void;
+  // The notifications dismissed this turn (#416), which auto end turn reads too.
+  dismissals?: Dismissals;
+  // The game's turn now, which a dismissal is for: the data's, which may be newer than the last render's (#416).
+  turn?: () => number;
   gameArea: HTMLElement;
   gameInfo: HTMLElement;
   // Page-scoped, and cleared by the `document` `endturn` event: its notices are added to the primary panel each time.
@@ -47,6 +56,9 @@ export class Hud {
   #deps: HudDeps;
   // Under the new interface (#735), the Next Turn button (#702) takes the primary panel's place.
   #nextTurn: NextTurn | null = null;
+  #notificationRows: NotificationRows | null = null;
+  #dismissals: Dismissals;
+  #turn = 0;
   #primaryActions: Actions | null = null;
   #secondaryActions: Actions;
   #unitActionButtons: UnitActions;
@@ -63,8 +75,21 @@ export class Hud {
       unitActionArea,
     } = deps;
 
+    this.#dismissals = deps.dismissals ?? new Dismissals();
+
     if (interfaceMode() === 'new') {
-      this.#nextTurn = new NextTurn(actionArea, {
+      // The notification rows (#416) over the Next Turn button (#702), in the primary panel's place.
+      const rows = s('<div class="ui-notification-rows"></div>'),
+        next = s('<div class="ui-next-turn-area"></div>');
+
+      actionArea.replaceChildren(rows, next);
+
+      this.#notificationRows = new NotificationRows(rows, {
+        dismiss: (action): void => this.#dismiss(action),
+        portal,
+        transport,
+      });
+      this.#nextTurn = new NextTurn(next, {
         centreActiveUnit: deps.centreActiveUnit ?? (() => {}),
         portal,
         transport,
@@ -78,6 +103,20 @@ export class Hud {
       transport
     );
     this.#unitActionButtons = new UnitActions(unitActionArea, unitAction);
+  }
+
+  // A notice is gone for good, as opening it makes it; a city in disorder for the rest of the turn.
+  #dismiss(action: PlayerAction): void {
+    if (action._ === 'Notice') {
+      (action.value as unknown as { dismiss(): void }).dismiss();
+    } else {
+      this.#dismissals.dismiss(
+        actionKey(action),
+        this.#deps.turn?.() ?? this.#turn
+      );
+    }
+
+    this.#deps.changed?.();
   }
 
   /** The Next Turn button, under the new interface: Enter and Shift+Enter press and skip it (`InputController`). */
@@ -104,11 +143,23 @@ export class Hud {
     );
 
     this.#primaryActions?.build(primary, data.player);
+
+    this.#turn = Number(data.turn?.value ?? 0);
+
+    // What the player hasn't dismissed this turn (#416).
+    const kept = primary.filter(
+      (action) => !this.#dismissals.has(actionKey(action), this.#turn)
+    );
+
+    this.#notificationRows?.build(
+      kept.filter((action) => ['CivilDisorder', 'Notice'].includes(action._)),
+      data.player
+    );
     this.#nextTurn?.build(
-      nextTurnQueue(primary, data.player.actions, waiting),
+      nextTurnQueue(kept, data.player.actions, waiting),
       waiting,
       data.player,
-      Number(data.turn?.value ?? 0)
+      this.#turn
     );
 
     this.#secondaryActions.build(secondary);
@@ -118,7 +169,9 @@ export class Hud {
       activeUnit ? world.get(activeUnit.tile.x, activeUnit.tile.y) : null
     );
 
-    gameArea.append(this.#deps.actionArea);
+    if (gameArea.lastElementChild !== this.#deps.actionArea) {
+      gameArea.append(this.#deps.actionArea);
+    }
 
     const gameDetails = new GameDetails(
       gameInfo,

@@ -87,8 +87,10 @@ export class Actions extends Element implements IActions {
 
   #actionedHandler = (event: CustomEvent<Action>) => event.detail.remove();
   #clickHandler = (event: MouseEvent) => {
+    // The page's `Element`, not `@dom111/element`'s, which this file imports as `Element` too: no click is one of those,
+    //  so the orbs answered no click or tap at all. Any element, as the target can be a glyph's `<svg>` (#741).
     const target = getClosestAncestorMatching(
-      event.target instanceof Element ? event.target : null,
+      event.target instanceof globalThis.Element ? event.target : null,
       '.action'
     );
 

@@ -196,6 +196,8 @@
   --ui-footer-edge: var(--ui-line);
   --ui-window-motion-in: 120ms;
   --ui-window-motion-out: 80ms;
+  // A notification row sliding in (#416).
+  --ui-notification-motion-in: 160ms;
 
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;

@@ -19,6 +19,18 @@ const cityNotices = [
   'City.destroyed-by',
 ];
 
+/** A notice's title or body, as its window shows them: for the Next Turn button and the notification rows (#702, #416). */
+export const noticeText = (
+  notification: NoticeData['notification'],
+  part: 'body' | 'title'
+): string =>
+  t(`${notification.key}.${part}`, {
+    ...notification.data,
+    defaultValue: part === 'title' ? t('Notification.title') : undefined,
+    ns: 'notification',
+    skipOnVariables: false,
+  }) as unknown as string;
+
 export class Notice extends Action {
   #portal: Portal;
 
@@ -82,14 +94,10 @@ export class Notice extends Action {
 
   // Its title and body, as the notice's window shows them: the Next Turn button names it by its title (#702).
   text(part: 'body' | 'title'): string {
-    const { notification } = this.value() as unknown as NoticeData;
-
-    return t(`${notification.key}.${part}`, {
-      ...notification.data,
-      defaultValue: part === 'title' ? t('Notification.title') : undefined,
-      ns: 'notification',
-      skipOnVariables: false,
-    }) as unknown as string;
+    return noticeText(
+      (this.value() as unknown as NoticeData).notification,
+      part
+    );
   }
 }
 

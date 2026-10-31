@@ -148,6 +148,36 @@ const run = async (): Promise<void> => {
     actions.element().remove();
   }
 
+  // Clicked or tapped, an orb does what it says, whatever in it was hit: the button, or the glyph's `<svg>` (#741).
+  {
+    const sent: unknown[] = [],
+      recording = {
+        send: (name: string, data: unknown) => sent.push([name, data]),
+      } as unknown as Transport,
+      actions = new Actions(
+        document.createElement('div'),
+        {} as Portal,
+        recording
+      ),
+      endTurn = { _: 'EndTurn', value: null } as unknown as PlayerAction;
+
+    document.body.append(actions.element());
+    actions.build([endTurn]);
+
+    const orb = actions.element().querySelector('button')!,
+      glyph = orb.querySelector('svg');
+
+    (glyph ?? orb).dispatchEvent(new Event('click', { bubbles: true }));
+
+    expect(
+      'a click on End Turn ends the turn',
+      [glyph !== null, sent],
+      [true, [['action', { name: 'EndTurn' }]]]
+    );
+
+    actions.element().remove();
+  }
+
   if (failures.length) {
     process.stderr.write(
       `FAIL actionButtons\n${failures

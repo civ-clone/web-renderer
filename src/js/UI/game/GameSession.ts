@@ -18,6 +18,8 @@ import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
 import UnitDetails from '../components/UnitDetails';
 import { instance as options } from '../GameOptionsRegistry';
+import Dismissals from '../lib/dismissals';
+import { actionKey } from '../lib/nextTurnQueue';
 import shouldAutoEndTurn from '../lib/autoEndTurn';
 import { instance as dataChanges } from '../lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
@@ -274,8 +276,16 @@ export class GameSession {
           unitsLayer: mapView.unitsLayer,
           world,
         }),
+        // The notifications dismissed this turn (#416): the HUD leaves them out, and auto end turn looks past them.
+        dismissals = new Dismissals(),
         hud = new Hud({
           actionArea,
+          changed: (): void => {
+            scheduleRender();
+            autoEndTurn();
+          },
+          dismissals,
+          turn: (): number => Number(gameState.data().turn?.value ?? 0),
           centreActiveUnit: (): void => {
             const unit = unitController.active();
 
@@ -366,6 +376,29 @@ export class GameSession {
         endTurnSent = true;
       };
 
+      // After each update, and when a notification is dismissed (#416): ends the turn if there's nothing left to do.
+      const autoEndTurn = (): void => {
+        const data = gameState.data();
+
+        if (
+          !endTurnSent &&
+          shouldAutoEndTurn(
+            data.player,
+            options,
+            gameState.waiting(),
+            (action) =>
+              dismissals.has(actionKey(action), Number(data.turn?.value ?? 0))
+          )
+        ) {
+          endTurnSent = true;
+
+          // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
+          transport.send('action', {
+            name: 'EndTurn',
+          });
+        }
+      };
+
       document.addEventListener('endturn', endTurnListener);
       transportDisposers.push((): void =>
         document.removeEventListener('endturn', endTurnListener)
@@ -451,21 +484,7 @@ export class GameSession {
         // (#326, #543).
         unitController.drain();
 
-        if (
-          !endTurnSent &&
-          shouldAutoEndTurn(
-            gameState.data().player,
-            options,
-            gameState.waiting()
-          )
-        ) {
-          endTurnSent = true;
-
-          // Not `endTurn()`: a turn nobody played should not clear the notices waiting to be read.
-          transport.send('action', {
-            name: 'EndTurn',
-          });
-        }
+        autoEndTurn();
       });
 
       // Not a full rebuild: `data` was built from this map above and
