@@ -1,8 +1,11 @@
 import { TransientElement, ITransientElement } from './TransientElement';
 import { off, on, s } from '@dom111/element';
 import { Coordinate } from '../types';
+import { button } from '../lib/button';
+import eyebrowFor from '../lib/windowEyebrows';
 import { glyph } from '../lib/glyphs';
 import { h } from '../lib/html';
+import interfaceMode from '../lib/interfaceMode';
 import { t } from 'i18next';
 
 export interface IWindow extends ITransientElement {
@@ -24,6 +27,8 @@ export type WindowSettings = {
   // Run on Escape, whether or not the window can be closed: the window's own way out, such as a "Cancel" button's.
   cancel: (() => void) | null;
   classes: string | string[];
+  // The line over the title in the new chrome (#738): what kind of window, and its key. By default from its classes.
+  eyebrow: string | null;
   modal: boolean;
   parent: HTMLElement;
   size: WindowSize | 'auto' | 'maximised';
@@ -39,6 +44,7 @@ const defaultOptions: WindowSettings = {
   canResize: false,
   cancel: null,
   classes: '',
+  eyebrow: null,
   modal: false,
   parent: document.body,
   size: 'auto',
@@ -57,6 +63,10 @@ export class Window
   #body: string | Node;
   // Closed and not shown since: a second `close()` does nothing.
   #closed: boolean = false;
+  // The new chrome (#738), behind the interface flag (#735): read once, as the window is made.
+  #newChrome: boolean = interfaceMode() === 'new';
+  // What had focus as the window opened, to have it back as it closes (#738).
+  #opener: HTMLElement | null = null;
   #title: string;
 
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
@@ -108,6 +118,11 @@ export class Window
       this.addClass('modal');
     }
 
+    if (this.#newChrome) {
+      this.addClass('ui-window');
+      this.#bindNewKeys();
+    }
+
     if (this.options.size === 'auto') {
       this.addClass('size-auto');
     }
@@ -153,7 +168,28 @@ export class Window
   build(): void {
     this.empty();
 
-    const headerActions: HTMLElement[] = (
+    if (this.#newChrome) {
+      this.#buildNew();
+
+      return;
+    }
+
+    const headerActions = this.#headerActions();
+
+    this.append(
+      this.#draggable(
+        s(`<header><h3>${this.#title}</h3></header>`, ...headerActions)
+      ),
+      s(
+        '<div class="body"></div>',
+        this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
+      )
+    );
+  }
+
+  // The title bar's buttons: maximise and close, where the window can.
+  #headerActions(): HTMLElement[] {
+    return (
       [
         [
           this.options.canMaximise,
@@ -185,50 +221,192 @@ export class Window
     )
       .filter(([show]: [boolean, HTMLElement]) => show)
       .map(([, element]) => element);
+  }
 
+  // A title bar that moves the window when dragged, and maximises it when double-clicked.
+  #draggable(header: HTMLElement): HTMLElement {
     let isDragging = false;
 
-    this.append(
-      h(s(`<header><h3>${this.#title}</h3></header>`, ...headerActions), {
-        dblclick: () => this.maximise(),
-        mousedown: (event) => {
-          if (event.target.closest('button')) {
+    return h(header, {
+      dblclick: () => this.maximise(),
+      mousedown: (event) => {
+        if (event.target.closest('button')) {
+          return;
+        }
+
+        isDragging = true;
+
+        const moveHandler = (event: MouseEvent) => {
+          if (!isDragging) {
             return;
           }
 
-          isDragging = true;
+          this.move({
+            x: event.movementX,
+            y: event.movementY,
+          });
+        };
 
-          const moveHandler = (event: MouseEvent) => {
-            if (!isDragging) {
-              return;
-            }
+        on(document, 'mousemove', moveHandler);
 
-            this.move({
-              x: event.movementX,
-              y: event.movementY,
-            });
-          };
+        on(
+          document,
+          'mouseup',
+          () => {
+            off(document, 'mousemove', moveHandler);
 
-          on(document, 'mousemove', moveHandler);
+            isDragging = false;
+          },
+          {
+            once: true,
+          }
+        );
+      },
+    });
+  }
 
-          on(
-            document,
-            'mouseup',
-            () => {
-              off(document, 'mousemove', moveHandler);
+  /**
+   * The new chrome (#738): an eyebrow over the title, the body, which is the part that scrolls, and a footer with a
+   *  hint and the window's actions, the primary last. A window's own footer, at the end of its body, is moved into it,
+   *  so no window needs to know which chrome it's in; one with none gets a quiet Close.
+   */
+  #buildNew(): void {
+    const eyebrow =
+        this.options.eyebrow ??
+        eyebrowFor(
+          Array.isArray(this.options.classes)
+            ? this.options.classes
+            : `${this.options.classes}`.split(' ')
+        ),
+      titles = s(`<div class="ui-window-titles"><h3>${this.#title}</h3></div>`);
 
-              isDragging = false;
-            },
-            {
-              once: true,
-            }
-          );
-        },
-      }),
+    if (eyebrow !== null) {
+      const line = s('<p class="ui-window-eyebrow"></p>');
+
+      line.textContent = eyebrow;
+      titles.prepend(line);
+    }
+
+    this.append(
+      this.#draggable(
+        s(
+          '<header class="ui-window-header"></header>',
+          titles,
+          ...this.#headerActions()
+        )
+      ),
       s(
         '<div class="body"></div>',
         this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
+      ),
+      s(
+        '<footer class="ui-window-footer"><p class="ui-window-hint"></p><div class="ui-window-actions"></div></footer>'
       )
+    );
+
+    this.#adoptFooter();
+  }
+
+  // Moves the body's own footer, or the primary button it ends in, into the chrome's, the quiet buttons first and the
+  //  primary last, and says what Enter and Escape do. With nothing to move, a window that can close gets a quiet Close.
+  #adoptFooter(): void {
+    const footer = this.element().querySelector(':scope > .ui-window-footer'),
+      actions = footer?.querySelector('.ui-window-actions'),
+      own = this.element().querySelector(
+        ':scope > .body > footer:last-child, :scope > .body > :last-child > footer:last-child'
+      );
+
+    if (!footer || !actions) {
+      return;
+    }
+
+    // A window that ends in its primary button alone (Game setup's Start, Resume) has that moved too.
+    const lone = this.element().querySelector(
+      ':scope > .body > button.btn-primary:last-child, :scope > .body > :last-child > button.btn-primary:last-child'
+    );
+
+    // A body drawn again brings its buttons again: they replace the ones moved from it before.
+    if (own || lone) {
+      actions.replaceChildren();
+    }
+
+    if (lone) {
+      actions.append(lone);
+    }
+
+    if (own) {
+      const rank = (element: Element) =>
+        element.classList.contains('btn-quiet')
+          ? 0
+          : element.classList.contains('btn-primary')
+          ? 2
+          : 1;
+
+      actions.replaceChildren(
+        ...[...Array.from(own.children), ...Array.from(actions.children)].sort(
+          (a, b) => rank(a) - rank(b)
+        )
+      );
+      own.remove();
+    }
+
+    if (actions.children.length === 0 && this.options.canClose) {
+      actions.append(
+        h(button(t('Window.close'), { variant: 'quiet', hotkey: 'Escape' }), {
+          click: () => this.close(),
+        })
+      );
+    }
+
+    const primary = actions.querySelector('.btn-primary')?.textContent?.trim(),
+      cancel = actions
+        .querySelector('[aria-keyshortcuts="Escape"]')
+        ?.textContent?.trim(),
+      hint = footer.querySelector('.ui-window-hint') as HTMLElement;
+
+    hint.textContent =
+      primary || cancel
+        ? t('Window.hint', {
+            primary,
+            cancel,
+            context:
+              primary && cancel ? 'both' : primary ? 'primary' : 'cancel',
+            interpolation: { escapeValue: false },
+          })
+        : '';
+  }
+
+  // Enter runs the primary action, unless it's pressed on something that takes Enter itself. Caught on the way in,
+  //  before a window's own keys, which close it on Enter (#738).
+  #bindNewKeys(): void {
+    this.element().addEventListener(
+      'keydown',
+      (event: KeyboardEvent) => {
+        if (
+          event.key !== 'Enter' ||
+          (event.target instanceof Element &&
+            event.target !== this.element() &&
+            event.target.closest(
+              'button, a[href], input, select, textarea, [contenteditable]'
+            ))
+        ) {
+          return;
+        }
+
+        const primary = this.element().querySelector(
+          ':scope > .ui-window-footer .btn-primary'
+        ) as HTMLButtonElement | null;
+
+        if (!primary || primary.disabled) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        primary.click();
+      },
+      true
     );
   }
 
@@ -259,10 +437,21 @@ export class Window
 
     this.#closed = true;
 
+    if (this.#newChrome) {
+      this.#fadeOut();
+    }
+
     this.element().close();
     this.remove();
 
     this.emit(new CustomEvent('close'));
+
+    // Back to what had focus as it opened, where that's still there (#738).
+    if (this.#opener?.isConnected) {
+      this.#opener.focus();
+
+      return;
+    }
 
     const windows = document.querySelectorAll('dialog.window');
 
@@ -276,6 +465,17 @@ export class Window
   display(focus = this.options.autofocus): void {
     this.#closed = false;
 
+    if (this.#newChrome) {
+      const active = document.activeElement;
+
+      this.#opener =
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        !this.element().contains(active)
+          ? active
+          : null;
+    }
+
     super.display();
 
     this.bindClose();
@@ -287,6 +487,41 @@ export class Window
     }
 
     this.element().focus();
+  }
+
+  // The window closes at once; a copy of it, which takes no input, fades in its place (#738).
+  #fadeOut(): void {
+    if (
+      !this.element().isConnected ||
+      this.hasClass('maximised') ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    ) {
+      return;
+    }
+
+    const box = this.element().getBoundingClientRect(),
+      ghost = this.element().cloneNode(true) as HTMLElement,
+      shell = document.createElement('div');
+
+    ghost.removeAttribute('id');
+    // Drawn as the window was, where it was: without the classes that place it or lift it into a stacking order.
+    shell.className = [
+      ...Array.from(this.element().classList).filter(
+        (name) => !['modal', 'position-auto'].includes(name)
+      ),
+      'ui-window-ghost',
+    ].join(' ');
+    shell.setAttribute('aria-hidden', 'true');
+    shell.style.left = `${box.left}px`;
+    shell.style.top = `${box.top}px`;
+    shell.style.width = `${box.width}px`;
+    shell.style.height = `${box.height}px`;
+    shell.append(...Array.from(ghost.childNodes));
+    shell.addEventListener('animationend', () => shell.remove());
+    document.body.append(shell);
+
+    // Gone even where the animation never runs.
+    setTimeout(() => shell.remove(), 200);
   }
 
   private showDialog(): void {
@@ -339,7 +574,7 @@ export class Window
   setTitle(title: string): void {
     this.#title = title;
 
-    const heading = this.element().querySelector(':scope > header > h3');
+    const heading = this.element().querySelector(':scope > header h3');
 
     if (heading) {
       heading.innerHTML = title;
@@ -355,6 +590,10 @@ export class Window
       ?.replaceChildren(
         content instanceof Node ? content : s(`<p>${content}</p>`)
       );
+
+    if (this.#newChrome) {
+      this.#adoptFooter();
+    }
   }
 }
 

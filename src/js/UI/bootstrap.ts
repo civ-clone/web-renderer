@@ -20,6 +20,7 @@ import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
 import { applyColourScheme, applyUiTheme } from './lib/theme';
+import { applyInterface } from './lib/interfaceMode';
 import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -50,6 +51,8 @@ export class Renderer {
     //  first (#736, #706).
     setOptionDefaults();
     applyUiTheme(queryParams.get('theme'));
+    // The classic interface or the new one (#735), before any window is made: `Window` reads it (#738).
+    applyInterface(queryParams.get('interface'), options.get('interface'));
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
     installGlyphs();
