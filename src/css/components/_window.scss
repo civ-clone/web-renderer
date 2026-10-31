@@ -5,6 +5,7 @@
   box-shadow: var(--ui-shadow-window);
   color: var(--ui-fg);
   margin: 0;
+  // The window itself takes focus only to hand it on; its controls show theirs.
   outline: 0;
   overflow: hidden;
   padding: 0;

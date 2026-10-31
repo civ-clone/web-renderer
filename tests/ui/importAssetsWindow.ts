@@ -277,14 +277,84 @@ const run = async (): Promise<void> => {
   addFormatters(i18next);
   await import('../../translations/local/en');
 
+  // The browser's file input can't take the theme (#739): it's hidden, a button of the system opens it, and the
+  //  names of the files chosen show beside the button.
+  {
+    const window = new ImportAssetsWindow(),
+      input = fileInput(window),
+      choose = window
+        .element()
+        .querySelector('.file-picker button') as HTMLButtonElement,
+      chosen = () =>
+        window.element().querySelector('.file-picker .chosen')?.textContent;
+    let opened = false;
+
+    input.click = () => {
+      opened = true;
+    };
+
+    expect(
+      'the file input is hidden, and out of the tab order',
+      [input.classList.contains('visually-hidden'), input.tabIndex],
+      [true, -1]
+    );
+    expect(
+      'a secondary button chooses the files',
+      [choose?.textContent, choose?.classList.contains('btn-secondary')],
+      ['Choose files', true]
+    );
+    expect('before any are chosen, it says so', chosen(), 'No files chosen');
+
+    choose.click();
+
+    expect('the button opens the file input', opened, true);
+
+    // The names alone, without starting an import of them.
+    const uploads: number[] = [];
+
+    window.handleFileUpload = async () => {
+      uploads.push(1);
+    };
+
+    Object.defineProperty(input, 'files', {
+      configurable: true,
+      value: [{ name: 'README.TXT' }, { name: 'R&D <1>.PIC' }],
+    });
+    input.dispatchEvent(new Event('change'));
+
+    expect(
+      "the chosen files' names show beside the button, as they are",
+      chosen(),
+      'README.TXT and R&D <1>.PIC'
+    );
+    expect('and the import starts', uploads.length, 1);
+
+    Object.defineProperty(input, 'files', { configurable: true, value: [] });
+    input.dispatchEvent(new Event('change'));
+
+    expect(
+      'closing the picker with nothing chosen says so, and imports nothing',
+      [chosen(), uploads.length],
+      ['No files chosen', 1]
+    );
+
+    window.close();
+  }
+
   // A file that can't be read: the import stops, says which file, and the player can choose again. The other file,
   //  which reads fine but finishes later, doesn't write over that, and isn't cut up.
   {
     readDelays['SP257.PIC'] = 50;
 
     const window = new ImportAssetsWindow(),
-      files = [notASheet('TER257.PIC'), sheet('SP257.PIC')],
-      settled = await settles(upload(window, files), 5000);
+      files = [notASheet('TER257.PIC'), sheet('SP257.PIC')];
+
+    // As the picker would have left it.
+    (
+      window.element().querySelector('.file-picker .chosen') as HTMLElement
+    ).textContent = 'TER257.PIC and SP257.PIC';
+
+    const settled = await settles(upload(window, files), 5000);
 
     expect('an unreadable file: the import finishes', settled, 'resolved');
 
@@ -317,6 +387,20 @@ const run = async (): Promise<void> => {
     expect(
       'an unreadable file: the file input takes files again',
       fileInput(window).hasAttribute('disabled'),
+      false
+    );
+    expect(
+      'an unreadable file: the names chosen are cleared with the input',
+      window.element().querySelector('.file-picker .chosen')?.textContent,
+      'No files chosen'
+    );
+    expect(
+      'an unreadable file: the button to choose them is back too',
+      (
+        window
+          .element()
+          .querySelector('.file-picker button') as HTMLButtonElement
+      ).disabled,
       false
     );
     // The extractor logs its own complaint about the file first.

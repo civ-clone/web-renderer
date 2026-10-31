@@ -33,6 +33,7 @@
     &:focus-visible {
       background: var(--ui-overlay-bg);
       color: var(--ui-overlay-fg);
+      // The highlight is the focus.
       outline: none;
     }
 

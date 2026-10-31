@@ -7,20 +7,34 @@ import {
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { assetFromURI, assetStore } from '../AssetStore';
+import { button } from '../lib/button';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
 
 export class ImportAssetsWindow extends Window {
+  // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
   #fileInput: HTMLInputElement;
+  #chooseButton: HTMLButtonElement;
+  #chosen: HTMLSpanElement;
   #progressInformation: HTMLParagraphElement;
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
   #replaceExistingInput: HTMLInputElement;
 
   constructor() {
-    const fileInput = s<HTMLInputElement>('<input type="file" multiple>'),
+    const fileInput = s<HTMLInputElement>(
+        '<input type="file" multiple class="visually-hidden" tabindex="-1" aria-hidden="true">'
+      ),
+      chooseButton = h(button(t('ImportAssetsWindow.choose')), {
+        click: () => fileInput.click(),
+      }),
+      chosen = s<HTMLSpanElement>(
+        `<span class="chosen" aria-live="polite">${t(
+          'ImportAssetsWindow.none-chosen'
+        )}</span>`
+      ),
       replaceExistingInput = s<HTMLInputElement>(
         '<input type="checkbox" checked>'
       ),
@@ -46,9 +60,23 @@ export class ImportAssetsWindow extends Window {
           )
         ),
         s(
-          '<p></p>',
+          '<p class="file-picker"></p>',
+          chooseButton,
+          chosen,
           h(fileInput, {
-            change: (event) => this.handleFileUpload(event),
+            change: (event) => {
+              const names = Array.from(
+                fileInput.files ?? [],
+                ({ name }) => name
+              );
+
+              this.#showChosen(names);
+
+              // Nothing chosen (the picker closed after an earlier choice) isn't an attempt to import.
+              if (names.length) {
+                this.handleFileUpload(event);
+              }
+            },
           })
         ),
         progressInformation
@@ -56,6 +84,8 @@ export class ImportAssetsWindow extends Window {
     );
 
     this.#fileInput = fileInput;
+    this.#chooseButton = chooseButton;
+    this.#chosen = chosen;
     this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
   }
@@ -84,6 +114,7 @@ export class ImportAssetsWindow extends Window {
     }
 
     this.#fileInput.setAttribute('disabled', '');
+    this.#chooseButton.disabled = true;
     this.#progressInformation.innerText = t(
       'ImportAssetsWindow.progress-building'
     );
@@ -268,13 +299,26 @@ export class ImportAssetsWindow extends Window {
     });
   }
 
+  /** The names of the files chosen, as text beside the button (#739). */
+  #showChosen(names: string[]): void {
+    this.#chosen.textContent = names.length
+      ? t('ImportAssetsWindow.chosen', {
+          files: names,
+          // Set as text, so a name with `&` or `<` in it shows as it is.
+          interpolation: { escapeValue: false },
+        })
+      : t('ImportAssetsWindow.none-chosen');
+  }
+
   /** Shows `message` as the reason the import stopped, and lets the player choose files again. */
   #fail(message: string): void {
     this.#progressInformation.classList.add('failed');
     this.#progressInformation.innerText = message;
     this.#fileInput.removeAttribute('disabled');
+    this.#chooseButton.disabled = false;
     // So choosing the same files again counts as a change.
     this.#fileInput.value = '';
+    this.#showChosen([]);
   }
 }
 

@@ -404,6 +404,8 @@ i18next.addResources('en', 'default', {
 
   'ImportAssetsWindow.brave':
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any color-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
+  'ImportAssetsWindow.choose': 'Choose files',
+  'ImportAssetsWindow.chosen': '{{files, list}}',
   'ImportAssetsWindow.done':
     'Done! Please reload the page to utilize the fresh assets.',
   'ImportAssetsWindow.failed':
@@ -411,6 +413,7 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.instructions':
     'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
+  'ImportAssetsWindow.none-chosen': 'No files chosen',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
   'ImportAssetsWindow.progress-building': 'Building image assets...',

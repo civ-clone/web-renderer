@@ -1,0 +1,1 @@
+{"version":"0.1.0@1e4af42","date":"2026-10-31T09:26:21.000Z","localChanges":["The interface's icons (close, maximise, the game menu, End turn, the spaceship, the sidebar's arrows and the release notes' arrows) are now one set drawn in the theme's colours, so they stay sharp at any size and follow ?theme=slate and dark mode (closes #741)."],"externalChanges":{}}

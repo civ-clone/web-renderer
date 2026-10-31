@@ -1,0 +1,230 @@
+// Form controls (#739), drawn from the theme's tokens rather than by the browser, so every one of them follows the
+//  theme. The elements stay the browser's own (`<select>`, `<input>`), which keeps their keyboard and screen reader
+//  behaviour. Indicators inside a control (the select's arrow, the tick, the dot) are drawn here in CSS: a control
+//  can't hold a glyph's markup. `color-scheme` tells the browser which way round to draw what it still draws itself:
+//  number spinners and scroll bars.
+
+@mixin field() {
+  appearance: none;
+  color-scheme: var(--ui-control-scheme);
+  background-color: var(--ui-control-bg);
+  border: 1px solid var(--ui-control-edge);
+  border-radius: var(--ui-control-radius);
+  box-sizing: border-box;
+  color: var(--ui-control-fg);
+  font-family: var(--ui-control-family);
+  font-size: var(--ui-control-size);
+  min-height: var(--ui-control-height);
+
+  &:disabled {
+    opacity: var(--ui-control-disabled-opacity);
+  }
+}
+
+@mixin focus-ring() {
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    outline: var(--ui-focus-outline);
+    outline-offset: var(--ui-focus-offset);
+  }
+
+  // The classic set's colour is the browser's own focus colour, which only Chrome and Safari have a name for; set
+  //  where it can be, as anywhere else it would turn the ring the colour of the text.
+  @supports (outline-color: -webkit-focus-ring-color) {
+    &:focus-visible {
+      outline-color: var(--ui-focus-colour);
+    }
+  }
+}
+
+input:not([type]),
+input[type='text'],
+input[type='number'],
+input[type='search'] {
+  @include field();
+  @include focus-ring();
+
+  padding: var(--ui-control-padding);
+
+  &::placeholder {
+    color: var(--ui-control-placeholder);
+    opacity: 1;
+  }
+}
+
+// A drop-down: the arrow is two halves of a triangle, in the token's colour, at the right.
+select:not([multiple]):not([size]) {
+  @include field();
+  @include focus-ring();
+
+  background-image: linear-gradient(
+      45deg,
+      transparent 50%,
+      var(--ui-select-arrow) 50%
+    ),
+    linear-gradient(135deg, var(--ui-select-arrow) 50%, transparent 50%);
+  background-position: right 10px top 50%, right 6px top 50%;
+  background-repeat: no-repeat;
+  background-size: 4px 4px;
+  cursor: default;
+  padding: var(--ui-select-padding);
+}
+
+// A choice list (`size` or `multiple`): the chosen rows in the theme's highlight, whether or not the list has focus.
+select[multiple],
+select[size] {
+  color: var(--ui-control-fg);
+  color-scheme: var(--ui-control-scheme);
+  font-family: var(--ui-control-family);
+  font-size: var(--ui-control-size);
+
+  // As an image, and solid: Chrome paints its own colour under it on the chosen row of a list with focus.
+  option:checked {
+    background: linear-gradient(var(--ui-choice-bg), var(--ui-choice-bg));
+    color: var(--ui-choice-fg);
+    // Chrome's own text colour for the row wins over `color`, but not over this.
+    -webkit-text-fill-color: var(--ui-choice-fg);
+  }
+}
+
+// The browser's own margins, as a box seats on them (below).
+$check-margin-bottom: 3px;
+
+input[type='checkbox'],
+input[type='radio'] {
+  @include focus-ring();
+
+  appearance: none;
+  background: var(--ui-check-bg);
+  border: 1px solid var(--ui-check-edge);
+  border-radius: var(--ui-check-radius);
+  box-sizing: border-box;
+  // With nothing in its flow (the tick is placed absolutely), the box sits by its bottom margin edge, whether or not
+  //  it's ticked; the browser's own sits by the box itself, with its margin hanging below the text's baseline.
+  display: inline-block;
+  height: var(--ui-check-size);
+  margin: 3px 3px $check-margin-bottom 4px;
+  position: relative;
+  vertical-align: calc(-1 * $check-margin-bottom);
+  width: var(--ui-check-size);
+
+  &:hover:not(:disabled) {
+    border-color: var(--ui-check-edge-hover);
+  }
+
+  &:checked {
+    background: var(--ui-check-on);
+    border-color: var(--ui-check-on);
+  }
+
+  &:checked:hover:not(:disabled) {
+    background: var(--ui-check-on-hover);
+    border-color: var(--ui-check-on-hover);
+  }
+
+  &:disabled {
+    opacity: var(--ui-control-disabled-opacity);
+  }
+}
+
+// The tick: the bottom and right edges of a box, turned.
+input[type='checkbox']:checked::before {
+  border: solid var(--ui-check-mark);
+  border-width: 0 calc(var(--ui-check-size) * 0.18)
+    calc(var(--ui-check-size) * 0.18) 0;
+  box-sizing: border-box;
+  content: '';
+  height: calc(var(--ui-check-size) * 0.72);
+  left: 50%;
+  position: absolute;
+  top: 42%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: calc(var(--ui-check-size) * 0.38);
+}
+
+// The dot: the box's own colour inside a ring of the field's.
+input[type='radio'] {
+  border-radius: 50%;
+  margin: 3px 3px 0 5px;
+  vertical-align: baseline;
+
+  &:checked {
+    box-shadow: inset 0 0 0 calc(var(--ui-check-size) * 0.16) var(--ui-check-bg);
+  }
+}
+
+// A slider: the track filled up to the thumb's middle. `--fill` (0 to 1, set by the slider's own code) says how far
+//  along it is; the thumb's middle runs from half a thumb in at one end to half a thumb in at the other.
+input[type='range'] {
+  @include focus-ring();
+
+  appearance: none;
+  background: transparent;
+  height: var(--ui-range-thumb-size);
+
+  &::-webkit-slider-runnable-track {
+    --fill-to: calc(
+      var(--ui-range-thumb-size) / 2 + var(--fill, 0) *
+        (100% - var(--ui-range-thumb-size))
+    );
+
+    background: linear-gradient(
+      to right,
+      var(--ui-range-fill) var(--fill-to),
+      var(--ui-range-track) var(--fill-to)
+    );
+    border: 1px solid var(--ui-range-track-edge);
+    border-radius: var(--ui-range-track-height);
+    box-sizing: border-box;
+    height: var(--ui-range-track-height);
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    background: var(--ui-range-thumb);
+    border: 0;
+    border-radius: 50%;
+    height: var(--ui-range-thumb-size);
+    margin-top: calc(
+      (var(--ui-range-track-height) - var(--ui-range-thumb-size)) / 2 - 1px
+    );
+    width: var(--ui-range-thumb-size);
+  }
+
+  &::-moz-range-track {
+    background: var(--ui-range-track);
+    border: 1px solid var(--ui-range-track-edge);
+    border-radius: var(--ui-range-track-height);
+    height: var(--ui-range-track-height);
+  }
+
+  &::-moz-range-progress {
+    background: var(--ui-range-fill);
+    border-radius: var(--ui-range-track-height);
+    height: var(--ui-range-track-height);
+  }
+
+  &::-moz-range-thumb {
+    background: var(--ui-range-thumb);
+    border: 0;
+    border-radius: 50%;
+    height: var(--ui-range-thumb-size);
+    width: var(--ui-range-thumb-size);
+  }
+
+  &:disabled {
+    opacity: var(--ui-control-disabled-opacity);
+  }
+}
+
+a {
+  color: var(--ui-link-fg);
+  text-decoration: var(--ui-link-decoration);
+
+  &:hover {
+    text-decoration: var(--ui-link-decoration-hover);
+  }
+}
