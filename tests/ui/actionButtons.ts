@@ -1,12 +1,14 @@
 // The round action buttons (#703): each has the interface's tooltip rather than the browser's, opening on focus, its
 //  title naming it for a screen reader, and its key, where it has one, after the title; buttons added once their icon
-//  has loaded are given theirs too.
+//  has loaded are given theirs too, and the tooltip goes when its action does.
 
 // Must stay first: modules read `document` as they load.
 import './lib/dom';
 
 import { PlayerAction } from '../../src/js/UI/types';
 import Action from '../../src/js/UI/components/Actions/Action';
+import Actions from '../../src/js/UI/components/Actions';
+import Portal from '../../src/js/UI/components/Portal';
 import EndTurn from '../../src/js/UI/components/Actions/EndTurn';
 import Transport from '../../src/js/UI/Transport';
 import { hideTooltip } from '../../src/js/UI/components/lib/Tooltip';
@@ -39,8 +41,14 @@ const panel = () => document.getElementById('tooltip'),
 
 // An action whose button comes later, as those waiting on an icon do.
 class Later extends Action {
-  add(): void {
-    this.append(s('<button class="btn-bare later" title="Later"></button>'));
+  add(key: string | null = null): void {
+    this.append(
+      s(
+        `<button class="btn-bare later" title="Later"${
+          key ? ` aria-keyshortcuts="${key}"` : ''
+        }></button>`
+      )
+    );
   }
 }
 
@@ -73,8 +81,9 @@ const run = async (): Promise<void> => {
       0
     );
 
-    hideTooltip();
-    endTurn.element().remove();
+    endTurn.remove();
+
+    expect("an action that's removed takes its tooltip with it", shown(), null);
   }
 
   {
@@ -95,6 +104,48 @@ const run = async (): Promise<void> => {
 
     hideTooltip();
     later.element().remove();
+  }
+
+  {
+    const later = new Later(action, transport);
+
+    document.body.append(later.element());
+    later.add('Plus');
+    later.element().querySelector('button')!.dispatchEvent(new Event('focus'));
+
+    expect(
+      'a key named for `aria-keyshortcuts` is shown as the key',
+      shown(),
+      'Later (+)'
+    );
+
+    hideTooltip();
+    later.element().remove();
+  }
+
+  {
+    const actions = new Actions(
+        document.createElement('div'),
+        {} as Portal,
+        transport
+      ),
+      endTurn = { _: 'EndTurn', value: null } as unknown as PlayerAction;
+
+    document.body.append(actions.element());
+    actions.build([endTurn]);
+    actions
+      .element()
+      .querySelector('button')!
+      .dispatchEvent(new Event('focus'));
+    actions.build([]);
+
+    expect(
+      'rebuilding the actions closes the tooltip of one gone',
+      shown(),
+      null
+    );
+
+    actions.element().remove();
   }
 
   if (failures.length) {
