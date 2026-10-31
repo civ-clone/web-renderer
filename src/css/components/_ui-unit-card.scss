@@ -1,0 +1,184 @@
+// The active unit's card under the new interface (#743, #735), in the sidebar's unit section (#699): the portrait with
+//  a veteran's mark on its corner, the name over its state and home city, the figures as pills, the moves as pips, the
+//  square, the actions in groups, and the other units on the square. Everything from the theme's tokens.
+.ui-unit-card {
+  // A button that reads as part of the card: the home city and the other units.
+  .ui-unit-card-home,
+  .ui-unit-card-others {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    padding: 0;
+    text-align: left;
+
+    &:focus-visible {
+      outline: 2px solid var(--ui-fg);
+      outline-offset: 1px;
+    }
+  }
+
+  .ui-unit-card-header {
+    align-items: center;
+    display: flex;
+    gap: 0.5em;
+  }
+
+  // Positioned, so the mark after the portrait is drawn over its corner in document order.
+  .ui-unit-card-portrait {
+    flex: none;
+    line-height: 0;
+    position: relative;
+
+    canvas {
+      display: block;
+    }
+  }
+
+  .ui-unit-card-veteran {
+    background: var(--ui-bg-0);
+    border: 1px solid var(--ui-accent);
+    border-radius: var(--ui-radius-control);
+    color: var(--ui-accent);
+    display: flex;
+    font-size: 0.7em;
+    padding: 0.05em;
+    position: absolute;
+    right: -0.3em;
+    top: -0.3em;
+
+    .glyph {
+      stroke-width: 3;
+      width: 1em;
+    }
+  }
+
+  .ui-unit-card-heading {
+    min-width: 0;
+  }
+
+  .ui-unit-card-name {
+    font-family: var(--type-heading-family);
+    font-weight: var(--type-strong-weight);
+  }
+
+  .ui-unit-card-status {
+    color: var(--ui-fg-muted);
+    display: flex;
+    flex-wrap: wrap;
+    font-size: var(--type-detail-size);
+    gap: 0 0.5em;
+  }
+
+  .ui-unit-card-home {
+    color: var(--ui-accent);
+    text-decoration: underline;
+  }
+
+  .ui-unit-card-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2em 0.6em;
+
+    .stat-pill {
+      gap: 0.25em;
+    }
+
+    .glyph {
+      color: var(--ui-fg-muted);
+      width: 1em;
+    }
+  }
+
+  // Eight pips to a row, whatever the card's width (#717); a unit with more wraps to another row of the same size.
+  .ui-unit-card-pips {
+    display: grid;
+    gap: 0.2em;
+    grid-template-columns: repeat(8, 1fr);
+  }
+
+  .ui-unit-card-pip {
+    background: var(--ui-sunken);
+    border: 1px solid var(--ui-bevel-dark);
+    box-sizing: border-box;
+    height: 0.6em;
+    overflow: hidden;
+  }
+
+  .ui-unit-card-pip-fill {
+    background: var(--ui-positive);
+    display: block;
+    height: 100%;
+  }
+
+  .ui-unit-card-tile {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+  }
+
+  .ui-unit-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3em;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  .ui-unit-card-eyebrow {
+    color: var(--type-eyebrow-colour);
+    font-family: var(--font-ui);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    margin: 0 0 0.15em;
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  .ui-unit-card-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25em;
+  }
+
+  .ui-unit-card-action {
+    height: 2rem;
+    min-height: 0;
+    min-width: 0;
+    padding: 2px;
+    width: 2rem;
+
+    canvas {
+      height: 100%;
+      image-rendering: pixelated;
+      width: 100%;
+    }
+  }
+
+  // At the portrait's size (#721), with the gap `UnitCard` counts a row by.
+  .ui-unit-card-others {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+
+    &:hover canvas,
+    &:hover .ui-unit-card-more {
+      filter: brightness(1.15);
+    }
+  }
+
+  .ui-unit-card-more {
+    align-items: center;
+    background: var(--ui-sunken);
+    border: 1px solid var(--ui-bevel-dark);
+    box-sizing: border-box;
+    display: flex;
+    font-weight: var(--type-strong-weight);
+    height: var(--portrait-size);
+    justify-content: center;
+    width: var(--portrait-size);
+  }
+}

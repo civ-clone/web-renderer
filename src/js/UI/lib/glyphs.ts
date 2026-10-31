@@ -21,6 +21,16 @@ const glyphs = {
   'chevron-down': '<polyline points="6 9 12 15 18 9"/>',
   // A filled triangle, for a section that opens and closes, the size the text's ▾ was.
   disclosure: '<path d="M5 8h14l-7 9z" fill="currentColor" stroke="none"/>',
+  // The active unit's figures (#743): a sword, Feather's shield, chevrons and eye, and a veteran's chevrons.
+  'stat-attack':
+    '<line x1="19" y1="5" x2="8" y2="16"/><polyline points="15 5 19 5 19 9"/><line x1="5" y1="13" x2="11" y2="19"/><line x1="8" y1="16" x2="4" y2="20"/>',
+  'stat-defence': '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  'stat-moves':
+    '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>',
+  'stat-visibility':
+    '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  veteran:
+    '<polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/>',
 };
 
 export type GlyphName = keyof typeof glyphs;

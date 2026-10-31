@@ -16,7 +16,9 @@ import PowerList from '../components/PowerList';
 import IntelligenceReport from '../components/IntelligenceReport';
 import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
-import UnitDetails from '../components/UnitDetails';
+import UnitCard from '../components/UnitCard';
+import UnitDetails, { UnitDetailsDeps } from '../components/UnitDetails';
+import { interfaceMode } from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
 import Dismissals from '../lib/dismissals';
 import { actionKey } from '../lib/nextTurnQueue';
@@ -227,8 +229,7 @@ export class GameSession {
           world: gameState.data().player.world,
         }),
         { portal, world } = mapView,
-        // The active unit's card (#699), kept for the game: it redraws only what has changed.
-        unitDetails = new UnitDetails(unitInfo, {
+        unitDetailsDeps: UnitDetailsDeps = {
           portal,
           transport,
           // As the map's stack window does: nothing while waiting for the turn.
@@ -239,7 +240,14 @@ export class GameSession {
 
             unitController.set(unit);
           },
-        }),
+        },
+        // The active unit's card (#699), kept for the game: it redraws only what has changed. Under the new interface,
+        //  the card with the unit's actions in it (#743), so the strip at the bottom left goes.
+        unitCard =
+          interfaceMode() === 'new'
+            ? new UnitCard(unitInfo, unitDetailsDeps)
+            : null,
+        unitDetails = unitCard ?? new UnitDetails(unitInfo, unitDetailsDeps),
         // The sidebar's cities (#700), following them through `dataChanges`, and power (#701, #708), told the turn by the HUD.
         citiesList = citiesListElement
           ? new CitiesList(citiesListElement, gameState.data().player, portal)
@@ -303,7 +311,7 @@ export class GameSession {
           transport,
           unitAction: (unitId, unitAction): void =>
             void unitController.act(unitId, unitAction),
-          unitActionArea,
+          unitActionArea: unitCard?.actionArea() ?? unitActionArea,
           world,
         }),
         gameMenuItem = new GameMenu(
@@ -321,6 +329,11 @@ export class GameSession {
         );
 
       this.#unitController = unitController;
+
+      // The unit's actions are in its card under the new interface (#743): no strip at the bottom left.
+      if (unitCard) {
+        unitActionArea.remove();
+      }
 
       if (citiesList) {
         transportDisposers.push((): void => citiesList.dispose());

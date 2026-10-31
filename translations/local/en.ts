@@ -721,6 +721,18 @@ i18next.addResources('en', 'default', {
   'TradeReport.ImprovementList.surplus-title': 'Total surplus',
 
   // The active unit's card in the sidebar (#699).
+  // The active unit's card under the new interface (#743).
+  'UnitCard.group.orders': 'Orders',
+  'UnitCard.group.others': 'Also here',
+  'UnitCard.group.special': 'Special',
+  'UnitCard.group.terrain': 'Terrain',
+  'UnitCard.key': 'Key',
+  'UnitCard.more': '+{{count, number}}',
+  'UnitCard.moves':
+    '{{remaining, number(minimumFractionDigits: 0; maximumFractionDigits: 2)}}/{{total, number}}',
+  'UnitCard.states': '{{states, list(type: unit)}}',
+  'UnitCard.value': '{{value, number}}',
+
   'UnitDetails.attack': 'A',
   'UnitDetails.defence': 'D',
   'UnitDetails.home-city': 'Home city: {{city}} (opens the city)',

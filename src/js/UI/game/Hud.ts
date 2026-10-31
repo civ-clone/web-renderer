@@ -12,6 +12,7 @@ import PowerList from '../components/PowerList';
 import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
+import UnitCardActions from '../components/UnitCardActions';
 import { interfaceMode } from '../lib/interfaceMode';
 import nextTurnQueue, { actionKey } from '../lib/nextTurnQueue';
 import partitionActions from '../lib/playerActionPanels';
@@ -61,7 +62,7 @@ export class Hud {
   #turn = 0;
   #primaryActions: Actions | null = null;
   #secondaryActions: Actions;
-  #unitActionButtons: UnitActions;
+  #unitActionButtons: UnitActions | UnitCardActions;
 
   constructor(deps: HudDeps) {
     this.#deps = deps;
@@ -102,7 +103,11 @@ export class Hud {
       portal,
       transport
     );
-    this.#unitActionButtons = new UnitActions(unitActionArea, unitAction);
+    // Under the new interface, inside the active unit's card (#743), which `unitActionArea` is then.
+    this.#unitActionButtons =
+      interfaceMode() === 'new'
+        ? new UnitCardActions(unitActionArea, unitAction)
+        : new UnitActions(unitActionArea, unitAction);
   }
 
   // A notice is gone for good, as opening it makes it; a city in disorder for the rest of the turn.
