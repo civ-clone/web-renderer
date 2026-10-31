@@ -1,0 +1,56 @@
+// A figure as a pill (#698, #742): an icon, the value in bold, then a muted detail, coloured when it's good or bad news.
+.stat-pill {
+  align-items: center;
+  display: flex;
+  gap: 0.4em;
+  white-space: nowrap;
+
+  .value {
+    font-weight: var(--type-strong-weight);
+  }
+
+  .detail {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &.positive .detail {
+    color: var(--ui-positive);
+  }
+
+  &.negative .detail {
+    color: var(--ui-negative);
+    font-weight: var(--type-strong-weight);
+  }
+
+  .yield-amount {
+    align-items: center;
+    display: flex;
+    gap: 0.25em;
+  }
+}
+
+// A pill that opens something (#698): the government (a revolution), the tax split (the trade rates), a report.
+button.stat-pill {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+
+  &:hover .value,
+  &:hover .bar {
+    filter: brightness(1.15);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ui-fg);
+    outline-offset: 2px;
+  }
+}

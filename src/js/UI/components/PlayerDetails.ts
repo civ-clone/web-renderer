@@ -7,7 +7,10 @@ import { openTradeRates, tradeRatesKey } from './Actions/AdjustTradeRates';
 import { reduceKnownYields } from '../lib/yieldMap';
 import { researchingName } from './lib/advances';
 import { TOptions, t } from 'i18next';
-import { turnsLeft, yieldIcon } from './lib/cityYields';
+import { turnsLeft, turnsText, yieldData, yieldIcon } from './lib/cityYields';
+import progressBar from './lib/ProgressBar';
+import statPill, { StatPillTone } from './lib/StatPill';
+import tooltip from './lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
@@ -24,80 +27,31 @@ const rateClasses: { [key: string]: string } = {
   ratePosition = (rate: string): number =>
     rateOrder.includes(rate) ? rateOrder.indexOf(rate) : rateOrder.length;
 
-// Fills in an item of the empire block (`stat`, `statButton`).
-const fill = <T extends HTMLElement>(
-  element: T,
-  title: string,
-  value: string,
-  detail: string,
-  ...before: Node[]
-): T => {
-  element.title = title;
-  // As text: these are translations and names, not markup.
-  element.querySelector('.visually-hidden')!.textContent = `${title}: `;
-  element.querySelector('.value')!.textContent = value;
-  element.querySelector('.detail')!.textContent = detail;
-  element.querySelector('.yield-amount')!.prepend(...before);
-
-  return element;
-};
-
-// One item of the empire block: a label for a screen reader (and the tooltip), the value, and a detail after it.
-const stat = (
-  className: string,
-  title: string,
-  value: string,
-  detail: string,
-  ...before: Node[]
-): HTMLElement => {
-  const element = s(
-    `<div class="stat ${className}"><span class="visually-hidden"></span><span class="yield-amount"><span class="value"></span></span><span class="detail"></span></div>`
-  );
-
-  return fill(element, title, value, detail, ...before);
-};
-
-// The same, as a button that does `onClick`: for an item that opens a window, as the tax bar does.
-const statButton = (
-  className: string,
-  title: string,
-  value: string,
-  detail: string,
-  onClick: () => void,
-  ...before: Node[]
-): HTMLButtonElement => {
-  const element = s<HTMLButtonElement>(
-    `<button type="button" class="btn-bare stat ${className}"><span class="visually-hidden"></span><span class="yield-amount"><span class="value"></span></span><span class="detail"></span></button>`
-  );
-
-  element.addEventListener('click', onClick);
-
-  return fill(element, title, value, detail, ...before);
-};
-
-// An item that opens a report when clicked, when there is one to open, or a plain item.
+// An item that opens a report when clicked, when there is one to open (#698), or a plain item: a stat pill (#742).
 const reportStat = (
   className: string,
   title: string,
   report: Report | undefined,
   value: string,
   detail: string,
+  tone: StatPillTone,
   ...before: Node[]
 ): HTMLElement =>
-  report
-    ? statButton(
-        className,
-        text('PlayerDetails.opens', {
+  statPill({
+    className,
+    label: report
+      ? text('PlayerDetails.opens', {
           title,
           opens: report.title,
           key: report.key,
-        }),
-        value,
-        detail,
-        report.open,
-        ...before
-      )
-    : stat(className, title, value, detail, ...before);
+        })
+      : title,
+    value,
+    detail,
+    tone,
+    before,
+    onClick: report?.open ?? null,
+  });
 
 // A report an item opens: its title and key for the tooltip, and how to open it.
 export type Report = {
@@ -188,11 +142,55 @@ export class PlayerDetails extends Element {
         perTurn: totalGold,
         context: anarchy ? 'anarchy' : undefined,
       }),
+      anarchy
+        ? null
+        : totalGold < 0
+        ? 'negative'
+        : totalGold > 0
+        ? 'positive'
+        : null,
       yieldIcon('Gold')
     );
 
-    gold.classList.toggle('negative', !anarchy && totalGold < 0);
-    gold.classList.toggle('positive', !anarchy && totalGold > 0);
+    // What the cities bring in, what their improvements cost, and what's left, as the Trade report counts them (#742).
+    tooltip(
+      gold,
+      () => {
+        const [income, upkeep, net] = cities.reduce(
+          ([income, upkeep, net], city) => {
+            const [cityIncome, cityUpkeep, cityNet] = yieldData(city, 'Gold');
+
+            return [income + cityIncome, upkeep + cityUpkeep, net + cityNet];
+          },
+          [0, 0, 0]
+        );
+
+        return {
+          title: text('PlayerDetails.Treasury.title'),
+          rows: [
+            [
+              text('PlayerDetails.Treasury.Breakdown.treasury'),
+              text('PlayerDetails.Treasury.value', {
+                value: goldTreasury.value,
+              }),
+            ],
+            [
+              text('PlayerDetails.Treasury.Breakdown.income'),
+              text('Progress.per-turn', { count: income }),
+            ],
+            [
+              text('PlayerDetails.Treasury.Breakdown.upkeep'),
+              text('Progress.per-turn', { count: Math.abs(upkeep) }),
+            ],
+          ],
+          total: [
+            text('PlayerDetails.Treasury.Breakdown.net'),
+            text('City.Progress.per-turn', { count: net }),
+          ],
+        };
+      },
+      { key: 'treasury' }
+    );
 
     const researching = reportStat(
       'research',
@@ -206,29 +204,53 @@ export class PlayerDetails extends Element {
         turns: researchTurns,
         context: researchContext,
       }),
+      null,
       yieldIcon('Research')
     );
 
     if (research.researching) {
-      const progress = s(
-          '<span class="progress" role="progressbar" aria-valuemin="0"><span class="fill"></span></span>'
-        ),
-        cost = Math.max(research.cost.value, 1),
-        done = Math.min(Math.max(research.progress.value, 0), cost);
+      // Named inside the item, so it's part of a button's name; next turn's research is the striped part (#742).
+      researching.querySelector('.detail')!.before(
+        progressBar({
+          group: 'Research',
+          stored: research.progress.value,
+          capacity: Math.max(research.cost.value, 1),
+          perTurn: totalResearch,
+          label: text('PlayerDetails.Researching.progress', {
+            progress: research.progress.value,
+            cost: research.cost.value,
+            perTurn: totalResearch,
+          }),
+        })
+      );
 
-      progress.setAttribute('aria-valuemax', `${cost}`);
-      progress.setAttribute('aria-valuenow', `${done}`);
-      progress.title = text('PlayerDetails.Researching.progress', {
-        progress: research.progress.value,
-        cost: research.cost.value,
-        perTurn: totalResearch,
-      });
-      progress.setAttribute('aria-label', progress.title);
-      (progress.firstElementChild as HTMLElement).style.width = `${
-        (done / cost) * 100
-      }%`;
-
-      researching.querySelector('.detail')!.before(progress);
+      tooltip(
+        researching,
+        () => ({
+          title: text('PlayerDetails.Researching.value', {
+            researching: researchingName(research),
+            context: 'researching',
+          }),
+          rows: [
+            [
+              text('PlayerDetails.Researching.Breakdown.progress'),
+              text('Progress.data', {
+                progress: research.progress.value,
+                total: research.cost.value,
+              }),
+            ],
+            [
+              text('PlayerDetails.Researching.Breakdown.per-turn'),
+              text('Progress.per-turn', { count: totalResearch }),
+            ],
+          ],
+          total: [
+            text('PlayerDetails.Researching.Breakdown.turns'),
+            turnsText(researchTurns),
+          ],
+        }),
+        { key: 'research' }
+      );
     }
 
     const revolution = actions.find((action) => action._ === 'Revolution'),
@@ -248,27 +270,24 @@ export class PlayerDetails extends Element {
             : 'choosing',
       }),
       // Starts a revolution, as its button does, when the engine offers one (#274).
-      governmentStat =
-        revolution && transport
-          ? statButton(
-              'government',
-              text('PlayerDetails.Government.revolution', {
+      governmentStat = statPill({
+        className: 'government',
+        label:
+          revolution && transport
+            ? text('PlayerDetails.Government.revolution', {
                 title: text('PlayerDetails.Government.title'),
-              }),
-              governmentName,
-              '',
-              () =>
+              })
+            : text('PlayerDetails.Government.title'),
+        value: governmentName,
+        onClick:
+          revolution && transport
+            ? () =>
                 confirmRevolution(
                   revolution.value as PlayerGovernment,
                   transport
                 )
-            )
-          : stat(
-              'government',
-              text('PlayerDetails.Government.title'),
-              governmentName,
-              ''
-            );
+            : null,
+      });
 
     this.append(heading, researching, gold, governmentStat);
 
@@ -290,7 +309,7 @@ export class PlayerDetails extends Element {
 
     const tradeRates = action.value as PlayerTradeRates,
       button = s<HTMLButtonElement>(
-        '<button type="button" class="btn-bare stat trade-rates"><span class="bar"></span><span class="visually-hidden"></span></button>'
+        '<button type="button" class="btn-bare stat-pill trade-rates"><span class="bar"></span><span class="visually-hidden"></span></button>'
       ),
       bar = button.querySelector('.bar') as HTMLElement,
       labels = [...tradeRates.all]

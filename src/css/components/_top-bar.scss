@@ -86,82 +86,12 @@
     }
   }
 
-  // The empire block (#698): an icon, a value and a detail after it.
-  .stat {
-    align-items: center;
-    display: flex;
-    gap: 0.4em;
-    white-space: nowrap;
-
-    .value {
-      font-weight: var(--type-strong-weight);
-    }
-
-    .detail {
-      color: var(--ui-fg-muted);
-      font-size: var(--type-detail-size);
-
-      &:empty {
-        display: none;
-      }
-    }
-
-    &.gold.positive .detail {
-      color: var(--ui-positive);
-    }
-
-    &.gold.negative .detail {
-      color: var(--ui-negative);
-      font-weight: var(--type-strong-weight);
-    }
-
-    .yield-amount {
-      align-items: center;
-      display: flex;
-      gap: 0.25em;
-    }
-  }
-
   // The research progress and the tax split are the same size, so they line up (#698).
-  .progress,
+  .progress-bar,
   .trade-rates .bar {
     box-sizing: border-box;
     height: 0.75em;
     width: 6em;
-  }
-
-  .progress {
-    background: var(--ui-sunken);
-    border: 1px solid var(--ui-bevel-dark);
-    display: inline-block;
-    overflow: hidden;
-
-    .fill {
-      background: var(--ui-accent);
-      display: block;
-      height: 100%;
-    }
-  }
-
-  // Items that open a window: the government (a revolution) and the tax split (the trade rates) (#698).
-  button.stat {
-    appearance: none;
-    background: none;
-    border: 0;
-    color: inherit;
-    cursor: pointer;
-    font: inherit;
-    padding: 0;
-
-    &:hover .value,
-    &:hover .bar {
-      filter: brightness(1.15);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--ui-fg);
-      outline-offset: 2px;
-    }
   }
 
   .trade-rates .bar {

@@ -129,6 +129,9 @@ const transport = {
     const element = document.createElement('div'),
       details = new PlayerDetails(element, data, withTransport, withReports);
 
+    // On the page, as the top bar is: a tooltip opens only over an item that is (#742).
+    document.body.append(element);
+
     details.build();
 
     return element;
@@ -209,7 +212,7 @@ const run = async (): Promise<void> => {
     expect('the government', text(element, '.government .value'), 'Monarchy');
     expect(
       'research comes before the treasury',
-      Array.from(element.querySelectorAll('.stat')).map(
+      Array.from(element.querySelectorAll('.stat-pill')).map(
         (item) =>
           item.className
             .split(' ')
@@ -260,12 +263,69 @@ const run = async (): Promise<void> => {
       ['science', 'trade']
     );
     expect(
-      'and their tooltips say so',
+      'and their names say so',
       [
-        element.querySelector('.research')?.getAttribute('title'),
-        element.querySelector('.gold')?.getAttribute('title'),
+        text(element, '.research .visually-hidden'),
+        text(element, '.gold .visually-hidden'),
       ],
-      ['Researching (Science report, F6)', 'Treasury (Trade report, F5)']
+      ['Researching (Science report, F6): ', 'Treasury (Trade report, F5): ']
+    );
+
+    // Their tooltips are breakdowns (#742), opened at once by keyboard focus, in place of the browser's own.
+    const breakdown = (selector: string) => {
+      const anchor = element.querySelector(selector) as HTMLElement;
+
+      anchor.dispatchEvent(new Event('focus'));
+
+      const panel = document.getElementById('tooltip'),
+        shown = {
+          describedBy: anchor.getAttribute('aria-describedby'),
+          title: anchor.getAttribute('title'),
+          heading: panel?.querySelector('h4')?.textContent,
+          rows: Array.from(panel?.querySelectorAll('dt') ?? []).map((term) => [
+            term.textContent,
+            term.nextElementSibling?.textContent,
+          ]),
+          total: panel?.querySelector('dt.total')?.textContent,
+        };
+
+      anchor.dispatchEvent(new Event('blur'));
+
+      return shown;
+    };
+
+    expect(
+      'the treasury breaks down what it gains a turn',
+      breakdown('.gold'),
+      {
+        describedBy: 'tooltip',
+        title: null,
+        heading: 'Treasury',
+        rows: [
+          ['In the treasury', '120'],
+          ['Income', '5 / turn'],
+          ['Upkeep', '8 / turn'],
+          ['Net', '-3 / turn'],
+        ],
+        total: 'Net',
+      }
+    );
+    expect('and the research its progress', breakdown('.research'), {
+      describedBy: 'tooltip',
+      title: null,
+      heading: 'Writing',
+      rows: [
+        ['Progress', '12 / 60'],
+        ['Per turn', '6 / turn'],
+        ['Done in', '8 turns'],
+      ],
+      total: 'Done in',
+    });
+    expect(
+      'research next turn is the striped part of its bar',
+      (element.querySelector('.research .progress-bar .next') as HTMLElement)
+        ?.style.width,
+      '10%'
     );
 
     const tax = element.querySelector('.trade-rates') as HTMLButtonElement;

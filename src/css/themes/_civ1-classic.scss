@@ -154,6 +154,28 @@
   --ui-focus-colour: -webkit-focus-ring-color;
   --ui-focus-offset: 0;
 
+  // Progress bars (#742): as the city screen drew them.
+  --ui-bar-track: color-mix(in srgb, var(--ui-shade) 12%, transparent);
+  --ui-bar-edge: color-mix(in srgb, var(--ui-shade) 35%, transparent);
+  --ui-bar-radius: 2px;
+  --ui-bar-inset: inset 0 1px 2px
+    color-mix(in srgb, var(--ui-shade) 20%, transparent);
+  --ui-bar-gloss: inset 0 1px 0
+    color-mix(in srgb, var(--ui-light) 30%, transparent);
+  --ui-bar-next-opacity: 0.6;
+  --ui-bar-tick: color-mix(in srgb, var(--ui-shade) 25%, transparent);
+
+  // Tooltips (#742): a small Civ1 window, its title on the title bar's blue.
+  --ui-tooltip-bg: #edc;
+  --ui-tooltip-fg: #123;
+  --ui-tooltip-muted: #3d4452;
+  --ui-tooltip-edge: #ccc;
+  --ui-tooltip-rule: rgba(0, 0, 0, 0.3);
+  --ui-tooltip-radius: 3px;
+  --ui-tooltip-shadow: 1px 1px 5px rgba(0, 0, 0, 0.6);
+  --ui-tooltip-title-bg: #38e;
+  --ui-tooltip-title-fg: #edc;
+
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;
   --ui-shadow-panel: 1px 1px 5px rgba(0, 0, 0, 0.6);

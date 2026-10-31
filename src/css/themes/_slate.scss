@@ -165,6 +165,26 @@
   --ui-focus-colour: var(--ui-focus);
   --ui-focus-offset: 2px;
 
+  // Progress bars (#742): flat, in a sunken track.
+  --ui-bar-track: var(--ui-sunken);
+  --ui-bar-edge: var(--ui-line);
+  --ui-bar-radius: 3px;
+  --ui-bar-inset: none;
+  --ui-bar-gloss: none;
+  --ui-bar-next-opacity: 0.5;
+  --ui-bar-tick: color-mix(in srgb, var(--ui-shade) 22%, transparent);
+
+  // Tooltips (#742): the title bar's slate throughout, brass-tinted title text.
+  --ui-tooltip-bg: var(--ui-title-bg);
+  --ui-tooltip-fg: #e9e5d9;
+  --ui-tooltip-muted: #9aa2ae;
+  --ui-tooltip-edge: #0d1014;
+  --ui-tooltip-rule: #3b4350;
+  --ui-tooltip-radius: var(--ui-radius-control);
+  --ui-tooltip-shadow: 0 6px 18px rgba(13, 16, 20, 0.45);
+  --ui-tooltip-title-bg: color-mix(in srgb, var(--ui-title-bg), #000 18%);
+  --ui-tooltip-title-fg: var(--ui-title-fg);
+
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;
   --ui-shadow-panel: 0 2px 8px rgba(13, 16, 20, 0.35);
