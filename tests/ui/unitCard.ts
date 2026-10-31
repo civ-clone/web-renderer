@@ -602,6 +602,16 @@ const run = async (): Promise<void> => {
       'Disband'
     );
 
+    actions.build(
+      unit('Unit-2', { actions: [action('Disband'), action('Sleep')] }),
+      null
+    );
+
+    expect(
+      "but not on to another unit's actions",
+      element.contains(document.activeElement),
+      false
+    );
     HTMLElement.prototype.focus = focus;
     delete (document as any).activeElement;
   }

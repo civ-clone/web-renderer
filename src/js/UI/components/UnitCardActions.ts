@@ -66,6 +66,7 @@ export class UnitCardActions extends Element {
   #act: (unitId: string, unitAction: string) => void;
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
+  #unitId: string | null = null;
 
   constructor(
     container: HTMLElement,
@@ -122,14 +123,18 @@ export class UnitCardActions extends Element {
     this.#signature = signature;
 
     // A keyboard player who has just pressed one keeps their place: the same action again, or the first.
+    //  Not for another unit: its first action could be Disband, under a key about to be pressed again.
     const focused =
       document.activeElement instanceof HTMLElement &&
-      this.element().contains(document.activeElement)
+      this.element().contains(document.activeElement) &&
+      unit?.id === this.#unitId
         ? document.activeElement.dataset.action ?? null
         : null;
 
     hideTooltipWithin(this.element());
     this.empty();
+
+    this.#unitId = unit?.id ?? null;
 
     if (unit === null) {
       return;

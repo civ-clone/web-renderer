@@ -334,9 +334,6 @@ export class GameSession {
       // The unit's actions are in its card under the new interface (#743): no strip at the bottom left.
       if (unitCard) {
         unitActionArea.remove();
-      }
-
-      if (unitCard) {
         transportDisposers.push((): void => unitCard.dispose());
       }
 

@@ -62,7 +62,8 @@ const stats = (unit: UnitData): HTMLElement =>
       ] as [string, string, number | null][]
     ).map(([className, name, value]) =>
       statPill({
-        className: `ui-unit-card-stat ${className}`,
+        // Not `moves`: the classic card's `#unitInfo .moves` rule would reach it, on the same element.
+        className: `ui-unit-card-stat ui-unit-card-stat-${className}`,
         label: yieldName(name),
         value:
           value === null
@@ -325,8 +326,14 @@ export class UnitCard extends Element {
 
     const next = this.#others(unit, othersOf(unit));
 
+    const focused = previous.contains(document.activeElement);
+
     previous.replaceWith(next);
     this.#othersSection = next;
+
+    if (focused) {
+      next.querySelector<HTMLElement>('button')?.focus();
+    }
   }
 
   // The other units on the square at the portrait's size (#721), two rows at most and a "+N" for the rest, under an
