@@ -1,0 +1,105 @@
+@use 'action-button';
+
+// The Next Turn button (#702), under the new interface (#735): a button of the button system (#740), primary when the
+//  turn is ready to end and secondary while something needs the player first. A small orb in the tint of the item's
+//  own orb beside what it is, its place in the queue under that, and its key at the end. Where the orbs were, at the
+//  bottom right of the map.
+
+// Not an `.action`, whose orb rules it would take: its own place in the column, taking the pointer as the orbs do.
+.ui-next-turn-holder {
+  margin: 0 1rem 1rem;
+  pointer-events: auto;
+  text-align: right;
+}
+
+.ui-next-turn {
+  --next-turn-tint: var(--ui-action);
+  align-items: center;
+  box-shadow: var(--ui-shadow-orb);
+  column-gap: 0.6em;
+  display: inline-grid;
+  grid-template-areas:
+    'mark label key'
+    'mark place key';
+  grid-template-columns: auto 1fr auto;
+  max-width: 20rem;
+  min-height: 3.1rem;
+  min-width: 14rem;
+  padding: 0.5em 0.9em 0.5em 0.6em;
+  row-gap: 0.1em;
+  text-align: left;
+
+  // Each kind in its orb's tint (#703's tokens).
+  &[data-kind='ChooseResearch'] {
+    --next-turn-tint: var(--ui-action-research);
+  }
+
+  &[data-kind='CityBuild'] {
+    --next-turn-tint: var(--ui-action-build);
+  }
+
+  &[data-kind='CivilDisorder'] {
+    --next-turn-tint: var(--ui-action-disorder);
+  }
+
+  &[data-kind='Notice'] {
+    --next-turn-tint: var(--ui-action-notice);
+  }
+
+  &[data-kind='units'] {
+    --next-turn-tint: var(--ui-action-units);
+  }
+
+  // The tint down its leading edge too, so the kind shows at a glance.
+  &[data-kind] {
+    border-left: 4px solid var(--next-turn-tint);
+  }
+
+  // Waiting: nothing to mark, so no room kept for it.
+  &:not([data-kind]):not(.btn-primary) {
+    grid-template-areas:
+      'label key'
+      'place key';
+    grid-template-columns: 1fr auto;
+  }
+
+  // End turn: its glyph where the orb would be, the label alone beside it.
+  &.btn-primary {
+    grid-template-areas: 'mark label key';
+  }
+
+  .glyph {
+    grid-area: mark;
+    height: 1.4em;
+    width: 1.4em;
+  }
+
+  &[data-hotkey]::after {
+    align-self: end;
+    grid-area: key;
+  }
+
+  &.btn-primary[data-hotkey]::after {
+    align-self: center;
+  }
+}
+
+.ui-next-turn-swatch {
+  @include action-button.background-gradient-silver-ring(var(--next-turn-tint));
+  border-radius: 50%;
+  box-shadow: var(--ui-shadow-orb);
+  grid-area: mark;
+  height: 2em;
+  width: 2em;
+}
+
+.ui-next-turn-label {
+  font-weight: var(--type-strong-weight);
+  grid-area: label;
+}
+
+.ui-next-turn-place {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-caption-size);
+  grid-area: place;
+}

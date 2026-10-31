@@ -66,6 +66,8 @@
   --ui-action-disorder: #a82929;
   --ui-action-notice: #c9a227;
   --ui-action-end-turn: #25b906;
+  // The units awaiting orders, on the Next Turn button (#702), which have no orb of their own.
+  --ui-action-units: #7a4fa8;
   --ui-orb-ring: radial-gradient(
     circle,
     transparent 60%,

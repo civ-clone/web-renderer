@@ -77,6 +77,9 @@ let activeUnit: Unit | null = unit,
   mandatoryActions: Array<{ _: string }> = [{ _: 'EndTurn' }],
   actions: Array<{ _: string; value?: unknown }> = [];
 
+// The Next Turn button under the new interface (#702): null, as under the classic one, but for its own checks.
+let nextTurnButton: { press(): void; skip(): void } | null = null;
+
 const actionArea = document.createElement('div');
 
 document.body.append(actionArea);
@@ -98,6 +101,7 @@ const controller = new InputController({
       calls.push('saveGame');
     },
   },
+  nextTurn: () => nextTurnButton,
   mapView: {
     centre: (centred: Tile): void => {
       calls.push(`centre ${centred.x},${centred.y}`);
@@ -159,7 +163,8 @@ const press = ({
   location = 0,
   metaKey = false,
   shiftKey = false,
-}: KeyInit): KeyboardEvent => {
+  target = null,
+}: KeyInit & { target?: EventTarget | null }): KeyboardEvent => {
   const event = new KeyboardEvent('keydown', {
     bubbles: true,
     cancelable: true,
@@ -175,7 +180,7 @@ const press = ({
     shiftKey: { value: shiftKey },
   });
 
-  document.dispatchEvent(event);
+  (target ?? document).dispatchEvent(event);
 
   return event;
 };
@@ -669,6 +674,82 @@ const run = async (): Promise<void> => {
   focused = document.body;
   actions = [];
   notice.remove();
+
+  // The Next Turn button (#702).
+
+  reset();
+  nextTurnButton = {
+    press: (): void => {
+      calls.push('next turn');
+    },
+    skip: (): void => {
+      calls.push('skip');
+    },
+  };
+  mandatoryActions = [{ _: 'EndTurn' }];
+
+  event = press({ key: 'Enter' });
+
+  expect(
+    'under the new interface, Enter presses the Next Turn button rather than ending the turn itself',
+    [calls, sent, event.defaultPrevented],
+    [['next turn'], [], true]
+  );
+
+  reset();
+  press({ key: 'Enter', shiftKey: true });
+
+  expect('and Shift+Enter skips its item', calls, ['skip']);
+
+  reset();
+
+  const heldEnter = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'Enter',
+  });
+
+  Object.defineProperty(heldEnter, 'repeat', { value: true });
+  document.dispatchEvent(heldEnter);
+
+  expect('a held Enter presses it once, not again for each repeat', calls, []);
+
+  reset();
+
+  const sidebarButton = document.createElement('button'),
+    report = document.createElement('dialog'),
+    reportText = document.createElement('p'),
+    nextTurnElement = document.createElement('button');
+
+  nextTurnElement.className = 'ui-next-turn';
+  report.append(reportText);
+  document.body.append(sidebarButton, report, nextTurnElement);
+
+  press({ key: 'Enter', target: sidebarButton });
+  press({ key: 'Enter', target: reportText });
+  press({ key: 'Enter', target: nextTurnElement });
+
+  expect(
+    "Enter on a button, in a window, or on the Next Turn button itself (its own click) isn't taken",
+    calls,
+    []
+  );
+
+  press({ key: 'Enter', shiftKey: true, target: nextTurnElement });
+
+  expect('Shift+Enter on the button itself skips', calls, ['skip']);
+
+  reset();
+  waiting = true;
+  press({ key: 'Enter' });
+  waiting = false;
+
+  expect('nor while waiting', [calls, sent], [[], []]);
+
+  sidebarButton.remove();
+  report.remove();
+  nextTurnElement.remove();
+  nextTurnButton = null;
 
   // `dispose`.
 

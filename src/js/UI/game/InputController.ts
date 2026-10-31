@@ -38,12 +38,26 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
 //  `dialog.window.modal[open]`, read from `document` and `document.activeElement` on each key press; Escape blurs
 //  `document.activeElement`; and Tab focuses the first action button in `actionArea`.
 
+// What answers Enter for itself, so the Next Turn button doesn't take it from it (#702).
+//  A window, open but not modal (a report), keeps it too.
+const takesEnter = (target: EventTarget | null): boolean =>
+    target instanceof Element &&
+    (target.matches(
+      'button, a[href], input, select, textarea, summary, [contenteditable], [role="button"]'
+    ) ||
+      target.closest('dialog') !== null),
+  isNextTurn = (target: EventTarget | null): boolean =>
+    target instanceof Element && target.matches('.ui-next-turn');
+
 export type InputControllerDeps = {
   // The primary actions' area, whose first button Tab focuses.
   actionArea: HTMLElement;
   // Read on every key press, so always the latest rebuild.
   data: () => GameData;
   gameMenu: { enableCheats(): void; saveGame(): void };
+  // Under the new interface (#702): Enter presses the Next Turn button and Shift+Enter skips its item, in place of
+  //  Enter ending the turn. Read on every key press, as the HUD makes it.
+  nextTurn?: () => { press(): void; skip(): void } | null;
   mapView: {
     centre(tile: Tile): void;
     toggleUnits(): void;
@@ -100,6 +114,7 @@ export class InputController {
         data,
         gameMenu,
         mapView,
+        nextTurn,
         notificationBar,
         transport,
         unitController,
@@ -170,7 +185,34 @@ export class InputController {
       return;
     }
 
+    const button = nextTurn?.() ?? null;
+
+    // Not from something that takes Enter itself (a button, a field), nor over a modal window. Shift+Enter on the button
+    //  itself skips too: Enter alone there is the button's own click.
     if (
+      button !== null &&
+      (key === 'Enter' || (event.key === 'Enter' && event.shiftKey)) &&
+      !modalWindow &&
+      !waiting() &&
+      // Once for a key held down: not a run through the queue.
+      !event.repeat &&
+      (!takesEnter(event.target) ||
+        (event.shiftKey && isNextTurn(event.target)))
+    ) {
+      if (event.shiftKey) {
+        button.skip();
+      } else {
+        button.press();
+      }
+
+      event.stopPropagation();
+      event.preventDefault();
+
+      return;
+    }
+
+    if (
+      button === null &&
       key === 'Enter' &&
       !waiting() &&
       data().player.mandatoryActions.some((action) => action._ === 'EndTurn')
@@ -185,7 +227,8 @@ export class InputController {
 
     if (key === 'Tab') {
       const topAction = actionArea.querySelector(
-        'div.action:first-child button'
+        // The first orb, or the Next Turn button (#702).
+        'div.action:first-child button, button.ui-next-turn'
       ) as HTMLButtonElement | null;
 
       if (topAction !== null) {

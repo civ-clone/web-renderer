@@ -26,6 +26,60 @@ export interface IActions {
   build(actions: PlayerAction[], player?: Player): void;
 }
 
+/**
+ * The `Action` for one of the player's actions, which draws its orb and does what pressing it does: shared by the orbs
+ *  and the Next Turn button (#702). Null for those handled elsewhere (the unit, the city screen) and any not known.
+ */
+export const createAction = (
+  playerAction: PlayerAction,
+  portal: Portal,
+  transport: Transport,
+  player?: Player
+): Action | null => {
+  switch (playerAction._) {
+    case 'AdjustTradeRates':
+      return new AdjustTradeRates(playerAction, transport);
+
+    case 'ChooseGovernment':
+      return new ChooseGovernment(playerAction, transport);
+
+    case 'ChooseResearch':
+      return new ChooseResearch(playerAction, transport, player);
+
+    case 'CityBuild':
+      return new CityBuild(playerAction, portal, transport);
+
+    case 'CivilDisorder':
+      return new CivilDisorder(playerAction, portal, transport);
+
+    case 'EndTurn':
+      return new EndTurn(playerAction, transport);
+
+    case 'Notice':
+      return new Notice(playerAction, portal, transport);
+
+    case 'LaunchSpaceship':
+      return new Spaceship(playerAction, transport);
+
+    case 'Revolution':
+      return new Revolution(playerAction, transport);
+
+    case 'ActiveUnit':
+    case 'ChangeProduction':
+    case 'ChangeSpecialist':
+    case 'ChangeWorkedTile':
+    case 'CompleteProduction':
+    case 'InactiveUnit':
+    case 'SellImprovement':
+      return null;
+
+    default:
+      console.log('need to handle ' + playerAction._);
+
+      return null;
+  }
+};
+
 export class Actions extends Element implements IActions {
   #actions = new Map<Node, Action>();
   #portal: Portal;
@@ -161,71 +215,15 @@ export class Actions extends Element implements IActions {
     this.#actions.clear();
 
     actions.forEach((playerAction) => {
-      let action: Action;
+      const action = createAction(
+        playerAction,
+        this.#portal,
+        this.#transport,
+        player
+      );
 
-      switch (playerAction._) {
-        case 'AdjustTradeRates':
-          action = new AdjustTradeRates(playerAction, this.#transport);
-
-          break;
-
-        case 'ChooseGovernment':
-          action = new ChooseGovernment(playerAction, this.#transport);
-
-          break;
-
-        case 'ChooseResearch':
-          action = new ChooseResearch(playerAction, this.#transport, player);
-
-          break;
-
-        case 'CityBuild':
-          action = new CityBuild(playerAction, this.#portal, this.#transport);
-
-          break;
-
-        case 'CivilDisorder':
-          action = new CivilDisorder(
-            playerAction,
-            this.#portal,
-            this.#transport
-          );
-
-          break;
-
-        case 'EndTurn':
-          action = new EndTurn(playerAction, this.#transport);
-
-          break;
-
-        case 'Notice':
-          action = new Notice(playerAction, this.#portal, this.#transport);
-
-          break;
-
-        case 'LaunchSpaceship':
-          action = new Spaceship(playerAction, this.#transport);
-
-          break;
-
-        case 'Revolution':
-          action = new Revolution(playerAction, this.#transport);
-
-          break;
-
-        case 'ActiveUnit':
-        case 'ChangeProduction':
-        case 'ChangeSpecialist':
-        case 'ChangeWorkedTile':
-        case 'CompleteProduction':
-        case 'InactiveUnit':
-        case 'SellImprovement':
-          return;
-
-        default:
-          console.log('need to handle ' + playerAction._);
-
-          return;
+      if (action === null) {
+        return;
       }
 
       this.append(action);
