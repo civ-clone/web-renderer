@@ -465,6 +465,147 @@ const run = async (): Promise<void> => {
     );
   }
 
+  {
+    // The card's width (#743): a stub ResizeObserver and a frame that runs at once, and a width the test sets.
+    const observers: (() => void)[] = [],
+      disconnected: number[] = [];
+
+    (globalThis as any).ResizeObserver = class {
+      #index: number;
+
+      constructor(callback: () => void) {
+        this.#index = observers.push(callback) - 1;
+      }
+
+      observe(): void {}
+
+      disconnect(): void {
+        disconnected.push(this.#index);
+      }
+    };
+    (globalThis as any).requestAnimationFrame = (callback: () => void) =>
+      callback();
+
+    const { element, details } = card(),
+      stack = Array.from({ length: 16 }, (_, index) =>
+        unit(`Unit-${30 + index}`)
+      );
+    let width = 0;
+
+    Object.defineProperty(element, 'clientWidth', { get: () => width });
+
+    tile.units = stack;
+
+    // Drawn while hidden: the fallback of six to a row.
+    details.update(stack[0]);
+
+    const header = element.querySelector('.ui-unit-card-header'),
+      portraits = () =>
+        element.querySelectorAll('.ui-unit-card-others canvas').length;
+
+    expect('drawn hidden: six to a row', portraits(), 11);
+
+    // Four portraits of 32px with 2px gaps.
+    width = 4 * 32 + 3 * 2;
+    observers[observers.length - 1]();
+
+    expect(
+      'shown narrower: four to a row, only the other units redrawn',
+      [
+        portraits(),
+        text(element, '.ui-unit-card-more'),
+        element.querySelector('.ui-unit-card-header') === header,
+      ],
+      [7, '+8', true]
+    );
+
+    const strip = element.querySelector('.ui-unit-card-others');
+
+    observers[observers.length - 1]();
+
+    expect(
+      'the same width again: nothing redrawn',
+      element.querySelector('.ui-unit-card-others') === strip,
+      true
+    );
+
+    details.dispose();
+
+    expect('disposed, it stops watching', disconnected.length, 1);
+
+    const next = card();
+
+    Object.defineProperty(next.element, 'clientWidth', { get: () => width });
+    next.details.update(stack[0]);
+
+    expect(
+      'a unit that cannot move has no row of pips',
+      (() => {
+        next.details.update({
+          ...stack[0],
+          movement: value(0),
+          moves: value(0),
+        } as Unit);
+
+        return next.element.querySelector('.ui-unit-card-pips');
+      })(),
+      null
+    );
+
+    delete (globalThis as any).ResizeObserver;
+    delete (globalThis as any).requestAnimationFrame;
+  }
+
+  {
+    // A keyboard player keeps their place when the actions change (linkedom has no focus, so it's tracked by hand).
+    const { element, actions } = card();
+    let focused: HTMLElement | null = null;
+
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => focused,
+    });
+
+    const focus = HTMLElement.prototype.focus;
+
+    HTMLElement.prototype.focus = function (this: HTMLElement) {
+      focused = this;
+    };
+
+    actions.build(
+      unit('Unit-1', {
+        actions: [action('Fortify'), action('Sleep'), action('BuildRoad')],
+      }),
+      null
+    );
+
+    (
+      element.querySelector('.ui-unit-card-action.Sleep') as HTMLElement
+    ).focus();
+
+    actions.build(
+      unit('Unit-1', { actions: [action('Sleep'), action('Disband')] }),
+      null
+    );
+
+    expect(
+      'the same action keeps the focus after the actions change',
+      (document.activeElement as HTMLElement | null)?.dataset.action,
+      'Sleep'
+    );
+
+    actions.build(unit('Unit-1', { actions: [action('Disband')] }), null);
+
+    expect(
+      'or the first, when it has gone',
+      (document.activeElement as HTMLElement | null)?.dataset.action,
+      'Disband'
+    );
+
+    HTMLElement.prototype.focus = focus;
+    delete (document as any).activeElement;
+  }
+
   expect(
     'unknown actions are special',
     [

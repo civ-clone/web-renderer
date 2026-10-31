@@ -336,6 +336,10 @@ export class GameSession {
         unitActionArea.remove();
       }
 
+      if (unitCard) {
+        transportDisposers.push((): void => unitCard.dispose());
+      }
+
       if (citiesList) {
         transportDisposers.push((): void => citiesList.dispose());
       }

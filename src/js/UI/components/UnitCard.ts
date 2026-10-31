@@ -155,6 +155,7 @@ export class UnitCard extends Element {
   // How many portraits a row was drawn with, so a card that's wider or narrower than it was redraws them (#743).
   #drawnPerRow: number | null = null;
   #othersSection: HTMLElement | null = null;
+  #observer: ResizeObserver | null = null;
   #resizePending = false;
   #deps: UnitCardDeps;
   #shown: string | null = null;
@@ -171,7 +172,7 @@ export class UnitCard extends Element {
 
     // The width can change after the card is drawn: the sidebar's breakpoint (#704), or a card first drawn hidden.
     if (typeof ResizeObserver !== 'undefined') {
-      const observer = new ResizeObserver((): void => {
+      const observer = (this.#observer = new ResizeObserver((): void => {
         if (cards.get(element) !== this) {
           observer.disconnect();
 
@@ -189,6 +190,7 @@ export class UnitCard extends Element {
           this.#resizePending = false;
 
           if (
+            cards.get(element) === this &&
             this.#drawnPerRow !== null &&
             this.#perRow(nativeTileSize(currentTileset()) * 2) !==
               this.#drawnPerRow
@@ -196,9 +198,19 @@ export class UnitCard extends Element {
             this.#redrawOthers();
           }
         });
-      });
+      }));
 
       observer.observe(element);
+    }
+  }
+
+  /** Stops watching the card's width, when the game ends. */
+  dispose(): void {
+    this.#observer?.disconnect();
+    this.#observer = null;
+
+    if (cards.get(this.element()) === this) {
+      cards.delete(this.element());
     }
   }
 
@@ -287,7 +299,10 @@ export class UnitCard extends Element {
 
     element.insertBefore(header, this.#actions);
     element.insertBefore(stats(unit), this.#actions);
-    element.insertBefore(movePips(unit), this.#actions);
+    // No moves at all (a unit that can't move): no empty row of pips.
+    if (unit.movement.value > 0) {
+      element.insertBefore(movePips(unit), this.#actions);
+    }
     element.insertBefore(tile(unit), this.#actions);
 
     const others = othersOf(unit);

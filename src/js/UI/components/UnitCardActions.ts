@@ -121,6 +121,13 @@ export class UnitCardActions extends Element {
 
     this.#signature = signature;
 
+    // A keyboard player who has just pressed one keeps their place: the same action again, or the first.
+    const focused =
+      document.activeElement instanceof HTMLElement &&
+      this.element().contains(document.activeElement)
+        ? document.activeElement.dataset.action ?? null
+        : null;
+
     hideTooltipWithin(this.element());
     this.empty();
 
@@ -163,6 +170,7 @@ export class UnitCardActions extends Element {
           });
 
         actionButton.setAttribute('aria-label', name);
+        actionButton.dataset.action = action._;
         tooltip(actionButton, () => ({
           title: name,
           rows: key ? [[text('UnitCard.key'), key]] : [],
@@ -181,6 +189,14 @@ export class UnitCardActions extends Element {
         this.#draw(actionButton.querySelector('canvas')!, layers[index]);
       });
     });
+
+    if (focused !== null) {
+      (
+        this.element().querySelector<HTMLElement>(
+          `.ui-unit-card-action[data-action="${focused}"]`
+        ) ?? this.element().querySelector<HTMLElement>('.ui-unit-card-action')
+      )?.focus();
+    }
   }
 }
 
