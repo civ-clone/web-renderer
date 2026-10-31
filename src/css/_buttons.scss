@@ -36,8 +36,14 @@
 
   &:focus-visible {
     outline: var(--ui-btn-focus-outline);
-    outline-color: var(--ui-focus-colour);
     outline-offset: var(--ui-btn-focus-offset);
+  }
+
+  // As `_controls.scss` does: the browser's own focus colour, where it has a name for it.
+  @supports (outline-color: -webkit-focus-ring-color) {
+    &:focus-visible {
+      outline-color: var(--ui-focus-colour);
+    }
   }
 
   &:disabled {

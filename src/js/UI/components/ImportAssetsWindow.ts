@@ -17,6 +17,7 @@ export class ImportAssetsWindow extends Window {
   // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
   #fileInput: HTMLInputElement;
   #chooseButton: HTMLButtonElement;
+  #chosen: HTMLSpanElement;
   #progressInformation: HTMLParagraphElement;
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
@@ -30,7 +31,9 @@ export class ImportAssetsWindow extends Window {
         click: () => fileInput.click(),
       }),
       chosen = s<HTMLSpanElement>(
-        `<span class="chosen">${t('ImportAssetsWindow.none-chosen')}</span>`
+        `<span class="chosen" aria-live="polite">${t(
+          'ImportAssetsWindow.none-chosen'
+        )}</span>`
       ),
       replaceExistingInput = s<HTMLInputElement>(
         '<input type="checkbox" checked>'
@@ -67,11 +70,12 @@ export class ImportAssetsWindow extends Window {
                 ({ name }) => name
               );
 
-              chosen.textContent = names.length
-                ? t('ImportAssetsWindow.chosen', { files: names })
-                : t('ImportAssetsWindow.none-chosen');
+              this.#showChosen(names);
 
-              this.handleFileUpload(event);
+              // Nothing chosen (the picker closed after an earlier choice) isn't an attempt to import.
+              if (names.length) {
+                this.handleFileUpload(event);
+              }
             },
           })
         ),
@@ -81,6 +85,7 @@ export class ImportAssetsWindow extends Window {
 
     this.#fileInput = fileInput;
     this.#chooseButton = chooseButton;
+    this.#chosen = chosen;
     this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
   }
@@ -294,6 +299,17 @@ export class ImportAssetsWindow extends Window {
     });
   }
 
+  /** The names of the files chosen, as text beside the button (#739). */
+  #showChosen(names: string[]): void {
+    this.#chosen.textContent = names.length
+      ? t('ImportAssetsWindow.chosen', {
+          files: names,
+          // Set as text, so a name with `&` or `<` in it shows as it is.
+          interpolation: { escapeValue: false },
+        })
+      : t('ImportAssetsWindow.none-chosen');
+  }
+
   /** Shows `message` as the reason the import stopped, and lets the player choose files again. */
   #fail(message: string): void {
     this.#progressInformation.classList.add('failed');
@@ -302,6 +318,7 @@ export class ImportAssetsWindow extends Window {
     this.#chooseButton.disabled = false;
     // So choosing the same files again counts as a change.
     this.#fileInput.value = '';
+    this.#showChosen([]);
   }
 }
 

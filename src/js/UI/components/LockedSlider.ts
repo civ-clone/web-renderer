@@ -93,8 +93,8 @@ export class LockedSlider extends Element {
       this.#range.value = value;
     }
 
-    // How far the track is filled, for the theme to draw (#739).
-    this.#range.style.setProperty('--fill', `${value}%`);
+    // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739).
+    this.#range.style.setProperty('--fill', String(parseInt(value, 10) / 100));
 
     if (this.#number.value !== value) {
       this.#number.value = value;

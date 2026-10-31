@@ -309,15 +309,33 @@ const run = async (): Promise<void> => {
 
     expect('the button opens the file input', opened, true);
 
+    // The names alone, without starting an import of them.
+    const uploads: number[] = [];
+
+    window.handleFileUpload = async () => {
+      uploads.push(1);
+    };
+
     Object.defineProperty(input, 'files', {
-      value: [{ name: 'README.TXT' }, { name: 'CIV.EXE' }],
+      configurable: true,
+      value: [{ name: 'README.TXT' }, { name: 'R&D <1>.PIC' }],
     });
     input.dispatchEvent(new Event('change'));
 
     expect(
-      "the chosen files' names show beside the button",
+      "the chosen files' names show beside the button, as they are",
       chosen(),
-      'README.TXT and CIV.EXE'
+      'README.TXT and R&D <1>.PIC'
+    );
+    expect('and the import starts', uploads.length, 1);
+
+    Object.defineProperty(input, 'files', { configurable: true, value: [] });
+    input.dispatchEvent(new Event('change'));
+
+    expect(
+      'closing the picker with nothing chosen says so, and imports nothing',
+      [chosen(), uploads.length],
+      ['No files chosen', 1]
     );
 
     window.close();
@@ -329,8 +347,14 @@ const run = async (): Promise<void> => {
     readDelays['SP257.PIC'] = 50;
 
     const window = new ImportAssetsWindow(),
-      files = [notASheet('TER257.PIC'), sheet('SP257.PIC')],
-      settled = await settles(upload(window, files), 5000);
+      files = [notASheet('TER257.PIC'), sheet('SP257.PIC')];
+
+    // As the picker would have left it.
+    (
+      window.element().querySelector('.file-picker .chosen') as HTMLElement
+    ).textContent = 'TER257.PIC and SP257.PIC';
+
+    const settled = await settles(upload(window, files), 5000);
 
     expect('an unreadable file: the import finishes', settled, 'resolved');
 
@@ -364,6 +388,11 @@ const run = async (): Promise<void> => {
       'an unreadable file: the file input takes files again',
       fileInput(window).hasAttribute('disabled'),
       false
+    );
+    expect(
+      'an unreadable file: the names chosen are cleared with the input',
+      window.element().querySelector('.file-picker .chosen')?.textContent,
+      'No files chosen'
     );
     expect(
       'an unreadable file: the button to choose them is back too',

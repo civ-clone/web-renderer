@@ -11,8 +11,10 @@
     display: none;
   }
 
-  select {
-    background: transparent;
+  // Weighted to win over the form controls' field (#739), which would otherwise frame a drop-down here; only the
+  //  colour, so the drop-down keeps its arrow.
+  .action-window-content select {
+    background-color: transparent;
     border: 0;
     display: block;
     flex: 1 1 auto;

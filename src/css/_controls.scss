@@ -26,11 +26,17 @@
     outline: none;
   }
 
-  // The colour on its own, so a browser that doesn't know the classic set's (Firefox) drops only that.
   &:focus-visible {
     outline: var(--ui-focus-outline);
-    outline-color: var(--ui-focus-colour);
     outline-offset: var(--ui-focus-offset);
+  }
+
+  // The classic set's colour is the browser's own focus colour, which only Chrome and Safari have a name for; set
+  //  where it can be, as anywhere else it would turn the ring the colour of the text.
+  @supports (outline-color: -webkit-focus-ring-color) {
+    &:focus-visible {
+      outline-color: var(--ui-focus-colour);
+    }
   }
 }
 
@@ -84,6 +90,9 @@ select[size] {
   }
 }
 
+// The browser's own margins, as a box seats on them (below).
+$check-margin-bottom: 3px;
+
 input[type='checkbox'],
 input[type='radio'] {
   @include focus-ring();
@@ -93,10 +102,13 @@ input[type='radio'] {
   border: 1px solid var(--ui-check-edge);
   border-radius: var(--ui-check-radius);
   box-sizing: border-box;
-  display: inline-grid;
+  // With nothing in its flow (the tick is placed absolutely), the box sits by its bottom margin edge, whether or not
+  //  it's ticked; the browser's own sits by the box itself, with its margin hanging below the text's baseline.
+  display: inline-block;
   height: var(--ui-check-size);
-  place-content: center;
-  vertical-align: -0.15em;
+  margin: 3px 3px $check-margin-bottom 4px;
+  position: relative;
+  vertical-align: calc(-1 * $check-margin-bottom);
   width: var(--ui-check-size);
 
   &:hover:not(:disabled) {
@@ -121,25 +133,31 @@ input[type='radio'] {
 // The tick: the bottom and right edges of a box, turned.
 input[type='checkbox']:checked::before {
   border: solid var(--ui-check-mark);
-  border-width: 0 calc(var(--ui-check-size) * 0.16)
-    calc(var(--ui-check-size) * 0.16) 0;
+  border-width: 0 calc(var(--ui-check-size) * 0.18)
+    calc(var(--ui-check-size) * 0.18) 0;
   box-sizing: border-box;
   content: '';
-  height: calc(var(--ui-check-size) * 0.6);
-  transform: translateY(-12%) rotate(45deg);
-  width: calc(var(--ui-check-size) * 0.32);
+  height: calc(var(--ui-check-size) * 0.72);
+  left: 50%;
+  position: absolute;
+  top: 42%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: calc(var(--ui-check-size) * 0.38);
 }
 
 // The dot: the box's own colour inside a ring of the field's.
 input[type='radio'] {
   border-radius: 50%;
+  margin: 3px 3px 0 5px;
+  vertical-align: baseline;
 
   &:checked {
     box-shadow: inset 0 0 0 calc(var(--ui-check-size) * 0.16) var(--ui-check-bg);
   }
 }
 
-// A slider: the track filled up to the thumb, which `--fill` (set by the slider's own code) says where is.
+// A slider: the track filled up to the thumb's middle. `--fill` (0 to 1, set by the slider's own code) says how far
+//  along it is; the thumb's middle runs from half a thumb in at one end to half a thumb in at the other.
 input[type='range'] {
   @include focus-ring();
 
@@ -148,10 +166,15 @@ input[type='range'] {
   height: var(--ui-range-thumb-size);
 
   &::-webkit-slider-runnable-track {
+    --fill-to: calc(
+      var(--ui-range-thumb-size) / 2 + var(--fill, 0) *
+        (100% - var(--ui-range-thumb-size))
+    );
+
     background: linear-gradient(
       to right,
-      var(--ui-range-fill) var(--fill, 0%),
-      var(--ui-range-track) var(--fill, 0%)
+      var(--ui-range-fill) var(--fill-to),
+      var(--ui-range-track) var(--fill-to)
     );
     border: 1px solid var(--ui-range-track-edge);
     border-radius: var(--ui-range-track-height);

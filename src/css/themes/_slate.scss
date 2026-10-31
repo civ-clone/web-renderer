@@ -161,7 +161,7 @@
   --ui-link-decoration-hover: underline;
   --ui-choice-bg: color-mix(in srgb, var(--ui-accent) 30%, var(--ui-bg-2));
   --ui-choice-fg: var(--ui-fg);
-  --ui-focus-outline: 2px solid;
+  --ui-focus-outline: 2px solid var(--ui-focus);
   --ui-focus-colour: var(--ui-focus);
   --ui-focus-offset: 2px;
 

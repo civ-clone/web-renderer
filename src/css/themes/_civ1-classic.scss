@@ -150,7 +150,7 @@
   --ui-choice-bg: Highlight;
   --ui-choice-fg: HighlightText;
   --ui-focus-outline: auto 1px;
-  // The browser's own focus colour where it has a name for it (Chrome, Safari); Firefox drops it and uses its own.
+  // The browser's own focus colour, where it has a name for it (Chrome, Safari: `_controls.scss` checks).
   --ui-focus-colour: -webkit-focus-ring-color;
   --ui-focus-offset: 0;
 
