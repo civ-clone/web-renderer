@@ -202,6 +202,32 @@ const run = async (): Promise<void> => {
 
   document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
 
+  // A notice opened is the notice as it is now: the city in it is re-read on each update (`Notices`).
+  {
+    let opened = '';
+
+    const asNow = (label: string) =>
+      ({
+        _: 'Notice',
+        id: 'notice-5',
+        value: {
+          city: null,
+          colours: null,
+          dismiss: () => (opened = label),
+          notification: { key: 'Test.again', data: {} },
+        },
+      } as unknown as PlayerAction);
+
+    rows.build([asNow('first update')], player);
+    rows.build([asNow('latest update')], player);
+    (area.querySelector('.ui-notification-open') as HTMLButtonElement).click();
+    await settle();
+
+    expect('opened with the latest of its data', opened, 'latest update');
+
+    document.querySelectorAll('dialog').forEach((dialog) => dialog.remove());
+  }
+
   // Overflow.
   const many = Array.from({ length: 7 }, (_, index) =>
     notice(`notice-m${index}`, `Test.kind${index}`)
@@ -268,7 +294,10 @@ const run = async (): Promise<void> => {
         'unitActionArea',
       ].map((name) => [name, document.createElement('div')])
     );
-  let changed = 0;
+  let changed = 0,
+    // The game's turn as the session has it: newer than the last render's at times.
+    dataTurn = 5,
+    appended = 0;
 
   holder.append(...Object.values(areas));
   document.body.append(holder);
@@ -306,6 +335,7 @@ const run = async (): Promise<void> => {
       ...(areas as any),
       changed: () => changed++,
       dismissals,
+      turn: () => dataTurn,
       notices: { actions: () => [] } as unknown as Notices,
       portal,
       transport,
@@ -317,7 +347,14 @@ const run = async (): Promise<void> => {
       areas.actionArea.querySelector('.ui-next-turn-label')?.textContent,
     ];
 
-  // Last turn's dismissal (turn 4, above) is this turn's too, so start a fresh one.
+  const append = areas.gameArea.append.bind(areas.gameArea);
+
+  areas.gameArea.append = (...nodes: any[]) => {
+    appended++;
+    append(...nodes);
+  };
+
+  // Turn 5: the dismissal above was for turn 4, so this turn starts with none.
   hud.build(
     { ...data, turn: { value: 5 } } as unknown as GameData,
     null,
@@ -361,6 +398,29 @@ const run = async (): Promise<void> => {
   );
 
   expect('a new turn brings it back', state(), [1, 'Civil disorder in Ur!']);
+
+  expect(
+    'the panel is moved to the end of the game area once, not put back on every render (its rows would slide in again)',
+    appended,
+    1
+  );
+
+  // Turn 7's data in, not yet drawn: a dismissal now is for turn 7, as the session reads it.
+  dataTurn = 7;
+  areas.actionArea
+    .querySelector('.ui-notification-row')!
+    .dispatchEvent(
+      new Event('contextmenu', { bubbles: true, cancelable: true })
+    );
+
+  expect(
+    "a dismissal is for the game's turn, even before that turn is drawn",
+    [
+      dismissals.has('CivilDisorder:Ur', 7),
+      dismissals.has('CivilDisorder:Ur', 6),
+    ],
+    [true, false]
+  );
 
   holder.remove();
   applyInterface('classic', null);

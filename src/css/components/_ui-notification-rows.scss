@@ -11,6 +11,8 @@
   gap: 0.35rem;
   margin: 0 1rem 0.5rem;
   min-height: 0;
+  // Not across: a row sliding in starts past the right edge.
+  overflow-x: hidden;
   overflow-y: auto;
   pointer-events: auto;
   scrollbar-width: thin;

@@ -22,8 +22,8 @@ import { t } from 'i18next';
 //  action buttons, and the game and player details. Rebuilt from the latest data on every render. The sidebar's Power
 //  list is told the turn, and asks for itself on a new one (#701, #708).
 //
-// Reaches beyond its own panels in one place: `build` appends the primary panel to `gameArea` every time, which moves
-//  it to the end of the game area.
+// Reaches beyond its own panels in one place: `build` moves the primary panel to the end of `gameArea` when it isn't
+//  there already. Not every time: a panel put back in the page plays its rows' entrance again (#416).
 
 export type HudDeps = {
   actionArea: HTMLElement;
@@ -33,6 +33,8 @@ export type HudDeps = {
   changed?: () => void;
   // The notifications dismissed this turn (#416), which auto end turn reads too.
   dismissals?: Dismissals;
+  // The game's turn now, which a dismissal is for: the data's, which may be newer than the last render's (#416).
+  turn?: () => number;
   gameArea: HTMLElement;
   gameInfo: HTMLElement;
   // Page-scoped, and cleared by the `document` `endturn` event: its notices are added to the primary panel each time.
@@ -108,7 +110,10 @@ export class Hud {
     if (action._ === 'Notice') {
       (action.value as unknown as { dismiss(): void }).dismiss();
     } else {
-      this.#dismissals.dismiss(actionKey(action), this.#turn);
+      this.#dismissals.dismiss(
+        actionKey(action),
+        this.#deps.turn?.() ?? this.#turn
+      );
     }
 
     this.#deps.changed?.();
@@ -164,7 +169,9 @@ export class Hud {
       activeUnit ? world.get(activeUnit.tile.x, activeUnit.tile.y) : null
     );
 
-    gameArea.append(this.#deps.actionArea);
+    if (gameArea.lastElementChild !== this.#deps.actionArea) {
+      gameArea.append(this.#deps.actionArea);
+    }
 
     const gameDetails = new GameDetails(
       gameInfo,

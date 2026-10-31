@@ -285,6 +285,7 @@ export class GameSession {
             autoEndTurn();
           },
           dismissals,
+          turn: (): number => Number(gameState.data().turn?.value ?? 0),
           centreActiveUnit: (): void => {
             const unit = unitController.active();
 

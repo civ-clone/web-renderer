@@ -1,7 +1,6 @@
 import { City, Player, PlayerAction } from '../types';
 import { Element, s } from '@dom111/element';
-import Action from './Actions/Action';
-import Notice from './Actions/Notice';
+import { noticeText } from './Actions/Notice';
 import { Notice as NoticeData } from './Notices';
 import Portal from './Portal';
 import Transport from '../Transport';
@@ -34,7 +33,6 @@ type Group = {
 const shown = 5;
 
 export class NotificationRows extends Element {
-  #actions = new Map<string, Action>();
   #deps: NotificationRowsDeps;
   #expanded = false;
   #groups: Group[] = [];
@@ -68,10 +66,6 @@ export class NotificationRows extends Element {
 
     this.#groups = Array.from(groups.values());
     this.#player = player;
-
-    Array.from(this.#actions.keys())
-      .filter((id) => !entries.some((action) => action.id === id))
-      .forEach((id) => this.#actions.delete(id));
 
     if (this.#groups.length <= shown) {
       this.#expanded = false;
@@ -182,7 +176,13 @@ export class NotificationRows extends Element {
 
       const [first] = current.actions;
 
-      this.#action(first)?.activate();
+      // Made when it's opened, from the action as it is now: a notice's city is the city as it is now (`Notices`).
+      createAction(
+        first,
+        this.#deps.portal,
+        this.#deps.transport,
+        this.#player ?? undefined
+      )?.activate();
 
       // A notice is dismissed by opening it, as its orb's is: its row goes now, not at the next update.
       if (first._ === 'Notice') {
@@ -235,26 +235,10 @@ export class NotificationRows extends Element {
       });
     }
 
-    return (this.#action(action) as Notice | null)?.text('title') ?? '';
-  }
-
-  #action(action: PlayerAction): Action | null {
-    if (!this.#actions.has(action.id)) {
-      const created = createAction(
-        action,
-        this.#deps.portal,
-        this.#deps.transport,
-        this.#player ?? undefined
-      );
-
-      if (created === null) {
-        return null;
-      }
-
-      this.#actions.set(action.id, created);
-    }
-
-    return this.#actions.get(action.id)!;
+    return noticeText(
+      (action.value as unknown as NoticeData).notification,
+      'title'
+    );
   }
 }
 
