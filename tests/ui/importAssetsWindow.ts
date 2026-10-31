@@ -277,6 +277,52 @@ const run = async (): Promise<void> => {
   addFormatters(i18next);
   await import('../../translations/local/en');
 
+  // The browser's file input can't take the theme (#739): it's hidden, a button of the system opens it, and the
+  //  names of the files chosen show beside the button.
+  {
+    const window = new ImportAssetsWindow(),
+      input = fileInput(window),
+      choose = window
+        .element()
+        .querySelector('.file-picker button') as HTMLButtonElement,
+      chosen = () =>
+        window.element().querySelector('.file-picker .chosen')?.textContent;
+    let opened = false;
+
+    input.click = () => {
+      opened = true;
+    };
+
+    expect(
+      'the file input is hidden, and out of the tab order',
+      [input.classList.contains('visually-hidden'), input.tabIndex],
+      [true, -1]
+    );
+    expect(
+      'a secondary button chooses the files',
+      [choose?.textContent, choose?.classList.contains('btn-secondary')],
+      ['Choose files', true]
+    );
+    expect('before any are chosen, it says so', chosen(), 'No files chosen');
+
+    choose.click();
+
+    expect('the button opens the file input', opened, true);
+
+    Object.defineProperty(input, 'files', {
+      value: [{ name: 'README.TXT' }, { name: 'CIV.EXE' }],
+    });
+    input.dispatchEvent(new Event('change'));
+
+    expect(
+      "the chosen files' names show beside the button",
+      chosen(),
+      'README.TXT and CIV.EXE'
+    );
+
+    window.close();
+  }
+
   // A file that can't be read: the import stops, says which file, and the player can choose again. The other file,
   //  which reads fine but finishes later, doesn't write over that, and isn't cut up.
   {
@@ -317,6 +363,15 @@ const run = async (): Promise<void> => {
     expect(
       'an unreadable file: the file input takes files again',
       fileInput(window).hasAttribute('disabled'),
+      false
+    );
+    expect(
+      'an unreadable file: the button to choose them is back too',
+      (
+        window
+          .element()
+          .querySelector('.file-picker button') as HTMLButtonElement
+      ).disabled,
       false
     );
     // The extractor logs its own complaint about the file first.

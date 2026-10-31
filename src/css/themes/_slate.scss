@@ -124,6 +124,47 @@
   --ui-kbd-edge: var(--ui-line);
   --ui-kbd-fg: var(--ui-fg-muted);
 
+  // Form controls (#739): fields a shade off the window, brass when on, one focus ring.
+  --ui-control-scheme: light;
+  --ui-control-bg: #ffffff;
+  --ui-control-fg: var(--ui-fg);
+  --ui-control-edge: var(--ui-line);
+  --ui-control-radius: var(--ui-radius-control);
+  --ui-control-family: var(--font-ui);
+  --ui-control-size: 0.875rem;
+  --ui-control-height: 2rem;
+  --ui-control-padding: 0 0.5rem;
+  --ui-control-placeholder: var(--ui-fg-muted);
+  --ui-control-disabled-opacity: 0.45;
+  --ui-select-arrow: var(--ui-fg-muted);
+  --ui-select-padding: 0 1.75rem 0 0.5rem;
+  --ui-check-size: 1rem;
+  --ui-check-radius: 3px;
+  --ui-check-bg: var(--ui-control-bg);
+  --ui-check-edge: var(--ui-line);
+  --ui-check-edge-hover: var(--ui-fg-muted);
+  --ui-check-on: var(--ui-accent);
+  --ui-check-on-hover: color-mix(
+    in srgb,
+    var(--ui-accent),
+    var(--ui-light) 14%
+  );
+  --ui-check-mark: var(--ui-accent-ink);
+  --ui-range-track: var(--ui-sunken);
+  --ui-range-track-edge: var(--ui-line);
+  --ui-range-track-height: 6px;
+  --ui-range-fill: var(--ui-accent);
+  --ui-range-thumb: var(--ui-accent);
+  --ui-range-thumb-size: 1rem;
+  --ui-link-fg: var(--ui-accent);
+  --ui-link-decoration: none;
+  --ui-link-decoration-hover: underline;
+  --ui-choice-bg: color-mix(in srgb, var(--ui-accent) 30%, var(--ui-bg-2));
+  --ui-choice-fg: var(--ui-fg);
+  --ui-focus-outline: 2px solid;
+  --ui-focus-colour: var(--ui-focus);
+  --ui-focus-offset: 2px;
+
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;
   --ui-shadow-panel: 0 2px 8px rgba(13, 16, 20, 0.35);
@@ -175,6 +216,9 @@
   --ui-bevel-light: #3b4350;
   --ui-bevel-dark: #0e1116;
   --ui-window-edge: #3b4350;
+
+  --ui-control-scheme: dark;
+  --ui-control-bg: var(--ui-sunken);
 
   --ui-accent: #c9a24a;
   --ui-accent-ink: #1d1a12;

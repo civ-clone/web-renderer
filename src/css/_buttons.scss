@@ -36,6 +36,7 @@
 
   &:focus-visible {
     outline: var(--ui-btn-focus-outline);
+    outline-color: var(--ui-focus-colour);
     outline-offset: var(--ui-btn-focus-offset);
   }
 

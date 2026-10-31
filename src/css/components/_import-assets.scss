@@ -2,3 +2,10 @@
 .import-assets .loading.failed {
   color: var(--ui-negative);
 }
+
+// The button that opens the (hidden) file input, and the names of the files chosen beside it (#739).
+.import-assets .file-picker {
+  align-items: center;
+  display: flex;
+  gap: 0.5em;
+}

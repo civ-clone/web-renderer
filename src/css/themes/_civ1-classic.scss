@@ -96,7 +96,7 @@
   --ui-btn-quiet-fg: #000;
   --ui-btn-danger-fg: #000;
   --ui-btn-shadow-pressed: none;
-  --ui-btn-focus-outline: auto;
+  --ui-btn-focus-outline: auto 1px;
   --ui-btn-focus-offset: 0;
   --ui-btn-disabled-opacity: 0.5;
   --ui-btn-family: Arial, sans-serif;
@@ -114,6 +114,45 @@
   --ui-kbd-bg: #e5e5e5;
   --ui-kbd-edge: #767676;
   --ui-kbd-fg: #000;
+
+  // Form controls (#739): close to the browser's own, as Chrome draws them, so the game looks as it did.
+  --ui-control-scheme: light;
+  --ui-control-bg: #fff;
+  --ui-control-fg: #000;
+  --ui-control-edge: #767676;
+  --ui-control-radius: 2px;
+  --ui-control-family: Arial, sans-serif;
+  --ui-control-size: 13.3333px;
+  --ui-control-height: auto;
+  // Chrome draws a field's edge 2px wide, so one more pixel of padding keeps it the size it was.
+  --ui-control-padding: 2px 3px;
+  --ui-control-placeholder: #757575;
+  --ui-control-disabled-opacity: 0.5;
+  --ui-select-arrow: #000;
+  --ui-select-padding: 1px 17px 1px 3px;
+  --ui-check-size: 13px;
+  --ui-check-radius: 2px;
+  --ui-check-bg: #fff;
+  --ui-check-edge: #767676;
+  --ui-check-edge-hover: #4f4f4f;
+  --ui-check-on: #0075ff;
+  --ui-check-on-hover: #005cc8;
+  --ui-check-mark: #fff;
+  --ui-range-track: #efefef;
+  --ui-range-track-edge: #b2b2b2;
+  --ui-range-track-height: 8px;
+  --ui-range-fill: #0075ff;
+  --ui-range-thumb: #0075ff;
+  --ui-range-thumb-size: 16px;
+  --ui-link-fg: #00e;
+  --ui-link-decoration: underline;
+  --ui-link-decoration-hover: underline;
+  --ui-choice-bg: Highlight;
+  --ui-choice-fg: HighlightText;
+  --ui-focus-outline: auto 1px;
+  // The browser's own focus colour where it has a name for it (Chrome, Safari); Firefox drops it and uses its own.
+  --ui-focus-colour: -webkit-focus-ring-color;
+  --ui-focus-offset: 0;
 
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;

@@ -93,6 +93,9 @@ export class LockedSlider extends Element {
       this.#range.value = value;
     }
 
+    // How far the track is filled, for the theme to draw (#739).
+    this.#range.style.setProperty('--fill', `${value}%`);
+
     if (this.#number.value !== value) {
       this.#number.value = value;
     }

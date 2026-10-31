@@ -68,6 +68,31 @@ const tradeRates = (...values: number[]) => {
   );
 }
 
+// Each track is filled up to its thumb, by `--fill`, which the theme draws from (#739); a rebalanced slider too.
+{
+  const sliders = tradeRates(30, 30, 40),
+    fill = (slider: LockedSlider) =>
+      (
+        slider
+          .element()
+          .querySelector('input[type="range"]') as HTMLInputElement
+      ).style.getPropertyValue('--fill');
+
+  expect('each track starts filled to its value', sliders.map(fill), [
+    '30%',
+    '30%',
+    '40%',
+  ]);
+
+  type(sliders[0], '60');
+
+  expect(
+    'and follows it when the value changes, rebalanced ones included',
+    sliders.map(fill),
+    values(sliders).map((value) => `${value}%`)
+  );
+}
+
 {
   const sliders = tradeRates(30, 30, 40);
 
