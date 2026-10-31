@@ -20,6 +20,9 @@ export type UnitCardDeps = UnitDetailsDeps;
 // How many of the other units' portraits fit on a row when the card can't be measured (it's hidden): the sidebar's.
 const fallbackPerRow = 6;
 
+// The card each element shows, so a card a later game has replaced stops listening for resizes.
+const cards = new WeakMap<HTMLElement, UnitCard>();
+
 // One pip a whole move, the moves left lit: a fraction of a move (a road's third) lights part of a pip. Eight to a row,
 //  however wide the card is (#717).
 const movePips = (unit: UnitData): HTMLElement => {
@@ -143,6 +146,8 @@ const shown = (unit: UnitData | null): string =>
  */
 export class UnitCard extends Element {
   #actions = s('<div class="ui-unit-card-actions"></div>');
+  // How many portraits a row was drawn with, so a card that's wider or narrower than it was redraws them (#743).
+  #drawnPerRow: number | null = null;
   #deps: UnitCardDeps;
   #shown: string | null = null;
   #unit: UnitData | null = null;
@@ -154,6 +159,28 @@ export class UnitCard extends Element {
 
     element.classList.add('ui-unit-card');
     element.append(this.#actions);
+    cards.set(element, this);
+
+    // The width can change after the card is drawn: the sidebar's breakpoint (#704), or a card first drawn hidden.
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver((): void => {
+        if (cards.get(element) !== this) {
+          observer.disconnect();
+
+          return;
+        }
+
+        if (
+          this.#drawnPerRow !== null &&
+          this.#perRow(nativeTileSize(currentTileset()) * 2) !==
+            this.#drawnPerRow
+        ) {
+          this.build();
+        }
+      });
+
+      observer.observe(element);
+    }
   }
 
   /** Where the unit's actions go: kept across redraws, so they're drawn only when they change. */
@@ -183,6 +210,8 @@ export class UnitCard extends Element {
     Array.from(element.children)
       .filter((child) => child !== this.#actions)
       .forEach((child) => child.remove());
+
+    this.#drawnPerRow = null;
 
     if (unit === null) {
       return;
@@ -262,6 +291,7 @@ export class UnitCard extends Element {
       fits = others.length <= perRow * 2,
       drawn = fits ? others : others.slice(0, perRow * 2 - 1);
 
+    this.#drawnPerRow = perRow;
     strip.style.setProperty('--portrait-size', `${size}px`);
     strip.title = text('UnitDetails.tile-units', { count: others.length });
     strip.querySelector('.visually-hidden')!.textContent = strip.title;

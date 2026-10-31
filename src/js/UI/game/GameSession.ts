@@ -268,14 +268,15 @@ export class GameSession {
           portal,
           scheduleRender: (): void => scheduleRender(),
           showUnitDetails: (unit): void => {
-            unitDetails.update(unit);
-
-            // With no unit active, its section goes rather than standing empty over the map (#697).
+            // With no unit active, its section goes rather than standing empty over the map (#697). Shown before the
+            //  card is drawn, so the card can measure itself (#743).
             const section = unitInfo.closest<HTMLElement>('.sidebar-section');
 
             if (section) {
               section.hidden = unit === null;
             }
+
+            unitDetails.update(unit);
 
             // Its unit is checked against the map next: the section's new size first (#697).
             mapView.measureCovered();

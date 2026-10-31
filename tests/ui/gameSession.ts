@@ -26,6 +26,7 @@ import Notifications from '../../src/js/UI/components/Notifications';
 import NotificationBar from '../../src/js/UI/app/NotificationBar';
 import Transport from '../../src/js/UI/Transport';
 import appElements from '../../src/js/UI/app/elements';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
 import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
@@ -727,6 +728,45 @@ const run = async (): Promise<void> => {
     requested,
     [['observeCity', [{ x: 3, y: 4 }]]]
   );
+
+  // The active unit's card (#743): the classic one and the strip at the bottom left, or under the new interface the
+  //  card with the unit's actions in it, and no strip.
+  expect(
+    'the classic interface keeps the classic card and the actions strip',
+    [
+      document.getElementById('unitInfo')?.classList.contains('ui-unit-card'),
+      document.getElementById('unit-actions') !== null,
+    ],
+    [false, true]
+  );
+
+  applyInterface('new', null);
+
+  new GameSession({
+    elements,
+    transport,
+    notifications: new Notifications(),
+    notices: new Notices(),
+    haltedUnits: new HaltedUnits(),
+    debugFlags: new DebugFlags(false),
+    notificationBar: new NotificationBar(elements.notificationArea),
+    pendingSave: 'a save',
+    cheatsEnabled: false,
+    setGameStarted: (): void => {},
+    transportDisposers: [],
+  }).start(makeMap(1));
+
+  expect(
+    'the new interface puts the actions in the card, and the strip goes',
+    [
+      document.getElementById('unitInfo')?.classList.contains('ui-unit-card'),
+      document.querySelectorAll('#unitInfo > .ui-unit-card-actions').length,
+      document.getElementById('unit-actions'),
+    ],
+    [true, 1, null]
+  );
+
+  applyInterface('classic', null);
 
   finished = true;
 
