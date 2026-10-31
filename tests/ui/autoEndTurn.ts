@@ -2,7 +2,8 @@
 // as `GameSession` calls it after each update. Checks each condition on its
 // own: the `autoEndOfTurn` option, waiting for the other civilizations, End
 // Turn being the one mandatory action, and the `autoEndOfTurnExceptions`
-// option; and that the answer is a boolean whatever the option holds.
+// option, less any the player has dismissed this turn (#416); and that the answer is a boolean whatever the option
+// holds.
 
 import shouldAutoEndTurn, {
   AutoEndTurnOptions,
@@ -154,6 +155,48 @@ check(
   check(
     `the options read while waiting (${asked.join()})`,
     asked.join() === 'autoEndOfTurnExceptions'
+  );
+}
+
+// Dismissed for the turn (#416): an exception the player has dismissed no longer holds it back; one still there does.
+{
+  const exceptions = optionsWith({
+      autoEndOfTurn: true,
+      autoEndOfTurnExceptions: ['CivilDisorder'],
+    }),
+    disorder = player(['EndTurn'], ['EndTurn', 'CivilDisorder']);
+
+  check(
+    'held back by an exception',
+    !shouldAutoEndTurn(disorder, exceptions, false)
+  );
+  check(
+    'but not once it is dismissed',
+    !!shouldAutoEndTurn(
+      disorder,
+      exceptions,
+      false,
+      (action) => action._ === 'CivilDisorder'
+    )
+  );
+  check(
+    'and still by one that is not',
+    !shouldAutoEndTurn(
+      player(['EndTurn'], ['EndTurn', 'CivilDisorder', 'CivilDisorder']),
+      exceptions,
+      false,
+      (() => {
+        let first = true;
+
+        return () => {
+          const dismissed = first;
+
+          first = false;
+
+          return dismissed;
+        };
+      })()
+    )
   );
 }
 
