@@ -3,6 +3,7 @@ import { s } from '@dom111/element';
 import { instance as localeProvider } from '../LocaleProvider';
 import { Marked } from 'marked';
 import { Release, byDay } from '../lib/releaseDays';
+import { glyph } from '../lib/glyphs';
 import { t } from 'i18next';
 
 const escapeHtml = (text: string): string =>
@@ -39,21 +40,6 @@ const bullets = (changes: string[], indent: string): string =>
         })}</li>`
     )
     .join(`\n${indent}`);
-
-const firstParentMatching = (
-  target: HTMLElement,
-  targetSelector: string
-): HTMLElement => {
-  while (!target?.matches(targetSelector)) {
-    if (!(target instanceof HTMLElement)) {
-      throw new TypeError(`Can't find a match for ${targetSelector}`);
-    }
-
-    target = target.parentElement as HTMLElement;
-  }
-
-  return target;
-};
 
 const toggleExpanded = (target: Node | null, expectedSelector: string) => {
   if (!(target instanceof HTMLElement) || !target.matches(expectedSelector)) {
@@ -95,9 +81,9 @@ const renderReleases = (releases: Release[]): HTMLElement[] =>
 
       return s(
         `<div class="release">
-    <h2>${
-      release.version
-    } - <time title="${releaseDate.toLocaleString()}">${localeProvider.timeSince(
+    <h2>${glyph('arrow-right')}${
+          release.version
+        } - <time title="${releaseDate.toLocaleString()}">${localeProvider.timeSince(
           releaseDate
         )}</time></h2>
 
@@ -116,7 +102,7 @@ const renderReleases = (releases: Release[]): HTMLElement[] =>
         release.devChanges.length > 0
           ? `
       <dl>
-        <dd>${t('ReleaseWindow.behind-the-scenes')}</dd>
+        <dd>${glyph('arrow-right')}${t('ReleaseWindow.behind-the-scenes')}</dd>
         <dt aria-expanded="false">
           <ul>
             ${bullets(release.devChanges, '          ')}
@@ -135,10 +121,9 @@ const renderReleases = (releases: Release[]): HTMLElement[] =>
       <dl>
         ${Object.entries(release.externalChanges)
           .map(
-            ([
-              module,
-              { status, log: changes },
-            ]) => `<dd>${status} ${module}</dd>
+            ([module, { status, log: changes }]) => `<dd>${glyph(
+              'arrow-right'
+            )}${status} ${module}</dd>
         <dt aria-expanded="false">
           <ul>
             ${bullets(changes ?? [], '          ')}
@@ -184,24 +169,20 @@ export class ReleaseWindow extends Window {
         list.append(s(`<p>${t('ReleaseWindow.failed')}</p>`));
       });
 
+    // The target can be a glyph's `<svg>`, which isn't an `HTMLElement`.
     this.on('click', (event) => {
-      if (!(event.target instanceof HTMLElement)) {
+      if (!(event.target instanceof Element)) {
         return;
       }
 
-      if (event.target.matches('dd, dd *')) {
-        toggleExpanded(
-          firstParentMatching(event.target, 'dd').nextElementSibling,
-          'dt'
-        );
-      }
-
-      if (event.target.matches('.release h2, .release h2 *')) {
-        toggleExpanded(
-          firstParentMatching(event.target, 'h2').nextElementSibling,
-          'div'
-        );
-      }
+      toggleExpanded(
+        event.target.closest('dd')?.nextElementSibling ?? null,
+        'dt'
+      );
+      toggleExpanded(
+        event.target.closest('.release h2')?.nextElementSibling ?? null,
+        'div'
+      );
     });
   }
 

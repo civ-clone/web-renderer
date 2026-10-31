@@ -80,16 +80,17 @@
       margin: 0;
     }
 
+    // Drawn as the title bar's buttons, not the body's (#741).
     > button {
-      background-position: center;
-      background-repeat: no-repeat;
-      background-size: 95%;
-      border: 1px solid var(--ui-control-edge);
-      border-radius: var(--ui-radius-control);
+      --ui-btn-bg: var(--ui-title-btn-bg);
+      --ui-btn-bg-hover: var(--ui-title-btn-bg-hover);
+      --ui-btn-bg-pressed: var(--ui-title-btn-bg-hover);
+      --ui-btn-edge: var(--ui-title-btn-edge);
+      --ui-btn-fg: var(--ui-title-btn-fg);
       font-size: 0;
       height: 1.3rem;
       margin-right: 0.33rem;
-      // The header's own size, not the icon button's: the glyph is a picture here until #741.
+      // The header's own size, not the icon button's.
       min-height: 0;
       min-width: 0;
       padding: 0;
@@ -99,12 +100,13 @@
         margin-right: 0;
       }
 
-      &.close {
-        background-image: url('feather-icons/dist/icons/x.svg');
+      .glyph {
+        height: 95%;
+        width: 95%;
       }
 
-      &.maximise {
-        background-image: url('feather-icons/dist/icons/maximize.svg');
+      .glyph-minimise {
+        display: none;
       }
     }
   }
@@ -120,7 +122,13 @@
     width: 100%;
 
     > header > button.maximise {
-      background-image: url('feather-icons/dist/icons/minimize.svg');
+      .glyph-maximise {
+        display: none;
+      }
+
+      .glyph-minimise {
+        display: inline;
+      }
     }
   }
 

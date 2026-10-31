@@ -6,13 +6,18 @@
   dd,
   h2 {
     &:has(+ [aria-expanded]) {
-      background: url('feather-icons/dist/icons/arrow-right.svg') no-repeat
-        center left;
       padding-left: 2rem;
+      position: relative;
+    }
 
-      &[aria-expanded='false'] {
-        background-image: url('feather-icons/dist/icons/arrow-up.svg');
-      }
+    // Where the picture of an arrow was, before the glyphs (#741).
+    > .glyph-arrow-right {
+      height: 24px;
+      left: 0;
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 24px;
     }
   }
 

@@ -2,10 +2,10 @@ import Action from './Action';
 import { Spaceship as SpaceshipData } from '../../types';
 import Window from '../Window';
 import civilizationAttribute from '../lib/civilizationAttribute';
-import globeIcon from 'feather-icons/dist/icons/globe.svg';
 import { h } from '../../lib/html';
 import { instance as localeProviderInstance } from '../../LocaleProvider';
 import { s } from '@dom111/element';
+import { glyph } from '../../lib/glyphs';
 import { t } from 'i18next';
 
 type SpaceshipYieldMap = {
@@ -196,7 +196,7 @@ export class Spaceship extends Action {
       s(
         `<button class="btn-bare spaceship" title="${t(
           'Actions.Spaceship.title'
-        )}"><img src="${globeIcon}"/></button>`
+        )}">${glyph('globe')}</button>`
       )
     );
   }

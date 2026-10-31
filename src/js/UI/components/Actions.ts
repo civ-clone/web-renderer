@@ -33,7 +33,7 @@ export class Actions extends Element implements IActions {
   #actionedHandler = (event: CustomEvent<Action>) => event.detail.remove();
   #clickHandler = (event: MouseEvent) => {
     const target = getClosestAncestorMatching(
-      event.target instanceof HTMLElement ? event.target : null,
+      event.target instanceof Element ? event.target : null,
       '.action'
     );
 

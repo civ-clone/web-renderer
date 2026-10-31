@@ -21,7 +21,6 @@
   --ui-bevel-dark: #a6aeb9;
   --ui-bevel-width: 1px;
   --ui-window-edge: #a6aeb9;
-  --ui-control-edge: #8b94a1;
 
   --ui-accent: #a8812f;
   --ui-accent-ink: #ffffff;
@@ -111,6 +110,14 @@
   --ui-btn-height: 2rem;
   --ui-btn-padding: 0 0.75rem;
   --ui-btn-icon-size: 2rem;
+  --ui-title-btn-bg: transparent;
+  --ui-title-btn-bg-hover: color-mix(
+    in srgb,
+    transparent,
+    var(--ui-title-fg) 15%
+  );
+  --ui-title-btn-edge: transparent;
+  --ui-title-btn-fg: var(--ui-title-fg);
   --ui-btn-icon-padding: 0;
   --ui-kbd-display: inline-block;
   --ui-kbd-bg: var(--ui-sunken);
@@ -168,7 +175,6 @@
   --ui-bevel-light: #3b4350;
   --ui-bevel-dark: #0e1116;
   --ui-window-edge: #3b4350;
-  --ui-control-edge: #59626f;
 
   --ui-accent: #c9a24a;
   --ui-accent-ink: #1d1a12;

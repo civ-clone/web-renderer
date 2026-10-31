@@ -2,6 +2,7 @@ import { Element, s } from '@dom111/element';
 import GameOptionsRegistry, {
   instance as defaultOptions,
 } from '../GameOptionsRegistry';
+import { glyph } from '../lib/glyphs';
 
 // The client option holding the keys of the collapsed sections, kept in browser storage like the others (#343).
 export const collapsedOption = 'sidebarCollapsed';
@@ -52,6 +53,7 @@ export class SidebarSection extends Element {
 
     // As text: a heading is a translation, not markup.
     this.#toggle.textContent = title;
+    this.#toggle.insertAdjacentHTML('afterbegin', glyph('disclosure'));
     this.#body.append(...content);
 
     this.#toggle.addEventListener('click', () =>

@@ -1,9 +1,24 @@
-.feather {
+// The interface's glyphs (#741), drawn in the colour of the text around them. They're decorative, so a click on one
+//  is a click on the control it sits in.
+.glyph {
   fill: none;
+  flex: none;
+  height: 1em;
+  pointer-events: none;
   stroke: currentColor;
-  stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+  stroke-width: 2;
+  vertical-align: -0.125em;
+  width: 1em;
+}
+
+// The symbols `glyph()` uses, kept out of the layout.
+.glyph-sheet {
+  height: 0;
+  overflow: hidden;
+  position: absolute;
+  width: 0;
 }
 
 // A yield's icon beside an amount outside the city screen (#683): the size the city screen draws them.

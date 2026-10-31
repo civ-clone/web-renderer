@@ -1,6 +1,6 @@
 import Action from './Action';
-import checkIcon from 'feather-icons/dist/icons/check-circle.svg';
 import endTurn from '../../lib/endTurn';
+import { glyph } from '../../lib/glyphs';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -27,7 +27,7 @@ export class EndTurn extends Action {
       s(
         `<button class="btn-bare large gradient endTurn" title="${t(
           'Actions.EndTurn.title'
-        )}"><img src="${checkIcon}"></button>`
+        )}">${glyph('end-turn')}</button>`
       )
     );
   }

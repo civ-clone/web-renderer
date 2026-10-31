@@ -23,8 +23,8 @@ import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { elementId, h } from '../lib/html';
-import menuIcon from 'feather-icons/dist/icons/menu.svg';
 import { t } from 'i18next';
+import { glyph } from '../lib/glyphs';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The local player comes first, labelled "You" with an empty value so leaving
@@ -313,9 +313,7 @@ export class GameMenu extends Element {
   }
 
   build(): void {
-    const button = s(
-      `<button class="btn-bare"><img src="${menuIcon}"></button>`
-    );
+    const button = s(`<button class="btn-bare">${glyph('menu')}</button>`);
 
     this.append(
       h(button, {

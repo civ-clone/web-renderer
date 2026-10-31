@@ -32,6 +32,7 @@ import {
 } from '../lib/setupControls';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '../lib/supportedTopologies';
+import { glyph } from '../lib/glyphs';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
@@ -574,7 +575,7 @@ export class GameSetupWindow extends Window {
             s<HTMLButtonElement>(
               `<button class="btn-icon remove" title="${t(
                 'GameSetup.remove-seat'
-              )}">×</button>`
+              )}">${glyph('close')}</button>`
             ),
             {
               click: () => {

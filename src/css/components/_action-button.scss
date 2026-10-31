@@ -9,6 +9,8 @@
   height: 3.1rem;
   image-rendering: pixelated;
   padding: 0;
+  // Off the text's baseline, which would leave room for a descender under it.
+  vertical-align: top;
   width: 3.1rem;
 
   // Their own feedback, now the button system no longer gives every button a glow and a shove (#740).
@@ -34,11 +36,24 @@
     width: calc(11px * var(--scale));
   }
 
+  // A block, centred, rather than inline on the text's baseline, which sat it low and to the left of the orb's middle.
+  .glyph {
+    display: block;
+    height: calc(11px * var(--scale));
+    margin: auto;
+    width: calc(11px * var(--scale));
+  }
+
   &.small {
     height: 2rem !important;
     width: 2rem !important;
 
     img {
+      width: calc(8px * var(--scale));
+    }
+
+    .glyph {
+      height: calc(8px * var(--scale));
       width: calc(8px * var(--scale));
     }
   }
@@ -49,6 +64,11 @@
     width: 4rem !important;
 
     img {
+      width: calc(14px * var(--scale));
+    }
+
+    .glyph {
+      height: calc(14px * var(--scale));
       width: calc(14px * var(--scale));
     }
   }
@@ -121,5 +141,10 @@
 @mixin white-child-svg() {
   img {
     filter: invert(1) drop-shadow(0 0 2px var(--ui-shade));
+  }
+
+  .glyph {
+    color: var(--ui-light);
+    filter: drop-shadow(0 0 2px var(--ui-shade));
   }
 }

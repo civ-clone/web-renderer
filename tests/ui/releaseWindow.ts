@@ -89,6 +89,16 @@ const run = async () => {
     ['You can now pick Random (#15).', 'chore: tidy up', 'Settlers dig faster.']
   );
 
+  // The arrow is a glyph, an `<svg>` rather than an `HTMLElement`, and clicking it opens and closes the day (#741).
+  const arrow = shown[0].querySelector('h2 > svg');
+
+  arrow?.dispatchEvent(new Event('click', { bubbles: true }));
+  expect(
+    "clicking a day's arrow closes it",
+    shown[0].querySelector('h2 + div')?.getAttribute('aria-expanded'),
+    'false'
+  );
+
   pending.close();
 
   // A note's Markdown is rendered, but any HTML in it is shown as text, and a link or image as its text (#583).
