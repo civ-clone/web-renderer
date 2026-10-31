@@ -487,6 +487,12 @@ i18next.addResources('en', 'default', {
   'NextTurn.place': '{{place, number}} of {{count, number}}',
   'NextTurn.units_one': '{{count, number}} unit needs orders',
   'NextTurn.units_other': '{{count, number}} units need orders',
+  'NotificationRows.count': '×{{count, number}}',
+  'NotificationRows.dismiss': 'Dismiss for this turn',
+  'NotificationRows.fewer': 'Show fewer',
+  'NotificationRows.more_one': '+{{count, number}} more',
+  'NotificationRows.more_other': '+{{count, number}} more',
+  'NotificationRows.open': 'Click to view',
   'Notification.title': 'Notification',
 
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',

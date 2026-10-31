@@ -1,0 +1,135 @@
+@use 'action-button';
+
+// The notification rows (#416), over the Next Turn button (#702) under the new interface (#735): one row each, a
+//  swatch in its kind's tint beside what it is and a muted line under that, its count when notices share it, and the
+//  dismiss glyph at its end. They scroll within the column rather than run under the top bar.
+.ui-notification-rows {
+  align-items: flex-end;
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0 1rem 0.5rem;
+  min-height: 0;
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.ui-notification-row {
+  --notification-tint: var(--ui-action-notice);
+  align-items: stretch;
+  background: var(--ui-btn-bg);
+  border: 1px solid var(--ui-btn-edge);
+  border-left: 4px solid var(--notification-tint);
+  border-radius: var(--ui-radius-control);
+  box-shadow: var(--ui-shadow-orb);
+  color: var(--ui-btn-fg);
+  display: flex;
+  flex: none;
+  width: min(18em, 60vw);
+
+  &[data-kind='CivilDisorder'] {
+    --notification-tint: var(--ui-action-disorder);
+  }
+
+  // A new row slides in from the right.
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity var(--ui-notification-motion-in),
+      transform var(--ui-notification-motion-in);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateX(1rem);
+    }
+  }
+}
+
+.ui-notification-open {
+  align-items: center;
+  appearance: none;
+  background: none;
+  border: 0;
+  color: inherit;
+  column-gap: 0.6em;
+  cursor: pointer;
+  display: grid;
+  flex: 1;
+  font: inherit;
+  grid-template-areas:
+    'mark title count'
+    'mark hint count';
+  grid-template-columns: auto 1fr auto;
+  min-width: 0;
+  padding: 0.4em 0.5em;
+  text-align: left;
+
+  &:hover {
+    background: var(--ui-btn-bg-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: -2px;
+  }
+}
+
+.ui-notification-swatch {
+  @include action-button.background-gradient-silver-ring(
+    var(--notification-tint)
+  );
+  border-radius: 50%;
+  grid-area: mark;
+  height: 1.6em;
+  width: 1.6em;
+}
+
+.ui-notification-title {
+  font-weight: var(--type-strong-weight);
+  grid-area: title;
+  // All of it, over two lines if it needs them, rather than cut short.
+  overflow-wrap: anywhere;
+}
+
+.ui-notification-hint {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-caption-size);
+  grid-area: hint;
+}
+
+.ui-notification-count {
+  background: var(--notification-tint);
+  border-radius: 999px;
+  color: var(--ui-light);
+  font-size: var(--type-caption-size);
+  font-variant-numeric: tabular-nums;
+  grid-area: count;
+  padding: 0 0.45em;
+}
+
+.ui-notification-dismiss {
+  align-self: center;
+  margin-right: 0.25em;
+}
+
+.ui-notification-more {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: var(--ui-link-fg, var(--ui-accent));
+  cursor: pointer;
+  flex: none;
+  font: inherit;
+  font-size: var(--type-caption-size);
+  padding: 0.1em 0.4em;
+  text-decoration: var(--ui-link-decoration, underline);
+}
+
+// The Next Turn button's own area, under the rows.
+.ui-next-turn-area {
+  flex: none;
+}
