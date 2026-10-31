@@ -192,7 +192,7 @@ export class Window
       h(s(`<header><h3>${this.#title}</h3></header>`, ...headerActions), {
         dblclick: () => this.maximise(),
         mousedown: (event) => {
-          if (event.target.matches('button, button img')) {
+          if (event.target.closest('button')) {
             return;
           }
 

@@ -41,21 +41,6 @@ const bullets = (changes: string[], indent: string): string =>
     )
     .join(`\n${indent}`);
 
-const firstParentMatching = (
-  target: HTMLElement,
-  targetSelector: string
-): HTMLElement => {
-  while (!target?.matches(targetSelector)) {
-    if (!(target instanceof HTMLElement)) {
-      throw new TypeError(`Can't find a match for ${targetSelector}`);
-    }
-
-    target = target.parentElement as HTMLElement;
-  }
-
-  return target;
-};
-
 const toggleExpanded = (target: Node | null, expectedSelector: string) => {
   if (!(target instanceof HTMLElement) || !target.matches(expectedSelector)) {
     return;
@@ -184,24 +169,20 @@ export class ReleaseWindow extends Window {
         list.append(s(`<p>${t('ReleaseWindow.failed')}</p>`));
       });
 
+    // The target can be a glyph's `<svg>`, which isn't an `HTMLElement`.
     this.on('click', (event) => {
-      if (!(event.target instanceof HTMLElement)) {
+      if (!(event.target instanceof Element)) {
         return;
       }
 
-      if (event.target.matches('dd, dd *')) {
-        toggleExpanded(
-          firstParentMatching(event.target, 'dd').nextElementSibling,
-          'dt'
-        );
-      }
-
-      if (event.target.matches('.release h2, .release h2 *')) {
-        toggleExpanded(
-          firstParentMatching(event.target, 'h2').nextElementSibling,
-          'div'
-        );
-      }
+      toggleExpanded(
+        event.target.closest('dd')?.nextElementSibling ?? null,
+        'dt'
+      );
+      toggleExpanded(
+        event.target.closest('.release h2')?.nextElementSibling ?? null,
+        'div'
+      );
     });
   }
 

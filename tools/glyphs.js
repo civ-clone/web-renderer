@@ -85,6 +85,27 @@ files(roots[0]).forEach((file) => {
   }
 });
 
+// A glyph takes no clicks, so a click on one reaches the control it sits in: several handlers only accept an
+// `HTMLElement` target, and an `<svg>` isn't one.
+{
+  const icons = fs.readFileSync(
+      path.join(webRenderer, 'src', 'css', 'components', '_icons.scss'),
+      'utf8'
+    ),
+    rule = icons.slice(
+      icons.indexOf('.glyph {'),
+      icons.indexOf('}', icons.indexOf('.glyph {'))
+    );
+
+  checks++;
+
+  if (!/pointer-events:\s*none/.test(rule)) {
+    failures.push(
+      'src/css/components/_icons.scss: .glyph needs pointer-events: none'
+    );
+  }
+}
+
 if (failures.length) {
   process.stderr.write(
     `FAIL glyphs\n${failures.map((failure) => `  ${failure}`).join('\n')}\n`

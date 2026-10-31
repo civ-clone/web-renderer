@@ -1,8 +1,10 @@
-// The interface's glyphs (#741), drawn in the colour of the text around them.
+// The interface's glyphs (#741), drawn in the colour of the text around them. They're decorative, so a click on one
+//  is a click on the control it sits in.
 .glyph {
   fill: none;
   flex: none;
   height: 1em;
+  pointer-events: none;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
