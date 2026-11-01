@@ -1,9 +1,7 @@
 import { Element, s } from '@dom111/element';
-import EarthWindow from './EarthWindow';
 import GameSetupWindow from './GameSetupWindow';
 import HallOfFameWindow from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
-import NewGameWindow from './NewGameWindow';
 import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
 import Transport from '../Transport';
 import { assetStore } from '../AssetStore';
@@ -13,6 +11,7 @@ import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { version } from '../../../../build.json';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
+import { askEarth, askNewGame } from './newGame';
 
 export class MainMenu extends Element {
   #transport: Transport;
@@ -50,7 +49,7 @@ export class MainMenu extends Element {
               ),
               {
                 click: () => {
-                  NewGameWindow.ask(this.#transport, () => this.remove());
+                  askNewGame(this.#transport, () => this.remove());
                 },
               }
             ),
@@ -76,8 +75,7 @@ export class MainMenu extends Element {
               )}</button>`
             ),
             {
-              click: () =>
-                new EarthWindow(this.#transport, () => this.remove()),
+              click: () => askEarth(this.#transport, () => this.remove()),
             }
           ),
           h(

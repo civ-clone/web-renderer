@@ -20,11 +20,13 @@ import worldSizes, {
 import supportedTopologies, {
   isSupportedTopology,
 } from '../../src/js/UI/lib/supportedTopologies';
-import EarthWindow from '../../src/js/UI/components/EarthWindow';
 import GameSetupWindow from '../../src/js/UI/components/GameSetupWindow';
 import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
-import MapGridWindow from '../../src/js/UI/components/MapGridWindow';
-import NewGameWindow from '../../src/js/UI/components/NewGameWindow';
+import {
+  askEarth,
+  askMapGrid,
+  askNewGame,
+} from '../../src/js/UI/components/newGame';
 import Request from '../../src/js/Engine/Request';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
@@ -395,7 +397,7 @@ const text = (element: Element | null): string =>
   // The question itself: hidden with one grid.
   const chosen: string[] = [];
 
-  MapGridWindow.ask((grid) => chosen.push(grid));
+  askMapGrid((grid) => chosen.push(grid));
 
   expect('with one grid, nothing is shown', openDialogs().length, 0);
 
@@ -404,8 +406,9 @@ const text = (element: Element | null): string =>
   expect('and square is chosen for the player', chosen, ['square']);
 
   // With a hex tileset installed as well, and a projection for it, it is asked, square to start with.
-  new MapGridWindow(supportedTopologies([civ1, hexStub], withHex), (grid) =>
-    chosen.push(grid)
+  askMapGrid(
+    (grid) => chosen.push(grid),
+    supportedTopologies([civ1, hexStub], withHex)
   );
 
   await settle();
@@ -429,7 +432,7 @@ const text = (element: Element | null): string =>
   closeAll();
 
   // New Game: no grid question, the sizes as always, and the grid sent.
-  NewGameWindow.ask(transport, () => {});
+  askNewGame(transport, () => {});
 
   await settle();
 
@@ -474,7 +477,7 @@ const text = (element: Element | null): string =>
   sent.length = 0;
 
   // Earth: square only, never asked.
-  new EarthWindow(transport, () => {});
+  askEarth(transport, () => {});
 
   await settle();
 
@@ -519,7 +522,7 @@ const text = (element: Element | null): string =>
 
   // Game setup, opened on Advanced as Customize world does: no grid question, and the grid sent with the rest. (The
   //  grid select is shown only for more than one grid, which the bundled tests cannot stub in: `gameSetupWindow`
-  //  covers the square-only case too, and `MapGridWindow` the question itself, above.)
+  //  covers the square-only case too, and `askMapGrid` the question itself, above.)
   const validity: string[] = [];
 
   Object.assign((globalThis as any).HTMLInputElement.prototype, {

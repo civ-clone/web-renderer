@@ -97,9 +97,24 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Build.group.unit': 'Units',
   'ChoiceWindow.Build.group.wonder': 'Wonders of the World',
   'ChoiceWindow.Build.movement': 'Moves',
-  'ChoiceWindow.Build.turns': 'Turns',
+  'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
+    'Acquire {{- choice}}',
+  'ChoiceWindow.ChooseFromList.choose-civilization.primary':
+    'Play as the {{- choice}}',
+  'ChoiceWindow.ChooseFromList.choose-civilization.random':
+    'Play as a random civilization',
+  'ChoiceWindow.ChooseFromList.choose-difficulty.primary':
+    'Play at {{- choice}} level',
+  'ChoiceWindow.ChooseFromList.choose-leader.primary': 'Play as {{- choice}}',
+  'ChoiceWindow.ChooseFromList.diplomacy.exchange-knowledge.primary':
+    'Take {{- choice}}',
+  'ChoiceWindow.Government.adopt': 'Adopt {{- government}}',
+  'ChoiceWindow.NewGame.start': 'Start with {{- players}}',
+  'ChoiceWindow.Research.cost': 'Cost in bulbs',
+  'ChoiceWindow.Research.research': 'Research {{- advance}}',
   'ChoiceWindow.choose': 'Choose',
   'ChoiceWindow.civilopedia': 'More in the Civilopedia',
+  'ChoiceWindow.turns': 'Turns',
   'ChooseFromList.capture-city.steal-advance.body':
     'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{- data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
   'ChooseFromList.capture-city.steal-advance.choice':
@@ -836,10 +851,12 @@ i18next.addResources('en', 'default', {
   'Window.maximize': 'Maximize',
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
+  'Window.Eyebrow.government': 'Government',
   'Window.Eyebrow.production': 'Production',
   'Window.Eyebrow.reference': 'Reference',
   'Window.Eyebrow.report': 'Report',
   'Window.Eyebrow.report_key': 'Report · {{key}}',
+  'Window.Eyebrow.science': 'Science',
   'Window.filter': 'Filter',
   'Window.filter-empty': 'Nothing matches.',
   'Window.filter-placeholder': 'Filter (press /)',

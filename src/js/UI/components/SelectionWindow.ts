@@ -6,6 +6,13 @@ import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { singleChoice } from '../lib/singleChoice';
 import { t } from 'i18next';
 
+declare global {
+  interface GlobalEventHandlersEventMap {
+    // What a list was answered with (`SelectionWindow`, `ChoiceWindow`).
+    selection: CustomEvent<string>;
+  }
+}
+
 export interface ISelectionWindow extends INotificationWindow {
   selectionList(): HTMLSelectElement;
 }

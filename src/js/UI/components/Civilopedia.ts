@@ -38,15 +38,18 @@ export const loadCivilopedia = (
   transport: Transport
 ): Promise<CivilopediaData> => {
   if (!loaded.has(transport)) {
+    // The answers typed here: `tsconfig.json`, which checks this file through `ChoiceHandler`, sees them as `any`.
     const request = Promise.all([
       transport.request(new CivilopediaRequest()),
       transport.request(new Requirements()),
-    ]).then(([entries, requirements]) => ({
-      entries: new Map(entries.map((entry) => [entry.key, entry])),
-      requirements: new Map(
-        requirements.map((requirement) => [requirement.id, requirement])
-      ),
-    }));
+    ]).then(
+      ([entries, requirements]: [CivilopediaEntry[], RequirementData[]]) => ({
+        entries: new Map(entries.map((entry) => [entry.key, entry])),
+        requirements: new Map(
+          requirements.map((requirement) => [requirement.id, requirement])
+        ),
+      })
+    );
 
     // A failure is asked again next time, not kept.
     request.catch(() => loaded.delete(transport));

@@ -49,6 +49,8 @@ export interface ChoiceWindowOptions {
   autoChooseSingle?: boolean;
   // Whether the list can be left with nothing chosen: Escape and Cancel close it, leaving things as they were.
   canClose?: boolean;
+  // Over everything else, which waits for the answer: a new game's questions.
+  modal?: boolean;
   // The row chosen as the window opens: what's being built, or what the engine suggests. By default the first.
   chosen?: string | null;
   // Over the list: why it has opened.
@@ -94,6 +96,7 @@ export class ChoiceWindow extends FilterableWindow {
       classes = [],
       autoChooseSingle = true,
       canClose = true,
+      modal = false,
       chosen = null,
       intro = null,
       describe = null,
@@ -140,6 +143,7 @@ export class ChoiceWindow extends FilterableWindow {
         // Shown once its rows are in, below.
         autoDisplay: false,
         canClose,
+        modal,
         classes: ['ui-choice-window', ...classes],
         groupSelector: '.ui-choice-group',
         rowSelector: '.ui-choice-row',

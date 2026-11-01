@@ -5,6 +5,7 @@ import {
 } from '../lib/chooseFromList';
 import {
   difficultyLabels,
+  difficultyName,
   preselectedDifficulty,
   rememberDifficulty,
 } from '../lib/difficulty';
@@ -14,7 +15,9 @@ import ActionWindow from '../components/ActionWindow';
 import DebugFlags from '../debug/DebugFlags';
 import SelectionWindow from '../components/SelectionWindow';
 import Transport from '../Transport';
+import entryDetails from '../components/lib/choiceDetails';
 import instanceOf from '../lib/instanceOf';
+import { openChoice } from '../components/choices';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {
@@ -37,6 +40,12 @@ const goodbyeFirst = <Choice extends { value: unknown }>(
   ...choices.filter(
     ({ value }) => !instanceOf(value as Interactions, 'Terminate')
   ),
+];
+
+// The lists whose choices are advances.
+const advanceKeys = [
+  'capture-city.steal-advance',
+  'diplomacy.exchange-knowledge',
 ];
 
 // Every list the engine asks the player to choose from (`chooseFromList`): a step of the talks with one answer as an
@@ -110,10 +119,34 @@ export const ChoiceHandler = {
         return;
       }
 
-      const body =
-        key === 'negotiation.next-step'
-          ? negotiationLabel(data as Negotiation)
-          : chooseFromListBody(key, data);
+      // The steps of the talks stay the classic list until they move to the choice window too (#745).
+      if (key === 'negotiation.next-step') {
+        const selectionWindow = new SelectionWindow(
+          title,
+          goodbyeFirst(choices).map(({ id, value }) => ({
+            label: interactionLabel(value as Interactions, true),
+            value: id,
+          })),
+          (choice) => transport.send('chooseFromList', choice),
+          negotiationLabel(data as Negotiation),
+          {
+            canClose: false,
+            displayAll: true,
+          }
+        );
+
+        // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
+        if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
+          selectionWindow.selectionList().value = choices[0].id;
+          debugFlags.uiStressRunner.automateChoice(
+            selectionWindow,
+            choices[0].id,
+            (choiceId) => transport.send('chooseFromList', choiceId)
+          );
+        }
+
+        return;
+      }
 
       // Picked client-side, among the choices offered (#15). Not a valid choice id, so it can't collide with one.
       const randomChoice = '@random',
@@ -129,9 +162,18 @@ export const ChoiceHandler = {
             : null,
         difficultyChoiceLabels = difficulties
           ? difficultyLabels(difficulties)
-          : null;
+          : null,
+        preselected = difficulties
+          ? choices[
+              difficulties.findIndex(
+                ({ name }) => name === preselectedDifficulty(difficulties)
+              )
+            ]?.id ?? null
+          : null,
+        // An advance offered (taken from a city, or in an exchange) is described as the Civilopedia describes it.
+        advances = advanceKeys.includes(key);
 
-      const selectionWindow = new SelectionWindow(
+      const selectionWindow = openChoice(
         title,
         [
           ...(offerRandom
@@ -139,23 +181,30 @@ export const ChoiceHandler = {
                 {
                   label: t(`ChooseFromList.${key}.random`),
                   value: randomChoice,
+                  primary: t(`ChoiceWindow.ChooseFromList.${key}.random`),
                 },
               ]
             : []),
-          ...(key === 'negotiation.next-step'
-            ? goodbyeFirst(choices)
-            : choices
-          ).map(({ id, value }, index) => {
-            const label =
-              key === 'negotiation.next-step'
-                ? interactionLabel(value as Interactions, true)
-                : difficultyChoiceLabels
-                ? difficultyChoiceLabels[index].label
-                : chooseFromListChoice(key, value);
+          ...choices.map(({ id, value }, index) => {
+            const label = difficultyChoiceLabels
+              ? difficultyChoiceLabels[index].label
+              : chooseFromListChoice(key, value);
 
             return {
               label,
               value: id,
+              primary: t(`ChoiceWindow.ChooseFromList.${key}.primary`, {
+                // "Play at Prince level", "Play as the Romans".
+                choice: difficulties
+                  ? difficultyName(difficulties[index].name)
+                  : key === 'choose-civilization'
+                  ? t('Generic.civilization-name.plural', {
+                      civilization: (value as { _: string })._,
+                    })
+                  : label,
+                defaultValue: t('ChoiceWindow.choose'),
+                interpolation: { escapeValue: false },
+              }),
             };
           }),
         ],
@@ -175,27 +224,26 @@ export const ChoiceHandler = {
               : choice
           );
         },
-        body,
         {
+          intro: chooseFromListBody(key, data),
           canClose: false,
-          displayAll: true,
+          classes: [`choose-from-list`],
+          // The stress runner takes the engine's first choice, as an automated seat does.
+          chosen: debugFlags.uiStressRunner ? choices[0].id : preselected,
+          describe: advances
+            ? ({ value }) => {
+                const advance = choices.find(({ id }) => id === value)
+                  ?.value as { _: string } | undefined;
+
+                return advance
+                  ? entryDetails(transport, advance._, ['advance'])
+                  : null;
+              }
+            : null,
         }
       );
 
-      if (difficulties && !selectionWindow.autoChosen()) {
-        const preselected = preselectedDifficulty(difficulties),
-          preselectedIndex = difficulties.findIndex(
-            ({ name }) => name === preselected
-          );
-
-        if (preselectedIndex > -1) {
-          selectionWindow.selectionList().value = choices[preselectedIndex].id;
-        }
-      }
-
-      // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
       if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
-        selectionWindow.selectionList().value = choices[0].id;
         debugFlags.uiStressRunner.automateChoice(
           selectionWindow,
           choices[0].id,
