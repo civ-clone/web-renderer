@@ -11,7 +11,7 @@ import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from './FilterableWindow';
 import Portal from './Portal';
-import ReportTable, { rowAction } from './lib/ReportTable';
+import ReportTable from './lib/ReportTable';
 import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import { assetStore } from '../AssetStore';
@@ -166,10 +166,11 @@ export class HappinessTable extends FilterableWindow {
         {
           key: 'view',
           heading: t('ReportTable.Happiness.view'),
-          cell: (city) =>
-            rowAction(t('ReportTable.Happiness.view'), viewCityText(city), () =>
-              portal.openCity(city)
-            ),
+          action: {
+            label: t('ReportTable.Happiness.view'),
+            name: viewCityText,
+            run: (city) => portal.openCity(city),
+          },
         },
       ],
       label: t('HappinessReport.title'),

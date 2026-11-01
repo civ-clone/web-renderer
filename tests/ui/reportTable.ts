@@ -990,6 +990,40 @@ const run = async (): Promise<void> => {
     'Nothing has changed how its citizens feel.'
   );
 
+  // A View button opened a city, then the game changed it: the button is the same one, so the city's window can give
+  //  the focus back to it, and it opens the city as it is now.
+  // Through the row's children: linkedom's `querySelector` and `firstElementChild` miss a node moved into a new
+  //  parent, as a kept button is on each redraw.
+  const viewOf = (row: Element): HTMLElement =>
+    Array.from(
+      Array.from(row.children).find(
+        (cell) => (cell as HTMLElement).dataset.column === 'view'
+      )!.childNodes
+    )[0] as HTMLElement;
+  const view = viewOf(happinessRows()[1]);
+
+  view.focus();
+  happyCities[1].name = 'Bukhara';
+  happiness.update();
+
+  const viewNow = viewOf(happinessRows()[1]);
+
+  viewNow.click();
+
+  expect(
+    'Happiness: View is kept across an update, with the focus, and opens the city as it is now',
+    [
+      viewNow === view,
+      view.isConnected,
+      document.activeElement === view,
+      view.getAttribute('aria-label'),
+      opened.at(-1),
+    ],
+    [true, true, true, 'View Bukhara', 'city:Bukhara']
+  );
+
+  happyCities[1].name = 'Samarkand';
+
   happiness.close();
 
   // Top Cities: what the engine sent, with View only for your own.

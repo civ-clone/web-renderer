@@ -1,5 +1,5 @@
 import { City as CityData, Player } from '../types';
-import ReportTable, { rowAction } from './lib/ReportTable';
+import ReportTable from './lib/ReportTable';
 import Portal from './Portal';
 import TopCities from '../../Engine/Requests/TopCities';
 import { TopCitiesRow } from '../../Engine/lib/topCities';
@@ -136,16 +136,20 @@ export class TopCitiesTable extends Window {
         {
           key: 'view',
           heading: t('ReportTable.Happiness.view'),
-          cell: (row) => {
-            const city = ownCity(row, this.#player);
+          action: {
+            label: t('ReportTable.Happiness.view'),
+            name: (row) => {
+              const city = ownCity(row, this.#player);
 
-            return city === null
-              ? null
-              : rowAction(
-                  t('ReportTable.Happiness.view'),
-                  viewCityText(city),
-                  () => portal.openCity(city)
-                );
+              return city === null ? null : viewCityText(city);
+            },
+            run: (row) => {
+              const city = ownCity(row, this.#player);
+
+              if (city !== null) {
+                portal.openCity(city);
+              }
+            },
           },
         },
       ],

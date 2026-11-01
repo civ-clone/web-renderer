@@ -21,7 +21,16 @@ export interface ReportColumn<Row> {
   kind?: 'text' | 'number' | 'meter';
   // The row's header cell: what a screen reader names the row by.
   header?: boolean;
-  cell: (row: Row) => ReportCell;
+  // What the cell shows; nothing for an `action` column, whose button the table makes.
+  cell?: (row: Row) => ReportCell;
+  // A row's one action (View): a quiet button with a short `label`, named for a screen reader and the tooltip by
+  //  `name`, or none for a row `name` gives `null`. It's made once for each row and kept across redraws, so it keeps
+  //  the focus, and a window it opened can give the focus back to it; `run` is given the row as it is when clicked.
+  action?: {
+    label: string;
+    name: (row: Row) => string | null;
+    run: (row: Row) => void;
+  };
   // What the column sorts by. Without one, the column can't be sorted.
   sortValue?: (row: Row) => number | string;
   // Which way the first click sorts: most first for a number or a meter, A to Z for words, unless it says.
@@ -56,6 +65,8 @@ interface RowEntry<Row> {
   element: HTMLTableRowElement;
   row: Row;
   index: number;
+  // Each `action` column's button, by its key.
+  actions: Map<string, HTMLButtonElement>;
 }
 
 const collator = new Intl.Collator(undefined, {
@@ -86,35 +97,6 @@ const fill = (cell: HTMLElement, content: ReportCell, kind?: string): void => {
     kind === 'number' && typeof content === 'number'
       ? localeProvider.number(content)
       : String(content);
-};
-
-/**
- * A row's one action (View): a quiet button with a short label, its full name (`View Beijing`) for a screen reader and
- *  the tooltip. Its click stays its own, rather than also choosing the row.
- */
-export const rowAction = (
-  label: string,
-  name: string,
-  action: () => void
-): HTMLButtonElement => {
-  const button = h(
-    s<HTMLButtonElement>(
-      '<button type="button" class="btn-quiet ui-report-row-action"></button>',
-      label
-    ),
-    {
-      click: (event: MouseEvent) => {
-        event.stopPropagation();
-
-        action();
-      },
-    }
-  );
-
-  button.setAttribute('aria-label', name);
-  button.title = name;
-
-  return button;
 };
 
 /**
@@ -235,7 +217,7 @@ export class ReportTable<Row> {
 
       entry.row = row;
       entry.index = index;
-      entry.element.replaceChildren(...this.#cells(row));
+      entry.element.replaceChildren(...this.#cells(entry));
 
       return entry;
     });
@@ -329,7 +311,9 @@ export class ReportTable<Row> {
     }
   }
 
-  #cells(row: Row): HTMLTableCellElement[] {
+  #cells(entry: RowEntry<Row>): HTMLTableCellElement[] {
+    const { row } = entry;
+
     return this.#columns.map((column) => {
       const cell = document.createElement(column.header ? 'th' : 'td'),
         tone = column.tone?.(row) ?? null;
@@ -345,10 +329,54 @@ export class ReportTable<Row> {
         cell.classList.add(`ui-report-table-${tone}`);
       }
 
-      fill(cell, column.cell(row), column.kind);
+      if (column.action) {
+        const name = column.action.name(row);
+
+        if (name !== null) {
+          cell.append(this.#action(entry, column.key, column.action, name));
+        }
+
+        return cell;
+      }
+
+      fill(cell, column.cell?.(row) ?? null, column.kind);
 
       return cell;
     });
+  }
+
+  // The row's button for an `action` column, made the first time and kept after; its click stays its own, rather than
+  //  also choosing the row.
+  #action(
+    entry: RowEntry<Row>,
+    key: string,
+    { label, run }: NonNullable<ReportColumn<Row>['action']>,
+    name: string
+  ): HTMLButtonElement {
+    let button = entry.actions.get(key);
+
+    if (button === undefined) {
+      button = h(
+        s<HTMLButtonElement>(
+          '<button type="button" class="btn-quiet ui-report-row-action"></button>',
+          label
+        ),
+        {
+          click: (event: MouseEvent) => {
+            event.stopPropagation();
+
+            run(entry.row);
+          },
+        }
+      );
+
+      entry.actions.set(key, button);
+    }
+
+    button.setAttribute('aria-label', name);
+    button.title = name;
+
+    return button;
   }
 
   #entry(row: Row): RowEntry<Row> {
@@ -356,6 +384,7 @@ export class ReportTable<Row> {
         element: document.createElement('tr'),
         row,
         index: 0,
+        actions: new Map(),
       },
       open = this.#open;
 
