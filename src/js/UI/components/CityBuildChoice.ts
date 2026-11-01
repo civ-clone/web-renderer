@@ -72,7 +72,7 @@ export const buildRow = (
         value: localeProvider.number(buildItem.cost.value),
       },
       {
-        label: t('ChoiceWindow.Build.turns'),
+        label: t('ChoiceWindow.turns'),
         value: t('Progress.turns', { count: turns }),
       },
     ],

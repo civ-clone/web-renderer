@@ -16,8 +16,12 @@
   flex-direction: column;
   gap: 0.5rem;
   min-height: 0;
-  // Wide enough for the pane beside the list, where the screen is.
+  // Wide enough for the pane beside the list, where the screen is; narrower with no pane.
   width: min(48rem, 90vw);
+
+  &:has(.ui-choice-details[hidden]) {
+    width: min(32rem, 90vw);
+  }
 }
 
 .ui-choice-panes {
@@ -34,11 +38,11 @@
 }
 
 .ui-choice-list {
-  // What the window leaves it, up to a comfortable length.
-  align-self: start;
+  // What the window leaves it, up to a comfortable length: it fills its row, which shrinks with the window.
   // The padding inside the height, so the list never runs past the panes.
   box-sizing: border-box;
-  max-height: min(100%, 32rem);
+  max-height: 32rem;
+  min-height: 0;
   overflow-y: auto;
   // Room for the focus ring of the row at the top and the bottom.
   padding: 2px;
@@ -222,7 +226,6 @@
   }
 
   .ui-choice-list {
-    align-self: stretch;
     max-height: none;
   }
 

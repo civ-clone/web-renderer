@@ -1,6 +1,7 @@
 import Action from './Action';
 import { PlayerGovernment } from '../../types';
-import SelectionWindow from '../SelectionWindow';
+import entryDetails from '../lib/choiceDetails';
+import { openChoice } from '../choices';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -9,15 +10,23 @@ import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
 export class ChooseGovernment extends Action {
   activate(): void {
-    const chooseWindow = new SelectionWindow(
+    openChoice(
       t('Actions.ChooseGovernment.title'),
-      this.value().available.map((government) => ({
-        label: t(`${government._}.name`, {
-          defaultValue: government._,
+      this.value().available.map(({ _: government }) => {
+        const name = t(`${government}.name`, {
+          defaultValue: government,
           ns: 'government',
-        }),
-        value: government._,
-      })),
+        });
+
+        return {
+          value: government,
+          label: name,
+          primary: t('ChoiceWindow.Government.adopt', {
+            government: name,
+            interpolation: { escapeValue: false },
+          }),
+        };
+      }),
       (selection) => {
         if (!selection) {
           return;
@@ -30,12 +39,13 @@ export class ChooseGovernment extends Action {
         });
 
         this.complete();
-
-        chooseWindow.close();
       },
-      t('Actions.ChooseGovernment.body'),
       {
-        displayAll: true,
+        intro: t('Actions.ChooseGovernment.body'),
+        classes: ['choose-government'],
+        // What each government does (#183).
+        describe: ({ value }) =>
+          entryDetails(this.transport(), value, ['government']),
       }
     );
   }

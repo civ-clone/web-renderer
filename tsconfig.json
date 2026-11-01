@@ -1,10 +1,7 @@
 {
   "compilerOptions": {
     "noEmit": true,
-    "lib": [
-      "dom",
-      "es2020"
-    ],
+    "lib": ["dom", "dom.iterable", "es2022"],
     "module": "commonjs",
     "strict": true,
     "target": "ES2018"

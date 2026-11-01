@@ -1,13 +1,16 @@
 import { Player, PlayerAction, PlayerResearch } from '../../types';
 import Action from './Action';
-import SelectionWindow from '../SelectionWindow';
+import { ChoiceRow } from '../ChoiceWindow';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
 import { combinedYields } from '../lib/playerYields';
 import { advanceName, held, researchClearedLabel } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft } from '../lib/cityYields';
+import { turnsLeft, yieldIcon } from '../lib/cityYields';
+import entryDetails from '../lib/choiceDetails';
+import { instance as localeProvider } from '../../LocaleProvider';
+import { openChoice } from '../choices';
 import currentTileset from '../../lib/tilesets';
 import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
@@ -27,36 +30,62 @@ export class ChooseResearch extends Action {
   activate(): void {
     const playerResearch = this.value(),
       yields = this.#player ? combinedYields(this.#player) : null,
-      label = (advance: string): string => {
-        const name = advanceName(advance, held(playerResearch, advance) + 1),
-          cost = playerResearch.costs?.[advance];
+      turns = (advance: string): number | null => {
+        const cost = playerResearch.costs?.[advance];
 
         if (yields === null || cost === undefined) {
-          return name;
+          return null;
         }
 
-        return t('Actions.ChooseResearch.choice', {
-          advance: name,
-          turns: turnsLeft(
-            {
-              ...playerResearch,
-              cost: {
-                ...playerResearch.cost,
-                value: cost,
-              },
+        return turnsLeft(
+          {
+            ...playerResearch,
+            cost: {
+              ...playerResearch.cost,
+              value: cost,
             },
-            yields,
-            'Research'
-          ),
-        });
-      };
+          },
+          yields,
+          'Research'
+        );
+      },
+      rows: ChoiceRow[] = playerResearch.available.map(({ _: advance }) => {
+        const name = advanceName(advance, held(playerResearch, advance) + 1),
+          cost = playerResearch.costs?.[advance],
+          left = turns(advance);
 
-    const chooseWindow = new SelectionWindow(
+        return {
+          value: advance,
+          label: name,
+          facts: [
+            ...(cost === undefined
+              ? []
+              : [
+                  {
+                    icon: () => yieldIcon('Research'),
+                    label: t('ChoiceWindow.Research.cost'),
+                    value: localeProvider.number(cost),
+                  },
+                ]),
+            ...(left === null
+              ? []
+              : [
+                  {
+                    label: t('ChoiceWindow.turns'),
+                    value: t('Progress.turns', { count: left }),
+                  },
+                ]),
+          ],
+          primary: t('ChoiceWindow.Research.research', {
+            advance: name,
+            interpolation: { escapeValue: false },
+          }),
+        };
+      });
+
+    openChoice(
       t('Actions.ChooseResearch.title'),
-      playerResearch.available.map((advance) => ({
-        label: label(advance._),
-        value: advance._,
-      })),
+      rows,
       (selection) => {
         if (!selection) {
           return;
@@ -69,29 +98,40 @@ export class ChooseResearch extends Action {
         });
 
         this.complete();
-
-        chooseWindow.close();
       },
-      // What was just researched, when that's why it has opened (#726), above the question.
-      (() => {
-        const body = s('<div></div>'),
-          cleared = researchClearedLabel(playerResearch),
-          question = s('<p></p>');
-
-        if (cleared !== null) {
-          const reason = s('<p class="research-cleared"></p>');
-
-          reason.textContent = cleared;
-          body.append(reason);
-        }
-
-        question.textContent = t('Actions.ChooseResearch.body');
-        body.append(question);
-
-        return body;
-      })(),
       {
-        displayAll: true,
+        // What was just researched, when that's why it has opened (#726), above the question.
+        intro: (() => {
+          const body = s('<div></div>'),
+            cleared = researchClearedLabel(playerResearch),
+            question = s('<p></p>');
+
+          if (cleared !== null) {
+            const reason = s('<p class="research-cleared"></p>');
+
+            reason.textContent = cleared;
+            body.append(reason);
+          }
+
+          question.textContent = t('Actions.ChooseResearch.body');
+          body.append(question);
+
+          return body;
+        })(),
+        classes: ['choose-research'],
+        // What the advance needs and leads to (#183).
+        describe: ({ value }) =>
+          entryDetails(this.transport(), value, ['advance']),
+        classicLabel: ({ value, label }) => {
+          const left = turns(value);
+
+          return left === null
+            ? label
+            : t('Actions.ChooseResearch.choice', {
+                advance: label,
+                turns: left,
+              });
+        },
       }
     );
   }
