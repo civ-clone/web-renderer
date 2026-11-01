@@ -721,6 +721,7 @@ i18next.addResources('en', 'default', {
   'TradeReport.ImprovementList.surplus-title': 'Total surplus',
 
   // The active unit's card under the new interface (#743).
+  'UnitCard.coordinates': 'Coordinates',
   'UnitCard.defence-bonus':
     '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defense',
   'UnitCard.defence-bonus.title': 'Defense bonus',

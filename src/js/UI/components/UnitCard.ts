@@ -123,10 +123,14 @@ const tile = (unit: UnitData): HTMLElement => {
     coordinates = s(
       `<span class="ui-unit-card-coordinates">${glyph(
         'location'
-      )}<span></span></span>`
+      )}<span class="visually-hidden"></span><span></span></span>`
     ),
     bonus = defenceBonus(unit);
 
+  // The pin is a picture, so a screen reader is told what the figures are: they're read first, as they float.
+  coordinates.querySelector('.visually-hidden')!.textContent = `${text(
+    'UnitCard.coordinates'
+  )}: `;
   coordinates.lastElementChild!.textContent = text('Generic.coordinates', {
     x: unit.tile.x,
     y: unit.tile.y,

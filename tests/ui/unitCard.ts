@@ -228,7 +228,7 @@ const run = async (): Promise<void> => {
         text(element, '.ui-unit-card-coordinates'),
         !!element.querySelector('.ui-unit-card-coordinates .glyph-location'),
       ],
-      ['Grassland, Shield, Road', '12, 34', true]
+      ['Grassland, Shield, Road', 'Coordinates: 12, 34', true]
     );
     expect(
       'no defence bonus, so none shown',
@@ -257,7 +257,7 @@ const run = async (): Promise<void> => {
         text(element, '.ui-unit-card-tile'),
         bonus?.parentElement?.classList.contains('ui-unit-card-tile'),
       ],
-      ['12, 34Grassland, Shield, Road+200% defense', true]
+      ['Coordinates: 12, 34Grassland, Shield, Road+200% defense', true]
     );
 
     bonus.dispatchEvent(new Event('focus'));
