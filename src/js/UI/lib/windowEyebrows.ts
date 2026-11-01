@@ -16,6 +16,7 @@ const eyebrows: { [windowClass: string]: [kind: string, key: string | null] } =
     'city-build': ['production', null],
     'choose-research': ['science', null],
     'choose-government': ['government', null],
+    'unit-stack': ['units', null],
   };
 
 /** The eyebrow for a window with these classes, or `null` for one without. */

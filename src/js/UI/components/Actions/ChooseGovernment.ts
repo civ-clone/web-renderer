@@ -1,7 +1,7 @@
 import Action from './Action';
 import { PlayerGovernment } from '../../types';
 import entryDetails from '../lib/choiceDetails';
-import { openChoice } from '../choices';
+import { openChoice } from '../choiceList';
 import { assetStore } from '../../AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
