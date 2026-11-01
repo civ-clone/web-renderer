@@ -6,6 +6,7 @@ i18next.addResources('en-GB', 'default', {
   'Actions.Revolution.body':
     'Overthrow your government? Your civilisation will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
 
+  'ChoiceWindow.Build.defence': 'Defence',
   'ChooseFromList.choose-civilization.title': 'Choose your civilisation',
 
   'CustomizeWorld.title': 'Customise world',

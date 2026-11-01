@@ -88,6 +88,20 @@ i18next.addResources('en', 'default', {
 
   'Buildable.label-empty': `Nothing`,
 
+  'ChoiceWindow.Build.attack': 'Attack',
+  'ChoiceWindow.Build.build': 'Build {{- item}}',
+  'ChoiceWindow.Build.cost': 'Cost',
+  'ChoiceWindow.Build.defence': 'Defense',
+  'ChoiceWindow.Build.group.improvement': 'City Improvements',
+  'ChoiceWindow.Build.group.spaceship': 'Spaceship Parts',
+  'ChoiceWindow.Build.group.unit': 'Units',
+  'ChoiceWindow.Build.group.wonder': 'Wonders of the World',
+  'ChoiceWindow.Build.movement': 'Moves',
+  'ChoiceWindow.Build.shields_one': '{{count, number}} shield',
+  'ChoiceWindow.Build.shields_other': '{{count, number}} shields',
+  'ChoiceWindow.Build.turns': 'Turns',
+  'ChoiceWindow.choose': 'Choose',
+  'ChoiceWindow.civilopedia': 'More in the Civilopedia',
   'ChooseFromList.capture-city.steal-advance.body':
     'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{- data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
   'ChooseFromList.capture-city.steal-advance.choice':
@@ -824,6 +838,7 @@ i18next.addResources('en', 'default', {
   'Window.maximize': 'Maximize',
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
+  'Window.Eyebrow.production': 'Production',
   'Window.Eyebrow.reference': 'Reference',
   'Window.Eyebrow.report': 'Report',
   'Window.Eyebrow.report_key': 'Report · {{key}}',

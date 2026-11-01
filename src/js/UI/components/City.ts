@@ -28,7 +28,7 @@ import {
 } from './lib/cityYields';
 import Cities from './Map/Cities';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
-import CityBuildSelectionWindow from './CityBuildSelectionWindow';
+import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from './ConfirmationWindow';
 import Fog from './Map/Fog';
@@ -951,11 +951,8 @@ export class City extends Window {
       return;
     }
 
-    new CityBuildSelectionWindow(
-      this.#city.build,
-      available,
-      this.#transport,
-      () => this.element().focus()
+    openCityBuild(this.#city.build, available, this.#transport, () =>
+      this.element().focus()
     );
   }
 

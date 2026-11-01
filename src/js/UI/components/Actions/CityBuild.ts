@@ -1,7 +1,7 @@
 import { CityBuild as CityBuildObject, PlayerAction } from '../../types';
 import Action from './Action';
 import CityBuildAvailable from '../../../Engine/Requests/CityBuildAvailable';
-import CityBuildSelectionWindow from '../CityBuildSelectionWindow';
+import { openCityBuild } from '../choices';
 import Portal from '../Portal';
 import Transport from '../../Transport';
 import { assetStore } from '../../AssetStore';
@@ -47,7 +47,7 @@ export class CityBuild extends Action {
       this.#opening = false;
     }
 
-    new CityBuildSelectionWindow(
+    openCityBuild(
       this.value(),
       available,
       this.transport(),

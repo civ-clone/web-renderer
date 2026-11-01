@@ -13,6 +13,7 @@ const eyebrows: { [windowClass: string]: [kind: string, key: string | null] } =
     'top-cities-report': ['report', 'F8'],
     'civilization-score-report': ['report', 'F9'],
     civilopedia: ['reference', null],
+    'city-build': ['production', null],
   };
 
 /** The eyebrow for a window with these classes, or `null` for one without. */
