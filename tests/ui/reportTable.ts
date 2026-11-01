@@ -264,13 +264,14 @@ const run = async (): Promise<void> => {
     'Zürich',
   ]);
   expect(
-    'and the focus moves to the redrawn row that had it, wherever it went',
+    'and the row keeps its element, so the focus stays on it, wherever it went',
     [
       (document.activeElement as HTMLElement | null) === before,
-      document.activeElement?.isConnected,
-      document.activeElement?.querySelector('th')?.textContent,
+      before.isConnected,
+      before.querySelector('th')?.textContent,
+      before.querySelector('[data-column="gold"]')?.textContent,
     ],
-    [false, true, 'Memphis']
+    [true, true, 'Memphis', '40']
   );
 
   const memphis = table
@@ -409,6 +410,56 @@ const run = async (): Promise<void> => {
   (statusTable.querySelector('tbody tr:last-child') as HTMLElement).click();
 
   expect('a city opens its city screen', opened.at(-1), 'city:Karakorum');
+
+  // A window opened from a row gives the focus back to it when it closes, so a change made there (a new build, a new
+  //  name) redraws the row in place rather than replacing it, and the row then opens the city as it is now.
+  const opener = statusTable.querySelector(
+    'tbody tr:last-child'
+  ) as HTMLElement;
+
+  player.cities[0].name = 'Ulaanbaatar';
+  status.update();
+
+  expect(
+    'a redrawn city keeps its row, which shows and opens the city as it is now',
+    [
+      statusTable.querySelector('tbody tr:last-child') === opener,
+      opener.querySelector('th')?.textContent,
+    ],
+    [true, 'Civil disorder: Ulaanbaatar']
+  );
+
+  opener.click();
+
+  expect('and opens it', opened.at(-1), 'city:Ulaanbaatar');
+  expect(
+    'its bars say what is stored, for a screen reader',
+    Array.from(opener.querySelectorAll('[role="progressbar"]')).map((bar) =>
+      bar.getAttribute('aria-label')
+    ),
+    ['Food 5 / 20']
+  );
+
+  // The filter reads a row redrawn in place afresh: the city's new name finds it.
+  ['u', 'l', 'b'].forEach((key) =>
+    status
+      .element()
+      .dispatchEvent(
+        new (globalThis as any).KeyboardEvent('keydown', { key, bubbles: true })
+      )
+  );
+
+  expect(
+    'the filter reads a redrawn row afresh',
+    Array.from(statusTable.querySelectorAll('tbody tr')).map((row) =>
+      row.classList.contains('filtered-out')
+    ),
+    [true, false]
+  );
+
+  (
+    status.element().querySelector('input[type=search]') as HTMLInputElement
+  ).value = '';
 
   // The filter over the table's rows, not its headings or totals.
   ['s', 'm', 'k'].forEach((key) =>

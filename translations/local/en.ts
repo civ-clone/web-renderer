@@ -510,8 +510,12 @@ i18next.addResources('en', 'default', {
   'ReportTable.CityStatus.corruption': 'Corruption',
   'ReportTable.CityStatus.disorder': 'Civil disorder',
   'ReportTable.CityStatus.food': 'Food',
+  'ReportTable.CityStatus.food-stored':
+    'Food $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
   'ReportTable.CityStatus.happy': 'Happy',
   'ReportTable.CityStatus.shields': 'Shields',
+  'ReportTable.CityStatus.shields-stored':
+    'Shields $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
   'ReportTable.CityStatus.size': 'Size',
   'ReportTable.CityStatus.trade': 'Trade',
   'ReportTable.CityStatus.unhappy': 'Unhappy',

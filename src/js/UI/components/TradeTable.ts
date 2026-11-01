@@ -194,7 +194,8 @@ export class TradeTable extends FilterableWindow {
     this.#table.update(this.#cities);
     this.#improvements.update(maintenance(this.#cities));
 
-    this.refilter();
+    // The rows keep their elements, so their text is read again.
+    this.reread();
   }
 }
 

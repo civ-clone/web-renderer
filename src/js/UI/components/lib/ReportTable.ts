@@ -47,6 +47,14 @@ export interface ReportTableOptions<Row> {
   sort?: ReportSort | null;
 }
 
+// A row as drawn: kept from one update to the next by its key, so a window that opened from it (the city, #744) can
+//  give the focus back to it, and its handlers always open its latest data.
+interface RowEntry<Row> {
+  element: HTMLTableRowElement;
+  row: Row;
+  index: number;
+}
+
 const collator = new Intl.Collator(undefined, {
   numeric: true,
   sensitivity: 'base',
@@ -90,7 +98,7 @@ export class ReportTable<Row> {
   #headings: Map<string, HTMLTableCellElement> = new Map();
   #open: ((row: Row) => void) | null;
   #rowKey: (row: Row) => string;
-  #rows: { element: HTMLTableRowElement; row: Row; index: number }[] = [];
+  #rows: RowEntry<Row>[] = [];
   #sort: ReportSort | null;
   #table: HTMLTableElement = document.createElement('table');
   #totals: ReportTableOptions<Row>['totals'] | null;
@@ -176,26 +184,37 @@ export class ReportTable<Row> {
     this.#order();
   }
 
-  /** Draws `rows`, in the order chosen, keeping the focus on the row that had it. */
+  /**
+   * Draws `rows`, in the order chosen. A row whose key was drawn before keeps its element, with its cells redrawn, so the
+   *  focus stays on it and a window it opened can give the focus back.
+   */
   update(rows: Row[]): void {
-    const focused = this.#rows.find(({ element }) =>
-        element.contains(document.activeElement)
-      ),
-      focusedKey = focused ? this.#rowKey(focused.row) : null;
+    const focused = document.activeElement,
+      previous = new Map(
+        this.#rows.map((entry) => [this.#rowKey(entry.row), entry])
+      );
 
-    this.#rows = rows.map((row, index) => ({
-      element: this.#row(row),
-      row,
-      index,
-    }));
+    this.#rows = rows.map((row, index) => {
+      const entry = previous.get(this.#rowKey(row)) ?? this.#entry(row);
+
+      entry.row = row;
+      entry.index = index;
+      entry.element.replaceChildren(...this.#cells(row));
+
+      return entry;
+    });
 
     this.#order();
     this.#drawTotals(rows);
 
-    if (focusedKey !== null) {
-      this.#rows
-        .find(({ row }) => this.#rowKey(row) === focusedKey)
-        ?.element.focus();
+    // Moving a row in the document takes the focus off it, so it goes back where it was.
+    if (
+      focused instanceof HTMLElement &&
+      document.activeElement !== focused &&
+      focused.isConnected &&
+      this.#body.contains(focused)
+    ) {
+      focused.focus();
     }
   }
 
@@ -263,55 +282,66 @@ export class ReportTable<Row> {
           )
         : this.#rows;
 
-    this.#body.replaceChildren(...ordered.map(({ element }) => element));
+    // Only when the order has changed: moving a row takes the focus off it.
+    if (
+      ordered.length !== this.#body.children.length ||
+      ordered.some(
+        ({ element }, index) => this.#body.children[index] !== element
+      )
+    ) {
+      this.#body.replaceChildren(...ordered.map(({ element }) => element));
+    }
   }
 
-  #row(row: Row): HTMLTableRowElement {
-    const element = document.createElement('tr');
+  #cells(row: Row): HTMLTableCellElement[] {
+    return this.#columns.map((column) => {
+      const cell = document.createElement(column.header ? 'th' : 'td'),
+        tone = column.tone?.(row) ?? null;
 
-    element.append(
-      ...this.#columns.map((column) => {
-        const cell = document.createElement(column.header ? 'th' : 'td'),
-          tone = column.tone?.(row) ?? null;
+      if (column.header) {
+        cell.setAttribute('scope', 'row');
+      }
 
-        if (column.header) {
-          cell.setAttribute('scope', 'row');
-        }
+      cell.classList.add(`ui-report-table-${column.kind ?? 'text'}`);
+      cell.dataset.column = column.key;
 
-        cell.classList.add(`ui-report-table-${column.kind ?? 'text'}`);
-        cell.dataset.column = column.key;
+      if (tone !== null) {
+        cell.classList.add(`ui-report-table-${tone}`);
+      }
 
-        if (tone !== null) {
-          cell.classList.add(`ui-report-table-${tone}`);
-        }
+      fill(cell, column.cell(row), column.kind);
 
-        fill(cell, column.cell(row), column.kind);
+      return cell;
+    });
+  }
 
-        return cell;
-      })
-    );
-
-    const open = this.#open;
+  #entry(row: Row): RowEntry<Row> {
+    const entry: RowEntry<Row> = {
+        element: document.createElement('tr'),
+        row,
+        index: 0,
+      },
+      open = this.#open;
 
     if (open !== null) {
-      element.classList.add('ui-report-table-opens');
-      element.setAttribute('tabindex', '0');
+      entry.element.classList.add('ui-report-table-opens');
+      entry.element.setAttribute('tabindex', '0');
 
-      h(element, {
-        click: () => open(row),
+      h(entry.element, {
+        click: () => open(entry.row),
         keydown: (event: KeyboardEvent) => {
-          if (event.target !== element || event.key !== 'Enter') {
+          if (event.target !== entry.element || event.key !== 'Enter') {
             return;
           }
 
           event.preventDefault();
 
-          open(row);
+          open(entry.row);
         },
       });
     }
 
-    return element;
+    return entry;
   }
 
   #drawTotals(rows: Row[]): void {

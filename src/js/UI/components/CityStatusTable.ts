@@ -90,6 +90,10 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
           stored: city.growth.progress.value,
           capacity: city.growth.cost.value,
           perTurn: net(city, 'Food'),
+          label: t('ReportTable.CityStatus.food-stored', {
+            progress: city.growth.progress.value,
+            total: city.growth.cost.value,
+          }),
         }),
         growthTurns(city)
       ),
@@ -107,6 +111,10 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
           stored: city.build.progress.value,
           capacity: city.build.building ? city.build.cost.value : 0,
           perTurn: net(city, 'Production'),
+          label: t('ReportTable.CityStatus.shields-stored', {
+            progress: city.build.progress.value,
+            total: city.build.cost.value,
+          }),
         }),
         city.build.building ? buildTurns(city) : null
       ),
@@ -198,7 +206,8 @@ export class CityStatusTable extends FilterableWindow {
   update() {
     this.#table.update(this.#cities);
 
-    this.refilter();
+    // The rows keep their elements, so their text is read again.
+    this.reread();
   }
 }
 

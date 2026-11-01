@@ -151,6 +151,12 @@ export class FilterableWindow extends Window {
     this.refilter();
   }
 
+  /** Reads the rows' text afresh and filters them again, as after rows are redrawn in place. */
+  reread(): void {
+    this.#filter.forget();
+    this.refilter();
+  }
+
   /** Filters the rows again, as after one is removed. */
   refilter(): void {
     const body = this.element().querySelector(':scope > .body');
