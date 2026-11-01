@@ -245,7 +245,10 @@ const run = async (): Promise<void> => {
   };
 
   table.sortBy('gold', 'descending');
-  (table.element().querySelectorAll('tbody tr')[1] as HTMLElement).focus();
+
+  const before = table.element().querySelectorAll('tbody tr')[1] as HTMLElement;
+
+  before.focus();
 
   table.update([
     { id: 'a', name: 'Zürich', gold: 1 },
@@ -261,10 +264,13 @@ const run = async (): Promise<void> => {
     'Zürich',
   ]);
   expect(
-    'and the focus stays on the row that had it, wherever it went',
-    (document.activeElement as HTMLElement | null)?.querySelector('th')
-      ?.textContent,
-    'Memphis'
+    'and the focus moves to the redrawn row that had it, wherever it went',
+    [
+      (document.activeElement as HTMLElement | null) === before,
+      document.activeElement?.isConnected,
+      document.activeElement?.querySelector('th')?.textContent,
+    ],
+    [false, true, 'Memphis']
   );
 
   const memphis = table
@@ -475,6 +481,30 @@ const run = async (): Promise<void> => {
     'Trade: no anarchy note outside Anarchy',
     (trade.element().querySelector('.ui-report-note') as HTMLElement).hidden,
     true
+  );
+
+  ['s', 'a', 'm'].forEach((key) =>
+    trade
+      .element()
+      .dispatchEvent(
+        new (globalThis as any).KeyboardEvent('keydown', { key, bubbles: true })
+      )
+  );
+
+  expect(
+    'Trade: the filter finds a city, and leaves the upkeep as it is',
+    [
+      Array.from(trade.table().element().querySelectorAll('tbody tr')).map(
+        (row) => row.classList.contains('filtered-out')
+      ),
+      Array.from(
+        trade.improvements().element().querySelectorAll('tbody tr')
+      ).map((row) => row.classList.contains('filtered-out')),
+    ],
+    [
+      [true, false],
+      [false, false],
+    ]
   );
 
   trade.close();

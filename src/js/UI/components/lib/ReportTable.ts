@@ -40,6 +40,10 @@ export interface ReportTableOptions<Row> {
   // The footer, by column key; the first column says what it is unless it's given.
   totals?: (rows: Row[]) => { [key: string]: ReportCell };
   caption?: string;
+  // Names the table for a screen reader when it has no caption, as the only table in its window.
+  label?: string;
+  // A class to pick the table out by, as a window with two does to filter only one.
+  className?: string;
   sort?: ReportSort | null;
 }
 
@@ -48,8 +52,11 @@ const collator = new Intl.Collator(undefined, {
   sensitivity: 'base',
 });
 
+// Equal values tie outright, `Infinity` (never) included, which `Infinity - Infinity` would make `NaN`.
 const compare = (a: number | string, b: number | string): number =>
-  typeof a === 'number' && typeof b === 'number'
+  a === b
+    ? 0
+    : typeof a === 'number' && typeof b === 'number'
     ? a - b
     : collator.compare(String(a), String(b));
 
@@ -94,6 +101,8 @@ export class ReportTable<Row> {
     open,
     totals,
     caption,
+    label,
+    className,
     sort = null,
   }: ReportTableOptions<Row>) {
     this.#columns = columns;
@@ -103,6 +112,14 @@ export class ReportTable<Row> {
     this.#totals = totals ?? null;
 
     this.#table.className = 'ui-report-table';
+
+    if (className) {
+      this.#table.classList.add(className);
+    }
+
+    if (label && !caption) {
+      this.#table.setAttribute('aria-label', label);
+    }
 
     // Made, not parsed: a `<caption>` parsed outside a table is dropped.
     if (caption) {

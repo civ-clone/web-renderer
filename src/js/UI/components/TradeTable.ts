@@ -79,7 +79,8 @@ export class TradeTable extends FilterableWindow {
     // `trade-report` for the window's eyebrow and size, as the classic report has.
     super(t('TradeReport.title'), s('<div></div>'), {
       classes: ['trade-report', 'ui-report'],
-      rowSelector: 'tbody tr',
+      // The cities only: a city's name finds its row, and leaves the upkeep as it is.
+      rowSelector: '.ui-report-cities tbody tr',
     });
 
     this.#cities = player.cities;
@@ -87,6 +88,7 @@ export class TradeTable extends FilterableWindow {
 
     this.#table = new ReportTable<CityData>({
       caption: t('ReportTable.Trade.cities'),
+      className: 'ui-report-cities',
       columns: [
         {
           key: 'city',

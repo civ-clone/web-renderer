@@ -501,6 +501,8 @@ i18next.addResources('en', 'default', {
   'ReleaseWindow.loading': 'Loading the release notes…',
   'ReleaseWindow.title': 'Releases',
 
+  'ReloadGuard.body': 'Are you sure you want to reload?',
+  'ReloadGuard.title': 'Reload',
   'ReportTable.city': 'City',
   'ReportTable.total': 'Total',
   'ReportTable.CityStatus.build': 'Building',
@@ -517,13 +519,11 @@ i18next.addResources('en', 'default', {
   'ReportTable.Trade.cost': 'Each',
   'ReportTable.Trade.count': 'Number',
   'ReportTable.Trade.improvement': 'Improvement',
-  'ReportTable.Trade.improvements': 'Upkeep',
+  'ReportTable.Trade.improvements': 'Improvement upkeep',
   'ReportTable.Trade.income': 'Income',
   'ReportTable.Trade.left': 'Left',
   'ReportTable.Trade.total': 'Total',
   'ReportTable.Trade.upkeep': 'Upkeep',
-  'ReloadGuard.body': 'Are you sure you want to reload?',
-  'ReloadGuard.title': 'Reload',
 
   'SavedGame.autosave-failed': 'This turn could not be autosaved: {{- error}}',
   'SavedGame.could-not-hand-over':

@@ -168,6 +168,7 @@ export class CityStatusTable extends FilterableWindow {
     this.#cities = player.cities;
     this.#table = new ReportTable({
       columns: cityStatusColumns(),
+      label: t('CityStatus.title'),
       rowKey: (city) => city.id,
       open: (city) => portal.openCity(city),
     });
