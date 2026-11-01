@@ -22,3 +22,13 @@ export const cityNameText = (city: {
     interpolation: { escapeValue: false },
     name: city.name,
   });
+
+/** "View Beijing", as text: the name of a button that opens a city, its city named as `cityNameText` names it. */
+export const viewCityText = (city: {
+  name: string;
+  originalPlayer: { civilization: { _: string } };
+}): string =>
+  t('ReportTable.view-city', {
+    city: cityNameText(city),
+    interpolation: { escapeValue: false },
+  });

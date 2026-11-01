@@ -7,8 +7,11 @@ import {
 } from '../types';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import City from '../components/City';
-import { openCityStatus, openTradeReport } from '../components/reports';
-import HappinessReport from '../components/HappinessReport';
+import {
+  openCityStatus,
+  openHappinessReport,
+  openTradeReport,
+} from '../components/reports';
 import Portal from '../components/Portal';
 import ScienceReport from '../components/ScienceReport';
 import Transport from '../Transport';
@@ -288,7 +291,7 @@ export class UIStressRunner {
     const factories: (() => WindowLike | null)[] = [
       () => new ScienceReport(data.player),
       () => openCityStatus(data.player, this.#portal, this.#transport),
-      () => new HappinessReport(data.player, this.#portal, this.#transport),
+      () => openHappinessReport(data.player, this.#portal, this.#transport),
       () => openTradeReport(data.player, this.#portal, this.#transport),
       () => {
         if (!data.player.cities.length) {

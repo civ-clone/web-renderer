@@ -4,15 +4,15 @@ import { t } from 'i18next';
 import {
   openCityStatus,
   openCivilizationScore,
+  openHappinessReport,
   openIntelligenceReport,
   openMilitaryReport,
+  openTopCities,
   openTradeReport,
 } from '../components/reports';
 import Civilopedia from '../components/Civilopedia';
 import GamePortal from '../components/GamePortal';
-import HappinessReport from '../components/HappinessReport';
 import ScienceReport from '../components/ScienceReport';
-import TopCitiesReport from '../components/TopCitiesReport';
 import Transport from '../Transport';
 import { PlayerTradeRates } from '../types';
 import endTurn from '../lib/endTurn';
@@ -92,10 +92,10 @@ export class InputController {
       F1: () => openCityStatus(data().player, portal, transport),
       F2: () => openMilitaryReport(transport),
       F3: () => openIntelligenceReport(transport),
-      F4: () => new HappinessReport(data().player, portal, transport),
+      F4: () => openHappinessReport(data().player, portal, transport),
       F5: () => openTradeReport(data().player, portal, transport),
       F6: () => new ScienceReport(data().player),
-      F8: () => new TopCitiesReport(transport),
+      F8: () => openTopCities(data().player, portal, transport),
       F9: () => openCivilizationScore(transport),
       // Civ1 opened its Civilopedia from the menu alone (#183). F7 is free, but it is Civ1's Wonders of the World,
       //  still to come.

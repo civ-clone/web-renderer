@@ -7,19 +7,19 @@ import CheatPlayers, {
 import {
   openCityStatus,
   openCivilizationScore,
+  openHappinessReport,
   openIntelligenceReport,
   openMilitaryReport,
+  openTopCities,
   openTradeReport,
 } from './reports';
 import Civilopedia from './Civilopedia';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
-import HappinessReport from './HappinessReport';
 import { Player } from '../types';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
-import TopCitiesReport from './TopCitiesReport';
 import Transport from '../Transport';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
@@ -411,7 +411,7 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.happiness-report'),
                 action: () => {
-                  new HappinessReport(
+                  openHappinessReport(
                     this.#getPlayer(),
                     this.#portal,
                     this.#transport
@@ -437,7 +437,11 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.top-cities'),
                 action: () => {
-                  new TopCitiesReport(this.#transport);
+                  openTopCities(
+                    this.#getPlayer(),
+                    this.#portal,
+                    this.#transport
+                  );
                 },
               },
               {
