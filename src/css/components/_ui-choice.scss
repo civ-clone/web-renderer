@@ -133,6 +133,17 @@
     height: 1em;
     width: 1em;
   }
+
+  // A tileset's sprite, such as the production shield, at its own pixel size.
+  .yield-icon {
+    display: inline-flex;
+    line-height: 0;
+
+    img {
+      image-rendering: pixelated;
+      width: var(--tileset-icon);
+    }
+  }
 }
 
 .ui-choice-details {

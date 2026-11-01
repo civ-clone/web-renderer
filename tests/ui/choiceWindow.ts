@@ -591,11 +591,23 @@ const run = async (): Promise<void> => {
         'Attack: 0',
         'Defense: 1',
         'Moves: 1',
-        'Cost: 30 shields',
+        'Cost in shields: 30',
         'Turns: 4 turns',
       ],
-      ['Cost: 40 shields', 'Turns: 6 turns'],
+      ['Cost in shields: 40', 'Turns: 6 turns'],
     ]
+  );
+  expect(
+    'the cost is shown with the production icon, not the word',
+    build
+      .rows()
+      .map(
+        (row) =>
+          row.querySelectorAll('.ui-choice-fact')[
+            row.querySelectorAll('.ui-choice-fact').length - 2
+          ].firstElementChild?.className
+      ),
+    ['yield-icon', 'yield-icon']
   );
   expect(
     'the eyebrow says what kind of window',

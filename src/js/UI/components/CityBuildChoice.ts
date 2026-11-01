@@ -14,7 +14,7 @@ import {
 import { instance as localeProvider } from '../LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft } from './lib/cityYields';
+import { turnsLeft, yieldIcon } from './lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean) => void;
 
@@ -67,10 +67,9 @@ export const buildRow = (
     facts: [
       ...(buildItem.stats ? unitFacts(buildItem.stats) : []),
       {
+        icon: () => yieldIcon('Production'),
         label: t('ChoiceWindow.Build.cost'),
-        value: t('ChoiceWindow.Build.shields', {
-          count: buildItem.cost.value,
-        }),
+        value: localeProvider.number(buildItem.cost.value),
       },
       {
         label: t('ChoiceWindow.Build.turns'),

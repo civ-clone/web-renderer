@@ -9,9 +9,13 @@ import { s } from '@dom111/element';
 import { singleChoice } from '../lib/singleChoice';
 import { t } from 'i18next';
 
-/** One figure on a row, on its right: an icon or glyph, then the value. `label` is said for a screen reader. */
+/**
+ * One figure on a row, on its right: a glyph or a decorative icon (a tileset's sprite, such as `yieldIcon`), then the
+ *  value. `label` is said for a screen reader, and is the tooltip.
+ */
 export interface ChoiceFact {
   glyph?: GlyphName;
+  icon?: () => Node;
   label: string;
   value: string;
 }
@@ -383,6 +387,10 @@ export class ChoiceWindow extends FilterableWindow {
           }<span class="visually-hidden"></span><span class="ui-choice-fact-value"></span></span>`
         ),
         value = element.querySelector('.ui-choice-fact-value')!;
+
+      if (fact.icon) {
+        element.prepend(fact.icon());
+      }
 
       element.title = fact.label;
       element.querySelector(
