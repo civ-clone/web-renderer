@@ -18,13 +18,17 @@ import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import {
   openCityStatus,
   openCivilizationScore,
+  openHappinessReport,
   openIntelligenceReport,
   openMilitaryReport,
+  openTopCities,
   openTradeReport,
 } from '../../src/js/UI/components/reports';
 import CivilizationScoreTable from '../../src/js/UI/components/CivilizationScoreTable';
 import IntelligenceTable from '../../src/js/UI/components/IntelligenceTable';
+import HappinessTable from '../../src/js/UI/components/HappinessTable';
 import MilitaryTable from '../../src/js/UI/components/MilitaryTable';
+import TopCitiesTable from '../../src/js/UI/components/TopCitiesTable';
 
 const failures: string[] = [];
 let checks = 0,
@@ -874,6 +878,160 @@ const run = async (): Promise<void> => {
 
   embassy.close();
 
+  // Happiness: each city's citizens and their counts, a View button that opens the city, and a row that shows why.
+  const happyCities = [
+      city('City-1', 'Karakorum', {
+        moods: ['happy', 'unhappy', 'unhappy'],
+        civilDisorder: true,
+      }),
+      city('City-2', 'Samarkand', { moods: ['happy', 'happy', 'content'] }),
+    ],
+    happyPlayer = {
+      id: 'Player-1',
+      cities: happyCities,
+      civilization: { _: 'Mongol' },
+    } as unknown as Player;
+
+  (happyCities[1] as any).celebrateLeader = true;
+  (happyCities[1] as any).citizens.causes = [
+    {
+      yield: { _: 'CityImprovementContent', cityImprovement: { _: 'Temple' } },
+      moods: ['content', 'content', 'content'],
+    },
+  ];
+
+  const happiness = new HappinessTable(happyPlayer, portal),
+    happinessRows = () =>
+      Array.from(happiness.table().element().querySelectorAll('tbody tr'));
+
+  expect(
+    'Happiness: each city, its counts, and a View button',
+    happinessRows().map((row) => [
+      row.querySelector('th')?.textContent,
+      ...['happy', 'content', 'unhappy'].map(
+        (mood) => row.querySelector(`[data-column="${mood}"]`)?.textContent
+      ),
+      row.querySelectorAll('[data-column="view"] button.btn-quiet').length,
+    ]),
+    [
+      ['Civil disorder: Karakorum', '1', '0', '2', 1],
+      ['Celebrating: Samarkand', '2', '1', '0', 1],
+    ]
+  );
+  expect(
+    'Happiness: disorder in red, celebrating in green',
+    happinessRows().map((row) =>
+      row.querySelector('th')?.className.split(' ').pop()
+    ),
+    ['ui-report-table-negative', 'ui-report-table-positive']
+  );
+
+  const openedBefore = opened.length;
+
+  (
+    happinessRows()[1].querySelector(
+      '[data-column="view"] button'
+    ) as HTMLElement
+  ).click();
+
+  expect(
+    'Happiness: View opens the city, and only that',
+    [
+      opened.slice(openedBefore),
+      happiness.element().querySelector('.ui-report-details'),
+    ],
+    [['city:Samarkand'], null]
+  );
+
+  (happinessRows()[1] as HTMLElement).click();
+
+  expect(
+    'Happiness: a row shows why, under the table',
+    [
+      happiness.element().querySelector('.ui-report-details h3')?.textContent,
+      happiness.element().querySelector('.ui-report-cause .ui-report-detail')
+        ?.textContent,
+    ],
+    ['Samarkand', 'Temple']
+  );
+
+  (happyCities[1] as any).citizens.causes = [];
+  happiness.update();
+
+  expect(
+    'Happiness: the reasons follow the game',
+    happiness.element().querySelector('.ui-report-details p')?.textContent,
+    'Nothing has changed how its citizens feel.'
+  );
+
+  happiness.close();
+
+  // Top Cities: what the engine sent, with View only for your own.
+  const topCities = new TopCitiesTable(happyPlayer, portal, pending);
+
+  topCities.show([
+    {
+      rank: 1,
+      size: 12,
+      citizens: { happy: 4, content: 6, unhappy: 2, specialists: [] },
+      wonders: ['Colossus', 'Pyramids'],
+      city: { name: 'Babylon', civilization: 'Babylonian' },
+      owner: { civilization: 'Babylonian', colors: ['#ff0000', '#ffffff'] },
+    },
+    {
+      rank: 2,
+      size: 10,
+      citizens: { happy: 2, content: 6, unhappy: 2, specialists: [] },
+      wonders: [],
+      city: { name: 'Samarkand', civilization: 'Mongol' },
+      owner: { civilization: 'Mongol', colors: null },
+    },
+    {
+      rank: 3,
+      size: 9,
+      citizens: { happy: 0, content: 9, unhappy: 0, specialists: [] },
+      wonders: [],
+      city: null,
+      owner: null,
+    },
+  ]);
+
+  const topRows = () =>
+    Array.from(topCities.table().element().querySelectorAll('tbody tr'));
+
+  expect(
+    'Top Cities: rank, city, owner, size, wonders, and View for your own',
+    topRows().map((row) => [
+      ...['rank', 'city', 'civilization', 'size', 'wonders'].map(
+        (column) => row.querySelector(`[data-column="${column}"]`)?.textContent
+      ),
+      row.querySelectorAll('[data-column="view"] button').length,
+    ]),
+    [
+      ['1', 'Babylon', 'Babylonian', '12', 'Colossus, Pyramids', 0],
+      ['2', 'Samarkand', 'Mongol', '10', '', 1],
+      ['3', 'Unknown city', 'an unknown civilization', '9', '', 0],
+    ]
+  );
+
+  (
+    topRows()[1].querySelector('[data-column="view"] button') as HTMLElement
+  ).click();
+
+  expect('Top Cities: View opens your city', opened.at(-1), 'city:Samarkand');
+
+  topCities.table().sortBy('wonders', 'ascending');
+
+  expect(
+    'Top Cities: sorts by wonders, fewest first, ties in rank order',
+    topRows().map(
+      (row) => row.querySelector('[data-column="rank"]')?.textContent
+    ),
+    ['2', '3', '1']
+  );
+
+  topCities.close();
+
   // British spellings, in the namespace the reports read.
   await import('../../translations/local/en-GB');
   await i18next.changeLanguage('en-GB');
@@ -898,6 +1056,8 @@ const run = async (): Promise<void> => {
     openMilitaryReport(pending),
     openIntelligenceReport(pending),
     openCivilizationScore(pending),
+    openHappinessReport(player, portal, pending),
+    openTopCities(player, portal, pending),
   ];
 
   applyInterface('new', null);
@@ -908,6 +1068,8 @@ const run = async (): Promise<void> => {
     openMilitaryReport(pending),
     openIntelligenceReport(pending),
     openCivilizationScore(pending),
+    openHappinessReport(player, portal, pending),
+    openTopCities(player, portal, pending),
   ];
 
   await settle();
@@ -921,11 +1083,15 @@ const run = async (): Promise<void> => {
       'MilitaryReport',
       'IntelligenceReport',
       'CivilizationScoreReport',
+      'HappinessReport',
+      'TopCitiesReport',
       'CityStatusTable',
       'TradeTable',
       'MilitaryTable',
       'IntelligenceTable',
       'CivilizationScoreTable',
+      'HappinessTable',
+      'TopCitiesTable',
     ]
   );
 

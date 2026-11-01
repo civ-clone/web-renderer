@@ -3,8 +3,11 @@ import { instance as localeProvider } from '../../LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
-/** A warning on a cell, as a colour rather than a word (#744): `negative` for a loss, `warn` for a risk. */
-export type ReportTone = 'negative' | 'warn' | null;
+/**
+ * A warning on a cell, as a colour rather than a word (#744): `negative` for a loss, `warn` for a risk, `positive` for
+ *  good news (a city celebrating).
+ */
+export type ReportTone = 'negative' | 'warn' | 'positive' | null;
 
 export type ReportCell = string | number | Node | null;
 
@@ -83,6 +86,35 @@ const fill = (cell: HTMLElement, content: ReportCell, kind?: string): void => {
     kind === 'number' && typeof content === 'number'
       ? localeProvider.number(content)
       : String(content);
+};
+
+/**
+ * A row's one action (View): a quiet button with a short label, its full name (`View Beijing`) for a screen reader and
+ *  the tooltip. Its click stays its own, rather than also choosing the row.
+ */
+export const rowAction = (
+  label: string,
+  name: string,
+  action: () => void
+): HTMLButtonElement => {
+  const button = h(
+    s<HTMLButtonElement>(
+      '<button type="button" class="btn-quiet ui-report-row-action"></button>',
+      label
+    ),
+    {
+      click: (event: MouseEvent) => {
+        event.stopPropagation();
+
+        action();
+      },
+    }
+  );
+
+  button.setAttribute('aria-label', name);
+  button.title = name;
+
+  return button;
 };
 
 /**

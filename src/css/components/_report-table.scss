@@ -128,6 +128,29 @@
     color: var(--ui-warn);
   }
 
+  .ui-report-table-positive {
+    color: var(--ui-positive);
+  }
+
+  // A row's one action, as small as the text around it, so it doesn't make its row taller than the rest.
+  .ui-report-row-action {
+    font-size: var(--type-detail-size);
+    height: auto;
+    line-height: 1.4;
+    // The classic theme's buttons have a margin, for a button on its own.
+    margin: 0;
+    min-height: 0;
+    padding-block: 0;
+  }
+
+  // A row's one action (View): shown on the row under the pointer or with the focus, where there's a pointer to hover;
+  //  always, on a touch screen. Faded rather than hidden, so it can still be tabbed to.
+  @media (hover: hover) {
+    tbody tr:not(:hover, :focus-within) .ui-report-row-action {
+      opacity: 0;
+    }
+  }
+
   .ui-report-flagged {
     display: inline-flex;
     margin-right: 0.3em;
@@ -218,9 +241,10 @@
     font-size: var(--type-detail-size);
   }
 
-  // A leader's traits and a score's terms wrap, rather than make the table wider than its window.
+  // A leader's traits, a score's terms and a city's wonders wrap, rather than make the table wider than its window.
   [data-column='leader'],
-  [data-column='detail'] {
+  [data-column='detail'],
+  [data-column='wonders'] {
     min-width: 10em;
     white-space: normal;
   }
@@ -283,4 +307,13 @@
   p {
     margin: 0 0 0.25rem;
   }
+}
+
+// A step in why a city's citizens are as they are: its citizens after it, and what it was.
+.ui-report-cause {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.25rem;
 }

@@ -1,6 +1,8 @@
 import { CityStatus } from './CityStatus';
 import CivilizationScoreReport from './CivilizationScoreReport';
 import CivilizationScoreTable from './CivilizationScoreTable';
+import HappinessReport from './HappinessReport';
+import HappinessTable from './HappinessTable';
 import IntelligenceReport from './IntelligenceReport';
 import IntelligenceTable from './IntelligenceTable';
 import MilitaryReport from './MilitaryReport';
@@ -10,6 +12,8 @@ import { Player } from '../types';
 import Portal from './Portal';
 import TradeReport from './TradeReport';
 import TradeTable from './TradeTable';
+import TopCitiesReport from './TopCitiesReport';
+import TopCitiesTable from './TopCitiesTable';
 import Transport from '../Transport';
 import { interfaceMode } from '../lib/interfaceMode';
 
@@ -60,3 +64,23 @@ export const openCivilizationScore = (
   interfaceMode() === 'new'
     ? new CivilizationScoreTable(transport)
     : new CivilizationScoreReport(transport);
+
+/** The Happiness report (F4). */
+export const openHappinessReport = (
+  player: Player,
+  portal: Portal,
+  transport: Transport
+): HappinessReport | HappinessTable =>
+  interfaceMode() === 'new'
+    ? new HappinessTable(player, portal)
+    : new HappinessReport(player, portal, transport);
+
+/** Top Cities in the World (F8). */
+export const openTopCities = (
+  player: Player,
+  portal: Portal,
+  transport: Transport
+): TopCitiesReport | TopCitiesTable =>
+  interfaceMode() === 'new'
+    ? new TopCitiesTable(player, portal, transport)
+    : new TopCitiesReport(transport);
