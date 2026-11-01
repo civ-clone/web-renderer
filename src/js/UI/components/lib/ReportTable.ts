@@ -195,7 +195,11 @@ export class ReportTable<Row> {
       );
 
     this.#rows = rows.map((row, index) => {
-      const entry = previous.get(this.#rowKey(row)) ?? this.#entry(row);
+      const key = this.#rowKey(row),
+        // A key given twice gets a row of its own the second time, rather than sharing the first's.
+        entry = previous.get(key) ?? this.#entry(row);
+
+      previous.delete(key);
 
       entry.row = row;
       entry.index = index;

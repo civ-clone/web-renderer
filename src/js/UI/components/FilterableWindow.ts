@@ -1,5 +1,5 @@
 import Window, { WindowOptions } from './Window';
-import RowFilter from '../lib/filterRows';
+import RowFilter, { filteredOutClass } from '../lib/filterRows';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -153,6 +153,13 @@ export class FilterableWindow extends Window {
 
   /** Reads the rows' text afresh and filters them again, as after rows are redrawn in place. */
   reread(): void {
+    // Shown first, so each is read as it's laid out: a hidden row's `innerText` is its `textContent`, with nothing
+    //  between its cells, and a query across two of them would stop finding it. All are read before any is hidden
+    //  again, so nothing is drawn in between.
+    this.element()
+      .querySelectorAll(`:scope > .body .${filteredOutClass}`)
+      .forEach((row) => row.classList.remove(filteredOutClass));
+
     this.#filter.forget();
     this.refilter();
   }

@@ -289,6 +289,13 @@ const run = async (): Promise<void> => {
   expect('a row opens on a click and on Enter', opened, ['Memphis', 'Memphis']);
   expect('and can take the focus', memphis.getAttribute('tabindex'), '0');
 
+  table.update([
+    { id: 'a', name: 'Zürich', gold: 1 },
+    { id: 'a', name: 'Zürich again', gold: 2 },
+  ]);
+
+  expect('a key given twice still gets two rows', names().length, 2);
+
   table.element().remove();
 
   // City Status.
@@ -456,6 +463,31 @@ const run = async (): Promise<void> => {
     ),
     [true, false]
   );
+
+  // A browser reads a hidden row's `innerText` as its `textContent`, with nothing between its cells, so a redraw reads
+  //  every row shown.
+  const readHidden: boolean[] = [];
+
+  Object.defineProperty(HTMLElement.prototype, 'innerText', {
+    configurable: true,
+    get(this: HTMLElement) {
+      if (this.matches('tbody tr')) {
+        readHidden.push(this.classList.contains('filtered-out'));
+      }
+
+      return this.textContent;
+    },
+  });
+
+  status.update();
+
+  expect(
+    'a redraw reads each row while it is shown, the hidden one too',
+    [readHidden, texts(statusTable, 'tbody tr.filtered-out th')],
+    [[false, false], ['Samarkand']]
+  );
+
+  delete (HTMLElement.prototype as any).innerText;
 
   (
     status.element().querySelector('input[type=search]') as HTMLInputElement
