@@ -62,9 +62,10 @@ coalesced to one run per animation frame.
 - `MainMenu`: entry to new game, Earth world, custom world, load game, asset
   import, and the release notes (`ReleaseWindow`, from the version link). The
   game options are hidden until assets are imported.
-- `NewGameWindow`: world size, then `PlayerCountWindow` for the number of
-  civilizations.
-- `EarthWindow`: Earth is a fixed map, so it asks only for the player count.
+- `newGame.ts`: New Game's questions, each through `openChoice`: the map grid
+  (`askMapGrid`), world size (`askWorldSize`), difficulty (`askDifficulty`),
+  then the number of civilizations (`askPlayerCount`). `askEarth` asks the same
+  of the sizes there is an Earth map for, and never the grid.
 - `GameSetupWindow`: the game setup, opened by Customise world. It asks for the
   map, the difficulty, the Advanced world options (exact size and land) and the
   seat table.

@@ -225,7 +225,8 @@
     grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  .ui-choice-list {
+  // Beside a pane only: a list with none keeps its own length.
+  .ui-choice-panes:has(> .ui-choice-details:not([hidden])) .ui-choice-list {
     max-height: none;
   }
 

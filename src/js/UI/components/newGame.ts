@@ -23,7 +23,8 @@ import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
 // The questions New Game asks, each one answered before the next (#745): which grid (#89), how big a world, the
-//  difficulty level (#173), then how many civilizations (#55). Each must be answered, over everything else.
+//  difficulty level (#173), then how many civilizations (#55). Each is over everything else, and Cancel or Escape
+//  backs out of New Game.
 
 export type FinishedHandler = () => void;
 
@@ -34,7 +35,6 @@ const ask = (
   onChoose: (value: string) => void
 ): void => {
   openChoice(title, rows, onChoose, {
-    canClose: false,
     chosen,
     modal: true,
     classicIntro: t('MandatorySelection.default-body'),

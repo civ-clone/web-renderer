@@ -19,7 +19,7 @@ The application is split into two JavaScript runtimes:
 1. Browser loads `index.html` and starts `dist/frontend.js`.
 2. `src/js/frontend.ts` creates `Renderer(new WorkerTransport(new Worker('dist/backend.js')))` (from `src/js/UI/bootstrap.ts`) and calls `init()`.
 3. Worker starts from `src/js/backend.ts` and creates `Game(new ParentTransport())`.
-4. For a new game, the setup windows (`PlayerCountWindow` or `GameSetupWindow`) send `setOptions` as a request, wait for its acknowledgement, then send `start`.
+4. For a new game, the setup windows (`askPlayerCount` in `components/newGame.ts`, or `GameSetupWindow`) send `setOptions` as a request, wait for its acknowledgement, then send `start`.
 5. Backend binds engine events, starts the engine, and dynamically imports the generated plugin imports (`src/js/plugins.ts`).
 
 Loading a saved game takes a different path. The player picks a file, `src/js/UI/lib/savedGame.ts` hands it over in IndexedDB (with a `sessionStorage` marker) and the page reloads, so the save always goes to a fresh worker. On the next `init()`, `Renderer` takes the pending save, sets up its listeners, and sends `load` instead of `start`. The worker imports the plugins, restores the game into `defaultGame` (`src/js/Engine/loadGame.ts`) and resumes the turn that was in progress. No world is generated.

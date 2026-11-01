@@ -1,8 +1,8 @@
 // The lists on the choice window under the new interface (#745), past the build list: research, with each advance's
 //  cost in bulbs and turns, named in the primary and described from the Civilopedia; government; the lists the engine
 //  asks (`chooseFromList`), each primary saying what choosing does, Random first among the civilizations (#15), the
-//  difficulty preselected (#173), and nothing to cancel; and New Game's questions, over everything, the last one
-//  starting the game. The steps of the talks stay the classic list for now, and the classic interface keeps its
+//  difficulty preselected (#173), and nothing to cancel; and New Game's questions, over everything, Cancel backing
+//  out, the last one starting the game. The steps of the talks stay the classic list for now, and the classic interface keeps its
 //  lists, the research labels with their turns.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -409,19 +409,37 @@ const run = async (): Promise<void> => {
     );
   sent.length = 0;
 
-  // New Game's questions: each must be answered, over everything else, and the last one starts the game.
+  // New Game's questions: over everything else, Cancel backing out, and the last one starts the game.
+  askNewGame(transport, () => {});
+  await settle();
+
+  const sizes = top();
+
+  (
+    Array.from(sizes.querySelectorAll('.ui-window-footer button')).find(
+      (button) => button.textContent === 'Cancel'
+    ) as HTMLButtonElement
+  ).click();
+  await settle();
+
+  expect(
+    'new game: Cancel backs out, asking nothing more',
+    [sizes.hasAttribute('open'), options.length, sent],
+    [false, 0, []]
+  );
+
   askNewGame(transport, () => {});
   await settle();
 
   expect(
-    'new game: the world sizes, Normal chosen, over everything, nothing to cancel',
+    'new game: the world sizes, Normal chosen, over everything, and Cancel backs out',
     [
       top().querySelector('header h3, .ui-window-title')?.textContent,
       chosen(),
       top().classList.contains('modal'),
       footer(),
     ],
-    ['How big a world?', 'Normal (80 × 50)', true, ['Choose']]
+    ['How big a world?', 'Normal (80 × 50)', true, ['Cancel', 'Choose']]
   );
 
   key('Enter');
