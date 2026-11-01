@@ -218,6 +218,13 @@
     font-size: var(--type-detail-size);
   }
 
+  // A leader's traits and a score's terms wrap, rather than make the table wider than its window.
+  [data-column='leader'],
+  [data-column='detail'] {
+    min-width: 10em;
+    white-space: normal;
+  }
+
   // A civilization's name, after its colours.
   .ui-report-nation {
     align-items: center;
