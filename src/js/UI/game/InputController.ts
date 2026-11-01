@@ -1,7 +1,7 @@
 import { GameData, Tile, Unit } from '../types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
-import CityStatus from '../components/CityStatus';
+import { openCityStatus, openTradeReport } from '../components/reports';
 import Civilopedia from '../components/Civilopedia';
 import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GamePortal from '../components/GamePortal';
@@ -10,7 +10,6 @@ import IntelligenceReport from '../components/IntelligenceReport';
 import MilitaryReport from '../components/MilitaryReport';
 import ScienceReport from '../components/ScienceReport';
 import TopCitiesReport from '../components/TopCitiesReport';
-import TradeReport from '../components/TradeReport';
 import Transport from '../Transport';
 import { PlayerTradeRates } from '../types';
 import endTurn from '../lib/endTurn';
@@ -87,11 +86,11 @@ export class InputController {
     const { data, portal, transport } = deps;
 
     this.#leaderScreensMap = {
-      F1: () => new CityStatus(data().player, portal, transport),
+      F1: () => openCityStatus(data().player, portal, transport),
       F2: () => new MilitaryReport(transport),
       F3: () => new IntelligenceReport(transport),
       F4: () => new HappinessReport(data().player, portal, transport),
-      F5: () => new TradeReport(data().player, portal, transport),
+      F5: () => openTradeReport(data().player, portal, transport),
       F6: () => new ScienceReport(data().player),
       F8: () => new TopCitiesReport(transport),
       F9: () => new CivilizationScoreReport(transport),

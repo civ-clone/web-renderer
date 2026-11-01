@@ -503,6 +503,31 @@ i18next.addResources('en', 'default', {
 
   'ReloadGuard.body': 'Are you sure you want to reload?',
   'ReloadGuard.title': 'Reload',
+  'ReportTable.city': 'City',
+  'ReportTable.total': 'Total',
+  'ReportTable.CityStatus.build': 'Building',
+  'ReportTable.CityStatus.content': 'Content',
+  'ReportTable.CityStatus.corruption': 'Corruption',
+  'ReportTable.CityStatus.disorder': 'Civil disorder',
+  'ReportTable.CityStatus.food': 'Food',
+  'ReportTable.CityStatus.food-stored':
+    'Food $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
+  'ReportTable.CityStatus.happy': 'Happy',
+  'ReportTable.CityStatus.shields': 'Shields',
+  'ReportTable.CityStatus.shields-stored':
+    'Shields $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
+  'ReportTable.CityStatus.size': 'Size',
+  'ReportTable.CityStatus.trade': 'Trade',
+  'ReportTable.CityStatus.unhappy': 'Unhappy',
+  'ReportTable.Trade.cities': 'Cities',
+  'ReportTable.Trade.cost': 'Each',
+  'ReportTable.Trade.count': 'Number',
+  'ReportTable.Trade.improvement': 'Improvement',
+  'ReportTable.Trade.improvements': 'Improvement upkeep',
+  'ReportTable.Trade.income': 'Income',
+  'ReportTable.Trade.left': 'Left',
+  'ReportTable.Trade.total': 'Total',
+  'ReportTable.Trade.upkeep': 'Upkeep',
 
   'SavedGame.autosave-failed': 'This turn could not be autosaved: {{- error}}',
   'SavedGame.could-not-hand-over':

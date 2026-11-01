@@ -29,6 +29,8 @@ const glyphs = {
     '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>',
   'stat-visibility':
     '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  // Feather's flag, by a city in civil disorder in a report (#744).
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   // Feather's map pin, by a square's coordinates.
   location:
     '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
