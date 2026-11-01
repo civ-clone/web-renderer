@@ -656,8 +656,10 @@ const run = async (): Promise<void> => {
 
     const focus = HTMLElement.prototype.focus;
 
+    // As a browser does: focusing fires `focus`, which opens a tooltip.
     HTMLElement.prototype.focus = function (this: HTMLElement) {
       focused = this;
+      this.dispatchEvent(new Event('focus'));
     };
 
     actions.build(
@@ -720,22 +722,36 @@ const run = async (): Promise<void> => {
     ) as HTMLElement;
 
     bonusAnchor.focus();
-    bonusAnchor.dispatchEvent(new Event('focus'));
 
     expect('the bonus tooltip is open', panel()?.hidden, false);
 
     bonusDetails.update(fortified(0));
 
+    const newBonus = () =>
+      bonusCard.querySelector('.ui-unit-card-defence-bonus') as HTMLElement;
+
     expect(
-      'a redraw closes it, and the focus moves to the new bonus',
+      'a redraw moves the focus to the new bonus, its tooltip open over it',
       [
         panel()?.hidden ?? true,
-        (document.activeElement as HTMLElement | null)?.classList.contains(
-          'ui-unit-card-defence-bonus'
-        ),
-        bonusCard.contains(document.activeElement),
+        document.activeElement === newBonus(),
+        newBonus().hasAttribute('aria-describedby'),
+        bonusAnchor.hasAttribute('aria-describedby'),
       ],
-      [true, true, true]
+      [false, true, true, false]
+    );
+
+    // Closed with Escape, it stays closed through the next redraw.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect('Escape closes it', panel()?.hidden, true);
+
+    bonusDetails.update(fortified(1));
+
+    expect(
+      'a redraw after Escape keeps the focus but not the tooltip',
+      [panel()?.hidden ?? true, document.activeElement === newBonus()],
+      [true, true]
     );
 
     HTMLElement.prototype.focus = focus;

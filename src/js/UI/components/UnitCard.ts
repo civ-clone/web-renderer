@@ -308,7 +308,13 @@ export class UnitCard extends Element {
         document.activeElement.classList.contains(
           'ui-unit-card-defence-bonus'
         ) &&
-        element.contains(document.activeElement);
+        element.contains(document.activeElement),
+      // And its tooltip, if they had it open: focusing the new bonus opens it again, but one they closed stays closed.
+      bonusTooltipOpen =
+        bonusFocused &&
+        (document.activeElement as HTMLElement).hasAttribute(
+          'aria-describedby'
+        );
 
     // Its anchor is about to go, which fires no `blur` or `mouseleave` to close it.
     hideTooltipWithin(element);
@@ -392,6 +398,10 @@ export class UnitCard extends Element {
       element
         .querySelector<HTMLElement>('.ui-unit-card-defence-bonus')
         ?.focus();
+
+      if (!bonusTooltipOpen) {
+        hideTooltipWithin(element);
+      }
     }
   }
 
