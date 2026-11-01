@@ -430,6 +430,29 @@ const run = async (): Promise<void> => {
   expect('cleared: the row the player chose is chosen again', selected(kept), [
     'Barracks',
   ]);
+
+  // The window putting the focus back on its chosen row, as when a window opened from it closes, isn't the player
+  //  choosing that row. `focus()` sends `focusin` here as a browser's does.
+  kept.rows().forEach((row) => {
+    row.focus = () =>
+      row.dispatchEvent(
+        new (globalThis as any).Event('focusin', { bubbles: true })
+      );
+  });
+  keptBox.value = 'Settl';
+  kept.refilter();
+  kept.element().dispatchEvent(new (globalThis as any).Event('focus'));
+  expect(
+    'filtered: the first shown is chosen, and focused by the window',
+    selected(kept),
+    ['Settlers']
+  );
+
+  keptBox.value = '';
+  kept.refilter();
+  expect('cleared again: still the row the player chose', selected(kept), [
+    'Barracks',
+  ]);
   kept.close();
 
   // A describer that throws, rather than rejecting: an empty pane, and the window still made.

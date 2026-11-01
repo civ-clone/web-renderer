@@ -68,6 +68,8 @@ export class ChoiceWindow extends FilterableWindow {
   #chosen: HTMLElement | null = null;
   // The row the player chose last, given back when a filter that hid it is cleared.
   #wanted: HTMLElement | null = null;
+  // While the window puts the focus back on the chosen row itself, which isn't the player choosing it.
+  #focusing: boolean = false;
   #describe: ChoiceDescriber | null;
   #done: boolean = false;
   #details: HTMLElement;
@@ -201,7 +203,7 @@ export class ChoiceWindow extends FilterableWindow {
         );
 
         if (row instanceof HTMLElement && this.#rows.has(row)) {
-          this.#select(row);
+          this.#select(row, !this.#focusing);
         }
       },
       keydown: (event: KeyboardEvent) => this.#key(event),
@@ -215,7 +217,7 @@ export class ChoiceWindow extends FilterableWindow {
         null
     );
 
-    this.on('focus', () => this.#chosen?.focus());
+    this.on('focus', () => this.#focusChosen());
 
     this.display();
   }
@@ -248,7 +250,7 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
-    this.#chosen?.focus();
+    this.#focusChosen();
     this.#scrollTo(this.#chosen);
   }
 
@@ -292,6 +294,16 @@ export class ChoiceWindow extends FilterableWindow {
 
   #elements(): HTMLElement[] {
     return Array.from(this.#rows.keys());
+  }
+
+  #focusChosen(): void {
+    this.#focusing = true;
+
+    try {
+      this.#chosen?.focus();
+    } finally {
+      this.#focusing = false;
+    }
   }
 
   #key(event: KeyboardEvent): void {
