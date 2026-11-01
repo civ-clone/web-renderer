@@ -7,6 +7,7 @@ import Intelligence from '../../Engine/Requests/Intelligence';
 import ReportTable from './lib/ReportTable';
 import Transport from '../Transport';
 import { advanceNames } from './lib/advances';
+import { cityNameText } from './lib/city';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
@@ -109,10 +110,10 @@ const embassyDetails = ({
     capital === null
       ? t('IntelligenceReport.no-capital')
       : t('IntelligenceReport.capital', {
-          // Unescaped here too: the name goes into the page as text, so `Xi'an` would show as `Xi&#39;an`.
-          city: t('Generic.city-name', {
-            ...capital,
-            interpolation: { escapeValue: false },
+          // As text, so `Xi'an` doesn't show as `Xi&#39;an`.
+          city: cityNameText({
+            name: capital.name,
+            originalPlayer: { civilization: { _: capital.civilization } },
           }),
           interpolation: { escapeValue: false },
         })
