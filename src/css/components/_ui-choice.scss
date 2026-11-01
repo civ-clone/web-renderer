@@ -1,0 +1,241 @@
+// The choice window under the new interface (#745): a list of rows, each a sprite, the name with a muted line under it
+//  and the facts that decide it on the right, under eyebrow headings; the row chosen in the theme's choice colours; and
+//  a pane describing it beside the list, or under it in a narrow window. The list and the pane share what height the
+//  window has and scroll on their own, so the window's body never scrolls as well (#634). Everything from the theme's
+//  tokens.
+.window.ui-choice-window > .body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ui-choice {
+  container-type: inline-size;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 0;
+  // Wide enough for the pane beside the list, where the screen is.
+  width: min(48rem, 90vw);
+}
+
+.ui-choice-panes {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 0 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+
+  &:has(> .ui-choice-details[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ui-choice-list {
+  // What the window leaves it, up to a comfortable length.
+  align-self: start;
+  // The padding inside the height, so the list never runs past the panes.
+  box-sizing: border-box;
+  max-height: min(100%, 32rem);
+  overflow-y: auto;
+  // Room for the focus ring of the row at the top and the bottom.
+  padding: 2px;
+}
+
+.ui-choice-heading {
+  color: var(--type-eyebrow-colour);
+  font-size: var(--type-eyebrow-size);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: var(--type-eyebrow-tracking);
+  margin: 0;
+  padding: 0.5rem 0.5rem 0.25rem;
+  text-transform: var(--type-eyebrow-transform);
+}
+
+.ui-choice-group:first-child .ui-choice-heading {
+  padding-top: 0;
+}
+
+.ui-choice-row {
+  align-items: center;
+  border-radius: var(--ui-radius-control);
+  cursor: pointer;
+  display: grid;
+  gap: 0 0.5rem;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  min-height: var(--ui-table-row-height);
+  padding: 0.125rem 0.5rem;
+
+  &:hover {
+    background: var(--ui-table-hover);
+  }
+
+  &[aria-selected='true'] {
+    background: var(--ui-choice-bg);
+    color: var(--ui-choice-fg);
+
+    .ui-choice-meta,
+    .ui-choice-fact {
+      color: inherit;
+    }
+  }
+
+  &:focus-visible {
+    outline: var(--ui-focus-outline);
+    outline-offset: -2px;
+  }
+}
+
+// No sprites in the list: no column for them.
+.ui-choice-list:not(:has(.ui-choice-sprite:not(:empty))) .ui-choice-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+
+  .ui-choice-sprite {
+    display: none;
+  }
+}
+
+.ui-choice-sprite {
+  display: inline-flex;
+  justify-content: center;
+  line-height: 0;
+
+  canvas,
+  img {
+    height: 2rem;
+    image-rendering: pixelated;
+    width: 2rem;
+  }
+}
+
+.ui-choice-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-choice-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-choice-meta {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+}
+
+.ui-choice-facts {
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+  gap: 0.75em;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.ui-choice-fact {
+  align-items: center;
+  color: var(--ui-fg-muted);
+  display: inline-flex;
+  font-size: var(--type-detail-size);
+  gap: 0.2em;
+
+  .glyph {
+    height: 1em;
+    width: 1em;
+  }
+
+  // A tileset's sprite, such as the production shield, at its own pixel size.
+  .yield-icon {
+    display: inline-flex;
+    line-height: 0;
+
+    img {
+      image-rendering: pixelated;
+      width: var(--tileset-icon);
+    }
+  }
+}
+
+.ui-choice-details {
+  border-left: 1px solid var(--ui-line-soft);
+  font-size: var(--type-detail-size);
+  // A long entry scrolls in the pane.
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0 0 1rem;
+
+  &:empty {
+    border-color: transparent;
+  }
+
+  .entry-name {
+    font-family: var(--type-heading-family);
+    font-size: var(--type-heading-size);
+    font-weight: var(--type-heading-weight);
+    letter-spacing: var(--type-heading-tracking);
+    margin: 0;
+    text-transform: var(--type-heading-transform);
+  }
+
+  .entry-kind {
+    color: var(--ui-fg-muted);
+    margin: 0 0 0.5rem;
+  }
+
+  h4 {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    margin: 0.5rem 0 0.25rem;
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 1.25em;
+  }
+
+  a {
+    color: var(--ui-link-fg);
+    text-decoration: var(--ui-link-decoration);
+
+    &:hover {
+      text-decoration: var(--ui-link-decoration-hover);
+    }
+  }
+}
+
+.ui-choice-entry-more {
+  margin: 0.75rem 0 0;
+}
+
+// Under 40 em the pane goes under the list. Last, so it wins over the rules above.
+@container (max-width: 40em) {
+  // The list takes what the pane leaves, and the pane no more than a third of the screen.
+  .ui-choice-panes {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .ui-choice-list {
+    align-self: stretch;
+    max-height: none;
+  }
+
+  .ui-choice-details {
+    border-left: 0;
+    border-top: 1px solid var(--ui-line-soft);
+    max-height: 33vh;
+    padding: 0.5rem 0 0;
+
+    // Nothing to say yet: no gap under the list.
+    &:empty {
+      border: 0;
+      padding: 0;
+    }
+  }
+}
