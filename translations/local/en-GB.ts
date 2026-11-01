@@ -68,6 +68,9 @@ i18next.addResources('en-GB', 'default', {
 
   'HallOfFame.column.civilization': 'Civilisation',
 
+  'ReportTable.Intelligence.civilization': 'Civilisation',
+  'ReportTable.Military.defence': 'Defence',
+
   'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
 });
 

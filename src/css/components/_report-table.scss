@@ -174,6 +174,11 @@
 }
 
 .ui-report-note {
+  color: var(--ui-fg-muted);
+}
+
+// A note that warns, as of Anarchy.
+.ui-report-note-warn {
   color: var(--ui-warn);
 }
 
@@ -193,5 +198,89 @@
     flex: 1 1 18rem;
     margin-top: 0;
     width: auto;
+  }
+}
+
+.ui-report-table {
+  // A unit's figures, by their glyphs.
+  .ui-report-glyph {
+    display: inline-flex;
+
+    .glyph {
+      height: 1em;
+      width: 1em;
+    }
+  }
+
+  // Words that explain a cell, after it: a score's terms, a leader's traits.
+  .ui-report-detail {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+  }
+
+  // A leader's traits and a score's terms wrap, rather than make the table wider than its window.
+  [data-column='leader'],
+  [data-column='detail'] {
+    min-width: 10em;
+    white-space: normal;
+  }
+
+  // A civilization's name, after its colours.
+  .ui-report-nation {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.4em;
+  }
+
+  .ui-report-swatch {
+    background: linear-gradient(
+      135deg,
+      var(--owner-primary, var(--ui-unknown-owner)) 50%,
+      var(--owner-secondary, var(--ui-unknown-owner-edge)) 50%
+    );
+    border: 1px solid var(--ui-line);
+    border-radius: var(--ui-radius-control);
+    display: inline-block;
+    height: 0.9em;
+    width: 0.9em;
+  }
+}
+
+// Military's status and losses, side by side when there's room.
+.ui-report-tables {
+  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .ui-report-section {
+    flex: 1 1 18rem;
+  }
+
+  // As wide as its columns: a share of a section that is itself as wide as its content never settles, and cuts the
+  //  last column off.
+  .ui-report-table {
+    width: auto;
+  }
+}
+
+// What an embassy tells us of the civilization chosen in the table.
+.ui-report-details {
+  border-top: 1px solid var(--ui-table-rule);
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.35rem 0;
+
+  h3,
+  h4 {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    margin: 0.5rem 0 0.25rem;
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  p {
+    margin: 0 0 0.25rem;
   }
 }

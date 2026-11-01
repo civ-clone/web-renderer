@@ -1,4 +1,10 @@
 import { CityStatus } from './CityStatus';
+import CivilizationScoreReport from './CivilizationScoreReport';
+import CivilizationScoreTable from './CivilizationScoreTable';
+import IntelligenceReport from './IntelligenceReport';
+import IntelligenceTable from './IntelligenceTable';
+import MilitaryReport from './MilitaryReport';
+import MilitaryTable from './MilitaryTable';
 import CityStatusTable from './CityStatusTable';
 import { Player } from '../types';
 import Portal from './Portal';
@@ -29,3 +35,28 @@ export const openTradeReport = (
   interfaceMode() === 'new'
     ? new TradeTable(player, portal)
     : new TradeReport(player, portal, transport);
+
+/** The Military report (F2). */
+export const openMilitaryReport = (
+  transport: Transport
+): MilitaryReport | MilitaryTable =>
+  interfaceMode() === 'new'
+    ? new MilitaryTable(transport)
+    : new MilitaryReport(transport);
+
+/** The Intelligence Report (F3): every civilization met, or only `civilization`, as when an embassy is established. */
+export const openIntelligenceReport = (
+  transport: Transport,
+  civilization: string | null = null
+): IntelligenceReport | IntelligenceTable =>
+  interfaceMode() === 'new'
+    ? new IntelligenceTable(transport, civilization)
+    : new IntelligenceReport(transport, civilization);
+
+/** The Civilization Score (F9). */
+export const openCivilizationScore = (
+  transport: Transport
+): CivilizationScoreReport | CivilizationScoreTable =>
+  interfaceMode() === 'new'
+    ? new CivilizationScoreTable(transport)
+    : new CivilizationScoreReport(transport);

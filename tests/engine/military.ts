@@ -88,18 +88,21 @@ expect(
   [
     {
       unit: 'Settlers',
+      key: 'Settlers',
       stats: { attack: 0, defence: 1, movement: 1, visibility: 1 },
       active: 0,
       inProduction: 2,
     },
     {
       unit: 'Trireme',
+      key: 'Trireme',
       stats: { attack: 1, defence: 0, movement: 3, visibility: 1 },
       active: 1,
       inProduction: 0,
     },
     {
       unit: 'Warrior',
+      key: 'Warrior',
       stats: { attack: 1, defence: 1, movement: 1, visibility: 1 },
       active: 2,
       inProduction: 0,
@@ -108,7 +111,7 @@ expect(
 );
 
 expect('each type we have lost, ours only', report.losses, [
-  { unit: 'Warrior', lost: 2 },
+  { unit: 'Warrior', key: 'Warrior', lost: 2 },
 ]);
 
 expect(

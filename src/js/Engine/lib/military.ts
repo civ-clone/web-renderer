@@ -4,6 +4,7 @@
 //  ruleset's (`UnitLossRegistry`). Only our own: without the cheat, v474.05 shows no one else's losses.
 
 import { UnitStats, unitStats } from './civilopedia';
+import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { CityBuildRegistry } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
@@ -16,6 +17,8 @@ import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
 export type MilitaryStatusRow = {
   // The class name, as the unit's strings are keyed (`unit:<name>.name`).
   unit: string;
+  // Its Civilopedia entry's key, for the report to open (#744).
+  key: string;
   stats: UnitStats;
   active: number;
   inProduction: number;
@@ -23,6 +26,7 @@ export type MilitaryStatusRow = {
 
 export type MilitaryLossRow = {
   unit: string;
+  key: string;
   lost: number;
 };
 
@@ -96,6 +100,7 @@ export const militaryReport = (
     status: inOrder(new Set([...active.keys(), ...inProduction.keys()])).map(
       (UnitType) => ({
         unit: UnitType.name,
+        key: typeNameOf(UnitType),
         stats: unitStats(UnitType, rules),
         active: active.get(UnitType) ?? 0,
         inProduction: inProduction.get(UnitType) ?? 0,
@@ -104,6 +109,7 @@ export const militaryReport = (
     losses: inOrder(losses.map((unitLoss) => unitLoss.unit())).map(
       (UnitType) => ({
         unit: UnitType.name,
+        key: typeNameOf(UnitType),
         lost: losses.find((unitLoss) => unitLoss.unit() === UnitType)!.count(),
       })
     ),

@@ -1,13 +1,16 @@
 import { GameData, Tile, Unit } from '../types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
-import { openCityStatus, openTradeReport } from '../components/reports';
+import {
+  openCityStatus,
+  openCivilizationScore,
+  openIntelligenceReport,
+  openMilitaryReport,
+  openTradeReport,
+} from '../components/reports';
 import Civilopedia from '../components/Civilopedia';
-import CivilizationScoreReport from '../components/CivilizationScoreReport';
 import GamePortal from '../components/GamePortal';
 import HappinessReport from '../components/HappinessReport';
-import IntelligenceReport from '../components/IntelligenceReport';
-import MilitaryReport from '../components/MilitaryReport';
 import ScienceReport from '../components/ScienceReport';
 import TopCitiesReport from '../components/TopCitiesReport';
 import Transport from '../Transport';
@@ -87,13 +90,13 @@ export class InputController {
 
     this.#leaderScreensMap = {
       F1: () => openCityStatus(data().player, portal, transport),
-      F2: () => new MilitaryReport(transport),
-      F3: () => new IntelligenceReport(transport),
+      F2: () => openMilitaryReport(transport),
+      F3: () => openIntelligenceReport(transport),
       F4: () => new HappinessReport(data().player, portal, transport),
       F5: () => openTradeReport(data().player, portal, transport),
       F6: () => new ScienceReport(data().player),
       F8: () => new TopCitiesReport(transport),
-      F9: () => new CivilizationScoreReport(transport),
+      F9: () => openCivilizationScore(transport),
       // Civ1 opened its Civilopedia from the menu alone (#183). F7 is free, but it is Civ1's Wonders of the World,
       //  still to come.
       '?': () => Civilopedia.open(transport),
