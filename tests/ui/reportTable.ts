@@ -7,11 +7,9 @@ import './lib/dom';
 
 import { City, Player } from '../../src/js/UI/types';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
-import CityStatus from '../../src/js/UI/components/CityStatus';
 import CityStatusTable from '../../src/js/UI/components/CityStatusTable';
 import Portal from '../../src/js/UI/components/Portal';
 import ReportTable from '../../src/js/UI/components/lib/ReportTable';
-import TradeReport from '../../src/js/UI/components/TradeReport';
 import TradeTable from '../../src/js/UI/components/TradeTable';
 import Transport from '../../src/js/UI/Transport';
 import { assetStore } from '../../src/js/UI/AssetStore';
@@ -19,8 +17,14 @@ import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import {
   openCityStatus,
+  openCivilizationScore,
+  openIntelligenceReport,
+  openMilitaryReport,
   openTradeReport,
 } from '../../src/js/UI/components/reports';
+import CivilizationScoreTable from '../../src/js/UI/components/CivilizationScoreTable';
+import IntelligenceTable from '../../src/js/UI/components/IntelligenceTable';
+import MilitaryTable from '../../src/js/UI/components/MilitaryTable';
 
 const failures: string[] = [];
 let checks = 0,
@@ -592,34 +596,294 @@ const run = async (): Promise<void> => {
 
   trade.close();
 
+  // Military: what the engine sent, a row opening its unit's Civilopedia entry.
+  const pending = {
+      request: () => new Promise(() => {}),
+    } as unknown as Transport,
+    military = new MilitaryTable(pending);
+
+  military.show({
+    status: [
+      {
+        unit: 'Warrior',
+        key: 'Warrior',
+        stats: { attack: 1, defence: 1, movement: 1, visibility: 1 },
+        active: 3,
+        inProduction: 0,
+      },
+      {
+        unit: 'Trireme',
+        key: 'Trireme',
+        stats: { attack: 1, defence: 0, movement: 3, visibility: 1 },
+        active: 0,
+        inProduction: 2,
+      },
+    ],
+    losses: [],
+  });
+
+  expect(
+    'Military: each type with its figures, and nothing for none',
+    Array.from(military.status().element().querySelectorAll('tbody tr')).map(
+      (row) => Array.from(row.children).map((cell) => cell.textContent)
+    ),
+    [
+      ['Warrior', '1', '1', '1', '1', '3', ''],
+      ['Trireme', '1', '0', '3', '1', '', '2'],
+    ]
+  );
+  expect(
+    'Military: no losses says so, without an empty table',
+    [
+      (military.element().querySelectorAll('.ui-report-note')[1] as HTMLElement)
+        .hidden,
+      military.losses().element().hidden,
+    ],
+    [false, true]
+  );
+
+  (
+    military.status().element().querySelector('tbody tr') as HTMLElement
+  ).click();
+
+  const civilopedia = Array.from(document.querySelectorAll('dialog')).find(
+    (dialog) => dialog.classList.contains('civilopedia')
+  );
+
+  expect(
+    'Military: a row opens the Civilopedia',
+    civilopedia !== undefined,
+    true
+  );
+
+  civilopedia?.remove();
+
+  military.show({
+    status: [],
+    losses: [{ unit: 'Warrior', key: 'Warrior', lost: 2 }],
+  });
+
+  expect(
+    'Military: losses with their total; no units says so',
+    [
+      Array.from(
+        military.losses().element().querySelectorAll('tbody tr, tfoot tr')
+      ).map((row) => Array.from(row.children).map((cell) => cell.textContent)),
+      (military.element().querySelectorAll('.ui-report-note')[0] as HTMLElement)
+        .hidden,
+    ],
+    [
+      [
+        ['Warrior', '2'],
+        ['Total', '2'],
+      ],
+      false,
+    ]
+  );
+
+  military.close();
+
+  // The Civilization Score: the engine's total, not the column's sum, with the conquest bonus.
+  const score = new CivilizationScoreTable(pending);
+
+  score.show({
+    terms: [
+      { term: 'citizens', value: 40 },
+      { term: 'pollution', value: -20 },
+    ],
+    bonus: 300,
+    total: 300,
+    scoringComplete: true,
+  });
+
+  expect(
+    'Score: each term and the bonus, the total from the engine',
+    Array.from(
+      score.table().element().querySelectorAll('tbody tr, tfoot tr')
+    ).map((row) =>
+      Array.from(row.children).map((cell) =>
+        cell.classList.contains('ui-report-table-negative')
+          ? `-${cell.textContent}-`
+          : cell.textContent
+      )
+    ),
+    [
+      [
+        'Citizens',
+        i18next.t('CivilizationScoreReport.term.citizens.detail'),
+        '40',
+      ],
+      [
+        'Pollution',
+        i18next.t('CivilizationScoreReport.term.pollution.detail'),
+        '--20-',
+      ],
+      [
+        'Conquest bonus',
+        i18next.t('CivilizationScoreReport.bonus.detail'),
+        '300',
+      ],
+      ['Total', '', '300'],
+    ]
+  );
+  expect(
+    'Score: scoring completed is said',
+    (score.element().querySelector('.ui-report-note') as HTMLElement).hidden,
+    false
+  );
+
+  score.close();
+
+  // Intelligence: a row for each civilization met, its details under the table when it's opened.
+  const intelligenceRows = [
+      {
+        civilization: 'Babylonian',
+        colors: ['#ff0000', '#ffffff'] as [string, string],
+        leader: 'Hammurabi',
+        atPeace: false,
+        theirEmbassy: true,
+        details: {
+          traits: ['Aggressive'],
+          capital: { name: 'Babylon', civilization: 'Babylonian' },
+          government: 'Monarchy',
+          gold: 1234,
+          units: 12,
+          foreignAffairs: [{ civilization: null, atPeace: true }],
+          advances: [],
+        },
+      },
+      {
+        civilization: 'Zulu',
+        colors: null,
+        leader: null,
+        atPeace: true,
+        theirEmbassy: false,
+        details: null,
+      },
+    ],
+    intelligence = new IntelligenceTable(pending);
+
+  intelligence.show(intelligenceRows);
+
+  const intelligenceTable = intelligence.table().element();
+
+  expect(
+    'Intelligence: what we know of each, and nothing we do not',
+    Array.from(intelligenceTable.querySelectorAll('tbody tr')).map((row) =>
+      Array.from(row.children).map((cell) => cell.textContent)
+    ),
+    [
+      [
+        'Babylonian',
+        'Hammurabi (Aggressive)',
+        'War',
+        'Both',
+        'Monarchy',
+        '1,234',
+        '12',
+      ],
+      ['Zulu', 'Unknown', 'Peace', 'None', '', '', ''],
+    ]
+  );
+  expect(
+    'Intelligence: war is coloured, and each nation has its colours',
+    [
+      intelligenceTable
+        .querySelector('tbody tr [data-column="relations"]')
+        ?.classList.contains('ui-report-table-negative'),
+      (
+        intelligenceTable.querySelector('.ui-report-swatch') as HTMLElement
+      ).style.getPropertyValue('--owner-primary'),
+    ],
+    [true, '#ff0000']
+  );
+
+  (intelligenceTable.querySelector('tbody tr') as HTMLElement).click();
+
+  expect(
+    'Intelligence: a row opens what our embassy tells us, under the table',
+    Array.from(
+      intelligence
+        .element()
+        .querySelectorAll('.ui-report-details p, .ui-report-details h4')
+    ).map((line) => line.textContent),
+    [
+      'Capital: ' +
+        i18next.t('Generic.city-name', {
+          name: 'Babylon',
+          civilization: 'Babylonian',
+        }),
+      'Foreign Affairs:',
+      'At PEACE with an unknown civilization.',
+      'Technologies:',
+      'None.',
+    ]
+  );
+
+  (intelligenceTable.querySelectorAll('tbody tr')[1] as HTMLElement).click();
+
+  expect(
+    'Intelligence: and says when there is no embassy',
+    intelligence.element().querySelector('.ui-report-details p')?.textContent,
+    'No embassy established.'
+  );
+
+  intelligence.close();
+
+  // An embassy just established: only that civilization, with its details shown.
+  const embassy = new IntelligenceTable(pending, 'Babylonian');
+
+  embassy.show(intelligenceRows);
+
+  expect(
+    'Intelligence for a new embassy: that civilization only, its details open',
+    [
+      embassy.table().element().querySelectorAll('tbody tr').length,
+      embassy.element().querySelectorAll('.ui-report-details h4').length,
+    ],
+    [1, 2]
+  );
+
+  embassy.close();
+
   // The flag picks which.
   applyInterface('classic', null);
 
   const classic = [
-    openCityStatus(player, portal, {} as Transport),
-    openTradeReport(player, portal, {} as Transport),
+    openCityStatus(player, portal, pending),
+    openTradeReport(player, portal, pending),
+    openMilitaryReport(pending),
+    openIntelligenceReport(pending),
+    openCivilizationScore(pending),
   ];
 
   applyInterface('new', null);
 
   const modern = [
-    openCityStatus(player, portal, {} as Transport),
-    openTradeReport(player, portal, {} as Transport),
+    openCityStatus(player, portal, pending),
+    openTradeReport(player, portal, pending),
+    openMilitaryReport(pending),
+    openIntelligenceReport(pending),
+    openCivilizationScore(pending),
   ];
 
   await settle();
 
   expect(
     'the classic interface opens the classic reports, the new one the tables',
-    [...classic, ...modern].map((report) =>
-      report instanceof CityStatus ||
-      report instanceof TradeReport ||
-      report instanceof CityStatusTable ||
-      report instanceof TradeTable
-        ? report.constructor.name
-        : null
-    ),
-    ['CityStatus', 'TradeReport', 'CityStatusTable', 'TradeTable']
+    [...classic, ...modern].map((report) => report.constructor.name),
+    [
+      'CityStatus',
+      'TradeReport',
+      'MilitaryReport',
+      'IntelligenceReport',
+      'CivilizationScoreReport',
+      'CityStatusTable',
+      'TradeTable',
+      'MilitaryTable',
+      'IntelligenceTable',
+      'CivilizationScoreTable',
+    ]
   );
 
   [...classic, ...modern].forEach((report) => report.close());

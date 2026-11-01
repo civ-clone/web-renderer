@@ -90,4 +90,6 @@ i18next.addResources('en-GB', 'notification', {
   'Spaceship.cancelled.body':
     '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship construction cancelled.',
   'Spaceship.cancelled.title': 'Spaceship cancelled',
+  'ReportTable.Intelligence.civilization': 'Civilisation',
+  'ReportTable.Military.defence': 'Defence',
 });

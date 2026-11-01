@@ -67,7 +67,9 @@ const figureHeading = (key: string) => ({
  */
 export class TradeTable extends FilterableWindow {
   #anarchy: HTMLElement = s(
-    `<p class="ui-report-note" hidden>${t('TradeReport.anarchy')}</p>`
+    `<p class="ui-report-note ui-report-note-warn" hidden>${t(
+      'TradeReport.anarchy'
+    )}</p>`
   );
   #cities: CityData[];
   #improvements: ReportTable<MaintenanceRow>;

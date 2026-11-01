@@ -4,14 +4,17 @@ import CheatUnitTypes from '../../Engine/Requests/CheatUnitTypes';
 import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
-import { openCityStatus, openTradeReport } from './reports';
+import {
+  openCityStatus,
+  openCivilizationScore,
+  openIntelligenceReport,
+  openMilitaryReport,
+  openTradeReport,
+} from './reports';
 import Civilopedia from './Civilopedia';
-import CivilizationScoreReport from './CivilizationScoreReport';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
 import HappinessReport from './HappinessReport';
-import IntelligenceReport from './IntelligenceReport';
-import MilitaryReport from './MilitaryReport';
 import { Player } from '../types';
 import PopupMenu from './PopupMenu';
 import Portal from './Portal';
@@ -396,13 +399,13 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.military-report'),
                 action: () => {
-                  new MilitaryReport(this.#transport);
+                  openMilitaryReport(this.#transport);
                 },
               },
               {
                 label: t('GameMenu.intelligence-report'),
                 action: () => {
-                  new IntelligenceReport(this.#transport);
+                  openIntelligenceReport(this.#transport);
                 },
               },
               {
@@ -440,7 +443,7 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.civilization-score'),
                 action: () => {
-                  new CivilizationScoreReport(this.#transport);
+                  openCivilizationScore(this.#transport);
                 },
               },
               {

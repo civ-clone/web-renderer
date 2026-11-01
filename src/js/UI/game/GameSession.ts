@@ -13,7 +13,7 @@ import NotificationWindow from '../components/NotificationWindow';
 import Notices from '../components/Notices';
 import Notifications from '../components/Notifications';
 import PowerList from '../components/PowerList';
-import IntelligenceReport from '../components/IntelligenceReport';
+import { openIntelligenceReport } from '../components/reports';
 import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
 import UnitCard from '../components/UnitCard';
@@ -664,7 +664,7 @@ export class GameSession {
         transport.receive(
           'embassyEstablished',
           (civilization): void =>
-            void new IntelligenceReport(transport, civilization)
+            void openIntelligenceReport(transport, civilization)
         ),
         transport.receive(
           'investigateCity',
