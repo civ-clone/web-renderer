@@ -1,21 +1,32 @@
 // The choice window under the new interface (#745): a list of rows, each a sprite, the name with a muted line under it
 //  and the facts that decide it on the right, under eyebrow headings; the row chosen in the theme's choice colours; and
-//  a pane describing it beside the list, or under it in a narrow window. Only the list scrolls (#634). Everything
-//  from the theme's tokens.
+//  a pane describing it beside the list, or under it in a narrow window. The list and the pane share what height the
+//  window has and scroll on their own, so the window's body never scrolls as well (#634). Everything from the theme's
+//  tokens.
+.window.ui-choice-window > .body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .ui-choice {
   container-type: inline-size;
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
   gap: 0.5rem;
+  min-height: 0;
   // Wide enough for the pane beside the list, where the screen is.
   width: min(48rem, 90vw);
 }
 
 .ui-choice-panes {
-  align-items: start;
   display: grid;
+  flex: 1 1 auto;
   gap: 0 1rem;
   grid-template-columns: minmax(0, 1fr) minmax(12rem, 16rem);
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
 
   &:has(> .ui-choice-details[hidden]) {
     grid-template-columns: minmax(0, 1fr);
@@ -23,9 +34,9 @@
 }
 
 .ui-choice-list {
-  // What's left of the screen once the window's title, filter and footer are drawn, so the window's own body needn't
-  //  scroll as well.
-  max-height: min(calc(100vh - 18rem), 32rem);
+  // What the window leaves it, up to a comfortable length.
+  align-self: start;
+  max-height: min(100%, 32rem);
   overflow-y: auto;
   // Room for the focus ring of the row at the top and the bottom.
   padding: 2px;
@@ -149,6 +160,9 @@
 .ui-choice-details {
   border-left: 1px solid var(--ui-line-soft);
   font-size: var(--type-detail-size);
+  // A long entry scrolls in the pane.
+  min-height: 0;
+  overflow-y: auto;
   padding: 0 0 0 1rem;
 
   &:empty {
@@ -199,18 +213,21 @@
 
 // Under 40 em the pane goes under the list. Last, so it wins over the rules above.
 @container (max-width: 40em) {
+  // The list takes what the pane leaves, and the pane no more than a third of the screen.
   .ui-choice-panes {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
   }
 
-  // The pane under it needs room too.
   .ui-choice-list {
-    max-height: min(calc(50vh - 9rem), 24rem);
+    align-self: stretch;
+    max-height: none;
   }
 
   .ui-choice-details {
     border-left: 0;
     border-top: 1px solid var(--ui-line-soft);
+    max-height: 33vh;
     padding: 0.5rem 0 0;
   }
 }

@@ -79,6 +79,8 @@ export class ChoiceWindow extends FilterableWindow {
   #details: HTMLElement;
   // The row the pane was last asked about, so an answer that comes late for another row is dropped.
   #describing: ChoiceRow | null = null;
+  // Each description asked for, so only the latest answer is drawn, even for a row chosen again since.
+  #request: number = 0;
   #list: HTMLElement;
   #onChoose: (value: string) => void;
   #primary: HTMLButtonElement;
@@ -344,6 +346,8 @@ export class ChoiceWindow extends FilterableWindow {
     }
 
     event.preventDefault();
+    // Not typed into the filter as well: a numpad key mapped to an arrow is still its digit underneath.
+    event.stopPropagation();
 
     const row =
       shown[Math.min(shown.length - 1, Math.max(0, target[key]))] ?? null;
@@ -471,10 +475,13 @@ export class ChoiceWindow extends FilterableWindow {
   }
 
   #showDetails(row: ChoiceRow | null): void {
+    const request = ++this.#request;
+
     this.#describing = row;
+    // Never the last row's description under this one, however long this one's takes.
+    this.#details.replaceChildren();
 
     if (row === null || this.#describe === null) {
-      this.#details.replaceChildren();
       this.#details.hidden = this.#describe === null;
 
       return;
@@ -483,13 +490,13 @@ export class ChoiceWindow extends FilterableWindow {
     // A describer that throws is a failure like one that rejects: an empty pane, not a window half made.
     new Promise<Node | null>((resolve) => resolve(this.#describe!(row))).then(
       (details) => {
-        if (this.#describing === row) {
+        if (this.#request === request) {
           this.#details.replaceChildren(...(details ? [details] : []));
         }
       },
       // Not answered: an empty pane, not a broken one.
       () => {
-        if (this.#describing === row) {
+        if (this.#request === request) {
           this.#details.replaceChildren();
         }
       }

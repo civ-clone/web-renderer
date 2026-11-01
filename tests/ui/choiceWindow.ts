@@ -382,6 +382,59 @@ const run = async (): Promise<void> => {
   );
   slow.close();
 
+  // The pane is emptied as the choice moves, and of two answers for the same row, only the later is drawn.
+  const pending: ((node: Node | null) => void)[] = [],
+    about = (text: string) => {
+      const node = document.createElement('p');
+
+      node.textContent = text;
+
+      return node;
+    },
+    again = new ChoiceWindow('Pick', rows, () => {}, {
+      describe: () =>
+        new Promise<Node | null>((resolve) => pending.push(resolve)),
+    });
+  const againList = again.element().querySelector('.ui-choice-list')!,
+    againPane = again.element().querySelector('.ui-choice-details')!;
+
+  pending[0](about('First'));
+  await settle();
+  key(againList, 'ArrowDown');
+  await settle();
+
+  const emptied = againPane.textContent;
+
+  key(againList, 'ArrowUp');
+  pending[2](about('First, again'));
+  await settle();
+  pending[1](about('Second'));
+  await settle();
+
+  expect(
+    'the pane empties as the choice moves; only the latest answer is drawn',
+    [emptied, againPane.textContent],
+    ['', 'First, again']
+  );
+
+  // A numpad key moves the choice and isn't typed into the filter too.
+  const numpadRow = again.rows()[0];
+
+  numpadRow.dispatchEvent(
+    new (globalThis as any).KeyboardEvent('keydown', {
+      key: '2',
+      code: 'Numpad2',
+      location: 3,
+      bubbles: true,
+    })
+  );
+  expect(
+    'numpad 2 moves down without filtering',
+    [selected(again), again.filter()],
+    [['Warriors'], '']
+  );
+  again.close();
+
   // The row that takes the focus is the one chosen: Down from the filter box, with the chosen row still shown, moves
   //  the focus to the first row shown, and Enter takes that row, not the one chosen before.
   const taken: string[] = [],
@@ -485,6 +538,16 @@ const run = async (): Promise<void> => {
         leadsTo: [],
         cost: 30,
         stats: { attack: 0, defence: 1, movement: 1, visibility: 1 },
+      },
+      // Keyed as the build item is named, but not a kind the build list asks for.
+      {
+        key: 'Temple',
+        name: 'Temple of Artemis',
+        kind: 'tileImprovement',
+        requires: [],
+        leadsTo: [],
+        cost: null,
+        stats: null,
       },
       {
         key: 'TempleImprovement',
@@ -626,7 +689,7 @@ const run = async (): Promise<void> => {
   await settle();
 
   expect(
-    "the pane: the item's Civilopedia entry, found by its class name, with a link to it",
+    "the pane: the item's Civilopedia entry, found by its class name among the kinds asked for, with a link to it",
     [
       build.element().querySelector('.ui-choice-details .entry-name')
         ?.textContent,

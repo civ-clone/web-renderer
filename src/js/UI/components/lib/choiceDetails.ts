@@ -17,11 +17,13 @@ export const entryDetails = (
   kinds: CivilopediaKind[]
 ): Promise<HTMLElement | null> =>
   loadCivilopedia(transport).then((data) => {
-    const entry =
-      data.entries.get(name) ??
-      Array.from(data.entries.values()).find(
-        (entry) => entry.name === name && kinds.includes(entry.kind)
-      );
+    const keyed = data.entries.get(name),
+      entry =
+        keyed !== undefined && kinds.includes(keyed.kind)
+          ? keyed
+          : Array.from(data.entries.values()).find(
+              (entry) => entry.name === name && kinds.includes(entry.kind)
+            );
 
     if (entry === undefined) {
       return null;
