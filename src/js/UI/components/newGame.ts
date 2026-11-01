@@ -17,7 +17,7 @@ import Difficulties from '../../Engine/Requests/Difficulties';
 import Request from '../../Engine/Request';
 import { TopologyId } from '../lib/topologyFor';
 import Transport from '../Transport';
-import { openChoice } from './choices';
+import { openChoice } from './choiceList';
 import supportedTopologies from '../lib/supportedTopologies';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';

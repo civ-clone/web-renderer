@@ -2,7 +2,7 @@ import { Player, Unit as UnitData, UnitAction } from '../types';
 import ActionWindow from '../components/ActionWindow';
 import ConfirmationWindow from '../components/ConfirmationWindow';
 import NotificationWindow from '../components/NotificationWindow';
-import SelectionWindow from '../components/SelectionWindow';
+import { openChoice } from '../components/choiceList';
 import Window from '../components/Window';
 import { t } from 'i18next';
 
@@ -312,7 +312,7 @@ export const openArrivalWindow = (
     );
 
   if (diplomat.length > 0) {
-    return new SelectionWindow(
+    return openChoice(
       t('Diplomat.arrives', {
         nation: civilization(unit.player, 'name'),
         city: cityName(
@@ -324,6 +324,8 @@ export const openArrivalWindow = (
       diplomat.map(([option]) => ({
         label: t(`Diplomat.${option}`),
         value: option,
+        // The button says what the Diplomat will do.
+        primary: t(`Diplomat.${option}`),
       })),
       (choice) => {
         const [, names] = diplomat.find(([option]) => option === choice)!,
@@ -332,33 +334,27 @@ export const openArrivalWindow = (
           )!;
 
         performWithPrompts(unit, action, actionsOnTile, perform);
-      },
-      null,
-      {
-        displayAll: true,
       }
     );
   }
 
   if (caravan.length > 0 && move) {
-    return new SelectionWindow(
+    return openChoice(
       t('TradeRoute.will-you'),
-      [move, ...caravan].map((action) => ({
-        label:
+      [move, ...caravan].map((action) => {
+        const label =
           action === move
             ? t('TradeRoute.keep-moving')
             : t(`Action.${action._}.name`, {
                 defaultValue: action._,
                 ns: 'unit',
-              }),
-        value: action._,
-      })),
+              });
+
+        // The button says what the Caravan will do.
+        return { label, value: action._, primary: label };
+      }),
       (choice) =>
-        perform([move, ...caravan].find((action) => action._ === choice)!),
-      null,
-      {
-        displayAll: true,
-      }
+        perform([move, ...caravan].find((action) => action._ === choice)!)
     );
   }
 

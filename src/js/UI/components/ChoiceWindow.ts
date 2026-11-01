@@ -83,6 +83,7 @@ export class ChoiceWindow extends FilterableWindow {
   #describing: ChoiceRow | null = null;
   // Each description asked for, so only the latest answer is drawn, even for a row chosen again since.
   #request: number = 0;
+  #id: string = '';
   #list: HTMLElement;
   #onChoose: (value: string) => void;
   #primary: HTMLButtonElement;
@@ -167,32 +168,8 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
-    rows.forEach((row, index) => {
-      const element = this.#row(row, `${id}-${index}`);
-
-      if (row.group === undefined) {
-        list.append(element);
-
-        return;
-      }
-
-      if (rows[index - 1]?.group !== row.group) {
-        const heading = s(
-          `<p class="ui-choice-heading" id="${id}-group-${index}"></p>`
-        );
-
-        heading.textContent = row.group;
-
-        list.append(
-          s(
-            `<div class="ui-choice-group" role="group" aria-labelledby="${id}-group-${index}"></div>`,
-            heading
-          )
-        );
-      }
-
-      list.lastElementChild!.append(element);
-    });
+    this.#id = id;
+    this.#fill(rows);
 
     h(primary, {
       click: () => {
@@ -282,6 +259,32 @@ export class ChoiceWindow extends FilterableWindow {
     }
   }
 
+  /**
+   * New rows for the list, as what it offers changes while it's open (the units in a stack, #344). The filter still
+   *  applies, the row chosen stays chosen where it's still offered, and the focus stays in the list if it was there.
+   */
+  replaceRows(rows: ChoiceRow[]): void {
+    const valueOf = (element: HTMLElement | null): string | null =>
+        element === null ? null : this.#rows.get(element)!.value,
+      chosen = valueOf(this.#chosen),
+      wanted = valueOf(this.#wanted),
+      focused = this.#list.contains(document.activeElement),
+      find = (value: string | null): HTMLElement | null =>
+        this.#elements().find((element) => valueOf(element) === value) ?? null;
+
+    this.#rows.clear();
+    this.#list.replaceChildren();
+    this.#chosen = null;
+    this.#fill(rows);
+    this.#wanted = find(wanted);
+    this.#select(find(chosen), false);
+    this.refilter();
+
+    if (focused) {
+      this.#focusChosen();
+    }
+  }
+
   /** The list's rows, in order. */
   rows(): HTMLElement[] {
     return this.#elements();
@@ -300,6 +303,38 @@ export class ChoiceWindow extends FilterableWindow {
     this.close();
 
     this.#onChoose(value);
+  }
+
+  // The rows into the list, each group under its heading.
+  #fill(rows: ChoiceRow[]): void {
+    rows.forEach((row, index) => {
+      const element = this.#row(row, `${this.#id}-${index}`);
+
+      if (row.group === undefined) {
+        this.#list.append(element);
+
+        return;
+      }
+
+      if (rows[index - 1]?.group !== row.group) {
+        const heading = s(
+          `<p class="ui-choice-heading" id="${this.#id}-group-${index}"></p>`
+        );
+
+        heading.textContent = row.group;
+
+        this.#list.append(
+          s(
+            `<div class="ui-choice-group" role="group" aria-labelledby="${
+              this.#id
+            }-group-${index}"></div>`,
+            heading
+          )
+        );
+      }
+
+      this.#list.lastElementChild!.append(element);
+    });
   }
 
   #elements(): HTMLElement[] {

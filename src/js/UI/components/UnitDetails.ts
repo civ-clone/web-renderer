@@ -4,7 +4,7 @@ import { Unit as UnitData } from '../types';
 import Portal from './Portal';
 import Transport from '../Transport';
 import Unit from './Unit';
-import UnitSelectionWindow from './UnitSelectionWindow';
+import { openUnitSelection } from './choices';
 import { cityName } from './lib/city';
 import unitLabel from '../lib/unitLabel';
 
@@ -217,16 +217,14 @@ export class UnitDetails extends Element {
       strip.querySelector('.visually-hidden')!.textContent = strip.title;
       strip.append(...others.map((other) => new Unit(other, 1).element()));
       // The stack window, as clicking the square on the map opens it: every unit there, this one included.
-      strip.addEventListener(
-        'click',
-        () =>
-          new UnitSelectionWindow(
-            unit.tile.units.filter(
-              (other) => other.player?.id === unit.player?.id
-            ),
-            this.#deps.transport,
-            (chosen) => this.#deps.setActiveUnit(chosen)
-          )
+      strip.addEventListener('click', () =>
+        openUnitSelection(
+          unit.tile.units.filter(
+            (other) => other.player?.id === unit.player?.id
+          ),
+          this.#deps.transport,
+          (chosen) => this.#deps.setActiveUnit(chosen)
+        )
       );
 
       this.append(strip);
