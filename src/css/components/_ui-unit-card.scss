@@ -77,10 +77,14 @@
     text-decoration: underline;
   }
 
+  // One line of figures: one that doesn't fit (visibility, last, on a narrow card) wraps out of sight rather than
+  //  onto a line of its own.
   .ui-unit-card-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.2em 0.6em;
+    gap: 0 0.6em;
+    height: 1lh;
+    overflow: hidden;
 
     .stat-pill {
       gap: 0.25em;
