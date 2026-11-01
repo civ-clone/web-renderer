@@ -724,6 +724,7 @@ i18next.addResources('en', 'default', {
   'UnitCard.defence-bonus':
     '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defense',
   'UnitCard.defence-bonus.title': 'Defense bonus',
+  'UnitCard.square.parts': '{{parts, list(type: unit)}}',
   'UnitCard.group.orders': 'Orders',
   'UnitCard.group.others': 'Also here',
   'UnitCard.group.special': 'Special',

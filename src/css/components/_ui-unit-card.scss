@@ -119,10 +119,22 @@
 
   .ui-unit-card-tile {
     color: var(--ui-fg-muted);
-    display: flex;
-    flex-wrap: wrap;
     font-size: var(--type-detail-size);
-    gap: 0 0.5em;
+  }
+
+  // At the end of the square's first line, the name wrapping round it.
+  .ui-unit-card-coordinates {
+    align-items: center;
+    display: inline-flex;
+    float: right;
+    font-variant-numeric: tabular-nums;
+    gap: 0.2em;
+    margin-left: 0.5em;
+
+    .glyph {
+      height: 0.9em;
+      width: 0.9em;
+    }
   }
 
   .ui-unit-card-defence-bonus {

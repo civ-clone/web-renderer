@@ -115,39 +115,53 @@ const defenceBonus = (unit: UnitData): HTMLElement | null => {
 };
 
 // The square: its terrain, then its features and improvements, and where it is, then the defence bonus it gives.
+// The square the unit is on: what is there, with the coordinates by a pin at the end of its first line, then the
+//  defence bonus it gives.
 const tile = (unit: UnitData): HTMLElement => {
-  const row = s('<p class="ui-unit-card-tile"></p>'),
-    where = s('<span></span>'),
+  const row = s('<div class="ui-unit-card-tile"></div>'),
+    where = s('<p class="ui-unit-card-where"></p>'),
+    coordinates = s(
+      `<span class="ui-unit-card-coordinates">${glyph(
+        'location'
+      )}<span></span></span>`
+    ),
     bonus = defenceBonus(unit);
+
+  coordinates.lastElementChild!.textContent = text('Generic.coordinates', {
+    x: unit.tile.x,
+    y: unit.tile.y,
+  });
+
+  // First, floated to the end of the line, so the square's name wraps around it.
+  where.append(
+    coordinates,
+    text('UnitCard.square.parts', {
+      parts: [
+        text(`${unit.tile.terrain._}.name`, {
+          defaultValue: unit.tile.terrain._,
+          ns: 'world',
+        }),
+        ...unit.tile.terrain.features.map((feature) =>
+          text(`Feature.${feature._}.name`, {
+            defaultValue: feature._,
+            ns: 'world',
+          })
+        ),
+        ...unit.tile.improvements.map((improvement) =>
+          text(`Improvement.${improvement._}.name`, {
+            defaultValue: improvement._,
+            ns: 'world',
+          })
+        ),
+      ],
+    })
+  );
 
   row.append(where);
 
   if (bonus) {
     row.append(bonus);
   }
-
-  where.textContent = text('UnitDetails.tile', {
-    parts: [
-      text(`${unit.tile.terrain._}.name`, {
-        defaultValue: unit.tile.terrain._,
-        ns: 'world',
-      }),
-      ...unit.tile.terrain.features.map((feature) =>
-        text(`Feature.${feature._}.name`, {
-          defaultValue: feature._,
-          ns: 'world',
-        })
-      ),
-      ...unit.tile.improvements.map((improvement) =>
-        text(`Improvement.${improvement._}.name`, {
-          defaultValue: improvement._,
-          ns: 'world',
-        })
-      ),
-    ],
-    x: unit.tile.x,
-    y: unit.tile.y,
-  });
 
   return row;
 };

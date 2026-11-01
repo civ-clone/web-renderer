@@ -222,9 +222,13 @@ const run = async (): Promise<void> => {
 
     details.update(active);
     expect(
-      'the square: its terrain, features, improvements and where it is',
-      text(element, '.ui-unit-card-tile'),
-      'Grassland, Shield, Road (12, 34)'
+      'the square: its terrain, features and improvements, and where it is by a pin',
+      [
+        element.querySelector('.ui-unit-card-where')?.lastChild?.textContent,
+        text(element, '.ui-unit-card-coordinates'),
+        !!element.querySelector('.ui-unit-card-coordinates .glyph-location'),
+      ],
+      ['Grassland, Shield, Road', '12, 34', true]
     );
     expect(
       'no defence bonus, so none shown',
@@ -253,7 +257,7 @@ const run = async (): Promise<void> => {
         text(element, '.ui-unit-card-tile'),
         bonus?.parentElement?.classList.contains('ui-unit-card-tile'),
       ],
-      ['Grassland, Shield, Road (12, 34)+200% defense', true]
+      ['12, 34Grassland, Shield, Road+200% defense', true]
     );
 
     bonus.dispatchEvent(new Event('focus'));
