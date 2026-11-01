@@ -398,8 +398,8 @@ export class UnitCard extends Element {
     }
   }
 
-  // The other units on the square at the portrait's size (#721), two rows at most and a "+N" for the rest, under an
-  //  eyebrow of their own so they don't read as more actions. Any of them opens the stack window, as clicking the square
+  // The other units on the square at the portrait's size (#721), one row of them filling the card and a "+N" in its
+  //  last place for the rest, under an eyebrow of their own so they don't read as more actions. Any of them opens the stack window, as clicking the square
   //  on the map does: every unit there, this one included.
   #others(unit: UnitData, others: UnitData[]): HTMLElement {
     const strip = s<HTMLButtonElement>(
@@ -407,8 +407,8 @@ export class UnitCard extends Element {
       ),
       size = nativeTileSize(currentTileset()) * 2,
       perRow = this.#perRow(size),
-      fits = others.length <= perRow * 2,
-      drawn = fits ? others : others.slice(0, perRow * 2 - 1);
+      fits = others.length <= perRow,
+      drawn = fits ? others : others.slice(0, perRow - 1);
 
     this.#drawnPerRow = perRow;
     strip.style.setProperty('--portrait-size', `${size}px`);

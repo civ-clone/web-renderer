@@ -1,6 +1,6 @@
 // The active unit's card under the new interface (#743): the portrait with a veteran's mark, the name over its state
 //  and home city, attack, defence, moves and visibility as pills, the moves as pips eight to a row, the square, the
-//  actions grouped under Orders, Terrain and Special, and the other units on the square at full size, two rows at most
+//  actions grouped under Orders, Terrain and Special, and the other units on the square at full size, one row of them
 //  and a "+N" for the rest, which open the stack window. The actions survive the card's redraws.
 
 // Must stay first: the components read `document` as they load.
@@ -515,25 +515,37 @@ const run = async (): Promise<void> => {
     const strip = element.querySelector('.ui-unit-card-others')!;
 
     expect(
-      'fifteen others: two rows of six, the last a "+N" for the rest',
+      'fifteen others: a row of six, the last a "+N" for the rest',
       [
         strip.querySelectorAll('canvas').length,
         text(strip as HTMLElement, '.ui-unit-card-more'),
         text(strip as HTMLElement, '.visually-hidden'),
       ],
-      [11, '+4', '15 other units here (choose a unit)']
+      [5, '+10', '15 other units here (choose a unit)']
     );
 
-    tile.units = stack.slice(0, 13);
+    tile.units = stack.slice(0, 7);
     details.update(stack[0]);
 
     expect(
-      'twelve others fit two rows: no "+N"',
+      'six others fill the row: no "+N"',
       [
         element.querySelectorAll('.ui-unit-card-others canvas').length,
         element.querySelector('.ui-unit-card-more'),
       ],
-      [12, null]
+      [6, null]
+    );
+
+    tile.units = stack.slice(0, 8);
+    details.update(stack[0]);
+
+    expect(
+      'seven others: five, then "+2"',
+      [
+        element.querySelectorAll('.ui-unit-card-others canvas').length,
+        text(element, '.ui-unit-card-more'),
+      ],
+      [5, '+2']
     );
   }
 
@@ -575,7 +587,7 @@ const run = async (): Promise<void> => {
       portraits = () =>
         element.querySelectorAll('.ui-unit-card-others canvas').length;
 
-    expect('drawn hidden: six to a row', portraits(), 11);
+    expect('drawn hidden: six to a row', portraits(), 5);
 
     // Four portraits of 32px with 2px gaps.
     width = 4 * 32 + 3 * 2;
@@ -588,7 +600,7 @@ const run = async (): Promise<void> => {
         text(element, '.ui-unit-card-more'),
         element.querySelector('.ui-unit-card-header') === header,
       ],
-      [7, '+8', true]
+      [3, '+12', true]
     );
 
     const strip = element.querySelector('.ui-unit-card-others');
