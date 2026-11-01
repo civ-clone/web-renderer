@@ -1,0 +1,197 @@
+// The table every report is drawn with under the new interface (#744): eyebrow headings that sort, numbers in tabular
+//  figures on the right, zebra rows that light up under the pointer, warnings as a colour on the cell, and a totals row
+//  under a rule. Everything from the theme's tokens.
+.ui-report-table {
+  border-collapse: collapse;
+  width: 100%;
+
+  & + & {
+    margin-top: 1rem;
+  }
+
+  caption {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    padding: 0 0.5rem 0.25rem;
+    text-align: left;
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  th,
+  td {
+    padding: 0 0.35rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  thead th {
+    border-bottom: 1px solid var(--ui-table-rule);
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    height: var(--ui-table-row-height);
+    letter-spacing: var(--type-eyebrow-tracking);
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  tbody th {
+    font-weight: inherit;
+  }
+
+  tbody tr {
+    height: var(--ui-table-row-height);
+
+    &:nth-child(even) {
+      background: var(--ui-table-stripe);
+    }
+  }
+
+  .ui-report-table-opens {
+    cursor: pointer;
+
+    &:hover {
+      background: var(--ui-table-hover);
+    }
+
+    &:focus-visible {
+      outline: var(--ui-focus-outline);
+      outline-offset: -2px;
+    }
+  }
+
+  tfoot {
+    border-top: 1px solid var(--ui-table-rule);
+
+    th,
+    td {
+      font-weight: var(--type-strong-weight);
+      height: var(--ui-table-row-height);
+    }
+  }
+
+  .ui-report-table-number {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .ui-report-table-heading {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.25em;
+  }
+
+  // The heading, as a button that reads as the heading.
+  .ui-report-table-sort {
+    align-items: center;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    display: inline-flex;
+    font: inherit;
+    gap: 0.25em;
+    letter-spacing: inherit;
+    padding: 0;
+    text-transform: inherit;
+
+    &:focus-visible {
+      outline: var(--ui-focus-outline);
+      outline-offset: 2px;
+    }
+  }
+
+  .ui-report-table-sort-mark {
+    border-left: 0.3em solid transparent;
+    border-right: 0.3em solid transparent;
+    visibility: hidden;
+  }
+
+  [aria-sort='ascending'] .ui-report-table-sort-mark {
+    border-bottom: 0.35em solid currentColor;
+    visibility: visible;
+  }
+
+  [aria-sort='descending'] .ui-report-table-sort-mark {
+    border-top: 0.35em solid currentColor;
+    visibility: visible;
+  }
+
+  .ui-report-table-negative {
+    color: var(--ui-negative);
+  }
+
+  .ui-report-table-warn {
+    color: var(--ui-warn);
+  }
+
+  .ui-report-flagged {
+    display: inline-flex;
+    margin-right: 0.3em;
+    vertical-align: -0.1em;
+
+    .glyph {
+      height: 1em;
+      width: 1em;
+    }
+  }
+
+  // A figure, its bar and the turns left, at the same widths in every row so the bars line up.
+  .ui-report-meter {
+    --meter-figure: 2em;
+
+    align-items: center;
+    display: grid;
+    gap: 0 0.5em;
+    grid-template-columns: var(--meter-figure) 2.5rem max-content;
+  }
+
+  .ui-report-meter-figure {
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // What a city is building, in words.
+  [data-column='build'] .ui-report-meter {
+    --meter-figure: 7em;
+  }
+
+  .ui-report-meter-turns {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .yield-icon,
+  .citizen {
+    display: inline-flex;
+    line-height: 0;
+  }
+}
+
+.ui-report-note {
+  color: var(--ui-warn);
+}
+
+// Trade's cities and upkeep, side by side when there's room, as the classic report has them.
+.ui-report-trade {
+  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  .ui-report-note {
+    flex-basis: 100%;
+    margin: 0;
+  }
+
+  .ui-report-table {
+    flex: 1 1 18rem;
+    margin-top: 0;
+    width: auto;
+  }
+}

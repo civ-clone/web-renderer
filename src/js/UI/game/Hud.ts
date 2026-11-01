@@ -9,7 +9,7 @@ import PlayerDetails from '../components/PlayerDetails';
 import Portal from '../components/Portal';
 import ScienceReport from '../components/ScienceReport';
 import PowerList from '../components/PowerList';
-import TradeReport from '../components/TradeReport';
+import { openTradeReport } from '../components/reports';
 import Transport from '../Transport';
 import UnitActions from '../components/UnitActions';
 import UnitCardActions from '../components/UnitCardActions';
@@ -199,7 +199,7 @@ export class Hud {
         },
         trade: {
           key: 'F5',
-          open: () => new TradeReport(data.player, portal, transport),
+          open: () => openTradeReport(data.player, portal, transport),
           title: t('TradeReport.title'),
         },
       }

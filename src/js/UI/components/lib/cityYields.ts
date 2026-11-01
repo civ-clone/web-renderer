@@ -55,6 +55,15 @@ const renderCitizen = (sprites: string[], title?: string): HTMLElement => {
   return citizen;
 };
 
+/** One citizen's face for `mood`, as a report's column heading (#744). Decorative: the heading says the mood. */
+export const citizenFace = (mood: CitizenMood): HTMLElement => {
+  const face = renderCitizen(citizenSprites([mood], mood));
+
+  face.setAttribute('aria-hidden', 'true');
+
+  return face;
+};
+
 /**
  * The city's citizens as Civ1 shows them: the happy, content and unhappy workers, then the specialists. The moods come
  * from the engine (civ1-city-happiness's `citizens` data), so the renderer doesn't know the rule that decides them.

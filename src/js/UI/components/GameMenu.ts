@@ -4,7 +4,7 @@ import CheatUnitTypes from '../../Engine/Requests/CheatUnitTypes';
 import CheatPlayers, {
   CheatPlayersResult,
 } from '../../Engine/Requests/CheatPlayers';
-import CityStatus from './CityStatus';
+import { openCityStatus, openTradeReport } from './reports';
 import Civilopedia from './Civilopedia';
 import CivilizationScoreReport from './CivilizationScoreReport';
 import ConfirmationWindow from './ConfirmationWindow';
@@ -17,7 +17,6 @@ import PopupMenu from './PopupMenu';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
 import TopCitiesReport from './TopCitiesReport';
-import TradeReport from './TradeReport';
 import Transport from '../Transport';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
@@ -387,7 +386,7 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.city-status'),
                 action: () => {
-                  new CityStatus(
+                  openCityStatus(
                     this.#getPlayer(),
                     this.#portal,
                     this.#transport
@@ -419,7 +418,7 @@ export class GameMenu extends Element {
               {
                 label: t('GameMenu.trade-report'),
                 action: () => {
-                  new TradeReport(
+                  openTradeReport(
                     this.#getPlayer(),
                     this.#portal,
                     this.#transport

@@ -194,6 +194,12 @@
   --ui-title-rule: var(--ui-accent);
   --ui-footer-bg: var(--ui-bg-1);
   --ui-footer-edge: var(--ui-line);
+
+  // Report tables (#744): the zebra stripe, a row under the pointer, the rules, and a row's height.
+  --ui-table-stripe: color-mix(in srgb, var(--ui-fg) 6%, transparent);
+  --ui-table-hover: color-mix(in srgb, var(--ui-accent) 16%, transparent);
+  --ui-table-rule: var(--ui-line);
+  --ui-table-row-height: 2rem;
   --ui-window-motion-in: 120ms;
   --ui-window-motion-out: 80ms;
   // A notification row sliding in (#416).
