@@ -671,6 +671,7 @@ const run = async (): Promise<void> => {
       ).map((row) => Array.from(row.children).map((cell) => cell.textContent)),
       (military.element().querySelectorAll('.ui-report-note')[0] as HTMLElement)
         .hidden,
+      military.status().element().hidden,
     ],
     [
       [
@@ -678,7 +679,37 @@ const run = async (): Promise<void> => {
         ['Total', '2'],
       ],
       false,
+      true,
     ]
+  );
+
+  // Both tables, then a filter that only one of them matches: the other goes, heading and all.
+  military.show({
+    status: [
+      {
+        unit: 'Trireme',
+        key: 'Trireme',
+        stats: { attack: 1, defence: 0, movement: 3, visibility: 1 },
+        active: 1,
+        inProduction: 0,
+      },
+    ],
+    losses: [{ unit: 'Warrior', key: 'Warrior', lost: 2 }],
+  });
+  ['t', 'r', 'i'].forEach((key) =>
+    military
+      .element()
+      .dispatchEvent(
+        new (globalThis as any).KeyboardEvent('keydown', { key, bubbles: true })
+      )
+  );
+
+  expect(
+    'Military: a filter hides a table none of whose units match',
+    Array.from(military.element().querySelectorAll('.ui-report-section')).map(
+      (section) => section.classList.contains('filtered-out')
+    ),
+    [false, true]
   );
 
   military.close();
@@ -744,7 +775,7 @@ const run = async (): Promise<void> => {
         theirEmbassy: true,
         details: {
           traits: ['Aggressive'],
-          capital: { name: 'Babylon', civilization: 'Babylonian' },
+          capital: { name: "Xi'an", civilization: 'Babylonian' },
           government: 'Monarchy',
           gold: 1234,
           units: 12,
@@ -808,11 +839,8 @@ const run = async (): Promise<void> => {
         .querySelectorAll('.ui-report-details p, .ui-report-details h4')
     ).map((line) => line.textContent),
     [
-      'Capital: ' +
-        i18next.t('Generic.city-name', {
-          name: 'Babylon',
-          civilization: 'Babylonian',
-        }),
+      // A name with an apostrophe, as text: not `Xi&#39;an`.
+      "Capital: Xi'an",
       'Foreign Affairs:',
       'At PEACE with an unknown civilization.',
       'Technologies:',
@@ -845,6 +873,21 @@ const run = async (): Promise<void> => {
   );
 
   embassy.close();
+
+  // British spellings, in the namespace the reports read.
+  await import('../../translations/local/en-GB');
+  await i18next.changeLanguage('en-GB');
+
+  expect(
+    'en-GB: Defence and Civilisation',
+    [
+      i18next.t('ReportTable.Military.defence'),
+      i18next.t('ReportTable.Intelligence.civilization'),
+    ],
+    ['Defence', 'Civilisation']
+  );
+
+  await i18next.changeLanguage('en');
 
   // The flag picks which.
   applyInterface('classic', null);

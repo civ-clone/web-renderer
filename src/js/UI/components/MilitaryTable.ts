@@ -67,6 +67,8 @@ export class MilitaryTable extends FilterableWindow {
     // `military-report` for the window's eyebrow, as the classic report has.
     super(t('MilitaryReport.title'), s('<div></div>'), {
       classes: ['military-report', 'ui-report'],
+      // A table none of whose units match is hidden, heading and all, as the classic report's sections are.
+      groupSelector: '.ui-report-section',
       rowSelector: 'tbody tr',
     });
 
@@ -132,6 +134,7 @@ export class MilitaryTable extends FilterableWindow {
 
     this.#noUnits.hidden = status.length > 0;
     this.#noLosses.hidden = losses.length > 0;
+    this.#status.element().hidden = status.length === 0;
     this.#losses.element().hidden = losses.length === 0;
 
     this.reread();

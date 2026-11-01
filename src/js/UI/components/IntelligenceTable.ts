@@ -109,7 +109,11 @@ const embassyDetails = ({
     capital === null
       ? t('IntelligenceReport.no-capital')
       : t('IntelligenceReport.capital', {
-          city: t('Generic.city-name', capital),
+          // Unescaped here too: the name goes into the page as text, so `Xi'an` would show as `Xi&#39;an`.
+          city: t('Generic.city-name', {
+            ...capital,
+            interpolation: { escapeValue: false },
+          }),
           interpolation: { escapeValue: false },
         })
   ),
@@ -126,6 +130,7 @@ const embassyDetails = ({
                   ? t('Generic.unknown-civilization')
                   : t('IntelligenceReport.the', {
                       nation: plural(civilization),
+                      interpolation: { escapeValue: false },
                     }),
               interpolation: { escapeValue: false },
             })
