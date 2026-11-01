@@ -16,7 +16,7 @@ import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import { assetStore } from '../AssetStore';
 import { citizenMoods } from '../lib/citizens';
-import { cityName } from './lib/city';
+import { cityName, viewCityText } from './lib/city';
 import currentTileset from '../lib/tilesets';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { glyph } from '../lib/glyphs';
@@ -98,6 +98,7 @@ export const renderHappinessDetails = (city: CityData): HTMLElement => {
 export class HappinessTable extends FilterableWindow {
   #cities: CityData[];
   #chosen: string | null = null;
+  #shown: string | null = null;
   #details: HTMLElement = s(
     '<div class="ui-report-details-area" aria-live="polite"></div>'
   );
@@ -166,10 +167,8 @@ export class HappinessTable extends FilterableWindow {
           key: 'view',
           heading: t('ReportTable.Happiness.view'),
           cell: (city) =>
-            rowAction(
-              t('ReportTable.Happiness.view'),
-              t('HappinessReport.view-city', { city }),
-              () => portal.openCity(city)
+            rowAction(t('ReportTable.Happiness.view'), viewCityText(city), () =>
+              portal.openCity(city)
             ),
         },
       ],
@@ -202,13 +201,22 @@ export class HappinessTable extends FilterableWindow {
     return this.#table;
   }
 
-  // The chosen city's reasons, as it is now, or nothing once it's gone.
+  // The chosen city's reasons, as it is now, or nothing once it's gone. Only replaced when they've changed: the panel
+  //  is a live region, so each replacement is read out again.
   #showDetails(): void {
-    const city = this.#cities.find(({ id }) => id === this.#chosen);
+    const city = this.#cities.find(({ id }) => id === this.#chosen),
+      details = city ? renderHappinessDetails(city) : null;
 
-    this.#details.replaceChildren(
-      ...(city ? [renderHappinessDetails(city)] : [])
-    );
+    if (
+      details !== null &&
+      details.textContent === this.#details.textContent &&
+      city!.id === this.#shown
+    ) {
+      return;
+    }
+
+    this.#shown = city?.id ?? null;
+    this.#details.replaceChildren(...(details ? [details] : []));
   }
 
   update() {

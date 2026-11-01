@@ -28,7 +28,10 @@ import CivilizationScoreTable from '../../src/js/UI/components/CivilizationScore
 import IntelligenceTable from '../../src/js/UI/components/IntelligenceTable';
 import HappinessTable from '../../src/js/UI/components/HappinessTable';
 import MilitaryTable from '../../src/js/UI/components/MilitaryTable';
-import TopCitiesTable from '../../src/js/UI/components/TopCitiesTable';
+import TopCitiesTable, {
+  ownCity,
+} from '../../src/js/UI/components/TopCitiesTable';
+import { TopCitiesRow } from '../../src/js/Engine/lib/topCities';
 
 const failures: string[] = [];
 let checks = 0,
@@ -885,6 +888,7 @@ const run = async (): Promise<void> => {
         civilDisorder: true,
       }),
       city('City-2', 'Samarkand', { moods: ['happy', 'happy', 'content'] }),
+      city('City-3', "Xi'an", { moods: ['content'] }),
     ],
     happyPlayer = {
       id: 'Player-1',
@@ -916,14 +920,26 @@ const run = async (): Promise<void> => {
     [
       ['Civil disorder: Karakorum', '1', '0', '2', 1],
       ['Celebrating: Samarkand', '2', '1', '0', 1],
+      ["Xi'an", '0', '1', '0', 1],
     ]
+  );
+  expect(
+    "Happiness: View's name is the city's, as text",
+    happinessRows()[2]
+      .querySelector('[data-column="view"] button')
+      ?.getAttribute('aria-label'),
+    "View Xi'an"
   );
   expect(
     'Happiness: disorder in red, celebrating in green',
     happinessRows().map((row) =>
       row.querySelector('th')?.className.split(' ').pop()
     ),
-    ['ui-report-table-negative', 'ui-report-table-positive']
+    [
+      'ui-report-table-negative',
+      'ui-report-table-positive',
+      'ui-report-table-text',
+    ]
   );
 
   const openedBefore = opened.length;
@@ -953,6 +969,16 @@ const run = async (): Promise<void> => {
         ?.textContent,
     ],
     ['Samarkand', 'Temple']
+  );
+
+  const panel = happiness.element().querySelector('.ui-report-details');
+
+  happiness.update();
+
+  expect(
+    'Happiness: the reasons stay put when nothing about them changed (a live region reads each change out)',
+    happiness.element().querySelector('.ui-report-details') === panel,
+    true
   );
 
   (happyCities[1] as any).citizens.causes = [];
@@ -1031,6 +1057,38 @@ const run = async (): Promise<void> => {
   );
 
   topCities.close();
+
+  // Two of yours with the same name and founder: told apart by size, or not matched at all.
+  const twins = {
+      civilization: { _: 'Mongol' },
+      cities: [
+        city('City-8', 'Samarkand', { size: 4 }),
+        city('City-9', 'Samarkand', { size: 7 }),
+      ],
+    } as unknown as Player,
+    twinRow = (size: number) =>
+      ({
+        rank: 1,
+        size,
+        citizens: { happy: 0, content: 0, unhappy: 0, specialists: [] },
+        wonders: [],
+        city: { name: 'Samarkand', civilization: 'Mongol' },
+        owner: { civilization: 'Mongol', colors: null },
+      } as TopCitiesRow);
+
+  expect(
+    'Top Cities: two of yours with one name are told apart by size, and not guessed at',
+    [4, 7, 5].map((size) => ownCity(twinRow(size), twins)?.id ?? null),
+    ['City-8', 'City-9', null]
+  );
+  expect(
+    "Top Cities: someone else's city of the same name and founder isn't yours",
+    ownCity(
+      { ...twinRow(4), owner: { civilization: 'Babylonian', colors: null } },
+      twins
+    ),
+    null
+  );
 
   // British spellings, in the namespace the reports read.
   await import('../../translations/local/en-GB');

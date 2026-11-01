@@ -5,7 +5,7 @@ import TopCities from '../../Engine/Requests/TopCities';
 import { TopCitiesRow } from '../../Engine/lib/topCities';
 import Transport from '../Transport';
 import Window from './Window';
-import { cityNameText } from './lib/city';
+import { cityNameText, viewCityText } from './lib/city';
 import { renderCitizenCounts } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -48,16 +48,26 @@ const wonderName = (wonder: string): string =>
 
 /**
  * One of your own cities, for a row: the rows carry no ids (a city you haven't seen can't be matched to anything), so
- *  it's found by its name and its founder among your cities, and only when you own it.
+ *  it's found by its name and its founder among your cities, and only when you own it. Two of yours with the same
+ *  name and founder are told apart by their size; when that doesn't settle it, there's no match rather than a guess.
  */
-export const ownCity = (row: TopCitiesRow, player: Player): CityData | null =>
-  row.city === null || row.owner?.civilization !== player.civilization._
-    ? null
-    : player.cities.find(
-        (city) =>
-          city.name === row.city!.name &&
-          city.originalPlayer.civilization._ === row.city!.civilization
-      ) ?? null;
+export const ownCity = (row: TopCitiesRow, player: Player): CityData | null => {
+  if (row.city === null || row.owner?.civilization !== player.civilization._) {
+    return null;
+  }
+
+  const named = player.cities.filter(
+      (city) =>
+        city.name === row.city!.name &&
+        city.originalPlayer.civilization._ === row.city!.civilization
+    ),
+    candidates =
+      named.length > 1
+        ? named.filter((city) => city.growth.size === row.size)
+        : named;
+
+  return candidates.length === 1 ? candidates[0] : null;
+};
 
 /**
  * Top Cities in the World (F8) under the new interface (#744): the ten best cities by Civ1's reckoning, with their
@@ -133,7 +143,7 @@ export class TopCitiesTable extends Window {
               ? null
               : rowAction(
                   t('ReportTable.Happiness.view'),
-                  t('HappinessReport.view-city', { city }),
+                  viewCityText(city),
                   () => portal.openCity(city)
                 );
           },

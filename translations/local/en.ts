@@ -505,6 +505,7 @@ i18next.addResources('en', 'default', {
   'ReloadGuard.title': 'Reload',
   'ReportTable.city': 'City',
   'ReportTable.total': 'Total',
+  'ReportTable.view-city': 'View {{city}}',
   'ReportTable.CityStatus.build': 'Building',
   'ReportTable.CityStatus.content': 'Content',
   'ReportTable.CityStatus.corruption': 'Corruption',
