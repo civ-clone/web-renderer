@@ -27,6 +27,10 @@ i18next.addResources('en-GB', 'default', {
   'Civilopedia.world.obsoletedBy': '{{line}}, once any civilisation has it',
   'Civilopedia.world.other': '{{line}}, for any civilisation',
 
+  'UnitCard.defence-bonus':
+    '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defence',
+  'UnitCard.defence-bonus.title': 'Defence bonus',
+
   'GameSetup.civilization': 'Civilisation',
 
   'ResumeGame.intro':

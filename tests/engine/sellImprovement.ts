@@ -5,7 +5,7 @@
 //  gained at once unlock (#302).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
-// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple and tries to sell the Library. Then it
+// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple (with a Warrior in the city, sent again) and tries to sell the Library. Then it
 // launches a spaceship with the parts to make it, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -26,7 +26,7 @@ import DataTransferClient from '../../src/js/Engine/DataTransferClient';
 import { Gold } from '@civ-clone/civ1-treasury/Yields';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import { Settlers } from '@civ-clone/civ1-unit/Units';
+import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -220,8 +220,26 @@ const run = async (): Promise<void> => {
     fail('the picker offered a Temple to a city that has one');
   }
 
+  // A unit in the city goes out again too: an improvement can be part of its defence (City Walls, #743).
+  const garrison = new Warrior(city, humanPlayer!, city.tile());
+
+  unitRegistryInstance.register(garrison);
+  flush();
+  objectsSent = [];
+
   await sell(city, temple.id());
   flush();
+
+  if (
+    !objectsSent.some(
+      (object) =>
+        object._ === 'Warrior' &&
+        object.id === garrison.id() &&
+        'defenceBonus' in object
+    )
+  ) {
+    fail('the unit in the city that sold its Temple was not sent again');
+  }
 
   if (!temple.destroyed() || treasury.value() !== 40) {
     fail(

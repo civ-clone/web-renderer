@@ -9,6 +9,7 @@ import UnitSelectionWindow from './UnitSelectionWindow';
 import { cityName } from './lib/city';
 import glyph, { GlyphName } from '../lib/glyphs';
 import statPill from './lib/StatPill';
+import tooltip, { hideTooltipWithin } from './lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
@@ -77,32 +78,94 @@ const stats = (unit: UnitData): HTMLElement =>
     )
   );
 
-// The square: its terrain, then its features and improvements, and where it is.
-const tile = (unit: UnitData): HTMLElement => {
-  const row = s('<p class="ui-unit-card-tile"></p>');
-
-  row.textContent = text('UnitDetails.tile', {
-    parts: [
-      text(`${unit.tile.terrain._}.name`, {
-        defaultValue: unit.tile.terrain._,
-        ns: 'world',
-      }),
-      ...unit.tile.terrain.features.map((feature) =>
-        text(`Feature.${feature._}.name`, {
-          defaultValue: feature._,
-          ns: 'world',
-        })
-      ),
-      ...unit.tile.improvements.map((improvement) =>
-        text(`Improvement.${improvement._}.name`, {
-          defaultValue: improvement._,
-          ns: 'world',
-        })
-      ),
+// What gives a defence bonus, as the engine names it (#743): a terrain, City Walls or Fortified.
+const sourceName = (name: string): string =>
+  t(
+    [
+      `world:${name}.name`,
+      `city:Improvement.${name}.name`,
+      `unit:Improvement.${name}.name`,
     ],
+    { defaultValue: name, interpolation: { escapeValue: false } }
+  );
+
+// The unit's defence bonus where it stands, from the engine (#743, #274), with what gives it in the tooltip.
+const defenceBonus = (unit: UnitData): HTMLElement | null => {
+  const bonus = unit.defenceBonus;
+
+  if (!bonus) {
+    return null;
+  }
+
+  const element = s('<span class="ui-unit-card-defence-bonus"></span>');
+
+  element.textContent = text('UnitCard.defence-bonus', {
+    bonus: bonus.multiplier - 1,
+  });
+
+  tooltip(element, () => ({
+    title: text('UnitCard.defence-bonus.title'),
+    rows: bonus.sources.map(({ name, multiplier }) => [
+      sourceName(name),
+      text('UnitCard.multiplier', { value: multiplier }),
+    ]),
+  }));
+
+  return element;
+};
+
+// The square: its terrain, then its features and improvements, and where it is, then the defence bonus it gives.
+// The square the unit is on: what is there, with the coordinates by a pin at the end of its first line, then the
+//  defence bonus it gives.
+const tile = (unit: UnitData): HTMLElement => {
+  const row = s('<div class="ui-unit-card-tile"></div>'),
+    where = s('<p class="ui-unit-card-where"></p>'),
+    coordinates = s(
+      `<span class="ui-unit-card-coordinates">${glyph(
+        'location'
+      )}<span class="visually-hidden"></span><span></span></span>`
+    ),
+    bonus = defenceBonus(unit);
+
+  // The pin is a picture, so a screen reader is told what the figures are: they're read first, as they float.
+  coordinates.querySelector('.visually-hidden')!.textContent = `${text(
+    'UnitCard.coordinates'
+  )}: `;
+  coordinates.lastElementChild!.textContent = text('Generic.coordinates', {
     x: unit.tile.x,
     y: unit.tile.y,
   });
+
+  // First, floated to the end of the line, so the square's name wraps around it.
+  where.append(
+    coordinates,
+    text('UnitCard.square.parts', {
+      parts: [
+        text(`${unit.tile.terrain._}.name`, {
+          defaultValue: unit.tile.terrain._,
+          ns: 'world',
+        }),
+        ...unit.tile.terrain.features.map((feature) =>
+          text(`Feature.${feature._}.name`, {
+            defaultValue: feature._,
+            ns: 'world',
+          })
+        ),
+        ...unit.tile.improvements.map((improvement) =>
+          text(`Improvement.${improvement._}.name`, {
+            defaultValue: improvement._,
+            ns: 'world',
+          })
+        ),
+      ],
+    })
+  );
+
+  row.append(where);
+
+  if (bonus) {
+    row.append(bonus);
+  }
 
   return row;
 };
@@ -129,6 +192,7 @@ const shown = (unit: UnitData | null): string =>
         unit.movement.value,
         unit.attack.value,
         unit.defence.value,
+        unit.defenceBonus ?? null,
         unit.visibility.value,
         unit.city?.id,
         unit.city?.name,
@@ -237,7 +301,23 @@ export class UnitCard extends Element {
 
   build(): void {
     const element = this.element(),
-      unit = this.#unit;
+      unit = this.#unit,
+      // A keyboard player reading the defence bonus keeps their place on it.
+      bonusFocused =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement.classList.contains(
+          'ui-unit-card-defence-bonus'
+        ) &&
+        element.contains(document.activeElement),
+      // And its tooltip, if they had it open: focusing the new bonus opens it again, but one they closed stays closed.
+      bonusTooltipOpen =
+        bonusFocused &&
+        (document.activeElement as HTMLElement).hasAttribute(
+          'aria-describedby'
+        );
+
+    // Its anchor is about to go, which fires no `blur` or `mouseleave` to close it.
+    hideTooltipWithin(element);
 
     Array.from(element.children)
       .filter((child) => child !== this.#actions)
@@ -313,6 +393,16 @@ export class UnitCard extends Element {
 
       element.append(this.#othersSection);
     }
+
+    if (bonusFocused) {
+      element
+        .querySelector<HTMLElement>('.ui-unit-card-defence-bonus')
+        ?.focus();
+
+      if (!bonusTooltipOpen) {
+        hideTooltipWithin(element);
+      }
+    }
   }
 
   // Only the other units, so the focus anywhere else on the card stays where it is.
@@ -336,8 +426,8 @@ export class UnitCard extends Element {
     }
   }
 
-  // The other units on the square at the portrait's size (#721), two rows at most and a "+N" for the rest, under an
-  //  eyebrow of their own so they don't read as more actions. Any of them opens the stack window, as clicking the square
+  // The other units on the square at the portrait's size (#721), one row of them filling the card and a "+N" in its
+  //  last place for the rest, under an eyebrow of their own so they don't read as more actions. Any of them opens the stack window, as clicking the square
   //  on the map does: every unit there, this one included.
   #others(unit: UnitData, others: UnitData[]): HTMLElement {
     const strip = s<HTMLButtonElement>(
@@ -345,8 +435,8 @@ export class UnitCard extends Element {
       ),
       size = nativeTileSize(currentTileset()) * 2,
       perRow = this.#perRow(size),
-      fits = others.length <= perRow * 2,
-      drawn = fits ? others : others.slice(0, perRow * 2 - 1);
+      fits = others.length <= perRow,
+      drawn = fits ? others : others.slice(0, perRow - 1);
 
     this.#drawnPerRow = perRow;
     strip.style.setProperty('--portrait-size', `${size}px`);

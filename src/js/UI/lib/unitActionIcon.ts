@@ -132,22 +132,82 @@ export const unitActionIconLayers = (
   }
 };
 
-// Centred in the icon, as the unit and city pictures are narrower than it.
+// The part of a picture that has anything drawn in it, as [left, top, width, height]: a Civ1 unit is 15 pixels of
+//  drawing in a 16 pixel square, its empty column and row on the right and at the bottom, so centring the square
+//  leaves the unit up and to the left. Kept per picture, as the pictures are shared and never change.
+const drawnAreas = new WeakMap<object, [number, number, number, number]>();
+
+const drawnArea = (
+  image: CanvasImageSource
+): [number, number, number, number] => {
+  const [width, height] = imageSize(image),
+    known = drawnAreas.get(image);
+
+  if (known) {
+    return known;
+  }
+
+  let area: [number, number, number, number] = [0, 0, width, height];
+
+  try {
+    const canvas = document.createElement('canvas'),
+      context = canvas.getContext('2d');
+
+    if (context) {
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(image, 0, 0);
+
+      const { data } = context.getImageData(0, 0, width, height);
+      let left = width,
+        right = -1,
+        top = height,
+        bottom = -1;
+
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (data[(y * width + x) * 4 + 3] > 0) {
+            left = Math.min(left, x);
+            right = Math.max(right, x);
+            top = Math.min(top, y);
+            bottom = Math.max(bottom, y);
+          }
+        }
+      }
+
+      if (right >= left) {
+        area = [left, top, right - left + 1, bottom - top + 1];
+      }
+    }
+  } catch {
+    // A picture that can't be read is centred by its size.
+  }
+
+  drawnAreas.set(image, area);
+
+  return area;
+};
+
+// Centred in the icon by what is drawn in it, as the unit and city pictures are narrower than it. At the screen's
+//  scale, to a whole pixel there, so a half-pixel shift doesn't blur or unevenly stretch the pixel art.
 const drawCentred = (
   context: CanvasRenderingContext2D,
   image: CanvasImageSource,
-  offset = 0
+  offset = 0,
+  scale = 1
 ): void => {
   if (!isDrawable(image)) {
     return;
   }
 
-  const [width, height] = imageSize(image);
+  const [left, top, width, height] = drawnArea(image),
+    centre = (start: number, size: number): number =>
+      Math.round(((iconSize - size) / 2 - start) * scale) / scale;
 
   context.drawImage(
     image,
-    Math.floor((iconSize - width) / 2) + offset,
-    Math.floor((iconSize - height) / 2) + offset
+    centre(left, width) + offset,
+    centre(top, height) + offset
   );
 };
 
@@ -190,7 +250,7 @@ export const drawUnitActionIcon = (
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
-      drawCentred(context, getPreloadedImage(layer.path));
+      drawCentred(context, getPreloadedImage(layer.path), 0, scale);
 
       return;
     }
@@ -247,7 +307,8 @@ export const drawUnitActionIcon = (
         player: layer.unit.player,
         improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
       }),
-      offset
+      offset,
+      scale
     );
 
     if (layer.status) {

@@ -1,6 +1,6 @@
 // The active unit's card under the new interface (#743): the portrait with a veteran's mark, the name over its state
 //  and home city, attack, defence, moves and visibility as pills, the moves as pips eight to a row, the square, the
-//  actions grouped under Orders, Terrain and Special, and the other units on the square at full size, two rows at most
+//  actions grouped under Orders, Terrain and Special, and the other units on the square at full size, one row of them
 //  and a "+N" for the rest, which open the stack window. The actions survive the card's redraws.
 
 // Must stay first: the components read `document` as they load.
@@ -146,6 +146,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-world/en');
+  await import('../../translations/civ1-city-improvement/en');
 
   const active = unit('Unit-1', {
       busy: { _: 'Fortifying' },
@@ -221,10 +222,85 @@ const run = async (): Promise<void> => {
 
     details.update(active);
     expect(
-      'the square: its terrain, features, improvements and where it is',
-      text(element, '.ui-unit-card-tile'),
-      'Grassland, Shield, Road (12, 34)'
+      'the square: its terrain, features and improvements, and where it is by a pin',
+      [
+        element.querySelector('.ui-unit-card-where')?.lastChild?.textContent,
+        text(element, '.ui-unit-card-coordinates'),
+        !!element.querySelector('.ui-unit-card-coordinates .glyph-location'),
+      ],
+      ['Grassland, Shield, Road', 'Coordinates: 12, 34', true]
     );
+    expect(
+      'no defence bonus, so none shown',
+      element.querySelector('.ui-unit-card-defence-bonus'),
+      null
+    );
+
+    details.update({
+      ...active,
+      defenceBonus: {
+        multiplier: 3,
+        sources: [
+          { name: 'Hills', multiplier: 2 },
+          { name: 'Fortified', multiplier: 1.5 },
+        ],
+      },
+    } as unknown as Unit);
+
+    const bonus = element.querySelector(
+      '.ui-unit-card-defence-bonus'
+    ) as HTMLElement;
+
+    expect(
+      'the defence bonus the engine sends, after the square',
+      [
+        text(element, '.ui-unit-card-tile'),
+        bonus?.parentElement?.classList.contains('ui-unit-card-tile'),
+      ],
+      ['Coordinates: 12, 34Grassland, Shield, Road+200% defense', true]
+    );
+
+    bonus.dispatchEvent(new Event('focus'));
+
+    const panel = document.getElementById('tooltip')!;
+
+    expect(
+      'what gives it, in its tooltip',
+      [
+        panel.hidden,
+        panel.querySelector('h4')?.textContent,
+        Array.from(panel.querySelectorAll('dt, dd')).map(
+          (cell) => cell.textContent
+        ),
+      ],
+      [false, 'Defense bonus', ['Hills', '×2', 'Fortified', '×1.5']]
+    );
+
+    bonus.dispatchEvent(new Event('blur'));
+
+    details.update({
+      ...active,
+      defenceBonus: {
+        multiplier: 3,
+        sources: [{ name: 'CityWalls', multiplier: 3 }],
+      },
+    } as unknown as Unit);
+
+    (
+      element.querySelector('.ui-unit-card-defence-bonus') as HTMLElement
+    ).dispatchEvent(new Event('focus'));
+
+    expect(
+      'City Walls by name, and the card redrawn when only the bonus changed',
+      Array.from(panel.querySelectorAll('dt')).map((cell) => cell.textContent),
+      ['City Walls']
+    );
+
+    (
+      element.querySelector('.ui-unit-card-defence-bonus') as HTMLElement
+    ).dispatchEvent(new Event('blur'));
+
+    details.update(active);
 
     const strip = element.querySelector(
       'button.ui-unit-card-others'
@@ -443,25 +519,37 @@ const run = async (): Promise<void> => {
     const strip = element.querySelector('.ui-unit-card-others')!;
 
     expect(
-      'fifteen others: two rows of six, the last a "+N" for the rest',
+      'fifteen others: a row of six, the last a "+N" for the rest',
       [
         strip.querySelectorAll('canvas').length,
         text(strip as HTMLElement, '.ui-unit-card-more'),
         text(strip as HTMLElement, '.visually-hidden'),
       ],
-      [11, '+4', '15 other units here (choose a unit)']
+      [5, '+10', '15 other units here (choose a unit)']
     );
 
-    tile.units = stack.slice(0, 13);
+    tile.units = stack.slice(0, 7);
     details.update(stack[0]);
 
     expect(
-      'twelve others fit two rows: no "+N"',
+      'six others fill the row: no "+N"',
       [
         element.querySelectorAll('.ui-unit-card-others canvas').length,
         element.querySelector('.ui-unit-card-more'),
       ],
-      [12, null]
+      [6, null]
+    );
+
+    tile.units = stack.slice(0, 8);
+    details.update(stack[0]);
+
+    expect(
+      'seven others: five, then "+2"',
+      [
+        element.querySelectorAll('.ui-unit-card-others canvas').length,
+        text(element, '.ui-unit-card-more'),
+      ],
+      [5, '+2']
     );
   }
 
@@ -503,7 +591,7 @@ const run = async (): Promise<void> => {
       portraits = () =>
         element.querySelectorAll('.ui-unit-card-others canvas').length;
 
-    expect('drawn hidden: six to a row', portraits(), 11);
+    expect('drawn hidden: six to a row', portraits(), 5);
 
     // Four portraits of 32px with 2px gaps.
     width = 4 * 32 + 3 * 2;
@@ -516,7 +604,7 @@ const run = async (): Promise<void> => {
         text(element, '.ui-unit-card-more'),
         element.querySelector('.ui-unit-card-header') === header,
       ],
-      [7, '+8', true]
+      [3, '+12', true]
     );
 
     const strip = element.querySelector('.ui-unit-card-others');
@@ -568,8 +656,10 @@ const run = async (): Promise<void> => {
 
     const focus = HTMLElement.prototype.focus;
 
+    // As a browser does: focusing fires `focus`, which opens a tooltip.
     HTMLElement.prototype.focus = function (this: HTMLElement) {
       focused = this;
+      this.dispatchEvent(new Event('focus'));
     };
 
     actions.build(
@@ -612,6 +702,58 @@ const run = async (): Promise<void> => {
       element.contains(document.activeElement),
       false
     );
+
+    // The defence bonus: its tooltip closes when the card is redrawn under it, and the focus stays on it.
+    const { element: bonusCard, details: bonusDetails } = card(),
+      fortified = (moves: number) =>
+        unit('Unit-1', {
+          moves: value(moves),
+          defenceBonus: {
+            multiplier: 2,
+            sources: [{ name: 'Hills', multiplier: 2 }],
+          },
+        }),
+      panel = () => document.getElementById('tooltip');
+
+    bonusDetails.update(fortified(1));
+
+    const bonusAnchor = bonusCard.querySelector(
+      '.ui-unit-card-defence-bonus'
+    ) as HTMLElement;
+
+    bonusAnchor.focus();
+
+    expect('the bonus tooltip is open', panel()?.hidden, false);
+
+    bonusDetails.update(fortified(0));
+
+    const newBonus = () =>
+      bonusCard.querySelector('.ui-unit-card-defence-bonus') as HTMLElement;
+
+    expect(
+      'a redraw moves the focus to the new bonus, its tooltip open over it',
+      [
+        panel()?.hidden ?? true,
+        document.activeElement === newBonus(),
+        newBonus().hasAttribute('aria-describedby'),
+        bonusAnchor.hasAttribute('aria-describedby'),
+      ],
+      [false, true, true, false]
+    );
+
+    // Closed with Escape, it stays closed through the next redraw.
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect('Escape closes it', panel()?.hidden, true);
+
+    bonusDetails.update(fortified(1));
+
+    expect(
+      'a redraw after Escape keeps the focus but not the tooltip',
+      [panel()?.hidden ?? true, document.activeElement === newBonus()],
+      [true, true]
+    );
+
     HTMLElement.prototype.focus = focus;
     delete (document as any).activeElement;
   }

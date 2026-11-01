@@ -161,6 +161,8 @@ export const handleSellImprovement: ActionHandler<SellImprovement> = async (
   ctx.cities
     .getByPlayer(ctx.player())
     .forEach((city) => ctx.patches.city(city));
+  // And the units in it, as an improvement can be part of their defence (City Walls, #743).
+  ctx.patches.onTiles(city.tile());
 
   return false;
 };

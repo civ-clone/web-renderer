@@ -77,10 +77,14 @@
     text-decoration: underline;
   }
 
+  // One line of figures: one that doesn't fit (visibility, last, on a narrow card) wraps out of sight rather than
+  //  onto a line of its own.
   .ui-unit-card-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.2em 0.6em;
+    gap: 0 0.6em;
+    height: 1lh;
+    overflow: hidden;
 
     .stat-pill {
       gap: 0.25em;
@@ -116,6 +120,26 @@
   .ui-unit-card-tile {
     color: var(--ui-fg-muted);
     font-size: var(--type-detail-size);
+  }
+
+  // At the end of the square's first line, the name wrapping round it.
+  .ui-unit-card-coordinates {
+    align-items: center;
+    display: inline-flex;
+    float: right;
+    font-variant-numeric: tabular-nums;
+    gap: 0.2em;
+    margin-left: 0.5em;
+
+    .glyph {
+      height: 0.9em;
+      width: 0.9em;
+    }
+  }
+
+  .ui-unit-card-defence-bonus {
+    color: var(--ui-fg);
+    font-weight: var(--type-strong-weight);
   }
 
   .ui-unit-card-actions {

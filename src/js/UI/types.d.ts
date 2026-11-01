@@ -186,6 +186,12 @@ export interface Unit extends EntityInstance {
   busy: Entity | null;
   city: City | null;
   defence: Yield;
+  // What the unit's defence is multiplied by where it stands, and by what: its terrain, then City Walls or being
+  //  fortified (#743). `null` when nothing is.
+  defenceBonus?: {
+    multiplier: number;
+    sources: { name: string; multiplier: number }[];
+  } | null;
   improvements: EntityInstance[];
   // Why the engine won't let this unit join the city it stands in (#279).
   joinCityRefusal?: { reason: string; [detail: string]: unknown } | null;
