@@ -382,6 +382,75 @@ const run = async (): Promise<void> => {
   );
   slow.close();
 
+  // The row that takes the focus is the one chosen: Down from the filter box, with the chosen row still shown, moves
+  //  the focus to the first row shown, and Enter takes that row, not the one chosen before.
+  const taken: string[] = [],
+    boxed = new ChoiceWindow('Pick', rows, (value) => taken.push(value), {
+      chosen: 'Temple',
+    }),
+    box = boxed
+      .element()
+      .querySelector('.window-filter input') as HTMLInputElement;
+
+  box.value = 'e';
+  boxed.refilter();
+  expect('a filter that still shows the chosen row keeps it', selected(boxed), [
+    'Temple',
+  ]);
+
+  key(box, 'ArrowDown');
+  // The stub DOM doesn't send `focusin` for `focus()`, nor track the focus: sent here to the row the box focuses, the
+  //  first shown, as the browser does.
+  boxed
+    .rows()[0]
+    .dispatchEvent(new (globalThis as any).Event('focusin', { bubbles: true }));
+  expect('Down from the box chooses the row it focuses', selected(boxed), [
+    'Settlers',
+  ]);
+
+  key(boxed.rows()[0], 'Enter');
+  expect('and Enter takes that row', taken, ['Settlers']);
+
+  // A filter that hides every row, then cleared: the row the player chose comes back.
+  const kept = new ChoiceWindow('Pick', rows, () => {}, { chosen: 'Barracks' }),
+    keptBox = kept
+      .element()
+      .querySelector('.window-filter input') as HTMLInputElement;
+
+  keptBox.value = 'zzz';
+  kept.refilter();
+  expect(
+    'a filter that hides every row: nothing chosen, the primary off',
+    [selected(kept), primaryOf(kept).disabled],
+    [[], true]
+  );
+
+  keptBox.value = '';
+  kept.refilter();
+  expect('cleared: the row the player chose is chosen again', selected(kept), [
+    'Barracks',
+  ]);
+  kept.close();
+
+  // A describer that throws, rather than rejecting: an empty pane, and the window still made.
+  const throwing = new ChoiceWindow('Pick', rows, () => {}, {
+    describe: () => {
+      throw new Error('no entry');
+    },
+  });
+
+  await settle();
+
+  expect(
+    'a describer that throws leaves the pane empty',
+    [
+      throwing.element().isConnected,
+      throwing.element().querySelector('.ui-choice-details')?.textContent,
+    ],
+    [true, '']
+  );
+  throwing.close();
+
   // The build list.
   const sent: any[] = [],
     entries: CivilopediaEntry[] = [

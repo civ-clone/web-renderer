@@ -66,6 +66,8 @@ let lists = 0;
 export class ChoiceWindow extends FilterableWindow {
   #autoChosen: boolean = false;
   #chosen: HTMLElement | null = null;
+  // The row the player chose last, given back when a filter that hid it is cleared.
+  #wanted: HTMLElement | null = null;
   #describe: ChoiceDescriber | null;
   #done: boolean = false;
   #details: HTMLElement;
@@ -191,6 +193,17 @@ export class ChoiceWindow extends FilterableWindow {
     });
 
     h(list, {
+      // A row that takes the focus is the one chosen, however it got it: the filter box's Down or Enter, Tab, a click.
+      //  Otherwise the focus ring and the choice Enter takes could be on two different rows.
+      focusin: (event: FocusEvent) => {
+        const row = (event.target as Element | null)?.closest?.(
+          '.ui-choice-row'
+        );
+
+        if (row instanceof HTMLElement && this.#rows.has(row)) {
+          this.#select(row);
+        }
+      },
       keydown: (event: KeyboardEvent) => this.#key(event),
     });
 
@@ -242,13 +255,18 @@ export class ChoiceWindow extends FilterableWindow {
   refilter(): void {
     super.refilter();
 
-    // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen.
-    if (
-      #rows in this &&
-      (this.#chosen === null ||
-        this.#chosen.classList.contains(filteredOutClass))
-    ) {
-      this.#select(this.#shown()[0] ?? null);
+    if (!(#rows in this)) {
+      return;
+    }
+
+    const shown = this.#shown();
+
+    // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen. The one the
+    //  player chose comes back once it's shown again.
+    if (this.#wanted !== null && shown.includes(this.#wanted)) {
+      this.#select(this.#wanted, false);
+    } else if (this.#chosen === null || !shown.includes(this.#chosen)) {
+      this.#select(shown[0] ?? null, false);
     }
   }
 
@@ -374,10 +392,15 @@ export class ChoiceWindow extends FilterableWindow {
     return element;
   }
 
-  #select(element: HTMLElement | null): void {
+  // `remember` is false where the list, not the player, moves the choice.
+  #select(element: HTMLElement | null, remember: boolean = true): void {
     const previous = this.#chosen;
 
     this.#chosen = element;
+
+    if (remember) {
+      this.#wanted = element;
+    }
 
     if (previous !== element) {
       previous?.setAttribute('aria-selected', 'false');
@@ -437,7 +460,8 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
-    Promise.resolve(this.#describe(row)).then(
+    // A describer that throws is a failure like one that rejects: an empty pane, not a window half made.
+    new Promise<Node | null>((resolve) => resolve(this.#describe!(row))).then(
       (details) => {
         if (this.#describing === row) {
           this.#details.replaceChildren(...(details ? [details] : []));
