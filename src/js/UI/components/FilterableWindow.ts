@@ -139,6 +139,11 @@ export class FilterableWindow extends Window {
     this.refilter();
   }
 
+  /** Puts the focus in the filter box. */
+  focusFilter(): void {
+    this.#input.focus();
+  }
+
   /** What's in the filter box. */
   filter(): string {
     return this.#input.value;

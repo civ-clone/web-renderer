@@ -261,7 +261,8 @@ export class ChoiceWindow extends FilterableWindow {
 
   /**
    * New rows for the list, as what it offers changes while it's open (the units in a stack, #344). The filter still
-   *  applies, the row chosen stays chosen where it's still offered, and the focus stays in the list if it was there.
+   *  applies, the row chosen stays chosen where it's still offered, and focus in the list stays in the window: on the
+   *  row chosen, or on the filter if it now hides every row.
    */
   replaceRows(rows: ChoiceRow[]): void {
     const valueOf = (element: HTMLElement | null): string | null =>
@@ -280,9 +281,17 @@ export class ChoiceWindow extends FilterableWindow {
     this.#select(find(chosen), false);
     this.refilter();
 
-    if (focused) {
-      this.#focusChosen();
+    if (!focused) {
+      return;
     }
+
+    if (this.#chosen === null) {
+      this.focusFilter();
+
+      return;
+    }
+
+    this.#focusChosen();
   }
 
   /** The list's rows, in order. */
