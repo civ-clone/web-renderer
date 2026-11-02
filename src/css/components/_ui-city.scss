@@ -154,8 +154,6 @@
   padding: 0;
 }
 
-// Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
-//  see-through rather than hidden, so Tab still reaches it.
 // An improvement's or a Wonder's icon (#64), in its row and on the production card. None imported: no gap for it.
 .ui-city .building-icon {
   display: inline-flex;
@@ -171,6 +169,8 @@
   }
 }
 
+// Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
+//  see-through rather than hidden, so Tab still reaches it.
 .ui-city-improvement {
   align-items: center;
   border-radius: var(--ui-radius-control);
@@ -187,6 +187,9 @@
   .name {
     flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   // As tall as the row's text, not the space a window gives its buttons.
@@ -197,6 +200,17 @@
 }
 
 @media (hover: hover) {
+  // Over the row's end, where the upkeep is, rather than taking room from the name beside the icon (#64): it comes
+  //  later in the row, so it's drawn over it.
+  .ui-city-improvement {
+    position: relative;
+
+    button.sell {
+      inset-inline-end: 0.25rem;
+      position: absolute;
+    }
+  }
+
   .ui-city-improvement:not(:hover, :focus-within) button.sell {
     opacity: 0;
   }
