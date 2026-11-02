@@ -5,7 +5,7 @@ import { unitName, unitStates } from '../lib/unitLabel';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
 import Unit from './Unit';
 import { UnitDetailsDeps } from './UnitDetails';
-import UnitSelectionWindow from './UnitSelectionWindow';
+import { openUnitSelection } from './choices';
 import { cityName } from './lib/city';
 import glyph, { GlyphName } from '../lib/glyphs';
 import statPill from './lib/StatPill';
@@ -456,16 +456,12 @@ export class UnitCard extends Element {
       strip.append(more);
     }
 
-    strip.addEventListener(
-      'click',
-      () =>
-        new UnitSelectionWindow(
-          unit.tile.units.filter(
-            (other) => other.player?.id === unit.player?.id
-          ),
-          this.#deps.transport,
-          (chosen) => this.#deps.setActiveUnit(chosen)
-        )
+    strip.addEventListener('click', () =>
+      openUnitSelection(
+        unit.tile.units.filter((other) => other.player?.id === unit.player?.id),
+        this.#deps.transport,
+        (chosen) => this.#deps.setActiveUnit(chosen)
+      )
     );
 
     const section = s(

@@ -1,6 +1,6 @@
 import { DragSample, releaseVelocity } from '../lib/drag';
 import { Tile, Unit } from '../types';
-import UnitSelectionWindow from './UnitSelectionWindow';
+import { openUnitSelection } from './choices';
 import Portal from './Portal';
 import UnitActionMenu from './UnitActionMenu';
 import { on } from '@dom111/element';
@@ -84,10 +84,8 @@ export class GamePortal extends Portal {
       const opened = tile.city ? this.openCity(tile.city) : false;
 
       if (!opened && playerTileUnits.length) {
-        new UnitSelectionWindow(
-          playerTileUnits,
-          this.transport(),
-          (unit: Unit) => this.emit('activate-unit', unit)
+        openUnitSelection(playerTileUnits, this.transport(), (unit: Unit) =>
+          this.emit('activate-unit', unit)
         );
 
         return;

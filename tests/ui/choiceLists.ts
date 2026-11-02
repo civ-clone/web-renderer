@@ -1,8 +1,9 @@
 // The lists on the choice window under the new interface (#745), past the build list: research, with each advance's
 //  cost in bulbs and turns, named in the primary and described from the Civilopedia; government; the lists the engine
 //  asks (`chooseFromList`), each primary saying what choosing does, Random first among the civilizations (#15), the
-//  difficulty preselected (#173), and nothing to cancel; and New Game's questions, over everything, Cancel backing
-//  out, the last one starting the game. The steps of the talks stay the classic list for now, and the classic interface keeps its
+//  difficulty preselected (#173), and nothing to cancel; the steps of the talks, each answer as you'd say it; New
+//  Game's questions, over everything, Cancel backing out, the last one starting the game; the units in a stack,
+//  following them while it's open (#344); and a Diplomat's and a Caravan's arrival. The classic interface keeps its
 //  lists, the research labels with their turns.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -15,6 +16,9 @@ import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
 import DebugFlags from '../../src/js/UI/debug/DebugFlags';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 import { askNewGame } from '../../src/js/UI/components/newGame';
+import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
+import { openArrivalWindow } from '../../src/js/UI/lib/unitActionPrompts';
+import { openUnitSelection } from '../../src/js/UI/components/choices';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
@@ -185,6 +189,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-difficulty/en');
   await import('../../translations/civ1-diplomacy/en');
+  await import('../../translations/civ1-unit/en');
 
   applyInterface('new', null);
 
@@ -390,23 +395,22 @@ const run = async (): Promise<void> => {
   );
 
   expect(
-    'the steps of the talks are still the classic list',
+    "the talks: each answer as you'd say it, the button saying it, and nothing to cancel",
+    [names(), primary().textContent, footer()],
     [
-      Boolean(top().querySelector('select')),
-      Boolean(top().querySelector('.ui-choice')),
-    ],
-    [true, false]
+      ['Pay the tribute.', 'We will not pay.'],
+      'Pay the tribute.',
+      ['Pay the tribute.'],
+    ]
   );
 
-  top()
-    .querySelector('select')!
-    .dispatchEvent(
-      new (globalThis as any).KeyboardEvent('keydown', {
-        key: 'Enter',
-        bubbles: true,
-        cancelable: true,
-      })
-    );
+  key('ArrowDown');
+  key('Enter');
+
+  expect('the talks: the answer chosen is sent', sent, [
+    ['chooseFromList', 'decline'],
+  ]);
+
   sent.length = 0;
 
   // New Game's questions: over everything else, Cancel backing out, and the last one starts the game.
@@ -472,6 +476,136 @@ const run = async (): Promise<void> => {
   );
 
   sent.length = 0;
+
+  // The units in a stack: each with its city and numbers, the one chosen woken and made active, and the list following
+  //  the units while it's open (#344).
+  const roman = { civilization: { _: 'Roman', attributes: [] } },
+    rome = { id: 'city-rome', name: 'Rome', originalPlayer: roman },
+    stackUnit = (id: string, _: string, active: boolean, moves: number) => ({
+      _,
+      id,
+      active,
+      player: roman,
+      city: rome,
+      busy: active ? null : { _: 'Sleeping' },
+      improvements: [],
+      attack: { value: _ === 'Settlers' ? 0 : 1 },
+      defence: { value: 1 },
+      movement: { value: 1 },
+      moves: { value: moves },
+    }),
+    activated: string[] = [];
+
+  openUnitSelection(
+    [
+      stackUnit('unit-1', 'Settlers', true, 1),
+      stackUnit('unit-2', 'Warriors', false, 0),
+    ] as any,
+    transport,
+    (unit) => activated.push(unit.id)
+  );
+
+  const stack = top();
+
+  expect(
+    'the stack: each unit with its home city and its numbers, and the eyebrow',
+    [
+      names(),
+      Array.from(stack.querySelectorAll('.ui-choice-meta')).map(
+        (meta) => meta.textContent
+      ),
+      facts(),
+      eyebrow(),
+      primary().textContent,
+    ],
+    [
+      ['Settlers', 'Warriors (Sleeping)'],
+      ['Rome', 'Rome'],
+      [
+        ['Attack: 0', 'Defense: 1', 'Moves left: 1/1'],
+        ['Attack: 1', 'Defense: 1', 'Moves left: 0/1'],
+      ],
+      'Units',
+      'Activate Settlers',
+    ]
+  );
+
+  key('ArrowDown');
+
+  // Warriors moves on while the list is open, and Settlers is gone.
+  dataChanges.collect(['unit-1', 'unit-2']);
+  dataChanges.notify({
+    player: { units: [stackUnit('unit-2', 'Warriors', false, 1)] },
+  } as any);
+
+  expect(
+    'the stack follows the units while open, keeping the one chosen',
+    [names(), facts()[0][2], chosen()],
+    [['Warriors (Sleeping)'], 'Moves left: 1/1', 'Warriors (Sleeping)']
+  );
+
+  key('Enter');
+
+  expect(
+    'the stack: a sleeping unit chosen is woken, then made active',
+    [sent, activated],
+    [[['action', { name: 'InactiveUnit', id: 'unit-2' }]], ['unit-2']]
+  );
+
+  sent.length = 0;
+
+  // A Diplomat arriving at a rival city, and a Caravan at one of yours.
+  const ur = {
+      _: 'City',
+      id: 'city-ur',
+      name: 'Ur',
+      originalPlayer: { civilization: { _: 'Babylonian' } },
+    },
+    arrival = (_: string) =>
+      ({ _, to: { id: 'tile-ur', city: ur, units: [] } } as any),
+    performed: string[] = [],
+    diplomat = {
+      id: 'diplomat-1',
+      player: {
+        civilization: { _: 'Roman' },
+        treasuries: [{ yield: { _: 'Gold' }, value: 0 }],
+      },
+    } as any;
+
+  openArrivalWindow(
+    diplomat,
+    [arrival('EstablishEmbassy'), arrival('InvestigateCity')],
+    (action) => performed.push(action._)
+  );
+
+  expect(
+    "a Diplomat's arrival: its options, the button saying what it will do",
+    [names(), primary().textContent],
+    [['Establish Embassy', 'Investigate City'], 'Establish Embassy']
+  );
+
+  key('ArrowDown');
+  key('Enter');
+
+  openArrivalWindow(
+    diplomat,
+    [arrival('Move'), arrival('HelpBuildWonder')],
+    (action) => performed.push(action._)
+  );
+
+  expect(
+    "a Caravan's arrival: keep moving first, the button saying it",
+    [names(), primary().textContent],
+    [['Keep moving', 'Help build Wonder'], 'Keep moving']
+  );
+
+  key('ArrowDown');
+  key('Enter');
+
+  expect('the arrivals: what was chosen is done', performed, [
+    'InvestigateCity',
+    'HelpBuildWonder',
+  ]);
 
   // The classic interface: the classic list, with the turns in the label.
   applyInterface('classic', null);

@@ -13,11 +13,10 @@ import { interactionLabel, negotiationLabel } from '../lib/interactionLabels';
 import { Interactions, Negotiation } from '../types';
 import ActionWindow from '../components/ActionWindow';
 import DebugFlags from '../debug/DebugFlags';
-import SelectionWindow from '../components/SelectionWindow';
 import Transport from '../Transport';
 import entryDetails from '../components/lib/choiceDetails';
 import instanceOf from '../lib/instanceOf';
-import { openChoice } from '../components/choices';
+import { openChoice } from '../components/choiceList';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {
@@ -49,7 +48,7 @@ const advanceKeys = [
 ];
 
 // Every list the engine asks the player to choose from (`chooseFromList`): a step of the talks with one answer as an
-//  `ActionWindow`, anything else as a `SelectionWindow`, with Random among the civilizations (#15) and the difficulty
+//  `ActionWindow`, anything else as a list (`openChoice`), with Random among the civilizations (#15) and the difficulty
 //  levels labelled and preselected (#173). The answer goes back on the same channel. Returns the disposer for
 //  `Renderer`'s `transportDisposers`.
 export const ChoiceHandler = {
@@ -119,27 +118,28 @@ export const ChoiceHandler = {
         return;
       }
 
-      // The steps of the talks stay the classic list until they move to the choice window too (#745).
+      // A step of the talks with several answers, Good bye first: each says what you'll say, as the button does.
       if (key === 'negotiation.next-step') {
-        const selectionWindow = new SelectionWindow(
+        const talksWindow = openChoice(
           title,
-          goodbyeFirst(choices).map(({ id, value }) => ({
-            label: interactionLabel(value as Interactions, true),
-            value: id,
-          })),
+          goodbyeFirst(choices).map(({ id, value }) => {
+            const label = interactionLabel(value as Interactions, true);
+
+            return { label, value: id, primary: label };
+          }),
           (choice) => transport.send('chooseFromList', choice),
-          negotiationLabel(data as Negotiation),
           {
+            intro: negotiationLabel(data as Negotiation),
             canClose: false,
-            displayAll: true,
+            classes: ['negotiation'],
+            // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
+            chosen: debugFlags.uiStressRunner ? choices[0].id : null,
           }
         );
 
-        // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
-        if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
-          selectionWindow.selectionList().value = choices[0].id;
+        if (debugFlags.uiStressRunner && !talksWindow.autoChosen()) {
           debugFlags.uiStressRunner.automateChoice(
-            selectionWindow,
+            talksWindow,
             choices[0].id,
             (choiceId) => transport.send('chooseFromList', choiceId)
           );

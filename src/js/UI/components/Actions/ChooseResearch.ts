@@ -10,7 +10,7 @@ import { t } from 'i18next';
 import { turnsLeft, yieldIcon } from '../lib/cityYields';
 import entryDetails from '../lib/choiceDetails';
 import { instance as localeProvider } from '../../LocaleProvider';
-import { openChoice } from '../choices';
+import { openChoice } from '../choiceList';
 import currentTileset from '../../lib/tilesets';
 import { spriteKey } from '../../tilesets/TilesetDescriptor';
 
