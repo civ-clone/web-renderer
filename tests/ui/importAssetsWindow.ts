@@ -548,6 +548,36 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // SP299.PIC, the improvement and Wonder icons, is optional (#64): the instructions say so, an import goes ahead
+  //  without it, and the files asked for when one is missing are the required ones.
+  {
+    const window = new ImportAssetsWindow();
+
+    expect(
+      'the instructions ask for the required files, and the icons as well',
+      window.element().querySelector('.import-assets p')?.textContent,
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons.'
+    );
+
+    await upload(window, [sheet('SP257.PIC')]);
+
+    expect(
+      'a required file missing: only the required ones are asked for',
+      progress(window).textContent,
+      'Please provide all files to generate assets: SP257.PIC and TER257.PIC.'
+    );
+
+    await upload(window, [sheet('SP257.PIC'), sheet('TER257.PIC')]);
+
+    expect(
+      'without SP299.PIC, the import goes ahead',
+      progress(window).textContent?.startsWith('Please provide'),
+      false
+    );
+
+    window.close();
+  }
+
   console.error = consoleError;
   finished = true;
 

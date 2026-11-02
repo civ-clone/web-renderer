@@ -10,8 +10,9 @@ describes how the code works once you are in.
 Go to [civ.one](https://civ.one). The game runs entirely in your browser; there is
 no account and no install. The first time, choose **Import assets** on the main
 menu and give it `TER257.PIC` and `SP257.PIC` from an original copy of
-Civilization (1991): the graphics are read from those two files and kept in
-your browser's storage. Nothing is uploaded anywhere.
+Civilization (1991), and `SP299.PIC` as well for the improvement and Wonder
+icons: the graphics are read from those files and kept in your browser's
+storage. Nothing is uploaded anywhere.
 
 On Brave, put Shields down while importing and playing, or the images come out
 wrong (Brave "farbles" canvas reads as a fingerprinting defence).

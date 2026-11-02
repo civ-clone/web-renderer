@@ -563,6 +563,74 @@ const run = async (): Promise<void> => {
 
   capped.close();
 
+  // Each improvement and Wonder with its icon from SP299.PIC, and the production card when it builds one (#64). The
+  //  icons are optional: one the player hasn't imported isn't drawn.
+  const has = assetStore.has,
+    shownAtURL = assetStore.shownAtURL;
+
+  assetStore.has = async (key: string) => !key.includes('barracks');
+  assetStore.shownAtURL = async (key: string) => `sprite:${key}`;
+
+  const iconed = openCity(
+    cityData('City-G', 'Nippur', {
+      player: owner,
+      improvements: [
+        {
+          _: 'Colossus',
+          __: ['Colossus', 'Wonder', 'CityImprovement', 'Buildable'],
+          id: 'City-G-Colossus',
+          saleValue: [],
+        },
+        ...cityData('City-G', 'Nippur').improvements,
+      ],
+    }),
+    portal,
+    transport
+  );
+
+  const wonderBuild = {
+    ...cityData('City-H', 'Larsa', { player: owner }),
+  } as CityData;
+
+  wonderBuild.build = {
+    ...wonderBuild.build,
+    building: {
+      item: { _: 'Pyramids', __: ['Pyramids', 'Wonder', 'Buildable'] },
+    },
+    cost: { value: 120 },
+    progress: { value: 30 },
+  } as unknown as CityData['build'];
+
+  const card = openCity(wonderBuild, portal, transport);
+
+  await settle();
+  await settle();
+
+  const icons = (screen: { element(): HTMLElement }, selector: string) =>
+    Array.from(screen.element().querySelectorAll(selector)).map(
+      (icon) => icon.querySelector('img')?.getAttribute('src') ?? ''
+    );
+
+  expect(
+    'improvements with their icons, a Wonder with its own, and none where it was not imported',
+    icons(iconed, '.ui-city-improvement .building-icon'),
+    [
+      '',
+      'sprite:./assets/city-improvements/palace.png',
+      'sprite:./assets/wonders/colossus.png',
+    ]
+  );
+  expect(
+    'the production card building a Wonder shows its icon',
+    icons(card, '.ui-city-production header .building-icon'),
+    ['sprite:./assets/wonders/pyramids.png']
+  );
+
+  iconed.close();
+  card.close();
+  assetStore.has = has;
+  assetStore.shownAtURL = shownAtURL;
+
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
 

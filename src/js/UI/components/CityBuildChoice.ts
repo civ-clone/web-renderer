@@ -4,6 +4,7 @@ import { ActionWindowActions } from './ActionWindow';
 import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
 import Transport from '../Transport';
 import Unit from './Unit';
+import buildingIcon from './lib/buildingIcon';
 import entryDetails from './lib/choiceDetails';
 import {
   getAutoLabel,
@@ -32,7 +33,10 @@ const unitFacts = (stats: NonNullable<BuildItem['stats']>): ChoiceFact[] =>
     value: localeProvider.number(value),
   }));
 
-/** One thing the city can build, as a row: its sprite where it's a unit, its numbers, its cost and how long it takes. */
+/**
+ * One thing the city can build, as a row: its sprite where it's a unit, or its icon where it's an improvement or a Wonder
+ *  (#64), its numbers, its cost and how long it takes.
+ */
 export const buildRow = (
   cityBuild: CityBuild,
   buildItem: BuildItem
@@ -62,6 +66,11 @@ export const buildRow = (
               } as unknown as ConstructorParameters<typeof Unit>[0],
               1
             ).element(),
+        }
+      : buildItem.group === 'improvement' || buildItem.group === 'wonder'
+      ? {
+          sprite: () =>
+            buildingIcon(buildItem.item._, buildItem.group === 'wonder'),
         }
       : {}),
     facts: [

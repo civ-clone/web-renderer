@@ -156,6 +156,21 @@
 
 // Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
 //  see-through rather than hidden, so Tab still reaches it.
+// An improvement's or a Wonder's icon (#64), in its row and on the production card. None imported: no gap for it.
+.ui-city .building-icon {
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+
+  &:empty {
+    display: none;
+  }
+
+  img {
+    image-rendering: pixelated;
+  }
+}
+
 .ui-city-improvement {
   align-items: center;
   border-radius: var(--ui-radius-control);

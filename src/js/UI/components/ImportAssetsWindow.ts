@@ -13,6 +13,12 @@ import { h } from '../lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
 
+// The files an import needs, and the ones it takes when they're chosen (#64): the extractor lists those as `optional`.
+const optionalFiles = (extractData as ExtractData).optional ?? [],
+  requiredFiles = Object.keys(extractData.files).filter(
+    (file) => !optionalFiles.includes(file)
+  );
+
 export class ImportAssetsWindow extends Window {
   // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
   #fileInput: HTMLInputElement;
@@ -46,8 +52,12 @@ export class ImportAssetsWindow extends Window {
       t('ImportAssetsWindow.title'),
       s(
         `<div class="import-assets"><p>${t('ImportAssetsWindow.instructions', {
-          files: Object.keys(extractData.files),
-        })}</p><div class="brave" ${
+          files: requiredFiles,
+        })}${
+          optionalFiles.length
+            ? ` ${t('ImportAssetsWindow.optional', { files: optionalFiles })}`
+            : ''
+        }</p><div class="brave" ${
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }>${t('ImportAssetsWindow.brave')}</div></div>`,
@@ -98,7 +108,7 @@ export class ImportAssetsWindow extends Window {
         (event.target as HTMLInputElement).files ?? []
       ) as File[],
       filenames: string[] = files.map((file: File) => file.name),
-      expectedFilenames = Object.keys(extractData.files),
+      expectedFilenames = requiredFiles,
       expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i'));
 
     if (

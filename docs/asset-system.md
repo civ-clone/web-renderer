@@ -3,6 +3,9 @@
 ## Why this matters
 
 Game rendering depends on an imported asset set derived from original Civilization files (`TER257.PIC`, `SP257.PIC`).
+`SP299.PIC` is optional (#64): the city screen's improvement and Wonder icons (`city-improvements/*`, `wonders/*`), which
+the extractor lists under `optional` and the Civ1 tileset under `assets.optional`. Without it the import still goes
+ahead, and `components/lib/buildingIcon.ts` draws nothing where an icon is missing.
 Without imported assets, gameplay options are hidden and import is the primary onboarding flow.
 
 ## Main components

@@ -298,6 +298,13 @@ export class AssetStore extends Store<{
     return this.shownAtURL(path, 1);
   }
 
+  /** Whether the sprite at `path` was imported, for one that's optional: drawn when it's there, left out when not. */
+  async has(path: string): Promise<boolean> {
+    await this.#ready;
+
+    return this.#loaded.has(path);
+  }
+
   async hasAllAssets(): Promise<boolean> {
     return (await this.missingAssets()).length === 0;
   }

@@ -112,6 +112,12 @@
     image-rendering: pixelated;
     width: 2rem;
   }
+
+  // An improvement's or a Wonder's icon is wider than it's tall: at its own size (#64).
+  .building-icon img {
+    height: auto;
+    width: auto;
+  }
 }
 
 .ui-choice-text {
