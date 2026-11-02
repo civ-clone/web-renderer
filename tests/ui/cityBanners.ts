@@ -50,6 +50,8 @@ const style = (form: string): BannerStyle => ({
   food: 'food',
   short: 'short',
   track: 'track',
+  light: '#ffffff',
+  shade: '#000000',
 });
 
 // Drawn with the tokens the test gives it rather than the page's.
@@ -173,6 +175,53 @@ const happy = preloadImage('city/people_happy_m', 8, 16),
       fills,
     };
   };
+
+// The size is written in the civilization's second colour where it reads on its first, otherwise in the theme's light or
+//  dark ink, whichever reads better (#747): Ethiopia's yellow on lilac is 2.9:1.
+const sizeInk = (colours: string[]) => {
+  const { calls, canvas } = fakeCanvas(320, 320),
+    context = canvas.getContext('2d') as any,
+    inks: string[] = [],
+    record = context.fillText;
+
+  context.fillText = (...args: any[]) => {
+    inks.push(context.fillStyle);
+    record(...args);
+  };
+  context.roundRect = () => {};
+  context.fill = () => {};
+  context.stroke = () => {};
+  TestCityBanners.form = 'full';
+
+  const layer = new TestCityBanners(
+    world({
+      '2,2': {
+        ...rivalCity,
+        player: player(colours),
+        originalPlayer: player(colours),
+      },
+    }),
+    2,
+    16,
+    canvas
+  );
+
+  layer.setViewport(0, 0, 320, 320);
+  calls.length = 0;
+  layer.render();
+
+  return inks[0];
+};
+
+expect(
+  "a second colour that reads is kept, and one that doesn't gives way",
+  [
+    sizeInk(['#8E2420', '#F5C342']),
+    sizeInk(['#8E6CD8', '#FCDD09']),
+    sizeInk(['#7A7A7A', '#D50000']),
+  ],
+  ['#F5C342', '#000000', '#000000']
+);
 
 // The classic label, as the Civ1-classic theme asks for.
 const label = draw({ '2,2': ownCity() }, { form: 'label' });

@@ -8,6 +8,7 @@ import { groupIcons, reduceKnownYield } from '../../lib/yieldMap';
 import { imageSize } from '../../lib/imageSize';
 import { instance as localeProvider } from '../../LocaleProvider';
 import { playerColours } from '../../lib/renderUnit';
+import { readableOn } from '../../lib/contrast';
 
 // The cities on the map under the new interface (#747): a banner below each city's square, as Civ V draws them, so the
 //  empire reads without opening anything. The theme says which, through `--ui-city-banner`: `full` draws the banner,
@@ -32,6 +33,9 @@ export type BannerStyle = {
   food: string;
   short: string;
   track: string;
+  // The inks a badge's size is written in where its civilization's second colour doesn't read on its first.
+  light: string;
+  shade: string;
 };
 
 const token = (style: CSSStyleDeclaration, name: string): string =>
@@ -54,6 +58,8 @@ export const readBannerStyle = (
     food: token(style, '--y-food'),
     short: token(style, '--y-short'),
     track: token(style, '--ui-city-banner-track'),
+    light: token(style, '--ui-light'),
+    shade: token(style, '--ui-shade'),
   };
 };
 
@@ -340,7 +346,12 @@ export class CityBanners extends CityNames {
     context.roundRect(badge.x, badge.y, badge.width, badge.height, radius);
     context.fill();
 
-    context.fillStyle = secondary ?? style.foreground;
+    // The size in the civilization's second colour, where it reads on its first: ten of them don't, as a sliver of a
+    //  city's sprite doesn't need to.
+    context.fillStyle = readableOn(primary, secondary ?? style.foreground, [
+      style.shade,
+      style.light,
+    ]);
     context.textAlign = 'center';
     context.fillText(layout.size, badge.x + badge.width / 2, layout.baseline);
     context.textAlign = 'left';
