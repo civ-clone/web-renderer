@@ -93,10 +93,8 @@
 }
 
 // No sprites in the list: no column for them. An improvement's icon that wasn't imported is an empty span (#64), which
-//  counts as none.
-.ui-choice-list:not(
-    :has(.ui-choice-sprite:not(:empty):not(:has(> .building-icon:empty)))
-  )
+//  counts as none. `:has` can't hold another `:has`, so it's the cell's child that's tested.
+.ui-choice-list:not(:has(.ui-choice-sprite > :not(.building-icon:empty)))
   .ui-choice-row {
   grid-template-columns: minmax(0, 1fr) auto;
 

@@ -16,7 +16,15 @@ export const buildingSprite = (_: string, wonder: boolean): string =>
 /** The icon for an improvement or a Wonder, drawn once its picture has loaded, if there is one. Decorative. */
 export const buildingIcon = (_: string, wonder: boolean): HTMLElement => {
   const icon = s('<span class="building-icon" aria-hidden="true"></span>'),
-    key = spriteKey(currentTileset(), buildingSprite(_, wonder));
+    key = spriteKey(currentTileset(), buildingSprite(_, wonder)),
+    cached = assetStore.cachedURL(key, BUILDING_ICON_WIDTH);
+
+  // Shown before: drawn at once, so the row doesn't lay out without it first on every render.
+  if (cached !== null) {
+    icon.append(s(`<img src="${cached}" alt="">`));
+
+    return icon;
+  }
 
   assetStore
     .has(key)

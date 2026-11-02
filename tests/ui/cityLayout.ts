@@ -652,6 +652,29 @@ const run = async (): Promise<void> => {
   assetStore.has = has;
   assetStore.shownAtURL = shownAtURL;
 
+  // Shown before: drawn as the row is, not after the store answers.
+  const cachedURL = assetStore.cachedURL;
+
+  assetStore.cachedURL = (key: string) => `cached:${key}`;
+
+  const again = openCity(
+    cityData('City-J', 'Uruk', { player: owner }),
+    portal,
+    transport
+  );
+
+  expect(
+    'an icon shown before is drawn at once',
+    icons(again, '.ui-city-improvement .building-icon'),
+    [
+      'cached:./assets/city-improvements/barracks.png',
+      'cached:./assets/city-improvements/palace.png',
+    ]
+  );
+
+  again.close();
+  assetStore.cachedURL = cachedURL;
+
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
 

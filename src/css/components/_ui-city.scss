@@ -205,9 +205,9 @@
 }
 
 @media (hover: hover) {
-  // Over the row's end, where the upkeep is, rather than taking room from the name beside the icon (#64): it comes
-  //  later in the row, so it's drawn over it.
-  .ui-city-improvement {
+  // Beside an icon, over the row's end where the upkeep is, rather than taking room from the name (#64): it comes later
+  //  in the row, so it's drawn over it. Without one, in the row as it always was.
+  .ui-city-improvement:has(.building-icon:not(:empty)) {
     position: relative;
 
     button.sell {
