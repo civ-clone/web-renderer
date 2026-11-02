@@ -219,8 +219,9 @@ expect(
     sizeInk(['#8E2420', '#F5C342']),
     sizeInk(['#8E6CD8', '#FCDD09']),
     sizeInk(['#7A7A7A', '#D50000']),
+    sizeInk(['#1A1A80', '#3A1A1A']),
   ],
-  ['#F5C342', '#000000', '#000000']
+  ['#F5C342', '#000000', '#000000', '#ffffff']
 );
 
 // The classic label, as the Civ1-classic theme asks for.
