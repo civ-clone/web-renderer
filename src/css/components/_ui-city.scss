@@ -154,7 +154,8 @@
   padding: 0;
 }
 
-// Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus.
+// Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
+//  see-through rather than hidden, so Tab still reaches it.
 .ui-city-improvement {
   align-items: center;
   border-radius: var(--ui-radius-control);
@@ -182,7 +183,7 @@
 
 @media (hover: hover) {
   .ui-city-improvement:not(:hover, :focus-within) button.sell {
-    visibility: hidden;
+    opacity: 0;
   }
 }
 
