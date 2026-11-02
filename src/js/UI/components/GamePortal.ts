@@ -295,38 +295,62 @@ export class GamePortal extends Portal {
     hover.timer = window.setTimeout(() => {
       hover.timer = null;
 
-      // What's there now: a window may have opened over the map while it waited, and the city's data, or its banner,
-      //  may have changed.
-      const now =
-        document.elementFromPoint(hover.clientX, hover.clientY) ===
-        this.canvas()
-          ? this.bannerAt(hover.offsetX, hover.offsetY)
-          : null;
-
-      if (now === null || now.city.id !== hover.city.id) {
-        this.endHover();
-
-        return;
-      }
-
-      const canvas = this.canvas().getBoundingClientRect(),
-        { city, box } = now;
-
-      showTooltipOver(
-        this.canvas(),
-        () => ({
-          left: canvas.left + box.x,
-          top: canvas.top + box.y,
-          bottom: canvas.top + box.y + box.height,
-        }),
-        () => cityBannerTooltip(city)
-      );
+      this.showHover(hover);
     }, BANNER_TOOLTIP_DELAY);
 
     this.#hover = hover;
 
     // A key, while it waits or once it's open: it may move the map, or open a window over it.
     document.addEventListener('keydown', this.endHover, true);
+  }
+
+  // Opens the tooltip for what's under the mouse now, or ends the hover: a window may have opened over the map while it
+  //  waited, and the city's data, or its banner, may have changed.
+  private showHover(hover: Hover): void {
+    const now =
+      document.elementFromPoint(hover.clientX, hover.clientY) === this.canvas()
+        ? this.bannerAt(hover.offsetX, hover.offsetY)
+        : null;
+
+    if (now === null || now.city.id !== hover.city.id) {
+      this.endHover();
+
+      return;
+    }
+
+    const canvas = this.canvas().getBoundingClientRect(),
+      { city, box } = now;
+
+    hover.city = city;
+
+    showTooltipOver(
+      this.canvas(),
+      () => ({
+        left: canvas.left + box.x,
+        top: canvas.top + box.y,
+        bottom: canvas.top + box.y + box.height,
+      }),
+      () => cityBannerTooltip(city)
+    );
+  }
+
+  // The city an open tooltip is about has changed: it says what the city's doing now, and moves with its banner, or
+  //  goes with it.
+  build(updatedTiles: Tile[]): void {
+    super.build(updatedTiles);
+
+    const hover = this.#hover;
+
+    if (
+      hover !== null &&
+      hover.timer === null &&
+      tooltipOpenOver(this.canvas()) &&
+      updatedTiles.some(
+        ({ x, y }) => x === hover.city.tile.x && y === hover.city.tile.y
+      )
+    ) {
+      this.showHover(hover);
+    }
   }
 
   private endHover = (): void => {

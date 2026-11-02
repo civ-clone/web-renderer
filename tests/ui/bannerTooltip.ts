@@ -388,6 +388,35 @@ const run = async (): Promise<void> => {
     ['Bank', '50 / 120 · 7 turns']
   );
 
+  // The city changing while it's open (#780, Copilot).
+  const square = (x: number, y: number) =>
+    tiles.find((tile) => tile.x === x && tile.y === y);
+
+  banner = {
+    ...ours,
+    build: { ...ours.build, progress: { value: 90 } },
+  } as unknown as City;
+  portal.build([square(5, 5)]);
+
+  expect(
+    'another square changing leaves it as it is',
+    says().rows.slice(0, 2),
+    ['Bank', '50 / 120 · 7 turns']
+  );
+
+  portal.build([square(1, 1)]);
+
+  expect(
+    "its city's square changing: it says what the city's doing now",
+    [shown(), ...says().rows.slice(0, 2)],
+    [true, 'Bank', '90 / 120 · 3 turns']
+  );
+
+  banner = null;
+  portal.build([square(1, 1)]);
+
+  expect('its banner gone (the city lost): it goes too', shown(), false);
+
   finished = true;
 
   if (failures.length > 0) {
