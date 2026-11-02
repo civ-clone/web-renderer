@@ -268,6 +268,10 @@ i18next.addResources('en', 'default', {
 
   'City.GarrisonedUnits.title': 'Garrisoned units',
   'City.Progress.per-turn': '{{count, number(signDisplay: exceptZero)}} / turn',
+  // In place of the turns to a growth the rules won't allow (#781): an improvement whose name needs an article has its
+  //  own sentence.
+  'City.Growth.needs': 'Needs {{improvement}}',
+  'City.Growth.needs-Aqueduct': 'Needs an Aqueduct',
   'City.Growth.size': 'Size {{size, number}}',
 
   'City.Growth.title': 'Growth',

@@ -23,6 +23,7 @@ import {
   yieldIcon,
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
+import { growthLimitText } from './lib/city';
 import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import button from '../lib/button';
@@ -104,7 +105,14 @@ const renderHeader = (
         capacity: city.growth.cost.value,
         perTurn,
       }),
-      renderFigures('Food', city.growth, perTurn, growthTurns(city))
+      renderFigures(
+        'Food',
+        city.growth,
+        perTurn,
+        growthTurns(city),
+        // Starving says more than the cap: the per-turn figure shows it.
+        perTurn < 0 ? null : growthLimitText(city.growth)
+      )
     ),
     s(
       '<div class="ui-city-citizens"></div>',

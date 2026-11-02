@@ -537,6 +537,32 @@ const run = async (): Promise<void> => {
     ]
   );
 
+  // At the size the rules cap it at, the figures say what it needs, not the turns to a growth that won't happen (#781).
+  const capped = openCity(
+    cityData('City-F', 'Eridu', {
+      player: owner,
+      growth: {
+        id: 'City-F-Growth',
+        progress: { value: 5 },
+        cost: { value: 20 },
+        size: 10,
+        limit: { size: 10, needs: 'Aqueduct' },
+      },
+    }),
+    portal,
+    transport
+  );
+
+  await settle();
+
+  expect(
+    'a city capped at its size: what it needs, in place of the turns',
+    text(capped.element().querySelector('.ui-city-growth .turns')),
+    'Needs an Aqueduct'
+  );
+
+  capped.close();
+
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
 

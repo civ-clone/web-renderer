@@ -1,4 +1,4 @@
-import { City } from '../../types';
+import { City, CityGrowth } from '../../types';
 import { t } from 'i18next';
 
 export const cityName = (city: City | null): string =>
@@ -32,3 +32,28 @@ export const viewCityText = (city: {
     city: cityNameText(city),
     interpolation: { escapeValue: false },
   });
+
+/**
+ * "Needs an Aqueduct", as text, when the ruleset says the city can't grow without it (#781): said in place of the turns
+ *  to a growth that won't happen. `null` when nothing holds it back.
+ */
+export const growthLimitText = (
+  growth: CityGrowth | undefined
+): string | null => {
+  const needs = growth?.limit?.needs;
+
+  if (!needs) {
+    return null;
+  }
+
+  // An improvement's own sentence where its name needs an article ("an Aqueduct"), the plain one otherwise. i18next
+  //  tries the first key in every language before the second, so a language that has the plain sentence needs each
+  //  improvement's own one too, or English's shows through.
+  return t([`City.Growth.needs-${needs}`, 'City.Growth.needs'], {
+    improvement: t(`Improvement.${needs}.name`, {
+      defaultValue: needs,
+      ns: 'city',
+    }),
+    interpolation: { escapeValue: false },
+  });
+};

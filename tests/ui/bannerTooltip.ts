@@ -227,6 +227,31 @@ const run = async (): Promise<void> => {
     } as City).rows[1],
     ['Grows to size 6', '12 / 30 · Starving']
   );
+  expect(
+    "at the size the rules cap it at: what it needs, not the turns to a growth that won't happen (#781)",
+    cityBannerTooltip({
+      ...ours,
+      growth: { ...ours.growth, limit: { size: 5, needs: 'Aqueduct' } },
+    } as City).rows[1],
+    ['Grows to size 6', 'Needs an Aqueduct']
+  );
+  expect(
+    'capped and starving: starving, which matters more',
+    cityBannerTooltip({
+      ...ours,
+      growth: { ...ours.growth, limit: { size: 5, needs: 'Aqueduct' } },
+      yields: [yieldOf('Production', 10), yieldOf('Food', -2)],
+    } as City).rows[1],
+    ['Grows to size 6', '12 / 30 · Starving']
+  );
+  expect(
+    'an improvement without a sentence of its own: its name',
+    cityBannerTooltip({
+      ...ours,
+      growth: { ...ours.growth, limit: { size: 5, needs: 'Granary' } },
+    } as City).rows[1],
+    ['Grows to size 6', 'Needs Granary']
+  );
 
   // When it opens.
   pointer('pointermove', ours);
