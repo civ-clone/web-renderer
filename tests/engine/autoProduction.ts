@@ -364,6 +364,20 @@ const run = async (): Promise<void> => {
 
   pass('a city building nothing starts what is added');
 
+  // Choosing what's first in the queue starts that queued item, rather than leaving it queued to be built twice.
+  await send(cityBuild, { queue: { op: 'add', chosen: second.item().name } });
+  cityBuild.cancel();
+  await send(cityBuild, { chosen: second.item().name });
+
+  if (
+    cityBuild.building()?.item() !== second.item() ||
+    cityBuild.queued().length !== 0
+  ) {
+    fail(`choosing the first queued item left ${queuedNames()} in the queue`);
+  }
+
+  pass('choosing the first queued item takes it from the queue');
+
   console.log(`PASS autoProduction (${checks.join('; ')})`);
 
   process.exit(0);

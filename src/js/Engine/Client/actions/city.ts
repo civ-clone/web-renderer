@@ -98,7 +98,7 @@ export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
     }
 
     if (cityBuild.building() === null) {
-      cityBuild.build(buildItem.item());
+      cityBuild.choose(buildItem.item());
       cityBuild.setAuto(false);
 
       return;
@@ -171,7 +171,8 @@ export const handleCityBuild: ActionHandler<
     return false;
   }
 
-  cityBuild.build(buildItem.item());
+  // The player's choice: the first queued item, if it's that, leaves the queue (#774).
+  cityBuild.choose(buildItem.item());
   // Choosing a build by hand takes the city off Auto.
   cityBuild.setAuto(false);
 
