@@ -294,15 +294,17 @@ const run = async (): Promise<void> => {
     }
   );
 
-  const [[, yieldsShown], [defenceShown], [movesShown]] =
+  const [[, yieldsShown], [, defenceShown], [, movesShown]] =
     squareTooltip(hills).rows;
 
   expect(
-    "yields as the tileset's icons, defence and moves as the unit card's glyphs",
+    "yields as the tileset's icons, defence and moves named, then the figure and the unit card's glyph",
     [
       (yieldsShown as Element).querySelectorAll('.yield-icon').length,
-      (defenceShown as Element).querySelector('.glyph-stat-defence') !== null,
-      (movesShown as Element).querySelector('.glyph-stat-moves') !== null,
+      (defenceShown as Element).lastElementChild?.matches(
+        '.glyph-stat-defence'
+      ),
+      (movesShown as Element).lastElementChild?.matches('.glyph-stat-moves'),
     ],
     [2, true, true]
   );
@@ -408,7 +410,7 @@ const run = async (): Promise<void> => {
     'the icons are in the panel, not just the content',
     [
       panel()?.querySelectorAll('dd .yield-icon').length,
-      panel()?.querySelector('dt .glyph-stat-defence') !== null,
+      panel()?.querySelector('dd .glyph-stat-defence') !== null,
     ],
     [2, true]
   );

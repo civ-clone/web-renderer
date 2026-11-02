@@ -16,30 +16,30 @@ import { yieldIcon } from '../lib/cityYields';
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
 
-// An icon with its name for a screen reader, as the unit card's figures have (#743), then `value` if there is one.
-const iconed = (
-  icon: Element,
-  name: string,
-  value: string | null = null
-): HTMLElement => {
+// A yield's icon with its name for a screen reader, as the unit card's figures have (#743), then its amount: read as
+//  "Food: 2".
+const iconed = (icon: Element, name: string, value: string): HTMLElement => {
   const element = s(
     '<span class="yield-amount"><span class="visually-hidden"></span></span>'
   );
 
-  // With a figure after it, read as "Food: 2".
-  element.firstElementChild!.textContent =
-    value === null ? name : text('SquareTooltip.named', { name });
+  element.firstElementChild!.textContent = text('SquareTooltip.named', {
+    name,
+  });
   element.prepend(icon);
-
-  if (value !== null) {
-    element.append(value);
-  }
+  element.append(value);
 
   return element;
 };
 
-const stat = (name: GlyphName, label: string): TooltipText =>
-  iconed(s(glyph(name)), label);
+// A unit's figure on the square, then its glyph, as `2 »`: the row's label names it, so the glyph is decorative.
+const stat = (value: string, name: GlyphName): TooltipText => {
+  const element = s('<span class="yield-amount"></span>');
+
+  element.append(value, s(glyph(name)));
+
+  return element;
+};
 
 /** Whether a square has a tooltip at all: not one you've never seen. */
 export const hasSquareTooltip = (tile: Tile): boolean =>
@@ -74,15 +74,21 @@ export const squareTooltip = (tile: Tile): TooltipContent => {
 
   if (terrain.defence !== undefined && terrain.defence > 1) {
     rows.push([
-      stat('stat-defence', text('SquareTooltip.defence')),
-      text('SquareTooltip.defence-bonus', { bonus: terrain.defence - 1 }),
+      text('SquareTooltip.defence'),
+      stat(
+        text('SquareTooltip.defence-bonus', { bonus: terrain.defence - 1 }),
+        'stat-defence'
+      ),
     ]);
   }
 
   if (terrain.movementCost !== undefined && terrain.movementCost !== null) {
     rows.push([
-      stat('stat-moves', text('SquareTooltip.movement-cost')),
-      text('SquareTooltip.value', { value: terrain.movementCost }),
+      text('SquareTooltip.movement-cost'),
+      stat(
+        text('SquareTooltip.value', { value: terrain.movementCost }),
+        'stat-moves'
+      ),
     ]);
   }
 
