@@ -1,11 +1,11 @@
 // The city screen under the new interface (#746), with the real `City` window built under linkedom: `openCity` picks the
 //  layout by the interface; the strip across the top with the size, the garrison and the citizens, the specialists
 //  changing on a click (#107); the yields with their names (#719); each improvement with its upkeep and the total, Sell
-//  asking first (#684) about that row's improvement; the city's Wonders among them, after the others and marked; the
-//  production card, "Nothing in production" with Choose, Buy with its price asking first and pressed by B; the units
-//  in the city as buttons that make one active (#482); Previous, Rename and Next in the window's footer, still there
-//  after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city, read-only, with
-//  nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
+//  asking first (#684) about that row's improvement; the city's Wonders, sent among them, in a section of their own;
+//  the production card, "Nothing in production" with Choose, Buy with its price asking first and pressed by B; the
+//  units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's footer, still
+//  there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city, read-only,
+//  with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -185,6 +185,16 @@ const key = (element: Element, key: string, target: Element = element) =>
     element?.textContent?.replace(/\s+/g, ' ').trim() ?? null,
   texts = (elements: NodeListOf<Element> | Element[]) =>
     Array.from(elements).map((element) => text(element)),
+  // The headed sections in a column after the production card, each with its rows' names, or what it says instead.
+  sections = (column: Element) =>
+    Array.from(column.querySelectorAll(':scope > .ui-city-section')).map(
+      (section) => [
+        text(section.querySelector('h3')),
+        texts(
+          section.querySelectorAll('.ui-city-improvement .name, .ui-city-empty')
+        ),
+      ]
+    ),
   confirmations = () => document.querySelectorAll('.confirmationWindow'),
   clearConfirmations = () =>
     confirmations().forEach((window) => window.remove()),
@@ -277,21 +287,28 @@ const run = async (): Promise<void> => {
     ['Food', 'Production', 'Trade', 'Luxuries', 'Gold', 'Research']
   );
 
-  // The improvements.
+  // The improvements, then the Wonders, which the engine sends among them.
   const rows = qa('.ui-city-improvement');
 
   expect(
-    'each improvement, its upkeep, and Sell only where it can be sold; then the Wonders, marked',
+    'each improvement, its upkeep, and Sell only where it can be sold; then the Wonders, with neither',
     Array.from(rows).map((row) => [
       text(row.querySelector('.name')),
       row.querySelector('.ui-city-gold')?.getAttribute('title') ?? null,
       row.querySelectorAll('button.sell').length,
-      text(row.querySelector('.ui-city-wonder-mark')) || null,
     ]),
     [
-      ['Barracks', 'Upkeep: 1 gold a turn', 1, null],
-      ['Palace', null, 0, null],
-      ['Colossus', null, 0, 'Wonder'],
+      ['Barracks', 'Upkeep: 1 gold a turn', 1],
+      ['Palace', null, 0],
+      ['Colossus', null, 0],
+    ]
+  );
+  expect(
+    'the Wonders in a section of their own, below the improvements',
+    sections(q('.ui-city-right')!),
+    [
+      ['Improvements', ['Barracks', 'Palace']],
+      ['Wonders', ['Colossus']],
     ]
   );
   expect(
@@ -442,7 +459,7 @@ const run = async (): Promise<void> => {
 
   investigated.close();
 
-  // A city with Wonders and no improvements lists them; one with neither says so.
+  // A city with Wonders and no improvements lists them, saying it has no improvements; one with neither says only that.
   const listed = (wonders: string[]) => {
     const window = openCity(
         cityData(`City-W${wonders.length}`, 'Eridu', {
@@ -461,19 +478,15 @@ const run = async (): Promise<void> => {
 
     window.close();
 
-    return [
-      texts(section!.querySelectorAll('.ui-city-improvement .name')),
-      text(section!.querySelector('.ui-city-empty')) || null,
-    ];
+    return sections(section!);
   };
 
   expect('Wonders alone are listed', listed(['Pyramids', 'GreatLibrary']), [
-    ['Pyramids', 'Great Library'],
-    null,
+    ['Improvements', ['No improvements yet']],
+    ['Wonders', ['Pyramids', 'Great Library']],
   ]);
   expect('and with neither, the city says so', listed([]), [
-    [],
-    'No improvements yet',
+    ['Improvements', ['No improvements yet']],
   ]);
 
   // The classic layout is still `City`'s own.
