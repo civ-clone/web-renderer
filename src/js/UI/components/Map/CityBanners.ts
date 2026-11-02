@@ -72,18 +72,14 @@ type BannerLayout = {
 export class CityBanners extends CityNames {
   #cachedStyle: BannerStyle | null = null;
 
-  /** Forgets the tokens read so far, so the next drawing reads them again: the theme, or light or dark, changed. */
-  restyle(): void {
-    this.#cachedStyle = null;
-  }
-
+  // The tokens are read again for each whole drawing: the theme, light or dark, or the fonts loaded, may have changed.
   render(tiles: Tile[] = this.visibleTiles()): void {
     this.#cachedStyle = null;
 
     super.render(tiles);
   }
 
-  /** The city whose banner is under `x`, `y` on the canvas, if there is one. */
+  /** The city whose banner is under `x`, `y` on the canvas, if there is one: of banners that overlap, the one on top. */
   cityAt(x: number, y: number): City | null {
     if (!this.isVisible() || !this.#full()) {
       return null;
@@ -97,21 +93,13 @@ export class CityBanners extends CityNames {
         height: reach.top + reach.bottom,
       }).filter((tile) => tile.city);
 
-    for (const tile of candidates) {
-      for (const [offsetX, offsetY] of this.placements(tile)) {
-        const { pill, food } = this.#layout(tile, offsetX, offsetY),
-          bottom = food
-            ? food.track.y + food.track.height
-            : pill.y + pill.height;
+    // Front to back: the reverse of the order they're drawn in.
+    for (const { tile, px, py } of this.placementsOf(candidates).reverse()) {
+      const { pill, food } = this.#layout(tile, px, py),
+        bottom = food ? food.track.y + food.track.height : pill.y + pill.height;
 
-        if (
-          x >= pill.x &&
-          x < pill.x + pill.width &&
-          y >= pill.y &&
-          y < bottom
-        ) {
-          return tile.city!;
-        }
+      if (x >= pill.x && x < pill.x + pill.width && y >= pill.y && y < bottom) {
+        return tile.city!;
       }
     }
 
@@ -129,9 +117,10 @@ export class CityBanners extends CityNames {
     this.#drawBanner(tile, offsetX, offsetY);
   }
 
-  // A banner is wider than the classic label by its badge, what's being built and its flags: a tile more either side.
+  // A banner is wider than the classic label by its badge, what's being built and its flags, nearly two tiles either side
+  //  for the widest name with both flags: two more, so a wider fallback font, before the theme's has loaded, still fits.
   protected overhang(): number {
-    return super.overhang() + this.tileSize();
+    return super.overhang() + this.tileSize() * 2;
   }
 
   // As the label's, and down to the bottom of the banner and its food bar.
@@ -210,6 +199,8 @@ export class CityBanners extends CityNames {
       top = this.#top(offsetY),
       size = localeProvider.number(city.growth.size);
 
+    // Measured in the banner's font, which the label's drawing sets again for itself.
+    this.context().save();
     this.context().font = this.#font();
 
     const badgeWidth = Math.max(height, this.#measure(size) + padding * 2),
@@ -240,6 +231,8 @@ export class CityBanners extends CityNames {
       left = Math.round(offsetX + width * labelX - contentWidth / 2),
       baseline = top + Math.round((height + fontSize * 0.7) / 2),
       iconTop = top + Math.round((height - iconSize) / 2);
+
+    this.context().restore();
 
     let cursor = left + badgeWidth + padding;
 

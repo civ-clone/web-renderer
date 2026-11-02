@@ -67,9 +67,10 @@ export class MapView {
   #resizeHandler = (): void => this.#resize();
   #scrollers: HTMLElement[] = [];
   #resizeObserver: ResizeObserver | null = null;
-  // The theme, or light or dark, changing: the city banners draw with its tokens (#747).
+  // The theme, light or dark, or the fonts loaded, changing: the city banners draw with the theme's tokens (#747).
   #themeObserver: MutationObserver | null = null;
   #schemeQuery: MediaQueryList | null = null;
+  #fonts: FontFaceSet | null = null;
   #restyleHandler = (): void => this.#restyle();
 
   // Keyed by coordinate: a tile resent several times between two renders
@@ -194,7 +195,12 @@ export class MapView {
 
       this.#schemeQuery =
         window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
-      this.#schemeQuery?.addEventListener('change', this.#restyleHandler);
+      // Older Safari's list has only `addListener`: there, the banners follow the theme only when it's chosen.
+      this.#schemeQuery?.addEventListener?.('change', this.#restyleHandler);
+
+      // A canvas doesn't wait for a web font: drawn before it loaded, the banners are drawn again once it has.
+      this.#fonts = document.fonts ?? null;
+      this.#fonts?.addEventListener?.('loadingdone', this.#restyleHandler);
     }
   }
 
@@ -210,7 +216,8 @@ export class MapView {
     off(window, 'resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
     this.#themeObserver?.disconnect();
-    this.#schemeQuery?.removeEventListener('change', this.#restyleHandler);
+    this.#schemeQuery?.removeEventListener?.('change', this.#restyleHandler);
+    this.#fonts?.removeEventListener?.('loadingdone', this.#restyleHandler);
     this.#scrollers.forEach((scroller) =>
       off(scroller, 'scroll', this.#measureHandler)
     );
@@ -331,13 +338,12 @@ export class MapView {
     this.minimap.update();
   }
 
-  // The banners read the theme's tokens again, and are drawn with them.
+  // The banners read the theme's tokens again, and are drawn with them and the fonts loaded now.
   #restyle(): void {
     if (!(this.cityNamesLayer instanceof CityBanners)) {
       return;
     }
 
-    this.cityNamesLayer.restyle();
     this.cityNamesLayer.render();
     this.portal.render();
   }

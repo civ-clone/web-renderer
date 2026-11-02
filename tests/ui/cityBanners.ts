@@ -1,8 +1,8 @@
 // The cities on the map under the new interface (#747), drawn on a recording canvas: the theme's `--ui-city-banner`
 //  choosing the classic label or the banner; your own city's banner with its size, name, the turns to finish what it's
 //  building (a dash for nothing) and a food bar, red when it's starving; the disorder and celebration flags; a rival's
-//  with its size and name only; the size alone at scale 1; and a click on a banner finding its city, which a click on
-//  the city's own square doesn't.
+//  with its size and name only; the size alone at scale 1; the widest within what an update clears; and a click on a
+//  banner finding its city, the one on top where two overlap, which a click on the city's own square doesn't.
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas, preloadImage } from './lib/fakeCanvas';
@@ -57,6 +57,11 @@ class TestCityBanners extends CityBanners {
 
   protected bannerStyle(): BannerStyle {
     return style(TestCityBanners.form);
+  }
+
+  // How far past its square a tile's drawing can go, which updates clear and culling keeps.
+  extent(): { overhang: number; bottom: number } {
+    return { overhang: this.overhang(), bottom: this.reach().bottom };
   }
 }
 
@@ -280,6 +285,47 @@ expect(
   'nor one on a banner hidden with the units (t)',
   nameAt(...centre(ownPill)),
   null
+);
+
+// Two cities a few squares apart in a row: their banners overlap, and the one drawn on top, the one further right, takes
+//  the click.
+const row = draw({
+    '2,2': ownCity(),
+    '5,2': ownCity({ name: 'Kish' }),
+  }),
+  [leftPill, , rightPill] = row.pills;
+
+expect(
+  'banners close enough to overlap',
+  leftPill.x + leftPill.width > rightPill.x,
+  true
+);
+expect(
+  'where they overlap, the click is for the banner drawn on top',
+  row.layer.cityAt(rightPill.x + 2, rightPill.y + rightPill.height / 2)?.name,
+  'Kish'
+);
+
+// The widest name in the city lists, with both flags and what it's building: within what an update clears.
+const widest = draw({
+    '6,6': ownCity({
+      name: 'Augusta Praetoria Salassorum',
+      civilDisorderDeclared: true,
+      celebrateLeader: true,
+    }),
+  }),
+  [widestPill] = widest.pills,
+  { overhang, bottom } = widest.layer.extent(),
+  [food] = widest.fills;
+
+expect(
+  'the widest banner is drawn within the reach an update clears',
+  [
+    widestPill.x >= 6 * 32 - overhang,
+    widestPill.x + widestPill.width <= 7 * 32 + overhang,
+    food[2] + food[4] <= 7 * 32 + bottom,
+  ],
+  [true, true, true]
 );
 
 const labelled = draw({ '2,2': ownCity() }, { form: 'label' });

@@ -66,10 +66,21 @@ export class GamePortal extends Portal {
 
       this.clearTimeout();
 
-      // A city's banner, which hangs past its square, is for the city: it opens, or the map centres on it (#747).
-      const bannerCity = this.cityAt(event.offsetX, event.offsetY);
+      const tile = this.tileAt(event.offsetX, event.offsetY),
+        // A city's banner hangs past its square, over its neighbours (#747).
+        bannerCity = this.cityAt(event.offsetX, event.offsetY);
 
-      if (bannerCity !== null) {
+      if (tile !== null) {
+        this.emit('tile-clicked', tile.x, tile.y);
+      }
+
+      const playerTileUnits = (tile?.units ?? []).filter(
+        (unit: Unit) => unit.player.id === this.playerId()
+      );
+
+      // A click on a banner is for its city, unless the square under it has units of ours, which a click selects
+      //  wherever they are: the city opens, or the map centres on it. A banner can hang past a locked pole.
+      if (bannerCity !== null && playerTileUnits.length === 0) {
         if (!this.openCity(bannerCity)) {
           this.setCenter(bannerCity.tile.x, bannerCity.tile.y);
         }
@@ -77,18 +88,10 @@ export class GamePortal extends Portal {
         return;
       }
 
-      const tile = this.tileAt(event.offsetX, event.offsetY);
-
       // Past a locked pole: nothing there to open or centre on.
       if (tile === null) {
         return;
       }
-
-      this.emit('tile-clicked', tile.x, tile.y);
-
-      const playerTileUnits = tile.units.filter(
-        (unit: Unit) => unit.player.id === this.playerId()
-      );
 
       // A city that opens, or the square's units; a city that doesn't open (another civilisation's) is a square like
       //  any other.
