@@ -60,8 +60,13 @@ const upkeepOf = (city: CityData, improvementId: string): number =>
 // An amount of gold with its icon, the words for a screen reader.
 const gold = (amount: number, label: string): HTMLElement => {
   const element = s(
-    `<span class="ui-city-gold" title="${label}"><span class="visually-hidden">${label}</span></span>`
-  );
+      '<span class="ui-city-gold"><span class="visually-hidden"></span></span>'
+    ),
+    words = element.firstElementChild!;
+
+  // Set as text, not markup: a translation is words.
+  element.setAttribute('title', label);
+  words.textContent = label;
 
   element.append(
     yieldIcon('Gold'),
