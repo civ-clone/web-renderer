@@ -10,7 +10,7 @@ import {
 } from './lib/cityYields';
 import FilterableWindow from './FilterableWindow';
 import Portal from './Portal';
-import { cityName } from './lib/city';
+import { cityName, growthLimitText } from './lib/city';
 import { citizenMoods } from '../lib/citizens';
 import { getLabelForBuildable } from './lib/cityBuild';
 import { glyph } from '../lib/glyphs';
@@ -23,10 +23,11 @@ import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 
 // A figure, its bar and the turns left, in one cell. With no turns, as when nothing is being built, neither the bar nor
 //  the turns.
+// `turns` is how many are left, or what to say in their place ("Needs an Aqueduct", #781).
 const meter = (
   figure: string,
   bar: HTMLElement,
-  turns: number | null
+  turns: number | string | null
 ): HTMLElement =>
   s(
     '<span class="ui-report-meter"></span>',
@@ -35,7 +36,10 @@ const meter = (
       ? []
       : [
           bar,
-          s('<span class="ui-report-meter-turns"></span>', turnsText(turns)),
+          s(
+            '<span class="ui-report-meter-turns"></span>',
+            typeof turns === 'string' ? turns : turnsText(turns)
+          ),
         ])
   );
 
@@ -95,7 +99,9 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
             total: city.growth.cost.value,
           }),
         }),
-        growthTurns(city)
+        // Not the turns to a growth the rules won't allow, unless it's starving, which the Food column shows.
+        (net(city, 'Food') < 0 ? null : growthLimitText(city.growth)) ??
+          growthTurns(city)
       ),
     sortValue: (city) => city.growth.size,
   },

@@ -396,6 +396,39 @@ const run = async (): Promise<void> => {
       ],
     ]
   );
+  const capped = new CityStatusTable(
+    {
+      ...player,
+      cities: [
+        {
+          ...city('City-3', 'Bukhara', { size: 10 }),
+          growth: {
+            id: 'CityGrowth-City-3',
+            size: 10,
+            cost: { value: 20 },
+            progress: { value: 5 },
+            limit: { size: 10, needs: 'Aqueduct' },
+          },
+        } as City,
+      ],
+    } as Player,
+    portal
+  );
+
+  await settle();
+
+  expect(
+    'a city capped at its size: what it needs, in place of the turns (#781)',
+    capped
+      .table()
+      .element()
+      .querySelector('[data-column="size"] .ui-report-meter-turns')
+      ?.textContent,
+    'Needs an Aqueduct'
+  );
+
+  capped.close();
+
   expect(
     'a city in disorder has the flag, said in words, and its unhappy are coloured',
     [
