@@ -613,6 +613,21 @@ export class Portal
     this.emit('focus-changed', x, y);
   }
 
+  /** The city a layer draws something for under the canvas pixel at `x`, `y`, past its own square (#747). */
+  cityAt(x: number, y: number): CityData | null {
+    this.syncViewport();
+
+    for (const layer of this.#layers) {
+      const city = layer.isVisible() ? layer.cityAt(x, y) : null;
+
+      if (city !== null) {
+        return city;
+      }
+    }
+
+    return null;
+  }
+
   /**
    * The tile under the canvas pixel at `x`, `y` — or `null` past a locked
    * pole, where the canvas is empty and there is no tile to point at.

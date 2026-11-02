@@ -9,9 +9,11 @@
 import './lib/dom';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
+import CityBanners from '../../src/js/UI/components/Map/CityBanners';
 import MapView from '../../src/js/UI/game/MapView';
 import { playerCityOpener } from '../../src/js/UI/lib/cityOpeners';
 import Transport from '../../src/js/UI/Transport';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0,
@@ -614,6 +616,76 @@ mapPortal.width = 10;
 window.dispatchEvent(new Event('resize'));
 
 expect('and the resize handler', mapPortal.width, 10);
+
+// The interface decides how the cities are named on the map: the classic labels, or the new interface's banners
+//  (#747), which the classic theme draws as the labels.
+applyInterface('new', null);
+
+const withBanners = new MapView({
+  activateUnit: () => {},
+  cityOpener: playerCityOpener(),
+  activeUnit: () => null,
+  mapPortal,
+  minimapCanvas,
+  options: { get: (key: string, defaultValue?: any) => defaultValue },
+  playerId: 'Player-1',
+  transport: {
+    send: () => {},
+    receive: () => () => {},
+  } as unknown as Transport,
+  world: { id: 'PlayerWorld-1', width, height, tiles } as unknown as WorldData,
+});
+
+expect(
+  'the classic interface names cities with labels, the new one with banners',
+  [
+    mapView.cityNamesLayer instanceof CityBanners,
+    withBanners.cityNamesLayer instanceof CityBanners,
+  ],
+  [false, true]
+);
+
+// The yields (y) hide the banners, wide enough to cover a row of them, without undoing t: with the yields gone they're
+//  back only if the units are.
+const shown = (): boolean[] => [
+  withBanners.yieldsLayer.isVisible(),
+  withBanners.unitsLayer.isVisible(),
+  withBanners.cityNamesLayer.isVisible(),
+];
+
+withBanners.toggleYields();
+
+expect('y hides the banners with the yields shown', shown(), [
+  true,
+  true,
+  false,
+]);
+
+withBanners.toggleUnits();
+withBanners.toggleYields();
+
+expect('with the units hidden, y off leaves the banners hidden', shown(), [
+  false,
+  false,
+  false,
+]);
+
+withBanners.toggleUnits();
+
+expect('t brings them back with the units', shown(), [false, true, true]);
+
+mapView.toggleYields();
+
+expect(
+  "the classic interface's labels stay with the yields shown, as before",
+  mapView.cityNamesLayer.isVisible(),
+  true
+);
+
+mapView.toggleYields();
+
+withBanners.dispose();
+applyInterface('classic', null);
 
 finished = true;
 
