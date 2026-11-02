@@ -1,7 +1,7 @@
 // The city screen under the new interface (#746), with the real `City` window built under linkedom: `openCity` picks the
 //  layout by the interface; the strip across the top with the size, the garrison and the citizens, the specialists
 //  changing on a click (#107); the yields with their names (#719); each improvement with its upkeep and the total, Sell
-//  asking first (#684); the production card, "Nothing in production" with Choose, Buy with its price asking first and
+//  asking first (#684); the city's Wonders among them, after the others and marked; the production card, "Nothing in production" with Choose, Buy with its price asking first and
 //  pressed by B; the units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's
 //  footer, still there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city,
 //  read-only, with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in
@@ -115,10 +115,16 @@ const babylonian = {
       improvements: [
         {
           _: 'Barracks',
+          __: ['Barracks', 'CityImprovement', 'Buildable'],
           id: `${id}-Barracks`,
           saleValue: [{ resource: { _: 'Gold' }, value: 40 }],
         },
-        { _: 'Palace', id: `${id}-Palace`, saleValue: [] },
+        {
+          _: 'Palace',
+          __: ['Palace', 'CityImprovement', 'Buildable'],
+          id: `${id}-Palace`,
+          saleValue: [],
+        },
       ],
       yields: [
         {
@@ -188,6 +194,7 @@ const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('../../translations/local/en');
   await import('../../translations/civ1-unit/en');
+  await import('../../translations/civ1-wonder/en');
 
   // The layout follows the interface.
   applyInterface('classic', null);
@@ -211,6 +218,15 @@ const run = async (): Promise<void> => {
     [first, second] = [
       cityData('City-A', 'Babylon', {
         player: owner,
+        improvements: [
+          {
+            _: 'Colossus',
+            __: ['Colossus', 'Wonder', 'CityImprovement', 'Buildable'],
+            id: 'City-A-Colossus',
+            saleValue: [],
+          },
+          ...cityData('City-A', 'Babylon').improvements,
+        ],
         tile: {
           x: 2,
           y: 2,
@@ -265,15 +281,17 @@ const run = async (): Promise<void> => {
   const rows = qa('.ui-city-improvement');
 
   expect(
-    'each improvement, its upkeep, and Sell only where it can be sold',
+    'each improvement, its upkeep, and Sell only where it can be sold; then the Wonders, marked',
     Array.from(rows).map((row) => [
       text(row.querySelector('.name')),
       row.querySelector('.ui-city-gold')?.getAttribute('title') ?? null,
       row.querySelectorAll('button.sell').length,
+      text(row.querySelector('.ui-city-wonder-mark')) || null,
     ]),
     [
-      ['Barracks', 'Upkeep: 1 gold a turn', 1],
-      ['Palace', null, 0],
+      ['Barracks', 'Upkeep: 1 gold a turn', 1, null],
+      ['Palace', null, 0, null],
+      ['Colossus', null, 0, 'Wonder'],
     ]
   );
   expect(
@@ -418,6 +436,40 @@ const run = async (): Promise<void> => {
   );
 
   investigated.close();
+
+  // A city with Wonders and no improvements lists them; one with neither says so.
+  const listed = (wonders: string[]) => {
+    const window = openCity(
+        cityData(`City-W${wonders.length}`, 'Eridu', {
+          improvements: wonders.map((wonder) => ({
+            _: wonder,
+            __: [wonder, 'Wonder', 'CityImprovement', 'Buildable'],
+            id: `Eridu-${wonder}`,
+            saleValue: [],
+          })),
+          yields: [],
+        }),
+        portal,
+        transport
+      ),
+      section = window.element().querySelector('.ui-city-right');
+
+    window.close();
+
+    return [
+      texts(section!.querySelectorAll('.ui-city-improvement .name')),
+      text(section!.querySelector('.ui-city-empty')) || null,
+    ];
+  };
+
+  expect('Wonders alone are listed', listed(['Pyramids', 'GreatLibrary']), [
+    ['Pyramids', 'Great Library'],
+    null,
+  ]);
+  expect('and with neither, the city says so', listed([]), [
+    [],
+    'No improvements yet',
+  ]);
 
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);

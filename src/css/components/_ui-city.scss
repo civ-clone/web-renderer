@@ -187,6 +187,12 @@
   }
 }
 
+// What sets a Wonder apart from the improvements around it, as quiet as their upkeep.
+.ui-city-wonder-mark {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+}
+
 .ui-city-gold {
   align-items: center;
   color: var(--ui-fg-muted);

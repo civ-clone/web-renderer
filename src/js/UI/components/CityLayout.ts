@@ -1,5 +1,6 @@
 import {
   City as CityData,
+  CityImprovement,
   CityImprovementMaintenanceGold,
   Unit as UnitData,
   Yield,
@@ -112,17 +113,22 @@ const renderHeader = (
   );
 };
 
-// Each improvement with its upkeep, and Sell where it can be sold (#31, #684); then the upkeep they come to.
+// Each improvement with its upkeep, and Sell where it can be sold (#31, #684), then the upkeep they come to. The city's
+//  Wonders are among its improvements, as the engine sends them: they're listed after the others, marked (#746).
 const renderImprovements = (
   city: CityData,
   { readOnly, sellImprovement }: CityScreenContext
 ): HTMLElement => {
-  const upkeeps = city.improvements.map((improvement) =>
-      upkeepOf(city, improvement.id)
-    ),
+  const isWonder = (improvement: CityImprovement) =>
+      instanceOf(improvement, 'Wonder'),
+    improvements = [
+      ...city.improvements.filter((improvement) => !isWonder(improvement)),
+      ...city.improvements.filter(isWonder),
+    ],
+    upkeeps = improvements.map((improvement) => upkeepOf(city, improvement.id)),
     total = upkeeps.reduce((sum, upkeep) => sum + upkeep, 0);
 
-  if (city.improvements.length === 0) {
+  if (improvements.length === 0) {
     return section(
       t('CityWindow.improvements'),
       s(`<p class="ui-city-empty">${t('CityWindow.no-improvements')}</p>`)
@@ -133,21 +139,31 @@ const renderImprovements = (
     t('CityWindow.improvements'),
     s(
       '<ul class="ui-city-improvements"></ul>',
-      ...city.improvements.map((improvement, index) => {
+      ...improvements.map((improvement, index) => {
         const [saleValue] = readOnly
             ? []
             : (improvement.saleValue ?? []).filter(
                 (saleValue) => saleValue.resource._ === 'Gold'
               ),
-          upkeep = upkeeps[index];
+          upkeep = upkeeps[index],
+          wonder = isWonder(improvement);
 
         return s(
-          '<li class="ui-city-improvement"></li>',
+          `<li class="ui-city-improvement${
+            wonder ? ' ui-city-wonder' : ''
+          }"></li>`,
           s(
             `<span class="name">${getLabelForBuildableEntity(
               improvement
             )}</span>`
           ),
+          wonder
+            ? s(
+                `<span class="ui-city-wonder-mark">${t(
+                  'CityWindow.wonder'
+                )}</span>`
+              )
+            : '',
           upkeep > 0
             ? gold(upkeep, t('CityWindow.upkeep', { count: upkeep }))
             : '',
