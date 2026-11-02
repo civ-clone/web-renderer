@@ -322,7 +322,10 @@ const run = async (): Promise<void> => {
   // The rows are in their own order, not the engine's: Sell is still for its row's improvement.
   expect(
     'Sell asks first, about that row’s improvement',
-    [confirmations().length, text(confirmations()[0]).includes('Barracks')],
+    [
+      confirmations().length,
+      text(confirmations()[0])?.includes('Barracks') ?? false,
+    ],
     [1, true]
   );
 
