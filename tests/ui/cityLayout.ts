@@ -565,6 +565,27 @@ const run = async (): Promise<void> => {
 
   // Each improvement and Wonder with its icon from SP299.PIC, and the production card when it builds one (#64). The
   //  icons are optional: one the player hasn't imported isn't drawn.
+  // Nothing imported, through the store's own `has`: no icons, and no gap for them.
+  const plainIcons = openCity(
+    cityData('City-I', 'Kish', { player: owner }),
+    portal,
+    transport
+  );
+
+  await settle();
+
+  expect(
+    'icons not imported: each row has an empty icon, and the name alone',
+    Array.from(
+      plainIcons
+        .element()
+        .querySelectorAll('.ui-city-improvement .building-icon')
+    ).map((icon) => icon.childElementCount),
+    [0, 0]
+  );
+
+  plainIcons.close();
+
   const has = assetStore.has,
     shownAtURL = assetStore.shownAtURL;
 

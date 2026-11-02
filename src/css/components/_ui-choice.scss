@@ -92,8 +92,12 @@
   }
 }
 
-// No sprites in the list: no column for them.
-.ui-choice-list:not(:has(.ui-choice-sprite:not(:empty))) .ui-choice-row {
+// No sprites in the list: no column for them. An improvement's icon that wasn't imported is an empty span (#64), which
+//  counts as none.
+.ui-choice-list:not(
+    :has(.ui-choice-sprite:not(:empty):not(:has(> .building-icon:empty)))
+  )
+  .ui-choice-row {
   grid-template-columns: minmax(0, 1fr) auto;
 
   .ui-choice-sprite {

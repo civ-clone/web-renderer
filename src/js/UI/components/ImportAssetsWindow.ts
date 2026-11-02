@@ -239,15 +239,10 @@ export class ImportAssetsWindow extends Window {
     }
 
     const definitions = Object.keys(allDefinitions).reduce((object, key) => {
-      const filenamesForObject = Object.entries(allDefinitions[key]).reduce(
-        (paths, [path, definition]) => {
-          definition.contents.forEach((entry) =>
-            paths.push(`./assets/${path + entry.name}.png`)
-          );
-
-          return paths;
-        },
-        [] as string[]
+      // `key` is the sprites' path ("units/"), and each of its definitions names some of them: the index of the
+      //  definition isn't part of it, which made this never match, so nothing already imported was ever skipped.
+      const filenamesForObject = allDefinitions[key].flatMap((definition) =>
+        definition.contents.map((entry) => `./assets/${key + entry.name}.png`)
       );
 
       if (

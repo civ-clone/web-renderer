@@ -187,6 +187,11 @@
   .name {
     flex: 1 1 auto;
     min-width: 0;
+  }
+
+  // Beside an icon, a name too long for its column ends in an ellipsis rather than running into the upkeep (#64).
+  //  Without one it wraps, as it always has.
+  &:has(.building-icon:not(:empty)) .name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
