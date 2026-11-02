@@ -7,6 +7,10 @@ import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data
 import anarchyTurns from '../AdditionalData/anarchyTurns';
 import civilDisorderDeclared from '../AdditionalData/civilDisorderDeclared';
 import researchCosts from '../AdditionalData/researchCosts';
+import {
+  terrainDefenceBonus,
+  terrainMoveCost,
+} from '../AdditionalData/terrainRules';
 import tradeRoutes from '../AdditionalData/tradeRoutes';
 
 let registered = false;
@@ -23,6 +27,8 @@ export const register = (): void => {
     anarchyTurns(),
     civilDisorderDeclared(),
     researchCosts(),
+    terrainDefenceBonus(),
+    terrainMoveCost(),
     tradeRoutes()
   );
 };

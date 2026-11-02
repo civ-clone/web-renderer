@@ -222,6 +222,10 @@ export interface SneakAttack
 
 export interface Terrain extends EntityInstance {
   features: EntityInstance[];
+  // What the terrain does for a unit on it (#748): a defender's multiplier, and the cost to move onto it without a road,
+  //  a ship's on water (`null` for a terrain the rules don't cost). Not on an unseen square's.
+  defence?: number;
+  movementCost?: number | null;
 }
 
 export interface Coordinate {

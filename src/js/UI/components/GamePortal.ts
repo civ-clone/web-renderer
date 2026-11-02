@@ -1,9 +1,18 @@
 import { DragSample, releaseVelocity } from '../lib/drag';
-import { City, Tile, Unit } from '../types';
+import { Coordinate, Tile, Unit } from '../types';
+import {
+  TooltipContent,
+  hideTooltip,
+  showTooltipOver,
+  tooltipOpenOver,
+} from './lib/Tooltip';
 import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
-import { hideTooltip, showTooltipOver, tooltipOpenOver } from './lib/Tooltip';
+import squareTooltip, { hasSquareTooltip } from './Map/squareTooltip';
+import { interfaceMode } from '../lib/interfaceMode';
 import { openUnitSelection } from './choices';
+import { instance as options } from '../GameOptionsRegistry';
 import Portal from './Portal';
+import { Rect } from '../lib/viewport';
 import UnitActionMenu from './UnitActionMenu';
 import { on } from '@dom111/element';
 
@@ -18,8 +27,8 @@ const DRAG_THRESHOLD = 8,
   // can make a short drag look many times faster than that, and would throw
   // the map clean across the world.
   INERTIA_MAX_SPEED = 3,
-  // How long the mouse rests on a city's banner before its tooltip opens, as the shared tooltip's (#742).
-  BANNER_TOOLTIP_DELAY = 400;
+  // How long the mouse rests on a city's banner, or a square, before its tooltip opens, as the shared tooltip's (#742).
+  HOVER_TOOLTIP_DELAY = 400;
 
 type Drag = {
   pointerId: number;
@@ -31,10 +40,21 @@ type Drag = {
   samples: DragSample[];
 };
 
-// The banner the mouse rests on (#747): whose, where the mouse is last seen on the canvas and in the window, and the
-//  wait before its tooltip opens.
+// What the mouse rests on that has a tooltip: one of your cities' banners (#747), or a square (#748). The key says which
+//  (a city by its id, as its data is replaced as it changes), `tile` is the square it's about, `box` where on the canvas
+//  the tooltip opens over.
+type HoverSubject = {
+  key: string;
+  tile: Coordinate;
+  box: Rect;
+  content: () => TooltipContent;
+};
+
+// The subject the mouse rests on, where the mouse is last seen on the canvas and in the window, and the wait before its
+//  tooltip opens.
 type Hover = {
-  city: City;
+  key: string;
+  tile: Coordinate;
   offsetX: number;
   offsetY: number;
   clientX: number;
@@ -48,9 +68,10 @@ export class GamePortal extends Portal {
   #hover: Hover | null = null;
   #inertiaFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
+  #waiting = false;
 
   protected bindEvents(): void {
-    // The banner's tooltip goes with anything that moves the map under it, a press, a key, or the mouse leaving.
+    // A tooltip goes with anything that moves the map under it, a press, a key, or the mouse leaving.
     this.on('focus-changed', () => this.endHover());
     on(this.canvas(), 'pointerleave', () => this.endHover());
 
@@ -248,23 +269,80 @@ export class GamePortal extends Portal {
     });
   }
 
-  // A mouse resting on one of your cities' banners opens its tooltip. Not on touch, where a long press is the unit
-  //  menu's, only while no button is held, as a press means the map, and not while the map glides on under it.
+  /** While the other players move, the map's tooltips don't open, and any open one goes (#748). */
+  setWaiting(waiting: boolean): void {
+    this.#waiting = waiting;
+
+    if (waiting) {
+      this.endHover();
+    }
+  }
+
+  // What has a tooltip under the canvas pixel at `x`, `y`: one of your cities' banners, with what it's building, or else
+  //  the square, with what it is, under the new interface and its option. A banner with nothing more to say (a rival's)
+  //  is about its city's square.
+  #subjectAt(x: number, y: number): HoverSubject | null {
+    const banner = this.bannerAt(x, y),
+      squares =
+        interfaceMode() === 'new' && options.get('squareTooltips', true);
+
+    if (banner !== null && hasBannerTooltip(banner.city)) {
+      const { city, box } = banner;
+
+      return {
+        key: `city ${city.id}`,
+        tile: city.tile,
+        box,
+        content: () => cityBannerTooltip(city),
+      };
+    }
+
+    if (!squares) {
+      return null;
+    }
+
+    const square =
+      banner === null
+        ? this.squareAt(x, y)
+        : {
+            tile: this.world().get(banner.city.tile.x, banner.city.tile.y),
+            box: banner.box,
+          };
+
+    if (square === null || !hasSquareTooltip(square.tile)) {
+      return null;
+    }
+
+    const { tile, box } = square;
+
+    return {
+      // Over a rival's banner it opens over the banner, so moving onto the square is a new hover, over the square.
+      key: `square ${tile.x},${tile.y}${banner === null ? '' : ' banner'}`,
+      tile,
+      box,
+      content: () => squareTooltip(tile),
+    };
+  }
+
+  // A mouse resting on a banner or a square opens its tooltip. Not on touch, where a long press is the unit menu's, only
+  //  while no button is held, as a press means the map, not while the map glides on under it, and not while the other
+  //  players move.
   private hover(event: PointerEvent): void {
-    const banner =
+    const subject =
         event.pointerType === 'mouse' &&
         event.buttons === 0 &&
-        this.#inertiaFrame === null
-          ? this.bannerAt(event.offsetX, event.offsetY)
+        this.#inertiaFrame === null &&
+        !this.#waiting
+          ? this.#subjectAt(event.offsetX, event.offsetY)
           : null,
       current = this.#hover;
 
-    // Still the same city's (by its id, as the city's data is replaced as it changes): wait on, or leave it open. Unless
-    //  something else has closed it since (a list scrolling), which resting here opens again.
+    // Still the same: wait on, or leave it open. Unless something else has closed it since (a list scrolling), which
+    //  resting here opens again.
     if (
-      banner !== null &&
+      subject !== null &&
       current !== null &&
-      banner.city.id === current.city.id &&
+      subject.key === current.key &&
       (current.timer !== null || tooltipOpenOver(this.canvas()))
     ) {
       Object.assign(current, {
@@ -279,12 +357,13 @@ export class GamePortal extends Portal {
 
     this.endHover();
 
-    if (banner === null || !hasBannerTooltip(banner.city)) {
+    if (subject === null) {
       return;
     }
 
     const hover: Hover = {
-      city: banner.city,
+      key: subject.key,
+      tile: subject.tile,
       offsetX: event.offsetX,
       offsetY: event.offsetY,
       clientX: event.clientX,
@@ -296,7 +375,7 @@ export class GamePortal extends Portal {
       hover.timer = null;
 
       this.showHover(hover);
-    }, BANNER_TOOLTIP_DELAY);
+    }, HOVER_TOOLTIP_DELAY);
 
     this.#hover = hover;
 
@@ -305,23 +384,23 @@ export class GamePortal extends Portal {
   }
 
   // Opens the tooltip for what's under the mouse now, or ends the hover: a window may have opened over the map while it
-  //  waited, and the city's data, or its banner, may have changed.
+  //  waited, and what it's about may have changed, or moved.
   private showHover(hover: Hover): void {
     const now =
       document.elementFromPoint(hover.clientX, hover.clientY) === this.canvas()
-        ? this.bannerAt(hover.offsetX, hover.offsetY)
+        ? this.#subjectAt(hover.offsetX, hover.offsetY)
         : null;
 
-    if (now === null || now.city.id !== hover.city.id) {
+    if (now === null || now.key !== hover.key) {
       this.endHover();
 
       return;
     }
 
     const canvas = this.canvas().getBoundingClientRect(),
-      { city, box } = now;
+      { box, content } = now;
 
-    hover.city = city;
+    hover.tile = now.tile;
 
     showTooltipOver(
       this.canvas(),
@@ -330,12 +409,11 @@ export class GamePortal extends Portal {
         top: canvas.top + box.y,
         bottom: canvas.top + box.y + box.height,
       }),
-      () => cityBannerTooltip(city)
+      content
     );
   }
 
-  // The city an open tooltip is about has changed: it says what the city's doing now, and moves with its banner, or
-  //  goes with it.
+  // The square an open tooltip is about has changed: it says what's there now, and moves with its banner, or goes.
   build(updatedTiles: Tile[]): void {
     super.build(updatedTiles);
 
@@ -345,9 +423,7 @@ export class GamePortal extends Portal {
       hover !== null &&
       hover.timer === null &&
       tooltipOpenOver(this.canvas()) &&
-      updatedTiles.some(
-        ({ x, y }) => x === hover.city.tile.x && y === hover.city.tile.y
-      )
+      updatedTiles.some(({ x, y }) => x === hover.tile.x && y === hover.tile.y)
     ) {
       this.showHover(hover);
     }

@@ -648,6 +648,11 @@ export class Portal
    * pole, where the canvas is empty and there is no tile to point at.
    */
   tileAt(x: number, y: number): Tile | null {
+    return this.squareAt(x, y)?.tile ?? null;
+  }
+
+  /** As `tileAt`, with the box on the canvas the square is drawn in, that a tooltip about it opens over (#748). */
+  squareAt(x: number, y: number): { tile: Tile; box: Rect } | null {
     this.syncViewport();
 
     const [column, row] = this.#projection.pixelToTile(
@@ -659,7 +664,19 @@ export class Portal
       return null;
     }
 
-    return this.#world.get(column, row);
+    // The copy of the square under the pixel, not wrapped, so the box is where the pointer is.
+    const [left, top] = this.#projection.tileToPixel(column, row),
+      { width, height } = this.#projection.footprint();
+
+    return {
+      tile: this.#world.get(column, row),
+      box: {
+        x: left - this.#viewport.x,
+        y: top - this.#viewport.y,
+        width,
+        height,
+      },
+    };
   }
 
   /** Where tiles go on the world in pixels, at this portal's scale. */

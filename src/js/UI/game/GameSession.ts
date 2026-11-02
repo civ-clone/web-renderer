@@ -552,6 +552,7 @@ export class GameSession {
       transportDisposers.push(
         transport.receive('turnEnded', (): void => {
           gameState.setWaiting(true);
+          portal.setWaiting(true);
           waitingBanner.textContent = t(
             observing ? 'Observer.watching' : 'Game.waiting'
           );
@@ -575,6 +576,7 @@ export class GameSession {
           // Drops the rebuild deferred while waiting: this one replaces
           // it.
           gameState.setWaiting(false);
+          portal.setWaiting(false);
           waitingBanner.textContent = '';
 
           gameState.update();

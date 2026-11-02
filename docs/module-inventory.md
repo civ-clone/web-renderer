@@ -47,7 +47,7 @@ Quick reference map of key code areas.
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
 - `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
-- `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
+- `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `terrainRules`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
 - `lib/*`: worker-side helpers: report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.

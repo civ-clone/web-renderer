@@ -414,6 +414,7 @@ i18next.addResources('en', 'default', {
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
   'GameOptions.new-cities-build-defender': 'New cities build a defender',
+  'GameOptions.square-tooltips': 'Describe the map square under the mouse',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
 
@@ -795,6 +796,21 @@ i18next.addResources('en', 'default', {
 
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
+
+  'SquareTooltip.city': 'City',
+  'SquareTooltip.defence': 'Defense',
+  'SquareTooltip.defence-bonus':
+    '+{{bonus, number(style: percent; maximumFractionDigits: 0)}}',
+  'SquareTooltip.improvements': 'Improvements',
+  'SquareTooltip.list': '{{items, list(type: unit)}}',
+  'SquareTooltip.more-units_one': 'and {{count, number}} more unit',
+  'SquareTooltip.more-units_other': 'and {{count, number}} more units',
+  'SquareTooltip.movement-cost': 'Movement cost',
+  'SquareTooltip.moves_one': '{{count, number}} move',
+  'SquareTooltip.moves_other': '{{count, number}} moves',
+  'SquareTooltip.worked-by': 'Worked by',
+  'SquareTooltip.yield': '{{value, number}} {{- yield}}',
+  'SquareTooltip.yields': 'Yields',
 
   // Moving onto, or pillaging, a treaty partner's land (#287).
   'Treaty.title': 'Peace treaty',
