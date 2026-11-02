@@ -468,6 +468,9 @@ i18next.addResources('en', 'default', {
     'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
   'ImportAssetsWindow.none-chosen': 'No files chosen',
+  // After the instructions, the files an import takes when they're chosen (#64).
+  'ImportAssetsWindow.optional':
+    'Add {{files, list}} as well for the improvement and Wonder icons.',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
   'ImportAssetsWindow.progress-building': 'Building image assets...',

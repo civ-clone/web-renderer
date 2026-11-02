@@ -154,6 +154,21 @@
   padding: 0;
 }
 
+// An improvement's or a Wonder's icon (#64), in its row and on the production card. None imported: no gap for it.
+.ui-city .building-icon {
+  display: inline-flex;
+  flex: none;
+  line-height: 0;
+
+  &:empty {
+    display: none;
+  }
+
+  img {
+    image-rendering: pixelated;
+  }
+}
+
 // Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
 //  see-through rather than hidden, so Tab still reaches it.
 .ui-city-improvement {
@@ -174,6 +189,14 @@
     min-width: 0;
   }
 
+  // Beside an icon, a name too long for its column ends in an ellipsis rather than running into the upkeep (#64).
+  //  Without one it wraps, as it always has.
+  &:has(.building-icon:not(:empty)) .name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   // As tall as the row's text, not the space a window gives its buttons.
   button.sell {
     min-height: 0;
@@ -182,6 +205,17 @@
 }
 
 @media (hover: hover) {
+  // Beside an icon, over the row's end where the upkeep is, rather than taking room from the name (#64): it comes later
+  //  in the row, so it's drawn over it. Without one, in the row as it always was.
+  .ui-city-improvement:has(.building-icon:not(:empty)) {
+    position: relative;
+
+    button.sell {
+      inset-inline-end: 0.25rem;
+      position: absolute;
+    }
+  }
+
   .ui-city-improvement:not(:hover, :focus-within) button.sell {
     opacity: 0;
   }

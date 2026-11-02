@@ -92,8 +92,10 @@
   }
 }
 
-// No sprites in the list: no column for them.
-.ui-choice-list:not(:has(.ui-choice-sprite:not(:empty))) .ui-choice-row {
+// No sprites in the list: no column for them. An improvement's icon that wasn't imported is an empty span (#64), which
+//  counts as none. `:has` can't hold another `:has`, so it's the cell's child that's tested.
+.ui-choice-list:not(:has(.ui-choice-sprite > :not(.building-icon:empty)))
+  .ui-choice-row {
   grid-template-columns: minmax(0, 1fr) auto;
 
   .ui-choice-sprite {
@@ -111,6 +113,12 @@
     height: 2rem;
     image-rendering: pixelated;
     width: 2rem;
+  }
+
+  // An improvement's or a Wonder's icon is wider than it's tall: at its own size (#64).
+  .building-icon img {
+    height: auto;
+    width: auto;
   }
 }
 

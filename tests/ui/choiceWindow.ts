@@ -636,6 +636,13 @@ const run = async (): Promise<void> => {
       ['Units', 'City Improvements'],
     ]
   );
+  expect(
+    "an improvement's icon in its row (#64), and not a unit's",
+    build
+      .rows()
+      .map((row) => !!row.querySelector('.ui-choice-sprite .building-icon')),
+    [false, true]
+  );
   expect('what the city builds now is chosen as it opens', selected(build), [
     'Temple',
   ]);

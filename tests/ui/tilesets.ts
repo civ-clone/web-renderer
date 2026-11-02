@@ -153,12 +153,18 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     [['./assets/other/terrain/x.png'], ['./assets/other/terrain/z.png']]
   );
   expect(
-    'the optional sprites are the three women specialists',
+    'the optional sprites are the three women specialists, and every icon cut from the optional SP299.PIC (#64)',
     sorted(optional),
     sorted([
       'city/people_tax_f',
       'city/people_science_f',
       'city/people_luxury_f',
+      ...Object.entries((extractData as any).files['SP299.PIC']).flatMap(
+        ([path, definitions]: [string, any]) =>
+          definitions.flatMap((definition: any) =>
+            definition.contents.map(({ name }: any) => path + name)
+          )
+      ),
     ])
   );
 

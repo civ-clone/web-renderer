@@ -24,6 +24,7 @@ import {
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
 import { growthLimitText } from './lib/city';
+import buildingIcon from './lib/buildingIcon';
 import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import button from '../lib/button';
@@ -142,6 +143,7 @@ const renderImprovementList = (
 
       return s(
         '<li class="ui-city-improvement"></li>',
+        buildingIcon(improvement._, isWonder(improvement)),
         s(
           `<span class="name">${getLabelForBuildableEntity(improvement)}</span>`
         ),
@@ -253,6 +255,10 @@ const renderProduction = (
             improvements: [],
             busy: null,
           }).element()
+        : building &&
+          (instanceOf(building.item, 'CityImprovement') ||
+            instanceOf(building.item, 'Wonder'))
+        ? buildingIcon(building.item._, instanceOf(building.item, 'Wonder'))
         : '',
       s(`<h3>${name}</h3>`),
       // A city on Auto chooses its own improvements (#194).

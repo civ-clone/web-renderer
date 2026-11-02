@@ -293,9 +293,21 @@ export class AssetStore extends Store<{
 
     return this.#cachedURLs.get(key)!;
   }
+  /** `shownAtURL`'s URL when it has been made already, for drawing it straight away on a re-render. */
+  cachedURL(path: string, width: number): string | null {
+    return this.#cachedURLs.get(`${path}@${width}`) ?? null;
+  }
+
   /** The sprite at `path` at its own size, as a URL for an `<img>`, made once: the action panels' buttons. */
   spriteURL(path: string): Promise<string> {
     return this.shownAtURL(path, 1);
+  }
+
+  /** Whether the sprite at `path` was imported, for one that's optional: drawn when it's there, left out when not. */
+  async has(path: string): Promise<boolean> {
+    await this.#ready;
+
+    return this.#loaded.has(path);
   }
 
   async hasAllAssets(): Promise<boolean> {

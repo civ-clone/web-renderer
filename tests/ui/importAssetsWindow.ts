@@ -21,6 +21,7 @@ import ImportAssetsWindow from '../../src/js/UI/components/ImportAssetsWindow';
 import addFormatters from '../../src/js/UI/app/i18nFormatters';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -546,6 +547,89 @@ const run = async (): Promise<void> => {
       fileInput(window).hasAttribute('disabled'),
       false
     );
+  }
+
+  // SP299.PIC, the improvement and Wonder icons, is optional (#64): the instructions say so, an import goes ahead
+  //  without it, and the files asked for when one is missing are the required ones.
+  {
+    const window = new ImportAssetsWindow();
+
+    expect(
+      'the instructions ask for the required files, and the icons as well',
+      window.element().querySelector('.import-assets p')?.textContent,
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons.'
+    );
+
+    await upload(window, [sheet('SP257.PIC')]);
+
+    expect(
+      'a required file missing: only the required ones are asked for',
+      progress(window).textContent,
+      'Please provide all files to generate assets: SP257.PIC and TER257.PIC.'
+    );
+
+    const written: string[] = [],
+      setAll = store.setAll;
+
+    store.setAll = async (assets: { name: string }[]): Promise<void> => {
+      written.push(...assets.map(({ name }) => name));
+    };
+
+    await upload(window, [sheet('SP257.PIC'), sheet('TER257.PIC')]);
+
+    store.setAll = setAll;
+
+    expect(
+      "without SP299.PIC, the import goes ahead: the required files' sprites are written, and no icons",
+      [
+        written.includes('./assets/terrain/land.png'),
+        written.includes('./assets/units/warrior.png'),
+        written.some((name) => name.includes('/wonders/')),
+      ],
+      [true, true, false]
+    );
+
+    window.close();
+  }
+
+  // Replace existing assets left unticked: a group of sprites already imported isn't cut again. It never was skipped,
+  //  as the paths it checked had the definition's index in them (#64).
+  {
+    const window = new ImportAssetsWindow(),
+      written: string[] = [],
+      { keys, setAll } = store,
+      units = (extractData as any).files['SP257.PIC']['units/'].flatMap(
+        (definition: any) =>
+          definition.contents.map(
+            ({ name }: any) => `./assets/units/${name}.png`
+          )
+      );
+
+    store.keys = async (): Promise<string[]> => units;
+    store.setAll = async (assets: { name: string }[]): Promise<void> => {
+      written.push(...assets.map(({ name }) => name));
+    };
+    (
+      window
+        .element()
+        .querySelector('input[type="checkbox"]') as HTMLInputElement
+    ).checked = false;
+
+    await upload(window, [sheet('SP257.PIC'), sheet('TER257.PIC')]);
+
+    store.keys = keys;
+    store.setAll = setAll;
+
+    expect(
+      'not replacing: the units already imported are skipped, the rest written',
+      [
+        written.some((name) => units.includes(name)),
+        written.includes('./assets/terrain/land.png'),
+      ],
+      [false, true]
+    );
+
+    window.close();
   }
 
   console.error = consoleError;
