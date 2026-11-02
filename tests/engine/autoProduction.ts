@@ -267,6 +267,91 @@ const run = async (): Promise<void> => {
 
   pass('Auto is saved');
 
+  // The queue (#774): what the build list's Add to queue and the city screen's rows send.
+  cityBuild.setAuto(false);
+
+  const [first, second] = cityBuild
+      .available()
+      .filter((buildItem) => buildItem.item() !== chosen.item()),
+    queuedNames = (): string[] => cityBuild.queued().map((Item) => Item.name),
+    // The patches send objects once, and refer to them by id elsewhere.
+    sentById = (): Map<string, any> => {
+      const found = new Map<string, any>(),
+        visit = (value: any): void => {
+          if (value === null || typeof value !== 'object') {
+            return;
+          }
+
+          if (!Array.isArray(value) && typeof value.id === 'string') {
+            found.set(value.id, value);
+          }
+
+          Object.values(value).forEach(visit);
+        };
+
+      visit(patches);
+
+      return found;
+    },
+    sentQueue = (): string[] | undefined => {
+      const byId = sentById(),
+        resolve = (value: any): any =>
+          value && typeof value === 'object' && '#ref' in value
+            ? byId.get(value['#ref'])
+            : value;
+
+      return sentCityBuilds()
+        .get(cityBuild.id())
+        ?.queue?.map((buildItem: any) => resolve(resolve(buildItem)?.item)?._);
+    };
+
+  await send(cityBuild, { queue: { op: 'add', chosen: first.item().name } });
+  await send(cityBuild, { queue: { op: 'add', chosen: second.item().name } });
+
+  if (
+    JSON.stringify(queuedNames()) !==
+      JSON.stringify([first.item().name, second.item().name]) ||
+    JSON.stringify(sentQueue()) !== JSON.stringify(queuedNames())
+  ) {
+    fail(`adding to the queue gave ${queuedNames()}, sent as ${sentQueue()}`);
+  }
+
+  await send(cityBuild, { queue: { op: 'move', index: 1, to: 0 } });
+
+  if (queuedNames()[0] !== second.item().name) {
+    fail(`moving in the queue gave ${queuedNames()}`);
+  }
+
+  await send(cityBuild, { queue: { op: 'remove', index: 0 } });
+  await send(cityBuild, { queue: { op: 'remove', index: 'x' } });
+  await send(cityBuild, { queue: { op: 'add', chosen: 'NotAThing' } });
+
+  if (JSON.stringify(queuedNames()) !== JSON.stringify([first.item().name])) {
+    fail(`removing from the queue gave ${queuedNames()}`);
+  }
+
+  await send(cityBuild, { queue: { op: 'clear' } });
+
+  if (queuedNames().length !== 0) {
+    fail(`clearing the queue left ${queuedNames()}`);
+  }
+
+  pass('the queue is added to, moved, removed from and cleared, and sent');
+
+  // Building nothing, Add to queue starts the item.
+  cityBuild.cancel();
+
+  await send(cityBuild, { queue: { op: 'add', chosen: first.item().name } });
+
+  if (
+    cityBuild.building()?.item() !== first.item() ||
+    cityBuild.queued().length !== 0
+  ) {
+    fail('adding to the queue of a city building nothing did not start it');
+  }
+
+  pass('a city building nothing starts what is added');
+
   console.log(`PASS autoProduction (${checks.join('; ')})`);
 
   process.exit(0);

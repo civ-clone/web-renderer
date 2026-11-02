@@ -95,6 +95,10 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
   } | null;
   cost: Yield;
   progress: Yield;
+  // What it builds after its current item, in order, priced for the city now (#774), and what the last move to the next
+  //  of them dropped as it could no longer be built. Missing from an engine without the queue.
+  queue?: BuildItem[];
+  queueDropped?: Entity[];
   spendCost: SpendCost[];
 }
 

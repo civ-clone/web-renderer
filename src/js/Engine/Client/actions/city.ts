@@ -71,14 +71,74 @@ export const handleRenameCity = async (
   return false;
 };
 
+// An edit to what the city builds after its current item (#774): `add` the item `chosen` (at `index`, or the end),
+//  `remove` the one at `index`, `move` the one at `index` to `to`, or `clear` them all. An item added while the city
+//  builds nothing is started instead. One the city can't build, or a position that isn't a whole number, changes
+//  nothing.
+export type QueueEdit =
+  | { op: 'add'; chosen: string; index?: number }
+  | { op: 'remove'; index: number }
+  | { op: 'move'; index: number; to: number }
+  | { op: 'clear' };
+
+export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
+  const isIndex = (value: unknown): value is number =>
+    Number.isInteger(value) && (value as number) >= 0;
+
+  if (edit.op === 'add') {
+    const [buildItem] = cityBuild
+      .available()
+      .filter((buildItem: BuildItem) => buildItem.item().name === edit.chosen);
+
+    if (!buildItem) {
+      return;
+    }
+
+    if (cityBuild.building() === null) {
+      cityBuild.build(buildItem.item());
+
+      return;
+    }
+
+    cityBuild.enqueue(
+      buildItem.item(),
+      isIndex(edit.index) ? edit.index : undefined
+    );
+
+    return;
+  }
+
+  if (edit.op === 'remove' && isIndex(edit.index)) {
+    cityBuild.dequeue(edit.index);
+
+    return;
+  }
+
+  if (edit.op === 'move' && isIndex(edit.index) && isIndex(edit.to)) {
+    cityBuild.requeue(edit.index, edit.to);
+
+    return;
+  }
+
+  if (edit.op === 'clear') {
+    cityBuild.clearQueue();
+  }
+};
+
 export const handleCityBuild: ActionHandler<
   CityBuild | ChangeProduction
 > = async (ctx, action, playerAction) => {
   const cityBuild = playerAction.value() as CityBuildItem,
-    { auto, chosen } = action;
+    { auto, chosen, queue } = action;
 
   // What the city is building, which is all a choice changes (#411).
   ctx.patches.cityBuild(cityBuild);
+
+  if (queue && typeof queue === 'object') {
+    editQueue(cityBuild, queue as QueueEdit);
+
+    return false;
+  }
 
   // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
   if (typeof auto === 'boolean') {

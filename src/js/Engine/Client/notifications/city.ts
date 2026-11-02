@@ -34,6 +34,69 @@ const ours =
         })
       : null;
 
+// A rival's wonder, or anything we build.
+const buildingComplete = (
+  ctx: NotificationContext,
+  cityBuild: CityBuildItem,
+  build: unknown
+): Notification | null => {
+  if (!ctx.view.owns(cityBuild.city().player()) && build instanceof Wonder) {
+    // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
+    //  a city we have never seen is not named at all (#43).
+    return ctx.hasSeen(cityBuild.city().tile())
+      ? new Notification('Wonder.building-complete.other-player.known', {
+          city: cityBuild.city(),
+          build,
+        })
+      : new Notification('Wonder.building-complete.other-player.unknown', {
+          build,
+        });
+  }
+
+  if (!ctx.view.owns(cityBuild.city().player())) {
+    return null;
+  }
+
+  // Already building another, as the player who keeps building military units asked (#690): told every few turns,
+  //  it would only be noise. The rule that starts it runs before the completion is announced.
+  if (
+    build instanceof Unit &&
+    cityBuild.building()?.item() === build.constructor
+  ) {
+    return null;
+  }
+
+  return new Notification(
+    'City.building-complete.' + buildingCompleteKind(build),
+    {
+      cityBuild,
+      build,
+    }
+  );
+};
+
+// What our queue dropped on its way to the next item, as the city could no longer build it (#774): the first, by kind,
+//  and how many more, which is rare.
+const queueDropped = (
+  ctx: NotificationContext,
+  cityBuild: CityBuildItem
+): Notification | null => {
+  const [first, ...more] = cityBuild.queueDropped();
+
+  if (!ctx.view.owns(cityBuild.city().player()) || first === undefined) {
+    return null;
+  }
+
+  return new Notification(
+    'City.queue-dropped.' + buildingCompleteKind(first.prototype),
+    {
+      city: cityBuild.city(),
+      item: { _: first.name },
+      more: more.length,
+    }
+  );
+};
+
 export const cityNotifications: NotificationTable = [
   // Our capture of a city. Losing one is the city's news (`Client/cityNews.ts`).
   [
@@ -77,46 +140,22 @@ export const cityNotifications: NotificationTable = [
           }),
   ],
 
-  // A rival's wonder, or anything we build.
+  // A rival's wonder, or anything we build, and what our queue dropped on its way to the next item (#774).
   [
     'city:building-complete',
     (ctx: NotificationContext, cityBuild: CityBuildItem, build: unknown) => {
-      if (
-        !ctx.view.owns(cityBuild.city().player()) &&
-        build instanceof Wonder
-      ) {
-        // Only the city (sent as an `UnknownCity`) and the wonder: `cityBuild` is the other player's build queue, and
-        //  a city we have never seen is not named at all (#43).
-        return ctx.hasSeen(cityBuild.city().tile())
-          ? new Notification('Wonder.building-complete.other-player.known', {
-              city: cityBuild.city(),
-              build,
-            })
-          : new Notification('Wonder.building-complete.other-player.unknown', {
-              build,
-            });
-      }
-
-      if (!ctx.view.owns(cityBuild.city().player())) {
-        return null;
-      }
-
-      // Already building another, as the player who keeps building military units asked (#690): told every few turns,
-      //  it would only be noise. The rule that starts it runs before the completion is announced.
-      if (
-        build instanceof Unit &&
-        cityBuild.building()?.item() === build.constructor
-      ) {
-        return null;
-      }
-
-      return new Notification(
-        'City.building-complete.' + buildingCompleteKind(build),
-        {
-          cityBuild,
-          build,
-        }
+      const notifications = [
+        buildingComplete(ctx, cityBuild, build),
+        queueDropped(ctx, cityBuild),
+      ].filter(
+        (notification): notification is Notification => notification !== null
       );
+
+      return notifications.length === 0
+        ? null
+        : notifications.length === 1
+        ? notifications[0]
+        : notifications;
     },
   ],
 

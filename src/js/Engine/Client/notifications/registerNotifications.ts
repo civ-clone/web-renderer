@@ -80,9 +80,13 @@ export const registerNotifications = (
         const listener = (...args: any[]): void => {
           const notification = handler(ctx, ...args);
 
-          if (notification !== null) {
-            ctx.notifier.notify(notification);
+          if (notification === null) {
+            return;
           }
+
+          (Array.isArray(notification) ? notification : [notification]).forEach(
+            (notification) => ctx.notifier.notify(notification)
+          );
         };
 
         engine.on(event, listener);

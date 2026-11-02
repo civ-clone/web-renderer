@@ -168,6 +168,15 @@ const contextOf = ({
     (event: string, args: unknown[], world: Partial<World> = {}) => {
       const notification = handlerOf(table, event)(contextOf(world), ...args);
 
+      // A build complete can be two notices (#774).
+      if (Array.isArray(notification)) {
+        notification.forEach((notification) =>
+          keysMade.add(notification.key())
+        );
+
+        return notification.map(describe);
+      }
+
       if (notification !== null) {
         keysMade.add(notification.key());
       }
@@ -248,8 +257,16 @@ const contextOf = ({
     null
   );
 
-  const buildOf = (buildCity: unknown, building: unknown = null) =>
-      named('build', { city: () => buildCity, building: () => building }),
+  const buildOf = (
+      buildCity: unknown,
+      building: unknown = null,
+      dropped: unknown[] = []
+    ) =>
+      named('build', {
+        city: () => buildCity,
+        building: () => building,
+        queueDropped: () => dropped,
+      }),
     pyramids = named('Pyramids', {}, Pyramids.prototype),
     builds: [string, unknown][] = [
       ['unit', unitOf(us)],
@@ -298,6 +315,55 @@ const contextOf = ({
       ]
     );
   }
+
+  // What the queue dropped on its way to the next item (#774), after the completion: the first, by kind, and how many
+  //  more. Not for a rival's city.
+  expect(
+    'our queue dropped a Wonder, and one more',
+    city('city:building-complete', [
+      buildOf(ourCity, null, [Pyramids, Barracks]),
+      barracks,
+    ]),
+    [
+      [
+        'City.building-complete.city-improvement',
+        false,
+        { cityBuild: 'build', build: (barracks as { name: string }).name },
+      ],
+      [
+        'City.queue-dropped.wonder',
+        false,
+        { city: 'Rome', item: { _: 'Pyramids' }, more: 1 },
+      ],
+    ]
+  );
+  (
+    [
+      ['unit', Trireme],
+      ['city-improvement', Barracks],
+      ['spaceship-part', Structural],
+      ['other', class Coinage {}],
+    ] as [string, { name: string }][]
+  ).forEach(([kind, Item]) =>
+    expect(
+      `our queue dropped a ${kind}`,
+      (
+        city('city:building-complete', [
+          buildOf(ourCity, null, [Item]),
+          barracks,
+        ]) as any
+      )?.[1]?.[0],
+      `City.queue-dropped.${kind}`
+    )
+  );
+  expect(
+    "a rival's queue",
+    city('city:building-complete', [
+      buildOf(rivalCity, null, [Barracks]),
+      barracks,
+    ]),
+    null
+  );
 
   expect(
     "a rival's wonder in a city we have seen",
@@ -798,6 +864,11 @@ const contextOf = ({
     'City.leader-celebration-ended',
     'City.order-restored',
     'City.polluted',
+    'City.queue-dropped.city-improvement',
+    'City.queue-dropped.other',
+    'City.queue-dropped.spaceship-part',
+    'City.queue-dropped.unit',
+    'City.queue-dropped.wonder',
     'City.sdi-protected',
     'City.unit-unsupported',
     'CityImprovement.obsolete',

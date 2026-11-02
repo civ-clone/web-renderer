@@ -97,6 +97,8 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Build.group.unit': 'Units',
   'ChoiceWindow.Build.group.wonder': 'Wonders of the World',
   'ChoiceWindow.Build.movement': 'Moves',
+  // Lines the chosen item up after what the city is building now (#774).
+  'ChoiceWindow.Build.queue': 'Add to queue',
   'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
     'Acquire {{- choice}}',
   'ChoiceWindow.ChooseFromList.choose-civilization.primary':
@@ -127,7 +129,12 @@ i18next.addResources('en', 'default', {
   'CityWindow.in-city': 'In the city · {{count, number}}',
   'CityWindow.no-improvements': 'No improvements yet',
   'CityWindow.nothing': 'Nothing in production',
+  'CityWindow.queue': 'Then',
+  'CityWindow.queue-down': 'Move {{- item}} down',
+  'CityWindow.queue-remove': 'Remove {{- item}} from the queue',
+  'CityWindow.queue-up': 'Move {{- item}} up',
   'CityWindow.supported': 'Supported · {{count, number}}',
+  'CityWindow.then': 'Then: {{- item}}',
   'CityWindow.upkeep_one': 'Upkeep: {{count, number}} gold a turn',
   'CityWindow.upkeep_other': 'Upkeep: {{count, number}} gold a turn',
   'CityWindow.upkeep-total': 'Upkeep each turn',
@@ -989,6 +996,25 @@ i18next.addResources('en', 'notification', {
   'City.building-complete.spaceship-part.body':
     '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" })!',
   'City.building-complete.spaceship-part.title': 'Building complete!',
+  // An item the city's queue dropped, as it could no longer build it (#774), by kind, as completions are.
+  'City.queue-dropped.unit.body':
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "unit" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
+  'City.queue-dropped.city-improvement.body':
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t(Improvement.{{item._}}.name, { "defaultValue": "{{item._}}", "ns": "city" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
+  'City.queue-dropped.wonder.body':
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "wonder" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
+  'City.queue-dropped.spaceship-part.body':
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "spaceship" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
+  'City.queue-dropped.other.body':
+    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build part of its queue, so it was dropped$t(City.queue-dropped.more, { "count": {{more}} }).',
+  'City.queue-dropped.more_zero': '',
+  'City.queue-dropped.more_one': ', with {{count, number}} more',
+  'City.queue-dropped.more_other': ', with {{count, number}} more',
+  'City.queue-dropped.unit.title': 'Dropped from the queue',
+  'City.queue-dropped.city-improvement.title': 'Dropped from the queue',
+  'City.queue-dropped.wonder.title': 'Dropped from the queue',
+  'City.queue-dropped.spaceship-part.title': 'Dropped from the queue',
+  'City.queue-dropped.other.title': 'Dropped from the queue',
   'City.building-complete.other.body':
     '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on its build project!',
   'City.building-complete.other.title': 'Building complete!',

@@ -98,7 +98,12 @@ ask before leaving a game in progress.
   the classic page (`classicCityLayout`), or under `?interface=new` the window
   of `CityLayout.ts` (#746). The behaviour is `City`'s whichever layout draws
   it; the parts both draw, the yield bars and the map, are in
-  `components/lib/cityParts.ts`.
+  `components/lib/cityParts.ts`. The new layout's production card lists the
+  city's build queue (core-city-build's `CityBuild#queue`, #774), each with
+  Up, Down and Remove; the build list's Add to queue lines up the chosen item.
+  Both send a `queue` edit on the city's `CityBuild`/`ChangeProduction` action
+  (`editQueue` in `components/lib/cityBuild.ts`, handled by `editQueue` in
+  `Engine/Client/actions/city.ts`).
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).
