@@ -163,6 +163,11 @@ colours and font come from tokens read off the page's root, and `MapView`
 redraws the layer when the theme or light/dark changes. A layer can claim a
 click past a city's square through `Map.cityAt()`, which `GamePortal` asks
 through `Portal.cityAt()` before it looks up the tile under the pointer.
+`Map.bannerAt()` gives the banner's box as well: a mouse resting on one of
+your cities' banners opens the shared tooltip over that box
+(`showTooltipOver`), with what the city is building and how it grows
+(`Map/cityBannerTooltip`). Leaving the banner, a press, a key or the map moving
+closes it.
 
 `Unworkable` is a further layer used only by the city screen.
 

@@ -88,7 +88,7 @@ export class CityBanners extends CityNames {
   }
 
   /** The city whose banner is under `x`, `y` on the canvas, if there is one: of banners that overlap, the one on top. */
-  cityAt(x: number, y: number): City | null {
+  bannerAt(x: number, y: number): { city: City; box: Rect } | null {
     if (!this.isVisible() || !this.#full()) {
       return null;
     }
@@ -107,7 +107,10 @@ export class CityBanners extends CityNames {
         bottom = food ? food.track.y + food.track.height : pill.y + pill.height;
 
       if (x >= pill.x && x < pill.x + pill.width && y >= pill.y && y < bottom) {
-        return tile.city!;
+        return {
+          city: tile.city!,
+          box: { ...pill, height: bottom - pill.y },
+        };
       }
     }
 

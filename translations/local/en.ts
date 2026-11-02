@@ -113,6 +113,12 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Research.cost': 'Cost in bulbs',
   'ChoiceWindow.Units.activate': 'Activate {{- unit}}',
   'ChoiceWindow.Units.moves': 'Moves left',
+  // The tooltip over a city's banner on the map (#747).
+  'CityBanner.grows': 'Grows to size {{size, number}}',
+  'CityBanner.progress':
+    '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(Progress.turns, { "count": {{turns}} })',
+  'CityBanner.starving':
+    '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(CitiesList.starving)',
   'CityWindow.buy': 'Buy for {{cost, number}} {{- resource}}',
   'CityWindow.garrison_zero': 'No units in the city',
   'CityWindow.garrison_one': '{{count, number}} unit in the city',
