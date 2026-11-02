@@ -75,6 +75,7 @@ i18next.addResources('en-GB', 'default', {
   'ReportTable.Military.defence': 'Defence',
 
   'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
+  'SquareTooltip.defence': 'Defence',
 });
 
 i18next.addResources('en-GB', 'notification', {

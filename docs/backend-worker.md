@@ -125,7 +125,7 @@ A move next to another player's unit can start talks (`canNegotiate`), and so ca
 - The player's `CityBuild`s are sent without `available`; `cityBuildAvailable` answers with it on request (#324).
 - Notifications, choices and request answers use a `standalone` filter: players and tiles go out as just their id and a few fields, with no refs into the game data (#130, #305).
 - Function-valued patch payloads are resolved at send time in `DataQueue.transferData()`.
-- `AdditionalData/*` providers add fields the UI needs but the engine keeps elsewhere (`anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `tradeRoutes`).
+- `AdditionalData/*` providers add fields the UI needs but the engine keeps elsewhere (`anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `terrainRules`, `tradeRoutes`).
 
 ## Constraints and risks in current backend
 

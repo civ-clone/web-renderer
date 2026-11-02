@@ -48,6 +48,34 @@
     text-align: right;
   }
 
+  // A label or a figure with its icon (#748): yields as the tileset draws them, a unit's figures as glyphs.
+  .yield-amount {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.25em;
+    vertical-align: middle;
+  }
+
+  // Its size held before the picture loads, so the panel is placed where it ends up.
+  .yield-icon {
+    block-size: var(--tileset-icon);
+    inline-size: var(--tileset-icon);
+  }
+
+  .yield-icon img {
+    display: block;
+    height: var(--tileset-icon);
+    image-rendering: pixelated;
+    width: var(--tileset-icon);
+  }
+
+  .tooltip-amounts {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.75em;
+    justify-content: flex-end;
+  }
+
   .total {
     border-top: 1px solid var(--ui-tooltip-rule);
     font-weight: var(--type-strong-weight);

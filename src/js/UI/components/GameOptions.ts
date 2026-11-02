@@ -5,6 +5,7 @@ import Transport from '../Transport';
 import Window from './Window';
 import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
+import { interfaceMode } from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '../lib/buildPreferences';
@@ -123,6 +124,25 @@ export class GameOptions extends Window {
             });
           })()
         ),
+        // Only the new interface has the tooltip (#748).
+        ...(interfaceMode() === 'new'
+          ? [
+              s(
+                `<label>${t('GameOptions.square-tooltips')}</label>`,
+                (() => {
+                  const input = s<HTMLInputElement>(
+                    `<input type="checkbox"${
+                      options.get('squareTooltips', true) ? ' checked' : ''
+                    }>`
+                  );
+
+                  return h(input, {
+                    change: () => options.set('squareTooltips', input.checked),
+                  });
+                })()
+              ),
+            ]
+          : []),
         s(
           `<label>${t('GameOptions.autosave')}</label>`,
           (() => {

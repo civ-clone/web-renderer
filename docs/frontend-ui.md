@@ -166,7 +166,13 @@ through `Portal.cityAt()` before it looks up the tile under the pointer.
 `Map.bannerAt()` gives the banner's box as well: a mouse resting on one of
 your cities' banners opens the shared tooltip over that box
 (`showTooltipOver`), with what the city is building and how it grows
-(`Map/cityBannerTooltip`). Leaving the banner, a press, a key or the map moving
+(`Map/cityBannerTooltip`). Elsewhere under the new interface, a mouse resting
+on a square opens it over the square's box (`Portal.squareAt()`), with what the
+square is, yields and has on it (`Map/squareTooltip`, #748), unless the
+`squareTooltips` option is off. A rival's banner is about its city's square.
+The terrain's defence multiplier and move cost come with it from the engine
+(`AdditionalData/terrainRules`). Leaving the banner or square, a press, a key,
+the map moving or the other players' turn starting (`GamePortal.setWaiting()`)
 closes it.
 
 `Unworkable` is a further layer used only by the city screen.

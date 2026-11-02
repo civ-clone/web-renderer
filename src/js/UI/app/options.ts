@@ -9,6 +9,8 @@ export const setOptionDefaults = (): void => {
     unitEdgeMargin: 2,
     mapScale: currentTileset().defaultScale,
     lockVerticalEdges: false,
+    // The new interface's tooltip for the map square under the mouse (#748).
+    squareTooltips: true,
     // As a new game starts, and then every 5 turns (#653): see `AUTOSAVE_CHOICES`.
     autosave: '5',
     // The keys of the sidebar sections the player has collapsed (#697).
