@@ -1,18 +1,6 @@
-.city-screen-window {
-  .body {
-    align-items: stretch;
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-  }
-}
-
-.city-screen {
-  // One colour a yield, for its bar in the yields and its meter below them (#686, #687, #719), from the theme (#736).
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-
+// What both city screens draw alike (#746): one colour a yield, for its bar in the yields and its meter (#686, #687,
+//  #719), from the theme (#736); the citizens; the yield icons; the figures beside a meter; and the yields as bars.
+@mixin city-parts {
   [data-yield='Food'] {
     --colour: var(--y-food);
   }
@@ -39,81 +27,6 @@
 
   [data-yield='Pollution'] {
     --colour: var(--y-pollution);
-  }
-
-  .city-map {
-    min-width: 160px;
-    text-align: center;
-    width: 20%;
-  }
-
-  .bottom-row {
-    align-items: stretch;
-    border-top: 1px solid var(--ui-line);
-    flex: 1 1;
-  }
-
-  .top-row,
-  .bottom-row {
-    display: flex;
-
-    .yield-details,
-    .improvements,
-    .growth,
-    .tabbed-details,
-    .build {
-      flex: 1 1;
-      padding: 0.25rem;
-    }
-
-    // The growth and the build side by side: a heading, the meter, its figures (#686, #687).
-    .growth,
-    .build {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      min-width: 0;
-      padding: 0.25rem 0.5rem;
-    }
-
-    .growth header {
-      display: flex;
-      justify-content: space-between;
-
-      .size {
-        opacity: 0.75;
-      }
-    }
-
-    .build-actions {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-
-      button {
-        margin: 0.25rem;
-      }
-    }
-
-    .build {
-      text-align: center;
-
-      header {
-        min-height: 2.25rem;
-
-        // A city on Auto chooses its own improvements (#194).
-        .auto {
-          display: block;
-          font-size: 0.75em;
-          opacity: 0.75;
-        }
-      }
-    }
-
-    .yield-details,
-    .improvements {
-      max-width: 40%;
-    }
   }
 
   .population {
@@ -272,6 +185,98 @@
   .yields-detail .other-yield {
     display: flex;
     justify-content: space-between;
+  }
+}
+
+.city-screen-window {
+  .body {
+    align-items: stretch;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+}
+
+.city-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+
+  @include city-parts;
+
+  .city-map {
+    min-width: 160px;
+    text-align: center;
+    width: 20%;
+  }
+
+  .bottom-row {
+    align-items: stretch;
+    border-top: 1px solid var(--ui-line);
+    flex: 1 1;
+  }
+
+  .top-row,
+  .bottom-row {
+    display: flex;
+
+    .yield-details,
+    .improvements,
+    .growth,
+    .tabbed-details,
+    .build {
+      flex: 1 1;
+      padding: 0.25rem;
+    }
+
+    // The growth and the build side by side: a heading, the meter, its figures (#686, #687).
+    .growth,
+    .build {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+      padding: 0.25rem 0.5rem;
+    }
+
+    .growth header {
+      display: flex;
+      justify-content: space-between;
+
+      .size {
+        opacity: 0.75;
+      }
+    }
+
+    .build-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+
+      button {
+        margin: 0.25rem;
+      }
+    }
+
+    .build {
+      text-align: center;
+
+      header {
+        min-height: 2.25rem;
+
+        // A city on Auto chooses its own improvements (#194).
+        .auto {
+          display: block;
+          font-size: 0.75em;
+          opacity: 0.75;
+        }
+      }
+    }
+
+    .yield-details,
+    .improvements {
+      max-width: 40%;
+    }
   }
 
   .tabbed-details,

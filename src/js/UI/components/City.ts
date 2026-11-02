@@ -2,7 +2,6 @@ import {
   City as CityData,
   CityImprovement,
   CityImprovementMaintenanceGold,
-  PlainObject,
   Player,
   Specialist,
   SpendCost,
@@ -16,301 +15,36 @@ import {
   getLabelForBuildableEntity,
   toggleAuto,
 } from './lib/cityBuild';
-import { reduceKnownYield, splitYield, yieldGroup } from '../lib/yieldMap';
-import cityMapLayout from '../lib/cityMapLayout';
-import { tileBounds } from '../lib/projection';
 import {
   renderFigures,
   renderPopulation,
   turnsLeft,
-  yieldIcon,
   yieldImages,
 } from './lib/cityYields';
-import Cities from './Map/Cities';
+import { renderMap, renderYields } from './lib/cityParts';
+import Window, { WindowOptions } from './Window';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from './ConfirmationWindow';
-import Fog from './Map/Fog';
-import Landscape from './Map/Landscape';
 import Portal from './Portal';
 import SupportedUnit from './SupportedUnit';
 import Transport from '../Transport';
 import Unit from './Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
-import Units from './Map/Units';
-import Unworkable from './Map/Unworkable';
-import Window from './Window';
-import World from './World';
-import Yields from './Map/Yields';
 import { cityName } from './lib/city';
 import { escape } from './lib/requirements';
 import { h } from '../lib/html';
-import { instance as localeProvider } from '../LocaleProvider';
 import instanceOf from '../lib/instanceOf';
-import isAnarchy from './lib/government';
+import { instance as localeProvider } from '../LocaleProvider';
+import { reduceKnownYield } from '../lib/yieldMap';
 import progressBar from './lib/ProgressBar';
 import { specialistForKey } from '../lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
 
-// The yield rows the city screen draws, one a group. This is the screen's layout, not a rule: the groups themselves come
-//  from the engine's class ancestry.
-const yieldRows = [
-  'Food',
-  'Production',
-  'Trade',
-  'Luxuries',
-  'Gold',
-  'Research',
-];
-
-// The groups drawn elsewhere on the screen: the rows above, and the citizens, which show Happiness and Unhappiness.
-const drawnYieldGroups = [...yieldRows, 'Happiness', 'Unhappiness'];
-
-const yieldName = (group: string): string =>
-  t(`${group}.name`, {
-    defaultValue: group,
-    ns: 'yield',
-  });
-
-// A tick every one of a yield, as Civ1 draws an icon each, while they stay apart: every 5 or 10 for a large city.
-const yieldTick = (scale: number): number =>
-  scale <= 30 ? 1 : scale <= 150 ? 5 : 10;
-
-/**
- * One yield as a row (#719): its icon, a bar of what the city makes, and the figures. The bar's first part is what the
- *  city uses of it (the food eaten, the shields supporting units, the trade lost to corruption, the gold for upkeep),
- *  then what's left over, or, past the end of what it makes, a red part for what it's short. Every row is drawn to
- *  `scale`, so the bars compare.
- */
-const renderYieldRow = (
-  group: string,
-  { used, deficit, free }: { used: number; deficit: number; free: number },
-  scale: number,
-  summary: string
-): HTMLElement => {
-  const row = s(
-      `<div class="yield-row" data-yield="${group}"><span class="visually-hidden"></span></div>`
-    ),
-    percent = (value: number) => `${(value / scale) * 100}%`,
-    bar = s(
-      `<span class="bar" aria-hidden="true"><span class="used"></span><span class="free"></span><span class="deficit"></span></span>`
-    ),
-    [usedPart, freePart, deficitPart] = Array.from(
-      bar.children
-    ) as HTMLElement[];
-
-  usedPart.style.width = percent(used);
-  freePart.style.width = percent(free);
-  deficitPart.style.width = percent(deficit);
-  bar.style.setProperty('--tick', percent(Math.min(yieldTick(scale), scale)));
-
-  // Set as text, not markup: a yield's name can be whatever the engine calls it.
-  row.setAttribute('title', summary);
-  row.firstElementChild!.textContent = summary;
-
-  const icon = yieldIcon(group);
-
-  icon.setAttribute('aria-hidden', 'true');
-
-  row.append(
-    icon,
-    bar,
-    s(
-      `<span class="figures" aria-hidden="true">${
-        used + deficit > 0
-          ? `<span class="total">${localeProvider.number(used + free)}</span>`
-          : ''
-      }<span class="net${
-        deficit > 0 ? ' negative' : ''
-      }">${localeProvider.number(
-        deficit > 0 ? -deficit : free,
-        used + deficit > 0 ? { signDisplay: 'exceptZero' } : {}
-      )}</span></span>`
-    )
-  );
-
-  return row;
-};
-
-const renderYields = (city: CityData): Node => {
-    const rows = yieldRows.map(
-        (group) => [group, splitYield(group, city.yields)] as const
-      ),
-      pollution = Number.isFinite(city.pollution)
-        ? Math.max(0, city.pollution!)
-        : 0,
-      // Wide enough for the most any row makes or uses, so the bars compare, and never nothing.
-      scale = Math.max(
-        1,
-        pollution,
-        ...rows.map(([, { used, deficit, free }]) => used + deficit + free)
-      );
-
-    return s(
-      '<div class="yields-detail"></div>',
-      ...rows.map(([group, split]) =>
-        renderYieldRow(
-          group,
-          split,
-          scale,
-          t('City.Yield.summary', {
-            context:
-              split.deficit > 0 ? 'short' : split.used > 0 ? undefined : 'made',
-            yield: yieldName(group),
-            made: split.used + split.free,
-            used: split.used + split.deficit,
-            spare: split.free,
-            short: split.deficit,
-          })
-        )
-      ),
-      // How much the city pollutes, from the engine's `pollution` data (#402), below the yields as one more row. Civ1
-      //  draws it as smokestacks at the bottom of its info panel.
-      ...(pollution > 0
-        ? [
-            renderYieldRow(
-              'Pollution',
-              { used: 0, deficit: 0, free: pollution },
-              scale,
-              t('City.pollution', { count: pollution })
-            ),
-          ]
-        : []),
-      ...(isAnarchy(city.player)
-        ? [s(`<p class="anarchy">${t('City.anarchy')}</p>`)]
-        : []),
-      // Other, unknown yields
-      ...Object.entries(
-        city.yields
-          .filter(
-            (cityYield) => !drawnYieldGroups.includes(yieldGroup(cityYield))
-          )
-          .reduce((yieldObject, cityYield) => {
-            if (!(cityYield._ in yieldObject)) {
-              yieldObject[cityYield._] = 0;
-            }
-
-            yieldObject[cityYield._] += cityYield.value;
-
-            return yieldObject;
-          }, {} as PlainObject)
-      ).map(([key, value]) => {
-        const other = s(
-          '<div class="other-yield"><span></span><span></span></div>'
-        );
-
-        other.firstElementChild!.textContent = yieldName(key);
-        other.lastElementChild!.textContent = localeProvider.number(
-          Number(value)
-        );
-
-        return other;
-      })
-    );
-  },
-  renderMap = (
-    portal: Portal,
-    city: CityData,
-    transport: Transport,
-    readOnly: boolean
-  ): Node => {
-    // Remap the city's tiles into a small local coordinate space so each layer
-    // canvas is sized to the city's squares rather than the full world (a full
-    // `World` here allocated ~10 world-sized canvases per open/update).
-    const {
-        center,
-        context,
-        height: localHeight,
-        tiles: localTiles,
-        tilesWorked: localTilesWorked,
-        width: localWidth,
-      } = cityMapLayout(city),
-      portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
-      cityPortal = new Portal(
-        new World(
-          {
-            ...city.player.world,
-            width: localWidth,
-            height: localHeight,
-            tiles: localTiles,
-          },
-          // The squares round the city's, as their neighbours only: they aren't drawn (#685).
-          context
-        ),
-        transport,
-        portalCanvas,
-        {
-          playerId: city.player.id,
-          scale: portal.scale(),
-          tileSize: portal.tileSize() / portal.scale(),
-        },
-        Landscape,
-        Fog,
-        Cities,
-        Units,
-        Yields,
-        Unworkable
-      );
-
-    // The canvas shows the city's squares, so it is as big as they are in
-    // pixels.
-    const { width, height } = tileBounds(cityPortal.projection(), [
-      center,
-      ...localTiles,
-    ]);
-
-    portalCanvas.height = height;
-    portalCanvas.width = width;
-
-    cityPortal.setCenter(center.x, center.y);
-    cityPortal.build(localTiles);
-
-    const unitMap = cityPortal.getLayer(Units)!;
-    unitMap.render(
-      localTiles.filter((tile) =>
-        tile.units.some((unit) => unit.player.id !== city.player.id)
-      )
-    );
-
-    const yieldMap = cityPortal.getLayer(Yields)!;
-    yieldMap.render(localTilesWorked);
-
-    const unworkable = cityPortal.getLayer(Unworkable)!;
-    unworkable.setCity(city);
-    unworkable.render(localTiles);
-
-    cityPortal.render();
-
-    return h(s('<div class="city-map"></div>', portalCanvas), {
-      click: (event: MouseEvent) => {
-        if (readOnly || event.target !== portalCanvas) {
-          return;
-        }
-
-        // The canvas is scaled by CSS, so `offsetX`/`offsetY` need mapping
-        // back onto its own pixels before they can be turned into a tile.
-        const localTile = cityPortal.tileAt(
-            (event.offsetX * portalCanvas.width) / portalCanvas.offsetWidth,
-            (event.offsetY * portalCanvas.height) / portalCanvas.offsetHeight
-          ),
-          tile = city.tiles.find((tile) => tile.id === localTile?.id);
-
-        if (!tile) {
-          return;
-        }
-
-        transport.send('action', {
-          name: 'ChangeWorkedTile',
-          id: city.id,
-          tile: tile.id,
-        });
-      },
-    });
-  },
-  renderBuild = (
+const renderBuild = (
     city: CityData,
     chooseProduction: () => void,
     completeProduction: (spendCost: SpendCost) => void,
@@ -667,10 +401,59 @@ const renderYields = (city: CityData): Node => {
   getTreasuryForYield = (player: Player, yieldName: string) =>
     player.treasuries.filter((treasury) => treasury.yield._ === yieldName)[0];
 
+/** What a layout of the city screen is given to draw it with: the screen's own actions, for its buttons and clicks. */
+export interface CityScreenContext {
+  portal: Portal;
+  transport: Transport;
+  // A rival's city, as a Diplomat investigates it (#58): shown, with nothing to change.
+  readOnly: boolean;
+  chooseProduction(): void;
+  completeProduction(spendCost: SpendCost): void;
+  sellImprovement(improvement: CityImprovement, saleValue: SpendCost): void;
+  changeSpecialist(specialist: Specialist): void;
+  toggleAuto(): void;
+  step(by: number): void;
+  rename(): void;
+}
+
+/**
+ * How the city screen is laid out: its contents, drawn afresh for each update, and its window. The screen's behaviour
+ *  (its keys, following the city, stepping through the player's cities, buying, selling and renaming) is the same
+ *  whatever the layout (#746).
+ */
+export interface CityLayout {
+  render(city: CityData, context: CityScreenContext): Node;
+  window: WindowOptions;
+}
+
+/** The classic city screen: a page over the map, the yields and improvements beside the map, the meters below. */
+export const classicCityLayout: CityLayout = {
+  render: (city, context) =>
+    cityDetails(
+      city,
+      context.portal,
+      context.transport,
+      context.chooseProduction,
+      context.completeProduction,
+      context.sellImprovement,
+      context.changeSpecialist,
+      context.readOnly,
+      context.readOnly ? '' : renderCityActions(context.step, context.rename)
+    ),
+  window: {
+    canResize: true,
+    canMaximise: true,
+    classes: 'city-screen-window',
+    size: 'maximised',
+  },
+};
+
 export class City extends Window {
   #city: CityData;
   // Whether the city screen is waiting for what the city can build, to open the production picker (#484).
   #choosingProduction = false;
+  #context: CityScreenContext;
+  #layout: CityLayout;
   #portal: Portal;
   #readOnly: boolean;
   // Whether a specialist has been changed and the city not yet updated with it. Changing one replaces it, so a second
@@ -682,42 +465,41 @@ export class City extends Window {
 
   /**
    * With `readOnly`, as for a rival's city a Diplomat has investigated (#58), the screen shows the city as it was sent
-   * and changes nothing: no production, worked tiles, specialists or buying, and no updates.
+   * and changes nothing: no production, worked tiles, specialists or buying, and no updates. `layout` is how it's drawn
+   * (#746), the classic page by default.
    */
   constructor(
     city: CityData,
     portal: Portal,
     transport: Transport,
-    { readOnly = false }: { readOnly?: boolean } = {}
+    {
+      readOnly = false,
+      layout = classicCityLayout,
+    }: { readOnly?: boolean; layout?: CityLayout } = {}
   ) {
+    const context: CityScreenContext = {
+      portal,
+      transport,
+      readOnly,
+      chooseProduction: () => this.changeProduction(),
+      completeProduction: (spendCost) => this.completeProduction(spendCost),
+      sellImprovement: (improvement, saleValue) =>
+        this.sellImprovement(improvement, saleValue),
+      changeSpecialist: (specialist) => this.#changeSpecialist(specialist),
+      toggleAuto: () => toggleAuto(this.#city.build, transport),
+      step: (by) => this.step(by),
+      rename: () => this.rename(),
+    };
+
     super(
       // The title is HTML, and a name the player typed (#676) is text.
       escape(cityName(city)),
-      cityDetails(
-        city,
-        portal,
-        transport,
-        () => this.changeProduction(),
-        (spendCost: SpendCost) => this.completeProduction(spendCost),
-        (improvement: CityImprovement, saleValue: SpendCost) =>
-          this.sellImprovement(improvement, saleValue),
-        (specialist: Specialist) => this.#changeSpecialist(specialist),
-        readOnly,
-        readOnly
-          ? ''
-          : renderCityActions(
-              (by: number) => this.step(by),
-              () => this.rename()
-            )
-      ),
-      {
-        canResize: true,
-        canMaximise: true,
-        classes: 'city-screen-window',
-        size: 'maximised',
-      }
+      layout.render(city, context),
+      layout.window
     );
 
+    this.#context = context;
+    this.#layout = layout;
     this.#city = city;
     this.#portal = portal;
     this.#readOnly = readOnly;
@@ -809,23 +591,7 @@ export class City extends Window {
   }
 
   #details(city: CityData): Node {
-    return cityDetails(
-      city,
-      this.#portal,
-      this.#transport,
-      () => this.changeProduction(),
-      (spendCost: SpendCost) => this.completeProduction(spendCost),
-      (improvement: CityImprovement, saleValue: SpendCost) =>
-        this.sellImprovement(improvement, saleValue),
-      (specialist: Specialist) => this.#changeSpecialist(specialist),
-      this.#readOnly,
-      this.#readOnly
-        ? ''
-        : renderCityActions(
-            (by: number) => this.step(by),
-            () => this.rename()
-          )
-    );
+    return this.#layout.render(city, this.#context);
   }
 
   // The player's cities as the page holds them now, which a step goes through (#678).
@@ -1023,5 +789,8 @@ export class City extends Window {
     );
   }
 }
+
+// Drawn by the new layout too (#746).
+export { renderBuildProgress, renderTradeRoutes };
 
 export default City;

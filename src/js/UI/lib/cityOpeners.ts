@@ -3,7 +3,7 @@
 //  opens it read-only. Every way in goes through `Portal#openCity`, so one choice covers them all.
 
 import { City as CityData } from '../types';
-import City from '../components/City';
+import openCity from '../components/openCity';
 import ObserveCity from '../../Engine/Requests/ObserveCity';
 import { ObserverState } from '../../Engine/Observer';
 import Portal from '../components/Portal';
@@ -19,7 +19,7 @@ export type CityOpener = {
 // The player's own cities, from the data the page holds.
 export const playerCityOpener = (): CityOpener => ({
   opens: (city, portal) => city.player.id === portal.playerId(),
-  open: (city, portal) => void new City(city, portal, portal.transport()),
+  open: (city, portal) => void openCity(city, portal, portal.transport()),
 });
 
 // Any city of a civilisation watched, or any city at all when the whole map is. The worker answers `null` for a square
@@ -42,7 +42,7 @@ export const observerCityOpener = (
       .request(new ObserveCity(city.tile.x, city.tile.y))
       .then((full) => {
         if (full !== null) {
-          new City(full, portal, transport, { readOnly: true });
+          openCity(full, portal, transport, { readOnly: true });
         }
       })
       // Not answered: the player has been told, and no city opens (#580).

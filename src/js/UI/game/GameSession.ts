@@ -2,7 +2,7 @@ import { City as CityData, DataPatch } from '../types';
 import { on, s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from '../lib/reconstituteData';
-import City from '../components/City';
+import openCity from '../components/openCity';
 import CitiesList from '../components/CitiesList';
 import GameMenu from '../components/GameMenu';
 import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
@@ -669,7 +669,7 @@ export class GameSession {
         transport.receive(
           'investigateCity',
           (city): void =>
-            void new City(city as unknown as CityData, portal, transport, {
+            void openCity(city as unknown as CityData, portal, transport, {
               readOnly: true,
             })
         )

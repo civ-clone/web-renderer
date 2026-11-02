@@ -1,0 +1,279 @@
+// The city screen under the new interface (#746): a window over the map, a strip across the top for the size, growth
+//  and citizens, three columns (what the city makes, its map, what it's building and has built) that share what
+//  height the window has and scroll on their own, and a strip along the bottom for its units. The bars, citizens and
+//  figures are drawn as the classic screen draws them (`city-parts`). Everything from the theme's tokens.
+.window.ui-city-window > .body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ui-city {
+  @include city-parts;
+
+  display: grid;
+  flex: 1 1 auto;
+  gap: 0.75rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  padding: 0.5rem 1rem;
+}
+
+// Not the space a window gives its buttons: the layout spaces them.
+.window .ui-city button {
+  margin: 0;
+}
+
+.ui-city-section h3 {
+  color: var(--type-eyebrow-colour);
+  font-size: var(--type-eyebrow-size);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: var(--type-eyebrow-tracking);
+  margin: 0 0 0.25rem;
+  text-transform: var(--type-eyebrow-transform);
+}
+
+.ui-city-empty {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+  margin: 0;
+}
+
+// The size and the food towards the next, then the citizens.
+.ui-city-header {
+  align-items: center;
+  border-bottom: 1px solid var(--ui-line);
+  display: flex;
+  gap: 1.5rem;
+  padding-bottom: 0.5rem;
+}
+
+.ui-city-growth {
+  display: grid;
+  flex: 0 1 18rem;
+  gap: 0.25rem;
+  min-width: 12rem;
+}
+
+.ui-city-size {
+  align-items: baseline;
+  display: flex;
+  font-weight: var(--type-strong-weight);
+  gap: 1rem;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.ui-city-garrison {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+  font-weight: normal;
+}
+
+.ui-city-citizens {
+  display: flex;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+
+  // Twice the tileset's size; crowded, they overlap further rather than overflow.
+  .population {
+    min-width: 0;
+  }
+
+  .population .citizen {
+    max-width: calc(var(--tileset-citizen-step) * 2);
+
+    img {
+      width: calc(var(--tileset-citizen-width) * 2);
+    }
+  }
+}
+
+// The trade routes, as compact as the yields above them.
+.ui-city .trade-routes {
+  header {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    margin: 0 0 0.25rem;
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  .trade-route {
+    font-size: var(--type-detail-size);
+    margin: 0;
+  }
+}
+
+// The yields with their names, between the icon and the bar.
+.ui-city .yields-detail {
+  grid-template-columns: var(--tileset-icon) max-content minmax(0, 1fr) auto;
+
+  .name {
+    font-size: var(--type-detail-size);
+  }
+}
+
+.ui-city-columns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(14rem, 1fr) auto minmax(13rem, 1fr);
+  min-height: 0;
+}
+
+.ui-city-left,
+.ui-city-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// The map at twice its size, its squares kept sharp.
+.ui-city-centre {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+
+  canvas {
+    image-rendering: pixelated;
+    max-width: 100%;
+  }
+}
+
+.ui-city-improvements {
+  // Two columns where there's room, so a city with every improvement still fits.
+  columns: 2 10rem;
+  column-gap: 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// Each improvement, its upkeep, and Sell (#684), shown where the pointer can hover only on the row's hover or focus:
+//  see-through rather than hidden, so Tab still reaches it.
+.ui-city-improvement {
+  align-items: center;
+  border-radius: var(--ui-radius-control);
+  display: flex;
+  break-inside: avoid;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+  padding: 0 0.25rem;
+
+  &:hover {
+    background: var(--ui-table-hover);
+  }
+
+  .name {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  // As tall as the row's text, not the space a window gives its buttons.
+  button.sell {
+    min-height: 0;
+    padding-block: 0;
+  }
+}
+
+@media (hover: hover) {
+  .ui-city-improvement:not(:hover, :focus-within) button.sell {
+    opacity: 0;
+  }
+}
+
+.ui-city-gold {
+  align-items: center;
+  color: var(--ui-fg-muted);
+  display: inline-flex;
+  font-size: var(--type-detail-size);
+  gap: 0.125rem;
+}
+
+.ui-city-upkeep-total {
+  align-items: center;
+  border-top: 1px solid var(--ui-table-rule);
+  display: flex;
+  font-size: var(--type-detail-size);
+  justify-content: space-between;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem 0.25rem 0;
+}
+
+// What the city is building, as a card: its picture and name, the meter and its figures, then its buttons (#687).
+.ui-city-production {
+  background: var(--ui-bg-1);
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+
+  header {
+    align-items: center;
+    display: flex;
+    gap: 0.5rem;
+
+    canvas,
+    img {
+      image-rendering: pixelated;
+    }
+
+    h3 {
+      flex: 1 1 auto;
+      font-family: var(--type-heading-family);
+      margin: 0;
+    }
+  }
+
+  &.nothing h3 {
+    color: var(--ui-fg-muted);
+  }
+
+  .auto-marker {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+  }
+}
+
+.ui-city-production-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+// The units in the city and those it supports, side by side.
+.ui-city-units-strip {
+  border-top: 1px solid var(--ui-line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.5rem;
+}
+
+.ui-city-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  min-height: 2rem;
+}
+
+.ui-city-unit {
+  line-height: 0;
+  padding: 0;
+
+  canvas,
+  img {
+    image-rendering: pixelated;
+  }
+
+  &:focus-visible {
+    outline: var(--ui-focus-outline);
+  }
+}
