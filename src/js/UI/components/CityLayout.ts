@@ -155,6 +155,26 @@ const renderImprovementList = (
     })
   );
 
+// The upkeep a list of improvements comes to, where it comes to any.
+const renderUpkeepTotal = (
+  city: CityData,
+  improvements: CityImprovement[]
+): HTMLElement | '' => {
+  const total = improvements.reduce(
+    (sum, improvement) => sum + upkeepOf(city, improvement.id),
+    0
+  );
+
+  return total > 0
+    ? s(
+        `<p class="ui-city-upkeep-total"><span>${t(
+          'CityWindow.upkeep-total'
+        )}</span></p>`,
+        gold(total, t('CityWindow.upkeep', { count: total }))
+      )
+    : '';
+};
+
 // The city's improvements, then the upkeep they come to. Its Wonders are among them, as the engine sends them, and
 //  have their own section below (#746).
 const renderImprovements = (
@@ -162,12 +182,8 @@ const renderImprovements = (
   context: CityScreenContext
 ): HTMLElement => {
   const improvements = city.improvements.filter(
-      (improvement) => !isWonder(improvement)
-    ),
-    total = city.improvements.reduce(
-      (sum, improvement) => sum + upkeepOf(city, improvement.id),
-      0
-    );
+    (improvement) => !isWonder(improvement)
+  );
 
   if (improvements.length === 0) {
     return section(
@@ -179,18 +195,11 @@ const renderImprovements = (
   return section(
     t('CityWindow.improvements'),
     renderImprovementList(city, improvements, context),
-    total > 0
-      ? s(
-          `<p class="ui-city-upkeep-total"><span>${t(
-            'CityWindow.upkeep-total'
-          )}</span></p>`,
-          gold(total, t('CityWindow.upkeep', { count: total }))
-        )
-      : ''
+    renderUpkeepTotal(city, improvements)
   );
 };
 
-// The city's Wonders, where it has any (#746).
+// The city's Wonders, where it has any (#746), and their upkeep under rules that charge any.
 const renderWonders = (
   city: CityData,
   context: CityScreenContext
@@ -201,7 +210,8 @@ const renderWonders = (
     ? ''
     : section(
         t('CityWindow.wonders'),
-        renderImprovementList(city, wonders, context)
+        renderImprovementList(city, wonders, context),
+        renderUpkeepTotal(city, wonders)
       );
 };
 

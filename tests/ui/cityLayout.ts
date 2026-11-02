@@ -492,6 +492,51 @@ const run = async (): Promise<void> => {
     ['Improvements', ['No improvements yet']],
   ]);
 
+  // Under rules that charge upkeep for a Wonder, each section's total is its own rows'.
+  const charged = openCity(
+      cityData('City-U', 'Uruk', {
+        improvements: [
+          {
+            _: 'Colossus',
+            __: ['Colossus', 'Wonder', 'CityImprovement', 'Buildable'],
+            id: 'City-U-Colossus',
+            saleValue: [],
+          },
+          ...cityData('City-U', 'Uruk').improvements,
+        ],
+        yields: [
+          ...cityData('City-U', 'Uruk').yields,
+          {
+            _: 'CityImprovementMaintenanceGold',
+            __: ['CityImprovementMaintenanceGold', 'Gold', 'Yield'],
+            value: -2,
+            cityImprovement: { id: 'City-U-Colossus' },
+          },
+        ],
+      }),
+      portal,
+      transport
+    ),
+    totals = Array.from(
+      charged.element().querySelectorAll('.ui-city-right > .ui-city-section')
+    ).map((section) => [
+      text(section.querySelector('h3')),
+      section
+        .querySelector('.ui-city-upkeep-total .ui-city-gold')
+        ?.getAttribute('title') ?? null,
+    ]);
+
+  charged.close();
+
+  expect(
+    'a Wonder’s upkeep is counted under Wonders, not Improvements',
+    totals,
+    [
+      ['Improvements', 'Upkeep: 1 gold a turn'],
+      ['Wonders', 'Upkeep: 2 gold a turn'],
+    ]
+  );
+
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
 
