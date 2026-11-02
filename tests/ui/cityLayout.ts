@@ -1,11 +1,11 @@
 // The city screen under the new interface (#746), with the real `City` window built under linkedom: `openCity` picks the
 //  layout by the interface; the strip across the top with the size, the garrison and the citizens, the specialists
 //  changing on a click (#107); the yields with their names (#719); each improvement with its upkeep and the total, Sell
-//  asking first (#684); the city's Wonders among them, after the others and marked; the production card, "Nothing in production" with Choose, Buy with its price asking first and
-//  pressed by B; the units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's
-//  footer, still there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city,
-//  read-only, with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in
-//  `cityWindow`.
+//  asking first (#684) about that row's improvement; the city's Wonders among them, after the others and marked; the
+//  production card, "Nothing in production" with Choose, Buy with its price asking first and pressed by B; the units
+//  in the city as buttons that make one active (#482); Previous, Rename and Next in the window's footer, still there
+//  after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city, read-only, with
+//  nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -302,7 +302,12 @@ const run = async (): Promise<void> => {
 
   click(rows[0].querySelector('button.sell'));
 
-  expect('Sell asks first', confirmations().length, 1);
+  // The rows are in their own order, not the engine's: Sell is still for its row's improvement.
+  expect(
+    'Sell asks first, about that row’s improvement',
+    [confirmations().length, text(confirmations()[0]).includes('Barracks')],
+    [1, true]
+  );
 
   clearConfirmations();
 

@@ -113,6 +113,15 @@ const renderHeader = (
   );
 };
 
+// What marks a Wonder among the improvements. Set as text, not markup: a translation is words.
+const wonderMark = (): HTMLElement => {
+  const mark = s('<span class="ui-city-wonder-mark"></span>');
+
+  mark.textContent = t('CityWindow.wonder');
+
+  return mark;
+};
+
 // Each improvement with its upkeep, and Sell where it can be sold (#31, #684), then the upkeep they come to. The city's
 //  Wonders are among its improvements, as the engine sends them: they're listed after the others, marked (#746).
 const renderImprovements = (
@@ -149,21 +158,13 @@ const renderImprovements = (
           wonder = isWonder(improvement);
 
         return s(
-          `<li class="ui-city-improvement${
-            wonder ? ' ui-city-wonder' : ''
-          }"></li>`,
+          '<li class="ui-city-improvement"></li>',
           s(
             `<span class="name">${getLabelForBuildableEntity(
               improvement
             )}</span>`
           ),
-          wonder
-            ? s(
-                `<span class="ui-city-wonder-mark">${t(
-                  'CityWindow.wonder'
-                )}</span>`
-              )
-            : '',
+          wonder ? wonderMark() : '',
           upkeep > 0
             ? gold(upkeep, t('CityWindow.upkeep', { count: upkeep }))
             : '',
