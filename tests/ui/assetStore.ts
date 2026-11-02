@@ -274,6 +274,16 @@ onPreloadedImagesChanged(() => changed++);
     ],
     ['url 3', 'url 4']
   );
+  expect(
+    "a URL already made is there to draw at once (#64), at that size only, and not one that wasn't kept",
+    [
+      store.cachedURL(key('city/food'), 14),
+      store.cachedURL(key('city/food'), 28),
+      store.cachedURL(key('city/food'), 36),
+      store.cachedURL(key('city/trade'), 14),
+    ],
+    ['url 1', 'url 2', null, null]
+  );
 
   // A bitmap that doesn't come in time, as might happen in a background tab: the sprite is loaded as an <img> instead.
   const createImageBitmap = (globalThis as any).createImageBitmap,
