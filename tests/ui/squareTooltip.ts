@@ -14,6 +14,10 @@ import Map from '../../src/js/UI/components/Map';
 import { Rect } from '../../src/js/UI/lib/viewport';
 import World from '../../src/js/UI/components/World';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
+import {
+  TooltipContent,
+  TooltipText,
+} from '../../src/js/UI/components/lib/Tooltip';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
@@ -60,7 +64,8 @@ let under: Element | null = null;
 (document as any).elementFromPoint = () => under;
 
 assetStore.spriteURL = () => new Promise(() => {});
-assetStore.shownAtURL = () => new Promise(() => {});
+// The tileset's pictures, by their sprite key.
+assetStore.shownAtURL = async (key: string) => `sprite:${key}`;
 
 const yieldOf = (_: string, value: number) =>
     ({ _, __: [_, 'Yield'], id: `Yield-${_}`, value } as unknown as Yield),
@@ -226,6 +231,20 @@ const pointer = (type: string, x: number, y: number): void => {
       (element) => element.textContent
     ),
   }),
+  // A cell as a screen reader has it: an icon's name, then its figure.
+  cellText = (cell: TooltipText): string =>
+    typeof cell === 'string'
+      ? cell
+      : (cell instanceof Element && cell.matches('.yield-amount')
+          ? [cell]
+          : [...(cell as Element).querySelectorAll('.yield-amount')]
+        )
+          .map((amount) => amount.textContent!.trim())
+          .join(', '),
+  plain = ({ title, rows }: TooltipContent) => ({
+    title,
+    rows: rows.map((row) => row.map(cellText)),
+  }),
   // Moves off anything, then rests on the pixel long enough for its tooltip.
   rest = async (x: number, y: number) => {
     canvas.dispatchEvent(new Event('pointerleave'));
@@ -248,67 +267,74 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-civilization/en');
 
   // What it says.
-  expect('grassland with a road, worked by a city', squareTooltip(grassland), {
-    title: 'Grassland',
-    rows: [
-      ['Yields', '2 Food · 1 Trade'],
-      ['Movement cost', '1 move'],
-      ['Improvements', 'Road'],
-      ['Worked by', 'Babylon'],
-    ],
-  });
   expect(
-    'hills with coal and a mine: the resource, and the defence bonus',
-    squareTooltip(hills),
+    'grassland with a road, worked by a city',
+    plain(squareTooltip(grassland)),
     {
-      title: 'Hills, Coal',
+      title: 'Grassland',
       rows: [
-        ['Yields', '1 Food · 5 Production'],
-        ['Defense', '+100%'],
-        ['Movement cost', '2 moves'],
-        ['Improvements', 'Mine'],
+        ['Yields', 'Food: 2, Trade: 1'],
+        ['Movement cost', '1'],
+        ['Improvements', 'Road'],
+        ['Worked by', 'Babylon'],
       ],
     }
   );
   expect(
-    "ocean with a rival's Trireme: the unit and whose",
-    squareTooltip(ocean),
+    'hills with coal and a mine: the resource, and the defence bonus',
+    plain(squareTooltip(hills)),
+    {
+      title: 'Hills, Coal',
+      rows: [
+        ['Yields', 'Food: 1, Production: 5'],
+        ['Defense', '+100%'],
+        ['Movement cost', '2'],
+        ['Improvements', 'Mine'],
+      ],
+    }
+  );
+
+  const [[, yieldsShown], [defenceShown], [movesShown]] =
+    squareTooltip(hills).rows;
+
+  expect(
+    "yields as the tileset's icons, defence and moves as the unit card's glyphs",
+    [
+      (yieldsShown as Element).querySelectorAll('.yield-icon').length,
+      (defenceShown as Element).querySelector('.glyph-stat-defence') !== null,
+      (movesShown as Element).querySelector('.glyph-stat-moves') !== null,
+    ],
+    [2, true, true]
+  );
+  expect(
+    "ocean with a rival's Trireme: not the unit, which the map shows, as much as you know of a rival's stack",
+    plain(squareTooltip(ocean)),
     {
       title: 'Ocean',
       rows: [
-        ['Yields', '1 Food · 2 Trade'],
-        ['Movement cost', '1 move'],
-        ['Trireme', 'Egyptian'],
+        ['Yields', 'Food: 1, Trade: 2'],
+        ['Movement cost', '1'],
       ],
     }
   );
   expect(
     'a city on the square, rather than working it',
-    squareTooltip({ ...grassland, city: babylon } as Tile).rows[3],
+    plain(squareTooltip({ ...grassland, city: babylon } as Tile)).rows[3],
     ['City', 'Babylon']
   );
   expect(
-    'six units: four named, the rest counted',
-    squareTooltip({
-      ...ocean,
-      units: Array.from({ length: 6 }, () => unit('Trireme', 'Egyptian')),
-    } as unknown as Tile).rows.slice(-2),
-    [
-      ['Trireme', 'Egyptian'],
-      ['and 2 more units', ''],
-    ]
-  );
-  expect(
     'a square yielding nothing: a dash',
-    squareTooltip({ ...ocean, yields: [] } as unknown as Tile).rows[0],
+    plain(squareTooltip({ ...ocean, yields: [] } as unknown as Tile)).rows[0],
     ['Yields', '–']
   );
   expect(
     'a terrain no unit can move onto: no move cost',
-    squareTooltip({
-      ...hills,
-      terrain: terrain('Hills', 2, null),
-    } as unknown as Tile).rows.map(([label]) => label),
+    plain(
+      squareTooltip({
+        ...hills,
+        terrain: terrain('Hills', 2, null),
+      } as unknown as Tile)
+    ).rows.map(([label]) => label),
     ['Yields', 'Defense', 'Improvements']
   );
   expect(
@@ -323,7 +349,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/local/en-GB');
   await i18next.changeLanguage('en-GB');
 
-  expect('British English: Defence', squareTooltip(hills).rows[1], [
+  expect('British English: Defence', plain(squareTooltip(hills)).rows[1], [
     'Defence',
     '+100%',
   ]);
@@ -367,6 +393,24 @@ const run = async (): Promise<void> => {
     "under the square, from the square's left, on the window",
     [panel()?.style.left, panel()?.style.top],
     [`${100 + box.x}px`, `${50 + box.y + box.height + 4}px`]
+  );
+
+  await wait(0);
+
+  expect(
+    "the yields' pictures, by the tileset's keys for them",
+    [...(panel()?.querySelectorAll('dd .yield-icon img') ?? [])].map(
+      (img) => /city\/(\w+)/.exec(img.getAttribute('src') ?? '')?.[1]
+    ),
+    ['food', 'production']
+  );
+  expect(
+    'the icons are in the panel, not just the content',
+    [
+      panel()?.querySelectorAll('dd .yield-icon').length,
+      panel()?.querySelector('dt .glyph-stat-defence') !== null,
+    ],
+    [2, true]
   );
 
   pointer('pointermove', 41, 46);

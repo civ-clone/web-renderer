@@ -803,13 +803,10 @@ i18next.addResources('en', 'default', {
     '+{{bonus, number(style: percent; maximumFractionDigits: 0)}}',
   'SquareTooltip.improvements': 'Improvements',
   'SquareTooltip.list': '{{items, list(type: unit)}}',
-  'SquareTooltip.more-units_one': 'and {{count, number}} more unit',
-  'SquareTooltip.more-units_other': 'and {{count, number}} more units',
   'SquareTooltip.movement-cost': 'Movement cost',
-  'SquareTooltip.moves_one': '{{count, number}} move',
-  'SquareTooltip.moves_other': '{{count, number}} moves',
+  'SquareTooltip.named': '{{- name}}: ',
+  'SquareTooltip.value': '{{value, number}}',
   'SquareTooltip.worked-by': 'Worked by',
-  'SquareTooltip.yield': '{{value, number}} {{- yield}}',
   'SquareTooltip.yields': 'Yields',
 
   // Moving onto, or pillaging, a treaty partner's land (#287).

@@ -3,10 +3,13 @@
 //  added last to `body` when it opens: later in the document than the map and the panels, so it's drawn over them
 //  without a stacking order of its own, and under a modal window, which is above everything.
 
+// Text, or an element with icons in it that names what they are for a screen reader (#748).
+export type TooltipText = string | Node;
+
 export interface TooltipContent {
   title: string;
-  rows: [label: string, value: string][];
-  total?: [label: string, value: string] | null;
+  rows: [label: TooltipText, value: TooltipText][];
+  total?: [label: TooltipText, value: TooltipText] | null;
 }
 
 export interface TooltipOptions {
@@ -63,7 +66,7 @@ const matches = (
   }
 };
 
-// Set as text, not markup: the figures come with names in them.
+// Set as text, not markup: the figures come with names in them. An element is added as it is.
 const fill = (element: HTMLElement, { title, rows, total }: TooltipContent) => {
   const heading = document.createElement('h4'),
     list = document.createElement('dl');
@@ -74,8 +77,8 @@ const fill = (element: HTMLElement, { title, rows, total }: TooltipContent) => {
     const term = document.createElement('dt'),
       definition = document.createElement('dd');
 
-    term.textContent = label;
-    definition.textContent = value;
+    term.append(label);
+    definition.append(value);
 
     if (total && index === rows.length) {
       term.className = definition.className = 'total';

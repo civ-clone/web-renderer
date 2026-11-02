@@ -213,7 +213,9 @@ export const yieldIcon = (group: string): HTMLElement => {
       spriteKey(currentTileset(), groupIcons[group]),
       currentTileset().ui.icon
     )
-    .then((url) => icon.append(s(`<img src="${url}" alt="">`)));
+    .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
+    // A tileset without the picture: the amount beside it says it all.
+    .catch(() => {});
 
   return icon;
 };
