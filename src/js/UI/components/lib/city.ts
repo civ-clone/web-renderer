@@ -46,7 +46,9 @@ export const growthLimitText = (
     return null;
   }
 
-  // An improvement's own sentence where its name needs an article ("an Aqueduct"), the plain one otherwise.
+  // An improvement's own sentence where its name needs an article ("an Aqueduct"), the plain one otherwise. i18next
+  //  tries the first key in every language before the second, so a language that has the plain sentence needs each
+  //  improvement's own one too, or English's shows through.
   return t([`City.Growth.needs-${needs}`, 'City.Growth.needs'], {
     improvement: t(`Improvement.${needs}.name`, {
       defaultValue: needs,
