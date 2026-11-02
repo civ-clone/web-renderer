@@ -91,8 +91,13 @@ const yieldOf = (_: string, value: number) =>
 // Whose banner is under the pointer, wherever it is: set by each check.
 let banner: City | null = null;
 
+// How often the portal has asked whose banner is where.
+let asked = 0;
+
 class Banners extends Map {
   bannerAt(): { city: City; box: Rect } | null {
+    asked++;
+
     return banner === null ? null : { city: banner, box };
   }
 }
@@ -143,7 +148,7 @@ const portal = new GamePortal(
 const pointer = (
     type: string,
     over: City | null,
-    { pointerType = 'mouse', buttons = 0 } = {}
+    { pointerType = 'mouse', buttons = 0, x = 40 } = {}
   ): void => {
     const event = new Event(type, { cancelable: true });
 
@@ -151,16 +156,16 @@ const pointer = (
 
     Object.entries({
       buttons,
-      clientX: 40,
+      clientX: x,
       clientY: 45,
       isPrimary: true,
-      offsetX: 40,
+      offsetX: x,
       offsetY: 45,
-      pageX: 40,
+      pageX: x,
       pageY: 45,
       pointerId: 7,
       pointerType,
-      x: 40,
+      x,
       y: 45,
     }).forEach(([key, value]) => Object.defineProperty(event, key, { value }));
 
@@ -263,6 +268,7 @@ const run = async (): Promise<void> => {
   // What closes it.
   await rest(null);
   await rest(ours);
+  expect('open, before: a press closes it', shown(), true);
   pointer('pointerdown', ours, { buttons: 1 });
 
   expect('a press closes it', shown(), false);
@@ -270,18 +276,21 @@ const run = async (): Promise<void> => {
   pointer('pointerup', ours);
   await rest(null);
   await rest(ours);
+  expect('open, before: a key closes it', shown(), true);
   document.dispatchEvent(new Event('keydown'));
 
   expect('a key closes it', shown(), false);
 
   await rest(null);
   await rest(ours);
+  expect('open, before: the map moving closes it', shown(), true);
   portal.setCenter(5, 5);
 
   expect('the map moving closes it', shown(), false);
 
   await rest(null);
   await rest(ours);
+  expect('open, before: the mouse leaving the map closes it', shown(), true);
   canvas.dispatchEvent(new Event('pointerleave'));
 
   expect('the mouse leaving the map closes it', shown(), false);
@@ -291,6 +300,37 @@ const run = async (): Promise<void> => {
   await wait(450);
 
   expect('leaving before the delay, it never opens', shown(), false);
+
+  // A fling: the map glides on after the press is let go.
+  const frames = (globalThis as any).window;
+
+  frames.requestAnimationFrame ??= (callback: (now: number) => void) =>
+    setTimeout(() => callback(performance.now()), 16);
+  frames.cancelAnimationFrame ??= (handle: number) => clearTimeout(handle);
+
+  await rest(null);
+  pointer('pointerdown', null, { buttons: 1, x: 40 });
+
+  for (let x = 30; x >= 0; x -= 10) {
+    await wait(5);
+    pointer('pointermove', null, { buttons: 1, x });
+  }
+
+  pointer('pointerup', null, { x: 0 });
+  asked = 0;
+  pointer('pointermove', ours);
+
+  expect(
+    "while the map glides on after a fling, resting on a banner doesn't start a tooltip: it would open where the banner was",
+    asked,
+    0
+  );
+
+  portal.setCenter(4, 4);
+  await rest(null);
+  await rest(ours);
+
+  expect('once it has stopped, it opens again', shown(), true);
 
   pointer('pointermove', ours);
   await wait(200);

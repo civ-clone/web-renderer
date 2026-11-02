@@ -249,10 +249,12 @@ export class GamePortal extends Portal {
   }
 
   // A mouse resting on one of your cities' banners opens its tooltip. Not on touch, where a long press is the unit
-  //  menu's, and only while no button is held, as a press means the map.
+  //  menu's, only while no button is held, as a press means the map, and not while the map glides on under it.
   private hover(event: PointerEvent): void {
     const banner =
-        event.pointerType === 'mouse' && event.buttons === 0
+        event.pointerType === 'mouse' &&
+        event.buttons === 0 &&
+        this.#inertiaFrame === null
           ? this.bannerAt(event.offsetX, event.offsetY)
           : null,
       current = this.#hover;
