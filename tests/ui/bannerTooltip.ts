@@ -12,6 +12,7 @@ import GamePortal from '../../src/js/UI/components/GamePortal';
 import Map from '../../src/js/UI/components/Map';
 import { Rect } from '../../src/js/UI/lib/viewport';
 import World from '../../src/js/UI/components/World';
+import { hideTooltip } from '../../src/js/UI/components/lib/Tooltip';
 import cityBannerTooltip from '../../src/js/UI/components/Map/cityBannerTooltip';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
@@ -49,8 +50,10 @@ process.on('exit', (code: number): void => {
     },
   });
 
-// What a click lands on, which the press in the checks below asks for.
-(document as any).elementFromPoint = () => null;
+// What's under the pointer in the window: the map, unless a check puts a window over it.
+let under: Element | null = null;
+
+(document as any).elementFromPoint = () => under;
 
 assetStore.spriteURL = () => new Promise(() => {});
 assetStore.shownAtURL = () => new Promise(() => {});
@@ -111,6 +114,7 @@ canvas.setPointerCapture = () => {};
 canvas.getBoundingClientRect = () =>
   ({ left: 100, top: 50, right: 228, bottom: 178 } as DOMRect);
 document.body.append(canvas);
+under = canvas;
 
 // The window it's kept inside, and the tooltip's own size: linkedom lays nothing out.
 Object.assign((globalThis as any).window, {
@@ -287,6 +291,62 @@ const run = async (): Promise<void> => {
   await wait(450);
 
   expect('leaving before the delay, it never opens', shown(), false);
+
+  pointer('pointermove', ours);
+  await wait(200);
+  document.dispatchEvent(new Event('keydown'));
+  await wait(250);
+
+  expect('a key while it waits: it never opens', shown(), false);
+
+  const report = document.createElement('dialog');
+
+  await rest(null);
+  pointer('pointermove', ours);
+  await wait(200);
+  under = report;
+  await wait(250);
+  under = canvas;
+
+  expect(
+    'a window opened over the map while it waits: it never opens over it',
+    shown(),
+    false
+  );
+
+  await rest(null);
+  await rest(ours);
+  hideTooltip();
+  await rest(ours);
+
+  expect(
+    'closed by something else (a list scrolling): resting on the banner opens it again',
+    shown(),
+    true
+  );
+
+  pointer('pointermove', { ...ours } as City);
+
+  expect(
+    'the same city with its data replaced is the same banner: it stays open',
+    shown(),
+    true
+  );
+
+  await rest(null);
+  pointer('pointermove', ours);
+  await wait(200);
+  banner = {
+    ...ours,
+    build: { ...ours.build, progress: { value: 50 } },
+  } as unknown as City;
+  await wait(250);
+
+  expect(
+    'what the city is building as it is when it opens, not when the mouse arrived',
+    says().rows.slice(0, 2),
+    ['Bank', '50 / 120 · 7 turns']
+  );
 
   finished = true;
 

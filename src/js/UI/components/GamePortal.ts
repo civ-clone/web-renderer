@@ -4,7 +4,6 @@ import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
 import { hideTooltip, showTooltipOver, tooltipOpenOver } from './lib/Tooltip';
 import { openUnitSelection } from './choices';
 import Portal from './Portal';
-import { Rect } from '../lib/viewport';
 import UnitActionMenu from './UnitActionMenu';
 import { on } from '@dom111/element';
 
@@ -32,10 +31,14 @@ type Drag = {
   samples: DragSample[];
 };
 
-// The banner the mouse rests on (#747), and the wait before its tooltip opens.
+// The banner the mouse rests on (#747): whose, where the mouse is last seen on the canvas and in the window, and the
+//  wait before its tooltip opens.
 type Hover = {
   city: City;
-  box: Rect;
+  offsetX: number;
+  offsetY: number;
+  clientX: number;
+  clientY: number;
   timer: number | null;
 };
 
@@ -249,12 +252,26 @@ export class GamePortal extends Portal {
   //  menu's, and only while no button is held, as a press means the map.
   private hover(event: PointerEvent): void {
     const banner =
-      event.pointerType === 'mouse' && event.buttons === 0
-        ? this.bannerAt(event.offsetX, event.offsetY)
-        : null;
+        event.pointerType === 'mouse' && event.buttons === 0
+          ? this.bannerAt(event.offsetX, event.offsetY)
+          : null,
+      current = this.#hover;
 
-    // Still the same city's: the city's data is replaced as it changes, so by its id.
-    if (banner?.city.id === this.#hover?.city.id) {
+    // Still the same city's (by its id, as the city's data is replaced as it changes): wait on, or leave it open. Unless
+    //  something else has closed it since (a list scrolling), which resting here opens again.
+    if (
+      banner !== null &&
+      current !== null &&
+      banner.city.id === current.city.id &&
+      (current.timer !== null || tooltipOpenOver(this.canvas()))
+    ) {
+      Object.assign(current, {
+        offsetX: event.offsetX,
+        offsetY: event.offsetY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+
       return;
     }
 
@@ -264,26 +281,50 @@ export class GamePortal extends Portal {
       return;
     }
 
-    const hover: Hover = { ...banner, timer: null };
+    const hover: Hover = {
+      city: banner.city,
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      timer: null,
+    };
 
     hover.timer = window.setTimeout(() => {
       hover.timer = null;
 
-      const canvas = this.canvas().getBoundingClientRect();
+      // What's there now: a window may have opened over the map while it waited, and the city's data, or its banner,
+      //  may have changed.
+      const now =
+        document.elementFromPoint(hover.clientX, hover.clientY) ===
+        this.canvas()
+          ? this.bannerAt(hover.offsetX, hover.offsetY)
+          : null;
+
+      if (now === null || now.city.id !== hover.city.id) {
+        this.endHover();
+
+        return;
+      }
+
+      const canvas = this.canvas().getBoundingClientRect(),
+        { city, box } = now;
 
       showTooltipOver(
         this.canvas(),
         () => ({
-          left: canvas.left + hover.box.x,
-          top: canvas.top + hover.box.y,
-          bottom: canvas.top + hover.box.y + hover.box.height,
+          left: canvas.left + box.x,
+          top: canvas.top + box.y,
+          bottom: canvas.top + box.y + box.height,
         }),
-        () => cityBannerTooltip(hover.city)
+        () => cityBannerTooltip(city)
       );
-      document.addEventListener('keydown', this.endHover, true);
     }, BANNER_TOOLTIP_DELAY);
 
     this.#hover = hover;
+
+    // A key, while it waits or once it's open: it may move the map, or open a window over it.
+    document.addEventListener('keydown', this.endHover, true);
   }
 
   private endHover = (): void => {
