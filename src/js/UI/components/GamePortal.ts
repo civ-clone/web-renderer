@@ -320,7 +320,7 @@ export class GamePortal extends Portal {
       key: `square ${tile.x},${tile.y}${banner === null ? '' : ' banner'}`,
       tile,
       box,
-      content: () => squareTooltip(tile),
+      content: () => squareTooltip(tile, this.playerId()),
     };
   }
 

@@ -10,7 +10,8 @@ import { yieldIcon } from '../lib/cityYields';
 // What a map square is, as the Civilopedia and the square itself would tell you (#748): its terrain and special
 //  resource, what it yields now, what it does for a unit there, what's been built on it, and the city on it or working
 //  it. All of it is what the client already holds or the engine sends with the terrain (#274). Not its units: the map
-//  draws the one on top, and a rival's stack says no more than that.
+//  draws the one on top, and a rival's stack says no more than that. Nor which rival city works it, which the map doesn't
+//  show either: only your own.
 
 // The tooltip sets these as text, so i18next's HTML escaping would show a name with `&` or `'` in it escaped (#704).
 const text = (key: string, options: TOptions = {}): string =>
@@ -45,7 +46,10 @@ const stat = (value: string, name: GlyphName): TooltipText => {
 export const hasSquareTooltip = (tile: Tile): boolean =>
   tile.terrain._ !== 'Unknown';
 
-export const squareTooltip = (tile: Tile): TooltipContent => {
+export const squareTooltip = (
+  tile: Tile,
+  playerId: string | null
+): TooltipContent => {
   const { terrain } = tile,
     yields = netTileYields(tile.yields ?? [])
       // Food, Production, Trade, as the map draws them.
@@ -105,7 +109,7 @@ export const squareTooltip = (tile: Tile): TooltipContent => {
 
   if (tile.city) {
     rows.push([text('SquareTooltip.city'), cityNameText(tile.city)]);
-  } else if (tile.workedBy) {
+  } else if (tile.workedBy && tile.workedBy.player.id === playerId) {
     rows.push([text('SquareTooltip.worked-by'), cityNameText(tile.workedBy)]);
   }
 

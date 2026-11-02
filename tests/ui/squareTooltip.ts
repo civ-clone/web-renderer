@@ -90,6 +90,7 @@ const yieldOf = (_: string, value: number) =>
   babylon = {
     id: 'City-1',
     name: 'Babylon',
+    player: { id: 'Player-1' },
     originalPlayer: { civilization: { _: 'Babylonian' } },
     tile: { x: 1, y: 1 },
   } as unknown as City,
@@ -269,7 +270,7 @@ const run = async (): Promise<void> => {
   // What it says.
   expect(
     'grassland with a road, worked by a city',
-    plain(squareTooltip(grassland)),
+    plain(squareTooltip(grassland, 'Player-1')),
     {
       title: 'Grassland',
       rows: [
@@ -282,7 +283,7 @@ const run = async (): Promise<void> => {
   );
   expect(
     'hills with coal and a mine: the resource, and the defence bonus',
-    plain(squareTooltip(hills)),
+    plain(squareTooltip(hills, 'Player-1')),
     {
       title: 'Hills, Coal',
       rows: [
@@ -294,8 +295,10 @@ const run = async (): Promise<void> => {
     }
   );
 
-  const [[, yieldsShown], [, defenceShown], [, movesShown]] =
-    squareTooltip(hills).rows;
+  const [[, yieldsShown], [, defenceShown], [, movesShown]] = squareTooltip(
+    hills,
+    'Player-1'
+  ).rows;
 
   expect(
     "yields as the tileset's icons, defence and moves named, then the figure and the unit card's glyph",
@@ -310,7 +313,7 @@ const run = async (): Promise<void> => {
   );
   expect(
     "ocean with a rival's Trireme: not the unit, which the map shows, as much as you know of a rival's stack",
-    plain(squareTooltip(ocean)),
+    plain(squareTooltip(ocean, 'Player-1')),
     {
       title: 'Ocean',
       rows: [
@@ -321,21 +324,34 @@ const run = async (): Promise<void> => {
   );
   expect(
     'a city on the square, rather than working it',
-    plain(squareTooltip({ ...grassland, city: babylon } as Tile)).rows[3],
+    plain(squareTooltip({ ...grassland, city: babylon } as Tile, 'Player-1'))
+      .rows[3],
     ['City', 'Babylon']
   );
   expect(
+    "a rival's city working it: not said, as the map doesn't show it",
+    plain(
+      squareTooltip({ ...grassland, workedBy: thebes } as Tile, 'Player-1')
+    ).rows.map(([label]) => label),
+    ['Yields', 'Movement cost', 'Improvements']
+  );
+  expect(
     'a square yielding nothing: a dash',
-    plain(squareTooltip({ ...ocean, yields: [] } as unknown as Tile)).rows[0],
+    plain(
+      squareTooltip({ ...ocean, yields: [] } as unknown as Tile, 'Player-1')
+    ).rows[0],
     ['Yields', '–']
   );
   expect(
     'a terrain no unit can move onto: no move cost',
     plain(
-      squareTooltip({
-        ...hills,
-        terrain: terrain('Hills', 2, null),
-      } as unknown as Tile)
+      squareTooltip(
+        {
+          ...hills,
+          terrain: terrain('Hills', 2, null),
+        } as unknown as Tile,
+        'Player-1'
+      )
     ).rows.map(([label]) => label),
     ['Yields', 'Defense', 'Improvements']
   );
@@ -351,10 +367,11 @@ const run = async (): Promise<void> => {
   await import('../../translations/local/en-GB');
   await i18next.changeLanguage('en-GB');
 
-  expect('British English: Defence', plain(squareTooltip(hills)).rows[1], [
-    'Defence',
-    '+100%',
-  ]);
+  expect(
+    'British English: Defence',
+    plain(squareTooltip(hills, 'Player-1')).rows[1],
+    ['Defence', '+100%']
+  );
 
   await i18next.changeLanguage('en');
 
