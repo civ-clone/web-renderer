@@ -1,7 +1,7 @@
 // A click on the map where a city's banner hangs over a square (#747), with the real `GamePortal` under linkedom and a
 //  layer that says whose banner is where: the square is always told of (`tile-clicked`, the create-unit cheat's
 //  coordinates); a city's own square, or our units, win over a banner, which hangs over its neighbours; otherwise the
-//  banner opens its city, or, for a city that doesn't open (a rival's), centres the map on it, past a locked pole too.
+//  banner opens its city, or, for a city that doesn't open (a rival's), centres the map on it.
 
 // Must stay first: `GamePortal` reaches windows that read `document.body` as they load.
 import { document } from './lib/dom';
