@@ -645,6 +645,45 @@ expect(
   [false, true]
 );
 
+// The yields (y) hide the banners, wide enough to cover a row of them, without undoing t: with the yields gone they're
+//  back only if the units are.
+const shown = (): boolean[] => [
+  withBanners.yieldsLayer.isVisible(),
+  withBanners.unitsLayer.isVisible(),
+  withBanners.cityNamesLayer.isVisible(),
+];
+
+withBanners.toggleYields();
+
+expect('y hides the banners with the yields shown', shown(), [
+  true,
+  true,
+  false,
+]);
+
+withBanners.toggleUnits();
+withBanners.toggleYields();
+
+expect('with the units hidden, y off leaves the banners hidden', shown(), [
+  false,
+  false,
+  false,
+]);
+
+withBanners.toggleUnits();
+
+expect('t brings them back with the units', shown(), [false, true, true]);
+
+mapView.toggleYields();
+
+expect(
+  "the classic interface's labels stay with the yields shown, as before",
+  mapView.cityNamesLayer.isVisible(),
+  true
+);
+
+mapView.toggleYields();
+
 withBanners.dispose();
 applyInterface('classic', null);
 

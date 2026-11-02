@@ -78,9 +78,10 @@ export class GamePortal extends Portal {
         (unit: Unit) => unit.player.id === this.playerId()
       );
 
-      // A click on a banner is for its city, unless the square under it has units of ours, which a click selects
-      //  wherever they are: the city opens, or the map centres on it. A banner can hang past a locked pole.
-      if (bannerCity !== null && playerTileUnits.length === 0) {
+      // A click on a banner is for its city, unless the square under it is a city's, or has units of ours, which a click
+      //  opens or selects wherever they are: the banner's city opens, or the map centres on it. A banner can hang past
+      //  a locked pole.
+      if (bannerCity !== null && !tile?.city && playerTileUnits.length === 0) {
         if (!this.openCity(bannerCity)) {
           this.setCenter(bannerCity.tile.x, bannerCity.tile.y);
         }

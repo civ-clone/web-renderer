@@ -72,6 +72,8 @@ export class MapView {
   #schemeQuery: MediaQueryList | null = null;
   #fonts: FontFaceSet | null = null;
   #restyleHandler = (): void => this.#restyle();
+  // Whether `t` shows the units, cities and city names, which the yields can hide the city names apart from.
+  #unitsShown = true;
 
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
@@ -262,9 +264,11 @@ export class MapView {
 
   /** Shows or hides the units, cities and city names (`t`). */
   toggleUnits(): void {
+    this.#unitsShown = !this.#unitsShown;
+
     this.unitsLayer.setVisible(!this.unitsLayer.isVisible());
     this.citiesLayer.setVisible(!this.citiesLayer.isVisible());
-    this.cityNamesLayer.setVisible(!this.cityNamesLayer.isVisible());
+    this.#showCityNames();
 
     this.portal.render();
   }
@@ -272,8 +276,21 @@ export class MapView {
   /** Shows or hides the yields (`y`). */
   toggleYields(): void {
     this.yieldsLayer.setVisible(!this.yieldsLayer.isVisible());
+    this.#showCityNames();
 
     this.portal.render();
+  }
+
+  // The city names are shown with the units, and the new interface's banners (#747) give way to the yields too, as
+  //  they're wide enough to cover a row of them; with the yields gone, they're back only if the units are.
+  #showCityNames(): void {
+    this.cityNamesLayer.setVisible(
+      this.#unitsShown &&
+        !(
+          this.cityNamesLayer instanceof CityBanners &&
+          this.yieldsLayer.isVisible()
+        )
+    );
   }
 
   /**

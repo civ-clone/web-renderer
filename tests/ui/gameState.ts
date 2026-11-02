@@ -505,6 +505,7 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   const city = (
     id: string,
     {
+      build = undefined as PlainObject | undefined,
       civilDisorderDeclared = false,
       name = 'Rome',
       player = 'Player-1',
@@ -514,6 +515,7 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     _: 'City',
     __: ['City', 'DataObject'],
     id,
+    ...(build ? { build } : {}),
     civilDisorderDeclared,
     growth: ref(`${id}-growth`),
     name,
@@ -569,7 +571,7 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
 
   state.update();
 
-  // Its yields change often; the map draws none of them.
+  // Its yields as part of the city: they look the same on the map's own layers.
   state.applyPatches([
     sent('City-1', city('City-1', { yields: [ref('Food-1')] }), {
       'City-1-growth': growth('City-1', 1),
@@ -578,6 +580,65 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
   ]);
 
   check('a city that looks the same queues nothing', queuedIds() === '');
+
+  // What the new interface's banner shows of your own city (#747): what it builds and how far along, and its yields,
+  //  each sent on its own, without the city.
+  const cityBuild = (building: string | null): PlainObject => ({
+    _: 'CityBuild',
+    __: ['CityBuild', 'DataObject'],
+    id: 'City-1-build',
+    building: building === null ? null : { item: { _: building } },
+    progress: ref('City-1-progress'),
+  });
+
+  state.applyPatches([
+    sent(
+      'City-1',
+      city('City-1', { build: ref('City-1-build'), yields: [ref('Food-1')] }),
+      {
+        'City-1-growth': growth('City-1', 1),
+        'City-1-build': cityBuild(null),
+        'City-1-progress': {
+          _: 'BuildProgress',
+          id: 'City-1-progress',
+          value: 0,
+        },
+      }
+    ),
+  ]);
+  state.update();
+  queuedIds();
+
+  state.applyPatches([sent('City-1-build', cityBuild('Warriors'))]);
+
+  check(
+    "a city's production chosen, on its own, queues its square",
+    queuedIds() === 'Tile-1'
+  );
+
+  state.applyPatches([
+    sent('City-1-progress', {
+      _: 'BuildProgress',
+      id: 'City-1-progress',
+      value: 4,
+    }),
+  ]);
+
+  check(
+    "a city's progress on its own queues its square",
+    queuedIds() === 'Tile-1'
+  );
+
+  state.applyPatches([sent('Food-1', { _: 'Food', id: 'Food-1', value: 3 })]);
+
+  check(
+    "a city's yields on their own queue its square",
+    queuedIds() === 'Tile-1'
+  );
+
+  state.applyPatches([sent('Food-2', { _: 'Food', id: 'Food-2', value: 3 })]);
+
+  check("another city's yields don't", queuedIds() === '');
 
   // It grows: the city in full, its growth in the side-table.
   state.applyPatches([

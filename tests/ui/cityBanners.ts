@@ -46,6 +46,7 @@ const style = (form: string): BannerStyle => ({
   edge: 'brass',
   radius: 2,
   family: 'sans-serif',
+  weight: '600',
   food: 'food',
   short: 'short',
   track: 'track',
@@ -229,6 +230,22 @@ expect(
   ['track', 'short']
 );
 
+const emptyStarving = draw({
+  '2,2': ownCity({
+    growth: { size: 3, progress: { value: 0 }, cost: { value: 40 } },
+    yields: [
+      { _: 'Production', __: ['Production', 'Yield'], value: 4 },
+      { _: 'Food', __: ['Food', 'Yield'], value: -1 },
+    ],
+  }),
+});
+
+expect(
+  'starving with nothing stored: still a sliver of red',
+  emptyStarving.fills.map(([style, , , width]) => [style, width]).pop(),
+  ['short', 4]
+);
+
 const flagged = draw({
   '2,2': ownCity({ civilDisorderDeclared: true, celebrateLeader: true }),
 });
@@ -247,6 +264,15 @@ expect(
   "a rival's city: its size and name, nothing it hasn't been sent",
   [rival.texts, rival.images, rival.fills],
   [['7', 'Ur'], [], []]
+);
+
+// A rival's city in disorder is sent so (#265), as v474.05 shows any city's on the map: its banner shows it too.
+const rioting = draw({ '6,6': { ...rivalCity, civilDisorderDeclared: true } });
+
+expect(
+  "a rival's city in disorder, which it is sent, shows the face",
+  rioting.images,
+  ['unhappy']
 );
 
 // Too small for words.

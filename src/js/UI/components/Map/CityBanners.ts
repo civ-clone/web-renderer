@@ -28,6 +28,7 @@ export type BannerStyle = {
   edge: string;
   radius: number;
   family: string;
+  weight: string;
   food: string;
   short: string;
   track: string;
@@ -49,6 +50,7 @@ export const readBannerStyle = (
     edge: token(style, '--ui-city-banner-edge'),
     radius: parseFloat(token(style, '--ui-city-banner-radius')) || 0,
     family: token(style, '--ui-city-banner-family') || 'sans-serif',
+    weight: token(style, '--type-strong-weight') || 'bold',
     food: token(style, '--y-food'),
     short: token(style, '--y-short'),
     track: token(style, '--ui-city-banner-track'),
@@ -181,7 +183,9 @@ export class CityBanners extends CityNames {
   }
 
   #font(): string {
-    return `600 ${this.#fontSize()}px ${this.#style().family}`;
+    const { family, weight } = this.#style();
+
+    return `${weight} ${this.#fontSize()}px ${family}`;
   }
 
   #measure(text: string): number {
@@ -284,13 +288,17 @@ export class CityBanners extends CityNames {
               track: foodTrack,
               fill: {
                 ...foodTrack,
-                width: Math.round(
-                  foodTrack.width *
-                    Math.min(
-                      1,
-                      Math.max(0, growth.progress.value) /
-                        Math.max(1, growth.cost.value)
-                    )
+                // Starving, at least a sliver, so an empty store still shows red.
+                width: Math.max(
+                  perTurn < 0 ? this.scale() * 2 : 0,
+                  Math.round(
+                    foodTrack.width *
+                      Math.min(
+                        1,
+                        Math.max(0, growth.progress.value) /
+                          Math.max(1, growth.cost.value)
+                      )
+                  )
                 ),
               },
               starving: perTurn < 0,

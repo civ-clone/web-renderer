@@ -79,6 +79,8 @@ const drawnCity = (
         value.tile,
         value.civilDisorderDeclared,
         (growth ?? value.growth)?.size,
+        // The new interface's banners say whether it's celebrating (#747).
+        value.celebrateLeader,
       ])
     : null;
 
@@ -188,10 +190,15 @@ export class GameState {
       //  the patches are in.
       before = new Map<string, PlainObject | undefined>(),
       cityIds = new Set<string>(),
-      growthIds = new Set<string>();
+      growthIds = new Set<string>(),
+      // Every id the patches touched, whole or in place.
+      touched = new Set<string>();
 
     applyDataPatches(this.#objectMap, patches, {
-      changed: (id) => this.#changedIds.add(id),
+      changed: (id) => {
+        this.#changedIds.add(id);
+        touched.add(id);
+      },
       set: (id, value, previous) => {
         if (previous === undefined) {
           this.#objectCount++;
@@ -274,6 +281,26 @@ export class GameState {
       }
 
       queueTiles(city.tile, previous?.tile);
+    });
+
+    // What the new interface's banner shows of your own city (#747): what it's building and how far along, how it's
+    //  growing, and the yields those come from. Each is an object of its own, which can change, whole or in place,
+    //  without the city: the city's square is drawn again when any does.
+    (this.#data.player?.cities ?? []).forEach((city) => {
+      const { build, growth } = city ?? {},
+        shown = [
+          build,
+          build?.progress,
+          build?.cost,
+          build?.building,
+          growth?.progress,
+          growth?.cost,
+          ...(city?.yields ?? []),
+        ];
+
+      if (shown.some((object) => object?.id && touched.has(object.id))) {
+        queueTiles(this.#objectMap.objects[city.id]?.tile);
+      }
     });
 
     tileIds.forEach((id) => {
