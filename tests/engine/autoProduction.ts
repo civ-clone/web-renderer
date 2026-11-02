@@ -316,14 +316,24 @@ const run = async (): Promise<void> => {
     fail(`adding to the queue gave ${queuedNames()}, sent as ${sentQueue()}`);
   }
 
-  await send(cityBuild, { queue: { op: 'move', index: 1, to: 0 } });
+  await send(cityBuild, {
+    queue: { op: 'move', index: 1, to: 0, item: second.item().name },
+  });
 
   if (queuedNames()[0] !== second.item().name) {
     fail(`moving in the queue gave ${queuedNames()}`);
   }
 
-  await send(cityBuild, { queue: { op: 'remove', index: 0 } });
-  await send(cityBuild, { queue: { op: 'remove', index: 'x' } });
+  await send(cityBuild, {
+    queue: { op: 'remove', index: 0, item: second.item().name },
+  });
+  // The same click again, sent before its update: the item at 0 is another now, so nothing changes.
+  await send(cityBuild, {
+    queue: { op: 'remove', index: 0, item: second.item().name },
+  });
+  await send(cityBuild, {
+    queue: { op: 'remove', index: 'x', item: first.item().name },
+  });
   await send(cityBuild, { queue: { op: 'add', chosen: 'NotAThing' } });
 
   if (JSON.stringify(queuedNames()) !== JSON.stringify([first.item().name])) {
@@ -338,14 +348,16 @@ const run = async (): Promise<void> => {
 
   pass('the queue is added to, moved, removed from and cleared, and sent');
 
-  // Building nothing, Add to queue starts the item.
+  // Building nothing, Add to queue starts the item, and takes the city off Auto as choosing does.
   cityBuild.cancel();
+  cityBuild.setAuto(true);
 
   await send(cityBuild, { queue: { op: 'add', chosen: first.item().name } });
 
   if (
     cityBuild.building()?.item() !== first.item() ||
-    cityBuild.queued().length !== 0
+    cityBuild.queued().length !== 0 ||
+    cityBuild.auto()
   ) {
     fail('adding to the queue of a city building nothing did not start it');
   }

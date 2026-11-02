@@ -748,12 +748,17 @@ const run = async (): Promise<void> => {
     {
       name: 'ChangeProduction',
       id: queuedCity.build.id,
-      queue: { op: 'move', index: 1, to: 0 },
+      queue: {
+        op: 'move',
+        index: 1,
+        to: 0,
+        item: "Magellan'sExpedition",
+      },
     },
     {
       name: 'ChangeProduction',
       id: queuedCity.build.id,
-      queue: { op: 'remove', index: 0 },
+      queue: { op: 'remove', index: 0, item: 'Temple' },
     },
   ]);
 

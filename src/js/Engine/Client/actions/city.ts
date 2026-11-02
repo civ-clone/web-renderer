@@ -73,17 +73,20 @@ export const handleRenameCity = async (
 
 // An edit to what the city builds after its current item (#774): `add` the item `chosen` (at `index`, or the end),
 //  `remove` the one at `index`, `move` the one at `index` to `to`, or `clear` them all. An item added while the city
-//  builds nothing is started instead. One the city can't build, or a position that isn't a whole number, changes
-//  nothing.
+//  builds nothing is started instead, taking it off Auto as choosing does. One the city can't build, a position that
+//  isn't a whole number, or an `item` that isn't the one at `index` (a second click sent before the first's update)
+//  changes nothing.
 export type QueueEdit =
   | { op: 'add'; chosen: string; index?: number }
-  | { op: 'remove'; index: number }
-  | { op: 'move'; index: number; to: number }
+  | { op: 'remove'; index: number; item: string }
+  | { op: 'move'; index: number; to: number; item: string }
   | { op: 'clear' };
 
 export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
   const isIndex = (value: unknown): value is number =>
-    Number.isInteger(value) && (value as number) >= 0;
+      Number.isInteger(value) && (value as number) >= 0,
+    isAt = (index: unknown, item: unknown): index is number =>
+      isIndex(index) && cityBuild.queued()[index]?.name === item;
 
   if (edit.op === 'add') {
     const [buildItem] = cityBuild
@@ -96,6 +99,7 @@ export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
 
     if (cityBuild.building() === null) {
       cityBuild.build(buildItem.item());
+      cityBuild.setAuto(false);
 
       return;
     }
@@ -108,13 +112,13 @@ export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
     return;
   }
 
-  if (edit.op === 'remove' && isIndex(edit.index)) {
+  if (edit.op === 'remove' && isAt(edit.index, edit.item)) {
     cityBuild.dequeue(edit.index);
 
     return;
   }
 
-  if (edit.op === 'move' && isIndex(edit.index) && isIndex(edit.to)) {
+  if (edit.op === 'move' && isAt(edit.index, edit.item) && isIndex(edit.to)) {
     cityBuild.requeue(edit.index, edit.to);
 
     return;

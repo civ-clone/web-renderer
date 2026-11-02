@@ -294,18 +294,20 @@ const renderQueue = (
                     op: 'move',
                     index,
                     to: index - 1,
+                    item: buildItem.item._,
                   })
                 : '',
               index < queue.length - 1
                 ? iconButton(
                     'chevron-down',
                     t('CityWindow.queue-down', { item }),
-                    { op: 'move', index, to: index + 1 }
+                    { op: 'move', index, to: index + 1, item: buildItem.item._ }
                   )
                 : '',
               iconButton('close', t('CityWindow.queue-remove', { item }), {
                 op: 'remove',
                 index,
+                item: buildItem.item._,
               }),
             ])
       );
