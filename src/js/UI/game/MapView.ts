@@ -3,6 +3,7 @@ import { CityOpener } from '../lib/cityOpeners';
 import { off, on } from '@dom111/element';
 import ActiveUnit from '../components/Map/ActiveUnit';
 import Cities from '../components/Map/Cities';
+import CityBanners from '../components/Map/CityBanners';
 import CityNames from '../components/Map/CityNames';
 import Fog from '../components/Map/Fog';
 import GamePortal from '../components/GamePortal';
@@ -15,6 +16,7 @@ import Units from '../components/Map/Units';
 import World from '../components/World';
 import Yields from '../components/Map/Yields';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
+import interfaceMode from '../lib/interfaceMode';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
@@ -65,6 +67,10 @@ export class MapView {
   #resizeHandler = (): void => this.#resize();
   #scrollers: HTMLElement[] = [];
   #resizeObserver: ResizeObserver | null = null;
+  // The theme, or light or dark, changing: the city banners draw with its tokens (#747).
+  #themeObserver: MutationObserver | null = null;
+  #schemeQuery: MediaQueryList | null = null;
+  #restyleHandler = (): void => this.#restyle();
 
   // Keyed by coordinate: a tile resent several times between two renders
   // only needs building once. A layer redraws a tile by looking its
@@ -112,7 +118,8 @@ export class MapView {
         Yields,
         Units,
         Cities,
-        CityNames,
+        // The new interface's banners, which the classic theme draws as these labels (#747).
+        interfaceMode() === 'new' ? CityBanners : CityNames,
         ActiveUnit
       ),
       overviewMap = portal.getLayer(Overview) as Overview,
@@ -173,6 +180,22 @@ export class MapView {
     );
 
     this.measureCovered();
+
+    // Not everywhere the map is built has these (the tests' DOM doesn't).
+    if (
+      this.cityNamesLayer instanceof CityBanners &&
+      typeof MutationObserver !== 'undefined'
+    ) {
+      this.#themeObserver = new MutationObserver(this.#restyleHandler);
+      this.#themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-theme', 'data-ui-theme'],
+      });
+
+      this.#schemeQuery =
+        window.matchMedia?.('(prefers-color-scheme: dark)') ?? null;
+      this.#schemeQuery?.addEventListener('change', this.#restyleHandler);
+    }
   }
 
   /** Centres the map on `tile` and redraws it (`c`). */
@@ -186,6 +209,8 @@ export class MapView {
   dispose(): void {
     off(window, 'resize', this.#resizeHandler);
     this.#resizeObserver?.disconnect();
+    this.#themeObserver?.disconnect();
+    this.#schemeQuery?.removeEventListener('change', this.#restyleHandler);
     this.#scrollers.forEach((scroller) =>
       off(scroller, 'scroll', this.#measureHandler)
     );
@@ -304,6 +329,17 @@ export class MapView {
     // part of rendering now.
     this.portal.render();
     this.minimap.update();
+  }
+
+  // The banners read the theme's tokens again, and are drawn with them.
+  #restyle(): void {
+    if (!(this.cityNamesLayer instanceof CityBanners)) {
+      return;
+    }
+
+    this.cityNamesLayer.restyle();
+    this.cityNamesLayer.render();
+    this.portal.render();
   }
 
   #tick(): void {

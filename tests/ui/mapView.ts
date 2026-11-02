@@ -9,9 +9,11 @@
 import './lib/dom';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
+import CityBanners from '../../src/js/UI/components/Map/CityBanners';
 import MapView from '../../src/js/UI/game/MapView';
 import { playerCityOpener } from '../../src/js/UI/lib/cityOpeners';
 import Transport from '../../src/js/UI/Transport';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0,
@@ -614,6 +616,37 @@ mapPortal.width = 10;
 window.dispatchEvent(new Event('resize'));
 
 expect('and the resize handler', mapPortal.width, 10);
+
+// The interface decides how the cities are named on the map: the classic labels, or the new interface's banners
+//  (#747), which the classic theme draws as the labels.
+applyInterface('new', null);
+
+const withBanners = new MapView({
+  activateUnit: () => {},
+  cityOpener: playerCityOpener(),
+  activeUnit: () => null,
+  mapPortal,
+  minimapCanvas,
+  options: { get: (key: string, defaultValue?: any) => defaultValue },
+  playerId: 'Player-1',
+  transport: {
+    send: () => {},
+    receive: () => () => {},
+  } as unknown as Transport,
+  world: { id: 'PlayerWorld-1', width, height, tiles } as unknown as WorldData,
+});
+
+expect(
+  'the classic interface names cities with labels, the new one with banners',
+  [
+    mapView.cityNamesLayer instanceof CityBanners,
+    withBanners.cityNamesLayer instanceof CityBanners,
+  ],
+  [false, true]
+);
+
+withBanners.dispose();
+applyInterface('classic', null);
 
 finished = true;
 

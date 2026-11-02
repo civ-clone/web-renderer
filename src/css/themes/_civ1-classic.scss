@@ -60,6 +60,16 @@
   --ui-chip-bg: #222;
   --ui-chip-edge: #aaa;
 
+  // The cities on the map under the new interface (#747): Civ1's size and name, as the classic interface draws them. The
+  //  rest is what a banner would be drawn with, were this theme to ask for one (`full`).
+  --ui-city-banner: label;
+  --ui-city-banner-bg: #222;
+  --ui-city-banner-fg: #fff;
+  --ui-city-banner-edge: #aaa;
+  --ui-city-banner-radius: 0;
+  --ui-city-banner-family: var(--font-ui);
+  --ui-city-banner-track: #555;
+
   --ui-action: #150d40;
   --ui-action-research: #2966a8;
   --ui-action-build: #ffa109;

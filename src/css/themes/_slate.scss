@@ -58,6 +58,16 @@
   --ui-chip-bg: #2b313b;
   --ui-chip-edge: #6b7482;
 
+  // The cities on the map under the new interface (#747): a slate banner edged in brass, the same in light and dark
+  //  as the map under it is. The radius is in the tileset's px, multiplied by the map's scale.
+  --ui-city-banner: full;
+  --ui-city-banner-bg: #2b313b;
+  --ui-city-banner-fg: #f1e6c8;
+  --ui-city-banner-edge: #8a6a26;
+  --ui-city-banner-radius: 2;
+  --ui-city-banner-family: var(--font-ui);
+  --ui-city-banner-track: #151920;
+
   --ui-action: #2b313b;
   --ui-action-research: #3d6fb4;
   --ui-action-build: #c98a1b;

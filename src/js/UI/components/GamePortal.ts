@@ -66,6 +66,17 @@ export class GamePortal extends Portal {
 
       this.clearTimeout();
 
+      // A city's banner, which hangs past its square, is for the city: it opens, or the map centres on it (#747).
+      const bannerCity = this.cityAt(event.offsetX, event.offsetY);
+
+      if (bannerCity !== null) {
+        if (!this.openCity(bannerCity)) {
+          this.setCenter(bannerCity.tile.x, bannerCity.tile.y);
+        }
+
+        return;
+      }
+
       const tile = this.tileAt(event.offsetX, event.offsetY);
 
       // Past a locked pole: nothing there to open or centre on.

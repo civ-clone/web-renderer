@@ -154,6 +154,16 @@ compositing order:
   the whole world as soon as it is built, so a loaded game's minimap is not
   blank (#270).
 
+Under the new interface (`?interface=new`), `MapView` mounts `CityBanners` in
+place of `CityNames` (#747). It extends `CityNames`, and the theme's
+`--ui-city-banner` token picks what it draws: `label` gives the classic size
+and name, and `full` gives a banner below the city's square (size badge, name,
+production turns, food bar, disorder and celebration flags). The banner's
+colours and font come from tokens read off the page's root, and `MapView`
+redraws the layer when the theme or light/dark changes. A layer can claim a
+click past a city's square through `Map.cityAt()`, which `GamePortal` asks
+through `Portal.cityAt()` before it looks up the tile under the pointer.
+
 `Unworkable` is a further layer used only by the city screen.
 
 Each layer's canvas is a window on the world the size of the portal, not the

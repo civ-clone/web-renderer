@@ -1,4 +1,4 @@
-import { NeighbourDirection, Tile } from '../types';
+import { City, NeighbourDirection, Tile } from '../types';
 import { Placement, Projection, Reach } from '../lib/projection';
 import {
   Rect,
@@ -97,6 +97,14 @@ export class Map implements IMap {
 
   canvas(): HTMLCanvasElement {
     return this.#canvas;
+  }
+
+  /**
+   * The city this layer draws something for under `x`, `y` on its canvas, past the city's own square, that a click
+   *  there is for (a banner, #747). None, unless a layer says otherwise.
+   */
+  cityAt(x: number, y: number): City | null {
+    return null;
   }
 
   clear(): void {

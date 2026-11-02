@@ -22,11 +22,8 @@ import { orderSpecialists } from '../../lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
-export const buildTurns = (city: City) =>
-  turnsLeft(city.build, city.yields, 'Production');
-
-export const growthTurns = (city: City) =>
-  turnsLeft(city.growth, city.yields, 'Food');
+// Here as well as on their own, as most of what shows a city's turns uses the rest of this too.
+export { buildTurns, growthTurns, turnsLeft } from '../../lib/cityTurns';
 
 const specialistIcons: { [key: string]: string } = {
   Entertainer: 'luxury',
@@ -179,27 +176,6 @@ export const renderCitizenCounts = (
     seed
   );
 
-export const turnsLeft = (
-  data: CityGrowth | CityBuild | PlayerResearch,
-  yields: Yield[],
-  yieldName: string
-) => {
-  const net = reduceKnownYield(yields, yieldName),
-    remaining = data.cost.value - data.progress.value;
-
-  // Done at the end of the turn, whatever comes in: progress already covers the cost.
-  if (remaining <= 0) {
-    return 1;
-  }
-
-  // 0, which the translations say as `Never`, with nothing to spare or a shortfall: a starving city counted its
-  //  shortfall as progress (#489).
-  if (net <= 0) {
-    return 0;
-  }
-
-  return Math.max(1, Math.ceil(remaining / net));
-};
 export const turnsText = (turns: number) =>
   t('Progress.turns', { count: turns });
 

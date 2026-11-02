@@ -43,9 +43,14 @@ export class CityNames extends Map {
       return;
     }
 
-    this.#labelled.add(`${tile.x},${tile.y}`);
+    this.markLabelled(tile);
 
     this.#drawLabel(tile, offsetX, offsetY);
+  }
+
+  // A city has something drawn for it, which an update has to clear if the city goes.
+  protected markLabelled(tile: Tile): void {
+    this.#labelled.add(`${tile.x},${tile.y}`);
   }
 
   // A label is centred on its tile and much wider than it, so a city several tiles off the canvas can still have its
