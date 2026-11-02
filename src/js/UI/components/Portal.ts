@@ -628,6 +628,21 @@ export class Portal
     return null;
   }
 
+  /** As `cityAt`, with the box on the canvas the layer draws it in. */
+  bannerAt(x: number, y: number): { city: CityData; box: Rect } | null {
+    this.syncViewport();
+
+    for (const layer of this.#layers) {
+      const banner = layer.isVisible() ? layer.bannerAt(x, y) : null;
+
+      if (banner !== null) {
+        return banner;
+      }
+    }
+
+    return null;
+  }
+
   /**
    * The tile under the canvas pixel at `x`, `y` — or `null` past a locked
    * pole, where the canvas is empty and there is no tile to point at.

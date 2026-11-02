@@ -1,5 +1,7 @@
 import { DragSample, releaseVelocity } from '../lib/drag';
-import { Tile, Unit } from '../types';
+import { City, Tile, Unit } from '../types';
+import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
+import { hideTooltip, showTooltipOver, tooltipOpenOver } from './lib/Tooltip';
 import { openUnitSelection } from './choices';
 import Portal from './Portal';
 import UnitActionMenu from './UnitActionMenu';
@@ -15,7 +17,9 @@ const DRAG_THRESHOLD = 8,
   // A hard flick is a few px per ms. Two pointer events a millisecond apart
   // can make a short drag look many times faster than that, and would throw
   // the map clean across the world.
-  INERTIA_MAX_SPEED = 3;
+  INERTIA_MAX_SPEED = 3,
+  // How long the mouse rests on a city's banner before its tooltip opens, as the shared tooltip's (#742).
+  BANNER_TOOLTIP_DELAY = 400;
 
 type Drag = {
   pointerId: number;
@@ -27,13 +31,29 @@ type Drag = {
   samples: DragSample[];
 };
 
+// The banner the mouse rests on (#747): whose, where the mouse is last seen on the canvas and in the window, and the
+//  wait before its tooltip opens.
+type Hover = {
+  city: City;
+  offsetX: number;
+  offsetY: number;
+  clientX: number;
+  clientY: number;
+  timer: number | null;
+};
+
 export class GamePortal extends Portal {
   #activeUnit: Unit | null = null;
   #drag: Drag | null = null;
+  #hover: Hover | null = null;
   #inertiaFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
 
   protected bindEvents(): void {
+    // The banner's tooltip goes with anything that moves the map under it, a press, a key, or the mouse leaving.
+    this.on('focus-changed', () => this.endHover());
+    on(this.canvas(), 'pointerleave', () => this.endHover());
+
     on(this.canvas(), 'pointerup', (event) => {
       // Only the primary pointer drives the map: a second finger landing or
       // lifting mid-gesture must not end the first finger's drag, or count as
@@ -138,6 +158,8 @@ export class GamePortal extends Portal {
     on(this.canvas(), 'pointerdown', (event) => {
       event.preventDefault();
 
+      this.endHover();
+
       if (!event.isPrimary) {
         return;
       }
@@ -173,7 +195,13 @@ export class GamePortal extends Portal {
     on(this.canvas(), 'pointermove', (event) => {
       const drag = this.#drag;
 
-      if (drag === null || drag.pointerId !== event.pointerId) {
+      if (drag === null) {
+        this.hover(event);
+
+        return;
+      }
+
+      if (drag.pointerId !== event.pointerId) {
         return;
       }
 
@@ -219,6 +247,125 @@ export class GamePortal extends Portal {
       this.clearTimeout();
     });
   }
+
+  // A mouse resting on one of your cities' banners opens its tooltip. Not on touch, where a long press is the unit
+  //  menu's, only while no button is held, as a press means the map, and not while the map glides on under it.
+  private hover(event: PointerEvent): void {
+    const banner =
+        event.pointerType === 'mouse' &&
+        event.buttons === 0 &&
+        this.#inertiaFrame === null
+          ? this.bannerAt(event.offsetX, event.offsetY)
+          : null,
+      current = this.#hover;
+
+    // Still the same city's (by its id, as the city's data is replaced as it changes): wait on, or leave it open. Unless
+    //  something else has closed it since (a list scrolling), which resting here opens again.
+    if (
+      banner !== null &&
+      current !== null &&
+      banner.city.id === current.city.id &&
+      (current.timer !== null || tooltipOpenOver(this.canvas()))
+    ) {
+      Object.assign(current, {
+        offsetX: event.offsetX,
+        offsetY: event.offsetY,
+        clientX: event.clientX,
+        clientY: event.clientY,
+      });
+
+      return;
+    }
+
+    this.endHover();
+
+    if (banner === null || !hasBannerTooltip(banner.city)) {
+      return;
+    }
+
+    const hover: Hover = {
+      city: banner.city,
+      offsetX: event.offsetX,
+      offsetY: event.offsetY,
+      clientX: event.clientX,
+      clientY: event.clientY,
+      timer: null,
+    };
+
+    hover.timer = window.setTimeout(() => {
+      hover.timer = null;
+
+      this.showHover(hover);
+    }, BANNER_TOOLTIP_DELAY);
+
+    this.#hover = hover;
+
+    // A key, while it waits or once it's open: it may move the map, or open a window over it.
+    document.addEventListener('keydown', this.endHover, true);
+  }
+
+  // Opens the tooltip for what's under the mouse now, or ends the hover: a window may have opened over the map while it
+  //  waited, and the city's data, or its banner, may have changed.
+  private showHover(hover: Hover): void {
+    const now =
+      document.elementFromPoint(hover.clientX, hover.clientY) === this.canvas()
+        ? this.bannerAt(hover.offsetX, hover.offsetY)
+        : null;
+
+    if (now === null || now.city.id !== hover.city.id) {
+      this.endHover();
+
+      return;
+    }
+
+    const canvas = this.canvas().getBoundingClientRect(),
+      { city, box } = now;
+
+    hover.city = city;
+
+    showTooltipOver(
+      this.canvas(),
+      () => ({
+        left: canvas.left + box.x,
+        top: canvas.top + box.y,
+        bottom: canvas.top + box.y + box.height,
+      }),
+      () => cityBannerTooltip(city)
+    );
+  }
+
+  // The city an open tooltip is about has changed: it says what the city's doing now, and moves with its banner, or
+  //  goes with it.
+  build(updatedTiles: Tile[]): void {
+    super.build(updatedTiles);
+
+    const hover = this.#hover;
+
+    if (
+      hover !== null &&
+      hover.timer === null &&
+      tooltipOpenOver(this.canvas()) &&
+      updatedTiles.some(
+        ({ x, y }) => x === hover.city.tile.x && y === hover.city.tile.y
+      )
+    ) {
+      this.showHover(hover);
+    }
+  }
+
+  private endHover = (): void => {
+    if (this.#hover?.timer) {
+      window.clearTimeout(this.#hover.timer);
+    }
+
+    this.#hover = null;
+
+    document.removeEventListener('keydown', this.endHover, true);
+
+    if (tooltipOpenOver(this.canvas())) {
+      hideTooltip();
+    }
+  };
 
   private clearTimeout() {
     if (this.#showActionMenuTimeout === null) {

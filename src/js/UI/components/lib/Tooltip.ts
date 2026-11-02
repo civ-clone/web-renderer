@@ -17,8 +17,13 @@ export interface TooltipOptions {
   key?: string | null;
 }
 
+// Where on the screen it's about, in the window's px.
+type Box = Pick<DOMRect, 'left' | 'top' | 'bottom'>;
+
 interface Open {
   anchor: HTMLElement;
+  // Where it's drawn from: the anchor's own box, or a part of it (a banner on the map's canvas).
+  box: () => Box;
   content: () => TooltipContent;
   key: string | null;
   // How it was opened, which says how it moves to an anchor that replaced its own.
@@ -84,11 +89,10 @@ const fill = (element: HTMLElement, { title, rows, total }: TooltipContent) => {
 
 // Below the anchor, or above it where there's no room below, and kept inside the window. Measured from the corner,
 //  so where it was last time doesn't squeeze it.
-const place = (element: HTMLElement, anchor: HTMLElement) => {
+const place = (element: HTMLElement, box: Box) => {
   element.style.left = element.style.top = '0';
 
-  const box = anchor.getBoundingClientRect(),
-    width = element.offsetWidth,
+  const width = element.offsetWidth,
     height = element.offsetHeight,
     below = box.bottom + gap,
     top =
@@ -138,7 +142,7 @@ const show = (current: Open) => {
   // Last, each time, so it's drawn over whatever was added since.
   document.body.append(element);
   element.hidden = false;
-  place(element, current.anchor);
+  place(element, current.box());
 
   current.anchor.setAttribute('aria-describedby', panelId);
   document.addEventListener('keydown', onEscape, true);
@@ -169,6 +173,20 @@ export const hideTooltipWithin = (container: Node): void => {
   }
 };
 
+/**
+ * Opens a tooltip of `content()` at once over `box()`, a part of `anchor` that isn't an element of its own (a city's
+ *  banner on the map's canvas, #747), for as long as its caller says: it waits, and closes it with `hideTooltip`.
+ */
+export const showTooltipOver = (
+  anchor: HTMLElement,
+  box: () => Box,
+  content: () => TooltipContent
+): void => show({ anchor, content, key: null, via: 'hover', box });
+
+/** Whether a tooltip is open over `anchor`. */
+export const tooltipOpenOver = (anchor: HTMLElement): boolean =>
+  open?.anchor === anchor;
+
 const focusable = (element: HTMLElement) =>
   element.matches('a[href], button, input, select, textarea, [tabindex]');
 
@@ -181,8 +199,9 @@ export const tooltip = (
   content: () => TooltipContent,
   { delay = 400, key = null }: TooltipOptions = {}
 ): HTMLElement => {
-  const byHover: Open = { anchor, content, key, via: 'hover' },
-    byFocus: Open = { anchor, content, key, via: 'focus' };
+  const box = () => anchor.getBoundingClientRect(),
+    byHover: Open = { anchor, content, key, via: 'hover', box },
+    byFocus: Open = { anchor, content, key, via: 'focus', box };
   let timer: ReturnType<typeof setTimeout> | null = null,
     hovering = false;
 

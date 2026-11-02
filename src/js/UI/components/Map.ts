@@ -104,6 +104,11 @@ export class Map implements IMap {
    *  there is for (a banner, #747). None, unless a layer says otherwise.
    */
   cityAt(x: number, y: number): City | null {
+    return this.bannerAt(x, y)?.city ?? null;
+  }
+
+  /** As `cityAt`, with the box on the canvas it's drawn in, that a tooltip about it opens over (#747). */
+  bannerAt(x: number, y: number): { city: City; box: Rect } | null {
     return null;
   }
 
