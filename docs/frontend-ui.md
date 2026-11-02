@@ -93,7 +93,12 @@ ask before leaving a game in progress.
 - City screen: `City`, with its own small `Portal` (`Landscape`, `Fog`,
   `Cities`, `Units`, `Yields`, `Unworkable`). Clicking a tile changes which
   tiles the city works; keys 1–8 change specialists, `c` changes production and
-  `b` buys. `CityBuildSelectionWindow` chooses production.
+  `b` buys. `CityBuildSelectionWindow` chooses production. Every way in goes
+  through `openCity` (`components/openCity.ts`), which gives `City` its layout:
+  the classic page (`classicCityLayout`), or under `?interface=new` the window
+  of `CityLayout.ts` (#746). The behaviour is `City`'s whichever layout draws
+  it; the parts both draw, the yield bars and the map, are in
+  `components/lib/cityParts.ts`.
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).

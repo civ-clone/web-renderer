@@ -6,7 +6,7 @@ import {
   UnitAction,
 } from '../types';
 import CityBuildAvailable from '../../Engine/Requests/CityBuildAvailable';
-import City from '../components/City';
+import openCity from '../components/openCity';
 import {
   openCityStatus,
   openHappinessReport,
@@ -300,7 +300,7 @@ export class UIStressRunner {
 
         const city = data.player.cities[this.#tick % data.player.cities.length];
 
-        return new City(city, this.#portal, this.#transport);
+        return openCity(city, this.#portal, this.#transport);
       },
     ];
 
