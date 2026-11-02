@@ -14,8 +14,8 @@ importers:
   .:
     dependencies:
       '@civ-clone/base-civilization-barbarian':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@civ-clone/base-leader-personality':
         specifier: ^0.1.2
         version: 0.1.2
@@ -375,20 +375,20 @@ packages:
   '@civ-clone/base-civilization-american@0.1.3':
     resolution: {integrity: sha512-GoKGLVqQFX/g6/itXKuTIPsQ70QFI53jOOa5GJUBEvkpweJSvnIZxMGHYXeFLlp7fK3SLyrtqx3UimXXRYcLCg==}
 
-  '@civ-clone/base-civilization-australian@0.1.0':
-    resolution: {integrity: sha512-vgJmLsVTp7rfEw8EESi+f7njhgARz7nFlKNEIs9UKdiXnO4mLAMyPS4vf+9JHvUe/MHFiD5QTFLH9iaqP2K5Vw==}
+  '@civ-clone/base-civilization-australian@0.1.1':
+    resolution: {integrity: sha512-e3vhHMOK3fN9V5KRvAx9sPKSwNK9Hm5rHp4YBMyMyo4dwzktFkjPCiShAKZjHgQQo12Ojr3YrE0+SnL1/pztOw==}
 
-  '@civ-clone/base-civilization-aztec@0.1.1':
-    resolution: {integrity: sha512-B820NouUmn7Rq4V0QY45gOVAzf/ohS1/VFKQGfjOqAWyVc0Jtu6CoH1e8+9WiIo+TepuboLZlbJH7W25KWCA+g==}
+  '@civ-clone/base-civilization-aztec@0.1.2':
+    resolution: {integrity: sha512-ZKYxx5B/Hd7gbxYxkBsh4EHCRigXk+7/qXkplEt1VCWETjd1bEu0AUXtHz56DOIAJz2f7ENWxNVwvxMlMDobnQ==}
 
   '@civ-clone/base-civilization-babylonian@0.1.2':
     resolution: {integrity: sha512-2ekUX1Yb4UCD6Oav8o9CVki354vDWrb0rVbsBv9FV41Xdup5n0EYpNih9sPVVoTzxsOQJ+RF4dk4lOGInoK+jg==}
 
-  '@civ-clone/base-civilization-barbarian@0.1.0':
-    resolution: {integrity: sha512-HVrK/6Vgzo+mmdsPL0M3GDYxL0E1Aa7IjJhuFzTsuuUMSSCNnvevQtjJkUD+Y8lS7WzzPMhZ4wbRCMu9F4OroA==}
+  '@civ-clone/base-civilization-barbarian@0.1.1':
+    resolution: {integrity: sha512-VHnUTay682OcI+QjsCscEOhUQj+wKQ2wdGpqOgrLF+/wzQhGDWboWPumAFL2qbZnhVmhjf+uYGQQmSr1iwnvWQ==}
 
-  '@civ-clone/base-civilization-brazilian@0.1.0':
-    resolution: {integrity: sha512-emg3wN05LBEl3xqIb0BkRJ0nm/ZJbENr5lEhfeS2EbjmInV3PtE1kYuFe3BMPBBme5kg2UFO8KD4N4icCXR0nw==}
+  '@civ-clone/base-civilization-brazilian@0.1.1':
+    resolution: {integrity: sha512-+up69I05eOPbso/RlIi83d477kviwJjIFxEl8q5KUvzawCt3zeb+0GZ+DiKx3OcvUh8pbGLAEYSw7XrMY2YUDA==}
 
   '@civ-clone/base-civilization-chinese@0.1.3':
     resolution: {integrity: sha512-n/xcsrh+ymD2/Z2MUGo4aIAKsVtKo6YMa966O+hfejBQ+/pPu8t6WfBkPavCrf6oPsvbQXjbNrtNj42QN1/LhA==}
@@ -402,8 +402,8 @@ packages:
   '@civ-clone/base-civilization-english@0.1.1':
     resolution: {integrity: sha512-nZLSsSUKjPHCgty8/unTnT/hKIShmgh9hhvgtNwey5bQ22PDV9zgbXTkj226z0MR1LAV+P3FN4UAgW410U/BVA==}
 
-  '@civ-clone/base-civilization-ethiopian@0.1.0':
-    resolution: {integrity: sha512-BsALHdsqsneEyWp7ok2RnCMHIfYgSzxmojfK8vgCSqA7yTsB9+P8yS4wyAr3zEpXuk4ox5SoVq79mQ6ZKGdleQ==}
+  '@civ-clone/base-civilization-ethiopian@0.1.1':
+    resolution: {integrity: sha512-+9MbyM4S1uXetitx47T47QnemgrcH7/fjtM0dFrgjKRYqsclQ9H50si0BUka34gndghlQuFZuLMFY1GbbTFx2g==}
 
   '@civ-clone/base-civilization-french@0.1.3':
     resolution: {integrity: sha512-7RdHIZc6NzqwW9G3Ioiz6X/XpULEawEp198WLLAjTFcW53Pl4uVotM6rNJM3ipX34gZ6oXg9wgOC5CHkwwWplg==}
@@ -414,17 +414,17 @@ packages:
   '@civ-clone/base-civilization-greek@0.1.4':
     resolution: {integrity: sha512-lc5sR0vXV0aLNdbQ/jcpCVtkjiejCiiZcLFjvoQZqQeSXK6rKDVGjDJTchQLNICyn+ijT8doSiQWVXEBRdPMVg==}
 
-  '@civ-clone/base-civilization-inca@0.1.1':
-    resolution: {integrity: sha512-fAHE8H9dtkVysr8gNc5dEbnNLj7qkAX4T6Gt0iG+3aInXfxUWiAEtT/+zZL1MVR/VdRrUpuLxV+eIUS81Otpdg==}
+  '@civ-clone/base-civilization-inca@0.1.2':
+    resolution: {integrity: sha512-3cYK7ih5D8ee41yuaz4N5ADawM7kda0FkNtsBRW0kZuGzNbdtMVTp7BH0pDf6LaqTtkezLsruGpDQo40+EXtQg==}
 
-  '@civ-clone/base-civilization-indian@0.1.4':
-    resolution: {integrity: sha512-P7Nx5/py22OMv5+Ba5AWUg0DWutNy1wpEKtzc9L0/bioS8VjgBZepEQXLo2/UZubvkeafvC/4kyCEch34XG6/w==}
+  '@civ-clone/base-civilization-indian@0.1.5':
+    resolution: {integrity: sha512-Gn/0BBKAyh60alpjY4ZBcksVtzh+JJA8XDZ5jhapOWKyYH0gsTFr0aDrCGsb8Pn9DfD0LtZEkmXKXYSjjkdG7w==}
 
   '@civ-clone/base-civilization-indonesian@0.1.1':
     resolution: {integrity: sha512-7B7T900UIUKkZOeIyZ3FNmZ4O9wl5hUFAq7gJ3UnL2ED77kVKJoepsCZ1W2P36No6HRdY/ecsqp9nWdCid6KRw==}
 
-  '@civ-clone/base-civilization-japanese@0.1.1':
-    resolution: {integrity: sha512-I9OTkiN8VOiFEa/LTk0IrdetNWAuuLdAMAs2OjjnB66FfnN0EL8RbnbHMG67Pr9CQC6CdeeWUkererlWXolntw==}
+  '@civ-clone/base-civilization-japanese@0.1.2':
+    resolution: {integrity: sha512-hg2c3dSeU747Fsk2xTltliqX8v2Spy9pj6DxxKOgqM6fFGw55evjq6i4yxgn7CeR7v7uMYdcelzkh+Ie6VuK7Q==}
 
   '@civ-clone/base-civilization-khmer@0.1.1':
     resolution: {integrity: sha512-fr3ieU92i3uqrmwr3BMyGnIdrRQGY/4mMo+9+jpC6rX0VaJRfD+odoFYsvoZUe0A60Z7G1vdYCpIrH8lTZIXmg==}
@@ -435,8 +435,8 @@ packages:
   '@civ-clone/base-civilization-malian@0.1.0':
     resolution: {integrity: sha512-EUsCkF8bBoHebZoarIdD0FzamQX9huZHD0qBxwLyycOskEF32Jpfn1gRlMrPGoDkTLB28wM5/qMN3Usoh2q91g==}
 
-  '@civ-clone/base-civilization-mongol@0.1.2':
-    resolution: {integrity: sha512-E0OP3zZICBKo4FG0puHRlRnJM6mvpr5Pl4TO41ZehW8Pn1uzzLr0YRNHw/nVvjkppQUYObi8fvGMj2zKp6NiQg==}
+  '@civ-clone/base-civilization-mongol@0.1.3':
+    resolution: {integrity: sha512-EVtFExAlD5yoDtOgjw02g7jUL8HPGL/Hn9jzUZdxv4FjaNiYSWmnTP0jZ3Mh55WUko9rNJOf3WZdHfzs42oviA==}
 
   '@civ-clone/base-civilization-roman@0.1.4':
     resolution: {integrity: sha512-vsfG5WMOPJhU7zhTZopdiWst74Jlmg6OlIoz/ogXmbZ6SG+WVMjEcfg431euL69CBcPnew70Hsn47gx//yxKhQ==}
@@ -444,8 +444,8 @@ packages:
   '@civ-clone/base-civilization-russian@0.1.2':
     resolution: {integrity: sha512-t8VuKWyUAAywHwLMgEAE82U1Z1P/8/9JVcl08CzqrTbMgi5VsnpHWq7inJAd27EgPm7SvBRD1TsOKV2lEv/hiw==}
 
-  '@civ-clone/base-civilization-sioux@0.1.0':
-    resolution: {integrity: sha512-EsISULgMh/Wh2FVDbGD96k84dhdSJxMsTqQTtxkIXjglW/jjMPoPOT814ewRFrd1Qhs+Q2Ca5lJWGnSfbhltwA==}
+  '@civ-clone/base-civilization-sioux@0.1.1':
+    resolution: {integrity: sha512-06FmvhEn0ItnQUPiEzn5usP17AhvZ08cHL425R3JncThPW1z4T1FcgqC5J0iT261Ore7Ge60n718XFs5bzBLzQ==}
 
   '@civ-clone/base-civilization-viking@0.1.1':
     resolution: {integrity: sha512-591KVHGzN0YJFE4DJuWeOdHY1EBj7ZFQqFB6Qoz1FZKOjqQshM44XTbt7scodqUaUkCS7i5R0Hkcv1v5fVvV6g==}
@@ -2242,11 +2242,11 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-australian@0.1.0':
+  '@civ-clone/base-civilization-australian@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-aztec@0.1.1':
+  '@civ-clone/base-civilization-aztec@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2254,11 +2254,11 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-barbarian@0.1.0':
+  '@civ-clone/base-civilization-barbarian@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-brazilian@0.1.0':
+  '@civ-clone/base-civilization-brazilian@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2278,7 +2278,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-ethiopian@0.1.0':
+  '@civ-clone/base-civilization-ethiopian@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2294,11 +2294,11 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-inca@0.1.1':
+  '@civ-clone/base-civilization-inca@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-indian@0.1.4':
+  '@civ-clone/base-civilization-indian@0.1.5':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2306,7 +2306,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-japanese@0.1.1':
+  '@civ-clone/base-civilization-japanese@0.1.2':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2322,7 +2322,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-mongol@0.1.2':
+  '@civ-clone/base-civilization-mongol@0.1.3':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -2334,7 +2334,7 @@ snapshots:
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
-  '@civ-clone/base-civilization-sioux@0.1.0':
+  '@civ-clone/base-civilization-sioux@0.1.1':
     dependencies:
       '@civ-clone/core-civilization': 0.1.7
 
@@ -3573,7 +3573,7 @@ snapshots:
   '@civ-clone/civ1-barbarians@https://codeload.github.com/civ-clone/civ1-barbarians/tar.gz/d6699b391bc854db48510b7c882a1a0399f4dd14':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-science-advance-automobile': 0.1.0
       '@civ-clone/base-science-advance-explosives': 0.1.0
       '@civ-clone/base-science-advance-industrialization': 0.1.0
@@ -3747,7 +3747,7 @@ snapshots:
   '@civ-clone/civ1-diplomacy@https://codeload.github.com/civ-clone/civ1-diplomacy/tar.gz/52ca914a8450f7991c60b99c6119e24d83fec9aa':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-diplomacy-declaration-peace': 0.1.0
       '@civ-clone/base-diplomacy-declaration-war': 0.1.0
       '@civ-clone/base-diplomacy-interaction-contact': 0.1.0
@@ -3808,7 +3808,7 @@ snapshots:
 
   '@civ-clone/civ1-game-end@https://codeload.github.com/civ-clone/civ1-game-end/tar.gz/d0be8c7fdba5a6282ae9f31c993147439b714b61':
     dependencies:
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/civ1-difficulty': https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
       '@civ-clone/civ1-player': https://codeload.github.com/civ-clone/civ1-player/tar.gz/3664b20ece92ba1f77306db774122ef7e15deb9b
       '@civ-clone/civ1-world': https://codeload.github.com/civ-clone/civ1-world/tar.gz/d01a418c5aabaff4290c717e42e04eb90456b64a
@@ -3849,7 +3849,7 @@ snapshots:
 
   '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/15dc73961fd8e65aae024b60ae8485f6a6ca5442':
     dependencies:
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-goody-hut-advance': 0.1.3
       '@civ-clone/base-goody-hut-city': 0.1.2
       '@civ-clone/base-goody-hut-gold': 0.1.4
@@ -3891,7 +3891,7 @@ snapshots:
 
   '@civ-clone/civ1-player@https://codeload.github.com/civ-clone/civ1-player/tar.gz/3664b20ece92ba1f77306db774122ef7e15deb9b':
     dependencies:
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-player-action-end-turn': 0.1.0
       '@civ-clone/base-terrain-grassland': 0.1.0
       '@civ-clone/base-terrain-plains': 0.1.0
@@ -3936,7 +3936,7 @@ snapshots:
 
   '@civ-clone/civ1-science@https://codeload.github.com/civ-clone/civ1-science/tar.gz/f305bb93837835ad29cce388e91f6a9adb611995':
     dependencies:
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/civ1-difficulty': https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/71bab793abb2a261448541620086b0f630deb089
       '@civ-clone/civ1-government': https://codeload.github.com/civ-clone/civ1-government/tar.gz/85d8e1707c4a883e811f44d05264679ca307fc7d
       '@civ-clone/core-city': 0.1.23
@@ -4065,7 +4065,7 @@ snapshots:
 
   '@civ-clone/civ1-unit@https://codeload.github.com/civ-clone/civ1-unit/tar.gz/c85a38ea6b7daae8b952cc60c50c0626d590a2eb':
     dependencies:
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-science-advance-advancedflight': 0.1.0
       '@civ-clone/base-science-advance-automobile': 0.1.0
       '@civ-clone/base-science-advance-bronzeworking': 0.1.0
@@ -4200,17 +4200,17 @@ snapshots:
 
   '@civ-clone/civ1-world-civilizations@https://codeload.github.com/civ-clone/civ1-world-civilizations/tar.gz/266e08b3167e5b30f0bd1c0cec7179f0f797f61d':
     dependencies:
-      '@civ-clone/base-civilization-australian': 0.1.0
-      '@civ-clone/base-civilization-brazilian': 0.1.0
+      '@civ-clone/base-civilization-australian': 0.1.1
+      '@civ-clone/base-civilization-brazilian': 0.1.1
       '@civ-clone/base-civilization-chukchi': 0.1.0
-      '@civ-clone/base-civilization-ethiopian': 0.1.0
-      '@civ-clone/base-civilization-inca': 0.1.1
+      '@civ-clone/base-civilization-ethiopian': 0.1.1
+      '@civ-clone/base-civilization-inca': 0.1.2
       '@civ-clone/base-civilization-indonesian': 0.1.1
-      '@civ-clone/base-civilization-japanese': 0.1.1
+      '@civ-clone/base-civilization-japanese': 0.1.2
       '@civ-clone/base-civilization-khmer': 0.1.1
       '@civ-clone/base-civilization-kongo': 0.1.0
       '@civ-clone/base-civilization-malian': 0.1.0
-      '@civ-clone/base-civilization-sioux': 0.1.0
+      '@civ-clone/base-civilization-sioux': 0.1.1
       '@civ-clone/base-civilization-viking': 0.1.1
       '@civ-clone/civ1-earth-generator': https://codeload.github.com/civ-clone/civ1-earth-generator/tar.gz/7ad66bc8ba20f8adcb1bad8abf7792e73bee31a0
       '@civ-clone/core-civilization': 0.1.7
@@ -4677,7 +4677,7 @@ snapshots:
   '@civ-clone/library-civilization@0.1.0':
     dependencies:
       '@civ-clone/base-civilization-american': 0.1.3
-      '@civ-clone/base-civilization-aztec': 0.1.1
+      '@civ-clone/base-civilization-aztec': 0.1.2
       '@civ-clone/base-civilization-babylonian': 0.1.2
       '@civ-clone/base-civilization-chinese': 0.1.3
       '@civ-clone/base-civilization-egyptian': 0.1.2
@@ -4685,8 +4685,8 @@ snapshots:
       '@civ-clone/base-civilization-french': 0.1.3
       '@civ-clone/base-civilization-german': 0.1.2
       '@civ-clone/base-civilization-greek': 0.1.4
-      '@civ-clone/base-civilization-indian': 0.1.4
-      '@civ-clone/base-civilization-mongol': 0.1.2
+      '@civ-clone/base-civilization-indian': 0.1.5
+      '@civ-clone/base-civilization-mongol': 0.1.3
       '@civ-clone/base-civilization-roman': 0.1.4
       '@civ-clone/base-civilization-russian': 0.1.2
       '@civ-clone/base-civilization-zulu': 0.1.2
@@ -4913,7 +4913,7 @@ snapshots:
   '@civ-clone/simple-ai-client@https://codeload.github.com/civ-clone/simple-ai-client/tar.gz/d1cb77df60b4fb87a2d1e8945b8c8df83e460dba':
     dependencies:
       '@civ-clone/base-city-yield-gold': 0.1.1
-      '@civ-clone/base-civilization-barbarian': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-diplomacy-declaration-peace': 0.1.0
       '@civ-clone/base-leader-personality': 0.1.2
       '@civ-clone/base-player-action-end-turn': 0.1.0
