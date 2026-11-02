@@ -1,11 +1,11 @@
 // The city screen under the new interface (#746), with the real `City` window built under linkedom: `openCity` picks the
 //  layout by the interface; the strip across the top with the size, the garrison and the citizens, the specialists
 //  changing on a click (#107); the yields with their names (#719); each improvement with its upkeep and the total, Sell
-//  asking first (#684); the production card, "Nothing in production" with Choose, Buy with its price asking first and
-//  pressed by B; the units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's
-//  footer, still there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city,
-//  read-only, with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in
-//  `cityWindow`.
+//  asking first (#684) about that row's improvement; the city's Wonders, sent among them, in a section of their own;
+//  the production card, "Nothing in production" with Choose, Buy with its price asking first and pressed by B; the
+//  units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's footer, still
+//  there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city, read-only,
+//  with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -115,10 +115,16 @@ const babylonian = {
       improvements: [
         {
           _: 'Barracks',
+          __: ['Barracks', 'CityImprovement', 'Buildable'],
           id: `${id}-Barracks`,
           saleValue: [{ resource: { _: 'Gold' }, value: 40 }],
         },
-        { _: 'Palace', id: `${id}-Palace`, saleValue: [] },
+        {
+          _: 'Palace',
+          __: ['Palace', 'CityImprovement', 'Buildable'],
+          id: `${id}-Palace`,
+          saleValue: [],
+        },
       ],
       yields: [
         {
@@ -179,6 +185,16 @@ const key = (element: Element, key: string, target: Element = element) =>
     element?.textContent?.replace(/\s+/g, ' ').trim() ?? null,
   texts = (elements: NodeListOf<Element> | Element[]) =>
     Array.from(elements).map((element) => text(element)),
+  // The headed sections in a column after the production card, each with its rows' names, or what it says instead.
+  sections = (column: Element) =>
+    Array.from(column.querySelectorAll(':scope > .ui-city-section')).map(
+      (section) => [
+        text(section.querySelector('h3')),
+        texts(
+          section.querySelectorAll('.ui-city-improvement .name, .ui-city-empty')
+        ),
+      ]
+    ),
   confirmations = () => document.querySelectorAll('.confirmationWindow'),
   clearConfirmations = () =>
     confirmations().forEach((window) => window.remove()),
@@ -188,6 +204,7 @@ const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('../../translations/local/en');
   await import('../../translations/civ1-unit/en');
+  await import('../../translations/civ1-wonder/en');
 
   // The layout follows the interface.
   applyInterface('classic', null);
@@ -211,6 +228,15 @@ const run = async (): Promise<void> => {
     [first, second] = [
       cityData('City-A', 'Babylon', {
         player: owner,
+        improvements: [
+          {
+            _: 'Colossus',
+            __: ['Colossus', 'Wonder', 'CityImprovement', 'Buildable'],
+            id: 'City-A-Colossus',
+            saleValue: [],
+          },
+          ...cityData('City-A', 'Babylon').improvements,
+        ],
         tile: {
           x: 2,
           y: 2,
@@ -261,11 +287,11 @@ const run = async (): Promise<void> => {
     ['Food', 'Production', 'Trade', 'Luxuries', 'Gold', 'Research']
   );
 
-  // The improvements.
+  // The improvements, then the Wonders, which the engine sends among them.
   const rows = qa('.ui-city-improvement');
 
   expect(
-    'each improvement, its upkeep, and Sell only where it can be sold',
+    'each improvement, its upkeep, and Sell only where it can be sold; then the Wonders, with neither',
     Array.from(rows).map((row) => [
       text(row.querySelector('.name')),
       row.querySelector('.ui-city-gold')?.getAttribute('title') ?? null,
@@ -274,6 +300,15 @@ const run = async (): Promise<void> => {
     [
       ['Barracks', 'Upkeep: 1 gold a turn', 1],
       ['Palace', null, 0],
+      ['Colossus', null, 0],
+    ]
+  );
+  expect(
+    'the Wonders in a section of their own, below the improvements',
+    sections(q('.ui-city-right')!),
+    [
+      ['Improvements', ['Barracks', 'Palace']],
+      ['Wonders', ['Colossus']],
     ]
   );
   expect(
@@ -284,7 +319,15 @@ const run = async (): Promise<void> => {
 
   click(rows[0].querySelector('button.sell'));
 
-  expect('Sell asks first', confirmations().length, 1);
+  // The rows are in their own order, not the engine's: Sell is still for its row's improvement.
+  expect(
+    'Sell asks first, about that row’s improvement',
+    [
+      confirmations().length,
+      text(confirmations()[0])?.includes('Barracks') ?? false,
+    ],
+    [1, true]
+  );
 
   clearConfirmations();
 
@@ -418,6 +461,81 @@ const run = async (): Promise<void> => {
   );
 
   investigated.close();
+
+  // A city with Wonders and no improvements lists them, saying it has no improvements; one with neither says only that.
+  const listed = (wonders: string[]) => {
+    const window = openCity(
+        cityData(`City-W${wonders.length}`, 'Eridu', {
+          improvements: wonders.map((wonder) => ({
+            _: wonder,
+            __: [wonder, 'Wonder', 'CityImprovement', 'Buildable'],
+            id: `Eridu-${wonder}`,
+            saleValue: [],
+          })),
+          yields: [],
+        }),
+        portal,
+        transport
+      ),
+      section = window.element().querySelector('.ui-city-right');
+
+    window.close();
+
+    return sections(section!);
+  };
+
+  expect('Wonders alone are listed', listed(['Pyramids', 'GreatLibrary']), [
+    ['Improvements', ['No improvements yet']],
+    ['Wonders', ['Pyramids', 'Great Library']],
+  ]);
+  expect('and with neither, the city says so', listed([]), [
+    ['Improvements', ['No improvements yet']],
+  ]);
+
+  // Under rules that charge upkeep for a Wonder, each section's total is its own rows'.
+  const charged = openCity(
+      cityData('City-U', 'Uruk', {
+        improvements: [
+          {
+            _: 'Colossus',
+            __: ['Colossus', 'Wonder', 'CityImprovement', 'Buildable'],
+            id: 'City-U-Colossus',
+            saleValue: [],
+          },
+          ...cityData('City-U', 'Uruk').improvements,
+        ],
+        yields: [
+          ...cityData('City-U', 'Uruk').yields,
+          {
+            _: 'CityImprovementMaintenanceGold',
+            __: ['CityImprovementMaintenanceGold', 'Gold', 'Yield'],
+            value: -2,
+            cityImprovement: { id: 'City-U-Colossus' },
+          },
+        ],
+      }),
+      portal,
+      transport
+    ),
+    totals = Array.from(
+      charged.element().querySelectorAll('.ui-city-right > .ui-city-section')
+    ).map((section) => [
+      text(section.querySelector('h3')),
+      section
+        .querySelector('.ui-city-upkeep-total .ui-city-gold')
+        ?.getAttribute('title') ?? null,
+    ]);
+
+  charged.close();
+
+  expect(
+    'a Wonder’s upkeep is counted under Wonders, not Improvements',
+    totals,
+    [
+      ['Improvements', 'Upkeep: 1 gold a turn'],
+      ['Wonders', 'Upkeep: 2 gold a turn'],
+    ]
+  );
 
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);

@@ -1,5 +1,6 @@
 import {
   City as CityData,
+  CityImprovement,
   CityImprovementMaintenanceGold,
   Unit as UnitData,
   Yield,
@@ -112,17 +113,79 @@ const renderHeader = (
   );
 };
 
-// Each improvement with its upkeep, and Sell where it can be sold (#31, #684); then the upkeep they come to.
+const isWonder = (improvement: CityImprovement): boolean =>
+  instanceOf(improvement, 'Wonder');
+
+// A list of improvements, each with its upkeep, and Sell where it can be sold (#31, #684).
+const renderImprovementList = (
+  city: CityData,
+  improvements: CityImprovement[],
+  { readOnly, sellImprovement }: CityScreenContext
+): HTMLElement =>
+  s(
+    '<ul class="ui-city-improvements"></ul>',
+    ...improvements.map((improvement) => {
+      const [saleValue] = readOnly
+          ? []
+          : (improvement.saleValue ?? []).filter(
+              (saleValue) => saleValue.resource._ === 'Gold'
+            ),
+        upkeep = upkeepOf(city, improvement.id);
+
+      return s(
+        '<li class="ui-city-improvement"></li>',
+        s(
+          `<span class="name">${getLabelForBuildableEntity(improvement)}</span>`
+        ),
+        upkeep > 0
+          ? gold(upkeep, t('CityWindow.upkeep', { count: upkeep }))
+          : '',
+        saleValue
+          ? h(
+              button(t('City.SellImprovement.sell'), {
+                variant: 'danger',
+                className: 'sell',
+              }),
+              {
+                click: () => sellImprovement(improvement, saleValue),
+              }
+            )
+          : ''
+      );
+    })
+  );
+
+// The upkeep a list of improvements comes to, where it comes to any.
+const renderUpkeepTotal = (
+  city: CityData,
+  improvements: CityImprovement[]
+): HTMLElement | '' => {
+  const total = improvements.reduce(
+    (sum, improvement) => sum + upkeepOf(city, improvement.id),
+    0
+  );
+
+  return total > 0
+    ? s(
+        `<p class="ui-city-upkeep-total"><span>${t(
+          'CityWindow.upkeep-total'
+        )}</span></p>`,
+        gold(total, t('CityWindow.upkeep', { count: total }))
+      )
+    : '';
+};
+
+// The city's improvements, then the upkeep they come to. Its Wonders are among them, as the engine sends them, and
+//  have their own section below (#746).
 const renderImprovements = (
   city: CityData,
-  { readOnly, sellImprovement }: CityScreenContext
+  context: CityScreenContext
 ): HTMLElement => {
-  const upkeeps = city.improvements.map((improvement) =>
-      upkeepOf(city, improvement.id)
-    ),
-    total = upkeeps.reduce((sum, upkeep) => sum + upkeep, 0);
+  const improvements = city.improvements.filter(
+    (improvement) => !isWonder(improvement)
+  );
 
-  if (city.improvements.length === 0) {
+  if (improvements.length === 0) {
     return section(
       t('CityWindow.improvements'),
       s(`<p class="ui-city-empty">${t('CityWindow.no-improvements')}</p>`)
@@ -131,49 +194,25 @@ const renderImprovements = (
 
   return section(
     t('CityWindow.improvements'),
-    s(
-      '<ul class="ui-city-improvements"></ul>',
-      ...city.improvements.map((improvement, index) => {
-        const [saleValue] = readOnly
-            ? []
-            : (improvement.saleValue ?? []).filter(
-                (saleValue) => saleValue.resource._ === 'Gold'
-              ),
-          upkeep = upkeeps[index];
-
-        return s(
-          '<li class="ui-city-improvement"></li>',
-          s(
-            `<span class="name">${getLabelForBuildableEntity(
-              improvement
-            )}</span>`
-          ),
-          upkeep > 0
-            ? gold(upkeep, t('CityWindow.upkeep', { count: upkeep }))
-            : '',
-          saleValue
-            ? h(
-                button(t('City.SellImprovement.sell'), {
-                  variant: 'danger',
-                  className: 'sell',
-                }),
-                {
-                  click: () => sellImprovement(improvement, saleValue),
-                }
-              )
-            : ''
-        );
-      })
-    ),
-    total > 0
-      ? s(
-          `<p class="ui-city-upkeep-total"><span>${t(
-            'CityWindow.upkeep-total'
-          )}</span></p>`,
-          gold(total, t('CityWindow.upkeep', { count: total }))
-        )
-      : ''
+    renderImprovementList(city, improvements, context),
+    renderUpkeepTotal(city, improvements)
   );
+};
+
+// The city's Wonders, where it has any (#746), and their upkeep under rules that charge any.
+const renderWonders = (
+  city: CityData,
+  context: CityScreenContext
+): HTMLElement | '' => {
+  const wonders = city.improvements.filter(isWonder);
+
+  return wonders.length === 0
+    ? ''
+    : section(
+        t('CityWindow.wonders'),
+        renderImprovementList(city, wonders, context),
+        renderUpkeepTotal(city, wonders)
+      );
 };
 
 // What the city is building: its picture, name, progress and figures, and the buttons for it (#687).
@@ -368,7 +407,8 @@ export const cityLayout: CityLayout = {
         s(
           '<div class="ui-city-right"></div>',
           renderProduction(city, context),
-          renderImprovements(city, context)
+          renderImprovements(city, context),
+          renderWonders(city, context)
         )
       ),
       renderUnits(city, context),

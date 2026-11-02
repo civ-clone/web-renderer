@@ -125,6 +125,7 @@ i18next.addResources('en', 'default', {
   'CityWindow.upkeep_one': 'Upkeep: {{count, number}} gold a turn',
   'CityWindow.upkeep_other': 'Upkeep: {{count, number}} gold a turn',
   'CityWindow.upkeep-total': 'Upkeep each turn',
+  'CityWindow.wonders': 'Wonders',
   'CityWindow.yields': 'Yields',
   'ChoiceWindow.Research.research': 'Research {{- advance}}',
   'ChoiceWindow.choose': 'Choose',
