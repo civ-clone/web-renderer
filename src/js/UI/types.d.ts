@@ -53,6 +53,8 @@ export type Specialist = EntityInstance<
 
 export interface CityGrowth extends EntityInstance<'CityGrowth'> {
   cost: Yield;
+  // What the city needs before it can grow past `size`, from the ruleset (#781): `needs` is an improvement's type name.
+  limit?: { size: number; needs: string } | null;
   progress: Yield;
   size: number;
 }

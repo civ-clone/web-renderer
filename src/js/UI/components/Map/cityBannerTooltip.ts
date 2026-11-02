@@ -1,7 +1,7 @@
 import { City } from '../../types';
 import { TooltipContent } from '../lib/Tooltip';
 import { buildTurns, growthTurns } from '../../lib/cityTurns';
-import { cityName } from '../lib/city';
+import { cityName, growthLimitText } from '../lib/city';
 import { getLabelForBuildable } from '../lib/cityBuild';
 import { reduceKnownYield } from '../../lib/yieldMap';
 import { t } from 'i18next';
@@ -30,13 +30,18 @@ export const cityBannerTooltip = (city: City): TooltipContent => {
     ];
 
   if (growth?.cost) {
+    const limit = growthLimitText(growth);
+
     rows.push([
       t('CityBanner.grows', { size: growth.size + 1 }),
-      t(starving ? 'CityBanner.starving' : 'CityBanner.progress', {
-        progress: growth.progress.value,
-        total: growth.cost.value,
-        turns: growthTurns(city),
-      }),
+      // Not the turns to a growth the rules won't allow (#781), unless it's starving, which matters more.
+      limit !== null && !starving
+        ? limit
+        : t(starving ? 'CityBanner.starving' : 'CityBanner.progress', {
+            progress: growth.progress.value,
+            total: growth.cost.value,
+            turns: growthTurns(city),
+          }),
     ]);
   }
 

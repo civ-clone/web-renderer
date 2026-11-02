@@ -221,14 +221,16 @@ export const yieldIcon = (group: string): HTMLElement => {
 };
 
 /**
- * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left. The icon
- *  is decorative, so the yield is named for a screen reader.
+ * The figures beside a meter: the stored and the cost, what comes in each turn, and how many turns are left, or `until`
+ *  in their place when the turns would mislead ("Needs an Aqueduct", #781). The icon is decorative, so the yield is
+ *  named for a screen reader.
  */
 export const renderFigures = (
   group: string,
   data: CityGrowth | CityBuild,
   perTurn: number,
-  turns: number
+  turns: number,
+  until: string | null = null
 ): HTMLElement =>
   s(
     `<p class="figures"></p>`,
@@ -252,7 +254,9 @@ export const renderFigures = (
         { count: perTurn }
       )}</span>`
     ),
-    s(`<span class="turns">${turnsText(turns)}</span>`)
+    until === null
+      ? s(`<span class="turns">${turnsText(turns)}</span>`)
+      : s('<span class="turns"></span>', document.createTextNode(until))
   );
 
 export const yieldImages = (
