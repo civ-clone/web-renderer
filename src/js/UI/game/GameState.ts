@@ -283,25 +283,27 @@ export class GameState {
       queueTiles(city.tile, previous?.tile);
     });
 
-    // What the new interface's banner shows of your own city (#747): what it's building and how far along, how it's
-    //  growing, and the yields those come from. Each is an object of its own, which can change, whole or in place,
-    //  without the city: the city's square is drawn again when any does.
-    (this.#data.player?.cities ?? []).forEach((city) => {
-      const { build, growth } = city ?? {},
-        shown = [
-          build,
-          build?.progress,
-          build?.cost,
-          build?.building,
-          growth?.progress,
-          growth?.cost,
-          ...(city?.yields ?? []),
-        ];
+    // What the new interface's banner shows of your own city (#747): what it's building and how far along, and how it's
+    //  growing, each an object of its own that can change, whole or in place, without the city; and the yields those
+    //  come from, which are made anew whenever the city is sent, so the city itself.
+    (touched.size === 0 ? [] : this.#data.player?.cities ?? []).forEach(
+      (city) => {
+        const { build, growth } = city ?? {},
+          shown = [
+            city,
+            build,
+            build?.progress,
+            build?.cost,
+            build?.building,
+            growth?.progress,
+            growth?.cost,
+          ];
 
-      if (shown.some((object) => object?.id && touched.has(object.id))) {
-        queueTiles(this.#objectMap.objects[city.id]?.tile);
+        if (shown.some((object) => object?.id && touched.has(object.id))) {
+          queueTiles(this.#objectMap.objects[city.id]?.tile);
+        }
       }
-    });
+    );
 
     tileIds.forEach((id) => {
       const tile = this.#objectMap.objects[id];

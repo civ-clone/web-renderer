@@ -571,7 +571,8 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
 
   state.update();
 
-  // Its yields as part of the city: they look the same on the map's own layers.
+  // Sent again with its yields, which the engine makes anew each time: the map's own layers look the same, but the new
+  //  interface's banner (#747) reads its turns from them.
   state.applyPatches([
     sent('City-1', city('City-1', { yields: [ref('Food-1')] }), {
       'City-1-growth': growth('City-1', 1),
@@ -579,9 +580,19 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     }),
   ]);
 
-  check('a city that looks the same queues nothing', queuedIds() === '');
+  check(
+    'your city sent again queues its square, for its banner',
+    queuedIds() === 'Tile-1'
+  );
 
-  // What the new interface's banner shows of your own city (#747): what it builds and how far along, and its yields,
+  state.applyPatches([sent('City-2', rivalCity('City-2'))]);
+
+  check(
+    "a rival's city that looks the same queues nothing",
+    queuedIds() === ''
+  );
+
+  // What the new interface's banner shows of your own city (#747): what it builds and how far along,
   //  each sent on its own, without the city.
   const cityBuild = (building: string | null): PlainObject => ({
     _: 'CityBuild',
@@ -629,16 +640,9 @@ const unitMoves = (state: GameState, id: string): number | undefined =>
     queuedIds() === 'Tile-1'
   );
 
-  state.applyPatches([sent('Food-1', { _: 'Food', id: 'Food-1', value: 3 })]);
+  state.applyPatches([sent('Unit-9', { _: 'Food', id: 'Unit-9', value: 3 })]);
 
-  check(
-    "a city's yields on their own queue its square",
-    queuedIds() === 'Tile-1'
-  );
-
-  state.applyPatches([sent('Food-2', { _: 'Food', id: 'Food-2', value: 3 })]);
-
-  check("another city's yields don't", queuedIds() === '');
+  check("what isn't your city's queues nothing", queuedIds() === '');
 
   // It grows: the city in full, its growth in the side-table.
   state.applyPatches([
