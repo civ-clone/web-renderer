@@ -85,8 +85,11 @@ const yieldOf = (_: string, value: number) =>
     tile: { x: 6, y: 6 },
     growth: { size: 3 },
   } as unknown as City,
-  // Where the banner is drawn on the canvas.
-  box: Rect = { x: 30, y: 40, width: 50, height: 12 };
+  // Where the banner is drawn on the canvas, as it is to begin with.
+  firstBox: Rect = { x: 30, y: 40, width: 50, height: 12 };
+
+// Where it's drawn now: a banner widens with what it says.
+let box = firstBox;
 
 // Whose banner is under the pointer, wherever it is: set by each check.
 let banner: City | null = null;
@@ -404,13 +407,16 @@ const run = async (): Promise<void> => {
     ['Bank', '50 / 120 · 7 turns']
   );
 
+  box = { x: 26, y: 40, width: 58, height: 12 };
   portal.build([square(1, 1)]);
 
   expect(
-    "its city's square changing: it says what the city's doing now",
-    [shown(), ...says().rows.slice(0, 2)],
-    [true, 'Bank', '90 / 120 · 3 turns']
+    "its city's square changing: it says what the city's doing now, and moves with its banner",
+    [shown(), ...says().rows.slice(0, 2), panel()?.style.left],
+    [true, 'Bank', '90 / 120 · 3 turns', '126px']
   );
+
+  box = firstBox;
 
   banner = null;
   portal.build([square(1, 1)]);
