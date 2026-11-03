@@ -25,7 +25,7 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ## Asset import flow
 
-1. User opens **Import Assets** from main menu.
+1. User opens **Import Assets** from main menu, or under the new interface from Options' Assets row (#749).
 2. UI checks that every file named in the extractor definitions (`extract-data.json`) is among the selected files,
    matching names case-insensitively.
 3. For each file:
