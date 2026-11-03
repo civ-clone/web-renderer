@@ -217,8 +217,9 @@ const save = (
       'Import assets'
     );
 
-    // A window open over the menu has the keys.
-    key('l');
+    // A window open over the menu has the keys: H would open the Hall of Fame at once.
+    key('h');
+    await settle();
 
     expect(
       'no key works while a window is open',
@@ -241,6 +242,36 @@ const save = (
 
     expect(
       'nor once the menu has gone',
+      document.querySelectorAll('dialog').length,
+      0
+    );
+  }
+
+  // A save loading as the page opens removes the menu before it has read the saves: nothing is built, and no key it
+  //  would have had does anything in the game.
+  {
+    document.body.innerHTML = '';
+
+    const element = document.createElement('div');
+
+    element.id = 'mainmenu';
+    document.body.append(element);
+
+    new TitleMenu(element, transport).remove();
+    await settle();
+
+    expect(
+      'a menu removed as it opens builds nothing',
+      element.querySelectorAll('.ui-title-menu-item').length,
+      0
+    );
+
+    key('o');
+    key('h');
+    await settle();
+
+    expect(
+      'and has no keys in the game',
       document.querySelectorAll('dialog').length,
       0
     );

@@ -28,14 +28,20 @@ export const assetsRow = (): HTMLElement => {
       })
     );
 
-  void assetStore.importedCount().then(async (count): Promise<void> => {
-    status.textContent = (await assetStore.hasAllAssets())
-      ? t('GameOptions.assets-imported', {
-          count,
-          tileset: currentTileset().name,
-        })
-      : t('GameOptions.assets-missing');
-  });
+  void assetStore
+    .importedCount()
+    .then(async (count): Promise<void> => {
+      status.textContent = (await assetStore.hasAllAssets())
+        ? t('GameOptions.assets-imported', {
+            count,
+            tileset: currentTileset().name,
+          })
+        : t('GameOptions.assets-missing');
+    })
+    // The store can't be read: there's nothing to say about it, rather than "Checking…" for good.
+    .catch((): void => {
+      status.textContent = '';
+    });
 
   return row;
 };

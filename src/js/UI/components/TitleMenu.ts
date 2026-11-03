@@ -61,6 +61,10 @@ export const newestSave = (saves: BrowserSave[]): BrowserSave | null =>
 export class TitleMenu extends Element {
   #keydown = (event: KeyboardEvent): void => this.#onKeydown(event);
   #items: TitleMenuItem[] = [];
+  // Continue's save being read, so a second press doesn't open its seats twice.
+  #continuing = false;
+  // Gone, maybe before `build` has read the saves: a save loading as the page opens removes the menu at once.
+  #removed = false;
   #transport: Transport;
 
   constructor(element: HTMLElement, transport: Transport) {
@@ -83,6 +87,11 @@ export class TitleMenu extends Element {
       save = hasAssets ? newestSave(saves) : null,
       finished = (): void => this.remove();
 
+    // Nothing to build, and above all no keys to listen for, in the game that's loading.
+    if (this.#removed) {
+      return;
+    }
+
     this.#items = [
       ...(save === null
         ? []
@@ -94,10 +103,21 @@ export class TitleMenu extends Element {
               hotkey: t('TitleMenu.key.continue'),
               // As Load game would load it: its seats first, to reassign (#608). The player has been told by the time
               //  this rejects.
-              action: (): void =>
+              action: (): void => {
+                if (this.#continuing) {
+                  return;
+                }
+
+                this.#continuing = true;
+
                 void loadSaveFromFile(save.data, (save) =>
                   ResumeGameWindow.ask(this.#transport, save)
-                ).catch((): void => {}),
+                )
+                  .catch((): void => {})
+                  .finally((): void => {
+                    this.#continuing = false;
+                  });
+              },
             },
           ]),
       ...(hasAssets
@@ -257,6 +277,8 @@ export class TitleMenu extends Element {
   }
 
   remove(): void {
+    this.#removed = true;
+
     document.removeEventListener('keydown', this.#keydown);
 
     this.queryAll('button').forEach((button) =>
