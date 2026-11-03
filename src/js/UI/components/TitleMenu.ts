@@ -110,9 +110,21 @@ export class TitleMenu extends Element {
 
                 this.#continuing = true;
 
-                void loadSaveFromFile(save.data, (save) =>
-                  ResumeGameWindow.ask(this.#transport, save)
-                )
+                // The saves as they are now: Load game may have deleted this one, or kept a newer. Then the menu says
+                //  so, rather than loading what it showed.
+                void listSaves()
+                  .catch((): BrowserSave[] => [])
+                  .then(async (saves): Promise<void> => {
+                    if (newestSave(saves)?.savedAt !== save.savedAt) {
+                      await this.build();
+
+                      return;
+                    }
+
+                    await loadSaveFromFile(save.data, (save) =>
+                      ResumeGameWindow.ask(this.#transport, save)
+                    );
+                  })
                   .catch((): void => {})
                   .finally((): void => {
                     this.#continuing = false;
@@ -173,6 +185,9 @@ export class TitleMenu extends Element {
             },
           ]),
     ];
+
+    // Built again when Continue finds the saves changed.
+    this.element().querySelector('.ui-title-menu-panel')?.remove();
 
     this.append(
       s(

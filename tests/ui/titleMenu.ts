@@ -16,6 +16,7 @@ import TitleMenu, {
 } from '../../src/js/UI/components/TitleMenu';
 import {
   BrowserSave,
+  deleteSave,
   keepSave,
   listSaves,
 } from '../../src/js/UI/lib/browserSaves';
@@ -26,6 +27,8 @@ import { askNewGame } from '../../src/js/UI/components/newGame';
 import { assetStore } from '../../src/js/UI/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import GameOptions from '../../src/js/UI/components/GameOptions';
+import { IPortal } from '../../src/js/UI/components/Portal';
 import { resetStore } from './lib/FakeStore';
 
 const failures: string[] = [];
@@ -343,7 +346,34 @@ const save = (
       'C'
     );
 
+    // Deleted from Load game while the menu was up: Continue doesn't load what it showed, and goes.
+    await deleteSave((await listSaves())[0].savedAt);
+    key('c');
+    await settle();
+
+    expect(
+      'a Continue whose save was deleted is gone, not loaded',
+      [items(element), document.querySelectorAll('dialog').length],
+      [['new-game', 'earth', 'load-game', 'hall-of-fame', 'options'], 0]
+    );
+
     resetStore();
+  }
+
+  // In a game, Options has no Assets row: the import reloads the page, and the game with it.
+  {
+    const options = new GameOptions({
+      scale: () => 2,
+      lockVerticalEdges: () => false,
+    } as unknown as IPortal);
+
+    expect(
+      'Options in a game has no Assets row',
+      options.element().querySelector('.assets'),
+      null
+    );
+
+    closeWindows();
   }
 
   // What Continue says, for each kind of save and one from before #749.
