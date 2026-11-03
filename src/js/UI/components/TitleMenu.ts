@@ -263,6 +263,7 @@ export class TitleMenu extends Element {
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
+      event.shiftKey ||
       document.querySelector('dialog[open]') !== null ||
       target?.closest('input, select, textarea, [contenteditable]')
     ) {

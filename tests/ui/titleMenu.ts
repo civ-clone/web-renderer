@@ -83,14 +83,20 @@ assetStore.hasAllAssets = async (): Promise<boolean> => hasAssets;
 assetStore.importedCount = async (): Promise<number> => (hasAssets ? 289 : 0);
 
 // The shim's `KeyboardEvent` takes only `key` (`lib/dom.ts`): the modifiers are set on it.
-const key = (key: string, modifiers: { ctrlKey?: boolean } = {}): void => {
+const key = (
+  key: string,
+  modifiers: { ctrlKey?: boolean; shiftKey?: boolean } = {}
+): KeyboardEvent => {
   const event = new (globalThis as any).KeyboardEvent('keydown', {
     key,
     bubbles: true,
+    cancelable: true,
   });
 
   Object.assign(event, modifiers);
   document.body.dispatchEvent(event);
+
+  return event;
 };
 
 const closeWindows = (): void =>
@@ -247,6 +253,24 @@ const save = (
       'nor with a modifier',
       document.querySelectorAll('dialog').length,
       0
+    );
+
+    // Shift too: the keys match either case, so Shift+O would otherwise open Options.
+    key('O', { shiftKey: true });
+    await settle();
+
+    expect('nor with Shift', document.querySelectorAll('dialog').length, 0);
+    closeWindows();
+
+    expect(
+      'an arrow moves between the items, and the menu takes it',
+      key('ArrowDown').defaultPrevented,
+      true
+    );
+    expect(
+      'but not with Shift, which is left to the browser',
+      key('ArrowDown', { shiftKey: true }).defaultPrevented,
+      false
     );
 
     menu.remove();
