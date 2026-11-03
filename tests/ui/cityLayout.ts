@@ -19,6 +19,8 @@ import { assetStore } from '../../src/js/UI/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import openCity from '../../src/js/UI/components/openCity';
+import { turnsLeft } from '../../src/js/UI/lib/cityTurns';
+import { turnsText } from '../../src/js/UI/components/lib/cityYields';
 
 const failures: string[] = [];
 let checks = 0,
@@ -674,6 +676,97 @@ const run = async (): Promise<void> => {
 
   again.close();
   assetStore.cachedURL = cachedURL;
+
+  // What the city builds next (#774): each item, its turns from nothing at the city's production, and Up, Down and
+  //  Remove, which send the edit as the city's ChangeProduction.
+  const queuedCity = cityData('City-K', 'Eshnunna', { player: owner });
+
+  queuedCity.build = {
+    ...queuedCity.build,
+    building: {
+      item: { _: 'Barracks', __: ['Barracks', 'CityImprovement', 'Buildable'] },
+    },
+    cost: { value: 40 },
+    progress: { value: 10 },
+    queue: [
+      {
+        item: { _: 'Temple', __: ['Temple', 'CityImprovement', 'Buildable'] },
+        cost: { value: 40 },
+      },
+      {
+        item: { _: "Magellan'sExpedition", __: ['Wonder', 'Buildable'] },
+        cost: { value: 400 },
+      },
+    ],
+  } as unknown as CityData['build'];
+
+  const turnsFor = (cost: number): string =>
+      turnsText(
+        turnsLeft(
+          { cost: { value: cost }, progress: { value: 0 } } as any,
+          queuedCity.yields,
+          'Production'
+        )
+      ),
+    queued = openCity(queuedCity, portal, transport),
+    queueRows = Array.from(
+      queued.element().querySelectorAll('.ui-city-queue .ui-city-queued')
+    ),
+    labels = (row: Element) =>
+      Array.from(row.querySelectorAll('button')).map((button) =>
+        button.getAttribute('aria-label')
+      );
+
+  expect(
+    'the queue under the progress: each item and its turns from nothing',
+    queueRows.map((row) => [
+      text(row.querySelector('.name')),
+      text(row.querySelector('.turns')),
+    ]),
+    [
+      ['Then: Temple', turnsFor(40)],
+      ["Then: Magellan'sExpedition", turnsFor(400)],
+    ]
+  );
+  expect(
+    'the first moves down, the last up, and each is removed',
+    queueRows.map(labels),
+    [
+      ['Move Temple down', 'Remove Temple from the queue'],
+      [
+        "Move Magellan'sExpedition up",
+        "Remove Magellan'sExpedition from the queue",
+      ],
+    ]
+  );
+
+  sent = [];
+  click(queueRows[1].querySelector('button'));
+  click(queueRows[0].querySelectorAll('button')[1]);
+
+  expect('Up and Remove send the edit', sent, [
+    {
+      name: 'ChangeProduction',
+      id: queuedCity.build.id,
+      queue: {
+        op: 'move',
+        index: 1,
+        to: 0,
+        queued: ['Temple', "Magellan'sExpedition"],
+      },
+    },
+    {
+      name: 'ChangeProduction',
+      id: queuedCity.build.id,
+      queue: {
+        op: 'remove',
+        index: 0,
+        queued: ['Temple', "Magellan'sExpedition"],
+      },
+    },
+  ]);
+
+  queued.close();
 
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);

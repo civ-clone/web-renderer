@@ -71,14 +71,85 @@ export const handleRenameCity = async (
   return false;
 };
 
+// An edit to what the city builds after its current item (#774): `add` the item `chosen` (at `index`, or the end),
+//  `remove` the one at `index`, `move` the one at `index` to `to`, or `clear` them all. An item added while the city
+//  builds nothing is started instead, taking it off Auto as choosing does. One the city can't build, a position that
+//  isn't a whole number, or a `queued` that isn't the queue as it is now (a second click sent before the first's
+//  update, even on one of two of the same item) changes nothing.
+export type QueueEdit =
+  | { op: 'add'; chosen: string; index?: number }
+  | { op: 'remove'; index: number; queued: string[] }
+  | { op: 'move'; index: number; to: number; queued: string[] }
+  | { op: 'clear' };
+
+export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
+  const isIndex = (value: unknown): value is number =>
+      Number.isInteger(value) && (value as number) >= 0,
+    isAt = (index: unknown, queued: unknown): index is number =>
+      isIndex(index) &&
+      index < cityBuild.queued().length &&
+      Array.isArray(queued) &&
+      queued.length === cityBuild.queued().length &&
+      cityBuild
+        .queued()
+        .every((Item, position) => Item.name === queued[position]);
+
+  if (edit.op === 'add') {
+    if (edit.index !== undefined && !isIndex(edit.index)) {
+      return;
+    }
+
+    const [buildItem] = cityBuild
+      .available()
+      .filter((buildItem: BuildItem) => buildItem.item().name === edit.chosen);
+
+    if (!buildItem) {
+      return;
+    }
+
+    if (cityBuild.building() === null) {
+      cityBuild.choose(buildItem.item());
+      cityBuild.setAuto(false);
+
+      return;
+    }
+
+    cityBuild.enqueue(buildItem.item(), edit.index);
+
+    return;
+  }
+
+  if (edit.op === 'remove' && isAt(edit.index, edit.queued)) {
+    cityBuild.dequeue(edit.index);
+
+    return;
+  }
+
+  if (edit.op === 'move' && isAt(edit.index, edit.queued) && isIndex(edit.to)) {
+    cityBuild.requeue(edit.index, edit.to);
+
+    return;
+  }
+
+  if (edit.op === 'clear') {
+    cityBuild.clearQueue();
+  }
+};
+
 export const handleCityBuild: ActionHandler<
   CityBuild | ChangeProduction
 > = async (ctx, action, playerAction) => {
   const cityBuild = playerAction.value() as CityBuildItem,
-    { auto, chosen } = action;
+    { auto, chosen, queue } = action;
 
   // What the city is building, which is all a choice changes (#411).
   ctx.patches.cityBuild(cityBuild);
+
+  if (queue && typeof queue === 'object') {
+    editQueue(cityBuild, queue as QueueEdit);
+
+    return false;
+  }
 
   // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
   if (typeof auto === 'boolean') {
@@ -107,7 +178,8 @@ export const handleCityBuild: ActionHandler<
     return false;
   }
 
-  cityBuild.build(buildItem.item());
+  // The player's choice: the first queued item, if it's that, leaves the queue (#774).
+  cityBuild.choose(buildItem.item());
   // Choosing a build by hand takes the city off Auto.
   cityBuild.setAuto(false);
 

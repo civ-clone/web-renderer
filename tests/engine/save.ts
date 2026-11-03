@@ -337,6 +337,19 @@ const report = (): void => {
 
   onAuto?.setAuto(true);
 
+  // A queue (#774), which only a player lines up, so the round trip would miss a save that dropped its classes.
+  const [queueable] = onAuto?.available() ?? [];
+
+  if (queueable) {
+    onAuto!.enqueue(queueable.item());
+  }
+
+  push(
+    'a city has a queue to save',
+    () => (onAuto?.queued().length ?? 0) > 0,
+    true
+  );
+
   try {
     first = save(defaultGame, { name: 'acceptance', createdAt: 0 });
   } catch (error) {

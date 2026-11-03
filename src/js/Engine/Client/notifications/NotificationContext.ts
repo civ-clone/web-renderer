@@ -19,10 +19,11 @@ export type NotificationContext = Pick<
   | 'government'
 >;
 
-// An engine event's arguments as the notice it is told as, or `null` for none.
+// An engine event's arguments as the notice it is told as, or `null` for none. A build complete can be two: the
+//  completion, and what the queue dropped on its way to the next item (#774).
 export type NotificationHandler = (
   ctx: NotificationContext,
   ...args: any[]
-) => Notification | null;
+) => Notification | Notification[] | null;
 
 export type NotificationTable = [string, NotificationHandler][];

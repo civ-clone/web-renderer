@@ -7,6 +7,7 @@ import Unit from './Unit';
 import buildingIcon from './lib/buildingIcon';
 import entryDetails from './lib/choiceDetails';
 import {
+  editQueue,
   getAutoLabel,
   getClearedLabel,
   getLabelForBuildable,
@@ -95,7 +96,8 @@ export const buildRow = (
 /**
  * What a city builds, under the new interface (#745): what it can build in the engine's order, under each section's
  *  heading (#432), with a unit's numbers (#381), each item's cost and turns, and its Civilopedia entry beside the list
- *  (#183). What it's building now is chosen as it opens. Auto (#194) and Can't build… (#183) are beside the primary.
+ *  (#183). What it's building now is chosen as it opens. Add to queue (#774), Auto (#194) and Can't build… (#183)
+ *  are beside the primary.
  */
 export class CityBuildChoice extends ChoiceWindow {
   #onComplete: onCompleteHandler;
@@ -145,6 +147,26 @@ export class CityBuildChoice extends ChoiceWindow {
           ]),
         actions: {
           ...additionalActions,
+          // What's chosen, after what the city is building now (#774). Building nothing, choosing starts it.
+          ...(cityBuild.building === null
+            ? {}
+            : {
+                queue: {
+                  label: t('ChoiceWindow.Build.queue'),
+                  action: (window) => {
+                    const chosen = (window as ChoiceWindow).chosen();
+
+                    if (chosen === null) {
+                      return;
+                    }
+
+                    editQueue(cityBuild, transport, { op: 'add', chosen });
+
+                    window.close();
+                    this.#onComplete(true);
+                  },
+                },
+              }),
           auto: {
             label: getAutoLabel(cityBuild),
             action: (window) => {

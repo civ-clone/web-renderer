@@ -19,6 +19,7 @@ const glyphs = {
   'arrow-right':
     '<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
   'chevron-down': '<polyline points="6 9 12 15 18 9"/>',
+  'chevron-up': '<polyline points="18 15 12 9 6 15"/>',
   // A filled triangle, for a section that opens and closes, the size the text's ▾ was.
   disclosure: '<path d="M5 8h14l-7 9z" fill="currentColor" stroke="none"/>',
   // The active unit's figures (#743): a sword, Feather's shield, chevrons and eye, and a veteran's chevrons.

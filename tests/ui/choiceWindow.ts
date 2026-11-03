@@ -685,11 +685,11 @@ const run = async (): Promise<void> => {
     'Production'
   );
   expect(
-    "Auto and Can't build… beside the primary",
+    "Add to queue, Auto and Can't build… beside the primary",
     Array.from(
       build.element().querySelectorAll('.ui-window-footer button')
     ).map((button) => button.textContent),
-    ['Cancel', 'Auto', 'Can’t build…', 'Build Temple']
+    ['Cancel', 'Add to queue', 'Auto', 'Can’t build…', 'Build Temple']
   );
 
   await settle();
@@ -727,6 +727,41 @@ const run = async (): Promise<void> => {
       ['complete:true'],
     ]
   );
+
+  // Add to queue (#774): what's chosen, after what the city is building now.
+  {
+    const queueing = new CityBuildChoice(
+        cityBuild,
+        available,
+        transport,
+        (done) => opened.push(`queued:${done}`)
+      ),
+      add = Array.from(
+        queueing.element().querySelectorAll('.ui-window-footer button')
+      ).find((button) => button.textContent === 'Add to queue') as HTMLElement;
+
+    sent.length = 0;
+    key(queueing.element().querySelector('.ui-choice-list')!, 'Home');
+    add.click();
+
+    expect(
+      'Add to queue sends the chosen item as a queue edit, and completes the prompt',
+      [sent, opened.at(-1)],
+      [
+        [
+          [
+            'action',
+            {
+              name: 'ChangeProduction',
+              id: 'CityBuild-1',
+              queue: { op: 'add', chosen: 'Settlers' },
+            },
+          ],
+        ],
+        'queued:true',
+      ]
+    );
+  }
 
   const empty = {
       ...cityBuild,

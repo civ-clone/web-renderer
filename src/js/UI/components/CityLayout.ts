@@ -12,6 +12,7 @@ import {
   renderTradeRoutes,
 } from './City';
 import {
+  editQueue,
   getAutoLabel,
   getLabelForBuildable,
   getLabelForBuildableEntity,
@@ -20,6 +21,7 @@ import {
   growthTurns,
   renderFigures,
   renderPopulation,
+  turnsText,
   yieldIcon,
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
@@ -28,6 +30,8 @@ import buildingIcon from './lib/buildingIcon';
 import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import button from '../lib/button';
+import { glyph } from '../lib/glyphs';
+import { turnsLeft } from '../lib/cityTurns';
 import { h } from '../lib/html';
 import instanceOf from '../lib/instanceOf';
 import { instance as localeProvider } from '../LocaleProvider';
@@ -225,16 +229,102 @@ const renderWonders = (
       );
 };
 
+// A span of text, set as text: an item's name may have an apostrophe in it.
+const textSpan = (className: string, text: string): HTMLElement => {
+  const span = s(`<span class="${className}"></span>`);
+
+  span.textContent = text;
+
+  return span;
+};
+
+// What the city builds after its current item (#774), each with the turns it takes at the city's production now, from
+//  nothing, as it starts once the one before it is done. Its own can be moved up or down, or removed.
+const renderQueue = (
+  city: CityData,
+  { readOnly, transport }: CityScreenContext
+): HTMLElement | '' => {
+  const queue = city.build.queue ?? [],
+    // The queue as the player sees it, sent with each edit, so a second click sent before the update changes nothing.
+    queued = queue.map((buildItem) => buildItem.item._),
+    iconButton = (
+      name: 'chevron-up' | 'chevron-down' | 'close',
+      label: string,
+      edit: Parameters<typeof editQueue>[2]
+    ): HTMLButtonElement => {
+      const element = button(glyph(name), { variant: 'icon' });
+
+      element.setAttribute('aria-label', label);
+      element.title = label;
+
+      return h(element, {
+        click: () => editQueue(city.build, transport, edit),
+      });
+    };
+
+  if (queue.length === 0) {
+    return '';
+  }
+
+  return s(
+    `<ol class="ui-city-queue" aria-label="${t('CityWindow.queue')}"></ol>`,
+    ...queue.map((buildItem, index) => {
+      const item = getLabelForBuildable(buildItem),
+        turns = turnsLeft(
+          {
+            ...city.build,
+            cost: buildItem.cost,
+            progress: { ...city.build.progress, value: 0 },
+          },
+          city.yields,
+          'Production'
+        );
+
+      return s(
+        '<li class="ui-city-queued"></li>',
+        instanceOf(buildItem.item, 'CityImprovement') ||
+          instanceOf(buildItem.item, 'Wonder')
+          ? buildingIcon(buildItem.item._, instanceOf(buildItem.item, 'Wonder'))
+          : '',
+        textSpan('name', t('CityWindow.then', { item })),
+        s(`<span class="turns">${turnsText(turns)}</span>`),
+        ...(readOnly
+          ? []
+          : [
+              index > 0
+                ? iconButton('chevron-up', t('CityWindow.queue-up', { item }), {
+                    op: 'move',
+                    index,
+                    to: index - 1,
+                    queued,
+                  })
+                : '',
+              index < queue.length - 1
+                ? iconButton(
+                    'chevron-down',
+                    t('CityWindow.queue-down', { item }),
+                    { op: 'move', index, to: index + 1, queued }
+                  )
+                : '',
+              iconButton('close', t('CityWindow.queue-remove', { item }), {
+                op: 'remove',
+                index,
+                queued,
+              }),
+            ])
+      );
+    })
+  );
+};
+
 // What the city is building: its picture, name, progress and figures, and the buttons for it (#687).
 const renderProduction = (
   city: CityData,
-  {
-    readOnly,
-    chooseProduction,
-    completeProduction,
-    toggleAuto,
-  }: CityScreenContext
+  context: CityScreenContext
 ): HTMLElement => {
+  const { readOnly, chooseProduction, completeProduction, toggleAuto } =
+    context;
+
   const building = city.build.building,
     name = building
       ? (t('City.Build.title', {
@@ -267,6 +357,7 @@ const renderProduction = (
         : ''
     ),
     ...renderBuildProgress(city),
+    renderQueue(city, context),
     readOnly
       ? ''
       : s(

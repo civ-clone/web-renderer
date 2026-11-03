@@ -54,3 +54,24 @@ export const toggleAuto = (cityBuild: CityBuild, transport: Transport): void =>
     id: cityBuild.id,
     auto: !cityBuild.auto,
   });
+
+/**
+ * Edits what a city builds after its current item (#774): adds `chosen` (or starts it, if the city builds nothing),
+ *  removes or moves the item at `index` (with the queue as the player saw it, `queued`, so a second click sent before
+ *  the first's update changes nothing), or clears them all. It answers the city's `CityBuild` action while it builds
+ *  nothing, and its `ChangeProduction` action otherwise, as `toggleAuto` does.
+ */
+export const editQueue = (
+  cityBuild: CityBuild,
+  transport: Transport,
+  queue:
+    | { op: 'add'; chosen: string; index?: number }
+    | { op: 'remove'; index: number; queued: string[] }
+    | { op: 'move'; index: number; to: number; queued: string[] }
+    | { op: 'clear' }
+): void =>
+  transport.send('action', {
+    name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
+    id: cityBuild.id,
+    queue,
+  });

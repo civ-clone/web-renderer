@@ -276,6 +276,44 @@
   }
 }
 
+// What the city builds next (#774), under the progress: each item, its turns, and the buttons that move or remove it.
+.ui-city-queue {
+  border-top: 1px solid var(--ui-line);
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0 0;
+}
+
+.ui-city-queued {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  min-height: 1.5rem;
+
+  .name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .turns {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+    white-space: nowrap;
+  }
+
+  // As tall as the row's text.
+  .btn-icon {
+    min-height: 0;
+    padding-block: 0;
+  }
+}
+
 .ui-city-production-actions {
   display: flex;
   flex-wrap: wrap;
