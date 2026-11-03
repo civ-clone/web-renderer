@@ -317,24 +317,33 @@ const run = async (): Promise<void> => {
   }
 
   await send(cityBuild, {
-    queue: { op: 'move', index: 1, to: 0, item: second.item().name },
+    queue: { op: 'move', index: 1, to: 0, queued: queuedNames() },
   });
 
   if (queuedNames()[0] !== second.item().name) {
     fail(`moving in the queue gave ${queuedNames()}`);
   }
 
+  const seen = queuedNames();
+
   await send(cityBuild, {
-    queue: { op: 'remove', index: 0, item: second.item().name },
+    queue: { op: 'remove', index: 0, queued: seen },
   });
-  // The same click again, sent before its update: the item at 0 is another now, so nothing changes.
+  // The same click again, sent before its update: the queue isn't the one it was sent from now, so nothing changes.
   await send(cityBuild, {
-    queue: { op: 'remove', index: 0, item: second.item().name },
+    queue: { op: 'remove', index: 0, queued: seen },
   });
   await send(cityBuild, {
-    queue: { op: 'remove', index: 'x', item: first.item().name },
+    queue: { op: 'remove', index: 'x', queued: queuedNames() },
   });
   await send(cityBuild, { queue: { op: 'add', chosen: 'NotAThing' } });
+
+  // An invalid position adds nothing, rather than adding at the end.
+  for (const index of [1.5, -1, 'x']) {
+    await send(cityBuild, {
+      queue: { op: 'add', chosen: second.item().name, index },
+    });
+  }
 
   if (JSON.stringify(queuedNames()) !== JSON.stringify([first.item().name])) {
     fail(`removing from the queue gave ${queuedNames()}`);
@@ -345,6 +354,21 @@ const run = async (): Promise<void> => {
   if (queuedNames().length !== 0) {
     fail(`clearing the queue left ${queuedNames()}`);
   }
+
+  // Two of the same item: a second Remove sent before the first's update leaves the other one.
+  await send(cityBuild, { queue: { op: 'add', chosen: first.item().name } });
+  await send(cityBuild, { queue: { op: 'add', chosen: first.item().name } });
+
+  const twins = queuedNames();
+
+  await send(cityBuild, { queue: { op: 'remove', index: 0, queued: twins } });
+  await send(cityBuild, { queue: { op: 'remove', index: 0, queued: twins } });
+
+  if (JSON.stringify(queuedNames()) !== JSON.stringify([first.item().name])) {
+    fail(`a second Remove on one of two of the same left ${queuedNames()}`);
+  }
+
+  cityBuild.clearQueue();
 
   pass('the queue is added to, moved, removed from and cleared, and sent');
 

@@ -245,6 +245,8 @@ const renderQueue = (
   { readOnly, transport }: CityScreenContext
 ): HTMLElement | '' => {
   const queue = city.build.queue ?? [],
+    // The queue as the player sees it, sent with each edit, so a second click sent before the update changes nothing.
+    queued = queue.map((buildItem) => buildItem.item._),
     iconButton = (
       name: 'chevron-up' | 'chevron-down' | 'close',
       label: string,
@@ -294,20 +296,20 @@ const renderQueue = (
                     op: 'move',
                     index,
                     to: index - 1,
-                    item: buildItem.item._,
+                    queued,
                   })
                 : '',
               index < queue.length - 1
                 ? iconButton(
                     'chevron-down',
                     t('CityWindow.queue-down', { item }),
-                    { op: 'move', index, to: index + 1, item: buildItem.item._ }
+                    { op: 'move', index, to: index + 1, queued }
                   )
                 : '',
               iconButton('close', t('CityWindow.queue-remove', { item }), {
                 op: 'remove',
                 index,
-                item: buildItem.item._,
+                queued,
               }),
             ])
       );

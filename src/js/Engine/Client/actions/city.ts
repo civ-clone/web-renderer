@@ -74,21 +74,31 @@ export const handleRenameCity = async (
 // An edit to what the city builds after its current item (#774): `add` the item `chosen` (at `index`, or the end),
 //  `remove` the one at `index`, `move` the one at `index` to `to`, or `clear` them all. An item added while the city
 //  builds nothing is started instead, taking it off Auto as choosing does. One the city can't build, a position that
-//  isn't a whole number, or an `item` that isn't the one at `index` (a second click sent before the first's update)
-//  changes nothing.
+//  isn't a whole number, or a `queued` that isn't the queue as it is now (a second click sent before the first's
+//  update, even on one of two of the same item) changes nothing.
 export type QueueEdit =
   | { op: 'add'; chosen: string; index?: number }
-  | { op: 'remove'; index: number; item: string }
-  | { op: 'move'; index: number; to: number; item: string }
+  | { op: 'remove'; index: number; queued: string[] }
+  | { op: 'move'; index: number; to: number; queued: string[] }
   | { op: 'clear' };
 
 export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
   const isIndex = (value: unknown): value is number =>
       Number.isInteger(value) && (value as number) >= 0,
-    isAt = (index: unknown, item: unknown): index is number =>
-      isIndex(index) && cityBuild.queued()[index]?.name === item;
+    isAt = (index: unknown, queued: unknown): index is number =>
+      isIndex(index) &&
+      index < cityBuild.queued().length &&
+      Array.isArray(queued) &&
+      queued.length === cityBuild.queued().length &&
+      cityBuild
+        .queued()
+        .every((Item, position) => Item.name === queued[position]);
 
   if (edit.op === 'add') {
+    if (edit.index !== undefined && !isIndex(edit.index)) {
+      return;
+    }
+
     const [buildItem] = cityBuild
       .available()
       .filter((buildItem: BuildItem) => buildItem.item().name === edit.chosen);
@@ -104,21 +114,18 @@ export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
       return;
     }
 
-    cityBuild.enqueue(
-      buildItem.item(),
-      isIndex(edit.index) ? edit.index : undefined
-    );
+    cityBuild.enqueue(buildItem.item(), edit.index);
 
     return;
   }
 
-  if (edit.op === 'remove' && isAt(edit.index, edit.item)) {
+  if (edit.op === 'remove' && isAt(edit.index, edit.queued)) {
     cityBuild.dequeue(edit.index);
 
     return;
   }
 
-  if (edit.op === 'move' && isAt(edit.index, edit.item) && isIndex(edit.to)) {
+  if (edit.op === 'move' && isAt(edit.index, edit.queued) && isIndex(edit.to)) {
     cityBuild.requeue(edit.index, edit.to);
 
     return;
