@@ -443,14 +443,14 @@ const run = async (): Promise<void> => {
     ['chooseFromList', 'pay'],
   ]);
 
-  // A key held down answers one step, not the next one too.
+  // A key held down answers one step, not the next one too: Escape included, where Good bye is offered.
   reset();
   step(demanded, [
     ['refuse', answer('Decline', demand)],
-    ['pay', answer('Accept', demand)],
+    ['goodbye', terminate],
   ]);
 
-  for (const name of ['Enter', '2']) {
+  for (const name of ['Enter', '2', 'Escape']) {
     const held = new KeyboardEvent('keydown', {
       bubbles: true,
       cancelable: true,

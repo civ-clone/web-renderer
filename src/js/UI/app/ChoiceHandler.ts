@@ -126,7 +126,9 @@ export const ChoiceHandler = {
       // Under the new interface, the meeting window (#752): the talks so far, and the replies in the engine's order, the
       //  one that costs nothing first (#674).
       if (key === 'negotiation.next-step' && interfaceMode() === 'new') {
-        const players = negotiation?.players ?? [],
+        // The stress runner as the window opens: the one that answers it, if any, however the panel changes meanwhile.
+        const stressRunner = debugFlags.uiStressRunner,
+          players = negotiation?.players ?? [],
           them =
             players.find((player) => player.id !== us?.id) ??
             players[0] ??
@@ -157,7 +159,7 @@ export const ChoiceHandler = {
               })),
               // The stress runner sends its own answer, whatever is chosen in the window meanwhile.
               onChoose: (choice) => {
-                if (!debugFlags.uiStressRunner) {
+                if (!stressRunner) {
                   transport.send('chooseFromList', choice);
                 }
               },
@@ -165,8 +167,8 @@ export const ChoiceHandler = {
             }
           );
 
-        if (debugFlags.uiStressRunner) {
-          debugFlags.uiStressRunner.automateChoice(
+        if (stressRunner) {
+          stressRunner.automateChoice(
             meetingWindow,
             choices[0].id,
             (choiceId) => transport.send('chooseFromList', choiceId)

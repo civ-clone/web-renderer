@@ -238,6 +238,8 @@ export class MeetingWindow extends Window {
       //  browser would otherwise press again.
       if (event.repeat) {
         event.preventDefault();
+        // Escape too, which the window's own listener would otherwise take as Good bye.
+        event.stopImmediatePropagation();
 
         return;
       }
