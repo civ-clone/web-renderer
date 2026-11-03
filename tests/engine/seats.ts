@@ -391,7 +391,7 @@ if (scenario !== null) {
   // The setup menu's requests.
   {
     const { replies } = run('requests'),
-      civilizations: { name: string; leaders: string[] }[] =
+      civilizations: { name: string; leaders: string[]; colours?: string[] }[] =
         replies.find(([channel]) => channel === 'civilizations')?.[1] ?? [],
       aiClients: string[] =
         replies.find(([channel]) => channel === 'aiClients')?.[1] ?? [];
@@ -408,6 +408,17 @@ if (scenario !== null) {
       civilizations
         .find(({ name }) => name === 'Roman')
         ?.leaders.includes('JuliusCaesar'),
+      true
+    );
+    // The colours a player of it is drawn in, for the setup's swatch (#750): every one of them has some.
+    expect(
+      'and every civilization comes with its colours',
+      civilizations.every(
+        ({ colours }) =>
+          Array.isArray(colours) &&
+          colours.length > 0 &&
+          colours.every((colour) => /^#([0-9a-f]{3}){1,2}$/i.test(colour))
+      ),
       true
     );
     // StrategyAIClient, SimpleAIClient's base class, is registered with core-ai-client as well, so it is offered too.

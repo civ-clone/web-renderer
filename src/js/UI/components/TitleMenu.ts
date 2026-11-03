@@ -3,7 +3,7 @@ import { Element, s } from '@dom111/element';
 import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
 import { askEarth, askNewGame } from './newGame';
 import GameOptions from './GameOptions';
-import GameSetupWindow from './GameSetupWindow';
+import GameSetupForm from './GameSetupForm';
 import HallOfFameWindow, { yearLabel } from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import ResumeGameWindow from './ResumeGameWindow';
@@ -142,7 +142,7 @@ export class TitleMenu extends Element {
               // The sizes, or Customise… for the game setup (#605), whose Advanced section has the rest.
               action: (): void =>
                 askNewGame(this.#transport, finished, () =>
-                  GameSetupWindow.ask(this.#transport, finished).catch(
+                  GameSetupForm.ask(this.#transport, finished).catch(
                     unlessRequestFailed
                   )
                 ),

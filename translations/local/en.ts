@@ -456,6 +456,23 @@ i18next.addResources('en', 'default', {
   'GameSetup.seats': 'Seats',
   'GameSetup.start': 'Start',
   'GameSetup.title': 'Game setup',
+  // The new interface's form (#750): what each level means, in a line, by the level's name; the map list's groups;
+  //  the Advanced fields' units; and what a game with no human seat is.
+  'GameSetup.difficulty-summary.Chieftain':
+    'The easiest level, for learning the game.',
+  'GameSetup.difficulty-summary.Warlord':
+    'An easy game, with room for mistakes.',
+  'GameSetup.difficulty-summary.Prince': 'A fair game for a practiced player.',
+  'GameSetup.difficulty-summary.King':
+    'A hard game, for an experienced player.',
+  'GameSetup.difficulty-summary.Emperor': 'The toughest level, for experts.',
+  'GameSetup.map-group.custom': 'Custom',
+  'GameSetup.map-group.earth': 'Earth',
+  'GameSetup.map-group.size': 'Generated',
+  'GameSetup.unit-passes': 'passes',
+  'GameSetup.unit-share': 'of the map',
+  'GameSetup.unit-squares': 'squares',
+  'GameSetup.watched': 'No one plays: you will watch the game.',
 
   'ResumeGame.intro':
     'Who plays each civilization? Take over a computer seat, or hand yours to the computer, before the game goes on.',

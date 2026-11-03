@@ -1,0 +1,261 @@
+// The game setup under the new interface (#750): the world as labelled fields over the seats, which alone scroll, and
+//  Start in the window's footer (#738). Everything is drawn from the theme; a civilization's swatch shows its own
+//  colours, which are data.
+
+// The seats scroll, so Start and the world stay in view however many seats there are. Only on a screen too short for
+//  the world and a few seats does the body scroll as well.
+.window.ui-window.ui-game-setup-window > .body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+
+.ui-game-setup {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 0.75rem;
+}
+
+.ui-game-setup-world {
+  flex: none;
+}
+
+.ui-game-setup-world,
+.ui-game-setup-fields {
+  display: grid;
+  gap: 0.5rem 1rem;
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+
+.ui-field {
+  display: contents;
+
+  > label {
+    align-self: center;
+  }
+}
+
+.ui-field-control {
+  align-items: center;
+  display: flex;
+  gap: 0.5em;
+
+  select,
+  input {
+    min-width: 0;
+  }
+}
+
+.ui-field-unit,
+.ui-field-hint,
+.ui-game-setup-note {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+}
+
+// Under the control, in its column, close to it: two classes, over the classic windows' margin for a paragraph.
+.ui-game-setup .ui-field-hint {
+  grid-column: 2;
+  margin: -0.25rem 0 0;
+}
+
+.ui-game-setup-advanced {
+  grid-column: 1 / -1;
+
+  > summary {
+    cursor: pointer;
+    font-weight: var(--type-strong-weight);
+  }
+
+  > .ui-game-setup-fields {
+    margin-top: 0.5rem;
+  }
+}
+
+// It gives way to the world first, down to its heading, a few seats and Add a seat: past that the body scrolls.
+.ui-game-setup-seating {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-height: 11rem;
+}
+
+.ui-game-setup-seats-heading {
+  align-items: baseline;
+  display: flex;
+  gap: 0.75em;
+
+  h4,
+  .ui-game-setup-note {
+    margin: 0;
+  }
+
+  h4 {
+    font-family: var(--type-heading-family);
+    letter-spacing: var(--type-heading-tracking);
+    text-transform: var(--type-heading-transform);
+  }
+}
+
+// The one part that scrolls, its heading kept in view.
+.ui-game-setup-table {
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  flex: 1 1 auto;
+  min-height: 6rem;
+  overflow: auto;
+}
+
+.ui-game-setup-seats {
+  border-collapse: collapse;
+  width: 100%;
+
+  th,
+  td {
+    padding: 0.15rem 0.5rem;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  // Drawn as every window's table headings are, and kept in view over the seats. Nothing in the rows is positioned or
+  //  made its own layer, so nothing draws over them.
+  thead th {
+    background: var(--ui-sunken);
+    border-bottom: 1px solid var(--ui-table-rule);
+    position: sticky;
+    top: 0;
+  }
+
+  tbody tr + tr {
+    border-top: 1px solid var(--ui-table-rule);
+  }
+
+  tbody th {
+    color: var(--ui-fg-muted);
+    font-variant-numeric: var(--type-figures);
+    width: 1.5em;
+  }
+
+  // Centred in the row, not on its text's baseline.
+  td > * {
+    margin: 0;
+    vertical-align: middle;
+  }
+
+  input[type='text'] {
+    width: 9em;
+  }
+}
+
+.ui-game-setup-civilization {
+  align-items: center;
+  display: flex;
+  gap: 0.5em;
+}
+
+.ui-game-setup-leader {
+  padding: 0 0.25em;
+}
+
+// The civilization's two colours, split on the diagonal; striped while it's left to chance.
+.ui-civ-swatch {
+  background: linear-gradient(
+    135deg,
+    var(--swatch-first) 50%,
+    var(--swatch-second) 50%
+  );
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  display: inline-block;
+  flex: none;
+  height: 1.25em;
+  width: 1.25em;
+
+  &.random {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--ui-sunken) 0 3px,
+      var(--ui-line-soft) 3px 6px
+    );
+  }
+}
+
+// Human / Computer: radio buttons drawn as one control, the chosen one pressed.
+.ui-segmented {
+  border: 1px solid var(--ui-btn-edge);
+  border-radius: var(--ui-radius-control);
+  display: inline-flex;
+  overflow: hidden;
+}
+
+.ui-segment {
+  cursor: pointer;
+  display: inline-flex;
+
+  + .ui-segment {
+    border-left: 1px solid var(--ui-btn-edge);
+  }
+
+  // The browser's own radio, kept for its keys and its name but taking no room: the label takes the clicks. Not
+  //  positioned, which would draw the rows over the table's sticky heading.
+  input {
+    appearance: none;
+    border: 0;
+    height: 0;
+    position: static;
+    margin: 0;
+    min-height: 0;
+    opacity: 0;
+    padding: 0;
+    width: 0;
+  }
+
+  span {
+    background: var(--ui-btn-bg);
+    color: var(--ui-btn-fg);
+    font-family: var(--ui-btn-family);
+    font-size: var(--type-detail-size);
+    padding: 0.2em 0.7em;
+  }
+
+  &:hover span {
+    background: var(--ui-btn-bg-hover);
+  }
+
+  // Filled, in the theme's colour for a chosen segment, at least 3:1 against the others, and in the strong weight.
+  input:checked + span {
+    background: var(--ui-segment-on-bg);
+    color: var(--ui-segment-on-fg);
+    font-weight: var(--type-strong-weight);
+  }
+
+  input:focus-visible + span {
+    outline: var(--ui-focus-outline);
+    outline-offset: calc(-1 * var(--ui-focus-offset));
+  }
+
+  // Held by its colour rather than an opacity, which would make it a layer of its own over the sticky headings.
+  input:disabled + span {
+    color: var(--ui-fg-muted);
+  }
+
+  &:has(input:disabled) {
+    cursor: not-allowed;
+  }
+}
+
+// Without the margin `.window :not(header) button` gives the classic windows' buttons.
+.ui-game-setup .ui-game-setup-remove,
+.ui-game-setup .ui-game-setup-add {
+  margin: 0;
+}
+
+.ui-game-setup-add {
+  align-self: flex-start;
+}

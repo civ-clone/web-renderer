@@ -111,6 +111,10 @@
   --ui-btn-quiet-fg: #000;
   --ui-btn-danger-fg: #000;
   --ui-btn-shadow-pressed: none;
+
+  // A toggle's chosen segment (#750): Civ1's blue with white, which reads against its light buttons in either scheme.
+  --ui-segment-on-bg: #2966a8;
+  --ui-segment-on-fg: #fff;
   --ui-btn-focus-outline: auto 1px;
   --ui-btn-focus-offset: 0;
   --ui-btn-disabled-opacity: 0.5;

@@ -116,6 +116,10 @@
   --ui-btn-quiet-fg: var(--ui-fg-muted);
   --ui-btn-danger-fg: var(--ui-negative);
   --ui-btn-shadow-pressed: inset 0 1px 3px rgba(13, 16, 20, 0.35);
+
+  // A toggle's chosen segment (#750): the brass, with its ink, as the primary button has.
+  --ui-segment-on-bg: var(--ui-accent);
+  --ui-segment-on-fg: var(--ui-accent-ink);
   --ui-btn-focus-outline: 2px solid var(--ui-focus);
   --ui-btn-focus-offset: 2px;
   --ui-btn-disabled-opacity: 0.45;

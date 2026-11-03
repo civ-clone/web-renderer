@@ -23,6 +23,7 @@ import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { DescribedClient, save } from '@civ-clone/core-save-game/save';
+import Civilization from '@civ-clone/core-civilization/Civilization';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import requirementsData from './lib/requirements';
 import civilopediaData from './lib/civilopedia';
@@ -241,6 +242,11 @@ export class Game implements IGame {
           leaders: defaultGame.leaders
             .getByCivilization(CivilizationType)
             .map((LeaderType) => typeNameOf(LeaderType)),
+          colours:
+            defaultGame.attributes
+              .getByCivilization(CivilizationType as typeof Civilization)
+              .find((attribute) => attribute.name() === 'colors')
+              ?.value() ?? [],
         }))
       )
     );
