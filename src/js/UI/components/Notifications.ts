@@ -24,12 +24,22 @@ export class Notifications {
   }
 
   private check(): void {
-    const active = document.querySelector('.notificationWindow');
+    // Not the copy a closing window leaves to fade out (`Window`, #738), which has its classes: taken for the window,
+    //  it held every notification after the first until the next one arrived.
+    const active = document.querySelector(
+      '.notificationWindow:not(.ui-window-ghost)'
+    );
 
-    if (!this.#notifications.length || active) {
-      // Stop polling when there is no work left.
+    // Stop polling when there is no work left.
+    if (!this.#notifications.length) {
       this.periodicChecker(true);
 
+      return;
+    }
+
+    // Still polled while one is open: any window of the kind (an action or a confirmation) holds the next notification,
+    //  and only the ones this opens say when they close.
+    if (active) {
       return;
     }
 
@@ -78,7 +88,8 @@ export class Notifications {
         parent: this.#container,
       });
 
-    notificationWindow.on('close', () => this.periodicChecker());
+    // The next one at once, rather than at the next poll, which goes on while any are waiting.
+    notificationWindow.on('close', () => this.check());
   }
 }
 

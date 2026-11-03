@@ -13,6 +13,7 @@ import { document } from './lib/dom';
 import NotificationWindow from '../../src/js/UI/components/NotificationWindow';
 import Notifications from '../../src/js/UI/components/Notifications';
 import Window from '../../src/js/UI/components/Window';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -214,6 +215,65 @@ const run = async (): Promise<void> => {
   press(notices()[0], 'Escape');
 
   expect('and then there are none', notices().length, 0);
+
+  // Under the new interface a closing window leaves a copy of itself to fade out, with its classes (#738). Taken for
+  //  the window, it held every notice after the first until another arrived.
+  applyInterface('new', null);
+
+  // Escape on the notice shown, if one is.
+  const closeNotice = (): void => {
+    const [notice] = notices();
+
+    if (notice) {
+      press(notice, 'Escape');
+    }
+  };
+
+  const faded = new Notifications(document.body);
+
+  ['fourth', 'fifth', 'sixth'].forEach((key) =>
+    faded.receive({ key, data: {} })
+  );
+
+  await poll();
+
+  closeNotice();
+
+  expect(
+    'with the closed one fading out, the next notice is shown at once',
+    [
+      document.querySelectorAll('.notificationWindow.ui-window-ghost').length >
+        0,
+      notices().length,
+    ],
+    [true, 1]
+  );
+
+  closeNotice();
+  closeNotice();
+
+  expect('and the last of them after it', notices().length, 0);
+
+  // Any window of the kind holds the next notice, though only the ones `Notifications` opens say when they close: the
+  //  notice is shown once it has gone.
+  const other = new NotificationWindow('Other', 'Not a notice');
+
+  faded.receive({ key: 'seventh', data: {} });
+
+  const others = (): boolean[] =>
+    notices().map((notice) => notice.textContent!.includes('Not a notice'));
+
+  expect('a notice waits behind another window', others(), [true]);
+
+  other.close();
+
+  await poll();
+
+  expect('and is shown once that window has closed', others(), [false]);
+
+  closeNotice();
+
+  applyInterface('classic', null);
 
   finished = true;
 
