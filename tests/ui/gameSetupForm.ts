@@ -11,6 +11,7 @@ import GameSetupForm from '../../src/js/UI/components/GameSetupForm';
 import GameSetupWindow from '../../src/js/UI/components/GameSetupWindow';
 import Request from '../../src/js/Engine/Request';
 import Transport from '../../src/js/UI/Transport';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -443,6 +444,26 @@ const run = async (): Promise<void> => {
     [6, true]
   );
 
+  // The toggle's focus follows its checked radio, as the arrow keys move both: not the first of the row's radios.
+  view = await open();
+  check(view.kinds(view.rows()[0])[1]);
+  view.kinds(view.rows()[0])[0].focus();
+  check(view.kinds(view.rows()[0])[0]);
+  view.kinds(view.rows()[0])[1].focus();
+  check(view.kinds(view.rows()[0])[1]);
+
+  expect(
+    'after the toggle is moved, its checked radio has the focus',
+    document.activeElement === view.kinds(view.rows()[0])[1],
+    true
+  );
+
+  // Enter on a button is the button's: Remove doesn't start the game.
+  press(view.remove(view.rows()[1]), 'Enter');
+  await settle();
+
+  expect('Enter on Remove starts nothing', view.options(), undefined);
+
   // Two AI clients, so the AI column and its payload run.
   const ais = ['SimpleAIClient', 'OtherAIClient'],
     choices = (element: Element): void => {
@@ -491,6 +512,32 @@ const run = async (): Promise<void> => {
         ?.args[0],
     ]
   );
+
+  // The new interface's chrome (#738): Start moved into its footer as the primary, and Enter on the window itself
+  //  starts, through the chrome.
+  applyInterface('new', null, document.documentElement);
+  view = await open();
+  await settle();
+
+  expect(
+    "under the new interface, Start is the window footer's primary",
+    view.element.querySelectorAll('.ui-window-footer .btn-primary.start')
+      .length,
+    1
+  );
+
+  press(view.element, 'Enter');
+  await settle();
+
+  expect(
+    'and Enter on the window starts the game',
+    view.log
+      .map(({ channel }) => channel)
+      .filter((channel) => ['setOptions', 'start'].includes(channel)),
+    ['setOptions', 'start']
+  );
+
+  applyInterface('classic', null, document.documentElement);
 
   finished = true;
 

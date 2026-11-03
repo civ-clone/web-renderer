@@ -123,13 +123,11 @@
     white-space: nowrap;
   }
 
-  // Two classes, over the classic windows' heading cells.
-  .ui-game-setup & thead th {
+  // Drawn as every window's table headings are, and kept in view over the seats. Nothing in the rows is positioned or
+  //  made its own layer, so nothing draws over them.
+  thead th {
     background: var(--ui-sunken);
     border-bottom: 1px solid var(--ui-table-rule);
-    color: var(--ui-fg-muted);
-    font-size: var(--type-detail-size);
-    font-weight: var(--type-strong-weight);
     position: sticky;
     top: 0;
   }
@@ -242,12 +240,13 @@
     outline-offset: calc(-1 * var(--ui-focus-offset));
   }
 
-  input:disabled {
-    cursor: not-allowed;
+  // Held by its colour rather than an opacity, which would make it a layer of its own over the sticky headings.
+  input:disabled + span {
+    color: var(--ui-fg-muted);
+  }
 
-    + span {
-      opacity: var(--ui-btn-disabled-opacity);
-    }
+  &:has(input:disabled) {
+    cursor: not-allowed;
   }
 }
 

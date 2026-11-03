@@ -463,9 +463,13 @@ export class GameSetupForm extends Window {
         )} ${number}"></div>`,
         ...kinds.map((kind) => {
           const input = s<HTMLInputElement>(
-            `<input type="radio" name="kind-${number}" value="${kind}">`
+            `<input type="radio" name="kind-${number}" value="${kind}"${
+              seat.kind === kind ? ' checked' : ''
+            }>`
           );
 
+          // Checked in the markup as well as the property: linkedom's `:checked`, which the focus is put back by, reads
+          //  the attribute.
           input.checked = seat.kind === kind;
           input.disabled = kind === 'human' && !setup.canBeHuman(seat);
 
