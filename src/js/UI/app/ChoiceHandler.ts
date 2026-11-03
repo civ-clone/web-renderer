@@ -9,7 +9,11 @@ import {
   preselectedDifficulty,
   rememberDifficulty,
 } from '../lib/difficulty';
-import { interactionLabel, negotiationLabel } from '../lib/interactionLabels';
+import {
+  interactionLabel,
+  negotiationLine,
+  speakerOf,
+} from '../lib/interactionLabels';
 import { Interactions, Negotiation } from '../types';
 import ActionWindow from '../components/ActionWindow';
 import DebugFlags from '../debug/DebugFlags';
@@ -17,6 +21,7 @@ import Transport from '../Transport';
 import entryDetails from '../components/lib/choiceDetails';
 import instanceOf from '../lib/instanceOf';
 import { openChoice } from '../components/choiceList';
+import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {
@@ -30,6 +35,28 @@ export interface ChoiceHandlerDeps {
 // A step of the talks lists Good bye first, so the option preselected, and taken by Enter, leaves the talks rather
 //  than demanding tribute after a hand-over (#502). Only the list shown changes: the engine's order is the one an
 //  automated seat picks from.
+// The lines of the talks, each with who said it, set as text (#751).
+const negotiationLines = (
+  lines: { speaker: string | null; text: string }[]
+): HTMLElement =>
+  s(
+    '<div class="negotiation-lines"></div>',
+    ...lines.map(({ speaker, text }) => {
+      const line = s('<p class="negotiation-line"></p>');
+
+      if (speaker !== null) {
+        const name = document.createElement('strong');
+
+        name.textContent = t('Negotiation.speaker', { speaker });
+        line.append(name, ' ');
+      }
+
+      line.append(text);
+
+      return line;
+    })
+  );
+
 const goodbyeFirst = <Choice extends { value: unknown }>(
   choices: Choice[]
 ): Choice[] => [
@@ -77,15 +104,28 @@ export const ChoiceHandler = {
 
       const title = chooseFromListTitle(key, data);
 
+      // The talks so far, from the player's side: they are whoever their answers are by.
+      const negotiation = data as Negotiation | null,
+        last = negotiation?.lastInteraction ?? null,
+        us =
+          key === 'negotiation.next-step'
+            ? speakerOf((choices[0]?.value ?? null) as Interactions | null)
+            : null;
+
+      // One answer: the last thing said and what the player is about to say, each with who says it, and Continue to
+      //  say it (#751).
       if (key === 'negotiation.next-step' && choices.length === 1) {
         const window = new ActionWindow(
           title,
-          negotiationLabel(data as Negotiation),
+          negotiationLines([
+            ...(last === null ? [] : [negotiationLine(last, us)]),
+            negotiationLine(choices[0].value as Interactions, us),
+          ]),
           {
             canClose: false,
             actions: {
               primary: {
-                label: interactionLabel(choices[0].value as Interactions, true),
+                label: t('Negotiation.continue'),
                 action: (actionWindow) => actionWindow.close(),
               },
             },
@@ -129,7 +169,10 @@ export const ChoiceHandler = {
           }),
           (choice) => transport.send('chooseFromList', choice),
           {
-            intro: negotiationLabel(data as Negotiation),
+            intro:
+              last === null
+                ? null
+                : negotiationLines([negotiationLine(last, us)]),
             canClose: false,
             classes: ['negotiation'],
             // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).

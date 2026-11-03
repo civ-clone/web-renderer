@@ -1,4 +1,10 @@
-import { Dialogue, Interactions, Negotiation, Resolution } from '../types';
+import {
+  Dialogue,
+  DiplomacyAction,
+  Interactions,
+  Player,
+  Resolution,
+} from '../types';
 import instanceOf from './instanceOf';
 import { t } from 'i18next';
 
@@ -59,12 +65,44 @@ export const interactionContext = (
       ns: 'diplomacy',
     });
   },
-  negotiationLabel = (negotiation: Negotiation) => {
-    const currentInteraction = negotiation.lastInteraction;
-
-    if (currentInteraction === null) {
-      return 'negotiation.missing-label';
+  /**
+   * Who said `interaction`: an action's, a proposal's or a dialogue's `by`, or, for a resolution, the player the
+   *  proposal was made to, who is the one answering it (#751). `null` when it can't be told.
+   */
+  speakerOf = (interaction: Interactions | null): Player | null => {
+    if (interaction === null) {
+      return null;
     }
 
-    return interactionLabel(currentInteraction);
+    if (instanceOf(interaction, 'Resolution')) {
+      return (interaction as Resolution).proposal?.for?.[0] ?? null;
+    }
+
+    return (interaction as DiplomacyAction).by ?? null;
+  },
+  /** A line of the talks: who said it, `You` for `us`, and what they said, in our own words where it's ours. */
+  negotiationLine = (
+    interaction: Interactions,
+    us: Player | null
+  ): { speaker: string | null; text: string } => {
+    const speaker = speakerOf(interaction),
+      own = us !== null && speaker !== null && speaker.id === us.id;
+
+    return {
+      speaker:
+        speaker === null
+          ? null
+          : own
+          ? t('Negotiation.you')
+          : speaker.civilization?.leader
+          ? t('Generic.leader-name', {
+              leader: speaker.civilization.leader._,
+              player: speaker,
+            })
+          : t('Generic.civilization-name.plural', {
+              civilization: speaker.civilization?._,
+              player: speaker,
+            }),
+      text: interactionLabel(interaction, own),
+    };
   };

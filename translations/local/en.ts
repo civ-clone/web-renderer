@@ -547,6 +547,11 @@ i18next.addResources('en', 'default', {
 
   'MandatorySelection.default-body': '$t(SelectionWindow.default-body)',
 
+  // The talks' lines, each with who said it, and the button that says the player's one answer (#751).
+  'Negotiation.continue': 'Continue',
+  'Negotiation.speaker': '{{- speaker}}:',
+  'Negotiation.you': 'You',
+
   'NewGameWindow.number-of-players': 'How many players?',
   'NewGameWindow.civilizations_one': '1 civilization',
   'NewGameWindow.civilizations_other': '{{count}} civilizations',

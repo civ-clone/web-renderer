@@ -184,12 +184,12 @@ const run = async (): Promise<void> => {
     [1, 0]
   );
   expect(
-    'titled with who is talking, its button the answer',
+    'titled with who is talking, its button Continue (#751)',
     [
       top().querySelector('header h3')?.textContent,
       top().querySelector('button:not(.close)')?.textContent,
     ],
-    ['Negotiation between Babylon and Rome', 'Good bye!']
+    ['Negotiation between Babylon and Rome', 'Continue']
   );
   expect('nothing is sent while it is open', sent, []);
 
@@ -200,6 +200,122 @@ const run = async (): Promise<void> => {
     [open().length, sent],
     [0, [['chooseFromList', 'choice-1']]]
   );
+
+  // The step after an emissary is received (#751): the last thing said and the player's one answer, each with who
+  //  said it, the player as You.
+  {
+    const mongols = {
+        id: 'Player-1',
+        civilization: {
+          ...civilization('Mongol'),
+          leader: { _: 'GenghisKhan' },
+        },
+      },
+      germans = {
+        id: 'Player-2',
+        civilization: {
+          ...civilization('German'),
+          leader: { _: 'FrederickTheGreat' },
+        },
+      },
+      initiate = {
+        _: 'Initiate',
+        __: ['Initiate', 'Proposal', 'Interaction'],
+        by: germans,
+        for: [mongols],
+      },
+      accept = {
+        _: 'Accept',
+        __: ['Accept', 'Resolution', 'Interaction'],
+        proposal: initiate,
+      },
+      welcome = (by: typeof mongols, to: typeof mongols) => ({
+        _: 'Dialogue',
+        __: ['Dialogue', 'Proposal', 'Interaction'],
+        key: 'welcome.no-peace',
+        by,
+        for: [to],
+      }),
+      lines = (): string[] =>
+        Array.from(top().querySelectorAll('.negotiation-line')).map((line) =>
+          (line.textContent ?? '').trim()
+        );
+
+    reset();
+    ask(
+      'negotiation.next-step',
+      [{ id: 'greet', value: welcome(mongols, germans) }],
+      { ...negotiation, lastInteraction: accept, players: [mongols, germans] }
+    );
+
+    expect(
+      "the body is who said what: the player's Yes, then the greeting they're about to give",
+      lines(),
+      [
+        'You: Yes',
+        'You: Greetings from Genghis Khan, leader of the powerful Mongols.',
+      ]
+    );
+    expect(
+      'and the button is Continue, not the greeting',
+      top().querySelector('button:not(.close)')?.textContent,
+      'Continue'
+    );
+
+    enter(top());
+
+    expect('Continue sends the one answer', sent, [
+      ['chooseFromList', 'greet'],
+    ]);
+
+    // The other side's line, by its leader's name.
+    reset();
+    ask(
+      'negotiation.next-step',
+      [{ id: 'goodbye', value: { ...terminate, by: mongols } }],
+      {
+        ...negotiation,
+        lastInteraction: welcome(germans, mongols),
+        players: [mongols, germans],
+      }
+    );
+
+    expect(
+      "the other side's line is said by their leader, and the player's Good bye by You",
+      lines(),
+      [
+        'Frederick the Great: Greetings from Frederick the Great, leader of the powerful Germans.',
+        'You: Good bye!',
+      ]
+    );
+
+    enter(top());
+
+    // Several answers: the line they answer, with its speaker, over the list.
+    reset();
+    ask(
+      'negotiation.next-step',
+      [
+        { id: 'goodbye', value: { ...terminate, by: mongols } },
+        { id: 'greet', value: welcome(mongols, germans) },
+      ],
+      {
+        ...negotiation,
+        lastInteraction: welcome(germans, mongols),
+        players: [mongols, germans],
+      }
+    );
+
+    expect(
+      'a list of answers has the line it answers, said by its leader',
+      lines(),
+      [
+        'Frederick the Great: Greetings from Frederick the Great, leader of the powerful Germans.',
+      ]
+    );
+
+    choose('goodbye');
+  }
 
   // A step of the talks with several answers: the player's own, labelled as theirs.
   reset();
