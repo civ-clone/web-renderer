@@ -66,16 +66,20 @@ export const interactionContext = (
     });
   },
   /**
-   * Who said `interaction`: an action's, a proposal's or a dialogue's `by`, or, for a resolution, the player the
-   *  proposal was made to, who is the one answering it (#751). `null` when it can't be told.
+   * Who said `interaction`: its `by`, or for a resolution without one, the player the proposal was made to, who is the
+   *  one answering it (#751). `null` when it can't be told.
    */
   speakerOf = (interaction: Interactions | null): Player | null => {
     if (interaction === null) {
       return null;
     }
 
+    // A resolution is an action of its own, by whoever answered; from a save that didn't send it, the one the proposal
+    //  was made to.
     if (instanceOf(interaction, 'Resolution')) {
-      return (interaction as Resolution).proposal?.for?.[0] ?? null;
+      const resolution = interaction as Resolution;
+
+      return resolution.by ?? resolution.proposal?.for?.[0] ?? null;
     }
 
     return (interaction as DiplomacyAction).by ?? null;

@@ -104,12 +104,20 @@ export const ChoiceHandler = {
 
       const title = chooseFromListTitle(key, data);
 
-      // The talks so far, from the player's side: they are whoever their answers are by.
+      // The talks so far, from the player's side: they are whoever their answers are by. A step whose answers aren't all
+      //  by one player can't say which is theirs, so it names everyone (#751).
       const negotiation = data as Negotiation | null,
         last = negotiation?.lastInteraction ?? null,
-        us =
+        speakers =
           key === 'negotiation.next-step'
-            ? speakerOf((choices[0]?.value ?? null) as Interactions | null)
+            ? choices.map(({ value }) => speakerOf(value as Interactions))
+            : [],
+        us =
+          speakers.length > 0 &&
+          speakers.every(
+            (speaker) => speaker !== null && speaker.id === speakers[0]?.id
+          )
+            ? speakers[0]
             : null;
 
       // One answer: the last thing said and what the player is about to say, each with who says it, and Continue to

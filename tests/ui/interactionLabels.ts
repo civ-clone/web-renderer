@@ -245,6 +245,10 @@ const rendered = (label: string): boolean =>
   //  the line with its speaker, the player as You and in their own words.
   const demand = proposal('DemandTribute', 'gold'),
     accept = entity('Accept', ['Resolution'], { proposal: demand }),
+    answered = entity('Accept', ['Resolution'], {
+      proposal: demand,
+      by: mongols,
+    }),
     line = (interaction: Interactions, us: object | null) =>
       JSON.stringify(negotiationLine(interaction, us as Player | null));
 
@@ -254,7 +258,12 @@ const rendered = (label: string): boolean =>
     egypt as unknown as Player
   );
   expect(
-    'a resolution by the one it was proposed to',
+    'a resolution by whoever answered it',
+    speakerOf(answered),
+    mongols as unknown as Player
+  );
+  expect(
+    'or, sent without, by the one it was proposed to',
     speakerOf(accept),
     babylon as unknown as Player
   );

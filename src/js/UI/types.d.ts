@@ -400,6 +400,9 @@ export interface DiplomacyAction<Types = 'Action' | 'Terminate'>
 export interface Resolution<
   Types = 'Abstain' | 'Accept' | 'Acknowledge' | 'Decline' | 'Resolution'
 > extends Interaction<Types> {
+  // Who answered, and to whom: a resolution is an action of its own.
+  by?: Player;
+  for?: Player[];
   proposal: Proposal;
 }
 

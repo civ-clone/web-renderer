@@ -201,7 +201,8 @@ const run = async (): Promise<void> => {
     [0, [['chooseFromList', 'choice-1']]]
   );
 
-  // The step after an emissary is received (#751): the last thing said and the player's one answer, each with who
+  // The step after the other side receives the player's emissary (#751), in the engine's order: the player
+  //  initiates and greets, the other side accepts. The last thing said and the player's one answer, each with who
   //  said it, the player as You.
   {
     const mongols = {
@@ -221,12 +222,14 @@ const run = async (): Promise<void> => {
       initiate = {
         _: 'Initiate',
         __: ['Initiate', 'Proposal', 'Interaction'],
-        by: germans,
-        for: [mongols],
+        by: mongols,
+        for: [germans],
       },
       accept = {
         _: 'Accept',
         __: ['Accept', 'Resolution', 'Interaction'],
+        by: germans,
+        for: [mongols],
         proposal: initiate,
       },
       welcome = (by: typeof mongols, to: typeof mongols) => ({
@@ -249,10 +252,10 @@ const run = async (): Promise<void> => {
     );
 
     expect(
-      "the body is who said what: the player's Yes, then the greeting they're about to give",
+      "the body is who said what: the other side's Yes, then the greeting the player is about to give",
       lines(),
       [
-        'You: Yes',
+        'Frederick the Great: Yes',
         'You: Greetings from Genghis Khan, leader of the powerful Mongols.',
       ]
     );
@@ -311,6 +314,49 @@ const run = async (): Promise<void> => {
       lines(),
       [
         'Frederick the Great: Greetings from Frederick the Great, leader of the powerful Germans.',
+      ]
+    );
+
+    choose('goodbye');
+
+    // A line whose speaker can't be told is shown without a name; so is everyone's when the answers aren't all one
+    //  player's, which can't say which is the player's.
+    reset();
+    ask(
+      'negotiation.next-step',
+      [{ id: 'goodbye', value: { ...terminate, by: mongols } }],
+      {
+        ...negotiation,
+        lastInteraction: terminate,
+        players: [mongols, germans],
+      }
+    );
+
+    expect('a line with no speaker has no name', lines(), [
+      'Good bye!',
+      'You: Good bye!',
+    ]);
+
+    enter(top());
+    reset();
+    ask(
+      'negotiation.next-step',
+      [
+        { id: 'goodbye', value: { ...terminate, by: mongols } },
+        { id: 'theirs', value: { ...terminate, by: germans } },
+      ],
+      {
+        ...negotiation,
+        lastInteraction: welcome(mongols, germans),
+        players: [mongols, germans],
+      }
+    );
+
+    expect(
+      "answers by two players can't say which is the player's: the line is named, not You",
+      lines(),
+      [
+        'Genghis Khan: Greetings from Genghis Khan, leader of the powerful Mongols.',
       ]
     );
 
