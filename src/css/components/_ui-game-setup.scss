@@ -228,8 +228,7 @@
     background: var(--ui-btn-bg-hover);
   }
 
-  // Filled, in the theme's colour for a chosen segment, which the theme keeps at 3:1 against the others and its text at
-  //  4.5:1 on it; in the strong weight too.
+  // Filled, in the theme's colour for a chosen segment, at least 3:1 against the others, and in the strong weight.
   input:checked + span {
     background: var(--ui-segment-on-bg);
     color: var(--ui-segment-on-fg);
