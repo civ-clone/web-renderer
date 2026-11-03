@@ -86,10 +86,12 @@ export const interactionContext = (
   },
   /**
    * Whether `interaction` is the scene rather than anyone's words: an emissary arriving ("An emissary from Germany
-   *  wishes to speak with you…"), or the hand-over to the player ("You respond..."). Said by nobody (#751).
+   *  wishes to speak with you…"), what an exchange took ("In exchange, the Germans take Bronze Working."), or the
+   *  hand-over to the player ("You respond..."). Said by nobody (#751).
    */
   narrated = (interaction: Interactions): boolean =>
     instanceOf(interaction, 'Initiate') ||
+    instanceOf(interaction, 'AdvanceTaken') ||
     (instanceOf(interaction, 'Dialogue') &&
       (interaction as Dialogue).key === 'handover'),
   /** A line of the talks: who said it, `You` for `us`, and what they said, in our own words where it's ours. */

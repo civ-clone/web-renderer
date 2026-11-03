@@ -336,6 +336,42 @@ const run = async (): Promise<void> => {
 
     enter(top());
 
+    // What an exchange took is the scene too, over the player's OK.
+    const taken = {
+      _: 'AdvanceTaken',
+      __: ['AdvanceTaken', 'Dialogue', 'Proposal', 'Interaction'],
+      key: 'exchange-knowledge.taken',
+      by: germans,
+      for: [mongols],
+      advance: { _: 'BronzeWorking' },
+    };
+
+    reset();
+    ask(
+      'negotiation.next-step',
+      [
+        {
+          id: 'ok',
+          value: {
+            _: 'Acknowledge',
+            __: ['Acknowledge', 'Resolution', 'Interaction'],
+            by: mongols,
+            for: [germans],
+            proposal: taken,
+          },
+        },
+      ],
+      { ...negotiation, lastInteraction: taken, players: [germans, mongols] }
+    );
+
+    expect(
+      'what an exchange took is said by nobody',
+      lines().map((line) => line.startsWith('In exchange, the Germans take')),
+      [true, false]
+    );
+
+    enter(top());
+
     // The hand-over at peace (#450), the scene again, with Good bye the one answer left.
     reset();
     ask(
