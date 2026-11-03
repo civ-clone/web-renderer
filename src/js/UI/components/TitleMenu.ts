@@ -12,6 +12,7 @@ import { assetStore } from '../AssetStore';
 import { chooseSave } from './LoadGameWindow';
 import { h } from '../lib/html';
 import { loadSaveFromFile } from '../lib/savedGame';
+import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { instance as localeProvider } from '../LocaleProvider';
 import { version } from '../../../../build.json';
 import { t } from 'i18next';
@@ -270,7 +271,9 @@ export class TitleMenu extends Element {
 
     const buttons = this.#buttons(),
       index = buttons.indexOf(document.activeElement as HTMLButtonElement),
-      step = event.key === 'ArrowDown' ? 1 : event.key === 'ArrowUp' ? -1 : 0;
+      // The numpad's 8 and 2 too, as the classic menu takes them.
+      arrow = mappedKeyFromEvent(event),
+      step = arrow === 'ArrowDown' ? 1 : arrow === 'ArrowUp' ? -1 : 0;
 
     if (step !== 0) {
       buttons[index === -1 ? 0 : index + step]?.focus();

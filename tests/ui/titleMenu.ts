@@ -185,6 +185,15 @@ const save = (
 
     expect('New game offers Customize… first', rows[0], 'Customize…');
     expect('then the sizes', rows.length > 1, true);
+    expect(
+      'with the usual size chosen, not Customize…',
+      Array.from(
+        document.querySelectorAll(
+          'dialog[open] [aria-selected="true"] .ui-choice-name'
+        )
+      ).map((row) => row.textContent),
+      ['Normal (80 × 50)']
+    );
 
     closeWindows();
 
