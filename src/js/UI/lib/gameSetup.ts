@@ -332,7 +332,10 @@ export class GameSetup {
       : customSizeProblem(this.topologyId, width, height);
   }
 
-  /** The seats as the worker takes them: random and the default AI left out. */
+  /**
+   * The seats as the worker takes them: random and the default AI left out, and a civilization's lone leader too,
+   *  which is shown but is the only one the worker could choose anyway, as the classic setup sends it.
+   */
   seatsPayload(): object[] {
     return this.seats.map((seat) => ({
       kind: seat.kind,
@@ -342,7 +345,9 @@ export class GameSetup {
       ...(seat.civilization !== RANDOM
         ? { civilization: seat.civilization }
         : {}),
-      ...(seat.civilization !== RANDOM && seat.leader !== RANDOM
+      ...(seat.civilization !== RANDOM &&
+      seat.leader !== RANDOM &&
+      (this.civilization(seat)?.leaders.length ?? 0) > 1
         ? { leader: seat.leader }
         : {}),
       ...(seat.kind === 'computer' &&

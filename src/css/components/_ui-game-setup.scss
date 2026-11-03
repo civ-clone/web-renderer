@@ -2,12 +2,13 @@
 //  Start in the window's footer (#738). Everything is drawn from the theme; a civilization's swatch shows its own
 //  colours, which are data.
 
-// The body doesn't scroll: the seats do, so Start and the world stay in view however many seats there are.
+// The seats scroll, so Start and the world stay in view however many seats there are. Only on a screen too short for
+//  the world and a few seats does the body scroll as well.
 .window.ui-window.ui-game-setup-window > .body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .ui-game-setup {
@@ -17,6 +18,10 @@
   gap: 0.75rem;
   min-height: 0;
   padding: 0.75rem;
+}
+
+.ui-game-setup-world {
+  flex: none;
 }
 
 .ui-game-setup-world,
@@ -71,12 +76,13 @@
   }
 }
 
+// It gives way to the world first, down to its heading, a few seats and Add a seat: past that the body scrolls.
 .ui-game-setup-seating {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   gap: 0.5rem;
-  min-height: 0;
+  min-height: 11rem;
 }
 
 .ui-game-setup-seats-heading {
@@ -117,7 +123,8 @@
     white-space: nowrap;
   }
 
-  thead th {
+  // Two classes, over the classic windows' heading cells.
+  .ui-game-setup & thead th {
     background: var(--ui-sunken);
     border-bottom: 1px solid var(--ui-table-rule);
     color: var(--ui-fg-muted);
@@ -203,6 +210,7 @@
     appearance: none;
     border: 0;
     height: 0;
+    position: static;
     margin: 0;
     min-height: 0;
     opacity: 0;

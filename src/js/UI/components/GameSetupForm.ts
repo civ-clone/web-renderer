@@ -336,6 +336,7 @@ export class GameSetupForm extends Window {
       // Not from a select, a button, a toggle or the Advanced summary, which Enter works, nor mid-composition.
       if (
         event.key === 'Enter' &&
+        !event.repeat &&
         !event.isComposing &&
         !(event.target instanceof HTMLSelectElement) &&
         !(event.target instanceof HTMLButtonElement) &&
@@ -405,7 +406,8 @@ export class GameSetupForm extends Window {
 
   #renderSeats(): void {
     const setup = this.#setup,
-      // The rows are rebuilt, so whatever had the focus is put back by its row and control.
+      // The rows are rebuilt, so whatever had the focus is put back by its row and control: the toggle by its checked
+      //  radio, which the arrow keys have just moved to, and anything else by its name.
       active = document.activeElement,
       focused =
         active instanceof HTMLElement && this.#seatsBody.contains(active)
@@ -413,8 +415,10 @@ export class GameSetupForm extends Window {
               row: Array.from(this.#seatsBody.children).indexOf(
                 active.closest('tr')!
               ),
-              name: active.getAttribute('name'),
-              value: (active as HTMLInputElement).value ?? null,
+              control:
+                active instanceof HTMLInputElement && active.type === 'radio'
+                  ? 'input[type=radio]:checked'
+                  : `[name="${active.getAttribute('name')}"]`,
             }
           : null;
 
@@ -426,15 +430,19 @@ export class GameSetupForm extends Window {
     this.#seatsNote.textContent = setup.watched() ? t('GameSetup.watched') : '';
     this.#seatsNote.hidden = !setup.watched();
 
+    // The same row, or the last when it was the one removed; failing its control, the first in it that takes the
+    //  focus.
     if (focused) {
-      const row = this.#seatsBody.children[focused.row];
+      const row =
+        this.#seatsBody.children[
+          Math.min(focused.row, this.#seatsBody.children.length - 1)
+        ];
 
       (
+        row?.querySelector<HTMLElement>(`${focused.control}:not(:disabled)`) ??
         row?.querySelector<HTMLElement>(
-          `[name="${focused.name}"][value="${focused.value}"]`
+          'input[type=radio]:checked, select, input:not(:disabled):not([hidden]), button:not(:disabled)'
         ) ??
-        row?.querySelector<HTMLElement>(`[name="${focused.name}"]`) ??
-        row?.querySelector<HTMLElement>('select, input, button') ??
         this.#addSeat
       ).focus();
     }
@@ -529,6 +537,8 @@ export class GameSetupForm extends Window {
       );
 
     nameInput.value = seat.name;
+    // Named, as the row's other controls are, for the focus to come back to it once the rows are drawn again.
+    remove.name = 'remove';
 
     if (leaders.length === 1) {
       leader.textContent = leaderName(leaders[0]);

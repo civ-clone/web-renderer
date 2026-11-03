@@ -60,6 +60,21 @@ Object.defineProperty(selectPrototype, 'value', {
   },
 });
 
+// linkedom has no focus: what has it is kept by hand, and a disabled control, as in a browser, doesn't take it.
+let focused: Element | null = document.body;
+
+Object.defineProperty(document, 'activeElement', {
+  configurable: true,
+  get: () => focused,
+});
+Object.getPrototypeOf(
+  Object.getPrototypeOf(document.createElement('button'))
+).focus = function (this: HTMLElement & { disabled?: boolean }): void {
+  if (!this.disabled) {
+    focused = this;
+  }
+};
+
 // linkedom has no constraint validation: the fields reported are kept to look at.
 const reported: string[] = [],
   inputPrototype = Object.getPrototypeOf(document.createElement('input'));
@@ -101,7 +116,7 @@ const civilizations = [
 type Sent = { channel: string; args: unknown[] };
 
 // The worker's answers, and everything the form sent or requested, in order.
-const fakeWorker = () => {
+const fakeWorker = (aiClients: string[] = ['SimpleAIClient']) => {
   const log: Sent[] = [],
     transport = {
       send: (channel: string, ...args: unknown[]) =>
@@ -113,7 +128,7 @@ const fakeWorker = () => {
           case 'civilizations':
             return civilizations;
           case 'aiClients':
-            return ['SimpleAIClient'];
+            return aiClients;
           case 'difficulties':
             return difficulties;
           case 'getOptions':
@@ -162,8 +177,8 @@ const settle = (): Promise<void> =>
     element.dispatchEvent(new Event('input', { bubbles: true }));
   };
 
-const open = async () => {
-  const worker = fakeWorker(),
+const open = async (aiClients?: string[]) => {
+  const worker = fakeWorker(aiClients),
     form = await GameSetupForm.ask(worker.transport),
     element = form.element();
 
@@ -403,12 +418,49 @@ const run = async (): Promise<void> => {
     [true, true, undefined]
   );
 
+  // Escape cancels, as in every window, and sends nothing.
   view = await open();
+  press(view.element, 'Escape');
+  await settle();
 
-  choose(view.map(), 'size:large');
-  choose(view.difficulty(), 'Chieftain');
-  choose(view.civilization(view.rows()[1]), 'Roman');
-  type(view.input('name'), ' Dom ');
+  expect(
+    'Escape closes the form and sends nothing',
+    [(view.element as HTMLDialogElement).open === true, view.options()],
+    [false, undefined]
+  );
+
+  // Removing a seat by keyboard leaves the focus in the table: on the next seat's Remove, rather than its held Human.
+  view = await open();
+  view.remove(view.rows()[2]).focus();
+  click(view.remove(view.rows()[2]));
+
+  expect(
+    "after Remove, the focus is on the next seat's Remove",
+    [
+      view.rows().length,
+      document.activeElement === view.remove(view.rows()[2]),
+    ],
+    [6, true]
+  );
+
+  // Two AI clients, so the AI column and its payload run.
+  const ais = ['SimpleAIClient', 'OtherAIClient'],
+    choices = (element: Element): void => {
+      const civilizations = element.querySelectorAll(
+        'select[name=civilization]'
+      );
+
+      choose(element.querySelector('select[name=map]')!, 'size:large');
+      choose(element.querySelector('select[name=difficulty]')!, 'Chieftain');
+      choose(civilizations[1], 'Roman');
+      // One leader: shown, and sent as the classic window sends it.
+      choose(civilizations[2], 'Babylonian');
+      choose(element.querySelectorAll('select[name=ai]')[3], 'OtherAIClient');
+      type(element.querySelector('input[name=name]')!, ' Dom ');
+    };
+
+  view = await open(ais);
+  choices(view.element);
   press(view.input('name'), 'Enter');
   await settle();
 
@@ -423,20 +475,21 @@ const run = async (): Promise<void> => {
   );
 
   // The classic window, given the same choices, sends the same.
-  const classicWorker = fakeWorker(),
+  const classicWorker = fakeWorker(ais),
     classic = (await GameSetupWindow.ask(classicWorker.transport)).element();
 
-  choose(classic.querySelector('select[name=map]')!, 'size:large');
-  choose(classic.querySelector('select[name=difficulty]')!, 'Chieftain');
-  choose(classic.querySelectorAll('select[name=civilization]')[1], 'Roman');
-  type(classic.querySelector('input[name=name]')!, ' Dom ');
+  choices(classic);
   click(classic.querySelector('button.start')!);
   await settle();
 
   expect(
-    'and sends what the classic window sends for the same choices',
-    sent,
-    classicWorker.log.find(({ channel }) => channel === 'setOptions')?.args[0]
+    'and sends what the classic window sends for the same choices, a lone leader and a second AI among them',
+    [sent?.seats?.[3]?.ai, sent],
+    [
+      'OtherAIClient',
+      classicWorker.log.find(({ channel }) => channel === 'setOptions')
+        ?.args[0],
+    ]
   );
 
   finished = true;
