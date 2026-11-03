@@ -98,8 +98,9 @@
       position: absolute;
     }
 
+    // Not once it's been pressed: the turn is ending, as the classic orb's glow stops.
     @media (prefers-reduced-motion: no-preference) {
-      &::before {
+      &:not(:disabled)::before {
         animation: ui-next-turn-pulse var(--ui-motion-pulse) var(--ui-ease)
           infinite;
       }

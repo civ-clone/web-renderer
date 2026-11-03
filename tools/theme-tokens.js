@@ -108,8 +108,9 @@ rules
 // A duration written in a `transition` or `animation`, rather than a token's.
 const timeLiteral = (property, value) =>
     /^(transition|animation)(-duration|-delay)?$/.test(property) &&
-    /(^|[\s,(])\d*\.?\d+m?s\b/.test(value.replace(/var\([^)]*\)/g, '')),
-  isNewInterface = (selector) => /(\.ui-|\.btn-)/.test(selector);
+    /(^|[\s,(-])\d*\.?\d+m?s\b/.test(value.replace(/var\([^)]*\)/g, '')),
+  isNewInterface = (selector) =>
+    /(\.ui-|\.btn-|\.sidebar-section|\.glyph-disclosure)/.test(selector);
 
 rules
   .filter(
@@ -147,6 +148,38 @@ classicMotion.forEach((value, token) =>
     value === '0s'
   )
 );
+// Wherever a set states its motion, Civ1's is none and slate's moves, and each part's own token is one of the
+//  vocabulary's rather than a duration of its own (Civ1's `0s` aside).
+const isMotionToken = (property) => /^--ui-[\w-]*motion[\w-]*$/.test(property),
+  isVocabulary = (property) =>
+    /^--ui-motion-(fast|base|slow|pulse)$/.test(property);
+
+rules
+  .filter(([selector]) => isTokenRule(selector))
+  .forEach(([selector, declarations]) => {
+    const isClassic = !selector.includes('data-ui-theme=slate');
+
+    declarations
+      .filter(([property]) => isMotionToken(property))
+      .forEach(([property, value]) => {
+        if (isVocabulary(property)) {
+          expect(
+            `${selector} { ${property}: ${value} }: ${
+              isClassic ? 'Civ1 has no motion' : 'slate moves'
+            }`,
+            isClassic ? value === '0s' : value !== '0s'
+          );
+
+          return;
+        }
+
+        expect(
+          `${selector} { ${property}: ${value} } has a duration of its own: use a --ui-motion-* token`,
+          (isClassic && value === '0s') || !timeLiteral('transition', value)
+        );
+      });
+  });
+
 expect('slate sets the motion tokens', slateMotion.size === 4);
 slateMotion.forEach((value, token) =>
   expect(`slate's ${token} is ${value}: it moves`, value !== '0s')
