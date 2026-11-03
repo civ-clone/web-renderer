@@ -25,6 +25,7 @@ import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { elementId, h } from '../lib/html';
+import { SaveDetails } from '../../Engine/Transport';
 import { t } from 'i18next';
 import { glyph } from '../lib/glyphs';
 import { unlessRequestFailed } from '../lib/unlessRequestFailed';
@@ -261,6 +262,7 @@ const cheatCreateUnitWindow = (
 export class GameMenu extends Element {
   #getPlayer: () => Player;
   #getTurn: () => number;
+  #getYear: () => number;
   #portal: Portal;
   #transport: Transport;
   #cheatsEnabled: boolean;
@@ -273,6 +275,7 @@ export class GameMenu extends Element {
     // cities, initial research) for the rest of the session.
     getPlayer: () => Player,
     getTurn: () => number,
+    getYear: () => number,
     portal: Portal,
     transport: Transport,
     cheatsEnabled: boolean = false
@@ -281,6 +284,7 @@ export class GameMenu extends Element {
 
     this.#getPlayer = getPlayer;
     this.#getTurn = getTurn;
+    this.#getYear = getYear;
     this.#portal = portal;
     this.#transport = transport;
     this.#cheatsEnabled = cheatsEnabled;
@@ -304,14 +308,30 @@ export class GameMenu extends Element {
     });
   }
 
+  // What the save is of, for the main menu's Continue to show (#749).
+  #saveDetails(): SaveDetails {
+    return {
+      civilization: this.#getPlayer().civilization._,
+      turn: this.#getTurn(),
+      year: this.#getYear(),
+    };
+  }
+
   // Save Game, from the menu or Shift+S.
   saveGame(): void {
-    this.#transport.send('save', { name: this.#saveName() });
+    this.#transport.send('save', {
+      name: this.#saveName(),
+      details: this.#saveDetails(),
+    });
   }
 
   // As a turn starts (#653): a new game's first, or every few turns after.
   autosave(kind: 'start' | 'autosave'): void {
-    this.#transport.send('save', { name: this.#saveName(), autosave: kind });
+    this.#transport.send('save', {
+      name: this.#saveName(),
+      autosave: kind,
+      details: this.#saveDetails(),
+    });
   }
 
   build(): void {

@@ -1,3 +1,4 @@
+import { SaveDetails } from '../../Engine/Transport';
 import { Store } from '../Store';
 
 /**
@@ -21,6 +22,8 @@ export type BrowserSave = {
   savedAt: number;
   kind: SaveKind;
   data: Blob;
+  // What it's of, for the main menu's Continue (#749): kept with saves made since, and missing from older ones.
+  details?: SaveDetails;
 };
 
 type BrowserSaves = {
@@ -100,9 +103,10 @@ export const keepSave = (
   data: Blob,
   kind: SaveKind,
   report: (error: Error) => void,
-  now: () => number = Date.now
+  now: () => number = Date.now,
+  details: SaveDetails | null = null
 ): Promise<boolean> => {
-  const kept = queue.then(() => write(name, data, kind, report, now));
+  const kept = queue.then(() => write(name, data, kind, report, now, details));
 
   queue = kept;
 
@@ -114,7 +118,8 @@ const write = async (
   data: Blob,
   kind: SaveKind,
   report: (error: Error) => void,
-  now: () => number
+  now: () => number,
+  details: SaveDetails | null
 ): Promise<boolean> => {
   const saves = savesStore();
 
@@ -137,7 +142,13 @@ const write = async (
       savedAt++;
     }
 
-    const save: BrowserSave = { name, savedAt, kind, data };
+    const save: BrowserSave = {
+      name,
+      savedAt,
+      kind,
+      data,
+      ...(details === null ? {} : { details }),
+    };
 
     await requestPersistence();
 

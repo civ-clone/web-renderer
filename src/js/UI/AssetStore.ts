@@ -310,6 +310,15 @@ export class AssetStore extends Store<{
     return this.#loaded.has(path);
   }
 
+  /** How many of the tileset's sprites, required or optional, are imported: for Options to say (#749). */
+  async importedCount(): Promise<number> {
+    const dbAssets = new Set(await this.keys());
+
+    return [...this.#requiredAssets, ...this.#optionalAssets].filter((asset) =>
+      dbAssets.has(asset)
+    ).length;
+  }
+
   async hasAllAssets(): Promise<boolean> {
     return (await this.missingAssets()).length === 0;
   }

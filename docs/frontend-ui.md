@@ -37,7 +37,8 @@ rest for each game.
 4. Bind global key handlers: Ctrl/Cmd+R asks before reloading, and so does F5
    until a game starts (in a game F5 is the Trade report).
 5. Set the default client options (see below), take any save waiting to be
-   loaded (`takePendingSave`), and build `MainMenu`.
+   loaded (`takePendingSave`), and build `MainMenu`, or `TitleMenu` under the
+   new interface (#749).
 6. Receive initial `gameData`: show the welcome window (new games only), turn on
    the leave guard, and build `World`, `GamePortal` with its layers, `Minimap`,
    the action panels, `GameMenu` and the details panels.
@@ -62,6 +63,13 @@ coalesced to one run per animation frame.
 - `MainMenu`: entry to new game, Earth world, custom world, load game, asset
   import, and the release notes (`ReleaseWindow`, from the version link). The
   game options are hidden until assets are imported.
+- `TitleMenu` (#749), the new interface's main menu: a list with each item's
+  key (C, N, E, L, H, O, I). Continue loads the newest save in the browser,
+  named from the `details` a save has kept since (`SaveDetails`: civilization,
+  turn, year), or its name for an older one. New Game passes `askNewGame` a
+  `customise` callback, which puts Customize… (the game setup) first among the
+  sizes; Options opens with no portal and shows the Assets row; Import assets is
+  listed only while the required sprites are missing.
 - `newGame.ts`: New Game's questions, each through `openChoice`: the map grid
   (`askMapGrid`), world size (`askWorldSize`), difficulty (`askDifficulty`),
   then the number of civilizations (`askPlayerCount`). `askEarth` asks the same

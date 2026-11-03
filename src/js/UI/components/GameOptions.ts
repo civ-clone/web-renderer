@@ -2,7 +2,10 @@ import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
 import { COLOUR_SCHEMES, applyColourScheme } from '../lib/theme';
 import { IPortal } from './Portal';
 import Transport from '../Transport';
+import ImportAssetsWindow from './ImportAssetsWindow';
 import Window from './Window';
+import { assetStore } from '../AssetStore';
+import { button } from '../lib/button';
 import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
 import { interfaceMode } from '../lib/interfaceMode';
@@ -11,10 +14,43 @@ import { s } from '@dom111/element';
 import sendBuildPreferences from '../lib/buildPreferences';
 import { t } from 'i18next';
 
+/** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */
+export const assetsRow = (): HTMLElement => {
+  const status = s(
+      `<span class="status">${t('GameOptions.assets-checking')}</span>`
+    ),
+    row = s(
+      `<div class="assets"></div>`,
+      s(`<span>${t('GameOptions.assets')}</span>`),
+      status,
+      h(button(t('GameOptions.import-assets')), {
+        click: () => new ImportAssetsWindow(),
+      })
+    );
+
+  void assetStore
+    .importedCount()
+    .then(async (count): Promise<void> => {
+      status.textContent = (await assetStore.hasAllAssets())
+        ? t('GameOptions.assets-imported', {
+            count,
+            tileset: currentTileset().name,
+          })
+        : t('GameOptions.assets-missing');
+    })
+    // The store can't be read: there's nothing to say about it, rather than "Checking…" for good.
+    .catch((): void => {
+      status.textContent = '';
+    });
+
+  return row;
+};
+
 export class GameOptions extends Window {
   // The map's options take effect as they are changed, so the window is given
   // the portal to apply them to, and the build options the transport to send them to the game on (#690, #691).
-  constructor(portal: IPortal, transport: Transport | null = null) {
+  //  From the main menu there's no game yet (#749): the map's options are kept for the next one.
+  constructor(portal: IPortal | null, transport: Transport | null = null) {
     // A checkbox for a build option the game's rules act on.
     const buildOption = (key: string, label: string): HTMLElement =>
       s(
@@ -83,7 +119,10 @@ export class GameOptions extends Window {
           (() => {
             // The scales the map's tileset can be shown at.
             const { scales } = currentTileset(),
-              current = options.get('mapScale', portal.scale()),
+              current = options.get(
+                'mapScale',
+                portal?.scale() ?? currentTileset().defaultScale
+              ),
               select = s<HTMLSelectElement>(
                 `<select>${scales
                   .map(
@@ -100,7 +139,7 @@ export class GameOptions extends Window {
                 const scale = parseInt(select.value, 10);
 
                 options.set('mapScale', scale);
-                portal.setScale(scale);
+                portal?.setScale(scale);
               },
             });
           })()
@@ -110,7 +149,10 @@ export class GameOptions extends Window {
           (() => {
             const input = s<HTMLInputElement>(
               `<input type="checkbox"${
-                options.get('lockVerticalEdges', portal.lockVerticalEdges())
+                options.get(
+                  'lockVerticalEdges',
+                  portal?.lockVerticalEdges() ?? false
+                )
                   ? ' checked'
                   : ''
               }>`
@@ -119,7 +161,7 @@ export class GameOptions extends Window {
             return h(input, {
               change: () => {
                 options.set('lockVerticalEdges', input.checked);
-                portal.setLockVerticalEdges(input.checked);
+                portal?.setLockVerticalEdges(input.checked);
               },
             });
           })()
@@ -193,7 +235,10 @@ export class GameOptions extends Window {
         buildOption(
           'newCitiesBuildDefender',
           t('GameOptions.new-cities-build-defender')
-        )
+        ),
+        // Whether the tileset's sprites are imported, and the import, which the new main menu shows only while they
+        //  aren't (#749). Only before a game: the import reloads the page, which would lose the game in play.
+        ...(interfaceMode() === 'new' && portal === null ? [assetsRow()] : [])
       )
     );
 
