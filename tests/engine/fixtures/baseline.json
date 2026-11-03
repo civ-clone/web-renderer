@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1096,
+        "total": 1097,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -204,7 +204,7 @@
           "Spend": 3,
           "Start": 8,
           "Started": 2,
-          "Step": 16,
+          "Step": 17,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,
@@ -359,7 +359,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1096,
+        "total": 1097,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -449,7 +449,7 @@
           "Spend": 3,
           "Start": 8,
           "Started": 2,
-          "Step": 16,
+          "Step": 17,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,
@@ -797,7 +797,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1096,
+        "total": 1097,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -887,7 +887,7 @@
           "Spend": 3,
           "Start": 8,
           "Started": 2,
-          "Step": 16,
+          "Step": 17,
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 1,

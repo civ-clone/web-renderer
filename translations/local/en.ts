@@ -547,6 +547,18 @@ i18next.addResources('en', 'default', {
 
   'MandatorySelection.default-body': '$t(SelectionWindow.default-body)',
 
+  // The meeting window under the new interface (#752): who they are and what the player knows of them, then the replies.
+  'Meeting.cities': 'Cities',
+  'Meeting.count': '{{count, number}}',
+  'Meeting.first-met': 'First met',
+  'Meeting.gold_one': '{{count, number}} gold',
+  'Meeting.gold_other': '{{count, number}} gold',
+  'Meeting.government': 'Government',
+  'Meeting.relations': 'Relations',
+  'Meeting.replies': 'Your reply',
+  'Meeting.title': 'Meeting with {{- leader}}',
+  'Meeting.treasury': 'Treasury',
+
   // The talks' lines, each with who said it, and the button that says the player's one answer (#751).
   'Negotiation.continue': 'Continue',
   'Negotiation.speaker': '{{- speaker}}:',
@@ -958,6 +970,7 @@ i18next.addResources('en', 'default', {
   'Window.minimize': 'Minimize',
   'Window.close': '$t(Generic.close)',
   'Window.Eyebrow.city': 'City',
+  'Window.Eyebrow.diplomacy': 'Diplomacy',
   'Window.Eyebrow.government': 'Government',
   'Window.Eyebrow.production': 'Production',
   'Window.Eyebrow.reference': 'Reference',

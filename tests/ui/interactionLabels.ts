@@ -274,12 +274,13 @@ const rendered = (label: string): boolean =>
     JSON.stringify({
       speaker: 'Ramesses II',
       text: 'Our armies grow restless. A tribute of 50 Gold would keep them at home.',
+      own: false,
     })
   );
   expect(
-    "the player's own line is said by You, in their own words",
+    "the player's own line is said by You, in their own words, and marked theirs",
     line(demand, egypt),
-    JSON.stringify({ speaker: 'You', text: 'Demand tribute.' })
+    JSON.stringify({ speaker: 'You', text: 'Demand tribute.', own: true })
   );
 
   finished = true;

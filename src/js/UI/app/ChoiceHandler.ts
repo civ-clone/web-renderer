@@ -12,14 +12,18 @@ import {
 import {
   interactionLabel,
   negotiationLine,
+  playerName,
   speakerOf,
 } from '../lib/interactionLabels';
 import { Interactions, Negotiation } from '../types';
 import ActionWindow from '../components/ActionWindow';
 import DebugFlags from '../debug/DebugFlags';
+import Intelligence from '../../Engine/Requests/Intelligence';
+import MeetingWindow from '../components/MeetingWindow';
 import Transport from '../Transport';
 import entryDetails from '../components/lib/choiceDetails';
 import instanceOf from '../lib/instanceOf';
+import { interfaceMode } from '../lib/interfaceMode';
 import { openChoice } from '../components/choiceList';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -118,6 +122,61 @@ export const ChoiceHandler = {
           speakers.every((speaker) => speaker?.id === speakers[0]?.id)
             ? speakers[0]
             : null;
+
+      // Under the new interface, the meeting window (#752): the talks so far, and the replies in the engine's order, the
+      //  one that costs nothing first (#674).
+      if (key === 'negotiation.next-step' && interfaceMode() === 'new') {
+        // The stress runner as the window opens: the one that answers it, if any, however the panel changes meanwhile.
+        const stressRunner = debugFlags.uiStressRunner,
+          players = negotiation?.players ?? [],
+          them =
+            players.find((player) => player.id !== us?.id) ??
+            players[0] ??
+            null,
+          meetingWindow = new MeetingWindow(
+            them === null
+              ? title
+              : t('Meeting.title', { leader: playerName(them) }),
+            {
+              nation: {
+                civilization: them?.civilization?._ ?? '',
+                leader: them === null ? '' : playerName(them),
+                nation:
+                  them === null
+                    ? ''
+                    : t('Generic.civilization-name.plural', {
+                        civilization: them.civilization?._,
+                        player: them,
+                      }),
+              },
+              lines: (
+                negotiation?.interactions ?? (last === null ? [] : [last])
+              ).map((interaction) => negotiationLine(interaction, us)),
+              replies: choices.map(({ id, value }) => ({
+                value: id,
+                label: interactionLabel(value as Interactions, true),
+                leave: instanceOf(value as Interactions, 'Terminate'),
+              })),
+              // The stress runner sends its own answer, whatever is chosen in the window meanwhile.
+              onChoose: (choice) => {
+                if (!stressRunner) {
+                  transport.send('chooseFromList', choice);
+                }
+              },
+              intelligence: transport.request(new Intelligence()),
+            }
+          );
+
+        if (stressRunner) {
+          stressRunner.automateChoice(
+            meetingWindow,
+            choices[0].id,
+            (choiceId) => transport.send('chooseFromList', choiceId)
+          );
+        }
+
+        return;
+      }
 
       // One answer: the last thing said and what the player is about to say, each with who says it, and Continue to
       //  say it (#751).

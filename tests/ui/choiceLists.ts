@@ -1,7 +1,7 @@
 // The lists on the choice window under the new interface (#745), past the build list: research, with each advance's
 //  cost in bulbs and turns, named in the primary and described from the Civilopedia; government; the lists the engine
 //  asks (`chooseFromList`), each primary saying what choosing does, Random first among the civilizations (#15), the
-//  difficulty preselected (#173), and nothing to cancel; the steps of the talks, each answer as you'd say it; New
+//  difficulty preselected (#173), and nothing to cancel; the steps of the talks in the meeting window (#752); New
 //  Game's questions, over everything, Cancel backing out, the last one starting the game; the units in a stack,
 //  following them while it's open (#344); and a Diplomat's and a Caravan's arrival. The classic interface keeps its
 //  lists, the research labels with their turns.
@@ -134,7 +134,7 @@ const entries: CivilopediaEntry[] = [
         return entries;
       }
 
-      if (channel === 'getRequirements') {
+      if (channel === 'getRequirements' || channel === 'intelligence') {
         return [];
       }
 
@@ -362,7 +362,8 @@ const run = async (): Promise<void> => {
   key('Enter');
   sent.length = 0;
 
-  // The talks stay the classic list.
+  // The talks are the meeting window (#752, `meetingWindow.ts`), not the choice window: the replies as buttons in the
+  //  engine's order, a number choosing one.
   const civilization = (_: string) => ({ _, __: [_, 'Civilization'] }),
     resolution = (_: string) => ({
       _,
@@ -395,17 +396,22 @@ const run = async (): Promise<void> => {
   );
 
   expect(
-    "the talks: each answer as you'd say it, the button saying it, and nothing to cancel",
-    [names(), primary().textContent, footer()],
+    'the talks: the meeting window, each answer as you would say it',
     [
-      ['Pay the tribute.', 'We will not pay.'],
-      'Pay the tribute.',
-      ['Pay the tribute.'],
-    ]
+      top().classList.contains('ui-meeting-window'),
+      Array.from(top().querySelectorAll('.ui-meeting-reply-text')).map(
+        (reply) => reply.textContent
+      ),
+    ],
+    [true, ['Pay the tribute.', 'We will not pay.']]
   );
 
-  key('ArrowDown');
-  key('Enter');
+  top().dispatchEvent(
+    new (globalThis as any).KeyboardEvent('keydown', {
+      key: '2',
+      bubbles: true,
+    })
+  );
 
   expect('the talks: the answer chosen is sent', sent, [
     ['chooseFromList', 'decline'],

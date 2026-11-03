@@ -43,6 +43,7 @@ import PlayerRegistry from '@civ-clone/core-player/PlayerRegistry';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import TraitRegistry from '@civ-clone/core-civilization/TraitRegistry';
+import { instance as turn } from '@civ-clone/core-turn-based-game/Turn';
 import registerTraits from '@civ-clone/civ1-civilization/registerTraits';
 
 const failures: string[] = [];
@@ -126,6 +127,8 @@ const palace = Object.assign(Object.create(Palace.prototype), {
       getByPlayerAndType: () => ({ value: () => 250 }),
     },
     unitRegistry: { getByPlayer: () => new Array(7).fill(null) },
+    // Twenty years a turn from 4000 BCE.
+    year: { value: (when: number) => -4000 + when * 20 },
   } as unknown as IntelligenceDependencies;
 
 const rows = intelligenceRows(
@@ -165,6 +168,7 @@ expect('the details an embassy gives', rows[0].details, {
   capital: { name: 'Rome', civilization: 'Roman' },
   government: 'Monarchy',
   gold: 250,
+  cities: 1,
   units: 7,
   foreignAffairs: [
     { civilization: 'Babylonian', atPeace: true },
@@ -172,6 +176,20 @@ expect('the details an embassy gives', rows[0].details, {
   ],
   advances: ['BronzeWorking', 'Monarchy'],
 });
+
+expect(
+  'the year of our first dealings with each, or none where we have had none (met only by seeing a city)',
+  intelligenceRows(
+    reader,
+    (other) => [rival, metOnly, unmet].includes(other),
+    dependencies
+  ).map(({ civilization, firstMet }) => ({ civilization, firstMet })),
+  [
+    { civilization: 'Roman', firstMet: -4000 + turn.value() * 20 },
+    { civilization: 'Greek', firstMet: -4000 + turn.value() * 20 },
+    { civilization: 'English', firstMet: null },
+  ]
+);
 
 // The report's strings are keyed on these names (`IntelligenceReport.trait.*`).
 expect(
