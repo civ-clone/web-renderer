@@ -114,9 +114,8 @@ export const ChoiceHandler = {
             : [],
         us =
           speakers.length > 0 &&
-          speakers.every(
-            (speaker) => speaker !== null && speaker.id === speakers[0]?.id
-          )
+          speakers[0]?.id !== undefined &&
+          speakers.every((speaker) => speaker?.id === speakers[0]?.id)
             ? speakers[0]
             : null;
 

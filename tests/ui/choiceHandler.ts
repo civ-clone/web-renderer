@@ -201,9 +201,9 @@ const run = async (): Promise<void> => {
     [0, [['chooseFromList', 'choice-1']]]
   );
 
-  // The step after the other side receives the player's emissary (#751), in the engine's order: the player
-  //  initiates and greets, the other side accepts. The last thing said and the player's one answer, each with who
-  //  said it, the player as You.
+  // A meeting the player starts (#751), as the engine runs one: whoever initiates also greets, and the other side
+  //  accepts. The step after the acceptance: the last thing said and the player's one answer, each with who said it,
+  //  the player as You.
   {
     const mongols = {
         id: 'Player-1',
@@ -271,73 +271,98 @@ const run = async (): Promise<void> => {
       ['chooseFromList', 'greet'],
     ]);
 
-    // The other side's line, by its leader's name.
-    reset();
-    ask(
-      'negotiation.next-step',
-      [{ id: 'goodbye', value: { ...terminate, by: mongols } }],
-      {
-        ...negotiation,
-        lastInteraction: welcome(germans, mongols),
-        players: [mongols, germans],
-      }
-    );
+    // A meeting a rival starts, the more usual way, the player second (`Talks`): the emissary is the scene, said by
+    //  nobody, over the player's Accept or Decline.
+    const theirs = {
+        ...initiate,
+        by: germans,
+        for: [mongols],
+      },
+      resolve = (_: string) => ({
+        _,
+        __: [_, 'Resolution', 'Interaction'],
+        by: mongols,
+        for: [germans],
+        proposal: theirs,
+      });
 
-    expect(
-      "the other side's line is said by their leader, and the player's Good bye by You",
-      lines(),
-      [
-        'Frederick the Great: Greetings from Frederick the Great, leader of the powerful Germans.',
-        'You: Good bye!',
-      ]
-    );
-
-    enter(top());
-
-    // Several answers: the line they answer, with its speaker, over the list.
     reset();
     ask(
       'negotiation.next-step',
       [
-        { id: 'goodbye', value: { ...terminate, by: mongols } },
-        { id: 'greet', value: welcome(mongols, germans) },
+        { id: 'accept', value: resolve('Accept') },
+        { id: 'decline', value: resolve('Decline') },
+      ],
+      { ...negotiation, lastInteraction: theirs, players: [germans, mongols] }
+    );
+
+    expect("the emissary's arrival is said by nobody", lines(), [
+      'An emissary from Germany wishes to speak with you. Will you receive them?',
+    ]);
+
+    choose('accept');
+
+    // Their greeting, and the player's one answer to it: OK.
+    reset();
+    ask(
+      'negotiation.next-step',
+      [
+        {
+          id: 'ok',
+          value: {
+            _: 'Acknowledge',
+            __: ['Acknowledge', 'Resolution', 'Interaction'],
+            by: mongols,
+            for: [germans],
+            proposal: welcome(germans, mongols),
+          },
+        },
       ],
       {
         ...negotiation,
         lastInteraction: welcome(germans, mongols),
-        players: [mongols, germans],
+        players: [germans, mongols],
       }
     );
 
     expect(
-      'a list of answers has the line it answers, said by its leader',
+      'their greeting is said by their leader, and the OK about to be given by You',
       lines(),
       [
         'Frederick the Great: Greetings from Frederick the Great, leader of the powerful Germans.',
+        'You: OK',
       ]
     );
 
-    choose('goodbye');
+    enter(top());
 
-    // A line whose speaker can't be told is shown without a name; so is everyone's when the answers aren't all one
-    //  player's, which can't say which is the player's.
+    // The hand-over at peace (#450), the scene again, with Good bye the one answer left.
     reset();
     ask(
       'negotiation.next-step',
       [{ id: 'goodbye', value: { ...terminate, by: mongols } }],
       {
         ...negotiation,
-        lastInteraction: terminate,
-        players: [mongols, germans],
+        lastInteraction: {
+          _: 'Dialogue',
+          __: ['Dialogue', 'Proposal', 'Interaction'],
+          key: 'handover',
+          by: germans,
+          for: [mongols],
+        },
+        players: [germans, mongols],
       }
     );
 
-    expect('a line with no speaker has no name', lines(), [
-      'Good bye!',
+    expect('"You respond..." is said by nobody', lines(), [
+      'You respond...',
       'You: Good bye!',
     ]);
 
     enter(top());
+
+    // Answers by two players can't say which is the player's: every line is named, none You. A player sent without
+    //  an id isn't taken for the player either.
     reset();
     ask(
       'negotiation.next-step',
@@ -352,15 +377,32 @@ const run = async (): Promise<void> => {
       }
     );
 
-    expect(
-      "answers by two players can't say which is the player's: the line is named, not You",
-      lines(),
-      [
-        'Genghis Khan: Greetings from Genghis Khan, leader of the powerful Mongols.',
-      ]
-    );
+    expect('answers by two players: the line is named, not You', lines(), [
+      'Genghis Khan: Greetings from Genghis Khan, leader of the powerful Mongols.',
+    ]);
 
     choose('goodbye');
+
+    // As a player with no id would arrive.
+    const nameless = { ...mongols, id: undefined } as unknown as typeof mongols;
+
+    reset();
+    ask(
+      'negotiation.next-step',
+      [{ id: 'goodbye', value: { ...terminate, by: nameless } }],
+      {
+        ...negotiation,
+        lastInteraction: welcome(nameless, germans),
+        players: [nameless, germans],
+      }
+    );
+
+    expect('a player without an id is named, not You', lines(), [
+      'Genghis Khan: Greetings from Genghis Khan, leader of the powerful Mongols.',
+      'Genghis Khan: Good bye!',
+    ]);
+
+    enter(top());
   }
 
   // A step of the talks with several answers: the player's own, labelled as theirs.

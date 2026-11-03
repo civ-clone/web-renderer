@@ -84,13 +84,25 @@ export const interactionContext = (
 
     return (interaction as DiplomacyAction).by ?? null;
   },
+  /**
+   * Whether `interaction` is the scene rather than anyone's words: an emissary arriving ("An emissary from Germany
+   *  wishes to speak with you…"), or the hand-over to the player ("You respond..."). Said by nobody (#751).
+   */
+  narrated = (interaction: Interactions): boolean =>
+    instanceOf(interaction, 'Initiate') ||
+    (instanceOf(interaction, 'Dialogue') &&
+      (interaction as Dialogue).key === 'handover'),
   /** A line of the talks: who said it, `You` for `us`, and what they said, in our own words where it's ours. */
   negotiationLine = (
     interaction: Interactions,
     us: Player | null
   ): { speaker: string | null; text: string } => {
-    const speaker = speakerOf(interaction),
-      own = us !== null && speaker !== null && speaker.id === us.id;
+    const speaker = narrated(interaction) ? null : speakerOf(interaction),
+      // Only by id, and only one there is: a player sent without one is nobody's but their own.
+      own =
+        us?.id !== undefined &&
+        speaker?.id !== undefined &&
+        speaker.id === us.id;
 
     return {
       speaker:
