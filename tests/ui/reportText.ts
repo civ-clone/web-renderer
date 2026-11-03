@@ -113,11 +113,13 @@ const run = async (): Promise<void> => {
       leader: null,
       atPeace: true,
       theirEmbassy: false,
+      firstMet: null,
       details: {
         traits: [],
         capital: null,
         government: null,
         gold: 1234,
+        cities: 0,
         units: 0,
         foreignAffairs: [],
         advances: [],

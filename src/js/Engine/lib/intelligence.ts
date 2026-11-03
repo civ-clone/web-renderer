@@ -34,6 +34,7 @@ import {
   UnitRegistry,
   instance as unitRegistryInstance,
 } from '@civ-clone/core-unit/UnitRegistry';
+import { Year, instance as yearInstance } from '@civ-clone/core-game-year/Year';
 import {
   NormalAggression,
   NormalDevelopment,
@@ -63,6 +64,7 @@ export type IntelligenceDetails = {
   } | null;
   government: string | null;
   gold: number;
+  cities: number;
   units: number;
   foreignAffairs: IntelligenceAffair[];
   advances: string[];
@@ -77,6 +79,9 @@ export type IntelligenceRow = {
   atPeace: boolean;
   // Whether they hold an embassy with the player.
   theirEmbassy: boolean;
+  // The year of the first dealings between the two (the first contact, as a rule), or `null` for none: met only by
+  //  seeing a city.
+  firstMet: number | null;
   // Only for a civilization the player holds an embassy with.
   details: IntelligenceDetails | null;
 };
@@ -90,6 +95,7 @@ export type IntelligenceDependencies = {
   playerResearchRegistry: PlayerResearchRegistry;
   playerTreasuryRegistry: PlayerTreasuryRegistry;
   unitRegistry: UnitRegistry;
+  year: Year;
 };
 
 const defaultDependencies: IntelligenceDependencies = {
@@ -101,6 +107,7 @@ const defaultDependencies: IntelligenceDependencies = {
   playerResearchRegistry: playerResearchRegistryInstance,
   playerTreasuryRegistry: playerTreasuryRegistryInstance,
   unitRegistry: unitRegistryInstance,
+  year: yearInstance,
 };
 
 const civilizationOf = (player: Player): string =>
@@ -131,6 +138,21 @@ const atPeace = (
       (interaction) =>
         interaction instanceof Peace && (interaction as Peace).active()
     );
+
+// The earliest of the two's dealings: `when` is the turn it happened in.
+const firstMet = (
+  player: Player,
+  other: Player,
+  { interactionRegistry, year }: IntelligenceDependencies
+): number | null => {
+  const turns = interactionRegistry
+    .getByPlayers(player, other)
+    .map((interaction) => interaction.when());
+
+  return turns.length === 0
+    ? null
+    : attempt(() => year.value(Math.min(...turns)), null);
+};
 
 const leaderOf = (player: Player): string | null => {
   const leader = player.civilization().leader();
@@ -201,6 +223,7 @@ const details = (
       () => playerTreasuryRegistry.getByPlayerAndType(subject, Gold).value(),
       0
     ),
+    cities: cityRegistry.getByPlayer(subject).length,
     units: unitRegistry.getByPlayer(subject).length,
     // Every civilization the subject has dealt with, the player included, in the order they joined the game.
     foreignAffairs: playerRegistry
@@ -255,6 +278,7 @@ export const intelligenceRows = (
           reader,
           dependencies.interactionRegistry
         ),
+        firstMet: firstMet(reader, player, dependencies),
         details: hasEmbassy(reader, player, dependencies.interactionRegistry)
           ? details(reader, player, hasMet, dependencies)
           : null,

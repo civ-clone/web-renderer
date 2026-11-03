@@ -8,6 +8,13 @@ import {
 import instanceOf from './instanceOf';
 import { t } from 'i18next';
 
+/** A line of the talks: who said it (`null` for the scene, said by nobody), what they said, and whether it's ours. */
+export interface NegotiationLine {
+  speaker: string | null;
+  text: string;
+  own: boolean;
+}
+
 // What a step of the talks with another leader says, and what each of the player's answers to it says. Used by the
 //  `chooseFromList` receiver (`app/ChoiceHandler.ts`).
 
@@ -94,11 +101,22 @@ export const interactionContext = (
     instanceOf(interaction, 'AdvanceTaken') ||
     (instanceOf(interaction, 'Dialogue') &&
       (interaction as Dialogue).key === 'handover'),
+  /** A player as the talks name them: their leader, or failing one, their nation. */
+  playerName = (player: Player): string =>
+    player.civilization?.leader
+      ? t('Generic.leader-name', {
+          leader: player.civilization.leader._,
+          player,
+        })
+      : t('Generic.civilization-name.plural', {
+          civilization: player.civilization?._,
+          player,
+        }),
   /** A line of the talks: who said it, `You` for `us`, and what they said, in our own words where it's ours. */
   negotiationLine = (
     interaction: Interactions,
     us: Player | null
-  ): { speaker: string | null; text: string } => {
+  ): NegotiationLine => {
     const speaker = narrated(interaction) ? null : speakerOf(interaction),
       // Only by id, and only one there is: a player sent without one is nobody's but their own.
       own =
@@ -112,15 +130,8 @@ export const interactionContext = (
           ? null
           : own
           ? t('Negotiation.you')
-          : speaker.civilization?.leader
-          ? t('Generic.leader-name', {
-              leader: speaker.civilization.leader._,
-              player: speaker,
-            })
-          : t('Generic.civilization-name.plural', {
-              civilization: speaker.civilization?._,
-              player: speaker,
-            }),
+          : playerName(speaker),
       text: interactionLabel(interaction, own),
+      own,
     };
   };

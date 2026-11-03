@@ -1,0 +1,203 @@
+// The meeting window under the new interface (#752): who they are in a strip under the header, the talks so far as a
+//  conversation that alone scrolls, and the replies as a stack of full-width buttons that stay in view. Everything is
+//  drawn from the theme; the swatch shows the civilization's own colours, which are data. Two classes on each rule
+//  where the classic window's own (`.window p`, `.window :not(header) button`) would win over one.
+
+.window.ui-meeting-window > .body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+// The replies are the window's buttons, and it can't be closed, so the chrome's footer has nothing to hold.
+.window.ui-meeting-window > .ui-window-footer:not(:has(button)) {
+  display: none;
+}
+
+.ui-meeting {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 0;
+  padding: 0.75rem;
+  width: min(34rem, 90vw);
+}
+
+.ui-meeting .ui-meeting-strip {
+  align-items: center;
+  background: var(--ui-bg-1);
+  border: 1px solid var(--ui-line-soft);
+  border-radius: var(--ui-radius-control);
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.ui-meeting .ui-meeting-swatch {
+  background: linear-gradient(
+    135deg,
+    var(--owner-primary, var(--ui-unknown-owner)) 50%,
+    var(--owner-secondary, var(--ui-unknown-owner-edge)) 50%
+  );
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  flex: none;
+  height: 1.75rem;
+  width: 1.75rem;
+}
+
+.ui-meeting .ui-meeting-who {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ui-meeting .ui-meeting-leader {
+  font-family: var(--type-heading-family);
+  font-size: var(--type-heading-size);
+  font-weight: var(--type-heading-weight);
+  letter-spacing: var(--type-heading-tracking);
+  text-transform: var(--type-heading-transform);
+}
+
+.ui-meeting .ui-meeting-nation {
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+}
+
+.ui-meeting .ui-meeting-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.ui-meeting .ui-meeting-fact {
+  display: flex;
+  flex-direction: column;
+
+  dt {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  dd {
+    font-variant-numeric: var(--type-figures);
+    margin: 0;
+
+    &[data-tone='negative'] {
+      color: var(--ui-negative);
+    }
+  }
+}
+
+// The talks so far, oldest first. Only this scrolls; the window opens on the latest line.
+.ui-meeting .ui-meeting-conversation {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 20rem;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+// Each line said, the speaker named over it; the player's own set to the other side.
+.ui-meeting .ui-meeting-speech {
+  align-self: flex-start;
+  background: var(--ui-bg-2);
+  border: 1px solid var(--ui-line-soft);
+  border-radius: var(--ui-radius-control);
+  color: var(--ui-fg-muted);
+  margin: 0;
+  max-width: 85%;
+  padding: 0.375rem 0.625rem;
+
+  figcaption {
+    color: var(--type-eyebrow-colour);
+    font-size: var(--type-eyebrow-size);
+    font-weight: var(--type-eyebrow-weight);
+    letter-spacing: var(--type-eyebrow-tracking);
+    text-transform: var(--type-eyebrow-transform);
+  }
+
+  blockquote {
+    margin: 0;
+  }
+
+  &.ui-meeting-speech-own {
+    align-self: flex-end;
+    background: var(--ui-sunken);
+  }
+
+  // The line being answered, as said, in full colour.
+  &.ui-meeting-latest {
+    border-color: var(--ui-line);
+    color: var(--ui-fg);
+  }
+}
+
+// The scene: an emissary arriving, the hand-over.
+.ui-meeting .ui-meeting-narration {
+  align-self: center;
+  color: var(--ui-fg-muted);
+  font-size: var(--type-detail-size);
+  font-style: italic;
+  margin: 0;
+  text-align: center;
+
+  &.ui-meeting-latest {
+    color: var(--ui-fg);
+  }
+}
+
+.ui-meeting .ui-meeting-replies {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.ui-meeting .ui-meeting-reply {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  margin: 0;
+  text-align: start;
+  width: 100%;
+
+  .ui-meeting-reply-text {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+// The reply's number, its key: drawn as the theme draws a key, and not at all where it draws none.
+.ui-meeting .ui-meeting-key {
+  background: var(--ui-kbd-bg);
+  border: 1px solid var(--ui-kbd-edge);
+  border-radius: 3px;
+  color: var(--ui-kbd-fg);
+  display: var(--ui-kbd-display);
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 0.75em;
+  font-weight: normal;
+  line-height: 1.4;
+  min-width: 1.4em;
+  padding: 0 0.3em;
+  text-align: center;
+}
