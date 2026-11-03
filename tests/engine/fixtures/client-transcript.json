@@ -1,8 +1,8 @@
 {
   "turns": 21,
   "sequence": {
-    "count": 264,
-    "hash": "8c248417c61705629523e85c9b65a6ce9051af8ebdf45d446a4a0049ffabe367"
+    "count": 263,
+    "hash": "33a0e3c181be98b7d39fed29e6a5eb5fec501074f1c1f4eed2bae1de9174f027"
   },
   "channels": {
     "actionHandled": {
@@ -10,8 +10,8 @@
       "hash": "ed19f197ae8a59c36f52c76f9857c7fc498eadc6d9c8b4ca71adc0e08e9a61e5"
     },
     "chooseFromList": {
-      "count": 11,
-      "hash": "d8f8bd3a72cf031893a9f5c96d6a44319b1cd5e4f9046501e02baf8540b502f1"
+      "count": 10,
+      "hash": "aaf521e5716852144a598e644c1212cdb23db6a3456e88d51d63d48ec61dcbea"
     },
     "cityBuildAvailable": {
       "count": 2,
@@ -31,7 +31,7 @@
     },
     "gameDataPatch": {
       "count": 120,
-      "hash": "999c08b5746932f302ef884c9b059fad5fc22191ab4f979f8910308a0f30f041"
+      "hash": "36e6b18b84f901aacc1dc9953bdbb47c16d33cb04b4095178024a27ba86c18d6"
     },
     "gameNotification": {
       "count": 1,
@@ -115,9 +115,9 @@
     "gameDataPatch 97a63b07fa1e update PlayerTile-9b, update Diplomat-1, update Player-1[units], update Player-1[actions], update Player-1[mandatoryActions]",
     "chooseFromList 461981415787 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-7\"},\"objects\":{\"ChoiceMeta-7\":{\"_\":\"ChoiceMe...",
     "chooseFromList 943bef20a221 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-9\"},\"objects\":{\"ChoiceMeta-9\":{\"_\":\"ChoiceMe...",
-    "chooseFromList 5c0182c6b3a6 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-b\"},\"objects\":{\"ChoiceMeta-b\":{\"_\":\"ChoiceMe...",
-    "chooseFromList 46005e8b016e {\"hierarchy\":{\"#ref\":\"ChoiceMeta-d\"},\"objects\":{\"ChoiceMeta-d\":{\"_\":\"ChoiceMe...",
-    "chooseFromList 51c5a372b2c5 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-f\"},\"objects\":{\"ChoiceMeta-f\":{\"_\":\"ChoiceMe...",
+    "chooseFromList d9db2931c0dc {\"hierarchy\":{\"#ref\":\"ChoiceMeta-b\"},\"objects\":{\"ChoiceMeta-b\":{\"_\":\"ChoiceMe...",
+    "chooseFromList 578690938173 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-d\"},\"objects\":{\"ChoiceMeta-d\":{\"_\":\"ChoiceMe...",
+    "chooseFromList 6caafd45d97f {\"hierarchy\":{\"#ref\":\"ChoiceMeta-f\"},\"objects\":{\"ChoiceMeta-f\":{\"_\":\"ChoiceMe...",
     "gameDataPatch 79f5d6e4232b update Warrior-1, update PlayerTile-9b, update PlayerTile-87, update Diplomat-1, update PlayerTile-73",
     "actionHandled 343f3beb915a {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-1\",\"unitAction\":\"GoTo\",\"target\":\"PlayerTi...",
     "unitHalted 7e21a5bce06f {\"target\":\"PlayerTile-73\",\"unit\":\"Diplomat-1\"}",
@@ -131,9 +131,8 @@
     "gameDataPatch fdb24df8000a update PlayerTile-88, update Diplomat-3, update Player-1[units], update Player-1[actions], update Player-1[mandatoryActions]",
     "chooseFromList dd801d3a0e76 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-h\"},\"objects\":{\"ChoiceMeta-h\":{\"_\":\"ChoiceMe...",
     "chooseFromList b994aef7bbb5 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-j\"},\"objects\":{\"ChoiceMeta-j\":{\"_\":\"ChoiceMe...",
-    "chooseFromList c78805d592e1 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-l\"},\"objects\":{\"ChoiceMeta-l\":{\"_\":\"ChoiceMe...",
-    "chooseFromList 8753bcd1ebc7 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-n\"},\"objects\":{\"ChoiceMeta-n\":{\"_\":\"ChoiceMe...",
-    "chooseFromList 2b848833e253 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-p\"},\"objects\":{\"ChoiceMeta-p\":{\"_\":\"ChoiceMe...",
+    "chooseFromList 20bafb060ebb {\"hierarchy\":{\"#ref\":\"ChoiceMeta-l\"},\"objects\":{\"ChoiceMeta-l\":{\"_\":\"ChoiceMe...",
+    "chooseFromList 7010498ecdaa {\"hierarchy\":{\"#ref\":\"ChoiceMeta-n\"},\"objects\":{\"ChoiceMeta-n\":{\"_\":\"ChoiceMe...",
     "gameDataPatch 2b46418b4ee1 update Diplomat-2, update PlayerTile-88, update PlayerTile-73, update Diplomat-3, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 1a2d7eead064 {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"MeetWithKing\",\"target\":\"...",
     "gameDataPatch 5509560346a6 update Diplomat-3, update PlayerTile-g3, update PlayerTile-h5, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
@@ -265,20 +264,20 @@
     "gameDataPatch 54413dd0bf3e update PlayerTile-5, update Settlers-4, update City-1, update Player-1[units], update CityBuild-1, update PlayerTile-8, and 5 more",
     "turnStarted 74234e98afe7 null",
     "gameNotification c16a924012e8 {\"hierarchy\":{\"#ref\":\"Notification-1\"},\"objects\":{\"Notification-1\":{\"_\":\"Noti...",
-    "gameDataPatch a0c32b696ad2 update CityBuild-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch 99fa15ce01e0 update CityBuild-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled cd3bdd60ffb4 {\"name\":\"CityBuild\",\"id\":\"CityBuild-1\",\"unitAction\":\"[undefined]\",\"target\":\"[...",
     "gameDataPatch 094891340654 update Diplomat-3, update PlayerTile-i9, update PlayerTile-h5, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled fbf41f91146e {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
     "gameDataPatch 3bb488eb87d5 update Warrior-1, update PlayerTile-8d, update PlayerTile-79, update Diplomat-3, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled a8546f44b89a {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"Move\",\"target\":\"PlayerTi...",
-    "gameDataPatch 94cebe3e3f96 update Diplomat-3, update PlayerTile-5, update PlayerTile-7, update Settlers-4, update City-1, update Player-1[actions], and 1 more",
+    "gameDataPatch a1fb1f58fe3e update Diplomat-3, update PlayerTile-5, update PlayerTile-7, update Settlers-4, update City-1, update Player-1[actions], and 1 more",
     "actionHandled 3f57fd61e674 {\"name\":\"ActiveUnit\",\"id\":\"Settlers-4\",\"unitAction\":\"Move\",\"target\":\"PlayerTi...",
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 5929fc143748 {\"name\":\"EndTurn\",\"id\":\"[undefined]\",\"unitAction\":\"[undefined]\",\"target\":\"[un...",
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 5e50131f3915 update PlayerTile-73",
     "gameDataPatch 046bcd3280ea update PlayerTile-86, update PlayerTile-9b",
-    "gameDataPatch 00e0656030cc update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch f7a6ade30339 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch affa3a97dad4 update Settlers-4, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled a082526eb168 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
@@ -286,14 +285,14 @@
     "actionHandled 524c37c13fa5 {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"Move\",\"target\":\"PlayerTi...",
     "gameDataPatch 9b4a86f6f595 update PlayerTile-8d, update PlayerTile-79, update Diplomat-3, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled a8546f44b89a {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"Move\",\"target\":\"PlayerTi...",
-    "gameDataPatch 3d1cdf9d0e43 update Diplomat-3, update PlayerTile-7, update City-6, update Player-1[cities], update PlayerTile-8, update Settlers-4, and 4 more",
+    "gameDataPatch 8af5229cb6d1 update Diplomat-3, update PlayerTile-7, update City-6, update Player-1[cities], update PlayerTile-8, update Settlers-4, and 4 more",
     "actionHandled c2147e745762 {\"name\":\"ActiveUnit\",\"id\":\"Settlers-4\",\"unitAction\":\"FoundCity\",\"target\":\"Pla...",
-    "gameDataPatch d6b7ccf51c11 update CityBuild-k, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch a88010836e52 update CityBuild-k, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled f4c60fe1e59b {\"name\":\"CityBuild\",\"id\":\"CityBuild-k\",\"unitAction\":\"[undefined]\",\"target\":\"[...",
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 5929fc143748 {\"name\":\"EndTurn\",\"id\":\"[undefined]\",\"unitAction\":\"[undefined]\",\"target\":\"[un...",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch ca02c8d82784 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch ba9cf4fe84e2 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch 75d19780ce0d update Settlers-4, update PlayerTile-h5, update PlayerTile-ia, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled a082526eb168 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
@@ -304,7 +303,7 @@
     "gameDataPatch 4f53cda18c2b ",
     "actionHandled 5929fc143748 {\"name\":\"EndTurn\",\"id\":\"[undefined]\",\"unitAction\":\"[undefined]\",\"target\":\"[un...",
     "turnEnded 74234e98afe7 null",
-    "gameDataPatch 050963c1b6e0 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch 5db4eaaa0886 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch f47f0be0be04 update Diplomat-3, update PlayerTile-ia, update PlayerTile-jd, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 1089539c33ff {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
@@ -316,7 +315,7 @@
     "actionHandled 5929fc143748 {\"name\":\"EndTurn\",\"id\":\"[undefined]\",\"unitAction\":\"[undefined]\",\"target\":\"[un...",
     "turnEnded 74234e98afe7 null",
     "gameDataPatch 9c2d6e7e2c15 update PlayerTile-9b, update PlayerTile-af",
-    "gameDataPatch 1762da092ba2 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
+    "gameDataPatch 56a5c409da68 update Turn-1, update Year-1, add Player-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "turnStarted 74234e98afe7 null",
     "gameDataPatch f8b6df9829ba update Diplomat-3, update PlayerTile-jd, update PlayerTile-i9, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled 498139f6dc23 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
