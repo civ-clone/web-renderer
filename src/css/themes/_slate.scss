@@ -116,6 +116,10 @@
   --ui-btn-quiet-fg: var(--ui-fg-muted);
   --ui-btn-danger-fg: var(--ui-negative);
   --ui-btn-shadow-pressed: inset 0 1px 3px rgba(13, 16, 20, 0.35);
+
+  // A toggle's chosen segment (#750): the brass, with the page's near-black ink, which reads on it where white doesn't.
+  --ui-segment-on-bg: var(--ui-accent);
+  --ui-segment-on-fg: #0d1014;
   --ui-btn-focus-outline: 2px solid var(--ui-focus);
   --ui-btn-focus-offset: 2px;
   --ui-btn-disabled-opacity: 0.45;
@@ -272,6 +276,7 @@
 
   --ui-accent: #c9a24a;
   --ui-accent-ink: #1d1a12;
+  --ui-segment-on-fg: var(--ui-accent-ink);
   --ui-focus: #e0bf6a;
 
   --ui-positive: #7cc58a;

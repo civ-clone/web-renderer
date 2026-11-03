@@ -228,10 +228,11 @@
     background: var(--ui-btn-bg-hover);
   }
 
-  // Pressed, as the theme presses a button, and in its strong weight, which reads in either set.
+  // Filled, in the theme's colour for a chosen segment, which the theme keeps at 3:1 against the others and its text at
+  //  4.5:1 on it; in the strong weight too.
   input:checked + span {
-    background: var(--ui-btn-bg-pressed);
-    box-shadow: var(--ui-btn-shadow-pressed);
+    background: var(--ui-segment-on-bg);
+    color: var(--ui-segment-on-fg);
     font-weight: var(--type-strong-weight);
   }
 
