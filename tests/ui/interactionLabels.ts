@@ -10,9 +10,10 @@
 import {
   interactionContext,
   interactionLabel,
-  negotiationLabel,
+  negotiationLine,
+  speakerOf,
 } from '../../src/js/UI/lib/interactionLabels';
-import { Interactions, Negotiation } from '../../src/js/UI/types';
+import { Interactions, Player } from '../../src/js/UI/types';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -44,9 +45,13 @@ process.on('exit', (code: number): void => {
 // Everything any of the wordings fills in, as the transport sends it: classes as `{ _ }`, players with their
 //  civilization and leader.
 const egypt = {
+    id: 'Player-1',
     civilization: { _: 'Egyptian', leader: { _: 'RamessesII' } },
   },
-  babylon = { civilization: { _: 'Babylonian', leader: { _: 'Hammurabi' } } },
+  babylon = {
+    id: 'Player-2',
+    civilization: { _: 'Babylonian', leader: { _: 'Hammurabi' } },
+  },
   mongols = { civilization: { _: 'Mongol', leader: { _: 'GenghisKhan' } } },
   gold = { _: 'Gold', value: 50 },
   writing = { _: 'Writing' },
@@ -236,25 +241,45 @@ const rendered = (label: string): boolean =>
     'Unheard'
   );
 
-  // The talks so far: the last step, as theirs.
-  const negotiation = (lastInteraction: Interactions | null) =>
-    ({
-      _: 'Negotiation',
-      __: ['Negotiation', 'Interaction', 'DataObject'],
-      interactions: lastInteraction ? [lastInteraction] : [],
-      lastInteraction,
-      terminated: false,
-    } as unknown as Negotiation);
+  // Who said a line of the talks (#751): a proposal's `by`, a resolution's answerer (the one it was proposed to), and
+  //  the line with its speaker, the player as You and in their own words.
+  const demand = proposal('DemandTribute', 'gold'),
+    accept = entity('Accept', ['Resolution'], { proposal: demand }),
+    answered = entity('Accept', ['Resolution'], {
+      proposal: demand,
+      by: mongols,
+    }),
+    line = (interaction: Interactions, us: object | null) =>
+      JSON.stringify(negotiationLine(interaction, us as Player | null));
 
   expect(
-    'a negotiation says its last step',
-    negotiationLabel(negotiation(proposal('DemandTribute', 'gold'))),
-    'Our armies grow restless. A tribute of 50 Gold would keep them at home.'
+    'a proposal is said by whoever made it',
+    speakerOf(demand),
+    egypt as unknown as Player
   );
   expect(
-    'a negotiation with no step yet',
-    negotiationLabel(negotiation(null)),
-    'negotiation.missing-label'
+    'a resolution by whoever answered it',
+    speakerOf(answered),
+    mongols as unknown as Player
+  );
+  expect(
+    'or, sent without, by the one it was proposed to',
+    speakerOf(accept),
+    babylon as unknown as Player
+  );
+  expect('nothing said has no speaker', speakerOf(null), null);
+  expect(
+    "the other side's line is said by their leader",
+    line(demand, babylon),
+    JSON.stringify({
+      speaker: 'Ramesses II',
+      text: 'Our armies grow restless. A tribute of 50 Gold would keep them at home.',
+    })
+  );
+  expect(
+    "the player's own line is said by You, in their own words",
+    line(demand, egypt),
+    JSON.stringify({ speaker: 'You', text: 'Demand tribute.' })
   );
 
   finished = true;

@@ -1,4 +1,10 @@
-import { Dialogue, Interactions, Negotiation, Resolution } from '../types';
+import {
+  Dialogue,
+  DiplomacyAction,
+  Interactions,
+  Player,
+  Resolution,
+} from '../types';
 import instanceOf from './instanceOf';
 import { t } from 'i18next';
 
@@ -59,12 +65,62 @@ export const interactionContext = (
       ns: 'diplomacy',
     });
   },
-  negotiationLabel = (negotiation: Negotiation) => {
-    const currentInteraction = negotiation.lastInteraction;
-
-    if (currentInteraction === null) {
-      return 'negotiation.missing-label';
+  /**
+   * Who said `interaction`: its `by`, or for a resolution without one, the player the proposal was made to, who is the
+   *  one answering it (#751). `null` when it can't be told.
+   */
+  speakerOf = (interaction: Interactions | null): Player | null => {
+    if (interaction === null) {
+      return null;
     }
 
-    return interactionLabel(currentInteraction);
+    // A resolution is an action of its own, by whoever answered; from a save that didn't send it, the one the proposal
+    //  was made to.
+    if (instanceOf(interaction, 'Resolution')) {
+      const resolution = interaction as Resolution;
+
+      return resolution.by ?? resolution.proposal?.for?.[0] ?? null;
+    }
+
+    return (interaction as DiplomacyAction).by ?? null;
+  },
+  /**
+   * Whether `interaction` is the scene rather than anyone's words: an emissary arriving ("An emissary from Germany
+   *  wishes to speak with you…"), what an exchange took ("In exchange, the Germans take Bronze Working."), or the
+   *  hand-over to the player ("You respond..."). Said by nobody (#751).
+   */
+  narrated = (interaction: Interactions): boolean =>
+    instanceOf(interaction, 'Initiate') ||
+    instanceOf(interaction, 'AdvanceTaken') ||
+    (instanceOf(interaction, 'Dialogue') &&
+      (interaction as Dialogue).key === 'handover'),
+  /** A line of the talks: who said it, `You` for `us`, and what they said, in our own words where it's ours. */
+  negotiationLine = (
+    interaction: Interactions,
+    us: Player | null
+  ): { speaker: string | null; text: string } => {
+    const speaker = narrated(interaction) ? null : speakerOf(interaction),
+      // Only by id, and only one there is: a player sent without one is nobody's but their own.
+      own =
+        us?.id !== undefined &&
+        speaker?.id !== undefined &&
+        speaker.id === us.id;
+
+    return {
+      speaker:
+        speaker === null
+          ? null
+          : own
+          ? t('Negotiation.you')
+          : speaker.civilization?.leader
+          ? t('Generic.leader-name', {
+              leader: speaker.civilization.leader._,
+              player: speaker,
+            })
+          : t('Generic.civilization-name.plural', {
+              civilization: speaker.civilization?._,
+              player: speaker,
+            }),
+      text: interactionLabel(interaction, own),
+    };
   };
