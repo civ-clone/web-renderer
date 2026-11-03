@@ -10,8 +10,8 @@
   }
 
   @media (prefers-reduced-motion: no-preference) {
-    transition: opacity var(--ui-window-motion-in) ease-out,
-      translate var(--ui-window-motion-in) ease-out;
+    transition: opacity var(--ui-window-motion-in) var(--ui-ease),
+      translate var(--ui-window-motion-in) var(--ui-ease);
 
     @starting-style {
       opacity: 0;
@@ -75,7 +75,7 @@
 // A closed window's copy, fading where it was (#738): drawn as the window was, it takes no input, and goes when it has
 //  faded.
 .window.ui-window-ghost {
-  animation: ui-window-out var(--ui-window-motion-out) ease-in forwards;
+  animation: ui-window-out var(--ui-window-motion-out) var(--ui-ease) forwards;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;

@@ -264,6 +264,50 @@ const run = async (): Promise<void> => {
     [null, 3]
   );
 
+  // Where the theme moves them (#753), a row going fades first: it stays, taking no input, until its animation ends,
+  //  and the rows staying are drawn in order around it. linkedom draws nothing, so the stylesheet's answer is given
+  //  here.
+  {
+    const computed = (globalThis as any).getComputedStyle;
+
+    (globalThis as any).getComputedStyle = (element: Element) => ({
+      animationName: element.classList.contains('ui-notification-leaving')
+        ? 'ui-notification-out'
+        : 'none',
+      animationDuration: '0.12s',
+    });
+
+    const going = area.querySelectorAll(
+      '.ui-notification-row'
+    )[0] as HTMLElement;
+
+    rows.build(many.slice(1, 3), player);
+
+    expect(
+      'a row going stays while it fades, inert, with the two staying after it',
+      [
+        going.isConnected,
+        going.classList.contains('ui-notification-leaving'),
+        going.inert,
+        area.querySelectorAll(
+          '.ui-notification-row:not(.ui-notification-leaving)'
+        ).length,
+        area.children[0] === going,
+      ],
+      [true, true, true, 2, true]
+    );
+
+    going.dispatchEvent(new Event('animationend'));
+
+    expect(
+      'and leaves the page when it has faded',
+      [going.isConnected, area.children.length],
+      [false, 2]
+    );
+
+    (globalThis as any).getComputedStyle = computed;
+  }
+
   area.remove();
 
   // Dismissals: for the turn, by what they're about.

@@ -9,7 +9,9 @@
 //   declares the faces a theme may name;
 // - Civ1 classic (`:root`) and slate and brass (`:root[data-ui-theme='slate']`) define the same tokens, and each dark
 //   set only overrides tokens its light set defines;
-// - every `--ui-*`, `--y-*`, `--font-*` and `--type-*` token a component reads is defined.
+// - every `--ui-*`, `--y-*`, `--font-*` and `--type-*` token a component reads is defined;
+// - the new interface's motion (#753), its `ui-` rules and the button system's, takes its durations from the theme's
+//   tokens, and Civ1 classic has none: each of its `--ui-motion-*` durations is 0s, while slate's are not.
 
 const path = require('path');
 
@@ -102,6 +104,53 @@ rules
       );
     })
   );
+
+// A duration written in a `transition` or `animation`, rather than a token's.
+const timeLiteral = (property, value) =>
+    /^(transition|animation)(-duration|-delay)?$/.test(property) &&
+    /(^|[\s,(])\d*\.?\d+m?s\b/.test(value.replace(/var\([^)]*\)/g, '')),
+  isNewInterface = (selector) => /(\.ui-|\.btn-)/.test(selector);
+
+rules
+  .filter(
+    ([selector]) =>
+      !isTokenRule(selector) &&
+      !selector.startsWith('@') &&
+      isNewInterface(selector)
+  )
+  .forEach(([selector, declarations]) =>
+    declarations.forEach(([property, value]) =>
+      expect(
+        `${selector} { ${property}: ${value} } has a duration of its own: use a --ui-motion-* token`,
+        !timeLiteral(property, value)
+      )
+    )
+  );
+
+const tokenValues = (selector) =>
+  new Map(
+    rules
+      .filter(([ruleSelector]) => ruleSelector === selector)
+      .flatMap(([, declarations]) => declarations)
+      .filter(([property]) =>
+        /^--ui-motion-(fast|base|slow|pulse)$/.test(property)
+      )
+  );
+
+const classicMotion = tokenValues(':root'),
+  slateMotion = tokenValues(':root[data-ui-theme=slate]');
+
+expect('Civ1 classic sets the motion tokens', classicMotion.size === 4);
+classicMotion.forEach((value, token) =>
+  expect(
+    `Civ1 classic's ${token} is ${value}, not 0s: Civ1 has no motion`,
+    value === '0s'
+  )
+);
+expect('slate sets the motion tokens', slateMotion.size === 4);
+slateMotion.forEach((value, token) =>
+  expect(`slate's ${token} is ${value}: it moves`, value !== '0s')
+);
 
 const classic = defined(':root'),
   slate = defined(":root[data-ui-theme='slate']"),

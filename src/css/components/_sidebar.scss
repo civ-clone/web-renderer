@@ -99,7 +99,9 @@
 
       .glyph-disclosure {
         height: 0.75em;
-        transition: transform 0.15s;
+        @media (prefers-reduced-motion: no-preference) {
+          transition: transform var(--ui-section-motion) var(--ui-ease);
+        }
         width: 0.75em;
       }
 
@@ -116,6 +118,18 @@
 
   > .body {
     padding: 0.4em;
+
+    // Opened, it eases in from just above; closed, it goes at once, so nothing below waits on it. Opacity and
+    //  transform only: the section's height changes as it opens, not as it eases (#753).
+    @media (prefers-reduced-motion: no-preference) {
+      transition: opacity var(--ui-section-motion) var(--ui-ease),
+        transform var(--ui-section-motion) var(--ui-ease);
+
+      @starting-style {
+        opacity: 0;
+        transform: translateY(-0.25rem);
+      }
+    }
 
     > p:first-child {
       margin-top: 0;
