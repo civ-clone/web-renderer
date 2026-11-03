@@ -22,6 +22,15 @@ import { ObjectMap } from '../UI/lib/reconstituteData';
 //  or its `requestFailed`, carries it back, so a reply is matched to its request and not only to its channel.
 export type RequestId = number;
 
+/** What a save is of, for the main menu's Continue to show (#749). */
+export type SaveDetails = {
+  // The player's civilization, by name, as a translation's `_` key takes it.
+  civilization: string;
+  turn: number;
+  // Negative for BCE.
+  year: number;
+};
+
 export type TransportMessage<
   Channel extends keyof TransportDataMap = keyof TransportDataMap
 > = {
@@ -176,14 +185,27 @@ declare global {
     //  choose what to do there as the arrow keys would.
     unitHalted: TransportData<{ target: string; unit: string }, never>;
     // `autosave` (#653), a new game's first turn or a later one: the file comes back compressed, on `autosaveGame`.
+    // `details` (#749), what the save is of for the main menu to show, comes back with the file as it was sent.
     save: TransportData<
       null,
-      { name: string; autosave?: 'start' | 'autosave' }
+      {
+        name: string;
+        autosave?: 'start' | 'autosave';
+        details?: SaveDetails;
+      }
     >;
-    saveGame: TransportData<{ name: string; data: string }, never>;
+    saveGame: TransportData<
+      { name: string; data: string; details?: SaveDetails },
+      never
+    >;
     // A save taken as a turn started (#653), gzipped in the worker where it can be, as the page would a download.
     autosaveGame: TransportData<
-      { name: string; kind: 'start' | 'autosave'; data: Blob },
+      {
+        name: string;
+        kind: 'start' | 'autosave';
+        data: Blob;
+        details?: SaveDetails;
+      },
       never
     >;
     // Game → Retire (#176, #362).

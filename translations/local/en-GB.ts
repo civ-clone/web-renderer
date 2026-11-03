@@ -46,6 +46,9 @@ i18next.addResources('en-GB', 'default', {
 
   'MainMenu.customise': 'Customise…',
 
+  'NewGameWindow.customize': 'Customise…',
+  'NewGameWindow.customize-meta':
+    'Choose the civilisations, seats, rules and the exact world',
   'NewGameWindow.civilizations_one': '1 civilisation',
   'NewGameWindow.civilizations_other': '{{count}} civilisations',
 

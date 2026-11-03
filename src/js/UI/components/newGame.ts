@@ -146,6 +146,9 @@ export const askPlayerCount = (
     }
   );
 
+// The world size question's row for the game setup: not a size's key.
+const customiseValue = '#customise';
+
 /**
  * The size of the world, then the difficulty level, then how many civilizations to play with. `sizes` are the sizes
  *  to offer, and `worldOptions` go to the engine with the answers (Earth offers only the sizes it has a map for, and
@@ -155,7 +158,8 @@ export const askWorldSize = (
   transport: Transport,
   onFinished?: FinishedHandler,
   sizes: WorldSize[] = worldSizes,
-  worldOptions: { [key: string]: any } = {}
+  worldOptions: { [key: string]: any } = {},
+  customise: (() => void) | null = null
 ): void => {
   // The size New Game selects, in `sizes`' own dimensions.
   const defaultSize =
@@ -163,12 +167,30 @@ export const askWorldSize = (
 
   ask(
     t('NewGameWindow.world-size'),
-    sizes.map(({ key, width, height }) => ({
-      label: t(`NewGameWindow.WorldSize.${key}`, { width, height }) as string,
-      value: key,
-    })),
+    [
+      // The game setup, for everything these questions don't ask (#749), first and not chosen.
+      ...(customise === null
+        ? []
+        : [
+            {
+              label: t('NewGameWindow.customize') as string,
+              value: customiseValue,
+              meta: t('NewGameWindow.customize-meta') as string,
+            },
+          ]),
+      ...sizes.map(({ key, width, height }) => ({
+        label: t(`NewGameWindow.WorldSize.${key}`, { width, height }) as string,
+        value: key,
+      })),
+    ],
     defaultSize.key,
     (selection) => {
+      if (selection === customiseValue && customise !== null) {
+        customise();
+
+        return;
+      }
+
       const size = sizes.find(({ key }) => key === selection) ?? defaultSize;
 
       askDifficulty(transport, (difficulty) =>
@@ -189,15 +211,25 @@ export const askWorldSize = (
   );
 };
 
-/** New Game: the map's grid, then the sizes there are on it. */
+/**
+ * New Game: the map's grid, then the sizes there are on it. With `customise`, the sizes are offered beside
+ *  Customise…, which it answers instead (#749).
+ */
 export const askNewGame = (
   transport: Transport,
-  onFinished?: FinishedHandler
+  onFinished?: FinishedHandler,
+  customise: (() => void) | null = null
 ): void =>
   askMapGrid((topologyId) =>
-    askWorldSize(transport, onFinished, worldSizesFor(topologyId), {
-      topologyId,
-    })
+    askWorldSize(
+      transport,
+      onFinished,
+      worldSizesFor(topologyId),
+      {
+        topologyId,
+      },
+      customise
+    )
   );
 
 /**

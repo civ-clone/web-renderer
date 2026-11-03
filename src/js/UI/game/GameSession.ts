@@ -324,6 +324,7 @@ export class GameSession {
           // Same reason: the turn a save is named after is the turn it
           // was taken on.
           turn,
+          () => Number(gameState.data()?.year?.value ?? 0),
           portal,
           transport,
           cheatsEnabled

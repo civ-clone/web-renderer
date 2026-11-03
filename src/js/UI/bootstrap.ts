@@ -4,6 +4,7 @@ import GameSession from './game/GameSession';
 import GameOverWindow from './components/GameOverWindow';
 import { ObserverState } from '../Engine/Observer';
 import MainMenu from './components/MainMenu';
+import TitleMenu from './components/TitleMenu';
 import { downloadFile, saveFile, takePendingSave } from './lib/savedGame';
 import { keepSave } from './lib/browserSaves';
 import Notices from './components/Notices';
@@ -20,7 +21,7 @@ import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
 import { applyColourScheme, applyUiTheme } from './lib/theme';
-import { applyInterface } from './lib/interfaceMode';
+import { applyInterface, interfaceMode } from './lib/interfaceMode';
 import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -83,7 +84,11 @@ export class Renderer {
         // window can be skipped — a loaded game is not a new one.
         pendingLoad = await takePendingSave(),
         pendingSave = pendingLoad === null ? null : pendingLoad.data,
-        mainMenu = new MainMenu(elements.mainMenuElement, this.#transport),
+        // The new interface's list, or the classic menu (#749).
+        mainMenu = new (interfaceMode() === 'new' ? TitleMenu : MainMenu)(
+          elements.mainMenuElement,
+          this.#transport
+        ),
         // Units whose GoTo stopped next to a choice (#357).
         haltedUnits = new HaltedUnits();
 
@@ -127,15 +132,22 @@ export class Renderer {
       // Saves are kept in the browser (#653), and downloaded from Load Game. One the browser won't keep is downloaded
       //  now instead, so it isn't lost.
       transportDisposers.push(
-        transport.receive('saveGame', ({ name, data }): void => {
+        transport.receive('saveGame', ({ name, data, details }): void => {
           saveFile(data)
             .then(async (file: Blob): Promise<void> => {
               let refused: Error | null = null;
 
               if (
-                await keepSave(name, file, 'player', (error: Error): void => {
-                  refused = error;
-                })
+                await keepSave(
+                  name,
+                  file,
+                  'player',
+                  (error: Error): void => {
+                    refused = error;
+                  },
+                  undefined,
+                  details ?? null
+                )
               ) {
                 notificationBar.show(t('SavedGame.saved', { name }));
 
@@ -161,13 +173,22 @@ export class Renderer {
       // A new game's first turn, and every few after (#653). Storage that is full or refused is said, and the game goes
       //  on.
       transportDisposers.push(
-        transport.receive('autosaveGame', ({ name, kind, data }): void => {
-          void keepSave(name, data, kind, (error: Error): void =>
-            notificationBar.show(
-              t('SavedGame.autosave-failed', { error: describe(error) })
-            )
-          );
-        })
+        transport.receive(
+          'autosaveGame',
+          ({ name, kind, data, details }): void => {
+            void keepSave(
+              name,
+              data,
+              kind,
+              (error: Error): void =>
+                notificationBar.show(
+                  t('SavedGame.autosave-failed', { error: describe(error) })
+                ),
+              undefined,
+              details ?? null
+            );
+          }
+        )
       );
 
       transportDisposers.push(notificationBar.listen(transport));

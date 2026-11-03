@@ -1,0 +1,366 @@
+// The main menu under the new interface (#749): Continue leads when the browser holds a save, named for its
+//  civilization and year when the save says them and by its name when it's older, with when it was kept beneath; the
+//  items for a game only once the assets are imported, and Import assets only until then; each item's key, but not
+//  while a window is open or with a modifier, and none once the menu has gone; the version and release notes under
+//  them. New Game offers Customise… first, and Options opens with no game, with the Assets row.
+//
+// Run over the fake store (`tools/saved-game.js`), for the saves Continue reads.
+
+// Must stay first: `Window.ts` reads `document.body` as it loads.
+import { document } from './lib/dom';
+
+import TitleMenu, {
+  continueDetail,
+  continueLabel,
+  newestSave,
+} from '../../src/js/UI/components/TitleMenu';
+import {
+  BrowserSave,
+  keepSave,
+  listSaves,
+} from '../../src/js/UI/lib/browserSaves';
+import Transport from '../../src/js/UI/Transport';
+import addFormatters from '../../src/js/UI/app/i18nFormatters';
+import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
+import { askNewGame } from '../../src/js/UI/components/newGame';
+import { assetStore } from '../../src/js/UI/AssetStore';
+import i18next from 'i18next';
+import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import { resetStore } from './lib/FakeStore';
+
+const failures: string[] = [];
+let checks = 0,
+  finished = false;
+
+const expect = (description: string, actual: unknown, expected: unknown) => {
+  checks++;
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    failures.push(
+      `${description}\n    expected: ${JSON.stringify(
+        expected
+      )}\n    actual:   ${JSON.stringify(actual)}`
+    );
+  }
+};
+
+// A suite that stops before its checks would otherwise pass in silence (#473).
+process.on('exit', (code: number): void => {
+  if (code === 0 && !finished) {
+    process.stderr.write(`FAIL titleMenu: stopped after ${checks} checks\n`);
+    process.exitCode = 1;
+  }
+});
+
+Object.defineProperty(globalThis, 'navigator', {
+  configurable: true,
+  value: {
+    storage: {
+      persisted: async (): Promise<boolean> => false,
+      persist: async (): Promise<boolean> => true,
+    },
+  },
+});
+
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 5; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
+
+const transport = {
+  send: (): void => {},
+  receive: (): (() => void) => () => {},
+  request: async (): Promise<never> => new Promise<never>(() => {}),
+} as unknown as Transport;
+
+let hasAssets = true;
+
+assetStore.hasAllAssets = async (): Promise<boolean> => hasAssets;
+assetStore.importedCount = async (): Promise<number> => (hasAssets ? 289 : 0);
+
+// The shim's `KeyboardEvent` takes only `key` (`lib/dom.ts`): the modifiers are set on it.
+const key = (key: string, modifiers: { ctrlKey?: boolean } = {}): void => {
+  const event = new (globalThis as any).KeyboardEvent('keydown', {
+    key,
+    bubbles: true,
+  });
+
+  Object.assign(event, modifiers);
+  document.body.dispatchEvent(event);
+};
+
+const closeWindows = (): void =>
+  document
+    .querySelectorAll('dialog')
+    .forEach((dialog: Element) => dialog.remove());
+
+const openMenu = async (): Promise<{
+  menu: TitleMenu;
+  element: HTMLElement;
+}> => {
+  document.body.innerHTML = '';
+
+  const element = document.createElement('div');
+
+  element.id = 'mainmenu';
+  document.body.append(element);
+
+  const menu = new TitleMenu(element, transport);
+
+  await settle();
+
+  return { menu, element };
+};
+
+const items = (element: HTMLElement): string[] =>
+  Array.from(element.querySelectorAll('.ui-title-menu-item')).map(
+    (item) => (item as HTMLElement).dataset.item ?? ''
+  );
+
+const save = (
+  savedAt: number,
+  kind: BrowserSave['kind'],
+  details?: BrowserSave['details']
+): BrowserSave => ({
+  name: `save ${savedAt}`,
+  savedAt,
+  kind,
+  data: new Blob(['']),
+  ...(details === undefined ? {} : { details }),
+});
+
+(async (): Promise<void> => {
+  await i18next.init({ ...i18nOptions, lng: 'en' });
+  addFormatters(i18next);
+  await import('../../translations/local/en');
+  await import('../../translations/civ1-civilization/en');
+  applyInterface('new', null);
+  resetStore();
+
+  // No save: the items for a game, and no Continue or Import assets.
+  {
+    const { menu, element } = await openMenu();
+
+    expect('with no save, the menu starts at New game', items(element), [
+      'new-game',
+      'earth',
+      'load-game',
+      'hall-of-fame',
+      'options',
+    ]);
+    expect(
+      'each item shows its key',
+      Array.from(element.querySelectorAll('.ui-title-menu-item .key')).map(
+        (key) => key.textContent
+      ),
+      ['N', 'E', 'L', 'H', 'O']
+    );
+    expect(
+      'and has it as its shortcut',
+      element
+        .querySelector('[data-item="new-game"]')
+        ?.getAttribute('aria-keyshortcuts'),
+      'N'
+    );
+    expect(
+      'the footer has the version and the release notes',
+      [
+        element.querySelector('.ui-title-menu-footer span')?.textContent ?? '',
+        element.querySelector('.ui-title-menu-link')?.textContent,
+      ].map((text) => (text ?? '').replace(/v\d.*/, 'v…')),
+      ['civ.one v…', 'Release notes']
+    );
+
+    // New Game: Customise… first, then the sizes.
+    key('n');
+    await settle();
+
+    const rows = Array.from(
+      document.querySelectorAll('dialog[open] .ui-choice-name')
+    ).map((row) => row.textContent);
+
+    expect('New game offers Customize… first', rows[0], 'Customize…');
+    expect('then the sizes', rows.length > 1, true);
+
+    closeWindows();
+
+    // The classic menu's New Game, which has its own Customize… button, asks only the sizes.
+    askNewGame(transport);
+    await settle();
+
+    expect(
+      'without Customise, only the sizes',
+      document
+        .querySelector('dialog[open] .ui-choice-name')
+        ?.textContent?.startsWith('Tiny'),
+      true
+    );
+
+    closeWindows();
+
+    // Options, with no game: the Assets row says how many are imported.
+    key('o');
+    await settle();
+
+    const options = document.querySelector('dialog.game-options');
+
+    expect('O opens Options with no game', options !== null, true);
+    expect(
+      'whose Assets row says what is imported',
+      options?.querySelector('.assets .status')?.textContent,
+      'Civilization assets imported · 289 sprites'
+    );
+    expect(
+      'and has Import assets',
+      options?.querySelector('.assets button')?.textContent,
+      'Import assets'
+    );
+
+    // A window open over the menu has the keys.
+    key('l');
+
+    expect(
+      'no key works while a window is open',
+      document.querySelectorAll('dialog').length,
+      1
+    );
+
+    closeWindows();
+
+    key('o', { ctrlKey: true });
+
+    expect(
+      'nor with a modifier',
+      document.querySelectorAll('dialog').length,
+      0
+    );
+
+    menu.remove();
+    key('o');
+
+    expect(
+      'nor once the menu has gone',
+      document.querySelectorAll('dialog').length,
+      0
+    );
+  }
+
+  // No assets: only what works without them, and Import assets.
+  {
+    hasAssets = false;
+
+    await keepSave('kept', new Blob(['']), 'autosave', () => {});
+
+    const { element } = await openMenu();
+
+    expect(
+      'without the assets, no game items, Continue included, and Import assets',
+      items(element),
+      ['hall-of-fame', 'options', 'import-assets']
+    );
+
+    key('o');
+    await settle();
+
+    expect(
+      'Options says nothing is imported',
+      document.querySelector('dialog.game-options .assets .status')
+        ?.textContent,
+      'Not imported'
+    );
+
+    closeWindows();
+    hasAssets = true;
+    resetStore();
+  }
+
+  // A save: Continue leads, named for what the save is of.
+  {
+    await keepSave(
+      'The Mongols, turn 200, 2026-11-03',
+      new Blob(['']),
+      'autosave',
+      () => {},
+      () => Date.now() - 3 * 60 * 60 * 1000,
+      { civilization: 'Mongol', turn: 200, year: 1945 }
+    );
+
+    expect('the save keeps what it is of', (await listSaves())[0].details, {
+      civilization: 'Mongol',
+      turn: 200,
+      year: 1945,
+    });
+
+    const { element } = await openMenu(),
+      continueItem = element.querySelector('[data-item="continue"]');
+
+    expect('with a save, Continue leads', items(element)[0], 'continue');
+    expect(
+      'named for its civilization and year',
+      continueItem?.querySelector('.label')?.textContent,
+      'Continue · Mongols · 1945 CE'
+    );
+    expect(
+      'with when it was kept beneath',
+      continueItem?.querySelector('.detail')?.textContent,
+      'Autosaved 3 hours ago'
+    );
+    expect(
+      'and C for its key',
+      continueItem?.querySelector('.key')?.textContent,
+      'C'
+    );
+
+    resetStore();
+  }
+
+  // What Continue says, for each kind of save and one from before #749.
+  expect(
+    'a save from before says its name',
+    continueLabel(save(1, 'player')),
+    'Continue · save 1'
+  );
+  expect(
+    'a BCE year',
+    continueLabel(
+      save(1, 'player', { civilization: 'Roman', turn: 5, year: -3800 })
+    ),
+    'Continue · Romans · 3800 BCE'
+  );
+  expect(
+    'the player saved it',
+    continueDetail({
+      ...save(1, 'player'),
+      savedAt: Date.now() - 2 * 86400000,
+    }),
+    'Saved 2 days ago'
+  );
+  expect(
+    'a game as it started',
+    continueDetail({ ...save(1, 'start'), savedAt: Date.now() }),
+    'Started just now'
+  );
+
+  // The newest save, the autosave or the player's.
+  expect(
+    'the newest save is the one Continue loads',
+    newestSave([save(2, 'autosave'), save(5, 'player'), save(3, 'start')])
+      ?.savedAt,
+    5
+  );
+  expect('with none, nothing', newestSave([]), null);
+
+  finished = true;
+
+  if (failures.length) {
+    process.stderr.write(
+      `FAIL titleMenu\n${failures
+        .map((failure) => `  ${failure}`)
+        .join('\n')}\n`
+    );
+    process.exit(1);
+  }
+
+  console.log(`PASS titleMenu (${checks} checks)`);
+})();

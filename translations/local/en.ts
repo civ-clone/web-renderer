@@ -411,6 +411,13 @@ i18next.addResources('en', 'default', {
 
   'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
+  // The new interface's Assets row (#749): whether the tileset's sprites are imported, and the import.
+  'GameOptions.assets': 'Assets',
+  'GameOptions.assets-checking': 'Checking…',
+  'GameOptions.assets-imported':
+    '{{tileset}} assets imported · {{count, number}} sprites',
+  'GameOptions.assets-missing': 'Not imported',
+  'GameOptions.import-assets': '$t(ImportAssetsWindow.title)',
   'GameOptions.autosave': 'Autosave',
   'GameOptions.autosave-choice.10': 'Game start, then every 10 turns',
   'GameOptions.autosave-choice.20': 'Game start, then every 20 turns',
@@ -528,6 +535,10 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.civilizations_other': '{{count}} civilizations',
   'NewGameWindow.map-grid': 'Which map grid?',
   'NewGameWindow.world-size': 'How big a world?',
+  // New Game's first row under the new interface (#749): the game setup, for everything the questions don't ask.
+  'NewGameWindow.customize': 'Customize…',
+  'NewGameWindow.customize-meta':
+    'Choose the civilizations, seats, rules and the exact world',
   'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.small': 'Small ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.normal': 'Normal ({{width}} × {{height}})',
@@ -841,6 +852,30 @@ i18next.addResources('en', 'default', {
   'TradeRoute.goods.Spice': 'Spice',
   'TradeRoute.keep-moving': 'Keep moving',
   'TradeRoute.will-you': 'Will you?',
+
+  // The main menu under the new interface (#749).
+  'TitleMenu.label': 'Main menu',
+  'TitleMenu.continue-game': 'Continue · {{- civilization}} · {{year}}',
+  'TitleMenu.continue-named': 'Continue · {{- name}}',
+  'TitleMenu.kept.autosave': 'Autosaved {{when}}',
+  'TitleMenu.kept.player': 'Saved {{when}}',
+  'TitleMenu.kept.start': 'Started {{when}}',
+  'TitleMenu.new-game': 'New game',
+  'TitleMenu.earth': 'Play Earth',
+  'TitleMenu.load-game': 'Load game',
+  'TitleMenu.hall-of-fame': 'Hall of fame',
+  'TitleMenu.options': 'Options',
+  'TitleMenu.import-assets': 'Import assets',
+  // Each item's key, a letter of its name.
+  'TitleMenu.key.continue': 'C',
+  'TitleMenu.key.new-game': 'N',
+  'TitleMenu.key.earth': 'E',
+  'TitleMenu.key.load-game': 'L',
+  'TitleMenu.key.hall-of-fame': 'H',
+  'TitleMenu.key.options': 'O',
+  'TitleMenu.key.import-assets': 'I',
+  'TitleMenu.version': 'civ.one v{{version}}',
+  'TitleMenu.release-notes': 'Release notes',
 
   'TradeReport.anarchy':
     'No taxes are collected and no upkeep is paid during Anarchy.',

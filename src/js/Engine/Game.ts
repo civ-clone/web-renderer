@@ -3,7 +3,7 @@ import DataTransferClient from './DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import Transport from './Transport';
+import Transport, { SaveDetails } from './Transport';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -114,9 +114,11 @@ export class Game implements IGame {
       ({
         name,
         autosave,
+        details,
       }: {
         name: string;
         autosave?: 'start' | 'autosave';
+        details?: SaveDetails;
       }): void => {
         let data: string;
 
@@ -149,7 +151,7 @@ export class Game implements IGame {
         }
 
         if (autosave === undefined) {
-          this.#transport.send('saveGame', { name, data });
+          this.#transport.send('saveGame', { name, data, details });
 
           return;
         }
@@ -177,6 +179,7 @@ export class Game implements IGame {
               name,
               kind: autosave,
               data: blob,
+              details,
             })
           )
           .catch((error: Error): void =>
