@@ -79,8 +79,8 @@ export type IntelligenceRow = {
   atPeace: boolean;
   // Whether they hold an embassy with the player.
   theirEmbassy: boolean;
-  // The year of the first dealings between the two (the first contact, as a rule), or `null` for none: met only by
-  //  seeing a city.
+  // The year of the first dealings between the two, or `null` for none: met only by seeing a city. Units meeting
+  //  register a `Contact` as they meet, before any talks, so a first meeting has its year.
   firstMet: number | null;
   // Only for a civilization the player holds an embassy with.
   details: IntelligenceDetails | null;

@@ -234,13 +234,15 @@ export class MeetingWindow extends Window {
 
     // Ahead of the window's own keys, which take every key pressed in it.
     this.on('keydown', (event: KeyboardEvent) => {
-      if (
-        event.repeat ||
-        event.isComposing ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey
-      ) {
+      // A key held down answers one step, not every step after it: each window focuses its default, which the
+      //  browser would otherwise press again.
+      if (event.repeat) {
+        event.preventDefault();
+
+        return;
+      }
+
+      if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) {
         return;
       }
 

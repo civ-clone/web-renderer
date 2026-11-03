@@ -9,7 +9,9 @@
 import { document } from './lib/dom';
 
 import ChoiceHandler from '../../src/js/UI/app/ChoiceHandler';
-import DebugFlags from '../../src/js/UI/debug/DebugFlags';
+import DebugFlags, {
+  StressRunnerHandle,
+} from '../../src/js/UI/debug/DebugFlags';
 import { IntelligenceRow } from '../../src/js/Engine/lib/intelligence';
 import Transport from '../../src/js/UI/Transport';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
@@ -101,10 +103,11 @@ const sent: unknown[] = [],
     send: (name: string, data: unknown) => sent.push([name, data]),
   } as unknown as Transport;
 
-const dispose = ChoiceHandler.listen(transport, {
-  clearKeys: () => {},
-  debugFlags: new DebugFlags(false),
-});
+const debugFlags = new DebugFlags(false),
+  dispose = ChoiceHandler.listen(transport, {
+    clearKeys: () => {},
+    debugFlags,
+  });
 
 const action = (_: string, kinds: string[], fields: object) => ({
     _,
@@ -439,6 +442,62 @@ const run = async (): Promise<void> => {
   expect('a click sends that reply, and only once', sent, [
     ['chooseFromList', 'pay'],
   ]);
+
+  // A key held down answers one step, not the next one too.
+  reset();
+  step(demanded, [
+    ['refuse', answer('Decline', demand)],
+    ['pay', answer('Accept', demand)],
+  ]);
+
+  for (const name of ['Enter', '2']) {
+    const held = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: name,
+    });
+
+    // linkedom's events don't take `repeat` from their options.
+    Object.defineProperty(held, 'repeat', { value: true });
+    top().dispatchEvent(held);
+  }
+
+  expect(
+    'a held key repeating chooses nothing',
+    [open().length, sent],
+    [1, []]
+  );
+
+  // With the `?debug=1` stress runner on, it answers: a reply chosen meanwhile doesn't send a second answer.
+  const handed: string[] = [];
+
+  debugFlags.uiStressRunner = {
+    automateChoice: (
+      _window: { close(): void },
+      choiceId: string,
+      onChoose: (choiceId: string) => void
+    ) => {
+      handed.push(choiceId);
+      onChoose(choiceId);
+    },
+    isAutomatingChoice: () => false,
+  } as unknown as StressRunnerHandle;
+  debugFlags.stressUiWindowsEnabled = true;
+
+  reset();
+  step(demanded, [
+    ['refuse', answer('Decline', demand)],
+    ['pay', answer('Accept', demand)],
+  ]);
+  key('2');
+
+  expect(
+    'the stress runner sends the one answer, the engine first',
+    [handed, sent],
+    [['refuse'], [['chooseFromList', 'refuse']]]
+  );
+
+  debugFlags.uiStressRunner = null;
 
   // Intelligence that isn't answered leaves the strip with the names alone, and the talks go on.
   const { RequestFailed } = await import(

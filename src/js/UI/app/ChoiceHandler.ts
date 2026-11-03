@@ -155,7 +155,12 @@ export const ChoiceHandler = {
                 label: interactionLabel(value as Interactions, true),
                 leave: instanceOf(value as Interactions, 'Terminate'),
               })),
-              onChoose: (choice) => transport.send('chooseFromList', choice),
+              // The stress runner sends its own answer, whatever is chosen in the window meanwhile.
+              onChoose: (choice) => {
+                if (!debugFlags.uiStressRunner) {
+                  transport.send('chooseFromList', choice);
+                }
+              },
               intelligence: transport.request(new Intelligence()),
             }
           );
