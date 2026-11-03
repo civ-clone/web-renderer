@@ -52,6 +52,7 @@ if (!('open' in DialogElement.prototype)) {
   'HTMLImageElement',
   'HTMLCanvasElement',
   'HTMLInputElement',
+  'HTMLButtonElement',
   'Event',
   'CustomEvent',
   'KeyboardEvent',

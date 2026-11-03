@@ -35,6 +35,7 @@ i18next.addResources('en-GB', 'default', {
   'UnitCard.defence-bonus.title': 'Defence bonus',
 
   'GameSetup.civilization': 'Civilisation',
+  'GameSetup.difficulty-summary.Prince': 'A fair game for a practised player.',
 
   'ResumeGame.intro':
     'Who plays each civilisation? Take over a computer seat, or hand yours to the computer, before the game goes on.',
