@@ -572,6 +572,19 @@ expect(
   [true, 1]
 );
 
+// Whether the minimap, drawn now, marks the unit awaiting orders' square.
+const minimapMarks = (): boolean => {
+  const { x, y } = activeUnit!.tile,
+    size = mapView.overviewLayer.canvas().width / width;
+
+  minimapFills.length = 0;
+  mapView.minimap.update();
+
+  return minimapFills.some(
+    ([left, top]) => left === x * size && top === y * size
+  );
+};
+
 // `t` hides the unit awaiting orders and its ring with the other units, in every way of marking it, so the square under
 //  it can be seen (#804); and brings them back.
 for (const marker of ['ring', 'both', 'blink'] as const) {
@@ -584,6 +597,11 @@ for (const marker of ['ring', 'both', 'blink'] as const) {
     [mapView.activeUnitLayer.isVisible(), rings()],
     [false, []]
   );
+  expect(
+    `${marker}: but the minimap, an overview, still marks it`,
+    minimapMarks(),
+    true
+  );
 
   counted();
   tick();
@@ -594,6 +612,7 @@ for (const marker of ['ring', 'both', 'blink'] as const) {
     [mapView.activeUnitLayer.isVisible(), rings(), counted()[0]],
     [false, [], 0]
   );
+  expect(`${marker}: and the minimap's marker steady`, minimapMarks(), true);
 
   mapView.toggleUnits();
 

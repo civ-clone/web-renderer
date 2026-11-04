@@ -160,11 +160,15 @@ export class MapView {
       overviewMap,
       // The marker shares the main map's blink phase, so the active
       // unit can be found on the minimap and clicked to centre
-      // without reaching for the keyboard.
+      // without reaching for the keyboard. With the units hidden (`t`)
+      // there's no blink, and the minimap, an overview whatever the map
+      // shows, marks it throughout (#804).
       () => {
         const unit = activeUnit();
 
-        return unit && activeUnitsMap.isVisible() ? unit.tile : null;
+        return unit && (!this.#unitsShown || activeUnitsMap.isVisible())
+          ? unit.tile
+          : null;
       }
     );
 
@@ -324,6 +328,9 @@ export class MapView {
     this.#placeMarker();
 
     this.portal.render();
+    // Its marker steady while they're hidden, and blinking again once they're not: in the blink, nothing else would
+    //  redraw it.
+    this.minimap.update();
   }
 
   /** Shows or hides the yields (`y`). */
