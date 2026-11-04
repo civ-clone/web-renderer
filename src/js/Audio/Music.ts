@@ -138,7 +138,7 @@ export class Music {
     }
   }
 
-  /** Applies the volume option as it is now: at once, and with the context suspended while it's off. */
+  /** Applies the volume option as it is now: at once, and with the context suspended while it's off or nothing's wanted. */
   volumeChanged(): void {
     const gain = this.#gain();
 
@@ -156,7 +156,9 @@ export class Music {
 
     if (gain === 0) {
       this.#suspend();
-    } else {
+    } else if (this.#wanted !== null) {
+      // With no tune wanted (after a fade, the context let go of), there's nothing to turn up: the next tune resumes
+      //  it.
       this.#resume();
     }
   }
@@ -269,6 +271,11 @@ export class Music {
 
         if (this.#wanted !== null) {
           this.#post({ play: this.#wanted });
+        }
+
+        // Turned off while the module loaded: the context started in the gesture has nothing to play yet.
+        if (this.#gain() === 0) {
+          this.#suspend();
         }
 
         return true;

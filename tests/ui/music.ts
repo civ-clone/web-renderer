@@ -315,9 +315,45 @@ const run = async (): Promise<void> => {
     await settle();
 
     expect(
-      'on again resumes',
+      'on again with no tune wanted posts it, and leaves the context suspended',
       [sent(stub).pop(), context.state],
-      [{ volume: 1 }, 'running']
+      [{ volume: 1 }, 'suspended']
+    );
+
+    music.play(3);
+    gain.value = 0;
+    music.volumeChanged();
+    gain.value = 0.5;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'on again with a tune wanted resumes',
+      [sent(stub).pop(), context.state],
+      [{ volume: 0.5 }, 'running']
+    );
+  }
+
+  // Turned off while the worklet's module loads: the context started in the gesture is suspended once it has.
+  {
+    const { stub, music, gesture, gain } = player();
+
+    await music.init();
+    music.play(3);
+    // The gesture starts the context and the load at once; the volume goes to 0 before the load has finished.
+    const started = gesture();
+
+    gain.value = 0;
+    music.volumeChanged();
+    await started;
+    await settle();
+
+    const [context] = stub.contexts;
+
+    expect(
+      'off during the load: the volume posted is 0, and the context suspended',
+      [sent(stub).find((message) => 'volume' in message), context.state],
+      [{ volume: 0 }, 'suspended']
     );
   }
 

@@ -122,6 +122,9 @@ class MusicProcessor extends AudioWorkletProcessor {
 
     if (typeof data.volume === 'number') {
       this.targetGain = Math.min(1, Math.max(0, data.volume));
+      // Watched for silence again: a context resumed for the change is let go of once it's quiet.
+      this.silentFrames = 0;
+      this.idle = false;
     }
 
     if (data.play && this.driver) {
