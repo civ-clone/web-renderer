@@ -20,6 +20,9 @@
 import Image, { PATCH_SIZE, PATCH_TABLE } from './Image';
 import TUNES, { Arrangement } from './tunes';
 
+// Commands a voice may run in one tick before a note: far more than any of the file's tunes uses (see tickVoice).
+const MAX_COMMANDS = 4096;
+
 export interface RegisterWrite {
   tick: number;
   sub: number;
@@ -303,12 +306,30 @@ export class Driver {
     // with no command in front, the original reads whatever the previous voice tick left there;
     // the same frame is reused, so it lives on the instance.
     if (V.dur === 0) {
+      // The original runs commands until a note, however many and wherever they lead. The file's own tunes reach a
+      //  note within a few, so a stream that doesn't, or runs off the data segment, is a damaged file: it would hang
+      //  the caller, so it throws instead.
+      let commands = 0;
+
       for (;;) {
-        const pos = V.pos,
-          b = ds[pos];
+        const pos = V.pos;
+
+        if (pos + 3 > ds.length) {
+          throw new RangeError(
+            `ASOUND.CVL: voice ${v}'s stream runs past the data segment`
+          );
+        }
+
+        const b = ds[pos];
 
         if (b < 0xf3) {
           break;
+        }
+
+        if (++commands > MAX_COMMANDS) {
+          throw new RangeError(
+            `ASOUND.CVL: voice ${v}'s stream reaches no note`
+          );
         }
 
         this.volflag = 0;
@@ -405,6 +426,12 @@ export class Driver {
           // random poke
           const n = s8(ds[pos + 1]),
             si = pos + 2;
+
+          if (si + n + 1 > ds.length) {
+            throw new RangeError(
+              `ASOUND.CVL: voice ${v}'s random choice runs past the data segment`
+            );
+          }
 
           this.rand();
 
