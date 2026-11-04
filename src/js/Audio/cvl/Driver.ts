@@ -11,9 +11,10 @@
 // 300 Hz interrupts of a tick while `soundWorker()` last returned 1 (until it
 // returns 0xffff); on the fifth, the fast worker runs before `soundWorker()`.
 // Each write is labelled with the tick it belongs to and a `sub`: 0 for writes
-// from `soundWorker()` (and from `play()`/`reset()`, labelled with the last
-// tick), and 1, 2, … for the fast worker's writes after that tick's
-// `soundWorker()`, one per call. A write's time is (5 × tick + sub) / 300 s
+// from `soundWorker()`, and 1, 2, … for the fast worker's writes after that
+// tick's `soundWorker()`, one per call. Writes from `play()`/`reset()` take the
+// last tick and the current `sub` (the fast worker's calls since that tick), so
+// they stay in order wherever they fall. A write's time is (5 × tick + sub) / 300 s
 // after the first tick, and writes come out in (tick, sub) order.
 
 import Image, { PATCH_SIZE, PATCH_TABLE } from './Image';
