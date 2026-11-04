@@ -24,6 +24,8 @@ export const setOptionDefaults = (): void => {
     colourScheme: 'system',
     // The classic interface or the new one (#735): see `INTERFACES`. Not offered in Options until there's more of it.
     interface: 'classic',
+    // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
+    unitMarker: 'theme',
   });
 };
 

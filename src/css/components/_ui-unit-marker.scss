@@ -1,0 +1,36 @@
+// The ring round the unit awaiting orders (#753), over the map's canvas: placed by `UnitMarker` on the unit's square,
+//  it pulses softly in the theme's colours on the theme's beat, opacity and scale only, so the map is never drawn again
+//  for it. Still with reduced motion, or in a theme with no motion.
+.ui-unit-markers {
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+}
+
+.ui-unit-marker {
+  border: 2px solid var(--ui-unit-ring);
+  border-radius: var(--ui-radius-control);
+  box-shadow: 0 0 0 2px var(--ui-unit-ring-halo),
+    0 0 10px var(--ui-unit-ring-glow);
+  box-sizing: border-box;
+  position: absolute;
+
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ui-unit-marker-pulse var(--ui-motion-pulse) var(--ui-ease)
+      infinite;
+  }
+}
+
+@keyframes ui-unit-marker-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}

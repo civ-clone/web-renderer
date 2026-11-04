@@ -228,6 +228,12 @@
   --ui-notification-motion-out: var(--ui-motion-base);
   --ui-section-motion: var(--ui-motion-slow);
   --ui-pulse-ring: color-mix(in srgb, var(--ui-accent) 60%, transparent);
+  // The unit awaiting orders (#753): a brass ring round its square, bright enough to read on any terrain, in light and
+  //  dark alike, as the map is the same in both. `blink`, `ring` or `both`; the player's choice in Options wins.
+  --ui-unit-marker: ring;
+  --ui-unit-ring: #e0b85a;
+  --ui-unit-ring-halo: rgba(224, 184, 90, 0.35);
+  --ui-unit-ring-glow: rgba(224, 184, 90, 0.55);
 
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;

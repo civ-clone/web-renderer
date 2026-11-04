@@ -2,6 +2,7 @@ import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
 import { COLOUR_SCHEMES, applyColourScheme } from '../lib/theme';
 import { IPortal } from './Portal';
 import Transport from '../Transport';
+import { UNIT_MARKER_CHOICES } from './Map/UnitMarker';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import Window from './Window';
 import { assetStore } from '../AssetStore';
@@ -163,6 +164,26 @@ export class GameOptions extends Window {
                 options.set('lockVerticalEdges', input.checked);
                 portal?.setLockVerticalEdges(input.checked);
               },
+            });
+          })()
+        ),
+        s(
+          `<label>${t('GameOptions.unit-marker')}</label>`,
+          (() => {
+            // How the unit awaiting orders is marked (#753), the theme's way unless one is chosen. The map reads it
+            //  at its next blink.
+            const current = options.get('unitMarker', 'theme'),
+              select = s<HTMLSelectElement>(
+                `<select>${UNIT_MARKER_CHOICES.map(
+                  (choice) =>
+                    `<option value="${choice}"${
+                      choice === current ? ' selected' : ''
+                    }>${t(`GameOptions.unit-marker-choice.${choice}`)}</option>`
+                ).join('')}</select>`
+              );
+
+            return h(select, {
+              change: () => options.set('unitMarker', select.value),
             });
           })()
         ),

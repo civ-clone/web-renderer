@@ -1,12 +1,16 @@
 import { IMap } from '../Map';
 import { Rect } from '../../lib/viewport';
 import Units from './Units';
+import { imageSize } from '../../lib/imageSize';
 
 export class ActiveUnit extends Units implements IMap {
   // This layer only ever holds the one unit, so it can clear just what it drew
   // last rather than the whole viewport, and tell the portal to recomposite
   // only that much when the blink turns it on and off.
   #drawn: Rect[] = [];
+  // Where the unit was drawn last, for the ring round it (#753): its sprite, which a tileset may draw smaller than the
+  //  square (Civ1's are a pixel short of it), so the ring is round the unit rather than off to one side of it.
+  #squares: Rect[] = [];
 
   render(): void {
     this.#drawn.forEach(({ x, y, width, height }) => {
@@ -16,6 +20,7 @@ export class ActiveUnit extends Units implements IMap {
     });
 
     this.#drawn = [];
+    this.#squares = [];
 
     const activeUnit = this.activeUnit(),
       activeTile = this.activeTile();
@@ -30,6 +35,12 @@ export class ActiveUnit extends Units implements IMap {
       reach = this.reach(),
       [stackX, stackY] = this.stackOffset(),
       image = this.renderUnit(activeUnit),
+      [imageWidth, imageHeight] = imageSize(image),
+      // A missing sprite has no size: the square, then.
+      [ringWidth, ringHeight] =
+        imageWidth > 0 && imageHeight > 0
+          ? [imageWidth * this.scale(), imageHeight * this.scale()]
+          : [width, height],
       // Not yet listed on a tile it is moving to, and still listed on its own.
       stacked = this.otherUnits(tile).length > 0;
 
@@ -53,6 +64,17 @@ export class ActiveUnit extends Units implements IMap {
       };
 
       this.#drawn.push(drawn);
+      // Round the stacked copy behind it too, where the tileset moves it out from under the unit.
+      const [backX, backY] = stacked ? [stackX, stackY] : [0, 0],
+        left = offsetX + Math.min(0, backX),
+        top = offsetY + Math.min(0, backY);
+
+      this.#squares.push({
+        x: left,
+        y: top,
+        width: offsetX + Math.max(0, backX) + ringWidth - left,
+        height: offsetY + Math.max(0, backY) + ringHeight - top,
+      });
 
       this.markDirty(drawn.x, drawn.y, drawn.width, drawn.height);
     });
@@ -60,6 +82,11 @@ export class ActiveUnit extends Units implements IMap {
 
   update(): void {
     this.render();
+  }
+
+  /** The unit's square on the canvas, once for each copy of it in view: none with no unit active. */
+  squares(): Rect[] {
+    return this.#squares.map((square) => ({ ...square }));
   }
 
   // The blink flips this layer on and off twice a second; all the portal has to
@@ -78,6 +105,7 @@ export class ActiveUnit extends Units implements IMap {
     this.clear();
 
     this.#drawn = [];
+    this.#squares = [];
 
     this.render();
   }

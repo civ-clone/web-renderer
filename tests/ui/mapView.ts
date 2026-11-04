@@ -11,6 +11,7 @@ import './lib/dom';
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
 import CityBanners from '../../src/js/UI/components/Map/CityBanners';
 import MapView from '../../src/js/UI/game/MapView';
+import { unitMarkerMode } from '../../src/js/UI/components/Map/UnitMarker';
 import { playerCityOpener } from '../../src/js/UI/lib/cityOpeners';
 import Transport from '../../src/js/UI/Transport';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
@@ -171,7 +172,9 @@ document.body.append(sidebar);
 });
 
 let activeUnit: Unit | null = null,
-  activeUnitReads = 0;
+  activeUnitReads = 0,
+  // The player's choice of how the unit awaiting orders is marked (#753): the theme's, until a test chooses.
+  unitMarker = 'theme';
 
 const mapView = new MapView({
   activateUnit: (unit) => activated.push(unit.id),
@@ -184,7 +187,10 @@ const mapView = new MapView({
   },
   mapPortal,
   minimapCanvas,
-  options: { get: (key: string, defaultValue?: any) => defaultValue },
+  options: {
+    get: (key: string, defaultValue?: any) =>
+      key === 'unitMarker' ? unitMarker : defaultValue,
+  },
   playerId: 'Player-1',
   transport: {
     send: () => {},
@@ -425,6 +431,155 @@ expect(
   true
 );
 expect('and, with no tile to draw, draws nothing', counted(), [0, 0]);
+
+// The mode: the player's choice, or the theme's for "the theme's way" (or a choice it doesn't know), or failing a theme
+//  that says, the blink.
+expect(
+  'the mode: chosen, or the theme’s, or the blink',
+  [
+    unitMarkerMode('both', () => 'ring'),
+    unitMarkerMode('theme', () => 'ring'),
+    unitMarkerMode('theme', () => 'both'),
+    unitMarkerMode('theme', () => ''),
+    unitMarkerMode('sparkle', () => 'nonsense'),
+  ],
+  ['both', 'ring', 'both', 'blink', 'blink']
+);
+
+// How the unit is marked (#753). The test's page has no theme, so the theme's way is the blink, as above, with no
+//  ring. A ring alone: the unit is drawn throughout, nothing is drawn again for it, and the ring is round its square.
+const rings = (): Array<[string, string, string, string]> =>
+  mapView.marker().element().hidden
+    ? []
+    : Array.from(mapView.marker().element().children).map((ring) => {
+        const { left, top, width, height } = (ring as HTMLElement).style;
+
+        return [left, top, width, height];
+      });
+
+// Where the layer last drew the unit, as it says once it has (`tests/ui/activeUnit.ts` checks it does): drawing a
+//  unit here would need its sprites.
+let drawnAt = [{ x: 64, y: 96, width: 32, height: 32 }];
+
+mapView.activeUnitLayer.squares = () => drawnAt;
+mapView.activeUnitLayer.setActiveUnit(activeUnit);
+mapView.activeUnitLayer.setVisible(true);
+portal.render();
+
+expect('the theme’s way, here the blink, draws no ring', rings(), []);
+
+const squares = mapView.activeUnitLayer.squares();
+
+expect('the unit’s square, once in view', squares.length, 1);
+
+unitMarker = 'ring';
+counted();
+tick();
+
+expect(
+  'a ring alone: the unit stays drawn, and the map isn’t drawn again (the minimap is, once, for the ring)',
+  [mapView.activeUnitLayer.isVisible(), counted()],
+  [true, [0, 1]]
+);
+expect(
+  'and the ring is round its square',
+  rings(),
+  squares.map(({ x, y, width, height }) => [
+    `${x}px`,
+    `${y}px`,
+    `${width}px`,
+    `${height}px`,
+  ])
+);
+
+tick();
+
+expect(
+  'nor at the next',
+  [mapView.activeUnitLayer.isVisible(), counted()],
+  [true, [0, 0]]
+);
+
+// Chosen while the blink had it hidden: drawn again at once, and kept.
+unitMarker = 'blink';
+tick();
+
+expect(
+  'back to the blink: it blinks, with no ring',
+  [mapView.activeUnitLayer.isVisible(), rings()],
+  [false, []]
+);
+
+unitMarker = 'ring';
+counted();
+tick();
+
+expect(
+  'a ring chosen with the unit blinked out draws it again, the minimap following the ring',
+  [mapView.activeUnitLayer.isVisible(), counted(), rings().length],
+  [true, [1, 2], 1]
+);
+
+// The map panned under the same unit: the ring moves, but the minimap's marker doesn't, and the portal's own
+//  `focus-changed` redraws the minimap for the pan.
+drawnAt = [{ x: 96, y: 96, width: 32, height: 32 }];
+counted();
+portal.render();
+
+expect(
+  'the ring following a pan doesn’t redraw the minimap',
+  [counted(), rings()[0]],
+  [
+    [1, 0],
+    ['96px', '96px', '32px', '32px'],
+  ]
+);
+
+// Another unit made active, with no blink to redraw the minimap: the ring moving does.
+activeUnit = { id: 'Unit-2', tile: tiles[12] } as unknown as Unit;
+drawnAt = [{ x: 128, y: 32, width: 32, height: 32 }];
+counted();
+portal.render();
+
+expect(
+  'the ring moving to another unit redraws the minimap',
+  [counted(), rings()[0]],
+  [
+    [1, 1],
+    ['128px', '32px', '32px', '32px'],
+  ]
+);
+
+counted();
+portal.render();
+
+expect('and not again, the ring where it was', counted(), [1, 0]);
+
+unitMarker = 'both';
+tick();
+
+expect(
+  'both: it blinks, ringed',
+  [mapView.activeUnitLayer.isVisible(), rings().length],
+  [false, 1]
+);
+
+tick();
+
+expect(
+  'and back, still ringed',
+  [mapView.activeUnitLayer.isVisible(), rings().length],
+  [true, 1]
+);
+
+mapView.activeUnitLayer.setActiveUnit(null);
+drawnAt = [];
+portal.render();
+
+expect('no unit awaiting orders, no ring', rings(), []);
+
+unitMarker = 'theme';
+mapView.activeUnitLayer.setVisible(true);
 
 // Resizing, and the teardown.
 
