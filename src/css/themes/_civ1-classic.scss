@@ -205,10 +205,19 @@
   --ui-table-hover: color-mix(in srgb, var(--ui-accent) 16%, transparent);
   --ui-table-rule: var(--ui-line);
   --ui-table-row-height: 2rem;
-  --ui-window-motion-in: 120ms;
-  --ui-window-motion-out: 80ms;
-  // A notification row sliding in (#416).
-  --ui-notification-motion-in: 160ms;
+  // Motion (#753): none, as Civ1 has none. The same tokens as slate's, every duration 0s.
+  --ui-motion-fast: 0s;
+  --ui-motion-base: 0s;
+  --ui-motion-slow: 0s;
+  --ui-motion-pulse: 0s;
+  --ui-ease: linear;
+  --ui-window-motion-in: var(--ui-motion-base);
+  --ui-window-motion-out: var(--ui-motion-fast);
+  --ui-notification-motion-in: var(--ui-motion-slow);
+  --ui-notification-motion-out: var(--ui-motion-base);
+  --ui-section-motion: var(--ui-motion-slow);
+  // Never seen with no pulse, but a theme drawing one has its colour here.
+  --ui-pulse-ring: var(--ui-glow);
 
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;

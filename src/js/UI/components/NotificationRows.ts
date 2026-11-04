@@ -32,6 +32,32 @@ type Group = {
 // Five rows, then the rest behind the "+N more" row.
 const shown = 5;
 
+// A row going, dismissed or no longer wanted, fades out where the theme moves it (#753), taking no input meanwhile, and
+//  leaves the page when it has. With no motion (the Civ1 set, reduced motion), it goes at once.
+const leavingClass = 'ui-notification-leaving';
+
+const leave = (row: HTMLElement): void => {
+  row.classList.add(leavingClass);
+  row.inert = true;
+
+  const style =
+      typeof getComputedStyle === 'function' ? getComputedStyle(row) : null,
+    moving =
+      !!style?.animationName &&
+      style.animationName !== 'none' &&
+      parseFloat(style.animationDuration || '0') > 0;
+
+  if (!moving) {
+    row.remove();
+
+    return;
+  }
+
+  row.addEventListener('animationend', () => row.remove(), { once: true });
+  // In a tab that's hidden the animation may never end.
+  setTimeout(() => row.remove(), 1000);
+};
+
 export class NotificationRows extends Element {
   #deps: NotificationRowsDeps;
   #expanded = false;
@@ -87,7 +113,7 @@ export class NotificationRows extends Element {
     Array.from(this.#rows.keys())
       .filter((key) => !visible.some((group) => group.key === key))
       .forEach((key) => {
-        this.#rows.get(key)!.remove();
+        leave(this.#rows.get(key)!);
         this.#rows.delete(key);
       });
 
@@ -101,10 +127,15 @@ export class NotificationRows extends Element {
       this.#more = null;
     }
 
-    // In order, moving only what has to move: a row put back in the page would slide in again.
+    // In order, moving only what has to move: a row put back in the page would slide in again. Rows still going are
+    //  left where they are.
     wanted.forEach((row, index) => {
-      if (element.children[index] !== row) {
-        element.insertBefore(row, element.children[index] ?? null);
+      const staying = Array.from(element.children).filter(
+        (child) => !child.classList.contains(leavingClass)
+      );
+
+      if (staying[index] !== row) {
+        element.insertBefore(row, staying[index] ?? null);
       }
     });
   }
@@ -199,7 +230,9 @@ export class NotificationRows extends Element {
 
       // Focus on to the row after it, or the one before, rather than lost with it.
       const rows = Array.from(
-          this.element().querySelectorAll<HTMLElement>('.ui-notification-row')
+          this.element().querySelectorAll<HTMLElement>(
+            `.ui-notification-row:not(.${leavingClass})`
+          )
         ),
         index = rows.indexOf(row),
         next = rows[index + 1] ?? rows[index - 1] ?? null,

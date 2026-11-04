@@ -88,7 +88,7 @@
   );
   --ui-orb-highlight: rgba(255, 255, 255, 0.25);
   // A short ease between states, and a little give when pressed (#703).
-  --ui-orb-motion: 100ms ease-out;
+  --ui-orb-motion: var(--ui-motion-fast) var(--ui-ease);
   --ui-orb-press: scale(0.94);
 
   // Buttons (#740): brass for the one primary action, a raised slate face for the rest, none for the quiet ones.
@@ -214,10 +214,20 @@
   --ui-table-hover: color-mix(in srgb, var(--ui-accent) 16%, transparent);
   --ui-table-rule: var(--ui-line);
   --ui-table-row-height: 2rem;
-  --ui-window-motion-in: 120ms;
-  --ui-window-motion-out: 80ms;
-  // A notification row sliding in (#416).
-  --ui-notification-motion-in: 160ms;
+  // Motion (#753): one short vocabulary of durations and an easing, which a theme can slow or remove. Each part's own
+  //  token is one of them: a window opening and closing, a notification row sliding in and going, a sidebar section
+  //  opening, and the Next Turn button's pulse while the turn is ready.
+  --ui-motion-fast: 80ms;
+  --ui-motion-base: 120ms;
+  --ui-motion-slow: 160ms;
+  --ui-motion-pulse: 1.6s;
+  --ui-ease: cubic-bezier(0.2, 0, 0, 1);
+  --ui-window-motion-in: var(--ui-motion-base);
+  --ui-window-motion-out: var(--ui-motion-fast);
+  --ui-notification-motion-in: var(--ui-motion-slow);
+  --ui-notification-motion-out: var(--ui-motion-base);
+  --ui-section-motion: var(--ui-motion-slow);
+  --ui-pulse-ring: color-mix(in srgb, var(--ui-accent) 60%, transparent);
 
   --ui-radius-control: 4px;
   --ui-radius-window: 6px;

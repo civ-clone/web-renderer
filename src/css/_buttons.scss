@@ -23,7 +23,7 @@
   line-height: normal;
   min-height: var(--ui-btn-height);
   padding: var(--ui-btn-padding);
-  transition: background-color 80ms;
+  transition: background-color var(--ui-motion-fast) var(--ui-ease);
 
   &:hover {
     background-color: var(--ui-btn-bg-hover);

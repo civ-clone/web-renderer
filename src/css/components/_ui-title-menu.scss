@@ -51,7 +51,8 @@
   width: 100%;
 
   @media (prefers-reduced-motion: no-preference) {
-    transition: background-color 150ms, color 150ms;
+    transition: background-color var(--ui-motion-slow) var(--ui-ease),
+      color var(--ui-motion-slow) var(--ui-ease);
   }
 
   .label {

@@ -41,13 +41,30 @@
 
   // A new row slides in from the right.
   @media (prefers-reduced-motion: no-preference) {
-    transition: opacity var(--ui-notification-motion-in),
-      transform var(--ui-notification-motion-in);
+    transition: opacity var(--ui-notification-motion-in) var(--ui-ease),
+      transform var(--ui-notification-motion-in) var(--ui-ease);
 
     @starting-style {
       opacity: 0;
       transform: translateX(1rem);
     }
+  }
+
+  // A row going, dismissed or no longer wanted, fades back to the right; it's taken out of the page when it has.
+  &.ui-notification-leaving {
+    pointer-events: none;
+
+    @media (prefers-reduced-motion: no-preference) {
+      animation: ui-notification-out var(--ui-notification-motion-out)
+        var(--ui-ease) forwards;
+    }
+  }
+}
+
+@keyframes ui-notification-out {
+  to {
+    opacity: 0;
+    transform: translateX(1rem);
   }
 }
 

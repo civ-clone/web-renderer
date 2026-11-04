@@ -82,6 +82,36 @@
   &.btn-primary[data-hotkey]::after {
     align-self: center;
   }
+
+  // Ready: a ring that comes and goes round it, so the end of the turn is seen without being looked for (#753). Only
+  //  its opacity changes, and it's outside the button's face, so nothing under it moves or is covered.
+  &.btn-primary {
+    position: relative;
+
+    &::before {
+      border-radius: inherit;
+      box-shadow: 0 0 0 3px var(--ui-pulse-ring);
+      content: '';
+      inset: -1px;
+      opacity: 0;
+      pointer-events: none;
+      position: absolute;
+    }
+
+    // Not once it's been pressed: the turn is ending, as the classic orb's glow stops.
+    @media (prefers-reduced-motion: no-preference) {
+      &:not(:disabled)::before {
+        animation: ui-next-turn-pulse var(--ui-motion-pulse) var(--ui-ease)
+          infinite;
+      }
+    }
+  }
+}
+
+@keyframes ui-next-turn-pulse {
+  50% {
+    opacity: 1;
+  }
 }
 
 .ui-next-turn-swatch {
