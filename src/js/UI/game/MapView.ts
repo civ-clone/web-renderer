@@ -160,11 +160,15 @@ export class MapView {
       overviewMap,
       // The marker shares the main map's blink phase, so the active
       // unit can be found on the minimap and clicked to centre
-      // without reaching for the keyboard.
+      // without reaching for the keyboard. With the units hidden (`t`)
+      // there's no blink, and the minimap, an overview whatever the map
+      // shows, marks it throughout (#804).
       () => {
         const unit = activeUnit();
 
-        return unit && activeUnitsMap.isVisible() ? unit.tile : null;
+        return unit && (!this.#unitsShown || activeUnitsMap.isVisible())
+          ? unit.tile
+          : null;
       }
     );
 
@@ -253,8 +257,11 @@ export class MapView {
   //  otherwise have redrawn. Panning moves the ring but not the unit, and the portal's `focus-changed` redraws the
   //  minimap for that.
   #placeMarker(): void {
+    // Not while the units are hidden (`t`), the unit awaiting orders with them (#804).
     const shown =
-      this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit();
+      this.#unitsShown &&
+      this.#mode !== 'blink' &&
+      this.activeUnitLayer.hasActiveUnit();
 
     this.#marker.place(this.activeUnitLayer.squares(), shown);
 
@@ -306,13 +313,24 @@ export class MapView {
 
   /** Shows or hides the units, cities and city names (`t`). */
   toggleUnits(): void {
-    this.#unitsShown = !this.#unitsShown;
+    this.#showUnits(!this.#unitsShown);
+  }
 
-    this.unitsLayer.setVisible(!this.unitsLayer.isVisible());
-    this.citiesLayer.setVisible(!this.citiesLayer.isVisible());
+  // The units, cities and city names, and the unit awaiting orders and its ring with them, so the square under it can
+  //  be seen (#804). Shown again, the unit blinks or is ringed as before.
+  #showUnits(shown: boolean): void {
+    this.#unitsShown = shown;
+
+    this.unitsLayer.setVisible(shown);
+    this.citiesLayer.setVisible(shown);
+    this.activeUnitLayer.setVisible(shown);
     this.#showCityNames();
+    this.#placeMarker();
 
     this.portal.render();
+    // Its marker steady while they're hidden, and blinking again once they're not: in the blink, nothing else would
+    //  redraw it.
+    this.minimap.update();
   }
 
   /** Shows or hides the yields (`y`). */
@@ -410,6 +428,12 @@ export class MapView {
   #tick(): void {
     const activeUnitsMap = this.activeUnitLayer;
 
+    // Hidden with `t`, and brought back since by the unit awaiting orders changing or moving, which shows the units
+    //  (`ActiveUnitController#render`): the cities, their names and the ring come back with them.
+    if (!this.#unitsShown && this.unitsLayer.isVisible()) {
+      this.#showUnits(true);
+    }
+
     // With no active unit the layer draws nothing, so toggling it is
     // invisible and there is no reason to composite every layer for
     // it. `ActiveUnitController#render` sets the layer visible again
@@ -417,7 +441,7 @@ export class MapView {
     // is safe.
     const mode = this.#markerMode(),
       changed = mode !== this.#mode,
-      hasActiveUnit = activeUnitsMap.hasActiveUnit(),
+      hasActiveUnit = activeUnitsMap.hasActiveUnit() && this.#unitsShown,
       // A ring alone marks the unit: it's drawn throughout, and only the ring moves (#753).
       blinking =
         hasActiveUnit && (mode !== 'ring' || !activeUnitsMap.isVisible());
