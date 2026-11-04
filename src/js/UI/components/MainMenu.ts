@@ -15,11 +15,18 @@ import { askEarth, askNewGame } from './newGame';
 
 export class MainMenu extends Element {
   #transport: Transport;
+  #onNewWorld: () => void;
 
-  constructor(element: HTMLElement, transport: Transport) {
+  /** `onNewWorld` is called as a new game's world starts to be made, just before the menu goes. */
+  constructor(
+    element: HTMLElement,
+    transport: Transport,
+    onNewWorld: () => void = (): void => {}
+  ) {
     super(element);
 
     this.#transport = transport;
+    this.#onNewWorld = onNewWorld;
 
     this.build();
 
@@ -49,7 +56,7 @@ export class MainMenu extends Element {
               ),
               {
                 click: () => {
-                  askNewGame(this.#transport, () => this.remove());
+                  askNewGame(this.#transport, () => this.#started());
                 },
               }
             ),
@@ -63,7 +70,7 @@ export class MainMenu extends Element {
                 // Not answered: the player has been told, and the menu is still here (#580).
                 click: () =>
                   GameSetupWindow.ask(this.#transport, () =>
-                    this.remove()
+                    this.#started()
                   ).catch(unlessRequestFailed),
               }
             )
@@ -75,7 +82,7 @@ export class MainMenu extends Element {
               )}</button>`
             ),
             {
-              click: () => askEarth(this.#transport, () => this.remove()),
+              click: () => askEarth(this.#transport, () => this.#started()),
             }
           ),
           h(
@@ -87,7 +94,7 @@ export class MainMenu extends Element {
             {
               // The same setup, with the world's exact size and land to hand (#605).
               click: () =>
-                GameSetupWindow.ask(this.#transport, () => this.remove(), {
+                GameSetupWindow.ask(this.#transport, () => this.#started(), {
                   advanced: true,
                 }).catch(unlessRequestFailed),
             }
@@ -165,6 +172,12 @@ export class MainMenu extends Element {
         )
       )
     );
+  }
+
+  // A new game's world is being made.
+  #started(): void {
+    this.#onNewWorld();
+    this.remove();
   }
 
   remove(): void {

@@ -1,0 +1,446 @@
+// The music player (src/js/Audio/Music.ts) with a stubbed AudioContext and worklet port (#126): nothing is made before
+// the player's first key or click, and then only with an ASOUND.CVL and the sound on; the worklet gets the CVL, the
+// volume and the tune asked for; stop is the driver's fade; and no CVL, no AudioWorklet, a module that won't load and a
+// context that won't start are all silent, with nothing in the console. `soundGain` turns the options into the gain.
+
+import Music, { MusicContext, MusicNode } from '../../src/js/Audio/Music';
+import soundGain from '../../src/js/UI/lib/soundGain';
+
+const failures: string[] = [];
+let checks = 0,
+  finished = false;
+
+const expect = (description: string, actual: unknown, expected: unknown) => {
+  checks++;
+
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    failures.push(
+      `${description}\n    expected: ${JSON.stringify(
+        expected
+      )}\n    actual:   ${JSON.stringify(actual)}`
+    );
+  }
+};
+
+// A suite that stops before its checks would otherwise pass in silence (#473).
+process.on('exit', (code: number): void => {
+  if (code === 0 && !finished) {
+    process.stderr.write(`FAIL music: stopped after ${checks} checks\n`);
+    process.exitCode = 1;
+  }
+});
+
+// Anything the player says in the console, which it should never.
+const said: string[] = [];
+
+(['error', 'warn', 'log', 'info'] as const).forEach((level) => {
+  console[level] = (...args: unknown[]) =>
+    said.push(`${level}: ${args.map(String).join(' ')}`);
+});
+
+const unhandled: unknown[] = [];
+
+process.on('unhandledRejection', (error) => unhandled.push(error));
+
+const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+interface Stub {
+  contexts: FakeContext[];
+  nodes: FakeNode[];
+  messages: any[];
+}
+
+class FakeContext implements MusicContext {
+  state = 'suspended';
+  destination = { destination: true };
+  modules: string[] = [];
+  resumes = 0;
+  suspends = 0;
+  audioWorklet?: { addModule(url: string): Promise<void> };
+
+  constructor(
+    { worklet = true, moduleFails = false, resumeFails = false } = {},
+    private readonly stub: Stub
+  ) {
+    this.resumeFails = resumeFails;
+
+    if (worklet) {
+      this.audioWorklet = {
+        addModule: (url: string): Promise<void> => {
+          this.modules.push(url);
+
+          return moduleFails
+            ? Promise.reject(new Error('The module could not be loaded.'))
+            : Promise.resolve();
+        },
+      };
+    }
+  }
+
+  private readonly resumeFails: boolean;
+
+  resume(): Promise<void> {
+    this.resumes++;
+
+    if (this.resumeFails) {
+      return Promise.reject(new Error('Not allowed to start.'));
+    }
+
+    this.state = 'running';
+
+    return Promise.resolve();
+  }
+
+  suspend(): Promise<void> {
+    this.suspends++;
+    this.state = 'suspended';
+
+    return Promise.resolve();
+  }
+}
+
+class FakeNode implements MusicNode {
+  connected: unknown[] = [];
+  port: MusicNode['port'];
+
+  constructor(private readonly stub: Stub) {
+    this.port = {
+      postMessage: (message: any) => stub.messages.push(message),
+      onmessage: null,
+    };
+  }
+
+  connect(destination: unknown): unknown {
+    this.connected.push(destination);
+
+    return destination;
+  }
+
+  reply(data: object): void {
+    this.port.onmessage?.({ data });
+  }
+}
+
+// A synthetic CVL's bytes: Music doesn't read them, it only passes them on.
+const cvl = new Uint8Array([0x4d, 0x5a, 1, 2, 3]).buffer;
+
+const player = ({
+  sound = cvl as ArrayBuffer | null,
+  gain = { value: 0.49 },
+  context = {} as {
+    worklet?: boolean;
+    moduleFails?: boolean;
+    resumeFails?: boolean;
+    throws?: boolean;
+    none?: boolean;
+  },
+} = {}) => {
+  const stub: Stub = { contexts: [], nodes: [], messages: [] },
+    gestures = new EventTarget(),
+    music = new Music({
+      sound: async () => sound,
+      gain: () => gain.value,
+      workletUrl: 'dist/musicWorklet.js?v=test',
+      gestureTarget: gestures,
+      createContext: () => {
+        if (context.throws) {
+          throw new Error('No audio device.');
+        }
+
+        if (context.none) {
+          return null;
+        }
+
+        const made = new FakeContext(context, stub);
+
+        stub.contexts.push(made);
+
+        return made;
+      },
+      createNode: () => {
+        const node = new FakeNode(stub);
+
+        stub.nodes.push(node);
+
+        return node;
+      },
+    }),
+    gesture = async (type = 'pointerdown') => {
+      gestures.dispatchEvent(new Event(type));
+      await settle();
+    };
+
+  return { stub, music, gesture, gain };
+};
+
+// Each message's kind and what it says, the CVL as its length.
+const sent = (stub: Stub) =>
+  stub.messages.map((message) =>
+    message.load ? { load: message.load.byteLength } : message
+  );
+
+const run = async (): Promise<void> => {
+  // With a CVL: nothing before the gesture, then the worklet, the CVL, the volume and the tune asked for.
+  {
+    const { stub, music, gesture } = player();
+
+    await music.init();
+    music.play(3);
+    await settle();
+
+    expect(
+      'before a gesture: no AudioContext is made',
+      stub.contexts.length,
+      0
+    );
+    expect('a CVL makes the music available', music.available, true);
+
+    await gesture();
+
+    const [context] = stub.contexts;
+
+    expect('the first gesture makes one context', stub.contexts.length, 1);
+    expect(
+      'and resumes it, inside the gesture',
+      [context.resumes > 0, context.state],
+      [true, 'running']
+    );
+    expect('the worklet module is loaded from its URL', context.modules, [
+      'dist/musicWorklet.js?v=test',
+    ]);
+    expect('the node is connected to the speakers', stub.nodes[0].connected, [
+      context.destination,
+    ]);
+    expect(
+      'the worklet is sent the CVL, then the volume, then the tune asked for before the gesture',
+      sent(stub),
+      [{ load: 5 }, { volume: 0.49 }, { play: { id: 3, level: 3 } }]
+    );
+
+    await gesture('keydown');
+    await gesture();
+
+    expect('later gestures make no more contexts', stub.contexts.length, 1);
+
+    stub.messages.length = 0;
+    music.play(4);
+    music.stop();
+    music.stop();
+
+    expect(
+      'play sends PlayTune; stop is PlayTune 1, the fade, sent once',
+      sent(stub),
+      [{ play: { id: 4, level: 3 } }, { play: { id: 1, level: 3 } }]
+    );
+
+    // Silent after the fade: the context is let go of. While a tune is wanted, it isn't (it may be resting).
+    stub.nodes[0].reply({ idle: true });
+
+    expect(
+      'idle after a fade suspends the context',
+      context.state,
+      'suspended'
+    );
+
+    music.play(3);
+    await settle();
+
+    expect(
+      'the next tune resumes it',
+      [context.state, sent(stub).pop()],
+      ['running', { play: { id: 3, level: 3 } }]
+    );
+
+    const suspends = context.suspends;
+
+    stub.nodes[0].reply({ idle: true });
+
+    expect(
+      'idle while a tune is wanted leaves it running',
+      [context.suspends, context.state],
+      [suspends, 'running']
+    );
+  }
+
+  // The volume: posted at once, and the context suspended while it's off.
+  {
+    const { stub, music, gesture, gain } = player();
+
+    await music.init();
+    await gesture();
+    await settle();
+    stub.messages.length = 0;
+
+    const [context] = stub.contexts;
+
+    gain.value = 0.25;
+    music.volumeChanged();
+
+    expect('a volume change is posted', sent(stub), [{ volume: 0.25 }]);
+
+    gain.value = 0;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'off posts 0 and suspends',
+      [sent(stub).pop(), context.state],
+      [{ volume: 0 }, 'suspended']
+    );
+
+    gain.value = 1;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'on again resumes',
+      [sent(stub).pop(), context.state],
+      [{ volume: 1 }, 'running']
+    );
+  }
+
+  // The sound off at the first gesture: nothing is made until it's turned on.
+  {
+    const { stub, music, gesture, gain } = player({ gain: { value: 0 } });
+
+    await music.init();
+    music.play(3);
+    await gesture();
+
+    expect('sound off: the gesture makes no context', stub.contexts.length, 0);
+
+    gain.value = 0.49;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'turned on: the context is made, and the wanted tune sent',
+      [stub.contexts.length, sent(stub).pop()],
+      [1, { play: { id: 3, level: 3 } }]
+    );
+  }
+
+  // No CVL: silent, as before.
+  {
+    const { stub, music, gesture } = player({ sound: null });
+
+    await music.init();
+    music.play(3);
+    await gesture();
+    music.volumeChanged();
+    music.stop();
+    await settle();
+
+    expect(
+      'no CVL: no context, nothing sent',
+      [stub.contexts.length, stub.messages.length, music.available],
+      [0, 0, false]
+    );
+  }
+
+  // A store that can't be read is as no CVL.
+  {
+    const music = new Music({
+      sound: async () => {
+        throw new Error('The database is blocked.');
+      },
+      gain: () => 1,
+      workletUrl: 'x',
+      gestureTarget: new EventTarget(),
+    });
+
+    await music.init();
+
+    expect('an unreadable store: not available', music.available, false);
+  }
+
+  // No AudioWorklet, no Web Audio, a context that throws, a module that won't load, a context that won't start: all
+  //  silent, and quiet.
+  for (const [description, context] of [
+    ['no AudioWorklet', { worklet: false }],
+    ['no Web Audio', { none: true }],
+    ['a context that throws', { throws: true }],
+    ['a module that will not load', { moduleFails: true }],
+    ['a context that will not start', { resumeFails: true }],
+  ] as const) {
+    const { stub, music, gesture } = player({ context });
+
+    await music.init();
+    music.play(3);
+    await gesture();
+    await settle();
+    music.play(4);
+    music.stop();
+    music.volumeChanged();
+    await settle();
+
+    const loaded = stub.nodes.length > 0;
+
+    expect(
+      `${description}: nothing goes wrong`,
+      [said.length, unhandled.length],
+      [0, 0]
+    );
+
+    if (description === 'a context that will not start') {
+      expect(`${description}: the tune is still sent`, loaded, true);
+    } else {
+      expect(
+        `${description}: no node, and not available`,
+        [loaded, music.available],
+        [false, false]
+      );
+    }
+  }
+
+  // The worklet can't read the CVL: as without one.
+  {
+    const { stub, music, gesture } = player();
+
+    await music.init();
+    await gesture();
+    await settle();
+    stub.nodes[0].reply({ error: 'ASOUND.CVL: not the AdLib driver' });
+
+    expect(
+      'a CVL the worklet refuses: not available, and quiet',
+      [music.available, stub.contexts[0].state, said.length],
+      [false, 'suspended', 0]
+    );
+  }
+
+  // The options as a gain: off is 0; the volume squared, as loudness goes.
+  expect(
+    'soundGain: off, 0, 50, 70, 100, out of range, not a number',
+    [
+      soundGain(false, 70),
+      soundGain(true, 0),
+      soundGain(true, 50),
+      soundGain(true, 70),
+      soundGain(true, 100),
+      soundGain(true, 150),
+      soundGain(true, '70'),
+    ],
+    [0, 0, 0.25, 0.48999999999999994, 1, 1, 0]
+  );
+
+  finished = true;
+
+  if (failures.length > 0) {
+    process.stderr.write(
+      `FAIL music: ${failures.length} of ${checks} checks\n  ${failures.join(
+        '\n  '
+      )}\n${said.length ? `  console: ${said.join('\n  ')}\n` : ''}`
+    );
+    process.exit(1);
+  }
+
+  process.stdout.write(`PASS music: ${checks} checks\n`);
+};
+
+run().catch((error) => {
+  process.stderr.write(
+    `FAIL music: ${error instanceof Error ? error.stack : error}\n`
+  );
+  process.exit(1);
+});

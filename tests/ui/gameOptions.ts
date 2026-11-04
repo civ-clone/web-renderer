@@ -172,6 +172,34 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
   );
 }
 
+{
+  // The sound (#126): on at 70 for a player who never changed it, and as they left it for one who did.
+  const fresh = memoryStorage();
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: fresh.storage,
+  });
+
+  setOptionDefaults();
+
+  expect(
+    'the sound is on at 70 by default (#126)',
+    [options.get('sound'), options.get('soundVolume')],
+    [true, 70]
+  );
+
+  options.set('sound', false);
+  options.set('soundVolume', 35);
+  setOptionDefaults();
+
+  expect(
+    'the sound and its volume survive a reload (#126)',
+    [options.get('sound'), options.get('soundVolume')],
+    [false, 35]
+  );
+}
+
 if (failures.length) {
   process.stderr.write(
     `FAIL gameOptions\n${failures

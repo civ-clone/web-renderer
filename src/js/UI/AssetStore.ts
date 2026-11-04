@@ -91,6 +91,12 @@ export const assetFromURI = async (
   blob: await (await fetch(uri)).blob(),
 });
 
+/**
+ * The key the player's ASOUND.CVL is kept under, as the file itself (#126): not a sprite, so it's never in the
+ *  tileset's counts.
+ */
+export const SOUND_DRIVER = './sources/ASOUND.CVL';
+
 export class AssetStore extends Store<{
   assets: {
     key: string;
@@ -317,6 +323,18 @@ export class AssetStore extends Store<{
     return [...this.#requiredAssets, ...this.#optionalAssets].filter((asset) =>
       dbAssets.has(asset)
     ).length;
+  }
+
+  /** The ASOUND.CVL the player imported, as its bytes, or null without one (#126). */
+  async soundDriver(): Promise<ArrayBuffer | null> {
+    const record: Asset | undefined = await super.get(SOUND_DRIVER);
+
+    return record?.blob ? record.blob.arrayBuffer() : null;
+  }
+
+  /** Whether an ASOUND.CVL has been imported, for Options to offer the volume. */
+  async hasSoundDriver(): Promise<boolean> {
+    return (await this.keys()).includes(SOUND_DRIVER);
   }
 
   async hasAllAssets(): Promise<boolean> {

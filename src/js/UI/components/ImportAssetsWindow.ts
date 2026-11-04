@@ -4,9 +4,10 @@ import {
   ImageMap,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
+import { Asset, SOUND_DRIVER, assetFromURI, assetStore } from '../AssetStore';
+import CvlImage from '../../Audio/cvl/Image';
 import Window from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
-import { assetFromURI, assetStore } from '../AssetStore';
 import { button } from '../lib/button';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import { h } from '../lib/html';
@@ -17,7 +18,10 @@ import { t } from 'i18next';
 const optionalFiles = (extractData as ExtractData).optional ?? [],
   requiredFiles = Object.keys(extractData.files).filter(
     (file) => !optionalFiles.includes(file)
-  );
+  ),
+  // Civilization's AdLib sound driver, kept as it is for the music (#126) rather than cut up.
+  soundFile = 'ASOUND.CVL',
+  isSoundFile = (file: File): boolean => file.name.toUpperCase() === soundFile;
 
 export class ImportAssetsWindow extends Window {
   // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
@@ -57,7 +61,9 @@ export class ImportAssetsWindow extends Window {
           optionalFiles.length
             ? ` ${t('ImportAssetsWindow.optional', { files: optionalFiles })}`
             : ''
-        }</p><div class="brave" ${
+        } ${t('ImportAssetsWindow.optional-sound', {
+          file: soundFile,
+        })}</p><div class="brave" ${
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
         }>${t('ImportAssetsWindow.brave')}</div></div>`,
@@ -109,9 +115,14 @@ export class ImportAssetsWindow extends Window {
       ) as File[],
       filenames: string[] = files.map((file: File) => file.name),
       expectedFilenames = requiredFiles,
-      expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i'));
+      expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i')),
+      // ASOUND.CVL alone is enough once the sprites are in (#126): the music can be added later.
+      addingSound =
+        files.some(isSoundFile) &&
+        (await assetStore.hasAllAssets().catch((): boolean => false));
 
     if (
+      !addingSound &&
       !expectedMatches.every((expectedMatch) =>
         filenames.some((filename) => filename.match(expectedMatch))
       )
@@ -169,15 +180,26 @@ export class ImportAssetsWindow extends Window {
       },
       wanted = (): boolean => extracting;
 
+    // ASOUND.CVL, checked before anything is cut up: kept as the file it is.
+    const sound = await this.#sound(files.find(isSoundFile));
+
     let results: ImageMap[];
 
     try {
       // Every file, read and its sprites extracted.
       results = (
         await Promise.all(
-          files.map((file) =>
-            this.#extract(file, existingKeys, replaceExisting, progress, wanted)
-          )
+          files
+            .filter((file) => !isSoundFile(file))
+            .map((file) =>
+              this.#extract(
+                file,
+                existingKeys,
+                replaceExisting,
+                progress,
+                wanted
+              )
+            )
         )
       ).flat();
     } finally {
@@ -190,9 +212,12 @@ export class ImportAssetsWindow extends Window {
 
     // ...and all results stored in IDB, in a single transaction, each as its PNG rather than the data URI the
     //  extractor gives (#730).
-    await assetStore.setAll(
-      await Promise.all(results.map(({ name, uri }) => assetFromURI(name, uri)))
-    );
+    await assetStore.setAll([
+      ...(await Promise.all(
+        results.map(({ name, uri }) => assetFromURI(name, uri))
+      )),
+      ...sound,
+    ]);
 
     if (!(await assetStore.hasAllAssets())) {
       console.error('Something went wrong...');
@@ -302,6 +327,35 @@ export class ImportAssetsWindow extends Window {
 
       reader.readAsBinaryString(file);
     });
+  }
+
+  /**
+   * ASOUND.CVL as a record to store, once `cvl/Image` has read it as the AdLib driver (#126), or nothing if it wasn't
+   *  chosen. Rejects, naming the file, when it isn't the driver.
+   */
+  async #sound(file: File | undefined): Promise<Asset[]> {
+    if (file === undefined) {
+      return [];
+    }
+
+    let bytes: ArrayBuffer;
+
+    try {
+      bytes = await file.arrayBuffer();
+      new CvlImage(bytes);
+    } catch (cause) {
+      throw Object.assign(
+        new Error(`${file.name} is not the AdLib sound driver`, { cause }),
+        { file: file.name }
+      ) as UnsupportedFile;
+    }
+
+    return [
+      {
+        name: SOUND_DRIVER,
+        blob: new Blob([bytes], { type: 'application/octet-stream' }),
+      },
+    ];
   }
 
   /** The names of the files chosen, as text beside the button (#739). */
