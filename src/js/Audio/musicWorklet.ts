@@ -116,9 +116,7 @@ class MusicProcessor extends AudioWorkletProcessor {
         this.fast = false;
         this.reply({ loaded: true });
       } catch (error) {
-        this.reply({
-          error: error instanceof Error ? error.message : String(error),
-        });
+        this.fail(error);
       }
     }
 
@@ -127,7 +125,12 @@ class MusicProcessor extends AudioWorkletProcessor {
     }
 
     if (data.play && this.driver) {
-      this.driver.play(data.play.id, data.play.level);
+      try {
+        this.driver.play(data.play.id, data.play.level);
+      } catch (error) {
+        this.fail(error);
+      }
+
       this.silentFrames = 0;
       this.idle = false;
     }
@@ -158,22 +161,37 @@ class MusicProcessor extends AudioWorkletProcessor {
     return this.irqStart! + Math.round((this.irq * sampleRate) / 300);
   }
 
+  // A file the driver can't play (a damaged tune, which throws rather than hang the audio thread): the driver goes
+  //  and the chip with it, so nothing more sounds, and Music is told, as for a file that wouldn't load.
+  private fail(error: unknown): void {
+    this.chip = new Opl2(sampleRate);
+    this.driver = null;
+    this.fast = false;
+    this.reply({
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
   /** One 300 Hz interrupt: the fast worker while it's requested, and on every fifth the 60 Hz worker after it. */
   private interrupt(): void {
     const driver = this.driver!;
 
-    if (this.fast) {
-      driver.fastWorker();
-    }
-
-    if (this.irq % 5 === 0) {
-      const r = driver.soundWorker();
-
-      if (r === 1) {
-        this.fast = true;
-      } else if (r === 0xffff) {
-        this.fast = false;
+    try {
+      if (this.fast) {
+        driver.fastWorker();
       }
+
+      if (this.irq % 5 === 0) {
+        const r = driver.soundWorker();
+
+        if (r === 1) {
+          this.fast = true;
+        } else if (r === 0xffff) {
+          this.fast = false;
+        }
+      }
+    } catch (error) {
+      this.fail(error);
     }
 
     this.irq++;
