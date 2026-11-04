@@ -29,6 +29,7 @@ import ChoiceHandler from './app/ChoiceHandler';
 import WorkerFailures from './app/WorkerFailures';
 import buildSidebar from './app/sidebar';
 import music from './app/music';
+import EventSounds from './lib/eventSounds';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -93,7 +94,9 @@ export class Renderer {
           this.#transport
         ),
         // Units whose GoTo stopped next to a choice (#357).
-        haltedUnits = new HaltedUnits();
+        haltedUnits = new HaltedUnits(),
+        // The game's moments as Civ1's tunes (#126).
+        sounds = new EventSounds({ jukebox: music });
 
       const sidebar = document.getElementById('sidebar');
 
@@ -111,6 +114,8 @@ export class Renderer {
       // A game nobody here plays is watched (#607): the worker says so, with the players to see it as, before the first
       //  `gameData`. Kept for the session to build on, and for the ending, which is then nobody's own.
       let observerState: ObserverState | null = null;
+      // A game loaded at its ending plays the ending's tune before its map arrives, which the game's start doesn't fade.
+      let endingHeard = false;
 
       transportDisposers.push(
         transport.receive('observer', (state): void => {
@@ -121,13 +126,17 @@ export class Renderer {
       // However the game ends (#176). Listened for from the start: a game loaded at its ending says so before its map
       //  arrives.
       transportDisposers.push(
-        transport.receive(
-          'gameOver',
-          (details): void =>
-            void new GameOverWindow(details, transport, {
-              observer: observerState !== null,
-            })
-        )
+        transport.receive('gameOver', (details): void => {
+          // Ours to celebrate or lament: not a watcher's.
+          if (observerState === null) {
+            endingHeard = true;
+            sounds.gameOver(details);
+          }
+
+          new GameOverWindow(details, transport, {
+            observer: observerState !== null,
+          }).on('close', () => sounds.gameOverClosed());
+        })
       );
 
       const notificationBar = new NotificationBar(elements.notificationArea);
@@ -203,6 +212,7 @@ export class Renderer {
         ChoiceHandler.listen(transport, {
           clearKeys: (): void => gameSession?.clearKeys(),
           debugFlags,
+          sounds,
         })
       );
 
@@ -227,9 +237,12 @@ export class Renderer {
             setGameStarted: (): void => {
               gameStarted = true;
               // The title menu's music fades as the game begins (#126).
-              music.stop();
+              if (!endingHeard) {
+                music.stop();
+              }
             },
             transportDisposers,
+            sounds,
           });
 
           gameSession.start(objectMap);

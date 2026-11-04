@@ -12,9 +12,15 @@ export class Notifications {
   #container: HTMLElement;
   #notifications: Notification[] = [];
   #interval: number | null = null;
+  #shown: ((notification: Notification) => void) | null = null;
 
   constructor(container: HTMLElement = document.body) {
     this.#container = container;
+  }
+
+  /** Told of each notification as its window opens, rather than as it's queued: the game's music (#126). */
+  onShown(listener: ((notification: Notification) => void) | null): void {
+    this.#shown = listener;
   }
 
   receive(notification: Notification): void {
@@ -90,6 +96,8 @@ export class Notifications {
 
     // The next one at once, rather than at the next poll, which goes on while any are waiting.
     notificationWindow.on('close', () => this.check());
+
+    this.#shown?.(notification);
   }
 }
 

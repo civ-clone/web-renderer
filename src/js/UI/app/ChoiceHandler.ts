@@ -34,6 +34,13 @@ export interface ChoiceHandlerDeps {
   // The same object `DebugPanel` writes: `uiStressRunner` and `stressUiWindowsEnabled` are read on every list, not
   //  copied when this starts listening.
   debugFlags: DebugFlags;
+  // The talks' music (#126): told of each step shown and of the reply to it. Structural, as `lib/eventSounds.ts`'s
+  //  `EventSounds` is made with the page's music, which this doesn't import.
+  sounds?: {
+    negotiationStep(negotiation: Negotiation): void;
+    talksContinued(): void;
+    negotiationReplied(reply: Interactions | null): void;
+  };
 }
 
 // A step of the talks lists Good bye first, so the option preselected, and taken by Enter, leaves the talks rather
@@ -85,7 +92,7 @@ const advanceKeys = [
 export const ChoiceHandler = {
   listen(
     transport: Transport,
-    { clearKeys, debugFlags }: ChoiceHandlerDeps
+    { clearKeys, debugFlags, sounds }: ChoiceHandlerDeps
   ): () => void {
     return transport.receive('chooseFromList', ({ choices, key, data }) => {
       // The worker waits for this before it answers the action that asked
@@ -107,6 +114,31 @@ export const ChoiceHandler = {
       }
 
       const title = chooseFromListTitle(key, data);
+
+      // A step of the talks is heard as it's shown, and the reply as it's sent (#126).
+      // The choices the talks make along the way (the advance to take in an exchange) are part of them too.
+      const inTalks =
+        key === 'negotiation.next-step' || key.startsWith('diplomacy.');
+
+      if (key === 'negotiation.next-step' && data) {
+        sounds?.negotiationStep(data as Negotiation);
+      } else if (inTalks) {
+        sounds?.talksContinued();
+      }
+
+      const reply = (choiceId: string): void => {
+        if (key === 'negotiation.next-step') {
+          sounds?.negotiationReplied(
+            (choices.find(({ id }) => id === choiceId)?.value as
+              | Interactions
+              | undefined) ?? null
+          );
+        } else if (inTalks) {
+          sounds?.negotiationReplied(null);
+        }
+
+        transport.send('chooseFromList', choiceId);
+      };
 
       // The talks so far, from the player's side: they are whoever their answers are by. A step whose answers aren't all
       //  by one player can't say which is theirs, so it names everyone (#751).
@@ -160,7 +192,7 @@ export const ChoiceHandler = {
               // The stress runner sends its own answer, whatever is chosen in the window meanwhile.
               onChoose: (choice) => {
                 if (!stressRunner) {
-                  transport.send('chooseFromList', choice);
+                  reply(choice);
                 }
               },
               intelligence: transport.request(new Intelligence()),
@@ -168,11 +200,7 @@ export const ChoiceHandler = {
           );
 
         if (stressRunner) {
-          stressRunner.automateChoice(
-            meetingWindow,
-            choices[0].id,
-            (choiceId) => transport.send('chooseFromList', choiceId)
-          );
+          stressRunner.automateChoice(meetingWindow, choices[0].id, reply);
         }
 
         return;
@@ -213,12 +241,10 @@ export const ChoiceHandler = {
           debugFlags.uiStressRunner.automateChoice(
             window,
             choices[0].id,
-            (choiceId) => transport.send('chooseFromList', choiceId)
+            reply
           );
         } else {
-          window.once('close', () =>
-            transport.send('chooseFromList', choices[0].id)
-          );
+          window.once('close', () => reply(choices[0].id));
         }
 
         return;
@@ -233,7 +259,7 @@ export const ChoiceHandler = {
 
             return { label, value: id, primary: label };
           }),
-          (choice) => transport.send('chooseFromList', choice),
+          (choice) => reply(choice),
           {
             intro:
               last === null
@@ -250,7 +276,7 @@ export const ChoiceHandler = {
           debugFlags.uiStressRunner.automateChoice(
             talksWindow,
             choices[0].id,
-            (choiceId) => transport.send('chooseFromList', choiceId)
+            reply
           );
         }
 
@@ -326,8 +352,7 @@ export const ChoiceHandler = {
             }
           }
 
-          transport.send(
-            'chooseFromList',
+          reply(
             offerRandom && choice === randomChoice
               ? choices[Math.floor(Math.random() * choices.length)].id
               : choice
@@ -356,7 +381,7 @@ export const ChoiceHandler = {
         debugFlags.uiStressRunner.automateChoice(
           selectionWindow,
           choices[0].id,
-          (choiceId) => transport.send('chooseFromList', choiceId)
+          (choiceId) => reply(choiceId)
         );
       }
     });

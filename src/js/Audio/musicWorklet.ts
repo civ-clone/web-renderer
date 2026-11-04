@@ -61,6 +61,8 @@ export interface MusicReply {
   loaded?: boolean;
   error?: string;
   idle?: boolean;
+  /** With `idle`: how many tunes had been asked for, so a reply that crossed a newer one can be told apart. */
+  plays?: number;
 }
 
 // Below this, a block counts as silence.
@@ -81,6 +83,7 @@ class MusicProcessor extends AudioWorkletProcessor {
   private targetGain = 1;
   private silentFrames = 0;
   private idle = false;
+  private plays = 0;
 
   constructor() {
     super();
@@ -125,6 +128,10 @@ class MusicProcessor extends AudioWorkletProcessor {
       // Watched for silence again: a context resumed for the change is let go of once it's quiet.
       this.silentFrames = 0;
       this.idle = false;
+    }
+
+    if (data.play) {
+      this.plays++;
     }
 
     if (data.play && this.driver) {
@@ -289,7 +296,7 @@ class MusicProcessor extends AudioWorkletProcessor {
 
     if (!this.idle && this.silentFrames >= 2 * sampleRate) {
       this.idle = true;
-      this.reply({ idle: true });
+      this.reply({ idle: true, plays: this.plays });
     }
   }
 }

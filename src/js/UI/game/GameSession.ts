@@ -31,6 +31,7 @@ import GameState from './GameState';
 import InputController from './InputController';
 import DebugFlags from '../debug/DebugFlags';
 import DebugPanel from '../debug/DebugPanel';
+import EventSounds from '../lib/eventSounds';
 import { AppElements } from '../app/elements';
 import NotificationBar from '../app/NotificationBar';
 import ObserverBar from '../components/ObserverBar';
@@ -69,6 +70,12 @@ export type GameSessionDeps = {
   setGameStarted: () => void;
   // The page's transport disposers, which the `pagehide` teardown runs: the game's are added after them.
   transportDisposers: Array<() => void>;
+  // The game's moments as Civ1's tunes (#126): the welcome, and each notice as it's shown. Not for a game being
+  //  watched, which is nobody's own to hear.
+  sounds?: Pick<
+    EventSounds,
+    'attach' | 'newGame' | 'welcomeClosed' | 'notificationShown' | 'noticeAdded'
+  >;
 };
 
 export class GameSession {
@@ -117,10 +124,12 @@ export class GameSession {
       observer = (): ObserverState | null => null,
       setGameStarted,
       transportDisposers,
+      sounds: gameSounds,
     } = this.#deps;
 
     // Watching, not playing (#607): no welcome, nothing to lose on leaving, and a bar to choose the view and the pace.
-    const observing = observer() !== null;
+    const observing = observer() !== null,
+      sounds = observing ? undefined : gameSounds;
 
     performance.mark('civ:game-data-received');
 
@@ -153,6 +162,12 @@ export class GameSession {
 
       setGameStarted();
 
+      // Heard as the player they're told to: ours, whose themes they are.
+      sounds?.attach(() => gameState.data()?.player ?? null);
+      notifications.onShown(
+        sounds ? (notification) => sounds.notificationShown(notification) : null
+      );
+
       if (!observing) {
         guardLeaving();
 
@@ -163,7 +178,7 @@ export class GameSession {
       // Only for a new game: "you have risen" is an introduction, and a
       // loaded game has already had one. A watched game is nobody's to be welcomed to.
       if (pendingSave === null && !observing) {
-        new NotificationWindow(
+        const welcome = new NotificationWindow(
           'Welcome',
           s(
             `<div class="welcome">
@@ -186,6 +201,10 @@ export class GameSession {
 </div>`
           )
         );
+
+        // The civilization's own theme, as Civ1 plays it over the welcome, faded as it closes (#126).
+        sounds?.newGame();
+        welcome.on('close', () => sounds?.welcomeClosed());
       }
 
       gameArea.classList.add('active');
@@ -628,6 +647,7 @@ export class GameSession {
           }
 
           notices.add(notification);
+          sounds?.noticeAdded(notification);
 
           scheduleRender();
         })
