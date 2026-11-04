@@ -572,6 +572,72 @@ expect(
   [true, 1]
 );
 
+// `t` hides the unit awaiting orders and its ring with the other units, in every way of marking it, so the square under
+//  it can be seen (#804); and brings them back.
+for (const marker of ['ring', 'both', 'blink'] as const) {
+  unitMarker = marker;
+  tick();
+  mapView.toggleUnits();
+
+  expect(
+    `${marker}: t hides the unit awaiting orders and its ring`,
+    [mapView.activeUnitLayer.isVisible(), rings()],
+    [false, []]
+  );
+
+  counted();
+  tick();
+  tick();
+
+  expect(
+    `${marker}: and it stays hidden, with nothing drawn for it`,
+    [mapView.activeUnitLayer.isVisible(), rings(), counted()[0]],
+    [false, [], 0]
+  );
+
+  mapView.toggleUnits();
+
+  expect(
+    `${marker}: t again shows it, ringed unless it blinks`,
+    [mapView.activeUnitLayer.isVisible(), rings().length],
+    [true, marker === 'blink' ? 0 : 1]
+  );
+}
+
+// Hidden, then the units brought back by the unit awaiting orders moving (`ActiveUnitController#render` shows them):
+//  the cities, their names and the ring follow at the next tick.
+unitMarker = 'ring';
+tick();
+mapView.toggleUnits();
+mapView.unitsLayer.setVisible(true);
+mapView.activeUnitLayer.setVisible(true);
+tick();
+
+expect(
+  'units shown again by a move bring back the cities, their names and the ring',
+  [
+    mapView.citiesLayer.isVisible(),
+    mapView.cityNamesLayer.isVisible(),
+    rings().length,
+  ],
+  [true, true, 1]
+);
+
+mapView.toggleUnits();
+
+expect(
+  'and t hides them all again',
+  [
+    mapView.unitsLayer.isVisible(),
+    mapView.citiesLayer.isVisible(),
+    mapView.activeUnitLayer.isVisible(),
+    rings(),
+  ],
+  [false, false, false, []]
+);
+
+mapView.toggleUnits();
+
 mapView.activeUnitLayer.setActiveUnit(null);
 drawnAt = [];
 portal.render();
