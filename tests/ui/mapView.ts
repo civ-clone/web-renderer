@@ -477,9 +477,9 @@ counted();
 tick();
 
 expect(
-  'a ring alone: the unit stays drawn, and the map isn’t drawn again',
+  'a ring alone: the unit stays drawn, and the map isn’t drawn again (the minimap is, once, for the ring)',
   [mapView.activeUnitLayer.isVisible(), counted()],
-  [true, [0, 0]]
+  [true, [0, 1]]
 );
 expect(
   'and the ring is round its square',
@@ -515,10 +515,29 @@ counted();
 tick();
 
 expect(
-  'a ring chosen with the unit blinked out draws it again',
+  'a ring chosen with the unit blinked out draws it again, the minimap following the ring',
   [mapView.activeUnitLayer.isVisible(), counted(), rings().length],
-  [true, [1, 1], 1]
+  [true, [1, 2], 1]
 );
+
+// Another unit made active, with no blink to redraw the minimap: the ring moving does.
+drawnAt = [{ x: 128, y: 32, width: 32, height: 32 }];
+counted();
+portal.render();
+
+expect(
+  'the ring moving to another unit redraws the minimap',
+  [counted(), rings()[0]],
+  [
+    [1, 1],
+    ['128px', '32px', '32px', '32px'],
+  ]
+);
+
+counted();
+portal.render();
+
+expect('and not again, the ring where it was', counted(), [1, 0]);
 
 unitMarker = 'both';
 tick();

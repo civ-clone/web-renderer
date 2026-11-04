@@ -64,11 +64,16 @@ export class ActiveUnit extends Units implements IMap {
       };
 
       this.#drawn.push(drawn);
+      // Round the stacked copy behind it too, where the tileset moves it out from under the unit.
+      const [backX, backY] = stacked ? [stackX, stackY] : [0, 0],
+        left = offsetX + Math.min(0, backX),
+        top = offsetY + Math.min(0, backY);
+
       this.#squares.push({
-        x: offsetX,
-        y: offsetY,
-        width: ringWidth,
-        height: ringHeight,
+        x: left,
+        y: top,
+        width: offsetX + Math.max(0, backX) + ringWidth - left,
+        height: offsetY + Math.max(0, backY) + ringHeight - top,
       });
 
       this.markDirty(drawn.x, drawn.y, drawn.width, drawn.height);

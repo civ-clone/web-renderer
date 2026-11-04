@@ -245,11 +245,16 @@ export class MapView {
     return this.#marker;
   }
 
+  // The ring moved: to another unit, say, which the blink's tick would otherwise have shown on the minimap too.
   #placeMarker(): void {
-    this.#marker.place(
-      this.activeUnitLayer.squares(),
-      this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit()
-    );
+    if (
+      this.#marker.place(
+        this.activeUnitLayer.squares(),
+        this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit()
+      )
+    ) {
+      this.minimap.update();
+    }
   }
 
   /** Builds the tiles released so far, then composites the map and updates the minimap. */

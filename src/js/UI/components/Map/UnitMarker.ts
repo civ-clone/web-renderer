@@ -42,7 +42,7 @@ export class UnitMarker {
   #canvas: HTMLCanvasElement;
   #element: HTMLElement;
   // What was placed last, so the same squares don't touch the page again.
-  #placed: string = '';
+  #placed: string = '[]';
 
   constructor(canvas: HTMLCanvasElement) {
     this.#canvas = canvas;
@@ -58,8 +58,13 @@ export class UnitMarker {
     return this.#element;
   }
 
-  /** Rings `squares` (in the canvas's pixels), or none when `shown` is false. */
-  place(squares: Rect[], shown: boolean): void {
+  /** Rings `squares` (in the canvas's pixels), or none when `shown` is false. Whether the rings moved. */
+  place(squares: Rect[], shown: boolean): boolean {
+    // None shown, and none to take away: nothing to measure (the blink's every render).
+    if (!shown && this.#placed === '[]') {
+      return false;
+    }
+
     const canvas = this.#canvas,
       // The canvas is drawn at its box's size, but may be stretched to it: its pixels to the page's.
       scaleX =
@@ -81,7 +86,7 @@ export class UnitMarker {
       placed = JSON.stringify(boxes);
 
     if (placed === this.#placed) {
-      return;
+      return false;
     }
 
     this.#placed = placed;
@@ -103,6 +108,8 @@ export class UnitMarker {
     });
 
     rings.slice(boxes.length).forEach((ring) => ring.remove());
+
+    return true;
   }
 
   dispose(): void {

@@ -579,9 +579,9 @@ expect(
   'units: ; active: Chariot 3+, Chariot 3'
 );
 expect(
-  'and says where its square is, for the ring round it (#753)',
+  'and says where it is, for the ring round it (#753): on its stack, the copy behind it, 2px up and left, too',
   JSON.stringify(activeLayer.layer.squares()),
-  JSON.stringify([{ x: 96, y: 0, width: 32, height: 32 }])
+  JSON.stringify([{ x: 94, y: -2, width: 34, height: 34 }])
 );
 
 // A sprite a pixel short of the square, as Civ1's units are: the ring is round the unit, not the square.
@@ -595,7 +595,7 @@ expect(
   expect(
     'round the sprite as drawn, where it is smaller than the square',
     JSON.stringify(layer.squares()),
-    JSON.stringify([{ x: 96, y: 0, width: 30, height: 30 }])
+    JSON.stringify([{ x: 94, y: -2, width: 32, height: 32 }])
   );
 
   layer.renderUnit = renderUnit;
