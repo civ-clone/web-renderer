@@ -64,11 +64,13 @@ class FakeContext implements MusicContext {
       moduleFails = false,
       resumeFails = false,
       lag = false,
+      blocked = false,
     } = {},
     private readonly stub: Stub
   ) {
     this.resumeFails = resumeFails;
     this.lag = lag;
+    this.blocked = blocked;
 
     if (worklet) {
       this.audioWorklet = {
@@ -84,6 +86,23 @@ class FakeContext implements MusicContext {
   }
 
   private readonly resumeFails: boolean;
+  // As Chrome does for a context made without the player's go-ahead: a resume waits, unanswered, until `allow()`.
+  private blocked: boolean;
+  private waiting: (() => void)[] = [];
+  closed = false;
+
+  allow(): void {
+    this.blocked = false;
+    this.state = 'running';
+    this.waiting.splice(0).forEach((resolve) => resolve());
+  }
+
+  close(): Promise<void> {
+    this.closed = true;
+    this.state = 'closed';
+
+    return Promise.resolve();
+  }
   // As a browser does: `state` changes only once the audio thread has caught up, a little after the call.
   private readonly lag: boolean;
 
@@ -107,6 +126,10 @@ class FakeContext implements MusicContext {
 
     if (this.resumeFails) {
       return Promise.reject(new Error('Not allowed to start.'));
+    }
+
+    if (this.blocked) {
+      return new Promise((resolve) => this.waiting.push(resolve));
     }
 
     return this.#become('running');
@@ -152,6 +175,7 @@ const player = ({
     moduleFails?: boolean;
     resumeFails?: boolean;
     lag?: boolean;
+    blocked?: boolean;
     throws?: boolean;
     none?: boolean;
   },
@@ -398,6 +422,65 @@ const run = async (): Promise<void> => {
     await wait();
 
     expect('and off: suspended', context.state, 'suspended');
+  }
+
+  // A first press the browser doesn't count (a touch's pointerdown, Escape): the context waits, and the next press asks
+  //  again, until it runs; then presses are let be.
+  {
+    const { stub, music, gesture } = player({ context: { blocked: true } });
+
+    await music.init();
+    music.play(3);
+    await gesture('pointerdown');
+
+    const [context] = stub.contexts;
+
+    expect(
+      'a press too early: one context, waiting',
+      [stub.contexts.length, context.resumes, context.state],
+      [1, 1, 'suspended']
+    );
+
+    await gesture('pointerup');
+
+    expect('the next press asks again', context.resumes, 2);
+
+    context.allow();
+    await settle();
+    await gesture('touchend');
+    await gesture('keydown');
+
+    expect(
+      'once running, presses no longer resume it',
+      [context.resumes, context.state, stub.contexts.length],
+      [2, 'running', 1]
+    );
+
+    music.volumeChanged();
+    stub.messages.length = 0;
+    music.stop();
+    stub.nodes[0].reply({ idle: true });
+    await settle();
+
+    expect(
+      'and a fade still lets it go: the waiting resume held nothing up',
+      context.state,
+      'suspended'
+    );
+  }
+
+  // No AudioWorklet (a page not served securely): the context made is closed.
+  {
+    const { stub, music, gesture } = player({ context: { worklet: false } });
+
+    await music.init();
+    await gesture();
+
+    expect(
+      'without an AudioWorklet the context is closed',
+      [stub.contexts[0]?.closed, music.available],
+      [true, false]
+    );
   }
 
   // The sound off at the first gesture: nothing is made until it's turned on.

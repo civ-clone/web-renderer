@@ -40,7 +40,10 @@ export interface MusicOptions {
   gestureTarget?: EventTarget | null;
 }
 
-const GESTURES = ['pointerdown', 'keydown'];
+// What a browser counts as the player's go-ahead differs: a mouse's press, but a touch's lift (`pointerup`, `touchend`),
+//  and any key but Escape. Listened for until the context is running, so a press too early for the browser is tried
+//  again on the next.
+const GESTURES = ['pointerdown', 'pointerup', 'touchend', 'click', 'keydown'];
 
 const defaultContext = (): MusicContext | null => {
   const AudioContextClass =
@@ -174,6 +177,29 @@ export class Music {
   #gesture(): void {
     this.#gestured = true;
 
+    const context = this.#context;
+
+    if (this.#failed || context?.state === 'running') {
+      this.#unlisten();
+
+      return;
+    }
+
+    // Inside the gesture, so the browser lets the context start.
+    if (context === null) {
+      this.#start();
+
+      return;
+    }
+
+    // Made in a press the browser didn't count (a touch's `pointerdown`, Escape): its resume waits, unanswered, so
+    //  it's asked again here, directly, rather than behind it.
+    if (this.#running) {
+      context.resume().catch((): void => {});
+    }
+  }
+
+  #unlisten(): void {
     const target =
       this.#options.gestureTarget === undefined
         ? (globalThis as any).document ?? null
@@ -182,9 +208,6 @@ export class Music {
     GESTURES.forEach((type) =>
       target?.removeEventListener(type, this.#onGesture, { capture: true })
     );
-
-    // Inside the gesture, so the browser lets the context start.
-    this.#start();
   }
 
   #post(message: MusicMessage, transfer: Transferable[] = []): void {
@@ -248,6 +271,8 @@ export class Music {
 
     if (context === null || !context.audioWorklet) {
       this.#failed = true;
+      // No AudioWorklet (a page not served securely): the context made can't play anything, so it's let go of.
+      context?.close?.().catch((): void => {});
 
       return Promise.resolve(false);
     }
