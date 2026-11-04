@@ -59,10 +59,16 @@ class FakeContext implements MusicContext {
   audioWorklet?: { addModule(url: string): Promise<void> };
 
   constructor(
-    { worklet = true, moduleFails = false, resumeFails = false } = {},
+    {
+      worklet = true,
+      moduleFails = false,
+      resumeFails = false,
+      lag = false,
+    } = {},
     private readonly stub: Stub
   ) {
     this.resumeFails = resumeFails;
+    this.lag = lag;
 
     if (worklet) {
       this.audioWorklet = {
@@ -78,6 +84,23 @@ class FakeContext implements MusicContext {
   }
 
   private readonly resumeFails: boolean;
+  // As a browser does: `state` changes only once the audio thread has caught up, a little after the call.
+  private readonly lag: boolean;
+
+  #become(state: string): Promise<void> {
+    if (!this.lag) {
+      this.state = state;
+
+      return Promise.resolve();
+    }
+
+    return new Promise((resolve) =>
+      setTimeout(() => {
+        this.state = state;
+        resolve();
+      }, 5)
+    );
+  }
 
   resume(): Promise<void> {
     this.resumes++;
@@ -86,16 +109,13 @@ class FakeContext implements MusicContext {
       return Promise.reject(new Error('Not allowed to start.'));
     }
 
-    this.state = 'running';
-
-    return Promise.resolve();
+    return this.#become('running');
   }
 
   suspend(): Promise<void> {
     this.suspends++;
-    this.state = 'suspended';
 
-    return Promise.resolve();
+    return this.#become('suspended');
   }
 }
 
@@ -131,6 +151,7 @@ const player = ({
     worklet?: boolean;
     moduleFails?: boolean;
     resumeFails?: boolean;
+    lag?: boolean;
     throws?: boolean;
     none?: boolean;
   },
@@ -235,6 +256,7 @@ const run = async (): Promise<void> => {
 
     // Silent after the fade: the context is let go of. While a tune is wanted, it isn't (it may be resting).
     stub.nodes[0].reply({ idle: true });
+    await settle();
 
     expect(
       'idle after a fade suspends the context',
@@ -297,6 +319,49 @@ const run = async (): Promise<void> => {
       [sent(stub).pop(), context.state],
       [{ volume: 1 }, 'running']
     );
+  }
+
+  // A context whose state lags the calls, as a browser's does: the slider through 0 and back, and a tune straight
+  //  after the fade's suspend, still end up playing.
+  {
+    const { stub, music, gesture, gain } = player({ context: { lag: true } });
+    const wait = () => new Promise((resolve) => setTimeout(resolve, 40));
+
+    await music.init();
+    music.play(3);
+    await gesture();
+    await wait();
+
+    const [context] = stub.contexts;
+
+    gain.value = 0;
+    music.volumeChanged();
+    gain.value = 0.04;
+    music.volumeChanged();
+    await wait();
+
+    expect(
+      'the slider through 0 and straight back: running',
+      context.state,
+      'running'
+    );
+
+    music.stop();
+    stub.nodes[0].reply({ idle: true });
+    music.play(4);
+    await wait();
+
+    expect(
+      'a tune straight after the fade suspends: running',
+      context.state,
+      'running'
+    );
+
+    gain.value = 0;
+    music.volumeChanged();
+    await wait();
+
+    expect('and off: suspended', context.state, 'suspended');
   }
 
   // The sound off at the first gesture: nothing is made until it's turned on.
@@ -401,11 +466,25 @@ const run = async (): Promise<void> => {
     await gesture();
     await settle();
     stub.nodes[0].reply({ error: 'ASOUND.CVL: not the AdLib driver' });
+    await settle();
 
     expect(
       'a CVL the worklet refuses: not available, and quiet',
       [music.available, stub.contexts[0].state, said.length],
       [false, 'suspended', 0]
+    );
+
+    const resumes = stub.contexts[0].resumes,
+      before = stub.messages.length;
+
+    music.play(3);
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'and nothing after starts it again',
+      [stub.contexts[0].resumes, stub.messages.length, stub.contexts[0].state],
+      [resumes, before, 'suspended']
     );
   }
 

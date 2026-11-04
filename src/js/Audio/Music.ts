@@ -15,6 +15,7 @@ export interface MusicContext {
   readonly audioWorklet?: { addModule(url: string): Promise<void> };
   resume(): Promise<void>;
   suspend(): Promise<void>;
+  close?(): Promise<void>;
 }
 
 /** The parts of an AudioWorkletNode Music uses. */
@@ -68,6 +69,11 @@ export class Music {
   #failed = false;
   // The tune that should be playing, or null after a fade.
   #wanted: Tune | null = null;
+  // Whether the context was last asked to run, and that ask: `context.state` changes only once the audio thread has
+  //  caught up, so a quick suspend and resume (the volume slider through 0) would read it stale. Each ask waits for
+  //  the one before.
+  #running = false;
+  #transition: Promise<void> = Promise.resolve();
   #onGesture = (): void => this.#gesture();
 
   constructor(options: MusicOptions) {
@@ -105,6 +111,10 @@ export class Music {
   play(id: number, level: number = 3): void {
     this.#wanted = { id, level };
 
+    if (this.#failed) {
+      return;
+    }
+
     if (this.#node !== null) {
       this.#resume();
       this.#post({ play: this.#wanted });
@@ -131,6 +141,10 @@ export class Music {
   /** Applies the volume option as it is now: at once, and with the context suspended while it's off. */
   volumeChanged(): void {
     const gain = this.#gain();
+
+    if (this.#failed) {
+      return;
+    }
 
     if (this.#node === null) {
       this.#start();
@@ -180,19 +194,31 @@ export class Music {
   }
 
   #resume(): void {
-    const context = this.#context;
-
-    if (context !== null && context.state !== 'running' && this.#gain() > 0) {
-      context.resume().catch((): void => {});
+    if (!this.#failed && this.#gain() > 0) {
+      this.#run(true);
     }
   }
 
   #suspend(): void {
+    this.#run(false);
+  }
+
+  #run(running: boolean): void {
     const context = this.#context;
 
-    if (context !== null && context.state === 'running') {
-      context.suspend().catch((): void => {});
+    if (context === null || running === this.#running) {
+      return;
     }
+
+    this.#running = running;
+    this.#transition = this.#transition
+      .then(() => (running ? context.resume() : context.suspend()))
+      .catch((): void => {
+        // Refused (a resume the browser won't allow yet): asked again next time, unless asked otherwise since.
+        if (this.#running === running) {
+          this.#running = !running;
+        }
+      });
   }
 
   /** Makes the context and the worklet, when there's a CVL, a gesture has been made and the sound is on. */
@@ -226,7 +252,7 @@ export class Music {
 
     this.#context = context;
     // Started now, inside the gesture: after the module has loaded it may be too late.
-    context.resume().catch((): void => {});
+    this.#run(true);
 
     const started = context.audioWorklet
       .addModule(this.#options.workletUrl)
@@ -249,7 +275,10 @@ export class Music {
       })
       .catch((): boolean => {
         this.#failed = true;
+        this.#node = null;
         this.#context = null;
+        // Nothing will play in it: let it go rather than leave it running.
+        context!.close?.().catch((): void => {});
 
         return false;
       });
