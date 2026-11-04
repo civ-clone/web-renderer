@@ -29,4 +29,11 @@ points when `asound.json` is given:
 
 `sim.py` is the piece to port to TypeScript for playback in the renderer: `Driver.play(id,
 level)`, `sound_worker()` at 60 Hz and `fast_worker()` at 300 Hz while `sound_worker()` last
-returned 1, collecting `(tick, register, value)` for an OPL2 emulator.
+returned 1, collecting `(tick, register, value)` for an OPL2 emulator. That port is
+`src/js/Audio/cvl/`, and `hashes.py` (stdlib only) writes the fixture it is checked against:
+
+```bash
+python3 hashes.py "$CVL" > ../../tests/ui/fixtures/cvl-driver.json
+python3 hashes.py "$CVL" --dump 42 3          # one ID's writes as `tick sub register value`
+CVL="$CVL" npm run test:cvl-driver            # from the repository root
+```

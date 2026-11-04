@@ -7,6 +7,7 @@
     "target": "ES2018"
   },
   "include": [
+    "src/js/Audio/**/*",
     "src/js/Engine/**/*",
     "src/js/Engine/Game.ts",
     "main.ts",
