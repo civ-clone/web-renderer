@@ -1,6 +1,6 @@
 import Music from '../../Audio/Music';
 import { assetStore } from '../AssetStore';
-import soundGain from '../lib/soundGain';
+import soundGain, { onSoundChanged } from '../lib/soundGain';
 import { version } from '../../../../build.json';
 
 /**
@@ -12,5 +12,7 @@ export const music = new Music({
   gain: () => soundGain(),
   workletUrl: `dist/musicWorklet.js?v=${encodeURIComponent(version)}`,
 });
+
+onSoundChanged(() => music.volumeChanged());
 
 export default music;

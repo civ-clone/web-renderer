@@ -10,4 +10,19 @@ export const soundGain = (
   return on === true ? (Math.min(100, Math.max(0, level)) / 100) ** 2 : 0;
 };
 
+// Told when either option changes (Options does), for the music to follow: so Options needn't import the player,
+//  and with it the build's own files.
+const listeners = new Set<() => void>();
+
+/** Calls `listener` whenever the sound options change; returns its removal. */
+export const onSoundChanged = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+
+  return () => listeners.delete(listener);
+};
+
+/** Says the sound options have changed. */
+export const soundChanged = (): void =>
+  listeners.forEach((listener) => listener());
+
 export default soundGain;

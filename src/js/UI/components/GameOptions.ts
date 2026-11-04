@@ -11,9 +11,9 @@ import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
 import { interfaceMode } from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
-import music from '../app/music';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '../lib/buildPreferences';
+import { soundChanged } from '../lib/soundGain';
 import { t } from 'i18next';
 
 /** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */
@@ -90,7 +90,7 @@ export const soundRows = (): HTMLElement[] => {
       h(on, {
         change: () => {
           options.set('sound', on.checked);
-          music.volumeChanged();
+          soundChanged();
         },
       })
     ),
@@ -100,7 +100,7 @@ export const soundRows = (): HTMLElement[] => {
         input: () => {
           fill();
           options.set('soundVolume', Number(volume.value));
-          music.volumeChanged();
+          soundChanged();
         },
       })
     ),
