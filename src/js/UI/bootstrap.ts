@@ -90,9 +90,7 @@ export class Renderer {
         // The new interface's list, or the classic menu (#749).
         mainMenu = new (interfaceMode() === 'new' ? TitleMenu : MainMenu)(
           elements.mainMenuElement,
-          this.#transport,
-          // Evolution while the new world is made (#126).
-          (): void => music.play(4)
+          this.#transport
         ),
         // Units whose GoTo stopped next to a choice (#357).
         haltedUnits = new HaltedUnits();
@@ -228,7 +226,7 @@ export class Renderer {
             observer: (): ObserverState | null => observerState,
             setGameStarted: (): void => {
               gameStarted = true;
-              // The title or Evolution fades as the game begins (#126).
+              // The title menu's music fades as the game begins (#126).
               music.stop();
             },
             transportDisposers,
@@ -243,8 +241,8 @@ export class Renderer {
       // listening before that. There is no `start` for a loaded game — that is
       // what generates a world.
       if (pendingLoad === null) {
-        // The main theme on the title menu (#126).
-        music.play(3);
+        // Evolution on the title menu, as the original's menu plays it, on until the game begins (#126).
+        music.play(4);
       } else {
         mainMenu.remove();
 

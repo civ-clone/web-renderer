@@ -67,18 +67,11 @@ export class TitleMenu extends Element {
   // Gone, maybe before `build` has read the saves: a save loading as the page opens removes the menu at once.
   #removed = false;
   #transport: Transport;
-  #onNewWorld: () => void;
 
-  /** `onNewWorld` is called as a new game's world starts to be made, just before the menu goes. */
-  constructor(
-    element: HTMLElement,
-    transport: Transport,
-    onNewWorld: () => void = (): void => {}
-  ) {
+  constructor(element: HTMLElement, transport: Transport) {
     super(element);
 
     this.#transport = transport;
-    this.#onNewWorld = onNewWorld;
 
     this.addClass('ui-title-menu');
 
@@ -93,10 +86,7 @@ export class TitleMenu extends Element {
         listSaves().catch((): BrowserSave[] => []),
       ]),
       save = hasAssets ? newestSave(saves) : null,
-      finished = (): void => {
-        this.#onNewWorld();
-        this.remove();
-      };
+      finished = (): void => this.remove();
 
     // Nothing to build, and above all no keys to listen for, in the game that's loading.
     if (this.#removed) {
