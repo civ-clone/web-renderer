@@ -258,10 +258,8 @@ export class MapView {
 
     this.#marker.place(this.activeUnitLayer.squares(), shown);
 
-    const tile =
-        shown && this.activeUnitLayer.isVisible()
-          ? this.#activeUnit()?.tile ?? null
-          : null,
+    // The unit's square alone: whether it's blinked out is the tick's, which redraws the minimap for it.
+    const tile = shown ? this.#activeUnit()?.tile ?? null : null,
       marked = tile === null ? null : `${tile.x},${tile.y}`;
 
     if (marked !== this.#minimapMarked) {
