@@ -12,6 +12,10 @@ import Landscape from '../components/Map/Landscape';
 import Minimap from '../components/Minimap';
 import Overview from '../components/Map/Overview';
 import Transport from '../Transport';
+import UnitMarker, {
+  UnitMarkerMode,
+  unitMarkerMode,
+} from '../components/Map/UnitMarker';
 import Units from '../components/Map/Units';
 import World from '../components/World';
 import Yields from '../components/Map/Yields';
@@ -63,6 +67,11 @@ export class MapView {
   #coveredBy: HTMLElement[];
   #intervalHandler: IntervalHandler;
   #mapPortal: HTMLCanvasElement;
+  // The ring round the active unit, and how the unit is marked now: read again each blink, so a choice in Options or
+  //  the theme changing takes at the next (#753).
+  #marker: UnitMarker;
+  #markerMode: () => UnitMarkerMode;
+  #mode: UnitMarkerMode;
   #measureHandler = (): void => this.measureCovered();
   #resizeHandler = (): void => this.#resize();
   #scrollers: HTMLElement[] = [];
@@ -98,6 +107,9 @@ export class MapView {
   }: MapViewDeps) {
     this.#coveredBy = coveredBy;
     this.#mapPortal = mapPortal;
+    this.#marker = new UnitMarker(mapPortal);
+    this.#markerMode = () => unitMarkerMode(options.get('unitMarker', 'theme'));
+    this.#mode = this.#markerMode();
 
     const world = new World(worldData),
       intervalHandler = new IntervalHandler(),
@@ -155,6 +167,7 @@ export class MapView {
     this.yieldsLayer.setVisible(false);
 
     portal.on('focus-changed', () => this.minimap.update());
+    portal.on('rendered', () => this.#placeMarker());
     portal.on('activate-unit', (unit) => activateUnit(unit));
 
     intervalHandler.on(() => this.#tick());
@@ -224,6 +237,19 @@ export class MapView {
       off(scroller, 'scroll', this.#measureHandler)
     );
     this.#intervalHandler.dispose();
+    this.#marker.dispose();
+  }
+
+  /** The ring, where it's drawn round the unit now (#753). */
+  marker(): UnitMarker {
+    return this.#marker;
+  }
+
+  #placeMarker(): void {
+    this.#marker.place(
+      this.activeUnitLayer.squares(),
+      this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit()
+    );
   }
 
   /** Builds the tiles released so far, then composites the map and updates the minimap. */
@@ -373,10 +399,22 @@ export class MapView {
     // it. `ActiveUnitController#render` sets the layer visible again
     // whenever a unit becomes active, so leaving the flag alone here
     // is safe.
-    const blinking = activeUnitsMap.hasActiveUnit();
+    const mode = this.#markerMode(),
+      changed = mode !== this.#mode,
+      hasActiveUnit = activeUnitsMap.hasActiveUnit(),
+      // A ring alone marks the unit: it's drawn throughout, and only the ring moves (#753).
+      blinking =
+        hasActiveUnit && (mode !== 'ring' || !activeUnitsMap.isVisible());
+
+    this.#mode = mode;
 
     if (blinking) {
-      activeUnitsMap.setVisible(!activeUnitsMap.isVisible());
+      activeUnitsMap.setVisible(mode === 'ring' || !activeUnitsMap.isVisible());
+    }
+
+    // Chosen now: the ring comes or goes without waiting for the map to move.
+    if (changed) {
+      this.#placeMarker();
     }
 
     const hasTilesToRender = this.#tilesToRender.size > 0;

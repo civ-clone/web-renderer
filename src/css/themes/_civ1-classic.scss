@@ -218,6 +218,11 @@
   --ui-section-motion: var(--ui-motion-slow);
   // Never seen with no pulse, but a theme drawing one has its colour here.
   --ui-pulse-ring: var(--ui-glow);
+  // The unit awaiting orders (#753): Civ1's blink. A ring, where the player chooses one, in white, still.
+  --ui-unit-marker: blink;
+  --ui-unit-ring: #fff;
+  --ui-unit-ring-halo: rgba(255, 255, 255, 0.35);
+  --ui-unit-ring-glow: rgba(255, 255, 255, 0.5);
 
   --ui-radius-control: 3px;
   --ui-radius-window: 3px;

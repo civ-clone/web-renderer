@@ -578,6 +578,29 @@ expect(
   showLayers(),
   'units: ; active: Chariot 3+, Chariot 3'
 );
+expect(
+  'and says where its square is, for the ring round it (#753)',
+  JSON.stringify(activeLayer.layer.squares()),
+  JSON.stringify([{ x: 96, y: 0, width: 32, height: 32 }])
+);
+
+// A sprite a pixel short of the square, as Civ1's units are: the ring is round the unit, not the square.
+{
+  const layer = activeLayer.layer as any,
+    renderUnit = layer.renderUnit;
+
+  layer.renderUnit = (unit: any) => new FakeImage(unit._, 15, 15);
+  layer.render();
+
+  expect(
+    'round the sprite as drawn, where it is smaller than the square',
+    JSON.stringify(layer.squares()),
+    JSON.stringify([{ x: 96, y: 0, width: 30, height: 30 }])
+  );
+
+  layer.renderUnit = renderUnit;
+  layer.render();
+}
 
 refreshedTiles();
 press('ArrowRight');
@@ -587,6 +610,11 @@ expect(
   'and the Chariot is drawn on the tile it is moving to, before any answer, the Militia left behind',
   showLayers(),
   'units: Militia 3; active: Chariot 4'
+);
+expect(
+  'its square moving with it',
+  JSON.stringify(activeLayer.layer.squares()),
+  JSON.stringify([{ x: 128, y: 0, width: 32, height: 32 }])
 );
 expect('both tiles are drawn again', refreshedTiles(), '3,4');
 

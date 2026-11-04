@@ -435,6 +435,11 @@ i18next.addResources('en', 'default', {
   'GameOptions.square-tooltips': 'Describe the map square under the mouse',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
+  'GameOptions.unit-marker': 'Unit awaiting orders',
+  'GameOptions.unit-marker-choice.blink': 'Blink',
+  'GameOptions.unit-marker-choice.both': 'Ring and blink',
+  'GameOptions.unit-marker-choice.ring': 'Ring',
+  'GameOptions.unit-marker-choice.theme': "The theme's way",
 
   'GameSetup.add-seat': 'Add a seat',
   'GameSetup.advanced': 'Advanced',

@@ -79,6 +79,8 @@ export class Portal
   extends EventEmitter<{
     ['activate-unit']: [Unit];
     ['focus-changed']: [number, number];
+    // Composited: what floats over the map in place of a layer (the unit's ring, #753) is placed again.
+    ['rendered']: [];
     ['tile-clicked']: [number, number];
   }>
   implements IPortal
@@ -366,6 +368,8 @@ export class Portal
         );
       });
     });
+
+    this.emit('rendered');
   }
 
   /**
