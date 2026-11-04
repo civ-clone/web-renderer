@@ -4,7 +4,9 @@
 
 import GameOptionsRegistry, {
   OptionStorage,
+  instance as options,
 } from '../../src/js/UI/GameOptionsRegistry';
+import setOptionDefaults from '../../src/js/UI/app/options';
 
 const failures: string[] = [];
 let checks = 0;
@@ -147,6 +149,26 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
     'with no storage at all, a change still applies',
     registry.get('mapScale'),
     3
+  );
+}
+
+{
+  // The page's own defaults: each option Options offers comes back from storage only if it has one.
+  const { storage } = memoryStorage({
+    gameOptions: JSON.stringify({ unitMarker: 'ring' }),
+  });
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: storage,
+  });
+
+  setOptionDefaults();
+
+  expect(
+    'how the unit awaiting orders is marked survives a reload (#753)',
+    options.get('unitMarker'),
+    'ring'
   );
 }
 

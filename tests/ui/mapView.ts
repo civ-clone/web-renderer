@@ -520,7 +520,23 @@ expect(
   [true, [1, 2], 1]
 );
 
+// The map panned under the same unit: the ring moves, but the minimap's marker doesn't, and the portal's own
+//  `focus-changed` redraws the minimap for the pan.
+drawnAt = [{ x: 96, y: 96, width: 32, height: 32 }];
+counted();
+portal.render();
+
+expect(
+  'the ring following a pan doesn’t redraw the minimap',
+  [counted(), rings()[0]],
+  [
+    [1, 0],
+    ['96px', '96px', '32px', '32px'],
+  ]
+);
+
 // Another unit made active, with no blink to redraw the minimap: the ring moving does.
+activeUnit = { id: 'Unit-2', tile: tiles[12] } as unknown as Unit;
 drawnAt = [{ x: 128, y: 32, width: 32, height: 32 }];
 counted();
 portal.render();

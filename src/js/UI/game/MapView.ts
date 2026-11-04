@@ -72,6 +72,9 @@ export class MapView {
   #marker: UnitMarker;
   #markerMode: () => UnitMarkerMode;
   #mode: UnitMarkerMode;
+  // Where the minimap's marker was last drawn for the ring: the unit's square, not the ring's place on screen.
+  #minimapMarked: string | null = null;
+  #activeUnit: () => Unit | null;
   #measureHandler = (): void => this.measureCovered();
   #resizeHandler = (): void => this.#resize();
   #scrollers: HTMLElement[] = [];
@@ -108,6 +111,7 @@ export class MapView {
     this.#coveredBy = coveredBy;
     this.#mapPortal = mapPortal;
     this.#marker = new UnitMarker(mapPortal);
+    this.#activeUnit = activeUnit;
     this.#markerMode = () => unitMarkerMode(options.get('unitMarker', 'theme'));
     this.#mode = this.#markerMode();
 
@@ -245,14 +249,23 @@ export class MapView {
     return this.#marker;
   }
 
-  // The ring moved: to another unit, say, which the blink's tick would otherwise have shown on the minimap too.
+  // The ring placed again: where the unit it marks is another, the minimap follows, which the blink's tick would
+  //  otherwise have redrawn. Panning moves the ring but not the unit, and the portal's `focus-changed` redraws the
+  //  minimap for that.
   #placeMarker(): void {
-    if (
-      this.#marker.place(
-        this.activeUnitLayer.squares(),
-        this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit()
-      )
-    ) {
+    const shown =
+      this.#mode !== 'blink' && this.activeUnitLayer.hasActiveUnit();
+
+    this.#marker.place(this.activeUnitLayer.squares(), shown);
+
+    const tile =
+        shown && this.activeUnitLayer.isVisible()
+          ? this.#activeUnit()?.tile ?? null
+          : null,
+      marked = tile === null ? null : `${tile.x},${tile.y}`;
+
+    if (marked !== this.#minimapMarked) {
+      this.#minimapMarked = marked;
       this.minimap.update();
     }
   }
