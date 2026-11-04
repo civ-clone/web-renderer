@@ -23,6 +23,7 @@ import { assetStore } from '../../src/js/UI/AssetStore';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
+import { readFileSync } from 'fs';
 
 const failures: string[] = [];
 let checks = 0,
@@ -557,7 +558,7 @@ const run = async (): Promise<void> => {
     expect(
       'the instructions ask for the required files, and the icons as well',
       window.element().querySelector('.import-assets p')?.textContent,
-      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons.'
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music.'
     );
 
     await upload(window, [sheet('SP257.PIC')]);
@@ -630,6 +631,143 @@ const run = async (): Promise<void> => {
     );
 
     window.close();
+  }
+
+  // ASOUND.CVL (#126): kept as the file it is, once cvl/Image has read it as the AdLib driver. A made-up driver here: an
+  //  MZ header, the ID string, and a data segment long enough with the AdLib's operator table in it.
+  {
+    const cvl = ({
+        id = 'RLND Cvlzatn12-03-91',
+        mz = true,
+        adlib = true,
+      } = {}): File => {
+        const header = 0x200,
+          ds = header + 0x1e20,
+          bytes = new Uint8Array(ds + 0x7400);
+
+        if (mz) {
+          bytes.set([0x4d, 0x5a], 0);
+        }
+
+        bytes[8] = header / 16;
+        bytes.set(
+          id.split('').map((c) => c.charCodeAt(0)),
+          header + 0x10
+        );
+
+        if (adlib) {
+          bytes.set(
+            [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21],
+            ds + 0x73d8
+          );
+        }
+
+        return new File([bytes], 'ASOUND.CVL');
+      },
+      written: { name: string; blob?: Blob }[] = [],
+      { setAll, hasAllAssets } = store,
+      importWith = async (files: File[], hasAssets = false) => {
+        const window = new ImportAssetsWindow();
+
+        written.length = 0;
+        store.hasAllAssets = async (): Promise<boolean> => hasAssets;
+        await upload(window, files);
+        window.close();
+
+        return progress(window).innerText;
+      };
+
+    store.setAll = async (assets: { name: string; blob?: Blob }[]) => {
+      written.push(...assets);
+    };
+    // A finished import reloads the page to use what it wrote.
+    let reloads = 0;
+
+    (globalThis as any).location = {
+      reload: () => {
+        reloads++;
+      },
+    };
+
+    await importWith([sheet('SP257.PIC'), sheet('TER257.PIC'), cvl()]);
+
+    const kept = written.find(({ name }) => name === './sources/ASOUND.CVL');
+
+    expect(
+      'a valid ASOUND.CVL is kept with the sprites, as its own bytes',
+      [
+        kept?.blob?.size,
+        written.includes(kept!),
+        written.some(({ name }) => name === './assets/units/warrior.png'),
+      ],
+      [cvl().size, true, true]
+    );
+
+    for (const [description, file] of [
+      ['not an MZ file', cvl({ mz: false })],
+      ["another driver's ID string", cvl({ id: 'Tandy CIVIL 12-02-91' })],
+      ['the MT-32 driver, without the AdLib table', cvl({ adlib: false })],
+      [
+        'too short',
+        new File([new Uint8Array([0x4d, 0x5a, 0, 0])], 'ASOUND.CVL'),
+      ],
+    ] as const) {
+      spritesCut = 0;
+
+      const message = await importWith([
+        sheet('SP257.PIC'),
+        sheet('TER257.PIC'),
+        file,
+      ]);
+
+      expect(
+        `junk as ASOUND.CVL (${description}): refused by name, nothing written or cut up`,
+        [message.startsWith('ASOUND.CVL '), written.length, spritesCut],
+        [true, 0, 0]
+      );
+    }
+
+    expect(
+      'ASOUND.CVL alone, with the sprites already in: it is added',
+      [await importWith([cvl()], true), written.map(({ name }) => name)],
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        ['./sources/ASOUND.CVL'],
+      ]
+    );
+
+    expect(
+      'ASOUND.CVL alone, before the sprites: the files needed are asked for',
+      [
+        (await importWith([cvl()])).startsWith('Please provide all files'),
+        written.length,
+      ],
+      [true, 0]
+    );
+
+    // The player's own copy, where there is one: CVL=/path/to/ASOUND.CVL.
+    if (process.env.CVL) {
+      await importWith(
+        [new File([readFileSync(process.env.CVL)], 'ASOUND.CVL')],
+        true
+      );
+
+      expect(
+        'the real ASOUND.CVL is accepted',
+        written.map(({ name }) => name),
+        ['./sources/ASOUND.CVL']
+      );
+    } else {
+      process.stdout.write(
+        'SKIP import-assets-window: set CVL to the path of ASOUND.CVL to import the real one\n'
+      );
+    }
+
+    expect('each finished import reloads the page', reloads > 0, true);
+
+    store.setAll = setAll;
+    store.hasAllAssets = hasAllAssets;
+    delete (globalThis as any).location;
   }
 
   console.error = consoleError;

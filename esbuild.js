@@ -5,7 +5,9 @@
       entryPoints: [
         'src/css/app.scss',
         'src/js/backend.ts',
-        'src/js/frontend.ts'
+        'src/js/frontend.ts',
+        // Its own file, for `audioWorklet.addModule()` (#126): dist/musicWorklet.js.
+        'src/js/Audio/musicWorklet.ts'
       ],
       bundle: true,
       keepNames: true,

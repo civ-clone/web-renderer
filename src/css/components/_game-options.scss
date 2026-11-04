@@ -5,6 +5,13 @@
     padding: 0.5rem;
   }
 
+  // What to import for the sound (#126), under its disabled rows.
+  .hint {
+    color: var(--ui-fg-muted);
+    margin: 0;
+    padding: 0 0.5rem 0.5rem;
+  }
+
   // Whether the assets are imported, and the import (#749): the status after the name, the button at the end.
   .assets {
     align-items: center;

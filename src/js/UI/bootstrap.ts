@@ -28,6 +28,7 @@ import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';
 import WorkerFailures from './app/WorkerFailures';
 import buildSidebar from './app/sidebar';
+import music from './app/music';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !
@@ -71,6 +72,8 @@ export class Renderer {
     await assetStore.load();
     await setCursor();
     await initI18n();
+    // Silent without an ASOUND.CVL; with one, waits for the player's first key or click (#126).
+    await music.init();
 
     new ReloadGuard(() => gameStarted);
 
@@ -223,6 +226,8 @@ export class Renderer {
             observer: (): ObserverState | null => observerState,
             setGameStarted: (): void => {
               gameStarted = true;
+              // The title menu's music fades as the game begins (#126).
+              music.stop();
             },
             transportDisposers,
           });
@@ -235,7 +240,10 @@ export class Renderer {
       // the first `gameData` follows immediately: every handler above has to be
       // listening before that. There is no `start` for a loaded game — that is
       // what generates a world.
-      if (pendingLoad !== null) {
+      if (pendingLoad === null) {
+        // Evolution on the title menu, as the original's menu plays it, on until the game begins (#126).
+        music.play(4);
+      } else {
         mainMenu.remove();
 
         // Marks a DevTools timeline or `performance.getEntriesByType('mark')` can read, for where a load's time goes

@@ -26,6 +26,9 @@ export const setOptionDefaults = (): void => {
     interface: 'classic',
     // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
     unitMarker: 'theme',
+    // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.
+    sound: true,
+    soundVolume: 70,
   });
 };
 

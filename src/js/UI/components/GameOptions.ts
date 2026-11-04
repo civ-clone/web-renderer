@@ -13,6 +13,7 @@ import { interfaceMode } from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '../lib/buildPreferences';
+import { soundChanged } from '../lib/soundGain';
 import { t } from 'i18next';
 
 /** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */
@@ -45,6 +46,66 @@ export const assetsRow = (): HTMLElement => {
     });
 
   return row;
+};
+
+/**
+ * Sound and Sound volume (#126): Civilization's music, which needs an imported ASOUND.CVL. Without one they're disabled,
+ *  with a hint saying what to import. A change is heard at once.
+ */
+export const soundRows = (): HTMLElement[] => {
+  const on = s<HTMLInputElement>(
+      `<input type="checkbox" disabled${
+        options.get('sound', true) ? ' checked' : ''
+      }>`
+    ),
+    volume = s<HTMLInputElement>(
+      `<input type="range" min="0" max="100" step="5" disabled value="${options.get(
+        'soundVolume',
+        70
+      )}">`
+    ),
+    hint = s<HTMLParagraphElement>(
+      `<p class="hint" hidden>${t('GameOptions.sound-unavailable', {
+        file: 'ASOUND.CVL',
+      })}</p>`
+    ),
+    // How far along the track the thumb is, 0 to 1, for the theme to fill it to (#739).
+    fill = (): void =>
+      volume.style.setProperty('--fill', String(Number(volume.value) / 100));
+
+  fill();
+
+  void assetStore
+    .hasSoundDriver()
+    .catch((): boolean => false)
+    .then((available): void => {
+      on.disabled = !available;
+      volume.disabled = !available;
+      hint.hidden = available;
+    });
+
+  return [
+    s(
+      `<label>${t('GameOptions.sound')}</label>`,
+      h(on, {
+        change: () => {
+          options.set('sound', on.checked);
+          soundChanged();
+        },
+      })
+    ),
+    s(
+      `<label>${t('GameOptions.sound-volume')}</label>`,
+      h(volume, {
+        input: () => {
+          fill();
+          options.set('soundVolume', Number(volume.value));
+          soundChanged();
+        },
+      })
+    ),
+    hint,
+  ];
 };
 
 export class GameOptions extends Window {
@@ -249,6 +310,7 @@ export class GameOptions extends Window {
             });
           })()
         ),
+        ...soundRows(),
         buildOption(
           'keepBuildingMilitaryUnits',
           t('GameOptions.keep-building-military-units')

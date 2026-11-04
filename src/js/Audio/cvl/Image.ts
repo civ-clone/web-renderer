@@ -10,6 +10,11 @@ export const DS_OFFSET = 0x1e20;
 export const PATCH_TABLE = 0x695a; // DS-relative
 export const PATCH_SIZE = 0x2c;
 
+// The image's ID string at +0x10 starts with this in the 1991 drivers for the AdLib and the MT-32, and the AdLib's
+//  operator table (ds:0x73d8) tells the two apart.
+const ID = 'RLND Cvlzatn';
+const OP_REG = [0, 1, 2, 3, 4, 5, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20, 21];
+
 export class Image {
   /** The data segment as in the file. `Driver` plays from its own copy. */
   readonly ds: Uint8Array;
@@ -31,7 +36,12 @@ export class Image {
       throw new TypeError('ASOUND.CVL: not an MZ executable');
     }
 
-    const header = (file[8] | (file[9] << 8)) * 16;
+    const header = (file[8] | (file[9] << 8)) * 16,
+      id = file.subarray(header + 0x10, header + 0x10 + ID.length);
+
+    if (String.fromCharCode(...Array.from(id)) !== ID) {
+      throw new TypeError('ASOUND.CVL: not a Civilization sound driver');
+    }
 
     this.ds = file.subarray(header + DS_OFFSET);
 
@@ -46,6 +56,11 @@ export class Image {
       (_, i) => [this.ds[0x73c6 + 2 * i], this.ds[0x73c6 + 2 * i + 1]] as const
     );
     this.opReg = Array.from(this.ds.subarray(0x73d8, 0x73d8 + 18));
+
+    if (this.opReg.some((value, i) => value !== OP_REG[i])) {
+      throw new TypeError('ASOUND.CVL: not the AdLib driver');
+    }
+
     this.rngSeed = this.word(0x73fd);
   }
 

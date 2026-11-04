@@ -432,6 +432,11 @@ i18next.addResources('en', 'default', {
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
   'GameOptions.new-cities-build-defender': 'New cities build a defender',
+  // Civilization's music from the player's ASOUND.CVL (#126).
+  'GameOptions.sound': 'Sound',
+  'GameOptions.sound-unavailable':
+    'Import {{file}} from the original Civilization files to hear its music.',
+  'GameOptions.sound-volume': 'Sound volume',
   'GameOptions.square-tooltips': 'Describe the map square under the mouse',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
@@ -507,6 +512,7 @@ i18next.addResources('en', 'default', {
   // After the instructions, the files an import takes when they're chosen (#64).
   'ImportAssetsWindow.optional':
     'Add {{files, list}} as well for the improvement and Wonder icons.',
+  'ImportAssetsWindow.optional-sound': 'Add {{file}} for the music.',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
   'ImportAssetsWindow.progress-building': 'Building image assets...',

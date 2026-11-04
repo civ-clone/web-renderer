@@ -37,3 +37,13 @@ python3 hashes.py "$CVL" > ../../tests/ui/fixtures/cvl-driver.json
 python3 hashes.py "$CVL" --dump 42 3          # one ID's writes as `tick sub register value`
 CVL="$CVL" npm run test:cvl-driver            # from the repository root
 ```
+
+The renderer's own OPL2 synth (`src/js/Audio/opl/`, MIT, written from the chip's documented
+behaviour) plays those writes. `render-ts.mjs` renders an ID through it, taking the same
+arguments as `render.py` plus an output rate, so the two renders can be compared:
+
+```bash
+node render-ts.mjs "$CVL" 3 main-theme-ts.wav 45 3 44100
+```
+
+Renders of the player's data are copyrighted like the data: keep the WAVs out of the repository.
