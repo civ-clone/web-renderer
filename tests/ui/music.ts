@@ -65,12 +65,14 @@ class FakeContext implements MusicContext {
       resumeFails = false,
       lag = false,
       blocked = false,
+      refuseFirst = false,
     } = {},
     private readonly stub: Stub
   ) {
     this.resumeFails = resumeFails;
     this.lag = lag;
     this.blocked = blocked;
+    this.refuseFirst = refuseFirst;
 
     if (worklet) {
       this.audioWorklet = {
@@ -89,6 +91,8 @@ class FakeContext implements MusicContext {
   // As Chrome does for a context made without the player's go-ahead: a resume waits, unanswered, until `allow()`.
   private blocked: boolean;
   private waiting: (() => void)[] = [];
+  // As Safari does for a context made without the go-ahead: the first resume is refused.
+  private refuseFirst: boolean;
   closed = false;
 
   allow(): void {
@@ -130,6 +134,12 @@ class FakeContext implements MusicContext {
 
     if (this.blocked) {
       return new Promise((resolve) => this.waiting.push(resolve));
+    }
+
+    if (this.refuseFirst) {
+      this.refuseFirst = false;
+
+      return Promise.reject(new Error('Not allowed to start.'));
     }
 
     return this.#become('running');
@@ -176,6 +186,7 @@ const player = ({
     resumeFails?: boolean;
     lag?: boolean;
     blocked?: boolean;
+    refuseFirst?: boolean;
     throws?: boolean;
     none?: boolean;
   },
@@ -464,6 +475,44 @@ const run = async (): Promise<void> => {
 
     expect(
       'and a fade still lets it go: the waiting resume held nothing up',
+      context.state,
+      'suspended'
+    );
+  }
+
+  // The same, where the browser refuses that first resume rather than leaving it waiting: the next press asks again.
+  {
+    const { stub, music, gesture } = player({
+      context: { refuseFirst: true },
+    });
+
+    await music.init();
+    music.play(3);
+    await gesture('pointerdown');
+
+    const [context] = stub.contexts;
+
+    expect(
+      'a refused first resume: suspended',
+      [context.resumes, context.state],
+      [1, 'suspended']
+    );
+
+    await gesture('pointerup');
+
+    expect(
+      'the next press resumes it',
+      [context.resumes, context.state],
+      [2, 'running']
+    );
+
+    music.stop();
+    stub.nodes[0].reply({ idle: true });
+    await settle();
+    await gesture('click');
+
+    expect(
+      'once running, a press after a fade leaves it let go of',
       context.state,
       'suspended'
     );

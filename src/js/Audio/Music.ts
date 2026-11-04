@@ -192,9 +192,11 @@ export class Music {
       return;
     }
 
-    // Made in a press the browser didn't count (a touch's `pointerdown`, Escape): its resume waits, unanswered, so
-    //  it's asked again here, directly, rather than behind it.
-    if (this.#running) {
+    // Made in a press the browser didn't count (a touch's `pointerdown`, Escape): its resume was refused (Safari) or
+    //  waits unanswered (Chrome), so it's asked again here, directly, rather than behind it, whenever there's
+    //  something to hear.
+    if (this.#wanted !== null && this.#gain() > 0) {
+      this.#running = true;
       context.resume().catch((): void => {});
     }
   }
