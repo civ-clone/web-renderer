@@ -1,0 +1,1 @@
+{"version":"0.1.0@99786ce1","date":"2026-11-04T19:50:43.000Z","localChanges":["T now hides the unit awaiting orders and its ring as well as the other units and cities, so you can see the square under it, such as whether it has a special resource (closes #804). Moving or choosing a unit while they're hidden brings the cities back too, not just the units."],"externalChanges":{}}
