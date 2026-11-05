@@ -65,6 +65,7 @@ i18next.addResources('en', 'unit', {
   'Action.Explore.name': 'Explore',
   'Action.Fortify.name': 'Fortify',
   'Action.FoundCity.name': 'Found a new city',
+  'Action.GoTo.name': 'Go to',
   'Action.HelpBuildWonder.name': 'Help build Wonder',
   'Action.IndustrialSabotage.name': 'Industrial sabotage',
   'Action.InciteRevolt.name': 'Incite a revolt',
