@@ -65,7 +65,10 @@ export const attackSoundOf = (unit: Unit): string[] | null => {
       sound.every((word) => typeof word === 'string')
       ? sound
       : null;
-  } catch {
+  } catch (error) {
+    // Quiet, rather than stopping the attack, but not unnoticed.
+    console.error(error);
+
     return null;
   }
 };

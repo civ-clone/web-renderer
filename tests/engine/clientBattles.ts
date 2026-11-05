@@ -250,7 +250,13 @@ const ours = { name: 'ours' },
   let given: unknown = ['gunfire'];
 
   additionalDataRegistryInstance.register(
-    new AdditionalData(Unit, 'attackSound', () => given)
+    new AdditionalData(Unit, 'attackSound', () => {
+      if (given instanceof Error) {
+        throw given;
+      }
+
+      return given;
+    })
   );
 
   expect('the words registered', attackSoundOf(fighter), ['gunfire']);
@@ -260,6 +266,22 @@ const ours = { name: 'ours' },
 
   given = [];
   expect('no words: no sound', attackSoundOf(fighter), null);
+
+  const logged: unknown[] = [],
+    error = console.error;
+
+  given = new Error('no table');
+  console.error = (...args: unknown[]) => logged.push(...args);
+
+  try {
+    expect(
+      'a provider that fails: no sound, and logged',
+      [attackSoundOf(fighter), logged.length],
+      [null, 1]
+    );
+  } finally {
+    console.error = error;
+  }
 }
 
 finished = true;
