@@ -192,6 +192,11 @@ export class GamePortal extends Portal {
 
       event.preventDefault();
 
+      // One a long press has already opened: a touch's `contextmenu` arrives after the hold that opened it.
+      if (openMenu() !== null) {
+        return;
+      }
+
       this.clearTimeout();
       this.#drag = null;
       this.endHover();

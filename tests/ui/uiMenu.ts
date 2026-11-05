@@ -64,6 +64,9 @@ console.error = () => {};
     }
   );
 
+// linkedom has a MutationObserver, which `./lib/dom` doesn't make global: the menu watches for windows opening with it.
+(globalThis as any).MutationObserver ??= (window as any).MutationObserver;
+
 // No layout: the element "under the pointer" is whichever the test says.
 let underPointer: Element | null = null;
 
@@ -321,6 +324,58 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     launcher.remove();
   }
 
+  // Only the main button (or a finger) runs a row.
+  {
+    const ran: string[] = [],
+      menu = menuOf({}, ran),
+      [one] = rows(menu);
+
+    underPointer = one;
+    pointer('pointermove');
+
+    const right = new Event('pointerup', { bubbles: true, cancelable: true });
+
+    Object.assign(right, { clientX: 10, clientY: 10, button: 2 });
+    document.body.dispatchEvent(right);
+    expect(
+      'the right button lifted on a row: nothing run, still open',
+      [ran, menu.isOpen()],
+      [[], true]
+    );
+
+    menu.close();
+  }
+
+  // Space on the launcher closes it, and the click some browsers send on its keyup doesn't open it again.
+  {
+    const launcher = document.createElement('button'),
+      clicks: string[] = [];
+
+    document.body.append(launcher);
+    const menu = menuOf({ launcher });
+
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => launcher,
+    });
+    key(' ');
+    // Listened for after the menu's swallowing listener: linkedom runs a node's listeners in the order they were added,
+    //  where a browser runs the capturing one first.
+    launcher.addEventListener('click', () => clicks.push('click'));
+    launcher.dispatchEvent(new Event('click', { bubbles: true }));
+    expect(
+      'closed by Space, and its keyup click swallowed',
+      [menu.isOpen(), clicks],
+      [false, []]
+    );
+
+    launcher.dispatchEvent(new Event('click', { bubbles: true }));
+    expect('the next click is the launcher’s again', clicks, ['click']);
+
+    delete (document as any).activeElement;
+    launcher.remove();
+  }
+
   // The keys move the same hover.
   {
     const ran: string[] = [],
@@ -429,16 +484,22 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       [false, true]
     );
 
-    if (typeof MutationObserver === 'function') {
+    {
       const dialog = document.createElement('dialog');
+
+      const ghost = document.createElement('div');
+
+      ghost.className = 'window ui-window-ghost';
+      document.body.append(ghost);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect('a closing window’s ghost: still open', second.isOpen(), true);
+      ghost.remove();
 
       dialog.className = 'window';
       document.body.append(dialog);
       await new Promise((resolve) => setTimeout(resolve, 0));
       expect('a window opening closes it', second.isOpen(), false);
       dialog.remove();
-    } else {
-      second.close();
     }
   }
 

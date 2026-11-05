@@ -390,6 +390,12 @@ export class UiMenu {
     });
 
     add<PointerEvent>(window, 'pointerup', (event) => {
+      // The main button's, or a finger's: a right or middle button lifted on a row runs nothing. The right button's
+      //  `contextmenu`, which some browsers send after it, would land on whatever is behind a closed menu.
+      if ((event.button ?? 0) !== 0) {
+        return;
+      }
+
       const index = this.#rowAt(event.clientX, event.clientY),
         held = this.#pressed;
 
@@ -447,6 +453,8 @@ export class UiMenu {
               (node) =>
                 node instanceof HTMLElement &&
                 node !== this.#element &&
+                // Not a closing window's fade-out ghost, which carries its classes (`Window`).
+                !node.matches('.ui-window-ghost') &&
                 (node.matches('dialog, .window') ||
                   node.querySelector?.('dialog, .window') !== null)
             )
@@ -497,6 +505,7 @@ export class UiMenu {
           if (this.#options.launcher?.contains(document.activeElement)) {
             handled();
             this.close({ restoreFocus: true });
+            this.#swallowLauncherClick();
           }
 
           return;
@@ -524,6 +533,29 @@ export class UiMenu {
 
     // Any other key does what it does anyway, a report's or a unit's, with the menu gone.
     this.close();
+  }
+
+  // Some browsers (Firefox) still click a button on Space's keyup, whatever its keydown did: that click, from the key
+  //  that just closed the menu, would open it again.
+  #swallowLauncherClick(): void {
+    const launcher = this.#options.launcher;
+
+    if (!launcher) {
+      return;
+    }
+
+    const swallow = (event: Event): void => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        done();
+      },
+      done = (): void => {
+        launcher.removeEventListener('click', swallow, true);
+        clearTimeout(timer);
+      },
+      timer = setTimeout(done, 500);
+
+    launcher.addEventListener('click', swallow, true);
   }
 
   // The next row from `from` in `step`'s direction that can be chosen, round the ends.
