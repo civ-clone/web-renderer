@@ -8,7 +8,7 @@ import { Tile, Unit, UnitAction } from '../types';
 import { Element, s } from '@dom111/element';
 import tooltip, { hideTooltipWithin } from './lib/Tooltip';
 import button from '../lib/button';
-import { keyForAction } from '../lib/unitActionKeys';
+import { keyForAction, keyName } from '../lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { unitActions } from '../lib/unitActions';
 
@@ -16,10 +16,6 @@ import { unitActions } from '../lib/unitActions';
 //  `&amp;` or `&#39;` (#704).
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
-
-// As `aria-keyshortcuts` names a key, and as the tooltip shows it: a capital is typed with Shift (Disband, Pillage).
-const keyName = (key: string): string =>
-  key === ' ' ? 'Space' : /^[A-Z]$/.test(key) ? `Shift+${key}` : key;
 
 export type ActionGroup = 'orders' | 'terrain' | 'special';
 

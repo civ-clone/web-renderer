@@ -70,4 +70,8 @@ export const keyForAction = (actionName: string): string | null =>
     actions.includes(actionName)
   )?.[0] ?? null;
 
+// As `aria-keyshortcuts` names a key, and as the tooltip shows it: a capital is typed with Shift (Disband, Pillage).
+export const keyName = (key: string): string =>
+  key === ' ' ? 'Space' : /^[A-Z]$/.test(key) ? `Shift+${key}` : key;
+
 export default keyToActionsMap;

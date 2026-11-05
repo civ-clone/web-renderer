@@ -14,6 +14,8 @@ import { instance as options } from '../GameOptionsRegistry';
 import Portal from './Portal';
 import { Rect } from '../lib/viewport';
 import UnitActionMenu from './UnitActionMenu';
+import openUnitMenu from './UiUnitMenu';
+import { openMenu } from './UiMenu';
 import { on } from '@dom111/element';
 
 // How far, in px, a press has to move before it is a drag rather than a click
@@ -162,6 +164,15 @@ export class GamePortal extends Portal {
         // moving now would slide the map out from under the menu.
         this.#drag = null;
 
+        // Under the new interface, the shared menu over the press, which a finger slides onto and lifts from (#808).
+        if (interfaceMode() === 'new') {
+          openUnitMenu(x, y, this.#activeUnit as Unit, tile, this.transport(), {
+            pressed: true,
+          });
+
+          return;
+        }
+
         new UnitActionMenu(
           this,
           x,
@@ -173,6 +184,33 @@ export class GamePortal extends Portal {
       }, 350);
     };
 
+    // A right-click opens the same menu at once, without the hold, in place of the browser's own (#808).
+    on(this.canvas(), 'contextmenu', (event) => {
+      if (interfaceMode() !== 'new') {
+        return;
+      }
+
+      event.preventDefault();
+
+      this.clearTimeout();
+      this.#drag = null;
+      this.endHover();
+
+      const tile = this.tileAt(event.offsetX, event.offsetY);
+
+      if (tile === null || this.#activeUnit === null) {
+        return;
+      }
+
+      openUnitMenu(
+        event.clientX,
+        event.clientY,
+        this.#activeUnit,
+        tile,
+        this.transport()
+      );
+    });
+
     // Prevent dragging address bar down by accident
     on(this.canvas(), 'touchstart', (event) => event.preventDefault());
 
@@ -182,6 +220,12 @@ export class GamePortal extends Portal {
       this.endHover();
 
       if (!event.isPrimary) {
+        return;
+      }
+
+      // A right-click is the menu's under the new interface (#808), not a press on the map: some browsers send its
+      //  `contextmenu` only once the button is up, which would otherwise be a click on the square first.
+      if (event.button === 2 && interfaceMode() === 'new') {
         return;
       }
 
@@ -215,6 +259,13 @@ export class GamePortal extends Portal {
 
     on(this.canvas(), 'pointermove', (event) => {
       const drag = this.#drag;
+
+      // No tooltip over an open menu (#808).
+      if (drag === null && openMenu() !== null) {
+        this.endHover();
+
+        return;
+      }
 
       if (drag === null) {
         this.hover(event);

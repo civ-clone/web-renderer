@@ -1,0 +1,215 @@
+// The new interface's menu (#808): the Game menu and the unit's long press menu. A panel with a rule down its leading
+//  edge, its rows in sections under eyebrows, each row an icon, a label, a detail and a key. The row under the pointer
+//  is the one chosen, so its hover is the strongest state here, and the same for the mouse, a sliding finger and the
+//  arrow keys: it's set as `data-hover` by the menu itself, never by `:hover`. No z-index: the menu is the last thing
+//  in the page.
+
+.ui-menu {
+  background: var(--ui-menu-bg);
+  border: 1px solid var(--ui-menu-edge);
+  border-inline-start: var(--ui-menu-rule-width) solid var(--ui-menu-rule);
+  border-radius: var(--ui-menu-radius);
+  box-shadow: var(--ui-menu-shadow);
+  box-sizing: border-box;
+  color: var(--ui-menu-fg);
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  font-size: var(--type-body-size);
+  left: 0;
+  max-width: min(20rem, calc(100vw - 1rem));
+  min-width: 12rem;
+  opacity: 0;
+  overflow: hidden;
+  position: fixed;
+  top: 0;
+  transform: translateY(var(--ui-menu-rise));
+  width: max-content;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: opacity var(--ui-menu-motion) var(--ui-ease),
+      transform var(--ui-menu-motion) var(--ui-ease);
+  }
+
+  &[data-open] {
+    opacity: 1;
+    transform: none;
+  }
+
+  // A menu over the map takes the press that opened it: no text selection or callout from the long press.
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.ui-menu-header {
+  align-items: center;
+  border-bottom: 1px solid var(--ui-menu-divider);
+  color: var(--ui-menu-heading-fg);
+  display: grid;
+  column-gap: 0.5rem;
+  grid-template-areas:
+    'portrait name'
+    'portrait square';
+  grid-template-columns: auto 1fr;
+  padding: 0.5rem 0.75rem;
+
+  .ui-menu-portrait {
+    grid-area: portrait;
+  }
+
+  .ui-menu-name {
+    font-family: var(--type-heading-family);
+    font-size: var(--type-heading-size);
+    font-weight: var(--type-heading-weight);
+    grid-area: name;
+    letter-spacing: var(--type-heading-tracking);
+    margin: 0;
+    text-transform: var(--type-heading-transform);
+  }
+
+  .ui-menu-square {
+    font-size: var(--type-caption-size);
+    grid-area: square;
+    margin: 0;
+    opacity: 0.85;
+  }
+}
+
+.ui-menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-menu-item-gap);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--ui-menu-padding);
+}
+
+.ui-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ui-menu-item-gap);
+}
+
+.ui-menu-eyebrow {
+  color: var(--ui-menu-eyebrow-fg);
+  font-size: var(--type-eyebrow-size);
+  font-weight: var(--type-eyebrow-weight);
+  letter-spacing: var(--type-eyebrow-tracking);
+  padding: 0.5rem 0.75rem 0.25rem;
+  text-transform: var(--type-eyebrow-transform);
+}
+
+.ui-menu-rule {
+  border-top: 1px solid var(--ui-menu-divider);
+  margin: 0.25rem 0;
+}
+
+.ui-menu-item {
+  align-items: center;
+  appearance: none;
+  background: var(--ui-menu-item-bg);
+  border: 0;
+  border-radius: var(--ui-menu-item-radius);
+  // The hover's bar, drawn inside the row so the row keeps its size whatever its state.
+  box-shadow: inset 3px 0 0 transparent;
+  color: var(--ui-menu-item-fg);
+  column-gap: 0.625rem;
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  grid-template-areas:
+    'icon label key'
+    'icon detail key';
+  grid-template-columns: auto 1fr auto;
+  padding: var(--ui-menu-item-padding);
+  text-align: start;
+  width: 100%;
+
+  @media (prefers-reduced-motion: no-preference) {
+    transition: background-color var(--ui-menu-motion) var(--ui-ease),
+      color var(--ui-menu-motion) var(--ui-ease),
+      box-shadow var(--ui-menu-motion) var(--ui-ease);
+  }
+
+  &:focus {
+    // The focus is drawn below, on the hover: none of the browser's own.
+    outline: none;
+  }
+
+  &.danger {
+    color: var(--ui-menu-danger-fg);
+  }
+
+  &[data-hover] {
+    background: var(--ui-menu-hover-bg);
+    box-shadow: inset 3px 0 0 var(--ui-menu-hover-bar);
+    color: var(--ui-menu-hover-fg);
+  }
+
+  &.danger[data-hover] {
+    color: var(--ui-menu-danger-fg);
+  }
+
+  &[data-hover][data-pressed] {
+    background: var(--ui-menu-pressed-bg);
+  }
+
+  &[data-hover]:focus-visible {
+    outline: var(--ui-focus-outline);
+    outline-offset: calc(-1 * var(--ui-focus-offset));
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: var(--ui-control-disabled-opacity);
+  }
+}
+
+// Empty when the row has no icon: no gap is kept for one.
+.ui-menu-icon {
+  display: flex;
+  grid-area: icon;
+
+  &:empty {
+    display: none;
+  }
+
+  canvas {
+    height: 1.5rem;
+    image-rendering: pixelated;
+    width: 1.5rem;
+  }
+}
+
+.ui-menu-item:has(.ui-menu-icon:empty) {
+  grid-template-areas:
+    'label key'
+    'detail key';
+  grid-template-columns: 1fr auto;
+}
+
+.ui-menu-label {
+  grid-area: label;
+  white-space: nowrap;
+}
+
+.ui-menu-detail {
+  font-size: var(--type-caption-size);
+  grid-area: detail;
+  opacity: 0.8;
+}
+
+.ui-menu-key {
+  background: var(--ui-menu-kbd-bg);
+  border: 1px solid var(--ui-menu-kbd-edge);
+  border-radius: 3px;
+  color: var(--ui-menu-kbd-fg);
+  display: var(--ui-kbd-display);
+  font-family: var(--font-mono);
+  font-size: var(--type-caption-size);
+  grid-area: key;
+  line-height: 1.4;
+  padding: 0 0.3rem;
+}

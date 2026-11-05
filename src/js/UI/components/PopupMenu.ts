@@ -7,6 +7,10 @@ import { t } from 'i18next';
 // doesn't stay pinned in this module-level registry for the page lifetime.
 const menuMap = new WeakMap<object, PopupMenu>();
 
+/** Whether `launcher` has a menu open (#710). */
+export const hasPopupMenu = (launcher: object): boolean =>
+  menuMap.has(launcher);
+
 export interface PopupMenuAction {
   label: string;
   action: (menu: PopupMenu) => void;

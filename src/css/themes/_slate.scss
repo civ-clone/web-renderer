@@ -204,6 +204,37 @@
   --ui-tooltip-title-bg: color-mix(in srgb, var(--ui-title-bg), #000 18%);
   --ui-tooltip-title-fg: var(--ui-title-fg);
 
+  // Menus (#808): the Game menu and the long press menu, on the tooltips' slate in light and dark alike, with a brass
+  //  rule down the leading edge. The row under the pointer, which is the one chosen, takes a brass wash and bar.
+  --ui-menu-bg: var(--ui-tooltip-bg);
+  --ui-menu-fg: var(--ui-tooltip-fg);
+  --ui-menu-muted: var(--ui-tooltip-muted);
+  --ui-menu-edge: var(--ui-tooltip-edge);
+  --ui-menu-rule: var(--ui-accent);
+  --ui-menu-rule-width: 3px;
+  --ui-menu-divider: var(--ui-tooltip-rule);
+  --ui-menu-radius: var(--ui-radius-window);
+  --ui-menu-shadow: var(--ui-tooltip-shadow);
+  --ui-menu-padding: 0.375rem;
+  --ui-menu-heading-fg: var(--ui-tooltip-title-fg);
+  --ui-menu-eyebrow-fg: var(--ui-tooltip-muted);
+  --ui-menu-item-bg: transparent;
+  --ui-menu-item-fg: var(--ui-menu-fg);
+  --ui-menu-item-radius: var(--ui-radius-control);
+  --ui-menu-item-gap: 0;
+  --ui-menu-item-padding: 0.375rem 0.75rem;
+  --ui-menu-hover-bg: color-mix(in srgb, var(--ui-accent) 25%, transparent);
+  --ui-menu-hover-fg: var(--ui-tooltip-title-fg);
+  --ui-menu-hover-bar: var(--ui-accent);
+  --ui-menu-pressed-bg: color-mix(in srgb, var(--ui-accent) 40%, transparent);
+  // The dark scheme's red in both, as the menu is dark in both.
+  --ui-menu-danger-fg: #ef7b6c;
+  --ui-menu-kbd-bg: color-mix(in srgb, var(--ui-tooltip-fg) 8%, transparent);
+  --ui-menu-kbd-edge: var(--ui-tooltip-rule);
+  --ui-menu-kbd-fg: var(--ui-tooltip-muted);
+  --ui-menu-motion: var(--ui-motion-fast);
+  --ui-menu-rise: 4px;
+
   // The new window chrome (#738): a brass rule under the slate title, and the footer on a band of its own.
   --ui-title-rule: var(--ui-accent);
   --ui-footer-bg: var(--ui-bg-1);

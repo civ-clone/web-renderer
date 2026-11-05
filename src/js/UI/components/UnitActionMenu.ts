@@ -1,73 +1,19 @@
 import { PopupMenu, PopupMenuAction } from './PopupMenu';
-import { Tile, Unit as UnitData, UnitAction } from '../types';
+import { Tile, Unit as UnitData } from '../types';
 import Transport from '../Transport';
 import { off, on } from '@dom111/element';
-import { hasUnitActions, unitActions } from '../lib/unitActions';
-import distantActions from '../lib/distantActions';
-import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
-import { t } from 'i18next';
+import unitMenuActions from '../lib/unitMenuActions';
 
+// The orders, as the new interface's menu has them too (#808).
 const buildActions = (
   tile: Tile,
   unit: UnitData,
   transport: Transport
-): PopupMenuAction[] => {
-  let actions: UnitAction[] = [];
-
-  // Not offered anything, not even GoTo, until the unit's actions have arrived (#323): the menu doesn't open, and the
-  //  next long press finds them.
-  if (!hasUnitActions(unit)) {
-    return [];
-  }
-
-  if (tile === unit.tile) {
-    actions = unitActions(unit);
-  }
-
-  const [neighbouringTileDetails] = Object.entries(
-    unit.actionsForNeighbours ?? {}
-  ).filter(([, actions]) => {
-    const [action] = actions;
-
-    if (!action) {
-      return false;
-    }
-
-    return action.to === tile;
-  });
-
-  const [, neighbouringTileActions] = neighbouringTileDetails ?? [];
-
-  if (neighbouringTileActions) {
-    actions = neighbouringTileActions;
-  }
-
-  if (tile !== unit.tile && !neighbouringTileActions?.length) {
-    actions = distantActions(unit, tile);
-  }
-
-  // Calling off a move onto a treaty partner's land is the Cancel of the window its move opens (#287), and an action a
-  //  Senate overrules is listed as what was asked for (#133).
-  return actions
-    .filter((action) => action._ !== 'AbortMove')
-    .map((action) => ({
-      label: t(`Action.${nameOf(action)}.name`, {
-        defaultValue: nameOf(action),
-        ns: 'unit',
-      }),
-      // Through the same windows as the arrow keys: a confirmation that would break a treaty, a Diplomat's incite and
-      //  bribe windows (#58).
-      action: () =>
-        performWithPrompts(unit, action, actions, (chosen) =>
-          transport.send('action', {
-            name: 'ActiveUnit',
-            id: unit.id,
-            unitAction: chosen._,
-            target: chosen.to.id,
-          })
-        ),
-    }));
-};
+): PopupMenuAction[] =>
+  unitMenuActions(tile, unit, transport).actions.map(({ label, run }) => ({
+    label,
+    action: run,
+  }));
 
 // TODO: This won't work as a private property of UnitActionMenu... Why?
 let bodyListener: (event: PointerEvent) => void = () => {};
