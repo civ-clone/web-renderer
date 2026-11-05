@@ -333,6 +333,19 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     underPointer = one;
     pointer('pointermove');
 
+    const rightDown = new Event('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    Object.assign(rightDown, { clientX: 10, clientY: 10, button: 2 });
+    one.dispatchEvent(rightDown);
+    expect(
+      'the right button pressed on a row: not drawn pressed',
+      one.hasAttribute('data-pressed'),
+      false
+    );
+
     const right = new Event('pointerup', { bubbles: true, cancelable: true });
 
     Object.assign(right, { clientX: 10, clientY: 10, button: 2 });
@@ -424,6 +437,22 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       [other.isOpen(), f4.defaultPrevented],
       [false, false]
     );
+
+    const loose = menuOf(),
+      space = key(' ');
+
+    expect(
+      'Space with nothing chosen: closed, and left to the game',
+      [loose.isOpen(), space.defaultPrevented],
+      [false, false]
+    );
+
+    const held = menuOf();
+
+    key('Control');
+    key('Alt');
+    expect('a modifier on its own leaves it open', held.isOpen(), true);
+    held.close();
 
     const escaped = menuOf(),
       escape = key('Escape');

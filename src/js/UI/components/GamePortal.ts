@@ -197,15 +197,16 @@ export class GamePortal extends Portal {
         return;
       }
 
-      this.clearTimeout();
-      this.#drag = null;
-      this.endHover();
-
       const tile = this.tileAt(event.offsetX, event.offsetY);
 
+      // Nothing to offer: the press is left as it was, a tap or a drag.
       if (tile === null || this.#activeUnit === null) {
         return;
       }
+
+      this.clearTimeout();
+      this.#drag = null;
+      this.endHover();
 
       openUnitMenu(
         event.clientX,

@@ -375,7 +375,8 @@ export class UiMenu {
       if (target && this.#element.contains(target)) {
         const index = this.#rowAt(event.clientX, event.clientY);
 
-        if (index !== null) {
+        // Drawn pressed for the button that would run it.
+        if (index !== null && (event.button ?? 0) === 0) {
           this.#hoverRow(index);
           this.#rows[index].dataset.pressed = '';
         }
@@ -506,7 +507,12 @@ export class UiMenu {
             handled();
             this.close({ restoreFocus: true });
             this.#swallowLauncherClick();
+
+            return;
           }
+
+          // The game's, then, as any other key is: the menu goes, so it isn't left over what the key does.
+          this.close();
 
           return;
         }
@@ -527,7 +533,12 @@ export class UiMenu {
 
         return;
 
+      // A modifier on its own, before the key it goes with.
       case 'Shift':
+      case 'Control':
+      case 'Alt':
+      case 'Meta':
+      case 'CapsLock':
         return;
     }
 
