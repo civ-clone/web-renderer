@@ -44,6 +44,7 @@ import registerNotifications from './Client/notifications/registerNotifications'
 import registerPatchEvents from './Client/events/patchEvents';
 import Talks, { registerTalkEvents } from './Client/Talks';
 import ChoicePrompt from './Client/ChoicePrompt';
+import registerBattleEvents from './Client/battleEvents';
 import registerDiplomatEvents from './Client/diplomatEvents';
 import registerObserveCity from './Client/observeCity';
 import TurnHandover, {
@@ -165,8 +166,10 @@ export class DataTransferClient extends Client implements IClient {
       console.error(error);
     });
 
+    // What each battle the player sees sounds like (#126): not for a watcher, whose game the page doesn't play.
     if (!readOnly) {
       this.#disposers.push(
+        registerBattleEvents(engineInstance, this.#context),
         registerTalkEvents(engineInstance, this.#context),
         registerTurnHandoverEvents(engineInstance, this.#turnHandover)
       );

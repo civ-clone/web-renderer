@@ -11,6 +11,7 @@ import { RequirementData } from './lib/requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './lib/civilopedia';
 import { CivilizationScore } from './lib/civilizationScore';
 import { CivilizationPowerRow } from './lib/civilizationPower';
+import type { BattleSound } from './Client/battleEvents';
 import { GameOverDetails } from './lib/gameOver';
 import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
@@ -147,6 +148,8 @@ declare global {
     resume: TransportData<never, null>;
     // The civilizations still to be chosen, with their leaders, for the game setup (#604).
     civilizations: TransportData<CivilizationOption[], null>;
+    // A battle the player sees or fights (#126): what it sounds like, for the page to play.
+    battle: TransportData<BattleSound, never>;
     // The difficulty levels the rules offer, for the new game menu (#173).
     difficulties: TransportData<DifficultyOption[], null>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.

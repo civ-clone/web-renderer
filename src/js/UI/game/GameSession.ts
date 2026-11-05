@@ -74,7 +74,12 @@ export type GameSessionDeps = {
   //  watched, which is nobody's own to hear.
   sounds?: Pick<
     EventSounds,
-    'attach' | 'newGame' | 'welcomeClosed' | 'notificationShown' | 'noticeAdded'
+    | 'attach'
+    | 'newGame'
+    | 'welcomeClosed'
+    | 'notificationShown'
+    | 'noticeAdded'
+    | 'battle'
   >;
 };
 
@@ -651,6 +656,10 @@ export class GameSession {
 
           scheduleRender();
         })
+      );
+
+      transportDisposers.push(
+        transport.receive('battle', (battle): void => sounds?.battle(battle))
       );
 
       transportDisposers.push(
