@@ -70,8 +70,11 @@ export class Music {
   // Settles once the worklet is loaded and the CVL sent to it, or at once with false if it can't be.
   #starting: Promise<boolean> | null = null;
   #failed = false;
-  // The tune that should be playing, or null after a fade.
+  // The tune that should be playing, or null after a fade, or once a tune played once has played out.
   #wanted: Tune | null = null;
+  #once = false;
+  // How many tunes have been sent to the worklet, which says how many it had had when it went idle.
+  #plays = 0;
   // Whether the context was last asked to run, and that ask: `context.state` changes only once the audio thread has
   //  caught up, so a quick suspend and resume (the volume slider through 0) would read it stale. Each ask waits for
   //  the one before.
@@ -110,9 +113,30 @@ export class Music {
     return this.#sound !== null && !this.#failed;
   }
 
-  /** Starts PlayTune `id` (3 is the main theme, 4 Evolution) at arrangement `level`, once sound can start. */
-  play(id: number, level: number = 3): void {
+  /**
+   * Starts PlayTune `id` (3 is the main theme, 4 Evolution) at arrangement `level`, once sound can start. A tune played
+   *  `once` (a jingle: a city's build, an advance) lets the context go once it has played out, as a fade does, and is
+   *  never kept for the first gesture: heard then, it would be about something long past.
+   */
+  play(
+    id: number,
+    level: number = 3,
+    { once = false }: { once?: boolean } = {}
+  ): void {
+    if (once && !this.#gestured) {
+      return;
+    }
+
+    // Nor while the sound's off: turned up later, it would be just as stale. Heard, it would have replaced the theme
+    //  playing and then played out, so that theme isn't taken up again either.
+    if (once && this.#gain() === 0) {
+      this.#wanted = null;
+
+      return;
+    }
+
     this.#wanted = { id, level };
+    this.#once = once;
 
     if (this.#failed) {
       return;
@@ -158,6 +182,11 @@ export class Music {
     this.#post({ volume: gain });
 
     if (gain === 0) {
+      // A jingle's moment has passed by the time it's turned up again: what's left of it isn't heard then.
+      if (this.#once) {
+        this.#wanted = null;
+      }
+
       this.#suspend();
     } else if (this.#wanted !== null) {
       // With no tune wanted (after a fade, the context let go of), there's nothing to turn up: the next tune resumes
@@ -213,6 +242,10 @@ export class Music {
   }
 
   #post(message: MusicMessage, transfer: Transferable[] = []): void {
+    if (message.play && this.#node !== null) {
+      this.#plays++;
+    }
+
     try {
       this.#node?.port.postMessage(message, transfer);
     } catch {
@@ -331,9 +364,20 @@ export class Music {
       return;
     }
 
-    // Silent after a fade: the context is let go of until the next tune. Not while a tune is wanted, which may only
-    //  be resting.
-    if (reply.idle && this.#wanted === null) {
+    // Silent after a fade, or after a tune played once: the context is let go of until the next tune. Not while a
+    //  tune is wanted, which may only be resting.
+    // An idle sent before the worklet had the latest tune is about the one before it: a jingle asked for just after a
+    //  fade's silence would otherwise be cut off.
+    if (
+      reply.idle &&
+      reply.plays !== undefined &&
+      reply.plays !== this.#plays
+    ) {
+      return;
+    }
+
+    if (reply.idle && (this.#wanted === null || this.#once)) {
+      this.#wanted = null;
       this.#suspend();
     }
   }

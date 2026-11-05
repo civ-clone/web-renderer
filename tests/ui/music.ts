@@ -367,6 +367,35 @@ const run = async (): Promise<void> => {
       [sent(stub).pop(), context.state],
       [{ volume: 0.5 }, 'running']
     );
+
+    // A jingle muted part-way: its moment has passed, so turned up again, the rest isn't heard.
+    music.play(24, 3, { once: true });
+    gain.value = 0;
+    music.volumeChanged();
+    gain.value = 0.5;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'a jingle muted part-way isn’t picked up again when turned up',
+      [sent(stub).pop(), context.state],
+      [{ volume: 0.5 }, 'suspended']
+    );
+
+    // A jingle while the sound's off: heard, it would have replaced the theme, so the theme isn't picked up again.
+    music.play(10);
+    gain.value = 0;
+    music.volumeChanged();
+    music.play(33, 3, { once: true });
+    gain.value = 0.5;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'a jingle dropped while off retires the theme it would have replaced',
+      [sent(stub).pop(), context.state],
+      [{ volume: 0.5 }, 'suspended']
+    );
   }
 
   // Turned off while the worklet's module loads: the context started in the gesture is suspended once it has.
@@ -653,6 +682,116 @@ const run = async (): Promise<void> => {
       'and nothing after starts it again',
       [stub.contexts[0].resumes, stub.messages.length, stub.contexts[0].state],
       [resumes, before, 'suspended']
+    );
+  }
+
+  // A tune played once (a jingle): not kept for the first gesture; after one, posted as any tune is, and once it has
+  //  played out the context is let go of, as after a fade, and a theme after it is held again.
+  {
+    const { stub, music, gesture } = player();
+
+    await music.init();
+    music.play(44, 3, { once: true });
+    await gesture();
+    await settle();
+
+    expect(
+      'a jingle before the first gesture is not played at it',
+      sent(stub),
+      [{ load: 5 }, { volume: 0.49 }]
+    );
+
+    const [context] = stub.contexts;
+
+    stub.messages.length = 0;
+    music.play(44, 3, { once: true });
+    await settle();
+
+    expect(
+      'after it, a jingle is posted, and the context runs',
+      [sent(stub), context.state],
+      [[{ play: { id: 44, level: 3 } }], 'running']
+    );
+
+    stub.nodes[0].reply({ idle: true });
+    await settle();
+
+    expect(
+      'once it has played out, the context is suspended',
+      context.state,
+      'suspended'
+    );
+
+    stub.messages.length = 0;
+    music.stop();
+
+    expect('and there is nothing left to fade', sent(stub), []);
+
+    music.play(10);
+    await settle();
+    stub.nodes[0].reply({ idle: true });
+    await settle();
+
+    expect(
+      'a theme after a jingle is held again: idle leaves it running',
+      [sent(stub), context.state],
+      [[{ play: { id: 10, level: 3 } }], 'running']
+    );
+
+    // A jingle over a theme replaces it, as there's one driver: once it has played out, the context is let go of.
+    music.play(24, 3, { once: true });
+    stub.nodes[0].reply({ idle: true });
+    await settle();
+
+    expect(
+      'a jingle over a theme lets the context go once it has played',
+      context.state,
+      'suspended'
+    );
+  }
+
+  // An idle the worklet sent before it had the latest tune is about the one before: a jingle just after a fade plays.
+  //  And a jingle asked for while the sound's off is dropped, not played when it's turned up.
+  {
+    const { stub, music, gesture, gain } = player();
+
+    await music.init();
+    await gesture();
+    await settle();
+
+    const [context] = stub.contexts;
+
+    music.play(10);
+    music.stop();
+    music.play(44, 3, { once: true });
+    await settle();
+    stub.nodes[0].reply({ idle: true, plays: 2 });
+    await settle();
+
+    expect(
+      'an idle from before the jingle reached the worklet leaves it playing',
+      context.state,
+      'running'
+    );
+
+    stub.nodes[0].reply({ idle: true, plays: 3 });
+    await settle();
+
+    expect('its own idle lets the context go', context.state, 'suspended');
+
+    gain.value = 0;
+    music.volumeChanged();
+    await settle();
+    stub.messages.length = 0;
+    music.play(44, 3, { once: true });
+    gain.value = 0.49;
+    music.volumeChanged();
+    await settle();
+
+    expect(
+      'a jingle asked for with the sound off is not played when it is turned up',
+      sent(stub).filter((message: any) => 'play' in message),
+      []
     );
   }
 
