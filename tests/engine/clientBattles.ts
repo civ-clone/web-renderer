@@ -140,6 +140,10 @@ const ours = { name: 'ours' },
 
   defeated(archers, tank, attack(tank));
   defeated(spearman, unit(rival, ['bombing', 'gunfire']), attack(spearman));
+  // A Bomber attacks, and its run is heard, won.
+  const bomber = unit(rival, ['bombing', 'gunfire']);
+
+  defeated(unit(other, ['melee']), bomber, attack(bomber));
   // Neither side in sight.
   defeated(hidden, unit(rival, ['melee'], farTile), attack(hidden));
   // The attacker out of sight, its target in it.
@@ -149,6 +153,7 @@ const ours = { name: 'ours' },
     { sound: ['melee'], won: false },
     { sound: ['gunfire'], won: true },
     { sound: ['melee'], won: false },
+    { sound: ['bombing', 'gunfire'], won: true },
     { sound: ['gunfire'], won: true },
   ]);
 }
@@ -224,7 +229,9 @@ const ours = { name: 'ours' },
   defeated(unit(rival, ['melee']), attacker);
   defeated(unit(rival, ['melee']), attacker, attack(bystander));
   // A winner without a sound (a plugin's unit).
-  defeated(unit(rival, ['melee']), unit(ours, null), attack(attacker));
+  const mute = unit(ours, null);
+
+  defeated(unit(rival, ['melee']), mute, attack(mute));
 
   expect('heard once, for battles only', sent, [
     { sound: ['melee'], won: true },
