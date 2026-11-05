@@ -1,9 +1,10 @@
 // The game's moments as Civ1's tunes (src/js/UI/lib/eventSounds.ts, #126): each notice as its tune, from the player's
 // civilization, the rival's or none, with the main theme or nothing for a civilization without a national theme; the
-// talks' themes, the rival's, short as their emissary arrives and long at the table, faded as the player leaves or
+// battles' tunes, won and lost; the talks' themes, the rival's, short as their emissary arrives and long at the table, faded as the player leaves or
 // once no step follows; the new game's theme over the welcome; notices added together heard as one; and the ending.
 
 import EventSounds, {
+  battleTune,
   gameOverTune,
   longTheme,
   loudest,
@@ -544,6 +545,54 @@ expect(
   expect('the ending over the notices around it', box.calls, [
     ['once', 35],
     ['once', 24],
+  ]);
+}
+
+// Battles: the first sound there's a tune for, in the version the battle went for whoever's heard.
+expect(
+  'battles: each sound, won and lost',
+  [
+    battleTune({ sound: ['melee'], won: true }),
+    battleTune({ sound: ['melee'], won: false }),
+    battleTune({ sound: ['gunfire'], won: true }),
+    battleTune({ sound: ['gunfire'], won: false }),
+  ],
+  [38, 39, 40, 41]
+);
+expect(
+  "battles: the Bomber's run, won or lost",
+  [
+    battleTune({ sound: ['bombing', 'gunfire'], won: true }),
+    battleTune({ sound: ['bombing', 'gunfire'], won: false }),
+  ],
+  [43, 43]
+);
+expect(
+  'battles: a sound without a tune is passed over for the next',
+  battleTune({ sound: ['catapult', 'gunfire'], won: true }),
+  40
+);
+expect(
+  'battles: nothing for sounds without tunes',
+  [
+    battleTune({ sound: ['catapult'], won: true }),
+    battleTune({ sound: ['toString'], won: true }),
+    battleTune({ sound: [], won: true }),
+  ],
+  [null, null, null]
+);
+
+{
+  const { box, eventSounds } = sounds();
+
+  eventSounds.battle({ sound: ['gunfire'], won: false });
+  eventSounds.battle({ sound: ['catapult'], won: false });
+  eventSounds.gameOver({ winner: null });
+  eventSounds.battle({ sound: ['melee'], won: true });
+
+  expect('battles: a jingle each, none over the ending', box.calls, [
+    ['once', 41],
+    ['once', 35],
   ]);
 }
 

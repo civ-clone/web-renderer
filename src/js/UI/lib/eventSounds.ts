@@ -11,6 +11,7 @@ import {
   Negotiation,
   Player,
 } from '../types';
+import type { BattleSound } from '../../Engine/Client/battleEvents';
 import { GameOverDetails } from '../../Engine/lib/gameOver';
 import civilizationAttribute from '../components/lib/civilizationAttribute';
 import instanceOf from './instanceOf';
@@ -143,6 +144,27 @@ export const loudest = (tunes: (number | null)[]): number | null =>
         : chosen,
     null
   );
+
+/**
+ * The battle tunes for each sound the engine gives a unit (`attackSound`), won and lost, as Civ1 plays them. Civ1's
+ *  bombing run is one tune, played however the bombing went.
+ */
+export const battleTunes: {
+  readonly [sound: string]: { readonly won: number; readonly lost: number };
+} = {
+  melee: { won: 38, lost: 39 },
+  gunfire: { won: 40, lost: 41 },
+  bombing: { won: 43, lost: 43 },
+};
+
+/** A battle's tune: the first of its sounds there's a tune for, or `null` for none. */
+export const battleTune = ({ sound, won }: BattleSound): number | null => {
+  const known = sound.find((word) =>
+    Object.prototype.hasOwnProperty.call(battleTunes, word)
+  );
+
+  return known === undefined ? null : battleTunes[known][won ? 'won' : 'lost'];
+};
 
 /** The ending's tune: celebration for a win, the lament for anything else. */
 export const gameOverTune = (
@@ -343,6 +365,11 @@ export class EventSounds {
       this.#talksEnd = null;
       this.#talksOver();
     }, this.#talksEndAfter);
+  }
+
+  /** A battle the player sees or fights, heard as it's fought. */
+  battle(battle: BattleSound): void {
+    this.#jingle(battleTune(battle));
   }
 
   gameOver(details: Pick<GameOverDetails, 'winner'>): void {
