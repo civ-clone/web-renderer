@@ -61,9 +61,10 @@ export interface UiMenuOptions {
   onClose?: () => void;
 }
 
-// How far, in px, the menu keeps from the viewport's edges, and from the press it opens over.
+// How far, in px, the menu keeps from the viewport's edges, and from the press it opens over: clear of the square
+//  pressed, at the map's usual scale, and of the finger pressing it.
 export const EDGE_MARGIN = 8,
-  POINT_GAP = 12,
+  POINT_GAP = 24,
   LAUNCHER_GAP = 4;
 
 /**
@@ -429,7 +430,13 @@ export class UiMenu {
 
     add<KeyboardEvent>(window, 'keydown', (event) => this.#key(event));
 
-    add(window, 'blur', () => this.close());
+    // The page losing focus, to another window or tab: not an element's blur, which this sees too as it listens in the
+    //  capture phase (the launcher's, as the keys move the focus to the first row).
+    add<FocusEvent>(window, 'blur', (event) => {
+      if (!(event.target instanceof Node)) {
+        this.close();
+      }
+    });
 
     // A window opened after the menu would be drawn over it.
     if (typeof MutationObserver !== 'undefined') {

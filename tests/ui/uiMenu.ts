@@ -303,6 +303,24 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     launcher.remove();
   }
 
+  // Only the page losing focus closes it: not an element's blur, which reaches the window's capture listener too, as the
+  //  launcher's does when the keys move the focus to the first row.
+  {
+    const launcher = document.createElement('button');
+
+    document.body.append(launcher);
+
+    const menu = menuOf({ launcher, byKeyboard: true });
+
+    launcher.dispatchEvent(new Event('blur', { bubbles: true }));
+    expect('an element’s blur: still open', menu.isOpen(), true);
+
+    window.dispatchEvent(new Event('blur'));
+    expect('the window’s blur: closed', menu.isOpen(), false);
+
+    launcher.remove();
+  }
+
   // The keys move the same hover.
   {
     const ran: string[] = [],
