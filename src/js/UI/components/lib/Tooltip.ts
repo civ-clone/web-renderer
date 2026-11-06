@@ -193,6 +193,11 @@ export const tooltipOpenOver = (anchor: HTMLElement): boolean =>
 const focusable = (element: HTMLElement) =>
   element.matches('a[href], button, input, select, textarea, [tabindex]');
 
+const acts = (element: HTMLElement) => element.matches('a[href], button');
+
+// On a touch screen. Not in the test DOM unless a test gives it.
+const cannotHover = () => window.matchMedia?.('(hover: none)').matches ?? false;
+
 /**
  * Gives `anchor` a tooltip of `content()`, read each time it opens. The anchor's own `title` goes, so there's one
  *  tooltip, and it's made focusable if it isn't, so the keyboard reaches it.
@@ -222,6 +227,12 @@ export const tooltip = (
   }
 
   anchor.addEventListener('mouseenter', () => {
+    // A tap sends this too, and nothing to end it. A tap on a button has done what it's for, and its tooltip would stay
+    //  over whatever that opened (#812); on anything else, a tap is the only way to see what it says.
+    if (cannotHover() && acts(anchor)) {
+      return;
+    }
+
     hovering = true;
     cancel();
     timer = setTimeout(() => {
