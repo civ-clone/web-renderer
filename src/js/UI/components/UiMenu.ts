@@ -30,10 +30,13 @@ export interface UiMenuSection {
   items: UiMenuItem[];
 }
 
-/** Where the menu opens: under a launcher, its end lined up with the launcher's, or over a point (a press). */
+/**
+ * Where the menu opens: under a launcher, its end lined up with the launcher's, or over a point (a press). With `rowAt`,
+ *  how far down the menu its first row's middle is, that row opens on the point.
+ */
 export type UiMenuAnchor =
   | { below: DOMRectReadOnly | Box }
-  | { point: { x: number; y: number } };
+  | { point: { x: number; y: number }; rowAt?: number };
 
 export interface Box {
   left: number;
@@ -57,6 +60,9 @@ export interface UiMenuOptions {
   byKeyboard?: boolean;
   /** Opened by a press still held (a long press): lifting it on no row leaves the menu open. */
   pressed?: boolean;
+  /** Opens with its first row on the anchor's point, chosen, where there's room: a mouse held down, which lets go to
+   *  run it (#814). Not a finger, which would cover the row. */
+  firstRowOnPoint?: boolean;
   className?: string;
   onClose?: () => void;
 }
@@ -100,6 +106,19 @@ export const placeMenu = (
     y = Math.min(anchor.point.y, viewport.height - EDGE_MARGIN),
     left = clampLeft(x - size.width / 2),
     above = y - POINT_GAP - size.height;
+
+  // On the point, scrolling if it has to. With no room for the row, it's kept off the point as any other, so nothing
+  //  else is left there to be run by letting go.
+  if (anchor.rowAt !== undefined) {
+    const top = y - anchor.rowAt;
+
+    if (
+      top >= EDGE_MARGIN &&
+      room(top) >= Math.min(size.height, anchor.rowAt * 2)
+    ) {
+      return { left, top, maxHeight: room(top) };
+    }
+  }
 
   if (above >= EDGE_MARGIN) {
     return { left, top: above, maxHeight: y - POINT_GAP - EDGE_MARGIN };
@@ -200,6 +219,15 @@ export class UiMenu {
 
     if (options.byKeyboard) {
       this.#hoverRow(this.#next(-1, 1), true);
+    }
+
+    if (options.firstRowOnPoint && 'point' in options.anchor) {
+      const { x, y } = options.anchor.point,
+        index = this.#rowAt(x, y);
+
+      if (index !== null && index === this.#next(-1, 1)) {
+        this.#hoverRow(index);
+      }
     }
 
     // Shown from the next frame, so it fades in.
@@ -378,6 +406,8 @@ export class UiMenu {
       // Where the launcher is now, which a resize can move.
       'below' in anchor && launcher
         ? { below: launcher.getBoundingClientRect() }
+        : 'point' in anchor && this.#options.firstRowOnPoint
+        ? { ...anchor, rowAt: this.#firstRowMiddle() }
         : anchor,
       { width: element.offsetWidth, height: element.offsetHeight },
       { width: window.innerWidth, height: window.innerHeight }
@@ -391,6 +421,20 @@ export class UiMenu {
 
     // A finger panning the rows is for a menu with more to show: otherwise it slides from row to row.
     body.toggleAttribute('data-scrolls', body.scrollHeight > body.clientHeight);
+  }
+
+  // How far down the menu the first row that can be chosen has its middle.
+  #firstRowMiddle(): number {
+    const index = this.#next(-1, 1);
+
+    if (index === null) {
+      return 0;
+    }
+
+    const row = this.#rows[index].getBoundingClientRect(),
+      menu = this.#element.getBoundingClientRect();
+
+    return row.top - menu.top + row.height / 2;
   }
 
   // Once any press is let go of: a resize doesn't move the menu from under one.

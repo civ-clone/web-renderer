@@ -200,6 +200,26 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       }
     );
     expect(
+      'its first row on a press (#814): the row’s middle on the point',
+      placeMenu({ point: { x: 400, y: 400 }, rowAt: 60 }, size, viewport),
+      { left: 300, top: 340, maxHeight: 600 - EDGE_MARGIN - 340 }
+    );
+    expect(
+      'taller than the room below it: stays on the point, scrolling',
+      placeMenu({ point: { x: 400, y: 500 }, rowAt: 60 }, size, viewport),
+      { left: 300, top: 440, maxHeight: 600 - EDGE_MARGIN - 440 }
+    );
+    expect(
+      'no room for its header above the press: off the point, as any other',
+      placeMenu({ point: { x: 400, y: 50 }, rowAt: 60 }, size, viewport).top,
+      50 + POINT_GAP
+    );
+    expect(
+      'no room for the row below the press: off the point, above it',
+      placeMenu({ point: { x: 400, y: 570 }, rowAt: 60 }, size, viewport).top,
+      570 - POINT_GAP - 300
+    );
+    expect(
       'taller than both sides, with more room above: from the top, scrolling',
       placeMenu(
         { point: { x: 400, y: 500 } },
@@ -376,6 +396,44 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     pointer('pointermove');
     pointer('pointerup');
     expect('the first finger’s still does', ran, ['Three']);
+  }
+
+  // A mouse held down (#814): the first row opens under it, chosen, and letting go runs it.
+  {
+    const ran: string[] = [],
+      first = () => document.querySelector('.first-row .ui-menu-item'),
+      stub = (document as any).elementFromPoint;
+
+    (document as any).elementFromPoint = first;
+
+    const menu = menuOf(
+      { pressed: true, firstRowOnPoint: true, className: 'first-row' },
+      ran
+    );
+
+    (document as any).elementFromPoint = stub;
+    underPointer = rows(menu)[0];
+
+    expect('held by a mouse: the first row is chosen', hovered(menu), ['One']);
+
+    pointer('pointerup', document.body, { pointerType: 'mouse' });
+    expect('letting go runs it', [ran, menu.isOpen()], [['One'], false]);
+
+    underPointer = null;
+
+    const elsewhere = menuOf({ pressed: true, firstRowOnPoint: true });
+
+    expect(
+      'kept off the point for want of room: nothing is chosen',
+      hovered(elsewhere),
+      []
+    );
+    elsewhere.close();
+
+    const finger = menuOf({ pressed: true });
+
+    expect('held by a finger: nothing is chosen', hovered(finger), []);
+    finger.close();
   }
 
   // The click a lift sends finds the menu gone: it isn't left to land on what was under it.

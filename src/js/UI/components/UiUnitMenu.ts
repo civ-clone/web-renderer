@@ -63,7 +63,8 @@ const header = (
 
 /**
  * Opens the menu of what `unit` can do to `tile` at `x`, `y` in the viewport, or nothing when it can do nothing there
- *  yet. `pressed` when the press that opened it is still held: lifting it on a row gives that order.
+ *  yet. `pressed` when the press that opened it is still held: lifting it on a row gives that order. `firstRowOnPoint`
+ *  when that's a mouse: its first order opens under the pointer, for letting go at once (#814).
  */
 export const openUnitMenu = (
   x: number,
@@ -73,9 +74,11 @@ export const openUnitMenu = (
   transport: Transport,
   {
     pressed = false,
+    firstRowOnPoint = false,
     draw = drawUnitActionIcon,
   }: {
     pressed?: boolean;
+    firstRowOnPoint?: boolean;
     draw?: typeof drawUnitActionIcon;
   } = {}
 ): UiMenu | null => {
@@ -92,6 +95,7 @@ export const openUnitMenu = (
       anchor: { point: { x, y } },
       header: header(unit, tile, ownSquare ? null : direction),
       pressed,
+      firstRowOnPoint,
       className: 'ui-unit-menu',
       sections: [
         {

@@ -155,7 +155,12 @@ export class GamePortal extends Portal {
       this.setCenter(tile.x, tile.y);
     });
 
-    const showActionMenu = (tile: Tile, x: number, y: number) => {
+    const showActionMenu = (
+      tile: Tile,
+      x: number,
+      y: number,
+      byMouse: boolean
+    ) => {
       this.clearTimeout();
 
       if (this.#activeUnit === null) {
@@ -171,6 +176,7 @@ export class GamePortal extends Portal {
         if (interfaceMode() === 'new') {
           openUnitMenu(x, y, this.#activeUnit as Unit, tile, this.transport(), {
             pressed: true,
+            firstRowOnPoint: byMouse,
           });
 
           return;
@@ -265,7 +271,7 @@ export class GamePortal extends Portal {
       const tile = this.tileAt(event.offsetX, event.offsetY);
 
       if (tile !== null) {
-        showActionMenu(tile, event.x, event.y);
+        showActionMenu(tile, event.x, event.y, event.pointerType === 'mouse');
       }
     });
 
