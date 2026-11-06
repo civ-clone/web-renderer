@@ -7,13 +7,24 @@ export const INTERFACES = ['classic', 'new'] as const;
 
 export type InterfaceMode = (typeof INTERFACES)[number];
 
-let mode: InterfaceMode = 'classic';
+let mode: InterfaceMode = 'classic',
+  // What the player last chose, which differs from `mode` until the page next loads: the interface can't change under
+  //  a game in play.
+  chosen: InterfaceMode = mode;
 
 const isInterface = (value: unknown): value is InterfaceMode =>
   (INTERFACES as readonly unknown[]).includes(value);
 
 /** The interface in use. */
 export const interfaceMode = (): InterfaceMode => mode;
+
+/** The interface the next page load will use. */
+export const chosenInterface = (): InterfaceMode => chosen;
+
+/** Remembers the player's choice, for `chosenInterface`. The `interface` option is what keeps it. */
+export const chooseInterface = (choice: InterfaceMode): void => {
+  chosen = choice;
+};
 
 /**
  * Sets the interface from the visit's `?interface=` when it names one, or else the `interface` option, and says which
@@ -25,6 +36,7 @@ export const applyInterface = (
   root: HTMLElement = document.documentElement
 ): InterfaceMode => {
   mode = isInterface(param) ? param : isInterface(option) ? option : 'classic';
+  chosen = mode;
 
   root.setAttribute('data-interface', mode);
 

@@ -2,7 +2,7 @@
 //  light or dark (#706). Changing either restyles everything at once, with no reload.
 
 // Civ1 classic is the default and needs no attribute; the others are named by `data-ui-theme`. #167's manifests
-//  replace this list.
+//  replace this list, and add to the choice Options offers.
 export const UI_THEMES = ['civ1-classic', 'slate'];
 
 export const DEFAULT_UI_THEME = 'civ1-classic';
@@ -10,7 +10,19 @@ export const DEFAULT_UI_THEME = 'civ1-classic';
 // `system` follows the browser or OS, and keeps following it as it changes.
 export const COLOUR_SCHEMES = ['system', 'light', 'dark'];
 
-// The theme named by `?theme=`, for this visit only until #167's picker. A name that isn't a theme is ignored.
+/** The theme to use: the visit's `?theme=` when it names one, or else the `uiTheme` option. */
+export const uiThemeFrom = (param: string | null, option: unknown): string =>
+  [param, option].find(
+    (name): name is string =>
+      typeof name === 'string' && UI_THEMES.includes(name)
+  ) ?? DEFAULT_UI_THEME;
+
+/** The theme in use. */
+export const currentUiTheme = (
+  root: HTMLElement = document.documentElement
+): string => root.getAttribute('data-ui-theme') ?? DEFAULT_UI_THEME;
+
+// Sets the theme, which restyles everything at once. A name that isn't a theme is ignored.
 export const applyUiTheme = (
   name: string | null,
   root: HTMLElement = document.documentElement
