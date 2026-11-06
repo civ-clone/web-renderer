@@ -410,7 +410,10 @@ export class GameOptions extends Window {
         // Whether the tileset's sprites are imported, and the import, which the new main menu shows only while they
         //  aren't (#749). Only before a game: the import reloads the page, which would lose the game in play.
         ...(interfaceMode() === 'new' && portal === null ? [assetsRow()] : [])
-      )
+      ),
+      // From the main menu it must be closed before a game can start: its Interface and Import assets reload the page,
+      //  which they only do with no game to lose.
+      { modal: portal === null }
     );
 
     this.addClass('game-options');

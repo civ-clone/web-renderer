@@ -1,4 +1,5 @@
 import { t } from 'i18next';
+import { withoutForgottenParams } from './forgetVisitParam';
 
 /**
  * Stops Back, or closing the tab, from silently ending a game in progress.
@@ -18,7 +19,12 @@ let guarding = false,
   asking = false;
 
 const pushGuardEntry = (): void =>
-    history.pushState({ leaveGuard: true }, '', location.href),
+    // Back lands on the entry beneath, whose address can hold a `?interface=` the player has since chosen over.
+    history.pushState(
+      { leaveGuard: true },
+      '',
+      withoutForgottenParams(location.href)
+    ),
   popStateHandler = (): void => {
     if (!guarding || leaving) {
       return;

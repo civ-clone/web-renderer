@@ -1,7 +1,7 @@
 // Interface and Theme in Options (#735). A theme applies as it's chosen and comes back on the next load. An interface
 //  loads a new page from the main menu; during a game it waits, with a hint, as reloading would lose the game. Both
 //  show what's in use, and choosing drops the visit's `?interface=` or `?theme=`, which would otherwise outrank the
-//  choice at the next load.
+//  choice at the next load, including through the leave guard. Options is modal before a game, so it can't reload one.
 
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
@@ -21,7 +21,12 @@ import {
   themeRow,
 } from '../../src/js/UI/components/GameOptions';
 import addFormatters from '../../src/js/UI/app/i18nFormatters';
-import forgetVisitParam from '../../src/js/UI/lib/forgetVisitParam';
+import forgetVisitParam, {
+  withoutForgottenParams,
+} from '../../src/js/UI/lib/forgetVisitParam';
+import GameOptions from '../../src/js/UI/components/GameOptions';
+import { IPortal } from '../../src/js/UI/components/Portal';
+import { allowLeaving, guardLeaving } from '../../src/js/UI/lib/leaveGuard';
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';
 import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
@@ -184,6 +189,53 @@ Object.assign(globalThis, {
     forgetVisitParam('theme');
 
     expect('no change to history', page.states.length, before);
+  }
+
+  // Back during a game lands on the entry beneath, which still holds the setting: the guard's new entry must not.
+  {
+    const pushed: string[] = [];
+
+    expect(
+      'a forgotten setting is left off other addresses, leaving the rest',
+      withoutForgottenParams('https://civ.one/?theme=slate&debug=1'),
+      'https://civ.one/?debug=1'
+    );
+
+    Object.assign(globalThis, {
+      location: { href: 'https://civ.one/?interface=new&debug=1' },
+      history: {
+        pushState: (_state: unknown, _title: string, url: string) =>
+          pushed.push(url),
+      },
+    });
+
+    guardLeaving();
+    allowLeaving();
+
+    expect('the guard entry leaves it off', pushed, [
+      'https://civ.one/?debug=1',
+    ]);
+  }
+
+  // Interface reloads from the main menu, so Options there must close before a game can start.
+  {
+    const beforeGame = new GameOptions(null),
+      inGame = new GameOptions({
+        scale: () => 2,
+        lockVerticalEdges: () => false,
+      } as unknown as IPortal);
+
+    expect(
+      'Options is modal only before a game',
+      [
+        beforeGame.element().classList.contains('modal'),
+        inGame.element().classList.contains('modal'),
+      ],
+      [true, false]
+    );
+
+    beforeGame.close();
+    inGame.close();
   }
 
   if (failures.length) {
