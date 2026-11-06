@@ -92,6 +92,20 @@ export const renderHappinessDetails = (city: CityData): HTMLElement => {
   );
 };
 
+// What a city's panel says, to tell whether it needs drawing again: its citizens are pictures, and a figure in it can
+//  arrive late, so its text wouldn't say.
+const reasonsShown = (city: CityData): string =>
+  JSON.stringify([
+    city.id,
+    cityName(city),
+    reduceKnownYield(city.yields, 'Luxuries'),
+    (city.citizens?.causes ?? []).map(({ moods, yield: cause }) => [
+      cause._,
+      (cause as { cityImprovement?: { _: string } }).cityImprovement?._,
+      moods,
+    ]),
+  ]);
+
 /**
  * The Happiness report (F4) under the new interface (#744): each city's citizens as Civ1 draws them, with the happy,
  *  content and unhappy counted beside them to sort by, and a View button. Choosing a city shows why its citizens are
@@ -103,6 +117,7 @@ export class HappinessTable extends FilterableWindow {
   #cities: CityData[];
   #chosen: string | null = null;
   #shown: string | null = null;
+  #showing: string | null = null;
   #details: HTMLElement = s(
     '<div class="ui-report-details-area" aria-live="polite"></div>'
   );
@@ -229,21 +244,23 @@ export class HappinessTable extends FilterableWindow {
   // The chosen city's reasons, as it is now, or nothing once it's gone. Only replaced when they've changed: the panel
   //  is a live region, so each replacement is read out again.
   #showDetails(): void {
-    const city = this.#cities.find(({ id }) => id === this.#chosen),
-      details = city ? renderHappinessDetails(city) : null;
+    const city = this.#cities.find(({ id }) => id === this.#chosen) ?? null,
+      showing = city ? reasonsShown(city) : null;
 
-    if (
-      details !== null &&
-      details.textContent === this.#details.textContent &&
-      city!.id === this.#shown
-    ) {
+    // Gone, it isn't coming back as the panel's subject if it's lost and regained.
+    if (city === null) {
+      this.#chosen = null;
+    }
+
+    if (city !== null && showing === this.#showing) {
       return;
     }
 
     this.#markChosen(city?.id ?? null);
     this.#shown = city?.id ?? null;
+    this.#showing = showing;
     this.#details.replaceChildren(
-      ...(details ? [this.#closeButton, details] : [])
+      ...(city ? [this.#closeButton, renderHappinessDetails(city)] : [])
     );
   }
 

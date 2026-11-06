@@ -175,18 +175,38 @@ export class FilterableWindow extends Window {
       return;
     }
 
-    const own = [this.#rowSelector, this.#groupSelector]
-      .filter((selector) => selector !== null)
-      .join(', ');
+    const row = this.#rowSelector,
+      own = [row, this.#groupSelector]
+        .filter((selector) => selector !== null)
+        .join(', '),
+      isOrHolds = (node: Node): boolean =>
+        node instanceof Element &&
+        (node.matches(row) || node.querySelector(row) !== null),
+      changesRows = ({
+        addedNodes,
+        removedNodes,
+        target,
+        type,
+      }: MutationRecord): boolean => {
+        const element =
+          target instanceof Element ? target : target.parentElement;
+
+        // Rows arriving or going, or something changing inside one; not the filter marking the rows themselves.
+        return (
+          (type === 'childList' &&
+            [...addedNodes, ...removedNodes].some(isOrHolds)) ||
+          (element?.closest(row) != null &&
+            !(type === 'attributes' && element.matches(own)))
+        );
+      };
 
     this.#observer = new MutationObserver((records): void => {
-      if (
-        records.some(
-          ({ target, type }) =>
-            type !== 'attributes' || !(target as Element).matches(own)
-        )
-      ) {
+      if (records.some(changesRows)) {
         this.reread();
+
+        // What refiltering itself changed, as a window's details beside its list do, isn't news: heard, it would
+        //  refilter for ever.
+        this.#observer?.takeRecords();
       }
     });
 

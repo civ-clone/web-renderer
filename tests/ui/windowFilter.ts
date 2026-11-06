@@ -6,6 +6,7 @@ import { document } from './lib/dom';
 
 import { fold, matches } from '../../src/js/UI/lib/filterRows';
 import FilterableWindow from '../../src/js/UI/components/FilterableWindow';
+import { hallOfFameTable } from '../../src/js/UI/components/HallOfFameWindow';
 import i18next from 'i18next';
 import { s } from '@dom111/element';
 
@@ -274,16 +275,48 @@ const run = async (): Promise<void> => {
 
   grouped.close();
 
-  // #664: no box with nothing to filter, and one once rows arrive; rows that change in place are read again.
-  (globalThis as any).MutationObserver ??= (
-    globalThis as any
-  ).window.MutationObserver;
+  // #664: no box with nothing to filter, and one once rows arrive; rows that change in place are read again. A stub
+  //  observer, told what a browser would say: linkedom's names the node it watches as every change's target.
+  let observed: ((records: unknown[]) => void) | null = null,
+    disconnected = 0,
+    taken = 0;
 
-  const late = new FilterableWindow('Late', s('<div></div>'), {
+  (globalThis as any).MutationObserver = class {
+    constructor(callback: (records: unknown[]) => void) {
+      observed = callback;
+    }
+
+    observe(): void {}
+
+    takeRecords(): unknown[] {
+      taken++;
+
+      return [];
+    }
+
+    disconnect(): void {
+      disconnected++;
+    }
+  };
+
+  const change = (record: { [key: string]: unknown }): void =>
+    observed!([{ addedNodes: [], removedNodes: [], ...record }]);
+
+  let refilters = 0;
+
+  class Watched extends FilterableWindow {
+    refilter(): void {
+      refilters++;
+      super.refilter();
+    }
+  }
+
+  const lateRows = s('<div></div>'),
+    note = s('<p class="note"></p>'),
+    late = new Watched('Late', s('<div></div>', note, lateRows), {
       rowSelector: '.row',
     }),
     bar = () => late.element().querySelector('.window-filter') as HTMLElement,
-    settle = () => new Promise((resolve) => setTimeout(resolve, 0)),
     keydown = (key: string) =>
       late
         .element()
@@ -298,34 +331,76 @@ const run = async (): Promise<void> => {
 
   const added = s('<p class="row">Rome</p>');
 
-  late.element().querySelector(':scope > .body > div')!.append(added);
-  await settle();
+  lateRows.append(added);
+  change({ type: 'childList', target: lateRows, addedNodes: [added] });
   expect('rows arriving later show it', bar().hidden, false);
 
   late.element().querySelector<HTMLInputElement>('input')!.value = 'paris';
   late.refilter();
   expect(
     'a row that doesn\u2019t match is hidden',
-    [added.classList.contains('filtered-out')],
-    [true]
+    added.classList.contains('filtered-out'),
+    true
   );
 
   added.textContent = 'Paris';
-  await settle();
+  taken = 0;
+  change({ type: 'characterData', target: added.firstChild });
   expect(
-    'its text changing in place is read again',
-    [added.classList.contains('filtered-out')],
-    [false]
+    'its text changing in place is read again, and what that changed isn\u2019t heard',
+    [added.classList.contains('filtered-out'), taken],
+    [false, 1]
   );
 
-  late.close();
+  refilters = 0;
+  note.textContent = 'elsewhere';
+  change({ type: 'characterData', target: note.firstChild });
+  change({ type: 'childList', target: note, addedNodes: [note.firstChild] });
+  change({ type: 'attributes', target: note });
+  expect('something beside the rows changing leaves them alone', refilters, 0);
 
-  added.textContent = 'Rome';
-  await settle();
+  change({ type: 'attributes', target: added });
+  expect('and so does the filter marking a row itself', refilters, 0);
+
+  const inner = s('<span></span>');
+
+  added.append(inner);
+  change({ type: 'attributes', target: inner });
+  expect('a change inside a row is read', refilters, 1);
+
+  change({ type: 'childList', target: lateRows, removedNodes: [added] });
+  expect('as is a row going', refilters, 2);
+
+  late.close();
+  expect('closed, it stops watching', disconnected, 1);
+
+  delete (globalThis as any).MutationObserver;
+
+  // The Hall of Fame's rows are the ones it filters, the game just finished among them, and not its header.
+  const entry = (id: string) => ({
+      id,
+      civilization: 'Roman',
+      leader: null,
+      difficulty: null,
+      reason: 'Retired',
+      year: -4000,
+      score: 1,
+      rating: 1,
+      date: 0,
+    }),
+    fame = hallOfFameTable([entry('one'), entry('two')], 'two');
+
   expect(
-    'closed, it stops watching',
-    added.classList.contains('filtered-out'),
-    false
+    'Hall of Fame: an entry for each, the current one marked',
+    Array.from(fame.querySelectorAll('tr')).map((row) => [
+      row.classList.contains('hall-of-fame-entry'),
+      row.classList.contains('current'),
+    ]),
+    [
+      [false, false],
+      [true, false],
+      [true, true],
+    ]
   );
 
   finished = true;

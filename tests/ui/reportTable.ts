@@ -1081,9 +1081,14 @@ const run = async (): Promise<void> => {
 
   (happinessRows()[2] as HTMLElement).click();
 
-  happinessRows()[2].classList.add('filtered-out');
-  happiness.element().dispatchEvent(new CustomEvent('filtered'));
-  happinessRows()[2].classList.remove('filtered-out');
+  const filterBox = happiness
+    .element()
+    .querySelector('.window-filter input') as HTMLInputElement;
+
+  filterBox.value = 'karak';
+  happiness.refilter();
+  filterBox.value = '';
+  happiness.refilter();
 
   expect(
     'Happiness: a city filtered out takes its reasons with it',
@@ -1092,6 +1097,41 @@ const run = async (): Promise<void> => {
   );
 
   (happinessRows()[1] as HTMLElement).click();
+
+  // Faces only: its reasons read the same, so the words alone wouldn't show it.
+  (happinessRows()[1] as HTMLElement).click();
+  (happyCities[1] as any).citizens.causes = [
+    {
+      yield: { _: 'CityImprovementContent', cityImprovement: { _: 'Temple' } },
+      moods: ['happy'],
+    },
+  ];
+  happiness.update();
+
+  const faces = happiness.element().querySelector('.ui-report-details');
+
+  (happyCities[1] as any).citizens.causes = [
+    {
+      yield: { _: 'CityImprovementContent', cityImprovement: { _: 'Temple' } },
+      moods: ['content'],
+    },
+  ];
+  happiness.update();
+
+  expect(
+    'Happiness: citizens changing redraw the reasons, though their words don\u2019t',
+    happiness.element().querySelector('.ui-report-details') !== faces,
+    true
+  );
+
+  const chosenCities = happyPlayer.cities;
+
+  happyPlayer.cities = chosenCities.filter(
+    ({ id }) => id !== happyCities[1].id
+  );
+  (happiness as any).update();
+  happyPlayer.cities = chosenCities;
+  (happiness as any).update();
 
   // A View button opened a city, then the game changed it: the button is the same one, so the city's window can give
   //  the focus back to it, and it opens the city as it is now.

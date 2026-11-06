@@ -72,7 +72,13 @@ const corruptionURL = (path: string, width: number): Promise<string> => {
   const key = `${path}@${width}`;
 
   if (!urls.has(key)) {
-    const url = assetStore.getShownAt(path, width).then((sprite) => {
+    const url = assetStore.has(path).then(async (has) => {
+      // The store draws a blank for one that's missing, which would be kept.
+      if (!has) {
+        throw new Error(`No sprite at ${path}`);
+      }
+
+      const sprite = await assetStore.getShownAt(path, width);
       const canvas = document.createElement('canvas'),
         context = canvas.getContext('2d')!;
 

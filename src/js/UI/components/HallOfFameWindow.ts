@@ -26,7 +26,7 @@ const row = (entry: HallOfFameEntry, current: boolean): HTMLTableRowElement => {
   element.classList.add('hall-of-fame-entry');
 
   if (current) {
-    element.className = 'current';
+    element.classList.add('current');
   }
 
   element.append(
