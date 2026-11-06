@@ -1054,9 +1054,9 @@ const run = async (): Promise<void> => {
   ).click();
 
   expect(
-    'Happiness: its button puts it away, and the mark',
+    'Happiness: its button puts it away, and the row stays marked',
     [happiness.element().querySelector('.ui-report-details'), chosenRows()],
-    [null, [false, false, false]]
+    [null, [false, false, true]]
   );
 
   (happinessRows()[2] as HTMLElement).click();

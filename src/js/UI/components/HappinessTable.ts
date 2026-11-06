@@ -122,12 +122,12 @@ const reasonsShown = (city: CityData): string =>
  * The Happiness report (F4) under the new interface (#744): each city's citizens as Civ1 draws them, with the happy,
  *  content and unhappy counted beside them to sort by, and a View button. Choosing a city shows why its citizens are
  *  as they are in a panel at the bottom of the window, in view whichever row was chosen and without moving the rows
- *  (#793). Choosing another replaces it, and its close button or Escape puts it away, with the row still marked until
- *  then.
+ *  (#793). Choosing another replaces it, and its close button or Escape puts it away, leaving the row marked.
  */
 export class HappinessTable extends FilterableWindow {
   #cities: CityData[];
   #chosen: string | null = null;
+  #marked: string | null = null;
   #shown: string | null = null;
   #showing: string | null = null;
   #details: HTMLElement = s(
@@ -268,7 +268,10 @@ export class HappinessTable extends FilterableWindow {
       return;
     }
 
-    this.#markChosen(city?.id ?? null);
+    if (city !== null) {
+      this.#markChosen(city.id);
+    }
+
     this.#shown = city?.id ?? null;
     this.#showing = showing;
     this.#details.replaceChildren(
@@ -299,15 +302,17 @@ export class HappinessTable extends FilterableWindow {
     }
   }
 
-  // The row the panel is about, when it's open.
-  #markChosen(id: string | null): void {
-    [this.#shown, id].forEach((key) => {
+  // The row last chosen, marked until another is, so the player keeps their place once the panel is put away.
+  #markChosen(id: string): void {
+    [this.#marked, id].forEach((key) => {
       if (key !== null) {
         this.#table
           .rowElement(key)
           ?.classList.toggle('ui-report-row-chosen', key === id);
       }
     });
+
+    this.#marked = id;
   }
 
   update() {
