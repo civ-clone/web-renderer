@@ -232,6 +232,9 @@ export class GamePortal extends Portal {
       // A right-click is the menu's under the new interface (#808), not a press on the map: some browsers send its
       //  `contextmenu` only once the button is up, which would otherwise be a click on the square first.
       if (event.button === 2 && interfaceMode() === 'new') {
+        // Not under the menu it's about to open.
+        this.stopGlide();
+
         return;
       }
 

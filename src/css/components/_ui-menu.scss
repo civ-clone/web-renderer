@@ -37,7 +37,6 @@
   }
 
   // A menu over the map takes the press that opened it: no text selection or callout from the long press.
-  touch-action: none;
   user-select: none;
   -webkit-touch-callout: none;
 }
@@ -47,6 +46,7 @@
   border-bottom: 1px solid var(--ui-menu-divider);
   color: var(--ui-menu-heading-fg);
   display: grid;
+  touch-action: none;
   column-gap: 0.5rem;
   grid-template-areas:
     'portrait name'
@@ -84,6 +84,9 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--ui-menu-padding);
+  // A menu too tall for the screen scrolls under a finger that starts on it. A slide from the long press that opened it
+  //  started on the map, so is still the menu's.
+  touch-action: pan-y;
 }
 
 .ui-menu-section {

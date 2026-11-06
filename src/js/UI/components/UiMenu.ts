@@ -331,11 +331,19 @@ export class UiMenu {
 
   #place(): void {
     const element = this.#element,
-      { left, top, maxHeight } = placeMenu(
-        this.#options.anchor,
-        { width: element.offsetWidth, height: element.offsetHeight },
-        { width: window.innerWidth, height: window.innerHeight }
-      );
+      { anchor, launcher } = this.#options;
+
+    // Its full size, not the height it was last allowed.
+    element.style.removeProperty('max-height');
+
+    const { left, top, maxHeight } = placeMenu(
+      // Where the launcher is now, which a resize can move.
+      'below' in anchor && launcher
+        ? { below: launcher.getBoundingClientRect() }
+        : anchor,
+      { width: element.offsetWidth, height: element.offsetHeight },
+      { width: window.innerWidth, height: window.innerHeight }
+    );
 
     element.style.setProperty('left', `${left}px`);
     element.style.setProperty('top', `${top}px`);
@@ -352,7 +360,12 @@ export class UiMenu {
       this.#listeners.push([target, type, listener]);
     };
 
+    // One pointer drives the menu: a second finger's press, slide or lift is nothing to it.
     add<PointerEvent>(window, 'pointermove', (event) => {
+      if (event.isPrimary === false) {
+        return;
+      }
+
       const index = this.#rowAt(event.clientX, event.clientY);
 
       if (index !== null) {
@@ -365,6 +378,10 @@ export class UiMenu {
     });
 
     add<PointerEvent>(window, 'pointerdown', (event) => {
+      if (event.isPrimary === false) {
+        return;
+      }
+
       const target = event.target as Node | null;
 
       // The launcher's own: its click toggles the menu.
@@ -393,7 +410,7 @@ export class UiMenu {
     add<PointerEvent>(window, 'pointerup', (event) => {
       // The main button's, or a finger's: a right or middle button lifted on a row runs nothing. The right button's
       //  `contextmenu`, which some browsers send after it, would land on whatever is behind a closed menu.
-      if ((event.button ?? 0) !== 0) {
+      if (event.isPrimary === false || (event.button ?? 0) !== 0) {
         return;
       }
 
@@ -414,6 +431,20 @@ export class UiMenu {
       //  menu stays for a tap.
       if (held && this.#slid) {
         this.close();
+      }
+    });
+
+    // The browser taking the press for itself, to scroll a menu too tall for the screen: nothing is chosen.
+    add<PointerEvent>(window, 'pointercancel', (event) => {
+      if (event.isPrimary === false) {
+        return;
+      }
+
+      this.#pressed = false;
+      this.#rows.forEach((row) => delete row.dataset.pressed);
+
+      if (!this.#hasFocus()) {
+        this.#hoverRow(null);
       }
     });
 
@@ -439,6 +470,9 @@ export class UiMenu {
 
     // The page losing focus, to another window or tab: not an element's blur, which this sees too as it listens in the
     //  capture phase (the launcher's, as the keys move the focus to the first row).
+    // A phone turned, or a window resized: kept in reach, scrolling if it has to.
+    add(window, 'resize', () => this.#place());
+
     add<FocusEvent>(window, 'blur', (event) => {
       if (!(event.target instanceof Node)) {
         this.close();
@@ -511,7 +545,8 @@ export class UiMenu {
             return;
           }
 
-          // The game's, then, as any other key is: the menu goes, so it isn't left over what the key does.
+          // Not the game's: over a menu, these answer the menu, and must not end the turn or give a unit its orders.
+          handled();
           this.close();
 
           return;

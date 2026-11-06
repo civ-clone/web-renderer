@@ -72,10 +72,20 @@ let underPointer: Element | null = null;
 
 (document as any).elementFromPoint = () => underPointer;
 
-const pointer = (type: string, target: EventTarget = document.body): Event => {
+const pointer = (
+  type: string,
+  target: EventTarget = document.body,
+  init: { button?: number; isPrimary?: boolean } = {}
+): Event => {
   const event = new Event(type, { bubbles: true, cancelable: true });
 
-  Object.assign(event, { clientX: 10, clientY: 10 });
+  Object.assign(event, {
+    clientX: 10,
+    clientY: 10,
+    button: 0,
+    isPrimary: true,
+    ...init,
+  });
   target.dispatchEvent(event);
 
   return event;
@@ -324,6 +334,116 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     launcher.remove();
   }
 
+  // One pointer drives it: a second finger's slide, press and lift are nothing to it.
+  {
+    const ran: string[] = [],
+      menu = menuOf({ pressed: true }, ran),
+      [one, , three] = rows(menu),
+      second = { isPrimary: false };
+
+    underPointer = one;
+    pointer('pointermove', document.body, second);
+    expect('a second finger’s slide: no hover', hovered(menu), []);
+
+    pointer('pointerdown', one, second);
+    expect(
+      'a second finger’s press: not drawn pressed',
+      one.hasAttribute('data-pressed'),
+      false
+    );
+
+    pointer('pointerup', document.body, second);
+    expect(
+      'a second finger’s lift: nothing run, still held',
+      [ran, menu.isOpen()],
+      [[], true]
+    );
+
+    underPointer = three;
+    pointer('pointermove');
+    pointer('pointerup');
+    expect('the first finger’s still does', ran, ['Three']);
+  }
+
+  // The browser taking a press to scroll the menu chooses nothing.
+  {
+    const ran: string[] = [],
+      menu = menuOf({}, ran),
+      [one] = rows(menu);
+
+    underPointer = one;
+    pointer('pointermove');
+    pointer('pointerdown', one);
+    pointer('pointercancel');
+    expect(
+      'scrolling: nothing pressed, hovered or run, and still open',
+      [one.hasAttribute('data-pressed'), hovered(menu), ran, menu.isOpen()],
+      [false, [], [], true]
+    );
+
+    menu.close();
+  }
+
+  // Kept in reach when the window changes: a phone turned leaves room for less.
+  {
+    const launcher = document.createElement('button'),
+      viewport = window as unknown as {
+        innerWidth: number;
+        innerHeight: number;
+      },
+      { innerWidth, innerHeight } = viewport;
+
+    document.body.append(launcher);
+    launcher.getBoundingClientRect = () =>
+      ({
+        left: 700,
+        right: 740,
+        top: 10,
+        bottom: 50,
+        width: 40,
+        height: 40,
+      } as DOMRect);
+
+    viewport.innerWidth = 800;
+    viewport.innerHeight = 600;
+
+    const menu = menuOf({
+        launcher,
+        anchor: { below: launcher.getBoundingClientRect() },
+      }),
+      element = menu.element();
+
+    Object.defineProperty(element, 'offsetWidth', { value: 200 });
+    Object.defineProperty(element, 'offsetHeight', { value: 300 });
+
+    launcher.getBoundingClientRect = () =>
+      ({
+        left: 500,
+        right: 540,
+        top: 10,
+        bottom: 50,
+        width: 40,
+        height: 40,
+      } as DOMRect);
+    viewport.innerWidth = 600;
+    viewport.innerHeight = 300;
+    window.dispatchEvent(new Event('resize'));
+
+    expect(
+      'resized: under the launcher where it is now, scrolling in the room left',
+      [
+        element.style.getPropertyValue('left'),
+        element.style.getPropertyValue('max-height'),
+      ],
+      ['340px', `${300 - EDGE_MARGIN - 50 - LAUNCHER_GAP}px`]
+    );
+
+    menu.close();
+    launcher.remove();
+    viewport.innerWidth = innerWidth;
+    viewport.innerHeight = innerHeight;
+  }
+
   // Only the main button (or a finger) runs a row.
   {
     const ran: string[] = [],
@@ -442,9 +562,9 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       space = key(' ');
 
     expect(
-      'Space with nothing chosen: closed, and left to the game',
+      'Space with nothing chosen: closed, and kept from the game',
       [loose.isOpen(), space.defaultPrevented],
-      [false, false]
+      [false, true]
     );
 
     const held = menuOf();
