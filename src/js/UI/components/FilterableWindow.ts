@@ -38,7 +38,9 @@ export class FilterableWindow extends Window {
     `<p class="filter-empty" hidden>${t('Window.filter-empty')}</p>`
   );
   #filter: RowFilter;
+  #groupSelector: string | null;
   #input: HTMLInputElement;
+  #observer: MutationObserver | null = null;
   #rowSelector: string;
 
   constructor(
@@ -50,6 +52,7 @@ export class FilterableWindow extends Window {
     super(title, body, { ...options, autoDisplay: false });
 
     this.#filter = new RowFilter(rowSelector, groupSelector ?? null);
+    this.#groupSelector = groupSelector ?? null;
     this.#rowSelector = rowSelector;
     this.#input = document.createElement('input');
 
@@ -92,6 +95,13 @@ export class FilterableWindow extends Window {
 
     // Heard before `Window`'s own keydown, which is added each time the window is shown.
     this.on('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && this.escaped()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        return;
+      }
+
       if (event.key === 'Escape' && this.#input.value !== '') {
         // Only the filter, wherever the focus is: the window stays open, and so does the dialog (#351).
         event.preventDefault();
@@ -103,7 +113,12 @@ export class FilterableWindow extends Window {
         return;
       }
 
-      if (event.target === this.#input || takesText(event.target)) {
+      // With nothing to filter, there's no box to type in.
+      if (
+        this.#bar.hidden ||
+        event.target === this.#input ||
+        takesText(event.target)
+      ) {
         return;
       }
 
@@ -137,6 +152,77 @@ export class FilterableWindow extends Window {
     this.element().querySelector(':scope > header')?.after(this.#bar);
 
     this.refilter();
+    this.#watchRows();
+  }
+
+  close() {
+    this.#observer?.disconnect();
+    this.#observer = null;
+
+    return super.close();
+  }
+
+  // Rows that change in place, a figure arriving or a city's reasons opening, are read again, so a filter matches what
+  //  the player can see now (#664), and rows that arrive late show the box. Not for the filter's own hiding of them.
+  #watchRows(): void {
+    const body = this.element().querySelector(':scope > .body');
+
+    if (
+      this.#observer !== null ||
+      body === null ||
+      typeof MutationObserver !== 'function'
+    ) {
+      return;
+    }
+
+    const row = this.#rowSelector,
+      own = [row, this.#groupSelector]
+        .filter((selector) => selector !== null)
+        .join(', '),
+      isOrHolds = (node: Node): boolean =>
+        node instanceof Element &&
+        (node.matches(row) || node.querySelector(row) !== null),
+      changesRows = ({ addedNodes, target, type }: MutationRecord): boolean => {
+        const element =
+          target instanceof Element ? target : target.parentElement;
+
+        // Rows arriving, or something changing inside one; not the filter marking the rows themselves.
+        return (
+          (type === 'childList' && [...addedNodes].some(isOrHolds)) ||
+          (element?.closest(row) != null &&
+            !(type === 'attributes' && element.matches(own)))
+        );
+      };
+
+    // Counted for the rows going: gone, one no longer matches a selector such as `tbody tr`.
+    let rows = body.querySelectorAll(row).length;
+
+    this.#observer = new MutationObserver((records): void => {
+      const count = body.querySelectorAll(row).length,
+        rowsWent = count !== rows;
+
+      rows = count;
+
+      if (rowsWent || records.some(changesRows)) {
+        this.reread();
+
+        // What refiltering itself changed, as a window's details beside its list do, isn't news: heard, it would
+        //  refilter for ever.
+        this.#observer?.takeRecords();
+      }
+    });
+
+    this.#observer.observe(body, {
+      attributeFilter: ['class', 'hidden'],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  /** Escape, before the filter's or the window's: whether something in the window took it. */
+  protected escaped(): boolean {
+    return false;
   }
 
   /** Puts the focus in the filter box. */
@@ -180,6 +266,11 @@ export class FilterableWindow extends Window {
     const shown = this.#filter.apply(body, this.#input.value);
 
     this.#empty.hidden = shown > 0 || this.#input.value.trim() === '';
+    // Nothing to filter: no rows yet, or none at all.
+    this.#bar.hidden =
+      this.#input.value === '' &&
+      body.querySelector(this.#rowSelector) === null;
+    this.element().dispatchEvent(new CustomEvent('filtered'));
   }
 }
 

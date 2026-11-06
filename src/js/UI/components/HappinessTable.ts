@@ -5,11 +5,13 @@ import {
   MartialLaw,
   MilitaryUnhappiness,
   Player,
+  Unit as UnitData,
 } from '../types';
 import { citizenFace, renderPopulation } from './lib/cityYields';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from './FilterableWindow';
+import { filteredOutClass } from '../lib/filterRows';
 import Portal from './Portal';
 import ReportTable from './lib/ReportTable';
 import SupportedUnit from './SupportedUnit';
@@ -20,6 +22,7 @@ import { cityName, viewCityText } from './lib/city';
 import currentTileset from '../lib/tilesets';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { glyph } from '../lib/glyphs';
+import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import { s } from '@dom111/element';
 import { spriteKey } from '../tilesets/TilesetDescriptor';
@@ -90,17 +93,53 @@ export const renderHappinessDetails = (city: CityData): HTMLElement => {
   );
 };
 
+// What a city's panel draws, to tell whether it needs drawing again: its citizens and units are pictures, and a figure
+//  in it can arrive late, so its text wouldn't say.
+const unitShown = (unit?: UnitData): unknown[] =>
+  unit
+    ? [
+        unit._,
+        unit.busy?._,
+        (unit.improvements ?? []).map(({ _ }: { _: string }) => _),
+      ]
+    : [];
+
+const reasonsShown = (city: CityData): string =>
+  JSON.stringify([
+    city.id,
+    cityName(city),
+    reduceKnownYield(city.yields, 'Luxuries'),
+    (city.specialists ?? []).map(({ _ }) => _),
+    (city.citizens?.causes ?? []).map(({ moods, yield: cause }) => [
+      cause._,
+      (cause as { cityImprovement?: { _: string } }).cityImprovement?._,
+      unitShown((cause as { unit?: UnitData }).unit),
+      moods,
+    ]),
+  ]);
+
 /**
  * The Happiness report (F4) under the new interface (#744): each city's citizens as Civ1 draws them, with the happy,
  *  content and unhappy counted beside them to sort by, and a View button. Choosing a city shows why its citizens are
- *  as they are, under the table.
+ *  as they are in a panel at the bottom of the window, in view whichever row was chosen and without moving the rows
+ *  (#793). Choosing another replaces it, and its close button or Escape puts it away, leaving the row marked.
  */
 export class HappinessTable extends FilterableWindow {
   #cities: CityData[];
   #chosen: string | null = null;
+  #marked: string | null = null;
   #shown: string | null = null;
+  #showing: string | null = null;
   #details: HTMLElement = s(
     '<div class="ui-report-details-area" aria-live="polite"></div>'
+  );
+  #closeButton: HTMLElement = h(
+    s(
+      `<button type="button" class="btn-icon ui-report-details-close" aria-label="${t(
+        'Generic.close'
+      )}">${glyph('close')}</button>`
+    ),
+    { click: () => this.#closeDetails() }
   );
   #table: ReportTable<CityData>;
   #unwatch: () => void;
@@ -181,6 +220,18 @@ export class HappinessTable extends FilterableWindow {
       },
     });
 
+    // A city filtered out of the list takes its reasons with it.
+    this.element().addEventListener('filtered', () => {
+      if (
+        this.#chosen !== null &&
+        this.#table
+          .rowElement(this.#chosen)
+          ?.classList.contains(filteredOutClass)
+      ) {
+        this.#closeDetails();
+      }
+    });
+
     this.#unwatch = watchPlayer(player, cityIds, (player) => {
       this.#cities = player.cities;
 
@@ -205,19 +256,63 @@ export class HappinessTable extends FilterableWindow {
   // The chosen city's reasons, as it is now, or nothing once it's gone. Only replaced when they've changed: the panel
   //  is a live region, so each replacement is read out again.
   #showDetails(): void {
-    const city = this.#cities.find(({ id }) => id === this.#chosen),
-      details = city ? renderHappinessDetails(city) : null;
+    const city = this.#cities.find(({ id }) => id === this.#chosen) ?? null,
+      showing = city ? reasonsShown(city) : null;
 
-    if (
-      details !== null &&
-      details.textContent === this.#details.textContent &&
-      city!.id === this.#shown
-    ) {
+    // Gone, it isn't coming back as the panel's subject if it's lost and regained.
+    if (city === null) {
+      this.#chosen = null;
+    }
+
+    if (city !== null && showing === this.#showing) {
       return;
     }
 
+    if (city !== null) {
+      this.#markChosen(city.id);
+    }
+
     this.#shown = city?.id ?? null;
-    this.#details.replaceChildren(...(details ? [details] : []));
+    this.#showing = showing;
+    this.#details.replaceChildren(
+      ...(city ? [this.#closeButton, renderHappinessDetails(city)] : [])
+    );
+  }
+
+  protected escaped(): boolean {
+    if (this.#chosen === null) {
+      return false;
+    }
+
+    this.#closeDetails();
+
+    return true;
+  }
+
+  #closeDetails(): void {
+    const row = this.#chosen ? this.#table.rowElement(this.#chosen) : null,
+      hadFocus = this.#details.contains(document.activeElement);
+
+    this.#chosen = null;
+    this.#showDetails();
+
+    // Back to the table, rather than lost with the button that had it.
+    if (hadFocus) {
+      row?.focus();
+    }
+  }
+
+  // The row last chosen, marked until another is, so the player keeps their place once the panel is put away.
+  #markChosen(id: string): void {
+    [this.#marked, id].forEach((key) => {
+      if (key !== null) {
+        this.#table
+          .rowElement(key)
+          ?.classList.toggle('ui-report-row-chosen', key === id);
+      }
+    });
+
+    this.#marked = id;
   }
 
   update() {

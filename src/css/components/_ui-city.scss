@@ -236,7 +236,11 @@
   font-size: var(--type-detail-size);
   justify-content: space-between;
   margin: 0.25rem 0 0;
-  padding: 0.25rem 0.25rem 0;
+}
+
+// Past `.window p`, which takes every paragraph's padding away.
+.window .ui-city-upkeep-total {
+  padding-top: 0.5rem;
 }
 
 // What the city is building, as a card: its picture and name, the meter and its figures, then its buttons (#687).

@@ -5,6 +5,7 @@ import {
 } from '../lib/unitActionIcon';
 import { Tile, Unit } from '../types';
 import { Element, s } from '@dom111/element';
+import ScaledCanvases from '../lib/scaledCanvases';
 import { keyForAction } from '../lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
@@ -17,6 +18,7 @@ const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 //  controller, which sends it and keeps the keys typed after it until it is answered (#543).
 export class UnitActions extends Element {
   #act: (unitId: string, unitAction: string) => void;
+  #canvases = new ScaledCanvases();
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
 
@@ -74,6 +76,7 @@ export class UnitActions extends Element {
 
     this.#signature = signature;
 
+    this.#canvases.clear();
     this.empty();
 
     if (unit === null) {
@@ -104,7 +107,9 @@ export class UnitActions extends Element {
       this.element().append(button);
 
       // Once it is on the page, so the picture can be drawn at the size it is shown at.
-      this.#draw(button.querySelector('canvas')!, layers[index]);
+      this.#canvases.add(button.querySelector('canvas')!, (canvas) =>
+        this.#draw(canvas, layers[index])
+      );
     });
   }
 }

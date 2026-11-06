@@ -595,7 +595,7 @@ const run = async (): Promise<void> => {
 
     // Four portraits of 32px with 2px gaps.
     width = 4 * 32 + 3 * 2;
-    observers[observers.length - 1]();
+    observers.forEach((observer) => observer());
 
     expect(
       'shown narrower: four to a row, only the other units redrawn',
@@ -609,7 +609,7 @@ const run = async (): Promise<void> => {
 
     const strip = element.querySelector('.ui-unit-card-others');
 
-    observers[observers.length - 1]();
+    observers.forEach((observer) => observer());
 
     expect(
       'the same width again: nothing redrawn',

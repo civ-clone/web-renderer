@@ -998,7 +998,7 @@ const run = async (): Promise<void> => {
   (happinessRows()[1] as HTMLElement).click();
 
   expect(
-    'Happiness: a row shows why, under the table',
+    'Happiness: a row shows why, in the panel',
     [
       happiness.element().querySelector('.ui-report-details h3')?.textContent,
       happiness.element().querySelector('.ui-report-cause .ui-report-detail')
@@ -1025,6 +1025,130 @@ const run = async (): Promise<void> => {
     happiness.element().querySelector('.ui-report-details p')?.textContent,
     'Nothing has changed how its citizens feel.'
   );
+
+  // The panel (#793): marked on its row, replaced by another, and put away by its button or Escape, not the window.
+  const chosenRows = () =>
+    happinessRows().map((row) =>
+      row.classList.contains('ui-report-row-chosen')
+    );
+
+  expect('Happiness: the row it\u2019s about is marked', chosenRows(), [
+    false,
+    true,
+    false,
+  ]);
+
+  (happinessRows()[2] as HTMLElement).click();
+
+  expect(
+    'Happiness: another city replaces it, and takes the mark',
+    [
+      happiness.element().querySelector('.ui-report-details h3')?.textContent,
+      chosenRows(),
+    ],
+    ["Xi'an", [false, false, true]]
+  );
+
+  (
+    happiness.element().querySelector('.ui-report-details-close') as HTMLElement
+  ).click();
+
+  expect(
+    'Happiness: its button puts it away, and the row stays marked',
+    [happiness.element().querySelector('.ui-report-details'), chosenRows()],
+    [null, [false, false, true]]
+  );
+
+  (happinessRows()[2] as HTMLElement).click();
+
+  const escape = new KeyboardEvent('keydown', {
+    key: 'Escape',
+    bubbles: true,
+    cancelable: true,
+  });
+
+  happiness.element().dispatchEvent(escape);
+
+  expect(
+    'Happiness: so does Escape, and the window stays',
+    [
+      happiness.element().querySelector('.ui-report-details'),
+      escape.defaultPrevented,
+      happiness.element().hasAttribute('open'),
+    ],
+    [null, true, true]
+  );
+
+  (happinessRows()[2] as HTMLElement).click();
+
+  const filterBox = happiness
+    .element()
+    .querySelector('.window-filter input') as HTMLInputElement;
+
+  filterBox.value = 'karak';
+  happiness.refilter();
+  filterBox.value = '';
+  happiness.refilter();
+
+  expect(
+    'Happiness: a city filtered out takes its reasons with it',
+    happiness.element().querySelector('.ui-report-details'),
+    null
+  );
+
+  (happinessRows()[1] as HTMLElement).click();
+
+  // Faces only: its reasons read the same, so the words alone wouldn't show it.
+  (happinessRows()[1] as HTMLElement).click();
+  (happyCities[1] as any).citizens.causes = [
+    {
+      yield: { _: 'CityImprovementContent', cityImprovement: { _: 'Temple' } },
+      moods: ['happy'],
+    },
+  ];
+  happiness.update();
+
+  const faces = happiness.element().querySelector('.ui-report-details');
+
+  (happyCities[1] as any).citizens.causes = [
+    {
+      yield: { _: 'CityImprovementContent', cityImprovement: { _: 'Temple' } },
+      moods: ['content'],
+    },
+  ];
+  happiness.update();
+
+  expect(
+    'Happiness: citizens changing redraw the reasons, though their words don\u2019t',
+    happiness.element().querySelector('.ui-report-details') !== faces,
+    true
+  );
+
+  const beforeSpecialist = happiness
+    .element()
+    .querySelector('.ui-report-details');
+
+  (happyCities[1] as any).specialists = [{ _: 'Taxman' }];
+  happiness.update();
+
+  expect(
+    'Happiness: so does a specialist changing',
+    happiness.element().querySelector('.ui-report-details') !==
+      beforeSpecialist,
+    true
+  );
+
+  (happyCities[1] as any).specialists = [];
+  happiness.update();
+
+  const chosenCities = happyPlayer.cities;
+
+  happyPlayer.cities = chosenCities.filter(
+    ({ id }) => id !== happyCities[1].id
+  );
+  (happiness as any).update();
+  happyPlayer.cities = chosenCities;
+  (happiness as any).update();
 
   // A View button opened a city, then the game changed it: the button is the same one, so the city's window can give
   //  the focus back to it, and it opens the city as it is now.

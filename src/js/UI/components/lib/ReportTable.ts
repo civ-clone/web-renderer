@@ -379,6 +379,13 @@ export class ReportTable<Row> {
     return button;
   }
 
+  /** The table row for `key` (see `rowKey`), or `null` for one that isn't shown. */
+  rowElement(key: string): HTMLTableRowElement | null {
+    return (
+      this.#rows.find(({ row }) => this.#rowKey(row) === key)?.element ?? null
+    );
+  }
+
   #entry(row: Row): RowEntry<Row> {
     const entry: RowEntry<Row> = {
         element: document.createElement('tr'),
