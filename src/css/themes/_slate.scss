@@ -229,6 +229,7 @@
   --ui-menu-pressed-bg: color-mix(in srgb, var(--ui-accent) 40%, transparent);
   // The dark scheme's red in both, as the menu is dark in both.
   --ui-menu-danger-fg: #ef7b6c;
+  --ui-menu-danger-hover-fg: var(--ui-menu-danger-fg);
   --ui-menu-kbd-bg: color-mix(in srgb, var(--ui-tooltip-fg) 8%, transparent);
   --ui-menu-kbd-edge: var(--ui-tooltip-rule);
   --ui-menu-kbd-fg: var(--ui-tooltip-muted);

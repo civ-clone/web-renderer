@@ -156,7 +156,7 @@
   }
 
   &.danger[data-hover] {
-    color: var(--ui-menu-danger-fg);
+    color: var(--ui-menu-danger-hover-fg);
   }
 
   &[data-hover][data-pressed] {
