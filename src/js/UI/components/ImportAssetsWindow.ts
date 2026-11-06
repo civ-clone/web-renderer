@@ -6,7 +6,7 @@ import {
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
 import { Asset, SOUND_DRIVER, assetFromURI, assetStore } from '../AssetStore';
 import CvlImage from '../../Audio/cvl/Image';
-import Window from './Window';
+import Window, { WindowOptions } from './Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { button } from '../lib/button';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
@@ -33,7 +33,7 @@ export class ImportAssetsWindow extends Window {
   // step with the box as drawn (#341).
   #replaceExistingInput: HTMLInputElement;
 
-  constructor() {
+  constructor(windowOptions: WindowOptions = {}) {
     const fileInput = s<HTMLInputElement>(
         '<input type="file" multiple class="visually-hidden" tabindex="-1" aria-hidden="true">'
       ),
@@ -96,7 +96,8 @@ export class ImportAssetsWindow extends Window {
           })
         ),
         progressInformation
-      )
+      ),
+      windowOptions
     );
 
     this.#fileInput = fileInput;

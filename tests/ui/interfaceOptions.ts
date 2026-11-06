@@ -1,4 +1,4 @@
-// Interface and Theme in Options (#735). A theme applies as it's chosen and comes back on the next load. An interface
+// Interface and Theme in Options (#735). A theme applies as it's chosen. An interface
 //  loads a new page from the main menu; during a game it waits, with a hint, as reloading would lose the game. Both
 //  show what's in use, and choosing drops the visit's `?interface=` or `?theme=`, which would otherwise outrank the
 //  choice at the next load, including through the leave guard. Options is modal before a game, so it can't reload one.
@@ -24,7 +24,7 @@ import addFormatters from '../../src/js/UI/app/i18nFormatters';
 import forgetVisitParam, {
   withoutForgottenParams,
 } from '../../src/js/UI/lib/forgetVisitParam';
-import GameOptions from '../../src/js/UI/components/GameOptions';
+import GameOptions, { assetsRow } from '../../src/js/UI/components/GameOptions';
 import { IPortal } from '../../src/js/UI/components/Portal';
 import { allowLeaving, guardLeaving } from '../../src/js/UI/lib/leaveGuard';
 import i18next from 'i18next';
@@ -81,6 +81,13 @@ Object.assign(globalThis, {
   addFormatters(i18next);
   await import('../../translations/local/en');
   setOptionDefaults();
+
+  // Stored options only come back for the keys given a default, so these must have one.
+  expect(
+    'both have a default',
+    [options.get('interface'), options.get('uiTheme')],
+    ['classic', 'civ1-classic']
+  );
 
   // Which theme a page load uses.
   expect('the option by default', uiThemeFrom(null, 'slate'), 'slate');
@@ -215,6 +222,27 @@ Object.assign(globalThis, {
     expect('the guard entry leaves it off', pushed, [
       'https://civ.one/?debug=1',
     ]);
+  }
+
+  // Options is modal before a game, so what it opens has to be too, or it would open behind it.
+  {
+    const row = assetsRow();
+
+    (row.querySelector('button') as HTMLButtonElement).click();
+
+    const opened = [
+      ...(document as unknown as Document).querySelectorAll('.import-assets'),
+    ]
+      .pop()
+      ?.closest('dialog');
+
+    expect(
+      'Import assets opens over Options',
+      opened?.classList.contains('modal'),
+      true
+    );
+
+    opened?.remove();
   }
 
   // Interface reloads from the main menu, so Options there must close before a game can start.

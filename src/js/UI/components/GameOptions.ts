@@ -39,7 +39,8 @@ export const assetsRow = (): HTMLElement => {
       s(`<span>${t('GameOptions.assets')}</span>`),
       status,
       h(button(t('GameOptions.import-assets')), {
-        click: () => new ImportAssetsWindow(),
+        // Over Options, which is modal here: a window that isn't would open behind it.
+        click: () => new ImportAssetsWindow({ modal: true }),
       })
     );
 
