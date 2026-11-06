@@ -7,6 +7,7 @@ import { document } from './lib/dom';
 import { fold, matches } from '../../src/js/UI/lib/filterRows';
 import FilterableWindow from '../../src/js/UI/components/FilterableWindow';
 import i18next from 'i18next';
+import { s } from '@dom111/element';
 
 const failures: string[] = [];
 let checks = 0,
@@ -272,6 +273,60 @@ const run = async (): Promise<void> => {
   ]);
 
   grouped.close();
+
+  // #664: no box with nothing to filter, and one once rows arrive; rows that change in place are read again.
+  (globalThis as any).MutationObserver ??= (
+    globalThis as any
+  ).window.MutationObserver;
+
+  const late = new FilterableWindow('Late', s('<div></div>'), {
+      rowSelector: '.row',
+    }),
+    bar = () => late.element().querySelector('.window-filter') as HTMLElement,
+    settle = () => new Promise((resolve) => setTimeout(resolve, 0)),
+    keydown = (key: string) =>
+      late
+        .element()
+        .dispatchEvent(
+          new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true })
+        );
+
+  expect('nothing to filter: no box', bar().hidden, true);
+
+  keydown('a');
+  expect('and typing puts nothing in it', late.filter(), '');
+
+  const added = s('<p class="row">Rome</p>');
+
+  late.element().querySelector(':scope > .body > div')!.append(added);
+  await settle();
+  expect('rows arriving later show it', bar().hidden, false);
+
+  late.element().querySelector<HTMLInputElement>('input')!.value = 'paris';
+  late.refilter();
+  expect(
+    'a row that doesn\u2019t match is hidden',
+    [added.classList.contains('filtered-out')],
+    [true]
+  );
+
+  added.textContent = 'Paris';
+  await settle();
+  expect(
+    'its text changing in place is read again',
+    [added.classList.contains('filtered-out')],
+    [false]
+  );
+
+  late.close();
+
+  added.textContent = 'Rome';
+  await settle();
+  expect(
+    'closed, it stops watching',
+    added.classList.contains('filtered-out'),
+    false
+  );
 
   finished = true;
 

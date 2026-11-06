@@ -23,6 +23,8 @@ const cell = (text: string, className: string = ''): HTMLTableCellElement => {
 const row = (entry: HallOfFameEntry, current: boolean): HTMLTableRowElement => {
   const element = document.createElement('tr');
 
+  element.classList.add('hall-of-fame-entry');
+
   if (current) {
     element.className = 'current';
   }
@@ -112,8 +114,7 @@ export class HallOfFameWindow extends FilterableWindow {
         : hallOfFameTable(entries),
       {
         classes: 'hall-of-fame-window',
-        // Not the header row.
-        rowSelector: 'tr + tr',
+        rowSelector: '.hall-of-fame-entry',
       }
     );
   }

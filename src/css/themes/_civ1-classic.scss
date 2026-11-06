@@ -236,6 +236,8 @@
   --ui-table-hover: color-mix(in srgb, var(--ui-accent) 16%, transparent);
   --ui-table-rule: var(--ui-line);
   --ui-table-row-height: 2rem;
+  // The Corruption icon's black arrow (#792): reports are always on the Civ1 window's light ground.
+  --ui-corruption-icon-filter: none;
   // Motion (#753): none, as Civ1 has none. The same tokens as slate's, every duration 0s.
   --ui-motion-fast: 0s;
   --ui-motion-base: 0s;

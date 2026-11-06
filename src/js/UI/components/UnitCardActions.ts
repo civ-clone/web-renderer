@@ -8,6 +8,7 @@ import { Tile, Unit, UnitAction } from '../types';
 import { Element, s } from '@dom111/element';
 import tooltip, { hideTooltipWithin } from './lib/Tooltip';
 import button from '../lib/button';
+import ScaledCanvases from '../lib/scaledCanvases';
 import { keyForAction, keyName } from '../lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { unitActions } from '../lib/unitActions';
@@ -60,6 +61,7 @@ const groups: ActionGroup[] = ['orders', 'terrain', 'special'];
  */
 export class UnitCardActions extends Element {
   #act: (unitId: string, unitAction: string) => void;
+  #canvases = new ScaledCanvases();
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
   #unitId: string | null = null;
@@ -128,6 +130,7 @@ export class UnitCardActions extends Element {
         : null;
 
     hideTooltipWithin(this.element());
+    this.#canvases.clear();
     this.empty();
 
     this.#unitId = unit?.id ?? null;
@@ -187,7 +190,9 @@ export class UnitCardActions extends Element {
         buttons.append(actionButton);
 
         // Once it is on the page, so the picture can be drawn at the size it is shown at.
-        this.#draw(actionButton.querySelector('canvas')!, layers[index]);
+        this.#canvases.add(actionButton.querySelector('canvas')!, (canvas) =>
+          this.#draw(canvas, layers[index])
+        );
       });
     });
 

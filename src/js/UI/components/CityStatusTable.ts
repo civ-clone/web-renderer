@@ -8,6 +8,7 @@ import {
   yieldData,
   yieldIcon,
 } from './lib/cityYields';
+import corruptionIcon from './lib/corruptionIcon';
 import FilterableWindow from './FilterableWindow';
 import Portal from './Portal';
 import { cityName, growthLimitText } from './lib/city';
@@ -156,6 +157,7 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
   {
     key: 'corruption',
     heading: t('ReportTable.CityStatus.corruption'),
+    icon: () => corruptionIcon(),
     kind: 'number',
     cell: (city) => Math.abs(reduceKnownYield(city.yields, 'Corruption')),
     sortValue: (city) => Math.abs(reduceKnownYield(city.yields, 'Corruption')),

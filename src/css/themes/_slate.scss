@@ -246,6 +246,8 @@
   --ui-table-hover: color-mix(in srgb, var(--ui-accent) 16%, transparent);
   --ui-table-rule: var(--ui-line);
   --ui-table-row-height: 2rem;
+  // The Corruption icon's black arrow (#792): dark surfaces outline it, so it doesn't vanish.
+  --ui-corruption-icon-filter: none;
   // Motion (#753): one short vocabulary of durations and an easing, which a theme can slow or remove. Each part's own
   //  token is one of them: a window opening and closing, a notification row sliding in and going, a sidebar section
   //  opening, and the Next Turn button's pulse while the turn is ready.
@@ -339,4 +341,6 @@
   --y-luxury: #d777c6;
   --y-short: #ef7b6c;
   --y-unhappy: #ef7b6c;
+
+  --ui-corruption-icon-filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.8));
 }

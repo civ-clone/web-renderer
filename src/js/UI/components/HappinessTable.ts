@@ -10,6 +10,7 @@ import { citizenFace, renderPopulation } from './lib/cityYields';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from './FilterableWindow';
+import { filteredOutClass } from '../lib/filterRows';
 import Portal from './Portal';
 import ReportTable from './lib/ReportTable';
 import SupportedUnit from './SupportedUnit';
@@ -20,6 +21,7 @@ import { cityName, viewCityText } from './lib/city';
 import currentTileset from '../lib/tilesets';
 import { getLabelForBuildableEntity } from './lib/cityBuild';
 import { glyph } from '../lib/glyphs';
+import { h } from '../lib/html';
 import { instance as localeProvider } from '../LocaleProvider';
 import { s } from '@dom111/element';
 import { spriteKey } from '../tilesets/TilesetDescriptor';
@@ -93,7 +95,9 @@ export const renderHappinessDetails = (city: CityData): HTMLElement => {
 /**
  * The Happiness report (F4) under the new interface (#744): each city's citizens as Civ1 draws them, with the happy,
  *  content and unhappy counted beside them to sort by, and a View button. Choosing a city shows why its citizens are
- *  as they are, under the table.
+ *  as they are in a panel at the bottom of the window, in view whichever row was chosen and without moving the rows
+ *  (#793). Choosing another replaces it, and its close button or Escape puts it away, with the row still marked until
+ *  then.
  */
 export class HappinessTable extends FilterableWindow {
   #cities: CityData[];
@@ -101,6 +105,14 @@ export class HappinessTable extends FilterableWindow {
   #shown: string | null = null;
   #details: HTMLElement = s(
     '<div class="ui-report-details-area" aria-live="polite"></div>'
+  );
+  #closeButton: HTMLElement = h(
+    s(
+      `<button type="button" class="btn-icon ui-report-details-close" aria-label="${t(
+        'Generic.close'
+      )}">${glyph('close')}</button>`
+    ),
+    { click: () => this.#closeDetails() }
   );
   #table: ReportTable<CityData>;
   #unwatch: () => void;
@@ -181,6 +193,18 @@ export class HappinessTable extends FilterableWindow {
       },
     });
 
+    // A city filtered out of the list takes its reasons with it.
+    this.element().addEventListener('filtered', () => {
+      if (
+        this.#chosen !== null &&
+        this.#table
+          .rowElement(this.#chosen)
+          ?.classList.contains(filteredOutClass)
+      ) {
+        this.#closeDetails();
+      }
+    });
+
     this.#unwatch = watchPlayer(player, cityIds, (player) => {
       this.#cities = player.cities;
 
@@ -216,8 +240,45 @@ export class HappinessTable extends FilterableWindow {
       return;
     }
 
+    this.#markChosen(city?.id ?? null);
     this.#shown = city?.id ?? null;
-    this.#details.replaceChildren(...(details ? [details] : []));
+    this.#details.replaceChildren(
+      ...(details ? [this.#closeButton, details] : [])
+    );
+  }
+
+  protected escaped(): boolean {
+    if (this.#chosen === null) {
+      return false;
+    }
+
+    this.#closeDetails();
+
+    return true;
+  }
+
+  #closeDetails(): void {
+    const row = this.#chosen ? this.#table.rowElement(this.#chosen) : null,
+      hadFocus = this.#details.contains(document.activeElement);
+
+    this.#chosen = null;
+    this.#showDetails();
+
+    // Back to the table, rather than lost with the button that had it.
+    if (hadFocus) {
+      row?.focus();
+    }
+  }
+
+  // The row the panel is about, when it's open.
+  #markChosen(id: string | null): void {
+    [this.#shown, id].forEach((key) => {
+      if (key !== null) {
+        this.#table
+          .rowElement(key)
+          ?.classList.toggle('ui-report-row-chosen', key === id);
+      }
+    });
   }
 
   update() {

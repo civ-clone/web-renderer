@@ -38,7 +38,9 @@ export class FilterableWindow extends Window {
     `<p class="filter-empty" hidden>${t('Window.filter-empty')}</p>`
   );
   #filter: RowFilter;
+  #groupSelector: string | null;
   #input: HTMLInputElement;
+  #observer: MutationObserver | null = null;
   #rowSelector: string;
 
   constructor(
@@ -50,6 +52,7 @@ export class FilterableWindow extends Window {
     super(title, body, { ...options, autoDisplay: false });
 
     this.#filter = new RowFilter(rowSelector, groupSelector ?? null);
+    this.#groupSelector = groupSelector ?? null;
     this.#rowSelector = rowSelector;
     this.#input = document.createElement('input');
 
@@ -92,6 +95,13 @@ export class FilterableWindow extends Window {
 
     // Heard before `Window`'s own keydown, which is added each time the window is shown.
     this.on('keydown', (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && this.escaped()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+
+        return;
+      }
+
       if (event.key === 'Escape' && this.#input.value !== '') {
         // Only the filter, wherever the focus is: the window stays open, and so does the dialog (#351).
         event.preventDefault();
@@ -103,7 +113,12 @@ export class FilterableWindow extends Window {
         return;
       }
 
-      if (event.target === this.#input || takesText(event.target)) {
+      // With nothing to filter, there's no box to type in.
+      if (
+        this.#bar.hidden ||
+        event.target === this.#input ||
+        takesText(event.target)
+      ) {
         return;
       }
 
@@ -137,6 +152,55 @@ export class FilterableWindow extends Window {
     this.element().querySelector(':scope > header')?.after(this.#bar);
 
     this.refilter();
+    this.#watchRows();
+  }
+
+  close() {
+    this.#observer?.disconnect();
+    this.#observer = null;
+
+    return super.close();
+  }
+
+  // Rows that change in place, a figure arriving or a city's reasons opening, are read again, so a filter matches what
+  //  the player can see now (#664), and rows that arrive late show the box. Not for the filter's own hiding of them.
+  #watchRows(): void {
+    const body = this.element().querySelector(':scope > .body');
+
+    if (
+      this.#observer !== null ||
+      body === null ||
+      typeof MutationObserver !== 'function'
+    ) {
+      return;
+    }
+
+    const own = [this.#rowSelector, this.#groupSelector]
+      .filter((selector) => selector !== null)
+      .join(', ');
+
+    this.#observer = new MutationObserver((records): void => {
+      if (
+        records.some(
+          ({ target, type }) =>
+            type !== 'attributes' || !(target as Element).matches(own)
+        )
+      ) {
+        this.reread();
+      }
+    });
+
+    this.#observer.observe(body, {
+      attributeFilter: ['class', 'hidden'],
+      characterData: true,
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  /** Escape, before the filter's or the window's: whether something in the window took it. */
+  protected escaped(): boolean {
+    return false;
   }
 
   /** Puts the focus in the filter box. */
@@ -180,6 +244,11 @@ export class FilterableWindow extends Window {
     const shown = this.#filter.apply(body, this.#input.value);
 
     this.#empty.hidden = shown > 0 || this.#input.value.trim() === '';
+    // Nothing to filter: no rows yet, or none at all.
+    this.#bar.hidden =
+      this.#input.value === '' &&
+      body.querySelector(this.#rowSelector) === null;
+    this.element().dispatchEvent(new CustomEvent('filtered'));
   }
 }
 
