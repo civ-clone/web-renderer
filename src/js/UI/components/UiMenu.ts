@@ -95,7 +95,9 @@ export const placeMenu = (
     };
   }
 
-  const { x, y } = anchor.point,
+  // A press from before a resize may be off the screen now.
+  const { x } = anchor.point,
+    y = Math.min(anchor.point.y, viewport.height - EDGE_MARGIN),
     left = clampLeft(x - size.width / 2),
     above = y - POINT_GAP - size.height;
 
@@ -127,6 +129,23 @@ const fadeTime = (element: HTMLElement): number => {
   }
 
   return value.endsWith('ms') ? amount : amount * 1000;
+};
+
+// Keeps the next click on `target` from anything: the one a browser sends after the press or key that closed a menu,
+//  which would land on what's under it, or open it again. Given up on if it doesn't come.
+const swallowClick = (target: EventTarget): void => {
+  const swallow = (event: Event): void => {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      done();
+    },
+    done = (): void => {
+      target.removeEventListener('click', swallow, true);
+      clearTimeout(timer);
+    },
+    timer = setTimeout(done, 500);
+
+  target.addEventListener('click', swallow, true);
 };
 
 // The menu open now: one at a time.
@@ -331,7 +350,9 @@ export class UiMenu {
 
   #place(): void {
     const element = this.#element,
-      { anchor, launcher } = this.#options;
+      { anchor, launcher } = this.#options,
+      body = element.querySelector<HTMLElement>('.ui-menu-body')!,
+      { scrollTop } = body;
 
     // Its full size, not the height it was last allowed.
     element.style.removeProperty('max-height');
@@ -348,6 +369,11 @@ export class UiMenu {
     element.style.setProperty('left', `${left}px`);
     element.style.setProperty('top', `${top}px`);
     element.style.setProperty('max-height', `${maxHeight}px`);
+
+    body.scrollTop = scrollTop;
+
+    // A finger panning the rows is for a menu with more to show: otherwise it slides from row to row.
+    body.toggleAttribute('data-scrolls', body.scrollHeight > body.clientHeight);
   }
 
   #listen(): void {
@@ -408,20 +434,29 @@ export class UiMenu {
     });
 
     add<PointerEvent>(window, 'pointerup', (event) => {
-      // The main button's, or a finger's: a right or middle button lifted on a row runs nothing. The right button's
-      //  `contextmenu`, which some browsers send after it, would land on whatever is behind a closed menu.
-      if (event.isPrimary === false || (event.button ?? 0) !== 0) {
+      if (event.isPrimary === false) {
         return;
       }
 
-      const index = this.#rowAt(event.clientX, event.clientY),
-        held = this.#pressed;
+      const held = this.#pressed;
 
       this.#pressed = false;
       this.#rows.forEach((row) => delete row.dataset.pressed);
 
+      // The main button's, or a finger's: a right or middle button lifted on a row runs nothing. The right button's
+      //  `contextmenu`, which some browsers send after it, would land on whatever is behind a closed menu.
+      if ((event.button ?? 0) !== 0) {
+        return;
+      }
+
+      const index = this.#rowAt(event.clientX, event.clientY);
+
       if (index !== null) {
         event.preventDefault();
+
+        // The click this lift is about to send would find the menu gone, and land on what's under it, or on a window
+        //  the row opens.
+        swallowClick(window);
         this.#run(index);
 
         return;
@@ -468,11 +503,15 @@ export class UiMenu {
 
     add<KeyboardEvent>(window, 'keydown', (event) => this.#key(event));
 
+    // A phone turned, or a window resized: kept in reach, scrolling if it has to. Not moved from under a held press.
+    add(window, 'resize', () => {
+      if (!this.#pressed) {
+        this.#place();
+      }
+    });
+
     // The page losing focus, to another window or tab: not an element's blur, which this sees too as it listens in the
     //  capture phase (the launcher's, as the keys move the focus to the first row).
-    // A phone turned, or a window resized: kept in reach, scrolling if it has to.
-    add(window, 'resize', () => this.#place());
-
     add<FocusEvent>(window, 'blur', (event) => {
       if (!(event.target instanceof Node)) {
         this.close();
@@ -540,7 +579,11 @@ export class UiMenu {
           if (this.#options.launcher?.contains(document.activeElement)) {
             handled();
             this.close({ restoreFocus: true });
-            this.#swallowLauncherClick();
+
+            // Some browsers (Firefox) still click a button on Space's keyup, whatever its keydown did.
+            if (this.#options.launcher) {
+              swallowClick(this.#options.launcher);
+            }
 
             return;
           }
@@ -579,29 +622,6 @@ export class UiMenu {
 
     // Any other key does what it does anyway, a report's or a unit's, with the menu gone.
     this.close();
-  }
-
-  // Some browsers (Firefox) still click a button on Space's keyup, whatever its keydown did: that click, from the key
-  //  that just closed the menu, would open it again.
-  #swallowLauncherClick(): void {
-    const launcher = this.#options.launcher;
-
-    if (!launcher) {
-      return;
-    }
-
-    const swallow = (event: Event): void => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        done();
-      },
-      done = (): void => {
-        launcher.removeEventListener('click', swallow, true);
-        clearTimeout(timer);
-      },
-      timer = setTimeout(done, 500);
-
-    launcher.addEventListener('click', swallow, true);
   }
 
   // The next row from `from` in `step`'s direction that can be chosen, round the ends.

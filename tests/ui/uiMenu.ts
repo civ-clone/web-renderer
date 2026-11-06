@@ -187,6 +187,19 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       800 - EDGE_MARGIN - 200
     );
     expect(
+      'a press left below the viewport by a resize: kept on screen',
+      placeMenu(
+        { point: { x: 400, y: 700 } },
+        { width: 200, height: 300 },
+        { width: 800, height: 400 }
+      ),
+      {
+        left: 300,
+        top: 400 - EDGE_MARGIN - POINT_GAP - 300,
+        maxHeight: 400 - EDGE_MARGIN - POINT_GAP - EDGE_MARGIN,
+      }
+    );
+    expect(
       'taller than both sides, with more room above: from the top, scrolling',
       placeMenu(
         { point: { x: 400, y: 500 } },
@@ -363,6 +376,61 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     pointer('pointermove');
     pointer('pointerup');
     expect('the first finger’s still does', ran, ['Three']);
+  }
+
+  // The click a lift sends finds the menu gone: it isn't left to land on what was under it.
+  {
+    // The rows run above are done waiting for their own clicks.
+    await new Promise((resolve) => setTimeout(resolve, 550));
+
+    const under = document.createElement('button'),
+      clicks: string[] = [];
+
+    document.body.append(under);
+
+    const menu = menuOf(),
+      [one] = rows(menu);
+
+    underPointer = one;
+    pointer('pointermove');
+    pointer('pointerup');
+
+    // After the menu's listener: linkedom runs a node's in the order they were added, and a window's after the page's.
+    window.addEventListener('click', (event) => clicks.push(event.type));
+
+    const click = new Event('click', { bubbles: true, cancelable: true });
+
+    under.dispatchEvent(click);
+    expect(
+      'the lift’s click: swallowed',
+      [menu.isOpen(), click.defaultPrevented, clicks],
+      [false, true, []]
+    );
+
+    under.dispatchEvent(new Event('click', { bubbles: true }));
+    expect('the next click: left alone', clicks, ['click']);
+
+    under.remove();
+  }
+
+  // A press lifted by another button still lets go of the hold.
+  {
+    const ran: string[] = [],
+      menu = menuOf({ pressed: true }, ran),
+      [one] = rows(menu);
+
+    underPointer = one;
+    pointer('pointermove');
+    pointer('pointerup', document.body, { button: 1 });
+    underPointer = null;
+    pointer('pointerup');
+    expect(
+      'the middle button’s hold let go: nothing run, still open',
+      [ran, menu.isOpen()],
+      [[], true]
+    );
+
+    menu.close();
   }
 
   // The browser taking a press to scroll the menu chooses nothing.

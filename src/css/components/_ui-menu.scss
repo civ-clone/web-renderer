@@ -84,9 +84,13 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: var(--ui-menu-padding);
-  // A menu too tall for the screen scrolls under a finger that starts on it. A slide from the long press that opened it
-  //  started on the map, so is still the menu's.
-  touch-action: pan-y;
+  // A finger slides from row to row, unless the menu is too tall for the screen: then one that starts on it scrolls it.
+  //  A slide from the long press that opened it started on the map, so is the menu's either way.
+  touch-action: none;
+
+  &[data-scrolls] {
+    touch-action: pan-y;
+  }
 }
 
 .ui-menu-section {
