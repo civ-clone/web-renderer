@@ -73,6 +73,10 @@
     grid-area: key;
     letter-spacing: normal;
     opacity: 0.6;
+
+    @media (hover: none) {
+      display: none;
+    }
   }
 
   &:hover {

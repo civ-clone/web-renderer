@@ -404,6 +404,36 @@ const run = async (): Promise<void> => {
     ]
   );
 
+  // On a touch screen there's no key to press, so the hint doesn't mention one (#814).
+  const page = globalThis.window as unknown as {
+      matchMedia?: (query: string) => { matches: boolean };
+    },
+    was = page.matchMedia,
+    placeholder = () => {
+      const filter = new FilterableWindow(
+          'Cities',
+          list(['Moscow', 'Granary']),
+          {
+            rowSelector: 'tr',
+          }
+        ),
+        field = filter
+          .element()
+          .querySelector('.window-filter input') as HTMLInputElement;
+
+      return field.placeholder === field.getAttribute('aria-label');
+    };
+
+  expect(
+    'with a keyboard, the hint is more than the name',
+    placeholder(),
+    false
+  );
+
+  page.matchMedia = (query) => ({ matches: query === '(hover: none)' });
+  expect('on a touch screen, the hint is just the name', placeholder(), true);
+  page.matchMedia = was;
+
   finished = true;
 
   if (failures.length) {

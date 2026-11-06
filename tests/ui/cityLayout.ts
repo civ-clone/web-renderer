@@ -389,6 +389,21 @@ const run = async (): Promise<void> => {
     'Next city',
   ]);
 
+  expect(
+    'Previous and Next show the arrow keys that do the same (#814)',
+    ['previous', 'next'].map((name) => {
+      const found = element.querySelector<HTMLElement>(
+        `:scope > .ui-window-footer button.${name}`
+      );
+
+      return [found?.dataset.hotkey, found?.getAttribute('aria-keyshortcuts')];
+    }),
+    [
+      ['←', 'ArrowLeft'],
+      ['→', 'ArrowRight'],
+    ]
+  );
+
   click(element.querySelector(':scope > .ui-window-footer button.next'));
   await settle();
 

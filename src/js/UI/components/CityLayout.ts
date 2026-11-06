@@ -463,13 +463,19 @@ const renderUnits = (
 const renderCityButtons = ({ step, rename }: CityScreenContext): HTMLElement =>
   s(
     '<footer></footer>',
-    h(button(t('City.previous'), { className: 'previous' }), {
-      click: () => step(-1),
-    }),
+    h(
+      button(t('City.previous'), {
+        className: 'previous',
+        hotkey: 'ArrowLeft',
+      }),
+      {
+        click: () => step(-1),
+      }
+    ),
     h(button(t('City.rename'), { className: 'rename' }), {
       click: () => rename(),
     }),
-    h(button(t('City.next'), { className: 'next' }), {
+    h(button(t('City.next'), { className: 'next', hotkey: 'ArrowRight' }), {
       click: () => step(1),
     })
   );

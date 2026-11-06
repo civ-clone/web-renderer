@@ -37,6 +37,14 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 
   expect('the variant', cancel.className, 'btn-quiet');
   expect('the chip shows Esc', cancel.dataset.hotkey, 'Esc');
+  expect(
+    'the arrow keys show as arrows',
+    [
+      button('Previous', { hotkey: 'ArrowLeft' }).dataset.hotkey,
+      button('Next', { hotkey: 'ArrowRight' }).dataset.hotkey,
+    ],
+    ['←', '→']
+  );
   expect('the label is still only the label', cancel.textContent, 'Cancel');
   expect(
     'the key is the shortcut',
