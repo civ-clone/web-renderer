@@ -17,7 +17,10 @@ import Civilopedia from './Civilopedia';
 import ConfirmationWindow from './ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '../types';
-import PopupMenu from './PopupMenu';
+import PopupMenu, { hasPopupMenu } from './PopupMenu';
+import UiMenu, { UiMenuItem } from './UiMenu';
+import { interfaceMode } from '../lib/interfaceMode';
+import { windowKey } from '../lib/windowEyebrows';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
 import Transport from '../Transport';
@@ -266,6 +269,7 @@ export class GameMenu extends Element {
   #portal: Portal;
   #transport: Transport;
   #cheatsEnabled: boolean;
+  #menu: UiMenu | null = null;
 
   constructor(
     element: HTMLElement,
@@ -334,280 +338,325 @@ export class GameMenu extends Element {
     });
   }
 
+  // What the menu offers (#808), worked out as it opens, as the cheats can be turned on mid-game: the classic menu lists
+  //  them in its old order, and the new one in sections, with the rows that end the game last.
+  #rows(): {
+    game: UiMenuItem[];
+    reports: UiMenuItem[];
+    reference: UiMenuItem[];
+    cheats: UiMenuItem[];
+    end: UiMenuItem[];
+  } {
+    const game: UiMenuItem[] = [
+        {
+          label: t('GameMenu.save-game'),
+          key: 'Shift+S',
+          action: () => {
+            this.saveGame();
+          },
+        },
+        {
+          label: t('GameMenu.load-game'),
+          action: () => {
+            new ConfirmationWindow(
+              t('GameMenu.load-game'),
+              t('GameMenu.load-game-confirm'),
+              // An autosave (#653) or a file, its seats shown first, to reassign (#608).
+              () => void chooseSave(this.#transport)
+            );
+          },
+        },
+        {
+          label: t('GameMenu.options'),
+          action: () => {
+            new GameOptions(this.#portal, this.#transport);
+          },
+        },
+      ],
+      // Retire ends the game with your score (#176); Quit leaves it for the main menu, reloading for a fresh worker as
+      //  loading a save does (#362).
+      end: UiMenuItem[] = [
+        {
+          label: t('GameMenu.retire'),
+          danger: true,
+          action: () => {
+            new ConfirmationWindow(
+              t('GameMenu.retire'),
+              t('GameMenu.retire-confirm'),
+              () => this.#transport.send('retire', null)
+            );
+          },
+        },
+        {
+          label: t('GameMenu.quit'),
+          danger: true,
+          action: () => {
+            new ConfirmationWindow(
+              t('GameMenu.quit'),
+              t('GameMenu.quit-confirm'),
+              () => {
+                allowLeaving();
+
+                window.location.reload();
+              }
+            );
+          },
+        },
+      ],
+      reports: UiMenuItem[] = [
+        {
+          label: t('GameMenu.city-status'),
+          key: windowKey('city-status'),
+          action: () => {
+            openCityStatus(this.#getPlayer(), this.#portal, this.#transport);
+          },
+        },
+        {
+          label: t('GameMenu.military-report'),
+          key: windowKey('military-report'),
+          action: () => {
+            openMilitaryReport(this.#transport);
+          },
+        },
+        {
+          label: t('GameMenu.intelligence-report'),
+          key: windowKey('intelligence-report'),
+          action: () => {
+            openIntelligenceReport(this.#transport);
+          },
+        },
+        {
+          label: t('GameMenu.happiness-report'),
+          key: windowKey('happiness-report'),
+          action: () => {
+            openHappinessReport(
+              this.#getPlayer(),
+              this.#portal,
+              this.#transport
+            );
+          },
+        },
+        {
+          label: t('GameMenu.trade-report'),
+          key: windowKey('trade-report'),
+          action: () => {
+            openTradeReport(this.#getPlayer(), this.#portal, this.#transport);
+          },
+        },
+        {
+          label: t('GameMenu.science-report'),
+          key: windowKey('science-report'),
+          action: () => {
+            new ScienceReport(this.#getPlayer());
+          },
+        },
+        {
+          label: t('GameMenu.top-cities'),
+          key: windowKey('top-cities-report'),
+          action: () => {
+            openTopCities(this.#getPlayer(), this.#portal, this.#transport);
+          },
+        },
+        {
+          label: t('GameMenu.civilization-score'),
+          key: windowKey('civilization-score-report'),
+          action: () => {
+            openCivilizationScore(this.#transport);
+          },
+        },
+      ],
+      reference: UiMenuItem[] = [
+        {
+          label: t('GameMenu.civilopedia'),
+          key: '?',
+          action: () => {
+            Civilopedia.open(this.#transport);
+          },
+        },
+      ],
+      cheats: UiMenuItem[] = this.#cheatsEnabled
+        ? [
+            {
+              label: t('GameMenu.cheat.reveal-map'),
+              action: () => {
+                this.#transport.send('cheat', {
+                  name: 'RevealMap',
+                  value: null,
+                });
+              },
+            },
+            {
+              label: t('GameMenu.cheat.grant-advance'),
+              action: whenAnswered(async () => {
+                const advances = s<HTMLSelectElement>(
+                    '<select multiple size="10"></select>'
+                  ),
+                  showAdvances = async (
+                    player: string | null
+                  ): Promise<void> => {
+                    const available = await this.#transport.request(
+                      new CheatAdvances(player)
+                    );
+
+                    advances.innerHTML =
+                      available.length === 0
+                        ? `<option disabled>${t(
+                            'GameMenu.cheat.no-advances'
+                          )}</option>`
+                        : available
+                            .map((advance): [string, string] => [
+                              advance,
+                              t(`${advance}.name`, {
+                                defaultValue: advance,
+                                ns: 'science',
+                              }),
+                            ])
+                            .sort(([, a], [, b]) => a.localeCompare(b))
+                            .map(
+                              ([advance, name]) =>
+                                `<option value="${advance}">${name}</option>`
+                            )
+                            .join('');
+                  };
+
+                await showAdvances(null);
+
+                cheatGrantWindow(
+                  t('GameMenu.cheat.grant-advance'),
+                  await this.#transport.request(new CheatPlayers()),
+                  advances,
+                  t('GameMenu.cheat.choose-advances'),
+                  (player) => {
+                    const chosen = [...advances.selectedOptions].map(
+                      (option) => option.value
+                    );
+
+                    if (chosen.length === 0) {
+                      return;
+                    }
+
+                    this.#transport.send('cheat', {
+                      name: 'GrantAdvance',
+                      value: {
+                        advances: chosen,
+                        ...(player ? { player } : {}),
+                      },
+                    });
+                  },
+                  showAdvances
+                );
+              }),
+            },
+            {
+              label: t('GameMenu.cheat.create-unit'),
+              action: whenAnswered(async () => {
+                const [players, unitTypes] = await Promise.all([
+                  this.#transport.request(new CheatPlayers()),
+                  this.#transport.request(new CheatUnitTypes()),
+                ]);
+
+                cheatCreateUnitWindow(
+                  players,
+                  unitTypes,
+                  this.#portal,
+                  this.#portal.center(),
+                  ({ player, unitType, x, y }) =>
+                    this.#transport.send('cheat', {
+                      name: 'CreateUnit',
+                      value: {
+                        unitType,
+                        x,
+                        y,
+                        ...(player ? { player } : {}),
+                      },
+                    })
+                );
+              }),
+            },
+            {
+              label: t('GameMenu.cheat.grant-gold'),
+              action: whenAnswered(async () => {
+                const amount = s<HTMLInputElement>(
+                  '<input type="number" step="1">'
+                );
+
+                cheatGrantWindow(
+                  t('GameMenu.cheat.grant-gold'),
+                  await this.#transport.request(new CheatPlayers()),
+                  amount,
+                  t('GameMenu.cheat.enter-gold-amount'),
+                  (player) => {
+                    const value = parseInt(amount.value, 10);
+
+                    if (Number.isNaN(value)) {
+                      return;
+                    }
+
+                    this.#transport.send('cheat', {
+                      name: 'GrantGold',
+                      value: {
+                        amount: value,
+                        ...(player ? { player } : {}),
+                      },
+                    });
+                  }
+                );
+              }),
+            },
+          ]
+        : [];
+
+    return { game, reports, reference, cheats, end };
+  }
+
   build(): void {
-    const button = s(`<button class="btn-bare">${glyph('menu')}</button>`);
+    const button = s<HTMLButtonElement>(
+      `<button class="btn-bare" aria-label="${t('GameMenu.label')}">${glyph(
+        'menu'
+      )}</button>`
+    );
+    // Whether the classic menu was open as the button was pressed: that press closes it, as any press does, and its
+    //  click mustn't open it again (#710).
+    let openAtPress = false;
+
+    if (interfaceMode() === 'new') {
+      button.setAttribute('aria-haspopup', 'menu');
+      button.setAttribute('aria-expanded', 'false');
+    }
 
     this.append(
       h(button, {
-        click: () => {
+        pointerdown: () => {
+          openAtPress = hasPopupMenu(this);
+        },
+        click: (event: MouseEvent) => {
+          if (interfaceMode() === 'new') {
+            // From the keyboard, a click with no pointer behind it.
+            this.#toggle(button, event.detail === 0);
+
+            return;
+          }
+
+          const closedByThisPress = openAtPress && event.detail !== 0;
+
+          openAtPress = false;
+
+          if (closedByThisPress) {
+            return;
+          }
+
           // Where the button is on the page: the menu is appended to the body, and the button is in the top bar's
           //  flow, not placed by the game menu itself (#697).
-          const { left, top } = button.getBoundingClientRect();
+          const { left, top } = button.getBoundingClientRect(),
+            { game, reports, reference, cheats, end } = this.#rows();
 
           new PopupMenu(
             this,
             left + window.scrollX,
             top + window.scrollY,
-            [
-              {
-                label: t('GameMenu.save-game'),
-                action: (menu) => {
-                  menu.remove();
-
-                  this.saveGame();
-                },
-              },
-              {
-                label: t('GameMenu.load-game'),
-                action: (menu) => {
-                  menu.remove();
-
-                  new ConfirmationWindow(
-                    t('GameMenu.load-game'),
-                    t('GameMenu.load-game-confirm'),
-                    // An autosave (#653) or a file, its seats shown first, to reassign (#608).
-                    () => void chooseSave(this.#transport)
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.options'),
-                action: () => {
-                  new GameOptions(this.#portal, this.#transport);
-                },
-              },
-              // Retire ends the game with your score (#176); Quit leaves it for the main menu, reloading for a fresh
-              //  worker as loading a save does (#362).
-              {
-                label: t('GameMenu.retire'),
-                action: (menu) => {
-                  menu.remove();
-
-                  new ConfirmationWindow(
-                    t('GameMenu.retire'),
-                    t('GameMenu.retire-confirm'),
-                    () => this.#transport.send('retire', null)
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.quit'),
-                action: (menu) => {
-                  menu.remove();
-
-                  new ConfirmationWindow(
-                    t('GameMenu.quit'),
-                    t('GameMenu.quit-confirm'),
-                    () => {
-                      allowLeaving();
-
-                      window.location.reload();
-                    }
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.city-status'),
-                action: () => {
-                  openCityStatus(
-                    this.#getPlayer(),
-                    this.#portal,
-                    this.#transport
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.military-report'),
-                action: () => {
-                  openMilitaryReport(this.#transport);
-                },
-              },
-              {
-                label: t('GameMenu.intelligence-report'),
-                action: () => {
-                  openIntelligenceReport(this.#transport);
-                },
-              },
-              {
-                label: t('GameMenu.happiness-report'),
-                action: () => {
-                  openHappinessReport(
-                    this.#getPlayer(),
-                    this.#portal,
-                    this.#transport
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.trade-report'),
-                action: () => {
-                  openTradeReport(
-                    this.#getPlayer(),
-                    this.#portal,
-                    this.#transport
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.science-report'),
-                action: () => {
-                  new ScienceReport(this.#getPlayer());
-                },
-              },
-              {
-                label: t('GameMenu.top-cities'),
-                action: () => {
-                  openTopCities(
-                    this.#getPlayer(),
-                    this.#portal,
-                    this.#transport
-                  );
-                },
-              },
-              {
-                label: t('GameMenu.civilization-score'),
-                action: () => {
-                  openCivilizationScore(this.#transport);
-                },
-              },
-              {
-                label: t('GameMenu.civilopedia'),
-                action: () => {
-                  Civilopedia.open(this.#transport);
-                },
-              },
-              ...(this.#cheatsEnabled
-                ? [
-                    {
-                      label: t('GameMenu.cheat.reveal-map'),
-                      action: () => {
-                        this.#transport.send('cheat', {
-                          name: 'RevealMap',
-                          value: null,
-                        });
-                      },
-                    },
-                    {
-                      label: t('GameMenu.cheat.grant-advance'),
-                      action: whenAnswered(async () => {
-                        const advances = s<HTMLSelectElement>(
-                            '<select multiple size="10"></select>'
-                          ),
-                          showAdvances = async (
-                            player: string | null
-                          ): Promise<void> => {
-                            const available = await this.#transport.request(
-                              new CheatAdvances(player)
-                            );
-
-                            advances.innerHTML =
-                              available.length === 0
-                                ? `<option disabled>${t(
-                                    'GameMenu.cheat.no-advances'
-                                  )}</option>`
-                                : available
-                                    .map((advance): [string, string] => [
-                                      advance,
-                                      t(`${advance}.name`, {
-                                        defaultValue: advance,
-                                        ns: 'science',
-                                      }),
-                                    ])
-                                    .sort(([, a], [, b]) => a.localeCompare(b))
-                                    .map(
-                                      ([advance, name]) =>
-                                        `<option value="${advance}">${name}</option>`
-                                    )
-                                    .join('');
-                          };
-
-                        await showAdvances(null);
-
-                        cheatGrantWindow(
-                          t('GameMenu.cheat.grant-advance'),
-                          await this.#transport.request(new CheatPlayers()),
-                          advances,
-                          t('GameMenu.cheat.choose-advances'),
-                          (player) => {
-                            const chosen = [...advances.selectedOptions].map(
-                              (option) => option.value
-                            );
-
-                            if (chosen.length === 0) {
-                              return;
-                            }
-
-                            this.#transport.send('cheat', {
-                              name: 'GrantAdvance',
-                              value: {
-                                advances: chosen,
-                                ...(player ? { player } : {}),
-                              },
-                            });
-                          },
-                          showAdvances
-                        );
-                      }),
-                    },
-                    {
-                      label: t('GameMenu.cheat.create-unit'),
-                      action: whenAnswered(async () => {
-                        const [players, unitTypes] = await Promise.all([
-                          this.#transport.request(new CheatPlayers()),
-                          this.#transport.request(new CheatUnitTypes()),
-                        ]);
-
-                        cheatCreateUnitWindow(
-                          players,
-                          unitTypes,
-                          this.#portal,
-                          this.#portal.center(),
-                          ({ player, unitType, x, y }) =>
-                            this.#transport.send('cheat', {
-                              name: 'CreateUnit',
-                              value: {
-                                unitType,
-                                x,
-                                y,
-                                ...(player ? { player } : {}),
-                              },
-                            })
-                        );
-                      }),
-                    },
-                    {
-                      label: t('GameMenu.cheat.grant-gold'),
-                      action: whenAnswered(async () => {
-                        const amount = s<HTMLInputElement>(
-                          '<input type="number" step="1">'
-                        );
-
-                        cheatGrantWindow(
-                          t('GameMenu.cheat.grant-gold'),
-                          await this.#transport.request(new CheatPlayers()),
-                          amount,
-                          t('GameMenu.cheat.enter-gold-amount'),
-                          (player) => {
-                            const value = parseInt(amount.value, 10);
-
-                            if (Number.isNaN(value)) {
-                              return;
-                            }
-
-                            this.#transport.send('cheat', {
-                              name: 'GrantGold',
-                              value: {
-                                amount: value,
-                                ...(player ? { player } : {}),
-                              },
-                            });
-                          }
-                        );
-                      }),
-                    },
-                  ]
-                : []),
-            ],
+            [...game, ...end, ...reports, ...reference, ...cheats].map(
+              ({ label, action }) => ({ label, action: () => action() })
+            ),
             {
               align: 'right',
               fullWidth: true,
@@ -616,6 +665,32 @@ export class GameMenu extends Element {
         },
       })
     );
+  }
+
+  // The new interface's menu (#808) under the button, or closed when it's open: the button toggles it.
+  #toggle(button: HTMLButtonElement, byKeyboard: boolean): void {
+    if (this.#menu?.isOpen()) {
+      this.#menu.close({ restoreFocus: byKeyboard });
+
+      return;
+    }
+
+    const { game, reports, reference, cheats, end } = this.#rows();
+
+    this.#menu = new UiMenu({
+      label: t('GameMenu.label'),
+      launcher: button,
+      byKeyboard,
+      anchor: { below: button.getBoundingClientRect() },
+      className: 'ui-game-menu',
+      sections: [
+        { items: game },
+        { heading: t('GameMenu.section.reports'), items: reports },
+        { heading: t('GameMenu.section.reference'), items: reference },
+        { heading: t('GameMenu.section.cheats'), items: cheats },
+        { rule: true, items: end },
+      ],
+    });
   }
 }
 

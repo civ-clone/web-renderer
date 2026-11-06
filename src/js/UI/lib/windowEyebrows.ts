@@ -21,6 +21,10 @@ const eyebrows: { [windowClass: string]: [kind: string, key: string | null] } =
     'ui-meeting-window': ['diplomacy', null],
   };
 
+/** The key that opens a window with this class, or `null` for none: the Game menu shows it (#808). */
+export const windowKey = (windowClass: string): string | null =>
+  eyebrows[windowClass]?.[1] ?? null;
+
 /** The eyebrow for a window with these classes, or `null` for one without. */
 export const eyebrowFor = (classes: string[]): string | null => {
   const found = classes.find((name) => name in eyebrows);

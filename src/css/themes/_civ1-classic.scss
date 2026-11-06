@@ -195,6 +195,37 @@
   --ui-tooltip-title-bg: #38e;
   --ui-tooltip-title-fg: #edc;
 
+  // Menus (#808): as the game's menus have always been, a dark wash with each row a pale pill of its own, which goes
+  //  to the overlay's colours under the pointer. No keys, as Civ1 classic shows none.
+  --ui-menu-bg: color-mix(in srgb, var(--ui-shade) 40%, transparent);
+  --ui-menu-fg: var(--ui-shade);
+  --ui-menu-muted: #3d4452;
+  --ui-menu-edge: transparent;
+  --ui-menu-rule: transparent;
+  --ui-menu-rule-width: 0px;
+  --ui-menu-divider: color-mix(in srgb, var(--ui-light) 50%, transparent);
+  --ui-menu-radius: 1rem;
+  --ui-menu-shadow: none;
+  --ui-menu-padding: 0.5rem;
+  --ui-menu-heading-fg: var(--ui-light);
+  --ui-menu-eyebrow-fg: var(--ui-light);
+  --ui-menu-item-bg: color-mix(in srgb, var(--ui-light) 85%, transparent);
+  --ui-menu-item-fg: var(--ui-shade);
+  --ui-menu-item-radius: 0.66rem;
+  --ui-menu-item-gap: 0.5rem;
+  --ui-menu-item-padding: 0.25rem 0.5rem;
+  --ui-menu-hover-bg: var(--ui-overlay-bg);
+  --ui-menu-hover-fg: var(--ui-overlay-fg);
+  --ui-menu-hover-bar: transparent;
+  --ui-menu-pressed-bg: var(--ui-overlay-bg);
+  --ui-menu-danger-fg: var(--ui-shade);
+  --ui-menu-danger-hover-fg: var(--ui-menu-hover-fg);
+  --ui-menu-kbd-bg: var(--ui-kbd-bg);
+  --ui-menu-kbd-edge: var(--ui-kbd-edge);
+  --ui-menu-kbd-fg: var(--ui-kbd-fg);
+  --ui-menu-motion: var(--ui-motion-fast);
+  --ui-menu-rise: 0px;
+
   // The new window chrome (#738): the Civ1 window still, with a thin rule under the title and no footer band.
   --ui-title-rule: var(--ui-accent);
   --ui-footer-bg: transparent;
