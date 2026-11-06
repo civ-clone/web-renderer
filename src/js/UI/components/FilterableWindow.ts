@@ -72,6 +72,14 @@ export class FilterableWindow extends Window {
           return;
         }
 
+        if (event.key === 'Enter' && this.entered()) {
+          event.preventDefault();
+          // Not on to the game, where Enter ends the turn.
+          event.stopPropagation();
+
+          return;
+        }
+
         const row = this.element().querySelector(
             `:scope > .body ${this.#rowSelector}:not(.filtered-out)`
           ),
@@ -223,6 +231,16 @@ export class FilterableWindow extends Window {
   /** Escape, before the filter's or the window's: whether something in the window took it. */
   protected escaped(): boolean {
     return false;
+  }
+
+  /** Enter in the filter box, for a window that acts on it: `true` if it did, or the focus moves to the first row. */
+  protected entered(): boolean {
+    return false;
+  }
+
+  /** What's in the filter box. */
+  protected filterText(): string {
+    return this.#input.value;
   }
 
   /** Puts the focus in the filter box. */

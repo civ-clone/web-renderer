@@ -2,7 +2,7 @@ import { ActionWindowActions } from './ActionWindow';
 import FilterableWindow from './FilterableWindow';
 import { GlyphName, glyph } from '../lib/glyphs';
 import { button } from '../lib/button';
-import { filteredOutClass } from '../lib/filterRows';
+import { filteredOutClass, fold, matchRank } from '../lib/filterRows';
 import { h } from '../lib/html';
 import { mappedKeyFromEvent } from '../lib/mappedKey';
 import { s } from '@dom111/element';
@@ -58,6 +58,9 @@ export interface ChoiceWindowOptions {
   describe?: ChoiceDescriber | null;
   // Buttons beside the primary (Auto, Can't build…), given the window.
   actions?: ActionWindowActions;
+  // A list to search by typing, without headings: the best matches listed first, the first of them chosen, and Enter in
+  //  the filter box taking it.
+  typeAhead?: boolean;
 }
 
 let lists = 0;
@@ -88,6 +91,9 @@ export class ChoiceWindow extends FilterableWindow {
   #onChoose: (value: string) => void;
   #primary: HTMLButtonElement;
   #rows = new Map<HTMLElement, ChoiceRow>();
+  #typeAhead: boolean = false;
+  // The rows as they were given, which a match is ranked within, for a type-ahead list that has moved them.
+  #listed: HTMLElement[] | null = null;
 
   constructor(
     title: string,
@@ -102,6 +108,7 @@ export class ChoiceWindow extends FilterableWindow {
       intro = null,
       describe = null,
       actions = {},
+      typeAhead = false,
     }: ChoiceWindowOptions = {}
   ) {
     const autoChoice = singleChoice(rows, autoChooseSingle),
@@ -158,6 +165,7 @@ export class ChoiceWindow extends FilterableWindow {
     this.#list = list;
     this.#onChoose = onChoose;
     this.#primary = primary;
+    this.#typeAhead = typeAhead;
 
     if (autoChoice !== null) {
       this.#autoChosen = true;
@@ -201,7 +209,9 @@ export class ChoiceWindow extends FilterableWindow {
         (element) => this.#rows.get(element)!.value === chosen
       ) ??
         this.#shown()[0] ??
-        null
+        null,
+      // Nobody's choice yet: the first row follows what's typed.
+      !typeAhead
     );
 
     this.on('focus', () => this.#focusChosen());
@@ -248,15 +258,63 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
+    if (this.#typeAhead) {
+      this.#rank();
+    }
+
     const shown = this.#shown();
 
     // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen. The one the
     //  player chose comes back once it's shown again.
     if (this.#wanted !== null && shown.includes(this.#wanted)) {
       this.#select(this.#wanted, false);
-    } else if (this.#chosen === null || !shown.includes(this.#chosen)) {
+    } else if (
+      this.#typeAhead ||
+      this.#chosen === null ||
+      !shown.includes(this.#chosen)
+    ) {
       this.#select(shown[0] ?? null, false);
     }
+  }
+
+  protected entered(): boolean {
+    const row = this.#typeAhead && this.#chosen && this.#rows.get(this.#chosen);
+
+    if (!row) {
+      return false;
+    }
+
+    this.#choose(row.value);
+
+    return true;
+  }
+
+  // The rows by how well their names match, the order they came in otherwise. Moved only if that changes anything: the
+  //  filter hears rows arriving, and reads them again.
+  #rank(): void {
+    const query = fold(this.filterText().trim()),
+      elements = this.#elements(),
+      listed = (this.#listed ??= elements),
+      ranked = listed
+        .map((element, index) => ({
+          element,
+          index,
+          rank: matchRank(query, fold(this.#rows.get(element)!.label)),
+        }))
+        .sort((a, b) => a.rank - b.rank || a.index - b.index)
+        .map(({ element }) => element);
+
+    if (ranked.every((element, index) => element === elements[index])) {
+      return;
+    }
+
+    const rows = new Map(this.#rows);
+
+    this.#rows.clear();
+
+    ranked.forEach((element) => this.#rows.set(element, rows.get(element)!));
+
+    this.#list.append(...ranked);
   }
 
   /**
@@ -274,6 +332,7 @@ export class ChoiceWindow extends FilterableWindow {
         this.#elements().find((element) => valueOf(element) === value) ?? null;
 
     this.#rows.clear();
+    this.#listed = null;
     this.#list.replaceChildren();
     this.#chosen = null;
     this.#fill(rows);

@@ -5,6 +5,7 @@ import { ObjectMap } from '../lib/reconstituteData';
 import openCity from '../components/openCity';
 import CitiesList from '../components/CitiesList';
 import GameMenu from '../components/GameMenu';
+import openFindCity from '../components/FindCity';
 import { allowLeaving, guardLeaving } from '../lib/leaveGuard';
 import { gridName } from '../lib/savedGame';
 import { autosaveDue } from '../lib/browserSaves';
@@ -339,6 +340,11 @@ export class GameSession {
           unitActionArea: unitCard?.actionArea() ?? unitActionArea,
           world,
         }),
+        findCity = (): void => {
+          openFindCity(gameState.data().player.world.tiles, (tile): void =>
+            mapView.centre(tile)
+          );
+        },
         gameMenuItem = new GameMenu(
           gameMenu,
           // `data` is replaced on a full rebuild, so this always
@@ -351,7 +357,8 @@ export class GameSession {
           () => Number(gameState.data()?.year?.value ?? 0),
           portal,
           transport,
-          cheatsEnabled
+          cheatsEnabled,
+          findCity
         );
 
       this.#unitController = unitController;
@@ -617,6 +624,17 @@ export class GameSession {
 
           if (autosave !== null) {
             gameMenuItem.autosave(autosave);
+          }
+
+          // A new game opens on the player's start, not wherever that happens to be in view from the map's corner
+          //  (#705). A loaded one, and one being watched, stay as they are.
+          const start =
+            firstTurnStarted && pendingSave === null && !observing
+              ? gameState.data().player.units[0]?.tile
+              : undefined;
+
+          if (start) {
+            mapView.centre(start);
           }
 
           firstTurnStarted = false;

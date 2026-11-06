@@ -121,7 +121,14 @@ expect(
     },
   });
 
-(document as any).elementFromPoint = () => null;
+// Where the portal asked about, which is in the viewport's coordinates, not the page's (#765).
+const pointsAskedAbout: number[][] = [];
+
+(document as any).elementFromPoint = (x: number, y: number) => {
+  pointsAskedAbout.push([x, y]);
+
+  return null;
+};
 
 const tiles: any[] = [];
 
@@ -149,7 +156,12 @@ const portal = new GamePortal(
 portal.on('tile-clicked', (x: number, y: number) => clicked.push(`${x},${y}`));
 
 // linkedom has no `PointerEvent`: an event with what the portal reads.
-const pointer = (type: string, x: number, y: number): void => {
+const pointer = (
+  type: string,
+  x: number,
+  y: number,
+  scrolled: number = 0
+): void => {
   const event = new Event(type, { cancelable: true });
 
   Object.entries({
@@ -160,7 +172,7 @@ const pointer = (type: string, x: number, y: number): void => {
     offsetX: x,
     offsetY: y,
     pageX: x,
-    pageY: y,
+    pageY: y + scrolled,
     pointerId: 7,
     x,
     y,
@@ -180,6 +192,19 @@ expect(
 pointer('pointerup', 40, 40);
 
 expect('let go where it was pressed, it is a click', clicked.length, 1);
+
+// A tap on a page scrolled under a phone's address bar: what's under it is looked for where the finger is on the screen.
+pointsAskedAbout.length = 0;
+pointer('pointerdown', 40, 40);
+pointer('pointerup', 40, 40, 60);
+
+expect(
+  'a release asks what is under the pointer on the screen, not on the page',
+  pointsAskedAbout,
+  [[40, 40]]
+);
+
+clicked.length = 1;
 
 pointer('pointerup', 40, 40);
 

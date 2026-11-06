@@ -18,7 +18,8 @@ import {
 } from '../../src/js/UI/lib/cityOpeners';
 import { ObserverState } from '../../src/js/Engine/Observer';
 import Portal from '../../src/js/UI/components/Portal';
-import { City as CityData } from '../../src/js/UI/types';
+import { City as CityData, Tile } from '../../src/js/UI/types';
+import { MapView } from '../../src/js/UI/game/MapView';
 import DebugFlags from '../../src/js/UI/debug/DebugFlags';
 import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
 import Notices from '../../src/js/UI/components/Notices';
@@ -113,7 +114,7 @@ Object.assign(globalThis, {
 
 const ref = (id: string) => ({ '#ref': id });
 
-const makeMap = (turn: number): ObjectMap => {
+const makeMap = (turn: number, unitOnTile: number | null = null): ObjectMap => {
   const objects: ObjectMap['objects'] = {
     'Player-1': {
       _: 'Player',
@@ -124,7 +125,7 @@ const makeMap = (turn: number): ObjectMap => {
       government: ref('Government-1'),
       research: ref('Research-1'),
       treasuries: [{ yield: { _: 'Gold' }, value: 30 }],
-      units: [],
+      units: unitOnTile === null ? [] : [ref('Unit-1')],
       world: ref('World-1'),
     },
     'Civilization-1': {
@@ -176,6 +177,17 @@ const makeMap = (turn: number): ObjectMap => {
       yields: [],
     };
   });
+
+  if (unitOnTile !== null) {
+    objects['Unit-1'] = {
+      _: 'Settlers',
+      id: 'Unit-1',
+      actions: [],
+      city: null,
+      player: ref('Player-1'),
+      tile: ref(`Tile-${unitOnTile}`),
+    };
+  }
 
   return {
     hierarchy: {
@@ -466,6 +478,53 @@ const run = async (): Promise<void> => {
     document.querySelectorAll('.welcome').length,
     0
   );
+
+  // A new game opens on the player's start, once (#705), and a loaded one where it is.
+  const mapViewCentre = MapView.prototype.centre,
+    centred: string[] = [],
+    startWith = (pendingSave: string | null): void => {
+      receivers.splice(0);
+      centred.length = 0;
+
+      new GameSession({
+        elements,
+        transport,
+        notifications: new Notifications(),
+        notices: new Notices(),
+        haltedUnits: new HaltedUnits(),
+        debugFlags: new DebugFlags(false),
+        notificationBar: new NotificationBar(elements.notificationArea),
+        pendingSave,
+        cheatsEnabled: false,
+        setGameStarted: (): void => {},
+        transportDisposers: [],
+      }).start(makeMap(1, 1));
+    };
+
+  MapView.prototype.centre = function (this: MapView, tile: Tile): void {
+    centred.push(`${tile.x},${tile.y}`);
+  };
+
+  startWith(null);
+
+  expect('the map waits for the first turn', centred, []);
+
+  deliver('turnStarted');
+
+  expect("a new game's first turn centres on the start", centred, ['1,0']);
+
+  deliver('turnEnded');
+  deliver('turnStarted');
+
+  expect('and no later turn does', centred, ['1,0']);
+
+  startWith('a save');
+  deliver('turnStarted');
+
+  expect('a loaded game stays where it is', centred, []);
+
+  MapView.prototype.centre = mapViewCentre;
+  document.querySelectorAll('.welcome').forEach((welcome) => welcome.remove());
 
   // A world on a grid that can't be drawn here (#89): said, and back to the menu, with no game started.
   const alerts: string[] = [];
