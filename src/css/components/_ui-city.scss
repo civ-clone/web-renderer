@@ -353,3 +353,107 @@
     outline: var(--ui-focus-outline);
   }
 }
+
+// Never taller than what the browser's bars leave, which `90vh` is on a phone (#812).
+.window.ui-city-window:not(.maximised) {
+  max-height: calc(100vh - 1rem);
+  max-height: calc(100dvh - 1rem);
+}
+
+// Without the width for three columns, or the height for them to share (#812): the map beside the rest, and the window
+//  scrolls as one rather than each column in what height is left.
+@media (max-width: 60em), (max-height: 30em) {
+  .window.ui-city-window > .body {
+    display: block;
+    overflow-y: auto;
+  }
+
+  .ui-city {
+    grid-template-rows: none;
+  }
+
+  .ui-city-header {
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+
+  .ui-city-growth {
+    flex: 1 1 12rem;
+  }
+
+  .ui-city-columns {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .ui-city-centre {
+    align-self: start;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .ui-city-left,
+  .ui-city-right {
+    grid-column: 2;
+    overflow-y: visible;
+  }
+}
+
+// A phone held upright: one column, as wide as the screen allows. What's used most comes first, whichever column it's
+//  in on a wider screen: the map, then what's being built, the yields, and what's been built.
+@media (max-width: 40em) {
+  .window.ui-city-window:not(.maximised) {
+    max-width: calc(100vw - 1rem);
+    min-width: calc(100vw - 1rem);
+  }
+
+  .ui-city {
+    padding-inline: 0.5rem;
+  }
+
+  .ui-city-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ui-city-left,
+  .ui-city-right {
+    display: contents;
+  }
+
+  // Twice as big again, past the width it's drawn at, for squares a finger can pick.
+  .ui-city-centre {
+    grid-column: auto;
+    grid-row: auto;
+    order: -2;
+
+    canvas {
+      min-width: min(20rem, calc(100vw - 2.25rem));
+    }
+  }
+
+  .ui-city-production {
+    order: -1;
+  }
+
+  .ui-city-right > :not(.ui-city-production) {
+    order: 1;
+  }
+}
+
+// A phone on its side, the browser's bars taking what height it has: as little chrome as will do, for the city.
+@media (max-height: 30em) {
+  .window.ui-city-window.ui-window {
+    > .ui-window-header,
+    > .ui-window-footer {
+      padding-block: 0.125em;
+    }
+
+    .ui-window-eyebrow {
+      display: none;
+    }
+  }
+
+  .ui-city {
+    gap: 0.5rem;
+    padding-block: 0.25rem;
+  }
+}

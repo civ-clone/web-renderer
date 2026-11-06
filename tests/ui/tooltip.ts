@@ -285,6 +285,35 @@ const run = async () => {
     hideTooltip();
   }
 
+  {
+    // On a touch screen (#812).
+    const was = window.matchMedia;
+
+    window.matchMedia = ((query: string) => ({
+      matches: query === '(hover: none)',
+    })) as typeof window.matchMedia;
+
+    const action = anchor('button'),
+      figure = anchor();
+
+    document.body.append(action, figure);
+    tooltip(action, () => ({ title: 'Next Turn', rows: [] }), { delay: 5 });
+    tooltip(figure, () => ({ title: 'Gold 90', rows: [] }), { delay: 5 });
+
+    action.dispatchEvent(new Event('mouseenter'));
+    await wait(15);
+    expect('a tap on a button opens no tooltip', shown(), null);
+
+    figure.dispatchEvent(new Event('mouseenter'));
+    await wait(15);
+    expect('a tap on anything else still does', shown(), 'Gold 90');
+
+    hideTooltip();
+    action.remove();
+    figure.remove();
+    window.matchMedia = was;
+  }
+
   if (failures.length) {
     process.stderr.write(
       `FAIL tooltip\n${failures.map((failure) => `  ${failure}`).join('\n')}\n`
