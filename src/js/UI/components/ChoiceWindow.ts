@@ -260,8 +260,16 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
-    const moved = this.#typeAhead && this.#rank(),
-      shown = this.#shown();
+    // Moved, a row loses the focus, and with it left on the page the keys would go to the game; and where the first row
+    //  follows what's typed, the focus has to follow it for Enter to take the row shown as chosen.
+    const focused =
+      this.#typeAhead && this.#list.contains(document.activeElement);
+
+    if (this.#typeAhead) {
+      this.#rank();
+    }
+
+    const shown = this.#shown();
 
     // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen. The one the
     //  player chose comes back once it's shown again.
@@ -275,7 +283,7 @@ export class ChoiceWindow extends FilterableWindow {
       this.#select(shown[0] ?? null, false);
     }
 
-    if (moved) {
+    if (focused) {
       this.#focusChosen();
     }
   }
@@ -293,9 +301,8 @@ export class ChoiceWindow extends FilterableWindow {
   }
 
   // The rows by how well their names match, the order they came in otherwise. Moved only if that changes anything: the
-  //  filter hears rows arriving, and reads them again. Returns whether the focus went with them: a row that's moved
-  //  loses it, and left on the page the keys would go to the game.
-  #rank(): boolean {
+  //  filter hears rows arriving, and reads them again.
+  #rank(): void {
     const query = fold(this.filter().trim()),
       elements = this.#elements(),
       listed = (this.#listed ??= elements),
@@ -315,19 +322,16 @@ export class ChoiceWindow extends FilterableWindow {
     }
 
     if (ranked.every((element, index) => element === elements[index])) {
-      return false;
+      return;
     }
 
-    const focused = this.#list.contains(document.activeElement),
-      rows = new Map(this.#rows);
+    const rows = new Map(this.#rows);
 
     this.#rows.clear();
 
     ranked.forEach((element) => this.#rows.set(element, rows.get(element)!));
 
     this.#list.append(...ranked);
-
-    return focused;
   }
 
   /**

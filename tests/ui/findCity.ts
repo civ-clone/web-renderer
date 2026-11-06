@@ -211,6 +211,11 @@ const run = async (): Promise<void> => {
 
   expect('Escape clears the filter', input().value, '');
   expect('the focus stays on the list, on the first row', focused, ['Aber']);
+  expect(
+    'the list is over everything, so a click on the page leaves the keys with it',
+    document.querySelector('dialog.find-city')?.classList.contains('modal'),
+    true
+  );
   expect('and the window stays open', again.chosen(), 'Tile-2');
 
   const held = new KeyboardEvent('keydown', {

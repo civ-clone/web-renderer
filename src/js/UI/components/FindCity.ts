@@ -75,6 +75,8 @@ export const openFindCity = (
       autoChooseSingle: false,
       classes: ['find-city'],
       intro: rows.length === 0 ? s(`<p>${t('FindCity.no-cities')}</p>`) : null,
+      // Over everything: a click on the page would take the focus, and the keys meant for the list, to the game.
+      modal: true,
       typeAhead: true,
     }
   );
