@@ -229,7 +229,67 @@ const run = async (): Promise<void> => {
 
   expect('/ held down does not type itself', held.defaultPrevented, true);
 
+  const composing = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: 'Enter',
+  });
+
+  Object.defineProperty(composing, 'isComposing', { value: true });
+  type('bern');
+
+  const before = opened.length;
+
+  input().dispatchEvent(composing);
+
+  expect(
+    'Enter finishing an input method chooses nothing',
+    opened.length,
+    before
+  );
+  expect('and goes on to the input method', composing.defaultPrevented, false);
+
   again.close();
+
+  // The order unchanged as the filter clears: the choice goes back to the first row, and the focus has to go with it,
+  //  or Enter would take a row other than the one focused.
+  const short = openFindCity(
+      [tile(3, 'Berlin', 'German'), tile(6, 'Bern', 'German')],
+      () => {}
+    ),
+    shortList = document.querySelector('.ui-choice-list') as HTMLElement,
+    shortRows = Array.from(
+      shortList.querySelectorAll('.ui-choice-row')
+    ) as HTMLElement[],
+    refocused: string[] = [];
+
+  type('ber');
+  press(shortList, 'ArrowDown');
+
+  expect('the arrows chose the second row', short.chosen(), 'Tile-6');
+
+  shortRows.forEach((element) =>
+    Object.assign(element, {
+      focus: () => refocused.push(element.textContent?.slice(0, 4) ?? ''),
+    })
+  );
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get: () => shortRows[1],
+  });
+
+  press(shortRows[1], 'Escape');
+
+  if (activeElement) {
+    Object.defineProperty(document, 'activeElement', activeElement);
+  } else {
+    delete (document as any).activeElement;
+  }
+
+  expect('the first row is chosen again', short.chosen(), 'Tile-3');
+  expect('and has the focus, though no row moved', refocused, ['Berl']);
+
+  short.close();
 
   // Nothing known yet.
   const none = openFindCity([tile(0, null)], () => {});

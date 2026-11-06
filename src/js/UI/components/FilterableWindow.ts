@@ -68,6 +68,11 @@ export class FilterableWindow extends Window {
     h(this.#input, {
       input: () => this.refilter(),
       keydown: (event: KeyboardEvent) => {
+        // Enter finishing a word in an input method, not asking for anything.
+        if (event.isComposing) {
+          return;
+        }
+
         // The key held that brought the player here, not a character they're typing.
         if (event.key === '/' && event.repeat) {
           event.preventDefault();
