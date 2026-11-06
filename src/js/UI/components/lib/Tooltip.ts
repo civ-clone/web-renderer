@@ -3,6 +3,8 @@
 //  added last to `body` when it opens: later in the document than the map and the panels, so it's drawn over them
 //  without a stacking order of its own, and under a modal window, which is above everything.
 
+import cannotHover from '../../lib/cannotHover';
+
 // Text, or an element with icons in it that names what they are for a screen reader (#748).
 export type TooltipText = string | Node;
 
@@ -194,9 +196,6 @@ const focusable = (element: HTMLElement) =>
   element.matches('a[href], button, input, select, textarea, [tabindex]');
 
 const acts = (element: HTMLElement) => element.matches('a[href], button');
-
-// On a touch screen. Not in the test DOM unless a test gives it.
-const cannotHover = () => window.matchMedia?.('(hover: none)').matches ?? false;
 
 /**
  * Gives `anchor` a tooltip of `content()`, read each time it opens. The anchor's own `title` goes, so there's one

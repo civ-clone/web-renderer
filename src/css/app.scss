@@ -35,6 +35,13 @@
   @include slate.dark();
 }
 
+// No keys to press on a touch screen (#814), whichever theme is in use.
+@media (hover: none) {
+  :root {
+    --ui-kbd-display: none !important;
+  }
+}
+
 body {
   // TODO: look into why this doesn't work like I'd expect!
   //--scale: attr(data-scale number, 2);

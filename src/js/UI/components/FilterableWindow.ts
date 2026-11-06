@@ -1,5 +1,6 @@
 import Window, { WindowOptions } from './Window';
 import RowFilter, { filteredOutClass } from '../lib/filterRows';
+import cannotHover from '../lib/cannotHover';
 import { h } from '../lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -59,8 +60,10 @@ export class FilterableWindow extends Window {
     Object.entries({
       'aria-label': t('Window.filter'),
       autocomplete: 'off',
-      // The shortcut, where it's seen; a screen reader hears just "Filter".
-      placeholder: t('Window.filter-placeholder'),
+      // The shortcut, where it's seen and there's a key to press; a screen reader hears just "Filter".
+      placeholder: t(
+        cannotHover() ? 'Window.filter' : 'Window.filter-placeholder'
+      ),
       spellcheck: 'false',
       type: 'search',
     }).forEach(([name, value]) => this.#input.setAttribute(name, value));

@@ -23,6 +23,8 @@ export interface ButtonOptions {
 
 // How a key is written on its chip, where that isn't its name.
 const keyLabels: { [key: string]: string } = {
+  ArrowLeft: '←',
+  ArrowRight: '→',
   Escape: 'Esc',
 };
 

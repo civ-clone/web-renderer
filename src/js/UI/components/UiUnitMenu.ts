@@ -63,7 +63,8 @@ const header = (
 
 /**
  * Opens the menu of what `unit` can do to `tile` at `x`, `y` in the viewport, or nothing when it can do nothing there
- *  yet. `pressed` when the press that opened it is still held: lifting it on a row gives that order.
+ *  yet. `pressed` when the press that opened it is still held: lifting it on a row gives that order. On a far square
+ *  that press opens it on Go to, for letting go at once (#814); nearer, the orders can't be undone, so one is chosen.
  */
 export const openUnitMenu = (
   x: number,
@@ -86,12 +87,14 @@ export const openUnitMenu = (
   }
 
   const ownSquare = tile === unit.tile,
+    farSquare = !ownSquare && direction === null,
     icons: [HTMLCanvasElement, ReturnType<typeof unitActionIconLayers>][] = [],
     menu = new UiMenu({
       label: text('UnitMenu.label', { unit: unitName(unit) }),
       anchor: { point: { x, y } },
       header: header(unit, tile, ownSquare ? null : direction),
       pressed,
+      firstRowOnPoint: pressed && farSquare,
       className: 'ui-unit-menu',
       sections: [
         {
