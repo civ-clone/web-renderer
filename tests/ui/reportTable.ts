@@ -1124,6 +1124,23 @@ const run = async (): Promise<void> => {
     true
   );
 
+  const beforeSpecialist = happiness
+    .element()
+    .querySelector('.ui-report-details');
+
+  (happyCities[1] as any).specialists = [{ _: 'Taxman' }];
+  happiness.update();
+
+  expect(
+    'Happiness: so does a specialist changing',
+    happiness.element().querySelector('.ui-report-details') !==
+      beforeSpecialist,
+    true
+  );
+
+  (happyCities[1] as any).specialists = [];
+  happiness.update();
+
   const chosenCities = happyPlayer.cities;
 
   happyPlayer.cities = chosenCities.filter(

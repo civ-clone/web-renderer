@@ -5,6 +5,7 @@ import {
   MartialLaw,
   MilitaryUnhappiness,
   Player,
+  Unit as UnitData,
 } from '../types';
 import { citizenFace, renderPopulation } from './lib/cityYields';
 import { groupIcons, reduceKnownYield } from '../lib/yieldMap';
@@ -92,16 +93,27 @@ export const renderHappinessDetails = (city: CityData): HTMLElement => {
   );
 };
 
-// What a city's panel says, to tell whether it needs drawing again: its citizens are pictures, and a figure in it can
-//  arrive late, so its text wouldn't say.
+// What a city's panel draws, to tell whether it needs drawing again: its citizens and units are pictures, and a figure
+//  in it can arrive late, so its text wouldn't say.
+const unitShown = (unit?: UnitData): unknown[] =>
+  unit
+    ? [
+        unit._,
+        unit.busy?._,
+        (unit.improvements ?? []).map(({ _ }: { _: string }) => _),
+      ]
+    : [];
+
 const reasonsShown = (city: CityData): string =>
   JSON.stringify([
     city.id,
     cityName(city),
     reduceKnownYield(city.yields, 'Luxuries'),
+    (city.specialists ?? []).map(({ _ }) => _),
     (city.citizens?.causes ?? []).map(({ moods, yield: cause }) => [
       cause._,
       (cause as { cityImprovement?: { _: string } }).cityImprovement?._,
+      unitShown((cause as { unit?: UnitData }).unit),
       moods,
     ]),
   ]);

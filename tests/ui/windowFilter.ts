@@ -368,6 +368,7 @@ const run = async (): Promise<void> => {
   change({ type: 'attributes', target: inner });
   expect('a change inside a row is read', refilters, 1);
 
+  added.remove();
   change({ type: 'childList', target: lateRows, removedNodes: [added] });
   expect('as is a row going', refilters, 2);
 
