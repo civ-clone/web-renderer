@@ -1,5 +1,11 @@
 import { AUTOSAVE_CHOICES } from '../lib/browserSaves';
-import { COLOUR_SCHEMES, applyColourScheme } from '../lib/theme';
+import {
+  COLOUR_SCHEMES,
+  UI_THEMES,
+  applyColourScheme,
+  applyUiTheme,
+  currentUiTheme,
+} from '../lib/theme';
 import { IPortal } from './Portal';
 import Transport from '../Transport';
 import { UNIT_MARKER_CHOICES } from './Map/UnitMarker';
@@ -9,11 +15,18 @@ import { assetStore } from '../AssetStore';
 import { button } from '../lib/button';
 import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
-import { interfaceMode } from '../lib/interfaceMode';
+import {
+  INTERFACES,
+  InterfaceMode,
+  chooseInterface,
+  chosenInterface,
+  interfaceMode,
+} from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '../lib/buildPreferences';
 import { soundChanged } from '../lib/soundGain';
+import forgetVisitParam from '../lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */
@@ -106,6 +119,79 @@ export const soundRows = (): HTMLElement[] => {
     ),
     hint,
   ];
+};
+
+/**
+ * Interface (#735). Everything is put together for one interface as the page loads, so a change needs a new page: it
+ *  loads at once from the main menu, and during a game the choice waits for the next load, with a hint saying so, as
+ *  reloading would lose the game. Choosing also drops the visit's `?interface=`, which would otherwise outrank it.
+ */
+export const interfaceRows = (
+  inGame: boolean,
+  reload: () => void = () => window.location.reload()
+): HTMLElement[] => {
+  const current = chosenInterface(),
+    select = s<HTMLSelectElement>(
+      `<select>${INTERFACES.map(
+        (choice) =>
+          `<option value="${choice}"${
+            choice === current ? ' selected' : ''
+          }>${t(`GameOptions.interface-choice.${choice}`)}</option>`
+      ).join('')}</select>`
+    ),
+    hint = s<HTMLParagraphElement>(
+      `<p class="hint"${current === interfaceMode() ? ' hidden' : ''}>${t(
+        'GameOptions.interface-next-load'
+      )}</p>`
+    );
+
+  return [
+    s(
+      `<label>${t('GameOptions.interface')}</label>`,
+      h(select, {
+        change: () => {
+          const choice = select.value as InterfaceMode;
+
+          options.set('interface', choice);
+          chooseInterface(choice);
+          forgetVisitParam('interface');
+
+          if (!inGame) {
+            reload();
+
+            return;
+          }
+
+          hint.hidden = choice === interfaceMode();
+        },
+      })
+    ),
+    hint,
+  ];
+};
+
+/** Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. */
+export const themeRow = (): HTMLElement => {
+  const current = currentUiTheme(),
+    select = s<HTMLSelectElement>(
+      `<select>${UI_THEMES.map(
+        (choice) =>
+          `<option value="${choice}"${
+            choice === current ? ' selected' : ''
+          }>${t(`GameOptions.theme-choice.${choice}`)}</option>`
+      ).join('')}</select>`
+    );
+
+  return s(
+    `<label>${t('GameOptions.theme')}</label>`,
+    h(select, {
+      change: () => {
+        options.set('uiTheme', select.value);
+        applyUiTheme(select.value);
+        forgetVisitParam('theme');
+      },
+    })
+  );
 };
 
 export class GameOptions extends Window {
@@ -286,6 +372,8 @@ export class GameOptions extends Window {
             });
           })()
         ),
+        ...interfaceRows(portal !== null),
+        themeRow(),
         s(
           `<label>${t('GameOptions.colour-scheme')}</label>`,
           (() => {

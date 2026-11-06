@@ -20,7 +20,7 @@ import { setCursor, setTilesetSizes } from './app/assets';
 import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
-import { applyColourScheme, applyUiTheme } from './lib/theme';
+import { applyColourScheme, applyUiTheme, uiThemeFrom } from './lib/theme';
 import { applyInterface, interfaceMode } from './lib/interfaceMode';
 import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
@@ -53,7 +53,7 @@ export class Renderer {
     // The options first, and the look from them before anything is drawn, so nothing shows in the wrong colours
     //  first (#736, #706).
     setOptionDefaults();
-    applyUiTheme(queryParams.get('theme'));
+    applyUiTheme(uiThemeFrom(queryParams.get('theme'), options.get('uiTheme')));
     // The classic interface or the new one (#735), before any window is made: `Window` reads it (#738).
     applyInterface(queryParams.get('interface'), options.get('interface'));
     applyColourScheme(options.get('colourScheme', 'system'));

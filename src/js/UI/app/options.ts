@@ -22,8 +22,10 @@ export const setOptionDefaults = (): void => {
     newCitiesBuildDefender: false,
     // Light, dark or the system's (#706): see `COLOUR_SCHEMES`.
     colourScheme: 'system',
-    // The classic interface or the new one (#735): see `INTERFACES`. Not offered in Options until there's more of it.
+    // The classic interface or the new one (#735): see `INTERFACES`.
     interface: 'classic',
+    // Which theme the interface is drawn in (#735): see `UI_THEMES`.
+    uiTheme: 'civ1-classic',
     // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
     unitMarker: 'theme',
     // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.

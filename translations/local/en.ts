@@ -435,6 +435,11 @@ i18next.addResources('en', 'default', {
   'GameOptions.colour-scheme-choice.dark': 'Dark',
   'GameOptions.colour-scheme-choice.light': 'Light',
   'GameOptions.colour-scheme-choice.system': 'System default',
+  'GameOptions.interface': 'Interface',
+  'GameOptions.interface-choice.classic': 'Classic',
+  'GameOptions.interface-choice.new': 'New (preview)',
+  'GameOptions.interface-next-load':
+    'The interface changes the next time the page loads.',
   'GameOptions.keep-building-military-units': 'Keep building military units',
   'GameOptions.lock-vertical-edges': 'Stop the map at the poles',
   'GameOptions.map-scale': 'Map scale',
@@ -445,6 +450,9 @@ i18next.addResources('en', 'default', {
     'Import {{file}} from the original Civilization files to hear its music.',
   'GameOptions.sound-volume': 'Sound volume',
   'GameOptions.square-tooltips': 'Describe the map square under the mouse',
+  'GameOptions.theme': 'Theme',
+  'GameOptions.theme-choice.civ1-classic': 'Civ1 classic',
+  'GameOptions.theme-choice.slate': 'Slate and brass',
   'GameOptions.unit-edge-margin':
     'Keep the active unit this many tiles from the edge',
   'GameOptions.unit-marker': 'Unit awaiting orders',
