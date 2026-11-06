@@ -97,6 +97,9 @@ const controller = new InputController({
     enableCheats: (): void => {
       calls.push('enableCheats');
     },
+    findCity: (): void => {
+      calls.push('findCity');
+    },
     saveGame: (): void => {
       calls.push('saveGame');
     },
@@ -281,6 +284,31 @@ const run = async (): Promise<void> => {
 
   modal.remove();
   focused = document.body;
+
+  // `/`: Find City (#346).
+
+  reset();
+  event = press({ key: '/' });
+
+  expect(
+    "/ opens Find City, and is no unit's key",
+    [calls, pressed, event.defaultPrevented],
+    [['findCity'], [], true]
+  );
+
+  reset();
+
+  const openWindow = document.createElement('dialog');
+
+  openWindow.classList.add('window');
+  openWindow.setAttribute('open', '');
+  document.body.append(openWindow);
+
+  press({ key: '/' });
+
+  expect('not over an open window, which has its own filter', calls, []);
+
+  openWindow.remove();
 
   // Shift+S.
 

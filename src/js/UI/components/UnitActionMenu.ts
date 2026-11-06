@@ -36,7 +36,7 @@ export class UnitActionMenu extends PopupMenu {
 
   build() {
     bodyListener = (event: PointerEvent) => {
-      const target = document.elementFromPoint(event.pageX, event.pageY);
+      const target = document.elementFromPoint(event.clientX, event.clientY);
 
       if (!target?.matches('.popup-menu button')) {
         return;

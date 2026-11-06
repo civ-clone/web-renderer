@@ -68,7 +68,27 @@ export class FilterableWindow extends Window {
     h(this.#input, {
       input: () => this.refilter(),
       keydown: (event: KeyboardEvent) => {
+        // Enter finishing a word in an input method, not asking for anything.
+        if (event.isComposing) {
+          return;
+        }
+
+        // The key held that brought the player here, not a character they're typing.
+        if (event.key === '/' && event.repeat) {
+          event.preventDefault();
+
+          return;
+        }
+
         if (event.key !== 'ArrowDown' && event.key !== 'Enter') {
+          return;
+        }
+
+        if (event.key === 'Enter' && this.entered()) {
+          event.preventDefault();
+          // Not on to the game, where Enter ends the turn.
+          event.stopPropagation();
+
           return;
         }
 
@@ -222,6 +242,11 @@ export class FilterableWindow extends Window {
 
   /** Escape, before the filter's or the window's: whether something in the window took it. */
   protected escaped(): boolean {
+    return false;
+  }
+
+  /** Enter in the filter box, for a window that acts on it: `true` if it did, or the focus moves to the first row. */
+  protected entered(): boolean {
     return false;
   }
 

@@ -7,6 +7,8 @@
     'map' minmax(0, 1fr)
     / minmax(0, 1fr);
   height: 100vh;
+  // The height left by a phone's address bar, so the page doesn't run on under it (#765).
+  height: 100dvh;
   left: 0;
   opacity: 0;
   pointer-events: none;

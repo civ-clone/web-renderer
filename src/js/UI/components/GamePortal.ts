@@ -101,7 +101,10 @@ export class GamePortal extends Portal {
         return;
       }
 
-      const realTarget = document.elementFromPoint(event.pageX, event.pageY);
+      const realTarget = document.elementFromPoint(
+        event.clientX,
+        event.clientY
+      );
 
       if (realTarget?.matches('.unit-actions *')) {
         return;

@@ -56,7 +56,7 @@ export type InputControllerDeps = {
   actionArea: HTMLElement;
   // Read on every key press, so always the latest rebuild.
   data: () => GameData;
-  gameMenu: { enableCheats(): void; saveGame(): void };
+  gameMenu: { enableCheats(): void; findCity(): void; saveGame(): void };
   // Under the new interface (#702): Enter presses the Next Turn button and Shift+Enter skips its item, in place of
   //  Enter ending the turn. Read on every key press, as the HUD makes it.
   nextTurn?: () => { press(): void; skip(): void } | null;
@@ -153,6 +153,18 @@ export class InputController {
 
       // Not part of the Shift+5, Shift+6 sequence below.
       this.#lastShiftedCode = '';
+
+      event.preventDefault();
+
+      return;
+    }
+
+    // Find City, with no window open: one takes `/` for its own filter, and may be the list already (#346). Once for a
+    //  key held down.
+    if (key === '/' && !document.querySelector('dialog.window[open]')) {
+      if (!event.repeat) {
+        gameMenu.findCity();
+      }
 
       event.preventDefault();
 

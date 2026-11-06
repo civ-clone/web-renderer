@@ -24,6 +24,12 @@
   }
 }
 
+// Find City is the one choice window the classic interface opens (#346): as wide as its list, not as a classic window.
+.window.find-city.size-auto {
+  max-width: calc(100vw - 1rem);
+  min-width: 0;
+}
+
 .ui-choice-panes {
   display: grid;
   flex: 1 1 auto;

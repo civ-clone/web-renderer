@@ -13,6 +13,7 @@ const eyebrows: { [windowClass: string]: [kind: string, key: string | null] } =
     'top-cities-report': ['report', 'F8'],
     'civilization-score-report': ['report', 'F9'],
     civilopedia: ['reference', null],
+    'find-city': ['reference', '/'],
     'city-build': ['production', null],
     'choose-research': ['science', null],
     'choose-government': ['government', null],

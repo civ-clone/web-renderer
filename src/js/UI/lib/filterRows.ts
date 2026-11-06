@@ -46,6 +46,22 @@ export const matches = (query: string, text: string): boolean => {
   return true;
 };
 
+/**
+ * How well `text` answers `query`, lower being better, for a list to show its best first: it starts with it, a later
+ * word does, it's somewhere inside, or only its letters are there in order. Both are expected folded already.
+ */
+export const matchRank = (query: string, text: string): number => {
+  if (text.startsWith(query)) {
+    return 0;
+  }
+
+  if (text.includes(` ${query}`)) {
+    return 1;
+  }
+
+  return text.includes(query) ? 2 : 3;
+};
+
 export const filteredOutClass = 'filtered-out';
 
 /**

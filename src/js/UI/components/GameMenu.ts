@@ -263,6 +263,7 @@ const cheatCreateUnitWindow = (
 };
 
 export class GameMenu extends Element {
+  #findCity: () => void;
   #getPlayer: () => Player;
   #getTurn: () => number;
   #getYear: () => number;
@@ -282,10 +283,12 @@ export class GameMenu extends Element {
     getYear: () => number,
     portal: Portal,
     transport: Transport,
-    cheatsEnabled: boolean = false
+    cheatsEnabled: boolean = false,
+    findCity: () => void = (): void => {}
   ) {
     super(element);
 
+    this.#findCity = findCity;
     this.#getPlayer = getPlayer;
     this.#getTurn = getTurn;
     this.#getYear = getYear;
@@ -319,6 +322,11 @@ export class GameMenu extends Element {
       turn: this.#getTurn(),
       year: this.#getYear(),
     };
+  }
+
+  // Find City, from the menu or `/` (#346).
+  findCity(): void {
+    this.#findCity();
   }
 
   // Save Game, from the menu or Shift+S.
@@ -466,6 +474,13 @@ export class GameMenu extends Element {
         },
       ],
       reference: UiMenuItem[] = [
+        {
+          label: t('GameMenu.find-city'),
+          key: windowKey('find-city'),
+          action: () => {
+            this.findCity();
+          },
+        },
         {
           label: t('GameMenu.civilopedia'),
           key: '?',
