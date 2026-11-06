@@ -75,7 +75,7 @@ let underPointer: Element | null = null;
 const pointer = (
   type: string,
   target: EventTarget = document.body,
-  init: { button?: number; isPrimary?: boolean } = {}
+  init: { button?: number; isPrimary?: boolean; pointerType?: string } = {}
 ): Event => {
   const event = new Event(type, { bubbles: true, cancelable: true });
 
@@ -388,6 +388,22 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
     document.body.append(under);
 
+    // A finger's slide from the long press sends no click, so waits for none: the next tap is a real one.
+    const slid = menuOf({ pressed: true });
+
+    underPointer = rows(slid)[0];
+    pointer('pointermove');
+    pointer('pointerup', document.body, { pointerType: 'touch' });
+
+    const tap = new Event('click', { bubbles: true, cancelable: true });
+
+    under.dispatchEvent(tap);
+    expect(
+      'a slid finger’s lift: the next tap left alone',
+      tap.defaultPrevented,
+      false
+    );
+
     const menu = menuOf(),
       [one] = rows(menu);
 
@@ -507,6 +523,36 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     );
 
     menu.close();
+
+    // Held, it isn't moved from under the press: it moves when the press is let go of.
+    const held = menuOf({
+        pressed: true,
+        anchor: { point: { x: 100, y: 100 } },
+      }),
+      heldElement = held.element();
+
+    Object.defineProperty(heldElement, 'offsetWidth', { value: 200 });
+    Object.defineProperty(heldElement, 'offsetHeight', { value: 50 });
+
+    const placedAt = heldElement.style.getPropertyValue('left');
+
+    viewport.innerWidth = 250;
+    window.dispatchEvent(new Event('resize'));
+    expect(
+      'resized under a held press: left where it is',
+      heldElement.style.getPropertyValue('left'),
+      placedAt
+    );
+
+    underPointer = null;
+    pointer('pointerup');
+    expect(
+      'and placed once it’s let go of',
+      heldElement.style.getPropertyValue('left'),
+      `${250 - EDGE_MARGIN - 200 - 0}px`
+    );
+
+    held.close();
     launcher.remove();
     viewport.innerWidth = innerWidth;
     viewport.innerHeight = innerHeight;
@@ -547,12 +593,22 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     menu.close();
   }
 
-  // Space on the launcher closes it, and the click some browsers send on its keyup doesn't open it again.
+  // Space on the launcher or a row is cancelled through its keyup, on which some browsers click whatever has the focus
+  //  by then: the launcher, or a confirm button the row's window focused.
   {
-    const launcher = document.createElement('button'),
-      clicks: string[] = [];
+    const keyup = (name: string): Event => {
+      const event = new Event('keyup', { bubbles: true, cancelable: true });
+
+      Object.assign(event, { key: name });
+      window.dispatchEvent(event);
+
+      return event;
+    };
+
+    const launcher = document.createElement('button');
 
     document.body.append(launcher);
+
     const menu = menuOf({ launcher });
 
     Object.defineProperty(document, 'activeElement', {
@@ -560,21 +616,30 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       get: () => launcher,
     });
     key(' ');
-    // Listened for after the menu's swallowing listener: linkedom runs a node's listeners in the order they were added,
-    //  where a browser runs the capturing one first.
-    launcher.addEventListener('click', () => clicks.push('click'));
-    launcher.dispatchEvent(new Event('click', { bubbles: true }));
+    delete (document as any).activeElement;
+
     expect(
-      'closed by Space, and its keyup click swallowed',
-      [menu.isOpen(), clicks],
-      [false, []]
+      'Space on the launcher: closed, and its keyup cancelled',
+      [
+        menu.isOpen(),
+        keyup('a').defaultPrevented,
+        keyup(' ').defaultPrevented,
+        keyup(' ').defaultPrevented,
+      ],
+      [false, false, true, false]
     );
 
-    launcher.dispatchEvent(new Event('click', { bubbles: true }));
-    expect('the next click is the launcher’s again', clicks, ['click']);
-
-    delete (document as any).activeElement;
     launcher.remove();
+
+    const ran: string[] = [],
+      chosen = menuOf({ byKeyboard: true }, ran);
+
+    key(' ');
+    expect(
+      'Space on a row: run, and its keyup cancelled',
+      [ran, chosen.isOpen(), keyup(' ').defaultPrevented],
+      [['One'], false, true]
+    );
   }
 
   // The keys move the same hover.

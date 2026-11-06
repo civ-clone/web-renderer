@@ -131,21 +131,37 @@ const fadeTime = (element: HTMLElement): number => {
   return value.endsWith('ms') ? amount : amount * 1000;
 };
 
-// Keeps the next click on `target` from anything: the one a browser sends after the press or key that closed a menu,
-//  which would land on what's under it, or open it again. Given up on if it doesn't come.
-const swallowClick = (target: EventTarget): void => {
+// Keeps the next click from anything: the one a browser sends after the lift that closed a menu, which would land on
+//  what's under it, or on a window its row opened. Given up on if it doesn't come.
+const swallowClick = (): void => {
   const swallow = (event: Event): void => {
       event.preventDefault();
       event.stopImmediatePropagation();
       done();
     },
     done = (): void => {
-      target.removeEventListener('click', swallow, true);
+      window.removeEventListener('click', swallow, true);
       clearTimeout(timer);
     },
     timer = setTimeout(done, 500);
 
-  target.addEventListener('click', swallow, true);
+  window.addEventListener('click', swallow, true);
+};
+
+// Cancels Space's keyup, on which some browsers click the focused button whatever its keydown did. By then the focus
+//  may be on the launcher, which would open the menu again, or on a window's confirm button, which would answer it
+//  unasked.
+const cancelSpaceUp = (): void => {
+  const keyup = (event: KeyboardEvent): void => {
+    if (event.key !== ' ') {
+      return;
+    }
+
+    event.preventDefault();
+    window.removeEventListener('keyup', keyup, true);
+  };
+
+  window.addEventListener('keyup', keyup, true);
 };
 
 // The menu open now: one at a time.
@@ -162,6 +178,7 @@ export class UiMenu {
   #hover: number | null = null;
   #pressed: boolean;
   #slid = false;
+  #resized = false;
   #closed = false;
   #observer: MutationObserver | null = null;
   #listeners: [EventTarget, string, (event: any) => void][] = [];
@@ -376,6 +393,14 @@ export class UiMenu {
     body.toggleAttribute('data-scrolls', body.scrollHeight > body.clientHeight);
   }
 
+  // Once any press is let go of: a resize doesn't move the menu from under one.
+  #placeIfResized(): void {
+    if (this.#resized) {
+      this.#resized = false;
+      this.#place();
+    }
+  }
+
   #listen(): void {
     const add = <E extends Event>(
       target: EventTarget,
@@ -455,8 +480,11 @@ export class UiMenu {
         event.preventDefault();
 
         // The click this lift is about to send would find the menu gone, and land on what's under it, or on a window
-        //  the row opens.
-        swallowClick(window);
+        //  the row opens. A finger that slid here from the map's long press sends none.
+        if (!held || event.pointerType === 'mouse') {
+          swallowClick();
+        }
+
         this.#run(index);
 
         return;
@@ -466,7 +494,11 @@ export class UiMenu {
       //  menu stays for a tap.
       if (held && this.#slid) {
         this.close();
+
+        return;
       }
+
+      this.#placeIfResized();
     });
 
     // The browser taking the press for itself, to scroll a menu too tall for the screen: nothing is chosen.
@@ -481,6 +513,8 @@ export class UiMenu {
       if (!this.#hasFocus()) {
         this.#hoverRow(null);
       }
+
+      this.#placeIfResized();
     });
 
     // A click with no pointer behind it: assistive technology's.
@@ -505,8 +539,10 @@ export class UiMenu {
 
     // A phone turned, or a window resized: kept in reach, scrolling if it has to. Not moved from under a held press.
     add(window, 'resize', () => {
+      this.#resized = true;
+
       if (!this.#pressed) {
-        this.#place();
+        this.#placeIfResized();
       }
     });
 
@@ -545,6 +581,10 @@ export class UiMenu {
     const handled = (): void => {
       event.preventDefault();
       event.stopImmediatePropagation();
+
+      if (event.key === ' ') {
+        cancelSpaceUp();
+      }
     };
 
     switch (event.key) {
@@ -579,11 +619,6 @@ export class UiMenu {
           if (this.#options.launcher?.contains(document.activeElement)) {
             handled();
             this.close({ restoreFocus: true });
-
-            // Some browsers (Firefox) still click a button on Space's keyup, whatever its keydown did.
-            if (this.#options.launcher) {
-              swallowClick(this.#options.launcher);
-            }
 
             return;
           }
