@@ -60,8 +60,8 @@ export interface UiMenuOptions {
   byKeyboard?: boolean;
   /** Opened by a press still held (a long press): lifting it on no row leaves the menu open. */
   pressed?: boolean;
-  /** Opens with its first row on the anchor's point, chosen, where there's room: a mouse held down, which lets go to
-   *  run it (#814). Not a finger, which would cover the row. */
+  /** Opens with its first row on the anchor's point, chosen, where there's room: a press held down, let go of to run
+   *  it (#814). */
   firstRowOnPoint?: boolean;
   className?: string;
   onClose?: () => void;

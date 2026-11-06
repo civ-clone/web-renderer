@@ -398,7 +398,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     expect('the first finger’s still does', ran, ['Three']);
   }
 
-  // A mouse held down (#814): the first row opens under it, chosen, and letting go runs it.
+  // A press held down (#814): the first row opens under it, chosen, and letting go runs it.
   {
     const ran: string[] = [],
       first = () => document.querySelector('.first-row .ui-menu-item'),
@@ -414,7 +414,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     (document as any).elementFromPoint = stub;
     underPointer = rows(menu)[0];
 
-    expect('held by a mouse: the first row is chosen', hovered(menu), ['One']);
+    expect('held: the first row is chosen', hovered(menu), ['One']);
 
     pointer('pointerup', document.body, { pointerType: 'mouse' });
     expect('letting go runs it', [ran, menu.isOpen()], [['One'], false]);
@@ -430,10 +430,10 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     );
     elsewhere.close();
 
-    const finger = menuOf({ pressed: true });
+    const plain = menuOf({ pressed: true });
 
-    expect('held by a finger: nothing is chosen', hovered(finger), []);
-    finger.close();
+    expect('held, any other menu: nothing is chosen', hovered(plain), []);
+    plain.close();
   }
 
   // The click a lift sends finds the menu gone: it isn't left to land on what was under it.
@@ -1117,6 +1117,37 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       ['Ocean', ['Go to']]
     );
     distant.close();
+
+    // Only a far square's opens on its first row for a held press (#814): nearer, the orders can't be undone.
+    const stub = (document as any).elementFromPoint,
+      held = (tile: Tile, pressed: boolean): string[] => {
+        (document as any).elementFromPoint = () =>
+          Array.from(document.querySelectorAll('.ui-unit-menu'))
+            .pop()
+            ?.querySelector('.ui-menu-item');
+
+        const menu = openUnitMenu(100, 100, unit, tile, transport, {
+            draw: noDraw,
+            pressed,
+          })!,
+          chosen = hovered(menu);
+
+        menu.close();
+
+        return chosen;
+      };
+
+    expect(
+      'held: chosen on a far square only',
+      [
+        held(ocean, true),
+        held(hills, true),
+        held(grassland, true),
+        held(ocean, false),
+      ],
+      [['Go to'], [], [], []]
+    );
+    (document as any).elementFromPoint = stub;
 
     expect(
       'no actions yet: no menu',
