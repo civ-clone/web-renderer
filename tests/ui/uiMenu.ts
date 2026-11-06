@@ -527,7 +527,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     // Held, it isn't moved from under the press: it moves when the press is let go of.
     const held = menuOf({
         pressed: true,
-        anchor: { point: { x: 100, y: 100 } },
+        anchor: { point: { x: 240, y: 100 } },
       }),
       heldElement = held.element();
 
@@ -549,7 +549,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     expect(
       'and placed once it’s let go of',
       heldElement.style.getPropertyValue('left'),
-      `${250 - EDGE_MARGIN - 200 - 0}px`
+      `${250 - EDGE_MARGIN - 200}px`
     );
 
     held.close();
