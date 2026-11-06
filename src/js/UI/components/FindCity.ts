@@ -45,14 +45,23 @@ export const findCityRows = (tiles: Tile[]): ChoiceRow[] =>
     })
     .sort((a, b) => a.label.localeCompare(b.label));
 
+// The list open now: the menu's row can ask again while it's up, and two would only be in each other's way.
+let open: ChoiceWindow | null = null;
+
 /** Opens the list, in either interface: the classic one has no list that can be typed in. */
 export const openFindCity = (
   tiles: Tile[],
   show: (tile: Tile) => void
 ): ChoiceWindow => {
+  if (open !== null) {
+    open.focusFilter();
+
+    return open;
+  }
+
   const rows = findCityRows(tiles);
 
-  return new ChoiceWindow(
+  const window = new ChoiceWindow(
     t('FindCity.title'),
     rows,
     (id) => {
@@ -69,6 +78,13 @@ export const openFindCity = (
       typeAhead: true,
     }
   );
+
+  open = window;
+  window.on('close', () => {
+    open = null;
+  });
+
+  return window;
 };
 
 export default openFindCity;

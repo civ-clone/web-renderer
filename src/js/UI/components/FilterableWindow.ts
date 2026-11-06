@@ -68,6 +68,13 @@ export class FilterableWindow extends Window {
     h(this.#input, {
       input: () => this.refilter(),
       keydown: (event: KeyboardEvent) => {
+        // The key held that brought the player here, not a character they're typing.
+        if (event.key === '/' && event.repeat) {
+          event.preventDefault();
+
+          return;
+        }
+
         if (event.key !== 'ArrowDown' && event.key !== 'Enter') {
           return;
         }
@@ -236,11 +243,6 @@ export class FilterableWindow extends Window {
   /** Enter in the filter box, for a window that acts on it: `true` if it did, or the focus moves to the first row. */
   protected entered(): boolean {
     return false;
-  }
-
-  /** What's in the filter box. */
-  protected filterText(): string {
-    return this.#input.value;
   }
 
   /** Puts the focus in the filter box. */

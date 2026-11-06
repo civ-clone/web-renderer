@@ -166,6 +166,64 @@ const run = async (): Promise<void> => {
 
   expect('the arrows choose the next row', again.chosen(), 'Tile-3');
 
+  expect(
+    'asked again while open, it is the same list',
+    openFindCity(tiles, () => {}) === again,
+    true
+  );
+  expect(
+    'and only one',
+    document.querySelectorAll('dialog.find-city[open]').length,
+    1
+  );
+
+  type('bern');
+
+  expect(
+    'what is typed next outranks the row the arrows chose, though it still matches',
+    again.chosen(),
+    'Tile-6'
+  );
+
+  // A row with the focus, moved as the filter clears: it would leave the focus on the page, and the keys to the game.
+  const focused: string[] = [],
+    list = document.querySelector('.ui-choice-list') as HTMLElement,
+    row = list.querySelector('.ui-choice-row') as HTMLElement,
+    activeElement = Object.getOwnPropertyDescriptor(document, 'activeElement');
+
+  list.querySelectorAll('.ui-choice-row').forEach((element) =>
+    Object.assign(element, {
+      focus: () => focused.push(element.textContent?.slice(0, 4) ?? ''),
+    })
+  );
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get: () => row,
+  });
+
+  press(row, 'Escape');
+
+  if (activeElement) {
+    Object.defineProperty(document, 'activeElement', activeElement);
+  } else {
+    delete (document as any).activeElement;
+  }
+
+  expect('Escape clears the filter', input().value, '');
+  expect('the focus stays on the list, on the first row', focused, ['Aber']);
+  expect('and the window stays open', again.chosen(), 'Tile-2');
+
+  const held = new KeyboardEvent('keydown', {
+    bubbles: true,
+    cancelable: true,
+    key: '/',
+  });
+
+  Object.defineProperty(held, 'repeat', { value: true });
+  input().dispatchEvent(held);
+
+  expect('/ held down does not type itself', held.defaultPrevented, true);
+
   again.close();
 
   // Nothing known yet.

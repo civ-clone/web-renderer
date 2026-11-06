@@ -852,6 +852,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
           ['Science Report', 'F6', false],
           ['Top Cities in the World', 'F8', false],
           ['Civilization Score', 'F9', false],
+          ['Find City', '/', false],
           ['Civilopedia', '?', false],
           ['Retire', null, true],
           ['Quit', null, true],

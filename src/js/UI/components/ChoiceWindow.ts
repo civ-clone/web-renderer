@@ -94,6 +94,8 @@ export class ChoiceWindow extends FilterableWindow {
   #typeAhead: boolean = false;
   // The rows as they were given, which a match is ranked within, for a type-ahead list that has moved them.
   #listed: HTMLElement[] | null = null;
+  // What they were last ranked for.
+  #ranked: string = '';
 
   constructor(
     title: string,
@@ -258,11 +260,8 @@ export class ChoiceWindow extends FilterableWindow {
       return;
     }
 
-    if (this.#typeAhead) {
-      this.#rank();
-    }
-
-    const shown = this.#shown();
+    const moved = this.#typeAhead && this.#rank(),
+      shown = this.#shown();
 
     // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen. The one the
     //  player chose comes back once it's shown again.
@@ -274,6 +273,10 @@ export class ChoiceWindow extends FilterableWindow {
       !shown.includes(this.#chosen)
     ) {
       this.#select(shown[0] ?? null, false);
+    }
+
+    if (moved) {
+      this.#focusChosen();
     }
   }
 
@@ -290,9 +293,10 @@ export class ChoiceWindow extends FilterableWindow {
   }
 
   // The rows by how well their names match, the order they came in otherwise. Moved only if that changes anything: the
-  //  filter hears rows arriving, and reads them again.
-  #rank(): void {
-    const query = fold(this.filterText().trim()),
+  //  filter hears rows arriving, and reads them again. Returns whether the focus went with them: a row that's moved
+  //  loses it, and left on the page the keys would go to the game.
+  #rank(): boolean {
+    const query = fold(this.filter().trim()),
       elements = this.#elements(),
       listed = (this.#listed ??= elements),
       ranked = listed
@@ -304,17 +308,26 @@ export class ChoiceWindow extends FilterableWindow {
         .sort((a, b) => a.rank - b.rank || a.index - b.index)
         .map(({ element }) => element);
 
-    if (ranked.every((element, index) => element === elements[index])) {
-      return;
+    // What the player chose was from another list: Enter takes the best of this one.
+    if (query !== this.#ranked) {
+      this.#ranked = query;
+      this.#wanted = null;
     }
 
-    const rows = new Map(this.#rows);
+    if (ranked.every((element, index) => element === elements[index])) {
+      return false;
+    }
+
+    const focused = this.#list.contains(document.activeElement),
+      rows = new Map(this.#rows);
 
     this.#rows.clear();
 
     ranked.forEach((element) => this.#rows.set(element, rows.get(element)!));
 
     this.#list.append(...ranked);
+
+    return focused;
   }
 
   /**
