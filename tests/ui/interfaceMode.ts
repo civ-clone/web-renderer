@@ -1,4 +1,4 @@
-// The interface flag (#735): classic unless the `interface` option or the visit's `?interface=` says new, a value that
+// The interface flag (#735): new unless the `interface` option or the visit's `?interface=` says classic, a value that
 //  isn't an interface ignored, and the one in use said on `<html>`.
 
 // Must stay first: modules read `document` as they load.
@@ -25,7 +25,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 
 const root = (document as unknown as Document).documentElement;
 
-expect('classic before anything says otherwise', interfaceMode(), 'classic');
+expect('new before anything says otherwise', interfaceMode(), 'new');
 expect(
   'the option says new',
   [applyInterface(null, 'new', root), root.getAttribute('data-interface')],
@@ -47,9 +47,9 @@ expect(
   'new'
 );
 expect(
-  'and with neither, classic',
+  'and with neither, new',
   [applyInterface('fancy', 'fancy', root), root.getAttribute('data-interface')],
-  ['classic', 'classic']
+  ['new', 'new']
 );
 
 if (failures.length) {

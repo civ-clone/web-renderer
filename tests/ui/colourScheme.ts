@@ -56,28 +56,28 @@ expect(
 
 applyUiTheme(null, root);
 expect(
-  'with no ?theme=, Civ1 classic needs no attribute',
+  'with no ?theme=, Slate and brass needs no attribute',
   root.hasAttribute('data-ui-theme'),
   false
 );
 
-applyUiTheme('slate', root);
+applyUiTheme('civ1-classic', root);
 expect(
-  '?theme=slate sets data-ui-theme',
+  '?theme=civ1-classic sets data-ui-theme',
   root.getAttribute('data-ui-theme'),
-  'slate'
+  'civ1-classic'
 );
 
 applyUiTheme('nonsense', root);
 expect(
   'a name that is not a theme is ignored',
   root.getAttribute('data-ui-theme'),
-  'slate'
+  'civ1-classic'
 );
 
-applyUiTheme('civ1-classic', root);
+applyUiTheme('slate', root);
 expect(
-  '?theme=civ1-classic goes back to the default',
+  '?theme=slate goes back to the default',
   root.hasAttribute('data-ui-theme'),
   false
 );

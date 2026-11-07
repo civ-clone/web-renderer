@@ -86,18 +86,26 @@ Object.assign(globalThis, {
   expect(
     'both have a default',
     [options.get('interface'), options.get('uiTheme')],
-    ['classic', 'civ1-classic']
+    ['new', 'slate']
   );
 
   // Which theme a page load uses.
-  expect('the option by default', uiThemeFrom(null, 'slate'), 'slate');
   expect(
-    'the visit over the option',
-    uiThemeFrom('civ1-classic', 'slate'),
+    'the option by default',
+    uiThemeFrom(null, 'civ1-classic'),
     'civ1-classic'
   );
-  expect('a bad visit falls to the option', uiThemeFrom('x', 'slate'), 'slate');
-  expect('and with neither, classic', uiThemeFrom('x', 7), 'civ1-classic');
+  expect(
+    'the visit over the option',
+    uiThemeFrom('slate', 'civ1-classic'),
+    'slate'
+  );
+  expect(
+    'a bad visit falls to the option',
+    uiThemeFrom('x', 'civ1-classic'),
+    'civ1-classic'
+  );
+  expect('and with neither, slate', uiThemeFrom('x', 7), 'slate');
 
   // The Theme row.
   {
@@ -110,7 +118,7 @@ Object.assign(globalThis, {
     expect(
       'and offers both, by name',
       [...select.querySelectorAll('option')].map((item) => item.textContent),
-      ['Civ1 classic', 'Slate and brass']
+      ['Slate and brass', 'Civ1 classic']
     );
 
     visit('?theme=slate&debug=1');
