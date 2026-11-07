@@ -133,15 +133,18 @@ export const interfaceRows = (
   reload: () => void = () => window.location.reload()
 ): HTMLElement[] => {
   const current = chosenInterface(),
+    // A manifest may come from outside, so what it says is never treated as markup.
     select = s<HTMLSelectElement>(
-      `<select>${interfaces()
-        .map(
-          ({ id, name }) =>
-            `<option value="${id}"${id === current ? ' selected' : ''}>${t(
-              name
-            )}</option>`
-        )
-        .join('')}</select>`
+      '<select></select>',
+      ...interfaces().map(({ id, name }) => {
+        const option = s<HTMLOptionElement>('<option></option>');
+
+        option.value = id;
+        option.textContent = t(name);
+        option.toggleAttribute('selected', id === current);
+
+        return option;
+      })
     ),
     hint = s<HTMLParagraphElement>(
       `<p class="hint"${current === interfaceMode() ? ' hidden' : ''}>${t(

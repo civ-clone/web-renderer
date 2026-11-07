@@ -15,6 +15,8 @@ import {
   applyInterface,
   chosenInterface,
   interfaceMode,
+  interfaces,
+  registerInterface,
 } from '../../src/js/UI/lib/interfaceMode';
 import {
   interfaceRows,
@@ -194,6 +196,29 @@ Object.assign(globalThis, {
     choose(select, 'classic');
 
     expect('going back takes the hint away', hint.hidden, true);
+  }
+
+  // A manifest may come from outside: what it says stays text.
+  {
+    const hostile = '"><img src=x onerror=alert(1)>';
+
+    registerInterface({
+      ...interfaces()[0],
+      id: hostile,
+      name: `<b>${hostile}</b>`,
+    });
+
+    const [row] = interfaceRows(true),
+      select = row.querySelector('select') as HTMLSelectElement,
+      option = [
+        ...select.querySelectorAll('option'),
+      ].pop() as HTMLOptionElement;
+
+    expect(
+      'a manifest cannot add markup to Options',
+      [row.querySelectorAll('img, b').length, option.value, option.textContent],
+      [0, hostile, `<b>${hostile}</b>`]
+    );
   }
 
   // With nothing to forget, the address is left alone.

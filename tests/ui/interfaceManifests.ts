@@ -5,6 +5,8 @@
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
 
+import { choiceList, openChoice } from '../../src/js/UI/components/choiceList';
+import ChoiceWindow from '../../src/js/UI/components/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   applyInterface,
@@ -82,6 +84,27 @@ expect(
   [hasFeature('nextTurn'), hasFeature('windowChrome')],
   [true, false]
 );
+
+// And what uses a real slot follows it, unchanged.
+{
+  const opened: string[] = [];
+
+  choiceList.provide('test', (title) => {
+    opened.push(title);
+
+    return null as unknown as ChoiceWindow;
+  });
+
+  registerInterface({
+    ...modern,
+    id: 'testChoices',
+    slots: { ...modern.slots, choiceList: 'test' },
+  });
+
+  use('testChoices');
+  openChoice('Which one?', [], () => {});
+  expect('a real slot opens what the manifest names', opened, ['Which one?']);
+}
 
 const broken = defineSlot<string>('nothingProvides');
 
