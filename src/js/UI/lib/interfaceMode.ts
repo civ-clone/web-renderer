@@ -1,4 +1,4 @@
-// Which interface is in use (#735): the new one, or the classic one, kept for one release after the switch-over.
+// Which interface is in use (#735): the new one, or the classic one, kept until interface manifests land (#824).
 //  The `interface` option says, kept like the others; `?interface=classic` (or `new`) says for one visit. Read where a
 //  family of components is put together, never inside a component, with one exception: `Window`, which every window
 //  shares, picks its chrome from it (#738).
