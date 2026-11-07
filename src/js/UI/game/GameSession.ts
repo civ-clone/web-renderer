@@ -19,7 +19,7 @@ import HaltedUnits from '../lib/haltedUnits';
 import Transport from '../Transport';
 import UnitCard from '../components/UnitCard';
 import UnitDetails, { UnitDetailsDeps } from '../components/UnitDetails';
-import { interfaceMode } from '../lib/interfaceMode';
+import { hasFeature } from '../lib/interfaceMode';
 import { instance as options } from '../GameOptionsRegistry';
 import Dismissals from '../lib/dismissals';
 import { actionKey } from '../lib/nextTurnQueue';
@@ -266,12 +266,11 @@ export class GameSession {
             unitController.set(unit);
           },
         },
-        // The active unit's card (#699), kept for the game: it redraws only what has changed. Under the new interface,
-        //  the card with the unit's actions in it (#743), so the strip at the bottom left goes.
-        unitCard =
-          interfaceMode() === 'new'
-            ? new UnitCard(unitInfo, unitDetailsDeps)
-            : null,
+        // The active unit's card (#699), kept for the game: it redraws only what has changed. Where the interface
+        //  has it, the card with the unit's actions in it (#743), so the strip at the bottom left goes.
+        unitCard = hasFeature('unitCard')
+          ? new UnitCard(unitInfo, unitDetailsDeps)
+          : null,
         unitDetails = unitCard ?? new UnitDetails(unitInfo, unitDetailsDeps),
         // The sidebar's cities (#700), following them through `dataChanges`, and power (#701, #708), told the turn by the HUD.
         citiesList = citiesListElement

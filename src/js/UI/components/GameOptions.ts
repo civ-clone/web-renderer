@@ -16,7 +16,8 @@ import { button } from '../lib/button';
 import currentTileset from '../lib/tilesets';
 import { h } from '../lib/html';
 import {
-  INTERFACES,
+  hasFeature,
+  interfaces,
   InterfaceMode,
   chooseInterface,
   chosenInterface,
@@ -133,12 +134,14 @@ export const interfaceRows = (
 ): HTMLElement[] => {
   const current = chosenInterface(),
     select = s<HTMLSelectElement>(
-      `<select>${INTERFACES.map(
-        (choice) =>
-          `<option value="${choice}"${
-            choice === current ? ' selected' : ''
-          }>${t(`GameOptions.interface-choice.${choice}`)}</option>`
-      ).join('')}</select>`
+      `<select>${interfaces()
+        .map(
+          ({ id, name }) =>
+            `<option value="${id}"${id === current ? ' selected' : ''}>${t(
+              name
+            )}</option>`
+        )
+        .join('')}</select>`
     ),
     hint = s<HTMLParagraphElement>(
       `<p class="hint"${current === interfaceMode() ? ' hidden' : ''}>${t(
@@ -335,8 +338,8 @@ export class GameOptions extends Window {
             });
           })()
         ),
-        // Only the new interface has the tooltip (#748).
-        ...(interfaceMode() === 'new'
+        // Only where the interface has the tooltip (#748).
+        ...(hasFeature('squareTooltips')
           ? [
               s(
                 `<label>${t('GameOptions.square-tooltips')}</label>`,
@@ -410,7 +413,9 @@ export class GameOptions extends Window {
         ),
         // Whether the tileset's sprites are imported, and the import, which the new main menu shows only while they
         //  aren't (#749). Only before a game: the import reloads the page, which would lose the game in play.
-        ...(interfaceMode() === 'new' && portal === null ? [assetsRow()] : [])
+        ...(hasFeature('assetsInOptions') && portal === null
+          ? [assetsRow()]
+          : [])
       ),
       // From the main menu it must be closed before a game can start: its Interface and Import assets reload the page,
       //  which they only do with no game to lose.

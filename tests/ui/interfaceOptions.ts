@@ -84,9 +84,9 @@ Object.assign(globalThis, {
 
   // Stored options only come back for the keys given a default, so these must have one.
   expect(
-    'both have a default',
+    'both have a default: no theme is the one the interface comes with (#824)',
     [options.get('interface'), options.get('uiTheme')],
-    ['new', 'slate']
+    ['new', '']
   );
 
   // Which theme a page load uses.

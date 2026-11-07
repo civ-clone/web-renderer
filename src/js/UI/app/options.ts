@@ -1,5 +1,4 @@
 import { DEFAULT_INTERFACE } from '../lib/interfaceMode';
-import { DEFAULT_UI_THEME } from '../lib/theme';
 import currentTileset from '../lib/tilesets';
 import { instance as options } from '../GameOptionsRegistry';
 
@@ -24,10 +23,10 @@ export const setOptionDefaults = (): void => {
     newCitiesBuildDefender: false,
     // Light, dark or the system's (#706): see `COLOUR_SCHEMES`.
     colourScheme: 'system',
-    // The new interface or the classic one (#735): see `INTERFACES`.
+    // Which interface (#735): see `interfaces()`.
     interface: DEFAULT_INTERFACE,
-    // Which theme the interface is drawn in (#735): see `UI_THEMES`.
-    uiTheme: DEFAULT_UI_THEME,
+    // Which theme the interface is drawn in (#735), or nothing for the one it comes with (#824): see `UI_THEMES`.
+    uiTheme: '',
     // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
     unitMarker: 'theme',
     // Civilization's music, with an ASOUND.CVL imported (#126): on, and its volume, 0 to 100. See `soundGain`.

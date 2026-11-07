@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "id": "new",
+  "name": "GameOptions.interface-choice.new",
+  "theme": "slate",
+  "slots": {
+    "titleScreen": "titleMenu",
+    "cityLabels": "banners",
+    "cityScreen": "window",
+    "reports": "tables",
+    "choices": "choiceWindows",
+    "choiceList": "choiceWindow"
+  },
+  "features": [
+    "assetsInOptions",
+    "meetingWindow",
+    "nextTurn",
+    "sharedMenus",
+    "squareTooltips",
+    "unitCard",
+    "windowChrome"
+  ]
+}

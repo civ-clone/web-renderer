@@ -21,7 +21,11 @@ import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
 import { applyColourScheme, applyUiTheme, uiThemeFrom } from './lib/theme';
-import { applyInterface, interfaceMode } from './lib/interfaceMode';
+import {
+  applyInterface,
+  currentInterface,
+  defineSlot,
+} from './lib/interfaceMode';
 import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -39,6 +43,14 @@ import EventSounds from './lib/eventSounds';
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+// The interface's `titleScreen` slot (#824).
+export const titleScreen = defineSlot<typeof TitleMenu | typeof MainMenu>(
+  'titleScreen'
+);
+
+titleScreen.provide('titleMenu', TitleMenu);
+titleScreen.provide('mainMenu', MainMenu);
+
 export class Renderer {
   #transport: Transport;
 
@@ -53,9 +65,16 @@ export class Renderer {
     // The options first, and the look from them before anything is drawn, so nothing shows in the wrong colours
     //  first (#736, #706).
     setOptionDefaults();
-    applyUiTheme(uiThemeFrom(queryParams.get('theme'), options.get('uiTheme')));
-    // The new interface or the classic one (#735), before any window is made: `Window` reads it (#738).
+    // The interface (#735), before any window is made: `Window` reads it (#738). Then its theme, unless the player has
+    //  chosen one (#824).
     applyInterface(queryParams.get('interface'), options.get('interface'));
+    applyUiTheme(
+      uiThemeFrom(
+        queryParams.get('theme'),
+        options.get('uiTheme'),
+        currentInterface().theme
+      )
+    );
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
     installGlyphs();
@@ -88,8 +107,8 @@ export class Renderer {
         // window can be skipped — a loaded game is not a new one.
         pendingLoad = await takePendingSave(),
         pendingSave = pendingLoad === null ? null : pendingLoad.data,
-        // The new interface's list, or the classic menu (#749).
-        mainMenu = new (interfaceMode() === 'new' ? TitleMenu : MainMenu)(
+        // The list, or the classic menu (#749).
+        mainMenu = new (titleScreen.current())(
           elements.mainMenuElement,
           this.#transport
         ),

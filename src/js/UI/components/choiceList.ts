@@ -1,6 +1,6 @@
 import ChoiceWindow, { ChoiceDescriber, ChoiceRow } from './ChoiceWindow';
 import SelectionWindow from './SelectionWindow';
-import { interfaceMode } from '../lib/interfaceMode';
+import { defineSlot } from '../lib/interfaceMode';
 import { s } from '@dom111/element';
 
 // A list of plain rows, the classic list or the choice window (#745). Apart from `choices.ts` so that what imports it
@@ -24,26 +24,32 @@ export interface ChoiceListOptions {
   classicIntro?: string | Node | null;
 }
 
-/**
- * Any other list (research, government, the ones the engine asks): the classic list of labels, or under the new
- *  interface the choice window, with each row's facts, the pane and a primary naming the choice.
- */
-export const openChoice = (
+type OpenChoice = (
   title: string,
   rows: ChoiceRow[],
   onChoose: (value: string) => void,
-  {
-    intro = null,
-    chosen = null,
-    canClose = true,
-    modal = false,
-    classes = [],
-    describe = null,
-    classicLabel = ({ label }) => label,
-    classicIntro = intro,
-  }: ChoiceListOptions = {}
-): ChoiceWindow | SelectionWindow => {
-  if (interfaceMode() === 'new') {
+  options?: ChoiceListOptions
+) => ChoiceWindow | SelectionWindow;
+
+// The interface's `choiceList` slot (#824).
+export const choiceList = defineSlot<OpenChoice>('choiceList');
+
+// With each row's facts, the pane and a primary naming the choice.
+choiceList.provide(
+  'choiceWindow',
+  (
+    title,
+    rows,
+    onChoose,
+    {
+      intro = null,
+      chosen = null,
+      canClose = true,
+      modal = false,
+      classes = [],
+      describe = null,
+    } = {}
+  ) => {
     let introNode: Node | null = typeof intro === 'string' ? null : intro;
 
     if (typeof intro === 'string' && intro !== '') {
@@ -60,26 +66,48 @@ export const openChoice = (
       intro: introNode,
     });
   }
+);
 
-  const window = new SelectionWindow(
+// The classic list of labels.
+choiceList.provide(
+  'selectionWindow',
+  (
     title,
-    rows.map((row) => ({
-      label: classicLabel(row),
-      value: row.value,
-      ...(row.group === undefined ? {} : { group: row.group }),
-    })),
+    rows,
     onChoose,
-    classicIntro,
     {
-      canClose,
-      displayAll: true,
-      modal,
+      intro = null,
+      chosen = null,
+      canClose = true,
+      modal = false,
+      classicLabel = ({ label }: ChoiceRow) => label,
+      classicIntro = intro,
+    } = {}
+  ) => {
+    const window = new SelectionWindow(
+      title,
+      rows.map((row) => ({
+        label: classicLabel(row),
+        value: row.value,
+        ...(row.group === undefined ? {} : { group: row.group }),
+      })),
+      onChoose,
+      classicIntro,
+      {
+        canClose,
+        displayAll: true,
+        modal,
+      }
+    );
+
+    if (chosen !== null && !window.autoChosen()) {
+      window.selectionList().value = chosen;
     }
-  );
 
-  if (chosen !== null && !window.autoChosen()) {
-    window.selectionList().value = chosen;
+    return window;
   }
+);
 
-  return window;
-};
+/** Any other list (research, government, the ones the engine asks). */
+export const openChoice: OpenChoice = (title, rows, onChoose, options) =>
+  choiceList.current()(title, rows, onChoose, options);

@@ -10,9 +10,13 @@ export const DEFAULT_UI_THEME = 'slate';
 // `system` follows the browser or OS, and keeps following it as it changes.
 export const COLOUR_SCHEMES = ['system', 'light', 'dark'];
 
-/** The theme to use: the visit's `?theme=` when it names one, or else the `uiTheme` option. */
-export const uiThemeFrom = (param: string | null, option: unknown): string =>
-  [param, option].find(
+/** The theme to use: the visit's `?theme=` when it names one, or else the `uiTheme` option, or else the interface's. */
+export const uiThemeFrom = (
+  param: string | null,
+  option: unknown,
+  interfaceTheme: string = DEFAULT_UI_THEME
+): string =>
+  [param, option, interfaceTheme].find(
     (name): name is string =>
       typeof name === 'string' && UI_THEMES.includes(name)
   ) ?? DEFAULT_UI_THEME;
