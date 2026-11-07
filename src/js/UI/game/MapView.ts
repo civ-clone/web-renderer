@@ -20,7 +20,7 @@ import Units from '../components/Map/Units';
 import World from '../components/World';
 import Yields from '../components/Map/Yields';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
-import interfaceMode from '../lib/interfaceMode';
+import { defineSlot } from '../lib/interfaceMode';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
@@ -52,6 +52,12 @@ export type MapViewDeps = {
   transport: Transport;
   world: WorldData;
 };
+
+// The interface's `cityLabels` slot (#824): what names the cities on the map.
+export const cityLabels = defineSlot<typeof CityNames>('cityLabels');
+
+cityLabels.provide('banners', CityBanners);
+cityLabels.provide('names', CityNames);
 
 export class MapView {
   readonly activeUnitLayer: ActiveUnit;
@@ -137,8 +143,8 @@ export class MapView {
         Yields,
         Units,
         Cities,
-        // The new interface's banners, which the classic theme draws as these labels (#747).
-        interfaceMode() === 'new' ? CityBanners : CityNames,
+        // The banners, which the classic theme draws as these labels, or the classic labels (#747).
+        cityLabels.current(),
         ActiveUnit
       ),
       overviewMap = portal.getLayer(Overview) as Overview,

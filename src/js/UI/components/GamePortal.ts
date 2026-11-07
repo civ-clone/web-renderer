@@ -8,7 +8,7 @@ import {
 } from './lib/Tooltip';
 import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
 import squareTooltip, { hasSquareTooltip } from './Map/squareTooltip';
-import { interfaceMode } from '../lib/interfaceMode';
+import { hasFeature } from '../lib/interfaceMode';
 import { openUnitSelection } from './choices';
 import { instance as options } from '../GameOptionsRegistry';
 import Portal from './Portal';
@@ -167,8 +167,8 @@ export class GamePortal extends Portal {
         // moving now would slide the map out from under the menu.
         this.#drag = null;
 
-        // Under the new interface, the shared menu over the press, which a finger slides onto and lifts from (#808).
-        if (interfaceMode() === 'new') {
+        // The shared menu over the press, which a finger slides onto and lifts from (#808).
+        if (hasFeature('sharedMenus')) {
           openUnitMenu(x, y, this.#activeUnit as Unit, tile, this.transport(), {
             pressed: true,
           });
@@ -189,7 +189,7 @@ export class GamePortal extends Portal {
 
     // A right-click opens the same menu at once, without the hold, in place of the browser's own (#808).
     on(this.canvas(), 'contextmenu', (event) => {
-      if (interfaceMode() !== 'new') {
+      if (!hasFeature('sharedMenus')) {
         return;
       }
 
@@ -232,9 +232,9 @@ export class GamePortal extends Portal {
         return;
       }
 
-      // A right-click is the menu's under the new interface (#808), not a press on the map: some browsers send its
+      // A right-click is the shared menu's (#808), not a press on the map: some browsers send its
       //  `contextmenu` only once the button is up, which would otherwise be a click on the square first.
-      if (event.button === 2 && interfaceMode() === 'new') {
+      if (event.button === 2 && hasFeature('sharedMenus')) {
         // Not under the menu it's about to open.
         this.stopGlide();
 
@@ -342,12 +342,12 @@ export class GamePortal extends Portal {
   }
 
   // What has a tooltip under the canvas pixel at `x`, `y`: one of your cities' banners, with what it's building, or else
-  //  the square, with what it is, under the new interface and its option. A banner with nothing more to say (a rival's)
+  //  the square, with what it is, where the interface has it and its option is on. A banner with nothing more to say (a rival's)
   //  is about its city's square.
   #subjectAt(x: number, y: number): HoverSubject | null {
     const banner = this.bannerAt(x, y),
       squares =
-        interfaceMode() === 'new' && options.get('squareTooltips', true);
+        hasFeature('squareTooltips') && options.get('squareTooltips', true);
 
     if (banner !== null && hasBannerTooltip(banner.city)) {
       const { city, box } = banner;

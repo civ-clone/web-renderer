@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "classic",
+  "name": "GameOptions.interface-choice.classic",
+  "theme": "civ1-classic",
+  "slots": {
+    "titleScreen": "mainMenu",
+    "cityLabels": "names",
+    "cityScreen": "page",
+    "reports": "classic",
+    "choices": "classic",
+    "choiceList": "selectionWindow"
+  },
+  "features": []
+}

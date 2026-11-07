@@ -5,7 +5,7 @@ import { button } from '../lib/button';
 import eyebrowFor from '../lib/windowEyebrows';
 import { glyph } from '../lib/glyphs';
 import { h } from '../lib/html';
-import interfaceMode from '../lib/interfaceMode';
+import { hasFeature } from '../lib/interfaceMode';
 import { t } from 'i18next';
 
 export interface IWindow extends ITransientElement {
@@ -64,7 +64,7 @@ export class Window
   // Closed and not shown since: a second `close()` does nothing.
   #closed: boolean = false;
   // The new chrome (#738), behind the interface flag (#735): read once, as the window is made.
-  #newChrome: boolean = interfaceMode() === 'new';
+  #newChrome: boolean = hasFeature('windowChrome');
   // What had focus as the window opened, to have it back as it closes (#738).
   #opener: HTMLElement | null = null;
   // What the new chrome moved out of the body into its footer, and where from: put back before the window is built

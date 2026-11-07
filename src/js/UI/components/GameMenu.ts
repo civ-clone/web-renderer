@@ -19,7 +19,7 @@ import GameOptions from './GameOptions';
 import { Player } from '../types';
 import PopupMenu, { hasPopupMenu } from './PopupMenu';
 import UiMenu, { UiMenuItem } from './UiMenu';
-import { interfaceMode } from '../lib/interfaceMode';
+import { hasFeature } from '../lib/interfaceMode';
 import { windowKey } from '../lib/windowEyebrows';
 import Portal from './Portal';
 import ScienceReport from './ScienceReport';
@@ -634,7 +634,7 @@ export class GameMenu extends Element {
     //  click mustn't open it again (#710).
     let openAtPress = false;
 
-    if (interfaceMode() === 'new') {
+    if (hasFeature('sharedMenus')) {
       button.setAttribute('aria-haspopup', 'menu');
       button.setAttribute('aria-expanded', 'false');
     }
@@ -645,7 +645,7 @@ export class GameMenu extends Element {
           openAtPress = hasPopupMenu(this);
         },
         click: (event: MouseEvent) => {
-          if (interfaceMode() === 'new') {
+          if (hasFeature('sharedMenus')) {
             // From the keyboard, a click with no pointer behind it.
             this.#toggle(button, event.detail === 0);
 

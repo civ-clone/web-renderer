@@ -23,7 +23,7 @@ import MeetingWindow from '../components/MeetingWindow';
 import Transport from '../Transport';
 import entryDetails from '../components/lib/choiceDetails';
 import instanceOf from '../lib/instanceOf';
-import { interfaceMode } from '../lib/interfaceMode';
+import { hasFeature } from '../lib/interfaceMode';
 import { openChoice } from '../components/choiceList';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -155,9 +155,9 @@ export const ChoiceHandler = {
             ? speakers[0]
             : null;
 
-      // Under the new interface, the meeting window (#752): the talks so far, and the replies in the engine's order, the
+      // With the meeting window (#752): the talks so far, and the replies in the engine's order, the
       //  one that costs nothing first (#674).
-      if (key === 'negotiation.next-step' && interfaceMode() === 'new') {
+      if (key === 'negotiation.next-step' && hasFeature('meetingWindow')) {
         // The stress runner as the window opens: the one that answers it, if any, however the panel changes meanwhile.
         const stressRunner = debugFlags.uiStressRunner,
           players = negotiation?.players ?? [],

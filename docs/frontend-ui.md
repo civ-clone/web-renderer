@@ -56,6 +56,19 @@ which refills only the objects whose ids a patch changed rather than the whole
 game (#322). Input-critical state is updated on every patch; rendering is
 coalesced to one run per animation frame.
 
+## Interfaces and themes
+
+An interface is described by a manifest in `src/js/UI/interfaces/` (#824), and a theme by its tokens (#167). A theme
+carries no layout. An interface carries the layout and names the theme it comes with, which the player's own choice of
+theme outranks.
+
+- **Slots** are parts of the interface with more than one implementation. A family of components calls `defineSlot`
+  where it is put together, such as `reports.ts`, and provides what it has. A manifest's `slots` says which to use.
+- **Features** are behaviours inside a shared component that an interface has or doesn't, read with `hasFeature`.
+- Only Options asks which interface is in use, and a test holds that. Everything else asks for a slot or a feature.
+
+A new interface needs a manifest passed to `registerInterface`, and its implementations provided to the slots it fills.
+
 ## Major UI modules
 
 ### Menu and setup
