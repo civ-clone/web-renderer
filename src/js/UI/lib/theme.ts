@@ -1,11 +1,11 @@
 // The interface's look, set on `<html>` for the stylesheet's tokens to follow: which theme (#736) and whether it is
 //  light or dark (#706). Changing either restyles everything at once, with no reload.
 
-// Civ1 classic is the default and needs no attribute; the others are named by `data-ui-theme`. #167's manifests
+// Slate and brass is the default and needs no attribute; the others are named by `data-ui-theme`. #167's manifests
 //  replace this list, and add to the choice Options offers.
-export const UI_THEMES = ['civ1-classic', 'slate'];
+export const UI_THEMES = ['slate', 'civ1-classic'];
 
-export const DEFAULT_UI_THEME = 'civ1-classic';
+export const DEFAULT_UI_THEME = 'slate';
 
 // `system` follows the browser or OS, and keeps following it as it changes.
 export const COLOUR_SCHEMES = ['system', 'light', 'dark'];

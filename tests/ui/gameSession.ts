@@ -7,6 +7,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/classicInterface';
 
 import { DataPatch } from '../../src/js/UI/types';
 import i18next from 'i18next';

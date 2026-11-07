@@ -6,33 +6,33 @@
 :root {
   --scale: 2;
 
-  @include civ1-classic.light();
+  @include slate.light();
 }
 
 // Light or dark follows the system unless the player chose one (#706): `data-theme` on `<html>`.
 @media (prefers-color-scheme: dark) {
   :root:not([data-ui-theme]):not([data-theme='light']) {
-    @include civ1-classic.dark();
-  }
-}
-
-:root:not([data-ui-theme])[data-theme='dark'] {
-  @include civ1-classic.dark();
-}
-
-// The theme in use (#736), until #167's manifests: Civ1 classic unless `data-ui-theme` names another.
-:root[data-ui-theme='slate'] {
-  @include slate.light();
-}
-
-@media (prefers-color-scheme: dark) {
-  :root[data-ui-theme='slate']:not([data-theme='light']) {
     @include slate.dark();
   }
 }
 
-:root[data-ui-theme='slate'][data-theme='dark'] {
+:root:not([data-ui-theme])[data-theme='dark'] {
   @include slate.dark();
+}
+
+// The theme in use (#736), until #167's manifests: Slate and brass unless `data-ui-theme` names another.
+:root[data-ui-theme='civ1-classic'] {
+  @include civ1-classic.light();
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-ui-theme='civ1-classic']:not([data-theme='light']) {
+    @include civ1-classic.dark();
+  }
+}
+
+:root[data-ui-theme='civ1-classic'][data-theme='dark'] {
+  @include civ1-classic.dark();
 }
 
 // No keys to press on a touch screen (#814), whichever theme is in use.

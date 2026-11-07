@@ -1,5 +1,5 @@
 // Slate and brass (#735, #736): cool slate neutrals with one warm brass accent, flat rather than bevelled, and the
-//  windows on the same surfaces as the panels. On trial, with `?theme=slate`.
+//  windows on the same surfaces as the panels. The default, on `:root` with no `data-ui-theme`.
 
 @mixin light() {
   --ui-page-bg: #0d1014;

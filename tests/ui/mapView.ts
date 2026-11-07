@@ -7,6 +7,7 @@
 
 // Must stay first: it gives the map a `document`.
 import './lib/dom';
+import './lib/classicInterface';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
 import CityBanners from '../../src/js/UI/components/Map/CityBanners';

@@ -7,7 +7,7 @@
 //   literal: a hex colour, `rgb()`/`hsl()` of plain numbers, or a named colour;
 // - none outside them names a type face or sets a bold weight: type comes by role (`--type-*`), and `@font-face` only
 //   declares the faces a theme may name;
-// - Civ1 classic (`:root`) and slate and brass (`:root[data-ui-theme='slate']`) define the same tokens, and each dark
+// - slate and brass (`:root`) and Civ1 classic (`:root[data-ui-theme='civ1-classic']`) define the same tokens, and each dark
 //   set only overrides tokens its light set defines;
 // - every `--ui-*`, `--y-*`, `--font-*` and `--type-*` token a component reads is defined;
 // - the new interface's motion (#753), its `ui-` rules and the button system's, takes its durations from the theme's
@@ -138,8 +138,8 @@ const tokenValues = (selector) =>
       )
   );
 
-const classicMotion = tokenValues(':root'),
-  slateMotion = tokenValues(':root[data-ui-theme=slate]');
+const classicMotion = tokenValues(':root[data-ui-theme=civ1-classic]'),
+  slateMotion = tokenValues(':root');
 
 expect('Civ1 classic sets the motion tokens', classicMotion.size === 4);
 classicMotion.forEach((value, token) =>
@@ -157,7 +157,7 @@ const isMotionToken = (property) => /^--ui-[\w-]*motion[\w-]*$/.test(property),
 rules
   .filter(([selector]) => isTokenRule(selector))
   .forEach(([selector, declarations]) => {
-    const isClassic = !selector.includes('data-ui-theme=slate');
+    const isClassic = selector.includes('data-ui-theme=civ1-classic');
 
     declarations
       .filter(([property]) => isMotionToken(property))
@@ -185,24 +185,24 @@ slateMotion.forEach((value, token) =>
   expect(`slate's ${token} is ${value}: it moves`, value !== '0s')
 );
 
-const classic = defined(':root'),
-  slate = defined(":root[data-ui-theme='slate']"),
+const slate = defined(':root'),
+  classic = defined(":root[data-ui-theme='civ1-classic']"),
   sets = {
     'Civ1 classic dark': [
       classic,
-      defined(":root:not([data-ui-theme]):not([data-theme='light'])"),
+      defined(":root[data-ui-theme='civ1-classic']:not([data-theme='light'])"),
     ],
     'Civ1 classic dark (chosen)': [
       classic,
-      defined(":root:not([data-ui-theme])[data-theme='dark']"),
+      defined(":root[data-ui-theme='civ1-classic'][data-theme='dark']"),
     ],
     'slate dark': [
       slate,
-      defined(":root[data-ui-theme='slate']:not([data-theme='light'])"),
+      defined(":root:not([data-ui-theme]):not([data-theme='light'])"),
     ],
     'slate dark (chosen)': [
       slate,
-      defined(":root[data-ui-theme='slate'][data-theme='dark']"),
+      defined(":root:not([data-ui-theme])[data-theme='dark']"),
     ],
   };
 

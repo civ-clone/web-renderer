@@ -37,8 +37,8 @@ rest for each game.
 4. Bind global key handlers: Ctrl/Cmd+R asks before reloading, and so does F5
    until a game starts (in a game F5 is the Trade report).
 5. Set the default client options (see below), take any save waiting to be
-   loaded (`takePendingSave`), and build `MainMenu`, or `TitleMenu` under the
-   new interface (#749).
+   loaded (`takePendingSave`), and build `TitleMenu`, or `MainMenu` under the
+   classic interface (#749).
 6. Receive initial `gameData`: show the welcome window (new games only), turn on
    the leave guard, and build `World`, `GamePortal` with its layers, `Minimap`,
    the action panels, `GameMenu` and the details panels.
@@ -103,8 +103,8 @@ ask before leaving a game in progress.
   tiles the city works; keys 1–8 change specialists, `c` changes production and
   `b` buys. `CityBuildSelectionWindow` chooses production. Every way in goes
   through `openCity` (`components/openCity.ts`), which gives `City` its layout:
-  the classic page (`classicCityLayout`), or under `?interface=new` the window
-  of `CityLayout.ts` (#746). The behaviour is `City`'s whichever layout draws
+  the window of `CityLayout.ts` (#746), or under `?interface=classic` the
+  classic page (`classicCityLayout`). The behaviour is `City`'s whichever layout draws
   it; the parts both draw, the yield bars and the map, are in
   `components/lib/cityParts.ts`. The new layout's production card lists the
   city's build queue (core-city-build's `CityBuild#queue`, #774), each with
@@ -167,7 +167,7 @@ compositing order:
   the whole world as soon as it is built, so a loaded game's minimap is not
   blank (#270).
 
-Under the new interface (`?interface=new`), `MapView` mounts `CityBanners` in
+Under the new interface, `MapView` mounts `CityBanners` in
 place of `CityNames` (#747). It extends `CityNames`, and the theme's
 `--ui-city-banner` token picks what it draws: `label` gives the classic size
 and name, and `full` gives a banner below the city's square (size badge, name,

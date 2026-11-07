@@ -5,6 +5,7 @@
 
 // Must stay first: `GamePortal` reaches windows that read `document.body` as they load.
 import { document } from './lib/dom';
+import './lib/classicInterface';
 
 import { City, Yield } from '../../src/js/UI/types';
 import { assetStore } from '../../src/js/UI/AssetStore';

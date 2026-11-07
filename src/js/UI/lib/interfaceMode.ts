@@ -1,13 +1,15 @@
-// Which interface is in use (#735): the classic one, or the new one being built behind this flag until the switch-over.
-//  The `interface` option says, kept like the others; `?interface=new` (or `classic`) says for one visit. Read where a
+// Which interface is in use (#735): the new one, or the classic one, kept until interface manifests land (#824).
+//  The `interface` option says, kept like the others; `?interface=classic` (or `new`) says for one visit. Read where a
 //  family of components is put together, never inside a component, with one exception: `Window`, which every window
 //  shares, picks its chrome from it (#738).
 
-export const INTERFACES = ['classic', 'new'] as const;
+export const INTERFACES = ['new', 'classic'] as const;
 
 export type InterfaceMode = (typeof INTERFACES)[number];
 
-let mode: InterfaceMode = 'classic',
+export const DEFAULT_INTERFACE: InterfaceMode = 'new';
+
+let mode: InterfaceMode = DEFAULT_INTERFACE,
   // What the player last chose, which differs from `mode` until the page next loads: the interface can't change under
   //  a game in play.
   chosen: InterfaceMode = mode;
@@ -35,7 +37,11 @@ export const applyInterface = (
   option: unknown,
   root: HTMLElement = document.documentElement
 ): InterfaceMode => {
-  mode = isInterface(param) ? param : isInterface(option) ? option : 'classic';
+  mode = isInterface(param)
+    ? param
+    : isInterface(option)
+    ? option
+    : DEFAULT_INTERFACE;
   chosen = mode;
 
   root.setAttribute('data-interface', mode);

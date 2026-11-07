@@ -54,7 +54,7 @@ export class Renderer {
     //  first (#736, #706).
     setOptionDefaults();
     applyUiTheme(uiThemeFrom(queryParams.get('theme'), options.get('uiTheme')));
-    // The classic interface or the new one (#735), before any window is made: `Window` reads it (#738).
+    // The new interface or the classic one (#735), before any window is made: `Window` reads it (#738).
     applyInterface(queryParams.get('interface'), options.get('interface'));
     applyColourScheme(options.get('colourScheme', 'system'));
     // The interface's glyphs, for every `glyph()` to refer to (#741).
