@@ -10,9 +10,10 @@ const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
 
-const ui = path.join(webRenderer, 'src', 'js', 'UI'),
-  skipped = [path.join(ui, 'debug')],
-  helper = path.join(ui, 'lib', 'button.ts'),
+// The frontend's packages (#825). A package's own `node_modules` holds only links, which aren't followed.
+const ui = path.join(webRenderer, 'packages'),
+  skipped = [path.join(ui, 'game', 'debug')],
+  helper = path.join(ui, 'widgets', 'lib', 'button.ts'),
   variant =
     /\sclass="(?:[^"]*\s)?btn-(primary|secondary|quiet|danger|icon|bare|\$\{)/,
   failures = [];

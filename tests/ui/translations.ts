@@ -610,6 +610,7 @@ const expect = (description: string, actual: string, expected: string) => {
     scan(join('node_modules/@civ-clone', name))
   );
   scan('src');
+  scan('packages');
 
   ['capture-city.steal-advance', 'negotiation.next-step'].forEach((key) => {
     if (!choiceMetaKeys.has(key)) {
