@@ -3,15 +3,8 @@ import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
   'Generic.just-now': 'just now',
-  'Generic.civilization-name.name':
-    '$t({{- civilization}}.name, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
-  'Generic.civilization-name.nation':
-    '$t({{- civilization}}.nation, { "defaultValue": "{{- civilization}}", "ns": "civilization" })',
   'Generic.civilization-name.plural':
     '$t({{- civilization}}.plural, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
-  'Generic.leader-name':
-    '$t(Leader.{{- leader}}.name, { "defaultValue": "{{player.civilization.leader._}}", "ns": "civilization" })',
-  'Buildable.label-empty': `Nothing`,
   'ChooseFromList.capture-city.steal-advance.body':
     'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{- data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
   'ChooseFromList.capture-city.steal-advance.choice':

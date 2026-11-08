@@ -4,11 +4,6 @@ import i18next from 'i18next';
 i18next.addResources('en', 'default', {
   'Generic.coordinates': '{{x, number}}, {{y, number}}',
   'Generic.no': 'No',
-  // For a nation that opens a sentence: `.nation` carries its own article ("the Aztec Empire"), lower case for
-  //  anywhere else in a sentence (#359).
-  'Generic.civilization-name.nation-start':
-    '$t(Generic.civilization-name.nation, capitalise)',
-  'Generic.unknown-civilization': 'an unknown civilization',
   'Generic.yes': 'Yes',
   'Actions.AdjustTradeRates.title': 'Adjust trade rates',
   'Actions.ChooseGovernment.body':
@@ -51,6 +46,7 @@ i18next.addResources('en', 'default', {
   'Actions.Spaceship.spaceship-name':
     '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship',
   'Actions.Spaceship.title': 'View spaceship',
+  'Buildable.label-empty': `Nothing`,
   'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
     'Acquire {{- choice}}',
   'ChoiceWindow.ChooseFromList.choose-civilization.primary':
@@ -399,7 +395,6 @@ i18next.addResources('en', 'default', {
   'NotificationRows.more_one': '+{{count, number}} more',
   'NotificationRows.more_other': '+{{count, number}} more',
   'NotificationRows.open': 'Click to view',
-  'Notification.title': 'Notification',
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',

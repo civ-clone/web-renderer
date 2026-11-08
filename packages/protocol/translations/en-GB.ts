@@ -2,6 +2,7 @@
 import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
+  'Generic.unknown-civilization': 'an unknown civilisation',
   'Game.progress.unmet-player': 'An unknown civilisation is moving…',
 });
 

@@ -463,6 +463,57 @@ expect(
   []
 );
 
+// A string that names another (`$t(Key)`) can only count on one its own package brings, or one a package it depends on
+//  does: a package swapped out takes its strings with it.
+const dependsOnAll = (name: string): Set<string> => {
+    const all = new Set<string>([name]),
+      stack = [name];
+
+    while (stack.length > 0) {
+      dependsOn(stack.pop()!).forEach((dependency) => {
+        if (!all.has(dependency)) {
+          all.add(dependency);
+          stack.push(dependency);
+        }
+      });
+    }
+
+    return all;
+  },
+  stringFiles = names.flatMap((name) =>
+    ['en', 'en-GB']
+      .map((language) =>
+        join(packagesRoot, name, 'translations', `${language}.ts`)
+      )
+      .filter((path) => existsSync(path))
+      .map((path) => ({ name, text: readFileSync(path, 'utf8') }))
+  ),
+  stringOwner = new Map<string, string>();
+
+stringFiles.forEach(({ name, text }) =>
+  [...text.matchAll(/^ {2}'?([A-Za-z0-9_.-]+)'?:/gm)].forEach(([, key]) =>
+    stringOwner.set(key, name)
+  )
+);
+
+const nested = stringFiles.flatMap(({ name, text }) =>
+  [...text.matchAll(/\$t\(([A-Za-z0-9_.-]+)[,)]/g)]
+    .map(([, key]) => key)
+    .filter((key) => stringOwner.has(key))
+    .map((key) => ({ name, key, owner: stringOwner.get(key)! }))
+);
+
+expect(
+  'a string names only strings its own package or one it depends on brings',
+  [
+    stringOwner.size > 900 && nested.length > 50,
+    nested
+      .filter(({ name, owner }) => !dependsOnAll(name).has(owner))
+      .map(({ name, key, owner }) => `${name}: ${key} (in ${owner})`),
+  ],
+  [true, []]
+);
+
 // Each package brings its own styles too (`styles/_*.scss`), which civ.one's stylesheet, `src/css/app.scss`, puts
 //  together in cascade order: every partial a package has is in it, once.
 const imported = [

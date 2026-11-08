@@ -5,8 +5,19 @@ i18next.addResources('en', 'default', {
   'Generic.height': 'Height',
   'Generic.city-name':
     '$t({{civilization}}.{{- name}}.name, { "defaultValue": "{{name}}", "ns": "city" })',
+  'Generic.civilization-name.name':
+    '$t({{- civilization}}.name, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
+  'Generic.civilization-name.nation':
+    '$t({{- civilization}}.nation, { "defaultValue": "{{- civilization}}", "ns": "civilization" })',
+  // For a nation that opens a sentence: `.nation` carries its own article ("the Aztec Empire"), lower case for
+  //  anywhere else in a sentence (#359).
+  'Generic.civilization-name.nation-start':
+    '$t(Generic.civilization-name.nation, capitalise)',
+  'Generic.leader-name':
+    '$t(Leader.{{- leader}}.name, { "defaultValue": "{{player.civilization.leader._}}", "ns": "civilization" })',
   'Generic.view-city':
     'View $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
+  'Generic.unknown-civilization': 'an unknown civilization',
   'Generic.unknown-civilization-start':
     '$t(Generic.unknown-civilization, capitalise)',
   'Generic.width': 'Width',
@@ -14,6 +25,7 @@ i18next.addResources('en', 'default', {
     'The $t({{civilization}}.plural, { "defaultValue": "{{civilization}}", "ns": "civilization" }) are moving…',
   'Game.progress.turn': 'Turn {{turn, number}}',
   'Game.progress.unmet-player': 'An unknown civilization is moving…',
+  'Notification.title': 'Notification',
   'SavedGame.autosave-failed': 'This turn could not be autosaved: {{- error}}',
   'Diplomat.establish-embassy': 'Establish Embassy',
   'Diplomat.investigate-city': 'Investigate City',

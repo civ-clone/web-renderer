@@ -2,7 +2,6 @@
 import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
-  'Generic.unknown-civilization': 'an unknown civilisation',
   'Actions.Revolution.body':
     'Overthrow your government? Your civilisation will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'ChoiceWindow.ChooseFromList.choose-civilization.random':
