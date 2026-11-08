@@ -244,9 +244,9 @@ importers:
       '@civ-clone/ui-worker-client':
         specifier: workspace:*
         version: link:packages/worker-client
-      '@civ-clone/ui-worker-transport':
-        specifier: workspace:*
-        version: link:packages/worker-transport
+      '@civ-clone/worker-transport':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@dom111/element':
         specifier: ^0.2.0
         version: 0.2.1
@@ -426,12 +426,6 @@ importers:
         version: link:../widgets
 
   packages/worker-client:
-    dependencies:
-      '@civ-clone/ui-protocol':
-        specifier: workspace:*
-        version: link:../protocol
-
-  packages/worker-transport:
     dependencies:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
@@ -1605,6 +1599,9 @@ packages:
   '@civ-clone/simple-world-path@https://codeload.github.com/civ-clone/simple-world-path/tar.gz/141192edb2b6c14691649e2f5b1cc0f6d5f6ea86':
     resolution: {gitHosted: true, integrity: sha512-+jH+uGomVqMROWJyuxu0J7MgFIXx4xi6cQdgJsRYeE8150zpen0Gn5TMEKV0oIU+C5sVdFa7fbBFhByBED+H8g==, tarball: https://codeload.github.com/civ-clone/simple-world-path/tar.gz/141192edb2b6c14691649e2f5b1cc0f6d5f6ea86}
     version: 0.1.2
+
+  '@civ-clone/worker-transport@0.1.0':
+    resolution: {integrity: sha512-PzB6pcRvPfvc/VVsCAqwRXyaEy5nEEgzCm8wcoTfSUOtdfw0P5ey6MSEw48tZkPDxvp5I2da2Vdg0msDd43lzQ==}
 
   '@dom111/element@0.2.1':
     resolution: {integrity: sha512-fma2ugw6XeUjXg+XqXq1rtb5EPr54UPqAd56oPJkJENReL09AbvFAnEKVb5ywSxirdrfe2EvZrL9v3wlT1LYCA==}
@@ -5185,6 +5182,11 @@ snapshots:
       '@civ-clone/core-world': 0.1.22
       '@civ-clone/core-world-path': 0.1.3
       '@civ-clone/library-unit': 0.1.14
+
+  '@civ-clone/worker-transport@0.1.0':
+    dependencies:
+      '@civ-clone/core-data-client': 0.1.0
+      '@civ-clone/core-data-object': 0.1.17
 
   '@dom111/element@0.2.1': {}
 

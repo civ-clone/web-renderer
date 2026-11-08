@@ -2,7 +2,7 @@
 import './interfaces.ts';
 import '@civ-clone/ui-map-square';
 import Renderer from '@civ-clone/ui-game/bootstrap';
-import WorkerTransport from '@civ-clone/ui-worker-transport/WorkerTransport';
+import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';
 import { version } from '../../build.json';
 
 // The build's version on the worker's URL, as on the page's own script and
@@ -10,7 +10,9 @@ import { version } from '../../build.json';
 //  can't work together.
 const renderer = new Renderer(
   new WorkerTransport(
-    new Worker(`dist/backend.js?v=${encodeURIComponent(version)}`)
+    new Worker(`dist/backend.js?v=${encodeURIComponent(version)}`),
+    // The game data is rebuilt incrementally by the page itself (#333).
+    { rawChannels: ['gameData'] }
   )
 );
 

@@ -40,7 +40,7 @@ Quick reference map of key code areas.
   - `cheats.ts`: the `cheat` receiver and the cheat menu's lists, with the plain-data checks for `CreateUnit` and `ModifyUnit`.
   - `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
-- The worker's end of the messaging, `ParentTransport`, is in `ui-worker-transport` with the page's end; what the two
+- The worker's end of the messaging, `ParentTransport`, is in `@civ-clone/worker-transport` with the page's end; what the two
   say is in the protocol package, and the transport itself and the patch queue (`DataQueue`, owned by
   `Client/PlayerPatches.ts`) are `@civ-clone/core-data-client`'s (below).
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
@@ -55,16 +55,16 @@ How a game talks to a client that isn't in the same process, knowing nothing abo
 `Transport` (the contract), `Request`, `AbstractTransport` (request ids, replies, failures, a silent other side
 reported), `DataQueue` (data object patches) and `reconstituteData` (rebuilding them).
 
-## Worker transport (`packages/worker-transport`, `@civ-clone/ui-worker-transport`)
+## `@civ-clone/worker-transport` (its own repository)
 
-- `ParentTransport.ts` / `WorkerTransport.ts`: the worker's and the page's ends of an `AbstractTransport` over the
-  worker's messages. `WorkerTransport` rebuilds what arrives, but for `gameData`, and passes the worker's own errors on
-  as `workerError`.
+- `ParentTransport` / `WorkerTransport`: the worker's and the page's ends of an `AbstractTransport` over the worker's
+  messages. `WorkerTransport` rebuilds what arrives, but for the raw channels it is given (civ.one's `gameData`), and
+  passes the worker's own errors on to its error channel (`workerError`).
 
 ## Protocol (`packages/protocol`, `@civ-clone/ui-protocol`)
 
 What the page and the worker say to each other (#825): civ.one's channels and what crosses them. The worker imports no
-package but this and the worker transport, and no package imports the worker.
+package but this, and no package imports the worker.
 
 - `Transport.ts`: civ.one's channels and their payloads (`TransportDataMap`).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).

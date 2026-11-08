@@ -1,5 +1,5 @@
 import Game from '@civ-clone/ui-worker-client/Game';
-import ParentTransport from '@civ-clone/ui-worker-transport/ParentTransport';
+import ParentTransport from '@civ-clone/worker-transport/ParentTransport';
 import { describeError } from '@civ-clone/ui-worker-client/answer';
 
 const transport = new ParentTransport(),

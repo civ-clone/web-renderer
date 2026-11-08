@@ -96,15 +96,15 @@ so they resolve from the root, where `civ sync` links engine checkouts. A few th
 path aren't packages yet: `src/js/Audio`, the generated `src/js/plugins.ts` and `src/js/translations.ts`, and
 `build.json`. The test lists them, and the list only shrinks.
 
-The worker (`worker-client`, which `backend.ts` starts with `worker-transport`'s `ParentTransport`) shares only
-`protocol` and `worker-transport` with the page: it imports no package but those, and no package imports from it.
-Under both is `@civ-clone/core-data-client`, in its own repository: the transport contract, requests and their
-replies, and data patches and rebuilding them, with nothing of civ.one's in it.
+The worker (`worker-client`, which `backend.ts` starts) shares only `protocol` with the page: it imports no other
+package, and no package imports from it. Under them are two packages in repositories of their own, with nothing of
+civ.one's in them: `@civ-clone/core-data-client` (the transport contract, requests and their replies, and data
+patches and rebuilding them) and `@civ-clone/worker-transport` (both ends of a transport over a web worker's
+messages, which `frontend.ts` and `backend.ts` start, telling the page's end that `gameData` arrives raw).
 
 | Package             | Holds                                                                               | Depends on                             |
 | ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
 | `protocol`          | What the page and the worker say to each other: requests, messages, the game's data | nothing else                           |
-| `worker-transport`  | Both ends of the transport over the worker's messages                               | protocol                               |
 | `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts              | protocol                               |
 | `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves    | protocol                               |
 | `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                  | protocol, client                       |
