@@ -463,6 +463,50 @@ expect(
   []
 );
 
+// Each package brings its own styles too (`styles/_*.scss`), which civ.one's stylesheet, `src/css/app.scss`, puts
+//  together in cascade order: every partial a package has is in it, once.
+const imported = [
+    ...readFileSync(join(root, 'src/css/app.scss'), 'utf8').matchAll(
+      /^@import '\.\.\/\.\.\/packages\/([^/]+)\/styles\/([^']+)';$/gm
+    ),
+  ].map(([, name, partial]) => `${name}/${partial}`),
+  partials = names.flatMap((name) =>
+    existsSync(join(packagesRoot, name, 'styles'))
+      ? readdirSync(join(packagesRoot, name, 'styles'))
+          .filter((file) => /^_.+\.scss$/.test(file))
+          .map((file) => `${name}/${file.slice(1, -5)}`)
+      : []
+  );
+
+const usedByPartials = new Set(
+  partials.flatMap((partial) => {
+    const [name, file] = partial.split('/');
+
+    return [
+      ...readFileSync(
+        join(packagesRoot, name, 'styles', `_${file}.scss`),
+        'utf8'
+      ).matchAll(/^@use '(?:\.\.\/\.\.\/([^/]+)\/styles\/)?([^'/]+)'/gm),
+    ].map(([, other, used]) => `${other ?? name}/${used}`);
+  })
+);
+
+expect(
+  'civ.one’s stylesheet imports every package’s partials, each once, and no other',
+  [
+    imported.length > 40,
+    // A partial of mixins that others `@use` is in through them.
+    partials.filter(
+      (partial) => !imported.includes(partial) && !usedByPartials.has(partial)
+    ),
+    imported.filter(
+      (partial, index) =>
+        !partials.includes(partial) || imported.indexOf(partial) !== index
+    ),
+  ],
+  [true, [], []]
+);
+
 // esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
 //  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
 //  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which

@@ -21,6 +21,11 @@ const files = (directory) =>
   fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(directory, entry.name);
 
+    // The text the packages bring (#825) is words, where `&times;` is a sign, not an icon: it was never checked here.
+    if (entry.isDirectory() && entry.name === 'translations') {
+      return [];
+    }
+
     return entry.isDirectory()
       ? files(full)
       : /\.(ts|scss)$/.test(full)
@@ -89,7 +94,7 @@ files(roots[0]).forEach((file) => {
 // `HTMLElement` target, and an `<svg>` isn't one.
 {
   const icons = fs.readFileSync(
-      path.join(webRenderer, 'src', 'css', 'components', '_icons.scss'),
+      path.join(webRenderer, 'packages', 'assets', 'styles', '_icons.scss'),
       'utf8'
     ),
     rule = icons.slice(
@@ -101,7 +106,7 @@ files(roots[0]).forEach((file) => {
 
   if (!/pointer-events:\s*none/.test(rule)) {
     failures.push(
-      'src/css/components/_icons.scss: .glyph needs pointer-events: none'
+      'packages/assets/styles/_icons.scss: .glyph needs pointer-events: none'
     );
   }
 }

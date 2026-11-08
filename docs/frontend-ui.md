@@ -11,7 +11,8 @@ Primary files:
 - `packages/*`, one workspace package per part of the frontend (see Packages below)
 - `packages/game/bootstrap.ts` (page start-up), and the rest of `packages/game/` (one game)
 - `packages/windows/components/*` (the windows) and `packages/map/components/Map/*` (the map's layers)
-- `src/css/*` (`app.scss`, with one partial per component under `src/css/components/`)
+- `src/css/app.scss`, civ.one's stylesheet: the themes, and each package's own partials (`packages/<name>/styles/`)
+  in cascade order
 
 ## UI composition model
 

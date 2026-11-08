@@ -1,4 +1,4 @@
-@use 'panel';
+@use '../../widgets/styles/panel';
 
 // No panel of its own: its sections float over the top left of the map, which runs underneath (#697). Positioned, as
 //  the map is, so the two paint in document order and this, after the map, is on top without a stacking order. Short

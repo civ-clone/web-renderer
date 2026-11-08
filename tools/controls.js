@@ -24,7 +24,11 @@ const files = (directory, pattern) =>
   });
 
 // An outline taken away has a comment just above saying what shows focus, or a `:focus-visible` ring just after it.
-files(path.join(webRenderer, 'src', 'css'), /\.scss$/).forEach((file) => {
+// civ.one's stylesheet and the packages' own partials (#825).
+[
+  ...files(path.join(webRenderer, 'src', 'css'), /\.scss$/),
+  ...files(path.join(webRenderer, 'packages'), /\.scss$/),
+].forEach((file) => {
   const lines = fs.readFileSync(file, 'utf8').split('\n');
 
   lines.forEach((line, index) => {
