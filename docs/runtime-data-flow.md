@@ -16,7 +16,7 @@
 ### Loading a saved game
 
 1. `lib/savedGame.ts` stores the chosen save in IndexedDB, marks it in `sessionStorage`, and reloads the page.
-2. `Renderer.init()` (`src/js/UI/bootstrap.ts`) takes the pending save, registers all its transport listeners, then sends `load` (no `start`).
+2. `Renderer.init()` (`packages/game/bootstrap.ts`) takes the pending save, registers all its transport listeners, then sends `load` (no `start`).
 3. The worker imports the plugins, hydrates the save into `defaultGame` (`restoreGame`), and resumes the player who was mid-turn (`resumeGame`), or starts the turn if the save was taken between turns.
 4. From there the flow is the same as above, starting at step 4.
 

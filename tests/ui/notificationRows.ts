@@ -8,17 +8,17 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { GameData, Player, PlayerAction } from '../../src/js/UI/types';
-import Dismissals from '../../src/js/UI/lib/dismissals';
-import Hud from '../../src/js/UI/game/Hud';
-import NotificationRows from '../../src/js/UI/components/NotificationRows';
-import Notices from '../../src/js/UI/components/Notices';
-import Portal from '../../src/js/UI/components/Portal';
-import Transport from '../../src/js/UI/Transport';
-import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
-import { assetStore } from '../../src/js/UI/AssetStore';
+import { GameData, Player, PlayerAction } from '@civ-clone-ui/client/types';
+import Dismissals from '@civ-clone-ui/client/lib/dismissals';
+import Hud from '@civ-clone-ui/game/Hud';
+import NotificationRows from '@civ-clone-ui/windows/components/NotificationRows';
+import Notices from '@civ-clone-ui/windows/components/Notices';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import Transport from '@civ-clone-ui/client/Transport';
+import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

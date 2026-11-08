@@ -11,23 +11,23 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import { DataPatch } from '../../src/js/UI/types';
+import { DataPatch } from '@civ-clone-ui/client/types';
 import { GameOverDetails } from '../../src/js/Engine/lib/gameOver';
-import { ObjectMap } from '../../src/js/UI/lib/reconstituteData';
+import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
 import { ObserverState } from '../../src/js/Engine/Observer';
 import i18next from 'i18next';
-import DebugFlags from '../../src/js/UI/debug/DebugFlags';
-import GameOverWindow from '../../src/js/UI/components/GameOverWindow';
-import GameSession from '../../src/js/UI/game/GameSession';
-import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
-import NotificationBar from '../../src/js/UI/app/NotificationBar';
-import Notices from '../../src/js/UI/components/Notices';
-import Notifications from '../../src/js/UI/components/Notifications';
-import ObserverBar from '../../src/js/UI/components/ObserverBar';
-import Transport from '../../src/js/UI/Transport';
-import appElements from '../../src/js/UI/app/elements';
-import { assetStore } from '../../src/js/UI/AssetStore';
-import { hallOfFame } from '../../src/js/UI/lib/hallOfFame';
+import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+import GameOverWindow from '@civ-clone-ui/windows/components/GameOverWindow';
+import GameSession from '@civ-clone-ui/game/GameSession';
+import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
+import NotificationBar from '@civ-clone-ui/game/app/NotificationBar';
+import Notices from '@civ-clone-ui/windows/components/Notices';
+import Notifications from '@civ-clone-ui/windows/components/Notifications';
+import ObserverBar from '@civ-clone-ui/windows/components/ObserverBar';
+import Transport from '@civ-clone-ui/client/Transport';
+import appElements from '@civ-clone-ui/game/app/elements';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import { hallOfFame } from '@civ-clone-ui/client/lib/hallOfFame';
 
 const failures: string[] = [];
 let checks = 0,

@@ -11,9 +11,9 @@ import './lib/grids';
 
 import GameSetupWindow, {
   GameSetupPreset,
-} from '../../src/js/UI/components/GameSetupWindow';
+} from '@civ-clone-ui/windows/components/GameSetupWindow';
 import Request from '../../src/js/Engine/Request';
-import Transport from '../../src/js/UI/Transport';
+import Transport from '@civ-clone-ui/client/Transport';
 import i18next from 'i18next';
 
 const failures: string[] = [];

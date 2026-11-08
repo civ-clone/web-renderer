@@ -18,16 +18,16 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { City as CityData, GameData } from '../../src/js/UI/types';
+import { City as CityData, GameData } from '@civ-clone-ui/client/types';
 import i18next from 'i18next';
-import City from '../../src/js/UI/components/City';
-import CityBuildAction from '../../src/js/UI/components/Actions/CityBuild';
-import progressBar from '../../src/js/UI/components/lib/ProgressBar';
-import { turnsLeft } from '../../src/js/UI/components/lib/cityYields';
-import Portal from '../../src/js/UI/components/Portal';
-import Transport from '../../src/js/UI/Transport';
-import { assetStore } from '../../src/js/UI/AssetStore';
-import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
+import City from '@civ-clone-ui/windows/components/City';
+import CityBuildAction from '@civ-clone-ui/windows/components/Actions/CityBuild';
+import progressBar from '@civ-clone-ui/widgets/components/lib/ProgressBar';
+import { turnsLeft } from '@civ-clone-ui/windows/components/lib/cityYields';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import Transport from '@civ-clone-ui/client/Transport';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
 
 const failures: string[] = [];
 let checks = 0,

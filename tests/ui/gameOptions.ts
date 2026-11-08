@@ -5,8 +5,8 @@
 import GameOptionsRegistry, {
   OptionStorage,
   instance as options,
-} from '../../src/js/UI/GameOptionsRegistry';
-import setOptionDefaults from '../../src/js/UI/app/options';
+} from '@civ-clone-ui/client/GameOptionsRegistry';
+import setOptionDefaults from '@civ-clone-ui/game/app/options';
 
 const failures: string[] = [];
 let checks = 0;

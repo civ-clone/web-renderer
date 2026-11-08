@@ -179,7 +179,7 @@ the same bytes. `changelog/<sha>.json` files that already exist are reused, not
 regenerated, unless `--force` is passed.
 
 The release window doesn't list entries one by one. It groups them by day at
-display time (`src/js/UI/lib/releaseDays.ts`, #355), in the player's own
+display time (`packages/client/lib/releaseDays.ts`, #355), in the player's own
 timezone. A day takes its newest commit's version and date, lists every
 bullet newest first, and joins each package's external logs. Bullets from
 dev-only commits (`chore:`, `test:`, `docs:` and so on) go under a collapsed

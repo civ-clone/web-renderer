@@ -10,9 +10,9 @@ import './lib/grids';
 
 import CityBanners, {
   BannerStyle,
-} from '../../src/js/UI/components/Map/CityBanners';
-import { Tile } from '../../src/js/UI/types';
-import World from '../../src/js/UI/components/World';
+} from '@civ-clone-ui/map/components/Map/CityBanners';
+import { Tile } from '@civ-clone-ui/client/types';
+import World from '@civ-clone-ui/map/components/World';
 import i18next from 'i18next';
 
 const failures: string[] = [];

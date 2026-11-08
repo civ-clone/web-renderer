@@ -1,7 +1,10 @@
 // The release window shows one entry per day, combined at display time from
 // releases.json's one entry per commit (#355).
 
-import byDay, { Release, isDevOnly } from '../../src/js/UI/lib/releaseDays';
+import byDay, {
+  Release,
+  isDevOnly,
+} from '@civ-clone-ui/client/lib/releaseDays';
 import releases from '../../changelog/releases.json';
 
 const failures: string[] = [];

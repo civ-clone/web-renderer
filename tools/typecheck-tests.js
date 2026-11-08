@@ -47,7 +47,7 @@ if (inTests.length > 0) {
 console.log(
   `PASS typecheck-tests (no errors in tests/${
     elsewhere.length > 0
-      ? `; ${elsewhere.length} in the src/ modules they import, left to #339`
+      ? `; ${elsewhere.length} in the frontend modules they import, left to #339`
       : ''
   })`
 );

@@ -9,16 +9,16 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { City, Yield } from '../../src/js/UI/types';
-import { assetStore } from '../../src/js/UI/AssetStore';
-import GamePortal from '../../src/js/UI/components/GamePortal';
-import Map from '../../src/js/UI/components/Map';
-import { Rect } from '../../src/js/UI/lib/viewport';
-import World from '../../src/js/UI/components/World';
-import { hideTooltip } from '../../src/js/UI/components/lib/Tooltip';
-import cityBannerTooltip from '../../src/js/UI/components/Map/cityBannerTooltip';
+import { City, Yield } from '@civ-clone-ui/client/types';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
+import Map from '@civ-clone-ui/map/components/Map';
+import { Rect } from '@civ-clone-ui/map/lib/viewport';
+import World from '@civ-clone-ui/map/components/World';
+import { hideTooltip } from '@civ-clone-ui/widgets/components/lib/Tooltip';
+import cityBannerTooltip from '@civ-clone-ui/windows/components/Map/cityBannerTooltip';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

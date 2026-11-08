@@ -5,7 +5,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import progressBar from '../../src/js/UI/components/lib/ProgressBar';
+import progressBar from '@civ-clone-ui/widgets/components/lib/ProgressBar';
 
 const failures: string[] = [];
 let checks = 0;

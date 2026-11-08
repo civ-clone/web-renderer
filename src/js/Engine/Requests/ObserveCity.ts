@@ -1,4 +1,4 @@
-import { City } from '../../UI/types';
+import { City } from '@civ-clone-ui/client/types';
 import Request from '../Request';
 
 // A city a watcher opens (#613), by its square: a city the watcher doesn't own reaches the page as a stand-in with an

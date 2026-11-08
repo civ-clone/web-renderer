@@ -5,7 +5,10 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import glyph, { glyphNames, installGlyphs } from '../../src/js/UI/lib/glyphs';
+import glyph, {
+  glyphNames,
+  installGlyphs,
+} from '@civ-clone-ui/assets/lib/glyphs';
 
 const failures: string[] = [];
 let checks = 0;

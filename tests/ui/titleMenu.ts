@@ -15,22 +15,22 @@ import TitleMenu, {
   continueDetail,
   continueLabel,
   newestSave,
-} from '../../src/js/UI/components/TitleMenu';
+} from '@civ-clone-ui/windows/components/TitleMenu';
 import {
   BrowserSave,
   deleteSave,
   keepSave,
   listSaves,
-} from '../../src/js/UI/lib/browserSaves';
-import Transport from '../../src/js/UI/Transport';
-import addFormatters from '../../src/js/UI/app/i18nFormatters';
-import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
-import { askNewGame } from '../../src/js/UI/components/newGame';
-import { assetStore } from '../../src/js/UI/AssetStore';
+} from '@civ-clone-ui/client/lib/browserSaves';
+import Transport from '@civ-clone-ui/client/Transport';
+import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
+import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import { askNewGame } from '@civ-clone-ui/windows/components/newGame';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
-import GameOptions from '../../src/js/UI/components/GameOptions';
-import { IPortal } from '../../src/js/UI/components/Portal';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import GameOptions from '@civ-clone-ui/windows/components/GameOptions';
+import { IPortal } from '@civ-clone-ui/map/components/Portal';
 import { resetStore } from './lib/FakeStore';
 
 const failures: string[] = [];

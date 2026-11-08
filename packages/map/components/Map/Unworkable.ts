@@ -1,0 +1,25 @@
+import { City, Tile } from '@civ-clone-ui/client/types';
+import Map from '../Map';
+
+export class Unworkable extends Map {
+  #city: City | null = null;
+
+  setCity(city: City): void {
+    this.#city = city;
+  }
+
+  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+    const { width, height } = this.projection().footprint();
+
+    if (
+      tile.workedBy !== null &&
+      this.#city !== null &&
+      tile.workedBy.id !== this.#city.id
+    ) {
+      this.context().fillStyle = 'rgba(200, 64, 64, 0.5)';
+      this.context().fillRect(offsetX, offsetY, width, height);
+    }
+  }
+}
+
+export default Unworkable;

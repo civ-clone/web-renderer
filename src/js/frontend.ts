@@ -1,7 +1,7 @@
 // What civ.one is made of (#825): the interfaces it offers, and the grids its map draws.
-import './UI/interfaces';
-import './UI/map-square';
-import Renderer from './UI/bootstrap';
+import './interfaces.ts';
+import '@civ-clone-ui/map-square';
+import Renderer from '@civ-clone-ui/game/bootstrap';
 import WorkerTransport from './Engine/WorkerTransport';
 import { version } from '../../build.json';
 

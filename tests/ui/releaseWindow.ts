@@ -11,8 +11,8 @@ import './lib/interfaces';
 
 import ReleaseWindow, {
   fetchReleases,
-} from '../../src/js/UI/components/ReleaseWindow';
-import { Release } from '../../src/js/UI/lib/releaseDays';
+} from '@civ-clone-ui/windows/components/ReleaseWindow';
+import { Release } from '@civ-clone-ui/client/lib/releaseDays';
 import i18next from 'i18next';
 
 const failures: string[] = [];

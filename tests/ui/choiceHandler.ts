@@ -14,13 +14,13 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import ChoiceHandler from '../../src/js/UI/app/ChoiceHandler';
+import ChoiceHandler from '@civ-clone-ui/game/app/ChoiceHandler';
 import DebugFlags, {
   StressRunnerHandle,
-} from '../../src/js/UI/debug/DebugFlags';
-import Transport from '../../src/js/UI/Transport';
+} from '@civ-clone-ui/client/debug/DebugFlags';
+import Transport from '@civ-clone-ui/client/Transport';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

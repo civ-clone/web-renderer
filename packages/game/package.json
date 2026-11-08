@@ -1,0 +1,15 @@
+{
+  "name": "@civ-clone-ui/game",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The page itself: starting up, a game in play, the keys and the debug tools. It puts the rest together.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone-ui/assets": "workspace:*",
+    "@civ-clone-ui/client": "workspace:*",
+    "@civ-clone-ui/map": "workspace:*",
+    "@civ-clone-ui/map-square": "workspace:*",
+    "@civ-clone-ui/widgets": "workspace:*",
+    "@civ-clone-ui/windows": "workspace:*"
+  }
+}

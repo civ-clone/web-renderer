@@ -17,11 +17,14 @@
 import GameState, {
   FrameScheduler,
   GameStateTiles,
-} from '../../src/js/UI/game/GameState';
-import DataChanges from '../../src/js/UI/lib/DataChanges';
-import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
-import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
-import { DataPatch, Tile } from '../../src/js/UI/types';
+} from '@civ-clone-ui/client/game/GameState';
+import DataChanges from '@civ-clone-ui/client/lib/DataChanges';
+import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
+import {
+  ObjectMap,
+  PlainObject,
+} from '@civ-clone-ui/client/lib/reconstituteData';
+import { DataPatch, Tile } from '@civ-clone-ui/client/types';
 
 const failures: string[] = [];
 let checks = 0,

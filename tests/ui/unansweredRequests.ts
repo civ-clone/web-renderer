@@ -8,10 +8,10 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { RequestFailed } from '../../src/js/Engine/AbstractTransport';
-import TopCitiesReport from '../../src/js/UI/components/TopCitiesReport';
-import Transport from '../../src/js/UI/Transport';
+import TopCitiesReport from '@civ-clone-ui/windows/components/TopCitiesReport';
+import Transport from '@civ-clone-ui/client/Transport';
 import i18next from 'i18next';
-import unlessRequestFailed from '../../src/js/UI/lib/unlessRequestFailed';
+import unlessRequestFailed from '@civ-clone-ui/client/lib/unlessRequestFailed';
 
 const failures: string[] = [];
 let checks = 0,

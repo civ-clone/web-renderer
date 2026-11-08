@@ -1,0 +1,1 @@
+{"version":"0.1.0@8345061b","date":"2026-11-08T16:53:02.000Z","localChanges":["refactor: each map grid registers its own projection, and the minimap belongs to the square grid (#825) (#831)"],"externalChanges":{}}

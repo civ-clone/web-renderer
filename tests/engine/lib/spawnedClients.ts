@@ -15,6 +15,8 @@ engine.on('player:spawned', (player: Player): void => {
   }
 
   clientRegistryInstance.register(
-    isBarbarian(player) ? new BarbarianClient(player) : new SimpleAIClient(player)
+    isBarbarian(player)
+      ? new BarbarianClient(player)
+      : new SimpleAIClient(player)
   );
 });

@@ -17,7 +17,7 @@ import { TopCitiesRow } from './lib/topCities';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { DataPatch } from './DataQueue';
 import Notification from './Notification';
-import { ObjectMap } from '../UI/lib/reconstituteData';
+import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
 
 // Which request a message asks or answers (#470): the page's `request` gives each one its own, and the worker's reply,
 //  or its `requestFailed`, carries it back, so a reply is matched to its request and not only to its channel.

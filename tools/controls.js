@@ -49,7 +49,7 @@ files(path.join(webRenderer, 'src', 'css'), /\.scss$/).forEach((file) => {
   });
 });
 
-files(path.join(webRenderer, 'src', 'js', 'UI'), /\.ts$/).forEach((file) => {
+files(path.join(webRenderer, 'packages'), /\.ts$/).forEach((file) => {
   const name = path.relative(webRenderer, file),
     source = fs.readFileSync(file, 'utf8');
 

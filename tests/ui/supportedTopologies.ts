@@ -14,31 +14,31 @@ import './lib/classicInterface';
 import topologyFor, {
   TopologyId,
   topologyName,
-} from '../../src/js/UI/lib/topologyFor';
+} from '@civ-clone-ui/client/lib/topologyFor';
 import worldSizes, {
   customSizeProblem,
   earthWorldSizes,
   worldSizesFor,
-} from '../../src/js/UI/lib/worldSizes';
+} from '@civ-clone-ui/client/lib/worldSizes';
 import supportedTopologies, {
   isSupportedTopology,
-} from '../../src/js/UI/lib/supportedTopologies';
-import GameSetupWindow from '../../src/js/UI/components/GameSetupWindow';
+} from '@civ-clone-ui/map/lib/supportedTopologies';
+import GameSetupWindow from '@civ-clone-ui/windows/components/GameSetupWindow';
 import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
 import {
   askEarth,
   askMapGrid,
   askNewGame,
-} from '../../src/js/UI/components/newGame';
+} from '@civ-clone-ui/windows/components/newGame';
 import Request from '../../src/js/Engine/Request';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
-import Transport from '../../src/js/UI/Transport';
-import civ1Json from '../../src/js/UI/tilesets/civ1.json';
+import Transport from '@civ-clone-ui/client/Transport';
+import civ1Json from '@civ-clone-ui/assets/tilesets/civ1.json';
 import i18next from 'i18next';
-import { drawableGrids } from '../../src/js/UI/lib/projectionFor';
-import { installedTilesets } from '../../src/js/UI/lib/tilesets';
-import validateDescriptor from '../../src/js/UI/tilesets/TilesetDescriptor';
+import { drawableGrids } from '@civ-clone-ui/map/lib/projectionFor';
+import { installedTilesets } from '@civ-clone-ui/assets/lib/tilesets';
+import validateDescriptor from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,

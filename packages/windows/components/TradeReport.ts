@@ -1,0 +1,188 @@
+import {
+  City as CityData,
+  CityImprovementMaintenanceGold,
+  Player,
+  Yield,
+} from '@civ-clone-ui/client/types';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import Transport from '@civ-clone-ui/client/Transport';
+import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
+import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import { cityName } from '@civ-clone-ui/client/components/lib/city';
+import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
+import { h } from '@civ-clone-ui/widgets/lib/html';
+import isAnarchy from './lib/government';
+import { groupIcons } from '@civ-clone-ui/client/lib/yieldMap';
+import { s } from '@dom111/element';
+import { t } from 'i18next';
+import watchPlayer, { cityRowIds } from './lib/watchPlayer';
+import { yieldData } from './lib/cityYields';
+
+export class TradeReport extends FilterableWindow {
+  #cities: CityData[];
+  #player: Player;
+  #portal: Portal;
+  #unwatch: () => void;
+
+  constructor(player: Player, portal: Portal, transport: Transport) {
+    super(t('TradeReport.title'), s('<div class="loading"></div>'), {
+      classes: 'trade-report',
+      rowSelector: 'tr',
+    });
+
+    this.#cities = player.cities;
+    this.#player = player;
+    this.#unwatch = watchPlayer(player, cityRowIds, (player) => {
+      this.#cities = player.cities;
+      this.#player = player;
+
+      this.update();
+    });
+    this.#portal = portal;
+
+    this.update();
+  }
+
+  close() {
+    this.#unwatch();
+
+    return super.close();
+  }
+
+  async update() {
+    const goldIcon = await assetStore
+        .shownAtURL(
+          spriteKey(currentTileset(), groupIcons.Gold),
+          currentTileset().ui.icon
+        )
+        .then((url) => `<img src="${url}">`),
+      cityList = s(`<table class="city-list"></table>`),
+      improvementList = s(`<table class="improvement-list"></table>`),
+      improvements: {
+        [key: string]: {
+          count: number;
+          cost: number;
+          name: string;
+        };
+      } = {},
+      [totalIncome, totalSpend, totalGold] = this.#cities.reduce(
+        ([totalIncome, totalSpend, totalGold], city: CityData) => {
+          city.yields.forEach(
+            (cityYield: Yield | CityImprovementMaintenanceGold) => {
+              if (cityYield._ === 'CityImprovementMaintenanceGold') {
+                const improvement = (
+                  cityYield as CityImprovementMaintenanceGold
+                ).cityImprovement;
+
+                if (!(improvement._ in improvements)) {
+                  improvements[improvement._] = {
+                    count: 0,
+                    cost: cityYield.value,
+                    // Its name, not its class name (#472).
+                    name: getLabelForBuildableEntity(improvement),
+                  };
+                }
+
+                improvements[improvement._].count++;
+              }
+            }
+          );
+
+          const [cityGold, used, free] = yieldData(city, 'Gold'),
+            row = document.createElement('tr');
+
+          h(row, {
+            click: () => this.#portal.openCity(city),
+          });
+
+          row.append(
+            ...[
+              cityName(city),
+              `${goldIcon} ${t('CityStatus.totals', {
+                total: cityGold,
+                free,
+                context: free === cityGold ? 'equal' : 'unequal',
+              })}`,
+            ].map((content) => {
+              const element = document.createElement('td');
+
+              element.innerHTML = content;
+
+              return element;
+            })
+          );
+
+          cityList.append(row);
+
+          return [totalIncome + cityGold, totalSpend + used, totalGold + free];
+        },
+        [0, 0, 0]
+      );
+
+    improvementList.append(
+      ...Object.values(improvements).map(({ count, cost, name }) => {
+        const row = document.createElement('tr');
+
+        row.append(
+          ...[
+            t('TradeReport.ImprovementList.item', {
+              count,
+              name,
+            }) as string,
+            t('TradeReport.ImprovementList.cost', {
+              icon: goldIcon,
+              total: Math.abs(count * -cost),
+            }) as string,
+          ].map((content) => {
+            const element = document.createElement('td');
+
+            element.innerHTML = content;
+
+            return element;
+          })
+        );
+
+        return row;
+      })
+    );
+
+    super.update(
+      s(
+        '<div></div>',
+        ...(isAnarchy(this.#player)
+          ? [s(`<p class="anarchy">${t('TradeReport.anarchy')}</p>`)]
+          : []),
+        s(
+          `<div class="two-column-wrapper"></div>`,
+          s('<div></div>', cityList),
+          s(
+            '<div></div>',
+            improvementList,
+            s(`    <dl class="totals">
+      <dt>${t('TradeReport.ImprovementList.income-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: totalIncome,
+      })}</dd>
+      <dt>${t('TradeReport.ImprovementList.cost-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: Math.abs(totalSpend),
+      })}</dd>
+      <dt>${t('TradeReport.ImprovementList.surplus-title')}</dt>
+      <dd>${t('TradeReport.ImprovementList.income-value', {
+        icon: goldIcon,
+        count: totalGold,
+      })}</dd>
+    </dl>
+`)
+          )
+        )
+      )
+    );
+  }
+}
+
+export default TradeReport;

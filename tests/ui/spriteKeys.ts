@@ -18,20 +18,20 @@ import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
 import getPreloadedImage, {
   setSprites,
-} from '../../src/js/UI/lib/getPreloadedImage';
+} from '@civ-clone-ui/assets/lib/getPreloadedImage';
 import validateDescriptor, {
   expandName,
   spriteKey,
-} from '../../src/js/UI/tilesets/TilesetDescriptor';
+} from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
-import civ1Json from '../../src/js/UI/tilesets/civ1.json';
-import currentTileset from '../../src/js/UI/lib/tilesets';
+import civ1Json from '@civ-clone-ui/assets/tilesets/civ1.json';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import {
   citizenSprites,
   specialistSprites,
-} from '../../src/js/UI/lib/citizens';
-import { groupIcons } from '../../src/js/UI/lib/yieldMap';
+} from '@civ-clone-ui/client/lib/citizens';
+import { groupIcons } from '@civ-clone-ui/client/lib/yieldMap';
 
 const failures: string[] = [];
 let checks = 0,
@@ -358,11 +358,18 @@ const sources = (directory: string): string[] =>
         : []
     );
 
+// The page's own code: `src/js` and the frontend's packages (#825). A package's `node_modules` holds only links, which
+//  aren't followed.
+const frontendSources = (): string[] => [
+  ...sources(path.resolve('src/js')),
+  ...sources(path.resolve('packages')),
+];
+
 // Outside the map, the yield icons, the citizens, the cursor and the action panels are asked for by the tileset's
 //  names too (#728), so another pack's are shown, not Civ1's. Every name they use is one the tileset has: those the
 //  lists give, and those written out as `spriteKey(currentTileset(), 'city/bulb')`.
 const tilesetSprites = [...civ1.assets.required, ...civ1.assets.optional],
-  writtenOut = sources(path.resolve('src/js')).flatMap((file) =>
+  writtenOut = frontendSources().flatMap((file) =>
     [
       ...fs
         .readFileSync(file, 'utf8')
@@ -391,7 +398,7 @@ expect(
 
 // And nothing builds Civ1's key by hand (`'./assets/city/food.png'`), which finds Civ1's sprite under any tileset.
 //  Civ1's import is the exception: it stores what it extracts under the extractor's own paths.
-const handBuilt = sources(path.resolve('src/js'))
+const handBuilt = frontendSources()
   .filter((file) => !file.endsWith('ImportAssetsWindow.ts'))
   .flatMap((file) =>
     fs
@@ -410,7 +417,7 @@ expect('no sprite key is built by hand', handBuilt, []);
 // A record keeps its sprite as a PNG `blob` since #730, and only an import from before that has a data URI: the
 //  interface asks the store for a URL (`spriteURL`, `shownAtURL`) rather than reading a record's `uri`. Only the store,
 //  which turns an old one into a blob, and the import, which turns the extractor's, read it.
-const readsUri = sources(path.resolve('src/js'))
+const readsUri = frontendSources()
   .filter(
     (file) =>
       !file.endsWith('AssetStore.ts') && !file.endsWith('ImportAssetsWindow.ts')

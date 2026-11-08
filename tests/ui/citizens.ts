@@ -12,9 +12,9 @@ import './lib/interfaces';
 import {
   renderCitizenCounts,
   renderPopulation,
-} from '../../src/js/UI/components/lib/cityYields';
+} from '@civ-clone-ui/windows/components/lib/cityYields';
 import i18next from 'i18next';
-import { assetStore } from '../../src/js/UI/AssetStore';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 
 const failures: string[] = [];
 let checks = 0;

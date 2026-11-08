@@ -1,4 +1,4 @@
-import { BuildItem } from '../../UI/types';
+import { BuildItem } from '@civ-clone-ui/client/types';
 import Request from '../Request';
 
 // What a city can build, for the production picker (#324). It is not sent with every `CityBuild` any more: working it

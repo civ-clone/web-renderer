@@ -11,7 +11,7 @@ const path = require('path');
 const { webRenderer } = require('./lib/paths');
 
 const roots = [
-    path.join(webRenderer, 'src', 'js', 'UI'),
+    path.join(webRenderer, 'packages'),
     path.join(webRenderer, 'src', 'css'),
   ],
   failures = [];
@@ -58,7 +58,7 @@ roots.flatMap(files).forEach((file) => {
 
 // Every `glyph('…')` names a glyph in the sheet.
 const sheet = fs.readFileSync(
-    path.join(webRenderer, 'src', 'js', 'UI', 'lib', 'glyphs.ts'),
+    path.join(webRenderer, 'packages', 'assets', 'lib', 'glyphs.ts'),
     'utf8'
   ),
   defined = new Set(

@@ -1,0 +1,48 @@
+import { Tile } from '@civ-clone-ui/client/types';
+
+type TileHolder = {
+  tile: Tile;
+  // Where the unit is drawn while the engine answers its move (#326).
+  pendingTile?: Tile | null;
+};
+
+// `Units` skips whichever tile holds the active unit, so a change of active
+//  unit leaves two tiles stale on that layer: the one being vacated, which has
+//  to draw its unit again, and the one taking over, which has to stop drawing
+//  it. Keyed by coordinate to dedupe, since several changes can land in a
+//  single frame.
+export class ActiveUnitTiles {
+  #stale = new Map<string, Tile>();
+  // Where the active unit stood when it was made active. Not its `tile` now:
+  //  an update refills the unit in place (#327), so by the next change that can
+  //  be the tile it moved to. A tile's object keeps its coordinates however
+  //  often it is refilled.
+  //
+  // And, while its move is answered, the tile it is drawn on: both are drawn
+  //  differently until then, the one it left without it.
+  #tiles: Tile[] = [];
+
+  change(unit: TileHolder | null): void {
+    const tiles = unit === null ? [] : [unit.tile];
+
+    if (unit?.pendingTile) {
+      tiles.push(unit.pendingTile);
+    }
+
+    [...this.#tiles, ...tiles].forEach((tile) =>
+      this.#stale.set(`${tile.x},${tile.y}`, tile)
+    );
+
+    this.#tiles = tiles;
+  }
+
+  take(): Tile[] {
+    const tiles = [...this.#stale.values()];
+
+    this.#stale.clear();
+
+    return tiles;
+  }
+}
+
+export default ActiveUnitTiles;

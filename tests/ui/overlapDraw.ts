@@ -47,26 +47,26 @@ import {
   stringHash,
   useSoftwareCanvases,
 } from './lib/softwareCanvas';
-import ActiveUnit from '../../src/js/UI/components/Map/ActiveUnit';
-import Cities from '../../src/js/UI/components/Map/Cities';
-import CityNames from '../../src/js/UI/components/Map/CityNames';
-import Fog from '../../src/js/UI/components/Map/Fog';
-import Landscape from '../../src/js/UI/components/Map/Landscape';
-import Map, { TilePlacement } from '../../src/js/UI/components/Map';
+import ActiveUnit from '@civ-clone-ui/map/components/Map/ActiveUnit';
+import Cities from '@civ-clone-ui/map/components/Map/Cities';
+import CityNames from '@civ-clone-ui/map/components/Map/CityNames';
+import Fog from '@civ-clone-ui/map/components/Map/Fog';
+import Landscape from '@civ-clone-ui/map/components/Map/Landscape';
+import Map, { TilePlacement } from '@civ-clone-ui/map/components/Map';
 import {
   Placement,
   Projection,
   Reach,
   TileSpan,
   WorldDimensions,
-} from '../../src/js/UI/lib/projection';
-import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
-import { Rect, mergeRects, rectArea } from '../../src/js/UI/lib/viewport';
-import { Tile } from '../../src/js/UI/types';
-import Units from '../../src/js/UI/components/Map/Units';
-import Unworkable from '../../src/js/UI/components/Map/Unworkable';
-import World from '../../src/js/UI/components/World';
-import Yields from '../../src/js/UI/components/Map/Yields';
+} from '@civ-clone-ui/map/lib/projection';
+import SquareProjection from '@civ-clone-ui/map-square/SquareProjection';
+import { Rect, mergeRects, rectArea } from '@civ-clone-ui/map/lib/viewport';
+import { Tile } from '@civ-clone-ui/client/types';
+import Units from '@civ-clone-ui/map/components/Map/Units';
+import Unworkable from '@civ-clone-ui/map/components/Map/Unworkable';
+import World from '@civ-clone-ui/map/components/World';
+import Yields from '@civ-clone-ui/map/components/Map/Yields';
 import i18next from 'i18next';
 
 useSoftwareCanvases();

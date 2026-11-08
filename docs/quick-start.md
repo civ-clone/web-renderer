@@ -23,14 +23,14 @@ civ-clone is one game spread over many small packages, so that any rule can be
 replaced and other rulesets can be layered on later. Every package is a
 repository under [github.com/civ-clone](https://github.com/civ-clone):
 
-| Prefix | Roughly how many | What they hold |
-| ------ | ---------------- | -------------- |
-| `core-*` | 47 | The engine's abstract parts: `Player`, `City`, `Unit`, `Tile`, the registries that hold them, `Rule`s, the turn loop, saving and loading. No game content. |
-| `base-*` | 304 | One concrete thing each: a unit type, a city improvement, a terrain, a wonder, a government, an AI strategy, a unit action. Most are a few files. |
-| `library-*` | 9 | Helpers several packages share, for units, cities, diplomacy, strategy, government, wonders, the world, science and civilizations. |
-| `civ1-*` | 26 | Civilization (1991) itself: its civilizations and leaders, its rules for science, government, happiness, trade, combat, barbarians, the game's ending. |
-| `simple-*` | 4 | The default implementations: `simple-ai-client` and `simple-ai-strategy-client` (the computer players), `simple-world-generator`, `simple-world-path`. |
-| `web-renderer` | 1 | The game you play: the page, the map, the windows, and a Web Worker that runs the engine with the packages above. This repository. |
+| Prefix         | Roughly how many | What they hold                                                                                                                                             |
+| -------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `core-*`       | 47               | The engine's abstract parts: `Player`, `City`, `Unit`, `Tile`, the registries that hold them, `Rule`s, the turn loop, saving and loading. No game content. |
+| `base-*`       | 304              | One concrete thing each: a unit type, a city improvement, a terrain, a wonder, a government, an AI strategy, a unit action. Most are a few files.          |
+| `library-*`    | 9                | Helpers several packages share, for units, cities, diplomacy, strategy, government, wonders, the world, science and civilizations.                         |
+| `civ1-*`       | 26               | Civilization (1991) itself: its civilizations and leaders, its rules for science, government, happiness, trade, combat, barbarians, the game's ending.     |
+| `simple-*`     | 4                | The default implementations: `simple-ai-client` and `simple-ai-strategy-client` (the computer players), `simple-world-generator`, `simple-world-path`.     |
+| `web-renderer` | 1                | The game you play: the page, the map, the windows, and a Web Worker that runs the engine with the packages above. This repository.                         |
 
 `web-renderer` depends on all of them as ordinary npm packages. The `core-*`,
 `base-*` and `library-*` packages come from the npm registry; the `civ1-*` and
@@ -87,7 +87,7 @@ rebuild seems not to have taken, hard-reload: the page caches its bundles.
 
 ## Change the renderer
 
-Everything on the page is in `src/js/UI`; everything in the worker (the engine's
+Everything on the page is in the workspace packages under `packages/`; everything in the worker (the engine's
 host, the AI pacing, what is sent to the page) is in `src/js/Engine`; styles are
 in `src/css`. [`architecture-overview.md`](./architecture-overview.md) and
 [`runtime-data-flow.md`](./runtime-data-flow.md) explain how the two halves

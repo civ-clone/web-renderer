@@ -11,29 +11,32 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { DataPatch } from '../../src/js/UI/types';
+import { DataPatch } from '@civ-clone-ui/client/types';
 import i18next from 'i18next';
-import ActiveUnitController from '../../src/js/UI/game/ActiveUnitController';
-import GameSession from '../../src/js/UI/game/GameSession';
+import ActiveUnitController from '@civ-clone-ui/game/ActiveUnitController';
+import GameSession from '@civ-clone-ui/game/GameSession';
 import {
   observerCityOpener,
   playerCityOpener,
-} from '../../src/js/UI/lib/cityOpeners';
+} from '@civ-clone-ui/windows/lib/cityOpeners';
 import { ObserverState } from '../../src/js/Engine/Observer';
-import Portal from '../../src/js/UI/components/Portal';
-import { City as CityData, Tile } from '../../src/js/UI/types';
-import { MapView } from '../../src/js/UI/game/MapView';
-import DebugFlags from '../../src/js/UI/debug/DebugFlags';
-import HaltedUnits from '../../src/js/UI/lib/haltedUnits';
-import Notices from '../../src/js/UI/components/Notices';
-import Notifications from '../../src/js/UI/components/Notifications';
-import NotificationBar from '../../src/js/UI/app/NotificationBar';
-import Transport from '../../src/js/UI/Transport';
-import appElements from '../../src/js/UI/app/elements';
-import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
-import { assetStore } from '../../src/js/UI/AssetStore';
-import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
-import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import { City as CityData, Tile } from '@civ-clone-ui/client/types';
+import { MapView } from '@civ-clone-ui/game/MapView';
+import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
+import Notices from '@civ-clone-ui/windows/components/Notices';
+import Notifications from '@civ-clone-ui/windows/components/Notifications';
+import NotificationBar from '@civ-clone-ui/game/app/NotificationBar';
+import Transport from '@civ-clone-ui/client/Transport';
+import appElements from '@civ-clone-ui/game/app/elements';
+import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import {
+  ObjectMap,
+  PlainObject,
+} from '@civ-clone-ui/client/lib/reconstituteData';
+import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
 
 const failures: string[] = [];
 let checks = 0,

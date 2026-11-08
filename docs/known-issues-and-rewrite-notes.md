@@ -11,15 +11,15 @@ marked as such, with the commit or issue that fixed them.
   - `src/js/UI/Renderer.ts` is a very large mixed-responsibility class (state, rendering, input, transport, window logic).
   - Increases regression risk and makes isolated feature rewrites difficult.
   - Still stands: about 1,900 lines on 2026-10-08. No issue tracks breaking it up.
-  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`), and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`. Split: `Renderer.ts` is now `src/js/UI/bootstrap.ts`, 153 lines of page start-up, with one game in `src/js/UI/game/` and the rest in `app/`, `debug/` and `lib/`.
+  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`), and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`. Split: `Renderer.ts` is now `packages/game/bootstrap.ts`, 153 lines of page start-up, with one game in `src/js/UI/game/` and the rest in `app/`, `debug/` and `lib/`.
 - **Late-game performance bottlenecks** (mostly addressed; tracked in #320)
   - README notes slowdown when rebuilding transferred data. The README note is still there, but most of the cause has been fixed:
     - The turn-start freeze in large games: notifications and patches no longer resend the whole known world (97140f2, #130), and the frontend rebuilds at most once a frame while the other civilizations move (b00c490, #61).
     - A unit move sends one patch rather than two (1e8fd07, #321).
-    - The frontend rebuilds only the objects a patch changed, with `src/js/UI/lib/IncrementalReconstituter.ts`, instead of the whole graph (e70f65a, #322; f5633a0, #327).
+    - The frontend rebuilds only the objects a patch changed, with `packages/client/lib/IncrementalReconstituter.ts`, instead of the whole graph (e70f65a, #322; f5633a0, #327).
     - Patches no longer carry every unit's actions (4ae9bbd, #323) or every city's build list (4732149, #324), and the page is sent only the player's own map (9ae604f, #328).
   - Still open: #326 (show a move straight away, keep keypresses typed during the lag), #333 (the initial game data is rebuilt twice on load) and #151 (turn handover refinements).
-  - `Renderer` had TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `GameState`'s rebuild (`src/js/UI/game/GameState.ts`): reconstituting in a worker thread. The object map is pruned by `src/js/UI/lib/pruneObjectMap.ts`, which keeps it bounded, so the backend sends no `remove` patches (#68).
+  - `Renderer` had TODOs calling out expensive reconstitution and orphan cleanup concerns. One performance TODO is left, in `GameState`'s rebuild (`packages/client/game/GameState.ts`): reconstituting in a worker thread. The object map is pruned by `packages/client/lib/pruneObjectMap.ts`, which keeps it bounded, so the backend sends no `remove` patches (#68).
   - `DataQueue` includes TODO to chunk data transfer but currently sends full queue each flush. Still true.
 - **Protocol drift risk in transport channels**
   - `restart` is declared in `TransportDataMap`, but has no receiver on the opposite side (sent by the backend, no frontend handler). `quit` was removed with the main menu's Quit button, an Electron leftover (#340).
@@ -29,15 +29,15 @@ marked as such, with the commit or issue that fixed them.
 ## Medium priority
 
 - **Hardcoded UI behavior and theme parameters**
-  - Map scale and tile size used to be hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). The tile size, the scales offered and the label fonts now come from the tileset descriptor (`src/js/UI/tilesets/civ1.json`, read through `src/js/UI/lib/tilesets.ts`, #56); choosing between several tilesets waits for a second one (#152).
-  - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `src/js/UI/app/options.ts` sets them on every page load.
+  - Map scale and tile size used to be hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). The tile size, the scales offered and the label fonts now come from the tileset descriptor (`packages/assets/tilesets/civ1.json`, read through `packages/assets/lib/tilesets.ts`, #56); choosing between several tilesets waits for a second one (#152).
+  - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `packages/game/app/options.ts` sets them on every page load.
 - **Plugin/translation generation portability**
   - Generated import files use absolute filesystem paths, potentially brittle across environments.
   - Still true of `src/js/plugins.ts` and `src/js/translations.ts` (both git-ignored). It breaks the arena in a git worktree with a symlinked `node_modules` (#240).
 - **Asset readiness is strict and static**
   - Required asset list is a large hardcoded path list in `AssetStore`.
   - Any naming/version mismatch blocks gameplay entry.
-  - The list is no longer hard-coded: `AssetStore` reads it from the tileset descriptor's `assets.required` (`src/js/UI/tilesets/civ1.json`, #56). Still true that any missing required sprite blocks gameplay entry.
+  - The list is no longer hard-coded: `AssetStore` reads it from the tileset descriptor's `assets.required` (`packages/assets/tilesets/civ1.json`, #56). Still true that any missing required sprite blocks gameplay entry.
 
 ## Lower priority / UX defects (already noted upstream)
 
@@ -50,15 +50,15 @@ From `README.md` known issues/TODO:
 
 ## Source-level TODO hotspots
 
-- `src/js/UI/bootstrap.ts` (was `Renderer.ts`)
+- `packages/game/bootstrap.ts` (was `Renderer.ts`)
   - Explicit note to break down and potentially use framework approach.
-- `src/js/UI/game/GameState.ts`
+- `packages/client/game/GameState.ts`
   - Performance TODOs around reconstitution and background processing. One is left: reconstituting in a worker thread.
 - `src/js/Engine/DataTransferClient.ts`
   - Multiple TODOs around action handling structure, hidden actions, negotiation reuse, and cleanup behavior.
 - `src/js/Engine/DataQueue.ts`
   - TODO for chunking patch transfer.
-- `src/js/UI/components/Minimap.ts`
+- `packages/map-square/Minimap.ts`
   - TODO around rectangle rendering near map edges. Fixed and removed in 91fe1f6.
 
 ## Rewrite-oriented acceptance targets
