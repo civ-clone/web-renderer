@@ -92,7 +92,7 @@ an import an area may not make fails the test unless it is one of the `exception
 | `assets`     | Sprites, tilesets and sounds, and drawing a sprite                               | client                       |
 | `widgets`    | The window and its controls, with nothing about the game in them                 | client, assets               |
 | `map`        | Drawing the world on any grid, through a `Projection`                            | client, assets, widgets      |
-| `map-square` | What only holds for the square grid (`src/js/UI/map-square/`)                    | client, assets, map          |
+| `map-square` | The square grid: its projection and minimap (`src/js/UI/map-square/`)            | client, assets, map          |
 | `windows`    | The game's windows, shared by every interface that wants them                    | client, assets, widgets, map |
 | `game`       | The page itself: starting up, a game in play, the keys, the debug tools          | all of the above             |
 | interfaces   | One per interface (`interfaces/<id>/`), see above                                | all but `game`               |
@@ -100,9 +100,10 @@ an import an area may not make fails the test unless it is one of the `exception
 **The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
 `Projection`, and anything true of the square grid alone lives in `map-square`. Hexagonal and isometric grids get
-areas of their own beside it (`map-hex`, `map-isometric`, #94, #97). Only `lib/projectionFor.ts`, which picks a grid's
-projection, and the minimap's `Overview`, which draws every world as squares in storage order, use `map-square` from
-`map`.
+areas of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
+projection with `registerGrid` (`lib/projectionFor.ts`), and the page loads the grids it draws, as `frontend.ts` loads
+`map-square`. The minimap, which draws every world as squares in storage order, is the square grid's too. Suites that
+draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
 
 ## Major UI modules
 

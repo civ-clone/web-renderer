@@ -6,6 +6,7 @@
 // builds a world's topology from the grid it says it is on, square when it does not say.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
+import './lib/grids';
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';

@@ -11,6 +11,7 @@
 // The size limit lives in the `sessionStorage` stand-in below, so "too big"
 // here means what it means in a browser.
 
+import './lib/grids';
 import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,

@@ -9,6 +9,7 @@
 //  they load.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/grids';
 
 import GamePortal from '../../src/js/UI/components/GamePortal';
 import World from '../../src/js/UI/components/World';

@@ -10,7 +10,7 @@
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
 
-import Overview from '../../src/js/UI/components/Map/Overview';
+import Overview from '../../src/js/UI/map-square/Overview';
 import { Tile, World as WorldData } from '../../src/js/UI/types';
 import World from '../../src/js/UI/components/World';
 import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';

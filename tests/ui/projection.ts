@@ -3,6 +3,7 @@
 //  caller wraps it. And what the layers ask of it to draw tiles that overlap (#91), which square tiles don't: no reach,
 //  a draw order that is a total order, and the tiles reaching a rectangle are the ones the square sums always gave.
 
+import './lib/grids';
 import { Placement, tileBounds } from '../../src/js/UI/lib/projection';
 import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
 import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';

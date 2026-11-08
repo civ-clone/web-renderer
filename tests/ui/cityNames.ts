@@ -4,6 +4,7 @@
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas, preloadImage } from './lib/fakeCanvas';
+import './lib/grids';
 
 import CityNames from '../../src/js/UI/components/Map/CityNames';
 import { Tile } from '../../src/js/UI/types';

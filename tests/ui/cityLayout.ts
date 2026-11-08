@@ -10,6 +10,7 @@
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/grids';
 
 import City, { classicCityLayout } from '../../src/js/UI/components/City';
 import { City as CityData } from '../../src/js/UI/types';

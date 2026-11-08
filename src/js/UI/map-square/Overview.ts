@@ -1,7 +1,7 @@
-import { EntityInstance, Tile } from '../../types';
-import { Projection } from '../../lib/projection';
-import SquareProjection from '../../map-square/SquareProjection';
-import { Map } from '../Map';
+import { EntityInstance, Tile } from '../types';
+import { Projection } from '../lib/projection';
+import SquareProjection from './SquareProjection';
+import { Map } from '../components/Map';
 
 // The width the minimap is given in the sidebar. The layer picks the largest
 // whole number of pixels per tile that fits, so tiles always land on whole
