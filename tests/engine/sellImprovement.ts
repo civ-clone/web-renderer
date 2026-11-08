@@ -5,7 +5,7 @@
 //  gained at once unlock (#302).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
-// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple (with a Warrior in the city, sent again) and tries to sell the Library. Then it
+// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple (with a Warrior in the city, sent again) and tries to sell the Library. It then builds a Temple with more shields than it costs, which can't be bought (#817). Then it
 // launches a spaceship with the parts to make it, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -24,6 +24,7 @@ import {
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { Gold } from '@civ-clone/civ1-treasury/Yields';
+import { Production } from '@civ-clone/civ1-world/Yields';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
@@ -284,6 +285,44 @@ const run = async (): Promise<void> => {
     fail('the city sold a second improvement in the same turn');
   }
 
+  // Nothing to buy once the shields stored pay for the item (#817): the Temple goes out with no price, at 77 of its 40
+  //  shields, and buying it anyway changes neither the gold nor the shields. A negative price used to add gold.
+  const cityBuild = cityBuildRegistryInstance.getByCity(city);
+
+  cityBuild.build(Temple);
+  cityBuild.add(new Production(77));
+  flush();
+  objectsSent = [];
+  collectObjects(JSON.parse(JSON.stringify(humanClient!.serialiseCity(city))));
+
+  const buildSent = objectsSent.find(
+    (object) => object.id === cityBuild.id() && 'spendCost' in object
+  );
+
+  if (!buildSent || JSON.stringify(buildSent.spendCost) !== '[]') {
+    fail(
+      `expected a Temple already paid for to go out with no price, got ${JSON.stringify(
+        buildSent?.spendCost ?? null
+      )}`
+    );
+  }
+
+  await Promise.resolve(
+    actionHandler!({
+      name: 'CompleteProduction',
+      id: cityBuild.id(),
+      treasury: treasury.id(),
+    })
+  ).then(settle);
+
+  if (treasury.value() !== 40 || cityBuild.progress().value() !== 77) {
+    fail(
+      `buying a Temple already paid for left the treasury at ${treasury.value()} and the shields at ${cityBuild
+        .progress()
+        .value()}, not 40 and 77`
+    );
+  }
+
   // One price for a spaceship part (#713), from every rule the game has: civ1-treasury's 4 gold a shield left, doubled
   //  with none stored. civ1-spaceship priced parts too, and the city screen had two Buy buttons.
   const partPrices = ruleRegistryInstance.process(Spend, {
@@ -367,7 +406,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a spaceship part has one price; a spaceship of 62 parts launches and the player goes out again)'
+    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a Temple already paid for in shields has no price and can’t be bought; a spaceship part has one price; a spaceship of 62 parts launches and the player goes out again)'
   );
 
   process.exit(0);

@@ -288,7 +288,7 @@
     "@civ-clone/core-science": "^0.1.8",
     "@civ-clone/core-score": "^0.1.0",
     "@civ-clone/core-spaceship": "^0.1.10",
-    "@civ-clone/core-treasury": "^0.1.9",
+    "@civ-clone/core-treasury": "^0.1.10",
     "@civ-clone/core-turn-based-game": "^0.1.10",
     "@civ-clone/core-unit": "^0.1.29",
     "@civ-clone/core-world": "^0.1.22",
