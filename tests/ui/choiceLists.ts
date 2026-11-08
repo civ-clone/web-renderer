@@ -9,6 +9,7 @@
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/grids';
 
 import ChoiceHandler from '../../src/js/UI/app/ChoiceHandler';
 import ChooseGovernment from '../../src/js/UI/components/Actions/ChooseGovernment';

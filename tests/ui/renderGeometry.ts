@@ -9,6 +9,7 @@
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, askedFor, preloadImage, preloaded } from './lib/fakeCanvas';
+import './lib/grids';
 
 import * as fs from 'fs';
 import * as os from 'os';
@@ -21,7 +22,7 @@ import CityNames from '../../src/js/UI/components/Map/CityNames';
 import Fog from '../../src/js/UI/components/Map/Fog';
 import Landscape from '../../src/js/UI/components/Map/Landscape';
 import Map from '../../src/js/UI/components/Map';
-import Overview from '../../src/js/UI/components/Map/Overview';
+import Overview from '../../src/js/UI/map-square/Overview';
 import Portal from '../../src/js/UI/components/Portal';
 import { Rect } from '../../src/js/UI/lib/viewport';
 import { City, PlayerTile, Tile } from '../../src/js/UI/types';

@@ -9,6 +9,7 @@
 import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
+import './lib/grids';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
 import CityBanners from '../../src/js/UI/components/Map/CityBanners';

@@ -7,6 +7,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
+import './lib/grids';
 
 import { City } from '../../src/js/UI/types';
 import { assetStore } from '../../src/js/UI/AssetStore';

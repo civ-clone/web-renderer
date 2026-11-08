@@ -110,12 +110,11 @@
       ]
     },
     "map": {
-      "about": "Drawing the world on any grid: the portal, its layers and the minimap, all through a `Projection`. What only holds for one grid goes in that grid's area.",
+      "about": "Drawing the world on any grid: the portal and its layers, all through a `Projection`. What only holds for one grid goes in that grid's area, which registers its projection.",
       "uses": ["client", "assets", "widgets"],
       "paths": [
         "components/Map.ts",
         "components/Map/",
-        "components/Minimap.ts",
         "components/Portal.ts",
         "components/World.ts",
         "lib/ActiveUnitTiles.ts",
@@ -127,7 +126,7 @@
       ]
     },
     "map-square": {
-      "about": "What only holds for the square grid. Hexagonal and isometric grids get areas of their own beside it (#94, #97).",
+      "about": "The square grid: its projection, its minimap, and the registration that lets the map draw square tilesets. Hexagonal and isometric grids get areas of their own beside it (#94, #97).",
       "uses": ["client", "assets", "map"],
       "paths": ["map-square/"]
     },
@@ -155,9 +154,6 @@
       ]
     }
   },
-  "exceptions": {
-    "lib/projectionFor.ts -> map-square/SquareProjection.ts": "Where the map picks the grid's projection: each grid's is named here.",
-    "components/Map/Overview.ts -> map-square/SquareProjection.ts": "The minimap draws every world as squares in storage order, whatever its grid."
-  },
+  "exceptions": {},
   "untangle": []
 }

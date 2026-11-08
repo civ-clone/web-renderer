@@ -9,6 +9,7 @@
 // Must stay first: `AssetStore` opens its database as it loads, and `Window` reads `document.body`.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/grids';
 
 import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';

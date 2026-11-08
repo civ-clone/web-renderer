@@ -21,6 +21,7 @@
 // Must stay first: it gives the map layers a canvas and a `document` to draw
 // with.
 import { FakeImage, fakeCanvas } from './lib/fakeCanvas';
+import './lib/grids';
 
 import {
   UnitActionsRequest,

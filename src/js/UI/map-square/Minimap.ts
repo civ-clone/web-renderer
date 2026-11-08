@@ -1,6 +1,6 @@
-import Overview from './Map/Overview';
-import Portal from './Portal';
-import World from './World';
+import Overview from './Overview';
+import Portal from '../components/Portal';
+import World from '../components/World';
 import { Coordinate } from '../types';
 import { on } from '@dom111/element';
 

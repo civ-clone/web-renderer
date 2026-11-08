@@ -10,6 +10,7 @@
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
+import './lib/grids';
 
 import Cities from '../../src/js/UI/components/Map/Cities';
 import CityNames from '../../src/js/UI/components/Map/CityNames';

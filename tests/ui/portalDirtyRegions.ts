@@ -6,6 +6,7 @@
 
 // Must stay first: it gives the layers a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
+import './lib/grids';
 
 import Map from '../../src/js/UI/components/Map';
 import Portal from '../../src/js/UI/components/Portal';

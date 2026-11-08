@@ -10,8 +10,8 @@ import Fog from '../components/Map/Fog';
 import GamePortal from '../components/GamePortal';
 import IntervalHandler from '../lib/IntervalHandler';
 import Landscape from '../components/Map/Landscape';
-import Minimap from '../components/Minimap';
-import Overview from '../components/Map/Overview';
+import Minimap from '../map-square/Minimap';
+import Overview from '../map-square/Overview';
 import Transport from '../Transport';
 import UnitMarker, {
   UnitMarkerMode,

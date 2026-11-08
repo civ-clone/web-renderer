@@ -4,7 +4,7 @@ import Cities from '../components/Map/Cities';
 import CityNames from '../components/Map/CityNames';
 import DebugFlags from './DebugFlags';
 import GamePortal from '../components/GamePortal';
-import Minimap from '../components/Minimap';
+import Minimap from '../map-square/Minimap';
 import NotificationBar from '../app/NotificationBar';
 import Transport from '../Transport';
 import UIStressRunner from '../lib/UIStressRunner';
