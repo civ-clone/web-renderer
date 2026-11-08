@@ -10,7 +10,7 @@ import {
   CityScreenContext,
   renderBuildProgress,
   renderTradeRoutes,
-} from './City';
+} from '@civ-clone/ui-windows/components/City';
 import {
   editQueue,
   getAutoLabel,
@@ -23,24 +23,27 @@ import {
   renderPopulation,
   turnsText,
   yieldIcon,
-} from './lib/cityYields';
-import { renderMap, renderYields } from './lib/cityParts';
+} from '@civ-clone/ui-windows/components/lib/cityYields';
+import {
+  renderMap,
+  renderYields,
+} from '@civ-clone/ui-windows/components/lib/cityParts';
 import { growthLimitText } from '@civ-clone/ui-client/components/lib/city';
 import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
-import SupportedUnit from './SupportedUnit';
-import Unit from './Unit';
+import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
+import Unit from '@civ-clone/ui-windows/components/Unit';
 import button from '@civ-clone/ui-widgets/lib/button';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { openUnitSelection } from './choices';
+import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
 import progressBar from '@civ-clone/ui-widgets/components/lib/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import unitLabel from '../lib/unitLabel';
+import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
 
 // The city screen under the new interface (#746): a window over the map, with a strip across the top for the city's
 //  size, growth and citizens, three columns below it (what the city makes, its map, what it's building and has built)

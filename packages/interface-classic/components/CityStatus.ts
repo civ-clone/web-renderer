@@ -1,6 +1,9 @@
 import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
 import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
-import { turnsLeft, yieldData } from './lib/cityYields';
+import {
+  turnsLeft,
+  yieldData,
+} from '@civ-clone/ui-windows/components/lib/cityYields';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
@@ -12,8 +15,10 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from './lib/requirements';
-import watchPlayer, { cityRowIds } from './lib/watchPlayer';
+import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
+import watchPlayer, {
+  cityRowIds,
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   const [food, production, trade, research, gold, luxuries] = [

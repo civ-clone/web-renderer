@@ -11,22 +11,24 @@ import {
 } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import SupportedUnit from './SupportedUnit';
+import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from './Unit';
+import Unit from '@civ-clone/ui-windows/components/Unit';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from './lib/requirements';
+import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { renderPopulation } from './lib/cityYields';
+import { renderPopulation } from '@civ-clone/ui-windows/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import watchPlayer, { cityIds } from './lib/watchPlayer';
+import watchPlayer, {
+  cityIds,
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
 
 const buildCityRow = async (
   city: CityData,

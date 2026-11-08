@@ -29,7 +29,7 @@ import {
   leaderName,
   option,
   select,
-} from '../lib/setupControls';
+} from '@civ-clone/ui-windows/lib/setupControls';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';

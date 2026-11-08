@@ -9,8 +9,8 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import GameSetupForm from '@civ-clone/ui-windows/components/GameSetupForm';
-import GameSetupWindow from '@civ-clone/ui-windows/components/GameSetupWindow';
+import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
+import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';

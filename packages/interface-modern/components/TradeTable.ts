@@ -10,11 +10,13 @@ import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow'
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
-import isAnarchy from './lib/government';
+import isAnarchy from '@civ-clone/ui-windows/components/lib/government';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import watchPlayer, { cityRowIds } from './lib/watchPlayer';
-import { yieldData } from './lib/cityYields';
+import watchPlayer, {
+  cityRowIds,
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+import { yieldData } from '@civ-clone/ui-windows/components/lib/cityYields';
 
 export interface MaintenanceRow {
   key: string;

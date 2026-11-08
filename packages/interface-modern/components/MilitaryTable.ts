@@ -7,7 +7,7 @@ import ReportTable, {
   ReportColumn,
 } from '@civ-clone/ui-widgets/components/lib/ReportTable';
 import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
-import Civilopedia from './Civilopedia';
+import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import Military from '@civ-clone/ui-protocol/Requests/Military';
 import Transport from '@civ-clone/ui-client/Transport';

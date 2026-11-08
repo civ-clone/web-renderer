@@ -13,7 +13,7 @@ import {
   turnsText,
   yieldData,
   yieldIcon,
-} from './lib/cityYields';
+} from '@civ-clone/ui-windows/components/lib/cityYields';
 import corruptionIcon from '@civ-clone/ui-assets/components/lib/corruptionIcon';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -29,7 +29,9 @@ import { progressBar } from '@civ-clone/ui-widgets/components/lib/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import watchPlayer, { cityRowIds } from './lib/watchPlayer';
+import watchPlayer, {
+  cityRowIds,
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
 
 // A figure, its bar and the turns left, in one cell. With no turns, as when nothing is being built, neither the bar nor
 //  the turns.

@@ -7,7 +7,10 @@ import {
   Player,
   Unit as UnitData,
 } from '@civ-clone/ui-protocol/types';
-import { citizenFace, renderPopulation } from './lib/cityYields';
+import {
+  citizenFace,
+  renderPopulation,
+} from '@civ-clone/ui-windows/components/lib/cityYields';
 import {
   groupIcons,
   reduceKnownYield,
@@ -17,8 +20,8 @@ import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow'
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
-import SupportedUnit from './SupportedUnit';
-import Unit from './Unit';
+import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
+import Unit from '@civ-clone/ui-windows/components/Unit';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
 import {
@@ -33,7 +36,9 @@ import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider'
 import { s } from '@dom111/element';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { t } from 'i18next';
-import watchPlayer, { cityIds } from './lib/watchPlayer';
+import watchPlayer, {
+  cityIds,
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
 
 const moodCount = (city: CityData, mood: CitizenMood): number =>
   citizenMoods(city).filter((cityMood) => cityMood === mood).length;

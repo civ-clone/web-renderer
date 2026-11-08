@@ -15,7 +15,7 @@ import TitleMenu, {
   continueDetail,
   continueLabel,
   newestSave,
-} from '@civ-clone/ui-windows/components/TitleMenu';
+} from '@civ-clone/ui-interface-modern/components/TitleMenu';
 import {
   BrowserSave,
   deleteSave,

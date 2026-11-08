@@ -1,11 +1,8 @@
-import City, { classicCityLayout } from './City';
+import City, { CityLayout } from './City';
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
-import cityLayout from './CityLayout';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
-
-type CityLayout = typeof cityLayout | typeof classicCityLayout;
 
 // The interface's `cityScreen` slot (#824), which each interface in `interfaces/` fills (#825).
 export const cityScreen = defineSlot<CityLayout>('cityScreen');

@@ -5,8 +5,10 @@
   "description": "The classic interface, which comes with the Civ1 classic theme: the pieces it puts in each slot.",
   "license": "MIT",
   "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
     "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-windows": "workspace:*"
   }
