@@ -659,6 +659,19 @@ const run = async (): Promise<void> => {
     ],
     ['0', '0', '-3', '0', '-0.3', '1,234', '-∞', 'NaN']
   );
+  expect(
+    'and in en-GB, and in a script with its own digits',
+    [
+      new LocaleProvider('en-GB', ['en-GB']).number(-0.4),
+      new LocaleProvider('ar-EG', ['ar-EG']).number(-0.4),
+      new LocaleProvider('ar-EG', ['ar-EG']).number(0),
+    ],
+    [
+      '0',
+      new Intl.NumberFormat('ar-EG').format(0),
+      new Intl.NumberFormat('ar-EG').format(0),
+    ]
+  );
 
   // Military: what the engine sent, a row opening its unit's Civilopedia entry.
   const pending = {

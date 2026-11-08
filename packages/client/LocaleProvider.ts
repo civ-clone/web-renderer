@@ -48,13 +48,20 @@ export class LocaleProvider {
 
     // -0, or a small negative rounded to 0, reads 0 rather than -0 (#816). `signDisplay: 'negative'` would say so, but
     //  older browsers reject it.
-    const parts = formatter.formatToParts(number),
+    // The locale's own zero, which isn't 0 in every script (٠ in Arabic, for one).
+    const zero =
+        formatter.formatToParts(0).find(({ type }) => type === 'integer')
+          ?.value ?? '0',
+      parts = formatter.formatToParts(number),
       digits = parts.filter(
         ({ type }) => type === 'integer' || type === 'fraction'
       );
 
     // No digits for Infinity or NaN, which are left as they are.
-    if (digits.length > 0 && digits.every(({ value }) => /^0+$/.test(value))) {
+    if (
+      digits.length > 0 &&
+      digits.every(({ value }) => [...value].every((digit) => digit === zero))
+    ) {
       return formatter.format(0);
     }
 
