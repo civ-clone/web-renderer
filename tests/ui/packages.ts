@@ -433,6 +433,151 @@ expect(
   []
 );
 
+// Each package brings its own text (`translations/en.ts`, and `en-GB.ts` where British English differs), which the
+//  page loads with the rest (`buildTranslationList.js`), and which suites load through `tests/ui/lib/strings*.ts`.
+const stringsListed = (helper: string) =>
+  specifiersOf(readFileSync(join(root, helper), 'utf8')).sort();
+
+expect(
+  'the suites’ strings helpers load every package’s text, and nothing else',
+  [
+    stringsListed('tests/ui/lib/strings.ts'),
+    stringsListed('tests/ui/lib/strings-en-GB.ts'),
+  ],
+  ['en', 'en-GB'].map((language) =>
+    names
+      .filter((name) =>
+        existsSync(join(packagesRoot, name, 'translations', `${language}.ts`))
+      )
+      .map((name) => `${scope}${name}/translations/${language}`)
+      .sort()
+  )
+);
+expect(
+  'and a package’s en-GB has an en beside it',
+  names.filter(
+    (name) =>
+      existsSync(join(packagesRoot, name, 'translations', 'en-GB.ts')) &&
+      !existsSync(join(packagesRoot, name, 'translations', 'en.ts'))
+  ),
+  []
+);
+
+// A string that names another (`$t(Key)`) can only count on one its own package brings, or one a package it depends on
+//  does: a package swapped out takes its strings with it.
+const dependsOnAll = (name: string): Set<string> => {
+    const all = new Set<string>([name]),
+      stack = [name];
+
+    while (stack.length > 0) {
+      dependsOn(stack.pop()!).forEach((dependency) => {
+        if (!all.has(dependency)) {
+          all.add(dependency);
+          stack.push(dependency);
+        }
+      });
+    }
+
+    return all;
+  },
+  stringFiles = names.flatMap((name) =>
+    ['en', 'en-GB']
+      .map((language) =>
+        join(packagesRoot, name, 'translations', `${language}.ts`)
+      )
+      .filter((path) => existsSync(path))
+      .map((path) => ({ name, text: readFileSync(path, 'utf8') }))
+  ),
+  stringOwner = new Map<string, string>();
+
+stringFiles.forEach(({ name, text }) =>
+  [...text.matchAll(/^ {2}'?([A-Za-z0-9_.-]+)'?:/gm)].forEach(([, key]) =>
+    stringOwner.set(key, name)
+  )
+);
+
+// The keys a nested `$t(…)` names: itself, its plural and context forms (`_one`, `_other`, …), or for an interpolated
+//  one (`TradeRoute.goods.{{goods}}`) every key with its literal prefix.
+const namedBy = (reference: string): string[] => {
+    const at = reference.indexOf('{{'),
+      prefix = at === -1 ? null : reference.slice(0, at);
+
+    return [...stringOwner.keys()].filter((key) =>
+      prefix === null
+        ? key === reference || key.startsWith(`${reference}_`)
+        : prefix !== '' && key.startsWith(prefix)
+    );
+  },
+  nested = stringFiles.flatMap(({ name, text }) =>
+    [...text.matchAll(/\$t\(([^,)]+)[,)]/g)]
+      .flatMap(([, reference]) => namedBy(reference.trim()))
+      .map((key) => ({ name, key, owner: stringOwner.get(key)! }))
+  );
+
+expect(
+  'a string names only strings its own package or one it depends on brings',
+  [
+    stringOwner.size > 900 && nested.length > 50,
+    nested
+      .filter(({ name, owner }) => !dependsOnAll(name).has(owner))
+      .map(({ name, key, owner }) => `${name}: ${key} (in ${owner})`),
+  ],
+  [true, []]
+);
+
+// Each package brings its own styles too (`styles/_*.scss`), which civ.one's stylesheet, `src/css/app.scss`, puts
+//  together in cascade order: every partial a package has is in it, once.
+const imported = [
+    ...readFileSync(join(root, 'src/css/app.scss'), 'utf8').matchAll(
+      /^@import '\.\.\/\.\.\/packages\/([^/]+)\/styles\/([^']+)';$/gm
+    ),
+  ].map(([, name, partial]) => `${name}/${partial}`),
+  partials = names.flatMap((name) =>
+    existsSync(join(packagesRoot, name, 'styles'))
+      ? readdirSync(join(packagesRoot, name, 'styles'))
+          .filter((file) => /^_.+\.scss$/.test(file))
+          .map((file) => `${name}/${file.slice(1, -5)}`)
+      : []
+  );
+
+const definesMixins = (partial: string): boolean => {
+    const [name, file] = partial.split('/');
+
+    return /^@mixin /m.test(
+      readFileSync(join(packagesRoot, name, 'styles', `_${file}.scss`), 'utf8')
+    );
+  },
+  usedByPartials = new Set(
+    partials.flatMap((partial) => {
+      const [name, file] = partial.split('/');
+
+      return [
+        ...readFileSync(
+          join(packagesRoot, name, 'styles', `_${file}.scss`),
+          'utf8'
+        ).matchAll(/^@use '(?:\.\.\/\.\.\/([^/]+)\/styles\/)?([^'/]+)'/gm),
+      ].map(([, other, used]) => `${other ?? name}/${used}`);
+    })
+  );
+
+expect(
+  'civ.one’s stylesheet imports every package’s partials, each once, and no other',
+  [
+    imported.length > 40,
+    // A partial of mixins that others `@use` is in through them.
+    partials.filter(
+      (partial) =>
+        !imported.includes(partial) &&
+        !(usedByPartials.has(partial) && definesMixins(partial))
+    ),
+    imported.filter(
+      (partial, index) =>
+        !partials.includes(partial) || imported.indexOf(partial) !== index
+    ),
+  ],
+  [true, [], []]
+);
+
 // esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
 //  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
 //  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which

@@ -918,7 +918,7 @@ const contextOf = ({
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
 
   // Every translation file there is for `en`, as the app loads them.
-  await import('../../translations/local/en');
+  await import('../ui/lib/strings');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
   await import('../../translations/civ1-civilization/en');

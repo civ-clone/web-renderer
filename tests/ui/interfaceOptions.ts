@@ -87,7 +87,7 @@ Object.assign(globalThis, {
 (async () => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   addFormatters(i18next);
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   setOptionDefaults();
 
   // Stored options only come back for the keys given a default, so these must have one.

@@ -55,7 +55,7 @@ class Later extends Action {
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   {
     const endTurn = new EndTurn(action, transport),

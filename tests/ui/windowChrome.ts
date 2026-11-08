@@ -51,7 +51,7 @@ const press = (target: EventTarget, key: string): KeyboardEvent => {
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   applyInterface('classic', null);
 

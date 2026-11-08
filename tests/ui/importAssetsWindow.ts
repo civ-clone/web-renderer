@@ -278,7 +278,7 @@ const notASheet = (name: string): File =>
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   addFormatters(i18next);
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   // The browser's file input can't take the theme (#739): it's hidden, a button of the system opens it, and the
   //  names of the files chosen show beside the button.

@@ -90,7 +90,7 @@ const latest = () => {
 
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-unit/en');

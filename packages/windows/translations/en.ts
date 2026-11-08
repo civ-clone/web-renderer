@@ -1,46 +1,14 @@
+// The windows package's own text (#825).
 import i18next from 'i18next';
-import {
-  Advance as FreeAdvance,
-  City as FreeCity,
-  Gold as FreeGold,
-} from '@civ-clone/civ1-goody-hut/GoodyHuts';
 
 i18next.addResources('en', 'default', {
-  'Generic.cancel': 'Cancel',
-  'Generic.close': 'Close',
   'Generic.coordinates': '{{x, number}}, {{y, number}}',
-  'Generic.height': 'Height',
-  'Generic.just-now': 'just now',
   'Generic.no': 'No',
-  'Generic.ok': 'OK',
-  'Generic.city-name':
-    '$t({{civilization}}.{{- name}}.name, { "defaultValue": "{{name}}", "ns": "city" })',
-  'Generic.civilization-name.name':
-    '$t({{- civilization}}.name, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
-  'Generic.civilization-name.nation':
-    '$t({{- civilization}}.nation, { "defaultValue": "{{- civilization}}", "ns": "civilization" })',
-  // For a nation that opens a sentence: `.nation` carries its own article ("the Aztec Empire"), lower case for
-  //  anywhere else in a sentence (#359).
-  'Generic.civilization-name.nation-start':
-    '$t(Generic.civilization-name.nation, capitalise)',
-  'Generic.civilization-name.plural':
-    '$t({{- civilization}}.plural, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
-  'Generic.leader-name':
-    '$t(Leader.{{- leader}}.name, { "defaultValue": "{{player.civilization.leader._}}", "ns": "civilization" })',
-  'Generic.view-city':
-    'View $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
-  'Generic.unknown-civilization': 'an unknown civilization',
-  'Generic.unknown-civilization-start':
-    '$t(Generic.unknown-civilization, capitalise)',
-  'Generic.width': 'Width',
   'Generic.yes': 'Yes',
-
   'Actions.AdjustTradeRates.title': 'Adjust trade rates',
-
   'Actions.ChooseGovernment.body':
     'Your revolution is over. Which government would you like?',
   'Actions.ChooseGovernment.title': 'Choose government',
-
   'Actions.ChooseResearch.body':
     'Which advance would you like to research next?',
   // Why the research picker has opened (#726).
@@ -51,27 +19,20 @@ i18next.addResources('en', 'default', {
   'Actions.ChooseResearch.choice':
     '{{- advance}} ($t(Progress.turns, { "count": {{turns}} }))',
   'Actions.ChooseResearch.title': 'Choose research',
-
   'Actions.CityBuildSelectionWindow.title':
     'What would you like to build in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })?',
-
   'Actions.CivilDisorder.body':
     'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }), mayor flees in panic!',
   'Actions.CivilDisorder.title':
     'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })!',
-
   'Actions.EndTurn.title': 'End turn',
-
   'Actions.Revolution.body':
     'Overthrow your government? Your civilization will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'Actions.Revolution.confirm': 'Revolution!',
   'Actions.Revolution.title': 'Revolution',
-
   'Actions.ShowCity.label':
     '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
-
   'Actions.ShowOnMap.label': 'Show on map',
-
   'Actions.Spaceship.chance-of-success': 'Chance of success',
   'Actions.Spaceship.energy': 'Energy',
   'Actions.Spaceship.flight-time': 'Flight time',
@@ -85,20 +46,7 @@ i18next.addResources('en', 'default', {
   'Actions.Spaceship.spaceship-name':
     '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship',
   'Actions.Spaceship.title': 'View spaceship',
-
   'Buildable.label-empty': `Nothing`,
-
-  'ChoiceWindow.Build.attack': 'Attack',
-  'ChoiceWindow.Build.build': 'Build {{- item}}',
-  'ChoiceWindow.Build.cost': 'Cost in shields',
-  'ChoiceWindow.Build.defence': 'Defense',
-  'ChoiceWindow.Build.group.improvement': 'City Improvements',
-  'ChoiceWindow.Build.group.spaceship': 'Spaceship Parts',
-  'ChoiceWindow.Build.group.unit': 'Units',
-  'ChoiceWindow.Build.group.wonder': 'Wonders of the World',
-  'ChoiceWindow.Build.movement': 'Moves',
-  // Lines the chosen item up after what the city is building now (#774).
-  'ChoiceWindow.Build.queue': 'Add to queue',
   'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
     'Acquire {{- choice}}',
   'ChoiceWindow.ChooseFromList.choose-civilization.primary':
@@ -113,69 +61,25 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Government.adopt': 'Adopt {{- government}}',
   'ChoiceWindow.NewGame.start': 'Start with {{- players}}',
   'ChoiceWindow.Research.cost': 'Cost in bulbs',
-  'ChoiceWindow.Units.activate': 'Activate {{- unit}}',
-  'ChoiceWindow.Units.moves': 'Moves left',
   // The tooltip over a city's banner on the map (#747).
   'CityBanner.grows': 'Grows to size {{size, number}}',
   'CityBanner.progress':
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(Progress.turns, { "count": {{turns}} })',
   'CityBanner.starving':
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(CitiesList.starving)',
-  'CityWindow.buy': 'Buy for {{cost, number}} {{- resource}}',
   'CityWindow.garrison_zero': 'No units in the city',
   'CityWindow.garrison_one': '{{count, number}} unit in the city',
   'CityWindow.garrison_other': '{{count, number}} units in the city',
-  'CityWindow.improvements': 'Improvements',
-  'CityWindow.in-city': 'In the city · {{count, number}}',
-  'CityWindow.no-improvements': 'No improvements yet',
   'CityWindow.nothing': 'Nothing in production',
-  'CityWindow.queue': 'Then',
-  'CityWindow.queue-down': 'Move {{- item}} down',
-  'CityWindow.queue-remove': 'Remove {{- item}} from the queue',
-  'CityWindow.queue-up': 'Move {{- item}} up',
-  'CityWindow.supported': 'Supported · {{count, number}}',
-  'CityWindow.then': 'Then: {{- item}}',
   'CityWindow.upkeep_one': 'Upkeep: {{count, number}} gold a turn',
   'CityWindow.upkeep_other': 'Upkeep: {{count, number}} gold a turn',
-  'CityWindow.upkeep-total': 'Upkeep each turn',
-  'CityWindow.wonders': 'Wonders',
-  'CityWindow.yields': 'Yields',
   'ChoiceWindow.Research.research': 'Research {{- advance}}',
-  'ChoiceWindow.choose': 'Choose',
   'ChoiceWindow.civilopedia': 'More in the Civilopedia',
   'ChoiceWindow.turns': 'Turns',
-  'ChooseFromList.capture-city.steal-advance.body':
-    'Choose an advance to acquire from $t(Generic.city-name, { "name": "{{- data.name}}", "civilization": "{{data.originalPlayer.civilization._}}", "ns": "default" }):',
-  'ChooseFromList.capture-city.steal-advance.choice':
-    '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
-  'ChooseFromList.capture-city.steal-advance.title': 'Acquire an advance',
-  'ChooseFromList.choose-civilization.body': '',
-  'ChooseFromList.choose-civilization.choice':
-    '$t(Generic.civilization-name.name, { "civilization": "{{value._}}", "ns": "default" })',
-  'ChooseFromList.choose-civilization.random': 'Random',
-  'ChooseFromList.choose-civilization.title': 'Choose your civilization',
-  'ChooseFromList.choose-difficulty.body':
-    'This game was saved before there were difficulty levels. Which level should it be played at?',
-  'ChooseFromList.choose-difficulty.title': 'Difficulty level',
-  'ChooseFromList.choose-leader.body': '',
-  'ChooseFromList.choose-leader.choice':
-    '$t(Generic.leader-name, { "leader": "{{value._}}", "ns": "default" })',
-  'ChooseFromList.choose-leader.title': 'Choose your leader',
-  'ChooseFromList.default.body': 'Please choose from the following options:',
-  'ChooseFromList.default.title': 'Choose an option',
-  'ChooseFromList.diplomacy.exchange-knowledge.body':
-    'Please choose from the advances that $t({{data.proposal.by.civilization._}}.nation, { "defaultValue": "{{data.proposal.by.civilization._}}", "ns": "civilization" }) has discovered:',
-  'ChooseFromList.diplomacy.exchange-knowledge.choice':
-    '$t({{value._}}.name, { "defaultValue": "{{value._}}", "ns": "science" })',
-  'ChooseFromList.diplomacy.exchange-knowledge.title': 'Exchanging Knowledge',
-  'ChooseFromList.negotiation.next-step.title':
-    'Negotiation between $t(Generic.civilization-name.nation, { "civilization": "{{data.players.0.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.nation, { "civilization": "{{data.players.1.civilization._}}", "ns": "default" })',
-
   'CityBuildUnavailable.title':
     'What $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }) can’t build',
   'CityBuildUnavailable.none': 'There is nothing this city can’t build.',
   'CityBuildUnavailable.other': 'Not available in this city',
-
   'Civilopedia.title': 'Civilopedia',
   'Civilopedia.back': 'Back',
   'Civilopedia.choose': 'Choose an entry from the list.',
@@ -236,53 +140,23 @@ i18next.addResources('en', 'default', {
     'Mountains or a River next to the city',
   'Civilopedia.condition.civ1-spaceship.unlaunched-spaceship':
     'a spaceship that hasn’t been launched',
-
-  'City.Build.auto': 'Auto',
   'City.Build.auto-marker': 'Auto',
-  'City.Build.auto-stop': 'Stop Auto',
-  'City.Build.build-item':
-    '{{- item}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
-  'City.Build.build-unit':
-    '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
-  'City.Build.buy': 'Buy',
-  'City.Build.group.improvement': 'City Improvements',
-  'City.Build.group.spaceship': 'Spaceship Parts',
-  'City.Build.group.unit': 'Units (A/D/M/V)',
-  'City.Build.group.wonder': 'Wonders of the World',
   'City.Build.unavailable': 'Can’t build…',
   // This can include the resource being using to buy with via {{spendCost}} which allows support for `Faith`, etc used in later games.
   // 'City.Build.buy-with': 'Buy with $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })',
   'City.Build.buy-with': 'Buy',
   'City.Build.change': 'Change',
   'City.Build.choose': 'Choose',
-  // Why the production picker has opened (#716).
-  'City.Build.cleared.cancelled': 'Production cancelled: {{- item}}',
-  'City.Build.cleared.captured': 'City captured',
-  'City.Build.cleared.completed': 'Production complete: {{- item}}',
-  'City.Build.cleared.created': 'City founded',
-  'City.Build.cleared.unavailable': '{{- item}} can no longer be built',
-  'City.Build.nothing': 'Nothing',
-  'City.Build.stored_one': '{{count, number}} shield kept for the next item',
-  'City.Build.stored_other': '{{count, number}} shields kept for the next item',
   'City.Build.title': '{{- item}}',
-
   'City.CompleteProduction.body':
     'Do you want to rush building of {{- item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available.',
-
   'City.SellImprovement.sell': 'Sell',
   'City.SellImprovement.body':
     'Do you want to sell your {{- item}} for {{saleValue.value, number}} $t({{saleValue.resource._}}.name, { "defaultValue": "{{saleValue.resource._}}", "ns": "yield" })?',
-
   'City.GarrisonedUnits.title': 'Garrisoned units',
   'City.Progress.per-turn': '{{count, number(signDisplay: exceptZero)}} / turn',
-  // In place of the turns to a growth the rules won't allow (#781): an improvement whose name needs an article has its
-  //  own sentence.
-  'City.Growth.needs': 'Needs {{improvement}}',
-  'City.Growth.needs-Aqueduct': 'Needs an Aqueduct',
   'City.Growth.size': 'Size {{size, number}}',
-
   'City.Growth.title': 'Growth',
-
   'City.next': 'Next city',
   'City.previous': 'Previous city',
   'City.rename': 'Rename',
@@ -294,36 +168,13 @@ i18next.addResources('en', 'default', {
     'Pollution {{count, number}}: this city may pollute the land around it',
   'City.trade-routes': 'Trade routes',
   'City.trade-route': '{{city}}: +{{trade, number}}',
-
-  'City.Citizens.happy_one': '{{count, number}} happy',
-  'City.Citizens.happy_other': '{{count, number}} happy',
-  'City.Citizens.content_one': '{{count, number}} content',
-  'City.Citizens.content_other': '{{count, number}} content',
-  'City.Citizens.unhappy_one': '{{count, number}} unhappy',
-  'City.Citizens.unhappy_other': '{{count, number}} unhappy',
-  'City.Citizens.Specialist.Entertainer_one': '{{count, number}} Entertainer',
-  'City.Citizens.Specialist.Entertainer_other':
-    '{{count, number}} Entertainers',
-  'City.Citizens.Specialist.Scientist_one': '{{count, number}} Scientist',
-  'City.Citizens.Specialist.Scientist_other': '{{count, number}} Scientists',
-  'City.Citizens.Specialist.TaxCollector_one':
-    '{{count, number}} Tax collector',
-  'City.Citizens.Specialist.TaxCollector_other':
-    '{{count, number}} Tax collectors',
-  'City.Citizens.separator': ', ',
   'City.Specialist.change': 'Change {{- specialist}}',
-  'City.Specialist.Entertainer': 'Entertainer',
-  'City.Specialist.Scientist': 'Scientist',
-  'City.Specialist.TaxCollector': 'Tax collector',
-
   'City.SupportedUnits.title': 'Supported units',
-
   'City.Yield.summary':
     '{{- yield}}: {{made, number}}, {{used, number}} used, {{spare, number}} spare',
   'City.Yield.summary_made': '{{- yield}}: {{made, number}}',
   'City.Yield.summary_short':
     '{{- yield}}: {{made, number}}, {{used, number}} used, {{short, number}} short',
-
   // The sidebar's list of cities (#700).
   'CitiesList.disorder': 'Civil disorder',
   'CitiesList.empty': 'No cities yet.',
@@ -331,53 +182,31 @@ i18next.addResources('en', 'default', {
   'CitiesList.show-all': 'Show all ({{count, number}})',
   'CitiesList.show-fewer': 'Show fewer',
   'CitiesList.starving': 'Starving',
-
   'CityStatus.build_empty':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) $t(Buildable.label-empty)',
   'CityStatus.build_nonempty':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) {{buildable}} $t(Progress.data, { "progress": {{build.progress.value}}, "total": {{build.cost.value}} }) ($t(Progress.turns, { "count": {{turns}} }))',
-  'CityStatus.growth':
-    '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) ($t(Progress.turns, {"count": {{turns}} }))',
   'CityStatus.title': 'City details',
   'CityStatus.totals_equal': '{{free, number}}',
   'CityStatus.totals_unequal': '{{free, number}} [{{total, number}}]',
-
   'ConfirmationWindow.Generic.title': 'Are you sure?',
-
-  'CustomizeWorld.build': 'Build',
-  'CustomizeWorld.even-height': 'This map grid needs an even height.',
   'CustomizeWorld.height': '$t(Generic.height)',
   'CustomizeWorld.land-coverage': 'Land coverage',
   'CustomizeWorld.land-size': 'Land size',
-  'CustomizeWorld.max-coverage': 'Max coverage',
   'CustomizeWorld.max-iterations': 'Max iterations',
-  'CustomizeWorld.players': 'Players',
-  'CustomizeWorld.title': 'Customize world',
-  'CustomizeWorld.whole-number': 'A whole number, 1 or more.',
   'CustomizeWorld.width': '$t(Generic.width)',
-
-  'DifficultyWindow.level': '{{level}}',
-  'DifficultyWindow.level_easiest': '{{level}} (easiest)',
-  'DifficultyWindow.level_toughest': '{{level}} (toughest)',
   'DifficultyWindow.title': 'Difficulty level',
-
-  'Game.progress.player':
-    'The $t({{civilization}}.plural, { "defaultValue": "{{civilization}}", "ns": "civilization" }) are moving…',
-  'Game.progress.turn': 'Turn {{turn, number}}',
-  'Game.progress.unmet-player': 'An unknown civilization is moving…',
   'Game.waiting': 'Waiting for the other civilizations…',
   'GameDetails.difficulty': '{{difficulty}} level',
   'GameDetails.turn': '{{turn, number}}',
   'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
   'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',
-
   'FindCity.no-cities': "You don't know of any cities yet.",
   'FindCity.title': 'Find City',
   'GameMenu.cheat.choose-advances': 'Advances',
   'GameMenu.cheat.click-map': 'Click the map to fill in the coordinates.',
   'GameMenu.cheat.create': 'Create',
   'GameMenu.cheat.create-unit': 'Create Unit',
-  'GameMenu.cheat.enabled': 'Cheat mode enabled',
   'GameMenu.cheat.enter-gold-amount': 'Enter the amount of gold',
   'GameMenu.cheat.grant': 'Grant',
   'GameMenu.cheat.grant-advance': 'Grant Advance',
@@ -415,7 +244,6 @@ i18next.addResources('en', 'default', {
   'GameMenu.civilization-score': 'Civilization Score',
   'GameMenu.civilopedia': 'Civilopedia',
   'GameMenu.trade-report': 'Trade Report',
-
   'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
   // The new interface's Assets row (#749): whether the tileset's sprites are imported, and the import.
@@ -460,15 +288,12 @@ i18next.addResources('en', 'default', {
   'GameOptions.unit-marker-choice.both': 'Ring and blink',
   'GameOptions.unit-marker-choice.ring': 'Ring',
   'GameOptions.unit-marker-choice.theme': "The theme's way",
-
   'GameSetup.add-seat': 'Add a seat',
   'GameSetup.advanced': 'Advanced',
   'GameSetup.ai': 'AI',
   'GameSetup.civilization': 'Civilization',
   'GameSetup.computer': 'Computer',
-  'GameSetup.custom': 'Custom ({{width}} × {{height}})',
   'GameSetup.difficulty': '$t(DifficultyWindow.title)',
-  'GameSetup.earth': 'Earth, {{size}}',
   'GameSetup.grid': 'Map grid',
   'GameSetup.human': 'Human',
   'GameSetup.kind': 'Played by',
@@ -481,24 +306,6 @@ i18next.addResources('en', 'default', {
   'GameSetup.seats': 'Seats',
   'GameSetup.start': 'Start',
   'GameSetup.title': 'Game setup',
-  // The new interface's form (#750): what each level means, in a line, by the level's name; the map list's groups;
-  //  the Advanced fields' units; and what a game with no human seat is.
-  'GameSetup.difficulty-summary.Chieftain':
-    'The easiest level, for learning the game.',
-  'GameSetup.difficulty-summary.Warlord':
-    'An easy game, with room for mistakes.',
-  'GameSetup.difficulty-summary.Prince': 'A fair game for a practiced player.',
-  'GameSetup.difficulty-summary.King':
-    'A hard game, for an experienced player.',
-  'GameSetup.difficulty-summary.Emperor': 'The toughest level, for experts.',
-  'GameSetup.map-group.custom': 'Custom',
-  'GameSetup.map-group.earth': 'Earth',
-  'GameSetup.map-group.size': 'Generated',
-  'GameSetup.unit-passes': 'passes',
-  'GameSetup.unit-share': 'of the map',
-  'GameSetup.unit-squares': 'squares',
-  'GameSetup.watched': 'No one plays: you will watch the game.',
-
   'ResumeGame.intro':
     'Who plays each civilization? Take over a computer seat, or hand yours to the computer, before the game goes on.',
   'ResumeGame.resume': 'Resume',
@@ -506,12 +313,7 @@ i18next.addResources('en', 'default', {
   'Grid.hex-odd-r': 'Hex',
   'Grid.square': 'Square',
   'Grid.staggered-iso': 'Isometric',
-
-  'HappinessReport.breakdown': 'Breakdown',
   'HappinessReport.title': 'Happiness report',
-  'HappinessReport.view-city':
-    '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
-
   'ImportAssetsWindow.brave':
     '<p>It looks like you\'re using Brave and due to the use of <code>HTMLCanvasElement</code>\'s <code>getImageData</code> and <code>toDataURL</code> functions, please put Shields down while importing, and playing, otherwise any color-replaced icons won\'t look correct. <strong>Remember to put them back up after!</strong></p><p><a href="https://brave.com/privacy-updates/4-fingerprinting-defenses-2.0/#2-fingerprinting-protections-20-farbling-for-great-good" target="_blank">Read more about "farbling".</a></p>',
   'ImportAssetsWindow.choose': 'Choose files',
@@ -536,15 +338,9 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.title': 'Import assets',
   'ImportAssetsWindow.unsupported-file':
     "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
-
-  'JoinCity.too-large.body':
-    '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',
-  'JoinCity.too-large.title': 'City too large',
-
   'LeaveGuard.body':
     'Leaving this page will end the game in progress. Any unsaved progress will be lost.',
   'LeaveGuard.title': 'Leave the game?',
-
   'LoadGame.could-not-delete': 'That save could not be deleted: {{- error}}',
   'LoadGame.delete': 'Delete',
   'LoadGame.delete-confirm': 'Delete “{{name}}”? This cannot be undone.',
@@ -559,20 +355,7 @@ i18next.addResources('en', 'default', {
   'LoadGame.load': 'Load',
   'LoadGame.load-save': 'Load {{- name}}',
   'LoadGame.title': '$t(GameMenu.load-game)',
-  'LockedSlider.lock': 'Lock',
-
-  'MainMenu.customize-world': '$t(CustomizeWorld.title)',
-  'MainMenu.customise': 'Customize…',
-  'MainMenu.earth': 'Earth',
-  'MainMenu.hall-of-fame': '$t(HallOfFame.title)',
-  'MainMenu.import-assets': '$t(ImportAssetsWindow.title)',
-  'MainMenu.load-game': 'Load a Saved Game',
-  'MainMenu.new-game': 'Start a New Game',
-  'MainMenu.quit': 'Quit',
-  'MainMenu.version': 'version: {{version}}',
-
   'MandatorySelection.default-body': '$t(SelectionWindow.default-body)',
-
   // The meeting window under the new interface (#752): who they are and what the player knows of them, then the replies.
   'Meeting.cities': 'Cities',
   'Meeting.count': '{{count, number}}',
@@ -582,28 +365,14 @@ i18next.addResources('en', 'default', {
   'Meeting.government': 'Government',
   'Meeting.relations': 'Relations',
   'Meeting.replies': 'Your reply',
-  'Meeting.title': 'Meeting with {{- leader}}',
   'Meeting.treasury': 'Treasury',
-
-  // The talks' lines, each with who said it, and the button that says the player's one answer (#751).
-  'Negotiation.continue': 'Continue',
-  'Negotiation.speaker': '{{- speaker}}:',
-  'Negotiation.you': 'You',
-
   'NewGameWindow.number-of-players': 'How many players?',
-  'NewGameWindow.civilizations_one': '1 civilization',
-  'NewGameWindow.civilizations_other': '{{count}} civilizations',
   'NewGameWindow.map-grid': 'Which map grid?',
   'NewGameWindow.world-size': 'How big a world?',
   // New Game's first row under the new interface (#749): the game setup, for everything the questions don't ask.
   'NewGameWindow.customize': 'Customize…',
   'NewGameWindow.customize-meta':
     'Choose the civilizations, seats, rules and the exact world',
-  'NewGameWindow.WorldSize.tiny': 'Tiny ({{width}} × {{height}})',
-  'NewGameWindow.WorldSize.small': 'Small ({{width}} × {{height}})',
-  'NewGameWindow.WorldSize.normal': 'Normal ({{width}} × {{height}})',
-  'NewGameWindow.WorldSize.large': 'Large ({{width}} × {{height}})',
-  'NewGameWindow.WorldSize.huge': 'Huge ({{width}} × {{height}})',
   'Observer.pause': 'Pause',
   'Observer.paused': 'Paused between turns',
   'Observer.play': 'Play',
@@ -613,8 +382,6 @@ i18next.addResources('en', 'default', {
   'Observer.civilizations': 'As these civilizations see it',
   'Observer.view-as': 'See the game as',
   'Observer.whole-map': 'The whole map',
-  'Observer.watching': 'Watching: the computer players are taking their turns…',
-
   'NextTurn.CityBuild':
     'Choose production in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
   'NextTurn.Keys.press': 'Do this',
@@ -628,91 +395,32 @@ i18next.addResources('en', 'default', {
   'NotificationRows.more_one': '+{{count, number}} more',
   'NotificationRows.more_other': '+{{count, number}} more',
   'NotificationRows.open': 'Click to view',
-  'Notification.title': 'Notification',
-
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',
   'ReleaseWindow.loading': 'Loading the release notes…',
   'ReleaseWindow.title': 'Releases',
-
-  'ReloadGuard.body': 'Are you sure you want to reload?',
-  'ReloadGuard.title': 'Reload',
-  'ReportTable.city': 'City',
-  'ReportTable.total': 'Total',
-  'ReportTable.view-city': 'View {{city}}',
-  'ReportTable.CityStatus.build': 'Building',
   'ReportTable.CityStatus.content': 'Content',
-  'ReportTable.CityStatus.corruption': 'Corruption',
-  'ReportTable.CityStatus.disorder': 'Civil disorder',
   'ReportTable.CityStatus.food': 'Food',
-  'ReportTable.CityStatus.food-stored':
-    'Food $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
   'ReportTable.CityStatus.happy': 'Happy',
   'ReportTable.CityStatus.shields': 'Shields',
-  'ReportTable.CityStatus.shields-stored':
-    'Shields $t(Progress.data, { "progress": {{progress}}, "total": {{total}} })',
   'ReportTable.CityStatus.size': 'Size',
-  'ReportTable.CityStatus.trade': 'Trade',
   'ReportTable.CityStatus.unhappy': 'Unhappy',
-  'ReportTable.Happiness.celebrating': 'Celebrating',
-  'ReportTable.Happiness.citizens': 'Citizens',
-  'ReportTable.Happiness.no-causes':
-    'Nothing has changed how its citizens feel.',
-  'ReportTable.Happiness.view': 'View',
-  'ReportTable.Intelligence.civilization': 'Civilization',
-  'ReportTable.Intelligence.embassy': 'Embassy',
   'ReportTable.Intelligence.embassy-both': 'Both',
   'ReportTable.Intelligence.embassy-none': 'None',
   'ReportTable.Intelligence.embassy-ours': 'Ours',
   'ReportTable.Intelligence.embassy-theirs': 'Theirs',
-  'ReportTable.Intelligence.government': 'Government',
-  'ReportTable.Intelligence.leader': 'Leader',
   'ReportTable.Intelligence.peace': 'Peace',
-  'ReportTable.Intelligence.relations': 'Relations',
-  'ReportTable.Intelligence.treasury': 'Treasury',
-  'ReportTable.Intelligence.units': 'Units',
   'ReportTable.Intelligence.war': 'War',
-  'ReportTable.Military.active': 'Active',
-  'ReportTable.Military.attack': 'Attack',
-  'ReportTable.Military.defence': 'Defense',
-  'ReportTable.Military.in-production': 'Building',
-  'ReportTable.Military.lost': 'Lost',
-  'ReportTable.Military.movement': 'Moves',
-  'ReportTable.Military.unit': 'Unit',
-  'ReportTable.Military.visibility': 'Visibility',
-  'ReportTable.Score.detail': 'Counts',
-  'ReportTable.Score.points': 'Points',
-  'ReportTable.Score.term': 'Score',
-  'ReportTable.TopCities.rank': 'Rank',
-  'ReportTable.TopCities.wonders': 'Wonders',
-  'ReportTable.Trade.cities': 'Cities',
-  'ReportTable.Trade.cost': 'Each',
-  'ReportTable.Trade.count': 'Number',
-  'ReportTable.Trade.improvement': 'Improvement',
-  'ReportTable.Trade.improvements': 'Improvement upkeep',
-  'ReportTable.Trade.income': 'Income',
-  'ReportTable.Trade.left': 'Left',
-  'ReportTable.Trade.total': 'Total',
-  'ReportTable.Trade.upkeep': 'Upkeep',
-
-  'SavedGame.autosave-failed': 'This turn could not be autosaved: {{- error}}',
   'SavedGame.could-not-hand-over':
     'That save could not be handed to the reloading page, so the game has not been loaded: {{- error}}',
-  'SavedGame.could-not-load':
-    'That save could not be loaded, so you are back at the main menu: {{- error}}',
   'SavedGame.could-not-read': 'That save could not be read: {{- error}}',
-
   'SavedGame.could-not-write': 'That save could not be written: {{- error}}',
-  'SavedGame.downloaded-instead':
-    'The browser would not keep your save ({{- error}}), so it has been downloaded instead.',
   'SavedGame.needs-grid':
     'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
-  'SavedGame.saved': 'Saved in this browser: {{- name}}',
-
   'PlayerDetails.Government.body_anarchy': `{{government}} ($t(Progress.turns-left, { "count": {{turns}} }))`,
   'PlayerDetails.Government.body_choosing':
     '{{government}} (choose a new government)',
@@ -748,7 +456,6 @@ i18next.addResources('en', 'default', {
   'PlayerDetails.Treasury.detail_anarchy': 'no taxes during Anarchy',
   'PlayerDetails.Treasury.title': 'Treasury',
   'PlayerDetails.Treasury.value': '{{value, number}}',
-
   'Progress.body':
     'Progress $t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) ($t(Progress.turns, {"count": {{turns}} }))',
   'Progress.data': '{{progress, number}} / {{total, number}}',
@@ -758,21 +465,13 @@ i18next.addResources('en', 'default', {
   'Progress.turns_one': '{{count, number}} turn',
   'Progress.turns_other': '{{count, number}} turns',
   'Progress.turns_zero': 'Never',
-
   'ScienceReport.progress_notresearching': '',
   'ScienceReport.progress_researching':
     '$t(Progress.body, { "progress": {{progress}}, "total": {{total}}, "turns": {{turns }} })',
   'ScienceReport.researching_notresearching': 'Researching nothing',
   'ScienceReport.researching_researching': 'Researching {{researching}}',
   'ScienceReport.title': 'Player research',
-
   'Diplomat.arrives': '{{nation}} Diplomat arrives in {{- city}}',
-  'Diplomat.establish-embassy': 'Establish Embassy',
-  'Diplomat.investigate-city': 'Investigate City',
-  'Diplomat.steal-technology': 'Steal Technology',
-  'Diplomat.industrial-sabotage': 'Industrial Sabotage',
-  'Diplomat.incite-revolt': 'Incite a Revolt',
-  'Diplomat.meet-with-king': 'Meet with King',
   'Diplomat.peace-treaty': 'We have signed a peace treaty with the {{nation}}!',
   'Diplomat.break-treaty': 'Break treaty',
   'Diplomat.cancel-action': 'Cancel action',
@@ -786,15 +485,12 @@ i18next.addResources('en', 'default', {
   'Diplomat.bribe.body':
     '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
   'Diplomat.bribe.bribe': 'Bribe unit',
-
   'IntelligenceReport.at-peace': 'At PEACE with {{nation}}.',
   'IntelligenceReport.at-war': 'At WAR with {{nation}}.',
   // Already escaped by `Generic.city-name`.
   'IntelligenceReport.capital': 'Capital: {{- city}}',
   'IntelligenceReport.empty': 'We have not met any other civilizations yet.',
   'IntelligenceReport.foreign-affairs': 'Foreign Affairs:',
-  'IntelligenceReport.government': 'Government: {{government}}',
-  'IntelligenceReport.leader': 'Leader: {{leader}}',
   'IntelligenceReport.leader_traits': 'Leader: {{leader}} ({{traits}})',
   'IntelligenceReport.military_one': 'Military: {{count, number}} Unit.',
   'IntelligenceReport.military_other': 'Military: {{count, number}} Units.',
@@ -808,7 +504,6 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.subject': 'Subject: the {{nation}}',
   'IntelligenceReport.technologies': 'Technologies:',
   'IntelligenceReport.the': 'the {{nation}}',
-  'IntelligenceReport.their-embassy': 'They have an embassy with us.',
   'IntelligenceReport.title': 'Intelligence Report',
   'IntelligenceReport.trait.Aggressive': 'Aggressive',
   'IntelligenceReport.trait.Civilized': 'Civilized',
@@ -816,9 +511,7 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.trait.Friendly': 'Friendly',
   'IntelligenceReport.trait.Militaristic': 'Militaristic',
   'IntelligenceReport.trait.Perfectionist': 'Perfectionist',
-  'IntelligenceReport.treasury': 'Treasury: {{gold, number}}',
   'IntelligenceReport.unknown': 'Unknown',
-
   'MilitaryReport.active_one': '{{count, number}} active',
   'MilitaryReport.active_other': '{{count, number}} active',
   'MilitaryReport.in-production_one': '{{count, number}} in production',
@@ -828,11 +521,8 @@ i18next.addResources('en', 'default', {
   'MilitaryReport.losses': 'Military Losses',
   'MilitaryReport.no-losses': 'We have lost no units.',
   'MilitaryReport.no-units': 'We have no units.',
-  'MilitaryReport.stats':
-    '({{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}})',
   'MilitaryReport.status': 'Military Status',
   'MilitaryReport.title': 'Military Report',
-
   'CivilizationScoreReport.term.citizens': 'Citizens',
   'CivilizationScoreReport.term.citizens.detail':
     '2 for each happy citizen, 1 for each content one, counted at 40% luxuries',
@@ -856,7 +546,6 @@ i18next.addResources('en', 'default', {
   'CivilizationScoreReport.scoring-complete': 'Scoring completed',
   'CivilizationScoreReport.title': 'Civilization Score',
   'CivilizationScoreReport.total': 'Total',
-
   // The sidebar's Power list (#701, #708).
   'PowerList.empty': 'No rankings yet.',
   'PowerList.power': '{{power, number}}',
@@ -866,22 +555,11 @@ i18next.addResources('en', 'default', {
   // An unmet civilization's row: the sidebar is too narrow for more.
   'PowerList.unknown': 'Unknown',
   'PowerList.you': '(you)',
-
-  'SelectionWindow.default-body': 'Please choose one of the following:',
-
   // A Republic or Democracy choosing to break a peace treaty (#133).
   'Senate.overruled': 'Overruled by the Senate. Action canceled.',
   'Senate.title': 'The Senate',
-
-  // The sidebar's sections, which can be collapsed (#697).
-  'Sidebar.cities': 'Cities',
-  'Sidebar.power': 'Power',
-  'Sidebar.unit': 'Active Unit',
-  'Sidebar.world': 'World',
-
   'SneakAttack.title': 'Sneak attack?',
   'SneakAttack.body': `Are you sure you want to attack {{nation}}? (This will terminate your current peace treaty)`,
-
   'SquareTooltip.city': 'City',
   'SquareTooltip.defence': 'Defense',
   'SquareTooltip.defence-bonus':
@@ -893,61 +571,16 @@ i18next.addResources('en', 'default', {
   'SquareTooltip.value': '{{value, number}}',
   'SquareTooltip.worked-by': 'Worked by',
   'SquareTooltip.yields': 'Yields',
-
   // Moving onto, or pillaging, a treaty partner's land (#287).
   'Treaty.title': 'Peace treaty',
-
   'TopCitiesReport.empty': 'No cities have been founded yet.',
-  'TopCitiesReport.row': '{{rank, number}}. {{city}} ({{civilization}})',
   'TopCitiesReport.title': 'Top Cities in the World',
   'TopCitiesReport.unknown-city': 'Unknown city',
-
-  'TradeRoute.goods.Silk': 'Silk',
-  'TradeRoute.goods.Silver': 'Silver',
-  'TradeRoute.goods.Wine': 'Wine',
-  'TradeRoute.goods.Copper': 'Copper',
-  'TradeRoute.goods.Gems': 'Gems',
-  'TradeRoute.goods.Dye': 'Dye',
-  'TradeRoute.goods.Salt': 'Salt',
-  'TradeRoute.goods.Spice': 'Spice',
   'TradeRoute.keep-moving': 'Keep moving',
   'TradeRoute.will-you': 'Will you?',
-
-  // The main menu under the new interface (#749).
-  'TitleMenu.label': 'Main menu',
-  'TitleMenu.continue-game': 'Continue · {{- civilization}} · {{year}}',
-  'TitleMenu.continue-named': 'Continue · {{- name}}',
-  'TitleMenu.kept.autosave': 'Autosaved {{when}}',
-  'TitleMenu.kept.player': 'Saved {{when}}',
-  'TitleMenu.kept.start': 'Started {{when}}',
-  'TitleMenu.new-game': 'New game',
-  'TitleMenu.earth': 'Play Earth',
-  'TitleMenu.load-game': 'Load game',
-  'TitleMenu.hall-of-fame': 'Hall of fame',
-  'TitleMenu.options': 'Options',
-  'TitleMenu.import-assets': 'Import assets',
-  // Each item's key, a letter of its name.
-  'TitleMenu.key.continue': 'C',
-  'TitleMenu.key.new-game': 'N',
-  'TitleMenu.key.earth': 'E',
-  'TitleMenu.key.load-game': 'L',
-  'TitleMenu.key.hall-of-fame': 'H',
-  'TitleMenu.key.options': 'O',
-  'TitleMenu.key.import-assets': 'I',
-  'TitleMenu.version': 'civ.one v{{version}}',
-  'TitleMenu.release-notes': 'Release notes',
-
   'TradeReport.anarchy':
     'No taxes are collected and no upkeep is paid during Anarchy.',
   'TradeReport.title': 'Trade report',
-  'TradeReport.ImprovementList.cost': '{{- icon}} {{total, number}}',
-  'TradeReport.ImprovementList.item': '{{count, number}} &times; {{name}}',
-  'TradeReport.ImprovementList.income-title': 'Total income',
-  'TradeReport.ImprovementList.income-value':
-    '{{- icon}} $t(Progress.per-turn, { "count": {{count}} })',
-  'TradeReport.ImprovementList.cost-title': 'Total cost',
-  'TradeReport.ImprovementList.surplus-title': 'Total surplus',
-
   // The active unit's card under the new interface (#743).
   'UnitCard.coordinates': 'Coordinates',
   'UnitCard.defence-bonus':
@@ -975,7 +608,6 @@ i18next.addResources('en', 'default', {
   'UnitMenu.direction.w': 'W',
   'UnitMenu.label': 'Orders for the {{unit}}',
   'UnitMenu.square': '{{terrain}} · {{direction}}',
-
   // The active unit's card in the sidebar (#699).
   'UnitDetails.attack': 'A',
   'UnitDetails.defence': 'D',
@@ -990,41 +622,10 @@ i18next.addResources('en', 'default', {
     '{{count, number}} other units here (choose a unit)',
   'UnitDetails.value': '{{value, number}}',
   'UnitDetails.visibility': 'V',
-
   // A unit's name, then its state, in the stack window and the active unit's card (#694).
   'UnitLabel.label': '{{unit}}',
   'UnitLabel.label_state': '{{unit}} ({{states, list(type: unit)}})',
-
   'UnitSelectionWindow.title': 'Activate unit',
-
-  'Welcome.you-have-risen':
-    '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }), you have risen to become leader of $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }).',
-  'Welcome.your-people-have-knowledge-of':
-    'Your people have knowledge of {{advances, list}}.',
-
-  'Window.maximize': 'Maximize',
-  'Window.minimize': 'Minimize',
-  'Window.close': '$t(Generic.close)',
-  'Window.Eyebrow.city': 'City',
-  'Window.Eyebrow.diplomacy': 'Diplomacy',
-  'Window.Eyebrow.government': 'Government',
-  'Window.Eyebrow.production': 'Production',
-  'Window.Eyebrow.reference': 'Reference',
-  'Window.Eyebrow.reference_key': 'Reference · {{- key}}',
-  'Window.Eyebrow.report': 'Report',
-  'Window.Eyebrow.report_key': 'Report · {{key}}',
-  'Window.Eyebrow.science': 'Science',
-  'Window.Eyebrow.units': 'Units',
-  'Window.filter': 'Filter',
-  'Window.filter-empty': 'Nothing matches.',
-  'Window.filter-placeholder': 'Filter (press /)',
-
-  'WorkerFailure.body':
-    'Something went wrong in the game. It may carry on; if nothing happens, reload the page.',
-  'WorkerFailure.not-answering':
-    'The game has stopped answering. It may be busy and carry on; if nothing happens, reload the page.',
-  'WorkerFailure.title': 'Something went wrong',
-
   'GameOver.conquest.body':
     'The {{nation}} have conquered the entire world. All hail {{leader}} the Conqueror!',
   'GameOver.conquest.title': 'Game over',
@@ -1051,7 +652,6 @@ i18next.addResources('en', 'default', {
     'A civilization we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
   'GameOver.spaceship.body_you':
     'Our colonists have landed on Alpha Centauri! The name of {{leader}} of the {{nation}} will live forever.',
-
   'FamousLeader.CharlesDeGaulle': 'Charles de Gaulle',
   'FamousLeader.Cleopatra': 'Cleopatra',
   'FamousLeader.DanQuayle': 'Dan Quayle',
@@ -1072,7 +672,6 @@ i18next.addResources('en', 'default', {
   'FamousLeader.ThomasJefferson': 'Thomas Jefferson',
   'FamousLeader.VladimirLenin': 'Vladimir Lenin',
   'FamousLeader.WinstonChurchill': 'Winston Churchill',
-
   'HallOfFame.column.civilization': 'Civilization',
   'HallOfFame.column.difficulty': 'Level',
   'HallOfFame.column.ending': 'Ending',
@@ -1087,193 +686,4 @@ i18next.addResources('en', 'default', {
   'HallOfFame.reason.retired': 'Retired',
   'HallOfFame.reason.spaceship': 'A spaceship landed',
   'HallOfFame.title': 'Hall of Fame',
-});
-
-i18next.addResources('en', 'notification', {
-  Title: '$t(Notification.title, { "ns": "default" })',
-  'City.building-complete.unit.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" })!',
-  'City.building-complete.unit.title': 'Building complete!',
-  'City.building-complete.city-improvement.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" })!',
-  'City.building-complete.city-improvement.title': 'Building complete!',
-  'City.building-complete.wonder.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
-  'City.building-complete.wonder.title': 'Building complete!',
-  'City.building-complete.spaceship-part.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" })!',
-  'City.building-complete.spaceship-part.title': 'Building complete!',
-  // An item the city's queue dropped, as it could no longer build it (#774), by kind, as completions are.
-  'City.queue-dropped.unit.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "unit" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
-  'City.queue-dropped.city-improvement.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t(Improvement.{{item._}}.name, { "defaultValue": "{{item._}}", "ns": "city" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
-  'City.queue-dropped.wonder.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "wonder" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
-  'City.queue-dropped.spaceship-part.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "spaceship" }), so it was dropped from the queue$t(City.queue-dropped.more, { "count": {{more}} }).',
-  'City.queue-dropped.other.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) can no longer build part of its queue, so it was dropped$t(City.queue-dropped.more, { "count": {{more}} }).',
-  'City.queue-dropped.more_zero': '',
-  'City.queue-dropped.more_one': ', with {{count, number}} more',
-  'City.queue-dropped.more_other': ', with {{count, number}} more',
-  'City.queue-dropped.unit.title': 'Dropped from the queue',
-  'City.queue-dropped.city-improvement.title': 'Dropped from the queue',
-  'City.queue-dropped.wonder.title': 'Dropped from the queue',
-  'City.queue-dropped.spaceship-part.title': 'Dropped from the queue',
-  'City.queue-dropped.other.title': 'Dropped from the queue',
-  'City.building-complete.other.body':
-    '$t(Generic.city-name, { "civilization": "{{cityBuild.city.originalPlayer.civilization._}}", "name": "{{- cityBuild.city.name}}", "ns": "default" }) has completed work on its build project!',
-  'City.building-complete.other.title': 'Building complete!',
-  'City.captured-by-us.body':
-    'We have captured $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) from $t({{originalPlayer.civilization._}}.nation, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" })',
-  'City.captured-by-us.title': 'City captured!',
-  'City.captured-from-us.body':
-    'Our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been captured by $t(Generic.civilization-name.nation, { "civilization": "{{capturingPlayer.civilization._}}", "ns": "default" })!',
-  'City.captured-from-us.title': 'City captured!',
-  'City.destroyed.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been destroyed!`,
-  'City.destroyed.title': 'City destroyed!',
-  'City.destroyed-by.body':
-    'Our city $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has been destroyed by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
-  'City.destroyed-by.title': 'City destroyed!',
-  'City.civil-disorder.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). Mayor flees in panic!`,
-  'City.civil-disorder.title': 'Civil disorder',
-  'City.leader-celebration.body': `Leader celebration in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
-  'City.leader-celebration.title': 'Leader celebration',
-  'City.leader-celebration-ended.body': `Leader celebration canceled in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!`,
-  'City.leader-celebration-ended.title': 'Leader celebration',
-  'City.order-restored.body': `Order restored in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'City.order-restored.title': 'Order restored!',
-  'City.polluted.body': `Pollution near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'City.polluted.title': 'Pollution!',
-  'City.sdi-protected.body': `SDI protects $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'City.sdi-protected.title': 'SDI Defense',
-  'City.unit-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }).`,
-  'City.unit-unsupported.title': 'Unit not supported!',
-  'City.improvement-unsupported.body': `$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
-  'City.improvement-unsupported.title': 'Improvement not supported!',
-  'City.food-storage-exhausted.body': `Food storage exhausted in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'City.food-storage-exhausted.title': 'Food storage exhausted!',
-  'CityImprovement.obsolete.body':
-    'Development of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" }) makes existing $t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) obsolete.',
-  'CityImprovement.obsolete.title': 'Improvement obsolete',
-
-  'GoodyHut.action-performed.Advance.body':
-    'You have discovered scrolls of ancient wisdom...',
-  'GoodyHut.action-performed.Advance.title': 'Exploration',
-  'GoodyHut.action-performed.Barbarians.body':
-    'You have unleashed a horde of barbarians!',
-  'GoodyHut.action-performed.Barbarians.title': 'Exploration',
-  'GoodyHut.action-performed.City.body':
-    'You have discovered an advanced tribe...',
-  'GoodyHut.action-performed.City.title': 'Exploration',
-  'GoodyHut.action-performed.Gold.body':
-    'You have discovered valuable treasure worth 50 Gold.',
-  'GoodyHut.action-performed.Gold.title': 'Exploration',
-  'GoodyHut.action-performed.Unit.body':
-    'You have discovered a friendly tribe of skilled mercenaries...',
-  'GoodyHut.action-performed.Unit.title': 'Exploration',
-
-  'Player.declaration-broken.body':
-    'We have broken our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }).',
-  'Player.declaration-broken.title': 'Treaty broken',
-  'Player.declaration-expired.body':
-    'Our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }) has been canceled!',
-  'Player.declaration-expired.title':
-    'Sneak attack by $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" })!',
-  'Player.defeated.by.body':
-    '$t(Generic.civilization-name.nation-start, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) has been defeated by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
-  'Player.defeated.by.title': 'Defeated!',
-  'Player.defeated.unknown.body':
-    '$t(Generic.civilization-name.nation-start, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) defeated!',
-  'Player.defeated.unknown.title': 'Defeated!',
-  'Player.defeated.unmet.body':
-    'News reaches us that $t(Generic.unknown-civilization, { "ns": "default" }) has been defeated!',
-  'Player.defeated.unmet.title': 'Defeated!',
-  'Player.defeated.unmet-by.body':
-    '$t(Generic.unknown-civilization-start, { "ns": "default" }) has been defeated by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
-  'Player.defeated.unmet-by.title': 'Defeated!',
-  'Barbarians.landing.body':
-    'Barbarian raiding party lands near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })! Citizens are alarmed.',
-  'Barbarians.landing.title': 'Barbarians!',
-  'Barbarians.ransom.body':
-    'Barbarian leader captured! {{amount, number}} Gold ransom paid.',
-  'Barbarians.ransom.title': 'Ransom',
-  'Barbarians.uprising.body':
-    'Travelers report: Barbarian uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
-  'Barbarians.uprising.title': 'Barbarian uprising',
-  'Barbarians.uprising.guerrilla.body':
-    'Travelers report: Guerrilla uprising near $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" })!',
-  'Barbarians.uprising.guerrilla.title': 'Guerrilla uprising',
-  'Player.respawned.body':
-    'Where $t(Generic.civilization-name.nation, { "civilization": "{{defeatedPlayer.civilization._}}", "ns": "default" }) once stood, a new civilization has arisen.',
-  'Player.respawned.title': 'A new civilization',
-  'Player.respawned.unmet.body':
-    'Travelers tell of a new civilization arising in a distant land.',
-  'Player.respawned.unmet.title': 'A new civilization',
-  'Player.government-collapsed.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Your civilization falls into Anarchy.`,
-  'Player.government-collapsed.title': 'Government falls!',
-  'Player.government-collapsed.pyramids.body': `Civil disorder in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has brought down your Democracy! Thanks to the Pyramids, you can choose a new government straight away.`,
-  'Player.government-collapsed.pyramids.title': 'Government falls!',
-  'Player.research-complete.body':
-    'You have discovered the secrets of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science", "context": "numbered", "number": {{number}} })!',
-  'Player.research-complete.title': 'Advance discovered!',
-  'Player.spaceship-landed.body': 'Our spaceship has landed on Alpha Centauri!',
-  'Player.spaceship-landed.title': 'Spaceship landed',
-
-  'Spaceship.part-built.body':
-    'Component added to $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship.',
-  'Spaceship.part-built.title': 'Spaceship built',
-  'Spaceship.part-built.unmet.body':
-    'Component added to the spaceship of $t(Generic.unknown-civilization, { "ns": "default" }).',
-  'Spaceship.part-built.unmet.title': 'Spaceship built',
-  'Spaceship.cancelled.body':
-    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship construction canceled.',
-  'Spaceship.cancelled.title': 'Spaceship canceled',
-  'Spaceship.returned.body':
-    '$t(Generic.civilization-name.name, { "civilization": "{{player.civilization._}}", "ns": "default" }) spaceship returns to Earth.',
-  'Spaceship.returned.title': 'Spaceship returns',
-
-  'Game.retirement-warning.body':
-    '$t(Generic.leader-name, { "leader": "{{player.civilization.leader._}}", "ns": "default" }) plans to retire in 20 years.',
-  'Game.retirement-warning.title': 'Retirement',
-
-  'Diplomat.advance-stolen.body': `$t({{thief.civilization._}}.plural, { "defaultValue": "{{thief.civilization._}}", "ns": "civilization" }) steal $t({{advance}}.name, { "defaultValue": "{{advance}}", "ns": "science" }).`,
-  'Diplomat.advance-stolen.title': 'Technology stolen!',
-  'Diplomat.incited.body': `$t({{originalPlayer.civilization._}}.plural, { "defaultValue": "{{originalPlayer.civilization._}}", "ns": "civilization" }) rebel! Civil War in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). $t({{inciter.civilization._}}.name, { "defaultValue": "{{inciter.civilization._}}", "ns": "civilization" }) influence suspected.`,
-  'Diplomat.incited.title': 'Civil war!',
-  'Diplomat.sabotaged.improvement.body': `$t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) destroyed in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.improvement.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.body': `Production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.production.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.unit.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "unit" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.production.unit.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.city-improvement.body': `$t(Improvement.{{build._}}.name, { "defaultValue": "{{build._}}", "ns": "city" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.production.city-improvement.title':
-    'Industrial sabotage!',
-  'Diplomat.sabotaged.production.wonder.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.production.wonder.title': 'Industrial sabotage!',
-  'Diplomat.sabotaged.production.spaceship-part.body': `$t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "spaceship" }) production sabotaged in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }).`,
-  'Diplomat.sabotaged.production.spaceship-part.title': 'Industrial sabotage!',
-  'Diplomat.unit-bribed.body': `$t({{previousOwner.civilization._}}.name, { "defaultValue": "{{previousOwner.civilization._}}", "ns": "civilization" }) $t({{unit}}.name, { "defaultValue": "{{unit}}", "ns": "unit" }) unit bribed by $t({{briber.civilization._}}.plural, { "defaultValue": "{{briber.civilization._}}", "ns": "civilization" })!`,
-  'Diplomat.unit-bribed.title': 'Unit bribed!',
-  'Unit.lost-at-sea.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was lost at sea.`,
-  'Unit.lost-at-sea.title': 'Unit lost at sea!',
-  'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from $t(Generic.city-name, { "civilization": "{{home.originalPlayer.civilization._}}", "name": "{{- home.name}}", "ns": "default" }) arrives in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }). The goods sold for {{bonus, number}} coins.`,
-  'Unit.trade-route-established.title': 'Trade route established',
-  'Unit.nuclear-attack.body':
-    'Nuclear weapons have been used by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" })!',
-  'Unit.nuclear-attack.title': 'Nuclear attack!',
-  'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
-  'Unit.out-of-fuel.title': 'Out of fuel!',
-
-  'Wonder.building-complete.other-player.known.body':
-    '$t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
-  'Wonder.building-complete.other-player.known.title': 'Wonder completed',
-  'Wonder.building-complete.other-player.unknown.body':
-    'A far away city has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
-  'Wonder.building-complete.other-player.unknown.title': 'Wonder completed',
-  'Wonder.obsolete.body':
-    '$t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in $t(Generic.city-name, { "civilization": "{{city.originalPlayer.civilization._}}", "name": "{{- city.name}}", "ns": "default" }) is now obsolete.',
-  'Wonder.obsolete.title': 'Wonder obsolete',
 });

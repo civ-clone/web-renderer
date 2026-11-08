@@ -14,8 +14,9 @@ The short version for a change to this repository:
    are the release notes shown in the game, one bullet per paragraph, with
    issue references inline ("…stopped working (closes #46)."). Implementation
    detail belongs in the pull request. `CLAUDE.md` has the rule.
-3. Text shown to players goes in `translations/local/en.ts`, with a British
-   spelling in `en-GB.ts` where the two differ.
+3. Text shown to players goes in the package that shows it, in
+   `packages/<name>/translations/en.ts`, with a British spelling in `en-GB.ts`
+   beside it where the two differ.
 4. Open a pull request against `main`. CI runs `npm run prettier:check` and
    `npm test`; merging deploys to [civ.one](https://civ.one).
 

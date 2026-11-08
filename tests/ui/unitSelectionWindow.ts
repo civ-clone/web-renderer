@@ -326,7 +326,7 @@ expect('and closes the window too', clicking.element().isConnected, false);
 // Each unit is a row (#694): its name and state, then the city that supports it, or no city line for a free unit.
 const rowText = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-city/en');
 

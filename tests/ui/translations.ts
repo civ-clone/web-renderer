@@ -97,7 +97,7 @@ const expect = (description: string, actual: string, expected: string) => {
 (async () => {
   await i18next.init({ ...i18nOptions, lng: 'fr-FR' });
   addFormatters(i18next);
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
   await import('../../translations/civ1-civilization/en');

@@ -82,7 +82,7 @@ const labels = (): string[] =>
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   expect(
     'a name that starts with what is typed comes first, then a later word, then inside, then its letters in order',

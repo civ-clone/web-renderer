@@ -48,7 +48,7 @@ const settle = () => new Promise((resolve) => setTimeout(resolve));
 
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   const report = renderCitizenCounts(
     {

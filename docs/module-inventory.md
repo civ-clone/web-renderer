@@ -101,8 +101,8 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 
 ## Styling and assets
 
-- `src/css/app.scss`: entry style file.
-- `src/css/components/*`: component-level SCSS modules.
+- `src/css/app.scss`: entry style file: the themes, and each package's partials in cascade order.
+- `packages/*/styles/*`: each package's own SCSS partials (#825).
 - `src/img/main-menu-bg.jpg`: main menu background image.
 
 ## Localization
