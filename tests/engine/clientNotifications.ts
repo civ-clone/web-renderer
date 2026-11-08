@@ -1,5 +1,5 @@
 // The notices the client sends the player (#449), checked with plain data: every key the notification tables in
-//  `src/js/Engine/Client/notifications/` can make, what each says, who is told and who isn't, that each key has a
+//  `packages/worker-client/Client/notifications/` can make, what each says, who is told and who isn't, that each key has a
 //  title and a body in the translations, and that the registrar listens for each event once, in the order the client
 //  used to, and sends what a handler makes and nothing for `null`.
 

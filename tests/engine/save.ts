@@ -448,7 +448,7 @@ const report = (): void => {
     const game = gameForLoad(defaultSlots);
 
     registerClasses(game, { collisions: [] });
-    // As the app does (`src/js/Engine/Game.ts`): the diplomacy classes `registerClasses` can't name.
+    // As the app does (`packages/worker-client/Game.ts`): the diplomacy classes `registerClasses` can't name.
     registerDiplomacyClasses(game);
     registerBarbarianClasses(game);
 

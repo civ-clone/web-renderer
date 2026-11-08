@@ -1,4 +1,4 @@
-// Battles' sounds (src/js/Engine/Client/battleEvents.ts, #126), checked with stand-in units, a stand-in view and a stub
+// Battles' sounds (packages/worker-client/Client/battleEvents.ts, #126), checked with stand-in units, a stand-in view and a stub
 //  transport: in the player's own battles, the winner's sound in the version for how it went for the player; in
 //  anyone else's, the attacker's in the version for how it went for the attacker, and only where one of the player's
 //  units sees either side. Each defeat is heard once, though `unit:defeated` comes twice (civ-clone/civ1-city#19).

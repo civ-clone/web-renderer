@@ -2,7 +2,7 @@
 //
 // The save suite proves a file round-trips byte-identically. That is not the
 // same question. This one goes through the renderer's own load path —
-// `src/js/Engine/loadGame.ts`, what the "Load Game" menu item runs — in a
+// `packages/worker-client/loadGame.ts`, what the "Load Game" menu item runs — in a
 // *second process*, because loading needs an engine that has not started a
 // game: plugins register their rules on import, closing over the singleton
 // registries, so a save cannot be laid over a game in progress.
