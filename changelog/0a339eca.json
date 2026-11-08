@@ -1,0 +1,1 @@
+{"version":"0.1.0@0a339eca","date":"2026-11-08T20:13:58.000Z","localChanges":["refactor: the worker is a package, ui-worker-client, that shares only the protocol and its transport with the page (#825) (#836)"],"externalChanges":{}}
