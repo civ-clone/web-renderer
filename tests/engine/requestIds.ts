@@ -11,9 +11,9 @@ import AbstractTransport, {
   TransportTimers,
   defaultSilenceTimeout,
 } from '@civ-clone/core-data-client/AbstractTransport';
-import ParentTransport from '@civ-clone/ui-worker-transport/ParentTransport';
+import ParentTransport from '@civ-clone/worker-transport/ParentTransport';
 import Request from '@civ-clone/core-data-client/Request';
-import WorkerTransport from '@civ-clone/ui-worker-transport/WorkerTransport';
+import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';
 import answer from '@civ-clone/ui-worker-client/answer';
 
 type Handler = (data: any, meta?: { id?: number }) => void;

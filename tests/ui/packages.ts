@@ -302,10 +302,10 @@ const outside = [
 ].filter((path) => path !== join(root, 'tests/ui/packages.ts'));
 
 // The worker (`worker-client`, which `backend.ts` starts) and the page share only the protocol, what one sends the
-//  other, and the transport over the worker's messages (#825). The worker never runs the page's code, nor the page the
+//  other (#825), over `@civ-clone/worker-transport`. The worker never runs the page's code, nor the page the
 //  worker's.
 const backend = join(root, 'src/js/backend.ts'),
-  backendMayUse = ['worker-client', 'worker-transport', 'protocol'];
+  backendMayUse = ['worker-client', 'protocol'];
 
 expect(
   'the worker client depends on the protocol, and on nothing of the page',

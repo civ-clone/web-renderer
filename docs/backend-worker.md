@@ -13,7 +13,7 @@ Primary files:
 - `packages/worker-client/Client/*`
 - `DataQueue` (`@civ-clone/core-data-client`)
 - `packages/protocol/Transport.ts` (`@civ-clone/ui-protocol`, shared with the page)
-- `packages/worker-transport/ParentTransport.ts` (`@civ-clone/ui-worker-transport`)
+- `ParentTransport` (`@civ-clone/worker-transport`)
 
 ## `Game` boot orchestration
 
