@@ -206,7 +206,7 @@ const play = (name: string, setup: Setup): void => {
   receivers.get('start')!(null);
 
   if (name.startsWith('fail:')) {
-    // The `workerError` is sent from inside `start`, so it is already there; a beat more is given for anything that
+    // The `workerError` is sent from `start`, once the plugins are in (#825); a beat more is given for anything that
     //  would go on regardless (the engine's events are emitted as they come, and a registered player would be by then).
     until(() => report.workerErrors.length > 0)
       .then(() => new Promise((resolve) => setTimeout(resolve, 100)))
