@@ -110,12 +110,11 @@
       ]
     },
     "map": {
-      "about": "Drawing the world on any grid: the portal, its layers and the minimap, all through a `Projection`. What only holds for one grid goes in that grid's area.",
+      "about": "Drawing the world on any grid: the portal and its layers, all through a `Projection`. What only holds for one grid goes in that grid's area, which registers its projection.",
       "uses": ["client", "assets", "widgets"],
       "paths": [
         "components/Map.ts",
         "components/Map/",
-        "components/Minimap.ts",
         "components/Portal.ts",
         "components/World.ts",
         "lib/ActiveUnitTiles.ts",

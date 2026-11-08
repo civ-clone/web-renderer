@@ -9,7 +9,10 @@ import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
 import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';
 import civ1Json from '../../src/js/UI/tilesets/civ1.json';
 import currentTileset from '../../src/js/UI/lib/tilesets';
-import projectionFor from '../../src/js/UI/lib/projectionFor';
+import projectionFor, {
+  drawableGrids,
+  registerGrid,
+} from '../../src/js/UI/lib/projectionFor';
 import validateDescriptor from '../../src/js/UI/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
@@ -440,8 +443,8 @@ expect(
     thrown(() => projectionFor(tilesetWith({ id: grid, grid }), world, 32))
   ),
   [
-    'Tileset "staggered-iso": there is no projection for the staggered-iso grid yet (#94/#97).',
-    'Tileset "hex-odd-r": there is no projection for the hex-odd-r grid yet (#94/#97).',
+    'Tileset "staggered-iso": no projection is loaded for the staggered-iso grid (isometric comes with #97, hex with #94).',
+    'Tileset "hex-odd-r": no projection is loaded for the hex-odd-r grid (isometric comes with #97, hex with #94).',
   ]
 );
 
@@ -488,6 +491,30 @@ expect(
     squareGeometry({ overhang: { top: 0, right: 0, bottom: 0, left: 1 } }),
   ],
   [noSpill, noSpill, noSpill]
+);
+
+// A grid's own code makes it drawable (#825): the map asks whichever projection is registered for the tileset's grid.
+const hexStub = tilesetWith({ id: 'hex-stub', grid: 'hex-odd-r' }),
+  hexAsked: unknown[] = [];
+
+registerGrid('hex-odd-r', (tileset, world, tileSize, wrapVertical) => {
+  hexAsked.push([tileset.id, tileSize, wrapVertical]);
+
+  return new SquareProjection(tileSize, world, wrapVertical);
+});
+
+expect(
+  'a registered grid is drawable, and its projection is the one the map gets',
+  [
+    drawableGrids().sort(),
+    projectionFor(hexStub, world, 24, false).footprint(),
+    hexAsked,
+  ],
+  [
+    ['hex-odd-r', 'square'],
+    { width: 24, height: 24 },
+    [['hex-stub', 24, false]],
+  ]
 );
 
 finished = true;

@@ -54,11 +54,12 @@ export const projectionFor = (
 ): Projection => {
   const projection = grids.get(tileset.grid);
 
+  // A grid nothing has registered: one there is no code for yet (isometric comes with #97, hex with #94), or one whose
+  //  code the page, or a suite, has not loaded.
   if (projection === undefined) {
-    // Isometric with #97, hex with #94.
     return refuse(
       tileset,
-      `there is no projection for the ${tileset.grid} grid yet (#94/#97).`
+      `no projection is loaded for the ${tileset.grid} grid (isometric comes with #97, hex with #94).`
     );
   }
 

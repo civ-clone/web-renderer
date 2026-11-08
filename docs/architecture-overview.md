@@ -44,7 +44,7 @@ Loading a saved game takes a different path. The player picks a file, `src/js/UI
   - The page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (#470); the `?debug=1` flags and panel.
 - `src/js/UI/components/*`
   - Window and UI primitives for reports, city/unit views, menu flows, and overlays.
-- `src/js/UI/components/Map/*`, `Portal.ts`, `GamePortal.ts`, `Minimap.ts`
+- `src/js/UI/components/Map/*`, `Portal.ts`, `GamePortal.ts`, and `src/js/UI/map-square/Minimap.ts`
   - Canvas layer renderers (terrain, units, cities, fog, improvements, etc.). Each layer's canvas is the size of the portal, not the world, and the portal composites only the regions the layers changed. The minimap draws from a layer of its own (`Map/Overview.ts`).
 
 ## State and rendering model
