@@ -304,14 +304,14 @@ const outside = [
 // The worker (`worker-client`, which `backend.ts` starts) and the page share only the protocol, what one sends the
 //  other, and the transport over the worker's messages (#825). The worker never runs the page's code, nor the page the
 //  worker's.
-const workerMayUse = ['protocol', 'worker-transport'],
-  backend = join(root, 'src/js/backend.ts');
+const backend = join(root, 'src/js/backend.ts'),
+  backendMayUse = ['worker-client', 'worker-transport', 'protocol'];
 
 expect(
-  'the worker client depends on the protocol and the transport, and on nothing of the page',
+  'the worker client depends on the protocol, and on nothing of the page',
   [
     dependsOn('worker-client').includes('protocol'),
-    dependsOn('worker-client').filter((name) => !workerMayUse.includes(name)),
+    dependsOn('worker-client').filter((name) => name !== 'protocol'),
   ],
   [true, []]
 );
@@ -322,11 +322,14 @@ expect(
 );
 expect(
   'the worker starts from `backend.ts`, which uses only the worker client, its transport and the protocol',
-  importsOf(backend)
-    .map((target) => packageOf(target) ?? relative(root, target))
-    .filter((to) => ![...workerMayUse, 'worker-client'].includes(to))
-    .filter((to) => !to.startsWith('node_modules/')),
-  []
+  [
+    importsOf(backend).some((target) => packageOf(target) === 'worker-client'),
+    importsOf(backend)
+      .map((target) => packageOf(target) ?? relative(root, target))
+      .filter((to) => !backendMayUse.includes(to))
+      .filter((to) => !to.startsWith('node_modules/')),
+  ],
+  [true, []]
 );
 expect(
   'and nothing else in civ.one’s own code imports the worker client',
