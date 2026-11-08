@@ -392,11 +392,17 @@ const reachedFrom = (starts: string[], enter: (path: string) => boolean) => {
     return seen;
   },
   interfaces = names.filter(isInterface),
-  sharedReach = reachedFrom([join(root, 'src/js/frontend.ts')], (path) => {
-    const name = packageOf(path);
+  // Everything civ.one's own entries reach, but through an interface: the page's, the worker's and their generated lists.
+  sharedReach = reachedFrom(
+    sourcesUnder(join(root, 'src/js'))
+      .filter((path) => !path.startsWith(join(root, 'src/js/Audio') + '/'))
+      .filter((path) => path !== join(root, 'src/js/interfaces.ts')),
+    (path) => {
+      const name = packageOf(path);
 
-    return name === null || !isInterface(name);
-  }),
+      return name === null || !isInterface(name);
+    }
+  ),
   interfaceReach = Object.fromEntries(
     interfaces.map((name) => [
       name,
