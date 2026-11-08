@@ -1,19 +1,21 @@
 import {
+  TransportMessage,
+  TransportWorkerError,
+} from '@civ-clone/ui-protocol/Transport';
+import {
   RequestId,
   TransportData,
   TransportDisposer,
-  TransportMessage,
   TransportReceiveArgs,
   TransportReceiveHandler,
   TransportSendArgs,
-  TransportWorkerError,
-} from '@civ-clone/ui-protocol/Transport';
+} from '@civ-clone/core-data-client/Transport';
 import AbstractTransport, {
   AbstractTransportOptions,
   RequestFailed,
-} from '@civ-clone/ui-protocol/AbstractTransport';
+} from '@civ-clone/core-data-client/AbstractTransport';
 import DataObject from '@civ-clone/core-data-object/DataObject';
-import reconstituteData from './lib/reconstituteData';
+import reconstituteData from '@civ-clone/core-data-client/reconstituteData';
 
 // Channels whose message is handed over as it arrived. The listener builds the live game data from the map itself with
 //  `IncrementalReconstituter`, so a rebuild here is a second copy of the same several megabytes, on the main thread,

@@ -1,5 +1,5 @@
 import { City } from '../types';
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 // A city a watcher opens (#613), by its square: a city the watcher doesn't own reaches the page as a stand-in with an
 //  id of its own, and its square is what both sides know it by. Answered in full, as a Diplomat's investigation is

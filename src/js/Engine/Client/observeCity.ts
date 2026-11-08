@@ -6,7 +6,9 @@
 //  turned out to hold nothing to open.
 
 import { ClientContext } from './ClientContext';
-import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
+import Transport, {
+  TransportDisposer,
+} from '@civ-clone/core-data-client/Transport';
 import answer from '../answer';
 import cityInFull from './cityInFull';
 

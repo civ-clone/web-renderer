@@ -4,7 +4,7 @@ import {
   TransportData,
   TransportReceiveArgs,
   TransportSendArgs,
-} from '@civ-clone/ui-protocol/Transport';
+} from '@civ-clone/core-data-client/Transport';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
 import { IDataObject } from '@civ-clone/core-data-object/DataObject';
 

@@ -2,7 +2,7 @@
 //  given, and sent at once or held until the turn is handed over (#130).
 
 import Notification from '@civ-clone/ui-protocol/Notification';
-import Transport from '@civ-clone/ui-protocol/Transport';
+import Transport from '@civ-clone/core-data-client/Transport';
 import { DataFilter } from './visibilityFilter';
 import { standalone } from './refs';
 

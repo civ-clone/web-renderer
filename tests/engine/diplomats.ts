@@ -40,7 +40,7 @@ import { instance as playerResearchRegistryInstance } from '@civ-clone/core-scie
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
+import { reconstituteData } from '@civ-clone/core-data-client/reconstituteData';
 
 let started = false,
   humanPlayer: Player | null = null,

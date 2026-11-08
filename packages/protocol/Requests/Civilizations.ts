@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 /**
  * A civilization as the worker lists it for the game setup (#604): its class name, its leaders' class names, and the

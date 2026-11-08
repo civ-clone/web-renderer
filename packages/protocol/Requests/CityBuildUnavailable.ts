@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { UnavailableBuildItem } from '../civilopedia';
 
 // What a city can't build, and the ids of the rules that refuse each item (#183). The argument is the `CityBuild`'s

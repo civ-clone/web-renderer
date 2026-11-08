@@ -14,7 +14,7 @@ import {
 } from '@civ-clone/ui-client/lib/difficulty';
 import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import Difficulties from '@civ-clone/ui-protocol/Requests/Difficulties';
-import Request from '@civ-clone/ui-protocol/Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import { openChoice } from './choiceList';

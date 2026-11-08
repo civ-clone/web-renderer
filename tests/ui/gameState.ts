@@ -20,7 +20,7 @@ import GameState, {
 } from '@civ-clone/ui-client/game/GameState';
 import DataChanges from '@civ-clone/ui-client/lib/DataChanges';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import { DataPatch, Tile } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];

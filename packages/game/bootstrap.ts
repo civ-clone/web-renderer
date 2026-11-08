@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import GameSession from './GameSession';
 import GameOverWindow from '@civ-clone/ui-windows/components/GameOverWindow';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';

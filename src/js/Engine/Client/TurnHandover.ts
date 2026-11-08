@@ -14,10 +14,8 @@ import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Tile from '@civ-clone/core-world/Tile';
 import TransferObject from '../TransferObject';
-import {
-  TransportDisposer,
-  TransportHandledAction,
-} from '@civ-clone/ui-protocol/Transport';
+import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
+import { TransportDisposer } from '@civ-clone/core-data-client/Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import { ClientContext, Disposer, Registries } from './ClientContext';
 import { filterToReference } from './refs';

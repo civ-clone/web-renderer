@@ -32,7 +32,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import appElements from '@civ-clone/ui-game/app/elements';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 
 const failures: string[] = [];

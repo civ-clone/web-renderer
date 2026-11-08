@@ -72,7 +72,7 @@ import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';
-import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
+import { reconstituteData } from '@civ-clone/core-data-client/reconstituteData';
 import worldSizes from '@civ-clone/ui-client/lib/worldSizes';
 
 const names = [

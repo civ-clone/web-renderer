@@ -14,7 +14,7 @@ import Overview from '@civ-clone/ui-map-square/Overview';
 import { Tile, World as WorldData } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 
 const failures: string[] = [];
 let checks = 0;

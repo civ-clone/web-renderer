@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { RequirementData } from '../requirements';
 
 // Every requirement entry (#37), for the civilopedia (#183).

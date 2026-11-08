@@ -14,8 +14,8 @@
 // id that arrives after something referred to it is found there, and an id
 // whose object becomes a list is rebuilt as one.
 
-import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { reconstituteData } from '@civ-clone/core-data-client/reconstituteData';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import pruneObjectMap from '@civ-clone/ui-client/lib/pruneObjectMap';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';

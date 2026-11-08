@@ -40,25 +40,36 @@ Quick reference map of key code areas.
   - `cheats.ts`: the `cheat` receiver and the cheat menu's lists, with the plain-data checks for `CreateUnit` and `ModifyUnit`.
   - `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
-- `ParentTransport.ts`: the worker's end of the messaging. The page's end, `WorkerTransport.ts`, is in `client`, and
-  what the two share is in the protocol package (below).
-- `DataQueue.ts`: patch queue and transfer serialization, owned by `Client/PlayerPatches.ts`.
+- The worker's end of the messaging, `ParentTransport`, is in `ui-worker-transport` with the page's end; what the two
+  say is in the protocol package, and the transport itself and the patch queue (`DataQueue`, owned by
+  `Client/PlayerPatches.ts`) are `@civ-clone/core-data-client`'s (below).
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
 - `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `terrainRules`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
 - `lib/*`: worker-side helpers (their row and entry types are the protocol's): report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
 
+## `@civ-clone/core-data-client` (its own repository)
+
+How a game talks to a client that isn't in the same process, knowing nothing about civ.one's channels (#825):
+`Transport` (the contract), `Request`, `AbstractTransport` (request ids, replies, failures, a silent other side
+reported), `DataQueue` (data object patches) and `reconstituteData` (rebuilding them).
+
+## Worker transport (`packages/worker-transport`, `@civ-clone/ui-worker-transport`)
+
+- `ParentTransport.ts` / `WorkerTransport.ts`: the worker's and the page's ends of an `AbstractTransport` over the
+  worker's messages. `WorkerTransport` rebuilds what arrives, but for `gameData`, and passes the worker's own errors on
+  as `workerError`.
+
 ## Protocol (`packages/protocol`, `@civ-clone/ui-protocol`)
 
-What the page and the worker say to each other (#825). The worker imports no other package, and no package imports the
-worker.
+What the page and the worker say to each other (#825): civ.one's channels and what crosses them. The worker imports no
+package but this and the worker transport, and no package imports the worker.
 
-- `Transport.ts`: channel and payload typing.
-- `AbstractTransport.ts`: shared `request()` implementation (replies matched by request id; a silent worker reported).
+- `Transport.ts`: civ.one's channels and their payloads (`TransportDataMap`).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
-- `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
-- `types.d.ts`: the game's data as the page gets it; `data.ts`: patches and the object map it is rebuilt from.
+- `Requests/*`: the requests the page asks (`Request`s from `core-data-client`) (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
+- `types.d.ts`: the game's data as the page gets it.
 - `reports.ts`, `civilopedia.ts`, `requirements.ts`, `observer.ts`, `battles.ts`, `topology.ts`: the rows, entries and
   states the worker sends.
 - `lib/seats.ts`, `lib/savedSeats.ts`: who plays each civilization, as setup and saves record it.
@@ -82,7 +93,6 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 - `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, viewport geometry, saved games, etc.).
 - `lib/IncrementalReconstituter.ts`: rebuilds the game data from the object map, touching only the ids a patch changed.
 - `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `components/lib/watchCity.ts` and `watchPlayer.ts` do it for the city screen and the reports.
-- `lib/reconstituteData.ts`: full rebuild of an object map; used for one-off payloads and as the reference for `IncrementalReconstituter`.
 - `lib/pruneObjectMap.ts`: drops object-map entries nothing reachable refers to.
 - `lib/unitActions.ts`: asks the worker for the active unit's actions (`unitActions`).
 - `lib/savedGame.ts`: downloading saves, and handing a save to the next page load.

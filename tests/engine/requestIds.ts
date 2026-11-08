@@ -10,10 +10,10 @@ import AbstractTransport, {
   RequestFailed,
   TransportTimers,
   defaultSilenceTimeout,
-} from '@civ-clone/ui-protocol/AbstractTransport';
-import ParentTransport from '../../src/js/Engine/ParentTransport';
-import Request from '@civ-clone/ui-protocol/Request';
-import WorkerTransport from '@civ-clone/ui-client/WorkerTransport';
+} from '@civ-clone/core-data-client/AbstractTransport';
+import ParentTransport from '@civ-clone/ui-worker-transport/ParentTransport';
+import Request from '@civ-clone/core-data-client/Request';
+import WorkerTransport from '@civ-clone/ui-worker-transport/WorkerTransport';
 import answer from '../../src/js/Engine/answer';
 
 type Handler = (data: any, meta?: { id?: number }) => void;

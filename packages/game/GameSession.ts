@@ -1,7 +1,7 @@
 import { City as CityData, DataPatch } from '@civ-clone/ui-protocol/types';
 import { on, s } from '@dom111/element';
 import { t } from 'i18next';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-windows/components/openCity';
 import CitiesList from '@civ-clone/ui-windows/components/CitiesList';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';

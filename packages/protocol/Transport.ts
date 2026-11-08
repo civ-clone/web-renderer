@@ -1,4 +1,3 @@
-import { Request, RequestArgs, RequestReturn } from './Request';
 import { SeatChanges } from './lib/savedSeats';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
@@ -16,12 +15,22 @@ import { RequirementData } from './requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
 import type { BattleSound } from './battles';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import { DataPatch, ObjectMap } from './data';
+import {
+  TransportData,
+  TransportFailure,
+  TransportMessage as CoreTransportMessage,
+} from '@civ-clone/core-data-client/Transport';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
+import { DataPatch } from '@civ-clone/core-data-client/DataQueue';
 import Notification from './Notification';
 
-// Which request a message asks or answers (#470): the page's `request` gives each one its own, and the worker's reply,
-//  or its `requestFailed`, carries it back, so a reply is matched to its request and not only to its channel.
-export type RequestId = number;
+// civ.one's channels between the page and the worker (#825): what is sent on each and what comes back. The transport
+//  itself, and how requests are matched to their replies, is `@civ-clone/core-data-client`'s.
+
+/** One message as it crosses, on one of civ.one's channels. */
+export type TransportMessage<
+  Channel extends keyof TransportDataMap = keyof TransportDataMap
+> = CoreTransportMessage<TransportDataMap, Channel>;
 
 /** What a save is of, for the main menu's Continue to show (#749). */
 export type SaveDetails = {
@@ -30,47 +39,6 @@ export type SaveDetails = {
   turn: number;
   // Negative for BCE.
   year: number;
-};
-
-export type TransportMessage<
-  Channel extends keyof TransportDataMap = keyof TransportDataMap
-> = {
-  channel: Channel;
-  data: TransportReceiveArgs<TransportDataMap[Channel]>;
-  // Only on a request and its reply.
-  id?: RequestId;
-};
-
-export type TransportData<Send = any, Receive = any> = {
-  send: Send;
-  receive: Receive;
-};
-
-export type TransportSendArgs<Data extends TransportData> =
-  Data extends TransportData<infer Send> ? Send : never;
-
-export type TransportReceiveArgs<Data extends TransportData> =
-  Data extends TransportData<any, infer Receive> ? Receive : never;
-
-// What came with a message besides its data: the payload as it arrived, before `WorkerTransport` rebuilt it, and the
-//  request the message asks or answers, when it is one.
-export type TransportMeta = {
-  rawData?: ObjectMap;
-  id?: RequestId;
-};
-
-export type TransportReceiveHandler<Data extends TransportData> = (
-  data: TransportReceiveArgs<Data>,
-  meta?: TransportMeta
-) => void;
-
-export type TransportDisposer = () => void;
-
-// A request the worker could not answer, on the channel it was asked on (#470), and which one it was.
-export type TransportFailure = {
-  channel: string;
-  message: string;
-  id: RequestId;
 };
 
 // Something went wrong in the worker (#470). `notAnswering` is the page's own: the worker has said nothing for a while
@@ -338,41 +306,3 @@ declare global {
     RevealMap: null;
   }
 }
-
-export interface Transport<
-  DataMap extends {
-    [key: string]: TransportData;
-  }
-> {
-  receive<Channel extends keyof DataMap>(
-    channel: Channel,
-    handler: TransportReceiveHandler<DataMap[Channel]>
-  ): TransportDisposer;
-
-  receiveOnce<Channel extends keyof DataMap>(
-    channel: Channel,
-    handler: TransportReceiveHandler<DataMap[Channel]>
-  ): TransportDisposer;
-
-  request<
-    RequestType extends Request,
-    Args extends any[] = RequestArgs<RequestType>,
-    Return extends any = RequestReturn<RequestType>
-  >(
-    request: Request
-  ): Promise<Return>;
-
-  // The answer to the request `id`, which the page matches it to (#470).
-  reply<Channel extends keyof DataMap>(
-    channel: Channel,
-    data: TransportSendArgs<DataMap[Channel]>,
-    id: RequestId
-  ): void;
-
-  send<Channel extends keyof DataMap>(
-    channel: Channel,
-    data: TransportSendArgs<DataMap[Channel]>
-  ): void;
-}
-
-export default Transport;

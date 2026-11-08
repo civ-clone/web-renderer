@@ -1,5 +1,5 @@
 import { BuildItem } from '../types';
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 // What a city can build, for the production picker (#324). It is not sent with every `CityBuild` any more: working it
 //  out for every city on every patch was most of the patch. The argument is the `CityBuild`'s id.

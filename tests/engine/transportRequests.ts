@@ -9,9 +9,9 @@
 
 import AbstractTransport, {
   RequestFailed,
-} from '@civ-clone/ui-protocol/AbstractTransport';
+} from '@civ-clone/core-data-client/AbstractTransport';
 import answer from '../../src/js/Engine/answer';
-import Request from '@civ-clone/ui-protocol/Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 type Handler = (data: any, meta?: { id?: number }) => void;
 

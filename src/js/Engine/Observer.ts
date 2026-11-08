@@ -5,7 +5,9 @@ import {
   ObservedPlayer,
 } from '@civ-clone/ui-protocol/observer';
 import Player from '@civ-clone/core-player/Player';
-import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
+import Transport, {
+  TransportDisposer,
+} from '@civ-clone/core-data-client/Transport';
 import { View } from './Client/View';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';

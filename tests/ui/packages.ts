@@ -300,8 +300,9 @@ const outside = [
   ...sourcesUnder(join(root, 'tests')),
 ].filter((path) => path !== join(root, 'tests/ui/packages.ts'));
 
-// The worker (`src/js/Engine`, started by `backend.ts`) and the page share only the protocol: what one sends the other
-//  (#825). The worker never runs the page's code, nor the page the worker's.
+// The worker (`src/js/Engine`, started by `backend.ts`) and the page share only the protocol, what one sends the other,
+//  and the transport over the worker's messages (#825). The worker never runs the page's code, nor the page the
+//  worker's.
 const worker = [
   ...sourcesUnder(join(root, 'src/js/Engine')),
   join(root, 'src/js/backend.ts'),
@@ -311,7 +312,7 @@ expect(
   'the scan finds the worker, and its imports of the protocol',
   [
     worker.length > 50,
-    importsOf(join(root, 'src/js/Engine/ParentTransport.ts')).some(
+    importsOf(join(root, 'src/js/Engine/Observer.ts')).some(
       (target) => packageOf(target) === 'protocol'
     ),
   ],
@@ -339,14 +340,18 @@ expect(
   ].sort(),
   []
 );
+const workerMayUse = ['protocol', 'worker-transport'];
+
 expect(
-  'the worker uses no package but the protocol',
+  'the worker uses no package but the protocol and the transport',
   [
     ...new Set(
       worker.flatMap((path) =>
         importsOf(path)
           .map((target) => packageOf(target))
-          .filter((to): to is string => to !== null && to !== 'protocol')
+          .filter(
+            (to): to is string => to !== null && !workerMayUse.includes(to)
+          )
           .map((to) => `${relative(root, path)} -> ${to}`)
       )
     ),

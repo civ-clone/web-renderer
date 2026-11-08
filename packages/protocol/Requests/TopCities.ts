@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { TopCitiesRow } from '../reports';
 
 export class TopCities extends Request<[number], TopCitiesRow[]> {
