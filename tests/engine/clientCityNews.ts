@@ -6,13 +6,13 @@
 import CityNewsCollector, {
   CityNews,
   cityNewsNotifications,
-} from '../../src/js/Engine/Client/cityNews';
+} from '@civ-clone/ui-worker-client/Client/cityNews';
 import City from '@civ-clone/core-city/City';
-import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
+import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
 import Notification from '@civ-clone/ui-protocol/Notification';
-import Notifier from '../../src/js/Engine/Client/Notifier';
+import Notifier from '@civ-clone/ui-worker-client/Client/Notifier';
 import Player from '@civ-clone/core-player/Player';
-import { standalone } from '../../src/js/Engine/Client/refs';
+import { standalone } from '@civ-clone/ui-worker-client/Client/refs';
 
 const failures: string[] = [];
 let checks = 0,

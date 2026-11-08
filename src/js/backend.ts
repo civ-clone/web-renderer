@@ -1,6 +1,6 @@
-import Game from './Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import ParentTransport from '@civ-clone/ui-worker-transport/ParentTransport';
-import { describeError } from './Engine/answer';
+import { describeError } from '@civ-clone/ui-worker-client/answer';
 
 const transport = new ParentTransport(),
   game = new Game(transport);

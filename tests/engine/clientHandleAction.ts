@@ -22,38 +22,38 @@ import {
   actionHandlers,
   findPlayerAction,
   handleAction,
-} from '../../src/js/Engine/Client/handleAction';
+} from '@civ-clone/ui-worker-client/Client/handleAction';
 import {
   handleActiveUnit,
   handleInactiveUnit,
-} from '../../src/js/Engine/Client/actions/unit';
+} from '@civ-clone/ui-worker-client/Client/actions/unit';
 import {
   handleAdjustTradeRates,
   handleChooseGovernment,
   handleChooseResearch,
   handleLaunchSpaceship,
   handleRevolution,
-} from '../../src/js/Engine/Client/actions/player';
+} from '@civ-clone/ui-worker-client/Client/actions/player';
 import {
   handleChangeSpecialist,
   handleChangeWorkedTile,
   handleCityBuild,
   handleCompleteProduction,
   handleSellImprovement,
-} from '../../src/js/Engine/Client/actions/city';
-import { ActionContext } from '../../src/js/Engine/Client/actions/ActionContext';
-import ActionsState from '../../src/js/Engine/Client/ActionsState';
+} from '@civ-clone/ui-worker-client/Client/actions/city';
+import { ActionContext } from '@civ-clone/ui-worker-client/Client/actions/ActionContext';
+import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
 import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import type Unit from '@civ-clone/core-unit/Unit';
-import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
-import Talks from '../../src/js/Engine/Client/Talks';
+import PlayerPatches from '@civ-clone/ui-worker-client/Client/PlayerPatches';
+import Talks from '@civ-clone/ui-worker-client/Client/Talks';
 import { stubView } from './lib/view';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 

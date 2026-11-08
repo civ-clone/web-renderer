@@ -16,7 +16,7 @@ import './lib/spawnedClients';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CIVIL_DISORDER } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
 import City from '@civ-clone/core-city/City';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { PendingEffect } from '@civ-clone/core-pending-effect';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';

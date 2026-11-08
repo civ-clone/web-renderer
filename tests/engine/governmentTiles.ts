@@ -23,7 +23,7 @@ import {
   Republic,
 } from '@civ-clone/civ1-government/Governments';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Government from '@civ-clone/core-government/Government';
 import Player from '@civ-clone/core-player/Player';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';

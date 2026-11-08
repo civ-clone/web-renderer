@@ -3,7 +3,7 @@
 // Runs tests/engine/load.ts twice, in two processes: one plays and saves, the
 // other loads that save through the renderer's own load path and plays on.
 // Two processes because loading needs an engine that has not started a game —
-// see the suite, and `src/js/Engine/loadGame.ts`.
+// see the suite, and `packages/worker-client/loadGame.ts`.
 //
 // Once per seed (see lib/seeds.js). Each game takes about a second.
 

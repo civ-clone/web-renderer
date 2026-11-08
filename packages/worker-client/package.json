@@ -1,0 +1,10 @@
+{
+  "name": "@civ-clone/ui-worker-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The game as the worker runs it for the page: the engine's host, the human's seat played over the transport, and the reports and data the page asks for.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-protocol": "workspace:*"
+  }
+}

@@ -5,7 +5,7 @@
 
 import registerBattleEvents, {
   attackSoundOf,
-} from '../../src/js/Engine/Client/battleEvents';
+} from '@civ-clone/ui-worker-client/Client/battleEvents';
 import { BattleSound } from '@civ-clone/ui-protocol/battles';
 import AdditionalData from '@civ-clone/core-data-object/AdditionalData';
 import Unit from '@civ-clone/core-unit/Unit';

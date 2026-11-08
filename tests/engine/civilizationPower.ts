@@ -21,12 +21,12 @@ import {
 import {
   CivilizationPowerDependencies,
   civilizationPowerRows,
-} from '../../src/js/Engine/lib/civilizationPower';
+} from '@civ-clone/ui-worker-client/lib/civilizationPower';
 import { CivilizationPowerRow } from '@civ-clone/ui-protocol/reports';
 import {
   RequestsContext,
   registerRequests,
-} from '../../src/js/Engine/Client/requests';
+} from '@civ-clone/ui-worker-client/Client/requests';
 
 const failures: string[] = [];
 let checks = 0,

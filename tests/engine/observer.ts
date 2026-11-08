@@ -16,7 +16,7 @@
 import './lib/seed';
 
 import Player from '@civ-clone/core-player/Player';
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import { execFileSync } from 'child_process';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';

@@ -13,7 +13,7 @@ import './lib/spawnedClients';
 import { Grassland, River } from '@civ-clone/civ1-world/Terrains';
 import { Irrigation, Road } from '@civ-clone/civ1-world/TileImprovements';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';

@@ -22,7 +22,7 @@ import {
   Temple,
 } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import City from '@civ-clone/core-city/City';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { Gold } from '@civ-clone/civ1-treasury/Yields';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';

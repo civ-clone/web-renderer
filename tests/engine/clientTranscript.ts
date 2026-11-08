@@ -28,7 +28,7 @@ import * as os from 'os';
 import * as path from 'path';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import DataObject from '@civ-clone/core-data-object/DataObject';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';

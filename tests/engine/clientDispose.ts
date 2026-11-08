@@ -12,11 +12,11 @@
 //  gone, and, with a second client, that a hand-over still to come when it is disposed of is called off (#503).
 
 import Civilization from '@civ-clone/core-civilization/Civilization';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
-import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
+import PlayerPatches from '@civ-clone/ui-worker-client/Client/PlayerPatches';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
-import TurnHandover from '../../src/js/Engine/Client/TurnHandover';
+import TurnHandover from '@civ-clone/ui-worker-client/Client/TurnHandover';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as yearInstance } from '@civ-clone/core-game-year/Year';

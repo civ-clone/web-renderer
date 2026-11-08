@@ -9,7 +9,7 @@ import {
   Ocean,
   River,
 } from '@civ-clone/civ1-world/Terrains';
-import '../../src/js/Engine/Client/registerAdditionalData';
+import '@civ-clone/ui-worker-client/Client/registerAdditionalData';
 
 const cases: [string, any, { defence: number; movementCost: number | null }][] =
   [

@@ -96,7 +96,7 @@ so they resolve from the root, where `civ sync` links engine checkouts. A few th
 path aren't packages yet: `src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them,
 and the list only shrinks.
 
-The worker (`src/js/Engine`, started by `backend.ts`) shares only `protocol` and `worker-transport` with the page: it
+The worker (`packages/worker-client` (`@civ-clone/ui-worker-client`), started by `backend.ts`) shares only `protocol` and `worker-transport` with the page: it
 imports no other package, and no package imports from it. Under both is `@civ-clone/core-data-client`, in its own
 repository: the transport contract, requests and their replies, and data patches and rebuilding them, with nothing of
 civ.one's in it.

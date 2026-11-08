@@ -13,7 +13,7 @@ import { config } from './lib/seed';
 import './lib/spawnedClients';
 
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';

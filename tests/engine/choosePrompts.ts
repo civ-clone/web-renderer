@@ -32,9 +32,9 @@ import {
 } from '@civ-clone/civ1-science/Advances';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import ChoicePrompt from '../../src/js/Engine/Client/ChoicePrompt';
+import ChoicePrompt from '@civ-clone/ui-worker-client/Client/ChoicePrompt';
 import City from '@civ-clone/core-city/City';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import Player from '@civ-clone/core-player/Player';

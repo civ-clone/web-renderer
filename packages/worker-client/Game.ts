@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { plugins } from '../plugins';
+import { plugins } from '../../src/js/plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -226,7 +226,7 @@ export class Game implements IGame {
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
     //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).
     answer(transport, 'difficulties', () =>
-      import('../plugins').then(() =>
+      import('../../src/js/plugins').then(() =>
         defaultGame.availableDifficulties.sorted().map((Level) => ({
           name: typeNameOf(Level),
           level: Level.level(),
@@ -237,7 +237,7 @@ export class Game implements IGame {
     // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer
     //  seat can be given. Answered as `difficulties` is, with the plugins imported first.
     answer(transport, 'civilizations', () =>
-      import('../plugins').then(() =>
+      import('../../src/js/plugins').then(() =>
         defaultGame.civilizations.entries().map((CivilizationType) => ({
           name: typeNameOf(CivilizationType),
           leaders: defaultGame.leaders
@@ -253,7 +253,7 @@ export class Game implements IGame {
     );
 
     answer(transport, 'aiClients', () =>
-      import('../plugins').then(() =>
+      import('../../src/js/plugins').then(() =>
         this.#availableAIClients().map((AIClientType) =>
           typeNameOf(AIClientType)
         )
@@ -561,7 +561,7 @@ export class Game implements IGame {
     this.#observer?.dispose();
     this.#observer = observed ? new Observer(this.#transport) : null;
 
-    import('../plugins')
+    import('../../src/js/plugins')
       .then(() => {
         this.#stopAtEnding(observed);
 
@@ -655,7 +655,7 @@ export class Game implements IGame {
     engine.start();
 
     // A game that can't start would otherwise leave the page waiting with nothing to say why (#470).
-    import('../plugins')
+    import('../../src/js/plugins')
       .then(() => engine.emit('plugins:load:end'))
       .catch((error: unknown): void => {
         console.error(error);

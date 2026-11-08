@@ -4,7 +4,7 @@
 
 import ActionsState, {
   diffActions,
-} from '../../src/js/Engine/Client/ActionsState';
+} from '@civ-clone/ui-worker-client/Client/ActionsState';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import Unit from '@civ-clone/core-unit/Unit';
 

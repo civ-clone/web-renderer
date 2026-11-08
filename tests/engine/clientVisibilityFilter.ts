@@ -12,14 +12,14 @@ import Player from '@civ-clone/core-player/Player';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import Unit from '@civ-clone/core-unit/Unit';
-import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
-import { isUnitWithoutActions } from '../../src/js/Engine/lib/unitWithoutActions';
-import ActionsState from '../../src/js/Engine/Client/ActionsState';
+import UnknownPlayer from '@civ-clone/ui-worker-client/UnknownObjects/Player';
+import { isUnitWithoutActions } from '@civ-clone/ui-worker-client/lib/unitWithoutActions';
+import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { stubView } from './lib/view';
 import {
   filterPlayerTile,
   makeDataFilter,
-} from '../../src/js/Engine/Client/visibilityFilter';
+} from '@civ-clone/ui-worker-client/Client/visibilityFilter';
 
 const failures: string[] = [];
 let checks = 0,

@@ -19,12 +19,12 @@ import {
 import {
   NotificationContext,
   NotificationTable,
-} from '../../src/js/Engine/Client/notifications/NotificationContext';
+} from '@civ-clone/ui-worker-client/Client/notifications/NotificationContext';
 import {
   notificationTables,
   registerNotifications,
   registrationOrder,
-} from '../../src/js/Engine/Client/notifications/registerNotifications';
+} from '@civ-clone/ui-worker-client/Client/notifications/registerNotifications';
 import { Anarchy } from '@civ-clone/civ1-government/Governments';
 import { Barracks } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
@@ -35,14 +35,14 @@ import Notification from '@civ-clone/ui-protocol/Notification';
 import { stubView } from './lib/view';
 import { Pyramids } from '@civ-clone/civ1-wonder/Wonders';
 import { Structural } from '@civ-clone/civ1-spaceship/Parts';
-import { buildingCompleteKind } from '../../src/js/Engine/Client/notifications/city';
-import cityNotifications from '../../src/js/Engine/Client/notifications/city';
+import { buildingCompleteKind } from '@civ-clone/ui-worker-client/Client/notifications/city';
+import cityNotifications from '@civ-clone/ui-worker-client/Client/notifications/city';
 import diplomatNotifications, {
   sabotagedBuildKind,
-} from '../../src/js/Engine/Client/notifications/diplomat';
+} from '@civ-clone/ui-worker-client/Client/notifications/diplomat';
 import i18next from 'i18next';
-import playerNotifications from '../../src/js/Engine/Client/notifications/player';
-import unitNotifications from '../../src/js/Engine/Client/notifications/unit';
+import playerNotifications from '@civ-clone/ui-worker-client/Client/notifications/player';
+import unitNotifications from '@civ-clone/ui-worker-client/Client/notifications/unit';
 
 const failures: string[] = [];
 let checks = 0,

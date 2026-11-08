@@ -146,10 +146,11 @@ expect(
 );
 
 // What the packages still reach outside themselves for, by path, until each is a package too (#825): the list only
-//  shrinks: the music player, the generated list of translations, and the build's version.
+//  shrinks: the music player, the generated lists of plugins and translations, and the build's version.
 const reachesOut: { [path: string]: string[] } = {
   'build.json': ['game', 'windows'],
   'src/js/Audio/': ['game', 'windows'],
+  'src/js/plugins.ts': ['worker-client'],
   'src/js/translations.ts': ['game'],
 };
 
@@ -300,74 +301,41 @@ const outside = [
   ...sourcesUnder(join(root, 'tests')),
 ].filter((path) => path !== join(root, 'tests/ui/packages.ts'));
 
-// The worker (`src/js/Engine`, started by `backend.ts`) and the page share only the protocol, what one sends the other,
-//  and the transport over the worker's messages (#825). The worker never runs the page's code, nor the page the
+// The worker (`worker-client`, which `backend.ts` starts) and the page share only the protocol, what one sends the
+//  other, and the transport over the worker's messages (#825). The worker never runs the page's code, nor the page the
 //  worker's.
-const worker = [
-  ...sourcesUnder(join(root, 'src/js/Engine')),
-  join(root, 'src/js/backend.ts'),
-];
+const workerMayUse = ['protocol', 'worker-transport'],
+  backend = join(root, 'src/js/backend.ts');
 
 expect(
-  'the scan finds the worker, and its imports of the protocol',
+  'the worker client depends on the protocol and the transport, and on nothing of the page',
   [
-    worker.length > 50,
-    importsOf(join(root, 'src/js/Engine/Observer.ts')).some(
-      (target) => packageOf(target) === 'protocol'
-    ),
+    dependsOn('worker-client').includes('protocol'),
+    dependsOn('worker-client').filter((name) => !workerMayUse.includes(name)),
   ],
-  [true, true]
+  [true, []]
 );
 expect(
-  'the worker reaches nothing of the page outside a package either: only its own files, the protocol and the plugins',
-  [
-    ...new Set(
-      worker.flatMap((path) =>
-        importsOf(path)
-          .filter(
-            (target) =>
-              target.startsWith(root + '/') &&
-              !target.includes('/node_modules/') &&
-              packageOf(target) === null &&
-              !target.startsWith(join(root, 'src/js/Engine') + '/') &&
-              target !== join(root, 'src/js/plugins.ts')
-          )
-          .map(
-            (target) => `${relative(root, path)} -> ${relative(root, target)}`
-          )
-      )
-    ),
-  ].sort(),
-  []
-);
-const workerMayUse = ['protocol', 'worker-transport'];
-
-expect(
-  'the worker uses no package but the protocol and the transport',
-  [
-    ...new Set(
-      worker.flatMap((path) =>
-        importsOf(path)
-          .map((target) => packageOf(target))
-          .filter(
-            (to): to is string => to !== null && !workerMayUse.includes(to)
-          )
-          .map((to) => `${relative(root, path)} -> ${to}`)
-      )
-    ),
-  ].sort(),
+  'and no package depends on the worker client',
+  names.filter((name) => dependsOn(name).includes('worker-client')),
   []
 );
 expect(
-  'and no package reaches into the worker',
-  edges
-    .filter(({ target }) =>
-      target.startsWith(join(root, 'src/js/Engine') + '/')
+  'the worker starts from `backend.ts`, which uses only the worker client, its transport and the protocol',
+  importsOf(backend)
+    .map((target) => packageOf(target) ?? relative(root, target))
+    .filter((to) => ![...workerMayUse, 'worker-client'].includes(to))
+    .filter((to) => !to.startsWith('node_modules/')),
+  []
+);
+expect(
+  'and nothing else in civ.one’s own code imports the worker client',
+  sourcesUnder(join(root, 'src'))
+    .filter((path) => path !== backend)
+    .filter((path) =>
+      importsOf(path).some((target) => packageOf(target) === 'worker-client')
     )
-    .map(
-      ({ path, target }) =>
-        `${relative(root, path)} -> ${relative(root, target)}`
-    ),
+    .map((path) => relative(root, path)),
   []
 );
 expect(

@@ -12,7 +12,7 @@ Quick reference map of key code areas.
 - `generate-changelog.mjs`: builds the release notes in `changelog/` from commit messages.
 - `tests/engine/*`, `tests/ui/*`: test suites, each run by a matching script in `tools/` (`npm test` runs them all).
 
-## Engine side (`src/js/Engine`)
+## Engine side (`packages/worker-client` (`@civ-clone/ui-worker-client`))
 
 - `Game.ts`: startup, options, save/load handling, player/client setup.
 - `loadGame.ts`: restores a save into `defaultGame` and resumes the turn in progress.

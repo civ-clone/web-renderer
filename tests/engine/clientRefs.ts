@@ -9,7 +9,7 @@ import {
   filterToReferenceAllExcept,
   referenceObject,
   standalone,
-} from '../../src/js/Engine/Client/refs';
+} from '@civ-clone/ui-worker-client/Client/refs';
 import AdditionalDataRegistry from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import DataObject from '@civ-clone/core-data-object/DataObject';

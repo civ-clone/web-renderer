@@ -36,7 +36,7 @@ The page sets `performance.mark` entries for where a load's time goes (#325): `c
 
 Both transport implementations normalize `DataObject` instances by converting to plain objects before send.
 
-Both extend `AbstractTransport` (`@civ-clone/core-data-client`), whose `request()` sends on a channel with an id of its own (`{ channel, data, id }`) and resolves with the reply that carries the same id. The worker answers through `answer()` (`src/js/Engine/answer.ts`), which replies with `transport.reply(channel, data, id)`, or, when its handler throws or rejects, sends a `requestFailed` (`{ channel, message, id }`), which rejects the request with a `RequestFailed` and opens the "Something went wrong" window through `workerError`. Several requests can wait on one channel at once, and each gets its own reply in whatever order they come. A reply or failure whose id isn't waiting is dropped with a `console.warn` (#324, #470).
+Both extend `AbstractTransport` (`@civ-clone/core-data-client`), whose `request()` sends on a channel with an id of its own (`{ channel, data, id }`) and resolves with the reply that carries the same id. The worker answers through `answer()` (`packages/worker-client/answer.ts`), which replies with `transport.reply(channel, data, id)`, or, when its handler throws or rejects, sends a `requestFailed` (`{ channel, message, id }`), which rejects the request with a `RequestFailed` and opens the "Something went wrong" window through `workerError`. Several requests can wait on one channel at once, and each gets its own reply in whatever order they come. A reply or failure whose id isn't waiting is dropped with a `console.warn` (#324, #470).
 
 A request is never given up on. Every message from the worker is a sign of life, and silence is counted only from the first, the `ready` that `backend.ts` sends once it has started, so a worker that is still loading isn't taken for one that has stopped. `Game` also sends an `alive` as each player's turn starts, in new and loaded games alike, so that a long round of AI turns isn't taken for silence. When requests are waiting and the worker has said nothing for `defaultSilenceTimeout` (30 s), `WorkerTransport` sends its own `workerError` with `notAnswering`, and the window says the game has stopped answering: once per silence, and no more than once for each request, so a request that is never answered doesn't open it again each time the worker goes quiet. A reply that comes later still resolves its request (#470).
 
@@ -46,7 +46,7 @@ Only silence is detected: a worker that keeps sending other messages but never a
 
 ### Initial snapshot (`gameData`)
 
-- Sent by the turn hand-over, `TurnHandover.sendInitialData()` in `src/js/Engine/Client/TurnHandover.ts`, the first time `takeTurn()` runs. Tests call it as `DataTransferClient.initialData()`.
+- Sent by the turn hand-over, `TurnHandover.sendInitialData()` in `packages/worker-client/Client/TurnHandover.ts`, the first time `takeTurn()` runs. Tests call it as `DataTransferClient.initialData()`.
 - A `TransferObject` rooted at the player, turn and year, serialised through the visibility filter, so other players arrive as `UnknownPlayer` and only the tiles the player knows are sent (#328).
 - Frontend treats this as full state bootstrap. A later `gameData` replaces the object map and rebuilds everything.
 

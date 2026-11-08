@@ -34,7 +34,7 @@ import {
   chooseDifficulty,
   restoreGame,
   resumeGame,
-} from '../../src/js/Engine/loadGame';
+} from '@civ-clone/ui-worker-client/loadGame';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Client from '@civ-clone/core-client/Client';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';

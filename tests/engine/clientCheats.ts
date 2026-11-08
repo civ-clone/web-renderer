@@ -9,7 +9,7 @@ import {
   modifiableProperties,
   resolveCheatPlayer,
   validCreateUnit,
-} from '../../src/js/Engine/Client/cheats';
+} from '@civ-clone/ui-worker-client/Client/cheats';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 

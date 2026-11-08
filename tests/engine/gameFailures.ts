@@ -3,7 +3,7 @@
 //  so the page can say so and go back to its menu, and one that can't be built on `saveFailed` (#581). And a game that was never started, as a loaded one isn't, still
 //  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
 
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 
 const failures: string[] = [];

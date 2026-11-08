@@ -2,7 +2,7 @@
 //  world it is given (nothing known by default), and nobody met.
 
 import Player from '@civ-clone/core-player/Player';
-import { playerView, View } from '../../../src/js/Engine/Client/View';
+import { playerView, View } from '@civ-clone/ui-worker-client/Client/View';
 
 export const stubView = (
   player: () => Player,

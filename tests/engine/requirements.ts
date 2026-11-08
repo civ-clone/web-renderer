@@ -29,7 +29,7 @@ import Requirements from '@civ-clone/core-science/Rules/Requirements';
 import Rule from '@civ-clone/core-rule/Rule';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
-import requirementsData from '../../src/js/Engine/lib/requirements';
+import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 
 const failures: string[] = [];

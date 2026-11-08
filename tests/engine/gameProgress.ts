@@ -12,7 +12,7 @@ import './lib/seed';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import Player from '@civ-clone/core-player/Player';
 import { execFileSync } from 'child_process';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';

@@ -9,7 +9,7 @@ import Game from '@civ-clone/core-game/Game';
 import Tile from '@civ-clone/core-world/Tile';
 import WorkedTile from '@civ-clone/core-city/WorkedTile';
 import WorkedTileRegistry from '@civ-clone/core-city/WorkedTileRegistry';
-import { releaseTilesOfDestroyedCities } from '../../src/js/Engine/loadGame';
+import { releaseTilesOfDestroyedCities } from '@civ-clone/ui-worker-client/loadGame';
 
 // Only `destroyed()` is read, and tiles are only compared by identity.
 const city = (destroyed: boolean) =>

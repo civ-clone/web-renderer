@@ -2,11 +2,11 @@
 //  queued as one patch and empties the queue, sends nothing while held, and a hold is let go of when what it holds for
 //  is done, whether that returned or threw.
 
-import ActionsState from '../../src/js/Engine/Client/ActionsState';
-import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
+import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
+import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
 import type { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
-import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
+import PlayerPatches from '@civ-clone/ui-worker-client/Client/PlayerPatches';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import { stubView } from './lib/view';
 

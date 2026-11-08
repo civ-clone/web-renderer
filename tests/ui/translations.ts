@@ -65,10 +65,13 @@ import Notification from '@civ-clone/ui-protocol/Notification';
 import { PlayerResearch } from '@civ-clone/ui-protocol/types';
 import Tile from '@civ-clone/core-world/Tile';
 import Barbarian from '@civ-clone/base-civilization-barbarian/Barbarian';
-import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';
-import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
+import {
+  playerProgress,
+  turnProgress,
+} from '@civ-clone/ui-worker-client/lib/progress';
+import UnknownCity from '@civ-clone/ui-worker-client/UnknownObjects/City';
 import type Player from '@civ-clone/core-player/Player';
-import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
+import UnknownPlayer from '@civ-clone/ui-worker-client/UnknownObjects/Player';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';

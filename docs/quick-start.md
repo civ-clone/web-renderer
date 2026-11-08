@@ -88,7 +88,7 @@ rebuild seems not to have taken, hard-reload: the page caches its bundles.
 ## Change the renderer
 
 Everything on the page is in the workspace packages under `packages/`; everything in the worker (the engine's
-host, the AI pacing, what is sent to the page) is in `src/js/Engine`; styles are
+host, the AI pacing, what is sent to the page) is in `packages/worker-client` (`@civ-clone/ui-worker-client`); styles are
 in `src/css`. [`architecture-overview.md`](./architecture-overview.md) and
 [`runtime-data-flow.md`](./runtime-data-flow.md) explain how the two halves
 talk.
@@ -202,7 +202,7 @@ publish waves.
   rules. A new behaviour is usually a new package with one rule in it.
 - **Registries** hold the entities (`PlayerRegistry`, `CityRegistry`,
   `UnitRegistry` and so on) and the game's `Game` object adopts them.
-- The renderer's worker builds the game in `src/js/Engine/Game.ts` from the
+- The renderer's worker builds the game in `packages/worker-client/Game.ts` from the
   `plugins` list that `npm run build` generates from `package.json`, so a new
   package becomes part of the game by being a dependency.
 - Civilization's actual rules, as opposed to the mechanism, are in `civ1-*`.
