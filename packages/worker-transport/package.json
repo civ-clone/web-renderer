@@ -3,8 +3,5 @@
   "version": "0.1.0",
   "private": true,
   "description": "Both ends of a transport over a web worker's messages: the worker's, to the page that started it, and the page's, to its worker.",
-  "license": "MIT",
-  "dependencies": {
-    "@civ-clone/ui-protocol": "workspace:*"
-  }
+  "license": "MIT"
 }

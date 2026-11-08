@@ -1,11 +1,8 @@
 import {
-  TransportMessage,
-  TransportWorkerError,
-} from '@civ-clone/ui-protocol/Transport';
-import {
   RequestId,
-  TransportData,
+  TransportDataMap,
   TransportDisposer,
+  TransportMessage,
   TransportReceiveArgs,
   TransportReceiveHandler,
   TransportSendArgs,
@@ -17,29 +14,49 @@ import AbstractTransport, {
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import reconstituteData from '@civ-clone/core-data-client/reconstituteData';
 
-// Channels whose message is handed over as it arrived. The listener builds the live game data from the map itself with
-//  `IncrementalReconstituter`, so a rebuild here is a second copy of the same several megabytes, on the main thread,
-//  for a loaded game (#333).
-const rawChannels: ReadonlySet<PropertyKey> = new Set(['gameData']);
+/** Something went wrong in the worker, or the page's own word that it has gone quiet while requests wait on it. */
+export type WorkerError = {
+  message: string;
+  notAnswering?: boolean;
+};
 
-const payload = <Data>(channel: PropertyKey, data: any): Data =>
-  data?.hierarchy && !rawChannels.has(channel)
-    ? (reconstituteData(data) as Data)
-    : data;
+export type WorkerTransportOptions = AbstractTransportOptions & {
+  /**
+   * Channels whose data is handed over as it arrived, an `ObjectMap` and all, for a listener that rebuilds it itself:
+   * every other channel's is rebuilt with `reconstituteData` first. civ.one's game data is one: its page rebuilds it
+   * incrementally, so a rebuild here would be a second copy of several megabytes (civ-clone/web-renderer#333).
+   */
+  rawChannels?: Iterable<PropertyKey>;
+  /**
+   * The channel the worker's own uncaught errors, a request it could not answer and its silence are passed on to, as
+   * `WorkerError`s, as though the worker had sent them. `workerError` unless given.
+   */
+  errorChannel?: PropertyKey;
+};
 
+/** The page's end of a transport over a web worker's messages. */
 export class WorkerTransport<
-  DataMap extends {
-    [key: string]: TransportData;
-  }
+  DataMap extends TransportDataMap
 > extends AbstractTransport<DataMap> {
-  #worker;
-  // Set while the page's own `workerError` goes to its listeners, which is not the worker saying anything.
+  #worker: Worker;
+  #rawChannels: ReadonlySet<PropertyKey>;
+  #errorChannel: PropertyKey;
+  // Set while the page's own errors go to their listeners, which is not the worker saying anything.
   #passingOn = false;
 
-  constructor(worker: Worker, options: AbstractTransportOptions = {}) {
+  constructor(
+    worker: Worker,
+    {
+      rawChannels = [],
+      errorChannel = 'workerError',
+      ...options
+    }: WorkerTransportOptions = {}
+  ) {
     super(options);
 
     this.#worker = worker;
+    this.#rawChannels = new Set(rawChannels);
+    this.#errorChannel = errorChannel;
 
     // Every message from the worker says it is still there (#470).
     worker.addEventListener('message', (): void => {
@@ -58,15 +75,15 @@ export class WorkerTransport<
     );
   }
 
-  // Something went wrong that the worker didn't say, passed on to the `workerError` listeners as though the worker had
-  //  sent it, as it does for a rejection nothing handled (#470).
-  #passOn(error: TransportWorkerError): void {
+  // Something went wrong that the worker didn't say, passed on to the error channel's listeners as though the worker
+  //  had sent it (civ-clone/web-renderer#470).
+  #passOn(error: WorkerError): void {
     this.#passingOn = true;
 
     try {
       this.#worker.dispatchEvent(
         new MessageEvent('message', {
-          data: { channel: 'workerError', data: error },
+          data: { channel: this.#errorChannel, data: error },
         })
       );
     } finally {
@@ -91,7 +108,7 @@ export class WorkerTransport<
   ): TransportDisposer {
     const listener = ({
       data: { channel: receivingChannel, data, id },
-    }: MessageEvent<TransportMessage>) => {
+    }: MessageEvent<TransportMessage<DataMap>>) => {
       // Only reconstitute payloads for the channel this listener cares about;
       // reconstituting first meant every listener rebuilt the full object
       // graph for every hierarchy-shaped message on any channel.
@@ -99,10 +116,13 @@ export class WorkerTransport<
         return;
       }
 
-      handler(payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data), {
-        rawData: data,
-        id,
-      });
+      handler(
+        this.#payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
+        {
+          rawData: data,
+          id,
+        }
+      );
     };
 
     this.#worker.addEventListener('message', listener);
@@ -118,15 +138,18 @@ export class WorkerTransport<
   ): TransportDisposer {
     const onceHandler = ({
       data: { channel: receivingChannel, data, id },
-    }: MessageEvent<TransportMessage>) => {
+    }: MessageEvent<TransportMessage<DataMap>>) => {
       if (channel !== receivingChannel) {
         return;
       }
 
-      handler(payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data), {
-        rawData: data,
-        id,
-      });
+      handler(
+        this.#payload<TransportReceiveArgs<DataMap[Channel]>>(channel, data),
+        {
+          rawData: data,
+          id,
+        }
+      );
 
       this.#worker.removeEventListener('message', onceHandler);
     };
@@ -136,6 +159,13 @@ export class WorkerTransport<
     return () => {
       this.#worker.removeEventListener('message', onceHandler);
     };
+  }
+
+  // A message's data as a listener gets it: rebuilt from its `ObjectMap`, unless its channel is a raw one.
+  #payload<Data>(channel: PropertyKey, data: any): Data {
+    return data?.hierarchy && !this.#rawChannels.has(channel)
+      ? (reconstituteData(data) as Data)
+      : data;
   }
 
   protected post<Channel extends keyof DataMap>(

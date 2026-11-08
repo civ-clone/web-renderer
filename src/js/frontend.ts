@@ -10,7 +10,9 @@ import { version } from '../../build.json';
 //  can't work together.
 const renderer = new Renderer(
   new WorkerTransport(
-    new Worker(`dist/backend.js?v=${encodeURIComponent(version)}`)
+    new Worker(`dist/backend.js?v=${encodeURIComponent(version)}`),
+    // The game data is rebuilt incrementally by the page itself (#333).
+    { rawChannels: ['gameData'] }
   )
 );
 

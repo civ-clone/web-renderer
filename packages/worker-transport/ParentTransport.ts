@@ -1,22 +1,23 @@
-import { TransportMessage } from '@civ-clone/ui-protocol/Transport';
 import {
   RequestId,
-  TransportData,
+  TransportDataMap,
   TransportDisposer,
+  TransportMessage,
   TransportReceiveHandler,
   TransportSendArgs,
 } from '@civ-clone/core-data-client/Transport';
 import AbstractTransport from '@civ-clone/core-data-client/AbstractTransport';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 
-export type TransportEventListenerArg = {
-  data: TransportMessage;
+export type TransportEventListenerArg<
+  DataMap extends TransportDataMap = TransportDataMap
+> = {
+  data: TransportMessage<DataMap>;
 };
 
+/** The worker's end of a transport over its messages, to the page that started it. */
 export class ParentTransport<
-  DataMap extends {
-    [key: string]: TransportData;
-  }
+  DataMap extends TransportDataMap
 > extends AbstractTransport<DataMap> {
   receive<Channel extends keyof DataMap>(
     channel: Channel,
@@ -24,7 +25,7 @@ export class ParentTransport<
   ): TransportDisposer {
     const listener = ({
       data: { channel: receivingChannel, data, id },
-    }: TransportEventListenerArg) => {
+    }: TransportEventListenerArg<DataMap>) => {
       if (channel === receivingChannel) {
         handler(data, { id });
       }
@@ -43,7 +44,7 @@ export class ParentTransport<
   ): TransportDisposer {
     const fullHandler = ({
       data: { channel: receivingChannel, data, id },
-    }: MessageEvent<TransportMessage>) => {
+    }: MessageEvent<TransportMessage<DataMap>>) => {
       if (channel === receivingChannel) {
         handler(data, { id });
 
@@ -58,7 +59,7 @@ export class ParentTransport<
     };
   }
 
-  // `id` is the request this answers, when it is a reply: `answer` echoes it (#470).
+  // `id` is the request this answers, when it is a reply (civ-clone/web-renderer#470).
   protected post<Channel extends keyof DataMap>(
     channel: Channel,
     data: TransportSendArgs<DataMap[Channel]>,
