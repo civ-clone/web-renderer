@@ -1,4 +1,4 @@
-import { IntelligenceRow } from '../lib/intelligence';
+import { IntelligenceRow } from '../reports';
 import Request from '../Request';
 
 export class Intelligence extends Request<[null], IntelligenceRow[]> {

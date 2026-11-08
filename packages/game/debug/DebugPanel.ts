@@ -1,4 +1,4 @@
-import { GameData, Unit } from '@civ-clone/ui-client/types';
+import { GameData, Unit } from '@civ-clone/ui-protocol/types';
 import createMemoryTestbed, { MemoryTestbed } from '../lib/memoryTestbed';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import CityNames from '@civ-clone/ui-map/components/Map/CityNames';

@@ -47,44 +47,10 @@ import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import Player from '@civ-clone/core-player/Player';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-
-export type IntelligenceAffair = {
-  // Only for a civilization the player has met (#59).
-  civilization: string | null;
-  atPeace: boolean;
-};
-
-export type IntelligenceDetails = {
-  // The leader's personality: the traits that aren't the normal one, as v474.05 lists them.
-  traits: string[];
-  capital: {
-    name: string;
-    // The founder's civilization, whose list the name comes from (`Generic.city-name`).
-    civilization: string;
-  } | null;
-  government: string | null;
-  gold: number;
-  cities: number;
-  units: number;
-  foreignAffairs: IntelligenceAffair[];
-  advances: string[];
-};
-
-export type IntelligenceRow = {
-  civilization: string;
-  colors: [string, string] | null;
-  // Known to anyone who has met them, as v474.05 shows it without an embassy (#419).
-  leader: string | null;
-  // The player's own dealings with them, embassy or not: at peace, or at war, as `atPeace` below counts it.
-  atPeace: boolean;
-  // Whether they hold an embassy with the player.
-  theirEmbassy: boolean;
-  // The year of the first dealings between the two, or `null` for none: met only by seeing a city. Units meeting
-  //  register a `Contact` as they meet, before any talks, so a first meeting has its year.
-  firstMet: number | null;
-  // Only for a civilization the player holds an embassy with.
-  details: IntelligenceDetails | null;
-};
+import {
+  IntelligenceDetails,
+  IntelligenceRow,
+} from '@civ-clone/ui-protocol/reports';
 
 export type IntelligenceDependencies = {
   cityImprovementRegistry: CityImprovementRegistry;

@@ -6,7 +6,7 @@ import { Gold } from '@civ-clone/civ1-city/Yields';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
-import Transport, { TransportDisposer } from '../Transport';
+import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
 import { ClientContext, Registries } from './ClientContext';
 import { filterToReference } from './refs';
 import answer from '../answer';

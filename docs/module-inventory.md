@@ -40,17 +40,28 @@ Quick reference map of key code areas.
   - `cheats.ts`: the `cheat` receiver and the cheat menu's lists, with the plain-data checks for `CreateUnit` and `ModifyUnit`.
   - `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
-- `Transport.ts`: channel and payload typing.
-- `AbstractTransport.ts`: shared `request()` implementation (replies matched by request id; a silent worker reported).
-- `ParentTransport.ts` / `WorkerTransport.ts`: worker messaging implementations.
+- `ParentTransport.ts`: the worker's end of the messaging. The page's end, `WorkerTransport.ts`, is in `client`, and
+  what the two share is in the protocol package (below).
 - `DataQueue.ts`: patch queue and transfer serialization, owned by `Client/PlayerPatches.ts`.
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
-- `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
-- `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
 - `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `terrainRules`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
-- `lib/*`: worker-side helpers: report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
+- `lib/*`: worker-side helpers (their row and entry types are the protocol's): report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
+
+## Protocol (`packages/protocol`, `@civ-clone/ui-protocol`)
+
+What the page and the worker say to each other (#825). The worker imports no other package, and no package imports the
+worker.
+
+- `Transport.ts`: channel and payload typing.
+- `AbstractTransport.ts`: shared `request()` implementation (replies matched by request id; a silent worker reported).
+- `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
+- `Request.ts` + `Requests/*`: request/response convenience layer (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
+- `types.d.ts`: the game's data as the page gets it; `data.ts`: patches and the object map it is rebuilt from.
+- `reports.ts`, `civilopedia.ts`, `requirements.ts`, `observer.ts`, `battles.ts`, `topology.ts`: the rows, entries and
+  states the worker sends.
+- `lib/seats.ts`, `lib/savedSeats.ts`: who plays each civilization, as setup and saves record it.
 
 ## UI side (`packages/*`)
 

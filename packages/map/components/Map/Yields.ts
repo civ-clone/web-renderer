@@ -1,6 +1,6 @@
 import Map from '../Map';
 import { Reach } from '../../lib/projection';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import { tileYieldIcons } from '@civ-clone/ui-client/lib/yieldMap';
 
 export class Yields extends Map {

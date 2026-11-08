@@ -15,12 +15,7 @@ import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { ClientContext, Disposer } from './ClientContext';
-
-/** A battle as it's heard: the words to look up in the sound pack, and which version. */
-export interface BattleSound {
-  sound: string[];
-  won: boolean;
-}
+import { BattleSound } from '@civ-clone/ui-protocol/battles';
 
 export type BattleEventsContext = Pick<
   ClientContext,

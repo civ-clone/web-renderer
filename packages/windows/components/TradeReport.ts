@@ -3,7 +3,7 @@ import {
   CityImprovementMaintenanceGold,
   Player,
   Yield,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';

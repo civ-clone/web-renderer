@@ -1,4 +1,4 @@
-import { Entity } from '../../types';
+import { Entity } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 
 export const entityName = (

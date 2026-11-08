@@ -1,8 +1,8 @@
 import {
   CivilizationScore as CivilizationScoreResult,
   CivilizationScoreTerm,
-} from '../../../src/js/Engine/lib/civilizationScore';
-import CivilizationScore from '../../../src/js/Engine/Requests/CivilizationScore';
+} from '@civ-clone/ui-protocol/reports';
+import CivilizationScore from '@civ-clone/ui-protocol/Requests/CivilizationScore';
 import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-widgets/components/Window';

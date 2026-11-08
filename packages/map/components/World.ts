@@ -2,7 +2,7 @@ import {
   NeighbourDirection,
   Tile,
   World as WorldData,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 
 export class World {

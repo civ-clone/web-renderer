@@ -11,7 +11,7 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { DataPatch } from '@civ-clone/ui-client/types';
+import { DataPatch } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
 import GameSession from '@civ-clone/ui-game/GameSession';
@@ -19,9 +19,9 @@ import {
   observerCityOpener,
   playerCityOpener,
 } from '@civ-clone/ui-windows/lib/cityOpeners';
-import { ObserverState } from '../../src/js/Engine/Observer';
+import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import { City as CityData, Tile } from '@civ-clone/ui-client/types';
+import { City as CityData, Tile } from '@civ-clone/ui-protocol/types';
 import { MapView } from '@civ-clone/ui-game/MapView';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
@@ -32,10 +32,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import appElements from '@civ-clone/ui-game/app/elements';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import {
-  ObjectMap,
-  PlainObject,
-} from '@civ-clone/ui-client/lib/reconstituteData';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 
 const failures: string[] = [];

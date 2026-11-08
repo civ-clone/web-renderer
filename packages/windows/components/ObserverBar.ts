@@ -1,5 +1,8 @@
-import { ObservedPlayer, ObserverState } from '../../../src/js/Engine/Observer';
-import { ObserverChoice } from '../../../src/js/Engine/ObserverViews';
+import {
+  ObservedPlayer,
+  ObserverState,
+  ObserverChoice,
+} from '@civ-clone/ui-protocol/observer';
 import Transport from '@civ-clone/ui-client/Transport';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';

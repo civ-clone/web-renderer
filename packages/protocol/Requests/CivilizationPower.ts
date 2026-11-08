@@ -1,4 +1,4 @@
-import { CivilizationPowerRow } from '../lib/civilizationPower';
+import { CivilizationPowerRow } from '../reports';
 import Request from '../Request';
 
 // Every civilization ranked by its power, for the sidebar (#701, #708).

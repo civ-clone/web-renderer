@@ -1,4 +1,4 @@
-import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 import Transport from '@civ-clone/ui-client/Transport';
 import {

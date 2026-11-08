@@ -24,7 +24,7 @@ import currentTileset, {
 import GameOptions from '@civ-clone/ui-windows/components/GameOptions';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 import {
   AssetStore,

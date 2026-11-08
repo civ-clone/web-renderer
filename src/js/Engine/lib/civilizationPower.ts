@@ -9,18 +9,7 @@ import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import { rank } from '@civ-clone/core-power/lib/rank';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-
-// One row as the UI gets it. Nothing in it identifies an unmet civilization: no id, and no name or colours, only its
-//  place and its power.
-export type CivilizationPowerRow = {
-  rank: number;
-  power: number;
-  // A row of the view's own: the player's, a watched group's members (#607), nobody's when watching the whole map.
-  own: boolean;
-  // Only for the player's own civilization and those it has met.
-  civilization: string | null;
-  colors: [string, string] | null;
-};
+import { CivilizationPowerRow } from '@civ-clone/ui-protocol/reports';
 
 export type CivilizationPowerDependencies = {
   // A defeated player is unregistered, so these are the civilizations still in the game.

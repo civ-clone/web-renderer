@@ -1,5 +1,5 @@
 import Action from './Action';
-import { Spaceship as SpaceshipData } from '@civ-clone/ui-client/types';
+import { Spaceship as SpaceshipData } from '@civ-clone/ui-protocol/types';
 import Window from '@civ-clone/ui-widgets/components/Window';
 import civilizationAttribute from '../lib/civilizationAttribute';
 import { h } from '@civ-clone/ui-widgets/lib/html';

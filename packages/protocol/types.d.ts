@@ -1,5 +1,5 @@
-import { Direction, EdgeDirection, TopologyId } from './lib/topologyFor';
-import { ObjectMap } from './lib/reconstituteData';
+import { Direction, EdgeDirection, TopologyId } from './topology';
+import { ObjectMap } from './data';
 
 export type PlainObject = {
   [key: string]: any;

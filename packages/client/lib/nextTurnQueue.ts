@@ -1,4 +1,4 @@
-import { PlayerAction } from '../types';
+import { PlayerAction } from '@civ-clone/ui-protocol/types';
 
 // What the Next Turn button (#702) goes through, in order: the questions the engine is waiting on, then the units
 //  awaiting orders (as one item), then the standing notices, then End turn, which the engine offers only once nothing

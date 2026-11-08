@@ -6,7 +6,7 @@ import {
   BuildPreferencesRegistry,
   instance as buildPreferencesRegistryInstance,
 } from '@civ-clone/core-city-build/BuildPreferencesRegistry';
-import Transport, { TransportDisposer } from '../Transport';
+import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
 import { ClientContext } from './ClientContext';
 
 export type BuildPreferencesContext = Pick<ClientContext, 'player'>;

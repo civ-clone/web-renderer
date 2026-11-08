@@ -1,5 +1,5 @@
 import { TOptions, t } from 'i18next';
-import { Unit } from '@civ-clone/ui-client/types';
+import { Unit } from '@civ-clone/ui-protocol/types';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

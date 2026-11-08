@@ -62,7 +62,7 @@ import {
 } from '@civ-clone/ui-map/lib/projection';
 import SquareProjection from '@civ-clone/ui-map-square/SquareProjection';
 import { Rect, mergeRects, rectArea } from '@civ-clone/ui-map/lib/viewport';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';

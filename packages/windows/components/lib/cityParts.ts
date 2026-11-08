@@ -1,4 +1,4 @@
-import { City as CityData, PlainObject } from '@civ-clone/ui-client/types';
+import { City as CityData, PlainObject } from '@civ-clone/ui-protocol/types';
 import { splitYield, yieldGroup } from '@civ-clone/ui-client/lib/yieldMap';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import Fog from '@civ-clone/ui-map/components/Map/Fog';

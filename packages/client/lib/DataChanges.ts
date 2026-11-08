@@ -1,4 +1,4 @@
-import { GameData } from '../types';
+import { GameData } from '@civ-clone/ui-protocol/types';
 
 // Which ids changed between two renders, and who wants to know (#344). The
 //  renderer `collect`s what each rebuild filled and `notify`s once per render,

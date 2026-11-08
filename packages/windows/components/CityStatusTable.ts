@@ -2,7 +2,7 @@ import {
   City as CityData,
   CitizenMood,
   Player,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import ReportTable, {
   ReportColumn,
 } from '@civ-clone/ui-widgets/components/lib/ReportTable';

@@ -1,7 +1,7 @@
-import { City as CityData, DataPatch } from '@civ-clone/ui-client/types';
+import { City as CityData, DataPatch } from '@civ-clone/ui-protocol/types';
 import { on, s } from '@dom111/element';
 import { t } from 'i18next';
-import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
+import { ObjectMap } from '@civ-clone/ui-protocol/data';
 import openCity from '@civ-clone/ui-windows/components/openCity';
 import CitiesList from '@civ-clone/ui-windows/components/CitiesList';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
@@ -45,7 +45,7 @@ import {
   observerCityOpener,
   playerCityOpener,
 } from '@civ-clone/ui-windows/lib/cityOpeners';
-import { ObserverState } from '../../src/js/Engine/Observer';
+import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug

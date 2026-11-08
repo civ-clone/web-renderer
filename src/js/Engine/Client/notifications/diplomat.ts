@@ -4,7 +4,7 @@ import Advance from '@civ-clone/core-science/Advance';
 import City from '@civ-clone/core-city/City';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import { NotificationContext, NotificationTable } from './NotificationContext';
-import Notification from '../../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';

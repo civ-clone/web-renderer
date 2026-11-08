@@ -8,11 +8,8 @@
 // Patches go through the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is
 // collected into the shared `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
-import { DataPatch, GameData, Player } from '@civ-clone/ui-client/types';
-import {
-  ObjectMap,
-  PlainObject,
-} from '@civ-clone/ui-client/lib/reconstituteData';
+import { DataPatch, GameData, Player } from '@civ-clone/ui-protocol/types';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 import watchPlayer, {
   PlayerIds,
   cityIds,

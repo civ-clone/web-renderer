@@ -9,7 +9,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import { City, Tile, Yield } from '@civ-clone/ui-client/types';
+import { City, Tile, Yield } from '@civ-clone/ui-protocol/types';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
 import Map from '@civ-clone/ui-map/components/Map';

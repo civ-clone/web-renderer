@@ -1,4 +1,4 @@
-import { GameData, Tile, Unit } from '@civ-clone/ui-client/types';
+import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
 import {
@@ -14,7 +14,7 @@ import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
 import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
 import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
-import { PlayerTradeRates } from '@civ-clone/ui-client/types';
+import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { openTradeRates } from '@civ-clone/ui-windows/components/Actions/AdjustTradeRates';

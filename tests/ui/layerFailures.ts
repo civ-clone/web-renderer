@@ -8,7 +8,7 @@ import './lib/grids';
 
 import Map from '@civ-clone/ui-map/components/Map';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];

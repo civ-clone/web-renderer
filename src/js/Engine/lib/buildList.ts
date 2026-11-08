@@ -1,7 +1,8 @@
 // The production picker's sections (#432) and a unit's numbers on its line (#381), worked out here so the picker
 //  knows no rules (#274): which section an item belongs to is its class's, and a unit's numbers come from the ruleset.
 
-import { CivilopediaKind, UnitStats, kindOf, unitStats } from './civilopedia';
+import { kindOf, unitStats } from './civilopedia';
+import { CivilopediaKind, UnitStats } from '@civ-clone/ui-protocol/civilopedia';
 import { RuleRegistry } from '@civ-clone/core-rule/RuleRegistry';
 
 export type BuildGroup = Extract<

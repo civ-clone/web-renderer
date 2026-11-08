@@ -9,7 +9,12 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { GameData, PlayerAction, Tile, Unit } from '@civ-clone/ui-client/types';
+import {
+  GameData,
+  PlayerAction,
+  Tile,
+  Unit,
+} from '@civ-clone/ui-protocol/types';
 import Hud from '@civ-clone/ui-game/Hud';
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';

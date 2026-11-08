@@ -229,6 +229,9 @@ importers:
       '@civ-clone/ui-map-square':
         specifier: workspace:*
         version: link:packages/map-square
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:packages/protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:packages/widgets
@@ -290,8 +293,15 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
-  packages/client: {}
+  packages/client:
+    dependencies:
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/game:
     dependencies:
@@ -307,6 +317,9 @@ importers:
       '@civ-clone/ui-map-square':
         specifier: workspace:*
         version: link:../map-square
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -352,6 +365,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -361,12 +377,14 @@ importers:
       '@civ-clone/ui-assets':
         specifier: workspace:*
         version: link:../assets
-      '@civ-clone/ui-client':
-        specifier: workspace:*
-        version: link:../client
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/protocol: {}
 
   packages/widgets:
     dependencies:
@@ -376,6 +394,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/windows:
     dependencies:
@@ -388,6 +409,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets

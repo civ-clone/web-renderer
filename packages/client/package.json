@@ -3,5 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "description": "The game as the page holds it, drawing nothing: the transport, the state and its patches, options, saves in storage, and the decisions the UI makes about them.",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-protocol": "workspace:*"
+  }
 }

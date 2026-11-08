@@ -1,4 +1,4 @@
-import { City, CityGrowth } from '../../types';
+import { City, CityGrowth } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 
 export const cityName = (city: City | null): string =>

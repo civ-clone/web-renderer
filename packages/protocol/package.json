@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "What the page and the worker say to each other: the requests and their answers, the transport's messages, and the game's data as it crosses.",
+  "license": "MIT"
+}

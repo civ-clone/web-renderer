@@ -1,4 +1,4 @@
-import { Tile, Unit, World as WorldData } from '@civ-clone/ui-client/types';
+import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import { CityOpener } from '@civ-clone/ui-windows/lib/cityOpeners';
 import { off, on } from '@dom111/element';
 import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';

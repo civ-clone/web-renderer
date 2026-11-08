@@ -13,8 +13,8 @@ import {
   rememberDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
 import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
-import Difficulties from '../../../src/js/Engine/Requests/Difficulties';
-import Request from '../../../src/js/Engine/Request';
+import Difficulties from '@civ-clone/ui-protocol/Requests/Difficulties';
+import Request from '@civ-clone/ui-protocol/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import { openChoice } from './choiceList';

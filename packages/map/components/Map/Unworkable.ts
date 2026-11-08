@@ -1,4 +1,4 @@
-import { City, Tile } from '@civ-clone/ui-client/types';
+import { City, Tile } from '@civ-clone/ui-protocol/types';
 import Map from '../Map';
 
 export class Unworkable extends Map {

@@ -1,4 +1,4 @@
-import { GameData, Player } from '@civ-clone/ui-client/types';
+import { GameData, Player } from '@civ-clone/ui-protocol/types';
 import DataChanges, { instance } from '@civ-clone/ui-client/lib/DataChanges';
 
 /** The ids, besides the player's own, that a window shows of the player. */

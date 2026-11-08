@@ -11,7 +11,7 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { Tile, Unit, World as WorldData } from '@civ-clone/ui-client/types';
+import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import CityBanners from '@civ-clone/ui-map/components/Map/CityBanners';
 import MapView from '@civ-clone/ui-game/MapView';
 import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';

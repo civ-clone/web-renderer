@@ -2,7 +2,7 @@
 import './interfaces.ts';
 import '@civ-clone/ui-map-square';
 import Renderer from '@civ-clone/ui-game/bootstrap';
-import WorkerTransport from './Engine/WorkerTransport';
+import WorkerTransport from '@civ-clone/ui-client/WorkerTransport';
 import { version } from '../../build.json';
 
 // The build's version on the worker's URL, as on the page's own script and

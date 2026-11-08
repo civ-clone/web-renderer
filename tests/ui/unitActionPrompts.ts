@@ -13,7 +13,7 @@ import {
   openArrivalWindow,
   performWithPrompts,
 } from '@civ-clone/ui-windows/lib/unitActionPrompts';
-import { Unit as UnitData, UnitAction } from '@civ-clone/ui-client/types';
+import { Unit as UnitData, UnitAction } from '@civ-clone/ui-protocol/types';
 import playUnitKey from '@civ-clone/ui-game/lib/playUnitKey';
 import i18next from 'i18next';
 

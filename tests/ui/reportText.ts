@@ -7,7 +7,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { City, Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { City, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import CivilDisorder from '@civ-clone/ui-windows/components/Actions/CivilDisorder';
 import { renderIntelligenceRow } from '@civ-clone/ui-windows/components/IntelligenceReport';
 import Portal from '@civ-clone/ui-map/components/Portal';

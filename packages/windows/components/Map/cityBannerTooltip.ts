@@ -1,4 +1,4 @@
-import { City } from '@civ-clone/ui-client/types';
+import { City } from '@civ-clone/ui-protocol/types';
 import { TooltipContent } from '@civ-clone/ui-widgets/components/lib/Tooltip';
 import { buildTurns, growthTurns } from '@civ-clone/ui-client/lib/cityTurns';
 import {

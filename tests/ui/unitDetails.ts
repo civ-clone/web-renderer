@@ -8,7 +8,7 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { City, Unit } from '@civ-clone/ui-client/types';
+import { City, Unit } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import UnitDetails from '@civ-clone/ui-windows/components/UnitDetails';
 import i18next from 'i18next';

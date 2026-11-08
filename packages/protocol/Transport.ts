@@ -2,22 +2,22 @@ import { Request, RequestArgs, RequestReturn } from './Request';
 import { SeatChanges } from './lib/savedSeats';
 import { CheatPlayersResult } from './Requests/CheatPlayers';
 import { CivilizationOption } from './Requests/Civilizations';
-import { ObserverState } from './Observer';
-import { ObserverChoice } from './ObserverViews';
+import { ObserverState, ObserverChoice } from './observer';
 import { DifficultyOption } from './Requests/Difficulties';
-import { IntelligenceRow } from './lib/intelligence';
-import { MilitaryReport } from './lib/military';
-import { RequirementData } from './lib/requirements';
-import { CivilopediaEntry, UnavailableBuildItem } from './lib/civilopedia';
-import { CivilizationScore } from './lib/civilizationScore';
-import { CivilizationPowerRow } from './lib/civilizationPower';
-import type { BattleSound } from './Client/battleEvents';
-import { GameOverDetails } from './lib/gameOver';
-import { TopCitiesRow } from './lib/topCities';
+import {
+  IntelligenceRow,
+  MilitaryReport,
+  CivilizationScore,
+  CivilizationPowerRow,
+  GameOverDetails,
+  TopCitiesRow,
+} from './reports';
+import { RequirementData } from './requirements';
+import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
+import type { BattleSound } from './battles';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import { DataPatch } from './DataQueue';
+import { DataPatch, ObjectMap } from './data';
 import Notification from './Notification';
-import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
 
 // Which request a message asks or answers (#470): the page's `request` gives each one its own, and the worker's reply,
 //  or its `requestFailed`, carries it back, so a reply is matched to its request and not only to its channel.

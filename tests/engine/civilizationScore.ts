@@ -10,10 +10,10 @@ import { config } from './lib/seed';
 import './lib/spawnedClients';
 
 import {
-  CivilizationScore,
   CivilizationScoreDependencies,
   civilizationScore,
 } from '../../src/js/Engine/lib/civilizationScore';
+import { CivilizationScore } from '@civ-clone/ui-protocol/reports';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Effect from '@civ-clone/core-rule/Effect';
 import { IScoreTerm } from '@civ-clone/core-score/Rules/Score';

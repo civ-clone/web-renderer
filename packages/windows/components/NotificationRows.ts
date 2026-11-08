@@ -1,4 +1,4 @@
-import { City, Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { City, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import { noticeText } from './Actions/Notice';
 import { Notice as NoticeData } from './Notices';

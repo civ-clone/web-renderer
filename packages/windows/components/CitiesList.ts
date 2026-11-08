@@ -1,4 +1,4 @@
-import { City, Player } from '@civ-clone/ui-client/types';
+import { City, Player } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { buildTurns, turnsText } from './lib/cityYields';

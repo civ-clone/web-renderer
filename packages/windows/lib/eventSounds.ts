@@ -10,9 +10,9 @@ import {
   Interactions,
   Negotiation,
   Player,
-} from '@civ-clone/ui-client/types';
-import type { BattleSound } from '../../../src/js/Engine/Client/battleEvents';
-import { GameOverDetails } from '../../../src/js/Engine/lib/gameOver';
+} from '@civ-clone/ui-protocol/types';
+import type { BattleSound } from '@civ-clone/ui-protocol/battles';
+import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
 import civilizationAttribute from '../components/lib/civilizationAttribute';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 

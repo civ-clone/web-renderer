@@ -20,9 +20,9 @@ import {
 } from '@civ-clone/civ1-civilization/Civilizations';
 import {
   CivilizationPowerDependencies,
-  CivilizationPowerRow,
   civilizationPowerRows,
 } from '../../src/js/Engine/lib/civilizationPower';
+import { CivilizationPowerRow } from '@civ-clone/ui-protocol/reports';
 import {
   RequestsContext,
   registerRequests,

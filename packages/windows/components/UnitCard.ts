@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
-import { Unit as UnitData } from '@civ-clone/ui-client/types';
+import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { unitName, unitStates } from '../lib/unitLabel';
 import currentTileset, {
   nativeTileSize,

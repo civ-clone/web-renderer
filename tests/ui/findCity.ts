@@ -7,7 +7,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { City, Tile } from '@civ-clone/ui-client/types';
+import { City, Tile } from '@civ-clone/ui-protocol/types';
 import {
   findCityRows,
   openFindCity,

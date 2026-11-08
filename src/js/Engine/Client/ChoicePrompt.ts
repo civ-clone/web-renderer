@@ -15,7 +15,7 @@ import {
   ChoiceMeta,
   DataForChoiceMeta,
 } from '@civ-clone/core-client/ChoiceMeta';
-import Transport, { TransportDisposer } from '../Transport';
+import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
 import { DataFilter } from './visibilityFilter';
 import { standalone } from './refs';
 

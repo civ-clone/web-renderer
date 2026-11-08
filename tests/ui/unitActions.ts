@@ -10,7 +10,7 @@ import {
   IconLayer,
   unitActionIconLayers,
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
-import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import ClearForest from '@civ-clone/base-unit-action-clear-forest/ClearForest';
 import ClearJungle from '@civ-clone/base-unit-action-clear-jungle/ClearJungle';
 import ClearSwamp from '@civ-clone/base-unit-action-clear-swamp/ClearSwamp';

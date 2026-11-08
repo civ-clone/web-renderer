@@ -1,4 +1,4 @@
-import { Unit, UnitAction } from '../types';
+import { Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { hasUnitActions } from './unitActions';
 
 export type Halt = { target: string; unit: string };

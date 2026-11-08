@@ -1,10 +1,10 @@
-import { Entity, EntityInstance } from './types';
+import { Entity, EntityInstance } from '@civ-clone/ui-protocol/types';
 import {
   Transport as BaseTransport,
   TransportData,
   TransportReceiveArgs,
   TransportSendArgs,
-} from '../../src/js/Engine/Transport';
+} from '@civ-clone/ui-protocol/Transport';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
 import { IDataObject } from '@civ-clone/core-data-object/DataObject';
 

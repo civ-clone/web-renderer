@@ -14,11 +14,8 @@ import './lib/interfaces';
 
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import { DataPatch, GameData, Unit } from '@civ-clone/ui-client/types';
-import {
-  ObjectMap,
-  PlainObject,
-} from '@civ-clone/ui-client/lib/reconstituteData';
+import { DataPatch, GameData, Unit } from '@civ-clone/ui-protocol/types';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import Transport from '@civ-clone/ui-client/Transport';
 import UnitSelectionWindow from '@civ-clone/ui-windows/components/UnitSelectionWindow';

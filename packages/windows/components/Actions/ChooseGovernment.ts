@@ -1,5 +1,5 @@
 import Action from './Action';
-import { PlayerGovernment } from '@civ-clone/ui-client/types';
+import { PlayerGovernment } from '@civ-clone/ui-protocol/types';
 import entryDetails from '../lib/choiceDetails';
 import { openChoice } from '../choiceList';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

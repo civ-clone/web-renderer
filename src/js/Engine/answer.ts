@@ -3,7 +3,7 @@ import Transport, {
   TransportDisposer,
   TransportMeta,
   TransportSendArgs,
-} from './Transport';
+} from '@civ-clone/ui-protocol/Transport';
 
 // The text of something thrown, for the page: an `Error`'s message, or the thing itself.
 export const describeError = (error: unknown): string =>

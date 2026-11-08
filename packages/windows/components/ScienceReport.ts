@@ -1,4 +1,4 @@
-import { Player, PlayerResearch, Yield } from '@civ-clone/ui-client/types';
+import { Player, PlayerResearch, Yield } from '@civ-clone/ui-protocol/types';
 import { advanceNames, researchingName } from './lib/advances';
 import {
   groupIcons,

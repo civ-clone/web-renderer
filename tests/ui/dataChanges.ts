@@ -17,11 +17,8 @@ import DataChanges, {
 } from '@civ-clone/ui-client/lib/DataChanges';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
-import {
-  ObjectMap,
-  PlainObject,
-} from '@civ-clone/ui-client/lib/reconstituteData';
-import { DataPatch, GameData } from '@civ-clone/ui-client/types';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { DataPatch, GameData } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0,

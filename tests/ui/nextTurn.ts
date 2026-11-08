@@ -7,7 +7,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { GameData, Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { GameData, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Hud from '@civ-clone/ui-game/Hud';
 import NextTurn from '@civ-clone/ui-windows/components/NextTurn';
 import Notices from '@civ-clone/ui-windows/components/Notices';

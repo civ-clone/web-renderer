@@ -1,5 +1,5 @@
 import Transport from '@civ-clone/ui-client/Transport';
-import { TransportTranslatedNotice } from '../../../src/js/Engine/Transport';
+import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import { t } from 'i18next';
 
 // The line along the top of the page that shows a message for 4 seconds: the worker's `notification` messages, the

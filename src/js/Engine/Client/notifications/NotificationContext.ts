@@ -2,7 +2,7 @@
 //  on, so that each handler can be checked with plain data.
 
 import { ClientContext } from '../ClientContext';
-import Notification from '../../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 
 export type NotificationContext = Pick<
   ClientContext,

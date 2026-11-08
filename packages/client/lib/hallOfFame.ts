@@ -1,7 +1,7 @@
 // The Hall of Fame (#179): your best games, kept in this browser as Civ1 kept them on the machine. Free of DOM imports
 //  so it can be tested in Node.
 
-import { GameOverDetails } from '../../../src/js/Engine/lib/gameOver';
+import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
 
 export type HallOfFameStorage = Pick<Storage, 'getItem' | 'setItem'>;
 

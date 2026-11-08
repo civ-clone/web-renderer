@@ -10,8 +10,9 @@ import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { ClientContext, Disposer, Registries } from './ClientContext';
-import { TransportDisposer } from '../Transport';
-import { GameOverDetails, gameOverDetails } from '../lib/gameOver';
+import { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
+import { gameOverDetails } from '../lib/gameOver';
+import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
 
 export type GameEndContext = Pick<
   ClientContext,

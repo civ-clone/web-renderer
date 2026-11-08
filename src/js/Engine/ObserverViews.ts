@@ -10,11 +10,6 @@ import hasMet from './lib/hasMet';
 import playerStandIn from './lib/playerStandIn';
 import { omittedActions } from './lib/playerWithoutActions';
 
-/** What the observer is asked to show (#613): some civilisations' worlds together, or the whole map. */
-export type ObserverChoice =
-  | { kind: 'players'; playerIds: string[] }
-  | { kind: 'world' };
-
 /** A view the observer built, and what undoes it. */
 export type ObserverView = {
   view: View;

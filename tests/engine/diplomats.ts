@@ -18,7 +18,7 @@ import {
 } from '@civ-clone/civ1-unit/Units';
 import { BronzeWorking } from '@civ-clone/civ1-science/Advances';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import { IntelligenceRow } from '../../src/js/Engine/lib/intelligence';
+import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import Negotiation from '@civ-clone/core-diplomacy/Negotiation';
 import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import City from '@civ-clone/core-city/City';

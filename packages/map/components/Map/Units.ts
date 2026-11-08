@@ -1,4 +1,4 @@
-import { Coordinate, Tile, Unit } from '@civ-clone/ui-client/types';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { Map, IMap } from '../Map';
 import renderUnit, {
   drawUnitStatus,

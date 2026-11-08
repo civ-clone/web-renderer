@@ -1,5 +1,5 @@
-import { Coordinate, UnitAction } from '../types';
-import { TransportHandledAction } from '../../../src/js/Engine/Transport';
+import { Coordinate, UnitAction } from '@civ-clone/ui-protocol/types';
+import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 
 type UnitHolder<T extends Coordinate> = {
   id: string;

@@ -1,7 +1,7 @@
 // The difficulty levels the new game menu offers, and the one it offers first. Kept free of DOM imports so it can be
 //  tested in Node.
 
-import { DifficultyOption } from '../../../src/js/Engine/Requests/Difficulties';
+import { DifficultyOption } from '@civ-clone/ui-protocol/Requests/Difficulties';
 import { t } from 'i18next';
 
 export type DifficultyStorage = Pick<Storage, 'getItem' | 'setItem'>;

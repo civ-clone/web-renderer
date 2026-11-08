@@ -18,7 +18,7 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { City as CityData, GameData } from '@civ-clone/ui-client/types';
+import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import City from '@civ-clone/ui-windows/components/City';
 import CityBuildAction from '@civ-clone/ui-windows/components/Actions/CityBuild';

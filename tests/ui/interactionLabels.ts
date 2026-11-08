@@ -13,7 +13,7 @@ import {
   negotiationLine,
   speakerOf,
 } from '@civ-clone/ui-client/lib/interactionLabels';
-import { Interactions, Player } from '@civ-clone/ui-client/types';
+import { Interactions, Player } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 
 const failures: string[] = [];

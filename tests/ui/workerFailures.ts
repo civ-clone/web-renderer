@@ -11,7 +11,7 @@ import './lib/interfaces';
 import i18next from 'i18next';
 import Transport from '@civ-clone/ui-client/Transport';
 import WorkerFailures from '@civ-clone/ui-game/app/WorkerFailures';
-import WorkerTransport from '../../src/js/Engine/WorkerTransport';
+import WorkerTransport from '@civ-clone/ui-client/WorkerTransport';
 
 const failures: string[] = [];
 let checks = 0,

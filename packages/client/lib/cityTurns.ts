@@ -1,4 +1,10 @@
-import { City, CityBuild, CityGrowth, PlayerResearch, Yield } from '../types';
+import {
+  City,
+  CityBuild,
+  CityGrowth,
+  PlayerResearch,
+  Yield,
+} from '@civ-clone/ui-protocol/types';
 import { reduceKnownYield } from './yieldMap';
 
 // How many turns a city has left to build or grow, as plain sums: the map's banners (#747) count them without the

@@ -15,10 +15,10 @@ import {
   playerName,
   speakerOf,
 } from '@civ-clone/ui-client/lib/interactionLabels';
-import { Interactions, Negotiation } from '@civ-clone/ui-client/types';
+import { Interactions, Negotiation } from '@civ-clone/ui-protocol/types';
 import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
-import Intelligence from '../../../src/js/Engine/Requests/Intelligence';
+import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import MeetingWindow from '@civ-clone/ui-windows/components/MeetingWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';

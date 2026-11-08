@@ -1,5 +1,5 @@
 import { Element, s } from '@dom111/element';
-import { GameDifficulty, Yield } from '@civ-clone/ui-client/types';
+import { GameDifficulty, Yield } from '@civ-clone/ui-protocol/types';
 import { difficultyName } from '@civ-clone/ui-client/lib/difficulty';
 import { t } from 'i18next';
 

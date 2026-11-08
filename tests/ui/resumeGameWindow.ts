@@ -7,8 +7,8 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 import ResumeGameWindow from '@civ-clone/ui-windows/components/ResumeGameWindow';
-import { SeatChanges } from '../../src/js/Engine/lib/savedSeats';
-import Request from '../../src/js/Engine/Request';
+import { SeatChanges } from '@civ-clone/ui-protocol/lib/savedSeats';
+import Request from '@civ-clone/ui-protocol/Request';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 

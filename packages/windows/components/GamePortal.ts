@@ -1,5 +1,5 @@
 import { DragSample, releaseVelocity } from '@civ-clone/ui-widgets/lib/drag';
-import { Coordinate, Tile, Unit } from '@civ-clone/ui-client/types';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import {
   TooltipContent,
   hideTooltip,

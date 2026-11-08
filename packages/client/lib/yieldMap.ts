@@ -1,4 +1,4 @@
-import { Yield } from '../types';
+import { Yield } from '@civ-clone/ui-protocol/types';
 import instanceOf from './instanceOf';
 
 /**

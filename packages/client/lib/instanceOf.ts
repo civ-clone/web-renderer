@@ -1,4 +1,4 @@
-import { Entity, EntityInstance } from '../types';
+import { Entity, EntityInstance } from '@civ-clone/ui-protocol/types';
 
 /**
  * Ensures the `__` property contains at least one of the passed in  `classNames`.

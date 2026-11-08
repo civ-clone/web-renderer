@@ -7,7 +7,7 @@ import {
   PlayerTradeRates,
   Spaceship,
   Unit,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone/ui-client/Transport';
 import tooltip, {

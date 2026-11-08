@@ -1,7 +1,7 @@
 import Action from './Action';
 import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
 import { Notice as NoticeData } from '../Notices';
-import { PlayerAction } from '@civ-clone/ui-client/types';
+import { PlayerAction } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

@@ -2,8 +2,8 @@ import {
   MilitaryLossRow,
   MilitaryReport as MilitaryReportData,
   MilitaryStatusRow,
-} from '../../../src/js/Engine/lib/military';
-import Military from '../../../src/js/Engine/Requests/Military';
+} from '@civ-clone/ui-protocol/reports';
+import Military from '@civ-clone/ui-protocol/Requests/Military';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { s } from '@dom111/element';

@@ -4,7 +4,7 @@
 import City from '@civ-clone/core-city/City';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import { NotificationContext, NotificationTable } from './NotificationContext';
-import Notification from '../../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';

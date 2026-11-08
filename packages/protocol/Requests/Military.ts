@@ -1,4 +1,4 @@
-import { MilitaryReport } from '../lib/military';
+import { MilitaryReport } from '../reports';
 import Request from '../Request';
 
 export class Military extends Request<[null], MilitaryReport> {

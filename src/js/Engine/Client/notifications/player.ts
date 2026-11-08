@@ -7,7 +7,7 @@ import { Anarchy } from '@civ-clone/civ1-government/Governments';
 import City from '@civ-clone/core-city/City';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import { NotificationContext, NotificationTable } from './NotificationContext';
-import Notification from '../../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 

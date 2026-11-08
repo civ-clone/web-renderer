@@ -1,8 +1,8 @@
 // The notifications the client sends the player (#449), moved out of `DataTransferClient`: each serialised as it is
 //  given, and sent at once or held until the turn is handed over (#130).
 
-import Notification from '../Notification';
-import Transport from '../Transport';
+import Notification from '@civ-clone/ui-protocol/Notification';
+import Transport from '@civ-clone/ui-protocol/Transport';
 import { DataFilter } from './visibilityFilter';
 import { standalone } from './refs';
 

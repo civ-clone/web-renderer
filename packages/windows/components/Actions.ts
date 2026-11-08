@@ -7,7 +7,7 @@ import CityBuild from './Actions/CityBuild';
 import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
 import Notice from './Actions/Notice';
-import { Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';

@@ -1,8 +1,8 @@
 import Civilopedia, { CivilopediaData, loadCivilopedia } from './Civilopedia';
 import { classLink, subjectLine, whereHtml } from './lib/requirements';
-import { CityBuild } from '@civ-clone/ui-client/types';
-import CityBuildUnavailable from '../../../src/js/Engine/Requests/CityBuildUnavailable';
-import { UnavailableBuildItem } from '../../../src/js/Engine/lib/civilopedia';
+import { CityBuild } from '@civ-clone/ui-protocol/types';
+import CityBuildUnavailable from '@civ-clone/ui-protocol/Requests/CityBuildUnavailable';
+import { UnavailableBuildItem } from '@civ-clone/ui-protocol/civilopedia';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-widgets/components/Window';
 import { h } from '@civ-clone/ui-widgets/lib/html';

@@ -30,7 +30,7 @@ The page sets `performance.mark` entries for where a load's time goes (#325): `c
 
 - `ParentTransport` (worker side)
   - Uses global `postMessage`/`addEventListener('message')`.
-- `WorkerTransport` (frontend side)
+- `WorkerTransport` (frontend side, in `client`)
   - Uses `Worker.postMessage` and worker event listeners.
   - Reconstitutes incoming hierarchy payloads (with `reconstituteData`) before handing them to the caller, only for the listener's own channel. The raw payload is passed as a second argument.
 

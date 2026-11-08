@@ -1,5 +1,5 @@
 import { Element, s } from '@dom111/element';
-import { Unit as UnitData } from '@civ-clone/ui-client/types';
+import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import currentTileset, {
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
