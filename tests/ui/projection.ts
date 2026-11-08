@@ -494,6 +494,7 @@ expect(
 );
 
 // A grid's own code makes it drawable (#825): the map asks whichever projection is registered for the tileset's grid.
+//  These stay last: the registry is the suite's own, and the checks above want hex unregistered.
 const hexStub = tilesetWith({ id: 'hex-stub', grid: 'hex-odd-r' }),
   hexAsked: unknown[] = [];
 
