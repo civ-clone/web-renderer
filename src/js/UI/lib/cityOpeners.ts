@@ -6,15 +6,11 @@ import { City as CityData } from '../types';
 import openCity from '../components/openCity';
 import ObserveCity from '../../Engine/Requests/ObserveCity';
 import { ObserverState } from '../../Engine/Observer';
-import Portal from '../components/Portal';
+import Portal, { CityOpener } from '../components/Portal';
 import Transport from '../Transport';
 import { unlessRequestFailed } from './unlessRequestFailed';
 
-export type CityOpener = {
-  // Whether `city` is one that opens: the map's click moves on to the square's units otherwise.
-  opens(city: CityData, portal: Portal): boolean;
-  open(city: CityData, portal: Portal): void;
-};
+export type { CityOpener };
 
 // The player's own cities, from the data the page holds.
 export const playerCityOpener = (): CityOpener => ({

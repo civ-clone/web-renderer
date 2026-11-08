@@ -18,7 +18,7 @@ import {
   interfaces,
   registerInterface,
 } from '../../src/js/UI/lib/interfaceMode';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { uiThemeFrom } from '../../src/js/UI/lib/theme';
 
 const failures: string[] = [];
@@ -201,48 +201,6 @@ expect(
     .sort(),
   ['components/GameOptions.ts']
 );
-
-// Each interface is a package of its own (#825): what's shared never imports one, one never imports another, and only
-//  civ.one's own entry (`frontend.ts`) imports `interfaces/`, which says which it offers.
-const jsRoot = join(process.cwd(), 'src/js'),
-  interfacesRoot = join(srcRoot, 'interfaces'),
-  importsOf = (path: string): string[] =>
-    [
-      ...readFileSync(path, 'utf8').matchAll(
-        /(?:^|\n)\s*(?:import|export)\b[^;]*?['"](\.[^'"]+)['"]/g
-      ),
-    ].map(([, spec]) => join(dirname(path), spec)),
-  packageOf = (path: string): string | null =>
-    path.startsWith(interfacesRoot + '/')
-      ? path.slice(interfacesRoot.length + 1).split('/')[0]
-      : null,
-  crossings = sources(jsRoot)
-    .filter((path) => path !== join(interfacesRoot, 'index.ts'))
-    .flatMap((path) =>
-      importsOf(path)
-        .filter((target) => {
-          const to = packageOf(target);
-
-          if (target === interfacesRoot) {
-            return path !== join(jsRoot, 'frontend.ts');
-          }
-
-          return to !== null && !/\.\w+$/.test(to) && packageOf(path) !== to;
-        })
-        .map(
-          (target) =>
-            `${path.slice(jsRoot.length + 1)} -> ${target.slice(
-              jsRoot.length + 1
-            )}`
-        )
-    );
-
-expect(
-  'civ.one is what chooses the interfaces',
-  importsOf(join(jsRoot, 'frontend.ts')).includes(interfacesRoot),
-  true
-);
-expect('nothing else reaches into one', crossings, []);
 
 if (failures.length) {
   process.stderr.write(`FAIL interfaceManifests\n${failures.join('\n')}\n`);

@@ -3,11 +3,8 @@
 //  caller wraps it. And what the layers ask of it to draw tiles that overlap (#91), which square tiles don't: no reach,
 //  a draw order that is a total order, and the tiles reaching a rectangle are the ones the square sums always gave.
 
-import {
-  Placement,
-  SquareProjection,
-  tileBounds,
-} from '../../src/js/UI/lib/projection';
+import { Placement, tileBounds } from '../../src/js/UI/lib/projection';
+import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
 import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';
 import civ1Json from '../../src/js/UI/tilesets/civ1.json';
 import currentTileset from '../../src/js/UI/lib/tilesets';
