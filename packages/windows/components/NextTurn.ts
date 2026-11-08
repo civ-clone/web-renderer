@@ -5,12 +5,12 @@ import Action from './Actions/Action';
 import Notice from './Actions/Notice';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
-import button from '@civ-clone/ui-widgets/lib/button';
+import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
-import tooltip from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 
 // The Next Turn button (#702), in place of the orbs under the new interface (#735): one button that names what needs
 //  the player next and does it when pressed, the item's place in the queue under it, and End turn once nothing is

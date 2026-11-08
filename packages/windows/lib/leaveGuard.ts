@@ -39,7 +39,7 @@ const pushGuardEntry = (): void =>
 
     asking = true;
 
-    import('@civ-clone/ui-widgets/components/ConfirmationWindow').then(
+    import('@civ-clone/ui-component-window/ConfirmationWindow').then(
       ({ ConfirmationWindow }) => {
         const confirmation = new ConfirmationWindow(
           t('LeaveGuard.title'),

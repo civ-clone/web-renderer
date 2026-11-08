@@ -1,5 +1,5 @@
 import { off, on } from '@dom111/element';
-import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import { allowLeaving } from '@civ-clone/ui-windows/lib/leaveGuard';
 import { t } from 'i18next';
 

@@ -1,7 +1,7 @@
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';
 import { GameData, Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';

@@ -4,7 +4,7 @@ import {
 } from '@civ-clone/ui-protocol/reports';
 import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import Transport from '@civ-clone/ui-client/Transport';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { advanceNames } from '@civ-clone/ui-windows/components/lib/advances';
 import { yieldIcon } from '@civ-clone/ui-windows/components/lib/cityYields';
 import { s } from '@dom111/element';

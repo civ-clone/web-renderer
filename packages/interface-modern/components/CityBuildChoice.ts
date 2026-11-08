@@ -2,8 +2,8 @@ import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import ChoiceWindow, {
   ChoiceFact,
   ChoiceRow,
-} from '@civ-clone/ui-widgets/components/ChoiceWindow';
-import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
+} from '@civ-clone/ui-component-choice-window/ChoiceWindow';
+import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
 import CityBuildUnavailableWindow from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-windows/components/Unit';

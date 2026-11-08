@@ -5,7 +5,7 @@ import {
 } from '@civ-clone/ui-protocol/reports';
 import Military from '@civ-clone/ui-protocol/Requests/Military';
 import Transport from '@civ-clone/ui-client/Transport';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

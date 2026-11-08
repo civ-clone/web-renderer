@@ -1,7 +1,7 @@
 import {
   PopupMenu,
   PopupMenuAction,
-} from '@civ-clone/ui-widgets/components/PopupMenu';
+} from '@civ-clone/ui-component-popup-menu/PopupMenu';
 import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import { off, on } from '@dom111/element';

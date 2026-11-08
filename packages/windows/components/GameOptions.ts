@@ -10,9 +10,9 @@ import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import ImportAssetsWindow from './ImportAssetsWindow';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { button } from '@civ-clone/ui-widgets/lib/button';
+import { button } from '@civ-clone/ui-component-button/button';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import {

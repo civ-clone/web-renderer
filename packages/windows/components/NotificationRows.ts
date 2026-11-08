@@ -5,7 +5,7 @@ import { Notice as NoticeData } from './Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
-import button from '@civ-clone/ui-widgets/lib/button';
+import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';

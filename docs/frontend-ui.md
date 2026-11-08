@@ -107,19 +107,26 @@ civ.one's in them: `@civ-clone/core-data-client` (the transport contract, reques
 patches and rebuilding them) and `@civ-clone/worker-transport` (both ends of a transport over a web worker's
 messages, which `frontend.ts` and `backend.ts` start, telling the page's end that `gameData` arrives raw).
 
-| Package             | Holds                                                                               | Depends on                             |
-| ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
-| `protocol`          | What the page and the worker say to each other: requests, messages, the game's data | nothing else                           |
-| `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts              | protocol                               |
-| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves    | protocol                               |
-| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                  | protocol, client                       |
-| `widgets`           | The window and its controls, with nothing about the game in them                    | protocol, client, assets               |
-| `map`               | Drawing the world on any grid, through a `Projection`                               | protocol, client, assets, widgets      |
-| `map-square`        | The square grid: its projection and minimap                                         | protocol, assets, map                  |
-| `windows`           | The game's windows, shared by every interface that wants them                       | protocol, client, assets, widgets, map |
-| `game`              | The page itself: starting up, a game in play, the keys, the debug tools             | everything above it but the worker's   |
-| `interface-modern`  | The modern interface, with Slate and brass, see above                               | the page's packages but `game`         |
-| `interface-classic` | The classic interface, with Civ1 classic, see above                                 | the page's packages but `game`         |
+| Package             | Holds                                                                                                                                                                                       | Depends on                                      |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `protocol`          | What the page and the worker say to each other: requests, messages, the game's data                                                                                                         | nothing else                                    |
+| `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts                                                                                                                      | protocol                                        |
+| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves                                                                                                            | protocol                                        |
+| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                                                                                                                          | protocol, client                                |
+| `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, client, assets, protocol |
+| `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | client, assets                                  |
+| `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, client, assets, widgets               |
+| `map-square`        | The square grid: its projection and minimap                                                                                                                                                 | protocol, assets, map                           |
+| `windows`           | The game's windows, shared by every interface that wants them                                                                                                                               | protocol, client, assets, widgets, map          |
+| `game`              | The page itself: starting up, a game in play, the keys, the debug tools                                                                                                                     | everything above it but the worker's            |
+| `interface-modern`  | The modern interface, with Slate and brass, see above                                                                                                                                       | the page's packages but `game`                  |
+| `interface-classic` | The classic interface, with Civ1 classic, see above                                                                                                                                         | the page's packages but `game`                  |
+
+The components (#825) are packages of their own so any interface can build on any of them, each bringing its styles:
+`@civ-clone/ui-component-window` is the window every interface builds on, `ui-component-button` the button system, and
+so on. `src/css/app.scss` still imports their partials in the order the cascade has always had. Ordering them by
+dependency instead, so the list could be generated, would change which of two equally specific rules wins in a few
+places (a base `.window .body` and a window's own `.city .body`, say), so each of those has to be settled first.
 
 Inside each package the folders are as they were under `src/js/UI/` (`components/`, `lib/`), but for the folder a
 package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a

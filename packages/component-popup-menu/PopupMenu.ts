@@ -1,5 +1,5 @@
 import { Element, off, on, s } from '@dom111/element';
-import { h } from '../lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
 

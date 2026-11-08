@@ -1,4 +1,4 @@
-import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { CityStatus } from './components/CityStatus';
 import CityBuildSelectionWindow from './components/CityBuildSelectionWindow';
 import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
@@ -7,7 +7,7 @@ import HappinessReport from './components/HappinessReport';
 import IntelligenceReport from './components/IntelligenceReport';
 import MainMenu from './components/MainMenu';
 import MilitaryReport from './components/MilitaryReport';
-import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
+import SelectionWindow from '@civ-clone/ui-component-selection-window/SelectionWindow';
 import TopCitiesReport from './components/TopCitiesReport';
 import TradeReport from './components/TradeReport';
 import UnitSelectionWindow from '@civ-clone/ui-windows/components/UnitSelectionWindow';

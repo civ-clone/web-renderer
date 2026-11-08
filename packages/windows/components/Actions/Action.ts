@@ -12,7 +12,7 @@ import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone/ui-client/Transport';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
 
 declare global {
   interface GlobalEventHandlersEventMap {

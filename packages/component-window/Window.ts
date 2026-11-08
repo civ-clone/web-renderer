@@ -1,10 +1,10 @@
 import { TransientElement, ITransientElement } from './TransientElement';
 import { off, on, s } from '@dom111/element';
 import { Coordinate } from '@civ-clone/ui-protocol/types';
-import { button } from '../lib/button';
-import eyebrowFor from '../lib/windowEyebrows';
+import { button } from '@civ-clone/ui-component-button/button';
+import eyebrowFor from './windowEyebrows';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
-import { h } from '../lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { t } from 'i18next';
 

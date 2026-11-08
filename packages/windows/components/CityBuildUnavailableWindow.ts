@@ -4,7 +4,7 @@ import { CityBuild } from '@civ-clone/ui-protocol/types';
 import CityBuildUnavailable from '@civ-clone/ui-protocol/Requests/CityBuildUnavailable';
 import { UnavailableBuildItem } from '@civ-clone/ui-protocol/civilopedia';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

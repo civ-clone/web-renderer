@@ -4,7 +4,7 @@ import {
 } from '@civ-clone/ui-client/lib/hallOfFame';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 
 // A year as the status window shows it: 4000 BCE, 1 CE.
 export const yearLabel = (year: number): string =>

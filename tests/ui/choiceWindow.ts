@@ -9,7 +9,7 @@ import './lib/interfaces';
 
 import ChoiceWindow, {
   ChoiceRow,
-} from '@civ-clone/ui-widgets/components/ChoiceWindow';
+} from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import CityBuildChoice from '@civ-clone/ui-interface-modern/components/CityBuildChoice';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';

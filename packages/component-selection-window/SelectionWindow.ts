@@ -1,7 +1,10 @@
-import { ActionWindow, ActionWindowOptions } from './ActionWindow';
+import {
+  ActionWindow,
+  ActionWindowOptions,
+} from '@civ-clone/ui-component-window/ActionWindow';
 import { s } from '@dom111/element';
-import { INotificationWindow } from './NotificationWindow';
-import { h } from '../lib/html';
+import { INotificationWindow } from '@civ-clone/ui-component-window/NotificationWindow';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { singleChoice } from '@civ-clone/ui-client/lib/singleChoice';
 import { t } from 'i18next';

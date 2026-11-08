@@ -1,6 +1,6 @@
 import { City, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Action from './Action';
-import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

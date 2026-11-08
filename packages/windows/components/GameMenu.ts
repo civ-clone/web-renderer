@@ -14,19 +14,19 @@ import {
   openTradeReport,
 } from './reports';
 import Civilopedia from './Civilopedia';
-import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '@civ-clone/ui-protocol/types';
 import PopupMenu, {
   hasPopupMenu,
-} from '@civ-clone/ui-widgets/components/PopupMenu';
+} from '@civ-clone/ui-component-popup-menu/PopupMenu';
 import UiMenu, { UiMenuItem } from './UiMenu';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
-import { windowKey } from '@civ-clone/ui-widgets/lib/windowEyebrows';
+import { windowKey } from '@civ-clone/ui-component-window/windowEyebrows';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ScienceReport from './ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';

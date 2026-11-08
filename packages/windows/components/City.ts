@@ -22,11 +22,11 @@ import {
   yieldImages,
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
-import Window, { WindowOptions } from '@civ-clone/ui-widgets/components/Window';
+import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
-import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from './SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -38,7 +38,7 @@ import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
-import progressBar from '@civ-clone/ui-widgets/components/lib/ProgressBar';
+import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { specialistForKey } from '@civ-clone/ui-client/lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';

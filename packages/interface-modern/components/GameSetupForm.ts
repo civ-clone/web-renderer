@@ -21,8 +21,8 @@ import {
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
-import button from '@civ-clone/ui-widgets/lib/button';
+import Window from '@civ-clone/ui-component-window/Window';
+import button from '@civ-clone/ui-component-button/button';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';

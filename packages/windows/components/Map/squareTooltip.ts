@@ -3,7 +3,7 @@ import { TOptions, t } from 'i18next';
 import {
   TooltipContent,
   TooltipText,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import { netTileYields } from '@civ-clone/ui-client/lib/yieldMap';

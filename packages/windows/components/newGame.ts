@@ -12,7 +12,7 @@ import {
   preselectedDifficulty,
   rememberDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
-import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import Difficulties from '@civ-clone/ui-protocol/Requests/Difficulties';
 import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';

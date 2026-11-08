@@ -1,8 +1,8 @@
 import ChoiceWindow, {
   ChoiceDescriber,
   ChoiceRow,
-} from '@civ-clone/ui-widgets/components/ChoiceWindow';
-import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
+} from '@civ-clone/ui-component-choice-window/ChoiceWindow';
+import SelectionWindow from '@civ-clone/ui-component-selection-window/SelectionWindow';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // A list of plain rows, the classic list or the choice window (#745). Apart from `choices.ts` so that what imports it

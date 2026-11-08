@@ -2,8 +2,8 @@ import {
   NotificationWindow,
   NotificationWindowOptions,
 } from './NotificationWindow';
-import { button } from '../lib/button';
-import { h } from '../lib/html';
+import { button } from '@civ-clone/ui-component-button/button';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

@@ -1,0 +1,12 @@
+{
+  "name": "@civ-clone/ui-component-selection-window",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A window that lists choices to pick one from, as a plain list.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

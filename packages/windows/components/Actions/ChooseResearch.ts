@@ -4,7 +4,7 @@ import {
   PlayerResearch,
 } from '@civ-clone/ui-protocol/types';
 import Action from './Action';
-import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { combinedYields } from '../lib/playerYields';

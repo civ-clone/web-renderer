@@ -7,10 +7,10 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
-import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
+import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import LoadGameWindow from '@civ-clone/ui-windows/components/LoadGameWindow';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

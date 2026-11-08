@@ -1,0 +1,11 @@
+{
+  "name": "@civ-clone/ui-component-report-table",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The table the reports are drawn with: columns, sorting and totals.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

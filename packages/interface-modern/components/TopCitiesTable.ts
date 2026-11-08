@@ -1,10 +1,10 @@
 import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
-import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import TopCities from '@civ-clone/ui-protocol/Requests/TopCities';
 import { TopCitiesRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import {
   cityNameText,
   viewCityText,

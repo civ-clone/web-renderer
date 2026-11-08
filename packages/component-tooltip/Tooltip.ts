@@ -3,7 +3,7 @@
 //  added last to `body` when it opens: later in the document than the map and the panels, so it's drawn over them
 //  without a stacking order of its own, and under a modal window, which is above everything.
 
-import cannotHover from '../../lib/cannotHover';
+import cannotHover from '@civ-clone/ui-widgets/lib/cannotHover';
 
 // Text, or an element with icons in it that names what they are for a screen reader (#748).
 export type TooltipText = string | Node;

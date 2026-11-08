@@ -1,0 +1,11 @@
+{
+  "name": "@civ-clone/ui-component-popup-menu",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A menu that opens over what was pressed.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

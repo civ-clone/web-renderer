@@ -16,10 +16,10 @@ import {
   reduceKnownYield,
 } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
 import Unit from '@civ-clone/ui-windows/components/Unit';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
