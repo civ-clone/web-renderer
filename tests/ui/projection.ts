@@ -517,6 +517,26 @@ expect(
   ]
 );
 
+registerGrid('hex-odd-r', (tileset, world, tileSize, wrapVertical) => {
+  hexAsked.push(['again', tileset.id, tileSize, wrapVertical]);
+
+  return new SquareProjection(tileSize * 2, world, wrapVertical);
+});
+
+expect(
+  'a grid registered again is listed once, and the map gets the latest projection',
+  [
+    drawableGrids().sort(),
+    projectionFor(hexStub, world, 16).footprint(),
+    hexAsked.slice(1),
+  ],
+  [
+    ['hex-odd-r', 'square'],
+    { width: 32, height: 32 },
+    [['again', 'hex-stub', 16, true]],
+  ]
+);
+
 finished = true;
 
 if (failures.length) {
