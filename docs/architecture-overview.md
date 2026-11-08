@@ -42,7 +42,8 @@ Loading a saved game takes a different path. The player picks a file, `packages/
   - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView` the map layers and minimap; `Hud` the action panels and details; `InputController` the hotkeys and leader screens.
 - `packages/game/app/*`, `packages/game/debug/*`
   - The page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (#470); the `?debug=1` flags and panel.
-- `packages/windows/components/*`, `packages/widgets/components/*`
+- `packages/windows/components/*`, and the components every window is built from, `packages/component-*/` (`Window`, the
+  button, the choice and selection windows, the report table, …)
   - Window and UI primitives for reports, city/unit views, menu flows, and overlays.
 - `packages/map/components/Map/*`, `Portal.ts`, `GamePortal.ts`, and `packages/map-square/Minimap.ts`
   - Canvas layer renderers (terrain, units, cities, fog, improvements, etc.). Each layer's canvas is the size of the portal, not the world, and the portal composites only the regions the layers changed. The minimap draws from a layer of its own (`Map/Overview.ts`).
