@@ -478,18 +478,25 @@ const imported = [
       : []
   );
 
-const usedByPartials = new Set(
-  partials.flatMap((partial) => {
+const definesMixins = (partial: string): boolean => {
     const [name, file] = partial.split('/');
 
-    return [
-      ...readFileSync(
-        join(packagesRoot, name, 'styles', `_${file}.scss`),
-        'utf8'
-      ).matchAll(/^@use '(?:\.\.\/\.\.\/([^/]+)\/styles\/)?([^'/]+)'/gm),
-    ].map(([, other, used]) => `${other ?? name}/${used}`);
-  })
-);
+    return /^@mixin /m.test(
+      readFileSync(join(packagesRoot, name, 'styles', `_${file}.scss`), 'utf8')
+    );
+  },
+  usedByPartials = new Set(
+    partials.flatMap((partial) => {
+      const [name, file] = partial.split('/');
+
+      return [
+        ...readFileSync(
+          join(packagesRoot, name, 'styles', `_${file}.scss`),
+          'utf8'
+        ).matchAll(/^@use '(?:\.\.\/\.\.\/([^/]+)\/styles\/)?([^'/]+)'/gm),
+      ].map(([, other, used]) => `${other ?? name}/${used}`);
+    })
+  );
 
 expect(
   'civ.one’s stylesheet imports every package’s partials, each once, and no other',
@@ -497,7 +504,9 @@ expect(
     imported.length > 40,
     // A partial of mixins that others `@use` is in through them.
     partials.filter(
-      (partial) => !imported.includes(partial) && !usedByPartials.has(partial)
+      (partial) =>
+        !imported.includes(partial) &&
+        !(usedByPartials.has(partial) && definesMixins(partial))
     ),
     imported.filter(
       (partial, index) =>

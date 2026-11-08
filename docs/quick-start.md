@@ -87,10 +87,12 @@ rebuild seems not to have taken, hard-reload: the page caches its bundles.
 
 ## Change the renderer
 
-Everything on the page is in the workspace packages under `packages/`; everything in the worker (the engine's
-host, the AI pacing, what is sent to the page) is in `packages/worker-client` (`@civ-clone/ui-worker-client`); styles are
-in each package's `styles/`, put together in cascade order by `src/css/app.scss`. [`architecture-overview.md`](./architecture-overview.md) and
-[`runtime-data-flow.md`](./runtime-data-flow.md) explain how the two halves
+Everything on the page is in the workspace packages under `packages/`;
+everything in the worker (the engine's host, the AI pacing, what is sent to the
+page) is in `packages/worker-client` (`@civ-clone/ui-worker-client`); styles
+are in each package's `styles/`, put together in cascade order by
+`src/css/app.scss`. [`architecture-overview.md`](./architecture-overview.md)
+and [`runtime-data-flow.md`](./runtime-data-flow.md) explain how the two halves
 talk.
 
 Checks, from quickest to slowest:
