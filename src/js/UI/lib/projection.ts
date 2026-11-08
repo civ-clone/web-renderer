@@ -27,7 +27,13 @@ export type TileSpan = {
   rows: [number, number];
 };
 
-const noReach: Reach = Object.freeze({ top: 0, right: 0, bottom: 0, left: 0 });
+/** No reach at all: every sprite stays in its own box. */
+export const noReach: Reach = Object.freeze({
+  top: 0,
+  right: 0,
+  bottom: 0,
+  left: 0,
+});
 
 /**
  * Where tiles go in pixels on the map, and which tile a pixel is on (#90).
@@ -89,95 +95,6 @@ export interface WorldDimensions {
   height(): number;
 }
 
-/**
- * Square tiles, `size` px each.
- *
- * The world's dimensions are asked for only when they are needed, as they were before there was a projection: a layer
- * drawn on its own in a test can have a world with none, and only the sizes that need them would notice.
- */
-export class SquareProjection implements Projection {
-  // The answers never change for a projection's life (the map builds a new
-  // one when the scale or the wrap changes), and `placements` asks for them
-  // for every tile it draws, so each is made once rather than per call.
-  #footprint: Size;
-  #size: number;
-  #world: WorldDimensions;
-  #worldSize: Size | null = null;
-  #wrapPeriod: { x: number; y: number | null } | null = null;
-  #wrapVertical: boolean;
-
-  constructor(
-    size: number,
-    world: WorldDimensions,
-    wrapVertical: boolean = true
-  ) {
-    this.#size = size;
-    this.#world = world;
-    this.#wrapVertical = wrapVertical;
-    this.#footprint = { width: size, height: size };
-  }
-
-  compareDrawOrder(a: Placement, b: Placement): number {
-    return a.py - b.py || a.px - b.px || a.y - b.y || a.x - b.x;
-  }
-
-  footprint(): Size {
-    return this.#footprint;
-  }
-
-  // Each square stays in its own box, so a tile can be cleared and redrawn on its own, in any order.
-  overlapsNeighbours(): boolean {
-    return false;
-  }
-
-  pixelToTile(px: number, py: number): [number, number] {
-    return [Math.floor(px / this.#size), Math.floor(py / this.#size)];
-  }
-
-  reach(): Reach {
-    return noReach;
-  }
-
-  tileSpan({ x, y, width, height }: Rect, overhang: number): TileSpan {
-    const size = this.#size,
-      span = (start: number, length: number): [number, number] =>
-        size <= 0
-          ? [0, 0]
-          : [
-              Math.floor((start - overhang) / size),
-              Math.ceil((start + length + overhang) / size),
-            ];
-
-    return { columns: span(x, width), rows: span(y, height) };
-  }
-
-  tileToPixel(x: number, y: number): [number, number] {
-    return [x * this.#size, y * this.#size];
-  }
-
-  worldSize(): Size {
-    if (!this.#worldSize) {
-      this.#worldSize = {
-        width: this.#world.width() * this.#size,
-        height: this.#world.height() * this.#size,
-      };
-    }
-
-    return this.#worldSize;
-  }
-
-  wrapPeriod(): { x: number; y: number | null } {
-    if (!this.#wrapPeriod) {
-      this.#wrapPeriod = {
-        x: this.#world.width() * this.#size,
-        y: this.#wrapVertical ? this.#world.height() * this.#size : null,
-      };
-    }
-
-    return this.#wrapPeriod;
-  }
-}
-
 /** The smallest rectangle, in world pixels, that holds the sprite box of every one of `tiles`. */
 export const tileBounds = (
   projection: Projection,
@@ -195,5 +112,3 @@ export const tileBounds = (
     height: Math.max(...corners.map(([, py]) => py + height)) - top,
   };
 };
-
-export default SquareProjection;

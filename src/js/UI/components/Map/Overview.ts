@@ -1,5 +1,6 @@
 import { EntityInstance, Tile } from '../../types';
-import { Projection, SquareProjection } from '../../lib/projection';
+import { Projection } from '../../lib/projection';
+import SquareProjection from '../../map-square/SquareProjection';
 import { Map } from '../Map';
 
 // The width the minimap is given in the sidebar. The layer picks the largest

@@ -1,4 +1,5 @@
-import { Projection, SquareProjection, WorldDimensions } from './projection';
+import { Projection, WorldDimensions } from './projection';
+import SquareProjection from '../map-square/SquareProjection';
 import { TilesetDescriptor } from '../tilesets/TilesetDescriptor';
 import { TopologyId } from './topologyFor';
 

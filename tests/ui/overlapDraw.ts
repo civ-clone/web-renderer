@@ -56,10 +56,10 @@ import {
   Placement,
   Projection,
   Reach,
-  SquareProjection,
   TileSpan,
   WorldDimensions,
 } from '../../src/js/UI/lib/projection';
+import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
 import { Rect, mergeRects, rectArea } from '../../src/js/UI/lib/viewport';
 import { Tile } from '../../src/js/UI/types';
 import Units from '../../src/js/UI/components/Map/Units';
