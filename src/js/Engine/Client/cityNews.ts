@@ -3,7 +3,7 @@
 //  `city:captured` is emitted, and by then it is the capturer's, so neither event alone says that we lost it, or how.
 
 import City from '@civ-clone/core-city/City';
-import Notification from '../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
 
 // What happened to a city during one engine call (#400, #420).

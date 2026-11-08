@@ -1,4 +1,4 @@
-import { PlayerAction, Unit } from '../types';
+import { PlayerAction, Unit } from '@civ-clone/ui-protocol/types';
 
 // The units the player can move this turn, and those deferred with `w` (wait). `ActiveUnitController#next` calls
 //  `update` after every rebuild, its `apply` calls `activated` for each unit made active, and the `w` key calls

@@ -1,8 +1,8 @@
 import { t } from 'i18next';
-import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
+import { ObjectMap } from '@civ-clone/ui-protocol/data';
 import GameSession from './GameSession';
 import GameOverWindow from '@civ-clone/ui-windows/components/GameOverWindow';
-import { ObserverState } from '../../src/js/Engine/Observer';
+import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import {
   downloadFile,

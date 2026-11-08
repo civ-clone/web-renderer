@@ -8,7 +8,7 @@ import { FakeImage, fakeCanvas, preloadImage } from './lib/fakeCanvas';
 import i18next from 'i18next';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import Units from '@civ-clone/ui-map/components/Map/Units';
-import { Tile, Unit } from '@civ-clone/ui-client/types';
+import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0;

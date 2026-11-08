@@ -1,4 +1,4 @@
-import { Coordinate, Tile, Unit } from '@civ-clone/ui-client/types';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
 import {
   Rect,
@@ -17,7 +17,7 @@ import currentTileset, {
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor from '../lib/projectionFor';
-import { City as CityData } from '@civ-clone/ui-client/types';
+import { City as CityData } from '@civ-clone/ui-protocol/types';
 
 /** How a city opens from the map: which do, and opening one (`lib/cityOpeners.ts` has the game's). */
 export type CityOpener = {

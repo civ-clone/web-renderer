@@ -5,11 +5,11 @@
 import {
   CivilopediaEntry,
   CivilopediaKind,
-} from '../../../../src/js/Engine/lib/civilopedia';
+} from '@civ-clone/ui-protocol/civilopedia';
 import {
   RequirementData,
   RequirementTargetData,
-} from '../../../../src/js/Engine/lib/requirements';
+} from '@civ-clone/ui-protocol/requirements';
 import { advanceName } from './advances';
 import { t } from 'i18next';
 

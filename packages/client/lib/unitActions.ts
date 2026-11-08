@@ -1,4 +1,4 @@
-import { Unit, UnitAction } from '../types';
+import { Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 
 // A unit's actions arrive only for the unit the UI has made active (#323): the worker leaves them out of every other
 //  unit, as working them out for all of a late game's units made each move's patch megabytes. These read them for the

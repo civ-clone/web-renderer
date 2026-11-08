@@ -18,7 +18,7 @@ import UiMenu, {
 import openUnitMenu, {
   squareLine,
 } from '@civ-clone/ui-windows/components/UiUnitMenu';
-import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';

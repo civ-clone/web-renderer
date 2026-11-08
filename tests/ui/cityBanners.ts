@@ -11,7 +11,7 @@ import './lib/grids';
 import CityBanners, {
   BannerStyle,
 } from '@civ-clone/ui-map/components/Map/CityBanners';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 import i18next from 'i18next';
 

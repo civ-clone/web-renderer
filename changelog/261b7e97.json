@@ -1,0 +1,1 @@
+{"version":"0.1.0@261b7e97","date":"2026-11-08T17:42:59.000Z","localChanges":["refactor: the frontend's packages are @civ-clone/ui-*, which the engine tools skip (#825) (#833)"],"externalChanges":{}}

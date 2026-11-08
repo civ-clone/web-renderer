@@ -8,7 +8,7 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { City, Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import { City, Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import UnitCard from '@civ-clone/ui-windows/components/UnitCard';
 import UnitCardActions, {

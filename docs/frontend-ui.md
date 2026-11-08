@@ -93,21 +93,24 @@ that list what is installed in the scope (`scan`, `collisions`, `duplicates`) sk
 
 A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
 so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
-path aren't packages yet: the worker's side in `src/js/Engine` (the transport and the requests the windows read),
-`src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them, and the list only
-shrinks.
+path aren't packages yet: `src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them,
+and the list only shrinks.
 
-| Package             | Holds                                                                            | Depends on                    |
-| ------------------- | -------------------------------------------------------------------------------- | ----------------------------- |
-| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves | nothing else                  |
-| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                               | client                        |
-| `widgets`           | The window and its controls, with nothing about the game in them                 | client, assets                |
-| `map`               | Drawing the world on any grid, through a `Projection`                            | client, assets, widgets       |
-| `map-square`        | The square grid: its projection and minimap                                      | client, assets, map           |
-| `windows`           | The game's windows, shared by every interface that wants them                    | client, assets, widgets, map  |
-| `game`              | The page itself: starting up, a game in play, the keys, the debug tools          | all of the above              |
-| `interface-modern`  | The modern interface, with Slate and brass, see above                            | client, widgets, map, windows |
-| `interface-classic` | The classic interface, with Civ1 classic, see above                              | client, widgets, map, windows |
+The worker (`src/js/Engine`, started by `backend.ts`) shares only `protocol` with the page: it imports no other package,
+and no package imports from it. The page's end of the messaging, `WorkerTransport`, is in `client`.
+
+| Package             | Holds                                                                               | Depends on                             |
+| ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
+| `protocol`          | What the page and the worker say to each other: requests, messages, the game's data | nothing else                           |
+| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves    | protocol                               |
+| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                  | protocol, client                       |
+| `widgets`           | The window and its controls, with nothing about the game in them                    | protocol, client, assets               |
+| `map`               | Drawing the world on any grid, through a `Projection`                               | protocol, client, assets, widgets      |
+| `map-square`        | The square grid: its projection and minimap                                         | protocol, assets, map                  |
+| `windows`           | The game's windows, shared by every interface that wants them                       | protocol, client, assets, widgets, map |
+| `game`              | The page itself: starting up, a game in play, the keys, the debug tools             | all of the above                       |
+| `interface-modern`  | The modern interface, with Slate and brass, see above                               | client, widgets, map, windows          |
+| `interface-classic` | The classic interface, with Civ1 classic, see above                                 | client, widgets, map, windows          |
 
 Inside each package the folders are as they were under `src/js/UI/` (`components/`, `lib/`), but for the folder a
 package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a

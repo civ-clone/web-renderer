@@ -8,7 +8,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { GameData, Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { GameData, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import Hud from '@civ-clone/ui-game/Hud';
 import NotificationRows from '@civ-clone/ui-windows/components/NotificationRows';

@@ -6,7 +6,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { PlayerAction } from '@civ-clone/ui-client/types';
+import { PlayerAction } from '@civ-clone/ui-protocol/types';
 import Action from '@civ-clone/ui-windows/components/Actions/Action';
 import Actions from '@civ-clone/ui-windows/components/Actions';
 import Portal from '@civ-clone/ui-map/components/Portal';

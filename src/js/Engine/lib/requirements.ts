@@ -4,28 +4,16 @@
 
 import {
   Condition,
-  Range,
-  Relation,
   Requirement,
   Target,
 } from '@civ-clone/core-requirement/Requirement';
 import { RequirementRegistry } from '@civ-clone/core-requirement/RequirementRegistry';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-
-/** A requirement's target on the wire: a class by its save key, or a condition a rule decides, by its id. */
-export type RequirementTargetData = { class: string } | { condition: string };
-
-export interface RequirementData {
-  id: string;
-  subject: string;
-  relation: Relation;
-  targets: RequirementTargetData[];
-  mode: 'all' | 'any';
-  range: Range;
-  /** Where the subject must be, e.g. the terrains a tile improvement can go on, or `null` for anywhere. */
-  where: string[] | null;
-}
+import {
+  RequirementTargetData,
+  RequirementData,
+} from '@civ-clone/ui-protocol/requirements';
 
 const targetData = (target: Target): RequirementTargetData =>
   target instanceof Condition

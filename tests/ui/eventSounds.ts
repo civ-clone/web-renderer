@@ -15,7 +15,11 @@ import EventSounds, {
   shortTheme,
   tunes,
 } from '@civ-clone/ui-windows/lib/eventSounds';
-import { Civilization, Negotiation, Player } from '@civ-clone/ui-client/types';
+import {
+  Civilization,
+  Negotiation,
+  Player,
+} from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0,

@@ -1,4 +1,4 @@
-import { City, NeighbourDirection, Tile } from '@civ-clone/ui-client/types';
+import { City, NeighbourDirection, Tile } from '@civ-clone/ui-protocol/types';
 import { Placement, Projection, Reach } from '../lib/projection';
 import {
   Rect,

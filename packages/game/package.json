@@ -9,6 +9,7 @@
     "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-map-square": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-windows": "workspace:*"
   }

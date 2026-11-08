@@ -2,14 +2,14 @@ import {
   MilitaryLossRow,
   MilitaryReport as MilitaryReportData,
   MilitaryStatusRow,
-} from '../../../src/js/Engine/lib/military';
+} from '@civ-clone/ui-protocol/reports';
 import ReportTable, {
   ReportColumn,
 } from '@civ-clone/ui-widgets/components/lib/ReportTable';
 import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import Civilopedia from './Civilopedia';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
-import Military from '../../../src/js/Engine/Requests/Military';
+import Military from '@civ-clone/ui-protocol/Requests/Military';
 import Transport from '@civ-clone/ui-client/Transport';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

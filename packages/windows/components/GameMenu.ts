@@ -1,9 +1,9 @@
 import { Element, s } from '@dom111/element';
-import CheatAdvances from '../../../src/js/Engine/Requests/CheatAdvances';
-import CheatUnitTypes from '../../../src/js/Engine/Requests/CheatUnitTypes';
+import CheatAdvances from '@civ-clone/ui-protocol/Requests/CheatAdvances';
+import CheatUnitTypes from '@civ-clone/ui-protocol/Requests/CheatUnitTypes';
 import CheatPlayers, {
   CheatPlayersResult,
-} from '../../../src/js/Engine/Requests/CheatPlayers';
+} from '@civ-clone/ui-protocol/Requests/CheatPlayers';
 import {
   openCityStatus,
   openCivilizationScore,
@@ -16,7 +16,7 @@ import {
 import Civilopedia from './Civilopedia';
 import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
 import GameOptions from './GameOptions';
-import { Player } from '@civ-clone/ui-client/types';
+import { Player } from '@civ-clone/ui-protocol/types';
 import PopupMenu, {
   hasPopupMenu,
 } from '@civ-clone/ui-widgets/components/PopupMenu';
@@ -30,7 +30,7 @@ import Window from '@civ-clone/ui-widgets/components/Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
-import { SaveDetails } from '../../../src/js/Engine/Transport';
+import { SaveDetails } from '@civ-clone/ui-protocol/Transport';
 import { t } from 'i18next';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

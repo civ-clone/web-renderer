@@ -13,7 +13,7 @@ import ChoiceHandler from '@civ-clone/ui-game/app/ChoiceHandler';
 import DebugFlags, {
   StressRunnerHandle,
 } from '@civ-clone/ui-client/debug/DebugFlags';
-import { IntelligenceRow } from '../../src/js/Engine/lib/intelligence';
+import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
@@ -502,7 +502,7 @@ const run = async (): Promise<void> => {
 
   // Intelligence that isn't answered leaves the strip with the names alone, and the talks go on.
   const { RequestFailed } = await import(
-    '../../src/js/Engine/AbstractTransport'
+    '@civ-clone/ui-protocol/AbstractTransport'
   );
 
   intelligence = Promise.reject(

@@ -1,4 +1,4 @@
-import { ObjectMap, PlainObject } from './reconstituteData';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 
 // The root `hierarchy` is not an id, but it can refer to an id the map does not
 //  hold like any object can, so it waits for one under its own key.

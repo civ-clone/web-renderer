@@ -1,4 +1,4 @@
-import { City, PlayerAction } from '@civ-clone/ui-client/types';
+import { City, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Action from './Action';
 import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';

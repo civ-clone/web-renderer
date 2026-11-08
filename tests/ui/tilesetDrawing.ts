@@ -18,7 +18,7 @@ import Fog from '@civ-clone/ui-map/components/Map/Fog';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import i18next from 'i18next';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import World from '@civ-clone/ui-map/components/World';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';

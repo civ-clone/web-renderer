@@ -4,8 +4,8 @@ import {
   PlayerAction,
   Unit,
   UnitAction,
-} from '@civ-clone/ui-client/types';
-import CityBuildAvailable from '../../../src/js/Engine/Requests/CityBuildAvailable';
+} from '@civ-clone/ui-protocol/types';
+import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import openCity from '@civ-clone/ui-windows/components/openCity';
 import {
   openCityStatus,

@@ -1,4 +1,9 @@
-import { GameData, PlayerAction, Tile, Unit } from '@civ-clone/ui-client/types';
+import {
+  GameData,
+  PlayerAction,
+  Tile,
+  Unit,
+} from '@civ-clone/ui-protocol/types';
 import Actions from '@civ-clone/ui-windows/components/Actions';
 import GameDetails from '@civ-clone/ui-windows/components/GameDetails';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';

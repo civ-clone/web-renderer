@@ -2,7 +2,7 @@ import {
   City as CityData,
   CityImprovementMaintenanceGold,
   Player,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import ReportTable, {
   ReportCell,
 } from '@civ-clone/ui-widgets/components/lib/ReportTable';

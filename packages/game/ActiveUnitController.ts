@@ -5,8 +5,8 @@ import {
   Tile,
   Unit,
   UnitAction,
-} from '@civ-clone/ui-client/types';
-import { TransportHandledAction } from '../../src/js/Engine/Transport';
+} from '@civ-clone/ui-protocol/types';
+import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
   directionKeys,

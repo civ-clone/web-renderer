@@ -14,8 +14,8 @@ import Civilopedia, {
 import CityBuildUnavailableWindow, {
   reasons,
 } from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
-import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
-import { RequirementData } from '../../src/js/Engine/lib/requirements';
+import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
+import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 

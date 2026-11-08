@@ -1,7 +1,7 @@
 import Overview from './Overview';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import World from '@civ-clone/ui-map/components/World';
-import { Coordinate } from '@civ-clone/ui-client/types';
+import { Coordinate } from '@civ-clone/ui-protocol/types';
 import { on } from '@dom111/element';
 
 export type ActiveUnitMarker = () => Coordinate | null;

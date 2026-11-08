@@ -1,4 +1,4 @@
-import { Civilization } from '@civ-clone/ui-client/types';
+import { Civilization } from '@civ-clone/ui-protocol/types';
 
 export const civilizationAttribute = (
   civilization: Civilization,

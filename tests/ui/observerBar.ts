@@ -11,10 +11,10 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import { DataPatch } from '@civ-clone/ui-client/types';
-import { GameOverDetails } from '../../src/js/Engine/lib/gameOver';
-import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
-import { ObserverState } from '../../src/js/Engine/Observer';
+import { DataPatch } from '@civ-clone/ui-protocol/types';
+import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
+import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import i18next from 'i18next';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import GameOverWindow from '@civ-clone/ui-windows/components/GameOverWindow';

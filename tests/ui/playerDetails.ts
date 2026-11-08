@@ -6,7 +6,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { Player, PlayerAction } from '@civ-clone/ui-client/types';
+import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import PlayerDetails, {
   PlayerDetailsReports,
 } from '@civ-clone/ui-windows/components/PlayerDetails';

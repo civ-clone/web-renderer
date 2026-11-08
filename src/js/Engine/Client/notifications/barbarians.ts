@@ -5,7 +5,7 @@
 
 import { NotificationContext, NotificationTable } from './NotificationContext';
 import City from '@civ-clone/core-city/City';
-import Notification from '../../Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';

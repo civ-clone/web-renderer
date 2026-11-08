@@ -17,9 +17,9 @@ import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Build from '@civ-clone/core-city-build/Rules/Build';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import civilopediaData, {
-  CivilopediaEntry,
   unavailableBuildItems,
 } from '../../src/js/Engine/lib/civilopedia';
+import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import requirementsData from '../../src/js/Engine/lib/requirements';
 import {
   cityBuildAvailable,

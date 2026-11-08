@@ -1,18 +1,8 @@
-import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-
-type DataPatchType = 'add' | 'update';
-
-type DataPatchContents = {
-  type: DataPatchType;
-  index: string | null;
-  // Built when the patch is sent, from the game as it is then. One that comes back `undefined` is left out: what it
-  //  would have sent turned out to be unchanged (#411).
-  value?: (() => ObjectMap | undefined) | ObjectMap;
-};
-
-export type DataPatch = {
-  [id: string]: DataPatchContents;
-};
+import {
+  DataPatchType,
+  DataPatchContents,
+  DataPatch,
+} from '@civ-clone/ui-protocol/data';
 
 export class DataQueue {
   #queue: DataPatch[] = [];

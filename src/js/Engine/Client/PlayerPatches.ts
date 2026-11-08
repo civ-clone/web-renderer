@@ -22,7 +22,7 @@ import { instance as playerResearchRegistryInstance } from '@civ-clone/core-scie
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import DataQueue from '../DataQueue';
-import Transport from '../Transport';
+import Transport from '@civ-clone/ui-protocol/Transport';
 import ActionsState, { diffActions } from './ActionsState';
 import { View } from './View';
 import {

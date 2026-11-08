@@ -5,8 +5,8 @@ import {
   TransportMessage,
   TransportReceiveHandler,
   TransportSendArgs,
-} from './Transport';
-import AbstractTransport from './AbstractTransport';
+} from '@civ-clone/ui-protocol/Transport';
+import AbstractTransport from '@civ-clone/ui-protocol/AbstractTransport';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 
 export type TransportEventListenerArg = {

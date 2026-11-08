@@ -1,4 +1,4 @@
-import { Player } from '../types';
+import { Player } from '@civ-clone/ui-protocol/types';
 
 // Whether `GameSession` ends the turn by itself after an update: the `autoEndOfTurn` option is on, the only thing left
 //  to do is end the turn, and the player has none of the actions named in `autoEndOfTurnExceptions` that they haven't

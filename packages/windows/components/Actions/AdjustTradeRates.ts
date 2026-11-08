@@ -1,7 +1,7 @@
 import Action from './Action';
 import LockedSlider from '@civ-clone/ui-widgets/components/LockedSlider';
 import LockedSliderGroup from '@civ-clone/ui-widgets/components/LockedSliderGroup';
-import { PlayerTradeRates } from '@civ-clone/ui-client/types';
+import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-widgets/components/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

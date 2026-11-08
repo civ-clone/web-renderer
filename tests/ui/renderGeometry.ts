@@ -25,7 +25,7 @@ import Map from '@civ-clone/ui-map/components/Map';
 import Overview from '@civ-clone/ui-map-square/Overview';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
-import { City, PlayerTile, Tile } from '@civ-clone/ui-client/types';
+import { City, PlayerTile, Tile } from '@civ-clone/ui-protocol/types';
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';

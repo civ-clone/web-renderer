@@ -1,4 +1,4 @@
-import { SaveDetails } from '../../../src/js/Engine/Transport';
+import { SaveDetails } from '@civ-clone/ui-protocol/Transport';
 import { Store } from '../Store';
 
 /**

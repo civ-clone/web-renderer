@@ -1,9 +1,7 @@
-import SquareTopology, {
-  SquareDirection,
-  SquareEdgeDirection,
-} from '@civ-clone/core-world/SquareTopology';
+import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import { ITopology } from '@civ-clone/core-world/Topology';
 import { createTopology } from '@civ-clone/core-world/topologies';
+import { Direction } from '@civ-clone/ui-protocol/topology';
 
 // The shape of the world's grid, for the UI: which tile neighbours which, and which ways there are (#88). It is the
 //  engine's own implementation, and the only thing the UI takes from the engine: `createTopology` and the topologies
@@ -11,19 +9,16 @@ import { createTopology } from '@civ-clone/core-world/topologies';
 //
 // The world says which grid it is on (#89), and a world that does not (one sent by an older engine, or a save made
 //  before the grid was recorded) is square. Only square worlds can be started or loaded for now (see
-//  `supportedTopologies`), so the direction types below are still square's: they widen to every grid's when another
-//  grid can be drawn.
-
-/** Which way a neighbour is. */
-export type Direction = SquareDirection;
-
-/** Which way a neighbour that shares an edge is. */
-export type EdgeDirection = SquareEdgeDirection;
+//  `supportedTopologies`), so the direction types (in the protocol, with the data) are still square's: they widen to
+//  every grid's when another grid can be drawn.
 
 export type Topology = ITopology<Direction>;
 
-/** The grids a world can be on, as the engine names them. Saves record them, so they are never renamed. */
-export type { TopologyId } from '@civ-clone/core-world/topologies';
+export type {
+  Direction,
+  EdgeDirection,
+  TopologyId,
+} from '@civ-clone/ui-protocol/topology';
 
 /** The grids there are, for what the UI keeps per grid (the keys that move a unit). */
 export type TopologyName = 'square';

@@ -9,7 +9,7 @@ import CityNewsCollector, {
 } from '../../src/js/Engine/Client/cityNews';
 import City from '@civ-clone/core-city/City';
 import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
-import Notification from '../../src/js/Engine/Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import Notifier from '../../src/js/Engine/Client/Notifier';
 import Player from '@civ-clone/core-player/Player';
 import { standalone } from '../../src/js/Engine/Client/refs';

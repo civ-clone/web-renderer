@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
-import { Unit as UnitData } from '@civ-clone/ui-client/types';
+import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';

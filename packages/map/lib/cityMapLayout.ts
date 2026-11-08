@@ -1,4 +1,4 @@
-import { City, Coordinate, Tile } from '@civ-clone/ui-client/types';
+import { City, Coordinate, Tile } from '@civ-clone/ui-protocol/types';
 import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 
 export type CityMapLayout = {

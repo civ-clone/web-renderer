@@ -9,15 +9,15 @@ import {
   earthWorldSizes,
   worldSizesFor,
 } from './worldSizes';
-import AIClients from '../../../src/js/Engine/Requests/AIClients';
+import AIClients from '@civ-clone/ui-protocol/Requests/AIClients';
 import Civilizations, {
   CivilizationOption,
-} from '../../../src/js/Engine/Requests/Civilizations';
+} from '@civ-clone/ui-protocol/Requests/Civilizations';
 import Difficulties, {
   DifficultyOption,
-} from '../../../src/js/Engine/Requests/Difficulties';
-import Options from '../../../src/js/Engine/Requests/Options';
-import Request from '../../../src/js/Engine/Request';
+} from '@civ-clone/ui-protocol/Requests/Difficulties';
+import Options from '@civ-clone/ui-protocol/Requests/Options';
+import Request from '@civ-clone/ui-protocol/Request';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
 import { rememberDifficulty } from './difficulty';

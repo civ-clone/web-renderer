@@ -1,4 +1,4 @@
-import { CivilizationScore as CivilizationScoreResult } from '../lib/civilizationScore';
+import { CivilizationScore as CivilizationScoreResult } from '../reports';
 import Request from '../Request';
 
 // The player's own Civilization Score, term by term (#149).

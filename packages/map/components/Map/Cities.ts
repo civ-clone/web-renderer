@@ -1,7 +1,7 @@
 import { Colouring } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { Map } from '../Map';
 import { Reach } from '../../lib/projection';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 import {
   playerColours,
   replacementColours,

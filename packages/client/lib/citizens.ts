@@ -1,7 +1,7 @@
 // Which citizens the city screen draws, and with which sprites. Kept free of DOM
 // imports so it can be tested in Node.
 
-import { CitizenMood } from '../types';
+import { CitizenMood } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 
 // Which citizens are drawn as women and which as men: a pattern taken from `seed` (a city's name), so the same city

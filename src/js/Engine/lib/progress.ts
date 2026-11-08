@@ -3,7 +3,7 @@
 //  every other notice. A civilization the player hasn't met is not named (#59), and the player's own turn needs no line.
 
 import Player from '@civ-clone/core-player/Player';
-import { TransportTranslatedNotice } from '../Transport';
+import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 
 export const turnProgress = (turn: number): TransportTranslatedNotice => ({
   key: 'Game.progress.turn',

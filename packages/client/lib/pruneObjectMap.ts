@@ -1,4 +1,4 @@
-import { ObjectMap, PlainObject } from './reconstituteData';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 
 const walkValue = (
   value: any,

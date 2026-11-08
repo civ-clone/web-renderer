@@ -1,4 +1,4 @@
-import { Player, Yield } from '@civ-clone/ui-client/types';
+import { Player, Yield } from '@civ-clone/ui-protocol/types';
 
 export const combinedYields = (player: Player) =>
   player.cities.reduce(

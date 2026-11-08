@@ -13,7 +13,7 @@ import './lib/interfaces';
 import './lib/grids';
 
 import City, { classicCityLayout } from '@civ-clone/ui-windows/components/City';
-import { City as CityData } from '@civ-clone/ui-client/types';
+import { City as CityData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';

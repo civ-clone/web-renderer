@@ -1,7 +1,7 @@
 import {
   GameOverCivilization,
   GameOverDetails,
-} from '../../../src/js/Engine/lib/gameOver';
+} from '@civ-clone/ui-protocol/reports';
 import {
   enterHallOfFame,
   hallOfFameEntry,

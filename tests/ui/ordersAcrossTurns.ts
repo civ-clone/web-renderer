@@ -15,8 +15,8 @@ import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
 import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
-import { TransportHandledAction } from '../../src/js/Engine/Transport';
-import { Tile } from '@civ-clone/ui-client/types';
+import { TransportHandledAction } from '@civ-clone/ui-protocol/Transport';
+import { Tile } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0,

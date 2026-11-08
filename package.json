@@ -301,6 +301,7 @@
     "@civ-clone/ui-interface-modern": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-map-square": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-windows": "workspace:*",
     "@dom111/element": "^0.2.0",

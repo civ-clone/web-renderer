@@ -1,5 +1,5 @@
 import i18next, { t } from 'i18next';
-import { PlayerResearch } from '@civ-clone/ui-client/types';
+import { PlayerResearch } from '@civ-clone/ui-protocol/types';
 
 // An advance's name. A player can hold more than one of a repeatable advance (Future Technology 1, 2, …), so `number`
 //  says which one: a translation with a `numbered` context shows it, and every other advance falls back to its plain

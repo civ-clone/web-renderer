@@ -61,8 +61,8 @@ import {
   researchClearedLabel,
   researchingName,
 } from '@civ-clone/ui-windows/components/lib/advances';
-import Notification from '../../src/js/Engine/Notification';
-import { PlayerResearch } from '@civ-clone/ui-client/types';
+import Notification from '@civ-clone/ui-protocol/Notification';
+import { PlayerResearch } from '@civ-clone/ui-protocol/types';
 import Tile from '@civ-clone/core-world/Tile';
 import Barbarian from '@civ-clone/base-civilization-barbarian/Barbarian';
 import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';

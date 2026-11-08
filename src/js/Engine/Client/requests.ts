@@ -7,21 +7,19 @@
 import Player from '@civ-clone/core-player/Player';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-import Transport, { TransportDisposer } from '../Transport';
+import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
 import {
-  TopCitiesRow,
   defaultTopCitiesLimit,
   topCitiesEntries,
   topCitiesRows,
 } from '../lib/topCities';
 import {
+  TopCitiesRow,
   CivilizationScore,
-  civilizationScore as civilizationScoreOf,
-} from '../lib/civilizationScore';
-import {
   CivilizationPowerRow,
-  civilizationPowerRows,
-} from '../lib/civilizationPower';
+} from '@civ-clone/ui-protocol/reports';
+import { civilizationScore as civilizationScoreOf } from '../lib/civilizationScore';
+import { civilizationPowerRows } from '../lib/civilizationPower';
 import { ClientContext, Registries } from './ClientContext';
 import { DataFilter, serialiseUnit } from './visibilityFilter';
 import { intelligenceRows } from '../lib/intelligence';

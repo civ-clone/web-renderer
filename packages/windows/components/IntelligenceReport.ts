@@ -1,8 +1,8 @@
 import {
   IntelligenceDetails,
   IntelligenceRow,
-} from '../../../src/js/Engine/lib/intelligence';
-import Intelligence from '../../../src/js/Engine/Requests/Intelligence';
+} from '@civ-clone/ui-protocol/reports';
+import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { advanceNames } from './lib/advances';

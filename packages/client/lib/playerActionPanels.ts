@@ -1,4 +1,4 @@
-import { PlayerAction } from '../types';
+import { PlayerAction } from '@civ-clone/ui-protocol/types';
 
 // Which of the player's actions go to the primary panel (the end-turn area) and which to the secondary one. Pure, so
 //  `Hud`'s `build` and the tests share it.

@@ -10,7 +10,7 @@ import {
   hallOfFameEntry,
   hallOfFameSize,
 } from '@civ-clone/ui-client/lib/hallOfFame';
-import { GameOverDetails } from '../../src/js/Engine/lib/gameOver';
+import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
 
 const failures: string[] = [];
 let checks = 0;

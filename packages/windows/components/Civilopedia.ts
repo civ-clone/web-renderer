@@ -1,7 +1,7 @@
 import {
   CivilopediaEntry,
   CivilopediaKind,
-} from '../../../src/js/Engine/lib/civilopedia';
+} from '@civ-clone/ui-protocol/civilopedia';
 import {
   EntriesByKey,
   classLink,
@@ -11,9 +11,9 @@ import {
   targetLine,
   whereHtml,
 } from './lib/requirements';
-import CivilopediaRequest from '../../../src/js/Engine/Requests/Civilopedia';
-import { RequirementData } from '../../../src/js/Engine/lib/requirements';
-import Requirements from '../../../src/js/Engine/Requests/Requirements';
+import CivilopediaRequest from '@civ-clone/ui-protocol/Requests/Civilopedia';
+import { RequirementData } from '@civ-clone/ui-protocol/requirements';
+import Requirements from '@civ-clone/ui-protocol/Requests/Requirements';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';

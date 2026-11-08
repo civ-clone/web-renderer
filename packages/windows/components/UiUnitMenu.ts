@@ -1,7 +1,7 @@
 // The unit's long press menu under the new interface (#808): the shared menu over the press, headed by the unit and the
 //  square it would act on, each order with the icon and key the unit card gives it (#743).
 
-import { Tile, Unit as UnitData } from '@civ-clone/ui-client/types';
+import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import {
   drawUnitActionIcon,
   unitActionIconLayers,

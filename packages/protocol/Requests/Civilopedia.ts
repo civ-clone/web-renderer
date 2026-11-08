@@ -1,4 +1,4 @@
-import { CivilopediaEntry } from '../lib/civilopedia';
+import { CivilopediaEntry } from '../civilopedia';
 import Request from '../Request';
 
 // Every entry the civilopedia shows, with the ids of the requirement entries about it (#183).

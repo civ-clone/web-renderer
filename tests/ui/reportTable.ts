@@ -6,7 +6,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { City, Player } from '@civ-clone/ui-client/types';
+import { City, Player } from '@civ-clone/ui-protocol/types';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import CityStatusTable from '@civ-clone/ui-windows/components/CityStatusTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -32,7 +32,7 @@ import MilitaryTable from '@civ-clone/ui-windows/components/MilitaryTable';
 import TopCitiesTable, {
   ownCity,
 } from '@civ-clone/ui-windows/components/TopCitiesTable';
-import { TopCitiesRow } from '../../src/js/Engine/lib/topCities';
+import { TopCitiesRow } from '@civ-clone/ui-protocol/reports';
 
 const failures: string[] = [];
 let checks = 0,

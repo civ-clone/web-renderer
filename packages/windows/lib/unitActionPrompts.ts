@@ -2,7 +2,7 @@ import {
   Player,
   Unit as UnitData,
   UnitAction,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
 import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
 import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';

@@ -1,4 +1,4 @@
-import { NeighbourDirection, Tile } from '@civ-clone/ui-client/types';
+import { NeighbourDirection, Tile } from '@civ-clone/ui-protocol/types';
 import { Map, IMap } from '../Map';
 import {
   SpriteFamily,

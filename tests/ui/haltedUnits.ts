@@ -2,7 +2,7 @@
 //  stopped next to are offered once they have arrived, once, one window at a time.
 
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
-import { Unit } from '@civ-clone/ui-client/types';
+import { Unit } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0;

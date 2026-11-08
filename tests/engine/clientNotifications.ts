@@ -31,7 +31,7 @@ import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
-import Notification from '../../src/js/Engine/Notification';
+import Notification from '@civ-clone/ui-protocol/Notification';
 import { stubView } from './lib/view';
 import { Pyramids } from '@civ-clone/civ1-wonder/Wonders';
 import { Structural } from '@civ-clone/civ1-spaceship/Parts';

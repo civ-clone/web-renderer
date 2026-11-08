@@ -7,7 +7,7 @@ import {
   PlayerResearch,
   Specialist,
   Yield,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import {
   groupIcons,
   reduceKnownYield,

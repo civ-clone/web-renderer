@@ -1,9 +1,9 @@
 import {
   CityBuild as CityBuildObject,
   PlayerAction,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import Action from './Action';
-import CityBuildAvailable from '../../../../src/js/Engine/Requests/CityBuildAvailable';
+import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import { openCityBuild } from '../choices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';

@@ -1,5 +1,5 @@
 import City, { classicCityLayout } from './City';
-import { City as CityData } from '@civ-clone/ui-client/types';
+import { City as CityData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import cityLayout from './CityLayout';

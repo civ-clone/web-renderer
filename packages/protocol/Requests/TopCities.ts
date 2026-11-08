@@ -1,5 +1,5 @@
 import Request from '../Request';
-import { TopCitiesRow } from '../lib/topCities';
+import { TopCitiesRow } from '../reports';
 
 export class TopCities extends Request<[number], TopCitiesRow[]> {
   constructor(limit: number) {

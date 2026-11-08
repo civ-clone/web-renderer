@@ -26,7 +26,7 @@ import './lib/spawnedClients';
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import { readFileSync, writeFileSync } from 'fs';
 import { restoreGame, resumeGame } from '../../src/js/Engine/loadGame';
-import { Seat } from '../../src/js/Engine/lib/seats';
+import { Seat } from '@civ-clone/ui-protocol/lib/seats';
 import Busy from '@civ-clone/core-unit/Rules/Busy';
 import City from '@civ-clone/core-city/City';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';

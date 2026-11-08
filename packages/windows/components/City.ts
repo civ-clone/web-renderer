@@ -7,7 +7,7 @@ import {
   SpendCost,
   Unit as UnitData,
   Yield,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import { emit, s } from '@dom111/element';
 import {
   getAutoLabel,
@@ -23,7 +23,7 @@ import {
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
 import Window, { WindowOptions } from '@civ-clone/ui-widgets/components/Window';
-import CityBuildAvailable from '../../../src/js/Engine/Requests/CityBuildAvailable';
+import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';

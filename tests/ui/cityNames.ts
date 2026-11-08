@@ -7,7 +7,7 @@ import { fakeCanvas, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
 
 import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
-import { Tile } from '@civ-clone/ui-client/types';
+import { Tile } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
 let checks = 0;

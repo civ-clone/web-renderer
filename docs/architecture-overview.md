@@ -57,7 +57,7 @@ Loading a saved game takes a different path. The player picks a file, `packages/
 
 ## Transport contract (high level)
 
-Core channels are defined in `src/js/Engine/Transport.ts`:
+Core channels are defined in `packages/protocol/Transport.ts` (`@civ-clone/ui-protocol`):
 
 - Control/config: `start`, `setOption`, `setOptions`, `getOptions`, `notification`
 - Save/load: `save`, `saveGame`, `load`

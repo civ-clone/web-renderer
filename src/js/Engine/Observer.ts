@@ -1,34 +1,17 @@
 import DataTransferClient from './DataTransferClient';
+import { ObserverView, unionView, worldView } from './ObserverViews';
 import {
   ObserverChoice,
-  ObserverView,
-  unionView,
-  worldView,
-} from './ObserverViews';
+  ObservedPlayer,
+} from '@civ-clone/ui-protocol/observer';
 import Player from '@civ-clone/core-player/Player';
-import Transport, { TransportDisposer } from './Transport';
+import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
 import { View } from './Client/View';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';
 import registries from './Client/registries';
-
-/** A player as the observer lists them: by id, with the civilization and leader class names for the page to name. */
-export type ObservedPlayer = {
-  id: string;
-  civilization: string;
-  leader: string | null;
-};
-
-/** What the page is told whenever the observer's view or the game's pace changes. */
-export type ObserverState = {
-  players: ObservedPlayer[];
-  // What the page sees: some civilisations' game as they see it, or the whole map (#613).
-  view: ObserverChoice;
-  // Whether the turns are held between turns.
-  paused: boolean;
-};
 
 /**
  * Watches a game nobody on this page plays (#607): the page sees the game as one or more of its players do, or the

@@ -4,7 +4,7 @@ import {
   Interactions,
   Player,
   Resolution,
-} from '../types';
+} from '@civ-clone/ui-protocol/types';
 import instanceOf from './instanceOf';
 import { t } from 'i18next';
 

@@ -1,5 +1,5 @@
 import i18next, { t } from 'i18next';
-import { BuildItem, CityBuild, Entity } from '../../types';
+import { BuildItem, CityBuild, Entity } from '@civ-clone/ui-protocol/types';
 import Transport from '../../Transport';
 
 export const getLabelForBuildable = (buildable: BuildItem | null): string =>

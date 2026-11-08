@@ -14,7 +14,7 @@ import './lib/grids';
 import ChoiceHandler from '@civ-clone/ui-game/app/ChoiceHandler';
 import ChooseGovernment from '@civ-clone/ui-windows/components/Actions/ChooseGovernment';
 import ChooseResearch from '@civ-clone/ui-windows/components/Actions/ChooseResearch';
-import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
+import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { askNewGame } from '@civ-clone/ui-windows/components/newGame';

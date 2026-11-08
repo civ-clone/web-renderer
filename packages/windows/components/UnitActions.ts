@@ -3,7 +3,7 @@ import {
   drawUnitActionIcon,
   unitActionIconLayers,
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
-import { Tile, Unit } from '@civ-clone/ui-client/types';
+import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { keyForAction } from '@civ-clone/ui-client/lib/unitActionKeys';

@@ -1,7 +1,7 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
-import CivilizationPower from '../../../src/js/Engine/Requests/CivilizationPower';
-import { CivilizationPowerRow } from '../../../src/js/Engine/lib/civilizationPower';
+import CivilizationPower from '@civ-clone/ui-protocol/Requests/CivilizationPower';
+import { CivilizationPowerRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
 import { toggleEvent } from '@civ-clone/ui-widgets/components/SidebarSection';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

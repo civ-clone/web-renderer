@@ -1,10 +1,10 @@
-import AIClients from '../../../src/js/Engine/Requests/AIClients';
+import AIClients from '@civ-clone/ui-protocol/Requests/AIClients';
 import {
   SavedSeat,
   SeatChanges,
   savedSeats,
-} from '../../../src/js/Engine/lib/savedSeats';
-import { Seat } from '../../../src/js/Engine/lib/seats';
+} from '@civ-clone/ui-protocol/lib/savedSeats';
+import { Seat } from '@civ-clone/ui-protocol/lib/seats';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-widgets/components/Window';
 import {

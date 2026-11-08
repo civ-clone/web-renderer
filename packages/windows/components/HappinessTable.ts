@@ -6,7 +6,7 @@ import {
   MilitaryUnhappiness,
   Player,
   Unit as UnitData,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import { citizenFace, renderPopulation } from './lib/cityYields';
 import {
   groupIcons,

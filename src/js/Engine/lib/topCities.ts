@@ -12,14 +12,10 @@ import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldReg
 import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-
-export type TopCitiesCitizens = {
-  happy: number;
-  content: number;
-  unhappy: number;
-  // Specialist class names, e.g. `Entertainer`.
-  specialists: string[];
-};
+import {
+  TopCitiesCitizens,
+  TopCitiesRow,
+} from '@civ-clone/ui-protocol/reports';
 
 // What the worker knows about one city. `seen` and `met` decide how much of it the player is told.
 export type TopCitiesEntry = {
@@ -35,25 +31,6 @@ export type TopCitiesEntry = {
   wonders: string[];
   seen: boolean;
   met: boolean;
-};
-
-// One row as the UI gets it. Nothing in it identifies a city or a player beyond what is shown: no ids, no tiles and no
-//  score, so a row for a city the player hasn't seen can't be matched to anything else.
-export type TopCitiesRow = {
-  rank: number;
-  size: number;
-  citizens: TopCitiesCitizens;
-  wonders: string[];
-  // Only for a city whose tile the player has seen.
-  city: {
-    name: string;
-    civilization: string;
-  } | null;
-  // Only for a civilization the player has met.
-  owner: {
-    civilization: string;
-    colors: [string, string] | null;
-  } | null;
 };
 
 export const defaultTopCitiesLimit = 10;

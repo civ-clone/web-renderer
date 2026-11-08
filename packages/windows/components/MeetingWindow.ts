@@ -1,4 +1,4 @@
-import { IntelligenceRow } from '../../../src/js/Engine/lib/intelligence';
+import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import { NegotiationLine } from '@civ-clone/ui-client/lib/interactionLabels';
 import { Window } from '@civ-clone/ui-widgets/components/Window';
 import { button } from '@civ-clone/ui-widgets/lib/button';

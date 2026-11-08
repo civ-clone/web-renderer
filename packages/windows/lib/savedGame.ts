@@ -3,7 +3,7 @@ import {
   SeatChanges,
   isSeatChanges,
   savedSeats,
-} from '../../../src/js/Engine/lib/savedSeats';
+} from '@civ-clone/ui-protocol/lib/savedSeats';
 import { allowLeaving } from './leaveGuard';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';

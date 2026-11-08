@@ -1,5 +1,5 @@
 import Civilopedia, { entryHtml, loadCivilopedia } from '../Civilopedia';
-import { CivilopediaKind } from '../../../../src/js/Engine/lib/civilopedia';
+import { CivilopediaKind } from '@civ-clone/ui-protocol/civilopedia';
 import Transport from '@civ-clone/ui-client/Transport';
 import { escape } from './requirements';
 import { h } from '@civ-clone/ui-widgets/lib/html';

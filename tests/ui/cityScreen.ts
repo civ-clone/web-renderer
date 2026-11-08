@@ -25,18 +25,15 @@ import {
   orderSpecialists,
   specialistForKey,
 } from '@civ-clone/ui-client/lib/specialists';
-import { CitizenMood, Yield } from '@civ-clone/ui-client/types';
+import { CitizenMood, Yield } from '@civ-clone/ui-protocol/types';
 import {
   netTileYields,
   splitYield,
   tileYieldIcons,
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';
-import { City, DataPatch, GameData } from '@civ-clone/ui-client/types';
-import {
-  ObjectMap,
-  PlainObject,
-} from '@civ-clone/ui-client/lib/reconstituteData';
+import { City, DataPatch, GameData } from '@civ-clone/ui-protocol/types';
+import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';

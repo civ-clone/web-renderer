@@ -4,7 +4,7 @@ import {
   CityImprovementMaintenanceGold,
   Unit as UnitData,
   Yield,
-} from '@civ-clone/ui-client/types';
+} from '@civ-clone/ui-protocol/types';
 import {
   CityLayout,
   CityScreenContext,

@@ -199,7 +199,7 @@ full delta (every entity in `set`, `root` present); `gameDataPatch` carries
 subsequent ones. Keeping both channels avoids a special case for "is this the
 first message".
 
-One new channel is added to `TransportDataMap` in `src/js/Engine/Transport.ts`:
+One new channel is added to `TransportDataMap` in `src/js/Engine/Transport.ts` (now `packages/protocol/Transport.ts`, #825):
 
 ```ts
 resync: TransportData<Delta, { since: number }>;

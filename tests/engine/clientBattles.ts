@@ -4,9 +4,9 @@
 //  units sees either side. Each defeat is heard once, though `unit:defeated` comes twice (civ-clone/civ1-city#19).
 
 import registerBattleEvents, {
-  BattleSound,
   attackSoundOf,
 } from '../../src/js/Engine/Client/battleEvents';
+import { BattleSound } from '@civ-clone/ui-protocol/battles';
 import AdditionalData from '@civ-clone/core-data-object/AdditionalData';
 import Unit from '@civ-clone/core-unit/Unit';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';

@@ -1,4 +1,4 @@
-import { RequestFailed } from '../../../src/js/Engine/AbstractTransport';
+import { RequestFailed } from '@civ-clone/ui-protocol/AbstractTransport';
 
 // The end of a request's chain, for a caller that has nothing more to do when the worker could not answer: the player
 //  has already been told, in the window `requestRejected` opens (#470), so that failure stops here, and anything else

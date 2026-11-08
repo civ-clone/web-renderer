@@ -1,4 +1,4 @@
-import { BuildItem, CityBuild } from '@civ-clone/ui-client/types';
+import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import ChoiceWindow, {
   ChoiceFact,
   ChoiceRow,

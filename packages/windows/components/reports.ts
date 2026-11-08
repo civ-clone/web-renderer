@@ -8,7 +8,7 @@ import IntelligenceTable from './IntelligenceTable';
 import MilitaryReport from './MilitaryReport';
 import MilitaryTable from './MilitaryTable';
 import CityStatusTable from './CityStatusTable';
-import { Player } from '@civ-clone/ui-client/types';
+import { Player } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import TradeReport from './TradeReport';
 import TradeTable from './TradeTable';

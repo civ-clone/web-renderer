@@ -1,15 +1,4 @@
-export type PlainObject = {
-  [key: string]: any;
-};
-
-export type ObjectStore = {
-  [key: string]: PlainObject;
-};
-
-export type ObjectMap = {
-  hierarchy: PlainObject;
-  objects: ObjectStore;
-};
+import { PlainObject, ObjectMap } from '@civ-clone/ui-protocol/data';
 
 export const reconstituteData = ({
   hierarchy,

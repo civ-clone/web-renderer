@@ -13,15 +13,18 @@ import Tile from '@civ-clone/core-world/Tile';
 import { View, playerView } from './Client/View';
 import { filterToReference } from './Client/refs';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import Transport from './Transport';
+import Transport from '@civ-clone/ui-protocol/Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import ActionsState from './Client/ActionsState';
 import Automation from './Client/Automation';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { instance as playerGovernmentRegistryInstance } from '@civ-clone/core-government/PlayerGovernmentRegistry';
-import { TopCitiesRow, defaultTopCitiesLimit } from './lib/topCities';
-import { CivilizationScore } from './lib/civilizationScore';
-import { GameOverDetails } from './lib/gameOver';
+import { defaultTopCitiesLimit } from './lib/topCities';
+import {
+  TopCitiesRow,
+  CivilizationScore,
+  GameOverDetails,
+} from '@civ-clone/ui-protocol/reports';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
 import {
   makeDataFilter,

@@ -27,7 +27,7 @@ import {
   isHumanDescriptor,
   savedSeats,
   seatFromDescriptor,
-} from '../../src/js/Engine/lib/savedSeats';
+} from '@civ-clone/ui-protocol/lib/savedSeats';
 
 type Bound = { player: string; client: string | null }[];
 

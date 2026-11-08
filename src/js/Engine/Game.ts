@@ -3,7 +3,7 @@ import DataTransferClient from './DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import Transport, { SaveDetails } from './Transport';
+import Transport, { SaveDetails } from '@civ-clone/ui-protocol/Transport';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -14,7 +14,7 @@ import {
   SeatChanges,
   isSeatChanges,
   seatFromDescriptor,
-} from './lib/savedSeats';
+} from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
 import { plugins } from '../plugins';
 import { registerDiplomacyClasses } from './diplomacy';
@@ -35,7 +35,7 @@ import {
   applySeatChoice,
   resolveSeatChoice,
   seatsFromOptions,
-} from './lib/seats';
+} from '@civ-clone/ui-protocol/lib/seats';
 import hasMet from './lib/hasMet';
 import { playerProgress, turnProgress } from './lib/progress';
 import registries from './Client/registries';

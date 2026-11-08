@@ -146,12 +146,10 @@ expect(
 );
 
 // What the packages still reach outside themselves for, by path, until each is a package too (#825): the list only
-//  shrinks. The worker's side of the transport and the requests it answers, whose types the windows use, the music
-//  player, the generated list of translations, and the build's version.
+//  shrinks: the music player, the generated list of translations, and the build's version.
 const reachesOut: { [path: string]: string[] } = {
   'build.json': ['game', 'windows'],
   'src/js/Audio/': ['game', 'windows'],
-  'src/js/Engine/': ['client', 'game', 'windows'],
   'src/js/translations.ts': ['game'],
 };
 
@@ -301,6 +299,77 @@ const outside = [
   ...sourcesUnder(join(root, 'src')),
   ...sourcesUnder(join(root, 'tests')),
 ].filter((path) => path !== join(root, 'tests/ui/packages.ts'));
+
+// The worker (`src/js/Engine`, started by `backend.ts`) and the page share only the protocol: what one sends the other
+//  (#825). The worker never runs the page's code, nor the page the worker's.
+const worker = [
+  ...sourcesUnder(join(root, 'src/js/Engine')),
+  join(root, 'src/js/backend.ts'),
+];
+
+expect(
+  'the scan finds the worker, and its imports of the protocol',
+  [
+    worker.length > 50,
+    importsOf(join(root, 'src/js/Engine/ParentTransport.ts')).some(
+      (target) => packageOf(target) === 'protocol'
+    ),
+  ],
+  [true, true]
+);
+expect(
+  'the worker reaches nothing of the page outside a package either: only its own files, the protocol and the plugins',
+  [
+    ...new Set(
+      worker.flatMap((path) =>
+        importsOf(path)
+          .filter(
+            (target) =>
+              target.startsWith(root + '/') &&
+              !target.includes('/node_modules/') &&
+              packageOf(target) === null &&
+              !target.startsWith(join(root, 'src/js/Engine') + '/') &&
+              target !== join(root, 'src/js/plugins.ts')
+          )
+          .map(
+            (target) => `${relative(root, path)} -> ${relative(root, target)}`
+          )
+      )
+    ),
+  ].sort(),
+  []
+);
+expect(
+  'the worker uses no package but the protocol',
+  [
+    ...new Set(
+      worker.flatMap((path) =>
+        importsOf(path)
+          .map((target) => packageOf(target))
+          .filter((to): to is string => to !== null && to !== 'protocol')
+          .map((to) => `${relative(root, path)} -> ${to}`)
+      )
+    ),
+  ].sort(),
+  []
+);
+expect(
+  'and no package reaches into the worker',
+  edges
+    .filter(({ target }) =>
+      target.startsWith(join(root, 'src/js/Engine') + '/')
+    )
+    .map(
+      ({ path, target }) =>
+        `${relative(root, path)} -> ${relative(root, target)}`
+    ),
+  []
+);
+expect(
+  'and the protocol depends on no other package',
+  dependsOn('protocol'),
+  []
+);
 
 expect(
   'only civ.one’s list of interfaces imports one',

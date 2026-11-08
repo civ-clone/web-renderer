@@ -4,7 +4,7 @@ import {
   unitActionIconLayers,
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import { TOptions, t } from 'i18next';
-import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import tooltip, {
   hideTooltipWithin,
