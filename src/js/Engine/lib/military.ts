@@ -4,7 +4,6 @@
 //  ruleset's (`UnitLossRegistry`). Only our own: without the cheat, v474.05 shows no one else's losses.
 
 import { unitStats } from './civilopedia';
-import { UnitStats } from '@civ-clone/ui-protocol/civilopedia';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { CityBuildRegistry } from '@civ-clone/core-city-build/CityBuildRegistry';

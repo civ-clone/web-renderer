@@ -1,4 +1,3 @@
-import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import {
   DataPatchType,
   DataPatchContents,

@@ -4,8 +4,6 @@
 
 import {
   Condition,
-  Range,
-  Relation,
   Requirement,
   Target,
 } from '@civ-clone/core-requirement/Requirement';

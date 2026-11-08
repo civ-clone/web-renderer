@@ -308,6 +308,38 @@ const worker = [
 ];
 
 expect(
+  'the scan finds the worker, and its imports of the protocol',
+  [
+    worker.length > 50,
+    importsOf(join(root, 'src/js/Engine/ParentTransport.ts')).some(
+      (target) => packageOf(target) === 'protocol'
+    ),
+  ],
+  [true, true]
+);
+expect(
+  'the worker reaches nothing of the page outside a package either: only its own files, the protocol and the plugins',
+  [
+    ...new Set(
+      worker.flatMap((path) =>
+        importsOf(path)
+          .filter(
+            (target) =>
+              target.startsWith(root + '/') &&
+              !target.includes('/node_modules/') &&
+              packageOf(target) === null &&
+              !target.startsWith(join(root, 'src/js/Engine') + '/') &&
+              target !== join(root, 'src/js/plugins.ts')
+          )
+          .map(
+            (target) => `${relative(root, path)} -> ${relative(root, target)}`
+          )
+      )
+    ),
+  ].sort(),
+  []
+);
+expect(
   'the worker uses no package but the protocol',
   [
     ...new Set(
