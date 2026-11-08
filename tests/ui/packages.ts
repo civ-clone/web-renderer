@@ -57,6 +57,15 @@ const root = process.cwd(),
       .sort();
 
 expect(
+  'every folder in packages/ is a package',
+  readdirSync(packagesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name !== 'node_modules')
+    .map(({ name }) => name)
+    .filter((name) => !names.includes(name)),
+  []
+);
+
+expect(
   'every package is named for its folder, private, says what it holds, and depends on its siblings as they are here',
   names.flatMap((name) => {
     const { name: named, description, private: isPrivate } = manifests[name],
@@ -349,6 +358,17 @@ expect(
   'and the packages are compiled as src/js is',
   tsconfig('packages/tsconfig.json').extends,
   '../src/js/tsconfig.json'
+);
+
+expect(
+  'and no tsconfig.json nearer a suite or a package file takes its place',
+  [
+    'tests/tsconfig.json',
+    'tests/ui/tsconfig.json',
+    'tests/engine/tsconfig.json',
+    ...names.map((name) => `packages/${name}/tsconfig.json`),
+  ].filter((path) => existsSync(join(root, path))),
+  []
 );
 
 expect(
