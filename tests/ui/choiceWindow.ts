@@ -11,7 +11,7 @@ import ChoiceWindow, {
   ChoiceRow,
 } from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
-import CityBuildChoice from '@civ-clone/ui-windows/components/CityBuildChoice';
+import CityBuildChoice from '@civ-clone/ui-interface-modern/components/CityBuildChoice';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';

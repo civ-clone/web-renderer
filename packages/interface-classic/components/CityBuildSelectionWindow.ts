@@ -1,6 +1,6 @@
 import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
-import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
+import CityBuildUnavailableWindow from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
 import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
@@ -11,7 +11,7 @@ import {
 } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft } from './lib/cityYields';
+import { turnsLeft } from '@civ-clone/ui-windows/components/lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 

@@ -23,7 +23,7 @@ import worldSizes, {
 import supportedTopologies, {
   isSupportedTopology,
 } from '@civ-clone/ui-map/lib/supportedTopologies';
-import GameSetupWindow from '@civ-clone/ui-windows/components/GameSetupWindow';
+import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
 import {
   askEarth,

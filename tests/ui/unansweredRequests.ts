@@ -8,7 +8,7 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
-import TopCitiesReport from '@civ-clone/ui-windows/components/TopCitiesReport';
+import TopCitiesReport from '@civ-clone/ui-interface-classic/components/TopCitiesReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 import unlessRequestFailed from '@civ-clone/ui-client/lib/unlessRequestFailed';

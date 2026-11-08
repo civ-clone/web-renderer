@@ -5,8 +5,8 @@ import {
 import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
-import { advanceNames } from './lib/advances';
-import { yieldIcon } from './lib/cityYields';
+import { advanceNames } from '@civ-clone/ui-windows/components/lib/advances';
+import { yieldIcon } from '@civ-clone/ui-windows/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

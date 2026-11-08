@@ -11,7 +11,7 @@ import './lib/grids';
 
 import GameSetupWindow, {
   GameSetupPreset,
-} from '@civ-clone/ui-windows/components/GameSetupWindow';
+} from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';

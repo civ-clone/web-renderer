@@ -8,10 +8,10 @@ import './lib/interfaces';
 
 import { City, Player } from '@civ-clone/ui-protocol/types';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
-import CityStatusTable from '@civ-clone/ui-windows/components/CityStatusTable';
+import CityStatusTable from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
-import TradeTable from '@civ-clone/ui-windows/components/TradeTable';
+import TradeTable from '@civ-clone/ui-interface-modern/components/TradeTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
@@ -25,13 +25,13 @@ import {
   openTopCities,
   openTradeReport,
 } from '@civ-clone/ui-windows/components/reports';
-import CivilizationScoreTable from '@civ-clone/ui-windows/components/CivilizationScoreTable';
-import IntelligenceTable from '@civ-clone/ui-windows/components/IntelligenceTable';
-import HappinessTable from '@civ-clone/ui-windows/components/HappinessTable';
-import MilitaryTable from '@civ-clone/ui-windows/components/MilitaryTable';
+import CivilizationScoreTable from '@civ-clone/ui-interface-modern/components/CivilizationScoreTable';
+import IntelligenceTable from '@civ-clone/ui-interface-modern/components/IntelligenceTable';
+import HappinessTable from '@civ-clone/ui-interface-modern/components/HappinessTable';
+import MilitaryTable from '@civ-clone/ui-interface-modern/components/MilitaryTable';
 import TopCitiesTable, {
   ownCity,
-} from '@civ-clone/ui-windows/components/TopCitiesTable';
+} from '@civ-clone/ui-interface-modern/components/TopCitiesTable';
 import { TopCitiesRow } from '@civ-clone/ui-protocol/reports';
 
 const failures: string[] = [];

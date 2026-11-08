@@ -1,19 +1,6 @@
-import { CityStatus } from './CityStatus';
-import CivilizationScoreReport from './CivilizationScoreReport';
-import CivilizationScoreTable from './CivilizationScoreTable';
-import HappinessReport from './HappinessReport';
-import HappinessTable from './HappinessTable';
-import IntelligenceReport from './IntelligenceReport';
-import IntelligenceTable from './IntelligenceTable';
-import MilitaryReport from './MilitaryReport';
-import MilitaryTable from './MilitaryTable';
-import CityStatusTable from './CityStatusTable';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { Player } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import TradeReport from './TradeReport';
-import TradeTable from './TradeTable';
-import TopCitiesReport from './TopCitiesReport';
-import TopCitiesTable from './TopCitiesTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
@@ -21,34 +8,13 @@ import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 //  `interfaces/` fills (#825): the classic ones or the ones drawn with the report table (#744). Every key, menu item and button that opens a report comes here.
 
 export interface Reports {
-  cityStatus(
-    player: Player,
-    portal: Portal,
-    transport: Transport
-  ): CityStatus | CityStatusTable;
-  trade(
-    player: Player,
-    portal: Portal,
-    transport: Transport
-  ): TradeReport | TradeTable;
-  military(transport: Transport): MilitaryReport | MilitaryTable;
-  intelligence(
-    transport: Transport,
-    civilization: string | null
-  ): IntelligenceReport | IntelligenceTable;
-  civilizationScore(
-    transport: Transport
-  ): CivilizationScoreReport | CivilizationScoreTable;
-  happiness(
-    player: Player,
-    portal: Portal,
-    transport: Transport
-  ): HappinessReport | HappinessTable;
-  topCities(
-    player: Player,
-    portal: Portal,
-    transport: Transport
-  ): TopCitiesReport | TopCitiesTable;
+  cityStatus(player: Player, portal: Portal, transport: Transport): Window;
+  trade(player: Player, portal: Portal, transport: Transport): Window;
+  military(transport: Transport): Window;
+  intelligence(transport: Transport, civilization: string | null): Window;
+  civilizationScore(transport: Transport): Window;
+  happiness(player: Player, portal: Portal, transport: Transport): Window;
+  topCities(player: Player, portal: Portal, transport: Transport): Window;
 }
 
 export const reports = defineSlot<Reports>('reports');
@@ -58,33 +24,27 @@ export const openCityStatus = (
   player: Player,
   portal: Portal,
   transport: Transport
-): CityStatus | CityStatusTable =>
-  reports.current().cityStatus(player, portal, transport);
+): Window => reports.current().cityStatus(player, portal, transport);
 
 /** The Trade report (F5). */
 export const openTradeReport = (
   player: Player,
   portal: Portal,
   transport: Transport
-): TradeReport | TradeTable =>
-  reports.current().trade(player, portal, transport);
+): Window => reports.current().trade(player, portal, transport);
 
 /** The Military report (F2). */
-export const openMilitaryReport = (
-  transport: Transport
-): MilitaryReport | MilitaryTable => reports.current().military(transport);
+export const openMilitaryReport = (transport: Transport): Window =>
+  reports.current().military(transport);
 
 /** The Intelligence Report (F3): every civilization met, or only `civilization`, as when an embassy is established. */
 export const openIntelligenceReport = (
   transport: Transport,
   civilization: string | null = null
-): IntelligenceReport | IntelligenceTable =>
-  reports.current().intelligence(transport, civilization);
+): Window => reports.current().intelligence(transport, civilization);
 
 /** The Civilization Score (F9). */
-export const openCivilizationScore = (
-  transport: Transport
-): CivilizationScoreReport | CivilizationScoreTable =>
+export const openCivilizationScore = (transport: Transport): Window =>
   reports.current().civilizationScore(transport);
 
 /** The Happiness report (F4). */
@@ -92,13 +52,11 @@ export const openHappinessReport = (
   player: Player,
   portal: Portal,
   transport: Transport
-): HappinessReport | HappinessTable =>
-  reports.current().happiness(player, portal, transport);
+): Window => reports.current().happiness(player, portal, transport);
 
 /** Top Cities in the World (F8). */
 export const openTopCities = (
   player: Player,
   portal: Portal,
   transport: Transport
-): TopCitiesReport | TopCitiesTable =>
-  reports.current().topCities(player, portal, transport);
+): Window => reports.current().topCities(player, portal, transport);

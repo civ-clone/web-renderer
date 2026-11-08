@@ -1,17 +1,19 @@
 import { Element, s } from '@dom111/element';
 import GameSetupWindow from './GameSetupWindow';
-import HallOfFameWindow from './HallOfFameWindow';
-import ImportAssetsWindow from './ImportAssetsWindow';
-import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
+import HallOfFameWindow from '@civ-clone/ui-windows/components/HallOfFameWindow';
+import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
+import ReleaseWindow, {
+  fetchReleases,
+} from '@civ-clone/ui-windows/components/ReleaseWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { chooseSave } from './LoadGameWindow';
+import { chooseSave } from '@civ-clone/ui-windows/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { version } from '../../../build.json';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
-import { askEarth, askNewGame } from './newGame';
+import { askEarth, askNewGame } from '@civ-clone/ui-windows/components/newGame';
 
 export class MainMenu extends Element {
   #transport: Transport;

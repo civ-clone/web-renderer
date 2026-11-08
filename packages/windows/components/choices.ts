@@ -1,14 +1,11 @@
+import Window from '@civ-clone/ui-widgets/components/Window';
 import {
   BuildItem,
   CityBuild,
   Unit as UnitData,
 } from '@civ-clone/ui-protocol/types';
 import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
-import CityBuildChoice from './CityBuildChoice';
-import CityBuildSelectionWindow from './CityBuildSelectionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import UnitSelectionWindow from './UnitSelectionWindow';
-import UnitStackChoice from './UnitStackChoice';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // Where the "pick one from a list" windows are put together (#735): the interface's `choices` slot (#824), which each
@@ -22,12 +19,12 @@ export interface Choices {
     transport: Transport,
     onComplete: (hasSelected: boolean) => void,
     additionalActions: ActionWindowActions
-  ): CityBuildSelectionWindow | CityBuildChoice;
+  ): Window;
   unitSelection(
     units: UnitData[],
     transport: Transport,
     onComplete: (unit: UnitData) => void
-  ): UnitSelectionWindow | UnitStackChoice;
+  ): Window;
 }
 
 export const choices = defineSlot<Choices>('choices');
@@ -39,7 +36,7 @@ export const openCityBuild = (
   transport: Transport,
   onComplete: (hasSelected: boolean) => void = () => {},
   additionalActions: ActionWindowActions = {}
-): CityBuildSelectionWindow | CityBuildChoice =>
+): Window =>
   choices
     .current()
     .cityBuild(cityBuild, available, transport, onComplete, additionalActions);
@@ -49,5 +46,4 @@ export const openUnitSelection = (
   units: UnitData[],
   transport: Transport,
   onComplete: (unit: UnitData) => void = () => {}
-): UnitSelectionWindow | UnitStackChoice =>
-  choices.current().unitSelection(units, transport, onComplete);
+): Window => choices.current().unitSelection(units, transport, onComplete);

@@ -1,0 +1,1 @@
+{"version":"0.1.0@bf56a47c","date":"2026-11-08T21:37:22.000Z","localChanges":["refactor: civ.one's worker entry hands the game its plugins, so the worker client knows no ruleset of its own (#825) (#838)"],"externalChanges":{}}

@@ -3,12 +3,12 @@ import ChoiceWindow, {
 } from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import { GameData, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from './Unit';
+import Unit from '@civ-clone/ui-windows/components/Unit';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { t } from 'i18next';
-import unitLabel, { unitName } from '../lib/unitLabel';
+import unitLabel, { unitName } from '@civ-clone/ui-windows/lib/unitLabel';
 
 type OnComplete = (unit: UnitData) => void;
 

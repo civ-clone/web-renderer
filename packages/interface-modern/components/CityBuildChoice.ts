@@ -4,11 +4,11 @@ import ChoiceWindow, {
   ChoiceRow,
 } from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
-import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
+import CityBuildUnavailableWindow from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from './Unit';
+import Unit from '@civ-clone/ui-windows/components/Unit';
 import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
-import entryDetails from './lib/choiceDetails';
+import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';
 import {
   editQueue,
   getAutoLabel,
@@ -19,7 +19,10 @@ import {
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft, yieldIcon } from './lib/cityYields';
+import {
+  turnsLeft,
+  yieldIcon,
+} from '@civ-clone/ui-windows/components/lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean) => void;
 

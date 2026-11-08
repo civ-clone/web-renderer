@@ -13,7 +13,7 @@ import {
   leaderName,
   option,
   select,
-} from '../lib/setupControls';
+} from '@civ-clone/ui-windows/lib/setupControls';
 import {
   difficultyLabels,
   preselectedDifficulty,

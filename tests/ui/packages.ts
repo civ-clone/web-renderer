@@ -148,7 +148,7 @@ expect(
 // What the packages still reach outside themselves for, by path, until each is a package too (#825): the list only
 //  shrinks: the music player, the generated list of translations, and the build's version.
 const reachesOut: { [path: string]: string[] } = {
-  'build.json': ['game', 'windows'],
+  'build.json': ['game', 'interface-classic', 'interface-modern'],
   'src/js/Audio/': ['game', 'windows'],
   'src/js/translations.ts': ['game'],
 };
@@ -348,8 +348,9 @@ expect(
 );
 
 expect(
-  'only civ.one’s list of interfaces imports one',
+  'in civ.one’s own code, only its list of interfaces imports one (a suite may test an interface’s pieces)',
   outside
+    .filter((path) => path.startsWith(join(root, 'src') + '/'))
     .filter((path) =>
       importsOf(path).some((target) => {
         const to = packageOf(target);
@@ -366,6 +367,69 @@ expect(
   importsOf(join(root, 'src/js/interfaces.ts'))
     .map((target) => packageOf(target))
     .filter((to) => to === null || !isInterface(to)),
+  []
+);
+
+// What only one interface uses is that interface's own (#825): a window or a map layer that civ.one's shared code never
+//  reaches, and the other interfaces don't either, belongs in the interface's package. The building blocks (`client`,
+//  `assets`, `widgets`) stay shared however many use them, as any interface can build on them. A piece a second
+//  interface wants moves back to a shared package.
+const reachedFrom = (starts: string[], enter: (path: string) => boolean) => {
+    const seen = new Set<string>(),
+      stack = [...starts];
+
+    while (stack.length > 0) {
+      const path = stack.pop()!;
+
+      if (seen.has(path) || !enter(path) || !existsSync(path)) {
+        continue;
+      }
+
+      seen.add(path);
+      stack.push(...importsOf(path).filter((target) => target.endsWith('.ts')));
+    }
+
+    return seen;
+  },
+  interfaces = names.filter(isInterface),
+  // Everything civ.one's own entries reach, but through an interface: the page's, the worker's and their generated lists.
+  sharedReach = reachedFrom(
+    sourcesUnder(join(root, 'src/js'))
+      .filter((path) => !path.startsWith(join(root, 'src/js/Audio') + '/'))
+      .filter((path) => path !== join(root, 'src/js/interfaces.ts')),
+    (path) => {
+      const name = packageOf(path);
+
+      return name === null || !isInterface(name);
+    }
+  ),
+  interfaceReach = Object.fromEntries(
+    interfaces.map((name) => [
+      name,
+      reachedFrom([join(packagesRoot, name, 'index.ts')], () => true),
+    ])
+  );
+
+expect(
+  'the scan reaches the shared code and each interface',
+  [
+    sharedReach.size > 100,
+    ...interfaces.map((name) => interfaceReach[name].size > 10),
+  ],
+  [true, ...interfaces.map(() => true)]
+);
+expect(
+  'a window or map piece only one interface uses is in that interface’s package',
+  ['windows', 'map', 'map-square'].flatMap((name) =>
+    sourcesUnder(join(packagesRoot, name))
+      .filter((path) => !sharedReach.has(path))
+      .filter(
+        (path) =>
+          interfaces.filter((name) => interfaceReach[name].has(path)).length ===
+          1
+      )
+      .map((path) => relative(root, path))
+  ),
   []
 );
 

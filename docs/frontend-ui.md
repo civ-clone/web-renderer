@@ -66,8 +66,12 @@ choice of theme outranks.
   is put together, such as `reports.ts`, and uses whatever the interface in use provided. A manifest's `slots` says
   which implementation to use.
 - **Features** are behaviours inside a shared component that an interface has or doesn't, read with `hasFeature`.
-- **What's shared** is every component an interface uses, so another interface can use it too. Something goes inside an
-  interface's package only if no other interface would want it.
+- **What's its own:** a window or map piece that only one interface uses lives in that interface's package
+  (`components/`): the modern report tables, title menu, setup form, city layout and choice windows, and the classic
+  reports, main menu, setup window and build list. The `packages` test holds it. The building blocks (`client`,
+  `assets`, `widgets`) stay shared, as any interface can build on them, and a piece a second interface wants moves to
+  a shared package. Each slot is typed by what its callers need (`Window`, `CityLayout`, `TitleScreen`), so shared
+  code names no interface's pieces.
 - **Boundaries:** nothing depends on an interface, an interface doesn't depend on `game`, and only
   `src/js/interfaces.ts`, which `frontend.ts` loads and which lists what civ.one offers, imports one.
   `DEFAULT_INTERFACE` must be one of them.
@@ -113,8 +117,8 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `map-square`        | The square grid: its projection and minimap                                         | protocol, assets, map                  |
 | `windows`           | The game's windows, shared by every interface that wants them                       | protocol, client, assets, widgets, map |
 | `game`              | The page itself: starting up, a game in play, the keys, the debug tools             | everything above it but the worker's   |
-| `interface-modern`  | The modern interface, with Slate and brass, see above                               | client, widgets, map, windows          |
-| `interface-classic` | The classic interface, with Civ1 classic, see above                                 | client, widgets, map, windows          |
+| `interface-modern`  | The modern interface, with Slate and brass, see above                               | the page's packages but `game`         |
+| `interface-classic` | The classic interface, with Civ1 classic, see above                                 | the page's packages but `game`         |
 
 Inside each package the folders are as they were under `src/js/UI/` (`components/`, `lib/`), but for the folder a
 package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a
