@@ -43,12 +43,22 @@ export class LocaleProvider {
   number(number: number, options?: Intl.NumberFormatOptions): string {
     const formatter = new Intl.NumberFormat(this.locales(), {
       maximumFractionDigits: 0,
-      // No sign on zero, so -0, or a small negative rounded to 0, reads 0 rather than -0 (#816).
-      signDisplay: 'negative',
       ...options,
     });
 
-    return formatter.format(number);
+    // -0, or a small negative rounded to 0, reads 0 rather than -0 (#816). `signDisplay: 'negative'` would say so, but
+    //  older browsers reject it.
+    const parts = formatter.formatToParts(number),
+      digits = parts.filter(
+        ({ type }) => type === 'integer' || type === 'fraction'
+      );
+
+    // No digits for Infinity or NaN, which are left as they are.
+    if (digits.length > 0 && digits.every(({ value }) => /^0+$/.test(value))) {
+      return formatter.format(0);
+    }
+
+    return parts.map(({ value }) => value).join('');
   }
 
   percent(number: number, options?: Intl.NumberFormatOptions): string {

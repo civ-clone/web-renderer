@@ -10,6 +10,7 @@ import { City, Player } from '@civ-clone/ui-protocol/types';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import CityStatusTable from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
+import LocaleProvider from '@civ-clone/ui-client/LocaleProvider';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import TradeTable from '@civ-clone/ui-interface-modern/components/TradeTable';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -639,6 +640,25 @@ const run = async (): Promise<void> => {
   );
 
   trade.close();
+
+  // The formatter itself (#816): no -0, whether it's -0 or a small negative rounded to 0, while a real negative, a
+  //  fraction and the numbers with no digits are as they were.
+  const formatter = new LocaleProvider('en', ['en']);
+
+  expect(
+    'numbers: -0 and a negative rounded to 0 read 0, the rest as before',
+    [
+      formatter.number(-0),
+      formatter.number(-0.4),
+      formatter.number(-3),
+      formatter.number(-0.04, { maximumFractionDigits: 1 }),
+      formatter.number(-0.25, { maximumFractionDigits: 1 }),
+      formatter.number(1234),
+      formatter.number(-Infinity),
+      formatter.number(NaN),
+    ],
+    ['0', '0', '-3', '0', '-0.3', '1,234', '-∞', 'NaN']
+  );
 
   // Military: what the engine sent, a row opening its unit's Civilopedia entry.
   const pending = {
