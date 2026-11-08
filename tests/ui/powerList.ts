@@ -73,7 +73,7 @@ const rows: CivilizationPowerRow[] = [
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-civilization/en');
 
   const options = new GameOptionsRegistry(() => null);

@@ -858,7 +858,7 @@ const run = async (): Promise<void> => {
     (city as { pollution?: number }).pollution = 4;
 
     // The summaries as the game words them, from its own translations.
-    await import('../../translations/local/en');
+    await import('./lib/strings');
 
     i18next.addResources(
       'en',

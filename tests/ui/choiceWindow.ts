@@ -90,8 +90,8 @@ const rows: ChoiceRow[] = [
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
-  await import('../../translations/local/en-GB');
+  await import('./lib/strings');
+  await import('./lib/strings-en-GB');
 
   applyInterface('modern', null);
 

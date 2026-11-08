@@ -56,8 +56,10 @@ reloads the page and hands the save to a fresh worker (see `packages/windows/lib
 
 `buildTranslationList.js` (`npm run build:generate-translations-ts`):
 
-- Scans `translations/*/*.ts`: one directory per engine package (`civ1-unit`, `civ1-science`, ...) plus `local` for
-  the renderer's own strings, with a file per language (`en.ts`, and `en-GB.ts` where British English differs).
+- Scans `translations/*/*.ts`, one directory per engine package (`civ1-unit`, `civ1-science`, ...), and
+  `packages/*/translations/*.ts`, each frontend package's own strings (#825), with a file per language (`en.ts`, and
+  `en-GB.ts` where British English differs). A string goes in the package that shows it; one that several show goes
+  in the package they all build on.
 - Writes static import file `src/js/translations.ts`, again with absolute paths.
 
 Each translation file calls `i18next.addResources(language, namespace, {...})` when imported.

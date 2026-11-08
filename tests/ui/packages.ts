@@ -433,6 +433,36 @@ expect(
   []
 );
 
+// Each package brings its own text (`translations/en.ts`, and `en-GB.ts` where British English differs), which the
+//  page loads with the rest (`buildTranslationList.js`), and which suites load through `tests/ui/lib/strings*.ts`.
+const stringsListed = (helper: string) =>
+  specifiersOf(readFileSync(join(root, helper), 'utf8')).sort();
+
+expect(
+  'the suites’ strings helpers load every package’s text, and nothing else',
+  [
+    stringsListed('tests/ui/lib/strings.ts'),
+    stringsListed('tests/ui/lib/strings-en-GB.ts'),
+  ],
+  ['en', 'en-GB'].map((language) =>
+    names
+      .filter((name) =>
+        existsSync(join(packagesRoot, name, 'translations', `${language}.ts`))
+      )
+      .map((name) => `${scope}${name}/translations/${language}`)
+      .sort()
+  )
+);
+expect(
+  'and a package’s en-GB has an en beside it',
+  names.filter(
+    (name) =>
+      existsSync(join(packagesRoot, name, 'translations', 'en-GB.ts')) &&
+      !existsSync(join(packagesRoot, name, 'translations', 'en.ts'))
+  ),
+  []
+);
+
 // esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
 //  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
 //  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which

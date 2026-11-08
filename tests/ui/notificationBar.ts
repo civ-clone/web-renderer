@@ -59,7 +59,7 @@ expect(
 
 (async () => {
   await i18next.init(i18nOptions);
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-civilization/en');
 
   listeners.notification({ key: 'Game.progress.turn', data: { turn: 42 } });

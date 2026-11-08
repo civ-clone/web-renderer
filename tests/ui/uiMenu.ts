@@ -140,7 +140,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
 (async () => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-world/en');
 

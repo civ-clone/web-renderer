@@ -58,7 +58,7 @@ const levels = [
 
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-difficulty/en');
 
   expect(

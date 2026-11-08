@@ -117,7 +117,7 @@ const reset = () => {
 
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   expect(
     'a file name keeps what a file system will take',

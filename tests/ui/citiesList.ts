@@ -98,7 +98,7 @@ const opened: string[] = [],
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');

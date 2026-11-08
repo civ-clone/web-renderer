@@ -144,7 +144,7 @@ const save = (
 (async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   addFormatters(i18next);
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-civilization/en');
   applyInterface('modern', null);
   resetStore();

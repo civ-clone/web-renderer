@@ -130,7 +130,7 @@ const city = (
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
 
@@ -1286,7 +1286,7 @@ const run = async (): Promise<void> => {
   );
 
   // British spellings, in the namespace the reports read.
-  await import('../../translations/local/en-GB');
+  await import('./lib/strings-en-GB');
   await i18next.changeLanguage('en-GB');
 
   expect(

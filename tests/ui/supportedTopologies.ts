@@ -146,7 +146,7 @@ const text = (element: Element | null): string =>
 
 (async () => {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   // The grids there are: the ones the installed tilesets are drawn for.
   const civ1 = validateDescriptor(civ1Json),

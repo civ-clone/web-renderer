@@ -72,7 +72,7 @@ const transport = {
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   const research = action('ChooseResearch', 'r', { id: 'research' }),
     buildKish = action('CityBuild', 'b1', { id: 'b1', city: city('Kish') }),

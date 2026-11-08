@@ -817,7 +817,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   );
 
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
 
   const optionsWindow = new GameOptions({
     lockVerticalEdges: () => false,

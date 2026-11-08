@@ -181,7 +181,7 @@ const action = (_: string, kinds: string[], fields: object) => ({
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
-  await import('../../translations/local/en');
+  await import('./lib/strings');
   await import('../../translations/civ1-civilization/en');
   await import('../../translations/civ1-diplomacy/en');
   await import('../../translations/civ1-government/en');

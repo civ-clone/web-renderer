@@ -120,9 +120,10 @@ civilization, you can now pick Random (#15).") and keep implementation detail in
 the pull request. [`build-and-release.md`](./build-and-release.md) has the
 details.
 
-The UI's text is in `translations/local/en.ts`, with British spellings as
-overrides in `en-GB.ts`; a new string that differs between the two needs an
-entry in both.
+The UI's text is in each package's `translations/en.ts`
+(`packages/<name>/translations/`), with British spellings as overrides in
+`en-GB.ts` beside it; a new string that differs between the two needs an entry
+in both.
 
 ## Change the engine
 

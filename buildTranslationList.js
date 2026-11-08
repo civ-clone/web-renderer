@@ -2,9 +2,10 @@ const fsModule = require('fs'),
   globModule = require('glob'),
   path = require('path');
 
-// TODO: have this in separate modules
+// The engine packages' text, kept here until each package brings its own, and the frontend packages' own (#825).
 const paths = [
-  path.join(__dirname, 'translations', '*', '*.ts')
+  path.join(__dirname, 'translations', '*', '*.ts'),
+  path.join(__dirname, 'packages', '*', 'translations', '*.ts'),
 ];
 
 // Sorted, so the import order does not depend on how the filesystem lists a
