@@ -273,7 +273,18 @@ export class Game implements IGame {
         this.bindEvents();
       }
 
-      this.start();
+      // The plugins are in first: the seats name civilizations, leaders and AI clients that they register, so rules
+      //  handed in to load lazily are in before the seats are checked against them (#825). civ.one's are in already.
+      this.#plugins.load().then(
+        () => this.start(),
+        (error: unknown): void => {
+          console.error(error);
+
+          this.#transport.send('workerError', {
+            message: describeError(error),
+          });
+        }
+      );
     });
 
     transport.receive('setOption', ({ name, value }) => {
