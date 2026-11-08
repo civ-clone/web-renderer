@@ -6,7 +6,7 @@ import {
   difficultyLabels,
   preselectedDifficulty,
   rememberDifficulty,
-} from '@civ-clone-ui/client/lib/difficulty';
+} from '@civ-clone/ui-client/lib/difficulty';
 import i18next from 'i18next';
 
 const failures: string[] = [];

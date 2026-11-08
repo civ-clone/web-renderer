@@ -5,15 +5,15 @@ import {
 } from '../../../src/js/Engine/lib/military';
 import ReportTable, {
   ReportColumn,
-} from '@civ-clone-ui/widgets/components/lib/ReportTable';
-import { GlyphName, glyph } from '@civ-clone-ui/assets/lib/glyphs';
+} from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import Civilopedia from './Civilopedia';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import Military from '../../../src/js/Engine/Requests/Military';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 const unitName = (unit: string): string =>
   t(`${unit}.name`, { defaultValue: unit, ns: 'unit' });

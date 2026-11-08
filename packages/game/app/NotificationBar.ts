@@ -1,4 +1,4 @@
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import { TransportTranslatedNotice } from '../../../src/js/Engine/Transport';
 import { t } from 'i18next';
 

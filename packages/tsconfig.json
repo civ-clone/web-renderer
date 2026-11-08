@@ -2,6 +2,6 @@
   "extends": "../src/js/tsconfig.json",
   "compilerOptions": {
     "baseUrl": ".",
-    "paths": { "@civ-clone-ui/*": ["./*"] }
+    "paths": { "@civ-clone/ui-*": ["./*"] }
   }
 }

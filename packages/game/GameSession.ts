@@ -1,52 +1,52 @@
-import { City as CityData, DataPatch } from '@civ-clone-ui/client/types';
+import { City as CityData, DataPatch } from '@civ-clone/ui-client/types';
 import { on, s } from '@dom111/element';
 import { t } from 'i18next';
-import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
-import openCity from '@civ-clone-ui/windows/components/openCity';
-import CitiesList from '@civ-clone-ui/windows/components/CitiesList';
-import GameMenu from '@civ-clone-ui/windows/components/GameMenu';
-import openFindCity from '@civ-clone-ui/windows/components/FindCity';
+import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
+import openCity from '@civ-clone/ui-windows/components/openCity';
+import CitiesList from '@civ-clone/ui-windows/components/CitiesList';
+import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import openFindCity from '@civ-clone/ui-windows/components/FindCity';
 import {
   allowLeaving,
   guardLeaving,
-} from '@civ-clone-ui/windows/lib/leaveGuard';
-import { gridName } from '@civ-clone-ui/windows/lib/savedGame';
-import { autosaveDue } from '@civ-clone-ui/client/lib/browserSaves';
-import { isSupportedTopology } from '@civ-clone-ui/map/lib/supportedTopologies';
-import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
-import Notices from '@civ-clone-ui/windows/components/Notices';
-import Notifications from '@civ-clone-ui/windows/components/Notifications';
-import PowerList from '@civ-clone-ui/windows/components/PowerList';
-import { openIntelligenceReport } from '@civ-clone-ui/windows/components/reports';
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
-import Transport from '@civ-clone-ui/client/Transport';
-import UnitCard from '@civ-clone-ui/windows/components/UnitCard';
+} from '@civ-clone/ui-windows/lib/leaveGuard';
+import { gridName } from '@civ-clone/ui-windows/lib/savedGame';
+import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
+import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
+import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import Notices from '@civ-clone/ui-windows/components/Notices';
+import Notifications from '@civ-clone/ui-windows/components/Notifications';
+import PowerList from '@civ-clone/ui-windows/components/PowerList';
+import { openIntelligenceReport } from '@civ-clone/ui-windows/components/reports';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
+import Transport from '@civ-clone/ui-client/Transport';
+import UnitCard from '@civ-clone/ui-windows/components/UnitCard';
 import UnitDetails, {
   UnitDetailsDeps,
-} from '@civ-clone-ui/windows/components/UnitDetails';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
-import Dismissals from '@civ-clone-ui/client/lib/dismissals';
-import { actionKey } from '@civ-clone-ui/client/lib/nextTurnQueue';
-import shouldAutoEndTurn from '@civ-clone-ui/client/lib/autoEndTurn';
-import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
+} from '@civ-clone/ui-windows/components/UnitDetails';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import Dismissals from '@civ-clone/ui-client/lib/dismissals';
+import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
+import shouldAutoEndTurn from '@civ-clone/ui-client/lib/autoEndTurn';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import ActiveUnitController from './ActiveUnitController';
 import MapView from './MapView';
 import Hud from './Hud';
-import GameState from '@civ-clone-ui/client/game/GameState';
+import GameState from '@civ-clone/ui-client/game/GameState';
 import InputController from './InputController';
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
-import EventSounds from '@civ-clone-ui/windows/lib/eventSounds';
+import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
 import { AppElements } from './app/elements';
 import NotificationBar from './app/NotificationBar';
-import ObserverBar from '@civ-clone-ui/windows/components/ObserverBar';
+import ObserverBar from '@civ-clone/ui-windows/components/ObserverBar';
 import {
   observerCityOpener,
   playerCityOpener,
-} from '@civ-clone-ui/windows/lib/cityOpeners';
+} from '@civ-clone/ui-windows/lib/cityOpeners';
 import { ObserverState } from '../../src/js/Engine/Observer';
-import sendBuildPreferences from '@civ-clone-ui/client/lib/buildPreferences';
+import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 
 // One game, from its first `gameData` (#344): the welcome, the map, the active unit, the panels, the menu, the debug
 //  panel and the keyboard, the render pair, the order each update runs in, and the game's receivers.

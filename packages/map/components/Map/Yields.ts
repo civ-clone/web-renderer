@@ -1,7 +1,7 @@
 import Map from '../Map';
 import { Reach } from '../../lib/projection';
-import { Tile } from '@civ-clone-ui/client/types';
-import { tileYieldIcons } from '@civ-clone-ui/client/lib/yieldMap';
+import { Tile } from '@civ-clone/ui-client/types';
+import { tileYieldIcons } from '@civ-clone/ui-client/lib/yieldMap';
 
 export class Yields extends Map {
   // Six columns at most, the last starting five sixths of the way across, and an icon no wider than half the box, as

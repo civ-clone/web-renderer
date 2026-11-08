@@ -10,11 +10,11 @@
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
 
-import Overview from '@civ-clone-ui/map-square/Overview';
-import { Tile, World as WorldData } from '@civ-clone-ui/client/types';
-import World from '@civ-clone-ui/map/components/World';
-import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
-import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
+import Overview from '@civ-clone/ui-map-square/Overview';
+import { Tile, World as WorldData } from '@civ-clone/ui-client/types';
+import World from '@civ-clone/ui-map/components/World';
+import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
+import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
 
 const failures: string[] = [];
 let checks = 0;

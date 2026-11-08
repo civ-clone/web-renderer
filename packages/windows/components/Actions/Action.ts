@@ -7,12 +7,12 @@ import {
   PlayerTradeRates,
   Spaceship,
   Unit,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
 
 declare global {
   interface GlobalEventHandlersEventMap {

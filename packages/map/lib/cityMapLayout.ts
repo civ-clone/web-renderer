@@ -1,5 +1,5 @@
-import { City, Coordinate, Tile } from '@civ-clone-ui/client/types';
-import topologyFor from '@civ-clone-ui/client/lib/topologyFor';
+import { City, Coordinate, Tile } from '@civ-clone/ui-client/types';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 
 export type CityMapLayout = {
   /** Where the city's own square is in the small world. */

@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import { withoutForgottenParams } from '@civ-clone-ui/client/lib/forgetVisitParam';
+import { withoutForgottenParams } from '@civ-clone/ui-client/lib/forgetVisitParam';
 
 /**
  * Stops Back, or closing the tab, from silently ending a game in progress.
@@ -39,7 +39,7 @@ const pushGuardEntry = (): void =>
 
     asking = true;
 
-    import('@civ-clone-ui/widgets/components/ConfirmationWindow').then(
+    import('@civ-clone/ui-widgets/components/ConfirmationWindow').then(
       ({ ConfirmationWindow }) => {
         const confirmation = new ConfirmationWindow(
           t('LeaveGuard.title'),

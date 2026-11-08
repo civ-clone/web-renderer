@@ -1,13 +1,13 @@
 {
-  "name": "@civ-clone-ui/interface-classic",
+  "name": "@civ-clone/ui-interface-classic",
   "version": "0.1.0",
   "private": true,
   "description": "The classic interface, which comes with the Civ1 classic theme: the pieces it puts in each slot.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone-ui/client": "workspace:*",
-    "@civ-clone-ui/map": "workspace:*",
-    "@civ-clone-ui/widgets": "workspace:*",
-    "@civ-clone-ui/windows": "workspace:*"
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*",
+    "@civ-clone/ui-windows": "workspace:*"
   }
 }

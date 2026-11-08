@@ -2,14 +2,14 @@ import {
   City as CityData,
   CityImprovementMaintenanceGold,
   Player,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import ReportTable, {
   ReportCell,
-} from '@civ-clone-ui/widgets/components/lib/ReportTable';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
-import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
+} from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import isAnarchy from './lib/government';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

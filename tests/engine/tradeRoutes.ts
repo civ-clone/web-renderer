@@ -36,7 +36,7 @@ import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-
 import { instance as tradeRouteRegistryInstance } from '@civ-clone/core-city/TradeRouteRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { goods } from '@civ-clone/civ1-unit/Rules/Unit/tradeRouteEstablished';
-import { reconstituteData } from '@civ-clone-ui/client/lib/reconstituteData';
+import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
 
 let started = false,
   humanPlayer: Player | null = null,

@@ -5,22 +5,22 @@ import {
   playerCounts,
   worldSizes,
   worldSizesFor,
-} from '@civ-clone-ui/client/lib/worldSizes';
+} from '@civ-clone/ui-client/lib/worldSizes';
 import {
   difficultyLabels,
   difficultyName,
   preselectedDifficulty,
   rememberDifficulty,
-} from '@civ-clone-ui/client/lib/difficulty';
-import { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
+} from '@civ-clone/ui-client/lib/difficulty';
+import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import Difficulties from '../../../src/js/Engine/Requests/Difficulties';
 import Request from '../../../src/js/Engine/Request';
-import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
-import Transport from '@civ-clone-ui/client/Transport';
+import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
+import Transport from '@civ-clone/ui-client/Transport';
 import { openChoice } from './choiceList';
-import supportedTopologies from '@civ-clone-ui/map/lib/supportedTopologies';
+import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The questions New Game asks, each one answered before the next (#745): which grid (#89), how big a world, the
 //  difficulty level (#173), then how many civilizations (#55). Each is over everything else, and Cancel or Escape

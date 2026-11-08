@@ -28,18 +28,18 @@ import {
   hasUnitActions,
   neighbourActions,
   unitActions,
-} from '@civ-clone-ui/client/lib/unitActions';
-import { IncrementalReconstituter } from '@civ-clone-ui/client/lib/IncrementalReconstituter';
-import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
-import chooseActiveUnit from '@civ-clone-ui/client/lib/chooseActiveUnit';
-import ActiveUnitTiles from '@civ-clone-ui/map/lib/ActiveUnitTiles';
-import PendingMove, { plainMove } from '@civ-clone-ui/client/lib/PendingMove';
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
-import topologyFor from '@civ-clone-ui/client/lib/topologyFor';
-import ActiveUnitController from '@civ-clone-ui/game/ActiveUnitController';
-import Units from '@civ-clone-ui/map/components/Map/Units';
-import ActiveUnit from '@civ-clone-ui/map/components/Map/ActiveUnit';
-import { Tile } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/lib/unitActions';
+import { IncrementalReconstituter } from '@civ-clone/ui-client/lib/IncrementalReconstituter';
+import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
+import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
+import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
+import PendingMove, { plainMove } from '@civ-clone/ui-client/lib/PendingMove';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
+import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
+import Units from '@civ-clone/ui-map/components/Map/Units';
+import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
+import { Tile } from '@civ-clone/ui-client/types';
 import { TransportHandledAction } from '../../src/js/Engine/Transport';
 
 const failures: string[] = [];

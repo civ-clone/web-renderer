@@ -2,13 +2,13 @@
 //  holds; a watcher (#607, #613) asks the worker for the city in full, as a Diplomat's investigation is sent, and
 //  opens it read-only. Every way in goes through `Portal#openCity`, so one choice covers them all.
 
-import { City as CityData } from '@civ-clone-ui/client/types';
+import { City as CityData } from '@civ-clone/ui-client/types';
 import openCity from '../components/openCity';
 import ObserveCity from '../../../src/js/Engine/Requests/ObserveCity';
 import { ObserverState } from '../../../src/js/Engine/Observer';
-import Portal, { CityOpener } from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import Portal, { CityOpener } from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 export type { CityOpener };
 

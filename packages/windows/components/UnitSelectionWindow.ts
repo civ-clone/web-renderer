@@ -1,12 +1,12 @@
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';
-import { GameData, Unit as UnitData } from '@civ-clone-ui/client/types';
-import Window from '@civ-clone-ui/widgets/components/Window';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { GameData, Unit as UnitData } from '@civ-clone/ui-client/types';
+import Window from '@civ-clone/ui-widgets/components/Window';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import unitLabel from '../lib/unitLabel';
 
 type OnComplete = (unit: UnitData) => void;

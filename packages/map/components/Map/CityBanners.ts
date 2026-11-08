@@ -1,17 +1,17 @@
-import { City, Tile } from '@civ-clone-ui/client/types';
+import { City, Tile } from '@civ-clone/ui-client/types';
 import { CityNames } from './CityNames';
 import { Reach } from '../../lib/projection';
 import { Rect } from '../../lib/viewport';
-import { buildTurns } from '@civ-clone-ui/client/lib/cityTurns';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
+import { buildTurns } from '@civ-clone/ui-client/lib/cityTurns';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import {
   groupIcons,
   reduceKnownYield,
-} from '@civ-clone-ui/client/lib/yieldMap';
-import { imageSize } from '@civ-clone-ui/assets/lib/imageSize';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
-import { playerColours } from '@civ-clone-ui/assets/lib/renderUnit';
-import { readableOn } from '@civ-clone-ui/widgets/lib/contrast';
+} from '@civ-clone/ui-client/lib/yieldMap';
+import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { playerColours } from '@civ-clone/ui-assets/lib/renderUnit';
+import { readableOn } from '@civ-clone/ui-widgets/lib/contrast';
 
 // The cities on the map under the new interface (#747): a banner below each city's square, as Civ V draws them, so the
 //  empire reads without opening anything. The theme says which, through `--ui-city-banner`: `full` draws the banner,

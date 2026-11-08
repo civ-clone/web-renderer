@@ -1,6 +1,6 @@
 import Music from '../../../src/js/Audio/Music';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import soundGain, { onSoundChanged } from '@civ-clone-ui/assets/lib/soundGain';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import soundGain, { onSoundChanged } from '@civ-clone/ui-assets/lib/soundGain';
 import { version } from '../../../build.json';
 
 /**

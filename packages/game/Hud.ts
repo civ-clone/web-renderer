@@ -1,23 +1,23 @@
-import { GameData, PlayerAction, Tile, Unit } from '@civ-clone-ui/client/types';
-import Actions from '@civ-clone-ui/windows/components/Actions';
-import GameDetails from '@civ-clone-ui/windows/components/GameDetails';
-import Dismissals from '@civ-clone-ui/client/lib/dismissals';
-import NextTurn from '@civ-clone-ui/windows/components/NextTurn';
-import NotificationRows from '@civ-clone-ui/windows/components/NotificationRows';
-import Notices from '@civ-clone-ui/windows/components/Notices';
-import PlayerDetails from '@civ-clone-ui/windows/components/PlayerDetails';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import ScienceReport from '@civ-clone-ui/windows/components/ScienceReport';
-import PowerList from '@civ-clone-ui/windows/components/PowerList';
-import { openTradeReport } from '@civ-clone-ui/windows/components/reports';
-import Transport from '@civ-clone-ui/client/Transport';
-import UnitActions from '@civ-clone-ui/windows/components/UnitActions';
-import UnitCardActions from '@civ-clone-ui/windows/components/UnitCardActions';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
+import { GameData, PlayerAction, Tile, Unit } from '@civ-clone/ui-client/types';
+import Actions from '@civ-clone/ui-windows/components/Actions';
+import GameDetails from '@civ-clone/ui-windows/components/GameDetails';
+import Dismissals from '@civ-clone/ui-client/lib/dismissals';
+import NextTurn from '@civ-clone/ui-windows/components/NextTurn';
+import NotificationRows from '@civ-clone/ui-windows/components/NotificationRows';
+import Notices from '@civ-clone/ui-windows/components/Notices';
+import PlayerDetails from '@civ-clone/ui-windows/components/PlayerDetails';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
+import PowerList from '@civ-clone/ui-windows/components/PowerList';
+import { openTradeReport } from '@civ-clone/ui-windows/components/reports';
+import Transport from '@civ-clone/ui-client/Transport';
+import UnitActions from '@civ-clone/ui-windows/components/UnitActions';
+import UnitCardActions from '@civ-clone/ui-windows/components/UnitCardActions';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import nextTurnQueue, {
   actionKey,
-} from '@civ-clone-ui/client/lib/nextTurnQueue';
-import partitionActions from '@civ-clone-ui/client/lib/playerActionPanels';
+} from '@civ-clone/ui-client/lib/nextTurnQueue';
+import partitionActions from '@civ-clone/ui-client/lib/playerActionPanels';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

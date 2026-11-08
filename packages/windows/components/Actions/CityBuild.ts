@@ -1,20 +1,20 @@
 import {
   CityBuild as CityBuildObject,
   PlayerAction,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import Action from './Action';
 import CityBuildAvailable from '../../../../src/js/Engine/Requests/CityBuildAvailable';
 import { openCityBuild } from '../choices';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class CityBuild extends Action {
   // Whether the picker is waiting for what the city can build (#484).

@@ -2,12 +2,12 @@ import {
   Player,
   Unit as UnitData,
   UnitAction,
-} from '@civ-clone-ui/client/types';
-import ActionWindow from '@civ-clone-ui/widgets/components/ActionWindow';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
-import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
+} from '@civ-clone/ui-client/types';
+import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
 import { openChoice } from '../components/choiceList';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { t } from 'i18next';
 
 // The windows a unit action can need before it's sent: a sneak attack's confirmation, a treaty partner's land (#287),

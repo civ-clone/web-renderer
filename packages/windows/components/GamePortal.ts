@@ -1,18 +1,18 @@
-import { DragSample, releaseVelocity } from '@civ-clone-ui/widgets/lib/drag';
-import { Coordinate, Tile, Unit } from '@civ-clone-ui/client/types';
+import { DragSample, releaseVelocity } from '@civ-clone/ui-widgets/lib/drag';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-client/types';
 import {
   TooltipContent,
   hideTooltip,
   showTooltipOver,
   tooltipOpenOver,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
 import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
 import squareTooltip, { hasSquareTooltip } from './Map/squareTooltip';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { openUnitSelection } from './choices';
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import { Rect } from '@civ-clone-ui/map/lib/viewport';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import UnitActionMenu from './UnitActionMenu';
 import openUnitMenu from './UiUnitMenu';
 import { openMenu } from './UiMenu';

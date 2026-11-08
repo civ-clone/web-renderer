@@ -9,11 +9,11 @@ import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
 
-import { City } from '@civ-clone-ui/client/types';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
-import Map from '@civ-clone-ui/map/components/Map';
-import World from '@civ-clone-ui/map/components/World';
+import { City } from '@civ-clone/ui-client/types';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import Map from '@civ-clone/ui-map/components/Map';
+import World from '@civ-clone/ui-map/components/World';
 
 const failures: string[] = [];
 let checks = 0,

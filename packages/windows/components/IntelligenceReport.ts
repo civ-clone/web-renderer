@@ -3,13 +3,13 @@ import {
   IntelligenceRow,
 } from '../../../src/js/Engine/lib/intelligence';
 import Intelligence from '../../../src/js/Engine/Requests/Intelligence';
-import Transport from '@civ-clone-ui/client/Transport';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import Transport from '@civ-clone/ui-client/Transport';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { advanceNames } from './lib/advances';
 import { yieldIcon } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The intelligence report (F3, #58), after v474.05's (`Overlay_14.cs` `F14_0000_1164`): every civilization you've
 //  met, with what an embassy tells you about it.

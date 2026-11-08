@@ -11,34 +11,34 @@ import {
   applyUiTheme,
   currentUiTheme,
   uiThemeFrom,
-} from '@civ-clone-ui/widgets/lib/theme';
+} from '@civ-clone/ui-widgets/lib/theme';
 import {
   applyInterface,
   chosenInterface,
   interfaceMode,
   interfaces,
   registerInterface,
-} from '@civ-clone-ui/client/lib/interfaceMode';
+} from '@civ-clone/ui-client/lib/interfaceMode';
 import {
   interfaceRows,
   themeRow,
-} from '@civ-clone-ui/windows/components/GameOptions';
-import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
+} from '@civ-clone/ui-windows/components/GameOptions';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import forgetVisitParam, {
   withoutForgottenParams,
-} from '@civ-clone-ui/client/lib/forgetVisitParam';
+} from '@civ-clone/ui-client/lib/forgetVisitParam';
 import GameOptions, {
   assetsRow,
-} from '@civ-clone-ui/windows/components/GameOptions';
-import { IPortal } from '@civ-clone-ui/map/components/Portal';
+} from '@civ-clone/ui-windows/components/GameOptions';
+import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import {
   allowLeaving,
   guardLeaving,
-} from '@civ-clone-ui/windows/lib/leaveGuard';
+} from '@civ-clone/ui-windows/lib/leaveGuard';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
-import setOptionDefaults from '@civ-clone-ui/game/app/options';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import setOptionDefaults from '@civ-clone/ui-game/app/options';
 
 const failures: string[] = [];
 let checks = 0;

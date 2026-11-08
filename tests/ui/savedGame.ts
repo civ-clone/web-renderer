@@ -18,7 +18,7 @@ import {
   loadSaveFromFile,
   savedTopologyId,
   takePendingSave,
-} from '@civ-clone-ui/windows/lib/savedGame';
+} from '@civ-clone/ui-windows/lib/savedGame';
 import i18next, { t } from 'i18next';
 
 // Everything `savedGame.ts` reaches for outside itself, it reaches for when it

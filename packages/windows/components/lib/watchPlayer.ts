@@ -1,5 +1,5 @@
-import { GameData, Player } from '@civ-clone-ui/client/types';
-import DataChanges, { instance } from '@civ-clone-ui/client/lib/DataChanges';
+import { GameData, Player } from '@civ-clone/ui-client/types';
+import DataChanges, { instance } from '@civ-clone/ui-client/lib/DataChanges';
 
 /** The ids, besides the player's own, that a window shows of the player. */
 export type PlayerIds = (player: Player) => Iterable<string>;

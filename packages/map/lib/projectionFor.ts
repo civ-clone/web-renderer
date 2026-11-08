@@ -1,6 +1,6 @@
 import { Projection, WorldDimensions } from './projection';
-import { TilesetDescriptor } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 
 // Where the map's tiles go comes from the tileset (#92): the grid it is drawn for picks the projection, and its
 //  geometry says how far apart the tiles are. The rest of the renderer asks the projection, so a tileset on another

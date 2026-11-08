@@ -1,9 +1,9 @@
 import City, { classicCityLayout } from './City';
-import { City as CityData } from '@civ-clone-ui/client/types';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
+import { City as CityData } from '@civ-clone/ui-client/types';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
 import cityLayout from './CityLayout';
-import { defineSlot } from '@civ-clone-ui/client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 type CityLayout = typeof cityLayout | typeof classicCityLayout;
 

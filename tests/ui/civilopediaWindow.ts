@@ -10,14 +10,14 @@ import './lib/interfaces';
 import Civilopedia, {
   CivilopediaData,
   entryHtml,
-} from '@civ-clone-ui/windows/components/Civilopedia';
+} from '@civ-clone/ui-windows/components/Civilopedia';
 import CityBuildUnavailableWindow, {
   reasons,
-} from '@civ-clone-ui/windows/components/CityBuildUnavailableWindow';
+} from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
 import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
 import { RequirementData } from '../../src/js/Engine/lib/requirements';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

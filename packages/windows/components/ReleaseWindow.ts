@@ -1,9 +1,9 @@
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { s } from '@dom111/element';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { Marked } from 'marked';
-import { Release, byDay } from '@civ-clone-ui/client/lib/releaseDays';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { Release, byDay } from '@civ-clone/ui-client/lib/releaseDays';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
 
 const escapeHtml = (text: string): string =>

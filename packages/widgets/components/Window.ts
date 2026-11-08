@@ -1,11 +1,11 @@
 import { TransientElement, ITransientElement } from './TransientElement';
 import { off, on, s } from '@dom111/element';
-import { Coordinate } from '@civ-clone-ui/client/types';
+import { Coordinate } from '@civ-clone/ui-client/types';
 import { button } from '../lib/button';
 import eyebrowFor from '../lib/windowEyebrows';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { h } from '../lib/html';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { t } from 'i18next';
 
 export interface IWindow extends ITransientElement {

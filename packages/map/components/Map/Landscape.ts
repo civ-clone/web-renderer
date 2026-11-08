@@ -2,11 +2,11 @@ import {
   EntityInstance,
   NeighbourDirection,
   Tile,
-} from '@civ-clone-ui/client/types';
-import { CoastStrip } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+} from '@civ-clone/ui-client/types';
+import { CoastStrip } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
-import { isDrawable } from '@civ-clone-ui/assets/lib/imageSize';
-import { onPreloadedImagesChanged } from '@civ-clone-ui/assets/lib/getPreloadedImage';
+import { isDrawable } from '@civ-clone/ui-assets/lib/imageSize';
+import { onPreloadedImagesChanged } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { s } from '@dom111/element';
 
 type Improvement = 'Mine' | 'Pollution' | 'Railroad' | 'Road';

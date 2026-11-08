@@ -2,9 +2,9 @@ import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import CivilizationPower from '../../../src/js/Engine/Requests/CivilizationPower';
 import { CivilizationPowerRow } from '../../../src/js/Engine/lib/civilizationPower';
-import Transport from '@civ-clone-ui/client/Transport';
-import { toggleEvent } from '@civ-clone-ui/widgets/components/SidebarSection';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import Transport from '@civ-clone/ui-client/Transport';
+import { toggleEvent } from '@civ-clone/ui-widgets/components/SidebarSection';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

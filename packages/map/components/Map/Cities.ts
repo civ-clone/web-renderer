@@ -1,11 +1,11 @@
-import { Colouring } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import { Colouring } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { Map } from '../Map';
 import { Reach } from '../../lib/projection';
-import { Tile } from '@civ-clone-ui/client/types';
+import { Tile } from '@civ-clone/ui-client/types';
 import {
   playerColours,
   replacementColours,
-} from '@civ-clone-ui/assets/lib/renderUnit';
+} from '@civ-clone/ui-assets/lib/renderUnit';
 
 export class Cities extends Map {
   // The city glyph is drawn the tileset's inset right of and below the tile's corner (Civ1's, a scale step).

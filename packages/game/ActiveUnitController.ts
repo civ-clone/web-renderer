@@ -5,26 +5,26 @@ import {
   Tile,
   Unit,
   UnitAction,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import { TransportHandledAction } from '../../src/js/Engine/Transport';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import {
   directionKeys,
   keyToActionsMap,
-} from '@civ-clone-ui/client/lib/unitActionKeys';
-import chooseActiveUnit from '@civ-clone-ui/client/lib/chooseActiveUnit';
-import UnitQueue from '@civ-clone-ui/client/lib/UnitQueue';
-import { openArrivalWindow } from '@civ-clone-ui/windows/lib/unitActionPrompts';
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
+} from '@civ-clone/ui-client/lib/unitActionKeys';
+import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
+import UnitQueue from '@civ-clone/ui-client/lib/UnitQueue';
+import { openArrivalWindow } from '@civ-clone/ui-windows/lib/unitActionPrompts';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import {
   UnitActionsRequest,
   hasUnitActions,
   unitActions,
-} from '@civ-clone-ui/client/lib/unitActions';
-import ActiveUnitTiles from '@civ-clone-ui/map/lib/ActiveUnitTiles';
-import PendingMove from '@civ-clone-ui/client/lib/PendingMove';
+} from '@civ-clone/ui-client/lib/unitActions';
+import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
+import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
 import playUnitKey, { PlayedKey } from './lib/playUnitKey';
-import { Topology } from '@civ-clone-ui/client/lib/topologyFor';
+import { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 
 // The active unit: which one it is, what the map layers and the unit details show for it, and what a unit key or one
 //  of its buttons does to it, typed now or kept while a move or another order is answered (#326, #543).

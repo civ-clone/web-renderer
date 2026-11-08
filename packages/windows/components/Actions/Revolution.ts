@@ -1,12 +1,12 @@
 import Action from './Action';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
-import { PlayerGovernment } from '@civ-clone-ui/client/types';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import { PlayerGovernment } from '@civ-clone/ui-client/types';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 /**
  * Asks before starting a revolution, and sends it once confirmed: for the button and the top bar's government alike

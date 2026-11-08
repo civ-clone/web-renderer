@@ -12,8 +12,8 @@ import {
   interactionLabel,
   negotiationLine,
   speakerOf,
-} from '@civ-clone-ui/client/lib/interactionLabels';
-import { Interactions, Player } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/lib/interactionLabels';
+import { Interactions, Player } from '@civ-clone/ui-client/types';
 import i18next from 'i18next';
 
 const failures: string[] = [];

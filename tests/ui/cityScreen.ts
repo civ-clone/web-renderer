@@ -20,28 +20,28 @@ import {
   citizenMoods,
   citizenSprites,
   specialistSprites,
-} from '@civ-clone-ui/client/lib/citizens';
+} from '@civ-clone/ui-client/lib/citizens';
 import {
   orderSpecialists,
   specialistForKey,
-} from '@civ-clone-ui/client/lib/specialists';
-import { CitizenMood, Yield } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/lib/specialists';
+import { CitizenMood, Yield } from '@civ-clone/ui-client/types';
 import {
   netTileYields,
   splitYield,
   tileYieldIcons,
   yieldGroup,
-} from '@civ-clone-ui/client/lib/yieldMap';
-import { City, DataPatch, GameData } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/lib/yieldMap';
+import { City, DataPatch, GameData } from '@civ-clone/ui-client/types';
 import {
   ObjectMap,
   PlainObject,
-} from '@civ-clone-ui/client/lib/reconstituteData';
-import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
-import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
-import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
-import { toggleAuto } from '@civ-clone-ui/client/components/lib/cityBuild';
-import watchCity from '@civ-clone-ui/windows/components/lib/watchCity';
+} from '@civ-clone/ui-client/lib/reconstituteData';
+import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
+import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
+import { toggleAuto } from '@civ-clone/ui-client/components/lib/cityBuild';
+import watchCity from '@civ-clone/ui-windows/components/lib/watchCity';
 
 const failures: string[] = [];
 let checks = 0,

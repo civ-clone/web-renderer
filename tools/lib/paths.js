@@ -5,6 +5,10 @@ const path = require('path');
 const webRenderer = path.resolve(__dirname, '..', '..');
 const nodeModules = path.join(webRenderer, 'node_modules');
 const scope = path.join(nodeModules, '@civ-clone');
+
+// The frontend's own workspace packages share the scope as `@civ-clone/ui-*` (#825). They are this repository's
+// folders, not engine packages: the tools that list what is installed in the scope leave them out.
+const isUiPackage = (name) => name.startsWith('ui-');
 const toolsDir = path.join(webRenderer, 'tools');
 const manifestPath = path.join(toolsDir, 'packages.json');
 
@@ -33,6 +37,7 @@ const checkoutPath = (name) => path.join(workspaceRoot(), name);
 module.exports = {
   checkoutPath,
   expandHome,
+  isUiPackage,
   manifestPath,
   nodeModules,
   scope,

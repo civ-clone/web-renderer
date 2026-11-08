@@ -6,8 +6,8 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { darkenTopArrow } from '@civ-clone-ui/assets/components/lib/corruptionIcon';
-import ScaledCanvases from '@civ-clone-ui/assets/lib/scaledCanvases';
+import { darkenTopArrow } from '@civ-clone/ui-assets/components/lib/corruptionIcon';
+import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 
 const failures: string[] = [];
 let checks = 0,

@@ -8,7 +8,7 @@ import './lib/interfaces';
 
 import tooltip, {
   hideTooltip,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
 
 const failures: string[] = [];
 let checks = 0;

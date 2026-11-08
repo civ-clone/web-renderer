@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { checkoutPath, webRenderer } = require('./paths');
+const { checkoutPath, isUiPackage, webRenderer } = require('./paths');
 
 // Two copies of one package is not a version conflict that something reports.
 // It is silent, and it breaks `instanceof`.
@@ -70,21 +70,23 @@ const linksIn = (root) => {
       return;
     }
 
-    names.forEach((name) => {
-      const entry = storeEntryOf(path.join(dir, name));
+    names
+      .filter((name) => !isUiPackage(name))
+      .forEach((name) => {
+        const entry = storeEntryOf(path.join(dir, name));
 
-      if (entry === null) {
-        return;
-      }
+        if (entry === null) {
+          return;
+        }
 
-      if (!found.has(name)) {
-        found.set(name, new Map());
-      }
+        if (!found.has(name)) {
+          found.set(name, new Map());
+        }
 
-      const entries = found.get(name);
+        const entries = found.get(name);
 
-      entries.set(entry, (entries.get(entry) ?? 0) + 1);
-    });
+        entries.set(entry, (entries.get(entry) ?? 0) + 1);
+      });
   });
 
   return found;

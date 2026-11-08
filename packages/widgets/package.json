@@ -1,11 +1,11 @@
 {
-  "name": "@civ-clone-ui/widgets",
+  "name": "@civ-clone/ui-widgets",
   "version": "0.1.0",
   "private": true,
   "description": "The window and its controls, with nothing about the game in them: what every interface builds its windows from.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone-ui/assets": "workspace:*",
-    "@civ-clone-ui/client": "workspace:*"
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*"
   }
 }

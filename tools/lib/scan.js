@@ -1,13 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const { nodeModules, scope } = require('./paths');
+const { isUiPackage, nodeModules, scope } = require('./paths');
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'tests', 'test', '.dist']);
 
 // Matches a `#name` declaration at the start of a line inside a class body.
 // The trailing group tells a field (`: T`, `= v`, `;`, EOL) from a method (`(`).
-const DECLARATION = /^([ \t]*)(static\s+)?(readonly\s+)?(#[A-Za-z_$][\w$]*)\s*(.?)/;
+const DECLARATION =
+  /^([ \t]*)(static\s+)?(readonly\s+)?(#[A-Za-z_$][\w$]*)\s*(.?)/;
 
 const walk = (dir, matches, found = []) => {
   let entries;
@@ -106,43 +107,45 @@ const scanSource = (dir) => {
 const installedPackages = () => {
   const packages = {};
 
-  fs.readdirSync(scope).forEach((name) => {
-    const linkPath = path.join(scope, name);
-    let realPath;
+  fs.readdirSync(scope)
+    .filter((name) => !isUiPackage(name))
+    .forEach((name) => {
+      const linkPath = path.join(scope, name);
+      let realPath;
 
-    try {
-      realPath = fs.realpathSync(linkPath);
-    } catch (e) {
-      return;
-    }
+      try {
+        realPath = fs.realpathSync(linkPath);
+      } catch (e) {
+        return;
+      }
 
-    let manifest;
+      let manifest;
 
-    try {
-      manifest = JSON.parse(
-        fs.readFileSync(path.join(realPath, 'package.json'), 'utf8')
-      );
-    } catch (e) {
-      return;
-    }
+      try {
+        manifest = JSON.parse(
+          fs.readFileSync(path.join(realPath, 'package.json'), 'utf8')
+        );
+      } catch (e) {
+        return;
+      }
 
-    // `.pnpm/@civ-clone+core-city@0.1.10` vs the codeload URL form used for
-    // dependencies declared as `github:civ-clone/<name>`.
-    const store = path.relative(path.join(nodeModules, '.pnpm'), realPath);
-    const resolution = /codeload\.github\.com/.test(store) ? 'github' : 'npm';
+      // `.pnpm/@civ-clone+core-city@0.1.10` vs the codeload URL form used for
+      // dependencies declared as `github:civ-clone/<name>`.
+      const store = path.relative(path.join(nodeModules, '.pnpm'), realPath);
+      const resolution = /codeload\.github\.com/.test(store) ? 'github' : 'npm';
 
-    packages[name] = {
-      name,
-      version: manifest.version,
-      resolution,
-      realPath,
-      dependencies: Object.keys(manifest.dependencies || {})
-        .filter((dependency) => dependency.startsWith('@civ-clone/'))
-        .map((dependency) => dependency.slice('@civ-clone/'.length))
-        .sort(),
-      source: scanSource(realPath),
-    };
-  });
+      packages[name] = {
+        name,
+        version: manifest.version,
+        resolution,
+        realPath,
+        dependencies: Object.keys(manifest.dependencies || {})
+          .filter((dependency) => dependency.startsWith('@civ-clone/'))
+          .map((dependency) => dependency.slice('@civ-clone/'.length))
+          .sort(),
+        source: scanSource(realPath),
+      };
+    });
 
   return packages;
 };

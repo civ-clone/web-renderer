@@ -14,9 +14,9 @@ import {
 import CivilopediaRequest from '../../../src/js/Engine/Requests/Civilopedia';
 import { RequirementData } from '../../../src/js/Engine/lib/requirements';
 import Requirements from '../../../src/js/Engine/Requests/Requirements';
-import Transport from '@civ-clone-ui/client/Transport';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import Transport from '@civ-clone/ui-client/Transport';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

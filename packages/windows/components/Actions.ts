@@ -7,14 +7,14 @@ import CityBuild from './Actions/CityBuild';
 import CivilDisorder from './Actions/CivilDisorder';
 import EndTurn from './Actions/EndTurn';
 import Notice from './Actions/Notice';
-import { Player, PlayerAction } from '@civ-clone-ui/client/types';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import { Player, PlayerAction } from '@civ-clone/ui-client/types';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
-import Transport from '@civ-clone-ui/client/Transport';
-import { getClosestAncestorMatching } from '@civ-clone-ui/widgets/lib/html';
-import { hideTooltipWithin } from '@civ-clone-ui/widgets/components/lib/Tooltip';
-import { mappedKeyFromEvent } from '@civ-clone-ui/client/lib/mappedKey';
+import Transport from '@civ-clone/ui-client/Transport';
+import { getClosestAncestorMatching } from '@civ-clone/ui-widgets/lib/html';
+import { hideTooltipWithin } from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 
 declare global {
   interface GlobalEventHandlersEventMap {

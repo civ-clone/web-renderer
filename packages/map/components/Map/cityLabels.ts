@@ -1,5 +1,5 @@
 import CityNames from './CityNames';
-import { defineSlot } from '@civ-clone-ui/client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // The interface's `cityLabels` slot (#824), which each interface in `interfaces/` fills (#825): what names the cities
 //  on the map.

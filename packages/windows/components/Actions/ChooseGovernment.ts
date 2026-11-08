@@ -1,12 +1,12 @@
 import Action from './Action';
-import { PlayerGovernment } from '@civ-clone-ui/client/types';
+import { PlayerGovernment } from '@civ-clone/ui-client/types';
 import entryDetails from '../lib/choiceDetails';
 import { openChoice } from '../choiceList';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class ChooseGovernment extends Action {
   activate(): void {

@@ -37,7 +37,7 @@ type Manifest = {
 
 const root = process.cwd(),
   packagesRoot = join(root, 'packages'),
-  scope = '@civ-clone-ui/',
+  scope = '@civ-clone/ui-',
   names = readdirSync(packagesRoot)
     .filter((name) => existsSync(join(packagesRoot, name, 'package.json')))
     .sort(),
@@ -114,10 +114,10 @@ expect(
       "const f = import ('./f');",
       "const g = require ('./g');",
       "import type { H } from './h';",
-      "import I from '@civ-clone-ui/client/i';",
+      "import I from '@civ-clone/ui-client/i';",
     ].join('\n')
   ),
-  ['./c', './d', './e', './f', './g', './h', '@civ-clone-ui/client/i']
+  ['./c', './d', './e', './f', './g', './h', '@civ-clone/ui-client/i']
 );
 
 const edges = names.flatMap((name) =>
@@ -239,8 +239,9 @@ expect(
     .filter(
       ({ from, path, to }) =>
         to === from &&
-        specifiersOf(readFileSync(path, 'utf8')).some((spec) =>
-          spec.startsWith(`${scope}${from}`)
+        specifiersOf(readFileSync(path, 'utf8')).some(
+          (spec) =>
+            spec === `${scope}${from}` || spec.startsWith(`${scope}${from}/`)
         )
     )
     .map(({ path }) => relative(root, path))
@@ -342,7 +343,7 @@ expect(
 
       return [
         path,
-        (paths['@civ-clone-ui/*'] ?? []).map((target) =>
+        (paths['@civ-clone/ui-*'] ?? []).map((target) =>
           relative(root, join(root, path, '..', baseUrl, target))
         ),
       ];

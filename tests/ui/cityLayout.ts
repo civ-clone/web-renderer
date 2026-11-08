@@ -12,17 +12,17 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import City, { classicCityLayout } from '@civ-clone-ui/windows/components/City';
-import { City as CityData } from '@civ-clone-ui/client/types';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import City, { classicCityLayout } from '@civ-clone/ui-windows/components/City';
+import { City as CityData } from '@civ-clone/ui-client/types';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
-import openCity from '@civ-clone-ui/windows/components/openCity';
-import { turnsLeft } from '@civ-clone-ui/client/lib/cityTurns';
-import { turnsText } from '@civ-clone-ui/windows/components/lib/cityYields';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import openCity from '@civ-clone/ui-windows/components/openCity';
+import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
+import { turnsText } from '@civ-clone/ui-windows/components/lib/cityYields';
 
 const failures: string[] = [];
 let checks = 0,

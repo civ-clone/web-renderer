@@ -6,9 +6,9 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { fold, matches } from '@civ-clone-ui/widgets/lib/filterRows';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import { hallOfFameTable } from '@civ-clone-ui/windows/components/HallOfFameWindow';
+import { fold, matches } from '@civ-clone/ui-widgets/lib/filterRows';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import { hallOfFameTable } from '@civ-clone/ui-windows/components/HallOfFameWindow';
 import i18next from 'i18next';
 import { s } from '@dom111/element';
 

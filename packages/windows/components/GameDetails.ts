@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
-import { GameDifficulty, Yield } from '@civ-clone-ui/client/types';
-import { difficultyName } from '@civ-clone-ui/client/lib/difficulty';
+import { GameDifficulty, Yield } from '@civ-clone/ui-client/types';
+import { difficultyName } from '@civ-clone/ui-client/lib/difficulty';
 import { t } from 'i18next';
 
 export class GameDetails extends Element {

@@ -1,4 +1,4 @@
-import { City, NeighbourDirection, Tile } from '@civ-clone-ui/client/types';
+import { City, NeighbourDirection, Tile } from '@civ-clone/ui-client/types';
 import { Placement, Projection, Reach } from '../lib/projection';
 import {
   Rect,
@@ -7,13 +7,13 @@ import {
   repeatOffsets,
   wrapIndices,
 } from '../lib/viewport';
-import { getPreloadedImage } from '@civ-clone-ui/assets/lib/getPreloadedImage';
+import { getPreloadedImage } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import World from './World';
-import { TilesetDescriptor } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { imageSize } from '@civ-clone-ui/assets/lib/imageSize';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 import projectionFor from '../lib/projectionFor';
-import replaceColours from '@civ-clone-ui/assets/lib/replaceColours';
+import replaceColours from '@civ-clone/ui-assets/lib/replaceColours';
 import { s } from '@dom111/element';
 
 export interface IMap {

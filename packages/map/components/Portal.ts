@@ -1,4 +1,4 @@
-import { Coordinate, Tile, Unit } from '@civ-clone-ui/client/types';
+import { Coordinate, Tile, Unit } from '@civ-clone/ui-client/types';
 import { EventEmitter } from '@dom111/typed-event-emitter';
 import {
   Rect,
@@ -9,15 +9,15 @@ import {
 } from '../lib/viewport';
 import Map from './Map';
 import { Projection } from '../lib/projection';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
 import currentTileset, {
   nativeTileSize,
-} from '@civ-clone-ui/assets/lib/tilesets';
+} from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor from '../lib/projectionFor';
-import { City as CityData } from '@civ-clone-ui/client/types';
+import { City as CityData } from '@civ-clone/ui-client/types';
 
 /** How a city opens from the map: which do, and opening one (`lib/cityOpeners.ts` has the game's). */
 export type CityOpener = {

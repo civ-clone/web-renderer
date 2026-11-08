@@ -9,8 +9,8 @@ import './lib/interfaces';
 
 import GameOptionsRegistry, {
   OptionStorage,
-} from '@civ-clone-ui/client/GameOptionsRegistry';
-import SidebarSection from '@civ-clone-ui/widgets/components/SidebarSection';
+} from '@civ-clone/ui-client/GameOptionsRegistry';
+import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
 
 const failures: string[] = [];
 let checks = 0;

@@ -11,23 +11,23 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import { DataPatch } from '@civ-clone-ui/client/types';
+import { DataPatch } from '@civ-clone/ui-client/types';
 import { GameOverDetails } from '../../src/js/Engine/lib/gameOver';
-import { ObjectMap } from '@civ-clone-ui/client/lib/reconstituteData';
+import { ObjectMap } from '@civ-clone/ui-client/lib/reconstituteData';
 import { ObserverState } from '../../src/js/Engine/Observer';
 import i18next from 'i18next';
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
-import GameOverWindow from '@civ-clone-ui/windows/components/GameOverWindow';
-import GameSession from '@civ-clone-ui/game/GameSession';
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
-import NotificationBar from '@civ-clone-ui/game/app/NotificationBar';
-import Notices from '@civ-clone-ui/windows/components/Notices';
-import Notifications from '@civ-clone-ui/windows/components/Notifications';
-import ObserverBar from '@civ-clone-ui/windows/components/ObserverBar';
-import Transport from '@civ-clone-ui/client/Transport';
-import appElements from '@civ-clone-ui/game/app/elements';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import { hallOfFame } from '@civ-clone-ui/client/lib/hallOfFame';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
+import GameOverWindow from '@civ-clone/ui-windows/components/GameOverWindow';
+import GameSession from '@civ-clone/ui-game/GameSession';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
+import NotificationBar from '@civ-clone/ui-game/app/NotificationBar';
+import Notices from '@civ-clone/ui-windows/components/Notices';
+import Notifications from '@civ-clone/ui-windows/components/Notifications';
+import ObserverBar from '@civ-clone/ui-windows/components/ObserverBar';
+import Transport from '@civ-clone/ui-client/Transport';
+import appElements from '@civ-clone/ui-game/app/elements';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { hallOfFame } from '@civ-clone/ui-client/lib/hallOfFame';
 
 const failures: string[] = [];
 let checks = 0,

@@ -18,20 +18,20 @@ import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
 import getPreloadedImage, {
   setSprites,
-} from '@civ-clone-ui/assets/lib/getPreloadedImage';
+} from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import validateDescriptor, {
   expandName,
   spriteKey,
-} from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
-import civ1Json from '@civ-clone-ui/assets/tilesets/civ1.json';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
+import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import {
   citizenSprites,
   specialistSprites,
-} from '@civ-clone-ui/client/lib/citizens';
-import { groupIcons } from '@civ-clone-ui/client/lib/yieldMap';
+} from '@civ-clone/ui-client/lib/citizens';
+import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
 
 const failures: string[] = [];
 let checks = 0,

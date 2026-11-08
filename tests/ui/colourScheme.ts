@@ -8,12 +8,12 @@ import './lib/interfaces';
 
 import GameOptionsRegistry, {
   OptionStorage,
-} from '@civ-clone-ui/client/GameOptionsRegistry';
+} from '@civ-clone/ui-client/GameOptionsRegistry';
 import {
   COLOUR_SCHEMES,
   applyColourScheme,
   applyUiTheme,
-} from '@civ-clone-ui/widgets/lib/theme';
+} from '@civ-clone/ui-widgets/lib/theme';
 
 const failures: string[] = [];
 let checks = 0;

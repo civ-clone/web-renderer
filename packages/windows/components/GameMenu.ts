@@ -14,26 +14,26 @@ import {
   openTradeReport,
 } from './reports';
 import Civilopedia from './Civilopedia';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
 import GameOptions from './GameOptions';
-import { Player } from '@civ-clone-ui/client/types';
+import { Player } from '@civ-clone/ui-client/types';
 import PopupMenu, {
   hasPopupMenu,
-} from '@civ-clone-ui/widgets/components/PopupMenu';
+} from '@civ-clone/ui-widgets/components/PopupMenu';
 import UiMenu, { UiMenuItem } from './UiMenu';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
-import { windowKey } from '@civ-clone-ui/widgets/lib/windowEyebrows';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
+import { windowKey } from '@civ-clone/ui-widgets/lib/windowEyebrows';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import ScienceReport from './ScienceReport';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
-import { elementId, h } from '@civ-clone-ui/widgets/lib/html';
+import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import { SaveDetails } from '../../../src/js/Engine/Transport';
 import { t } from 'i18next';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The local player comes first, labelled "You" with an empty value so leaving
 // the select alone sends no `player` at all; every other player follows,

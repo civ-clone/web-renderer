@@ -4,25 +4,25 @@ import {
   MartialLaw,
   MilitaryUnhappiness,
   Player,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import {
   groupIcons,
   reduceKnownYield,
-} from '@civ-clone-ui/client/lib/yieldMap';
+} from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from './SupportedUnit';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { escape } from './lib/requirements';
-import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
-import { h } from '@civ-clone-ui/widgets/lib/html';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { h } from '@civ-clone/ui-widgets/lib/html';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { renderPopulation } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

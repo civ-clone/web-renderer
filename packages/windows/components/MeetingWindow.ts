@@ -1,11 +1,11 @@
 import { IntelligenceRow } from '../../../src/js/Engine/lib/intelligence';
-import { NegotiationLine } from '@civ-clone-ui/client/lib/interactionLabels';
-import { Window } from '@civ-clone-ui/widgets/components/Window';
-import { button } from '@civ-clone-ui/widgets/lib/button';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { NegotiationLine } from '@civ-clone/ui-client/lib/interactionLabels';
+import { Window } from '@civ-clone/ui-widgets/components/Window';
+import { button } from '@civ-clone/ui-widgets/lib/button';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 /** Who the player is meeting, already translated, set as text. */
 export interface MeetingNation {

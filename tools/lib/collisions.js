@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { checkoutPath, scope } = require('./paths');
+const { checkoutPath, isUiPackage, scope } = require('./paths');
 const { read } = require('./audit');
 const { sourceFiles } = require('./scan');
 
@@ -15,8 +15,10 @@ const { sourceFiles } = require('./scan');
 // Class names are matched by name, not by resolved import, which is a heuristic:
 // two unrelated classes sharing a name could pair up. The output is small enough
 // to check by hand, and a false positive costs a glance.
-const CLASS = /^export\s+(?:abstract\s+)?class\s+(\w+)(?:<[^{]*?>)?\s*(?:extends\s+([\w]+)(?:<[^{]*?>)?)?/gm;
-const FIELD = /^\s{2}(?:private\s+|protected\s+|readonly\s+)*(?:(#)|_)([A-Za-z_$][\w$]*)\s*[:=;?]/gm;
+const CLASS =
+  /^export\s+(?:abstract\s+)?class\s+(\w+)(?:<[^{]*?>)?\s*(?:extends\s+([\w]+)(?:<[^{]*?>)?)?/gm;
+const FIELD =
+  /^\s{2}(?:private\s+|protected\s+|readonly\s+)*(?:(#)|_)([A-Za-z_$][\w$]*)\s*[:=;?]/gm;
 
 const classesIn = (dir, label, found) => {
   sourceFiles(dir).forEach((file) => {
@@ -50,11 +52,13 @@ const scan = () => {
   const classes = new Map();
 
   // Installed packages first, so a checkout's newer source wins where both exist.
-  fs.readdirSync(scope).forEach((name) => {
-    try {
-      classesIn(fs.realpathSync(path.join(scope, name)), name, classes);
-    } catch (e) {}
-  });
+  fs.readdirSync(scope)
+    .filter((name) => !isUiPackage(name))
+    .forEach((name) => {
+      try {
+        classesIn(fs.realpathSync(path.join(scope, name)), name, classes);
+      } catch (e) {}
+    });
 
   Object.keys(manifest.packages).forEach((name) => {
     if (fs.existsSync(checkoutPath(name))) {
@@ -110,7 +114,9 @@ const run = () => {
 
   found.forEach((hit) =>
     console.log(
-      `  ${hit.live ? 'TS2415' : 'shadow'}  ${hit.where} ${hit.name}._${hit.field} over ${hit.baseWhere} ${hit.base}`
+      `  ${hit.live ? 'TS2415' : 'shadow'}  ${hit.where} ${hit.name}._${
+        hit.field
+      } over ${hit.baseWhere} ${hit.base}`
     )
   );
 

@@ -9,12 +9,12 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { GameData, PlayerAction, Tile, Unit } from '@civ-clone-ui/client/types';
-import Hud from '@civ-clone-ui/game/Hud';
-import Notices from '@civ-clone-ui/windows/components/Notices';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import { GameData, PlayerAction, Tile, Unit } from '@civ-clone/ui-client/types';
+import Hud from '@civ-clone/ui-game/Hud';
+import Notices from '@civ-clone/ui-windows/components/Notices';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 
 const failures: string[] = [];

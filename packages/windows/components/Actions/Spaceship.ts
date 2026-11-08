@@ -1,11 +1,11 @@
 import Action from './Action';
-import { Spaceship as SpaceshipData } from '@civ-clone-ui/client/types';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import { Spaceship as SpaceshipData } from '@civ-clone/ui-client/types';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import civilizationAttribute from '../lib/civilizationAttribute';
-import { h } from '@civ-clone-ui/widgets/lib/html';
-import { instance as localeProviderInstance } from '@civ-clone-ui/client/LocaleProvider';
+import { h } from '@civ-clone/ui-widgets/lib/html';
+import { instance as localeProviderInstance } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
 
 type SpaceshipYieldMap = {

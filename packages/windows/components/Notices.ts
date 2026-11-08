@@ -1,4 +1,4 @@
-import { City, GameData, PlayerAction } from '@civ-clone-ui/client/types';
+import { City, GameData, PlayerAction } from '@civ-clone/ui-client/types';
 import { Notification } from './Notifications';
 
 export interface Notice {

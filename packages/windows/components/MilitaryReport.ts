@@ -4,11 +4,11 @@ import {
   MilitaryStatusRow,
 } from '../../../src/js/Engine/lib/military';
 import Military from '../../../src/js/Engine/Requests/Military';
-import Transport from '@civ-clone-ui/client/Transport';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import Transport from '@civ-clone/ui-client/Transport';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The Military report (F2, #405), after v474.05's Military Advisor: MILITARY STATUS, each type of unit we have or are
 //  building, then MILITARY LOSSES, each type we have lost. Our own only, as the original shows them without the cheat.

@@ -3,18 +3,18 @@ import {
   CityImprovementMaintenanceGold,
   Player,
   Yield,
-} from '@civ-clone-ui/client/types';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
-import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+} from '@civ-clone/ui-client/types';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from './lib/government';
-import { groupIcons } from '@civ-clone-ui/client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, { cityRowIds } from './lib/watchPlayer';

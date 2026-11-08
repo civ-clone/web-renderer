@@ -34,7 +34,7 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import { reconstituteData } from '@civ-clone-ui/client/lib/reconstituteData';
+import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
 import { unknownPlayerOf } from '../../src/js/Engine/Client/standIns';
 import { instance as workedTileRegistryInstance } from '@civ-clone/core-city/WorkedTileRegistry';
 

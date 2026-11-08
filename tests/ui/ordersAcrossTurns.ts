@@ -11,12 +11,12 @@ import './lib/interfaces';
 import './lib/classicInterface';
 
 import i18next from 'i18next';
-import ActiveUnitController from '@civ-clone-ui/game/ActiveUnitController';
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
-import PendingMove from '@civ-clone-ui/client/lib/PendingMove';
-import topologyFor from '@civ-clone-ui/client/lib/topologyFor';
+import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
+import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 import { TransportHandledAction } from '../../src/js/Engine/Transport';
-import { Tile } from '@civ-clone-ui/client/types';
+import { Tile } from '@civ-clone/ui-client/types';
 
 const failures: string[] = [];
 let checks = 0,

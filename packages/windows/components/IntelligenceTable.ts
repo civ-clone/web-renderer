@@ -2,15 +2,15 @@ import {
   IntelligenceDetails,
   IntelligenceRow,
 } from '../../../src/js/Engine/lib/intelligence';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
 import Intelligence from '../../../src/js/Engine/Requests/Intelligence';
-import ReportTable from '@civ-clone-ui/widgets/components/lib/ReportTable';
-import Transport from '@civ-clone-ui/client/Transport';
+import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import Transport from '@civ-clone/ui-client/Transport';
 import { advanceNames } from './lib/advances';
-import { cityNameText } from '@civ-clone-ui/client/components/lib/city';
+import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 const plural = (civilization: string): string =>
   t(`${civilization}.plural`, {

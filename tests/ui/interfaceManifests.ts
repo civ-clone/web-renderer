@@ -9,8 +9,8 @@ import './lib/interfaces';
 import {
   choiceList,
   openChoice,
-} from '@civ-clone-ui/windows/components/choiceList';
-import ChoiceWindow from '@civ-clone-ui/widgets/components/ChoiceWindow';
+} from '@civ-clone/ui-windows/components/choiceList';
+import ChoiceWindow from '@civ-clone/ui-widgets/components/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   DEFAULT_INTERFACE,
@@ -20,9 +20,9 @@ import {
   hasFeature,
   interfaces,
   registerInterface,
-} from '@civ-clone-ui/client/lib/interfaceMode';
+} from '@civ-clone/ui-client/lib/interfaceMode';
 import { join } from 'path';
-import { uiThemeFrom } from '@civ-clone-ui/widgets/lib/theme';
+import { uiThemeFrom } from '@civ-clone/ui-widgets/lib/theme';
 
 const failures: string[] = [];
 let checks = 0;

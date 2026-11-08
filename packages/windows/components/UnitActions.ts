@@ -2,14 +2,14 @@ import {
   IconLayer,
   drawUnitActionIcon,
   unitActionIconLayers,
-} from '@civ-clone-ui/assets/lib/unitActionIcon';
-import { Tile, Unit } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { Tile, Unit } from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
-import ScaledCanvases from '@civ-clone-ui/assets/lib/scaledCanvases';
-import { keyForAction } from '@civ-clone-ui/client/lib/unitActionKeys';
+import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
+import { keyForAction } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
 import { t } from 'i18next';
-import { unitActions } from '@civ-clone-ui/client/lib/unitActions';
+import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 
 const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 

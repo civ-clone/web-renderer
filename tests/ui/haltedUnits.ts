@@ -1,8 +1,8 @@
 // The units whose GoTo stopped next to a choice (#357): each is made active in turn, and its actions for the tile it
 //  stopped next to are offered once they have arrived, once, one window at a time.
 
-import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
-import { Unit } from '@civ-clone-ui/client/types';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
+import { Unit } from '@civ-clone/ui-client/types';
 
 const failures: string[] = [];
 let checks = 0;

@@ -1,7 +1,7 @@
-import { TilesetDescriptor } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import { drawableGrids } from './projectionFor';
-import { installedTilesets } from '@civ-clone-ui/assets/lib/tilesets';
+import { installedTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { topologyIds } from '@civ-clone/core-world/topologies';
 
 /**

@@ -1,4 +1,4 @@
-import { Tile } from '@civ-clone-ui/client/types';
+import { Tile } from '@civ-clone/ui-client/types';
 
 type TileHolder = {
   tile: Tile;

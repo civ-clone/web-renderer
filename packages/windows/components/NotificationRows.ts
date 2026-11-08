@@ -1,13 +1,13 @@
-import { City, Player, PlayerAction } from '@civ-clone-ui/client/types';
+import { City, Player, PlayerAction } from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
 import { noticeText } from './Actions/Notice';
 import { Notice as NoticeData } from './Notices';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { actionKey } from '@civ-clone-ui/client/lib/nextTurnQueue';
-import button from '@civ-clone-ui/widgets/lib/button';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
+import button from '@civ-clone/ui-widgets/lib/button';
 import { createAction } from './Actions';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
 
 // The notification rows (#416), above the Next Turn button under the new interface (#735): one row for each notice or

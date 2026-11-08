@@ -4,23 +4,23 @@ import {
   PlayerAction,
   Unit,
   UnitAction,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import CityBuildAvailable from '../../../src/js/Engine/Requests/CityBuildAvailable';
-import openCity from '@civ-clone-ui/windows/components/openCity';
+import openCity from '@civ-clone/ui-windows/components/openCity';
 import {
   openCityStatus,
   openHappinessReport,
   openTradeReport,
-} from '@civ-clone-ui/windows/components/reports';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import ScienceReport from '@civ-clone-ui/windows/components/ScienceReport';
-import Transport from '@civ-clone-ui/client/Transport';
-import endTurn from '@civ-clone-ui/client/lib/endTurn';
+} from '@civ-clone/ui-windows/components/reports';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
+import Transport from '@civ-clone/ui-client/Transport';
+import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import {
   hasUnitActions,
   unitActions,
-} from '@civ-clone-ui/client/lib/unitActions';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+} from '@civ-clone/ui-client/lib/unitActions';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 interface WindowLike {
   close(): void;

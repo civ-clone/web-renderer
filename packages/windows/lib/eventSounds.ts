@@ -10,11 +10,11 @@ import {
   Interactions,
   Negotiation,
   Player,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import type { BattleSound } from '../../../src/js/Engine/Client/battleEvents';
 import { GameOverDetails } from '../../../src/js/Engine/lib/gameOver';
 import civilizationAttribute from '../components/lib/civilizationAttribute';
-import instanceOf from '@civ-clone-ui/client/lib/instanceOf';
+import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 
 /** A notice as the page receives it (`components/Notifications.ts`), which isn't imported, so this checks on its own. */
 export interface Notification {

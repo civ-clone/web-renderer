@@ -1,25 +1,25 @@
-import { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
-import { CityStatus } from '@civ-clone-ui/windows/components/CityStatus';
-import CityBuildSelectionWindow from '@civ-clone-ui/windows/components/CityBuildSelectionWindow';
-import CityNames from '@civ-clone-ui/map/components/Map/CityNames';
-import CivilizationScoreReport from '@civ-clone-ui/windows/components/CivilizationScoreReport';
-import HappinessReport from '@civ-clone-ui/windows/components/HappinessReport';
-import IntelligenceReport from '@civ-clone-ui/windows/components/IntelligenceReport';
-import MainMenu from '@civ-clone-ui/windows/components/MainMenu';
-import MilitaryReport from '@civ-clone-ui/windows/components/MilitaryReport';
-import SelectionWindow from '@civ-clone-ui/widgets/components/SelectionWindow';
-import TopCitiesReport from '@civ-clone-ui/windows/components/TopCitiesReport';
-import TradeReport from '@civ-clone-ui/windows/components/TradeReport';
-import UnitSelectionWindow from '@civ-clone-ui/windows/components/UnitSelectionWindow';
-import { choiceList } from '@civ-clone-ui/windows/components/choiceList';
-import { choices } from '@civ-clone-ui/windows/components/choices';
-import cityLabels from '@civ-clone-ui/map/components/Map/cityLabels';
-import { classicCityLayout } from '@civ-clone-ui/windows/components/City';
-import { cityScreen } from '@civ-clone-ui/windows/components/openCity';
+import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import { CityStatus } from '@civ-clone/ui-windows/components/CityStatus';
+import CityBuildSelectionWindow from '@civ-clone/ui-windows/components/CityBuildSelectionWindow';
+import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
+import CivilizationScoreReport from '@civ-clone/ui-windows/components/CivilizationScoreReport';
+import HappinessReport from '@civ-clone/ui-windows/components/HappinessReport';
+import IntelligenceReport from '@civ-clone/ui-windows/components/IntelligenceReport';
+import MainMenu from '@civ-clone/ui-windows/components/MainMenu';
+import MilitaryReport from '@civ-clone/ui-windows/components/MilitaryReport';
+import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
+import TopCitiesReport from '@civ-clone/ui-windows/components/TopCitiesReport';
+import TradeReport from '@civ-clone/ui-windows/components/TradeReport';
+import UnitSelectionWindow from '@civ-clone/ui-windows/components/UnitSelectionWindow';
+import { choiceList } from '@civ-clone/ui-windows/components/choiceList';
+import { choices } from '@civ-clone/ui-windows/components/choices';
+import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
+import { classicCityLayout } from '@civ-clone/ui-windows/components/City';
+import { cityScreen } from '@civ-clone/ui-windows/components/openCity';
 import manifest from './manifest.json';
-import { registerInterface } from '@civ-clone-ui/client/lib/interfaceMode';
-import { reports } from '@civ-clone-ui/windows/components/reports';
-import titleScreen from '@civ-clone-ui/windows/components/titleScreen';
+import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { reports } from '@civ-clone/ui-windows/components/reports';
+import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 
 // The classic interface (#735, #825), after Civ1's own: its manifest, and the pieces it fills its slots with.
 

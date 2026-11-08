@@ -1,14 +1,14 @@
-import { BuildItem, CityBuild } from '@civ-clone-ui/client/types';
-import { ActionWindowActions } from '@civ-clone-ui/widgets/components/ActionWindow';
+import { BuildItem, CityBuild } from '@civ-clone/ui-client/types';
+import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
 import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
-import SelectionWindow from '@civ-clone-ui/widgets/components/SelectionWindow';
-import Transport from '@civ-clone-ui/client/Transport';
+import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
+import Transport from '@civ-clone/ui-client/Transport';
 import {
   getAutoLabel,
   getClearedLabel,
   getLabelForBuildable,
   toggleAuto,
-} from '@civ-clone-ui/client/components/lib/cityBuild';
+} from '@civ-clone/ui-client/components/lib/cityBuild';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from './lib/cityYields';
