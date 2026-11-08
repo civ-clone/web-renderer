@@ -4,6 +4,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { City, Player } from '../../src/js/UI/types';
 import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
@@ -1312,7 +1313,7 @@ const run = async (): Promise<void> => {
     openTopCities(player, portal, pending),
   ];
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   const modern = [
     openCityStatus(player, portal, pending),

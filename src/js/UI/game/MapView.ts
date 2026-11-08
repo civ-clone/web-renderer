@@ -5,6 +5,7 @@ import ActiveUnit from '../components/Map/ActiveUnit';
 import Cities from '../components/Map/Cities';
 import CityBanners from '../components/Map/CityBanners';
 import CityNames from '../components/Map/CityNames';
+import cityLabels from '../components/Map/cityLabels';
 import Fog from '../components/Map/Fog';
 import GamePortal from '../components/GamePortal';
 import IntervalHandler from '../lib/IntervalHandler';
@@ -20,7 +21,6 @@ import Units from '../components/Map/Units';
 import World from '../components/World';
 import Yields from '../components/Map/Yields';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
-import { defineSlot } from '../lib/interfaceMode';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
@@ -52,12 +52,6 @@ export type MapViewDeps = {
   transport: Transport;
   world: WorldData;
 };
-
-// The interface's `cityLabels` slot (#824): what names the cities on the map.
-export const cityLabels = defineSlot<typeof CityNames>('cityLabels');
-
-cityLabels.provide('banners', CityBanners);
-cityLabels.provide('names', CityNames);
 
 export class MapView {
   readonly activeUnitLayer: ActiveUnit;

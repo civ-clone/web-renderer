@@ -29,20 +29,6 @@ runSuite('ui', process.argv[2] ?? 'savedGame', {
           }));
         },
       },
-      {
-        // `build.json` is written by the build, not the tests: the main menu shows the version from it (#749).
-        name: 'build-json',
-        setup(build) {
-          build.onResolve({ filter: /\/build\.json$/ }, () => ({
-            path: 'build.json',
-            namespace: 'build-json',
-          }));
-          build.onLoad({ filter: /.*/, namespace: 'build-json' }, () => ({
-            contents: '{"version": "0.0.0@test"}',
-            loader: 'json',
-          }));
-        },
-      },
     ],
   },
 });

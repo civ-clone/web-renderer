@@ -5,6 +5,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import ChoiceWindow, {
   ChoiceRow,
@@ -92,7 +93,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/local/en');
   await import('../../translations/local/en-GB');
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   // The shell on its own.
   const chosen: string[] = [],
@@ -798,7 +799,7 @@ const run = async (): Promise<void> => {
   // The flag picks which.
   applyInterface('classic', null);
   const classic = openCityBuild(cityBuild, available, transport);
-  applyInterface('new', null);
+  applyInterface('modern', null);
   const modern = openCityBuild(cityBuild, available, transport);
 
   expect(

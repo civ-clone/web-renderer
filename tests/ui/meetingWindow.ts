@@ -7,6 +7,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import ChoiceHandler from '../../src/js/UI/app/ChoiceHandler';
 import DebugFlags, {
@@ -186,7 +187,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-government/en');
   await import('../../translations/civ1-science/en');
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   // The emissary arrives: the scene, and the player's Yes or No.
   step(

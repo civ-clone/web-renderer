@@ -9,6 +9,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import NotificationWindow from '../../src/js/UI/components/NotificationWindow';
 import Notifications from '../../src/js/UI/components/Notifications';
@@ -218,7 +219,7 @@ const run = async (): Promise<void> => {
 
   // Under the new interface a closing window leaves a copy of itself to fade out, with its classes (#738). Taken for
   //  the window, it held every notice after the first until another arrived.
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   // Escape on the notice shown, if one is.
   const closeNotice = (): void => {

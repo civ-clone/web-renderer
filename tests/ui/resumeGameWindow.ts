@@ -4,6 +4,7 @@
 //  and what Resume hands back (only the seats changed, the default AI as nothing) or Close (nothing: no load).
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 import './lib/classicInterface';
 import ResumeGameWindow from '../../src/js/UI/components/ResumeGameWindow';
 import { SeatChanges } from '../../src/js/Engine/lib/savedSeats';

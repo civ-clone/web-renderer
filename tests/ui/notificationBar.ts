@@ -4,6 +4,7 @@
 
 // Must stay first: the components read `document` as they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import NotificationBar from '../../src/js/UI/app/NotificationBar';
 import Transport from '../../src/js/UI/Transport';

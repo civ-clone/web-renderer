@@ -7,6 +7,7 @@
 
 // Must stay first: it gives the map a `document`.
 import './lib/dom';
+import './lib/interfaces';
 import './lib/classicInterface';
 
 import { Tile, Unit, World as WorldData } from '../../src/js/UI/types';
@@ -860,7 +861,7 @@ expect('and the resize handler', mapPortal.width, 10);
 
 // The interface decides how the cities are named on the map: the classic labels, or the new interface's banners
 //  (#747), which the classic theme draws as the labels.
-applyInterface('new', null);
+applyInterface('modern', null);
 
 const withBanners = new MapView({
   activateUnit: () => {},

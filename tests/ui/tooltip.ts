@@ -4,6 +4,7 @@
 
 // Must stay first: modules read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import tooltip, { hideTooltip } from '../../src/js/UI/components/lib/Tooltip';
 

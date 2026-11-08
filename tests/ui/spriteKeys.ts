@@ -9,6 +9,7 @@
 
 // Must stay first: it gives the test a `document`.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import * as fs from 'fs';
 import * as path from 'path';

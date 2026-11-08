@@ -4,6 +4,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { CivilizationPowerRow } from '../../src/js/Engine/lib/civilizationPower';
 import GameOptionsRegistry from '../../src/js/UI/GameOptionsRegistry';

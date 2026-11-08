@@ -5,6 +5,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { GameData, Player, PlayerAction } from '../../src/js/UI/types';
 import Hud from '../../src/js/UI/game/Hud';
@@ -434,7 +435,7 @@ const run = async (): Promise<void> => {
 
   try {
     classic = mount('classic');
-    flagged = mount('new');
+    flagged = mount('modern');
   } catch (error) {
     failures.push(`mounting the HUD threw: ${error}`);
   }

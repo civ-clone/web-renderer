@@ -6,6 +6,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import i18next from 'i18next';
 import Transport from '../../src/js/UI/Transport';

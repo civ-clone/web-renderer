@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "id": "new",
-  "name": "GameOptions.interface-choice.new",
+  "id": "modern",
+  "name": "GameOptions.interface-choice.modern",
   "theme": "slate",
   "slots": {
     "titleScreen": "titleMenu",

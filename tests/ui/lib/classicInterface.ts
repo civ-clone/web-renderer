@@ -3,6 +3,7 @@
 //  new ones.
 
 import { document } from './dom';
+import './interfaces';
 
 import { applyInterface } from '../../../src/js/UI/lib/interfaceMode';
 

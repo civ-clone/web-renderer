@@ -4,6 +4,7 @@
 
 // Must stay first: modules read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { PlayerAction } from '../../src/js/UI/types';
 import Action from '../../src/js/UI/components/Actions/Action';

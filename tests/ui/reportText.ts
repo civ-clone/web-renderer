@@ -5,6 +5,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { City, Player, PlayerAction } from '../../src/js/UI/types';
 import CivilDisorder from '../../src/js/UI/components/Actions/CivilDisorder';

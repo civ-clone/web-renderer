@@ -5,6 +5,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { City, GameData, Player } from '../../src/js/UI/types';
 import CitiesList from '../../src/js/UI/components/CitiesList';

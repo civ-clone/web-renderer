@@ -4,6 +4,7 @@
 
 // Must stay first: it gives the component a `document`.
 import './lib/dom';
+import './lib/interfaces';
 
 import {
   IconLayer,

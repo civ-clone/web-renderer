@@ -5,6 +5,7 @@
 
 // Must stay first: it gives the store a `document`, and an `indexedDB` that never opens.
 import './lib/dom';
+import './lib/interfaces';
 
 import { AssetStore, decodeSprite } from '../../src/js/UI/AssetStore';
 import { Store } from '../../src/js/UI/Store';

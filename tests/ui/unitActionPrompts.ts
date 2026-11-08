@@ -5,6 +5,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 import './lib/classicInterface';
 
 import {

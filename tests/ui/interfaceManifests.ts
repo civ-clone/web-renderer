@@ -1,9 +1,10 @@
-// Interface manifests (#824): `new` and `classic` each say what fills every slot, a manifest that swaps one slot changes
+// Interface manifests (#824): `modern` and `classic` each say what fills every slot, a manifest that swaps one slot changes
 //  that part and nothing that uses it, features follow the manifest, an interface brings its theme unless the player or
 //  the visit has chosen one, and only Options knows which interface is in use.
 
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import { choiceList, openChoice } from '../../src/js/UI/components/choiceList';
 import ChoiceWindow from '../../src/js/UI/components/ChoiceWindow';
@@ -16,7 +17,7 @@ import {
   interfaces,
   registerInterface,
 } from '../../src/js/UI/lib/interfaceMode';
-import { join } from 'path';
+import { dirname, join } from 'path';
 import { uiThemeFrom } from '../../src/js/UI/lib/theme';
 
 const failures: string[] = [];
@@ -40,7 +41,7 @@ const root = (document as unknown as Document).documentElement,
 expect(
   'new and classic are manifests',
   interfaces().map(({ id }) => id),
-  ['new', 'classic']
+  ['modern', 'classic']
 );
 
 const [modern, classic] = interfaces();
@@ -51,7 +52,7 @@ expect(
   Object.keys(modern.slots).sort()
 );
 
-// A slot, and an interface that differs from `new` only there.
+// A slot, and an interface that differs from `modern` only there.
 const slot = defineSlot<string>('cityScreen');
 
 slot.provide('window', 'the window');
@@ -66,8 +67,8 @@ registerInterface({
   theme: 'civ1-classic',
 });
 
-use('new');
-expect('new fills the slot', slot.current(), 'the window');
+use('modern');
+expect('modern fills the slot', slot.current(), 'the window');
 
 use('classic');
 expect('classic fills it differently', slot.current(), 'the page');
@@ -84,6 +85,17 @@ expect(
   [hasFeature('nextTurn'), hasFeature('windowChrome')],
   [true, false]
 );
+
+// A replacement for the interface in use waits for the next load, as a choice does: what is on screen was built from
+//  the one the page loaded with.
+registerInterface({ ...currentInterface(), features: [] });
+expect(
+  'replacing the interface in use changes nothing yet',
+  hasFeature('nextTurn'),
+  true
+);
+use('test');
+expect('and does when it next loads', hasFeature('nextTurn'), false);
 
 // And what uses a real slot follows it, unchanged.
 {
@@ -127,10 +139,11 @@ expect(
 
 [
   null,
-  'new',
+  'modern',
   { ...modern, schema: 2 },
   { ...modern, id: 7 },
   { ...modern, slots: { reports: 7 } },
+  { ...modern, slots: [] },
   { ...modern, features: 'nextTurn' },
 ].forEach((manifest) => {
   let threw = false;
@@ -181,6 +194,48 @@ expect(
     .sort(),
   ['components/GameOptions.ts']
 );
+
+// Each interface is a package of its own (#825): what's shared never imports one, one never imports another, and only
+//  civ.one's own entry (`frontend.ts`) imports `interfaces/`, which says which it offers.
+const jsRoot = join(process.cwd(), 'src/js'),
+  interfacesRoot = join(srcRoot, 'interfaces'),
+  importsOf = (path: string): string[] =>
+    [
+      ...readFileSync(path, 'utf8').matchAll(
+        /(?:^|\n)\s*(?:import|export)\b[^;]*?['"](\.[^'"]+)['"]/g
+      ),
+    ].map(([, spec]) => join(dirname(path), spec)),
+  packageOf = (path: string): string | null =>
+    path.startsWith(interfacesRoot + '/')
+      ? path.slice(interfacesRoot.length + 1).split('/')[0]
+      : null,
+  crossings = sources(jsRoot)
+    .filter((path) => path !== join(interfacesRoot, 'index.ts'))
+    .flatMap((path) =>
+      importsOf(path)
+        .filter((target) => {
+          const to = packageOf(target);
+
+          if (target === interfacesRoot) {
+            return path !== join(jsRoot, 'frontend.ts');
+          }
+
+          return to !== null && !/\.\w+$/.test(to) && packageOf(path) !== to;
+        })
+        .map(
+          (target) =>
+            `${path.slice(jsRoot.length + 1)} -> ${target.slice(
+              jsRoot.length + 1
+            )}`
+        )
+    );
+
+expect(
+  'civ.one is what chooses the interfaces',
+  importsOf(join(jsRoot, 'frontend.ts')).includes(interfacesRoot),
+  true
+);
+expect('nothing else reaches into one', crossings, []);
 
 if (failures.length) {
   process.stderr.write(`FAIL interfaceManifests\n${failures.join('\n')}\n`);

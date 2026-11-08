@@ -10,6 +10,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import './lib/dom';
+import './lib/interfaces';
 
 import i18next from 'i18next';
 import i18nOptions from '../../src/js/UI/app/i18nOptions';

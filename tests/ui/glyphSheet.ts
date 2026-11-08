@@ -3,6 +3,7 @@
 
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import glyph, { glyphNames, installGlyphs } from '../../src/js/UI/lib/glyphs';
 

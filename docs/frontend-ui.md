@@ -58,16 +58,26 @@ coalesced to one run per animation frame.
 
 ## Interfaces and themes
 
-An interface is described by a manifest in `src/js/UI/interfaces/` (#824), and a theme by its tokens (#167). A theme
-carries no layout. An interface carries the layout and names the theme it comes with, which the player's own choice of
-theme outranks.
+Each interface is a package of its own in `src/js/UI/interfaces/` (#825): `modern` and `classic`. A package holds its
+manifest (#824) and an `index.ts` that provides the pieces it uses to the slots and registers the manifest. A theme
+(#167) carries no layout. An interface carries the layout and names the theme it comes with, which the player's own
+choice of theme outranks.
 
-- **Slots** are parts of the interface with more than one implementation. A family of components calls `defineSlot`
-  where it is put together, such as `reports.ts`, and provides what it has. A manifest's `slots` says which to use.
+- **Slots** are parts of the interface with more than one implementation. Shared code calls `defineSlot` where the part
+  is put together, such as `reports.ts`, and uses whatever the interface in use provided. A manifest's `slots` says
+  which implementation to use.
 - **Features** are behaviours inside a shared component that an interface has or doesn't, read with `hasFeature`.
-- Only Options asks which interface is in use, and a test holds that. Everything else asks for a slot or a feature.
+- **What's shared** is every component an interface uses, so another interface can use it too. Something goes inside an
+  interface's package only if no other interface would want it.
+- **Boundaries:** shared code never imports an interface, one interface never imports another, and only
+  `src/js/frontend.ts` imports `interfaces/`, which lists what civ.one offers. The first listed is the default.
+- Only Options asks which interface is in use. A test holds that and the boundaries.
+- An interface that's renamed keeps its old id in `RENAMED` (`lib/interfaceMode.ts`), so stored choices and old links
+  still find it: `new` is now `modern`.
 
-A new interface needs a manifest passed to `registerInterface`, and its implementations provided to the slots it fills.
+A new interface is a folder beside these two, with its manifest and an `index.ts` providing what it fills its slots
+with, and a line in `interfaces/index.ts`. Test suites import `tests/ui/lib/interfaces.ts` straight after `./lib/dom`
+to register them as the page does.
 
 ## Major UI modules
 
@@ -76,7 +86,7 @@ A new interface needs a manifest passed to `registerInterface`, and its implemen
 - `MainMenu`: entry to new game, Earth world, custom world, load game, asset
   import, and the release notes (`ReleaseWindow`, from the version link). The
   game options are hidden until assets are imported.
-- `TitleMenu` (#749), the new interface's main menu: a list with each item's
+- `TitleMenu` (#749), the modern interface's main menu: a list with each item's
   key (C, N, E, L, H, O, I). Continue loads the newest save in the browser,
   named from the `details` a save has kept since (`SaveDetails`: civilization,
   turn, year), or its name for an older one. New Game passes `askNewGame` a
@@ -180,7 +190,7 @@ compositing order:
   the whole world as soon as it is built, so a loaded game's minimap is not
   blank (#270).
 
-Under the new interface, `MapView` mounts `CityBanners` in
+Under the modern interface, `MapView` mounts `CityBanners` in
 place of `CityNames` (#747). It extends `CityNames`, and the theme's
 `--ui-city-banner` token picks what it draws: `label` gives the classic size
 and name, and `full` gives a banner below the city's square (size badge, name,
@@ -192,7 +202,7 @@ through `Portal.cityAt()` before it looks up the tile under the pointer.
 `Map.bannerAt()` gives the banner's box as well: a mouse resting on one of
 your cities' banners opens the shared tooltip over that box
 (`showTooltipOver`), with what the city is building and how it grows
-(`Map/cityBannerTooltip`). Elsewhere under the new interface, a mouse resting
+(`Map/cityBannerTooltip`). Elsewhere under the modern interface, a mouse resting
 on a square opens it over the square's box (`Portal.squareAt()`), with what the
 square is, yields and has on it (`Map/squareTooltip`, #748), unless the
 `squareTooltips` option is off. A rival's banner is about its city's square.

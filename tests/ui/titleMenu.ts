@@ -8,6 +8,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import TitleMenu, {
   continueDetail,
@@ -144,7 +145,7 @@ const save = (
   addFormatters(i18next);
   await import('../../translations/local/en');
   await import('../../translations/civ1-civilization/en');
-  applyInterface('new', null);
+  applyInterface('modern', null);
   resetStore();
 
   // No save: the items for a game, and no Continue or Import assets.

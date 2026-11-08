@@ -17,8 +17,8 @@ import TopCitiesTable from './TopCitiesTable';
 import Transport from '../Transport';
 import { defineSlot } from '../lib/interfaceMode';
 
-// Where the reports are put together (#735): the interface's `reports` slot (#824), the classic ones or the ones drawn
-//  with the report table (#744). Every key, menu item and button that opens a report comes here.
+// Where the reports are put together (#735): the interface's `reports` slot (#824), which each interface in
+//  `interfaces/` fills (#825): the classic ones or the ones drawn with the report table (#744). Every key, menu item and button that opens a report comes here.
 
 export interface Reports {
   cityStatus(
@@ -52,32 +52,6 @@ export interface Reports {
 }
 
 export const reports = defineSlot<Reports>('reports');
-
-reports.provide('tables', {
-  cityStatus: (player, portal) => new CityStatusTable(player, portal),
-  trade: (player, portal) => new TradeTable(player, portal),
-  military: (transport) => new MilitaryTable(transport),
-  intelligence: (transport, civilization) =>
-    new IntelligenceTable(transport, civilization),
-  civilizationScore: (transport) => new CivilizationScoreTable(transport),
-  happiness: (player, portal) => new HappinessTable(player, portal),
-  topCities: (player, portal, transport) =>
-    new TopCitiesTable(player, portal, transport),
-});
-
-reports.provide('classic', {
-  cityStatus: (player, portal, transport) =>
-    new CityStatus(player, portal, transport),
-  trade: (player, portal, transport) =>
-    new TradeReport(player, portal, transport),
-  military: (transport) => new MilitaryReport(transport),
-  intelligence: (transport, civilization) =>
-    new IntelligenceReport(transport, civilization),
-  civilizationScore: (transport) => new CivilizationScoreReport(transport),
-  happiness: (player, portal, transport) =>
-    new HappinessReport(player, portal, transport),
-  topCities: (_player, _portal, transport) => new TopCitiesReport(transport),
-});
 
 /** City Status (F1). */
 export const openCityStatus = (

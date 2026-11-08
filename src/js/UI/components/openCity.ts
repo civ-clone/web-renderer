@@ -7,11 +7,8 @@ import { defineSlot } from '../lib/interfaceMode';
 
 type CityLayout = typeof cityLayout | typeof classicCityLayout;
 
-// The interface's `cityScreen` slot (#824).
+// The interface's `cityScreen` slot (#824), which each interface in `interfaces/` fills (#825).
 export const cityScreen = defineSlot<CityLayout>('cityScreen');
-
-cityScreen.provide('window', cityLayout);
-cityScreen.provide('page', classicCityLayout);
 
 /**
  * Where the city screen is put together (#735): the classic page, or the window with its columns (#746). Every way a city screen opens comes here. `readOnly` shows a city that can't be changed, as a
