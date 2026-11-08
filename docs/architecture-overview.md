@@ -17,12 +17,12 @@ The application is split into two JavaScript runtimes:
 ## Entry points and boot sequence
 
 1. Browser loads `index.html` and starts `dist/frontend.js`.
-2. `src/js/frontend.ts` creates `Renderer(new WorkerTransport(new Worker('dist/backend.js')))` (from `src/js/UI/bootstrap.ts`) and calls `init()`.
+2. `src/js/frontend.ts` creates `Renderer(new WorkerTransport(new Worker('dist/backend.js')))` (from `packages/game/bootstrap.ts`) and calls `init()`.
 3. Worker starts from `src/js/backend.ts` and creates `Game(new ParentTransport())`.
 4. For a new game, the setup windows (`askPlayerCount` in `components/newGame.ts`, or `GameSetupWindow`) send `setOptions` as a request, wait for its acknowledgement, then send `start`.
 5. Backend binds engine events, starts the engine, and dynamically imports the generated plugin imports (`src/js/plugins.ts`).
 
-Loading a saved game takes a different path. The player picks a file, `src/js/UI/lib/savedGame.ts` hands it over in IndexedDB (with a `sessionStorage` marker) and the page reloads, so the save always goes to a fresh worker. On the next `init()`, `Renderer` takes the pending save, sets up its listeners, and sends `load` instead of `start`. The worker imports the plugins, restores the game into `defaultGame` (`src/js/Engine/loadGame.ts`) and resumes the turn that was in progress. No world is generated.
+Loading a saved game takes a different path. The player picks a file, `packages/windows/lib/savedGame.ts` hands it over in IndexedDB (with a `sessionStorage` marker) and the page reloads, so the save always goes to a fresh worker. On the next `init()`, `Renderer` takes the pending save, sets up its listeners, and sends `load` instead of `start`. The worker imports the plugins, restores the game into `defaultGame` (`src/js/Engine/loadGame.ts`) and resumes the turn that was in progress. No world is generated.
 
 ## Main subsystem responsibilities
 
@@ -36,7 +36,7 @@ Loading a saved game takes a different path. The player picks a file, `src/js/UI
   - Handles player actions, cheats and UI requests from the frontend.
   - Emits `gameData` (initial snapshot) and `gameDataPatch` (incremental updates), and `turnStarted`/`turnEnded` around the player's turn.
   - Can hand the local player's turn to a `SimpleAIClient` when the `automateLocalPlayer` option is set.
-- `src/js/UI/bootstrap.ts` (the `Renderer` class)
+- `packages/game/bootstrap.ts` (the `Renderer` class)
   - Page start-up: cursor, i18n, the reload guard, option defaults, the pending save, and the receivers that outlive a game (`saveGame`, `gameOver`, notifications, choice lists). The first `gameData` starts a `GameSession`; a pending save is sent with `load` last.
 - `src/js/UI/game/*`
   - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView` the map layers and minimap; `Hud` the action panels and details; `InputController` the hotkeys and leader screens.

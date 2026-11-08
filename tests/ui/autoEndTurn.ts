@@ -7,8 +7,8 @@
 
 import shouldAutoEndTurn, {
   AutoEndTurnOptions,
-} from '../../src/js/UI/lib/autoEndTurn';
-import { Player, PlayerAction } from '../../src/js/UI/types';
+} from '@civ-clone-ui/client/lib/autoEndTurn';
+import { Player, PlayerAction } from '@civ-clone-ui/client/types';
 
 const failures: string[] = [];
 let checks = 0,

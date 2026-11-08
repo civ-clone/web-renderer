@@ -17,23 +17,23 @@ import * as Units from '@civ-clone/civ1-unit/Units';
 import validateDescriptor, {
   TilesetDescriptor,
   expandName,
-} from '../../src/js/UI/tilesets/TilesetDescriptor';
-import currentTileset, { nativeTileSize } from '../../src/js/UI/lib/tilesets';
-import GameOptions from '../../src/js/UI/components/GameOptions';
-import Portal from '../../src/js/UI/components/Portal';
+} from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset, { nativeTileSize } from '@civ-clone-ui/assets/lib/tilesets';
+import GameOptions from '@civ-clone-ui/windows/components/GameOptions';
+import Portal from '@civ-clone-ui/map/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
-import { Tile } from '../../src/js/UI/types';
-import World from '../../src/js/UI/components/World';
+import { Tile } from '@civ-clone-ui/client/types';
+import World from '@civ-clone-ui/map/components/World';
 import {
   AssetStore,
   assetStore,
   shownAtScale,
-} from '../../src/js/UI/AssetStore';
-import { setTilesetSizes } from '../../src/js/UI/app/assets';
+} from '@civ-clone-ui/assets/AssetStore';
+import { setTilesetSizes } from '@civ-clone-ui/game/app/assets';
 import i18next from 'i18next';
-import { instance as options } from '../../src/js/UI/GameOptionsRegistry';
-import setOptionDefaults from '../../src/js/UI/app/options';
-import civ1Json from '../../src/js/UI/tilesets/civ1.json';
+import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
+import setOptionDefaults from '@civ-clone-ui/game/app/options';
+import civ1Json from '@civ-clone-ui/assets/tilesets/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 
 const failures: string[] = [];

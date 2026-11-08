@@ -7,15 +7,15 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { City, Tile } from '../../src/js/UI/types';
+import { City, Tile } from '@civ-clone-ui/client/types';
 import {
   findCityRows,
   openFindCity,
-} from '../../src/js/UI/components/FindCity';
-import eyebrowFor from '../../src/js/UI/lib/windowEyebrows';
-import { matchRank } from '../../src/js/UI/lib/filterRows';
+} from '@civ-clone-ui/windows/components/FindCity';
+import eyebrowFor from '@civ-clone-ui/widgets/lib/windowEyebrows';
+import { matchRank } from '@civ-clone-ui/widgets/lib/filterRows';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0;

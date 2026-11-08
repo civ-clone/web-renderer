@@ -11,14 +11,14 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import GamePortal from '../../src/js/UI/components/GamePortal';
-import World from '../../src/js/UI/components/World';
+import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
+import World from '@civ-clone-ui/map/components/World';
 import {
   clampOrigin,
   isWithinView,
   wrappedDelta,
-} from '../../src/js/UI/lib/viewport';
-import { releaseVelocity } from '../../src/js/UI/lib/drag';
+} from '@civ-clone-ui/map/lib/viewport';
+import { releaseVelocity } from '@civ-clone-ui/widgets/lib/drag';
 
 const failures: string[] = [];
 let checks = 0;

@@ -11,10 +11,10 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import NotificationWindow from '../../src/js/UI/components/NotificationWindow';
-import Notifications from '../../src/js/UI/components/Notifications';
-import Window from '../../src/js/UI/components/Window';
-import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
+import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
+import Notifications from '@civ-clone-ui/windows/components/Notifications';
+import Window from '@civ-clone-ui/widgets/components/Window';
+import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
 import i18next from 'i18next';
 
 const failures: string[] = [];

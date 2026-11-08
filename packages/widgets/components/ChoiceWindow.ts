@@ -1,0 +1,631 @@
+import { ActionWindowActions } from './ActionWindow';
+import FilterableWindow from './FilterableWindow';
+import { GlyphName, glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { button } from '../lib/button';
+import { filteredOutClass, fold, matchRank } from '../lib/filterRows';
+import { h } from '../lib/html';
+import { mappedKeyFromEvent } from '@civ-clone-ui/client/lib/mappedKey';
+import { s } from '@dom111/element';
+import { singleChoice } from '@civ-clone-ui/client/lib/singleChoice';
+import { t } from 'i18next';
+
+/**
+ * One figure on a row, on its right: a glyph or a decorative icon (a tileset's sprite, such as `yieldIcon`), then the
+ *  value. `label` is said for a screen reader, and is the tooltip.
+ */
+export interface ChoiceFact {
+  glyph?: GlyphName;
+  icon?: () => Node;
+  label: string;
+  value: string;
+}
+
+/** One thing to choose (#745), filled by each list from what the engine sent with it (#274). */
+export interface ChoiceRow {
+  // What `onChoose` is given: unique in the list.
+  value: string;
+  // The name, already translated, set as text.
+  label: string;
+  // A heading, already translated: rows next to each other with the same `group` are listed under it.
+  group?: string;
+  // Drawn as the row is made: a unit's sprite, a civilization's colours. `null`, or a throw, draws none.
+  sprite?: () => Node | null;
+  // A line under the name, muted.
+  meta?: string | null;
+  facts?: ChoiceFact[];
+  // What the primary button says while this row is chosen ("Build Settlers"); by default "Choose".
+  primary?: string;
+}
+
+/** What the pane beside the list shows for a row, or `null` for an empty pane. It may take a moment. */
+export type ChoiceDescriber = (
+  row: ChoiceRow
+) => Node | null | Promise<Node | null>;
+
+export interface ChoiceWindowOptions {
+  // The window's classes, for its eyebrow and its styles.
+  classes?: string[];
+  // A list with one row is chosen without being shown (#148). `false` is for a list whose one row is still a decision.
+  autoChooseSingle?: boolean;
+  // Whether the list can be left with nothing chosen: Escape and Cancel close it, leaving things as they were.
+  canClose?: boolean;
+  // Over everything else, which waits for the answer: a new game's questions.
+  modal?: boolean;
+  // The row chosen as the window opens: what's being built, or what the engine suggests. By default the first.
+  chosen?: string | null;
+  // Over the list: why it has opened.
+  intro?: Node | null;
+  describe?: ChoiceDescriber | null;
+  // Buttons beside the primary (Auto, Can't build…), given the window.
+  actions?: ActionWindowActions;
+  // A list to search by typing, without headings: the best matches listed first, the first of them chosen, and Enter in
+  //  the filter box taking it.
+  typeAhead?: boolean;
+}
+
+let lists = 0;
+
+/**
+ * Every "pick one from a list" under the new interface (#745): rows with a sprite, the name and a line under it, and
+ *  the facts that decide it on the right, under group headings; a pane beside them describing the row chosen; and a
+ *  footer whose primary names the choice. The arrows move through the rows, typing filters them (#661), Enter or a
+ *  double-click chooses, and Escape leaves things as they were where the list can be closed. Only the list scrolls,
+ *  the footer stays in view (#634).
+ */
+export class ChoiceWindow extends FilterableWindow {
+  #autoChosen: boolean = false;
+  #chosen: HTMLElement | null = null;
+  // The row the player chose last, given back when a filter that hid it is cleared.
+  #wanted: HTMLElement | null = null;
+  // While the window puts the focus back on the chosen row itself, which isn't the player choosing it.
+  #focusing: boolean = false;
+  #describe: ChoiceDescriber | null;
+  #done: boolean = false;
+  #details: HTMLElement;
+  // The row the pane was last asked about, so an answer that comes late for another row is dropped.
+  #describing: ChoiceRow | null = null;
+  // Each description asked for, so only the latest answer is drawn, even for a row chosen again since.
+  #request: number = 0;
+  #id: string = '';
+  #list: HTMLElement;
+  #onChoose: (value: string) => void;
+  #primary: HTMLButtonElement;
+  #rows = new Map<HTMLElement, ChoiceRow>();
+  #typeAhead: boolean = false;
+  // The rows as they were given, which a match is ranked within, for a type-ahead list that has moved them.
+  #listed: HTMLElement[] | null = null;
+  // What they were last ranked for.
+  #ranked: string = '';
+
+  constructor(
+    title: string,
+    rows: ChoiceRow[],
+    onChoose: (value: string) => void,
+    {
+      classes = [],
+      autoChooseSingle = true,
+      canClose = true,
+      modal = false,
+      chosen = null,
+      intro = null,
+      describe = null,
+      actions = {},
+      typeAhead = false,
+    }: ChoiceWindowOptions = {}
+  ) {
+    const autoChoice = singleChoice(rows, autoChooseSingle),
+      id = `ui-choice-${++lists}`,
+      list = s('<div class="ui-choice-list" role="listbox"></div>'),
+      details = s(
+        '<aside class="ui-choice-details" aria-live="polite"></aside>'
+      ),
+      primary = button(t('ChoiceWindow.choose'), { variant: 'primary' }),
+      footer = s(
+        '<footer></footer>',
+        ...(canClose
+          ? [
+              h(
+                button(t('Generic.cancel'), {
+                  variant: 'quiet',
+                  hotkey: 'Escape',
+                }),
+                { click: () => this.close() }
+              ),
+            ]
+          : []),
+        ...Object.values(actions).map(({ label, action, variant }) =>
+          h(button(label, { variant: variant ?? 'secondary' }), {
+            click: () => action(this),
+          })
+        ),
+        primary
+      );
+
+    super(
+      title,
+      s(
+        '<div class="ui-choice"></div>',
+        ...(intro === null ? [] : [intro]),
+        s('<div class="ui-choice-panes"></div>', list, details),
+        footer
+      ),
+      {
+        // Shown once its rows are in, below.
+        autoDisplay: false,
+        canClose,
+        modal,
+        classes: ['ui-choice-window', ...classes],
+        groupSelector: '.ui-choice-group',
+        rowSelector: '.ui-choice-row',
+      }
+    );
+
+    list.setAttribute('aria-label', title);
+
+    this.#describe = describe;
+    this.#details = details;
+    this.#list = list;
+    this.#onChoose = onChoose;
+    this.#primary = primary;
+    this.#typeAhead = typeAhead;
+
+    if (autoChoice !== null) {
+      this.#autoChosen = true;
+
+      // Not from inside the constructor: `onChoose` usually closes what the caller is still making.
+      queueMicrotask(() => this.#choose(autoChoice.value));
+
+      return;
+    }
+
+    this.#id = id;
+    this.#fill(rows);
+
+    h(primary, {
+      click: () => {
+        const row = this.#chosen && this.#rows.get(this.#chosen);
+
+        if (row) {
+          this.#choose(row.value);
+        }
+      },
+    });
+
+    h(list, {
+      // A row that takes the focus is the one chosen, however it got it: the filter box's Down or Enter, Tab, a click.
+      //  Otherwise the focus ring and the choice Enter takes could be on two different rows.
+      focusin: (event: FocusEvent) => {
+        const row = (event.target as Element | null)?.closest?.(
+          '.ui-choice-row'
+        );
+
+        if (row instanceof HTMLElement && this.#rows.has(row)) {
+          this.#select(row, !this.#focusing);
+        }
+      },
+      keydown: (event: KeyboardEvent) => this.#key(event),
+    });
+
+    this.#select(
+      this.#elements().find(
+        (element) => this.#rows.get(element)!.value === chosen
+      ) ??
+        this.#shown()[0] ??
+        null,
+      // Nobody's choice yet: the first row follows what's typed.
+      !typeAhead
+    );
+
+    this.on('focus', () => this.#focusChosen());
+
+    this.display();
+  }
+
+  autoChosen(): boolean {
+    return this.#autoChosen;
+  }
+
+  /** The value of the row chosen now, or `null` when none is. */
+  chosen(): string | null {
+    return this.#chosen ? this.#rows.get(this.#chosen)!.value : null;
+  }
+
+  close(): void {
+    // Never shown, so there's nothing to take down, nor focus to give back.
+    if (this.#autoChosen) {
+      this.emit(new CustomEvent('close'));
+
+      return;
+    }
+
+    super.close();
+  }
+
+  display(focus?: boolean): void {
+    super.display(focus);
+
+    // Shown again after `close()`, say: there's a row to put the focus on. Never before the rows are in.
+    if (!(#rows in this)) {
+      return;
+    }
+
+    this.#focusChosen();
+    this.#scrollTo(this.#chosen);
+  }
+
+  refilter(): void {
+    super.refilter();
+
+    if (!(#rows in this)) {
+      return;
+    }
+
+    // Moved, a row loses the focus, and with it left on the page the keys would go to the game; and where the first row
+    //  follows what's typed, the focus has to follow it for Enter to take the row shown as chosen.
+    const focused =
+      this.#typeAhead && this.#list.contains(document.activeElement);
+
+    if (this.#typeAhead) {
+      this.#rank();
+    }
+
+    const shown = this.#shown();
+
+    // The chosen row filtered out: the first one shown instead, so Enter never chooses what can't be seen. The one the
+    //  player chose comes back once it's shown again.
+    if (this.#wanted !== null && shown.includes(this.#wanted)) {
+      this.#select(this.#wanted, false);
+    } else if (
+      this.#typeAhead ||
+      this.#chosen === null ||
+      !shown.includes(this.#chosen)
+    ) {
+      this.#select(shown[0] ?? null, false);
+    }
+
+    if (focused) {
+      this.#focusChosen();
+    }
+  }
+
+  protected entered(): boolean {
+    const row = this.#typeAhead && this.#chosen && this.#rows.get(this.#chosen);
+
+    if (!row) {
+      return false;
+    }
+
+    this.#choose(row.value);
+
+    return true;
+  }
+
+  // The rows by how well their names match, the order they came in otherwise. Moved only if that changes anything: the
+  //  filter hears rows arriving, and reads them again.
+  #rank(): void {
+    const query = fold(this.filter().trim()),
+      elements = this.#elements(),
+      listed = (this.#listed ??= elements),
+      ranked = listed
+        .map((element, index) => ({
+          element,
+          index,
+          rank: matchRank(query, fold(this.#rows.get(element)!.label)),
+        }))
+        .sort((a, b) => a.rank - b.rank || a.index - b.index)
+        .map(({ element }) => element);
+
+    // What the player chose was from another list: Enter takes the best of this one.
+    if (query !== this.#ranked) {
+      this.#ranked = query;
+      this.#wanted = null;
+    }
+
+    if (ranked.every((element, index) => element === elements[index])) {
+      return;
+    }
+
+    const rows = new Map(this.#rows);
+
+    this.#rows.clear();
+
+    ranked.forEach((element) => this.#rows.set(element, rows.get(element)!));
+
+    this.#list.append(...ranked);
+  }
+
+  /**
+   * New rows for the list, as what it offers changes while it's open (the units in a stack, #344). The filter still
+   *  applies, the row chosen stays chosen where it's still offered, and focus in the list stays in the window: on the
+   *  row chosen, or on the filter if it now hides every row.
+   */
+  replaceRows(rows: ChoiceRow[]): void {
+    const valueOf = (element: HTMLElement | null): string | null =>
+        element === null ? null : this.#rows.get(element)!.value,
+      chosen = valueOf(this.#chosen),
+      wanted = valueOf(this.#wanted),
+      focused = this.#list.contains(document.activeElement),
+      find = (value: string | null): HTMLElement | null =>
+        this.#elements().find((element) => valueOf(element) === value) ?? null;
+
+    this.#rows.clear();
+    this.#listed = null;
+    this.#list.replaceChildren();
+    this.#chosen = null;
+    this.#fill(rows);
+    this.#wanted = find(wanted);
+    this.#select(find(chosen), false);
+    this.refilter();
+
+    if (!focused) {
+      return;
+    }
+
+    if (this.#chosen === null) {
+      this.focusFilter();
+
+      return;
+    }
+
+    this.#focusChosen();
+  }
+
+  /** The list's rows, in order. */
+  rows(): HTMLElement[] {
+    return this.#elements();
+  }
+
+  #choose(value: string): void {
+    // Once: a double-click's second click, or Enter heard by both chromes, would choose again.
+    if (this.#done) {
+      return;
+    }
+
+    this.#done = true;
+
+    this.emit(new CustomEvent<string>('selection', { detail: value }));
+
+    this.close();
+
+    this.#onChoose(value);
+  }
+
+  // The rows into the list, each group under its heading.
+  #fill(rows: ChoiceRow[]): void {
+    rows.forEach((row, index) => {
+      const element = this.#row(row, `${this.#id}-${index}`);
+
+      if (row.group === undefined) {
+        this.#list.append(element);
+
+        return;
+      }
+
+      if (rows[index - 1]?.group !== row.group) {
+        const heading = s(
+          `<p class="ui-choice-heading" id="${this.#id}-group-${index}"></p>`
+        );
+
+        heading.textContent = row.group;
+
+        this.#list.append(
+          s(
+            `<div class="ui-choice-group" role="group" aria-labelledby="${
+              this.#id
+            }-group-${index}"></div>`,
+            heading
+          )
+        );
+      }
+
+      this.#list.lastElementChild!.append(element);
+    });
+  }
+
+  #elements(): HTMLElement[] {
+    return Array.from(this.#rows.keys());
+  }
+
+  #focusChosen(): void {
+    this.#focusing = true;
+
+    try {
+      this.#chosen?.focus();
+    } finally {
+      this.#focusing = false;
+    }
+  }
+
+  #key(event: KeyboardEvent): void {
+    const key = mappedKeyFromEvent(event),
+      shown = this.#shown(),
+      index = this.#chosen === null ? -1 : shown.indexOf(this.#chosen),
+      // A page is as many rows as the list shows.
+      page = Math.max(
+        1,
+        Math.floor(
+          this.#list.clientHeight / (this.#chosen?.offsetHeight || 1)
+        ) - 1
+      ),
+      target: { [key: string]: number } = {
+        ArrowDown: index + 1,
+        ArrowUp: index - 1,
+        End: shown.length - 1,
+        Home: 0,
+        PageDown: index + page,
+        PageUp: index - page,
+      };
+
+    if (key === 'Enter') {
+      // The new chrome presses the primary on the way in; this is the classic chrome's.
+      event.preventDefault();
+
+      this.#primary.click();
+
+      return;
+    }
+
+    if (!(key in target)) {
+      return;
+    }
+
+    event.preventDefault();
+    // Not typed into the filter as well: a numpad key mapped to an arrow is still its digit underneath.
+    event.stopPropagation();
+
+    const row =
+      shown[Math.min(shown.length - 1, Math.max(0, target[key]))] ?? null;
+
+    this.#select(row);
+    row?.focus();
+  }
+
+  #row(row: ChoiceRow, id: string): HTMLElement {
+    const element = s(
+        `<div class="ui-choice-row" role="option" id="${id}" tabindex="-1" aria-selected="false"></div>`
+      ),
+      sprite = s('<span class="ui-choice-sprite" aria-hidden="true"></span>'),
+      name = s('<span class="ui-choice-name"></span>'),
+      text = s('<span class="ui-choice-text"></span>', name),
+      facts = s('<span class="ui-choice-facts"></span>');
+
+    name.textContent = row.label;
+
+    try {
+      const drawn = row.sprite?.() ?? null;
+
+      if (drawn !== null) {
+        sprite.append(drawn);
+      }
+    } catch {
+      // No sprite rather than no row: one the tileset can't draw.
+    }
+
+    if (row.meta) {
+      const meta = s('<span class="ui-choice-meta"></span>');
+
+      meta.textContent = row.meta;
+      text.append(meta);
+    }
+
+    (row.facts ?? []).forEach((fact) => {
+      const element = s(
+          `<span class="ui-choice-fact">${
+            fact.glyph ? glyph(fact.glyph) : ''
+          }<span class="visually-hidden"></span><span class="ui-choice-fact-value"></span></span>`
+        ),
+        value = element.querySelector('.ui-choice-fact-value')!;
+
+      if (fact.icon) {
+        element.prepend(fact.icon());
+      }
+
+      element.title = fact.label;
+      element.querySelector(
+        '.visually-hidden'
+      )!.textContent = `${fact.label}: `;
+      value.textContent = fact.value;
+      facts.append(element);
+    });
+
+    element.append(sprite, text, facts);
+
+    h(element, {
+      click: () => this.#select(element),
+      dblclick: () => this.#choose(row.value),
+    });
+
+    this.#rows.set(element, row);
+
+    return element;
+  }
+
+  // `remember` is false where the list, not the player, moves the choice.
+  #select(element: HTMLElement | null, remember: boolean = true): void {
+    const previous = this.#chosen;
+
+    this.#chosen = element;
+
+    if (remember) {
+      this.#wanted = element;
+    }
+
+    if (previous !== element) {
+      previous?.setAttribute('aria-selected', 'false');
+      previous?.setAttribute('tabindex', '-1');
+    }
+
+    const row = element ? this.#rows.get(element)! : null;
+
+    element?.setAttribute('aria-selected', 'true');
+    // The one row Tab stops on.
+    element?.setAttribute('tabindex', '0');
+    this.#scrollTo(element);
+
+    this.#primary.textContent = row?.primary ?? t('ChoiceWindow.choose');
+    this.#primary.disabled = row === null;
+
+    if (previous !== element || this.#describing === null) {
+      this.#showDetails(row);
+    }
+  }
+
+  // The list scrolled to show `element`, and only the list: `scrollIntoView` would scroll the window's body too, taking
+  //  the pane beside the list with it.
+  #scrollTo(element: HTMLElement | null): void {
+    if (element === null) {
+      return;
+    }
+
+    // A group's first row brings its heading with it.
+    const shown = element.previousElementSibling?.matches('.ui-choice-heading')
+        ? element.previousElementSibling
+        : element,
+      list = this.#list.getBoundingClientRect(),
+      row = shown.getBoundingClientRect(),
+      bottom = element.getBoundingClientRect().bottom;
+
+    if (row.top < list.top) {
+      this.#list.scrollTop -= list.top - row.top;
+    } else if (bottom > list.bottom) {
+      this.#list.scrollTop += bottom - list.bottom;
+    }
+  }
+
+  #shown(): HTMLElement[] {
+    return this.#elements().filter(
+      (element) => !element.classList.contains(filteredOutClass)
+    );
+  }
+
+  #showDetails(row: ChoiceRow | null): void {
+    const request = ++this.#request;
+
+    this.#describing = row;
+    // Never the last row's description under this one, however long this one's takes.
+    this.#details.replaceChildren();
+
+    if (row === null || this.#describe === null) {
+      this.#details.hidden = this.#describe === null;
+
+      return;
+    }
+
+    // A describer that throws is a failure like one that rejects: an empty pane, not a window half made.
+    new Promise<Node | null>((resolve) => resolve(this.#describe!(row))).then(
+      (details) => {
+        if (this.#request === request) {
+          this.#details.replaceChildren(...(details ? [details] : []));
+        }
+      },
+      // Not answered: an empty pane, not a broken one.
+      () => {
+        if (this.#request === request) {
+          this.#details.replaceChildren();
+        }
+      }
+    );
+  }
+}
+
+export default ChoiceWindow;

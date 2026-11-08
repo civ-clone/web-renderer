@@ -7,15 +7,15 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { City, Player, PlayerAction } from '../../src/js/UI/types';
-import CivilDisorder from '../../src/js/UI/components/Actions/CivilDisorder';
-import { renderIntelligenceRow } from '../../src/js/UI/components/IntelligenceReport';
-import Portal from '../../src/js/UI/components/Portal';
-import TradeReport from '../../src/js/UI/components/TradeReport';
-import Transport from '../../src/js/UI/Transport';
-import { assetStore } from '../../src/js/UI/AssetStore';
+import { City, Player, PlayerAction } from '@civ-clone-ui/client/types';
+import CivilDisorder from '@civ-clone-ui/windows/components/Actions/CivilDisorder';
+import { renderIntelligenceRow } from '@civ-clone-ui/windows/components/IntelligenceReport';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import TradeReport from '@civ-clone-ui/windows/components/TradeReport';
+import Transport from '@civ-clone-ui/client/Transport';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

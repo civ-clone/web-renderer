@@ -14,11 +14,11 @@
 
 import DataChanges, {
   instance as sharedChanges,
-} from '../../src/js/UI/lib/DataChanges';
-import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
-import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
-import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
-import { DataPatch, GameData } from '../../src/js/UI/types';
+} from '@civ-clone-ui/client/lib/DataChanges';
+import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
+import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
+import { ObjectMap, PlainObject } from '@civ-clone-ui/client/lib/reconstituteData';
+import { DataPatch, GameData } from '@civ-clone-ui/client/types';
 
 const failures: string[] = [];
 let checks = 0,

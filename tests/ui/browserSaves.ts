@@ -9,7 +9,7 @@ import {
   deleteSave,
   keepSave,
   listSaves,
-} from '../../src/js/UI/lib/browserSaves';
+} from '@civ-clone-ui/client/lib/browserSaves';
 import {
   failStore,
   limitStore,

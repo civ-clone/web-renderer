@@ -3,7 +3,7 @@
 // 1.5× growth since the last prune, and that neither prunes at 5,000 objects
 // or fewer.
 
-import PruneSchedule from '../../src/js/UI/lib/PruneSchedule';
+import PruneSchedule from '@civ-clone-ui/client/lib/PruneSchedule';
 
 const failures: string[] = [];
 let checks = 0,

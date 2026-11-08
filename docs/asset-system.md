@@ -10,11 +10,11 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ## Main components
 
-- `src/js/UI/components/ImportAssetsWindow.ts`
+- `packages/windows/components/ImportAssetsWindow.ts`
   - UI flow for selecting source files and triggering extraction.
-- `src/js/UI/AssetStore.ts`
+- `packages/assets/AssetStore.ts`
   - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730).
-- `src/js/UI/lib/getPreloadedImage.ts`
+- `packages/assets/lib/getPreloadedImage.ts`
   - The decoded sprites the map layers look up, by key, as `AssetStore.load` leaves them.
 - `@civ-clone/civ1-asset-extractor`
   - External package that performs sprite extraction from source files.
@@ -60,8 +60,8 @@ Not every extracted sprite is required. The women specialists are deliberately l
 
 Code that draws an optional sprite falls back to an older one. `assetStore.firstImported(paths)` returns the first of
 `paths` that has been imported, or the last of them if none has. The city screen's citizens (`renderCitizen` in
-`src/js/UI/components/lib/cityYields.ts`) ask for `[people_<type>_f, people_<type>]` for a woman specialist (from
-`specialistSprites` in `src/js/UI/lib/citizens.ts`), so they show the man until the player imports again.
+`packages/windows/components/lib/cityYields.ts`) ask for `[people_<type>_f, people_<type>]` for a woman specialist (from
+`specialistSprites` in `packages/client/lib/citizens.ts`), so they show the man until the player imports again.
 
 ## Asset persistence and loading
 
@@ -70,8 +70,8 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
 - Persistent storage (`idb`) keyed by asset `name`. A record holds the sprite's PNG as `blob`. Imports from before #730
   hold a data URI in `uri` instead; `load` turns each into a `blob` the first time it reads it, and writes it back.
 - The required sprites (286 for Civ1) as the runtime readiness check, and the optional ones. Both lists come from the
-  tileset descriptor's `assets` (`src/js/UI/tilesets/civ1.json`, through `currentTileset()` in
-  `src/js/UI/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
+  tileset descriptor's `assets` (`packages/assets/tilesets/civ1.json`, through `currentTileset()` in
+  `packages/assets/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
 - `load()`: reads the tileset's own required and optional sprites, and no other pack's, decodes each with
   `createImageBitmap` (or, if a bitmap hasn't come within 5 seconds, loads it as an `<img>`, whose `load` event comes
   in a background tab too: `decodeSprite`), and hands them to the map's lookup (`setSprites`). A sprite that will not decode, or an old record
@@ -88,7 +88,7 @@ The map layers look sprites up by name with `getPreloadedImage()` (for example `
 synchronously, from what `load` decoded.
 
 A sprite's key, its record's `name`, is the tileset's `storage.prefix + name + storage.ext` (`spriteKey` in
-`src/js/UI/tilesets/TilesetDescriptor.ts`): `./assets/units/settlers.png` for Civ1, as the import has always stored
+`packages/assets/tilesets/TilesetDescriptor.ts`): `./assets/units/settlers.png` for Civ1, as the import has always stored
 it. Another pack keeps its sprites under `./assets/<id>/`. `getPreloadedImage()` matches the whole key and nothing
 else, so a second pack's sprite of the same name is never taken for Civ1's (#56).
 

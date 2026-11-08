@@ -91,4 +91,4 @@ Quick reference map of key code areas.
 
 - `changelog/*.json`: release snapshots.
 - `changelog/releases.json`: aggregate release feed.
-- `src/js/UI/components/ReleaseWindow.ts`: in-app release viewer.
+- `packages/windows/components/ReleaseWindow.ts`: in-app release viewer.

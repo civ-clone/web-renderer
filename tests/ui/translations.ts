@@ -42,14 +42,14 @@ import {
   Indian,
   Mongol,
 } from '@civ-clone/civ1-civilization/Civilizations';
-import { cityName, cityNameText } from '../../src/js/UI/components/lib/city';
+import { cityName, cityNameText } from '@civ-clone-ui/client/components/lib/city';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
 import {
   chooseFromListBody,
   chooseFromListChoice,
   chooseFromListTitle,
-} from '../../src/js/UI/lib/chooseFromList';
+} from '@civ-clone-ui/client/lib/chooseFromList';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import i18next, { t } from 'i18next';
 import {
@@ -57,20 +57,20 @@ import {
   advanceNames,
   researchClearedLabel,
   researchingName,
-} from '../../src/js/UI/components/lib/advances';
+} from '@civ-clone-ui/windows/components/lib/advances';
 import Notification from '../../src/js/Engine/Notification';
-import { PlayerResearch } from '../../src/js/UI/types';
+import { PlayerResearch } from '@civ-clone-ui/client/types';
 import Tile from '@civ-clone/core-world/Tile';
 import Barbarian from '@civ-clone/base-civilization-barbarian/Barbarian';
 import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import type Player from '@civ-clone/core-player/Player';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
-import addFormatters from '../../src/js/UI/app/i18nFormatters';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
+import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 import { join } from 'path';
-import { reconstituteData } from '../../src/js/UI/lib/reconstituteData';
-import worldSizes from '../../src/js/UI/lib/worldSizes';
+import { reconstituteData } from '@civ-clone-ui/client/lib/reconstituteData';
+import worldSizes from '@civ-clone-ui/client/lib/worldSizes';
 
 const names = [
   "J. S. Bach's Cathedral",
@@ -651,6 +651,10 @@ const expect = (description: string, actual: string, expected: string) => {
       readdirSync(directory).forEach((name) => {
         const path = join(directory, name);
 
+        if (name === 'node_modules') {
+          return;
+        }
+
         if (statSync(path).isDirectory()) {
           scanUI(path);
 
@@ -668,7 +672,7 @@ const expect = (description: string, actual: string, expected: string) => {
         }
       });
 
-  scanUI('src/js/UI');
+  scanUI('packages');
 
   if (literalKeys.size < 100) {
     failures.push(`t() scan: only ${literalKeys.size} keys found`);

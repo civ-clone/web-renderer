@@ -8,10 +8,10 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import DebugFlags from '../../src/js/UI/debug/DebugFlags';
-import DebugPanel from '../../src/js/UI/debug/DebugPanel';
-import NotificationBar from '../../src/js/UI/app/NotificationBar';
-import Transport from '../../src/js/UI/Transport';
+import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+import DebugPanel from '@civ-clone-ui/game/debug/DebugPanel';
+import NotificationBar from '@civ-clone-ui/game/app/NotificationBar';
+import Transport from '@civ-clone-ui/client/Transport';
 
 const failures: string[] = [];
 let checks = 0,

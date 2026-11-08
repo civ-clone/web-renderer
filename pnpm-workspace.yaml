@@ -1,3 +1,8 @@
+# The frontend's own packages (#825), each `@civ-clone-ui/<folder>`. Their npm dependencies stay in the root
+# package.json, so they get the engine packages `civ sync` links there.
+packages:
+  - 'packages/*'
+
 publicHoistPattern:
   - '*@civ-clone/*'
 

@@ -1,7 +1,7 @@
 // The `?debug=1`-style query-string switches: which spellings turn a switch on
 // or off, and that anything else (or nothing) falls back to the default.
 
-import parseBooleanParam from '../../src/js/UI/lib/parseBooleanParam';
+import parseBooleanParam from '@civ-clone-ui/client/lib/parseBooleanParam';
 
 const failures: string[] = [];
 let checks = 0,

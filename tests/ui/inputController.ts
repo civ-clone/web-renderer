@@ -9,11 +9,11 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { GameData, Tile, Unit } from '../../src/js/UI/types';
+import { GameData, Tile, Unit } from '@civ-clone-ui/client/types';
 import i18next from 'i18next';
-import InputController from '../../src/js/UI/game/InputController';
-import GamePortal from '../../src/js/UI/components/GamePortal';
-import Transport from '../../src/js/UI/Transport';
+import InputController from '@civ-clone-ui/game/InputController';
+import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
+import Transport from '@civ-clone-ui/client/Transport';
 
 const failures: string[] = [];
 let checks = 0,

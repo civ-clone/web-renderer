@@ -1,13 +1,28 @@
-// The source tree's own imports, read from the files, for the tests that hold its boundaries (#825). Relative
-//  specifiers only: packages from npm are not part of the tree.
+// The source tree's own imports, read from the files, for the test that holds the packages' lines (#825). Relative
+//  specifiers, and the frontend's own packages by name: other packages from npm are not part of the tree.
 import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, join, relative } from 'path';
 import ts from 'typescript';
 
-/** Every `.ts` file under `dir`. */
+const scope = '@civ-clone-ui/';
+
+/** Where the frontend's packages are: `packages/<name>/`, each `@civ-clone-ui/<name>`. */
+export const packagesRoot = join(process.cwd(), 'packages');
+
+/** The package `path` is in, or `null` for a file in none. */
+export const packageOf = (path: string): string | null =>
+  path.startsWith(packagesRoot + '/')
+    ? relative(packagesRoot, path).split('/')[0]
+    : null;
+
+/** Every `.ts` file under `dir`, but for any `node_modules`. */
 export const sourcesUnder = (dir: string): string[] =>
   readdirSync(dir).flatMap((name) => {
     const path = join(dir, name);
+
+    if (name === 'node_modules') {
+      return [];
+    }
 
     return statSync(path).isDirectory()
       ? sourcesUnder(path)
@@ -28,13 +43,18 @@ export const specifiersOf = (source: string): string[] =>
     .preProcessFile(source, true, true)
     .importedFiles.map(({ fileName }) => fileName);
 
-/** The files `path` imports, as paths, each resolved as esbuild would (a missing one is left as written). */
+/**
+ * The files `path` imports, as paths, each resolved as esbuild would (a missing one is left as written): a relative
+ *  specifier from `path`, and a package of the frontend's own from `packages/`, where the workspace links it from.
+ */
 export const importsOf = (path: string): string[] => [
   ...new Set(
     specifiersOf(readFileSync(path, 'utf8'))
-      .filter((spec) => spec.startsWith('.'))
+      .filter((spec) => spec.startsWith('.') || spec.startsWith(scope))
       .map((spec) => {
-        const base = join(dirname(path), spec);
+        const base = spec.startsWith(scope)
+          ? join(packagesRoot, spec.slice(scope.length))
+          : join(dirname(path), spec);
 
         return (
           [base, `${base}.ts`, `${base}.d.ts`, join(base, 'index.ts')].find(

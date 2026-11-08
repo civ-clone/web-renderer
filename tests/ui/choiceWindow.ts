@@ -9,14 +9,14 @@ import './lib/interfaces';
 
 import ChoiceWindow, {
   ChoiceRow,
-} from '../../src/js/UI/components/ChoiceWindow';
-import { BuildItem, CityBuild } from '../../src/js/UI/types';
-import CityBuildChoice from '../../src/js/UI/components/CityBuildChoice';
+} from '@civ-clone-ui/widgets/components/ChoiceWindow';
+import { BuildItem, CityBuild } from '@civ-clone-ui/client/types';
+import CityBuildChoice from '@civ-clone-ui/windows/components/CityBuildChoice';
 import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
-import { applyInterface } from '../../src/js/UI/lib/interfaceMode';
+import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
-import { openCityBuild } from '../../src/js/UI/components/choices';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import { openCityBuild } from '@civ-clone-ui/windows/components/choices';
 
 const failures: string[] = [];
 let checks = 0,

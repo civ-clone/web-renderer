@@ -1,0 +1,154 @@
+import {
+  City as CityData,
+  CityImprovementContent,
+  MartialLaw,
+  MilitaryUnhappiness,
+  Player,
+} from '@civ-clone-ui/client/types';
+import { groupIcons, reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import Element from '@dom111/element';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import SupportedUnit from './SupportedUnit';
+import Transport from '@civ-clone-ui/client/Transport';
+import Unit from './Unit';
+import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
+import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
+import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import { cityName } from '@civ-clone-ui/client/components/lib/city';
+import { escape } from './lib/requirements';
+import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
+import { h } from '@civ-clone-ui/widgets/lib/html';
+import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { renderPopulation } from './lib/cityYields';
+import { s } from '@dom111/element';
+import { t } from 'i18next';
+import watchPlayer, { cityIds } from './lib/watchPlayer';
+
+const buildCityRow = async (
+  city: CityData,
+  portal: Portal,
+  transport: Transport
+) => {
+  const happinessReasons: {
+    [key: string]: (cityYield: any) => string | HTMLElement | Element;
+  } = {
+    CityImprovementContent: (cityYield: CityImprovementContent) =>
+      getLabelForBuildableEntity(cityYield.cityImprovement),
+    MartialLaw: (cityYield: MartialLaw) => new Unit(cityYield.unit),
+    MilitaryUnhappiness: (cityYield: MilitaryUnhappiness) =>
+      new SupportedUnit(city, cityYield.unit, ['MilitaryUnhappiness']),
+    LuxuryHappiness: () => {
+      const luxuriesElement = s(`<span></span>`);
+
+      assetStore
+        .shownAtURL(
+          spriteKey(currentTileset(), groupIcons.Luxuries),
+          currentTileset().ui.icon
+        )
+        .then((url) =>
+          luxuriesElement.append(
+            s(`<img src="${url}">`),
+            localeProvider.number(reduceKnownYield(city.yields, 'Luxuries'))
+          )
+        );
+
+      return luxuriesElement;
+    },
+  };
+
+  const reasons = (city.citizens?.causes ?? []).map((cause) =>
+    s(
+      `<div class="reason"></div>`,
+      renderPopulation(city, cause.moods),
+      s(
+        `<div class="detail"></div>`,
+        happinessReasons[cause.yield._]
+          ? happinessReasons[cause.yield._](cause.yield)
+          : cause.yield._
+      )
+    )
+  );
+
+  const reasonWrapper = s('<div class="reasons hidden"></div>', ...reasons);
+
+  return h(
+    s(
+      `<div class="city${city.celebrateLeader ? ' celebrateLeader' : ''}${
+        city.civilDisorder ? ' civilDisorder' : ''
+      }"><div class="name">${escape(cityName(city))}</div></div>`,
+      renderPopulation(city),
+      h(
+        s(
+          `<button class="btn-secondary">${t('HappinessReport.view-city', {
+            city,
+          })}</button>`
+        ),
+        {
+          click(event: MouseEvent) {
+            event.stopPropagation();
+
+            portal.openCity(city);
+          },
+        }
+      ),
+      reasonWrapper
+    ),
+    {
+      click() {
+        if (reasons.length === 0) {
+          return;
+        }
+
+        reasonWrapper.classList.toggle('hidden');
+      },
+    }
+  );
+};
+
+export class HappinessReport extends FilterableWindow {
+  #player: Player;
+  #portal: Portal;
+  #transport: Transport;
+  #unwatch: () => void;
+
+  constructor(player: Player, portal: Portal, transport: Transport) {
+    super(t('HappinessReport.title'), s('<div></div>'), {
+      classes: 'happiness-report',
+      rowSelector: '.city',
+    });
+
+    this.element().setAttribute(
+      'data-i18n-breakdown',
+      t('HappinessReport.breakdown')
+    );
+
+    this.#unwatch = watchPlayer(player, cityIds, (player) => {
+      this.#player = player;
+
+      this.update();
+    });
+
+    this.#player = player;
+    this.#portal = portal;
+    this.#transport = transport;
+
+    this.update();
+  }
+
+  close() {
+    this.#unwatch();
+
+    return super.close();
+  }
+
+  update() {
+    Promise.all(
+      this.#player.cities.map((city) =>
+        buildCityRow(city, this.#portal, this.#transport)
+      )
+    ).then((rows) => super.update(s('<div></div>', ...rows)));
+  }
+}
+
+export default HappinessReport;

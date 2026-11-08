@@ -7,13 +7,13 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { AssetStore, decodeSprite } from '../../src/js/UI/AssetStore';
-import { Store } from '../../src/js/UI/Store';
-import currentTileset from '../../src/js/UI/lib/tilesets';
+import { AssetStore, decodeSprite } from '@civ-clone-ui/assets/AssetStore';
+import { Store } from '@civ-clone-ui/client/Store';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
-} from '../../src/js/UI/lib/getPreloadedImage';
-import { spriteKey } from '../../src/js/UI/tilesets/TilesetDescriptor';
+} from '@civ-clone-ui/assets/lib/getPreloadedImage';
+import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,

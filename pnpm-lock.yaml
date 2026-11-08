@@ -13,6 +13,33 @@ importers:
 
   .:
     dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:packages/assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:packages/client
+      '@civ-clone-ui/game':
+        specifier: workspace:*
+        version: link:packages/game
+      '@civ-clone-ui/interface-classic':
+        specifier: workspace:*
+        version: link:packages/interface-classic
+      '@civ-clone-ui/interface-modern':
+        specifier: workspace:*
+        version: link:packages/interface-modern
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:packages/map
+      '@civ-clone-ui/map-square':
+        specifier: workspace:*
+        version: link:packages/map-square
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:packages/widgets
+      '@civ-clone-ui/windows':
+        specifier: workspace:*
+        version: link:packages/windows
       '@civ-clone/base-civilization-barbarian':
         specifier: ^0.1.1
         version: 0.1.1
@@ -257,6 +284,113 @@ importers:
       typescript:
         specifier: ^4.0.0
         version: 4.9.5
+
+  packages/assets:
+    dependencies:
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+
+  packages/client: {}
+
+  packages/game:
+    dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone-ui/map-square':
+        specifier: workspace:*
+        version: link:../map-square
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:../widgets
+      '@civ-clone-ui/windows':
+        specifier: workspace:*
+        version: link:../windows
+
+  packages/interface-classic:
+    dependencies:
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:../widgets
+      '@civ-clone-ui/windows':
+        specifier: workspace:*
+        version: link:../windows
+
+  packages/interface-modern:
+    dependencies:
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:../widgets
+      '@civ-clone-ui/windows':
+        specifier: workspace:*
+        version: link:../windows
+
+  packages/map:
+    dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/map-square:
+    dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:../map
+
+  packages/widgets:
+    dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+
+  packages/windows:
+    dependencies:
+      '@civ-clone-ui/assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone-ui/client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone-ui/map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone-ui/widgets':
+        specifier: workspace:*
+        version: link:../widgets
 
 packages:
 

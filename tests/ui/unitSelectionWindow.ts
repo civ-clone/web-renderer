@@ -13,14 +13,14 @@ import './lib/dom';
 import './lib/interfaces';
 
 import i18next from 'i18next';
-import i18nOptions from '../../src/js/UI/app/i18nOptions';
-import { DataPatch, GameData, Unit } from '../../src/js/UI/types';
-import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
-import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
-import Transport from '../../src/js/UI/Transport';
-import UnitSelectionWindow from '../../src/js/UI/components/UnitSelectionWindow';
-import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
-import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
+import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import { DataPatch, GameData, Unit } from '@civ-clone-ui/client/types';
+import { ObjectMap, PlainObject } from '@civ-clone-ui/client/lib/reconstituteData';
+import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
+import Transport from '@civ-clone-ui/client/Transport';
+import UnitSelectionWindow from '@civ-clone-ui/windows/components/UnitSelectionWindow';
+import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
+import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
 
 const failures: string[] = [];
 let checks = 0,

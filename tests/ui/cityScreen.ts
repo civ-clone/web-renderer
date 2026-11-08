@@ -20,25 +20,25 @@ import {
   citizenMoods,
   citizenSprites,
   specialistSprites,
-} from '../../src/js/UI/lib/citizens';
+} from '@civ-clone-ui/client/lib/citizens';
 import {
   orderSpecialists,
   specialistForKey,
-} from '../../src/js/UI/lib/specialists';
-import { CitizenMood, Yield } from '../../src/js/UI/types';
+} from '@civ-clone-ui/client/lib/specialists';
+import { CitizenMood, Yield } from '@civ-clone-ui/client/types';
 import {
   netTileYields,
   splitYield,
   tileYieldIcons,
   yieldGroup,
-} from '../../src/js/UI/lib/yieldMap';
-import { City, DataPatch, GameData } from '../../src/js/UI/types';
-import { ObjectMap, PlainObject } from '../../src/js/UI/lib/reconstituteData';
-import IncrementalReconstituter from '../../src/js/UI/lib/IncrementalReconstituter';
-import applyDataPatches from '../../src/js/UI/lib/applyDataPatches';
-import { instance as dataChanges } from '../../src/js/UI/lib/DataChanges';
-import { toggleAuto } from '../../src/js/UI/components/lib/cityBuild';
-import watchCity from '../../src/js/UI/components/lib/watchCity';
+} from '@civ-clone-ui/client/lib/yieldMap';
+import { City, DataPatch, GameData } from '@civ-clone-ui/client/types';
+import { ObjectMap, PlainObject } from '@civ-clone-ui/client/lib/reconstituteData';
+import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
+import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
+import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
+import { toggleAuto } from '@civ-clone-ui/client/components/lib/cityBuild';
+import watchCity from '@civ-clone-ui/windows/components/lib/watchCity';
 
 const failures: string[] = [];
 let checks = 0,

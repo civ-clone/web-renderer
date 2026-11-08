@@ -8,11 +8,11 @@
 import { fakeCanvas } from './lib/fakeCanvas';
 import './lib/grids';
 
-import Map from '../../src/js/UI/components/Map';
-import Portal from '../../src/js/UI/components/Portal';
-import { Rect, mergeRects } from '../../src/js/UI/lib/viewport';
-import { Tile } from '../../src/js/UI/types';
-import World from '../../src/js/UI/components/World';
+import Map from '@civ-clone-ui/map/components/Map';
+import Portal from '@civ-clone-ui/map/components/Portal';
+import { Rect, mergeRects } from '@civ-clone-ui/map/lib/viewport';
+import { Tile } from '@civ-clone-ui/client/types';
+import World from '@civ-clone-ui/map/components/World';
 
 const failures: string[] = [];
 let checks = 0,

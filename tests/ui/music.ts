@@ -4,7 +4,7 @@
 // context that won't start are all silent, with nothing in the console. `soundGain` turns the options into the gain.
 
 import Music, { MusicContext, MusicNode } from '../../src/js/Audio/Music';
-import soundGain from '../../src/js/UI/lib/soundGain';
+import soundGain from '@civ-clone-ui/assets/lib/soundGain';
 
 const failures: string[] = [];
 let checks = 0,

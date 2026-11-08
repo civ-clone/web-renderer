@@ -7,7 +7,7 @@ The frontend is responsible for rendering, input capture, and player interaction
 Primary files:
 
 - `src/js/frontend.ts`
-- `src/js/UI/bootstrap.ts` (page start-up) and `src/js/UI/game/*` (one game)
+- `packages/game/bootstrap.ts` (page start-up) and `src/js/UI/game/*` (one game)
 - `src/js/UI/app/*`, `src/js/UI/debug/*`
 - `src/js/UI/components/*`
 - `src/js/UI/components/Map/*`
@@ -134,7 +134,7 @@ draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
 where the browser has `CompressionStream`. Loading reloads the page: the save is
 handed over in IndexedDB (`civ-clone-saved-game`) with a marker in
 `sessionStorage`, so a fresh worker loads it with nothing else in it
-(`src/js/UI/lib/savedGame.ts`). `leaveGuard` makes Back, and closing the tab,
+(`packages/windows/lib/savedGame.ts`). `leaveGuard` makes Back, and closing the tab,
 ask before leaving a game in progress.
 
 ### Gameplay overlays/windows
@@ -256,7 +256,7 @@ Layers record which parts of themselves changed, and `Portal.render()`
 composites those regions rather than the whole canvas, so a blinking unit or a
 moved one costs a tile rather than a viewport. Past half the canvas, or more
 than eight regions, it composites the lot. The wrapping and rectangle maths is in
-`src/js/UI/lib/viewport.ts`.
+`packages/map/lib/viewport.ts`.
 
 Moving around the map:
 

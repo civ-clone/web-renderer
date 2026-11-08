@@ -4,16 +4,16 @@
 //  a draw order that is a total order, and the tiles reaching a rectangle are the ones the square sums always gave.
 
 import './lib/grids';
-import { Placement, tileBounds } from '../../src/js/UI/lib/projection';
-import SquareProjection from '../../src/js/UI/map-square/SquareProjection';
-import { tileRange, wrapIndices } from '../../src/js/UI/lib/viewport';
-import civ1Json from '../../src/js/UI/tilesets/civ1.json';
-import currentTileset from '../../src/js/UI/lib/tilesets';
+import { Placement, tileBounds } from '@civ-clone-ui/map/lib/projection';
+import SquareProjection from '@civ-clone-ui/map-square/SquareProjection';
+import { tileRange, wrapIndices } from '@civ-clone-ui/map/lib/viewport';
+import civ1Json from '@civ-clone-ui/assets/tilesets/civ1.json';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
 import projectionFor, {
   drawableGrids,
   registerGrid,
-} from '../../src/js/UI/lib/projectionFor';
-import validateDescriptor from '../../src/js/UI/tilesets/TilesetDescriptor';
+} from '@civ-clone-ui/map/lib/projectionFor';
+import validateDescriptor from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,

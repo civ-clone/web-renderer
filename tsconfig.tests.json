@@ -7,5 +7,5 @@
     "resolveJsonModule": true,
     "skipLibCheck": true
   },
-  "include": ["tests/engine/**/*", "tests/ui/**/*", "src/js/UI/modules.d.ts"]
+  "include": ["tests/engine/**/*", "tests/ui/**/*", "packages/client/modules.d.ts"]
 }

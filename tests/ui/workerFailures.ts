@@ -9,8 +9,8 @@ import './lib/dom';
 import './lib/interfaces';
 
 import i18next from 'i18next';
-import Transport from '../../src/js/UI/Transport';
-import WorkerFailures from '../../src/js/UI/app/WorkerFailures';
+import Transport from '@civ-clone-ui/client/Transport';
+import WorkerFailures from '@civ-clone-ui/game/app/WorkerFailures';
 import WorkerTransport from '../../src/js/Engine/WorkerTransport';
 
 const failures: string[] = [];

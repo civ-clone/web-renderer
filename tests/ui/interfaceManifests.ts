@@ -6,8 +6,8 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import { choiceList, openChoice } from '../../src/js/UI/components/choiceList';
-import ChoiceWindow from '../../src/js/UI/components/ChoiceWindow';
+import { choiceList, openChoice } from '@civ-clone-ui/windows/components/choiceList';
+import ChoiceWindow from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   DEFAULT_INTERFACE,
@@ -17,9 +17,9 @@ import {
   hasFeature,
   interfaces,
   registerInterface,
-} from '../../src/js/UI/lib/interfaceMode';
+} from '@civ-clone-ui/client/lib/interfaceMode';
 import { join } from 'path';
-import { uiThemeFrom } from '../../src/js/UI/lib/theme';
+import { uiThemeFrom } from '@civ-clone-ui/widgets/lib/theme';
 
 const failures: string[] = [];
 let checks = 0;
@@ -185,13 +185,17 @@ const sources = (dir: string): string[] =>
     readdirSync(dir).flatMap((name) => {
       const path = join(dir, name);
 
+      if (name === 'node_modules') {
+        return [];
+      }
+
       return statSync(path).isDirectory()
         ? sources(path)
         : path.endsWith('.ts')
         ? [path]
         : [];
     }),
-  srcRoot = join(process.cwd(), 'src/js/UI');
+  srcRoot = join(process.cwd(), 'packages');
 
 expect(
   'only Options reads interfaceMode()',
@@ -199,7 +203,7 @@ expect(
     .filter((path) => readFileSync(path, 'utf8').includes('interfaceMode()'))
     .map((path) => path.slice(srcRoot.length + 1))
     .sort(),
-  ['components/GameOptions.ts']
+  ['windows/components/GameOptions.ts']
 );
 
 if (failures.length) {

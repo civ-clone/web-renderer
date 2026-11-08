@@ -8,7 +8,7 @@ import worldSizes, {
   defaultWorldSize,
   earthWorldSizes,
   playerCounts,
-} from '../../src/js/UI/lib/worldSizes';
+} from '@civ-clone-ui/client/lib/worldSizes';
 
 const failures: string[] = [];
 let checks = 0;

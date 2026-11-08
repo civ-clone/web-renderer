@@ -9,22 +9,22 @@ import './lib/interfaces';
 import {
   IconLayer,
   unitActionIconLayers,
-} from '../../src/js/UI/lib/unitActionIcon';
-import { Tile, Unit, UnitAction } from '../../src/js/UI/types';
+} from '@civ-clone-ui/assets/lib/unitActionIcon';
+import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
 import ClearForest from '@civ-clone/base-unit-action-clear-forest/ClearForest';
 import ClearJungle from '@civ-clone/base-unit-action-clear-jungle/ClearJungle';
 import ClearSwamp from '@civ-clone/base-unit-action-clear-swamp/ClearSwamp';
 import Move from '@civ-clone/base-unit-action-move/Move';
 import PlantForest from '@civ-clone/base-unit-action-plant-forest/PlantForest';
-import UnitActions from '../../src/js/UI/components/UnitActions';
+import UnitActions from '@civ-clone-ui/windows/components/UnitActions';
 import actionResult from '../../src/js/Engine/AdditionalData/actionResult';
-import distantActions from '../../src/js/UI/lib/distantActions';
+import distantActions from '@civ-clone-ui/client/lib/distantActions';
 import {
   directionKeys,
   keyToActionsMap,
-} from '../../src/js/UI/lib/unitActionKeys';
-import currentTileset from '../../src/js/UI/lib/tilesets';
-import topologyFor from '../../src/js/UI/lib/topologyFor';
+} from '@civ-clone-ui/client/lib/unitActionKeys';
+import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
+import topologyFor from '@civ-clone-ui/client/lib/topologyFor';
 
 const failures: string[] = [];
 let checks = 0;

@@ -26,7 +26,7 @@ const END = 'arena>>>';
 const MINIMUM = 'd660d9b';
 const WORKING_TREE = 'working-tree';
 // The sizes there is an Earth map for, with the number of civilizations New
-// Game offers on each (src/js/UI/lib/worldSizes.ts).
+// Game offers on each (packages/client/lib/worldSizes.ts).
 const EARTH_SIZES = [
   { width: 80, height: 50, players: 7 },
   { width: 104, height: 65, players: 9 },

@@ -1,0 +1,12 @@
+{
+  "name": "@civ-clone-ui/map",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drawing the world on any grid: the portal and its layers, through a Projection. Each grid registers its own projection from a package of its own.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone-ui/assets": "workspace:*",
+    "@civ-clone-ui/client": "workspace:*",
+    "@civ-clone-ui/widgets": "workspace:*"
+  }
+}
