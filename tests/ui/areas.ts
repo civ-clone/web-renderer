@@ -94,10 +94,17 @@ const edges = ui.flatMap((path) =>
   ),
   crossings = edges
     .filter(({ path, target }) => {
-      const from = areaOf(path) as string,
+      const from = areaOf(path),
         to = areaOf(target);
 
-      return to !== null && from !== 'interfaces' && !mayUse(from, to);
+      // A file in no area is reported above. `interfaces/index.ts` lists the interfaces, and imports nothing else.
+      if (from === null || to === null) {
+        return false;
+      }
+
+      return from === 'interfaces'
+        ? !to.startsWith('interfaces/')
+        : !mayUse(from, to);
     })
     .map(({ path, target }) => edge(path, target))
     .sort(),
