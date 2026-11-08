@@ -1,12 +1,12 @@
 {
-  "name": "@civ-clone-ui/map-square",
+  "name": "@civ-clone/ui-map-square",
   "version": "0.1.0",
   "private": true,
   "description": "The square grid: its projection and its minimap. Loading it lets the map draw square tilesets.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone-ui/assets": "workspace:*",
-    "@civ-clone-ui/client": "workspace:*",
-    "@civ-clone-ui/map": "workspace:*"
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*"
   }
 }

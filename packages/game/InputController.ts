@@ -1,4 +1,4 @@
-import { GameData, Tile, Unit } from '@civ-clone-ui/client/types';
+import { GameData, Tile, Unit } from '@civ-clone/ui-client/types';
 import { emit, off, on } from '@dom111/element';
 import { t } from 'i18next';
 import {
@@ -9,15 +9,15 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
-} from '@civ-clone-ui/windows/components/reports';
-import Civilopedia from '@civ-clone-ui/windows/components/Civilopedia';
-import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
-import ScienceReport from '@civ-clone-ui/windows/components/ScienceReport';
-import Transport from '@civ-clone-ui/client/Transport';
-import { PlayerTradeRates } from '@civ-clone-ui/client/types';
-import endTurn from '@civ-clone-ui/client/lib/endTurn';
-import { mappedKeyFromEvent } from '@civ-clone-ui/client/lib/mappedKey';
-import { openTradeRates } from '@civ-clone-ui/windows/components/Actions/AdjustTradeRates';
+} from '@civ-clone/ui-windows/components/reports';
+import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
+import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
+import Transport from '@civ-clone/ui-client/Transport';
+import { PlayerTradeRates } from '@civ-clone/ui-client/types';
+import endTurn from '@civ-clone/ui-client/lib/endTurn';
+import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { openTradeRates } from '@civ-clone/ui-windows/components/Actions/AdjustTradeRates';
 
 // A letter as typed with Shift alone deciding its case, so Caps Lock doesn't turn `p` (CleanPollution) into `P`
 //  (Pillage), or `d` into `D` (Disband) (#479).

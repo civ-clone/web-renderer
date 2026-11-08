@@ -1,5 +1,5 @@
 import TerrainAbstract from './TerrainAbstract';
-import { Tile } from '@civ-clone-ui/client/types';
+import { Tile } from '@civ-clone/ui-client/types';
 
 export class Fog extends TerrainAbstract {
   protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {

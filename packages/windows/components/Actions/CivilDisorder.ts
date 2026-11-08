@@ -1,15 +1,15 @@
-import { City, PlayerAction } from '@civ-clone-ui/client/types';
+import { City, PlayerAction } from '@civ-clone/ui-client/types';
 import Action from './Action';
-import ActionWindow from '@civ-clone-ui/widgets/components/ActionWindow';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
 import showCityOnMapAction from '../lib/showCityOnMap';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class CivilDisorder extends Action {
   #portal: Portal;

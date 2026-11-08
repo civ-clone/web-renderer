@@ -2,21 +2,21 @@ import {
   Player,
   PlayerAction,
   PlayerResearch,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import Action from './Action';
-import { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import { ChoiceRow } from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { combinedYields } from '../lib/playerYields';
 import { advanceName, held, researchClearedLabel } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft, yieldIcon } from '../lib/cityYields';
 import entryDetails from '../lib/choiceDetails';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { openChoice } from '../choiceList';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class ChooseResearch extends Action {
   #player: Player | null;

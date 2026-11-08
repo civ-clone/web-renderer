@@ -9,13 +9,13 @@ import {
   SOUND_DRIVER,
   assetFromURI,
   assetStore,
-} from '@civ-clone-ui/assets/AssetStore';
+} from '@civ-clone/ui-assets/AssetStore';
 import CvlImage from '../../../src/js/Audio/cvl/Image';
-import Window, { WindowOptions } from '@civ-clone-ui/widgets/components/Window';
+import Window, { WindowOptions } from '@civ-clone/ui-widgets/components/Window';
 import { allowLeaving } from '../lib/leaveGuard';
-import { button } from '@civ-clone-ui/widgets/lib/button';
+import { button } from '@civ-clone/ui-widgets/lib/button';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
 

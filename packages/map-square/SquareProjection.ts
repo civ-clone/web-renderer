@@ -6,8 +6,8 @@ import {
   TileSpan,
   WorldDimensions,
   noReach,
-} from '@civ-clone-ui/map/lib/projection';
-import { Rect } from '@civ-clone-ui/map/lib/viewport';
+} from '@civ-clone/ui-map/lib/projection';
+import { Rect } from '@civ-clone/ui-map/lib/viewport';
 
 // The square grid's own code (#825): the map draws every grid through a `Projection`, and only what is true of squares
 //  alone lives here. Hexagonal and isometric grids get folders of their own beside this one (#94, #97).

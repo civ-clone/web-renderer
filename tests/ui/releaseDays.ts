@@ -4,7 +4,7 @@
 import byDay, {
   Release,
   isDevOnly,
-} from '@civ-clone-ui/client/lib/releaseDays';
+} from '@civ-clone/ui-client/lib/releaseDays';
 import releases from '../../changelog/releases.json';
 
 const failures: string[] = [];

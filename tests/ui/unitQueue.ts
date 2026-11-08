@@ -3,8 +3,8 @@
 // from the `w` key, `activated` for each unit made active (`setActiveUnit`
 // follows every `wait` that returns a unit, so the checks do too).
 
-import { PlayerAction, Unit } from '@civ-clone-ui/client/types';
-import UnitQueue from '@civ-clone-ui/client/lib/UnitQueue';
+import { PlayerAction, Unit } from '@civ-clone/ui-client/types';
+import UnitQueue from '@civ-clone/ui-client/lib/UnitQueue';
 
 const failures: string[] = [];
 let checks = 0,

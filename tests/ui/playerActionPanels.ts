@@ -7,8 +7,8 @@
 import partitionActions, {
   ignoredActionList,
   primaryActionList,
-} from '@civ-clone-ui/client/lib/playerActionPanels';
-import { PlayerAction } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/lib/playerActionPanels';
+import { PlayerAction } from '@civ-clone/ui-client/types';
 
 const failures: string[] = [];
 let checks = 0,

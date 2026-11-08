@@ -2,29 +2,29 @@ import {
   chooseFromListBody,
   chooseFromListChoice,
   chooseFromListTitle,
-} from '@civ-clone-ui/client/lib/chooseFromList';
+} from '@civ-clone/ui-client/lib/chooseFromList';
 import {
   difficultyLabels,
   difficultyName,
   preselectedDifficulty,
   rememberDifficulty,
-} from '@civ-clone-ui/client/lib/difficulty';
+} from '@civ-clone/ui-client/lib/difficulty';
 import {
   interactionLabel,
   negotiationLine,
   playerName,
   speakerOf,
-} from '@civ-clone-ui/client/lib/interactionLabels';
-import { Interactions, Negotiation } from '@civ-clone-ui/client/types';
-import ActionWindow from '@civ-clone-ui/widgets/components/ActionWindow';
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+} from '@civ-clone/ui-client/lib/interactionLabels';
+import { Interactions, Negotiation } from '@civ-clone/ui-client/types';
+import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import Intelligence from '../../../src/js/Engine/Requests/Intelligence';
-import MeetingWindow from '@civ-clone-ui/windows/components/MeetingWindow';
-import Transport from '@civ-clone-ui/client/Transport';
-import entryDetails from '@civ-clone-ui/windows/components/lib/choiceDetails';
-import instanceOf from '@civ-clone-ui/client/lib/instanceOf';
-import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
-import { openChoice } from '@civ-clone-ui/windows/components/choiceList';
+import MeetingWindow from '@civ-clone/ui-windows/components/MeetingWindow';
+import Transport from '@civ-clone/ui-client/Transport';
+import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';
+import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
+import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
+import { openChoice } from '@civ-clone/ui-windows/components/choiceList';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

@@ -2,7 +2,7 @@
 // context records each call, and loaded sprites of a given size. Imported
 // before anything that reaches for `document`.
 
-import { setSprites } from '@civ-clone-ui/assets/lib/getPreloadedImage';
+import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 
 export type Call = [string, ...any[]];
 

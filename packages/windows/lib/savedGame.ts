@@ -1,11 +1,11 @@
-import { Store } from '@civ-clone-ui/client/Store';
+import { Store } from '@civ-clone/ui-client/Store';
 import {
   SeatChanges,
   isSeatChanges,
   savedSeats,
 } from '../../../src/js/Engine/lib/savedSeats';
 import { allowLeaving } from './leaveGuard';
-import { isSupportedTopology } from '@civ-clone-ui/map/lib/supportedTopologies';
+import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 
 /**

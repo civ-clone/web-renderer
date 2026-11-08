@@ -1,7 +1,7 @@
-import { WorldDimensions } from '@civ-clone-ui/map/lib/projection';
-import { registerGrid, refuse } from '@civ-clone-ui/map/lib/projectionFor';
+import { WorldDimensions } from '@civ-clone/ui-map/lib/projection';
+import { registerGrid, refuse } from '@civ-clone/ui-map/lib/projectionFor';
 import SquareProjection from './SquareProjection';
-import { TilesetDescriptor } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 // The square grid, made drawable (#825): the page loads this for the map to draw square tilesets.
 

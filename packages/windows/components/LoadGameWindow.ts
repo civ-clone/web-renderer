@@ -8,17 +8,17 @@ import {
   BrowserSave,
   deleteSave,
   listSaves,
-} from '@civ-clone-ui/client/lib/browserSaves';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
+} from '@civ-clone/ui-client/lib/browserSaves';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
 import ResumeGameWindow from './ResumeGameWindow';
-import Transport from '@civ-clone-ui/client/Transport';
-import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
-import { filteredOutClass } from '@civ-clone-ui/widgets/lib/filterRows';
+import Transport from '@civ-clone/ui-client/Transport';
+import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
 import {
   ButtonVariant,
   button as systemButton,
-} from '@civ-clone-ui/widgets/lib/button';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+} from '@civ-clone/ui-widgets/lib/button';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

@@ -10,7 +10,7 @@
     "target": "ES2018",
     "baseUrl": ".",
     "paths": {
-      "@civ-clone-ui/*": ["../../packages/*"]
+      "@civ-clone/ui-*": ["../../packages/*"]
     }
   }
 }

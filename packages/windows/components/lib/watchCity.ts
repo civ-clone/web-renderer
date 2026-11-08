@@ -1,5 +1,5 @@
-import { City, GameData } from '@civ-clone-ui/client/types';
-import DataChanges, { instance } from '@civ-clone-ui/client/lib/DataChanges';
+import { City, GameData } from '@civ-clone/ui-client/types';
+import DataChanges, { instance } from '@civ-clone/ui-client/lib/DataChanges';
 
 export type CityWatchHandlers = {
   /**

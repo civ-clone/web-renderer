@@ -9,23 +9,23 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import { City, Tile, Yield } from '@civ-clone-ui/client/types';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
-import Map from '@civ-clone-ui/map/components/Map';
-import { Rect } from '@civ-clone-ui/map/lib/viewport';
-import World from '@civ-clone-ui/map/components/World';
-import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import { City, Tile, Yield } from '@civ-clone/ui-client/types';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import Map from '@civ-clone/ui-map/components/Map';
+import { Rect } from '@civ-clone/ui-map/lib/viewport';
+import World from '@civ-clone/ui-map/components/World';
+import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import {
   TooltipContent,
   TooltipText,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import squareTooltip, {
   hasSquareTooltip,
-} from '@civ-clone-ui/windows/components/Map/squareTooltip';
+} from '@civ-clone/ui-windows/components/Map/squareTooltip';
 
 const failures: string[] = [];
 let checks = 0,

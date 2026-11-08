@@ -11,7 +11,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import SelectionWindow from '@civ-clone-ui/widgets/components/SelectionWindow';
+import SelectionWindow from '@civ-clone/ui-widgets/components/SelectionWindow';
 
 const failures: string[] = [];
 let checks = 0;

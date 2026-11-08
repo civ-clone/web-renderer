@@ -14,8 +14,8 @@ import EventSounds, {
   rivalStarted,
   shortTheme,
   tunes,
-} from '@civ-clone-ui/windows/lib/eventSounds';
-import { Civilization, Negotiation, Player } from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-windows/lib/eventSounds';
+import { Civilization, Negotiation, Player } from '@civ-clone/ui-client/types';
 
 const failures: string[] = [];
 let checks = 0,

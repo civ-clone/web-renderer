@@ -14,15 +14,15 @@ import UiMenu, {
   UiMenuOptions,
   openMenu,
   placeMenu,
-} from '@civ-clone-ui/windows/components/UiMenu';
+} from '@civ-clone/ui-windows/components/UiMenu';
 import openUnitMenu, {
   squareLine,
-} from '@civ-clone-ui/windows/components/UiUnitMenu';
-import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
-import GameMenu from '@civ-clone-ui/windows/components/GameMenu';
-import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+} from '@civ-clone/ui-windows/components/UiUnitMenu';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

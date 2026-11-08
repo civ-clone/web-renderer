@@ -1,11 +1,11 @@
 import { Element, s } from '@dom111/element';
-import { Unit as UnitData } from '@civ-clone-ui/client/types';
+import { Unit as UnitData } from '@civ-clone/ui-client/types';
 import currentTileset, {
   nativeTileSize,
-} from '@civ-clone-ui/assets/lib/tilesets';
+} from '@civ-clone/ui-assets/lib/tilesets';
 import renderUnit, {
   drawUnitStatus,
-} from '@civ-clone-ui/assets/lib/renderUnit';
+} from '@civ-clone/ui-assets/lib/renderUnit';
 
 // A unit as a window shows it: on a tile of the tileset's, `scale` times its size (the interface's 2 unless asked).
 const tileCanvas = (scale: number): HTMLCanvasElement => {

@@ -1,23 +1,23 @@
-import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
 import { t } from 'i18next';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import {
   directionKeys,
   keyToActionsMap,
-} from '@civ-clone-ui/client/lib/unitActionKeys';
-import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
-import { cityNameText } from '@civ-clone-ui/client/components/lib/city';
+} from '@civ-clone/ui-client/lib/unitActionKeys';
+import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import {
   chooseUnitAction,
   nameOf,
   performWithPrompts,
-} from '@civ-clone-ui/windows/lib/unitActionPrompts';
+} from '@civ-clone/ui-windows/lib/unitActionPrompts';
 import {
   neighbourActions,
   unitActions,
-} from '@civ-clone-ui/client/lib/unitActions';
-import PendingMove, { plainMove } from '@civ-clone-ui/client/lib/PendingMove';
-import { Topology } from '@civ-clone-ui/client/lib/topologyFor';
+} from '@civ-clone/ui-client/lib/unitActions';
+import PendingMove, { plainMove } from '@civ-clone/ui-client/lib/PendingMove';
+import { Topology } from '@civ-clone/ui-client/lib/topologyFor';
 
 // What a unit key does to the active unit (#326, #543), for `ActiveUnitController`, which plays it typed now or kept
 //  while a move or an order is answered. Moved out of the controller (#503).

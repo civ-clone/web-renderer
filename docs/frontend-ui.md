@@ -81,11 +81,15 @@ to register them as the page does.
 
 ## Packages
 
-The frontend is a set of pnpm workspace packages (#825), each in `packages/<name>/` and named `@civ-clone-ui/<name>`.
+The frontend is a set of pnpm workspace packages (#825), each in `packages/<name>/` and named `@civ-clone/ui-<name>`.
 They are built and released together with civ.one, and none is published on its own yet. Inside a package, files use
-relative paths. A file reaches another package only by its name (`@civ-clone-ui/client/lib/UnitQueue`), and only one
+relative paths. A file reaches another package only by its name (`@civ-clone/ui-client/lib/UnitQueue`), and only one
 its own `package.json` depends on (`"workspace:*"`). The `packages` test holds all of this: every dependency a package
 declares is one it uses, no two depend on each other however far round, and nothing depends on an interface.
+
+They share the engine's `@civ-clone` scope, and the `ui-` prefix keeps them apart: the plugin list and the `civ` tools
+that list what is installed in the scope (`scan`, `collisions`, `duplicates`) skip every `@civ-clone/ui-*`
+(`isUiPackage` in `tools/lib/paths.js`). An engine package must never be named `ui-…`.
 
 A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
 so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
@@ -113,7 +117,7 @@ package is named after (`game/`, `map-square/`), whose files are at the package'
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
 `Projection`, and anything true of the square grid alone lives in `map-square`. Hexagonal and isometric grids get
 packages of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
-projection with `registerGrid` (`@civ-clone-ui/map/lib/projectionFor`), and the page loads the grids it draws, as `frontend.ts` loads
+projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the grids it draws, as `frontend.ts` loads
 `map-square`. The minimap, which draws every world as squares in storage order, is the square grid's too. Suites that
 draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
 

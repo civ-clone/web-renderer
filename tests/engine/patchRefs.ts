@@ -44,16 +44,16 @@ import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegis
 import {
   ObjectMap,
   PlainObject,
-} from '@civ-clone-ui/client/lib/reconstituteData';
+} from '@civ-clone/ui-client/lib/reconstituteData';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
-import reconstituteData from '@civ-clone-ui/client/lib/reconstituteData';
-import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
-import pruneObjectMap from '@civ-clone-ui/client/lib/pruneObjectMap';
-import PruneSchedule from '@civ-clone-ui/client/lib/PruneSchedule';
+import reconstituteData from '@civ-clone/ui-client/lib/reconstituteData';
+import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
+import pruneObjectMap from '@civ-clone/ui-client/lib/pruneObjectMap';
+import PruneSchedule from '@civ-clone/ui-client/lib/PruneSchedule';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';

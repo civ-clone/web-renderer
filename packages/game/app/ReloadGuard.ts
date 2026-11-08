@@ -1,6 +1,6 @@
 import { off, on } from '@dom111/element';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
-import { allowLeaving } from '@civ-clone-ui/windows/lib/leaveGuard';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import { allowLeaving } from '@civ-clone/ui-windows/lib/leaveGuard';
 import { t } from 'i18next';
 
 // F5 and Ctrl/Cmd+R ask before reloading. Once a game is running, F5 is a

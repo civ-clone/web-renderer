@@ -6,7 +6,7 @@ import GameSetup, {
   SeatState,
   SetupData,
   requestSetupData,
-} from '@civ-clone-ui/client/lib/gameSetup';
+} from '@civ-clone/ui-client/lib/gameSetup';
 import {
   cell,
   civilizationName,
@@ -17,15 +17,15 @@ import {
 import {
   difficultyLabels,
   preselectedDifficulty,
-} from '@civ-clone-ui/client/lib/difficulty';
-import { elementId, h } from '@civ-clone-ui/widgets/lib/html';
-import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
-import button from '@civ-clone-ui/widgets/lib/button';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+} from '@civ-clone/ui-client/lib/difficulty';
+import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
+import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
+import button from '@civ-clone/ui-widgets/lib/button';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { s } from '@dom111/element';
-import { supportedTopologies } from '@civ-clone-ui/map/lib/supportedTopologies';
+import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 
 // Each seat's kind, in the order the toggle shows them.

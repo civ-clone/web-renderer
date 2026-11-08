@@ -7,14 +7,14 @@ import {
   SpendCost,
   Unit as UnitData,
   Yield,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import { emit, s } from '@dom111/element';
 import {
   getAutoLabel,
   getLabelForBuildable,
   getLabelForBuildableEntity,
   toggleAuto,
-} from '@civ-clone-ui/client/components/lib/cityBuild';
+} from '@civ-clone/ui-client/components/lib/cityBuild';
 import {
   renderFigures,
   renderPopulation,
@@ -22,27 +22,27 @@ import {
   yieldImages,
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
-import Window, { WindowOptions } from '@civ-clone-ui/widgets/components/Window';
+import Window, { WindowOptions } from '@civ-clone/ui-widgets/components/Window';
 import CityBuildAvailable from '../../../src/js/Engine/Requests/CityBuildAvailable';
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
-import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from './SupportedUnit';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { escape } from './lib/requirements';
-import { h } from '@civ-clone-ui/widgets/lib/html';
-import instanceOf from '@civ-clone-ui/client/lib/instanceOf';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
-import { reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
-import progressBar from '@civ-clone-ui/widgets/components/lib/ProgressBar';
-import { specialistForKey } from '@civ-clone-ui/client/lib/specialists';
+import { h } from '@civ-clone/ui-widgets/lib/html';
+import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
+import progressBar from '@civ-clone/ui-widgets/components/lib/ProgressBar';
+import { specialistForKey } from '@civ-clone/ui-client/lib/specialists';
 import { t } from 'i18next';
 import watchCity from './lib/watchCity';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 const renderBuild = (
     city: CityData,

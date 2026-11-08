@@ -18,10 +18,10 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import ImportAssetsWindow from '@civ-clone-ui/windows/components/ImportAssetsWindow';
-import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
 import { readFileSync } from 'fs';

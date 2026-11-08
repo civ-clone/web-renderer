@@ -1,4 +1,4 @@
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 
 /** The `sound` and `soundVolume` options as an output gain (#126): off is 0, and the volume's square, as loudness goes. */
 export const soundGain = (

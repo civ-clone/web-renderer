@@ -5,7 +5,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import statPill from '@civ-clone-ui/widgets/components/lib/StatPill';
+import statPill from '@civ-clone/ui-widgets/components/lib/StatPill';
 
 const failures: string[] = [];
 let checks = 0;

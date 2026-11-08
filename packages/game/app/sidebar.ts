@@ -1,5 +1,5 @@
 import { AppElements } from './elements';
-import SidebarSection from '@civ-clone-ui/widgets/components/SidebarSection';
+import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
 import { t } from 'i18next';
 
 // Wraps the sidebar's panels in sections that can be collapsed (#697). Once a page: the panels are the page's own, and

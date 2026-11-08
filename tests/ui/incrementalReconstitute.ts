@@ -18,10 +18,10 @@ import {
   ObjectMap,
   PlainObject,
   reconstituteData,
-} from '@civ-clone-ui/client/lib/reconstituteData';
-import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
-import pruneObjectMap from '@civ-clone-ui/client/lib/pruneObjectMap';
-import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
+} from '@civ-clone/ui-client/lib/reconstituteData';
+import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
+import pruneObjectMap from '@civ-clone/ui-client/lib/pruneObjectMap';
+import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 
 const failures: string[] = [];
 let checks = 0;

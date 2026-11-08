@@ -6,15 +6,15 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { PlayerAction } from '@civ-clone-ui/client/types';
-import Action from '@civ-clone-ui/windows/components/Actions/Action';
-import Actions from '@civ-clone-ui/windows/components/Actions';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import EndTurn from '@civ-clone-ui/windows/components/Actions/EndTurn';
-import Transport from '@civ-clone-ui/client/Transport';
-import { hideTooltip } from '@civ-clone-ui/widgets/components/lib/Tooltip';
+import { PlayerAction } from '@civ-clone/ui-client/types';
+import Action from '@civ-clone/ui-windows/components/Actions/Action';
+import Actions from '@civ-clone/ui-windows/components/Actions';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import EndTurn from '@civ-clone/ui-windows/components/Actions/EndTurn';
+import Transport from '@civ-clone/ui-client/Transport';
+import { hideTooltip } from '@civ-clone/ui-widgets/components/lib/Tooltip';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { s } from '@dom111/element';
 
 const failures: string[] = [];

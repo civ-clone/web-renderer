@@ -7,8 +7,8 @@ import currentTileset, { nativeTileSize } from './tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from './getPreloadedImage';
-import { Unit as UnitData } from '@civ-clone-ui/client/types';
-import { entityName } from '@civ-clone-ui/client/components/lib/entity';
+import { Unit as UnitData } from '@civ-clone/ui-client/types';
+import { entityName } from '@civ-clone/ui-client/components/lib/entity';
 import { isDrawable } from './imageSize';
 import replaceColours from './replaceColours';
 import { s } from '@dom111/element';

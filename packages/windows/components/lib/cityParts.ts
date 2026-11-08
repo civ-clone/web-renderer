@@ -1,21 +1,21 @@
-import { City as CityData, PlainObject } from '@civ-clone-ui/client/types';
-import { splitYield, yieldGroup } from '@civ-clone-ui/client/lib/yieldMap';
-import Cities from '@civ-clone-ui/map/components/Map/Cities';
-import Fog from '@civ-clone-ui/map/components/Map/Fog';
-import Landscape from '@civ-clone-ui/map/components/Map/Landscape';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import Units from '@civ-clone-ui/map/components/Map/Units';
-import Unworkable from '@civ-clone-ui/map/components/Map/Unworkable';
-import World from '@civ-clone-ui/map/components/World';
-import Yields from '@civ-clone-ui/map/components/Map/Yields';
-import cityMapLayout from '@civ-clone-ui/map/lib/cityMapLayout';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { City as CityData, PlainObject } from '@civ-clone/ui-client/types';
+import { splitYield, yieldGroup } from '@civ-clone/ui-client/lib/yieldMap';
+import Cities from '@civ-clone/ui-map/components/Map/Cities';
+import Fog from '@civ-clone/ui-map/components/Map/Fog';
+import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import Units from '@civ-clone/ui-map/components/Map/Units';
+import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
+import World from '@civ-clone/ui-map/components/World';
+import Yields from '@civ-clone/ui-map/components/Map/Yields';
+import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from './government';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { tileBounds } from '@civ-clone-ui/map/lib/projection';
+import { tileBounds } from '@civ-clone/ui-map/lib/projection';
 import { yieldIcon } from './cityYields';
 
 // The parts of the city screen both its layouts draw (#746): the yields as bars, and the city's map.

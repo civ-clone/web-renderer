@@ -1,7 +1,7 @@
-import { EntityInstance, Tile } from '@civ-clone-ui/client/types';
-import { Projection } from '@civ-clone-ui/map/lib/projection';
+import { EntityInstance, Tile } from '@civ-clone/ui-client/types';
+import { Projection } from '@civ-clone/ui-map/lib/projection';
 import SquareProjection from './SquareProjection';
-import { Map } from '@civ-clone-ui/map/components/Map';
+import { Map } from '@civ-clone/ui-map/components/Map';
 
 // The width the minimap is given in the sidebar. The layer picks the largest
 // whole number of pixels per tile that fits, so tiles always land on whole

@@ -1,17 +1,17 @@
-import { GameData, Unit } from '@civ-clone-ui/client/types';
+import { GameData, Unit } from '@civ-clone/ui-client/types';
 import createMemoryTestbed, { MemoryTestbed } from '../lib/memoryTestbed';
-import Cities from '@civ-clone-ui/map/components/Map/Cities';
-import CityNames from '@civ-clone-ui/map/components/Map/CityNames';
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
-import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
-import Minimap from '@civ-clone-ui/map-square/Minimap';
+import Cities from '@civ-clone/ui-map/components/Map/Cities';
+import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
+import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import Minimap from '@civ-clone/ui-map-square/Minimap';
 import NotificationBar from '../app/NotificationBar';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import UIStressRunner from '../lib/UIStressRunner';
 import { exportDebugCsv, exportDebugJson } from './debugExport';
-import Units from '@civ-clone-ui/map/components/Map/Units';
-import Yields from '@civ-clone-ui/map/components/Map/Yields';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import Units from '@civ-clone/ui-map/components/Map/Units';
+import Yields from '@civ-clone/ui-map/components/Map/Yields';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 
 // What the panel reads from the game. The values that change during a game are

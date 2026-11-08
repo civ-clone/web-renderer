@@ -1,19 +1,19 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
-import { Unit as UnitData } from '@civ-clone-ui/client/types';
+import { Unit as UnitData } from '@civ-clone/ui-client/types';
 import { unitName, unitStates } from '../lib/unitLabel';
 import currentTileset, {
   nativeTileSize,
-} from '@civ-clone-ui/assets/lib/tilesets';
+} from '@civ-clone/ui-assets/lib/tilesets';
 import Unit from './Unit';
 import { UnitDetailsDeps } from './UnitDetails';
 import { openUnitSelection } from './choices';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
-import glyph, { GlyphName } from '@civ-clone-ui/assets/lib/glyphs';
-import statPill from '@civ-clone-ui/widgets/components/lib/StatPill';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import glyph, { GlyphName } from '@civ-clone/ui-assets/lib/glyphs';
+import statPill from '@civ-clone/ui-widgets/components/lib/StatPill';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

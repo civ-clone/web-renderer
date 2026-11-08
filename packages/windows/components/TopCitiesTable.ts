@@ -1,18 +1,18 @@
-import { City as CityData, Player } from '@civ-clone-ui/client/types';
-import ReportTable from '@civ-clone-ui/widgets/components/lib/ReportTable';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import { City as CityData, Player } from '@civ-clone/ui-client/types';
+import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import TopCities from '../../../src/js/Engine/Requests/TopCities';
 import { TopCitiesRow } from '../../../src/js/Engine/lib/topCities';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import {
   cityNameText,
   viewCityText,
-} from '@civ-clone-ui/client/components/lib/city';
+} from '@civ-clone/ui-client/components/lib/city';
 import { renderCitizenCounts } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // Up to ten rather than Civ1's five (#124): there are fewer early in the game.
 const limit = 10;

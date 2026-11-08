@@ -8,14 +8,14 @@ import IntelligenceTable from './IntelligenceTable';
 import MilitaryReport from './MilitaryReport';
 import MilitaryTable from './MilitaryTable';
 import CityStatusTable from './CityStatusTable';
-import { Player } from '@civ-clone-ui/client/types';
-import Portal from '@civ-clone-ui/map/components/Portal';
+import { Player } from '@civ-clone/ui-client/types';
+import Portal from '@civ-clone/ui-map/components/Portal';
 import TradeReport from './TradeReport';
 import TradeTable from './TradeTable';
 import TopCitiesReport from './TopCitiesReport';
 import TopCitiesTable from './TopCitiesTable';
-import Transport from '@civ-clone-ui/client/Transport';
-import { defineSlot } from '@civ-clone-ui/client/lib/interfaceMode';
+import Transport from '@civ-clone/ui-client/Transport';
+import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // Where the reports are put together (#735): the interface's `reports` slot (#824), which each interface in
 //  `interfaces/` fills (#825): the classic ones or the ones drawn with the report table (#744). Every key, menu item and button that opens a report comes here.

@@ -6,8 +6,8 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import LockedSlider from '@civ-clone-ui/widgets/components/LockedSlider';
-import LockedSliderGroup from '@civ-clone-ui/widgets/components/LockedSliderGroup';
+import LockedSlider from '@civ-clone/ui-widgets/components/LockedSlider';
+import LockedSliderGroup from '@civ-clone/ui-widgets/components/LockedSliderGroup';
 
 const failures: string[] = [];
 let checks = 0;

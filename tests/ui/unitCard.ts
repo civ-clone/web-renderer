@@ -8,14 +8,14 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 
-import { City, Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
-import Transport from '@civ-clone-ui/client/Transport';
-import UnitCard from '@civ-clone-ui/windows/components/UnitCard';
+import { City, Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
+import Transport from '@civ-clone/ui-client/Transport';
+import UnitCard from '@civ-clone/ui-windows/components/UnitCard';
 import UnitCardActions, {
   actionGroup,
-} from '@civ-clone-ui/windows/components/UnitCardActions';
+} from '@civ-clone/ui-windows/components/UnitCardActions';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

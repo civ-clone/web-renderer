@@ -1,4 +1,4 @@
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import { MemoryTestbed } from '../lib/memoryTestbed';
 import NotificationBar from '../app/NotificationBar';
 

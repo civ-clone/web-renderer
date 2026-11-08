@@ -1,5 +1,5 @@
-import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
-import Transport from '@civ-clone-ui/client/Transport';
+import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import Transport from '@civ-clone/ui-client/Transport';
 import { t } from 'i18next';
 
 export interface WorkerFailuresDeps {

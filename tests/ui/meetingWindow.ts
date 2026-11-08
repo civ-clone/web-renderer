@@ -9,15 +9,15 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import ChoiceHandler from '@civ-clone-ui/game/app/ChoiceHandler';
+import ChoiceHandler from '@civ-clone/ui-game/app/ChoiceHandler';
 import DebugFlags, {
   StressRunnerHandle,
-} from '@civ-clone-ui/client/debug/DebugFlags';
+} from '@civ-clone/ui-client/debug/DebugFlags';
 import { IntelligenceRow } from '../../src/js/Engine/lib/intelligence';
-import Transport from '@civ-clone-ui/client/Transport';
-import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import Transport from '@civ-clone/ui-client/Transport';
+import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

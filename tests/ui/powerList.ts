@@ -7,15 +7,15 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { CivilizationPowerRow } from '../../src/js/Engine/lib/civilizationPower';
-import GameOptionsRegistry from '@civ-clone-ui/client/GameOptionsRegistry';
+import GameOptionsRegistry from '@civ-clone/ui-client/GameOptionsRegistry';
 import PowerList, {
   powerWindow,
-} from '@civ-clone-ui/windows/components/PowerList';
-import SidebarSection from '@civ-clone-ui/widgets/components/SidebarSection';
+} from '@civ-clone/ui-windows/components/PowerList';
+import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
 import { RequestFailed } from '../../src/js/Engine/AbstractTransport';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

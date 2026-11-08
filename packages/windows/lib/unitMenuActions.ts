@@ -1,11 +1,11 @@
-import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
 import {
   hasUnitActions,
   unitActions,
-} from '@civ-clone-ui/client/lib/unitActions';
-import distantActions from '@civ-clone-ui/client/lib/distantActions';
+} from '@civ-clone/ui-client/lib/unitActions';
+import distantActions from '@civ-clone/ui-client/lib/distantActions';
 import { nameOf, performWithPrompts } from './unitActionPrompts';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import { t } from 'i18next';
 
 /** An order the long press menu offers, named as the player reads it, and what giving it does. */

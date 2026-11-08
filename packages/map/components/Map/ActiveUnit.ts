@@ -1,7 +1,7 @@
 import { IMap } from '../Map';
 import { Rect } from '../../lib/viewport';
 import Units from './Units';
-import { imageSize } from '@civ-clone-ui/assets/lib/imageSize';
+import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 
 export class ActiveUnit extends Units implements IMap {
   // This layer only ever holds the one unit, so it can clear just what it drew

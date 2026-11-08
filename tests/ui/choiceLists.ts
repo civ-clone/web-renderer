@@ -11,19 +11,19 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import ChoiceHandler from '@civ-clone-ui/game/app/ChoiceHandler';
-import ChooseGovernment from '@civ-clone-ui/windows/components/Actions/ChooseGovernment';
-import ChooseResearch from '@civ-clone-ui/windows/components/Actions/ChooseResearch';
+import ChoiceHandler from '@civ-clone/ui-game/app/ChoiceHandler';
+import ChooseGovernment from '@civ-clone/ui-windows/components/Actions/ChooseGovernment';
+import ChooseResearch from '@civ-clone/ui-windows/components/Actions/ChooseResearch';
 import { CivilopediaEntry } from '../../src/js/Engine/lib/civilopedia';
-import DebugFlags from '@civ-clone-ui/client/debug/DebugFlags';
-import { applyInterface } from '@civ-clone-ui/client/lib/interfaceMode';
-import { askNewGame } from '@civ-clone-ui/windows/components/newGame';
-import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
-import { openArrivalWindow } from '@civ-clone-ui/windows/lib/unitActionPrompts';
-import { openUnitSelection } from '@civ-clone-ui/windows/components/choices';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
+import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { askNewGame } from '@civ-clone/ui-windows/components/newGame';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
+import { openArrivalWindow } from '@civ-clone/ui-windows/lib/unitActionPrompts';
+import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0,

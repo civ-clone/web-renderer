@@ -3,12 +3,12 @@ import {
   CivilizationScoreTerm,
 } from '../../../src/js/Engine/lib/civilizationScore';
 import CivilizationScore from '../../../src/js/Engine/Requests/CivilizationScore';
-import ReportTable from '@civ-clone-ui/widgets/components/lib/ReportTable';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // A row of the score: each term, and the conquest bonus as one more.
 export interface ScoreRow {

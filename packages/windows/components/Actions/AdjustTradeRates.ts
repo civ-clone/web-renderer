@@ -1,14 +1,14 @@
 import Action from './Action';
-import LockedSlider from '@civ-clone-ui/widgets/components/LockedSlider';
-import LockedSliderGroup from '@civ-clone-ui/widgets/components/LockedSliderGroup';
-import { PlayerTradeRates } from '@civ-clone-ui/client/types';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import LockedSlider from '@civ-clone/ui-widgets/components/LockedSlider';
+import LockedSliderGroup from '@civ-clone/ui-widgets/components/LockedSliderGroup';
+import { PlayerTradeRates } from '@civ-clone/ui-client/types';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 // The key the button's tooltip shows. `-` opens the window too (#662).
 export const tradeRatesKey = '+';

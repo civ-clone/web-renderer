@@ -1,7 +1,7 @@
-import { City as CityData } from '@civ-clone-ui/client/types';
-import { INotificationWindow } from '@civ-clone-ui/widgets/components/NotificationWindow';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
+import { City as CityData } from '@civ-clone/ui-client/types';
+import { INotificationWindow } from '@civ-clone/ui-widgets/components/NotificationWindow';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
 import { t } from 'i18next';
 
 export const showCityAction = (

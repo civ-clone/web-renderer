@@ -1,15 +1,15 @@
-import { City, Player } from '@civ-clone-ui/client/types';
+import { City, Player } from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { buildTurns, turnsText } from './lib/cityYields';
 import DataChanges, {
   instance as dataChanges,
-} from '@civ-clone-ui/client/lib/DataChanges';
+} from '@civ-clone/ui-client/lib/DataChanges';
 import watchPlayer, { cityRowIds } from './lib/watchPlayer';
-import Portal from '@civ-clone-ui/map/components/Portal';
-import { cityName } from '@civ-clone-ui/client/components/lib/city';
-import { getLabelForBuildable } from '@civ-clone-ui/client/components/lib/cityBuild';
-import { reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import Portal from '@civ-clone/ui-map/components/Portal';
+import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

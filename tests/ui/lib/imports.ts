@@ -4,9 +4,9 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'fs';
 import { dirname, join, relative } from 'path';
 import ts from 'typescript';
 
-const scope = '@civ-clone-ui/';
+const scope = '@civ-clone/ui-';
 
-/** Where the frontend's packages are: `packages/<name>/`, each `@civ-clone-ui/<name>`. */
+/** Where the frontend's packages are: `packages/<name>/`, each `@civ-clone/ui-<name>`. */
 export const packagesRoot = join(process.cwd(), 'packages');
 
 /** The package `path` is in, or `null` for a file in none. */

@@ -4,7 +4,7 @@ import {
   CityImprovementMaintenanceGold,
   Unit as UnitData,
   Yield,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import {
   CityLayout,
   CityScreenContext,
@@ -16,7 +16,7 @@ import {
   getAutoLabel,
   getLabelForBuildable,
   getLabelForBuildableEntity,
-} from '@civ-clone-ui/client/components/lib/cityBuild';
+} from '@civ-clone/ui-client/components/lib/cityBuild';
 import {
   growthTurns,
   renderFigures,
@@ -25,19 +25,19 @@ import {
   yieldIcon,
 } from './lib/cityYields';
 import { renderMap, renderYields } from './lib/cityParts';
-import { growthLimitText } from '@civ-clone-ui/client/components/lib/city';
-import buildingIcon from '@civ-clone-ui/assets/components/lib/buildingIcon';
+import { growthLimitText } from '@civ-clone/ui-client/components/lib/city';
+import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
 import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
-import button from '@civ-clone-ui/widgets/lib/button';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
-import { turnsLeft } from '@civ-clone-ui/client/lib/cityTurns';
-import { h } from '@civ-clone-ui/widgets/lib/html';
-import instanceOf from '@civ-clone-ui/client/lib/instanceOf';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import button from '@civ-clone/ui-widgets/lib/button';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
+import { h } from '@civ-clone/ui-widgets/lib/html';
+import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { openUnitSelection } from './choices';
-import progressBar from '@civ-clone-ui/widgets/components/lib/ProgressBar';
-import { reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import progressBar from '@civ-clone/ui-widgets/components/lib/ProgressBar';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import unitLabel from '../lib/unitLabel';

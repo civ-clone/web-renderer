@@ -1,4 +1,4 @@
-import { City, Unit as UnitData, Yield } from '@civ-clone-ui/client/types';
+import { City, Unit as UnitData, Yield } from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
 import Unit from './Unit';
 import { yieldImages } from './lib/cityYields';

@@ -6,10 +6,10 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 
-import NotificationBar from '@civ-clone-ui/game/app/NotificationBar';
-import Transport from '@civ-clone-ui/client/Transport';
+import NotificationBar from '@civ-clone/ui-game/app/NotificationBar';
+import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
 const failures: string[] = [];
 let checks = 0;

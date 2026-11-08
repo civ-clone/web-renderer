@@ -7,22 +7,22 @@ import Difficulties, {
 } from '../../../src/js/Engine/Requests/Difficulties';
 import Options from '../../../src/js/Engine/Requests/Options';
 import Request from '../../../src/js/Engine/Request';
-import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import {
   WorldSize,
   customSizeProblem,
   defaultWorldSize,
   earthWorldSizes,
   worldSizesFor,
-} from '@civ-clone-ui/client/lib/worldSizes';
+} from '@civ-clone/ui-client/lib/worldSizes';
 import {
   difficultyLabels,
   preselectedDifficulty,
   rememberDifficulty,
-} from '@civ-clone-ui/client/lib/difficulty';
-import { elementId, h } from '@civ-clone-ui/widgets/lib/html';
+} from '@civ-clone/ui-client/lib/difficulty';
+import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import {
   cell,
   civilizationName,
@@ -31,10 +31,10 @@ import {
   select,
 } from '../lib/setupControls';
 import { s } from '@dom111/element';
-import { supportedTopologies } from '@civ-clone-ui/map/lib/supportedTopologies';
-import { glyph } from '@civ-clone-ui/assets/lib/glyphs';
+import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
+import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 type FinishedHandler = () => void | Promise<void>;
 

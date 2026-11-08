@@ -12,21 +12,21 @@
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
 
-import Cities from '@civ-clone-ui/map/components/Map/Cities';
-import CityNames from '@civ-clone-ui/map/components/Map/CityNames';
-import Fog from '@civ-clone-ui/map/components/Map/Fog';
-import Landscape from '@civ-clone-ui/map/components/Map/Landscape';
-import Units from '@civ-clone-ui/map/components/Map/Units';
+import Cities from '@civ-clone/ui-map/components/Map/Cities';
+import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
+import Fog from '@civ-clone/ui-map/components/Map/Fog';
+import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import Units from '@civ-clone/ui-map/components/Map/Units';
 import i18next from 'i18next';
-import { Tile } from '@civ-clone-ui/client/types';
-import { TilesetDescriptor } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import World from '@civ-clone-ui/map/components/World';
-import { drawUnitActionIcon } from '@civ-clone-ui/assets/lib/unitActionIcon';
-import renderUnit from '@civ-clone-ui/assets/lib/renderUnit';
-import replaceColours from '@civ-clone-ui/assets/lib/replaceColours';
-import { setSprites } from '@civ-clone-ui/assets/lib/getPreloadedImage';
+import { Tile } from '@civ-clone/ui-client/types';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import World from '@civ-clone/ui-map/components/World';
+import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
+import renderUnit from '@civ-clone/ui-assets/lib/renderUnit';
+import replaceColours from '@civ-clone/ui-assets/lib/replaceColours';
+import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { createTopology } from '@civ-clone/core-world/topologies';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 
 const failures: string[] = [];
 let checks = 0,
@@ -422,7 +422,7 @@ expect(
   'the stub descriptor is one the renderer reads',
   (() => {
     try {
-      require('@civ-clone-ui/assets/tilesets/TilesetDescriptor').validateDescriptor(
+      require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').validateDescriptor(
         stub
       );
 

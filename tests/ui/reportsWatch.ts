@@ -8,20 +8,20 @@
 // Patches go through the shipped `applyDataPatches` and a real `IncrementalReconstituter`, and each rebuild is
 // collected into the shared `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
-import { DataPatch, GameData, Player } from '@civ-clone-ui/client/types';
+import { DataPatch, GameData, Player } from '@civ-clone/ui-client/types';
 import {
   ObjectMap,
   PlainObject,
-} from '@civ-clone-ui/client/lib/reconstituteData';
+} from '@civ-clone/ui-client/lib/reconstituteData';
 import watchPlayer, {
   PlayerIds,
   cityIds,
   cityRowIds,
   researchIds,
-} from '@civ-clone-ui/windows/components/lib/watchPlayer';
-import IncrementalReconstituter from '@civ-clone-ui/client/lib/IncrementalReconstituter';
-import applyDataPatches from '@civ-clone-ui/client/lib/applyDataPatches';
-import { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
+} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
+import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 
 const failures: string[] = [];
 let checks = 0,

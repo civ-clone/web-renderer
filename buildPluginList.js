@@ -23,7 +23,11 @@ const getScriptEntrypoints = (glob = globModule, fs = fsModule) => {
   paths.forEach((pattern) => {
     (glob.sync(pattern, { cwd: __dirname, absolute: true }) || []).forEach(
       (pathName) => {
-        if (excludes.includes(path.basename(pathName))) {
+        // The frontend's own packages, `@civ-clone/ui-*` (#825), are this repository's, never plugins.
+        if (
+          excludes.includes(path.basename(pathName)) ||
+          path.basename(pathName).startsWith('ui-')
+        ) {
           return;
         }
 

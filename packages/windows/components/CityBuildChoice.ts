@@ -1,13 +1,13 @@
-import { BuildItem, CityBuild } from '@civ-clone-ui/client/types';
+import { BuildItem, CityBuild } from '@civ-clone/ui-client/types';
 import ChoiceWindow, {
   ChoiceFact,
   ChoiceRow,
-} from '@civ-clone-ui/widgets/components/ChoiceWindow';
-import { ActionWindowActions } from '@civ-clone-ui/widgets/components/ActionWindow';
+} from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
 import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
-import Transport from '@civ-clone-ui/client/Transport';
+import Transport from '@civ-clone/ui-client/Transport';
 import Unit from './Unit';
-import buildingIcon from '@civ-clone-ui/assets/components/lib/buildingIcon';
+import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
 import entryDetails from './lib/choiceDetails';
 import {
   editQueue,
@@ -15,8 +15,8 @@ import {
   getClearedLabel,
   getLabelForBuildable,
   toggleAuto,
-} from '@civ-clone-ui/client/components/lib/cityBuild';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+} from '@civ-clone/ui-client/components/lib/cityBuild';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft, yieldIcon } from './lib/cityYields';

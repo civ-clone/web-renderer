@@ -3,11 +3,11 @@ import {
   CivilizationScoreTerm,
 } from '../../../src/js/Engine/lib/civilizationScore';
 import CivilizationScore from '../../../src/js/Engine/Requests/CivilizationScore';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // Built with `createElement`: a `<tr>` parsed on its own, outside a table, loses its cells.
 const buildRow = (

@@ -1,11 +1,11 @@
 import Civilopedia, { CivilopediaData, loadCivilopedia } from './Civilopedia';
 import { classLink, subjectLine, whereHtml } from './lib/requirements';
-import { CityBuild } from '@civ-clone-ui/client/types';
+import { CityBuild } from '@civ-clone/ui-client/types';
 import CityBuildUnavailable from '../../../src/js/Engine/Requests/CityBuildUnavailable';
 import { UnavailableBuildItem } from '../../../src/js/Engine/lib/civilopedia';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

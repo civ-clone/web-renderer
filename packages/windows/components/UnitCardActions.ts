@@ -2,18 +2,18 @@ import {
   IconLayer,
   drawUnitActionIcon,
   unitActionIconLayers,
-} from '@civ-clone-ui/assets/lib/unitActionIcon';
+} from '@civ-clone/ui-assets/lib/unitActionIcon';
 import { TOptions, t } from 'i18next';
-import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-client/types';
 import { Element, s } from '@dom111/element';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone-ui/widgets/components/lib/Tooltip';
-import button from '@civ-clone-ui/widgets/lib/button';
-import ScaledCanvases from '@civ-clone-ui/assets/lib/scaledCanvases';
-import { keyForAction, keyName } from '@civ-clone-ui/client/lib/unitActionKeys';
+} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import button from '@civ-clone/ui-widgets/lib/button';
+import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
+import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
-import { unitActions } from '@civ-clone-ui/client/lib/unitActions';
+import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

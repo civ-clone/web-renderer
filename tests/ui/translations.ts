@@ -45,14 +45,14 @@ import {
 import {
   cityName,
   cityNameText,
-} from '@civ-clone-ui/client/components/lib/city';
+} from '@civ-clone/ui-client/components/lib/city';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
 import {
   chooseFromListBody,
   chooseFromListChoice,
   chooseFromListTitle,
-} from '@civ-clone-ui/client/lib/chooseFromList';
+} from '@civ-clone/ui-client/lib/chooseFromList';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import i18next, { t } from 'i18next';
 import {
@@ -60,20 +60,20 @@ import {
   advanceNames,
   researchClearedLabel,
   researchingName,
-} from '@civ-clone-ui/windows/components/lib/advances';
+} from '@civ-clone/ui-windows/components/lib/advances';
 import Notification from '../../src/js/Engine/Notification';
-import { PlayerResearch } from '@civ-clone-ui/client/types';
+import { PlayerResearch } from '@civ-clone/ui-client/types';
 import Tile from '@civ-clone/core-world/Tile';
 import Barbarian from '@civ-clone/base-civilization-barbarian/Barbarian';
 import { playerProgress, turnProgress } from '../../src/js/Engine/lib/progress';
 import UnknownCity from '../../src/js/Engine/UnknownObjects/City';
 import type Player from '@civ-clone/core-player/Player';
 import UnknownPlayer from '../../src/js/Engine/UnknownObjects/Player';
-import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
-import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
+import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';
-import { reconstituteData } from '@civ-clone-ui/client/lib/reconstituteData';
-import worldSizes from '@civ-clone-ui/client/lib/worldSizes';
+import { reconstituteData } from '@civ-clone/ui-client/lib/reconstituteData';
+import worldSizes from '@civ-clone/ui-client/lib/worldSizes';
 
 const names = [
   "J. S. Bach's Cathedral",
@@ -606,9 +606,10 @@ const expect = (description: string, actual: string, expected: string) => {
         }
       });
 
-  readdirSync('node_modules/@civ-clone').forEach((name) =>
-    scan(join('node_modules/@civ-clone', name))
-  );
+  // The engine's packages: the frontend's own, `ui-*`, are scanned from `packages/` below.
+  readdirSync('node_modules/@civ-clone')
+    .filter((name) => !name.startsWith('ui-'))
+    .forEach((name) => scan(join('node_modules/@civ-clone', name)));
   scan('src');
   scan('packages');
 

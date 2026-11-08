@@ -1,20 +1,20 @@
-import { AUTOSAVE_CHOICES } from '@civ-clone-ui/client/lib/browserSaves';
+import { AUTOSAVE_CHOICES } from '@civ-clone/ui-client/lib/browserSaves';
 import {
   COLOUR_SCHEMES,
   UI_THEMES,
   applyColourScheme,
   applyUiTheme,
   currentUiTheme,
-} from '@civ-clone-ui/widgets/lib/theme';
-import { IPortal } from '@civ-clone-ui/map/components/Portal';
-import Transport from '@civ-clone-ui/client/Transport';
-import { UNIT_MARKER_CHOICES } from '@civ-clone-ui/map/components/Map/UnitMarker';
+} from '@civ-clone/ui-widgets/lib/theme';
+import { IPortal } from '@civ-clone/ui-map/components/Portal';
+import Transport from '@civ-clone/ui-client/Transport';
+import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import ImportAssetsWindow from './ImportAssetsWindow';
-import Window from '@civ-clone-ui/widgets/components/Window';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import { button } from '@civ-clone-ui/widgets/lib/button';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import Window from '@civ-clone/ui-widgets/components/Window';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { button } from '@civ-clone/ui-widgets/lib/button';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import {
   hasFeature,
   interfaces,
@@ -22,12 +22,12 @@ import {
   chooseInterface,
   chosenInterface,
   interfaceMode,
-} from '@civ-clone-ui/client/lib/interfaceMode';
-import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
+} from '@civ-clone/ui-client/lib/interfaceMode';
+import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import { s } from '@dom111/element';
-import sendBuildPreferences from '@civ-clone-ui/client/lib/buildPreferences';
-import { soundChanged } from '@civ-clone-ui/assets/lib/soundGain';
-import forgetVisitParam from '@civ-clone-ui/client/lib/forgetVisitParam';
+import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
+import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
+import forgetVisitParam from '@civ-clone/ui-client/lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */

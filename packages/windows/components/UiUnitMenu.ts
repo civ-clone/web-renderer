@@ -1,13 +1,13 @@
 // The unit's long press menu under the new interface (#808): the shared menu over the press, headed by the unit and the
 //  square it would act on, each order with the icon and key the unit card gives it (#743).
 
-import { Tile, Unit as UnitData } from '@civ-clone-ui/client/types';
+import { Tile, Unit as UnitData } from '@civ-clone/ui-client/types';
 import {
   drawUnitActionIcon,
   unitActionIconLayers,
-} from '@civ-clone-ui/assets/lib/unitActionIcon';
-import { keyForAction, keyName } from '@civ-clone-ui/client/lib/unitActionKeys';
-import Transport from '@civ-clone-ui/client/Transport';
+} from '@civ-clone/ui-assets/lib/unitActionIcon';
+import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
+import Transport from '@civ-clone/ui-client/Transport';
 import UiMenu from './UiMenu';
 import Unit from './Unit';
 import { nameOf } from '../lib/unitActionPrompts';

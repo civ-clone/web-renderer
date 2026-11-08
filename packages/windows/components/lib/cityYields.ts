@@ -7,22 +7,22 @@ import {
   PlayerResearch,
   Specialist,
   Yield,
-} from '@civ-clone-ui/client/types';
+} from '@civ-clone/ui-client/types';
 import {
   groupIcons,
   reduceKnownYield,
   yieldGroup,
-} from '@civ-clone-ui/client/lib/yieldMap';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
-import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+} from '@civ-clone/ui-client/lib/yieldMap';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import {
   citizenMoods,
   citizenSprites,
   citizenSummary,
   specialistSprites,
-} from '@civ-clone-ui/client/lib/citizens';
-import { orderSpecialists } from '@civ-clone-ui/client/lib/specialists';
+} from '@civ-clone/ui-client/lib/citizens';
+import { orderSpecialists } from '@civ-clone/ui-client/lib/specialists';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -31,7 +31,7 @@ export {
   buildTurns,
   growthTurns,
   turnsLeft,
-} from '@civ-clone-ui/client/lib/cityTurns';
+} from '@civ-clone/ui-client/lib/cityTurns';
 
 const specialistIcons: { [key: string]: string } = {
   Entertainer: 'luxury',

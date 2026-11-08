@@ -3,14 +3,14 @@ import GameSetupWindow from './GameSetupWindow';
 import HallOfFameWindow from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { chooseSave } from './LoadGameWindow';
-import { h } from '@civ-clone-ui/widgets/lib/html';
-import { mappedKeyFromEvent } from '@civ-clone-ui/client/lib/mappedKey';
+import { h } from '@civ-clone/ui-widgets/lib/html';
+import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { version } from '../../../build.json';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import { askEarth, askNewGame } from './newGame';
 
 export class MainMenu extends Element {

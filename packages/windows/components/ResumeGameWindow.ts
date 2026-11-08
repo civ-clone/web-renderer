@@ -5,8 +5,8 @@ import {
   savedSeats,
 } from '../../../src/js/Engine/lib/savedSeats';
 import { Seat } from '../../../src/js/Engine/lib/seats';
-import Transport from '@civ-clone-ui/client/Transport';
-import Window from '@civ-clone-ui/widgets/components/Window';
+import Transport from '@civ-clone/ui-client/Transport';
+import Window from '@civ-clone/ui-widgets/components/Window';
 import {
   cell,
   civilizationName,
@@ -14,7 +14,7 @@ import {
   option,
   select,
 } from '../lib/setupControls';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

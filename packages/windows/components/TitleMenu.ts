@@ -1,4 +1,4 @@
-import { BrowserSave, listSaves } from '@civ-clone-ui/client/lib/browserSaves';
+import { BrowserSave, listSaves } from '@civ-clone/ui-client/lib/browserSaves';
 import { Element, s } from '@dom111/element';
 import ReleaseWindow, { fetchReleases } from './ReleaseWindow';
 import { askEarth, askNewGame } from './newGame';
@@ -7,16 +7,16 @@ import GameSetupForm from './GameSetupForm';
 import HallOfFameWindow, { yearLabel } from './HallOfFameWindow';
 import ImportAssetsWindow from './ImportAssetsWindow';
 import ResumeGameWindow from './ResumeGameWindow';
-import Transport from '@civ-clone-ui/client/Transport';
-import { assetStore } from '@civ-clone-ui/assets/AssetStore';
+import Transport from '@civ-clone/ui-client/Transport';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { chooseSave } from './LoadGameWindow';
-import { h } from '@civ-clone-ui/widgets/lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { loadSaveFromFile } from '../lib/savedGame';
-import { mappedKeyFromEvent } from '@civ-clone-ui/client/lib/mappedKey';
-import { instance as localeProvider } from '@civ-clone-ui/client/LocaleProvider';
+import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { version } from '../../../build.json';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
 // The main menu under the new interface (#749, #735): a list down the left in the display face, against an accent
 //  rule, each item with its key after it. Continue leads when the browser holds a save; Import assets is there only

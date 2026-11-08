@@ -1,28 +1,28 @@
-import { Tile, Unit, World as WorldData } from '@civ-clone-ui/client/types';
-import { CityOpener } from '@civ-clone-ui/windows/lib/cityOpeners';
+import { Tile, Unit, World as WorldData } from '@civ-clone/ui-client/types';
+import { CityOpener } from '@civ-clone/ui-windows/lib/cityOpeners';
 import { off, on } from '@dom111/element';
-import ActiveUnit from '@civ-clone-ui/map/components/Map/ActiveUnit';
-import Cities from '@civ-clone-ui/map/components/Map/Cities';
-import CityBanners from '@civ-clone-ui/map/components/Map/CityBanners';
-import CityNames from '@civ-clone-ui/map/components/Map/CityNames';
-import cityLabels from '@civ-clone-ui/map/components/Map/cityLabels';
-import Fog from '@civ-clone-ui/map/components/Map/Fog';
-import GamePortal from '@civ-clone-ui/windows/components/GamePortal';
-import IntervalHandler from '@civ-clone-ui/client/lib/IntervalHandler';
-import Landscape from '@civ-clone-ui/map/components/Map/Landscape';
-import Minimap from '@civ-clone-ui/map-square/Minimap';
-import Overview from '@civ-clone-ui/map-square/Overview';
-import Transport from '@civ-clone-ui/client/Transport';
+import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
+import Cities from '@civ-clone/ui-map/components/Map/Cities';
+import CityBanners from '@civ-clone/ui-map/components/Map/CityBanners';
+import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
+import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
+import Fog from '@civ-clone/ui-map/components/Map/Fog';
+import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import IntervalHandler from '@civ-clone/ui-client/lib/IntervalHandler';
+import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import Minimap from '@civ-clone/ui-map-square/Minimap';
+import Overview from '@civ-clone/ui-map-square/Overview';
+import Transport from '@civ-clone/ui-client/Transport';
 import UnitMarker, {
   UnitMarkerMode,
   unitMarkerMode,
-} from '@civ-clone-ui/map/components/Map/UnitMarker';
-import Units from '@civ-clone-ui/map/components/Map/Units';
-import World from '@civ-clone-ui/map/components/World';
-import Yields from '@civ-clone-ui/map/components/Map/Yields';
+} from '@civ-clone/ui-map/components/Map/UnitMarker';
+import Units from '@civ-clone/ui-map/components/Map/Units';
+import World from '@civ-clone/ui-map/components/World';
+import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import currentTileset, {
   nativeTileSize,
-} from '@civ-clone-ui/assets/lib/tilesets';
+} from '@civ-clone/ui-assets/lib/tilesets';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
