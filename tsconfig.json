@@ -61,7 +61,6 @@
     "packages/map/lib/projectionFor.ts",
     "packages/game/lib/playUnitKey.ts",
     "packages/client/lib/pruneObjectMap.ts",
-    "packages/client/lib/reconstituteData.ts",
     "packages/client/lib/releaseDays.ts",
     "packages/assets/lib/renderUnit.ts",
     "packages/assets/lib/replaceColours.ts",

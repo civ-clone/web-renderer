@@ -137,7 +137,7 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0
       '@civ-clone/core-data-object':
-        specifier: ^0.1.14
+        specifier: ^0.1.17
         version: 0.1.17
       '@civ-clone/core-difficulty':
         specifier: ^0.1.0
