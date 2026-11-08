@@ -3,7 +3,7 @@
 //  Each interface is an area of its own: nothing shared imports one, one never imports another, and only civ.one's
 //  entry (`frontend.ts`) imports `interfaces/`, which says which it offers.
 
-import { importsOf, sourcesUnder } from './lib/imports';
+import { importsOf, sourcesUnder, specifiersOf } from './lib/imports';
 import { join, relative } from 'path';
 import areas from '../../src/js/UI/areas.json';
 
@@ -87,6 +87,23 @@ expect(
       .map((use) => `${name}: ${use}`)
   ),
   []
+);
+
+expect(
+  'the scan reads imports however they are written, and only those',
+  specifiersOf(
+    [
+      "// import A from './a';",
+      'const s = "import \'./b\'";',
+      "import C from './c';",
+      "export { d } from './d';",
+      "import './e';",
+      "const f = import ('./f');",
+      "const g = require ('./g');",
+      "import type { H } from './h';",
+    ].join('\n')
+  ),
+  ['./c', './d', './e', './f', './g', './h']
 );
 
 const edges = ui.flatMap((path) =>
