@@ -338,12 +338,18 @@ importers:
 
   packages/interface-classic:
     dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -353,12 +359,18 @@ importers:
 
   packages/interface-modern:
     dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
