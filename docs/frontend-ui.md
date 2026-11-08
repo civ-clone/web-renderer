@@ -93,8 +93,8 @@ that list what is installed in the scope (`scan`, `collisions`, `duplicates`) sk
 
 A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
 so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
-path aren't packages yet: `src/js/Audio`, the generated `src/js/plugins.ts` and `src/js/translations.ts`, and
-`build.json`. The test lists them, and the list only shrinks.
+path aren't packages yet: `src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The generated
+`src/js/plugins.ts` is civ.one's choice of rules, which `backend.ts` hands the worker client. The test lists them, and the list only shrinks.
 
 The worker (`worker-client`, which `backend.ts` starts) shares only `protocol` with the page: it imports no other
 package, and no package imports from it. Under them are two packages in repositories of their own, with nothing of

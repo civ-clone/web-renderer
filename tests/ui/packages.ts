@@ -146,11 +146,10 @@ expect(
 );
 
 // What the packages still reach outside themselves for, by path, until each is a package too (#825): the list only
-//  shrinks: the music player, the generated lists of plugins and translations, and the build's version.
+//  shrinks: the music player, the generated list of translations, and the build's version.
 const reachesOut: { [path: string]: string[] } = {
   'build.json': ['game', 'windows'],
   'src/js/Audio/': ['game', 'windows'],
-  'src/js/plugins.ts': ['worker-client'],
   'src/js/translations.ts': ['game'],
 };
 
@@ -305,7 +304,8 @@ const outside = [
 //  other (#825), over `@civ-clone/worker-transport`. The worker never runs the page's code, nor the page the
 //  worker's.
 const backend = join(root, 'src/js/backend.ts'),
-  backendMayUse = ['worker-client', 'protocol'];
+  // civ.one's choice of rules, which the entry hands the worker client: every installed plugin.
+  backendMayUse = ['worker-client', 'protocol', 'src/js/plugins.ts'];
 
 expect(
   'the worker client depends on the protocol, and on nothing of the page',
@@ -321,7 +321,7 @@ expect(
   []
 );
 expect(
-  'the worker starts from `backend.ts`, which uses only the worker client, its transport and the protocol',
+  'the worker starts from `backend.ts`, which uses only the worker client, the protocol and civ.one’s plugins',
   [
     importsOf(backend).some((target) => packageOf(target) === 'worker-client'),
     importsOf(backend)

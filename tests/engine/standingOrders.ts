@@ -702,8 +702,13 @@ if (mode === 'load') {
   // No `engine.start()`: that is what generates a world. Plugins are imported for their rules, as the worker does.
   import('../../src/js/plugins')
     .then((): void => {
-      restoreGame(game, (player: Player, seat: Seat) =>
-        seat.kind === 'human' ? humanClient(player) : new SimpleAIClient(player)
+      restoreGame(
+        game,
+        (player: Player, seat: Seat) =>
+          seat.kind === 'human'
+            ? humanClient(player)
+            : new SimpleAIClient(player),
+        plugins
       );
 
       if (!humanPlayer) {

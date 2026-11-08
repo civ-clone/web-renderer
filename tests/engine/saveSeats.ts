@@ -23,6 +23,7 @@ import { instance as clientRegistryInstance } from '@civ-clone/core-client/Clien
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import Game from '@civ-clone/ui-worker-client/Game';
+import civOnePlugins from './lib/plugins';
 import {
   isHumanDescriptor,
   savedSeats,
@@ -120,7 +121,7 @@ const play = (name: string, path: string): void => {
   console.error = () => {};
   console.warn = () => {};
 
-  new Game(transport);
+  new Game(transport, civOnePlugins);
 
   (async (): Promise<void> => {
     if (name === 'save') {

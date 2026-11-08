@@ -1,0 +1,1 @@
+{"version":"0.1.0@cc5afdf4","date":"2026-11-08T21:21:34.000Z","localChanges":["refactor: the worker transports come from @civ-clone/worker-transport (#825) (#837)"],"externalChanges":{"worker-transport":{"status":"added","log":["feat: a core-data-client transport over a web worker's messages, for the page's end and the worker's"]}}}

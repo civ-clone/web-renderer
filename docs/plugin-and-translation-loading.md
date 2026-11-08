@@ -31,8 +31,11 @@ Observed behavior:
 
 ## Runtime plugin activation
 
-The worker's `Game.ts` and `loadGame.ts` import the `plugins` manifest statically, so the plugin modules run, and
-register their rules, as soon as the worker script loads.
+The worker client knows no ruleset of its own (#825). civ.one's worker entry, `src/js/backend.ts`, imports the
+`plugins` manifest statically, so the plugin modules run, and register their rules, as soon as the worker script loads,
+and hands `Game` a `Plugins` (`packages/worker-client/Plugins.ts`): the manifest, and `load`, which imports them.
+`Game` and `restoreGame` take everything plugin-related from it, so another build or a test can hand in other rules.
+Suites hand in civ.one's with `tests/engine/lib/plugins.ts`.
 
 In `Game.start()` (a new game):
 

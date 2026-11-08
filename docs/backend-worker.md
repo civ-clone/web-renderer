@@ -32,7 +32,8 @@ On `start()`:
 - Hooks `engine:start` to create players.
 - Registers one human `DataTransferClient` (player index 0).
 - Registers AI clients (`SimpleAIClient`) for all other players.
-- Calls `engine.start()` and then dynamic-imports generated plugins.
+- Calls `engine.start()` and then loads the plugins `backend.ts` handed `Game` (`Plugins.load()`; civ.one's are the
+  generated `src/js/plugins.ts`).
 
 On `load()`:
 

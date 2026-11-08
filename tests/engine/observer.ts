@@ -17,6 +17,7 @@ import './lib/seed';
 
 import Player from '@civ-clone/core-player/Player';
 import Game from '@civ-clone/ui-worker-client/Game';
+import civOnePlugins from './lib/plugins';
 import { execFileSync } from 'child_process';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -292,7 +293,7 @@ const play = (name: string, setup: Setup): void => {
     report.actions.errors++;
   });
 
-  new Game(transport);
+  new Game(transport, civOnePlugins);
 
   engine.on('game:start', (): void => {
     report.clients = { atStart: names(), later: [] };

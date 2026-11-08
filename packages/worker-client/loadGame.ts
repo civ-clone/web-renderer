@@ -17,7 +17,7 @@ import {
   registerDiplomacyClasses,
   stripInteractionCollaborators,
 } from './diplomacy';
-import { plugins } from '../../src/js/plugins';
+import { Plugins } from './Plugins';
 import { registerBarbarianClasses } from './barbarians';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 
@@ -104,7 +104,9 @@ export const restoreGame = (
   file: SaveGame,
   // Each player's client, from the seat the save records for it (#608): a computer seat with the host's default AI
   //  for a player the file lists no client for.
-  createClient: (player: Player, seat: Seat) => Client
+  createClient: (player: Player, seat: Seat) => Client,
+  // The plugins the game is played with, which the save's own manifest is checked against (#825).
+  manifest: Plugins['manifest']
 ): void => {
   // Before hydrating, and before any player claims a civilisation: `civ1-player`
   // unregisters one as it is claimed, so a registry read afterwards is missing
@@ -113,7 +115,7 @@ export const restoreGame = (
   registerDiplomacyClasses(defaultGame);
   registerBarbarianClasses(defaultGame);
 
-  engine.registerPlugins(plugins);
+  engine.registerPlugins(manifest);
 
   stripInteractionCollaborators(file, defaultGame);
   dropRepeatedContacts(file, defaultGame);
@@ -202,10 +204,11 @@ export const chooseDifficulty = async (game = defaultGame): Promise<void> => {
 export const loadGame = async (
   file: SaveGame,
   createClient: (player: Player, seat: Seat) => Client,
+  manifest: Plugins['manifest'],
   // Once the game is back and before it moves: an observer (#607) sends its first view from here.
   beforeResume: () => void = () => {}
 ): Promise<void> => {
-  restoreGame(file, createClient);
+  restoreGame(file, createClient, manifest);
 
   await chooseDifficulty(defaultGame);
 
