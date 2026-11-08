@@ -12,7 +12,7 @@ import './lib/spawnedClients';
 import {
   CivilizationScoreDependencies,
   civilizationScore,
-} from '../../src/js/Engine/lib/civilizationScore';
+} from '@civ-clone/ui-worker-client/lib/civilizationScore';
 import { CivilizationScore } from '@civ-clone/ui-protocol/reports';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Effect from '@civ-clone/core-rule/Effect';
@@ -20,7 +20,7 @@ import { IScoreTerm } from '@civ-clone/core-score/Rules/Score';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import Score from '@civ-clone/core-score/Rules/Score';
 import { conquestBonus } from '@civ-clone/civ1-game-end/lib/scoring';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Settlers } from '@civ-clone/civ1-unit/Units';

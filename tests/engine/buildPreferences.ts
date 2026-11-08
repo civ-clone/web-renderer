@@ -5,7 +5,7 @@
 import BuildPreferencesRegistry from '@civ-clone/core-city-build/BuildPreferencesRegistry';
 import Player from '@civ-clone/core-player/Player';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
-import registerBuildPreferences from '../../src/js/Engine/Client/buildPreferences';
+import registerBuildPreferences from '@civ-clone/ui-worker-client/Client/buildPreferences';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 
 const failures: string[] = [];

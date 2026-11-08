@@ -3,7 +3,10 @@
 //  having seen a city they hold, or having seen a city they founded (a defeated player holds none); and that a city
 //  of theirs we haven't seen, or nothing at all, isn't meeting them.
 
-import { HasMetDependencies, hasMet } from '../../src/js/Engine/lib/hasMet';
+import {
+  HasMetDependencies,
+  hasMet,
+} from '@civ-clone/ui-worker-client/lib/hasMet';
 import City from '@civ-clone/core-city/City';
 import InteractionRegistry from '@civ-clone/core-diplomacy/InteractionRegistry';
 import { Peace } from '@civ-clone/library-diplomacy/Declarations';

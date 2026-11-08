@@ -241,6 +241,9 @@ importers:
       '@civ-clone/ui-windows':
         specifier: workspace:*
         version: link:packages/windows
+      '@civ-clone/ui-worker-client':
+        specifier: workspace:*
+        version: link:packages/worker-client
       '@civ-clone/ui-worker-transport':
         specifier: workspace:*
         version: link:packages/worker-transport
@@ -421,6 +424,12 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/worker-client:
+    dependencies:
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/worker-transport:
     dependencies:

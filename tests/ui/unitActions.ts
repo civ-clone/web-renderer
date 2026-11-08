@@ -17,7 +17,7 @@ import ClearSwamp from '@civ-clone/base-unit-action-clear-swamp/ClearSwamp';
 import Move from '@civ-clone/base-unit-action-move/Move';
 import PlantForest from '@civ-clone/base-unit-action-plant-forest/PlantForest';
 import UnitActions from '@civ-clone/ui-windows/components/UnitActions';
-import actionResult from '../../src/js/Engine/AdditionalData/actionResult';
+import actionResult from '@civ-clone/ui-worker-client/AdditionalData/actionResult';
 import distantActions from '@civ-clone/ui-client/lib/distantActions';
 import {
   directionKeys,

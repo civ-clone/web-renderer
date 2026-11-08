@@ -20,7 +20,7 @@ import { Pollution } from '@civ-clone/civ1-world/TileImprovements';
 import { Production } from '@civ-clone/civ1-city-improvement/Yields';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import ProcessYield from '@civ-clone/core-city/Rules/ProcessYield';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';

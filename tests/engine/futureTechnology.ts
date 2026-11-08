@@ -11,7 +11,7 @@ import './lib/spawnedClients';
 
 import Advance from '@civ-clone/core-science/Advance';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { FutureTechnology } from '@civ-clone/civ1-science/Advances';
 import GoodyHut from '@civ-clone/core-goody-hut/GoodyHut';
 import GoodyHutAdvance from '@civ-clone/base-goody-hut-advance/Advance';

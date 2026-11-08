@@ -7,10 +7,10 @@ The worker runtime hosts engine execution and translates core game objects into 
 Primary files:
 
 - `src/js/backend.ts`
-- `src/js/Engine/Game.ts`
-- `src/js/Engine/loadGame.ts`
-- `src/js/Engine/DataTransferClient.ts`
-- `src/js/Engine/Client/*`
+- `packages/worker-client/Game.ts`
+- `packages/worker-client/loadGame.ts`
+- `packages/worker-client/DataTransferClient.ts`
+- `packages/worker-client/Client/*`
 - `DataQueue` (`@civ-clone/core-data-client`)
 - `packages/protocol/Transport.ts` (`@civ-clone/ui-protocol`, shared with the page)
 - `packages/worker-transport/ParentTransport.ts` (`@civ-clone/ui-worker-transport`)
@@ -46,7 +46,7 @@ A save can only be loaded into a worker that has not started a game, because the
 
 `DataTransferClient` extends core client behavior for web-renderer communication. It is a composition root (#449, `docs/state-rewrite/13-data-transfer-client-split.md`): its constructor builds one shared `ClientContext` (the player, the transport, the patches, the notifier, automation, the talks and the registries), registers each module's engine listeners and transport receivers in a fixed order, and keeps what each registration returns so that `dispose()` can undo it. Apart from `chooseFromList`'s shortcuts (automation chooses, a single choice is taken), its methods are one-line delegations. The class name is part of the save format, so it is never renamed.
 
-The modules, all under `src/js/Engine/Client/`:
+The modules, all under `packages/worker-client/Client/`:
 
 - `ClientContext.ts`: what the modules share, one object the constructor makes once (types only); each module declares what it reads as a `Pick` of it.
 - `registries.ts`: the engine registries the context holds, the singletons in one place.

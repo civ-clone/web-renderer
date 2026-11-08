@@ -3,16 +3,16 @@
 //  as nothing else would send it (#492), whether the talks end or fail. Then, counted in microtasks (#503), when the
 //  talks a Meet with King starts and those the hand-over starts settle for an action that waits for them.
 
-import ActionsState from '../../src/js/Engine/Client/ActionsState';
-import { DataFilter } from '../../src/js/Engine/Client/visibilityFilter';
+import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
+import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
 import { Gold } from '@civ-clone/civ1-city/Yields';
 import Player from '@civ-clone/core-player/Player';
-import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
+import PlayerPatches from '@civ-clone/ui-worker-client/Client/PlayerPatches';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTreasury from '@civ-clone/core-treasury/PlayerTreasury';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
-import Talks, { TalksContext } from '../../src/js/Engine/Client/Talks';
-import Timeout from '../../src/js/Engine/Error/Timeout';
+import Talks, { TalksContext } from '@civ-clone/ui-worker-client/Client/Talks';
+import Timeout from '@civ-clone/ui-worker-client/Error/Timeout';
 import { stubView } from './lib/view';
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';

@@ -17,7 +17,7 @@ import {
   registerDiplomacyClasses,
   stripInteractionCollaborators,
 } from './diplomacy';
-import { plugins } from '../plugins';
+import { plugins } from '../../src/js/plugins';
 import { registerBarbarianClasses } from './barbarians';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 

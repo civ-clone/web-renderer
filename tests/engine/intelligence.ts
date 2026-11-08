@@ -23,7 +23,7 @@ import {
 import {
   IntelligenceDependencies,
   intelligenceRows,
-} from '../../src/js/Engine/lib/intelligence';
+} from '@civ-clone/ui-worker-client/lib/intelligence';
 import { Peace, War } from '@civ-clone/library-diplomacy/Declarations';
 import {
   BronzeWorking,

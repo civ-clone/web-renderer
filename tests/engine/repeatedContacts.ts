@@ -8,7 +8,7 @@ import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import {
   dropRepeatedContacts,
   registerDiplomacyClasses,
-} from '../../src/js/Engine/diplomacy';
+} from '@civ-clone/ui-worker-client/diplomacy';
 
 const failures: string[] = [];
 let checks = 0,

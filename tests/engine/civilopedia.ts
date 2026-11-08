@@ -18,14 +18,14 @@ import Build from '@civ-clone/core-city-build/Rules/Build';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import civilopediaData, {
   unavailableBuildItems,
-} from '../../src/js/Engine/lib/civilopedia';
+} from '@civ-clone/ui-worker-client/lib/civilopedia';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
-import requirementsData from '../../src/js/Engine/lib/requirements';
+import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import {
   cityBuildAvailable,
   registerRequests,
-} from '../../src/js/Engine/Client/requests';
-import { inBuildListOrder } from '../../src/js/Engine/lib/buildList';
+} from '@civ-clone/ui-worker-client/Client/requests';
+import { inBuildListOrder } from '@civ-clone/ui-worker-client/lib/buildList';
 import Player from '@civ-clone/core-player/Player';
 import setUpCity from '@civ-clone/civ1-city/tests/lib/setUpCity';
 

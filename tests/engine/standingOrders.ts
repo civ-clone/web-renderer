@@ -25,13 +25,13 @@ import './lib/spawnedClients';
 
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import { readFileSync, writeFileSync } from 'fs';
-import { restoreGame, resumeGame } from '../../src/js/Engine/loadGame';
+import { restoreGame, resumeGame } from '@civ-clone/ui-worker-client/loadGame';
 import { Seat } from '@civ-clone/ui-protocol/lib/seats';
 import Busy from '@civ-clone/core-unit/Rules/Busy';
 import City from '@civ-clone/core-city/City';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import Criterion from '@civ-clone/core-rule/Criterion';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Effect from '@civ-clone/core-rule/Effect';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
@@ -48,7 +48,7 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { plugins } from '../../src/js/plugins';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
-import { registerDiplomacyClasses } from '../../src/js/Engine/diplomacy';
+import { registerDiplomacyClasses } from '@civ-clone/ui-worker-client/diplomacy';
 import { save } from '@civ-clone/core-save-game/save';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';

@@ -35,8 +35,8 @@ import Stowed from '@civ-clone/base-unit-action-embark/Busy/Stowed';
 import { generateKey, goToBusy } from '@civ-clone/base-unit-action-goto/GoTo';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
-import { registerBarbarianClasses } from '../../src/js/Engine/barbarians';
-import { registerDiplomacyClasses } from '../../src/js/Engine/diplomacy';
+import { registerBarbarianClasses } from '@civ-clone/ui-worker-client/barbarians';
+import { registerDiplomacyClasses } from '@civ-clone/ui-worker-client/diplomacy';
 import { save } from '@civ-clone/core-save-game/save';
 import City from '@civ-clone/core-city/City';
 import TradeRoute from '@civ-clone/core-city/TradeRoute';
@@ -448,7 +448,7 @@ const report = (): void => {
     const game = gameForLoad(defaultSlots);
 
     registerClasses(game, { collisions: [] });
-    // As the app does (`src/js/Engine/Game.ts`): the diplomacy classes `registerClasses` can't name.
+    // As the app does (`packages/worker-client/Game.ts`): the diplomacy classes `registerClasses` can't name.
     registerDiplomacyClasses(game);
     registerBarbarianClasses(game);
 

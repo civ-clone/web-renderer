@@ -93,25 +93,26 @@ that list what is installed in the scope (`scan`, `collisions`, `duplicates`) sk
 
 A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
 so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
-path aren't packages yet: `src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them,
-and the list only shrinks.
+path aren't packages yet: `src/js/Audio`, the generated `src/js/plugins.ts` and `src/js/translations.ts`, and
+`build.json`. The test lists them, and the list only shrinks.
 
-The worker (`src/js/Engine`, started by `backend.ts`) shares only `protocol` and `worker-transport` with the page: it
-imports no other package, and no package imports from it. Under both is `@civ-clone/core-data-client`, in its own
-repository: the transport contract, requests and their replies, and data patches and rebuilding them, with nothing of
-civ.one's in it.
+The worker (`worker-client`, which `backend.ts` starts with `worker-transport`'s `ParentTransport`) shares only
+`protocol` and `worker-transport` with the page: it imports no package but those, and no package imports from it.
+Under both is `@civ-clone/core-data-client`, in its own repository: the transport contract, requests and their
+replies, and data patches and rebuilding them, with nothing of civ.one's in it.
 
 | Package             | Holds                                                                               | Depends on                             |
 | ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
 | `protocol`          | What the page and the worker say to each other: requests, messages, the game's data | nothing else                           |
 | `worker-transport`  | Both ends of the transport over the worker's messages                               | protocol                               |
+| `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts              | protocol                               |
 | `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves    | protocol                               |
 | `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                  | protocol, client                       |
 | `widgets`           | The window and its controls, with nothing about the game in them                    | protocol, client, assets               |
 | `map`               | Drawing the world on any grid, through a `Projection`                               | protocol, client, assets, widgets      |
 | `map-square`        | The square grid: its projection and minimap                                         | protocol, assets, map                  |
 | `windows`           | The game's windows, shared by every interface that wants them                       | protocol, client, assets, widgets, map |
-| `game`              | The page itself: starting up, a game in play, the keys, the debug tools             | all of the above                       |
+| `game`              | The page itself: starting up, a game in play, the keys, the debug tools             | everything above it but the worker's   |
 | `interface-modern`  | The modern interface, with Slate and brass, see above                               | client, widgets, map, windows          |
 | `interface-classic` | The classic interface, with Civ1 classic, see above                                 | client, widgets, map, windows          |
 
@@ -182,7 +183,7 @@ ask before leaving a game in progress.
   Up, Down and Remove; the build list's Add to queue lines up the chosen item.
   Both send a `queue` edit on the city's `CityBuild`/`ChangeProduction` action
   (`editQueue` in `components/lib/cityBuild.ts`, handled by `editQueue` in
-  `Engine/Client/actions/city.ts`).
+  `packages/worker-client/Client/actions/city.ts`).
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).

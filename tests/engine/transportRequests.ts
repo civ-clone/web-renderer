@@ -10,7 +10,7 @@
 import AbstractTransport, {
   RequestFailed,
 } from '@civ-clone/core-data-client/AbstractTransport';
-import answer from '../../src/js/Engine/answer';
+import answer from '@civ-clone/ui-worker-client/answer';
 import Request from '@civ-clone/core-data-client/Request';
 
 type Handler = (data: any, meta?: { id?: number }) => void;

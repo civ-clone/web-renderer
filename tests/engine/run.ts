@@ -174,7 +174,7 @@ engine.on('turn:start', (turn: number): void => {
 });
 
 // Registered before the plugins load, so it runs ahead of the `engine:start`
-// handler that builds the world — the same ordering src/js/Engine/Game.ts relies
+// handler that builds the world — the same ordering packages/worker-client/Game.ts relies
 // on.
 engine.on('engine:start', (): void => {
   const Level = defaultGame.availableDifficulties
@@ -187,7 +187,7 @@ engine.on('engine:start', (): void => {
     return;
   }
 
-  // Before the players, as src/js/Engine/Game.ts does it.
+  // Before the players, as packages/worker-client/Game.ts does it.
   defaultGame.difficulty.set(Level);
 
   new Array(config.players).fill(0).forEach((): void => {

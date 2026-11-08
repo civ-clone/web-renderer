@@ -4,7 +4,7 @@
 // Played through the worker's own `Game` over a stub transport, with the human's turns automated. The new game reveals
 //  the map at turn 2, so its player has met the civilizations with cities, and saves at turn 3 through `save`. The save
 //  is then loaded through `load` in a second process of this same bundle (`--load <file>`), as loading needs an engine
-//  that has not started a game (see `src/js/Engine/loadGame.ts`), which plays on to turn 5 and reports what it sent.
+//  that has not started a game (see `packages/worker-client/loadGame.ts`), which plays on to turn 5 and reports what it sent.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -12,7 +12,7 @@ import './lib/seed';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import Player from '@civ-clone/core-player/Player';
 import { execFileSync } from 'child_process';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';

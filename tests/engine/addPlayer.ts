@@ -1,6 +1,6 @@
 // A player can be added to a game that's already running (#168). In a seeded game of computer players, civ1-player's
 //  `addPlayer` brings in a new one part-way through turn 10, the host answers `player:spawned` with a client as
-//  src/js/Engine/Game.ts does, and the `Spawn` rules give it a Settlers. It doesn't move on turn 10, the turn it
+//  packages/worker-client/Game.ts does, and the `Spawn` rules give it a Settlers. It doesn't move on turn 10, the turn it
 //  joined part-way through; it takes its turn from turn 11; and a save keeps the player, its world and its client.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -168,7 +168,7 @@ engine.on('turn:start', (turn: number): void => {
   }
 });
 
-// Before the players claim their civilizations, as src/js/Engine/Game.ts does, so a save can name them.
+// Before the players claim their civilizations, as packages/worker-client/Game.ts does, so a save can name them.
 engine.on('engine:start', (): void => {
   registerClasses(defaultGame);
 });
@@ -193,7 +193,7 @@ engine.start();
 
 import('../../src/js/plugins')
   .then(({ plugins }) => {
-    // The manifest a save records, as src/js/Engine/Game.ts registers it.
+    // The manifest a save records, as packages/worker-client/Game.ts registers it.
     engine.registerPlugins(plugins);
     engine.emit('plugins:load:end');
   })

@@ -10,8 +10,7 @@
   },
   "include": [
     "src/js/Audio/**/*",
-    "src/js/Engine/**/*",
-    "src/js/Engine/Game.ts",
+    "packages/worker-client/**/*",
     "main.ts",
     "src/js/preload.ts",
     "packages/client/lib/applyDataPatches.ts",

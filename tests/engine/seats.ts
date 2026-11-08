@@ -18,7 +18,7 @@
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
 
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import Player from '@civ-clone/core-player/Player';
 import { execFileSync } from 'child_process';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';

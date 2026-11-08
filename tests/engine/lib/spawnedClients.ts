@@ -1,5 +1,5 @@
 // A player brought into a running game (#168), such as a destroyed civilization coming back (#178), asks its host for
-//  a client with `player:spawned`. src/js/Engine/Game.ts gives it a computer player's; this does the same for the
+//  a client with `player:spawned`. packages/worker-client/Game.ts gives it a computer player's; this does the same for the
 //  harnesses, which make their own clients rather than going through `Game`. The barbarians (#169) get theirs.
 
 import Player from '@civ-clone/core-player/Player';

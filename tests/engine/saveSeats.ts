@@ -22,7 +22,7 @@ import { ClientDescriptor } from '@civ-clone/core-save-game/SaveGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
-import Game from '../../src/js/Engine/Game';
+import Game from '@civ-clone/ui-worker-client/Game';
 import {
   isHumanDescriptor,
   savedSeats,

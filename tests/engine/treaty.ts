@@ -17,7 +17,7 @@ import { Democracy, Despotism } from '@civ-clone/civ1-government/Governments';
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { Irrigation } from '@civ-clone/civ1-world/TileImprovements';
 import { Peace } from '@civ-clone/library-diplomacy/Declarations';
 import Player from '@civ-clone/core-player/Player';
@@ -35,7 +35,7 @@ import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { reconstituteData } from '@civ-clone/core-data-client/reconstituteData';
-import { unknownPlayerOf } from '../../src/js/Engine/Client/standIns';
+import { unknownPlayerOf } from '@civ-clone/ui-worker-client/Client/standIns';
 import { instance as workedTileRegistryInstance } from '@civ-clone/core-city/WorkedTileRegistry';
 
 let started = false,

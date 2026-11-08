@@ -54,7 +54,7 @@ From `README.md` known issues/TODO:
   - Explicit note to break down and potentially use framework approach.
 - `packages/client/game/GameState.ts`
   - Performance TODOs around reconstitution and background processing. One is left: reconstituting in a worker thread.
-- `src/js/Engine/DataTransferClient.ts`
+- `packages/worker-client/DataTransferClient.ts`
   - Multiple TODOs around action handling structure, hidden actions, negotiation reuse, and cleanup behavior.
 - `DataQueue` (`@civ-clone/core-data-client`)
   - TODO for chunking patch transfer.

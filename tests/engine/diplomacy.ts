@@ -30,11 +30,11 @@ import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
-import { restoreGame, resumeGame } from '../../src/js/Engine/loadGame';
+import { restoreGame, resumeGame } from '@civ-clone/ui-worker-client/loadGame';
 import { plugins } from '../../src/js/plugins';
 import { readFileSync, writeFileSync } from 'fs';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
-import { registerDiplomacyClasses } from '../../src/js/Engine/diplomacy';
+import { registerDiplomacyClasses } from '@civ-clone/ui-worker-client/diplomacy';
 import { save } from '@civ-clone/core-save-game/save';
 
 const mode = process.argv.includes('--load') ? 'load' : 'save';

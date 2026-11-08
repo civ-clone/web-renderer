@@ -7,7 +7,7 @@ import { Settlers, Trireme, Warrior } from '@civ-clone/civ1-unit/Units';
 import {
   MilitaryDependencies,
   militaryReport,
-} from '../../src/js/Engine/lib/military';
+} from '@civ-clone/ui-worker-client/lib/military';
 import { Barracks } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import Player from '@civ-clone/core-player/Player';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';

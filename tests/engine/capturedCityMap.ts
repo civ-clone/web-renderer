@@ -19,7 +19,7 @@ import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataObject from '@civ-clone/core-data-object/DataObject';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
@@ -36,7 +36,7 @@ import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-diff
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import { unknownPlayerOf } from '../../src/js/Engine/Client/standIns';
+import { unknownPlayerOf } from '@civ-clone/ui-worker-client/Client/standIns';
 
 let started = false,
   checks = 0,

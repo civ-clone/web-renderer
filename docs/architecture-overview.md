@@ -22,16 +22,16 @@ The application is split into two JavaScript runtimes:
 4. For a new game, the setup windows (`askPlayerCount` in `components/newGame.ts`, or `GameSetupWindow`) send `setOptions` as a request, wait for its acknowledgement, then send `start`.
 5. Backend binds engine events, starts the engine, and dynamically imports the generated plugin imports (`src/js/plugins.ts`).
 
-Loading a saved game takes a different path. The player picks a file, `packages/windows/lib/savedGame.ts` hands it over in IndexedDB (with a `sessionStorage` marker) and the page reloads, so the save always goes to a fresh worker. On the next `init()`, `Renderer` takes the pending save, sets up its listeners, and sends `load` instead of `start`. The worker imports the plugins, restores the game into `defaultGame` (`src/js/Engine/loadGame.ts`) and resumes the turn that was in progress. No world is generated.
+Loading a saved game takes a different path. The player picks a file, `packages/windows/lib/savedGame.ts` hands it over in IndexedDB (with a `sessionStorage` marker) and the page reloads, so the save always goes to a fresh worker. On the next `init()`, `Renderer` takes the pending save, sets up its listeners, and sends `load` instead of `start`. The worker imports the plugins, restores the game into `defaultGame` (`packages/worker-client/loadGame.ts`) and resumes the turn that was in progress. No world is generated.
 
 ## Main subsystem responsibilities
 
-- `src/js/Engine/Game.ts`
+- `packages/worker-client/Game.ts`
   - Worker-side bootstrap and option handling (`setOption`, `getOptions`, `setOptions`).
   - Save (`save` → `saveGame`) and load (`load`) via `@civ-clone/core-save-game`.
   - Creates players and chooses the client implementation (`DataTransferClient` for player 0 in a new game, `SimpleAIClient` for others). A loaded game makes a `DataTransferClient` for whichever player the save records as human.
-- `src/js/Engine/DataTransferClient.ts`, over `src/js/Engine/Client/*`
-  - The composition root of the human player's client (#449): it builds one shared context and registers the modules in `src/js/Engine/Client/` (visibility filter and serialisers, patches and flushes, notifications, patch-producing engine listeners, talks, actions, the turn hand-over, cheats, requests, the game's end, automation), and can `dispose()` them. `docs/backend-worker.md` lists each module.
+- `packages/worker-client/DataTransferClient.ts`, over `packages/worker-client/Client/*`
+  - The composition root of the human player's client (#449): it builds one shared context and registers the modules in `packages/worker-client/Client/` (visibility filter and serialisers, patches and flushes, notifications, patch-producing engine listeners, talks, actions, the turn hand-over, cheats, requests, the game's end, automation), and can `dispose()` them. `docs/backend-worker.md` lists each module.
   - Adapts the core game model into UI-transferable objects, through a visibility filter.
   - Handles player actions, cheats and UI requests from the frontend.
   - Emits `gameData` (initial snapshot) and `gameDataPatch` (incremental updates), and `turnStarted`/`turnEnded` around the player's turn.

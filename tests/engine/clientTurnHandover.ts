@@ -13,19 +13,19 @@
 // Then, through the client: after `setAutomationEnabled` toggles, the engine listeners the client registered (the
 //  halted GoTo, the talks' and the patches' `unit:moved`) and `chooseFromList` read automation as it is now.
 
-import ActionsState from '../../src/js/Engine/Client/ActionsState';
+import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { ActiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
-import Automation from '../../src/js/Engine/Client/Automation';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import Automation from '@civ-clone/ui-worker-client/Client/Automation';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
-import Notifier from '../../src/js/Engine/Client/Notifier';
+import Notifier from '@civ-clone/ui-worker-client/Client/Notifier';
 import { stubView } from './lib/view';
-import PlayerPatches from '../../src/js/Engine/Client/PlayerPatches';
+import PlayerPatches from '@civ-clone/ui-worker-client/Client/PlayerPatches';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import TurnHandover, {
   registerTurnHandoverEvents,
-} from '../../src/js/Engine/Client/TurnHandover';
-import { handleAction } from '../../src/js/Engine/Client/handleAction';
+} from '@civ-clone/ui-worker-client/Client/TurnHandover';
+import { handleAction } from '@civ-clone/ui-worker-client/Client/handleAction';
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';

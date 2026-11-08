@@ -14,7 +14,7 @@ import {
   BuildRouteNote,
   generateKey,
 } from '@civ-clone/base-unit-action-build-route/BuildRoute';
-import DataTransferClient from '../../src/js/Engine/DataTransferClient';
+import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import Player from '@civ-clone/core-player/Player';
 import { Road } from '@civ-clone/civ1-world/TileImprovements';
 import { Settlers } from '@civ-clone/civ1-unit/Units';

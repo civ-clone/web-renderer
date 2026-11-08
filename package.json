@@ -305,6 +305,7 @@
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-windows": "workspace:*",
+    "@civ-clone/ui-worker-client": "workspace:*",
     "@civ-clone/ui-worker-transport": "workspace:*",
     "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2",
