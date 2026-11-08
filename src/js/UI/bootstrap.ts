@@ -3,8 +3,7 @@ import { ObjectMap } from './lib/reconstituteData';
 import GameSession from './game/GameSession';
 import GameOverWindow from './components/GameOverWindow';
 import { ObserverState } from '../Engine/Observer';
-import MainMenu from './components/MainMenu';
-import TitleMenu from './components/TitleMenu';
+import titleScreen from './components/titleScreen';
 import { downloadFile, saveFile, takePendingSave } from './lib/savedGame';
 import { keepSave } from './lib/browserSaves';
 import Notices from './components/Notices';
@@ -21,11 +20,7 @@ import { assetStore } from './AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from './GameOptionsRegistry';
 import { applyColourScheme, applyUiTheme, uiThemeFrom } from './lib/theme';
-import {
-  applyInterface,
-  currentInterface,
-  defineSlot,
-} from './lib/interfaceMode';
+import { applyInterface, currentInterface } from './lib/interfaceMode';
 import { installGlyphs } from './lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
@@ -42,14 +37,6 @@ import EventSounds from './lib/eventSounds';
 // An error's message, for saying: anything thrown, `Error` or not.
 const describe = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
-
-// The interface's `titleScreen` slot (#824).
-export const titleScreen = defineSlot<typeof TitleMenu | typeof MainMenu>(
-  'titleScreen'
-);
-
-titleScreen.provide('titleMenu', TitleMenu);
-titleScreen.provide('mainMenu', MainMenu);
 
 export class Renderer {
   #transport: Transport;

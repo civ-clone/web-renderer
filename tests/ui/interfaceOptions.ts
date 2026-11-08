@@ -5,6 +5,7 @@
 
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import {
   applyUiTheme,
@@ -88,7 +89,7 @@ Object.assign(globalThis, {
   expect(
     'both have a default: no theme is the one the interface comes with (#824)',
     [options.get('interface'), options.get('uiTheme')],
-    ['new', '']
+    ['modern', '']
   );
 
   // Which theme a page load uses.
@@ -142,7 +143,7 @@ Object.assign(globalThis, {
 
   // Interface from the main menu: a new page at once.
   {
-    applyInterface('new', 'classic', root);
+    applyInterface('modern', 'classic', root);
     visit('?interface=new');
 
     let reloads = 0;
@@ -150,7 +151,7 @@ Object.assign(globalThis, {
     const [row, hint] = interfaceRows(false, () => reloads++),
       select = row.querySelector('select') as HTMLSelectElement;
 
-    expect('a visit shows what is in use', select.value, 'new');
+    expect('a visit shows what is in use', select.value, 'modern');
     expect('with no hint', hint.hidden, true);
 
     choose(select, 'classic');
@@ -172,15 +173,15 @@ Object.assign(globalThis, {
     const [row, hint] = interfaceRows(true, () => reloads++),
       select = row.querySelector('select') as HTMLSelectElement;
 
-    choose(select, 'new');
+    choose(select, 'modern');
 
     expect(
       'choosing keeps it and leaves the game alone',
       [options.get('interface'), reloads, interfaceMode()],
-      ['new', 0, 'classic']
+      ['modern', 0, 'classic']
     );
     expect('saying when it changes', hint.hidden, false);
-    expect('the next load uses it', chosenInterface(), 'new');
+    expect('the next load uses it', chosenInterface(), 'modern');
 
     const [againRow, againHint] = interfaceRows(true, () => reloads++);
 
@@ -190,7 +191,7 @@ Object.assign(globalThis, {
         (againRow.querySelector('select') as HTMLSelectElement).value,
         againHint.hidden,
       ],
-      ['new', false]
+      ['modern', false]
     );
 
     choose(select, 'classic');

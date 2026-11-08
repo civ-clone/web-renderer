@@ -8,6 +8,7 @@
 // Must stay first: `GamePortal` reaches windows that read `document.body` as
 //  they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import GamePortal from '../../src/js/UI/components/GamePortal';
 import World from '../../src/js/UI/components/World';

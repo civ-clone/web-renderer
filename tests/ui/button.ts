@@ -3,6 +3,7 @@
 
 // Must stay first: modules read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import button from '../../src/js/UI/lib/button';
 

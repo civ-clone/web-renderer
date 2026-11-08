@@ -1,3 +1,4 @@
+import './UI/interfaces';
 import Renderer from './UI/bootstrap';
 import WorkerTransport from './Engine/WorkerTransport';
 import { version } from '../../build.json';

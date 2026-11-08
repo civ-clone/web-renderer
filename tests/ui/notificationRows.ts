@@ -6,6 +6,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { GameData, Player, PlayerAction } from '../../src/js/UI/types';
 import Dismissals from '../../src/js/UI/lib/dismissals';
@@ -325,7 +326,7 @@ const run = async (): Promise<void> => {
   );
 
   // The HUD under the new interface: a dismissed disorder leaves the rows and the Next Turn queue, and says so.
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   const holder = document.createElement('div'),
     areas = Object.fromEntries(

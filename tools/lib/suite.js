@@ -41,6 +41,22 @@ const regeneratePlugins = () => {
   }
 };
 
+// `build.json` is written by the build, not the tests, and CI runs them without one: the title screens show the
+// version from it (#749), and every UI suite loads them with the interfaces (#825).
+const buildJson = {
+  name: 'build-json',
+  setup(build) {
+    build.onResolve({ filter: /\/build\.json$/ }, () => ({
+      path: 'build.json',
+      namespace: 'build-json',
+    }));
+    build.onLoad({ filter: /.*/, namespace: 'build-json' }, () => ({
+      contents: '{"version": "0.0.0@test"}',
+      loader: 'json',
+    }));
+  },
+};
+
 // The options each kind of suite is bundled with. The UI suites load the
 // game's icons as its own build does, and linkedom reaches for the optional
 // native `canvas` package, and copes without it.
@@ -49,6 +65,7 @@ const bundleOptions = (kind) =>
     ? {
         loader: { '.png': 'dataurl', '.svg': 'dataurl' },
         external: ['canvas'],
+        plugins: [buildJson],
       }
     : {};
 
@@ -69,6 +86,10 @@ const bundle = async (kind, name, { esbuild = {}, entryPoint } = {}) => {
     logLevel: 'error',
     ...bundleOptions(kind),
     ...esbuild,
+    plugins: [
+      ...(esbuild.plugins ?? []),
+      ...(bundleOptions(kind).plugins ?? []),
+    ],
   });
 
   return { directory, outfile };

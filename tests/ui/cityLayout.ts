@@ -9,6 +9,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import City, { classicCityLayout } from '../../src/js/UI/components/City';
 import { City as CityData } from '../../src/js/UI/types';
@@ -224,7 +225,7 @@ const run = async (): Promise<void> => {
 
   classic.close();
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   const owner = { ...player, cities: [] as CityData[] },
     [first, second] = [

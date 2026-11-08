@@ -14,6 +14,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 import './lib/classicInterface';
 
 import { City as CityData, GameData } from '../../src/js/UI/types';

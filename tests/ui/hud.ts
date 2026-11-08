@@ -6,6 +6,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 import './lib/classicInterface';
 
 import { GameData, PlayerAction, Tile, Unit } from '../../src/js/UI/types';

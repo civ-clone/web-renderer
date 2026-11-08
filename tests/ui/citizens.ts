@@ -7,6 +7,7 @@
 
 // Must stay first: the citizens are built as DOM elements.
 import './lib/dom';
+import './lib/interfaces';
 
 import {
   renderCitizenCounts,

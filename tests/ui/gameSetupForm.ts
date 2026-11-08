@@ -6,6 +6,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import GameSetupForm from '../../src/js/UI/components/GameSetupForm';
 import GameSetupWindow from '../../src/js/UI/components/GameSetupWindow';
@@ -515,7 +516,7 @@ const run = async (): Promise<void> => {
 
   // The new interface's chrome (#738): Start moved into its footer as the primary, and Enter on the window itself
   //  starts, through the chrome.
-  applyInterface('new', null, document.documentElement);
+  applyInterface('modern', null, document.documentElement);
   view = await open();
   await settle();
 

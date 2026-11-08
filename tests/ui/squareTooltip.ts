@@ -6,6 +6,7 @@
 
 // Must stay first: `GamePortal` reaches windows that read `document.body` as they load.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import { City, Tile, Yield } from '../../src/js/UI/types';
 import { assetStore } from '../../src/js/UI/AssetStore';
@@ -183,7 +184,7 @@ Object.defineProperties((globalThis as any).HTMLElement.prototype, {
   offsetHeight: { get: () => 40, configurable: true },
 });
 
-applyInterface('new', null);
+applyInterface('modern', null);
 
 const portal = new GamePortal(
   new World({ width: 8, height: 8, tiles } as any),
@@ -490,7 +491,7 @@ const run = async (): Promise<void> => {
 
   expect('nor under the classic interface', shown(), false);
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   // A rival's banner.
   Object.assign(

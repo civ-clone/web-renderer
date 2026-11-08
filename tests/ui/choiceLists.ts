@@ -8,6 +8,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
+import './lib/interfaces';
 
 import ChoiceHandler from '../../src/js/UI/app/ChoiceHandler';
 import ChooseGovernment from '../../src/js/UI/components/Actions/ChooseGovernment';
@@ -191,7 +192,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-diplomacy/en');
   await import('../../translations/civ1-unit/en');
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   // Research.
   new ChooseResearch(

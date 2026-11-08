@@ -437,7 +437,7 @@ i18next.addResources('en', 'default', {
   'GameOptions.colour-scheme-choice.system': 'System default',
   'GameOptions.interface': 'Interface',
   'GameOptions.interface-choice.classic': 'Classic',
-  'GameOptions.interface-choice.new': 'New',
+  'GameOptions.interface-choice.modern': 'Modern',
   'GameOptions.interface-next-load':
     'The interface changes the next time the page loads.',
   'GameOptions.keep-building-military-units': 'Keep building military units',

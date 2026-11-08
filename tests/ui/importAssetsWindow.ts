@@ -16,6 +16,7 @@
 // Must stay first: `Window.ts` reads `document.body` as it loads. Imported for its globals alone: a binding nothing
 //  uses would be dropped from the bundle, and the shim with it.
 import './lib/dom';
+import './lib/interfaces';
 
 import ImportAssetsWindow from '../../src/js/UI/components/ImportAssetsWindow';
 import addFormatters from '../../src/js/UI/app/i18nFormatters';

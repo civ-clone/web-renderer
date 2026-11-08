@@ -4,6 +4,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import { darkenTopArrow } from '../../src/js/UI/components/lib/corruptionIcon';
 import ScaledCanvases from '../../src/js/UI/lib/scaledCanvases';

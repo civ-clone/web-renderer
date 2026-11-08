@@ -5,6 +5,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import UiMenu, {
   EDGE_MARGIN,
@@ -845,7 +846,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
   // The Game menu: under the new interface its button toggles the menu.
   {
-    applyInterface('new', null);
+    applyInterface('modern', null);
 
     const holder = document.createElement('div');
 
@@ -994,7 +995,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
   // The long press menu.
   {
-    applyInterface('new', null);
+    applyInterface('modern', null);
 
     const grassland = {
         id: 'Tile-1',

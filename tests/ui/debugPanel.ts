@@ -6,6 +6,7 @@
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
+import './lib/interfaces';
 
 import DebugFlags from '../../src/js/UI/debug/DebugFlags';
 import DebugPanel from '../../src/js/UI/debug/DebugPanel';

@@ -4,6 +4,7 @@
 
 // Must stay first: the sliders are built as DOM elements.
 import './lib/dom';
+import './lib/interfaces';
 
 import LockedSlider from '../../src/js/UI/components/LockedSlider';
 import LockedSliderGroup from '../../src/js/UI/components/LockedSliderGroup';

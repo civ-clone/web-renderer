@@ -7,6 +7,7 @@
 
 // Must stay first: it gives the controller a `document`.
 import './lib/dom';
+import './lib/interfaces';
 
 import { GameData, Tile, Unit } from '../../src/js/UI/types';
 import i18next from 'i18next';

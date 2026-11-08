@@ -5,6 +5,7 @@
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import './lib/dom';
+import './lib/interfaces';
 
 import ActionWindow from '../../src/js/UI/components/ActionWindow';
 import ConfirmationWindow from '../../src/js/UI/components/ConfirmationWindow';
@@ -77,7 +78,7 @@ const run = async (): Promise<void> => {
     window.close();
   }
 
-  applyInterface('new', null);
+  applyInterface('modern', null);
 
   {
     const window = new Window('Trade report', 'Body', {
