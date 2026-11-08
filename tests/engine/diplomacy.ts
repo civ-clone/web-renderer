@@ -162,7 +162,8 @@ if (mode === 'save') {
     .then((): void => {
       restoreGame(
         saved,
-        (player: Player): SimpleAIClient => new SimpleAIClient(player)
+        (player: Player): SimpleAIClient => new SimpleAIClient(player),
+        plugins
       );
 
       const loaded = negotiation();

@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import Game from '@civ-clone/ui-worker-client/Game';
+import civOnePlugins from './lib/plugins';
 import Player from '@civ-clone/core-player/Player';
 import { execFileSync } from 'child_process';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -84,7 +85,7 @@ engine.emit = ((event: string, ...args: any[]): void => {
   emitDirect(event, ...args);
 }) as typeof engine.emit;
 
-new Game(transport);
+new Game(transport, civOnePlugins);
 
 const human = (): Player | null =>
   clientRegistryInstance

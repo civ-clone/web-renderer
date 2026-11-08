@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { plugins } from '../../src/js/plugins';
+import { Plugins } from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -61,8 +61,12 @@ export class Game implements IGame {
   #seats: WeakMap<Client, Seat> = new WeakMap();
   #transport: Transport<TransportDataMap>;
 
-  constructor(transport: Transport<TransportDataMap>) {
+  // The rules this game is played with, which the worker's entry hands in (#825).
+  #plugins: Plugins;
+
+  constructor(transport: Transport<TransportDataMap>, plugins: Plugins) {
     this.#transport = transport;
+    this.#plugins = plugins;
 
     // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
     //  makes one itself. Bound here rather than in `bindEvents`, so a loaded game answers too.
@@ -226,7 +230,7 @@ export class Game implements IGame {
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
     //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).
     answer(transport, 'difficulties', () =>
-      import('../../src/js/plugins').then(() =>
+      this.#plugins.load().then(() =>
         defaultGame.availableDifficulties.sorted().map((Level) => ({
           name: typeNameOf(Level),
           level: Level.level(),
@@ -237,7 +241,7 @@ export class Game implements IGame {
     // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer
     //  seat can be given. Answered as `difficulties` is, with the plugins imported first.
     answer(transport, 'civilizations', () =>
-      import('../../src/js/plugins').then(() =>
+      this.#plugins.load().then(() =>
         defaultGame.civilizations.entries().map((CivilizationType) => ({
           name: typeNameOf(CivilizationType),
           leaders: defaultGame.leaders
@@ -253,11 +257,13 @@ export class Game implements IGame {
     );
 
     answer(transport, 'aiClients', () =>
-      import('../../src/js/plugins').then(() =>
-        this.#availableAIClients().map((AIClientType) =>
-          typeNameOf(AIClientType)
+      this.#plugins
+        .load()
+        .then(() =>
+          this.#availableAIClients().map((AIClientType) =>
+            typeNameOf(AIClientType)
+          )
         )
-      )
     );
 
     transport.receive('start', () => {
@@ -561,7 +567,8 @@ export class Game implements IGame {
     this.#observer?.dispose();
     this.#observer = observed ? new Observer(this.#transport) : null;
 
-    import('../../src/js/plugins')
+    this.#plugins
+      .load()
       .then(() => {
         this.#stopAtEnding(observed);
 
@@ -575,6 +582,7 @@ export class Game implements IGame {
               this.#seatAvailableHere(player, changed.get(player.id()) ?? seat),
               observed
             ),
+          this.#plugins.manifest,
           () => this.#observer?.observeFirst()
         );
       })
@@ -615,7 +623,7 @@ export class Game implements IGame {
       // it against, and the class registry is what turns a saved `type` back
       // into something to allocate. Registered before any player claims a
       // civilisation, because `civ1-player` unregisters one as it is claimed.
-      engine.registerPlugins(plugins);
+      engine.registerPlugins(this.#plugins.manifest);
       registerClasses(defaultGame);
       registerDiplomacyClasses(defaultGame);
       registerBarbarianClasses(defaultGame);
@@ -655,7 +663,8 @@ export class Game implements IGame {
     engine.start();
 
     // A game that can't start would otherwise leave the page waiting with nothing to say why (#470).
-    import('../../src/js/plugins')
+    this.#plugins
+      .load()
       .then(() => engine.emit('plugins:load:end'))
       .catch((error: unknown): void => {
         console.error(error);

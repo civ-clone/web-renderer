@@ -4,6 +4,7 @@
 //  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
 
 import Game from '@civ-clone/ui-worker-client/Game';
+import civOnePlugins from './lib/plugins';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 
 const failures: string[] = [];
@@ -66,7 +67,7 @@ engine.on = ((event: string, handler: (...args: any[]) => void): void => {
   on.call(engine, event as any, handler);
 }) as typeof engine.on;
 
-new Game(transport);
+new Game(transport, civOnePlugins);
 
 engine.on = on;
 

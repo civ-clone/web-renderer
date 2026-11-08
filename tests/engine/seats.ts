@@ -19,6 +19,7 @@
 import './lib/seed';
 
 import Game from '@civ-clone/ui-worker-client/Game';
+import civOnePlugins from './lib/plugins';
 import Player from '@civ-clone/core-player/Player';
 import { execFileSync } from 'child_process';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -162,7 +163,7 @@ const play = (name: string, setup: Setup): void => {
   process.on('uncaughtException', () => {});
   process.on('unhandledRejection', () => {});
 
-  new Game(transport);
+  new Game(transport, civOnePlugins);
 
   engine.on('game:start', (): void => {
     report.players = playerRegistryInstance.entries().map((player: Player) => ({

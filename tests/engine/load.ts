@@ -297,7 +297,8 @@ if (mode === 'load') {
     .then(async (): Promise<void> => {
       restoreGame(
         file_,
-        (player: Player): SimpleAIClient => new SimpleAIClient(player)
+        (player: Player): SimpleAIClient => new SimpleAIClient(player),
+        plugins
       );
 
       report.difficultyAtLoad = difficulty();
