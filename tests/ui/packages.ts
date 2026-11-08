@@ -496,12 +496,23 @@ stringFiles.forEach(({ name, text }) =>
   )
 );
 
-const nested = stringFiles.flatMap(({ name, text }) =>
-  [...text.matchAll(/\$t\(([A-Za-z0-9_.-]+)[,)]/g)]
-    .map(([, key]) => key)
-    .filter((key) => stringOwner.has(key))
-    .map((key) => ({ name, key, owner: stringOwner.get(key)! }))
-);
+// The keys a nested `$t(…)` names: itself, its plural and context forms (`_one`, `_other`, …), or for an interpolated
+//  one (`TradeRoute.goods.{{goods}}`) every key with its literal prefix.
+const namedBy = (reference: string): string[] => {
+    const at = reference.indexOf('{{'),
+      prefix = at === -1 ? null : reference.slice(0, at);
+
+    return [...stringOwner.keys()].filter((key) =>
+      prefix === null
+        ? key === reference || key.startsWith(`${reference}_`)
+        : prefix !== '' && key.startsWith(prefix)
+    );
+  },
+  nested = stringFiles.flatMap(({ name, text }) =>
+    [...text.matchAll(/\$t\(([^,)]+)[,)]/g)]
+      .flatMap(([, reference]) => namedBy(reference.trim()))
+      .map((key) => ({ name, key, owner: stringOwner.get(key)! }))
+  );
 
 expect(
   'a string names only strings its own package or one it depends on brings',

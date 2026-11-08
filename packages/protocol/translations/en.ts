@@ -33,6 +33,14 @@ i18next.addResources('en', 'default', {
   'Diplomat.industrial-sabotage': 'Industrial Sabotage',
   'Diplomat.incite-revolt': 'Incite a Revolt',
   'Diplomat.meet-with-king': 'Meet with King',
+  'TradeRoute.goods.Silk': 'Silk',
+  'TradeRoute.goods.Silver': 'Silver',
+  'TradeRoute.goods.Wine': 'Wine',
+  'TradeRoute.goods.Copper': 'Copper',
+  'TradeRoute.goods.Gems': 'Gems',
+  'TradeRoute.goods.Dye': 'Dye',
+  'TradeRoute.goods.Salt': 'Salt',
+  'TradeRoute.goods.Spice': 'Spice',
 });
 
 i18next.addResources('en', 'notification', {
