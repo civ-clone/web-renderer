@@ -6,7 +6,7 @@ import Difficulties, {
   DifficultyOption,
 } from '@civ-clone/ui-protocol/Requests/Difficulties';
 import Options from '@civ-clone/ui-protocol/Requests/Options';
-import Request from '@civ-clone/ui-protocol/Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-widgets/components/Window';

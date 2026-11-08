@@ -133,8 +133,11 @@ importers:
       '@civ-clone/core-client':
         specifier: ^0.1.4
         version: 0.1.4
+      '@civ-clone/core-data-client':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/core-data-object':
-        specifier: ^0.1.14
+        specifier: ^0.1.17
         version: 0.1.17
       '@civ-clone/core-difficulty':
         specifier: ^0.1.0
@@ -238,6 +241,9 @@ importers:
       '@civ-clone/ui-windows':
         specifier: workspace:*
         version: link:packages/windows
+      '@civ-clone/ui-worker-transport':
+        specifier: workspace:*
+        version: link:packages/worker-transport
       '@dom111/element':
         specifier: ^0.2.0
         version: 0.2.1
@@ -415,6 +421,12 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/worker-transport:
+    dependencies:
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
 packages:
 
@@ -1440,6 +1452,9 @@ packages:
 
   '@civ-clone/core-client@0.1.4':
     resolution: {integrity: sha512-osadRAYf9GkJRUMM4hqLcGqd0sVTiPQpda8SNjE0IZzaC3jWGRUnPa+a708M6RgzcF1IdXJL8Q0sggrGf51fNw==}
+
+  '@civ-clone/core-data-client@0.1.0':
+    resolution: {integrity: sha512-BODI5jeoDEMJ1j3KZC1RIgAheJwvTQDOmWfAWUAoaE63fUFbnOWhwOaXfd5RcQj62RRSi6Dh4x2g5/vkHITGUA==}
 
   '@civ-clone/core-data-object@0.1.17':
     resolution: {integrity: sha512-37vYkBQac3inFOcPioZmASomcRbZcRkEPQKfOEwhjVN2TtHA9OdGiXjGqq4kvAw4xnucHBURMGO8ClE707waCw==}
@@ -4470,6 +4485,10 @@ snapshots:
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-random': 0.1.2
       '@civ-clone/core-registry': 0.1.6
+
+  '@civ-clone/core-data-client@0.1.0':
+    dependencies:
+      '@civ-clone/core-data-object': 0.1.17
 
   '@civ-clone/core-data-object@0.1.17':
     dependencies:

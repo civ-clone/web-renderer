@@ -33,7 +33,7 @@ import {
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';
 import { City, DataPatch, GameData } from '@civ-clone/ui-protocol/types';
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';

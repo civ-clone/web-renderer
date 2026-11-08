@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 // Every advance a player has not yet discovered, by class name. `null` means
 // the local player.

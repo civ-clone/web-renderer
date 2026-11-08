@@ -13,7 +13,7 @@ import Tile from '@civ-clone/core-world/Tile';
 import { View, playerView } from './Client/View';
 import { filterToReference } from './Client/refs';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
-import Transport from '@civ-clone/ui-protocol/Transport';
+import Transport from '@civ-clone/core-data-client/Transport';
 import Unit from '@civ-clone/core-unit/Unit';
 import ActionsState from './Client/ActionsState';
 import Automation from './Client/Automation';

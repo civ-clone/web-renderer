@@ -96,12 +96,15 @@ so they resolve from the root, where `civ sync` links engine checkouts. A few th
 path aren't packages yet: `src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them,
 and the list only shrinks.
 
-The worker (`src/js/Engine`, started by `backend.ts`) shares only `protocol` with the page: it imports no other package,
-and no package imports from it. The page's end of the messaging, `WorkerTransport`, is in `client`.
+The worker (`src/js/Engine`, started by `backend.ts`) shares only `protocol` and `worker-transport` with the page: it
+imports no other package, and no package imports from it. Under both is `@civ-clone/core-data-client`, in its own
+repository: the transport contract, requests and their replies, and data patches and rebuilding them, with nothing of
+civ.one's in it.
 
 | Package             | Holds                                                                               | Depends on                             |
 | ------------------- | ----------------------------------------------------------------------------------- | -------------------------------------- |
 | `protocol`          | What the page and the worker say to each other: requests, messages, the game's data | nothing else                           |
+| `worker-transport`  | Both ends of the transport over the worker's messages                               | protocol                               |
 | `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves    | protocol                               |
 | `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                  | protocol, client                       |
 | `widgets`           | The window and its controls, with nothing about the game in them                    | protocol, client, assets               |

@@ -502,7 +502,7 @@ const run = async (): Promise<void> => {
 
   // Intelligence that isn't answered leaves the strip with the names alone, and the talks go on.
   const { RequestFailed } = await import(
-    '@civ-clone/ui-protocol/AbstractTransport'
+    '@civ-clone/core-data-client/AbstractTransport'
   );
 
   intelligence = Promise.reject(

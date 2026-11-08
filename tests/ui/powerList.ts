@@ -12,7 +12,7 @@ import PowerList, {
   powerWindow,
 } from '@civ-clone/ui-windows/components/PowerList';
 import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
-import { RequestFailed } from '@civ-clone/ui-protocol/AbstractTransport';
+import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

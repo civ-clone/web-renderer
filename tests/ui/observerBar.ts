@@ -13,7 +13,7 @@ import './lib/grids';
 
 import { DataPatch } from '@civ-clone/ui-protocol/types';
 import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import i18next from 'i18next';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';

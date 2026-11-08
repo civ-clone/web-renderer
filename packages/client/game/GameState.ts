@@ -1,5 +1,5 @@
 import { DataPatch, GameData, Tile } from '@civ-clone/ui-protocol/types';
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import DataChanges, { instance as sharedChanges } from '../lib/DataChanges';
 import IncrementalReconstituter from '../lib/IncrementalReconstituter';
 import PruneSchedule from '../lib/PruneSchedule';

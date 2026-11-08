@@ -7,7 +7,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import { RequestFailed } from '@civ-clone/ui-protocol/AbstractTransport';
+import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import TopCitiesReport from '@civ-clone/ui-windows/components/TopCitiesReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';

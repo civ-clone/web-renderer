@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 /** A difficulty level as the worker lists it: the class name, and where it sits, 0 being the easiest. */
 export type DifficultyOption = {

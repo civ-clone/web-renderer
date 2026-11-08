@@ -1,4 +1,4 @@
-import { ObjectMap, PlainObject } from '@civ-clone/ui-protocol/data';
+import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 
 const walkValue = (
   value: any,

@@ -7,7 +7,9 @@
 import Player from '@civ-clone/core-player/Player';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
-import Transport, { TransportDisposer } from '@civ-clone/ui-protocol/Transport';
+import Transport, {
+  TransportDisposer,
+} from '@civ-clone/core-data-client/Transport';
 import {
   defaultTopCitiesLimit,
   topCitiesEntries,

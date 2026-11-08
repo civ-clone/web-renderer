@@ -67,7 +67,7 @@ Core channels are defined in `packages/protocol/Transport.ts` (`@civ-clone/ui-pr
 - Diplomat results: `embassyEstablished`, `investigateCity`
 - Debug/cheat: `cheat`, `cheatAdvances`, `cheatPlayers`
 
-Requests go through `Transport.request()` (`AbstractTransport`), which matches a reply to its request by channel and so sends one request per channel at a time.
+Requests go through `Transport.request()` (`AbstractTransport`, from `@civ-clone/core-data-client`), which gives each request an id of its own that its reply echoes, so any number can wait on one channel at once and each gets its own reply, in whatever order they come (#324, #470).
 
 The game's end uses `gameOver`, `retire` and `gameContinue` (#176); there is no `restart` or `quit` channel any more (#340).
 

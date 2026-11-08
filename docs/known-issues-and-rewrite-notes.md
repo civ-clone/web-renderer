@@ -56,7 +56,7 @@ From `README.md` known issues/TODO:
   - Performance TODOs around reconstitution and background processing. One is left: reconstituting in a worker thread.
 - `src/js/Engine/DataTransferClient.ts`
   - Multiple TODOs around action handling structure, hidden actions, negotiation reuse, and cleanup behavior.
-- `src/js/Engine/DataQueue.ts`
+- `DataQueue` (`@civ-clone/core-data-client`)
   - TODO for chunking patch transfer.
 - `packages/map-square/Minimap.ts`
   - TODO around rectangle rendering near map edges. Fixed and removed in 91fe1f6.

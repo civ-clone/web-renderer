@@ -11,8 +11,9 @@ Primary files:
 - `src/js/Engine/loadGame.ts`
 - `src/js/Engine/DataTransferClient.ts`
 - `src/js/Engine/Client/*`
-- `src/js/Engine/DataQueue.ts`
+- `DataQueue` (`@civ-clone/core-data-client`)
 - `packages/protocol/Transport.ts` (`@civ-clone/ui-protocol`, shared with the page)
+- `packages/worker-transport/ParentTransport.ts` (`@civ-clone/ui-worker-transport`)
 
 ## `Game` boot orchestration
 

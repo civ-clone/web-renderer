@@ -1,5 +1,5 @@
 import { Direction, EdgeDirection, TopologyId } from './topology';
-import { ObjectMap } from './data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 
 export type PlainObject = {
   [key: string]: any;

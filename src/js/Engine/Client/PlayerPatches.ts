@@ -21,8 +21,8 @@ import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegis
 import { instance as playerResearchRegistryInstance } from '@civ-clone/core-science/PlayerResearchRegistry';
 import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-treasury/PlayerTreasuryRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import DataQueue from '../DataQueue';
-import Transport from '@civ-clone/ui-protocol/Transport';
+import DataQueue from '@civ-clone/core-data-client/DataQueue';
+import Transport from '@civ-clone/core-data-client/Transport';
 import ActionsState, { diffActions } from './ActionsState';
 import { View } from './View';
 import {

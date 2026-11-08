@@ -17,7 +17,7 @@ import Difficulties, {
   DifficultyOption,
 } from '@civ-clone/ui-protocol/Requests/Difficulties';
 import Options from '@civ-clone/ui-protocol/Requests/Options';
-import Request from '@civ-clone/ui-protocol/Request';
+import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
 import { rememberDifficulty } from './difficulty';

@@ -1,5 +1,5 @@
 import { DataPatch, PlainObject } from '@civ-clone/ui-protocol/types';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 
 // Applies `gameDataPatch` batches to the object map the page holds, in place. Shared by `GameState` and the tests that
 //  check what a patch does to the map, so they exercise the same code.

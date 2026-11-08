@@ -1,4 +1,4 @@
-import Request from '../Request';
+import Request from '@civ-clone/core-data-client/Request';
 
 // The AI clients a computer seat can be given (#604): the class names registered with core-ai-client, the host's
 //  default first.

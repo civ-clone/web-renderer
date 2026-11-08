@@ -30,7 +30,7 @@ import {
   unitActions,
 } from '@civ-clone/ui-client/lib/unitActions';
 import { IncrementalReconstituter } from '@civ-clone/ui-client/lib/IncrementalReconstituter';
-import { ObjectMap } from '@civ-clone/ui-protocol/data';
+import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
 import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
 import PendingMove, { plainMove } from '@civ-clone/ui-client/lib/PendingMove';

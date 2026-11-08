@@ -30,7 +30,7 @@ import {
   askMapGrid,
   askNewGame,
 } from '@civ-clone/ui-windows/components/newGame';
-import Request from '@civ-clone/ui-protocol/Request';
+import Request from '@civ-clone/core-data-client/Request';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import Transport from '@civ-clone/ui-client/Transport';

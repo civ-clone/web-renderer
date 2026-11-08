@@ -29,7 +29,7 @@ import { UnitLossRegistry } from '@civ-clone/core-unit/UnitLossRegistry';
 import { UnitRegistry } from '@civ-clone/core-unit/UnitRegistry';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { Year } from '@civ-clone/core-game-year/Year';
-import Transport from '@civ-clone/ui-protocol/Transport';
+import Transport from '@civ-clone/core-data-client/Transport';
 import ActionsState from './ActionsState';
 import Automation from './Automation';
 import { CityNewsCollector } from './cityNews';
