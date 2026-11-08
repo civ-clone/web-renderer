@@ -71,13 +71,38 @@ choice of theme outranks.
   interface's package only if no other interface would want it.
 - **Boundaries:** shared code never imports an interface, one interface never imports another, and only
   `src/js/frontend.ts` imports `interfaces/`, which lists what civ.one offers. `DEFAULT_INTERFACE` must be one of them.
-- Only Options asks which interface is in use. A test holds that and the boundaries.
+- Only Options asks which interface is in use. `interfaceManifests` holds that, and `areas` the boundaries.
 - An interface that's renamed keeps its old id in `RENAMED` (`lib/interfaceMode.ts`), so stored choices and old links
   still find it: `new` is now `modern`.
 
 A new interface is a folder beside these two, with its manifest and an `index.ts` providing what it fills its slots
 with, and a line in `interfaces/index.ts`. Test suites import `tests/ui/lib/interfaces.ts` straight after `./lib/dom`
 to register them as the page does.
+
+## Areas
+
+On the way to packages (#825), every file under `src/js/UI/` belongs to an area, listed in `src/js/UI/areas.json`
+with what each may use. The `areas` test holds them: a file is in the area with the longest path that matches it, and
+an import an area may not make fails the test unless it is one of the `exceptions`, each with its reason, or on the
+`untangle` list, which only ever shrinks.
+
+| Area         | Holds                                                                            | May use                      |
+| ------------ | -------------------------------------------------------------------------------- | ---------------------------- |
+| `client`     | The game as the page holds it, drawing nothing: transport, state, options, saves | nothing else                 |
+| `assets`     | Sprites, tilesets and sounds, and drawing a sprite                               | client                       |
+| `widgets`    | The window and its controls, with nothing about the game in them                 | client, assets               |
+| `map`        | Drawing the world on any grid, through a `Projection`                            | client, assets, widgets      |
+| `map-square` | What only holds for the square grid (`src/js/UI/map-square/`)                    | client, assets, map          |
+| `windows`    | The game's windows, shared by every interface that wants them                    | client, assets, widgets, map |
+| `game`       | The page itself: starting up, a game in play, the keys, the debug tools          | all of the above             |
+| interfaces   | One per interface (`interfaces/<id>/`), see above                                | all but `game`               |
+
+**The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
+for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
+`Projection`, and anything true of the square grid alone lives in `map-square`. Hexagonal and isometric grids get
+areas of their own beside it (`map-hex`, `map-isometric`, #94, #97). Only `lib/projectionFor.ts`, which picks a grid's
+projection, and the minimap's `Overview`, which draws every world as squares in storage order, use `map-square` from
+`map`.
 
 ## Major UI modules
 

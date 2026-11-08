@@ -16,7 +16,13 @@ import { IConstructor } from '@civ-clone/core-registry/Registry';
 import currentTileset, { nativeTileSize } from '../lib/tilesets';
 import projectionFor from '../lib/projectionFor';
 import { City as CityData } from '../types';
-import { CityOpener } from '../lib/cityOpeners';
+
+/** How a city opens from the map: which do, and opening one (`lib/cityOpeners.ts` has the game's). */
+export type CityOpener = {
+  // Whether `city` is one that opens: the map's click moves on to the square's units otherwise.
+  opens(city: CityData, portal: Portal): boolean;
+  open(city: CityData, portal: Portal): void;
+};
 
 export interface IPortal {
   build(updatedTiles: Tile[]): void;
