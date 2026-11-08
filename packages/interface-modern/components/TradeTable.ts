@@ -54,7 +54,8 @@ export const maintenance = (cities: CityData[]): MaintenanceRow[] =>
 const gold = (city: CityData): [number, number, number] => {
   const [income, used, left] = yieldData(city, 'Gold');
 
-  return [income, -used, left];
+  // `0 - used`, not `-used`, which makes no upkeep -0 (#816).
+  return [income, 0 - used, left];
 };
 
 const sum = (rows: number[]): number =>

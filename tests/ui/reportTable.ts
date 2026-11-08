@@ -566,6 +566,8 @@ const run = async (): Promise<void> => {
           upkeep: ['CityWalls', 'Temple'],
         }),
         city('City-2', 'Samarkand', { gold: 1, upkeep: ['CityWalls'] }),
+        // No upkeep: 0, not -0 (#816).
+        city('City-3', 'Bukhara', { gold: 2 }),
       ],
       government: { _: 'Despotism' },
     } as unknown as Player,
@@ -586,7 +588,8 @@ const run = async (): Promise<void> => {
     [
       ['Karakorum', '6', '2', '4'],
       ['Samarkand', '1', '1', '0'],
-      ['Total', '7', '3', '4'],
+      ['Bukhara', '2', '0', '2'],
+      ['Total', '9', '3', '6'],
     ]
   );
   expect(
@@ -630,7 +633,7 @@ const run = async (): Promise<void> => {
       ).map((row) => row.classList.contains('filtered-out')),
     ],
     [
-      [true, false],
+      [true, false, true],
       [false, false],
     ]
   );

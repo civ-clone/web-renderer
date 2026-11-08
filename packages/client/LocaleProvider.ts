@@ -43,6 +43,8 @@ export class LocaleProvider {
   number(number: number, options?: Intl.NumberFormatOptions): string {
     const formatter = new Intl.NumberFormat(this.locales(), {
       maximumFractionDigits: 0,
+      // No sign on zero, so -0, or a small negative rounded to 0, reads 0 rather than -0 (#816).
+      signDisplay: 'negative',
       ...options,
     });
 

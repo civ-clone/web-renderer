@@ -634,11 +634,15 @@ export class GameSession {
           }
 
           // A new game opens on the player's start, not wherever that happens to be in view from the map's corner
-          //  (#705). A loaded one, and one being watched, stay as they are.
-          const start =
-            firstTurnStarted && pendingSave === null && !observing
-              ? gameState.data().player.units[0]?.tile
-              : undefined;
+          //  (#705). A loaded one opens on the player's first city, or their first unit if they have no city (#826): the
+          //  map's corner is often unexplored, and black. A unit waiting for orders elsewhere is then brought into view
+          //  as usual. One being watched stays as it is.
+          const { player } = gameState.data(),
+            start =
+              firstTurnStarted && !observing
+                ? (pendingSave === null ? undefined : player.cities[0]?.tile) ??
+                  player.units[0]?.tile
+                : undefined;
 
           if (start) {
             mapView.centre(start);
