@@ -70,7 +70,7 @@ choice of theme outranks.
 - **What's shared** is every component an interface uses, so another interface can use it too. Something goes inside an
   interface's package only if no other interface would want it.
 - **Boundaries:** shared code never imports an interface, one interface never imports another, and only
-  `src/js/frontend.ts` imports `interfaces/`, which lists what civ.one offers. The first listed is the default.
+  `src/js/frontend.ts` imports `interfaces/`, which lists what civ.one offers. `DEFAULT_INTERFACE` must be one of them.
 - Only Options asks which interface is in use. A test holds that and the boundaries.
 - An interface that's renamed keeps its old id in `RENAMED` (`lib/interfaceMode.ts`), so stored choices and old links
   still find it: `new` is now `modern`.

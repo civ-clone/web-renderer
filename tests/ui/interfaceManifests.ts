@@ -10,6 +10,7 @@ import { choiceList, openChoice } from '../../src/js/UI/components/choiceList';
 import ChoiceWindow from '../../src/js/UI/components/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
+  DEFAULT_INTERFACE,
   applyInterface,
   currentInterface,
   defineSlot,
@@ -42,6 +43,12 @@ expect(
   'new and classic are manifests',
   interfaces().map(({ id }) => id),
   ['modern', 'classic']
+);
+
+expect(
+  'the default is one of them',
+  interfaces().some(({ id }) => id === DEFAULT_INTERFACE),
+  true
 );
 
 const [modern, classic] = interfaces();

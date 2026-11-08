@@ -81,8 +81,17 @@ export const interfaces = (): InterfaceManifest[] => [...manifests.values()];
 export const interfaceMode = (): InterfaceMode => mode;
 
 /** The manifest of the interface in use. */
-export const currentInterface = (): InterfaceManifest =>
-  active ?? (manifests.get(mode) as InterfaceManifest);
+export const currentInterface = (): InterfaceManifest => {
+  const manifest = active ?? manifests.get(mode);
+
+  if (manifest === undefined) {
+    throw new TypeError(
+      `No interface '${mode}' is registered: the page's entry imports \`UI/interfaces\`, and a test suite \`tests/ui/lib/interfaces\`.`
+    );
+  }
+
+  return manifest;
+};
 
 /** Whether the interface in use has `feature`. */
 export const hasFeature = (feature: string): boolean =>
