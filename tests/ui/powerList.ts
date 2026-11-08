@@ -8,7 +8,9 @@ import './lib/interfaces';
 
 import { CivilizationPowerRow } from '../../src/js/Engine/lib/civilizationPower';
 import GameOptionsRegistry from '@civ-clone-ui/client/GameOptionsRegistry';
-import PowerList, { powerWindow } from '@civ-clone-ui/windows/components/PowerList';
+import PowerList, {
+  powerWindow,
+} from '@civ-clone-ui/windows/components/PowerList';
 import SidebarSection from '@civ-clone-ui/widgets/components/SidebarSection';
 import { RequestFailed } from '../../src/js/Engine/AbstractTransport';
 import Transport from '@civ-clone-ui/client/Transport';

@@ -2,7 +2,9 @@ import { City, Player } from '@civ-clone-ui/client/types';
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { buildTurns, turnsText } from './lib/cityYields';
-import DataChanges, { instance as dataChanges } from '@civ-clone-ui/client/lib/DataChanges';
+import DataChanges, {
+  instance as dataChanges,
+} from '@civ-clone-ui/client/lib/DataChanges';
 import watchPlayer, { cityRowIds } from './lib/watchPlayer';
 import Portal from '@civ-clone-ui/map/components/Portal';
 import { cityName } from '@civ-clone-ui/client/components/lib/city';

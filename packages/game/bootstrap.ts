@@ -4,7 +4,11 @@ import GameSession from './GameSession';
 import GameOverWindow from '@civ-clone-ui/windows/components/GameOverWindow';
 import { ObserverState } from '../../src/js/Engine/Observer';
 import titleScreen from '@civ-clone-ui/windows/components/titleScreen';
-import { downloadFile, saveFile, takePendingSave } from '@civ-clone-ui/windows/lib/savedGame';
+import {
+  downloadFile,
+  saveFile,
+  takePendingSave,
+} from '@civ-clone-ui/windows/lib/savedGame';
 import { keepSave } from '@civ-clone-ui/client/lib/browserSaves';
 import Notices from '@civ-clone-ui/windows/components/Notices';
 import Notifications from '@civ-clone-ui/windows/components/Notifications';
@@ -19,8 +23,15 @@ import { setCursor, setTilesetSizes } from './app/assets';
 import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
-import { applyColourScheme, applyUiTheme, uiThemeFrom } from '@civ-clone-ui/widgets/lib/theme';
-import { applyInterface, currentInterface } from '@civ-clone-ui/client/lib/interfaceMode';
+import {
+  applyColourScheme,
+  applyUiTheme,
+  uiThemeFrom,
+} from '@civ-clone-ui/widgets/lib/theme';
+import {
+  applyInterface,
+  currentInterface,
+} from '@civ-clone-ui/client/lib/interfaceMode';
 import { installGlyphs } from '@civ-clone-ui/assets/lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';

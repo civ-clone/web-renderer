@@ -1,4 +1,9 @@
-import { City, Player, PlayerGovernment, PlayerTradeRates } from '@civ-clone-ui/client/types';
+import {
+  City,
+  Player,
+  PlayerGovernment,
+  PlayerTradeRates,
+} from '@civ-clone-ui/client/types';
 import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone-ui/client/Transport';
 import { confirmRevolution } from './Actions/Revolution';
@@ -9,7 +14,9 @@ import { researchingName } from './lib/advances';
 import { TOptions, t } from 'i18next';
 import { turnsLeft, turnsText, yieldData, yieldIcon } from './lib/cityYields';
 import progressBar from '@civ-clone-ui/widgets/components/lib/ProgressBar';
-import statPill, { StatPillTone } from '@civ-clone-ui/widgets/components/lib/StatPill';
+import statPill, {
+  StatPillTone,
+} from '@civ-clone-ui/widgets/components/lib/StatPill';
 import tooltip from '@civ-clone-ui/widgets/components/lib/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as

@@ -14,7 +14,10 @@ import {
   option,
   select,
 } from '../lib/setupControls';
-import { difficultyLabels, preselectedDifficulty } from '@civ-clone-ui/client/lib/difficulty';
+import {
+  difficultyLabels,
+  preselectedDifficulty,
+} from '@civ-clone-ui/client/lib/difficulty';
 import { elementId, h } from '@civ-clone-ui/widgets/lib/html';
 import { TopologyId } from '@civ-clone-ui/client/lib/topologyFor';
 import Transport from '@civ-clone-ui/client/Transport';

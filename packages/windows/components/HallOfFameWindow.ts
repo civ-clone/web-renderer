@@ -1,4 +1,7 @@
-import { HallOfFameEntry, hallOfFame } from '@civ-clone-ui/client/lib/hallOfFame';
+import {
+  HallOfFameEntry,
+  hallOfFame,
+} from '@civ-clone-ui/client/lib/hallOfFame';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';

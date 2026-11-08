@@ -1,4 +1,8 @@
-import { NeighbourDirection, Tile, World as WorldData } from '@civ-clone-ui/client/types';
+import {
+  NeighbourDirection,
+  Tile,
+  World as WorldData,
+} from '@civ-clone-ui/client/types';
 import topologyFor, { Topology } from '@civ-clone-ui/client/lib/topologyFor';
 
 export class World {

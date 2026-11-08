@@ -6,7 +6,10 @@ import openCity from '@civ-clone-ui/windows/components/openCity';
 import CitiesList from '@civ-clone-ui/windows/components/CitiesList';
 import GameMenu from '@civ-clone-ui/windows/components/GameMenu';
 import openFindCity from '@civ-clone-ui/windows/components/FindCity';
-import { allowLeaving, guardLeaving } from '@civ-clone-ui/windows/lib/leaveGuard';
+import {
+  allowLeaving,
+  guardLeaving,
+} from '@civ-clone-ui/windows/lib/leaveGuard';
 import { gridName } from '@civ-clone-ui/windows/lib/savedGame';
 import { autosaveDue } from '@civ-clone-ui/client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone-ui/map/lib/supportedTopologies';
@@ -18,7 +21,9 @@ import { openIntelligenceReport } from '@civ-clone-ui/windows/components/reports
 import HaltedUnits from '@civ-clone-ui/client/lib/haltedUnits';
 import Transport from '@civ-clone-ui/client/Transport';
 import UnitCard from '@civ-clone-ui/windows/components/UnitCard';
-import UnitDetails, { UnitDetailsDeps } from '@civ-clone-ui/windows/components/UnitDetails';
+import UnitDetails, {
+  UnitDetailsDeps,
+} from '@civ-clone-ui/windows/components/UnitDetails';
 import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
 import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';
 import Dismissals from '@civ-clone-ui/client/lib/dismissals';
@@ -36,7 +41,10 @@ import EventSounds from '@civ-clone-ui/windows/lib/eventSounds';
 import { AppElements } from './app/elements';
 import NotificationBar from './app/NotificationBar';
 import ObserverBar from '@civ-clone-ui/windows/components/ObserverBar';
-import { observerCityOpener, playerCityOpener } from '@civ-clone-ui/windows/lib/cityOpeners';
+import {
+  observerCityOpener,
+  playerCityOpener,
+} from '@civ-clone-ui/windows/lib/cityOpeners';
 import { ObserverState } from '../../src/js/Engine/Observer';
 import sendBuildPreferences from '@civ-clone-ui/client/lib/buildPreferences';
 

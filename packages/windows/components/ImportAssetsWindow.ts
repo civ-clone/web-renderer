@@ -4,7 +4,12 @@ import {
   ImageMap,
   extractSprites,
 } from '@civ-clone/civ1-asset-extractor/extractSprites';
-import { Asset, SOUND_DRIVER, assetFromURI, assetStore } from '@civ-clone-ui/assets/AssetStore';
+import {
+  Asset,
+  SOUND_DRIVER,
+  assetFromURI,
+  assetStore,
+} from '@civ-clone-ui/assets/AssetStore';
 import CvlImage from '../../../src/js/Audio/cvl/Image';
 import Window, { WindowOptions } from '@civ-clone-ui/widgets/components/Window';
 import { allowLeaving } from '../lib/leaveGuard';

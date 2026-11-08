@@ -52,7 +52,9 @@ Quick reference map of key code areas.
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
 
-## UI side (`src/js/UI`)
+## UI side (`packages/*`)
+
+Each path below is inside one of the workspace packages under `packages/` (see `docs/frontend-ui.md`, Packages).
 
 - `bootstrap.ts`: page start-up, the `Renderer` class `frontend.ts` starts; hands each game to `game/GameSession`.
 - `game/*`: one game: `GameSession`, `GameState` (patches and rebuilds), `ActiveUnitController`, `MapView`, `Hud`, `InputController`.
@@ -65,7 +67,7 @@ Quick reference map of key code areas.
 - `LocaleProvider.ts`: locale-aware number, percentage, list and relative-time formatting.
 - `components/*`: windows, panels, menus, reports, details.
 - `components/Map/*`: map canvas layers, sized to the portal rather than the world.
-- `components/Portal.ts`, `GamePortal.ts`, `World.ts` and `map-square/Minimap.ts`: compositing the layers, map input (click, drag), the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
+- `components/Portal.ts`, `GamePortal.ts`, `World.ts` and `Minimap.ts` (in `map-square`): compositing the layers, map input (click, drag), the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
 - `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, viewport geometry, saved games, etc.).
 - `lib/IncrementalReconstituter.ts`: rebuilds the game data from the object map, touching only the ids a patch changed.
 - `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `components/lib/watchCity.ts` and `watchPlayer.ts` do it for the city screen and the reports.

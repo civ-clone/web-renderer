@@ -1,4 +1,7 @@
-import ChoiceWindow, { ChoiceDescriber, ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
+import ChoiceWindow, {
+  ChoiceDescriber,
+  ChoiceRow,
+} from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import SelectionWindow from '@civ-clone-ui/widgets/components/SelectionWindow';
 import { defineSlot } from '@civ-clone-ui/client/lib/interfaceMode';
 

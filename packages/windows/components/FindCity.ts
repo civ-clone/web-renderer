@@ -1,4 +1,6 @@
-import ChoiceWindow, { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
+import ChoiceWindow, {
+  ChoiceRow,
+} from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import { City, Tile } from '@civ-clone-ui/client/types';
 import { cityName } from '@civ-clone-ui/client/components/lib/city';
 import { playerColours } from '@civ-clone-ui/assets/lib/renderUnit';

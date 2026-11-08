@@ -314,6 +314,43 @@ expect(
   []
 );
 
+// esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
+//  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
+//  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which
+//  lowers their class fields as before.
+const tsconfig = (path: string) =>
+  JSON.parse(readFileSync(join(root, path), 'utf8')) as {
+    extends?: string;
+    compilerOptions?: { baseUrl?: string; paths?: { [key: string]: string[] } };
+  };
+
+expect(
+  'every tsconfig.json a build or a suite starts from finds the packages by path, not through node_modules',
+  ['tsconfig.json', 'src/js/tsconfig.json', 'packages/tsconfig.json'].map(
+    (path) => {
+      const { compilerOptions: { baseUrl = '.', paths = {} } = {} } =
+        tsconfig(path);
+
+      return [
+        path,
+        (paths['@civ-clone-ui/*'] ?? []).map((target) =>
+          relative(root, join(root, path, '..', baseUrl, target))
+        ),
+      ];
+    }
+  ),
+  [
+    ['tsconfig.json', ['packages/*']],
+    ['src/js/tsconfig.json', ['packages/*']],
+    ['packages/tsconfig.json', ['packages/*']],
+  ]
+);
+expect(
+  'and the packages are compiled as src/js is',
+  tsconfig('packages/tsconfig.json').extends,
+  '../src/js/tsconfig.json'
+);
+
 expect(
   'the frontend is all in packages',
   existsSync(join(root, 'src/js/UI')),

@@ -1,5 +1,8 @@
 import { BuildItem, CityBuild } from '@civ-clone-ui/client/types';
-import ChoiceWindow, { ChoiceFact, ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
+import ChoiceWindow, {
+  ChoiceFact,
+  ChoiceRow,
+} from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import { ActionWindowActions } from '@civ-clone-ui/widgets/components/ActionWindow';
 import CityBuildUnavailableWindow from './CityBuildUnavailableWindow';
 import Transport from '@civ-clone-ui/client/Transport';

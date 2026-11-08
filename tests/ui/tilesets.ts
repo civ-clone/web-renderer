@@ -18,7 +18,9 @@ import validateDescriptor, {
   TilesetDescriptor,
   expandName,
 } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
-import currentTileset, { nativeTileSize } from '@civ-clone-ui/assets/lib/tilesets';
+import currentTileset, {
+  nativeTileSize,
+} from '@civ-clone-ui/assets/lib/tilesets';
 import GameOptions from '@civ-clone-ui/windows/components/GameOptions';
 import Portal from '@civ-clone-ui/map/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';

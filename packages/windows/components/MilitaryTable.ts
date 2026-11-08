@@ -3,7 +3,9 @@ import {
   MilitaryReport as MilitaryReportData,
   MilitaryStatusRow,
 } from '../../../src/js/Engine/lib/military';
-import ReportTable, { ReportColumn } from '@civ-clone-ui/widgets/components/lib/ReportTable';
+import ReportTable, {
+  ReportColumn,
+} from '@civ-clone-ui/widgets/components/lib/ReportTable';
 import { GlyphName, glyph } from '@civ-clone-ui/assets/lib/glyphs';
 import Civilopedia from './Civilopedia';
 import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';

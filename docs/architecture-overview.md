@@ -38,13 +38,13 @@ Loading a saved game takes a different path. The player picks a file, `packages/
   - Can hand the local player's turn to a `SimpleAIClient` when the `automateLocalPlayer` option is set.
 - `packages/game/bootstrap.ts` (the `Renderer` class)
   - Page start-up: cursor, i18n, the reload guard, option defaults, the pending save, and the receivers that outlive a game (`saveGame`, `gameOver`, notifications, choice lists). The first `gameData` starts a `GameSession`; a pending save is sent with `load` last.
-- `src/js/UI/game/*`
+- `packages/game/*`
   - One game, split out of the old `Renderer.ts` (#344). `GameSession` composes the rest: `GameState` applies patches to the raw object map and rebuilds the rich UI state from it with `IncrementalReconstituter`; `ActiveUnitController` holds the active unit and its keys; `MapView` the map layers and minimap; `Hud` the action panels and details; `InputController` the hotkeys and leader screens.
-- `src/js/UI/app/*`, `src/js/UI/debug/*`
+- `packages/game/app/*`, `packages/game/debug/*`
   - The page's elements, i18n, assets, options, reload guard, notification bar, choice windows and the windows that say what went wrong in the worker (#470); the `?debug=1` flags and panel.
-- `src/js/UI/components/*`
+- `packages/windows/components/*`, `packages/widgets/components/*`
   - Window and UI primitives for reports, city/unit views, menu flows, and overlays.
-- `src/js/UI/components/Map/*`, `Portal.ts`, `GamePortal.ts`, and `src/js/UI/map-square/Minimap.ts`
+- `packages/map/components/Map/*`, `Portal.ts`, `GamePortal.ts`, and `packages/map-square/Minimap.ts`
   - Canvas layer renderers (terrain, units, cities, fog, improvements, etc.). Each layer's canvas is the size of the portal, not the world, and the portal composites only the regions the layers changed. The minimap draws from a layer of its own (`Map/Overview.ts`).
 
 ## State and rendering model
@@ -74,5 +74,5 @@ The game's end uses `gameOver`, `retire` and `gameContinue` (#176); there is no 
 ## Rewrite implications
 
 - Current architecture already isolates engine logic from UI logic via worker transport.
-- The frontend orchestration, once one `Renderer` closure, is split into the `src/js/UI/game/` modules (#344).
+- The frontend orchestration, once one `Renderer` closure, is split into the `packages/game/` modules (#344).
 - A reactive store-based rewrite can preserve worker boundary while replacing in-place patch application + custom event plumbing with derived state/selectors.

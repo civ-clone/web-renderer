@@ -1,6 +1,9 @@
 import { NeighbourDirection, Tile } from '@civ-clone-ui/client/types';
 import { Map, IMap } from '../Map';
-import { SpriteFamily, expandName } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import {
+  SpriteFamily,
+  expandName,
+} from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 
 export class TerrainAbstract extends Map implements IMap {
   update(tilesToUpdate: Tile[]): void {

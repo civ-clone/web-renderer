@@ -8,7 +8,10 @@ import {
 } from '@civ-clone-ui/client/types';
 import { TransportHandledAction } from '../../src/js/Engine/Transport';
 import Transport from '@civ-clone-ui/client/Transport';
-import { directionKeys, keyToActionsMap } from '@civ-clone-ui/client/lib/unitActionKeys';
+import {
+  directionKeys,
+  keyToActionsMap,
+} from '@civ-clone-ui/client/lib/unitActionKeys';
 import chooseActiveUnit from '@civ-clone-ui/client/lib/chooseActiveUnit';
 import UnitQueue from '@civ-clone-ui/client/lib/UnitQueue';
 import { openArrivalWindow } from '@civ-clone-ui/windows/lib/unitActionPrompts';

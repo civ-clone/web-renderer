@@ -5,7 +5,10 @@ import TopCities from '../../../src/js/Engine/Requests/TopCities';
 import { TopCitiesRow } from '../../../src/js/Engine/lib/topCities';
 import Transport from '@civ-clone-ui/client/Transport';
 import Window from '@civ-clone-ui/widgets/components/Window';
-import { cityNameText, viewCityText } from '@civ-clone-ui/client/components/lib/city';
+import {
+  cityNameText,
+  viewCityText,
+} from '@civ-clone-ui/client/components/lib/city';
 import { renderCitizenCounts } from './lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

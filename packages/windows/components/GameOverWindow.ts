@@ -2,7 +2,10 @@ import {
   GameOverCivilization,
   GameOverDetails,
 } from '../../../src/js/Engine/lib/gameOver';
-import { enterHallOfFame, hallOfFameEntry } from '@civ-clone-ui/client/lib/hallOfFame';
+import {
+  enterHallOfFame,
+  hallOfFameEntry,
+} from '@civ-clone-ui/client/lib/hallOfFame';
 import { allowLeaving } from '../lib/leaveGuard';
 import { button } from '@civ-clone-ui/widgets/lib/button';
 import { h } from '@civ-clone-ui/widgets/lib/html';

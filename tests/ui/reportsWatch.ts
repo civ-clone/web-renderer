@@ -9,7 +9,10 @@
 // collected into the shared `DataChanges` instance as `GameState` does; a "render" is a `notify`.
 
 import { DataPatch, GameData, Player } from '@civ-clone-ui/client/types';
-import { ObjectMap, PlainObject } from '@civ-clone-ui/client/lib/reconstituteData';
+import {
+  ObjectMap,
+  PlainObject,
+} from '@civ-clone-ui/client/lib/reconstituteData';
 import watchPlayer, {
   PlayerIds,
   cityIds,

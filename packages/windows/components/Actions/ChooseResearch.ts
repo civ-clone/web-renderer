@@ -1,4 +1,8 @@
-import { Player, PlayerAction, PlayerResearch } from '@civ-clone-ui/client/types';
+import {
+  Player,
+  PlayerAction,
+  PlayerResearch,
+} from '@civ-clone-ui/client/types';
 import Action from './Action';
 import { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import Transport from '@civ-clone-ui/client/Transport';

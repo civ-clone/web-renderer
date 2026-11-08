@@ -27,9 +27,14 @@ import addFormatters from '@civ-clone-ui/game/app/i18nFormatters';
 import forgetVisitParam, {
   withoutForgottenParams,
 } from '@civ-clone-ui/client/lib/forgetVisitParam';
-import GameOptions, { assetsRow } from '@civ-clone-ui/windows/components/GameOptions';
+import GameOptions, {
+  assetsRow,
+} from '@civ-clone-ui/windows/components/GameOptions';
 import { IPortal } from '@civ-clone-ui/map/components/Portal';
-import { allowLeaving, guardLeaving } from '@civ-clone-ui/windows/lib/leaveGuard';
+import {
+  allowLeaving,
+  guardLeaving,
+} from '@civ-clone-ui/windows/lib/leaveGuard';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone-ui/game/app/i18nOptions';
 import { instance as options } from '@civ-clone-ui/client/GameOptionsRegistry';

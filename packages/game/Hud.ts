@@ -14,7 +14,9 @@ import Transport from '@civ-clone-ui/client/Transport';
 import UnitActions from '@civ-clone-ui/windows/components/UnitActions';
 import UnitCardActions from '@civ-clone-ui/windows/components/UnitCardActions';
 import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
-import nextTurnQueue, { actionKey } from '@civ-clone-ui/client/lib/nextTurnQueue';
+import nextTurnQueue, {
+  actionKey,
+} from '@civ-clone-ui/client/lib/nextTurnQueue';
 import partitionActions from '@civ-clone-ui/client/lib/playerActionPanels';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

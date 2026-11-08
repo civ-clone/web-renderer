@@ -6,7 +6,9 @@ import {
 import { TOptions, t } from 'i18next';
 import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
 import { Element, s } from '@dom111/element';
-import tooltip, { hideTooltipWithin } from '@civ-clone-ui/widgets/components/lib/Tooltip';
+import tooltip, {
+  hideTooltipWithin,
+} from '@civ-clone-ui/widgets/components/lib/Tooltip';
 import button from '@civ-clone-ui/widgets/lib/button';
 import ScaledCanvases from '@civ-clone-ui/assets/lib/scaledCanvases';
 import { keyForAction, keyName } from '@civ-clone-ui/client/lib/unitActionKeys';

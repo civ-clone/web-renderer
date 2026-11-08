@@ -16,7 +16,10 @@ import Portal from '@civ-clone-ui/map/components/Portal';
 import ScienceReport from '@civ-clone-ui/windows/components/ScienceReport';
 import Transport from '@civ-clone-ui/client/Transport';
 import endTurn from '@civ-clone-ui/client/lib/endTurn';
-import { hasUnitActions, unitActions } from '@civ-clone-ui/client/lib/unitActions';
+import {
+  hasUnitActions,
+  unitActions,
+} from '@civ-clone-ui/client/lib/unitActions';
 import { unlessRequestFailed } from '@civ-clone-ui/client/lib/unlessRequestFailed';
 
 interface WindowLike {

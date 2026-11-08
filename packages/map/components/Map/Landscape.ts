@@ -1,4 +1,8 @@
-import { EntityInstance, NeighbourDirection, Tile } from '@civ-clone-ui/client/types';
+import {
+  EntityInstance,
+  NeighbourDirection,
+  Tile,
+} from '@civ-clone-ui/client/types';
 import { CoastStrip } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
 import { isDrawable } from '@civ-clone-ui/assets/lib/imageSize';

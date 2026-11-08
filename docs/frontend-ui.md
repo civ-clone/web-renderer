@@ -7,11 +7,10 @@ The frontend is responsible for rendering, input capture, and player interaction
 Primary files:
 
 - `src/js/frontend.ts`
-- `packages/game/bootstrap.ts` (page start-up) and `src/js/UI/game/*` (one game)
-- `src/js/UI/app/*`, `src/js/UI/debug/*`
-- `src/js/UI/components/*`
-- `src/js/UI/components/Map/*`
-- `src/js/UI/lib/*` (helpers: viewport maths, dragging, saved games, citizens, unit actions, reconstitution)
+- `src/js/interfaces.ts` (the interfaces civ.one offers)
+- `packages/*`, one workspace package per part of the frontend (see Packages below)
+- `packages/game/bootstrap.ts` (page start-up), and the rest of `packages/game/` (one game)
+- `packages/windows/components/*` (the windows) and `packages/map/components/Map/*` (the map's layers)
 - `src/css/*` (`app.scss`, with one partial per component under `src/css/components/`)
 
 ## UI composition model
@@ -58,7 +57,7 @@ coalesced to one run per animation frame.
 
 ## Interfaces and themes
 
-Each interface is a package of its own in `src/js/UI/interfaces/` (#825): `modern` and `classic`. A package holds its
+Each interface is a package of its own (#825): `packages/interface-modern/` and `packages/interface-classic/`. Each holds its
 manifest (#824) and an `index.ts` that provides the pieces it uses to the slots and registers the manifest. A theme
 (#167) carries no layout. An interface carries the layout and names the theme it comes with, which the player's own
 choice of theme outranks.
@@ -69,39 +68,52 @@ choice of theme outranks.
 - **Features** are behaviours inside a shared component that an interface has or doesn't, read with `hasFeature`.
 - **What's shared** is every component an interface uses, so another interface can use it too. Something goes inside an
   interface's package only if no other interface would want it.
-- **Boundaries:** shared code never imports an interface, one interface never imports another, and only
-  `src/js/frontend.ts` imports `interfaces/`, which lists what civ.one offers. `DEFAULT_INTERFACE` must be one of them.
-- Only Options asks which interface is in use. `interfaceManifests` holds that, and `areas` the boundaries.
+- **Boundaries:** nothing depends on an interface, an interface doesn't depend on `game`, and only
+  `src/js/interfaces.ts`, which `frontend.ts` loads and which lists what civ.one offers, imports one.
+  `DEFAULT_INTERFACE` must be one of them.
+- Only Options asks which interface is in use. `interfaceManifests` holds that, and `packages` the boundaries.
 - An interface that's renamed keeps its old id in `RENAMED` (`lib/interfaceMode.ts`), so stored choices and old links
   still find it: `new` is now `modern`.
 
-A new interface is a folder beside these two, with its manifest and an `index.ts` providing what it fills its slots
-with, and a line in `interfaces/index.ts`. Test suites import `tests/ui/lib/interfaces.ts` straight after `./lib/dom`
+A new interface is a package beside these two, with its manifest and an `index.ts` providing what it fills its slots
+with, a line in `src/js/interfaces.ts` and one in the root `package.json`. Test suites import `tests/ui/lib/interfaces.ts` straight after `./lib/dom`
 to register them as the page does.
 
-## Areas
+## Packages
 
-On the way to packages (#825), every file under `src/js/UI/` belongs to an area, listed in `src/js/UI/areas.json`
-with what each may use. The `areas` test holds them: a file is in the area with the longest path that matches it, and
-an import an area may not make fails the test unless it is one of the `exceptions`, each with its reason, or on the
-`untangle` list, which only ever shrinks.
+The frontend is a set of pnpm workspace packages (#825), each in `packages/<name>/` and named `@civ-clone-ui/<name>`.
+They are built and released together with civ.one, and none is published on its own yet. Inside a package, files use
+relative paths. A file reaches another package only by its name (`@civ-clone-ui/client/lib/UnitQueue`), and only one
+its own `package.json` depends on (`"workspace:*"`). The `packages` test holds all of this: every dependency a package
+declares is one it uses, no two depend on each other however far round, and nothing depends on an interface.
 
-| Area         | Holds                                                                            | May use                      |
-| ------------ | -------------------------------------------------------------------------------- | ---------------------------- |
-| `client`     | The game as the page holds it, drawing nothing: transport, state, options, saves | nothing else                 |
-| `assets`     | Sprites, tilesets and sounds, and drawing a sprite                               | client                       |
-| `widgets`    | The window and its controls, with nothing about the game in them                 | client, assets               |
-| `map`        | Drawing the world on any grid, through a `Projection`                            | client, assets, widgets      |
-| `map-square` | The square grid: its projection and minimap (`src/js/UI/map-square/`)            | client, assets, map          |
-| `windows`    | The game's windows, shared by every interface that wants them                    | client, assets, widgets, map |
-| `game`       | The page itself: starting up, a game in play, the keys, the debug tools          | all of the above             |
-| interfaces   | One per interface (`interfaces/<id>/`), see above                                | all but `game`               |
+A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
+so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
+path aren't packages yet: the worker's side in `src/js/Engine` (the transport and the requests the windows read),
+`src/js/Audio`, the generated `src/js/translations.ts` and `build.json`. The test lists them, and the list only
+shrinks.
+
+| Package             | Holds                                                                            | Depends on                    |
+| ------------------- | -------------------------------------------------------------------------------- | ----------------------------- |
+| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves | nothing else                  |
+| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                               | client                        |
+| `widgets`           | The window and its controls, with nothing about the game in them                 | client, assets                |
+| `map`               | Drawing the world on any grid, through a `Projection`                            | client, assets, widgets       |
+| `map-square`        | The square grid: its projection and minimap                                      | client, assets, map           |
+| `windows`           | The game's windows, shared by every interface that wants them                    | client, assets, widgets, map  |
+| `game`              | The page itself: starting up, a game in play, the keys, the debug tools          | all of the above              |
+| `interface-modern`  | The modern interface, with Slate and brass, see above                            | client, widgets, map, windows |
+| `interface-classic` | The classic interface, with Civ1 classic, see above                              | client, widgets, map, windows |
+
+Inside each package the folders are as they were under `src/js/UI/` (`components/`, `lib/`), but for the folder a
+package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a
+`game/GameState.ts` and `windows` a `components/` folder. Tidying those is for later.
 
 **The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
 `Projection`, and anything true of the square grid alone lives in `map-square`. Hexagonal and isometric grids get
-areas of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
-projection with `registerGrid` (`lib/projectionFor.ts`), and the page loads the grids it draws, as `frontend.ts` loads
+packages of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
+projection with `registerGrid` (`@civ-clone-ui/map/lib/projectionFor`), and the page loads the grids it draws, as `frontend.ts` loads
 `map-square`. The minimap, which draws every world as squares in storage order, is the square grid's too. Suites that
 draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
 
@@ -203,7 +215,7 @@ ask before leaving a game in progress.
 
 ### Map rendering
 
-`GamePortal` composes layer renderers from `src/js/UI/components/Map/*`, in
+`GamePortal` composes layer renderers from `packages/map/components/Map/*`, in
 compositing order:
 
 - Scenery: `Landscape` (land and coast, irrigation, terrain, improvements,
@@ -317,7 +329,7 @@ Moving around the map:
   Largely addressed: incremental reconstitution (#322), unit actions on demand
   (#323) and the viewport-sized layers.
 - Terrain colours on the minimap are hardcoded. Map scale is now an option, and
-  the tile size comes from the tileset descriptor (`src/js/UI/tilesets/`, #56).
+  the tile size comes from the tileset descriptor (`packages/assets/tilesets/`, #56).
 
 ## Rewrite opportunities (reactive store direction)
 

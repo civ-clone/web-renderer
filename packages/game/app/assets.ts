@@ -1,6 +1,9 @@
 import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
-import { TilesetDescriptor, spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
+import {
+  TilesetDescriptor,
+  spriteKey,
+} from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
 
 /**
  * The sizes `tileset` shows its sprites at outside the map (#729), as custom properties on `:root` for the stylesheets:

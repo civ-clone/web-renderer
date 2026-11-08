@@ -41,7 +41,10 @@ import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
-import { ObjectMap, PlainObject } from '@civ-clone-ui/client/lib/reconstituteData';
+import {
+  ObjectMap,
+  PlainObject,
+} from '@civ-clone-ui/client/lib/reconstituteData';
 import PlayerTile from '@civ-clone/core-player-world/PlayerTile';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as turnInstance } from '@civ-clone/core-turn-based-game/Turn';

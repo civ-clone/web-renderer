@@ -42,7 +42,10 @@ import {
   Indian,
   Mongol,
 } from '@civ-clone/civ1-civilization/Civilizations';
-import { cityName, cityNameText } from '@civ-clone-ui/client/components/lib/city';
+import {
+  cityName,
+  cityNameText,
+} from '@civ-clone-ui/client/components/lib/city';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import { CeremonialBurial } from '@civ-clone/civ1-science/Advances';
 import {

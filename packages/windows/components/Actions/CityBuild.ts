@@ -1,4 +1,7 @@
-import { CityBuild as CityBuildObject, PlayerAction } from '@civ-clone-ui/client/types';
+import {
+  CityBuild as CityBuildObject,
+  PlayerAction,
+} from '@civ-clone-ui/client/types';
 import Action from './Action';
 import CityBuildAvailable from '../../../../src/js/Engine/Requests/CityBuildAvailable';
 import { openCityBuild } from '../choices';

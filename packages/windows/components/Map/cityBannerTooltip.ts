@@ -1,7 +1,10 @@
 import { City } from '@civ-clone-ui/client/types';
 import { TooltipContent } from '@civ-clone-ui/widgets/components/lib/Tooltip';
 import { buildTurns, growthTurns } from '@civ-clone-ui/client/lib/cityTurns';
-import { cityName, growthLimitText } from '@civ-clone-ui/client/components/lib/city';
+import {
+  cityName,
+  growthLimitText,
+} from '@civ-clone-ui/client/components/lib/city';
 import { getLabelForBuildable } from '@civ-clone-ui/client/components/lib/cityBuild';
 import { reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
 import { t } from 'i18next';

@@ -1,7 +1,10 @@
 import { Tile, Unit, UnitAction } from '@civ-clone-ui/client/types';
 import { t } from 'i18next';
 import Transport from '@civ-clone-ui/client/Transport';
-import { directionKeys, keyToActionsMap } from '@civ-clone-ui/client/lib/unitActionKeys';
+import {
+  directionKeys,
+  keyToActionsMap,
+} from '@civ-clone-ui/client/lib/unitActionKeys';
 import NotificationWindow from '@civ-clone-ui/widgets/components/NotificationWindow';
 import { cityNameText } from '@civ-clone-ui/client/components/lib/city';
 import {
@@ -9,7 +12,10 @@ import {
   nameOf,
   performWithPrompts,
 } from '@civ-clone-ui/windows/lib/unitActionPrompts';
-import { neighbourActions, unitActions } from '@civ-clone-ui/client/lib/unitActions';
+import {
+  neighbourActions,
+  unitActions,
+} from '@civ-clone-ui/client/lib/unitActions';
 import PendingMove, { plainMove } from '@civ-clone-ui/client/lib/PendingMove';
 import { Topology } from '@civ-clone-ui/client/lib/topologyFor';
 

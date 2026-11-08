@@ -13,7 +13,9 @@ import Transport from '@civ-clone-ui/client/Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
-import currentTileset, { nativeTileSize } from '@civ-clone-ui/assets/lib/tilesets';
+import currentTileset, {
+  nativeTileSize,
+} from '@civ-clone-ui/assets/lib/tilesets';
 import projectionFor from '../lib/projectionFor';
 import { City as CityData } from '@civ-clone-ui/client/types';
 

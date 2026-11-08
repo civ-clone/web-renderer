@@ -20,7 +20,9 @@ import UnitMarker, {
 import Units from '@civ-clone-ui/map/components/Map/Units';
 import World from '@civ-clone-ui/map/components/World';
 import Yields from '@civ-clone-ui/map/components/Map/Yields';
-import currentTileset, { nativeTileSize } from '@civ-clone-ui/assets/lib/tilesets';
+import currentTileset, {
+  nativeTileSize,
+} from '@civ-clone-ui/assets/lib/tilesets';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.

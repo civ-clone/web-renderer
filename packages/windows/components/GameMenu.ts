@@ -17,7 +17,9 @@ import Civilopedia from './Civilopedia';
 import ConfirmationWindow from '@civ-clone-ui/widgets/components/ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '@civ-clone-ui/client/types';
-import PopupMenu, { hasPopupMenu } from '@civ-clone-ui/widgets/components/PopupMenu';
+import PopupMenu, {
+  hasPopupMenu,
+} from '@civ-clone-ui/widgets/components/PopupMenu';
 import UiMenu, { UiMenuItem } from './UiMenu';
 import { hasFeature } from '@civ-clone-ui/client/lib/interfaceMode';
 import { windowKey } from '@civ-clone-ui/widgets/lib/windowEyebrows';

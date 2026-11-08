@@ -8,7 +8,11 @@ import {
   Specialist,
   Yield,
 } from '@civ-clone-ui/client/types';
-import { groupIcons, reduceKnownYield, yieldGroup } from '@civ-clone-ui/client/lib/yieldMap';
+import {
+  groupIcons,
+  reduceKnownYield,
+  yieldGroup,
+} from '@civ-clone-ui/client/lib/yieldMap';
 import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
 import { spriteKey } from '@civ-clone-ui/assets/tilesets/TilesetDescriptor';
@@ -23,7 +27,11 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 // Here as well as on their own, as most of what shows a city's turns uses the rest of this too.
-export { buildTurns, growthTurns, turnsLeft } from '@civ-clone-ui/client/lib/cityTurns';
+export {
+  buildTurns,
+  growthTurns,
+  turnsLeft,
+} from '@civ-clone-ui/client/lib/cityTurns';
 
 const specialistIcons: { [key: string]: string } = {
   Entertainer: 'luxury',

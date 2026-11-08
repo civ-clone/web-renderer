@@ -5,7 +5,10 @@ import {
   MilitaryUnhappiness,
   Player,
 } from '@civ-clone-ui/client/types';
-import { groupIcons, reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import {
+  groupIcons,
+  reduceKnownYield,
+} from '@civ-clone-ui/client/lib/yieldMap';
 import Element from '@dom111/element';
 import Portal from '@civ-clone-ui/map/components/Portal';
 import SupportedUnit from './SupportedUnit';

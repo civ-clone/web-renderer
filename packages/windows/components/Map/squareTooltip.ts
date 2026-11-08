@@ -1,6 +1,9 @@
 import { GlyphName, glyph } from '@civ-clone-ui/assets/lib/glyphs';
 import { TOptions, t } from 'i18next';
-import { TooltipContent, TooltipText } from '@civ-clone-ui/widgets/components/lib/Tooltip';
+import {
+  TooltipContent,
+  TooltipText,
+} from '@civ-clone-ui/widgets/components/lib/Tooltip';
 import { Tile } from '@civ-clone-ui/client/types';
 import { cityNameText } from '@civ-clone-ui/client/components/lib/city';
 import { netTileYields } from '@civ-clone-ui/client/lib/yieldMap';

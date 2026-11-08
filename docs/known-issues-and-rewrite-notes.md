@@ -58,7 +58,7 @@ From `README.md` known issues/TODO:
   - Multiple TODOs around action handling structure, hidden actions, negotiation reuse, and cleanup behavior.
 - `src/js/Engine/DataQueue.ts`
   - TODO for chunking patch transfer.
-- `src/js/UI/components/Minimap.ts`
+- `packages/map-square/Minimap.ts`
   - TODO around rectangle rendering near map edges. Fixed and removed in 91fe1f6.
 
 ## Rewrite-oriented acceptance targets

@@ -10,7 +10,9 @@ import {
 } from '@civ-clone-ui/client/types';
 import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone-ui/client/Transport';
-import tooltip, { hideTooltipWithin } from '@civ-clone-ui/widgets/components/lib/Tooltip';
+import tooltip, {
+  hideTooltipWithin,
+} from '@civ-clone-ui/widgets/components/lib/Tooltip';
 
 declare global {
   interface GlobalEventHandlersEventMap {

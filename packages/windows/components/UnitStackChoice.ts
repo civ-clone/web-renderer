@@ -1,4 +1,6 @@
-import ChoiceWindow, { ChoiceRow } from '@civ-clone-ui/widgets/components/ChoiceWindow';
+import ChoiceWindow, {
+  ChoiceRow,
+} from '@civ-clone-ui/widgets/components/ChoiceWindow';
 import { GameData, Unit as UnitData } from '@civ-clone-ui/client/types';
 import Transport from '@civ-clone-ui/client/Transport';
 import Unit from './Unit';

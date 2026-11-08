@@ -1,6 +1,9 @@
 import { Player, PlayerResearch, Yield } from '@civ-clone-ui/client/types';
 import { advanceNames, researchingName } from './lib/advances';
-import { groupIcons, reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import {
+  groupIcons,
+  reduceKnownYield,
+} from '@civ-clone-ui/client/lib/yieldMap';
 import Window from '@civ-clone-ui/widgets/components/Window';
 import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import currentTileset from '@civ-clone-ui/assets/lib/tilesets';

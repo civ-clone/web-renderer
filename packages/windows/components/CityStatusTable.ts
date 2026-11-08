@@ -1,5 +1,11 @@
-import { City as CityData, CitizenMood, Player } from '@civ-clone-ui/client/types';
-import ReportTable, { ReportColumn } from '@civ-clone-ui/widgets/components/lib/ReportTable';
+import {
+  City as CityData,
+  CitizenMood,
+  Player,
+} from '@civ-clone-ui/client/types';
+import ReportTable, {
+  ReportColumn,
+} from '@civ-clone-ui/widgets/components/lib/ReportTable';
 import {
   buildTurns,
   citizenFace,
@@ -11,7 +17,10 @@ import {
 import corruptionIcon from '@civ-clone-ui/assets/components/lib/corruptionIcon';
 import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
 import Portal from '@civ-clone-ui/map/components/Portal';
-import { cityName, growthLimitText } from '@civ-clone-ui/client/components/lib/city';
+import {
+  cityName,
+  growthLimitText,
+} from '@civ-clone-ui/client/components/lib/city';
 import { citizenMoods } from '@civ-clone-ui/client/lib/citizens';
 import { getLabelForBuildable } from '@civ-clone-ui/client/components/lib/cityBuild';
 import { glyph } from '@civ-clone-ui/assets/lib/glyphs';

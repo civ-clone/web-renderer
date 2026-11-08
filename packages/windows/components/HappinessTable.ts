@@ -8,7 +8,10 @@ import {
   Unit as UnitData,
 } from '@civ-clone-ui/client/types';
 import { citizenFace, renderPopulation } from './lib/cityYields';
-import { groupIcons, reduceKnownYield } from '@civ-clone-ui/client/lib/yieldMap';
+import {
+  groupIcons,
+  reduceKnownYield,
+} from '@civ-clone-ui/client/lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from '@civ-clone-ui/widgets/components/FilterableWindow';
 import { filteredOutClass } from '@civ-clone-ui/widgets/lib/filterRows';
@@ -18,7 +21,10 @@ import SupportedUnit from './SupportedUnit';
 import Unit from './Unit';
 import { assetStore } from '@civ-clone-ui/assets/AssetStore';
 import { citizenMoods } from '@civ-clone-ui/client/lib/citizens';
-import { cityName, viewCityText } from '@civ-clone-ui/client/components/lib/city';
+import {
+  cityName,
+  viewCityText,
+} from '@civ-clone-ui/client/components/lib/city';
 import currentTileset from '@civ-clone-ui/assets/lib/tilesets';
 import { getLabelForBuildableEntity } from '@civ-clone-ui/client/components/lib/cityBuild';
 import { glyph } from '@civ-clone-ui/assets/lib/glyphs';

@@ -1,6 +1,8 @@
 import { Coordinate, Tile, Unit } from '@civ-clone-ui/client/types';
 import { Map, IMap } from '../Map';
-import renderUnit, { drawUnitStatus } from '@civ-clone-ui/assets/lib/renderUnit';
+import renderUnit, {
+  drawUnitStatus,
+} from '@civ-clone-ui/assets/lib/renderUnit';
 import { Reach } from '../../lib/projection';
 
 export class Units extends Map implements IMap {

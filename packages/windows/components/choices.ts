@@ -1,4 +1,8 @@
-import { BuildItem, CityBuild, Unit as UnitData } from '@civ-clone-ui/client/types';
+import {
+  BuildItem,
+  CityBuild,
+  Unit as UnitData,
+} from '@civ-clone-ui/client/types';
 import { ActionWindowActions } from '@civ-clone-ui/widgets/components/ActionWindow';
 import CityBuildChoice from './CityBuildChoice';
 import CityBuildSelectionWindow from './CityBuildSelectionWindow';
