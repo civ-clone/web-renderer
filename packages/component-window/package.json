@@ -1,0 +1,14 @@
+{
+  "name": "@civ-clone/ui-component-window",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The window every interface builds on: its chrome, closing, dragging and filtering, and the notification, confirmation and action windows made from it, with their styles.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-button": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

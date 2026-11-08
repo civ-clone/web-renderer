@@ -1,7 +1,9 @@
 import Window, { WindowOptions } from './Window';
-import RowFilter, { filteredOutClass } from '../lib/filterRows';
-import cannotHover from '../lib/cannotHover';
-import { h } from '../lib/html';
+import RowFilter, {
+  filteredOutClass,
+} from '@civ-clone/ui-widgets/lib/filterRows';
+import cannotHover from '@civ-clone/ui-widgets/lib/cannotHover';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

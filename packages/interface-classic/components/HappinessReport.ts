@@ -14,7 +14,7 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-windows/components/Unit';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';

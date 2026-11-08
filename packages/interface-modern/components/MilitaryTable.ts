@@ -5,10 +5,10 @@ import {
 } from '@civ-clone/ui-protocol/reports';
 import ReportTable, {
   ReportColumn,
-} from '@civ-clone/ui-widgets/components/lib/ReportTable';
+} from '@civ-clone/ui-component-report-table/ReportTable';
 import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import Military from '@civ-clone/ui-protocol/Requests/Military';
 import Transport from '@civ-clone/ui-client/Transport';
 import { s } from '@dom111/element';

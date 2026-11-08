@@ -6,7 +6,7 @@ import {
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import { Seat } from '@civ-clone/ui-protocol/lib/seats';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import {
   cell,
   civilizationName,

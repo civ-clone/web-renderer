@@ -71,8 +71,8 @@ input {
   width: 1px;
 }
 
-@import '../../packages/widgets/styles/buttons';
-@import '../../packages/widgets/styles/controls';
+@import '../../packages/component-button/styles/buttons';
+@import '../../packages/component-controls/styles/controls';
 @import '../../packages/windows/styles/actions';
 @import '../../packages/windows/styles/city';
 @import '../../packages/windows/styles/city-status';
@@ -91,24 +91,24 @@ input {
 @import '../../packages/windows/styles/military-report';
 @import '../../packages/game/styles/notification-area';
 @import '../../packages/windows/styles/notification-window';
-@import '../../packages/widgets/styles/popup-menu';
-@import '../../packages/widgets/styles/progress-bar';
-@import '../../packages/widgets/styles/report-table';
-@import '../../packages/widgets/styles/ui-choice';
+@import '../../packages/component-popup-menu/styles/popup-menu';
+@import '../../packages/component-progress-bar/styles/progress-bar';
+@import '../../packages/component-report-table/styles/report-table';
+@import '../../packages/component-choice-window/styles/ui-choice';
 @import '../../packages/interface-modern/styles/ui-city';
 @import '../../packages/windows/styles/releases';
 @import '../../packages/windows/styles/science-report';
-@import '../../packages/widgets/styles/selection-window';
+@import '../../packages/component-selection-window/styles/selection-window';
 @import '../../packages/windows/styles/sidebar';
 @import '../../packages/windows/styles/spaceship-window';
-@import '../../packages/widgets/styles/stat-pill';
+@import '../../packages/component-stat-pill/styles/stat-pill';
 @import '../../packages/windows/styles/supported-unit';
 @import '../../packages/windows/styles/top-bar';
-@import '../../packages/widgets/styles/tooltip';
+@import '../../packages/component-tooltip/styles/tooltip';
 @import '../../packages/windows/styles/top-cities-report';
 @import '../../packages/windows/styles/trade-report';
-@import '../../packages/widgets/styles/window';
-@import '../../packages/widgets/styles/ui-window';
+@import '../../packages/component-window/styles/window';
+@import '../../packages/component-window/styles/ui-window';
 @import '../../packages/windows/styles/ui-next-turn';
 @import '../../packages/windows/styles/ui-notification-rows';
 @import '../../packages/windows/styles/ui-unit-card';

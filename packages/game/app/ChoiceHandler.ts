@@ -16,7 +16,7 @@ import {
   speakerOf,
 } from '@civ-clone/ui-client/lib/interactionLabels';
 import { Interactions, Negotiation } from '@civ-clone/ui-protocol/types';
-import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import MeetingWindow from '@civ-clone/ui-windows/components/MeetingWindow';

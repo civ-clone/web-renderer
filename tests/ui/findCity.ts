@@ -12,7 +12,7 @@ import {
   findCityRows,
   openFindCity,
 } from '@civ-clone/ui-windows/components/FindCity';
-import eyebrowFor from '@civ-clone/ui-widgets/lib/windowEyebrows';
+import eyebrowFor from '@civ-clone/ui-component-window/windowEyebrows';
 import { matchRank } from '@civ-clone/ui-widgets/lib/filterRows';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

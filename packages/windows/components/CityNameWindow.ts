@@ -1,6 +1,6 @@
-import { NotificationWindow } from '@civ-clone/ui-widgets/components/NotificationWindow';
+import { NotificationWindow } from '@civ-clone/ui-component-window/NotificationWindow';
 import { escape } from './lib/requirements';
-import { button } from '@civ-clone/ui-widgets/lib/button';
+import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

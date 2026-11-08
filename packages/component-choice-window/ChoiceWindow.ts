@@ -1,9 +1,13 @@
-import { ActionWindowActions } from './ActionWindow';
-import FilterableWindow from './FilterableWindow';
+import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
-import { button } from '../lib/button';
-import { filteredOutClass, fold, matchRank } from '../lib/filterRows';
-import { h } from '../lib/html';
+import { button } from '@civ-clone/ui-component-button/button';
+import {
+  filteredOutClass,
+  fold,
+  matchRank,
+} from '@civ-clone/ui-widgets/lib/filterRows';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { s } from '@dom111/element';
 import { singleChoice } from '@civ-clone/ui-client/lib/singleChoice';

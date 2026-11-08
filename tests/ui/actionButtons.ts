@@ -12,7 +12,7 @@ import Actions from '@civ-clone/ui-windows/components/Actions';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import EndTurn from '@civ-clone/ui-windows/components/Actions/EndTurn';
 import Transport from '@civ-clone/ui-client/Transport';
-import { hideTooltip } from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import { hideTooltip } from '@civ-clone/ui-component-tooltip/Tooltip';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { s } from '@dom111/element';

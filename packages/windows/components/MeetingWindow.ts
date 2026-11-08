@@ -1,7 +1,7 @@
 import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import { NegotiationLine } from '@civ-clone/ui-client/lib/interactionLabels';
-import { Window } from '@civ-clone/ui-widgets/components/Window';
-import { button } from '@civ-clone/ui-widgets/lib/button';
+import { Window } from '@civ-clone/ui-component-window/Window';
+import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

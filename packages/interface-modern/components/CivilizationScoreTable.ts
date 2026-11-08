@@ -3,9 +3,9 @@ import {
   CivilizationScoreTerm,
 } from '@civ-clone/ui-protocol/reports';
 import CivilizationScore from '@civ-clone/ui-protocol/Requests/CivilizationScore';
-import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

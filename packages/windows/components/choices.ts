@@ -1,10 +1,10 @@
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import {
   BuildItem,
   CityBuild,
   Unit as UnitData,
 } from '@civ-clone/ui-protocol/types';
-import { ActionWindowActions } from '@civ-clone/ui-widgets/components/ActionWindow';
+import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 

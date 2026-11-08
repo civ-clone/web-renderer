@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-component-button",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The buttons of the button system, made in code or markup, with their styles: what every window and menu presses.",
+  "license": "MIT"
+}

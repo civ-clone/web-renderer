@@ -1,4 +1,4 @@
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import { s } from '@dom111/element';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { Marked } from 'marked';

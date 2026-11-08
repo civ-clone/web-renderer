@@ -1,0 +1,10 @@
+{
+  "name": "@civ-clone/ui-component-tooltip",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A tooltip that follows the pointer, or a long press.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

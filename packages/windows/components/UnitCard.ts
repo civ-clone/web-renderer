@@ -10,10 +10,10 @@ import { UnitDetailsDeps } from './UnitDetails';
 import { openUnitSelection } from './choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import glyph, { GlyphName } from '@civ-clone/ui-assets/lib/glyphs';
-import statPill from '@civ-clone/ui-widgets/components/lib/StatPill';
+import statPill from '@civ-clone/ui-component-stat-pill/StatPill';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

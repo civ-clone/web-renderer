@@ -19,7 +19,7 @@ import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import {
   TooltipContent,
   TooltipText,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';

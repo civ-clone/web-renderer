@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-component-progress-bar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A bar that fills to show how far something has come.",
+  "license": "MIT"
+}

@@ -10,7 +10,7 @@ import {
   choiceList,
   openChoice,
 } from '@civ-clone/ui-windows/components/choiceList';
-import ChoiceWindow from '@civ-clone/ui-widgets/components/ChoiceWindow';
+import ChoiceWindow from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   DEFAULT_INTERFACE,

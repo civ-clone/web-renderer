@@ -1,5 +1,5 @@
 import Action from './Action';
-import ActionWindow from '@civ-clone/ui-widgets/components/ActionWindow';
+import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { Notice as NoticeData } from '../Notices';
 import { PlayerAction } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';

@@ -2,9 +2,9 @@ import {
   IntelligenceDetails,
   IntelligenceRow,
 } from '@civ-clone/ui-protocol/reports';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
-import ReportTable from '@civ-clone/ui-widgets/components/lib/ReportTable';
+import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import { advanceNames } from '@civ-clone/ui-windows/components/lib/advances';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';

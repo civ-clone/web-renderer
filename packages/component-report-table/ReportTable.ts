@@ -1,4 +1,4 @@
-import { h } from '../../lib/html';
+import { h } from '@civ-clone/ui-widgets/lib/html';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

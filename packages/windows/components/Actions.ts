@@ -13,7 +13,7 @@ import Revolution from './Actions/Revolution';
 import Spaceship from './Actions/Spaceship';
 import Transport from '@civ-clone/ui-client/Transport';
 import { getClosestAncestorMatching } from '@civ-clone/ui-widgets/lib/html';
-import { hideTooltipWithin } from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import { hideTooltipWithin } from '@civ-clone/ui-component-tooltip/Tooltip';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 
 declare global {

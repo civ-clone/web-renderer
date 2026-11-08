@@ -9,15 +9,15 @@ import {
   deleteSave,
   listSaves,
 } from '@civ-clone/ui-client/lib/browserSaves';
-import ConfirmationWindow from '@civ-clone/ui-widgets/components/ConfirmationWindow';
+import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import ResumeGameWindow from './ResumeGameWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
 import {
   ButtonVariant,
   button as systemButton,
-} from '@civ-clone/ui-widgets/lib/button';
+} from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

@@ -7,14 +7,14 @@ import {
   hallOfFameEntry,
 } from '@civ-clone/ui-client/lib/hallOfFame';
 import { allowLeaving } from '../lib/leaveGuard';
-import { button } from '@civ-clone/ui-widgets/lib/button';
+import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { hallOfFameTable, yearLabel } from './HallOfFameWindow';
 import { s } from '@dom111/element';
 import { scoreTable } from './CivilizationScoreReport';
 import { t } from 'i18next';
 import Transport from '@civ-clone/ui-client/Transport';
-import Window from '@civ-clone/ui-widgets/components/Window';
+import Window from '@civ-clone/ui-component-window/Window';
 
 const people = ({ civilization }: GameOverCivilization): string =>
   t(`${civilization}.plural`, {

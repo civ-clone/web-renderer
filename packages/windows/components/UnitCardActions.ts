@@ -8,8 +8,8 @@ import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import tooltip, {
   hideTooltipWithin,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
-import button from '@civ-clone/ui-widgets/lib/button';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
+import button from '@civ-clone/ui-component-button/button';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';

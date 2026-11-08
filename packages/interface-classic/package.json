@@ -7,6 +7,9 @@
   "dependencies": {
     "@civ-clone/ui-assets": "workspace:*",
     "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-choice-window": "workspace:*",
+    "@civ-clone/ui-component-selection-window": "workspace:*",
+    "@civ-clone/ui-component-window": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",

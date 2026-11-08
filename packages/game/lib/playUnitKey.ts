@@ -5,7 +5,7 @@ import {
   directionKeys,
   keyToActionsMap,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
-import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import {
   chooseUnitAction,

@@ -5,7 +5,7 @@ import {
   hideTooltip,
   showTooltipOver,
   tooltipOpenOver,
-} from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-tooltip/Tooltip';
 import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
 import squareTooltip, { hasSquareTooltip } from './Map/squareTooltip';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';

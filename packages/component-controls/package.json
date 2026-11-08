@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-component-controls",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The form controls (fields, selects, checkboxes, ranges) as the theme tokens draw them.",
+  "license": "MIT"
+}

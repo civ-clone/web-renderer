@@ -13,7 +13,7 @@ import {
 import { gridName } from '@civ-clone/ui-windows/lib/savedGame';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
-import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import Notifications from '@civ-clone/ui-windows/components/Notifications';
 import PowerList from '@civ-clone/ui-windows/components/PowerList';

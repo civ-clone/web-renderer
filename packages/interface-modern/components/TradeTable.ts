@@ -5,8 +5,8 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import ReportTable, {
   ReportCell,
-} from '@civ-clone/ui-widgets/components/lib/ReportTable';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+} from '@civ-clone/ui-component-report-table/ReportTable';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';

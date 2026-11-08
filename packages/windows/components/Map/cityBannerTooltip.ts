@@ -1,5 +1,5 @@
 import { City } from '@civ-clone/ui-protocol/types';
-import { TooltipContent } from '@civ-clone/ui-widgets/components/lib/Tooltip';
+import { TooltipContent } from '@civ-clone/ui-component-tooltip/Tooltip';
 import { buildTurns, growthTurns } from '@civ-clone/ui-client/lib/cityTurns';
 import {
   cityName,

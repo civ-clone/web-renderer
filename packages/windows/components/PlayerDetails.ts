@@ -13,11 +13,11 @@ import { reduceKnownYields } from '@civ-clone/ui-client/lib/yieldMap';
 import { researchingName } from './lib/advances';
 import { TOptions, t } from 'i18next';
 import { turnsLeft, turnsText, yieldData, yieldIcon } from './lib/cityYields';
-import progressBar from '@civ-clone/ui-widgets/components/lib/ProgressBar';
+import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import statPill, {
   StatPillTone,
-} from '@civ-clone/ui-widgets/components/lib/StatPill';
-import tooltip from '@civ-clone/ui-widgets/components/lib/Tooltip';
+} from '@civ-clone/ui-component-stat-pill/StatPill';
+import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-component-stat-pill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A small labelled figure, as the top bar and the cards show them.",
+  "license": "MIT"
+}

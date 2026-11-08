@@ -1,4 +1,4 @@
-import NotificationWindow from '@civ-clone/ui-widgets/components/NotificationWindow';
+import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { t } from 'i18next';
 

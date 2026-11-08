@@ -217,6 +217,36 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:packages/client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:packages/component-button
+      '@civ-clone/ui-component-choice-window':
+        specifier: workspace:*
+        version: link:packages/component-choice-window
+      '@civ-clone/ui-component-controls':
+        specifier: workspace:*
+        version: link:packages/component-controls
+      '@civ-clone/ui-component-popup-menu':
+        specifier: workspace:*
+        version: link:packages/component-popup-menu
+      '@civ-clone/ui-component-progress-bar':
+        specifier: workspace:*
+        version: link:packages/component-progress-bar
+      '@civ-clone/ui-component-report-table':
+        specifier: workspace:*
+        version: link:packages/component-report-table
+      '@civ-clone/ui-component-selection-window':
+        specifier: workspace:*
+        version: link:packages/component-selection-window
+      '@civ-clone/ui-component-stat-pill':
+        specifier: workspace:*
+        version: link:packages/component-stat-pill
+      '@civ-clone/ui-component-tooltip':
+        specifier: workspace:*
+        version: link:packages/component-tooltip
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:packages/component-window
       '@civ-clone/ui-game':
         specifier: workspace:*
         version: link:packages/game
@@ -312,6 +342,86 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/component-button: {}
+
+  packages/component-choice-window:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/component-controls: {}
+
+  packages/component-popup-menu:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/component-progress-bar: {}
+
+  packages/component-report-table:
+    dependencies:
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/component-selection-window:
+    dependencies:
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/component-stat-pill: {}
+
+  packages/component-tooltip:
+    dependencies:
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
+  packages/component-window:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
+
   packages/game:
     dependencies:
       '@civ-clone/ui-assets':
@@ -320,6 +430,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -344,6 +457,15 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-choice-window':
+        specifier: workspace:*
+        version: link:../component-choice-window
+      '@civ-clone/ui-component-selection-window':
+        specifier: workspace:*
+        version: link:../component-selection-window
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -365,6 +487,21 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
+      '@civ-clone/ui-component-choice-window':
+        specifier: workspace:*
+        version: link:../component-choice-window
+      '@civ-clone/ui-component-progress-bar':
+        specifier: workspace:*
+        version: link:../component-progress-bar
+      '@civ-clone/ui-component-report-table':
+        specifier: workspace:*
+        version: link:../component-report-table
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -415,9 +552,6 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
-      '@civ-clone/ui-protocol':
-        specifier: workspace:*
-        version: link:../protocol
 
   packages/windows:
     dependencies:
@@ -427,6 +561,30 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
+      '@civ-clone/ui-component-choice-window':
+        specifier: workspace:*
+        version: link:../component-choice-window
+      '@civ-clone/ui-component-popup-menu':
+        specifier: workspace:*
+        version: link:../component-popup-menu
+      '@civ-clone/ui-component-progress-bar':
+        specifier: workspace:*
+        version: link:../component-progress-bar
+      '@civ-clone/ui-component-selection-window':
+        specifier: workspace:*
+        version: link:../component-selection-window
+      '@civ-clone/ui-component-stat-pill':
+        specifier: workspace:*
+        version: link:../component-stat-pill
+      '@civ-clone/ui-component-tooltip':
+        specifier: workspace:*
+        version: link:../component-tooltip
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map

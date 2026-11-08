@@ -5,7 +5,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import button from '@civ-clone/ui-widgets/lib/button';
+import button from '@civ-clone/ui-component-button/button';
 
 const failures: string[] = [];
 let checks = 0;

@@ -7,7 +7,7 @@ import './lib/interfaces';
 import './lib/classicInterface';
 
 import { fold, matches } from '@civ-clone/ui-widgets/lib/filterRows';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { hallOfFameTable } from '@civ-clone/ui-windows/components/HallOfFameWindow';
 import i18next from 'i18next';
 import { s } from '@dom111/element';

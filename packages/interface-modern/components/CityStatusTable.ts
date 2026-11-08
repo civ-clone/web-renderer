@@ -5,7 +5,7 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import ReportTable, {
   ReportColumn,
-} from '@civ-clone/ui-widgets/components/lib/ReportTable';
+} from '@civ-clone/ui-component-report-table/ReportTable';
 import {
   buildTurns,
   citizenFace,
@@ -15,7 +15,7 @@ import {
   yieldIcon,
 } from '@civ-clone/ui-windows/components/lib/cityYields';
 import corruptionIcon from '@civ-clone/ui-assets/components/lib/corruptionIcon';
-import FilterableWindow from '@civ-clone/ui-widgets/components/FilterableWindow';
+import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import {
   cityName,
@@ -25,7 +25,7 @@ import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
 import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { progressBar } from '@civ-clone/ui-widgets/components/lib/ProgressBar';
+import { progressBar } from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
