@@ -209,6 +209,7 @@ expect(
 
 // What a ctx needs for the paths that only look at the player's actions.
 const patchesCalls: string[] = [],
+  claimed: string[] = [],
   plainContext = (overrides: Partial<ActionContext> = {}): ActionContext =>
     ({
       player: () => player,
@@ -221,6 +222,7 @@ const patchesCalls: string[] = [],
       talks: { pending: Promise.resolve(), talkToPlayersMet: async () => {} },
       cities: { getBy: () => [], getByPlayer: () => [] },
       cityImprovements: { getByCity: () => [] },
+      cityNames: { claim: (name: string) => claimed.push(name) },
       playerTreasuries: { getBy: () => [] },
       rules: {},
       ...overrides,
@@ -568,6 +570,11 @@ const run = async (): Promise<void> => {
     );
     expect('and the name is set, trimmed', own.name(), 'Akkad');
     expect(
+      'and claimed, so no later city is founded with it (#712)',
+      claimed.splice(0),
+      ['Akkad']
+    );
+    expect(
       'a rival’s city is not renamed',
       [await rename('city-theirs', 'Akkad'), theirs.name()],
       [[], 'Babylon']
@@ -597,6 +604,9 @@ const run = async (): Promise<void> => {
       await rename('city-gone', 'Akkad'),
       []
     );
+    expect('only the names given are claimed', claimed.splice(0), [
+      'Mesopotamian',
+    ]);
   }
 
   finished = true;

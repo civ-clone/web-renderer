@@ -8,6 +8,7 @@ import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/Avai
 import { CityBuildRegistry } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { CityGrowthRegistry } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { CityImprovementRegistry } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
+import { CityNameRegistry } from '@civ-clone/core-civilization/CityNameRegistry';
 import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
 import { ClientRegistry } from '@civ-clone/core-client/ClientRegistry';
 import { CurrentPlayerRegistry } from '@civ-clone/core-player/CurrentPlayerRegistry';
@@ -49,6 +50,7 @@ export interface ClientRegistries {
   cityBuilds: Pick<CityBuildRegistry, 'getBy'>;
   cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
   cityImprovements: Pick<CityImprovementRegistry, 'getByCity'>;
+  cityNames: Pick<CityNameRegistry, 'claim'>;
   clients: Pick<ClientRegistry, 'getByPlayer'>;
   currentPlayers: Pick<CurrentPlayerRegistry, 'entries'>;
   difficulties: GameDifficultyRegistry;

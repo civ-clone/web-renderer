@@ -5,7 +5,7 @@
 //  gained at once unlock (#302).
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
-// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple (with a Warrior in the city, sent again) and tries to sell the Library. It then builds a Temple with more shields than it costs, which can't be bought (#817). Then it
+// test founds a city, grants Ceremonial Burial and Bronze Working together, gives it a Temple and a Library, then sells the Temple (with a Warrior in the city, sent again) and tries to sell the Library. It then builds a Temple with more shields than it costs, which can't be bought (#817), and a Warrior, which can't be bought while the city's disorder is recorded (#680). Then it
 // launches a spaceship with the parts to make it, the one `LaunchSpaceship` any suite sends.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -48,6 +48,12 @@ import {
   Structural,
 } from '@civ-clone/civ1-spaceship/Parts';
 import Part from '@civ-clone/core-spaceship/Part';
+import {
+  PendingEffect,
+  instance as pendingEffectRegistryInstance,
+} from '@civ-clone/core-pending-effect';
+import { CIVIL_DISORDER } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
+import { soldOn } from '@civ-clone/civ1-treasury/Rules/CityImprovement/sell';
 import Spaceship from '@civ-clone/core-spaceship/Spaceship';
 import Spend from '@civ-clone/core-treasury/Rules/Spend';
 import SpendCost from '@civ-clone/core-treasury/SpendCost';
@@ -285,6 +291,15 @@ const run = async (): Promise<void> => {
     fail('the city sold a second improvement in the same turn');
   }
 
+  // The sale is recorded on the city, where a save keeps it, so reloading mid-turn still refuses a second (#679).
+  if (soldOn(city) !== turnInstance.value()) {
+    fail(
+      `expected the sale recorded for turn ${turnInstance.value()}, got ${soldOn(
+        city
+      )}`
+    );
+  }
+
   // Nothing to buy once the shields stored pay for the item (#817): the Temple goes out with no price, at 77 of its 40
   //  shields, and buying it anyway changes neither the gold nor the shields. A negative price used to add gold.
   const cityBuild = cityBuildRegistryInstance.getByCity(city);
@@ -320,6 +335,61 @@ const run = async (): Promise<void> => {
       `buying a Temple already paid for left the treasury at ${treasury.value()} and the shields at ${cityBuild
         .progress()
         .value()}, not 40 and 77`
+    );
+  }
+
+  // A city in civil disorder can't buy a unit (#680), going by the disorder recorded at turn processing, which the city
+  //  screen shows, not its happiness now. Without the record, the same Warrior has a price.
+  const unitPrice = (): unknown => {
+      flush();
+      objectsSent = [];
+      collectObjects(
+        JSON.parse(JSON.stringify(humanClient!.serialiseCity(city)))
+      );
+
+      return objectsSent.find(
+        (object) => object.id === cityBuild.id() && 'spendCost' in object
+      )?.spendCost;
+    },
+    disorder = new PendingEffect(CIVIL_DISORDER, city);
+
+  cityBuild.build(Warrior);
+  cityBuild.progress().set(1);
+  pendingEffectRegistryInstance.register(disorder);
+
+  const priceInDisorder = unitPrice();
+
+  if (JSON.stringify(priceInDisorder) !== '[]') {
+    fail(
+      `expected a Warrior in a city in recorded disorder to go out with no price, got ${JSON.stringify(
+        priceInDisorder ?? null
+      )}`
+    );
+  }
+
+  await Promise.resolve(
+    actionHandler!({
+      name: 'CompleteProduction',
+      id: cityBuild.id(),
+      treasury: treasury.id(),
+    })
+  ).then(settle);
+
+  if (treasury.value() !== 40) {
+    fail(
+      `buying a Warrior in recorded disorder left the treasury at ${treasury.value()}, not 40`
+    );
+  }
+
+  pendingEffectRegistryInstance.unregister(disorder);
+
+  const priceAfter = unitPrice();
+
+  if (!Array.isArray(priceAfter) || priceAfter.length === 0) {
+    fail(
+      `expected a Warrior to have a price once the disorder is over, got ${JSON.stringify(
+        priceAfter ?? null
+      )}`
     );
   }
 
@@ -406,7 +476,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused; a Temple already paid for in shields has no price and can’t be bought; a spaceship part has one price; a spaceship of 62 parts launches and the player goes out again)'
+    'PASS sellImprovement (two advances at once both show in the picker; the Temple goes out selling for 40, sells, and the city goes out without it; a second sale that turn is refused and the sale is recorded on the city; a Temple already paid for in shields has no price and can’t be bought; a Warrior has no price and can’t be bought while the city’s disorder is recorded, and has one after; a spaceship part has one price; a spaceship of 62 parts launches and the player goes out again)'
   );
 
   process.exit(0);
