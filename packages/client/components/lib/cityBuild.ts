@@ -1,5 +1,6 @@
 import i18next, { t } from 'i18next';
 import { BuildItem, CityBuild, Entity } from '@civ-clone/ui-protocol/types';
+import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
 import Transport from '../../Transport';
 
 export const getLabelForBuildable = (buildable: BuildItem | null): string =>
@@ -64,11 +65,7 @@ export const toggleAuto = (cityBuild: CityBuild, transport: Transport): void =>
 export const editQueue = (
   cityBuild: CityBuild,
   transport: Transport,
-  queue:
-    | { op: 'add'; chosen: string; index?: number }
-    | { op: 'remove'; index: number; queued: string[] }
-    | { op: 'move'; index: number; to: number; queued: string[] }
-    | { op: 'clear' }
+  queue: QueueEdit
 ): void =>
   transport.send('action', {
     name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',

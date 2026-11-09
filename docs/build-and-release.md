@@ -47,8 +47,8 @@ Notable options:
   - Prettier format write
   - generate `build.json` version string
 - `watch`: esbuild watch mode
-- `ts:compile`: `tsc --build tsconfig.json`, a typecheck of the parts of `src/` it
-  lists so far (#339)
+- `ts:compile`: `tsc --build tsconfig.json`, a typecheck of `src/js` and every
+  `packages/*` (#339), with TypeScript 5 (#361)
 - `ts:compile:tests`: a typecheck of `tests/` (`tsconfig.tests.json`, via
   `tools/typecheck-tests.js`)
 - `prettier:format` / `prettier:check`: Prettier over `src/**/*.{ts,scss}`

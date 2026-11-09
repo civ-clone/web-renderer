@@ -76,7 +76,7 @@ i18next.init({
   lng: 'en',
   defaultNS: 'default',
   ns: ['default'],
-  initImmediate: false,
+  initAsync: false,
 });
 
 const failures: string[] = [],

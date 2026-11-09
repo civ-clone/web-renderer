@@ -1,17 +1,12 @@
-import {
-  City,
-  CityBuild,
-  CityGrowth,
-  PlayerResearch,
-  Yield,
-} from '@civ-clone/ui-protocol/types';
+import { City, Yield } from '@civ-clone/ui-protocol/types';
 import { reduceKnownYield } from './yieldMap';
 
 // How many turns a city has left to build or grow, as plain sums: the map's banners (#747) count them without the
 //  interface's pictures, which `components/lib/cityYields` loads.
 
+// `data` is a city's growth or build, the player's research, or anything else with a cost and progress so far.
 export const turnsLeft = (
-  data: CityGrowth | CityBuild | PlayerResearch,
+  data: { cost: { value: number }; progress: { value: number } },
   yields: Yield[],
   yieldName: string
 ) => {

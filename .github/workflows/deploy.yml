@@ -62,7 +62,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node generate-changelog.mjs --release
 
-      # Typechecks src/ and tests/, then every suite. A deploy that skipped
+      # Typechecks src/, packages/ and tests/, then every suite. A deploy that skipped
       # these would be the only place the renderer ships without them.
       - run: npm test
 

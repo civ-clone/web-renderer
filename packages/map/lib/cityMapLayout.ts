@@ -1,4 +1,4 @@
-import { City, Coordinate, Tile } from '@civ-clone/ui-protocol/types';
+import { City, Coordinate, PlayerTile } from '@civ-clone/ui-protocol/types';
 import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 
 export type CityMapLayout = {
@@ -8,13 +8,13 @@ export type CityMapLayout = {
    * The rest of the small world: the squares round and between the city's, as the player knows them, at their places in
    * the small world. Not to be drawn: they're there as the city's squares' neighbours (#685).
    */
-  context: Tile[];
+  context: PlayerTile[];
   /** How many squares across and down the small world is. */
   height: number;
   /** The city's squares, at their places in the small world. */
-  tiles: Tile[];
+  tiles: PlayerTile[];
   /** The squares the city works, at their places in the small world. */
-  tilesWorked: Tile[];
+  tilesWorked: PlayerTile[];
   width: number;
 };
 
@@ -40,7 +40,7 @@ export const cityMapLayout = (city: City): CityMapLayout => {
         : delta < -size / 2
         ? delta + size
         : delta,
-    offset = (tile: Tile): Coordinate => ({
+    offset = (tile: Coordinate): Coordinate => ({
       x: nearest(tile.x - city.tile.x, width, topology.wrapsX()),
       y: nearest(tile.y - city.tile.y, height, topology.wrapsY()),
     }),
@@ -50,7 +50,7 @@ export const cityMapLayout = (city: City): CityMapLayout => {
     top = Math.min(0, ...offsets.map(({ y }) => y)),
     bottom = Math.max(0, ...offsets.map(({ y }) => y)),
     center = { x: 1 - left, y: 1 - top },
-    toLocal = (tile: Tile): Tile => {
+    toLocal = (tile: PlayerTile): PlayerTile => {
       const { x, y } = offset(tile);
 
       return { ...tile, x: center.x + x, y: center.y + y };
@@ -76,7 +76,7 @@ export const cityMapLayout = (city: City): CityMapLayout => {
       ])
     ),
     taken = new Set(tiles.map(({ x, y }) => `${x},${y}`)),
-    context: Tile[] = [];
+    context: PlayerTile[] = [];
 
   for (let y = 0; y < localHeight; y++) {
     for (let x = 0; x < localWidth; x++) {

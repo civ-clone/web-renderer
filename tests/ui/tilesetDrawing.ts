@@ -268,7 +268,7 @@ preloadImage('troops/dug-in', 3, 1);
 preloadImage('city/people_unhappy_m', 3, 3);
 
 // No translations: a busy state's letter is the capitals of its name.
-i18next.init({ lng: 'en', resources: {}, initImmediate: false } as any);
+i18next.init({ lng: 'en', resources: {}, initAsync: false });
 
 // A player whose civilization's colours are red and blue.
 const player = {

@@ -2,9 +2,12 @@
 // that is not being rendered — a detached `cloneNode()`, say. `naturalWidth` is
 // the intrinsic size, and is 0 only until the image has actually decoded, which
 // is the state callers need to know about.
+// A `VideoFrame` has no `width` or `height`, only its display and coded sizes.
 export const imageSize = (image: CanvasImageSource): [number, number] =>
   image instanceof HTMLImageElement
     ? [image.naturalWidth, image.naturalHeight]
+    : 'displayWidth' in image
+    ? [image.displayWidth, image.displayHeight]
     : [image.width as number, image.height as number];
 
 // A source with no dimensions has no pixels to read: `getImageData` throws on a

@@ -511,7 +511,7 @@ export class GameMenu extends Element {
                   showAdvances = async (
                     player: string | null
                   ): Promise<void> => {
-                    const available = await this.#transport.request(
+                    const available: string[] = await this.#transport.request(
                       new CheatAdvances(player)
                     );
 

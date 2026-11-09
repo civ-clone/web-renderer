@@ -3,8 +3,8 @@ import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
   'Generic.height': 'Height',
-  'Generic.city-name':
-    '$t({{civilization}}.{{- name}}.name, { "defaultValue": "{{name}}", "ns": "city" })',
+  // `cityName` looks the name up on the founder's list (`i18nFormatters`).
+  'Generic.city-name': '{{- name, cityName}}',
   'Generic.civilization-name.name':
     '$t({{- civilization}}.name, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
   'Generic.civilization-name.nation':

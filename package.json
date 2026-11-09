@@ -227,7 +227,7 @@
     "linkedom": "^0.18.13",
     "prettier": "^2.0.0",
     "sass": "^1.59.2",
-    "typescript": "^4.0.0"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@civ-clone/base-civilization-barbarian": "^0.1.1",
@@ -320,7 +320,7 @@
     "@civ-clone/worker-transport": "^0.1.0",
     "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2",
-    "i18next": "^23.16.8",
+    "i18next": "^26.4.3",
     "i18next-browser-languagedetector": "^8.2.1",
     "idb": "^7.1.1",
     "marked": "^18.1.1"

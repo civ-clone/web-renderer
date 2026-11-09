@@ -206,7 +206,8 @@ const renderBuild = (
                     cityYield: Yield | CityImprovementMaintenanceGold
                   ): cityYield is CityImprovementMaintenanceGold =>
                     cityYield._ === 'CityImprovementMaintenanceGold' &&
-                    cityYield.cityImprovement.id === improvement.id
+                    (cityYield as CityImprovementMaintenanceGold)
+                      .cityImprovement.id === improvement.id
                 )
                 .flatMap((cityYield) => yieldImages(cityYield, true))
             ),
