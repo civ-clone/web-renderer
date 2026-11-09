@@ -72,7 +72,7 @@ i18next.addResources('en', 'unit', {
   'Action.InvestigateCity.name': 'Investigate city',
   'Action.JoinCity.name': 'Join city',
   'Action.LandAircraft.name': 'Land',
-  'Action.MeetWithKing.name': 'Meet with king',
+  'Action.MeetWithLeader.name': 'Meet with leader',
   'Action.Move.name': 'Move',
   'Action.NoOrders.name': 'No orders',
   'Action.NuclearAttack.name': 'Nuclear attack',

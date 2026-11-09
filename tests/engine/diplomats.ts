@@ -312,7 +312,7 @@ const run = async (): Promise<void> => {
   ambassador.moves().set(1);
 
   await flush();
-  await unitAction(ambassador, 'MeetWithKing', site);
+  await unitAction(ambassador, 'MeetWithLeader', site);
 
   if (
     ambassador.destroyed() ||

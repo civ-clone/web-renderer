@@ -1,5 +1,5 @@
 // Talks with other players (#449), moved out of `DataTransferClient`: the players our units have moved next to, the
-//  talks a Diplomat's Meet with King starts, and each negotiation, a step at a time, each step chosen by the player
+//  talks a Diplomat's Meet with Leader starts, and each negotiation, a step at a time, each step chosen by the player
 //  whose step it is.
 //
 // The talks are one promise chain. The action that started them waits for it and then offers talks with the players
@@ -50,7 +50,7 @@ export class Talks {
   // The other players our units have moved next to since talks were last offered (#357): by hand, on a GoTo, or on a
   //  GoTo carried on at the start of the turn.
   #metOnTheWay: Set<Player> = new Set();
-  // Talks a Diplomat's Meet with King started (#58), which the action that started them waits for, as it waits for
+  // Talks a Diplomat's Meet with Leader started (#58), which the action that started them waits for, as it waits for
   //  talks with units met on the way (`talkToPlayersMet`).
   #talks: Promise<void> = Promise.resolve();
   // How many of the links in `#talks` have yet to settle: talks are under way while any has (#491).
@@ -69,7 +69,7 @@ export class Talks {
     return this.#talks;
   }
 
-  // Whether `pending` has yet to settle: a Meet with King's talks, or those at the start of the turn, are open. `EndTurn`
+  // Whether `pending` has yet to settle: a Meet with Leader's talks, or those at the start of the turn, are open. `EndTurn`
   //  waits for them (`handleAction.ts`). Counted, as a promise can't be asked whether it has settled.
   get underWay(): boolean {
     return this.#unsettled > 0;
@@ -95,7 +95,7 @@ export class Talks {
 
   // Each link of the chain catches what its talks threw, so one that fails doesn't fail every talk after it, and every
   //  action that waits for them (#470).
-  meetWithKing(other: Player): void {
+  meetWithLeader(other: Player): void {
     this.#talks = this.#talks
       .then(() => this.handleNegotiation(other))
       .then(
@@ -281,12 +281,12 @@ export class Talks {
   }
 }
 
-// The talks' engine listeners: the players met by each of our units' moves, and a Diplomat's Meet with King. The
+// The talks' engine listeners: the players met by each of our units' moves, and a Diplomat's Meet with Leader. The
 //  `unit:moved` listener is registered before the patches' (`events/patchEvents.ts`), which flushes.
 export const registerTalkEvents = (
   engine: Pick<Engine, 'on' | 'off'>,
   ctx: Pick<ClientContext, 'view'> & {
-    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithKing'>;
+    talks: Pick<Talks, 'meetNeighboursOf' | 'meetWithLeader'>;
     // Whether automation is on, read as each unit moves: it is turned on and off mid-game.
     automation: Pick<Automation, 'enabled'>;
   }
@@ -307,12 +307,12 @@ export const registerTalkEvents = (
     ctx.talks.meetNeighboursOf(unit);
   });
 
-  on('player:meet-with-king', (player: Player, other: Player) => {
+  on('player:meet-with-leader', (player: Player, other: Player) => {
     if (!ctx.view.owns(player)) {
       return;
     }
 
-    ctx.talks.meetWithKing(other);
+    ctx.talks.meetWithLeader(other);
   });
 
   return (): void =>

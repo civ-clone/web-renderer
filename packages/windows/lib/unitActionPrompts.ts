@@ -41,7 +41,7 @@ const sneakActions = [
     ['steal-technology', ['StealTechnology', 'SneakStealTechnology']],
     ['industrial-sabotage', ['IndustrialSabotage']],
     ['incite-revolt', inciteActions],
-    ['meet-with-king', ['MeetWithKing']],
+    ['meet-with-leader', ['MeetWithLeader']],
   ];
 
 const civilization = (

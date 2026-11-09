@@ -90,7 +90,7 @@ export interface ClientContext extends ClientRegistries {
   cityNews: CityNewsCollector;
   // Whether the player's turns are automated, read as it goes: it is turned on and off mid-game.
   automation: Automation;
-  // Talks with other players: those met on the way and a Diplomat's Meet with King.
+  // Talks with other players: those met on the way and a Diplomat's Meet with Leader.
   talks: Talks;
   // Whether we have met a player, which says whether a notice or a report may name them (#59).
   hasMet(player: Player): boolean;

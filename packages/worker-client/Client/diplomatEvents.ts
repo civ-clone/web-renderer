@@ -1,6 +1,6 @@
 // What a Diplomat's missions open for the player (#449), moved out of `DataTransferClient`: the intelligence report
 //  for an embassy established, and the city a Diplomat investigated. What the player is told of a mission is in
-//  `notifications/diplomat.ts`, and the talks a Meet with King starts are in `Talks.ts`.
+//  `notifications/diplomat.ts`, and the talks a Meet with Leader starts are in `Talks.ts`.
 
 import City from '@civ-clone/core-city/City';
 import Engine from '@civ-clone/core-engine/Engine';
