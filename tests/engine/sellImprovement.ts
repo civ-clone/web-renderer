@@ -357,10 +357,12 @@ const run = async (): Promise<void> => {
   cityBuild.progress().set(1);
   pendingEffectRegistryInstance.register(disorder);
 
-  if (JSON.stringify(unitPrice()) !== '[]') {
+  const priceInDisorder = unitPrice();
+
+  if (JSON.stringify(priceInDisorder) !== '[]') {
     fail(
       `expected a Warrior in a city in recorded disorder to go out with no price, got ${JSON.stringify(
-        unitPrice()
+        priceInDisorder ?? null
       )}`
     );
   }
@@ -381,8 +383,14 @@ const run = async (): Promise<void> => {
 
   pendingEffectRegistryInstance.unregister(disorder);
 
-  if (JSON.stringify(unitPrice()) === '[]') {
-    fail('expected a Warrior to have a price once the disorder is over');
+  const priceAfter = unitPrice();
+
+  if (!Array.isArray(priceAfter) || priceAfter.length === 0) {
+    fail(
+      `expected a Warrior to have a price once the disorder is over, got ${JSON.stringify(
+        priceAfter ?? null
+      )}`
+    );
   }
 
   // One price for a spaceship part (#713), from every rule the game has: civ1-treasury's 4 gold a shield left, doubled
