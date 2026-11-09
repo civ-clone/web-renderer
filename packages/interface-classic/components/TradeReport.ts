@@ -11,6 +11,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from '@civ-clone/ui-windows/components/lib/government';
@@ -101,7 +102,9 @@ export class TradeReport extends FilterableWindow {
 
           row.append(
             ...[
-              cityName(city),
+              // Escaped: the cells are set as HTML, and a name not on its founder's list is the player's own text, or a
+              //  save file's (#849).
+              escape(cityName(city)),
               `${goldIcon} ${t('CityStatus.totals', {
                 total: cityGold,
                 free,

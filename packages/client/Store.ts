@@ -22,9 +22,15 @@ export class Store<Types extends DBSchema> {
   ) {
     this.#store = store;
 
-    this.#connection = openDB(db, 1, {
-      upgrade: (db) => db.createObjectStore(this.#store, options),
-    });
+    // Opened inside a promise, so a browser that refuses the database outright (storage blocked) rejects here rather
+    //  than throwing as the store is made, which for a store made as its module loads stopped the page (#850).
+    this.#connection = Promise.resolve().then(() =>
+      openDB(db, 1, {
+        upgrade: (db) => db.createObjectStore(this.#store, options),
+      })
+    );
+    // Whoever uses the store hears of it then; nobody may be listening yet.
+    this.#connection.catch((): void => {});
   }
 
   async get(key: StoreKey<Types, StoreNames<Types>>) {

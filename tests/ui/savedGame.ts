@@ -411,6 +411,41 @@ const reset = () => {
     );
   }
 
+  // A browser that blocks storage throws on touching it: there is no save to take, and the game starts (#850).
+  reset();
+
+  const working = (globalThis as any).sessionStorage,
+    blocked = (): never => {
+      const error = new Error('The operation is insecure.');
+
+      error.name = 'SecurityError';
+
+      throw error;
+    };
+
+  (globalThis as any).sessionStorage = {
+    getItem: blocked,
+    setItem: blocked,
+    removeItem: blocked,
+  };
+
+  let blockedThrown: string | null = null,
+    blockedTaken: unknown = 'not asked';
+
+  try {
+    blockedTaken = await takePendingSave();
+  } catch (error) {
+    blockedThrown = (error as Error).name;
+  }
+
+  expect(
+    'with storage blocked there is no save to take, and nothing is thrown or said',
+    JSON.stringify([blockedThrown, blockedTaken, alerts.length]),
+    JSON.stringify([null, null, 0])
+  );
+
+  (globalThis as any).sessionStorage = working;
+
   if (failures.length) {
     console.error(`FAIL savedGame\n  ${failures.join('\n  ')}`);
 

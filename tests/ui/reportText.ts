@@ -90,6 +90,28 @@ const run = async (): Promise<void> => {
 
   report.close();
 
+  // A name that isn't on its founder's list is the player's own text, or a save file's: shown, not parsed (#849).
+  const marked = new TradeReport(
+    {
+      id: 'Player-1',
+      cities: [{ ...city, id: 'City-marked', name: '<b>Hub</b>' }],
+    } as unknown as Player,
+    portal,
+    transport
+  );
+
+  await settle();
+
+  const nameCell = marked.element().querySelector('.city-list td');
+
+  expect(
+    'the classic Trade report shows a city name as text, markup and all',
+    [nameCell?.textContent, nameCell?.querySelector('b') ?? null],
+    ['<b>Hub</b>', null]
+  );
+
+  marked.close();
+
   const disorder = new CivilDisorder(
     { _: 'CivilDisorder', value: city } as unknown as PlayerAction,
     portal,

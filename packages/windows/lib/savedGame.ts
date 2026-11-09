@@ -274,10 +274,16 @@ export const takePendingSave = async (): Promise<PendingLoad | null> => {
   // The marker first, and only then the store: it is what says the save
   // waiting on this origin is this tab's, and it means a page load that is not
   // a hand-over never opens the database at all.
-  if (sessionStorage.getItem(PENDING) === null) {
-    // Seats left from a load that never happened are nobody's: gone, so they never go with a later save.
-    sessionStorage.removeItem(PENDING_SEATS);
+  try {
+    if (sessionStorage.getItem(PENDING) === null) {
+      // Seats left from a load that never happened are nobody's: gone, so they never go with a later save.
+      sessionStorage.removeItem(PENDING_SEATS);
 
+      return null;
+    }
+  } catch {
+    // A browser that blocks storage throws on reading it. Nothing was handed over without it, so there is no save to
+    //  take, and the game starts as it would with none (#850).
     return null;
   }
 

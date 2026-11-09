@@ -18,7 +18,13 @@ export interface PopupMenuAction {
 
 export interface PopupMenuOptions {
   align: 'left' | 'center' | 'right';
+  // Opened from the keyboard: the first item takes the focus, for the arrow keys to move (#853).
+  byKeyboard: boolean;
   fullWidth: boolean;
+  // What the menu is called, for assistive technology.
+  label: string | null;
+  // What opened it: given the focus back when the keyboard closes the menu.
+  restoreFocus: HTMLElement | null;
   target: HTMLElement;
 }
 
@@ -28,9 +34,14 @@ export class PopupMenu extends Element {
   #targetPointerUpListener: (event: PointerEvent) => void = () => {};
   #centerX: number;
   #centerY: number;
+  // An item has run: a press's `pointerup` and a click with no pointer behind it must not both run one.
+  #done = false;
   #options: PopupMenuOptions = {
     align: 'left',
+    byKeyboard: false,
     fullWidth: false,
+    label: null,
+    restoreFocus: null,
     target: document.body,
   };
 
@@ -41,7 +52,7 @@ export class PopupMenu extends Element {
     actions: PopupMenuAction[],
     options: Partial<PopupMenuOptions> = {}
   ) {
-    super(s(`<div class="popup-menu hide"></div>`));
+    super(s(`<div class="popup-menu hide" role="menu"></div>`));
 
     if (menuMap.has(launcher)) {
       const existingMenu = menuMap.get(launcher)!;
@@ -77,29 +88,29 @@ export class PopupMenu extends Element {
 
     this.removeClass('hide');
 
+    if (this.#options.label !== null) {
+      this.element().setAttribute('aria-label', this.#options.label);
+    }
+
     this.append(
-      ...actions.map(({ action, label }) => {
-        const button = s(`<button class="btn-bare">${label}</button>`);
-
-        on(button, 'pointerup', () => {
-          action(this);
-
-          this.remove();
-        });
-
-        return button;
-      }),
-      h(
+      ...actions.map(({ action, label }) =>
+        this.#item(
+          s(`<button class="btn-bare" role="menuitem">${label}</button>`),
+          () => action(this)
+        )
+      ),
+      this.#item(
         s(
-          `<button class="btn-bare close" aria-label="${t(
+          `<button class="btn-bare close" role="menuitem" aria-label="${t(
             'Generic.close'
           )}">${glyph('close')}</button>`
         ),
-        {
-          pointerup: () => this.remove(),
-        }
+        () => {}
       )
     );
+
+    // The keys, while the focus is in the menu (#853). Kept from the game's own, which would move a unit.
+    on(this.element(), 'keydown', (event: KeyboardEvent) => this.#key(event));
 
     this.addClass(this.#options.align);
 
@@ -112,6 +123,108 @@ export class PopupMenu extends Element {
     on(this.#options.target, 'pointerup', this.#targetPointerUpListener);
 
     this.#options.target.append(this.element());
+
+    if (this.#options.byKeyboard) {
+      this.#items()[0]?.focus();
+    }
+  }
+
+  // An item: run by a press on it, or by a click with no pointer behind it, which is Enter or Space on the focused
+  //  item, or assistive technology's (#853). Then the menu closes.
+  #item(button: HTMLElement, run: () => void): HTMLElement {
+    const choose = (byKeyboard: boolean): void => {
+      if (this.#done) {
+        return;
+      }
+
+      this.#done = true;
+
+      try {
+        run();
+      } finally {
+        // Closed whatever became of it: an item that threw would otherwise leave a menu nothing in it can run.
+        //  Chosen with the keys, the focus is on the item, which is about to go: back to what opened the menu, unless
+        //  what ran took it (a window does). A press leaves the focus where it always did.
+        this.#close(byKeyboard && this.#hasFocus());
+      }
+    };
+
+    return h(button, {
+      pointerup: () => choose(false),
+      click: (event: MouseEvent) => {
+        if (event.detail === 0) {
+          choose(true);
+        }
+      },
+    });
+  }
+
+  #items(): HTMLElement[] {
+    return Array.from(this.element().querySelectorAll('button'));
+  }
+
+  #hasFocus(): boolean {
+    return this.element().contains(document.activeElement);
+  }
+
+  #close(restoreFocus: boolean): void {
+    this.remove();
+
+    if (restoreFocus) {
+      this.#options.restoreFocus?.focus();
+    }
+  }
+
+  #key(event: KeyboardEvent): void {
+    const items = this.#items(),
+      current = items.indexOf(document.activeElement as HTMLElement),
+      to = (index: number): void =>
+        items[(index + items.length) % items.length]?.focus();
+
+    switch (event.key) {
+      case 'ArrowDown':
+        to(current + 1);
+
+        break;
+
+      case 'ArrowUp':
+        to(current === -1 ? -1 : current - 1);
+
+        break;
+
+      case 'Home':
+        to(0);
+
+        break;
+
+      case 'End':
+        to(-1);
+
+        break;
+
+      case 'Escape':
+        this.#close(true);
+
+        break;
+
+      // The focused item's own: the browser clicks it. Only kept from the game, where they are orders. Not a key
+      //  still held from opening the menu, though: its repeat would choose the first item, which then has the focus.
+      case 'Enter':
+      case ' ':
+        if (event.repeat) {
+          event.preventDefault();
+        }
+
+        event.stopPropagation();
+
+        return;
+
+      default:
+        return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
   }
 
   remove() {

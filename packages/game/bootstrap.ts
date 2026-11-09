@@ -39,6 +39,7 @@ import ChoiceHandler from './app/ChoiceHandler';
 import WorkerFailures from './app/WorkerFailures';
 import buildSidebar from './app/sidebar';
 import music from './app/music';
+import showStartFailure from './app/startFailure';
 import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -56,7 +57,17 @@ export class Renderer {
     this.#transport = transport;
   }
 
-  async init() {
+  // Whatever stops the game starting is said, not only logged (#850): the page would otherwise stay blank.
+  async init(): Promise<void> {
+    try {
+      await this.#start();
+    } catch (error) {
+      console.error(error);
+      showStartFailure(error);
+    }
+  }
+
+  async #start(): Promise<void> {
     const transport = this.#transport;
     const queryParams = new URLSearchParams(window.location.search);
 
@@ -287,6 +298,7 @@ export class Renderer {
       }
     } catch (e) {
       console.error(e);
+      showStartFailure(e);
     }
   }
 }

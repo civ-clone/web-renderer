@@ -636,13 +636,25 @@ export class GameMenu extends Element {
     //  click mustn't open it again (#710).
     let openAtPress = false;
 
+    button.setAttribute('aria-haspopup', 'menu');
+
     if (hasFeature('sharedMenus')) {
-      button.setAttribute('aria-haspopup', 'menu');
       button.setAttribute('aria-expanded', 'false');
     }
 
     this.append(
       h(button, {
+        // Enter and Space on the classic button are the button's own, to open its menu (#853): kept from the game,
+        //  where Enter ends the turn and Space is an order, either of which would be done instead. The new interface's
+        //  menu takes its keys from the page while it is open, so its button is left alone.
+        keydown: (event: KeyboardEvent) => {
+          if (
+            !hasFeature('sharedMenus') &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.stopPropagation();
+          }
+        },
         pointerdown: () => {
           openAtPress = hasPopupMenu(this);
         },
@@ -676,7 +688,11 @@ export class GameMenu extends Element {
             ),
             {
               align: 'right',
+              // From the keyboard, a click with no pointer behind it: the first item takes the focus (#853).
+              byKeyboard: event.detail === 0,
               fullWidth: true,
+              label: t('GameMenu.label'),
+              restoreFocus: button,
             }
           );
         },

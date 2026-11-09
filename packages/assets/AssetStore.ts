@@ -316,9 +316,20 @@ export class AssetStore extends Store<{
     return this.#loaded.has(path);
   }
 
+  // What the store holds, by key, or nothing when the browser won't open it (#850): a store that can't be read holds
+  //  nothing as far as the game can tell, so the menus, the cursor and the music start as they do before anything
+  //  has been imported. `load` has already logged why.
+  async #imported(): Promise<string[]> {
+    try {
+      return await this.keys();
+    } catch {
+      return [];
+    }
+  }
+
   /** How many of the tileset's sprites, required or optional, are imported: for Options to say (#749). */
   async importedCount(): Promise<number> {
-    const dbAssets = new Set(await this.keys());
+    const dbAssets = new Set(await this.#imported());
 
     return [...this.#requiredAssets, ...this.#optionalAssets].filter((asset) =>
       dbAssets.has(asset)
@@ -327,14 +338,19 @@ export class AssetStore extends Store<{
 
   /** The ASOUND.CVL the player imported, as its bytes, or null without one (#126). */
   async soundDriver(): Promise<ArrayBuffer | null> {
-    const record: Asset | undefined = await super.get(SOUND_DRIVER);
+    try {
+      const record: Asset | undefined = await super.get(SOUND_DRIVER);
 
-    return record?.blob ? record.blob.arrayBuffer() : null;
+      return record?.blob ? await record.blob.arrayBuffer() : null;
+    } catch {
+      // A store that can't be read has no sound driver to give (#850).
+      return null;
+    }
   }
 
   /** Whether an ASOUND.CVL has been imported, for Options to offer the volume. */
   async hasSoundDriver(): Promise<boolean> {
-    return (await this.keys()).includes(SOUND_DRIVER);
+    return (await this.#imported()).includes(SOUND_DRIVER);
   }
 
   async hasAllAssets(): Promise<boolean> {
@@ -342,7 +358,7 @@ export class AssetStore extends Store<{
   }
 
   async missingAssets(): Promise<string[]> {
-    const dbAssets = await this.keys();
+    const dbAssets = await this.#imported();
 
     return this.#requiredAssets.filter(
       (requiredAsset) => !dbAssets.includes(requiredAsset)

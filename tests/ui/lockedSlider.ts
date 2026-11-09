@@ -120,6 +120,22 @@ const tradeRates = (...values: number[]) => {
   expect('a negative value is set to 0', slider.value(), 0);
 }
 
+// Each input says which rate it is: the legend alone leaves a screen reader with "slider, 50" (#857).
+{
+  const slider = new LockedSlider('tax', 50, 'Tax "rate" & more');
+
+  expect(
+    'the slider and the number box are both named after the rate',
+    ['range', 'number'].map((type) =>
+      slider
+        .element()
+        .querySelector(`input[type="${type}"]`)
+        ?.getAttribute('aria-label')
+    ),
+    ['Tax "rate" & more', 'Tax "rate" & more']
+  );
+}
+
 if (failures.length) {
   process.stderr.write(
     `FAIL lockedSlider\n${failures
