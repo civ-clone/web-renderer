@@ -44,7 +44,7 @@ export const handleReassignWorkers = async (
 export const cityNameMaxLength = 12;
 
 // Renaming one of the player's cities (#676). Not one of the player's actions either, so looked for by name. A rival's
-//  city, an empty name or one too long changes nothing.
+//  city, an empty name or one too long changes nothing. The new name is taken out of the name pools (#712).
 export const handleRenameCity = async (
   ctx: ActionContext,
   action: any
@@ -62,6 +62,9 @@ export const handleRenameCity = async (
   }
 
   city.setName(name);
+
+  // So no city founded later is given the same name (#712).
+  ctx.cityNames.claim(name);
 
   // Every city of the player's, for the trade routes that name it.
   ctx.cities

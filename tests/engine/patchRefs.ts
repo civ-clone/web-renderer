@@ -59,8 +59,9 @@ import { instance as playerTreasuryRegistryInstance } from '@civ-clone/core-trea
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 
 // Long enough for the human, playing by hand, to have founded a few cities and have units to move about (#411), and
-//  short of the turn the default seed's game is won (118 since #401): the checks are of a game in progress.
-const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 115);
+//  short of the turn the default seed's game is won (98 since the pillage, sale and disorder fixes of #413, #679 and
+//  #680): the checks are of a game in progress.
+const TURNS = Number(process.env.PATCH_REFS_TURNS ?? 95);
 
 const objectMap: ObjectMap = { hierarchy: {}, objects: {} },
   missing = new Map<string, number>(),
@@ -1093,18 +1094,14 @@ const act = (action: { name: string; [key: string]: any }): Promise<void> =>
   });
 
 // The unit actions the human never chooses: a GoTo, exploring or automating hands the unit to the client, which then
-//  sends its actions with no one asking, and a nuclear attack takes everything around it. And Pillage, for now: when
-//  it completes, `base-unit-action-pillage` takes the improvement off the square itself rather than through the
-//  `Pillaged` rules, so the square's yields aren't worked out again and nothing says the square changed. The same goes
-//  for pillaging a treaty partner's land (#287).
+//  sends its actions with no one asking, and a nuclear attack takes everything around it. Pillage is chosen since it
+//  goes through the `Pillaged` rules (#413), so the tiles the page holds must stay fresh after it.
 const unitActionsNotChosen = new Set([
   'Automate',
   'Explore',
   'GoTo',
   'NuclearAttack',
-  'Pillage',
   'SneakNuclearAttack',
-  'SneakPillage',
 ]);
 
 // One of a unit's actions, on its own square or a neighbour the player knows. Settlers found a city wherever they can,
