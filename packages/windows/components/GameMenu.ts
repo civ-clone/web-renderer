@@ -636,8 +636,9 @@ export class GameMenu extends Element {
     //  click mustn't open it again (#710).
     let openAtPress = false;
 
+    button.setAttribute('aria-haspopup', 'menu');
+
     if (hasFeature('sharedMenus')) {
-      button.setAttribute('aria-haspopup', 'menu');
       button.setAttribute('aria-expanded', 'false');
     }
 
@@ -676,7 +677,11 @@ export class GameMenu extends Element {
             ),
             {
               align: 'right',
+              // From the keyboard, a click with no pointer behind it: the first item takes the focus (#853).
+              byKeyboard: event.detail === 0,
               fullWidth: true,
+              label: t('GameMenu.label'),
+              restoreFocus: button,
             }
           );
         },

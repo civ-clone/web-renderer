@@ -36,6 +36,10 @@ export class LockedSlider extends Element {
       'input[type="checkbox"]'
     ) as HTMLInputElement;
 
+    // Each named after its rate: the legend alone leaves a screen reader saying "slider, 50" (#857).
+    this.#range.setAttribute('aria-label', label);
+    this.#number.setAttribute('aria-label', label);
+
     this.build();
   }
 

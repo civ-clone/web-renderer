@@ -20,6 +20,7 @@ import openUnitMenu, {
 } from '@civ-clone/ui-windows/components/UiUnitMenu';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import PopupMenu from '@civ-clone/ui-component-popup-menu/PopupMenu';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -990,6 +991,151 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
     expect('and again: open', shown(), 1);
 
     pointer('pointerup', document.body);
+
+    // From the keyboard (#853): Enter or Space on the button is a click with no pointer behind it.
+    const open = () =>
+        Array.from(document.querySelectorAll('.popup-menu')).filter(
+          (menu) => !menu.classList.contains('hide')
+        )[0] as HTMLElement | undefined,
+      items = () =>
+        Array.from(open()?.querySelectorAll('button') ?? []) as HTMLElement[],
+      keyboardClick = (target: HTMLElement) => {
+        const event = new Event('click', { bubbles: true });
+
+        Object.assign(event, { detail: 0 });
+        target.dispatchEvent(event);
+      },
+      // linkedom does no focus: what was last asked to take it.
+      focused: { element: Element | null } = { element: null },
+      focus = HTMLElement.prototype.focus,
+      activeElement = Object.getOwnPropertyDescriptor(
+        document,
+        'activeElement'
+      ),
+      // The game's own keys, which listen on the page.
+      reachedThePage: string[] = [],
+      pageKeys = (event: Event) =>
+        reachedThePage.push((event as KeyboardEvent).key);
+
+    HTMLElement.prototype.focus = function (this: HTMLElement) {
+      focused.element = this;
+    };
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => focused.element,
+    });
+    document.addEventListener('keydown', pageKeys);
+
+    expect(
+      'the classic button says it opens a menu, too',
+      button.getAttribute('aria-haspopup'),
+      'menu'
+    );
+
+    keyboardClick(button);
+    expect(
+      'opened from the keyboard: a menu, named, its items menu items, the first with the focus',
+      [
+        open()?.getAttribute('role'),
+        open()?.getAttribute('aria-label'),
+        items().every((item) => item.getAttribute('role') === 'menuitem'),
+        focused.element === items()[0],
+        items()[0]?.textContent,
+      ],
+      ['menu', 'Game menu', true, true, 'Save Game']
+    );
+
+    key('ArrowDown', items()[0]);
+    expect('Down: the next item', focused.element === items()[1], true);
+
+    key('ArrowUp', items()[1]);
+    key('ArrowUp', items()[0]);
+    expect(
+      'Up from the first: round to the last',
+      focused.element === items()[items().length - 1],
+      true
+    );
+
+    key('Home', items()[items().length - 1]);
+    expect('Home: the first', focused.element === items()[0], true);
+
+    key('End', items()[0]);
+    expect(
+      'End: the last',
+      focused.element === items()[items().length - 1],
+      true
+    );
+
+    key('Enter', items()[0]);
+    key(' ', items()[0]);
+    expect(
+      'none of them reaches the game, where they are orders',
+      reachedThePage,
+      []
+    );
+
+    key('a', items()[0]);
+    expect('another key does', reachedThePage, ['a']);
+    reachedThePage.length = 0;
+
+    key('Escape', items()[0]);
+    expect(
+      'Escape: closed, the focus back on the button, and not the game’s to hear',
+      [shown(), focused.element === button, reachedThePage],
+      [0, true, []]
+    );
+
+    // Enter on an item: its action, once, then closed. Nothing took the focus, so what opened the menu has it again.
+    const runs: string[] = [],
+      launcher = {},
+      menuOf = (byKeyboard: boolean) =>
+        new PopupMenu(
+          launcher,
+          0,
+          0,
+          [
+            { label: 'One', action: () => runs.push('one') },
+            { label: 'Two', action: () => runs.push('two') },
+          ],
+          { byKeyboard, restoreFocus: button }
+        );
+
+    menuOf(true);
+
+    const two = items()[1];
+
+    focused.element = two;
+    keyboardClick(two);
+    // A browser that sends the press's `pointerup` as well must not run it twice.
+    pointer('pointerup', two);
+
+    expect(
+      'Enter on an item runs it once, closes the menu and gives the focus back',
+      [runs, shown(), focused.element === button],
+      [['two'], 0, true]
+    );
+
+    // A press on an item, as before: run, closed, and the focus left where it was.
+    runs.length = 0;
+    menuOf(false);
+    focused.element = null;
+    pointer('pointerup', items()[0]);
+
+    expect(
+      'a press on an item runs it and closes the menu, and moves no focus',
+      [runs, shown(), focused.element],
+      [['one'], 0, null]
+    );
+
+    document.removeEventListener('keydown', pageKeys);
+    HTMLElement.prototype.focus = focus;
+
+    if (activeElement) {
+      Object.defineProperty(document, 'activeElement', activeElement);
+    } else {
+      delete (document as any).activeElement;
+    }
+
     holder.remove();
   }
 
