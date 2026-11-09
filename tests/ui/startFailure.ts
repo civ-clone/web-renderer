@@ -167,6 +167,22 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
   );
   late.remove();
 
+  // The game's text is fetched after i18next starts: a start that fails in between has no string yet, and says it in
+  //  English rather than showing the key.
+  i18next.removeResourceBundle('en', 'default');
+
+  const between = showStartFailure(new Error('no text yet'));
+
+  expect(
+    'with i18next started but its text not loaded, the English and not the keys',
+    [
+      between.querySelector('p')?.textContent,
+      between.querySelector('button')?.textContent,
+    ],
+    ['The game could not start. Reload the page to try again.', 'Reload']
+  );
+  between.remove();
+
   finished = true;
 
   if (failures.length > 0) {

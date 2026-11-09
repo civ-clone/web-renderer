@@ -644,6 +644,17 @@ export class GameMenu extends Element {
 
     this.append(
       h(button, {
+        // Enter and Space on the classic button are the button's own, to open its menu (#853): kept from the game,
+        //  where Enter ends the turn and Space is an order, either of which would be done instead. The new interface's
+        //  menu takes its keys from the page while it is open, so its button is left alone.
+        keydown: (event: KeyboardEvent) => {
+          if (
+            !hasFeature('sharedMenus') &&
+            (event.key === 'Enter' || event.key === ' ')
+          ) {
+            event.stopPropagation();
+          }
+        },
         pointerdown: () => {
           openAtPress = hasPopupMenu(this);
         },

@@ -27,8 +27,12 @@ export const showStartFailure = (
       '<button type="button" class="btn-primary"></button>'
     ),
     detail = describe(error),
+    // In the game's words once it has them. Its text may not have loaded even then (it is fetched after i18next
+    //  starts), so the English stands in for a missing string rather than its key.
     say = (key: keyof typeof FALLBACK): string =>
-      i18next.isInitialized ? t(`StartFailure.${key}`) : FALLBACK[key];
+      i18next.isInitialized
+        ? t(`StartFailure.${key}`, { defaultValue: FALLBACK[key] })
+        : FALLBACK[key];
 
   dialog.className = 'start-failure';
   dialog.setAttribute('role', 'alertdialog');

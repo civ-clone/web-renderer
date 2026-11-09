@@ -1032,6 +1032,18 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       'menu'
     );
 
+    // Enter and Space on the button are its own, to open the menu: the game would end the turn, or give an order.
+    key('Enter', button);
+    key(' ', button);
+    expect(
+      'Enter and Space on the classic button are kept from the game',
+      reachedThePage,
+      []
+    );
+    key('a', button);
+    expect('another key on it is the game’s still', reachedThePage, ['a']);
+    reachedThePage.length = 0;
+
     keyboardClick(button);
     expect(
       'opened from the keyboard: a menu, named, its items menu items, the first with the focus',
