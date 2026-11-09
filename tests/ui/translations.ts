@@ -70,8 +70,8 @@ import {
   turnProgress,
 } from '@civ-clone/ui-worker-client/lib/progress';
 import UnknownCity from '@civ-clone/ui-worker-client/UnknownObjects/City';
-import type Player from '@civ-clone/core-player/Player';
-import UnknownPlayer from '@civ-clone/ui-worker-client/UnknownObjects/Player';
+import Civilization from '@civ-clone/core-civilization/Civilization';
+import Player from '@civ-clone/core-player/Player';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { join } from 'path';
@@ -219,13 +219,17 @@ const expect = (description: string, actual: string, expected: string) => {
 
   // Asansol is an Indian city name, now held by Babylon: the name has to come
   //  from the founder, not the current owner.
-  // An `UnknownCity` takes the stand-ins for players as the client builds them, which aren't core `Player`s.
-  const unknownPlayer = (
-    ...args: ConstructorParameters<typeof UnknownPlayer>
-  ): Player => new UnknownPlayer(...args) as unknown as Player;
+  // An `UnknownCity` holds the game's own players, as `UnknownCity.fromCity` gives it them (#582).
+  const gamePlayer = (civilization: Civilization): Player => {
+    const player = new Player();
 
-  const india = unknownPlayer(new Indian()),
-    babylon = unknownPlayer(new Babylonian()),
+    player.setCivilization(civilization);
+
+    return player;
+  };
+
+  const india = gamePlayer(new Indian()),
+    babylon = gamePlayer(new Babylonian()),
     asansol = new UnknownCity(
       'Asansol',
       null as unknown as Tile,
@@ -237,9 +241,9 @@ const expect = (description: string, actual: string, expected: string) => {
   const toronto = new UnknownCity(
     'Toronto',
     null as unknown as Tile,
-    unknownPlayer(new Mongol()),
+    gamePlayer(new Mongol()),
     3,
-    unknownPlayer(new Mongol())
+    gamePlayer(new Mongol())
   );
 
   expect(
@@ -322,9 +326,9 @@ const expect = (description: string, actual: string, expected: string) => {
     )
   );
 
-  const aztec = unknownPlayer(new Aztec()),
-    sioux = unknownPlayer(new WorldCivilizations.Sioux()),
-    barbarians = unknownPlayer(new Barbarian());
+  const aztec = gamePlayer(new Aztec()),
+    sioux = gamePlayer(new WorldCivilizations.Sioux()),
+    barbarians = gamePlayer(new Barbarian());
 
   const colossus = { _: 'Colossus' },
     notifications: [string, any, string][] = [
