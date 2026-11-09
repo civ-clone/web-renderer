@@ -139,11 +139,14 @@ export class PopupMenu extends Element {
 
       this.#done = true;
 
-      run();
-
-      // Chosen with the keys, the focus is on the item, which is about to go: back to what opened the menu, unless
-      //  what ran took it (a window does). A press leaves the focus where it always did.
-      this.#close(byKeyboard && this.#hasFocus());
+      try {
+        run();
+      } finally {
+        // Closed whatever became of it: an item that threw would otherwise leave a menu nothing in it can run.
+        //  Chosen with the keys, the focus is on the item, which is about to go: back to what opened the menu, unless
+        //  what ran took it (a window does). A press leaves the focus where it always did.
+        this.#close(byKeyboard && this.#hasFocus());
+      }
     };
 
     return h(button, {
@@ -204,9 +207,14 @@ export class PopupMenu extends Element {
 
         break;
 
-      // The focused item's own: the browser clicks it. Only kept from the game, where they are orders.
+      // The focused item's own: the browser clicks it. Only kept from the game, where they are orders. Not a key
+      //  still held from opening the menu, though: its repeat would choose the first item, which then has the focus.
       case 'Enter':
       case ' ':
+        if (event.repeat) {
+          event.preventDefault();
+        }
+
         event.stopPropagation();
 
         return;

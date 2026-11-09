@@ -1115,6 +1115,65 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       [['two'], 0, true]
     );
 
+    // The other way round, as a browser whose tap is a click with no pointer behind it has it: once, still.
+    runs.length = 0;
+    menuOf(true);
+
+    const one = items()[0];
+
+    pointer('pointerup', one);
+    keyboardClick(one);
+    expect('a press whose click follows it runs the item once', runs, ['one']);
+
+    // The Enter that opened the menu, still held: its repeats land on the first item, and must not choose it.
+    menuOf(true);
+
+    const repeat = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      }),
+      fresh = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        bubbles: true,
+        cancelable: true,
+      });
+
+    Object.assign(repeat, { repeat: true });
+    items()[0].dispatchEvent(repeat);
+    items()[0].dispatchEvent(fresh);
+    expect(
+      'a held key’s repeat is not the item’s to click; a fresh press is',
+      [repeat.defaultPrevented, fresh.defaultPrevented, reachedThePage],
+      [true, false, []]
+    );
+    key('Escape', items()[0]);
+
+    // An item that throws: the menu still closes, rather than staying up with nothing in it that can run.
+    const broken = new PopupMenu(
+      {},
+      0,
+      0,
+      [
+        {
+          label: 'Broken',
+          action: () => {
+            throw new Error('broken');
+          },
+        },
+      ],
+      { byKeyboard: true }
+    );
+
+    // linkedom throws a listener's error from `dispatchEvent`, where a browser reports it and carries on.
+    try {
+      keyboardClick(broken.element().querySelector('button') as HTMLElement);
+    } catch {
+      // The item's own error, which isn't the menu's to hide.
+    }
+
+    expect('an item that throws still closes its menu', shown(), 0);
+
     // A press on an item, as before: run, closed, and the focus left where it was.
     runs.length = 0;
     menuOf(false);

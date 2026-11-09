@@ -341,7 +341,7 @@ export class AssetStore extends Store<{
     try {
       const record: Asset | undefined = await super.get(SOUND_DRIVER);
 
-      return record?.blob ? record.blob.arrayBuffer() : null;
+      return record?.blob ? await record.blob.arrayBuffer() : null;
     } catch {
       // A store that can't be read has no sound driver to give (#850).
       return null;
