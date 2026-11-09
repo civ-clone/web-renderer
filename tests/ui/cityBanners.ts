@@ -1,7 +1,7 @@
 // The cities on the map under the new interface (#747), drawn on a recording canvas: the theme's `--ui-city-banner`
 //  choosing the classic label or the banner; your own city's banner with its size, name, the turns to finish what it's
 //  building (a dash for nothing) and a food bar, red when it's starving; the disorder and celebration flags; a rival's
-//  with its size and name only; the size alone at scale 1; the widest within what an update clears; and a click on a
+//  with its size and name only; the size and name alone at scale 1; the widest within what an update clears; and a click on a
 //  banner finding its city, the one on top where two overlap, which a click on the city's own square doesn't.
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
@@ -326,10 +326,16 @@ expect(
   ['unhappy']
 );
 
-// Too small for words.
+// Zoomed out, the size and the name are kept, and nothing else (#822).
 const small = draw({ '2,2': ownCity(), '6,6': rivalCity }, { scale: 1 });
 
-expect('at scale 1, each city is its size alone', small.texts, ['3', '7']);
+expect('at scale 1, each city is its size and name alone', small.texts, [
+  '3',
+  'Babylon',
+  '7',
+  'Ur',
+]);
+expect('with no production, flags or food bar', small.images, []);
 
 // Clicking.
 const both = draw({ '2,2': ownCity(), '6,6': rivalCity }),

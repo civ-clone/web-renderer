@@ -248,7 +248,9 @@
     border-left: 0;
     border-top: 1px solid var(--ui-line-soft);
     max-height: 33vh;
-    padding: 0.5rem 0 0;
+    // In line with the list's headings above it (the list's 2px and their 0.5rem), not against the window's edge
+    //  (#827).
+    padding: 0.5rem calc(0.5rem + 2px) 0;
 
     // Nothing to say yet: no gap under the list.
     &:empty {

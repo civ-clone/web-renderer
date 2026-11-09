@@ -117,13 +117,17 @@ Object.assign(globalThis, {
 
 const ref = (id: string) => ({ '#ref': id });
 
-const makeMap = (turn: number, unitOnTile: number | null = null): ObjectMap => {
+const makeMap = (
+  turn: number,
+  unitOnTile: number | null = null,
+  cityOnTile: number | null = null
+): ObjectMap => {
   const objects: ObjectMap['objects'] = {
     'Player-1': {
       _: 'Player',
       id: 'Player-1',
       actions: [],
-      cities: [],
+      cities: cityOnTile === null ? [] : [ref('City-1')],
       civilization: ref('Civilization-1'),
       government: ref('Government-1'),
       research: ref('Research-1'),
@@ -180,6 +184,21 @@ const makeMap = (turn: number, unitOnTile: number | null = null): ObjectMap => {
       yields: [],
     };
   });
+
+  if (cityOnTile !== null) {
+    objects['City-1'] = {
+      _: 'City',
+      id: 'City-1',
+      name: 'Thebes',
+      build: { building: null, cost: { value: 0 }, progress: { value: 0 } },
+      growth: { size: 1, cost: { value: 20 }, progress: { value: 0 } },
+      improvements: [],
+      specialists: [],
+      yields: [],
+      player: ref('Player-1'),
+      tile: ref(`Tile-${cityOnTile}`),
+    };
+  }
 
   if (unitOnTile !== null) {
     objects['Unit-1'] = {
@@ -485,7 +504,10 @@ const run = async (): Promise<void> => {
   // A new game opens on the player's start, once (#705), and a loaded one where it is.
   const mapViewCentre = MapView.prototype.centre,
     centred: string[] = [],
-    startWith = (pendingSave: string | null): void => {
+    startWith = (
+      pendingSave: string | null,
+      cityOnTile: number | null = null
+    ): void => {
       receivers.splice(0);
       centred.length = 0;
 
@@ -501,7 +523,7 @@ const run = async (): Promise<void> => {
         cheatsEnabled: false,
         setGameStarted: (): void => {},
         transportDisposers: [],
-      }).start(makeMap(1, 1));
+      }).start(makeMap(1, 1, cityOnTile));
     };
 
   MapView.prototype.centre = function (this: MapView, tile: Tile): void {
@@ -521,10 +543,23 @@ const run = async (): Promise<void> => {
 
   expect('and no later turn does', centred, ['1,0']);
 
+  // A loaded one on the player's first city, or with none their first unit, rather than the map's corner (#826).
+  startWith('a save', 0);
+  deliver('turnStarted');
+
+  expect("a loaded game opens on the player's first city", centred, ['0,0']);
+
+  deliver('turnEnded');
+  deliver('turnStarted');
+
+  expect('and only on its first turn', centred, ['0,0']);
+
   startWith('a save');
   deliver('turnStarted');
 
-  expect('a loaded game stays where it is', centred, []);
+  expect('a loaded game with no city opens on the first unit', centred, [
+    '1,0',
+  ]);
 
   MapView.prototype.centre = mapViewCentre;
   document.querySelectorAll('.welcome').forEach((welcome) => welcome.remove());

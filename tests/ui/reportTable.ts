@@ -10,6 +10,7 @@ import { City, Player } from '@civ-clone/ui-protocol/types';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import CityStatusTable from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
+import LocaleProvider from '@civ-clone/ui-client/LocaleProvider';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import TradeTable from '@civ-clone/ui-interface-modern/components/TradeTable';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -566,6 +567,8 @@ const run = async (): Promise<void> => {
           upkeep: ['CityWalls', 'Temple'],
         }),
         city('City-2', 'Samarkand', { gold: 1, upkeep: ['CityWalls'] }),
+        // No upkeep: 0, not -0 (#816).
+        city('City-3', 'Bukhara', { gold: 2 }),
       ],
       government: { _: 'Despotism' },
     } as unknown as Player,
@@ -586,7 +589,8 @@ const run = async (): Promise<void> => {
     [
       ['Karakorum', '6', '2', '4'],
       ['Samarkand', '1', '1', '0'],
-      ['Total', '7', '3', '4'],
+      ['Bukhara', '2', '0', '2'],
+      ['Total', '9', '3', '6'],
     ]
   );
   expect(
@@ -630,12 +634,44 @@ const run = async (): Promise<void> => {
       ).map((row) => row.classList.contains('filtered-out')),
     ],
     [
-      [true, false],
+      [true, false, true],
       [false, false],
     ]
   );
 
   trade.close();
+
+  // The formatter itself (#816): no -0, whether it's -0 or a small negative rounded to 0, while a real negative, a
+  //  fraction and the numbers with no digits are as they were.
+  const formatter = new LocaleProvider('en', ['en']);
+
+  expect(
+    'numbers: -0 and a negative rounded to 0 read 0, the rest as before',
+    [
+      formatter.number(-0),
+      formatter.number(-0.4),
+      formatter.number(-3),
+      formatter.number(-0.04, { maximumFractionDigits: 1 }),
+      formatter.number(-0.25, { maximumFractionDigits: 1 }),
+      formatter.number(1234),
+      formatter.number(-Infinity),
+      formatter.number(NaN),
+    ],
+    ['0', '0', '-3', '0', '-0.3', '1,234', '-∞', 'NaN']
+  );
+  expect(
+    'and in en-GB, and in a script with its own digits',
+    [
+      new LocaleProvider('en-GB', ['en-GB']).number(-0.4),
+      new LocaleProvider('ar-EG', ['ar-EG']).number(-0.4),
+      new LocaleProvider('ar-EG', ['ar-EG']).number(0),
+    ],
+    [
+      '0',
+      new Intl.NumberFormat('ar-EG').format(0),
+      new Intl.NumberFormat('ar-EG').format(0),
+    ]
+  );
 
   // Military: what the engine sent, a row opening its unit's Civilopedia entry.
   const pending = {

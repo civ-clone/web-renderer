@@ -166,8 +166,8 @@ export class CityBanners extends CityNames {
     return this.#style().form === 'full';
   }
 
-  // Too small for words: the size alone.
-  #badgeOnly(): boolean {
+  // Too small for more than the size and the name (#822): no production, flags or food bar.
+  #compact(): boolean {
     return this.scale() < 2;
   }
 
@@ -220,11 +220,11 @@ export class CityBanners extends CityNames {
     this.context().font = this.#font();
 
     const badgeWidth = Math.max(height, this.#measure(size) + padding * 2),
-      badgeOnly = this.#badgeOnly(),
-      name = badgeOnly ? null : cityName(city),
-      nameWidth = name === null ? 0 : this.#measure(name),
+      compact = this.#compact(),
+      name = cityName(city),
+      nameWidth = this.#measure(name),
       // What a city seen in full is building, and in how many turns; a dash for nothing, or for never.
-      building = !badgeOnly && city.build ? city.build : null,
+      building = !compact && city.build ? city.build : null,
       turns = building?.building ? buildTurns(city) : 0,
       productionText = turns > 0 ? localeProvider.number(turns) : '–',
       iconSize = fontSize,
@@ -232,7 +232,7 @@ export class CityBanners extends CityNames {
         building === null
           ? 0
           : iconSize + scale + this.#measure(productionText),
-      flagPaths = badgeOnly
+      flagPaths = compact
         ? []
         : [
             ...(city.civilDisorderDeclared ? [disorderIconPath] : []),
@@ -241,7 +241,9 @@ export class CityBanners extends CityNames {
       flagWidth = flagPaths.length * (iconSize + scale),
       contentWidth =
         badgeWidth +
-        (name === null ? 0 : padding + nameWidth + padding) +
+        padding +
+        nameWidth +
+        padding +
         (productionWidth > 0 ? productionWidth + padding : 0) +
         flagWidth,
       left = Math.round(offsetX + width * labelX - contentWidth / 2),
@@ -252,9 +254,9 @@ export class CityBanners extends CityNames {
 
     let cursor = left + badgeWidth + padding;
 
-    const nameLayout = name === null ? null : { text: name, x: cursor };
+    const nameLayout = { text: name, x: cursor };
 
-    cursor += name === null ? 0 : nameWidth + padding;
+    cursor += nameWidth + padding;
 
     const production =
       building === null
@@ -277,7 +279,7 @@ export class CityBanners extends CityNames {
         },
       })),
       perTurn = city.yields ? reduceKnownYield(city.yields, 'Food') : 0,
-      growth = !badgeOnly && city.growth.cost ? city.growth : null,
+      growth = !compact && city.growth.cost ? city.growth : null,
       foodTrack = {
         x: left,
         y: top + height,
