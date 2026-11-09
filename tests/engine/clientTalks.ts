@@ -1,7 +1,7 @@
 // Talks with another player (#449), checked with a stub transport, the real `PlayerPatches` and an empty rule registry,
 //  in which every negotiation is over at its first step: gold given or taken in the talks is sent once they are over,
 //  as nothing else would send it (#492), whether the talks end or fail. Then, counted in microtasks (#503), when the
-//  talks a Meet with King starts and those the hand-over starts settle for an action that waits for them.
+//  talks a Meet with Leader starts and those the hand-over starts settle for an action that waits for them.
 
 import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
@@ -144,12 +144,12 @@ playerResearchRegistryInstance.register(new PlayerResearch(ours));
 
   sent.splice(0);
 
-  // Talks a Meet with King started that fail don't fail the talks after them, or the actions that wait for them (#470).
+  // Talks a Meet with Leader started that fail don't fail the talks after them, or the actions that wait for them (#470).
   const logged = console.error;
   let pendingFailed = false;
 
   console.error = () => {};
-  talks.meetWithKing(rival);
+  talks.meetWithLeader(rival);
   await talks.pending.catch(() => {
     pendingFailed = true;
   });
@@ -157,7 +157,7 @@ playerResearchRegistryInstance.register(new PlayerResearch(ours));
 
   interactions.register = () => {};
   step.onChoose = () => treasury.add(5);
-  talks.meetWithKing(rival);
+  talks.meetWithLeader(rival);
   await talks.pending;
 
   expect(
@@ -284,8 +284,8 @@ playerResearchRegistryInstance.register(new PlayerResearch(ours));
     };
 
   expect(
-    "a Meet with King's talks are over, with nothing, for what waits for them on the 5th microtask",
-    await counted((chained) => chained.meetWithKing(rival)),
+    "a Meet with Leader's talks are over, with nothing, for what waits for them on the 5th microtask",
+    await counted((chained) => chained.meetWithLeader(rival)),
     ['handleNegotiation@1', 'pending settled(undefined)@5']
   );
   expect(

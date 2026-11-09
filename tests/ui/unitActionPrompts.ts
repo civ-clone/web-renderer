@@ -105,7 +105,7 @@ const latest = () => {
     action('InvestigateCity'),
     action('IndustrialSabotage'),
     action('InciteRevolt', { cost: 900 }),
-    action('MeetWithKing'),
+    action('MeetWithLeader'),
   ];
 
   chooseUnitAction(roman(1000), atWar, perform);
@@ -121,7 +121,7 @@ const latest = () => {
     'Steal Technology',
     'Industrial Sabotage',
     'Incite a Revolt',
-    'Meet with King',
+    'Meet with Leader',
   ]);
 
   choose('steal-technology');
@@ -131,7 +131,7 @@ const latest = () => {
   [
     ['establish-embassy', 'EstablishEmbassy'],
     ['investigate-city', 'InvestigateCity'],
-    ['meet-with-king', 'MeetWithKing'],
+    ['meet-with-leader', 'MeetWithLeader'],
   ].forEach(([option, name]) => {
     chooseUnitAction(roman(1000), atWar, perform);
     choose(option);

@@ -2,12 +2,12 @@
   "turns": 21,
   "sequence": {
     "count": 263,
-    "hash": "f5487f899e131b719f9c2e1a360defc00a81fa64be16db06fc620fecef996a9a"
+    "hash": "9d6303285867d809cdc8152152e85e43fe23a61dc0915d158c5c615094d8b2fa"
   },
   "channels": {
     "actionHandled": {
       "count": 80,
-      "hash": "ed19f197ae8a59c36f52c76f9857c7fc498eadc6d9c8b4ca71adc0e08e9a61e5"
+      "hash": "5332be237ebe714543f0139203b57bae0250897c499b8b33e4ecd2b1a72dd52f"
     },
     "chooseFromList": {
       "count": 10,
@@ -31,7 +31,7 @@
     },
     "gameDataPatch": {
       "count": 120,
-      "hash": "aa230282e23b148828d192e95ad85fb8b307719941feae68d22ca0065297cd26"
+      "hash": "45b16171867a1d551f1b125e0643318d387ce8c185fe2d1050c399e7d71b2d4b"
     },
     "gameNotification": {
       "count": 1,
@@ -118,7 +118,7 @@
     "chooseFromList e201dd01cf5f {\"hierarchy\":{\"#ref\":\"ChoiceMeta-b\"},\"objects\":{\"ChoiceMeta-b\":{\"_\":\"ChoiceMe...",
     "chooseFromList 8facaca0ee8d {\"hierarchy\":{\"#ref\":\"ChoiceMeta-d\"},\"objects\":{\"ChoiceMeta-d\":{\"_\":\"ChoiceMe...",
     "chooseFromList 17c5b796ba5f {\"hierarchy\":{\"#ref\":\"ChoiceMeta-f\"},\"objects\":{\"ChoiceMeta-f\":{\"_\":\"ChoiceMe...",
-    "gameDataPatch 7cda22459d5d update Warrior-1, update PlayerTile-9b, update PlayerTile-87, update Diplomat-1, update PlayerTile-73",
+    "gameDataPatch 325ed7afca0e update Warrior-1, update PlayerTile-9b, update PlayerTile-87, update Diplomat-1, update PlayerTile-73",
     "actionHandled 343f3beb915a {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-1\",\"unitAction\":\"GoTo\",\"target\":\"PlayerTi...",
     "unitHalted 7e21a5bce06f {\"target\":\"PlayerTile-73\",\"unit\":\"Diplomat-1\"}",
     "embassyEstablished ae4d849ad5c1 \"German\"",
@@ -134,7 +134,7 @@
     "chooseFromList 8c95152a491c {\"hierarchy\":{\"#ref\":\"ChoiceMeta-l\"},\"objects\":{\"ChoiceMeta-l\":{\"_\":\"ChoiceMe...",
     "chooseFromList 0974e68731b3 {\"hierarchy\":{\"#ref\":\"ChoiceMeta-n\"},\"objects\":{\"ChoiceMeta-n\":{\"_\":\"ChoiceMe...",
     "gameDataPatch 428e1afeacdd update Diplomat-2, update PlayerTile-88, update PlayerTile-73, update Diplomat-3, update Player-1[actions], update Player-1[mandatoryActions]",
-    "actionHandled 1a2d7eead064 {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"MeetWithKing\",\"target\":\"...",
+    "actionHandled d6ceaaa1bbd7 {\"name\":\"ActiveUnit\",\"id\":\"Diplomat-3\",\"unitAction\":\"MeetWithLeader\",\"target\"...",
     "gameDataPatch 8b3d3810acdd update Diplomat-3, update PlayerTile-g3, update PlayerTile-h5, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled fbf41f91146e {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",
     "gameDataPatch 4f53cda18c2b ",

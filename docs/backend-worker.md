@@ -61,7 +61,7 @@ The modules, all under `packages/worker-client/Client/`:
 - `cityNews.ts`: what happened to each city during one engine call (captured, destroyed, famine), told once the call is over.
 - `notifications/*`: pure handler tables (`city`, `unit`, `diplomat`, `player`) that turn an engine event into a notice; `registerNotifications.ts` registers them after the patch listeners, and `NotificationContext.ts` is what the handlers read.
 - `events/patchEvents.ts`: the engine events that queue patches for what they changed; every `unit:moved` flushes, which is how the AI's moves reach the UI.
-- `Talks.ts`: talks with other players (those met on the way, a Diplomat's Meet with King, each negotiation step), one promise chain the action that started them waits for.
+- `Talks.ts`: talks with other players (those met on the way, a Diplomat's Meet with Leader, each negotiation step), one promise chain the action that started them waits for.
 - `ChoicePrompt.ts`: sends a choice to the UI and listens once for the answer; one prompt pending per client (#491).
 - `diplomatEvents.ts`: the intelligence report for an embassy established, and the city a Diplomat investigated.
 - `handleAction.ts`: acts on each `action`: Reassign Workers and End Turn, then the named player action through the `actionHandlers` table. The handlers are in `actions/unit.ts`, `actions/city.ts` and `actions/player.ts`, and `actions/ActionContext.ts` is what they read.
@@ -116,7 +116,7 @@ Sends data to frontend:
 
 Diplomacy (`Client/Talks.ts`) uses iterative `chooseFromList` prompts while negotiation is active.
 AI clients are timeout-protected (500 ms) for negotiation responses.
-A move next to another player's unit can start talks (`canNegotiate`), and so can a Diplomat's Meet with King (`player:meet-with-king`).
+A move next to another player's unit can start talks (`canNegotiate`), and so can a Diplomat's Meet with Leader (`player:meet-with-leader`).
 
 ## Data conversion strategy
 

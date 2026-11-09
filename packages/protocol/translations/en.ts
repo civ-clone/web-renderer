@@ -32,7 +32,7 @@ i18next.addResources('en', 'default', {
   'Diplomat.steal-technology': 'Steal Technology',
   'Diplomat.industrial-sabotage': 'Industrial Sabotage',
   'Diplomat.incite-revolt': 'Incite a Revolt',
-  'Diplomat.meet-with-king': 'Meet with King',
+  'Diplomat.meet-with-leader': 'Meet with Leader',
   'TradeRoute.goods.Silk': 'Silk',
   'TradeRoute.goods.Silver': 'Silver',
   'TradeRoute.goods.Wine': 'Wine',

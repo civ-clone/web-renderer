@@ -356,7 +356,7 @@ const diplomacy = async (): Promise<void> => {
   const [beside, besideToo] = site.getNeighbours().filter(free);
 
   await actOn(created('Diplomat', beside), 'InvestigateCity', site);
-  await actOn(created('Diplomat', besideToo), 'MeetWithKing', site);
+  await actOn(created('Diplomat', besideToo), 'MeetWithLeader', site);
 };
 
 // What the UI does besides what it must, by which of the human's turns it is.
@@ -676,8 +676,8 @@ const finish = (): void => {
     'embassyEstablished',
     'ActiveUnit InvestigateCity',
     'investigateCity',
-    'ActiveUnit MeetWithKing',
-    'negotiation in ActiveUnit MeetWithKing',
+    'ActiveUnit MeetWithLeader',
+    'negotiation in ActiveUnit MeetWithLeader',
   ].filter((what) => !done.has(what));
 
   if (expected.length > 0) {

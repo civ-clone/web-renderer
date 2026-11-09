@@ -440,9 +440,9 @@ const answeredWithAPatch = (from: number, handled: string): boolean => {
 
 const onTurnStarted = (turn: number): void => {
   if (turn === 1) {
-    // Talks at the start of the turn, as a Meet with King or a GoTo's meeting starts them.
+    // Talks at the start of the turn, as a Meet with Leader or a GoTo's meeting starts them.
     answerWindows = false;
-    engine.emit('player:meet-with-king', humanPlayer!, others()[0]);
+    engine.emit('player:meet-with-leader', humanPlayer!, others()[0]);
 
     setTimeout(() =>
       displacedTalks().catch((error) => fail('turn 1 failed', error))
@@ -454,7 +454,7 @@ const onTurnStarted = (turn: number): void => {
   if (turn === 2) {
     answerWindows = false;
     nothingLeftToDo();
-    engine.emit('player:meet-with-king', humanPlayer!, others()[0]);
+    engine.emit('player:meet-with-leader', humanPlayer!, others()[0]);
 
     // As the page's auto end of turn sends it on `turnStarted`.
     setTimeout(() =>
