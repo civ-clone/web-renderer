@@ -24,7 +24,7 @@ const statusRow = ({
 }: MilitaryStatusRow): string =>
   `<tr><th scope="row">${unitName(unit)}</th><td class="stats">${t(
     'MilitaryReport.stats',
-    stats
+    { ...stats }
   )}</td><td class="active">${
     active > 0 ? t('MilitaryReport.active', { count: active }) : ''
   }</td><td class="in-production">${

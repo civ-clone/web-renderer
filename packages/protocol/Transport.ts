@@ -14,6 +14,7 @@ import {
 import { RequirementData } from './requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
 import type { BattleSound } from './battles';
+import type { QueueEdit } from './cityBuild';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import {
   TransportData,
@@ -238,6 +239,7 @@ declare global {
       id: string;
       chosen?: string;
       auto?: boolean;
+      queue?: QueueEdit;
     };
     ChooseGovernment: {
       id: string;
@@ -258,6 +260,7 @@ declare global {
       id: string;
       chosen?: string;
       auto?: boolean;
+      queue?: QueueEdit;
     };
     CompleteProduction: {
       id: string;
@@ -273,8 +276,17 @@ declare global {
     ReassignWorkers: {
       city: string;
     };
+    RenameCity: {
+      id: string;
+      cityName: string;
+    };
     Revolution: {
       id: string;
+    };
+    SellImprovement: {
+      id: string;
+      improvement: string;
+      treasury: string;
     };
   }
 

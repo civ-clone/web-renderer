@@ -277,7 +277,7 @@ export interface World extends EntityInstance<'World'> {
   width: number;
 }
 
-export interface Yield<Types = 'Yield'> extends EntityInstance<Types> {
+export interface Yield<Types = string> extends EntityInstance<Types> {
   value: number;
   values: [number, string][];
 }

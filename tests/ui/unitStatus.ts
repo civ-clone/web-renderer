@@ -26,7 +26,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 };
 
 // No translations: a busy state's letter is the capitals of its name.
-i18next.init({ lng: 'en', resources: {}, initImmediate: false } as any);
+i18next.init({ lng: 'en', resources: {}, initAsync: false });
 
 preloadImage('map/city', 16, 16);
 

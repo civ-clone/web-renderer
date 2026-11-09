@@ -186,7 +186,9 @@ const report = (): void => {
 
       const land = fighter
         .actions(water)
-        .find((action) => action instanceof LandAircraft);
+        // `: boolean`, so `land` stays an Action: as a LandAircraft it isn't one to the compiler, which compares their
+        //  `_keys` (#21).
+        .find((action): boolean => action instanceof LandAircraft);
 
       if (!land) {
         return `no LandAircraft, only ${fighter

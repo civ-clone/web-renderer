@@ -56,6 +56,11 @@ export const importsOf = (path: string): string[] => [
           ? join(packagesRoot, spec.slice(scope.length))
           : join(dirname(path), spec);
 
+        // A JSON file is itself, even before it's generated: `build.json.d.ts` only types it (#339).
+        if (base.endsWith('.json')) {
+          return base;
+        }
+
         return (
           [base, `${base}.ts`, `${base}.d.ts`, join(base, 'index.ts')].find(
             isFile

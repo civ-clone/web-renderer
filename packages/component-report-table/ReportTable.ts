@@ -115,7 +115,7 @@ export class ReportTable<Row> {
   #rows: RowEntry<Row>[] = [];
   #sort: ReportSort | null;
   #table: HTMLTableElement = document.createElement('table');
-  #totals: ReportTableOptions<Row>['totals'] | null;
+  #totals: NonNullable<ReportTableOptions<Row>['totals']> | null;
 
   constructor({
     columns,

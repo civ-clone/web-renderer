@@ -6,6 +6,7 @@ import currentTileset, {
 import renderUnit, {
   drawUnitStatus,
 } from '@civ-clone/ui-assets/lib/renderUnit';
+import imageSize from '@civ-clone/ui-assets/lib/imageSize';
 
 // A unit as a window shows it: on a tile of the tileset's, `scale` times its size (the interface's 2 unless asked).
 const tileCanvas = (scale: number): HTMLCanvasElement => {
@@ -33,9 +34,10 @@ export class Unit extends Element {
 
   build(unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>) {
     const unitCanvas = renderUnit(unit),
+      [width, height] = imageSize(unitCanvas),
       context = this.element().getContext('2d')!,
-      sizeX = this.size(unitCanvas.width as number),
-      sizeY = this.size(unitCanvas.height as number),
+      sizeX = this.size(width),
+      sizeY = this.size(height),
       offsetX = Math.floor((this.size(this.#tileSize) - sizeX) / 2),
       offsetY = Math.floor((this.size(this.#tileSize) - sizeY) / 2);
 

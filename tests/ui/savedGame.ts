@@ -101,7 +101,7 @@ const save = (characters: number): string => {
   return JSON.stringify({ format: 2, entities });
 };
 
-const gzipped = async (data: string): Promise<Uint8Array> =>
+const gzipped = async (data: string): Promise<Uint8Array<ArrayBuffer>> =>
   new Uint8Array(
     await new Response(
       new Blob([data]).stream().pipeThrough(new CompressionStream('gzip'))

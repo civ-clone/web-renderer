@@ -38,7 +38,7 @@ process.on('exit', (code: number): void => {
 });
 
 // A city's name is looked up in the translations, which fall back to the name itself.
-i18next.init({ lng: 'en', initImmediate: false, resources: {} });
+i18next.init({ lng: 'en', initAsync: false, resources: {} });
 
 const style = (form: string): BannerStyle => ({
   form,

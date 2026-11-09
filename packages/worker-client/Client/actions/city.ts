@@ -20,6 +20,7 @@ import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTil
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import autoBuild from '@civ-clone/civ1-city/lib/autoBuild';
 import { ActionContext, ActionHandler } from './ActionContext';
+import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
 
 // Not one of the player's actions, so looked for by name alone, before them.
 // TODO: a proper action for this probably...
@@ -74,17 +75,9 @@ export const handleRenameCity = async (
   return false;
 };
 
-// An edit to what the city builds after its current item (#774): `add` the item `chosen` (at `index`, or the end),
-//  `remove` the one at `index`, `move` the one at `index` to `to`, or `clear` them all. An item added while the city
-//  builds nothing is started instead, taking it off Auto as choosing does. One the city can't build, a position that
-//  isn't a whole number, or a `queued` that isn't the queue as it is now (a second click sent before the first's
-//  update, even on one of two of the same item) changes nothing.
-export type QueueEdit =
-  | { op: 'add'; chosen: string; index?: number }
-  | { op: 'remove'; index: number; queued: string[] }
-  | { op: 'move'; index: number; to: number; queued: string[] }
-  | { op: 'clear' };
-
+// Applies an edit to what the city builds after its current item (#774). An item added while the city builds nothing
+//  is started instead, taking it off Auto as choosing does. One the city can't build, a position that isn't a whole
+//  number, or a `queued` that isn't the queue as it is now (even on one of two of the same item) changes nothing.
 export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
   const isIndex = (value: unknown): value is number =>
       Number.isInteger(value) && (value as number) >= 0,

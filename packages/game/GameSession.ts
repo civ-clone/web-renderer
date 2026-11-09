@@ -1,5 +1,5 @@
 import { City as CityData, DataPatch } from '@civ-clone/ui-protocol/types';
-import { on, s } from '@dom111/element';
+import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-windows/components/openCity';
@@ -408,7 +408,7 @@ export class GameSession {
       // `pagehide`, not `beforeunload`: the leave guard can still cancel an unload after `beforeunload`, and a
       //  page restored from the back/forward cache comes back as it was. Tearing down in either case left a
       //  game with nothing listening to the worker.
-      on(window, 'pagehide', (event: PageTransitionEvent) => {
+      window.addEventListener('pagehide', (event) => {
         if (event.persisted) {
           return;
         }

@@ -1,4 +1,4 @@
-import { EntityInstance, Tile } from '@civ-clone/ui-protocol/types';
+import { Attribute, Tile } from '@civ-clone/ui-protocol/types';
 import { Projection } from '@civ-clone/ui-map/lib/projection';
 import SquareProjection from './SquareProjection';
 import { Map } from '@civ-clone/ui-map/components/Map';
@@ -120,7 +120,7 @@ export class Overview extends Map {
     // Cities take the owner's colour, so whose territory is where can be read
     // without opening anything.
     const [colours] = tile.city.player.civilization.attributes.filter(
-      (attribute: EntityInstance) => attribute.name === 'colors'
+      (attribute: Attribute) => attribute.name === 'colors'
     ) as { value: string[] }[];
 
     if (!colours) {

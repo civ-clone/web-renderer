@@ -41,6 +41,7 @@ export class Notices {
   actions(data: GameData): PlayerAction<Notice>[] {
     return Array.from(this.#notices, ([id, notification]) => ({
       _: 'Notice',
+      __: ['Notice'],
       id,
       value: {
         // The city as it is now, not the snapshot the notification carried, so opening it shows current data.

@@ -67,7 +67,7 @@ console.error = (error: unknown) => logged.push(error);
     }
   );
 
-i18next.init({ lng: 'en', resources: {}, initImmediate: false } as any);
+i18next.init({ lng: 'en', resources: {}, initAsync: false });
 
 const ref = (id: string) => ({ '#ref': id }),
   unit = (id: string, moves = 1): PlainObject => ({

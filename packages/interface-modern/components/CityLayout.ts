@@ -63,7 +63,8 @@ const upkeepOf = (city: CityData, improvementId: string): number =>
         cityYield: Yield | CityImprovementMaintenanceGold
       ): cityYield is CityImprovementMaintenanceGold =>
         cityYield._ === 'CityImprovementMaintenanceGold' &&
-        cityYield.cityImprovement.id === improvementId
+        (cityYield as CityImprovementMaintenanceGold).cityImprovement.id ===
+          improvementId
     )
     .reduce((total, cityYield) => total + Math.abs(cityYield.value), 0);
 
