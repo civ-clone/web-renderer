@@ -1,0 +1,1 @@
+{"version":"0.1.0@46eba3ce","date":"2026-11-10T08:25:39.000Z","localChanges":["Games and autosaves saved before Diplomats met a leader rather than a king load again, instead of failing with \"Save needs plugins that are not loaded\" (fixes #915)."],"externalChanges":{}}

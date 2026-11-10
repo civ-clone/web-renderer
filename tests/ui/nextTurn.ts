@@ -15,6 +15,7 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import nextTurnQueue from '@civ-clone/ui-client/lib/nextTurnQueue';
@@ -72,6 +73,8 @@ const transport = {
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
+  // As the page has them: a city is named by the `cityName` formatter (#855).
+  addFormatters(i18next);
   await import('./lib/strings');
   await import('../../translations/civ1-civilization/en');
 
@@ -435,6 +438,20 @@ const run = async (): Promise<void> => {
     [shown()[0], shown()[3], next.hasMeeting()],
     ['Waiting for the Germans…', true, false]
   );
+
+  // As text: a renamed city's apostrophe is itself, not "&#39;" (#855).
+  next.build(
+    nextTurnQueue(
+      [action('CityBuild', 'b3', { id: 'b3', city: city("O'Brien") }), end],
+      [end],
+      false
+    ),
+    false,
+    player,
+    4
+  );
+
+  expect('a city named as text', shown()[0], "Choose production in O'Brien");
 
   area.remove();
 

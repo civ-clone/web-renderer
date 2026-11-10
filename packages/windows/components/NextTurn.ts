@@ -236,6 +236,7 @@ export class NextTurn extends Element {
     return this.#actions.get(id)!;
   }
 
+  // As text: the button's label is its `textContent`, and its tooltip's title is too (#855).
   #label(item: NextTurnItem | undefined): string {
     if (this.#waiting && this.#waitingFor !== null) {
       return String(
@@ -260,13 +261,17 @@ export class NextTurn extends Element {
       case 'CityBuild':
         return t('NextTurn.CityBuild', {
           city: (action.value as unknown as { city: City }).city,
+          interpolation: { escapeValue: false },
         });
 
       case 'CivilDisorder':
-        return t('Actions.CivilDisorder.title', { city: action.value });
+        return t('Actions.CivilDisorder.title', {
+          city: action.value,
+          interpolation: { escapeValue: false },
+        });
 
       case 'Notice':
-        return (this.#action(item) as Notice).text('title');
+        return (this.#action(item) as Notice).text('title', true);
 
       default:
         return t(`Actions.${action._}.title`);

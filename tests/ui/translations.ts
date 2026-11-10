@@ -934,6 +934,47 @@ const expect = (description: string, actual: string, expected: string) => {
     'Ulan Bator'
   );
 
+  // #855: a name with a quote, a backslash or an apostrophe, renamed by its player so on no list, is written as it is,
+  //  never into a nested translation's options, which are JSON: escaped once as HTML, and as itself as text.
+  [
+    ['The "Hub"', 'The &quot;Hub&quot;'],
+    ['A\\B', 'A\\B'],
+    ["O'Brien", 'O&#39;Brien'],
+  ].forEach(([name, html]) => {
+    const city = { name, originalPlayer: { civilization: { _: 'Mongol' } } },
+      text = { interpolation: { escapeValue: false } };
+
+    ['en', 'en-GB'].forEach((lng) => {
+      expect(
+        `NextTurn.CityBuild (${name}, ${lng})`,
+        t('NextTurn.CityBuild', { city, lng }),
+        `Choose production in ${html}`
+      );
+      expect(
+        `NextTurn.CityBuild as text (${name}, ${lng})`,
+        t('NextTurn.CityBuild', { city, lng, ...text }),
+        `Choose production in ${name}`
+      );
+      expect(
+        `Actions.CivilDisorder.title as text (${name}, ${lng})`,
+        t('Actions.CivilDisorder.title', { city, lng, ...text }),
+        `Civil disorder in ${name}!`
+      );
+      expect(
+        `Actions.ShowCity.label (${name}, ${lng})`,
+        t('Actions.ShowCity.label', { city, lng }),
+        `View ${html}`
+      );
+    });
+  });
+
+  // A city on its founder's list still takes its name from there, given whole.
+  expect(
+    'NextTurn.CityBuild (on the list)',
+    t('NextTurn.CityBuild', { city: xian }),
+    "Choose production in Xi'an"
+  );
+
   if (failures.length) {
     console.error(`FAIL translations\n  ${failures.join('\n  ')}`);
 
