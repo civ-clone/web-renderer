@@ -3,12 +3,12 @@ import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import GameSession from './GameSession';
 import GameOverWindow from '@civ-clone/ui-reports/components/GameOverWindow';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
-import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import titleScreen from '@civ-clone/ui-menus/components/titleScreen';
 import {
   downloadFile,
   saveFile,
   takePendingSave,
-} from '@civ-clone/ui-windows/lib/savedGame';
+} from '@civ-clone/ui-menus/lib/savedGame';
 import { keepSave } from '@civ-clone/ui-client/lib/browserSaves';
 import Notices from '@civ-clone/ui-hud/components/Notices';
 import Notifications from '@civ-clone/ui-hud/components/Notifications';

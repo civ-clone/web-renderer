@@ -1,5 +1,5 @@
 import UiMenu, { openMenu } from './UiMenu';
-import { MapMenus } from '@civ-clone/ui-windows/components/mapMenus';
+import { MapMenus } from '@civ-clone/ui-menus/components/mapMenus';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import openUnitMenu from './UiUnitMenu';
 import { t } from 'i18next';

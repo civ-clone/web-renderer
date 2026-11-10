@@ -10,7 +10,7 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ## Main components
 
-- `packages/windows/components/ImportAssetsWindow.ts`
+- `packages/menus/components/ImportAssetsWindow.ts`
   - UI flow for selecting source files and triggering extraction.
 - `packages/assets/AssetStore.ts`
   - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730).

@@ -1,18 +1,11 @@
-// The windows package's own text, as en-GB has it where it differs from en (#825).
+// The menus package's own text, as en-GB has it where it differs from en (#825).
 import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
-  'ChoiceWindow.ChooseFromList.choose-civilization.random':
-    'Play as a random civilisation',
   'GameOptions.colour-scheme': 'Colours',
-  'Game.waiting': 'Waiting for the other civilisations…',
-  'NextTurn.waiting.unmet-player': 'Waiting for an unknown civilisation…',
   'GameMenu.retire-confirm':
     'Retiring ends the game now, and you see your Civilisation Score. You can keep playing afterwards, but nothing more is scored.',
   'GameMenu.civilization-score': 'Civilisation Score',
-  'UnitCard.defence-bonus':
-    '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defence',
-  'UnitCard.defence-bonus.title': 'Defence bonus',
   'GameSetup.civilization': 'Civilisation',
   'ResumeGame.intro':
     'Who plays each civilisation? Take over a computer seat, or hand yours to the computer, before the game goes on.',
@@ -23,8 +16,4 @@ i18next.addResources('en-GB', 'default', {
   'NewGameWindow.customize': 'Customise…',
   'NewGameWindow.customize-meta':
     'Choose the civilisations, seats, rules and the exact world',
-  'IntelligenceReport.empty': 'We have not met any other civilisations yet.',
-  'IntelligenceReport.no-foreign-affairs':
-    'No contact with other civilisations.',
-  'IntelligenceReport.trait.Civilized': 'Civilised',
 });

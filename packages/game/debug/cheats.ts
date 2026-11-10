@@ -4,7 +4,7 @@ import CheatUnitTypes from '@civ-clone/ui-protocol/Requests/CheatUnitTypes';
 import CheatPlayers, {
   CheatPlayersResult,
 } from '@civ-clone/ui-protocol/Requests/CheatPlayers';
-import { GameMenuItem } from '@civ-clone/ui-windows/components/mapMenus';
+import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';

@@ -35,4 +35,28 @@ i18next.addResources('en', 'default', {
   'WorkerFailure.not-answering':
     'The game has stopped answering. It may be busy and carry on; if nothing happens, reload the page.',
   'WorkerFailure.title': 'Something went wrong',
+  'ChoiceWindow.ChooseFromList.capture-city.steal-advance.primary':
+    'Acquire {{- choice}}',
+  'ChoiceWindow.ChooseFromList.choose-civilization.primary':
+    'Play as the {{- choice}}',
+  'ChoiceWindow.ChooseFromList.choose-civilization.random':
+    'Play as a random civilization',
+  'ChoiceWindow.ChooseFromList.choose-leader.primary': 'Play as {{- choice}}',
+  'ChoiceWindow.ChooseFromList.diplomacy.exchange-knowledge.primary':
+    'Take {{- choice}}',
+  'GameMenu.cheat.choose-advances': 'Advances',
+  'GameMenu.cheat.click-map': 'Click the map to fill in the coordinates.',
+  'GameMenu.cheat.create': 'Create',
+  'GameMenu.cheat.create-unit': 'Create Unit',
+  'GameMenu.cheat.enter-gold-amount': 'Enter the amount of gold',
+  'GameMenu.cheat.grant': 'Grant',
+  'GameMenu.cheat.grant-advance': 'Grant Advance',
+  'GameMenu.cheat.grant-gold': 'Grant Gold',
+  'GameMenu.cheat.no-advances': 'None available',
+  'GameMenu.cheat.player': 'Player',
+  'GameMenu.cheat.reveal-map': 'Reveal Map',
+  'GameMenu.cheat.unit-type': 'Unit type',
+  'GameMenu.cheat.x': 'X',
+  'GameMenu.cheat.y': 'Y',
+  'GameMenu.cheat.you': 'You',
 });

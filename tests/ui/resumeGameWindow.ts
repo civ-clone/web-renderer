@@ -6,7 +6,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
-import ResumeGameWindow from '@civ-clone/ui-windows/components/ResumeGameWindow';
+import ResumeGameWindow from '@civ-clone/ui-menus/components/ResumeGameWindow';
 import { SeatChanges } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';

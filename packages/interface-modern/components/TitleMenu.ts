@@ -2,20 +2,20 @@ import { BrowserSave, listSaves } from '@civ-clone/ui-client/lib/browserSaves';
 import { Element, s } from '@dom111/element';
 import ReleaseWindow, {
   fetchReleases,
-} from '@civ-clone/ui-windows/components/ReleaseWindow';
-import { askEarth, askNewGame } from '@civ-clone/ui-windows/components/newGame';
-import GameOptions from '@civ-clone/ui-windows/components/GameOptions';
+} from '@civ-clone/ui-menus/components/ReleaseWindow';
+import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
+import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
 import GameSetupForm from './GameSetupForm';
 import HallOfFameWindow, {
   yearLabel,
 } from '@civ-clone/ui-reports/components/HallOfFameWindow';
-import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
-import ResumeGameWindow from '@civ-clone/ui-windows/components/ResumeGameWindow';
+import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
+import ResumeGameWindow from '@civ-clone/ui-menus/components/ResumeGameWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { chooseSave } from '@civ-clone/ui-windows/components/LoadGameWindow';
+import { chooseSave } from '@civ-clone/ui-menus/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { loadSaveFromFile } from '@civ-clone/ui-windows/lib/savedGame';
+import { loadSaveFromFile } from '@civ-clone/ui-menus/lib/savedGame';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import build from '@civ-clone/ui-client/lib/build';

@@ -10,7 +10,7 @@ Primary files:
 - `src/js/interfaces.ts` (the interfaces civ.one offers)
 - `packages/*`, one workspace package per part of the frontend (see Packages below)
 - `packages/game/bootstrap.ts` (page start-up), and the rest of `packages/game/` (one game)
-- `packages/windows/components/*` (the menus, options and saves), `packages/hud/components/*` (the actions, notices, top bar, sidebar lists, unit and map tooltips around the map), `packages/reports/components/*` (the reports, the Civilopedia, the Hall of Fame and the game's end) and `packages/map/components/Map/*` (the map's layers)
+- `packages/menus/components/*` (the menus, options and saves), `packages/hud/components/*` (the actions, notices, top bar, sidebar lists, unit and map tooltips around the map), `packages/reports/components/*` (the reports, the Civilopedia, the Hall of Fame and the game's end) and `packages/map/components/Map/*` (the map's layers)
 - `src/css/app.scss`, civ.one's stylesheet: the themes, and each package's own partials (`packages/<name>/styles/`)
   in cascade order
 
@@ -129,7 +129,7 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `city`              | The city screen and its parts (the squares, the yields, the citizens), renaming a city and Find City                                                                                        | protocol, client, assets, widgets, map                      |
 | `reports`           | The reports, the Civilopedia (and why a city can't build something), the Hall of Fame and the game's end                                                                                    | protocol, client, assets, widgets, map, city                |
 | `hud`               | What's around the map in play: the actions and notices, the top bar's year and empire, the sidebar's lists, the observer's bar, the unit and its prompts, and the map's tooltips            | protocol, client, assets, widgets, map, city, reports       |
-| `windows`           | The game's menus, options and saves: the Game menu, the options, a new game, loading, resuming and importing, the release notes and the title screen                                        | protocol, client, assets, widgets, map, audio, reports, hud |
+| `menus`             | The game's menus, options and saves: the Game menu, the options, a new game, loading, resuming and importing, the release notes and the title screen                                        | protocol, client, assets, widgets, map, audio, reports, hud |
 | `game`              | The page itself: starting up, a game in play, the keys, the debug tools                                                                                                                     | everything above it but the worker's                        |
 | `interface-modern`  | The modern interface, with Slate and brass, see above                                                                                                                                       | the page's packages but `game`                              |
 | `interface-classic` | The classic interface, with Civ1 classic, see above                                                                                                                                         | the page's packages but `game`                              |
@@ -142,7 +142,7 @@ places (a base `.window .body` and a window's own `.city .body`, say), so each o
 
 Inside each package the folders are as they were before the split (`components/`, `lib/`), but for the folder a
 package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a
-`game/GameState.ts` and `windows` a `components/` folder. Tidying those is for later.
+`game/GameState.ts` and `menus` a `components/` folder. Tidying those is for later.
 
 **The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
@@ -181,13 +181,13 @@ draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
 where the browser has `CompressionStream`. Loading reloads the page: the save is
 handed over in IndexedDB (`civ-clone-saved-game`) with a marker in
 `sessionStorage`, so a fresh worker loads it with nothing else in it
-(`packages/windows/lib/savedGame.ts`). `leaveGuard` (`packages/component-window/leaveGuard.ts`) makes Back, and closing the tab,
+(`packages/menus/lib/savedGame.ts`). `leaveGuard` (`packages/component-window/leaveGuard.ts`) makes Back, and closing the tab,
 ask before leaving a game in progress.
 
 ### Gameplay overlays/windows
 
 What surrounds the map in play (the actions, notices, details, sidebar lists, unit prompts and map tooltips) is in
-`packages/hud` (#863); the menus, options and saves are in `packages/windows`.
+`packages/hud` (#863); the menus, options and saves are in `packages/menus`.
 
 - Action panels: `Actions` (buttons from `components/Actions/*`: `EndTurn`,
   `CityBuild`, `ChooseResearch`, `ChooseGovernment`, `Revolution`,

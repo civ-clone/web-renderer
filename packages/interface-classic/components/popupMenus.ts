@@ -1,7 +1,7 @@
 import PopupMenu, {
   hasPopupMenu,
 } from '@civ-clone/ui-component-popup-menu/PopupMenu';
-import { MapMenus } from '@civ-clone/ui-windows/components/mapMenus';
+import { MapMenus } from '@civ-clone/ui-menus/components/mapMenus';
 import UnitActionMenu from './UnitActionMenu';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { t } from 'i18next';

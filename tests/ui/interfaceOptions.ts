@@ -22,14 +22,14 @@ import {
 import {
   interfaceRows,
   themeRow,
-} from '@civ-clone/ui-windows/components/GameOptions';
+} from '@civ-clone/ui-menus/components/GameOptions';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import forgetVisitParam, {
   withoutForgottenParams,
 } from '@civ-clone/ui-client/lib/forgetVisitParam';
 import GameOptions, {
   assetsRow,
-} from '@civ-clone/ui-windows/components/GameOptions';
+} from '@civ-clone/ui-menus/components/GameOptions';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import {
   allowLeaving,

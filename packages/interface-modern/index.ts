@@ -21,7 +21,7 @@ import cityLayout from './components/CityLayout';
 import { cityScreen } from '@civ-clone/ui-city/components/openCity';
 import meetingTalks from './components/meetingTalks';
 import manifest from './manifest.json';
-import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
+import mapMenus from '@civ-clone/ui-menus/components/mapMenus';
 import sharedMenus from './components/sharedMenus';
 import {
   InterfaceManifest,
@@ -32,7 +32,7 @@ import { reports } from '@civ-clone/ui-reports/components/reports';
 import { s } from '@dom111/element';
 import talks from '@civ-clone/ui-hud/components/talks';
 import nextTurnQueue from '@civ-clone/ui-client/lib/nextTurnQueue';
-import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import titleScreen from '@civ-clone/ui-menus/components/titleScreen';
 import turnControls from '@civ-clone/ui-hud/components/turnControls';
 import unitPanel from '@civ-clone/ui-hud/components/unitPanel';
 import windowChrome from '@civ-clone/ui-component-window/windowChrome';

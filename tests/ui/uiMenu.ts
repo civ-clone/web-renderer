@@ -19,7 +19,7 @@ import openUnitMenu, {
   squareLine,
 } from '@civ-clone/ui-interface-modern/components/UiUnitMenu';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
-import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import cheatRows from '@civ-clone/ui-game/debug/cheats';
 import PopupMenu from '@civ-clone/ui-component-popup-menu/PopupMenu';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';

@@ -4,15 +4,15 @@ import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
-import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
-import { GameMenuItem } from '@civ-clone/ui-windows/components/mapMenus';
+import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
+import { GameMenuItem } from '@civ-clone/ui-menus/components/mapMenus';
 import cheatRows from './debug/cheats';
 import openFindCity from '@civ-clone/ui-city/components/FindCity';
 import {
   allowLeaving,
   guardLeaving,
 } from '@civ-clone/ui-component-window/leaveGuard';
-import { gridName } from '@civ-clone/ui-windows/lib/savedGame';
+import { gridName } from '@civ-clone/ui-menus/lib/savedGame';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';

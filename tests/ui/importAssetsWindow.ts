@@ -18,7 +18,7 @@
 import './lib/dom';
 import './lib/interfaces';
 
-import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
+import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

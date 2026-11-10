@@ -173,7 +173,7 @@ expect(
         relative(packagesRoot, path) === 'city/components/openCity.ts' &&
         relative(packagesRoot, target) === 'city/components/City.ts'
     ),
-    edges.some(({ from, to }) => from === 'windows' && to === 'client'),
+    edges.some(({ from, to }) => from === 'menus' && to === 'client'),
   ],
   [true, true, true]
 );
@@ -451,7 +451,7 @@ expect(
 );
 expect(
   'a window or map piece only one interface uses is in that interface’s package',
-  ['windows', 'map', 'map-square'].flatMap((name) =>
+  ['city', 'hud', 'menus', 'reports', 'map', 'map-square'].flatMap((name) =>
     sourcesUnder(join(packagesRoot, name))
       .filter((path) => !sharedReach.has(path))
       .filter(

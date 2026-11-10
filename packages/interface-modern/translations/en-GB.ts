@@ -6,4 +6,8 @@ i18next.addResources('en-GB', 'default', {
   'GameSetup.difficulty-summary.Prince': 'A fair game for a practised player.',
   'ReportTable.Intelligence.civilization': 'Civilisation',
   'ReportTable.Military.defence': 'Defence',
+  'NextTurn.waiting.unmet-player': 'Waiting for an unknown civilisation…',
+  'UnitCard.defence-bonus':
+    '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defence',
+  'UnitCard.defence-bonus.title': 'Defence bonus',
 });
