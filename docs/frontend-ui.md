@@ -109,11 +109,12 @@ the one they get, where `civ sync` links engine checkouts: `autoInstallPeers: fa
 second copy out of `packages/*/node_modules`. Its `exports` are the modules other packages and civ.one's own code
 import from it, and no others, so a module newly imported from another package is added there on purpose; the builds
 find the packages by path, so only `tests/ui/packages.ts` holds a package to them, and the suites may reach into any
-package. One thing the packages still reach for by
-path isn't a package yet: the generated `src/js/translations.ts`. The build's version and the URLs of its files are
-the entry's (`src/js/frontend.ts`), which passes them to the packages through `@civ-clone/ui-client/lib/build`. The
-generated `src/js/plugins.ts` is civ.one's choice of rules, which `backend.ts` hands the worker client. The test lists
-what's left, and the list only shrinks.
+package.
+
+One thing the packages still reach for by path isn't a package yet: the generated `src/js/translations.ts`. The
+build's version and the URLs of its files are the entry's (`src/js/frontend.ts`), which passes them to the packages
+through `@civ-clone/ui-client/lib/build`. The generated `src/js/plugins.ts` is civ.one's choice of rules, which
+`backend.ts` hands the worker client. The test lists what's left, and the list only shrinks.
 
 The worker (`worker-client`, which `backend.ts` starts) shares only `protocol` with the page: it imports no other
 package, and no package imports from it but a rule set's worker rules (`rules-civ1`, #865), which the plugin list
