@@ -16,11 +16,12 @@
       minify: !process.argv.includes('dev'),
       sourcemap: true,
       // Said here because esbuild no longer takes it from tsconfig.json (since 0.18), and without one it writes the
-      //  newest syntax there is. Private fields and methods are left as the browser's own, which the engine's
-      //  packages already needed of it; anything newer than ES2022 is rewritten.
+      //  newest syntax there is: anything newer than ES2022 is rewritten.
       target: 'es2022',
       // Except the one piece of ES2022 that the old build never wrote: with `keepNames`, esbuild would name every
-      //  class in a static block, which Safari only has from 16.4.
+      //  class in a static block, which Safari only has from 16.4. Without them it names a class after it is made,
+      //  and to do that it rewrites the fields and private members of every named class (to WeakMaps), as the old
+      //  build did for the frontend's own code.
       supported: { 'class-static-blocks': false },
       tsconfig,
       outdir: 'dist',

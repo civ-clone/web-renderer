@@ -76,37 +76,50 @@ ruleRegistry.register(new Started(new Effect(() => {})));`,
   fs.rmSync(directory, { recursive: true, force: true });
 }
 
-// Each engine package as it is installed (or linked in by `civ sync`), and the frontend's own.
+// Each engine package as it is installed (or linked in by `civ sync`), the frontend's own, and civ.one's entry
+//  points.
 const roots = [
   ...fs
     .readdirSync(scope)
     .filter((name) => !isUiPackage(name))
-    .map((name) => [
-      `@civ-clone/${name}`,
-      fs.realpathSync(path.join(scope, name)),
-    ]),
+    .map((name) => {
+      const link = path.join(scope, name);
+
+      try {
+        return [`@civ-clone/${name}`, fs.realpathSync(link)];
+      } catch (e) {
+        failures.push(`@civ-clone/${name}: ${link} leads nowhere`);
+
+        return null;
+      }
+    })
+    .filter((root) => root !== null),
   ['packages', path.join(webRenderer, 'packages')],
+  ['src/js', path.join(webRenderer, 'src', 'js')],
 ];
 
 let files = 0;
 
-roots.forEach(([label, root]) =>
-  sourcesIn(root).forEach((file) => {
-    files++;
+roots.forEach(([label, root]) => {
+  const sources = sourcesIn(root);
 
+  // A package published without its TypeScript would otherwise go unchecked, and the suite still pass.
+  if (sources.length === 0) {
+    failures.push(`${label}: no TypeScript was found to check`);
+  }
+
+  files += sources.length;
+
+  sources.forEach((file) =>
     findings(file).forEach(({ line, text }) =>
       failures.push(`${label}/${path.relative(root, file)}:${line}  ${text}`)
-    );
-  })
-);
-
-if (files === 0) {
-  failures.push('no TypeScript was found to check');
-}
+    )
+  );
+});
 
 if (failures.length > 0) {
   console.error(
-    `FAIL rule-lint: a rule registered inside an Effect exists only in memory, so a save cannot carry it\n  ${failures.join(
+    `FAIL rule-lint (a rule registered inside an Effect exists only in memory, so a save cannot carry it)\n  ${failures.join(
       '\n  '
     )}`
   );
@@ -116,6 +129,6 @@ if (failures.length > 0) {
 
 console.log(
   `PASS rule-lint (${files} files in ${
-    roots.length - 1
+    roots.length - 2
   } engine packages and the frontend's own: no rule is registered inside an Effect)`
 );

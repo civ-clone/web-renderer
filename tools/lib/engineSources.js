@@ -13,68 +13,151 @@ const { webRenderer } = require('./paths');
 // checkout linked in by `civ sync` is outside `node_modules`, so it would still be bundled from its `.ts`: a linked
 // package and an installed one would no longer be the same code.
 //
-// So this plugin takes the `.ts` wherever an engine package has one beside the `.js` esbuild chose.
+// So this plugin takes the `.ts` wherever an installed engine package has one beside the `.js`, however the file
+// was asked for: without an extension, by the package's name alone (its `main` is `index.js`), or by the full path
+// the generated plugin list gives. A module reached two of those ways used to be bundled twice, once from each
+// file: now there is one of it.
 const ENGINE = /[\\/]@civ-clone[\\/]/,
   INSTALLED = /[\\/]node_modules[\\/]/,
   // A marker on the plugin's own nested `build.resolve`, so it isn't asked the same question again.
   NESTED = Symbol('engineSources');
 
+const installedEngine = (file) => INSTALLED.test(file) && ENGINE.test(file);
+
+// Both remembered for as long as the process runs, as one `npm test -- --for` makes a build per suite, each asking
+//  the same questions: what is on the disk, and what a package's name resolves to from each place it is imported.
+//  A watching build therefore doesn't notice a `.ts` that appears beside a `.js` it has already bundled.
+const files = new Map(),
+  named = new Map();
+
+const isFile = (file) => {
+  if (!files.has(file)) {
+    let found = false;
+
+    try {
+      found = fs.statSync(file).isFile();
+    } catch (e) {}
+
+    files.set(file, found);
+  }
+
+  return files.get(file);
+};
+
+const realPath = (file) => {
+  try {
+    return fs.realpathSync(file);
+  } catch (e) {
+    return file;
+  }
+};
+
+// The `.ts` beside an installed engine package's `.js`, or `null`.
+const sourceOf = (compiled) => {
+  if (!compiled.endsWith('.js') || !installedEngine(compiled)) {
+    return null;
+  }
+
+  const source = `${compiled.slice(0, -3)}.ts`;
+
+  return isFile(source) ? source : null;
+};
+
+// The folder of the installed package `directory` is in, which is where a package's name is resolved from.
+const packageRoot = (directory) => {
+  const marker = `${path.sep}node_modules${path.sep}`,
+    at = directory.lastIndexOf(marker);
+
+  if (at === -1) {
+    return directory;
+  }
+
+  const [scope, name] = directory.slice(at + marker.length).split(path.sep);
+
+  return path.join(
+    directory.slice(0, at + marker.length),
+    ...(scope.startsWith('@') ? [scope, name] : [scope])
+  );
+};
+
 const engineSources = () => ({
   name: 'engine-sources',
   setup(build) {
-    const sources = new Map();
-
-    const sourceOf = (compiled) => {
-      if (!sources.has(compiled)) {
-        const source = `${compiled.slice(0, -3)}.ts`;
-
-        sources.set(compiled, fs.existsSync(source) ? source : null);
-      }
-
-      return sources.get(compiled);
-    };
-
-    build.onResolve({ filter: /.*/ }, async (args) => {
-      if (
-        args.pluginData?.[NESTED] ||
-        !(
-          args.path.startsWith('@civ-clone/') ||
-          (args.path.startsWith('.') && ENGINE.test(args.resolveDir))
-        )
-      ) {
+    build.onResolve({ filter: /.*/, namespace: 'file' }, async (args) => {
+      if (args.pluginData?.[NESTED]) {
         return;
       }
 
-      const resolved = await build.resolve(args.path, {
-        importer: args.importer,
-        kind: args.kind,
-        namespace: args.namespace,
-        pluginData: { [NESTED]: true },
-        resolveDir: args.resolveDir,
-      });
+      // The generated plugin list's full paths, which go through `node_modules/@civ-clone/<name>`: a link, under
+      //  pnpm, to where the package is. esbuild knows a file by where it really is, and would take the same file
+      //  under the link's path for another one.
+      if (path.isAbsolute(args.path)) {
+        const source = sourceOf(realPath(args.path));
 
-      if (
-        resolved.errors.length > 0 ||
-        resolved.external ||
-        !resolved.path.endsWith('.js') ||
-        !INSTALLED.test(resolved.path) ||
-        !ENGINE.test(resolved.path)
-      ) {
+        return source === null ? undefined : { path: source };
+      }
+
+      // One file of an installed engine package importing another, which is nearly every import there is: answered
+      //  from the disk, as asking esbuild (`build.resolve`) for each made a build eight times slower.
+      if (args.path.startsWith('.')) {
+        if (!installedEngine(args.resolveDir)) {
+          return;
+        }
+
+        const asked = path.join(args.resolveDir, args.path),
+          compiled = [asked, `${asked}.js`, path.join(asked, 'index.js')].find(
+            (candidate) => candidate.endsWith('.js') && isFile(candidate)
+          ),
+          source = compiled === undefined ? null : sourceOf(compiled);
+
+        // With no `.js` there (a `.json`, a folder with its own package.json), esbuild finds it as it would have.
+        return source === null ? undefined : { path: source };
+      }
+
+      if (!args.path.startsWith('@civ-clone/')) {
         return;
       }
 
-      const source = sourceOf(resolved.path);
+      // A package's name, with or without a file in it: where that is depends on who asks, so esbuild is asked,
+      //  once for each place it is asked from.
+      const key = [
+        args.path,
+        args.kind,
+        INSTALLED.test(args.resolveDir)
+          ? packageRoot(args.resolveDir)
+          : args.resolveDir,
+      ].join('\0');
 
-      if (source === null) {
-        return;
+      if (!named.has(key)) {
+        const resolved = await build.resolve(args.path, {
+          importer: args.importer,
+          kind: args.kind,
+          namespace: args.namespace,
+          pluginData: { [NESTED]: true },
+          resolveDir: args.resolveDir,
+        });
+
+        // Not remembered: esbuild reports it when the plugin steps aside.
+        if (resolved.errors.length > 0) {
+          return;
+        }
+
+        const source = resolved.external ? null : sourceOf(resolved.path);
+
+        named.set(
+          key,
+          source === null
+            ? null
+            : {
+                namespace: resolved.namespace,
+                path: source,
+                sideEffects: resolved.sideEffects,
+                suffix: resolved.suffix,
+              }
+        );
       }
 
-      return {
-        namespace: resolved.namespace,
-        path: source,
-        sideEffects: resolved.sideEffects,
-        suffix: resolved.suffix,
-      };
+      return named.get(key) ?? undefined;
     });
   },
 });

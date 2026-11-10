@@ -788,10 +788,11 @@ expect(
   [true, [], []]
 );
 
-// esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
-//  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
-//  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which
-//  lowers their class fields as before.
+// esbuild used to compile each file with the nearest tsconfig.json, and none at all for a file it reached through
+//  node_modules, which is where the workspace links the packages. Every build is now given the root tsconfig.json by
+//  name, for every file (`tools/lib/engineSources.js`), but `tsc` and an editor still read the nearest. So each
+//  tsconfig.json a build or a suite starts from maps the packages to their folders, and the packages' own extends the
+//  one they were built with under src/js, which lowers their class fields as before.
 const tsconfig = (path: string) =>
   JSON.parse(readFileSync(join(root, path), 'utf8')) as {
     extends?: string;

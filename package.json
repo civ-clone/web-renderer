@@ -27,6 +27,7 @@
     "test:orders-across-turns": "node tools/run-suite.js ui ordersAcrossTurns",
     "test:join-city": "node tools/run-suite.js engine joinCity",
     "test:renamed-city": "node tools/run-suite.js engine renamedCity",
+    "test:engine-sources": "node tools/engine-sources.js",
     "test:rule-lint": "node tools/rule-lint.js",
     "test:asset-slices": "node tools/asset-slices.js",
     "test:changelog": "node tools/changelog.js",
