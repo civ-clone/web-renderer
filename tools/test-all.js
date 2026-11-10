@@ -10,9 +10,10 @@
 //   npm test -- --list               what would run, and nothing more
 //
 // They used to be one `&&` chain, run one after another: about three minutes on the four cores CI has, most of it
-// spent waiting. Each suite is its own process with its own bundle and temporary directory, and the one file they
-// shared, `src/js/plugins.ts`, is only rewritten when it would change (`buildPluginList.js`), so they can run side by
-// side. The type-checks run alongside them.
+// spent waiting. Each suite is its own process, and the files they share, `src/js/plugins.ts` and `translations.ts`,
+// are only rewritten when they would change, so they can run side by side. The type-checks run alongside them. The
+// suites are bundled together first, a kind at a time, rather than each bundling the same engine or interface for
+// itself.
 //
 // What runs is every script named `test:*`, but for the ones that rewrite a fixture (`…:update`) and those in
 // `NOT_PART_OF_IT`. So a new suite needs its script and nothing else: there is no list to add it to.
@@ -21,9 +22,11 @@
 // script exited 0; the ones that failed are named, with their output, again at the end.
 
 const { spawn } = require('child_process');
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { bundleAll } = require('./lib/suite');
 const { webRenderer } = require('./lib/paths');
 
 const scripts = require(path.join(webRenderer, 'package.json')).scripts,
@@ -102,7 +105,7 @@ const inputsOf = async ({ kind, name }) => {
     // A package in the workspace is reached through its link in node_modules: asked about by where it really is.
     path.relative(
       webRenderer,
-      require('fs').realpathSync(path.resolve(webRenderer, input))
+      fs.realpathSync(path.resolve(webRenderer, input))
     )
   );
 };
@@ -161,14 +164,17 @@ const select = async ({ names, paths }) => {
 
 // One script, as `npm run` would run it, but without starting npm for each of two hundred: its command, through the
 //  shell, with the project's own binaries on the PATH. Resolves with how it went; its output is kept, not shown.
-const run = (name) =>
+const run = (name, env = {}) =>
   new Promise((resolve) => {
     const started = Date.now(),
       output = [],
       child = spawn(scripts[name], {
         cwd: webRenderer,
+        // A group of its own, so that stopping the run stops what the script's shell started too.
+        detached: true,
         env: {
           ...process.env,
+          ...env,
           PATH: `${path.join(webRenderer, 'node_modules', '.bin')}${
             path.delimiter
           }${process.env.PATH}`,
@@ -197,6 +203,16 @@ const run = (name) =>
 
 const running = new Set();
 
+// Where the suites' bundles are, while a run has them: removed when it ends, however it ends.
+let bundles = null;
+
+const discardBundles = () => {
+  if (bundles !== null) {
+    fs.rmSync(bundles, { recursive: true, force: true });
+    bundles = null;
+  }
+};
+
 const report = ({ name, passed, how, seconds, output }) =>
   process.stdout.write(
     `\n> ${name} (${seconds.toFixed(1)}s)${passed ? '' : ` FAILED (${how})`}\n${
@@ -204,26 +220,70 @@ const report = ({ name, passed, how, seconds, output }) =>
     }`
   );
 
+/**
+ * Bundles every suite about to run, a kind at a time, in one build each: the engine suites all import the whole
+ * engine and the ui suites most of the interface, and bundling each on its own read that code once per suite.
+ * The suites find theirs through `SUITE_BUNDLES` (tools/lib/suite.js). If the build fails (one suite that won't
+ * compile fails it for all), nothing is said here: each suite bundles itself, as it does when run alone, and the one
+ * at fault says why.
+ */
+const bundleSuites = async (queue) => {
+  const byKind = { engine: new Set(), ui: new Set() };
+
+  queue.forEach((name) => {
+    const suite = suiteOf(name);
+
+    if (suite !== null) {
+      byKind[suite.kind].add(suite.name);
+    }
+  });
+
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'suites-'));
+
+  bundles = directory;
+
+  try {
+    await Promise.all(
+      Object.entries(byKind)
+        .filter(([, names]) => names.size > 0)
+        .map(([kind, names]) => bundleAll(kind, [...names], directory))
+    );
+
+    return { SUITE_BUNDLES: directory };
+  } catch {
+    discardBundles();
+
+    return {};
+  }
+};
+
 const main = async () => {
   const options = parseArguments(process.argv.slice(2));
 
   if (options.error) {
     process.stderr.write(`${options.error}\n`);
-    process.exit(2);
+    process.exitCode = 2;
+
+    return;
   }
 
   const started = Date.now(),
     jobs = options.jobs ?? Math.max(1, os.availableParallelism()),
     all = options.names.length === 0 && options.paths.length === 0;
 
-  // First, and one at a time: what every bundle reads.
-  for (const name of FIRST) {
-    const result = await run(name);
+  // First, and one at a time: what every bundle reads. Not just to list what would run, unless that takes bundling
+  //  the suites to see what they import.
+  if (!options.list || options.paths.length > 0) {
+    for (const name of FIRST) {
+      const result = await run(name);
 
-    if (!result.passed) {
-      report(result);
-      process.stdout.write(`\nFAIL ${name}: nothing else was run\n`);
-      process.exit(1);
+      if (!result.passed) {
+        report(result);
+        process.stdout.write(`\nFAIL ${name}: nothing else was run\n`);
+        process.exitCode = 1;
+
+        return;
+      }
     }
   }
 
@@ -244,22 +304,29 @@ const main = async () => {
 
   if (queue.length === 0) {
     process.stderr.write('FAIL nothing to run: no script matches\n');
-    process.exit(1);
+    process.exitCode = 1;
+
+    return;
   }
 
-  const results = [];
+  const results = [],
+    env = await bundleSuites(queue);
   let next = 0;
 
-  await Promise.all(
-    Array.from({ length: Math.min(jobs, queue.length) }, async () => {
-      while (next < queue.length) {
-        const result = await run(queue[next++]);
+  try {
+    await Promise.all(
+      Array.from({ length: Math.min(jobs, queue.length) }, async () => {
+        while (next < queue.length) {
+          const result = await run(queue[next++], env);
 
-        results.push(result);
-        report(result);
-      }
-    })
-  );
+          results.push(result);
+          report(result);
+        }
+      })
+    );
+  } finally {
+    discardBundles();
+  }
 
   const failed = results.filter(({ passed }) => !passed),
     work = results.reduce((total, { seconds }) => total + seconds, 0),
@@ -267,6 +334,7 @@ const main = async () => {
       0
     )}s of work, ${Math.min(jobs, queue.length)} at a time)`;
 
+  // The exit code is set, not exited with: what has been written may still be on its way down a pipe.
   if (failed.length > 0) {
     process.stdout.write(
       `\n${'='.repeat(72)}\nFAIL ${failed.length} of ${
@@ -274,7 +342,9 @@ const main = async () => {
       } in ${took}: ${failed.map(({ name }) => name).join(', ')}\n`
     );
     failed.forEach(report);
-    process.exit(1);
+    process.exitCode = 1;
+
+    return;
   }
 
   process.stdout.write(
@@ -282,15 +352,27 @@ const main = async () => {
   );
 };
 
-// Stopped by hand: so is everything it started.
+// Stopped by hand, or by whatever was reading the output going away: so is everything it started, each script's
+//  whole group, and the bundles go with it.
+const stop = (signal) => {
+  running.forEach((child) => {
+    try {
+      process.kill(-child.pid, signal);
+    } catch {
+      // Gone already.
+    }
+  });
+  discardBundles();
+  process.exit(128 + os.constants.signals[signal]);
+};
+
 ['SIGINT', 'SIGTERM'].forEach((signal) =>
-  process.on(signal, () => {
-    running.forEach((child) => child.kill(signal));
-    process.exit(130);
-  })
+  process.on(signal, () => stop(signal))
 );
+process.stdout.on('error', () => stop('SIGTERM'));
 
 main().catch((error) => {
+  discardBundles();
   process.stderr.write(`FAIL test-all: ${error.stack ?? error}\n`);
-  process.exit(1);
+  process.exitCode = 1;
 });
