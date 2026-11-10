@@ -514,6 +514,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@civ-clone/ui-reports':
+        specifier: workspace:*
+        version: link:../reports
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -553,6 +556,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@civ-clone/ui-reports':
+        specifier: workspace:*
+        version: link:../reports
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -598,6 +604,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@civ-clone/ui-reports':
+        specifier: workspace:*
+        version: link:../reports
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -630,6 +639,33 @@ importers:
         version: link:../protocol
 
   packages/protocol: {}
+
+  packages/reports:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-city':
+        specifier: workspace:*
+        version: link:../city
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-component-button':
+        specifier: workspace:*
+        version: link:../component-button
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
+      '@civ-clone/ui-map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
 
   packages/widgets:
     dependencies:
@@ -678,6 +714,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
+      '@civ-clone/ui-reports':
+        specifier: workspace:*
+        version: link:../reports
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets

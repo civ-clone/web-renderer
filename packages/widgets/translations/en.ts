@@ -25,4 +25,7 @@ i18next.addResources('en', 'default', {
   'Window.filter': 'Filter',
   'Window.filter-empty': 'Nothing matches.',
   'Window.filter-placeholder': 'Filter (press /)',
+  'LeaveGuard.body':
+    'Leaving this page will end the game in progress. Any unsaved progress will be lost.',
+  'LeaveGuard.title': 'Leave the game?',
 });

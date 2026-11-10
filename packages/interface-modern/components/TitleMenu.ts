@@ -8,7 +8,7 @@ import GameOptions from '@civ-clone/ui-windows/components/GameOptions';
 import GameSetupForm from './GameSetupForm';
 import HallOfFameWindow, {
   yearLabel,
-} from '@civ-clone/ui-windows/components/HallOfFameWindow';
+} from '@civ-clone/ui-reports/components/HallOfFameWindow';
 import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
 import ResumeGameWindow from '@civ-clone/ui-windows/components/ResumeGameWindow';
 import Transport from '@civ-clone/ui-client/Transport';

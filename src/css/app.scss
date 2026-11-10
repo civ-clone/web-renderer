@@ -78,8 +78,8 @@ input {
 @import '../../packages/windows/styles/actions';
 @import '../../packages/city/styles/city';
 @import '../../packages/windows/styles/city-status';
-@import '../../packages/windows/styles/civilopedia';
-@import '../../packages/windows/styles/civilization-score-report';
+@import '../../packages/reports/styles/civilopedia';
+@import '../../packages/reports/styles/civilization-score-report';
 @import '../../packages/game/styles/game';
 @import '../../packages/windows/styles/game-menu';
 @import '../../packages/windows/styles/game-options';
@@ -99,7 +99,7 @@ input {
 @import '../../packages/component-choice-window/styles/ui-choice';
 @import '../../packages/interface-modern/styles/ui-city';
 @import '../../packages/windows/styles/releases';
-@import '../../packages/windows/styles/science-report';
+@import '../../packages/reports/styles/science-report';
 @import '../../packages/component-selection-window/styles/selection-window';
 @import '../../packages/windows/styles/sidebar';
 @import '../../packages/windows/styles/spaceship-window';

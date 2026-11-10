@@ -38,7 +38,7 @@ import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { t } from 'i18next';
 import watchPlayer, {
   cityIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
 const moodCount = (city: CityData, mood: CitizenMood): number =>
   citizenMoods(city).filter((cityMood) => cityMood === mood).length;

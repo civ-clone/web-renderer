@@ -7,17 +7,17 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
-} from './reports';
-import Civilopedia from './Civilopedia';
+} from '@civ-clone/ui-reports/components/reports';
+import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '@civ-clone/ui-protocol/types';
 import { GameMenuItem, GameMenuRows, mapMenus } from './mapMenus';
 import { windowKey } from '@civ-clone/ui-component-window/windowEyebrows';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import ScienceReport from './ScienceReport';
+import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
-import { allowLeaving } from '../lib/leaveGuard';
+import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { SaveDetails } from '@civ-clone/ui-protocol/Transport';
 import { t } from 'i18next';

@@ -1,5 +1,8 @@
 import { Player, PlayerResearch, Yield } from '@civ-clone/ui-protocol/types';
-import { advanceNames, researchingName } from './lib/advances';
+import {
+  advanceNames,
+  researchingName,
+} from '@civ-clone/ui-client/lib/advances';
 import {
   groupIcons,
   reduceKnownYield,
@@ -8,7 +11,7 @@ import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
-import { combinedYields } from './lib/playerYields';
+import { combinedYields } from '@civ-clone/ui-client/lib/playerYields';
 import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

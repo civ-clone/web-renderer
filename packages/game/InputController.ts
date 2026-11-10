@@ -9,10 +9,10 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
-} from '@civ-clone/ui-windows/components/reports';
-import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
+} from '@civ-clone/ui-reports/components/reports';
+import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
 import GamePortal from './GamePortal';
-import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
+import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';

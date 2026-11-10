@@ -86,4 +86,9 @@ i18next.addResources('en', 'default', {
   'NewGameWindow.WorldSize.large': 'Large ({{width}} × {{height}})',
   'NewGameWindow.WorldSize.huge': 'Huge ({{width}} × {{height}})',
   'ReportTable.view-city': 'View {{city}}',
+  // Why the research picker has opened (#726).
+  'Actions.ChooseResearch.cleared.acquired':
+    '{{- advance}} was acquired before its research finished',
+  'Actions.ChooseResearch.cleared.completed':
+    'Research complete: {{- advance}}',
 });

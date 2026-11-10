@@ -6,7 +6,7 @@ import {
   enterHallOfFame,
   hallOfFameEntry,
 } from '@civ-clone/ui-client/lib/hallOfFame';
-import { allowLeaving } from '../lib/leaveGuard';
+import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { hallOfFameTable, yearLabel } from './HallOfFameWindow';

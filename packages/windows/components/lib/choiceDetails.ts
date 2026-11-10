@@ -1,4 +1,7 @@
-import Civilopedia, { entryHtml, loadCivilopedia } from '../Civilopedia';
+import Civilopedia, {
+  entryHtml,
+  loadCivilopedia,
+} from '@civ-clone/ui-reports/components/Civilopedia';
 import { CivilopediaKind } from '@civ-clone/ui-protocol/civilopedia';
 import Transport from '@civ-clone/ui-client/Transport';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';

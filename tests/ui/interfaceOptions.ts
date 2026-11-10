@@ -34,7 +34,7 @@ import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import {
   allowLeaving,
   guardLeaving,
-} from '@civ-clone/ui-windows/lib/leaveGuard';
+} from '@civ-clone/ui-component-window/leaveGuard';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';

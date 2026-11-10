@@ -10,7 +10,7 @@ import {
   RequirementData,
   RequirementTargetData,
 } from '@civ-clone/ui-protocol/requirements';
-import { advanceName } from './advances';
+import { advanceName } from '@civ-clone/ui-client/lib/advances';
 import { escape } from '@civ-clone/ui-widgets/lib/html';
 import { t } from 'i18next';
 

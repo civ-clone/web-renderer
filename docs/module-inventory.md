@@ -92,7 +92,7 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 - `components/Portal.ts`, `World.ts` and `Minimap.ts` (in `map-square`): compositing the layers, the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
 - `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, viewport geometry, saved games, etc.).
 - `lib/IncrementalReconstituter.ts`: rebuilds the game data from the object map, touching only the ids a patch changed.
-- `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `watchCity.ts` (in `packages/city/components/lib`) and `watchPlayer.ts` do it for the city screen and the reports.
+- `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `watchCity.ts` (in `packages/city/components/lib`) and `watchPlayer.ts` (in `packages/reports/components/lib`) do it for the city screen and the reports.
 - `lib/pruneObjectMap.ts`: drops object-map entries nothing reachable refers to.
 - `lib/unitActions.ts`: asks the worker for the active unit's actions (`unitActions`).
 - `lib/savedGame.ts`: downloading saves, and handing a save to the next page load.

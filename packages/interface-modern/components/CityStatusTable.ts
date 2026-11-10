@@ -31,7 +31,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {
   cityRowIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
 // A figure, its bar and the turns left, in one cell. With no turns, as when nothing is being built, neither the bar nor
 //  the turns.

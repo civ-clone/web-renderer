@@ -4,5 +4,6 @@ import '@civ-clone/ui-client/translations/en-GB';
 import '@civ-clone/ui-interface-classic/translations/en-GB';
 import '@civ-clone/ui-interface-modern/translations/en-GB';
 import '@civ-clone/ui-protocol/translations/en-GB';
+import '@civ-clone/ui-reports/translations/en-GB';
 import '@civ-clone/ui-widgets/translations/en-GB';
 import '@civ-clone/ui-windows/translations/en-GB';

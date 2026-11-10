@@ -60,7 +60,7 @@ import {
   advanceNames,
   researchClearedLabel,
   researchingName,
-} from '@civ-clone/ui-windows/components/lib/advances';
+} from '@civ-clone/ui-client/lib/advances';
 import Notification from '@civ-clone/ui-protocol/Notification';
 import { PlayerResearch } from '@civ-clone/ui-protocol/types';
 import Tile from '@civ-clone/core-world/Tile';

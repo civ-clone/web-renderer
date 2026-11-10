@@ -10,7 +10,7 @@ import { confirmRevolution } from './Actions/Revolution';
 import isAnarchy from '@civ-clone/ui-client/lib/government';
 import { openTradeRates, tradeRatesKey } from './Actions/AdjustTradeRates';
 import { reduceKnownYields } from '@civ-clone/ui-client/lib/yieldMap';
-import { researchingName } from './lib/advances';
+import { researchingName } from '@civ-clone/ui-client/lib/advances';
 import { TOptions, t } from 'i18next';
 import {
   turnsLeft,
