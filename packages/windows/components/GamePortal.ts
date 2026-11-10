@@ -14,9 +14,7 @@ import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
-import UnitActionMenu from './UnitActionMenu';
-import openUnitMenu from './UiUnitMenu';
-import { openMenu } from './UiMenu';
+import mapMenus from './mapMenus';
 import { on } from '@dom111/element';
 
 // How far, in px, a press has to move before it is a drag rather than a click
@@ -171,36 +169,34 @@ export class GamePortal extends Portal {
         // moving now would slide the map out from under the menu.
         this.#drag = null;
 
-        // The shared menu over the press, which a finger slides onto and lifts from (#808).
-        if (hasFeature('sharedMenus')) {
-          openUnitMenu(x, y, this.#activeUnit as Unit, tile, this.transport(), {
-            pressed: true,
-          });
-
-          return;
-        }
-
-        new UnitActionMenu(
-          this,
-          x,
-          y,
-          this.#activeUnit as Unit,
-          tile,
-          this.transport()
-        );
+        // The interface's menu over the press (#808, #860).
+        mapMenus
+          .current()
+          .unitMenu(
+            this,
+            x,
+            y,
+            this.#activeUnit as Unit,
+            tile,
+            this.transport(),
+            true
+          );
       }, 350);
     };
 
-    // A right-click opens the same menu at once, without the hold, in place of the browser's own (#808).
+    // A right-click opens the same menu at once, without the hold, in place of the browser's own, where the interface's
+    //  does (#808).
     on(this.canvas(), 'contextmenu', (event) => {
-      if (!hasFeature('sharedMenus')) {
+      const menus = mapMenus.current();
+
+      if (!menus.unitMenuOnRightClick) {
         return;
       }
 
       event.preventDefault();
 
       // One a long press has already opened: a touch's `contextmenu` arrives after the hold that opened it.
-      if (openMenu() !== null) {
+      if (menus.isOpen()) {
         return;
       }
 
@@ -215,12 +211,14 @@ export class GamePortal extends Portal {
       this.#drag = null;
       this.endHover();
 
-      openUnitMenu(
+      menus.unitMenu(
+        this,
         event.clientX,
         event.clientY,
         this.#activeUnit,
         tile,
-        this.transport()
+        this.transport(),
+        false
       );
     });
 
@@ -236,9 +234,9 @@ export class GamePortal extends Portal {
         return;
       }
 
-      // A right-click is the shared menu's (#808), not a press on the map: some browsers send its
+      // A right-click that opens the unit's menu (#808) is the menu's, not a press on the map: some browsers send its
       //  `contextmenu` only once the button is up, which would otherwise be a click on the square first.
-      if (event.button === 2 && hasFeature('sharedMenus')) {
+      if (event.button === 2 && mapMenus.current().unitMenuOnRightClick) {
         // Not under the menu it's about to open.
         this.stopGlide();
 
@@ -277,7 +275,7 @@ export class GamePortal extends Portal {
       const drag = this.#drag;
 
       // No tooltip over an open menu (#808).
-      if (drag === null && openMenu() !== null) {
+      if (drag === null && mapMenus.current().isOpen()) {
         this.endHover();
 
         return;

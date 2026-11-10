@@ -177,11 +177,14 @@ ask before leaving a game in progress.
 - Action panels: `Actions` (buttons from `components/Actions/*`: `EndTurn`,
   `CityBuild`, `ChooseResearch`, `ChooseGovernment`, `Revolution`,
   `CivilDisorder`, `AdjustTradeRates`, `Spaceship`, and `Notice` for held
-  notices), `ActionWindow`, `UnitActionMenu` (a long press on the map).
+  notices), `ActionWindow`, and the unit's menu (a long press on the map), which
+  each interface fills through the `mapMenus` slot (#860): classic's
+  `UnitActionMenu` popup, or modern's `UiUnitMenu`, which a right-click opens too.
 - `Notices`: `bubble` notifications (such as an obsolete Wonder) wait as buttons
   beside End Turn until opened or the turn ends.
 - `GameMenu`: save, load, `GameOptions`, the reports, and the cheat items
-  (shown with `?cheat=1`, or Shift+5 then Shift+6).
+  (shown with `?cheat=1`, or Shift+5 then Shift+6), in the interface's menu
+  from the same `mapMenus` slot: a popup, or modern's `UiMenu`.
 - City screen: `City`, with its own small `Portal` (`Landscape`, `Fog`,
   `Cities`, `Units`, `Yields`, `Unworkable`). Clicking a tile changes which
   tiles the city works; keys 1–8 change specialists, `c` changes production and
@@ -321,7 +324,7 @@ Moving around the map:
 - `mappedKeyFromEvent` normalizes key handling.
 - Some UX paths depend on modal dialog focus forwarding.
 - Pointer events drive the map, so mouse and touch share one path; a press held
-  for 350ms opens `UnitActionMenu` for the active unit.
+  for 350ms opens the unit's menu for the active unit.
 
 ## Accessibility
 

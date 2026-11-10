@@ -19,6 +19,8 @@ import cityLayout from './components/CityLayout';
 import { cityScreen } from '@civ-clone/ui-windows/components/openCity';
 import meetingTalks from './components/meetingTalks';
 import manifest from './manifest.json';
+import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
+import sharedMenus from './components/sharedMenus';
 import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
@@ -100,5 +102,7 @@ unitPanel.provide('card', ({ unitInfo, unitActionArea }, deps) => {
 });
 
 talks.provide('meetingWindow', meetingTalks);
+
+mapMenus.provide('shared', sharedMenus);
 
 registerInterface(manifest);

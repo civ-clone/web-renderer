@@ -9,11 +9,11 @@ import {
 import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import Transport from '@civ-clone/ui-client/Transport';
 import UiMenu from './UiMenu';
-import Unit from './Unit';
-import { nameOf } from '../lib/unitActionPrompts';
+import Unit from '@civ-clone/ui-windows/components/Unit';
+import { nameOf } from '@civ-clone/ui-windows/lib/unitActionPrompts';
 import { t } from 'i18next';
-import { unitName } from '../lib/unitLabel';
-import unitMenuActions from '../lib/unitMenuActions';
+import { unitName } from '@civ-clone/ui-windows/lib/unitLabel';
+import unitMenuActions from '@civ-clone/ui-windows/lib/unitMenuActions';
 
 // Interpolated names are text, not HTML: they're set as `textContent`.
 const text = (key: string, options: { [key: string]: unknown } = {}): string =>

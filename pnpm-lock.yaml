@@ -460,6 +460,9 @@ importers:
       '@civ-clone/ui-component-choice-window':
         specifier: workspace:*
         version: link:../component-choice-window
+      '@civ-clone/ui-component-popup-menu':
+        specifier: workspace:*
+        version: link:../component-popup-menu
       '@civ-clone/ui-component-selection-window':
         specifier: workspace:*
         version: link:../component-selection-window
@@ -573,9 +576,6 @@ importers:
       '@civ-clone/ui-component-choice-window':
         specifier: workspace:*
         version: link:../component-choice-window
-      '@civ-clone/ui-component-popup-menu':
-        specifier: workspace:*
-        version: link:../component-popup-menu
       '@civ-clone/ui-component-progress-bar':
         specifier: workspace:*
         version: link:../component-progress-bar
