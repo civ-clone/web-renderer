@@ -347,8 +347,41 @@ expect(
   [true, []]
 );
 expect(
-  'and no package depends on the worker client',
-  names.filter((name) => dependsOn(name).includes('worker-client')),
+  'and no package depends on the worker client but a rule set’s worker rules (`rules-*`, #865)',
+  names
+    .filter((name) => !name.startsWith('rules-'))
+    .filter((name) => dependsOn(name).includes('worker-client')),
+  []
+);
+expect(
+  'which depend on nothing else, and only the plugin list imports them',
+  [
+    names
+      .filter((name) => name.startsWith('rules-'))
+      .flatMap((name) => dependsOn(name))
+      .filter((name) => name !== 'worker-client'),
+    outside
+      .filter((path) =>
+        importsOf(path).some((target) =>
+          (packageOf(target) ?? '').startsWith('rules-')
+        )
+      )
+      .map((path) => relative(root, path))
+      // The engine suites play Civ1, as civ.one does.
+      .filter((path) => !path.startsWith('tests/engine/'))
+      .filter((path) => path !== 'src/js/plugins.ts'),
+  ],
+  [[], []]
+);
+expect(
+  'the worker client imports none of Civ1’s packages: it asks its rule set’s worker rules (#865)',
+  sourcesUnder(join(packagesRoot, 'worker-client'))
+    .filter((path) =>
+      specifiersOf(readFileSync(path, 'utf8')).some((specifier) =>
+        specifier.startsWith('@civ-clone/civ1-')
+      )
+    )
+    .map((path) => relative(root, path)),
   []
 );
 expect(

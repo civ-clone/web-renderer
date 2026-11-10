@@ -1,0 +1,10 @@
+{
+  "name": "@civ-clone/ui-rules-civ1",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Civ1's part of the worker client: what it acts on, shows and scores that only Civ1's rules have, handed to the client when the plugins are loaded.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-worker-client": "workspace:*"
+  }
+}

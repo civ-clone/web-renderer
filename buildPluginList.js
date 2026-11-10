@@ -103,11 +103,25 @@ if (entrypoints.length === 0) {
   process.exit(1);
 }
 
+// The rule set's worker rules (#865), `civ-clone.rules` in `package.json`: what the worker client needs that only
+//  those rules have, which it is handed when they are imported. Imported after the plugins, as they register
+//  AdditionalData for the plugins' classes.
+const rules = (require('./package.json')['civ-clone'] ?? {}).rules;
+
+if (typeof rules !== 'string') {
+  console.error(
+    "buildPluginList: package.json has no `civ-clone.rules`, the package of the rule set's worker rules"
+  );
+
+  process.exit(1);
+}
+
 // Written only when it would change, and then put in place whole: the engine suites each ask for it before they run,
 //  several at a time under `npm test` (#879), and one must never read a list another is halfway through writing.
 const target = __dirname + '/src/js/plugins.ts',
   contents =
     entrypoints.map(({ entrypoint }) => `import '${entrypoint}';`).join('\n') +
+    `\nimport '${rules}';` +
     `\n\nexport const plugins: { [name: string]: string } = ${JSON.stringify(
       manifest,
       null,

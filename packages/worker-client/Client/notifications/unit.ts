@@ -7,7 +7,7 @@ import { NotificationContext, NotificationTable } from './NotificationContext';
 import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
-import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
+import { workerRules } from '../../workerRules';
 
 export const unitNotifications: NotificationTable = [
   // A nuclear detonation (#129), told to everyone but the player who set it off.
@@ -27,7 +27,7 @@ export const unitNotifications: NotificationTable = [
       !ctx.view.owns(unit.player())
         ? null
         : new Notification(
-            aircraftRange.some(([UnitType]) => unit instanceof UnitType)
+            workerRules().needsFuel(unit)
               ? 'Unit.out-of-fuel'
               : 'Unit.lost-at-sea',
             {

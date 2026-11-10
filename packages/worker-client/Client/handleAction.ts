@@ -1,64 +1,58 @@
 // Acting on what the UI sends on `action` (#449), moved out of `DataTransferClient`: Reassign Workers and End Turn,
-//  then the player's action it names, found by name and value id and handed to the first handler in `actionHandlers`
-//  it is an instance of, in the order the client's `if` chain tested them. Says whether the turn is over.
+//  then the player's action it names, found by name and value id and handed to the first handler in `actionHandlers()`
+//  it is an instance of: the ones every rule set shares, then the rule set's own (#865). Says whether the turn is over.
 
-import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
+import {
+  ActiveUnit,
+  InactiveUnit,
+} from '@civ-clone/library-unit/PlayerActions';
 import {
   ChangeProduction,
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
-import {
-  ChooseGovernment,
-  Revolution,
-} from '@civ-clone/civ1-government/PlayerActions';
-import {
-  CompleteProduction,
-  SellImprovement,
-} from '@civ-clone/civ1-treasury/PlayerActions';
+import { PlayerActionType, workerRules } from '../workerRules';
 import { handleActiveUnit, handleInactiveUnit } from './actions/unit';
 import {
   handleAdjustTradeRates,
-  handleChooseGovernment,
   handleChooseResearch,
   handleLaunchSpaceship,
-  handleRevolution,
 } from './actions/player';
 import {
   handleChangeSpecialist,
   handleChangeWorkedTile,
   handleCityBuild,
-  handleCompleteProduction,
   handleReassignWorkers,
   handleRenameCity,
-  handleSellImprovement,
 } from './actions/city';
 import { ActionContext, ActionHandler } from './actions/ActionContext';
-import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
+import AdjustTradeRates from '@civ-clone/base-player-action-adjust-trade-rates/AdjustTradeRates';
 import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
-import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
-import { EndTurn } from '@civ-clone/civ1-player/PlayerActions';
-import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
+import ChooseResearch from '@civ-clone/library-science/PlayerActions/ChooseResearch';
+import EndTurn from '@civ-clone/base-player-action-end-turn/EndTurn';
+import LaunchSpaceship from '@civ-clone/base-player-action-launch-spaceship/LaunchSpaceship';
 import MandatoryPlayerAction from '@civ-clone/core-player/MandatoryPlayerAction';
 import PlayerAction from '@civ-clone/core-player/PlayerAction';
 
-export type PlayerActionType = new (...args: any[]) => PlayerAction;
+export type { PlayerActionType };
 
-// Each of the player's actions the UI may send, and what acts on it.
-export const actionHandlers: [PlayerActionType, ActionHandler<any>][] = [
+// Each of the player's actions the UI may send that every rule set shares, and what acts on it.
+export const sharedActionHandlers: [PlayerActionType, ActionHandler<any>][] = [
   [ActiveUnit, handleActiveUnit],
   [InactiveUnit, handleInactiveUnit],
   [CityBuild, handleCityBuild],
   [ChangeProduction, handleCityBuild],
   [ChooseResearch, handleChooseResearch],
-  [CompleteProduction, handleCompleteProduction],
-  [SellImprovement, handleSellImprovement],
-  [Revolution, handleRevolution],
-  [ChooseGovernment, handleChooseGovernment],
   [AdjustTradeRates, handleAdjustTradeRates],
   [ChangeWorkedTile, handleChangeWorkedTile],
   [ChangeSpecialist, handleChangeSpecialist],
   [LaunchSpaceship, handleLaunchSpaceship],
+];
+
+// Those, then the rule set's own (#865), which its worker rules hand in.
+export const actionHandlers = (): [PlayerActionType, ActionHandler<any>][] => [
+  ...sharedActionHandlers,
+  ...workerRules().actionHandlers,
 ];
 
 // The player's action the UI means: the one of that name whose value has that id (none, for an action with no value).
@@ -131,8 +125,9 @@ const dispatchAction = (
   // TODO: other actions
   // TODO: make this better...
   const [, handler] =
-    actionHandlers.find(([ActionType]) => playerAction instanceof ActionType) ??
-    [];
+    actionHandlers().find(
+      ([ActionType]) => playerAction instanceof ActionType
+    ) ?? [];
 
   if (handler) {
     return handler(ctx, action, playerAction);

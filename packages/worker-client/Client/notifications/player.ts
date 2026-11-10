@@ -3,7 +3,7 @@
 //  change goes out as patches, which the client queues itself, before these.
 
 import Advance from '@civ-clone/core-science/Advance';
-import { Anarchy } from '@civ-clone/civ1-government/Governments';
+import { Anarchy } from '@civ-clone/library-government/Governments';
 import City from '@civ-clone/core-city/City';
 import Declaration from '@civ-clone/core-diplomacy/Declaration';
 import { NotificationContext, NotificationTable } from './NotificationContext';

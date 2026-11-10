@@ -2,7 +2,7 @@
 //  menu asks for (`cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`), and the checks that decide whether a
 //  `CreateUnit` is acted on and which of a `ModifyUnit`'s fields are, which can be checked with plain data.
 
-import { Gold } from '@civ-clone/civ1-city/Yields';
+import { Gold } from '@civ-clone/library-city/Yields';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import isBarbarian from '@civ-clone/base-civilization-barbarian/isBarbarian';

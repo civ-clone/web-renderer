@@ -18,7 +18,8 @@ The project uses generated import lists rather than dynamic runtime discovery in
   - Falls back to `index.js`.
   - Packages with neither are skipped silently.
 - Writes `src/js/plugins.ts`, which has:
-  - one static import per package, and
+  - one static import per package,
+  - then an import of the rule set's worker rules, the package `package.json`'s `civ-clone.rules` names (#865), and
   - an exported `plugins` manifest: package name to installed version, sorted by name.
 
 Observed behavior:
@@ -36,6 +37,15 @@ The worker client knows no ruleset of its own (#825). civ.one's worker entry, `s
 and hands `Game` a `Plugins` (`packages/worker-client/Plugins.ts`): the manifest, and `load`, which imports them.
 `Game` and `restoreGame` take everything plugin-related from it, so another build or a test can hand in other rules.
 Suites hand in civ.one's with `tests/engine/lib/plugins.ts`.
+
+What the worker client needs that only one rule set has, it asks of that rule set's worker rules (#865,
+`packages/worker-client/workerRules.ts`): its own player actions and their handlers, the classes a save can name,
+whether a city is in civil disorder, choosing an Auto city's build, citizens' moods, the conquest bonus, the
+difficulty's level, the final rating and famous leader, and which units need fuel. civ.one's are Civ1's,
+`@civ-clone/ui-rules-civ1` (`packages/rules-civ1`), which also registers Civ1's AdditionalData (`anarchyTurns`,
+`civilDisorderDeclared`, a terrain's `defence` and `movementCost`). The plugin list imports it after the plugins, and
+it hands itself in with `setWorkerRules`. The client asks for them only once a game is under way; an engine suite
+that never imports the plugin list imports `@civ-clone/ui-rules-civ1` itself.
 
 In `Game.start()` (a new game):
 

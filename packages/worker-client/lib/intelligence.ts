@@ -39,7 +39,7 @@ import {
   NormalAggression,
   NormalDevelopment,
   NormalMilitarism,
-} from '@civ-clone/civ1-civilization/Traits';
+} from '@civ-clone/library-civilization/Traits';
 import Embassy from '@civ-clone/base-unit-action-establish-embassy/Embassy';
 import { Gold } from '@civ-clone/library-city/Yields';
 import { Palace } from '@civ-clone/library-city/CityImprovements';

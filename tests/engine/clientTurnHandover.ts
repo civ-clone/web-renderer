@@ -29,6 +29,8 @@ import { handleAction } from '@civ-clone/ui-worker-client/Client/handleAction';
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
 import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+// Civ1's worker rules, which the client asks for once it acts (#865).
+import '@civ-clone/ui-rules-civ1';
 
 const failures: string[] = [];
 let checks = 0,
