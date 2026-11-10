@@ -32,7 +32,9 @@ const EXEMPT = [
     (code >= 4112 && code <= 4123 && code !== 4118) ||
     code === 4127 ||
     code === 4128,
-  relative = (fileName) => path.relative(webRenderer, fileName),
+  // From the repository's root, with `/` between its parts whatever the system's separator is, as `EXEMPT` has them.
+  relative = (fileName) =>
+    path.relative(webRenderer, fileName).split(path.sep).join('/'),
   // The engine's packages, however they're installed: anything in a `node_modules`, or outside the repository.
   isOurs = (fileName) => {
     const name = relative(fileName);
@@ -40,7 +42,7 @@ const EXEMPT = [
     return (
       !name.startsWith('..') &&
       !path.isAbsolute(name) &&
-      !name.split(path.sep).includes('node_modules')
+      !name.split('/').includes('node_modules')
     );
   },
   where = ({ file, start }) => {
