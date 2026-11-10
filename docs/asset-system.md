@@ -103,10 +103,10 @@ A tileset pack describes itself in a JSON descriptor (Civ1's is `packages/assets
 size and map scales, the sprites it has, how each kind of thing's sprites are named and put together, and how player
 colours go on. `packages/assets/tilesets/tileset.schema.json` is a JSON Schema (draft 2020-12) for it, with a title or
 description on each field, so a pack author's editor can complete and explain the fields and flag a wrong one as it is
-typed (#869). A descriptor names it with `"$schema"`, as Civ1's does (`"./tileset.schema.json"`, beside it); in another
-pack, point it at a copy of the schema, or set it up in the editor (VS Code's `json.schemas` setting) for the pack's
-descriptor. The game ignores `$schema`, and the build leaves the schema's titles and descriptions out of the game's
-bundle (`esbuild.js`).
+typed (#869). A descriptor names it with `"$schema"`, as Civ1's does (`"./tileset.schema.json"`, beside it); another
+pack points it at `https://civ.one/dist/tileset.schema.json`, where the build puts a copy (the schema's `$id`), or the
+editor is told which schema the pack's descriptor has (VS Code's `json.schemas` setting). The game ignores `$schema`,
+and the build leaves the schema's titles and descriptions out of the game's bundle (`esbuild.js`).
 
 `validateDescriptor` (`packages/assets/tilesets/TilesetDescriptor.ts`) checks a descriptor against the same schema first,
 with the small checker in `packages/assets/lib/jsonSchema.ts`, which knows only the keywords the schema uses and refuses

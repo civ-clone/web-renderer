@@ -64,6 +64,13 @@
         'changelog/releases.json',
         'dist/releases.json'
       ),
+    // Whole, with its titles and descriptions, for a pack author's editor to be pointed at (#869):
+    //  https://civ.one/dist/tileset.schema.json, the schema's `$id`.
+    copySchema = () =>
+      require('fs').copyFileSync(
+        'packages/assets/tilesets/tileset.schema.json',
+        'dist/tileset.schema.json'
+      ),
     failed = (e) => {
       console.log(`\x1b[31mfailed.\x1b[0m`);
       console.log('');
@@ -79,6 +86,7 @@
       .build(buildOptions)
       .then(() => {
         copyReleases();
+        copySchema();
 
         console.log('\x1b[32mdone.\x1b[0m');
       })
@@ -113,6 +121,7 @@
 
               if (!built) {
                 copyReleases();
+                copySchema();
               }
 
               console.log(

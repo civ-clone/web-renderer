@@ -19,7 +19,10 @@
 
 `frontend.js` starts `dist/backend.js` as a Web Worker (`src/js/frontend.ts`), so both
 have to be served from `dist/`. It also copies `changelog/releases.json` to
-`dist/releases.json`, which the Releases window fetches when it opens (#476).
+`dist/releases.json`, which the Releases window fetches when it opens (#476). And
+it copies the tileset descriptor's JSON Schema to `dist/tileset.schema.json`, where
+pack authors' editors can be pointed at it (#869, `docs/asset-system.md`); the copy
+in the bundle has its titles and descriptions left out.
 
 `build.json`'s version goes on the URLs as `?v=`: on the worker's, the music
 worklet's and the release notes' in the code (only `src/js/frontend.ts` reads

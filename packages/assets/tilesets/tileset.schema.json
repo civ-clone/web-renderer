@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://civ.one/dist/tileset.schema.json",
   "title": "civ.one tileset descriptor",
   "description": "What a tileset says about itself: the grid it is drawn for, its native tile size, the map scales it can be shown at, the sprites it has, how the sprites for each kind of thing are named and put together, and how player colours go onto units and cities. Sprite names leave out the store's prefix and extension (terrain/hills_nes, not ./assets/terrain/hills_nes.png). Sizes and offsets are in the pack's native pixels; the renderer multiplies them by the map scale. A {placeholder} in a sprite name is filled from engine names and directions. civ.one also checks what a schema cannot say: that each name's placeholders are ones the map fills, that the grid is one the engine knows, that defaultScale is one of scales, that no sprite is listed twice, and that sizes which depend on each other agree.",
   "type": "object",
