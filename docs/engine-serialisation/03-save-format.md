@@ -1,5 +1,9 @@
 # 03 — Save Format and Hydration
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 The technical design. Assumes the `#private` → `private` migration from
 [`02-design-review.md`](./02-design-review.md) §1 has landed, which is what makes
 the hydrator generic instead of per-class.

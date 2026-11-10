@@ -8,10 +8,10 @@ marked as such, with the commit or issue that fixed them.
 ## High priority
 
 - **Monolithic frontend orchestrator**
-  - `src/js/UI/Renderer.ts` is a very large mixed-responsibility class (state, rendering, input, transport, window logic).
+  - The frontend's `Renderer.ts` was a very large mixed-responsibility class (state, rendering, input, transport, window logic).
   - Increases regression risk and makes isolated feature rewrites difficult.
   - Still stands: about 1,900 lines on 2026-10-08. No issue tracks breaking it up.
-  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`), and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`. Split: `Renderer.ts` is now `packages/game/bootstrap.ts`, 153 lines of page start-up, with one game in `src/js/UI/game/` and the rest in `app/`, `debug/` and `lib/`.
+  - Being split since 2026-10-21 under #344 (`docs/state-rewrite/08-phase-3-subscriptions.md`), and open windows learn of changes through `lib/DataChanges.ts` rather than the `document` events and `DataObserver`. Split: `Renderer.ts` is now `packages/game/bootstrap.ts`, 153 lines of page start-up, with one game in `packages/game/` (`GameSession.ts`, `Hud.ts`, `MapView.ts`) over `packages/client/game/GameState.ts`, and the rest in `packages/game/app/`, `debug/` and `lib/`.
 - **Late-game performance bottlenecks** (mostly addressed; tracked in #320)
   - README notes slowdown when rebuilding transferred data. The README note is still there, but most of the cause has been fixed:
     - The turn-start freeze in large games: notifications and patches no longer resend the whole known world (97140f2, #130), and the frontend rebuilds at most once a frame while the other civilizations move (b00c490, #61).

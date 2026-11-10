@@ -128,7 +128,7 @@ so on. `src/css/app.scss` still imports their partials in the order the cascade 
 dependency instead, so the list could be generated, would change which of two equally specific rules wins in a few
 places (a base `.window .body` and a window's own `.city .body`, say), so each of those has to be settled first.
 
-Inside each package the folders are as they were under `src/js/UI/` (`components/`, `lib/`), but for the folder a
+Inside each package the folders are as they were before the split (`components/`, `lib/`), but for the folder a
 package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a
 `game/GameState.ts` and `windows` a `components/` folder. Tidying those is for later.
 

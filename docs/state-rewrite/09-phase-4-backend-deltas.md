@@ -1,5 +1,9 @@
 # 09 — Phase 4: Backend Deltas
 
+> **Historical document.** It was last revised on 2026-10-21 (`14e0560d`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** Partly met by other means: no v2 protocol, but payloads were cut by #321, #323, #324 and #328. See the README's Status section. The `sendPatchData`/`sendInitialData` this document rewrites are now `PlayerPatches.flush()` and `TurnHandover.sendInitialData()` in `src/js/Engine/Client/` (#449).
 
 **Goal.** Stop sending a full snapshot of every city and every unit on every

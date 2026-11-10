@@ -1,5 +1,9 @@
 # 05 — Phase 0: Foundations
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** Done in substance, not as written: the test suite, conformance fixture, `bench.js` and performance marks (#325) exist; recording, replay fixtures, `seedRandom` and full `tsconfig` coverage do not. See the README's Status section.
 
 **Goal.** Make the rest of the work verifiable. Nothing here changes runtime

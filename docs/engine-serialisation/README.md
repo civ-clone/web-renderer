@@ -1,5 +1,9 @@
 # Engine Serialisation — Design Study
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 Can the civ-clone engine be given save/load, and what would it take?
 
 > **Status, 2026-10-08.** All eight stages of

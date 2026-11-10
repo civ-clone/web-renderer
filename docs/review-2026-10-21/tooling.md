@@ -1,5 +1,9 @@
 # Review: build, release and test tooling (origin/main 18f28b0)
 
+> **Historical document.** It was last revised on 2026-10-21 (`d736e636`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 (`runwith.js` bundles a suite with a substitute `plugins.ts`; `empty-plugins-results.txt`; `run-*.txt`; `bullets.mjs`; `tsc-tests.txt`; `deploy-log.txt` is the log of deploy run 39506519550.)
 
 ## Area health

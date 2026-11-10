@@ -1,5 +1,9 @@
 # 11 — Phase 6: Lifecycle
 
+> **Historical document.** It was last revised on 2026-10-23 (`ce27775b`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-23):** Done by other means. The game ending shipped instead of `restart` (#176), and the `restart` and `quit` channels are gone (#340). Save and load shipped through `docs/engine-serialisation/` as real saves, not a replay log. `DataTransferClient.dispose()` landed with its split (#541). See the README's Status section.
 
 **Goal.** Make `restart` and `quit` work, and build the seams that make save and

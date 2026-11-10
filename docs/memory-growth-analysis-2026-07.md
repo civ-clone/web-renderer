@@ -1,5 +1,9 @@
 # Memory Growth Analysis and Proposed Fixes (2026-07-01)
 
+> **Historical document.** It was last revised on 2026-10-25 (`f0092491`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](frontend-ui.md) for where things are now.
+
 ## Context
 
 Symptom: with the application open for a long session (many turns / hours), browser
