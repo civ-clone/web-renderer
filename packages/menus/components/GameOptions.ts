@@ -22,12 +22,12 @@ import {
   chooseInterface,
   chosenInterface,
   interfaceMode,
-} from '@civ-clone/ui-client/lib/interfaceMode';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import { s } from '@dom111/element';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
-import forgetVisitParam from '@civ-clone/ui-client/lib/forgetVisitParam';
+import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */

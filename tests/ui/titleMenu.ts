@@ -24,7 +24,7 @@ import {
 } from '@civ-clone/ui-client/lib/browserSaves';
 import Transport from '@civ-clone/ui-client/Transport';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';

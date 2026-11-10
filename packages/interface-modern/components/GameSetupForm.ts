@@ -24,7 +24,7 @@ import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
 import button from '@civ-clone/ui-component-button/button';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';

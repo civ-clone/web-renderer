@@ -63,7 +63,7 @@ roots.flatMap(files).forEach((file) => {
 
 // Every `glyph('…')` names a glyph in the sheet.
 const sheet = fs.readFileSync(
-    path.join(webRenderer, 'packages', 'assets', 'lib', 'glyphs.ts'),
+    path.join(webRenderer, 'packages', 'platform', 'lib', 'glyphs.ts'),
     'utf8'
   ),
   defined = new Set(
@@ -94,7 +94,7 @@ files(roots[0]).forEach((file) => {
 // `HTMLElement` target, and an `<svg>` isn't one.
 {
   const icons = fs.readFileSync(
-      path.join(webRenderer, 'packages', 'assets', 'styles', '_icons.scss'),
+      path.join(webRenderer, 'packages', 'platform', 'styles', '_glyphs.scss'),
       'utf8'
     ),
     rule = icons.slice(
@@ -106,7 +106,7 @@ files(roots[0]).forEach((file) => {
 
   if (!/pointer-events:\s*none/.test(rule)) {
     failures.push(
-      'packages/assets/styles/_icons.scss: .glyph needs pointer-events: none'
+      'packages/platform/styles/_glyphs.scss: .glyph needs pointer-events: none'
     );
   }
 }

@@ -1,12 +1,12 @@
-import Window from './Window';
+import Window from '@civ-clone/ui-component-window/Window';
 import {
   BuildItem,
   CityBuild,
   Unit as UnitData,
 } from '@civ-clone/ui-protocol/types';
-import { ActionWindowActions } from './ActionWindow';
+import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // Where the "pick one from a list" windows are put together (#735): the interface's `choices` slot (#824), which each
 //  interface in `interfaces/` fills (#825): the classic ones or the ones drawn with the choice window (#745). Everything that opens one of these lists comes here, or to

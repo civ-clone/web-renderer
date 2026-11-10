@@ -5,8 +5,8 @@ import {
 import { s } from '@dom111/element';
 import { INotificationWindow } from '@civ-clone/ui-component-window/NotificationWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
-import { singleChoice } from '@civ-clone/ui-client/lib/singleChoice';
+import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
+import { singleChoice } from '@civ-clone/ui-platform/lib/singleChoice';
 import { t } from 'i18next';
 
 declare global {

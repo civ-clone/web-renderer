@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import { withoutForgottenParams } from '@civ-clone/ui-client/lib/forgetVisitParam';
+import { withoutForgottenParams } from '@civ-clone/ui-platform/lib/forgetVisitParam';
 
 /**
  * Stops Back, or closing the tab, from silently ending a game in progress.

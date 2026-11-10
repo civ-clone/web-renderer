@@ -8,7 +8,7 @@ import './lib/interfaces';
 
 import GameOptionsRegistry, {
   OptionStorage,
-} from '@civ-clone/ui-client/GameOptionsRegistry';
+} from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
   COLOUR_SCHEMES,
   applyColourScheme,

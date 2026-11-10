@@ -8,8 +8,8 @@ import {
   Specialist,
   Yield,
 } from '@civ-clone/ui-protocol/types';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import {
-  groupIcons,
   reduceKnownYield,
   yieldGroup,
 } from '@civ-clone/ui-client/lib/yieldMap';

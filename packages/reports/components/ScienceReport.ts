@@ -3,10 +3,8 @@ import {
   advanceNames,
   researchingName,
 } from '@civ-clone/ui-client/lib/advances';
-import {
-  groupIcons,
-  reduceKnownYield,
-} from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';

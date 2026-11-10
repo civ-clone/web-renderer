@@ -1,6 +1,6 @@
 import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
-import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { GlyphName, glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { button } from '@civ-clone/ui-component-button/button';
 import {
   filteredOutClass,
@@ -8,9 +8,9 @@ import {
   matchRank,
 } from '@civ-clone/ui-widgets/lib/filterRows';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
 import { s } from '@dom111/element';
-import { singleChoice } from '@civ-clone/ui-client/lib/singleChoice';
+import { singleChoice } from '@civ-clone/ui-platform/lib/singleChoice';
 import { t } from 'i18next';
 
 /**

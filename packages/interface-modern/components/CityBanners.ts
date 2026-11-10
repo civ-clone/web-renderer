@@ -4,12 +4,10 @@ import { Reach } from '@civ-clone/ui-map/lib/projection';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import { buildTurns } from '@civ-clone/ui-client/lib/cityTurns';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import {
-  groupIcons,
-  reduceKnownYield,
-} from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { playerColours } from '@civ-clone/ui-assets/lib/renderUnit';
 import { readableOn } from '@civ-clone/ui-widgets/lib/contrast';
 

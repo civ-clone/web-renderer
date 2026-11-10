@@ -8,7 +8,7 @@ import './lib/interfaces';
 import glyph, {
   glyphNames,
   installGlyphs,
-} from '@civ-clone/ui-assets/lib/glyphs';
+} from '@civ-clone/ui-platform/lib/glyphs';
 
 const failures: string[] = [];
 let checks = 0;

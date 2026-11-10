@@ -16,7 +16,7 @@ import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
-import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
 import { openTradeRates } from '@civ-clone/ui-hud/components/Actions/AdjustTradeRates';
 
 // A letter as typed with Shift alone deciding its case, so Caps Lock doesn't turn `p` (CleanPollution) into `P`

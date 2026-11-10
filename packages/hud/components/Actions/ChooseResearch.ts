@@ -20,7 +20,7 @@ import {
   yieldIcon,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import entryDetails from '../lib/choiceDetails';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { openChoice } from '../choiceList';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';

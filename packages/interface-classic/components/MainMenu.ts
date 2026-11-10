@@ -9,7 +9,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { chooseSave } from '@civ-clone/ui-menus/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
 import build from '@civ-clone/ui-client/lib/build';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

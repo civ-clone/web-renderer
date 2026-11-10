@@ -21,7 +21,7 @@ import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import { chooseSave } from './LoadGameWindow';
 import { SaveDetails } from '@civ-clone/ui-protocol/Transport';
 import { t } from 'i18next';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 
 export class GameMenu extends Element {
   #findCity: () => void;

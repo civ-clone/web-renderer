@@ -1,0 +1,7 @@
+{
+  "name": "@civ-clone/ui-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "What the interface stands on, knowing nothing of the game: options, storage, the locale's formatting, the interfaces and their slots, the glyphs, and key and address helpers.",
+  "license": "MIT"
+}

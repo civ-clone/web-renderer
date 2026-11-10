@@ -2,7 +2,7 @@ import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `turnControls` slot (#860): what fills the end-turn area with the player's actions, and ends the
 //  turn. The classic interface has its orbs; the modern one the notification rows over the Next Turn button (#416,

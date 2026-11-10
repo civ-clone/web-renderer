@@ -5,7 +5,7 @@
   "description": "The table the reports are drawn with: columns, sorting and totals.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
   }
 }

@@ -1,5 +1,5 @@
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `titleScreen` slot (#824), which each interface in `interfaces/` fills (#825): the menu the page
 //  opens on.

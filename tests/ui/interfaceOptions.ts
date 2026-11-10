@@ -18,7 +18,7 @@ import {
   interfaceMode,
   interfaces,
   registerInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   interfaceRows,
   themeRow,
@@ -26,7 +26,7 @@ import {
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import forgetVisitParam, {
   withoutForgottenParams,
-} from '@civ-clone/ui-client/lib/forgetVisitParam';
+} from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import GameOptions, {
   assetsRow,
 } from '@civ-clone/ui-menus/components/GameOptions';
@@ -37,7 +37,7 @@ import {
 } from '@civ-clone/ui-component-window/leaveGuard';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 
 const failures: string[] = [];

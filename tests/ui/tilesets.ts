@@ -33,7 +33,7 @@ import {
 } from '@civ-clone/ui-assets/AssetStore';
 import { setTilesetSizes } from '@civ-clone/ui-game/app/assets';
 import i18next from 'i18next';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';

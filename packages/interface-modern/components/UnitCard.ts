@@ -7,9 +7,9 @@ import currentTileset, {
 } from '@civ-clone/ui-assets/lib/tilesets';
 import Unit from '@civ-clone/ui-hud/components/Unit';
 import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
-import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
+import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import glyph, { GlyphName } from '@civ-clone/ui-assets/lib/glyphs';
+import glyph, { GlyphName } from '@civ-clone/ui-platform/lib/glyphs';
 import statPill from '@civ-clone/ui-component-stat-pill/StatPill';
 import tooltip, {
   hideTooltipWithin,

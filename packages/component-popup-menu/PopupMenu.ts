@@ -1,6 +1,6 @@
 import { Element, off, on, s } from '@dom111/element';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { t } from 'i18next';
 
 // WeakMap so a menu whose launcher is dropped without an explicit `remove()`

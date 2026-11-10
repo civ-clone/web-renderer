@@ -5,6 +5,6 @@
 import { document } from './dom';
 import './interfaces';
 
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 applyInterface('classic', null, document.documentElement as HTMLElement);

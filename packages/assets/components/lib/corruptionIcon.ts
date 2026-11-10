@@ -1,6 +1,6 @@
 import { assetStore } from '../../AssetStore';
 import currentTileset from '../../lib/tilesets';
-import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '../../lib/groupIcons';
 import { s } from '@dom111/element';
 import { spriteKey } from '../../tilesets/TilesetDescriptor';
 

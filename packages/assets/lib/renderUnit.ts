@@ -8,7 +8,7 @@ import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from './getPreloadedImage';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import { entityName } from '@civ-clone/ui-client/components/lib/entity';
+import { entityName } from '@civ-clone/ui-platform/lib/entity';
 import { isDrawable } from './imageSize';
 import replaceColours from './replaceColours';
 import { s } from '@dom111/element';

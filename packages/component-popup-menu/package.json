@@ -5,7 +5,7 @@
   "description": "A menu that opens over what was pressed.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
   }
 }

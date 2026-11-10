@@ -13,7 +13,7 @@ import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupFo
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import i18next from 'i18next';
 
 const failures: string[] = [];

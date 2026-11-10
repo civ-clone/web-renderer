@@ -2,7 +2,7 @@ import Window from '@civ-clone/ui-component-window/Window';
 import { Player } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // Where the reports are put together (#735): the interface's `reports` slot (#824), which each interface in
 //  `interfaces/` fills (#825): the classic ones or the ones drawn with the report table (#744). Every key, menu item and button that opens a report comes here.

@@ -12,9 +12,9 @@ import cityBannerTooltip, {
 import squareTooltip, {
   hasSquareTooltip,
 } from '@civ-clone/ui-hud/components/Map/squareTooltip';
-import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
-import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { hasFeature } from '@civ-clone/ui-platform/lib/interfaceMode';
+import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';

@@ -70,17 +70,6 @@ export const tileYieldIcons = (
   }));
 };
 
-export const groupIcons: { [key: string]: string } = {
-  Food: 'city/food',
-  Production: 'city/production',
-  Trade: 'city/trade',
-  Gold: 'city/gold',
-  Luxuries: 'city/luxury',
-  Pollution: 'city/pollution',
-  Research: 'city/bulb',
-  Unhappiness: 'city/sad',
-};
-
 /**
  * How a city's yield is drawn on the city screen: what it makes and uses (`used`), what it uses but doesn't make
  * (`deficit`), and what is left over (`free`).

@@ -7,10 +7,8 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { CivilizationPowerRow } from '@civ-clone/ui-protocol/reports';
-import GameOptionsRegistry from '@civ-clone/ui-client/GameOptionsRegistry';
-import PowerList, {
-  powerWindow,
-} from '@civ-clone/ui-hud/components/PowerList';
+import GameOptionsRegistry from '@civ-clone/ui-platform/GameOptionsRegistry';
+import PowerList, { powerWindow } from '@civ-clone/ui-hud/components/PowerList';
 import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import Transport from '@civ-clone/ui-client/Transport';

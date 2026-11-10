@@ -1,6 +1,6 @@
 import Action from './Action';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

@@ -14,7 +14,7 @@ import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from '@civ-clone/ui-client/lib/government';
-import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {

@@ -1,5 +1,5 @@
 import { SaveDetails } from '@civ-clone/ui-protocol/Transport';
-import { Store } from '../Store';
+import { Store } from '@civ-clone/ui-platform/Store';
 
 /**
  * Saved games, kept in the browser (#653): the ones the player saves, the one each new game keeps as it starts, and

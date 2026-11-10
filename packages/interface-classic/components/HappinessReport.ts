@@ -5,10 +5,8 @@ import {
   MilitaryUnhappiness,
   Player,
 } from '@civ-clone/ui-protocol/types';
-import {
-  groupIcons,
-  reduceKnownYield,
-} from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
@@ -21,7 +19,7 @@ import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { renderPopulation } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';

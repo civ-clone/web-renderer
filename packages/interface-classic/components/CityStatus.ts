@@ -1,5 +1,5 @@
 import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
-import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import {
   turnsLeft,
   yieldData,

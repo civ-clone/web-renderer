@@ -4,7 +4,7 @@
 // and what the player is told when it cannot (#5) — or, named as the argument,
 // another suite over browser storage: tests/ui/browserSaves.ts (#653).
 //
-// `packages/client/Store.ts` is resolved to `tests/ui/lib/FakeStore.ts` for this
+// `packages/platform/Store.ts` is resolved to `tests/ui/lib/FakeStore.ts` for this
 // bundle: node has no `indexedDB`, and `idb` checks its own wrappers with
 // `instanceof IDBDatabase` and friends, so a shim faithful enough to run it
 // would be more machinery than the thing under test. The `sessionStorage` the

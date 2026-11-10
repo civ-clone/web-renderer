@@ -1,5 +1,5 @@
 import { Map } from '../Map';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `cityLabels` slot (#824), which each interface in `interfaces/` fills (#825): what names the cities
 //  on the map. Its labels take clicks and hovers as any layer does, through `bannerAt`.

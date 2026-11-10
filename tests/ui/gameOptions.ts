@@ -10,7 +10,7 @@ import './lib/interfaces';
 import GameOptionsRegistry, {
   OptionStorage,
   instance as options,
-} from '@civ-clone/ui-client/GameOptionsRegistry';
+} from '@civ-clone/ui-platform/GameOptionsRegistry';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 
 const failures: string[] = [];

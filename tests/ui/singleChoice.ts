@@ -1,7 +1,7 @@
 // When a selection list is chosen for the player instead of being shown: it
 // has exactly one option, and the caller hasn't opted out (#148).
 
-import singleChoice from '@civ-clone/ui-client/lib/singleChoice';
+import singleChoice from '@civ-clone/ui-platform/lib/singleChoice';
 
 const failures: string[] = [];
 let checks = 0;

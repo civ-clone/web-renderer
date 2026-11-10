@@ -17,7 +17,7 @@ import MapView from '@civ-clone/ui-game/MapView';
 import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import { playerCityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import Transport from '@civ-clone/ui-client/Transport';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0,

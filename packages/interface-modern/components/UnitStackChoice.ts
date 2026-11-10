@@ -6,7 +6,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-hud/components/Unit';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { t } from 'i18next';
 import unitLabel, { unitName } from '@civ-clone/ui-hud/lib/unitLabel';
 

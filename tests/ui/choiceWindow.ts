@@ -13,10 +13,10 @@ import ChoiceWindow, {
 import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import CityBuildChoice from '@civ-clone/ui-interface-modern/components/CityBuildChoice';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import { openCityBuild } from '@civ-clone/ui-component-window/choices';
+import { openCityBuild } from '@civ-clone/ui-city/components/choices';
 
 const failures: string[] = [];
 let checks = 0,

@@ -16,11 +16,11 @@ import ChooseGovernment from '@civ-clone/ui-hud/components/Actions/ChooseGovernm
 import ChooseResearch from '@civ-clone/ui-hud/components/Actions/ChooseResearch';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import { openArrivalWindow } from '@civ-clone/ui-hud/lib/unitActionPrompts';
-import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
+import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

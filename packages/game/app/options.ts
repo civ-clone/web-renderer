@@ -1,6 +1,6 @@
-import { defaultInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defaultInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 // Any the player has changed come back from browser storage (#343).
 export const setOptionDefaults = (): void => {

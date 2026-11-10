@@ -23,7 +23,7 @@ import {
   hasFeature,
   interfaces,
   registerInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 import { join } from 'path';
 import {
   defaultUiTheme,
