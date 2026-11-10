@@ -614,6 +614,106 @@ const run = async (): Promise<void> => {
     { id: OBSOLESCENCE, value: true },
   ]);
 
+  // A choice that is an alternative of another choice, and a choice that two sets hold.
+  const rule = (id: string, active: boolean = true): RuleSetNode => ({
+      id,
+      kind: 'rule',
+      state: 'on',
+      active,
+      switchable: true,
+      members: [],
+    }),
+    inner: RuleSetNode = {
+      id: 'test:inner',
+      kind: 'choice',
+      state: 'on',
+      active: true,
+      switchable: false,
+      chosen: 'test:inner/a',
+      members: [rule('test:inner/a'), rule('test:inner/b', false)],
+    },
+    shared: RuleSetNode = {
+      id: 'test:shared',
+      kind: 'choice',
+      state: 'on',
+      active: true,
+      switchable: false,
+      chosen: 'test:shared/a',
+      members: [rule('test:shared/a'), rule('test:shared/b', false)],
+    },
+    heading = (id: string): RuleSetNode => ({
+      id,
+      kind: 'set',
+      state: 'on',
+      active: true,
+      switchable: false,
+      members: [shared],
+    });
+
+  changes.length = 0;
+
+  renderRuleSets(
+    holder,
+    [
+      {
+        id: 'test:outer',
+        kind: 'choice',
+        state: 'on',
+        active: true,
+        switchable: false,
+        chosen: 'test:inner',
+        members: [rule('test:plain', false), inner],
+      },
+      heading('test:first'),
+      heading('test:second'),
+    ],
+    (change) => changes.push(change)
+  );
+
+  const radios = [...holder.querySelectorAll<HTMLInputElement>('input')],
+    groups = (ending: string): string[] => [
+      ...new Set(
+        radios
+          .filter((radio) => radio.dataset.ruleSet!.endsWith(ending))
+          .map((radio) => radio.name)
+      ),
+    ];
+
+  expect(
+    'a choice that is an alternative of another is drawn as a choice beneath its radio button: radios, and no checkbox',
+    [
+      radios.map((radio) => radio.type).filter((type) => type !== 'radio'),
+      radios
+        .filter((radio) => radio.dataset.ruleSet!.includes('test:inner\n'))
+        .map((radio) => `${radio.value}${radio.checked ? ' on' : ''}`),
+      holder.querySelectorAll('fieldset fieldset').length,
+    ],
+    [[], ['test:inner/a on', 'test:inner/b'], 1]
+  );
+
+  tick(
+    radios.find((radio) => radio.value === 'test:inner/b') as HTMLInputElement,
+    true
+  );
+
+  expect(
+    'and picking one of its alternatives picks from that choice',
+    changes,
+    [{ id: 'test:inner', value: 'test:inner/b' }]
+  );
+  expect(
+    "a choice drawn twice is two groups of radio buttons: picking in one doesn't clear the other, and each group differs from the choice inside a choice",
+    [
+      groups('test:shared/a').length,
+      new Set([
+        ...groups('test:shared/a'),
+        ...groups('test:inner/a'),
+        ...groups('test:plain'),
+      ]).size,
+    ],
+    [2, 4]
+  );
+
   finished = true;
 
   if (failures.length > 0) {

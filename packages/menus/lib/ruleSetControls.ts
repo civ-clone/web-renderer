@@ -170,7 +170,11 @@ const item = (
         alternative.append(
           wrapper,
           ...aboutMember,
-          ...inside(member.members, member, under(here, member.id), label)
+          // An alternative that is itself a choice is drawn as one, beneath its radio button: its own alternatives
+          //  are picked from, not ticked.
+          ...(member.kind === 'choice'
+            ? inside([member], node, here, label)
+            : inside(member.members, member, under(here, member.id), label))
         );
 
         return alternative;
