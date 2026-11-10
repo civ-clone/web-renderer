@@ -19,7 +19,6 @@ import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
-import { h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from './government';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
@@ -290,6 +289,9 @@ const renderSquares = (
     button.style.height = percent(box.height, canvas.height);
     button.dataset.x = String(localTile.x);
     button.dataset.y = String(localTile.y);
+    // Which square it is, for the keyboard to be put back on once the city is drawn again: its label says what the
+    //  square is doing, and two squares can read alike.
+    button.dataset.focusKey = `square:${at(localTile)}`;
     // One stop for Tab: the city's own square, until another has had the focus.
     button.setAttribute('tabindex', tile.id === city.tile.id ? '0' : '-1');
     button.setAttribute('aria-label', squareLabel(tile, city));
@@ -298,6 +300,19 @@ const renderSquares = (
     buttons.set(at(localTile), button);
     squares.append(button);
   });
+
+  // A city whose own square isn't among those the engine sent still has a way in.
+  if (
+    ![...buttons.values()].some(
+      (button) => button.getAttribute('tabindex') === '0'
+    )
+  ) {
+    buttons.values().next().value?.setAttribute('tabindex', '0');
+  }
+
+  // A pointer's press works the square without taking the keyboard there: Enter is still the screen's, and the
+  //  arrow keys still the previous and next city, as they were when the press landed on the canvas.
+  squares.addEventListener('mousedown', (event) => event.preventDefault());
 
   // The square the keyboard is on is the one Tab comes back to.
   squares.addEventListener('focusin', (event) => {
@@ -310,12 +325,20 @@ const renderSquares = (
     const step = arrows[event.key],
       from = event.target as HTMLElement;
 
+    // A key held down presses once: each press draws the city again and puts the keyboard back here, so a repeat
+    //  would work the square and free it, over and over.
+    if (event.repeat && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+
+      return;
+    }
+
+    // With Shift too: left to the screen, it would be the next city.
     if (
       step === undefined ||
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
-      event.shiftKey ||
       from.dataset.x === undefined
     ) {
       return;
@@ -427,39 +450,16 @@ export const renderMap = (
       tile: tile.id,
     });
 
-  return h(
+  // A click on a square lands on its button (#854), which does what the click on the canvas used to.
+  return s(
+    '<div class="city-map"></div>',
+    // The canvas and the buttons over it, in one box the size of the canvas.
     s(
-      '<div class="city-map"></div>',
-      // The canvas and the buttons over it, in one box the size of the canvas.
-      s(
-        '<div class="city-map-frame"></div>',
-        portalCanvas,
-        readOnly
-          ? ''
-          : renderSquares(city, cityPortal, localTiles, portalCanvas, toggle)
-      )
-    ),
-    {
-      click: (event: MouseEvent) => {
-        // A click on a square lands on its button (#854): this is for one that lands on the canvas all the same.
-        if (readOnly || event.target !== portalCanvas) {
-          return;
-        }
-
-        // The canvas is scaled by CSS, so `offsetX`/`offsetY` need mapping
-        // back onto its own pixels before they can be turned into a tile.
-        const localTile = cityPortal.tileAt(
-            (event.offsetX * portalCanvas.width) / portalCanvas.offsetWidth,
-            (event.offsetY * portalCanvas.height) / portalCanvas.offsetHeight
-          ),
-          tile = city.tiles.find((tile) => tile.id === localTile?.id);
-
-        if (!tile) {
-          return;
-        }
-
-        toggle(tile);
-      },
-    }
+      '<div class="city-map-frame"></div>',
+      portalCanvas,
+      readOnly
+        ? ''
+        : renderSquares(city, cityPortal, localTiles, portalCanvas, toggle)
+    )
   );
 };

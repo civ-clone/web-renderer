@@ -44,6 +44,8 @@ const placeAmong = <T extends Element>(like: T[], element: T): number =>
 /**
  * Call before the redraw; call what it returns after. That puts the focus on, in order of preference:
  *
+ * 0. the control with the same `data-focus-key`, where the one that had the focus carried one: it says which it is,
+ *    whatever its label reads now (a city's square, worked a moment ago and now not);
  * 1. the control with the same name (its tag, classes and label), the same one of several alike, as long as there
  *    are as many of that name as before: where one has gone, which of the rest is "the same" can't be told by name
  *    (two Warriors queued, one now first with no Up);
@@ -70,7 +72,9 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
     return () => false;
   }
 
-  const name = nameOf(focused),
+  const // One that says which it is (`data-focus-key`): a city's square, whose label changes with what it is doing.
+    ownKey = focused.dataset.focusKey,
+    name = nameOf(focused),
     alikeBefore = controls(root).filter((control) => nameOf(control) === name),
     place = placeAmong(alikeBefore, focused),
     row = focused.closest<HTMLElement>('[data-key]'),
@@ -140,6 +144,11 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
               (control) => kindOf(control) === kind && safe(control)
             ),
       target =
+        (ownKey === undefined
+          ? undefined
+          : controls(root).find(
+              (control) => control.dataset.focusKey === ownKey
+            )) ??
         (alike.length === alikeBefore.length ? alike[place] : undefined) ??
         (sameRow === undefined
           ? undefined

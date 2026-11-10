@@ -1007,13 +1007,38 @@ const run = async (): Promise<void> => {
         "The city's squares: arrow keys move, Enter works or frees a square",
       ]
     );
+    // Three squares across and down, so each is a third of the canvas: the city's in the middle, the east one to
+    //  its right.
+    const placed = (button: HTMLButtonElement | undefined): number[] =>
+      ['left', 'top', 'width', 'height'].map((side) =>
+        Math.round(parseFloat(button?.style.getPropertyValue(side) ?? ''))
+      );
+
     expect(
-      'each is placed by its square’s share of the canvas',
-      squares().every((button) =>
-        ['left', 'top', 'width', 'height'].every((side) =>
-          /^\d+(\.\d+)?%$/.test(button.style.getPropertyValue(side))
-        )
-      ),
+      'each is placed over its square, by its share of the canvas',
+      [
+        placed(labelled('Plains')),
+        placed(labelled('Grassland')),
+        placed(labelled('Desert')),
+        squares().every((button) =>
+          ['left', 'top', 'width', 'height'].every((side) =>
+            button.style.getPropertyValue(side).endsWith('%')
+          )
+        ),
+      ],
+      [[33, 33, 33, 33], [67, 33, 33, 33], [33, 0, 33, 33], true]
+    );
+
+    const pressed = new MouseEvent('mousedown', {
+      bubbles: true,
+      cancelable: true,
+    });
+
+    labelled('Forest')!.dispatchEvent(pressed);
+
+    expect(
+      'a pointer’s press doesn’t take the keyboard to the square: Enter is still the screen’s',
+      pressed.defaultPrevented,
       true
     );
 
@@ -1086,6 +1111,39 @@ const run = async (): Promise<void> => {
       'Grassland, worked. Food: 2'
     );
 
+    // With Shift too, which the screen would take for the next city.
+    const shifted = new KeyboardEvent('keydown', {
+      bubbles: true,
+      cancelable: true,
+      key: 'ArrowRight',
+      shiftKey: true,
+    });
+
+    focused!.dispatchEvent(shifted);
+    taken.push(shifted.defaultPrevented);
+
+    // Enter is the button's own: it doesn't close the screen. Held down, it presses once.
+    const enter = (repeat: boolean): boolean => {
+      const event = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: 'Enter',
+      });
+
+      // linkedom's events don't take it from what they're made with.
+      Object.defineProperty(event, 'repeat', { value: repeat });
+
+      focused!.dispatchEvent(event);
+
+      return event.defaultPrevented;
+    };
+
+    expect(
+      'Enter on a square leaves the screen open, and a held Enter is not a second press',
+      [enter(false), mapScreen.element().isConnected, enter(true)],
+      [false, true, true]
+    );
+
     taken.push(arrow('Left'), arrow('Left'), arrow('Right'), arrow('Up'));
 
     expect(
@@ -1096,7 +1154,7 @@ const run = async (): Promise<void> => {
     expect(
       'the arrow keys are the map’s: none reached the screen, and none scrolls the window',
       [reached, taken],
-      [0, [true, true, true, true, true, true]]
+      [0, [true, true, true, true, true, true, true]]
     );
 
     // The city drawn again with the square freed: the keyboard is on that square's new button.
@@ -1120,9 +1178,51 @@ const run = async (): Promise<void> => {
     );
 
     mapScreen.element().removeEventListener('keydown', count);
+    mapScreen.close();
+
+    // Two squares that read alike, whose states swap in one update, as when the engine moves a worker: the keyboard
+    //  stays on the square it was on, not on the one that now reads as that one did.
+    {
+      const left = square(1, 2, 'Grassland', [['Food', 2]]),
+        right = square(3, 2, 'Grassland', [['Food', 2]]),
+        alike = [left, centre, right],
+        twin = (worked: typeof alike) =>
+          cityData('City-T', 'Tuttul', {
+            player: { ...player, world: { ...player.world, tiles: alike } },
+            tile: centre,
+            tiles: alike,
+            tilesWorked: worked,
+          }),
+        start = twin([centre, right]),
+        twins = openCity(start, portal, transport),
+        at = (x: number): HTMLElement =>
+          twins
+            .element()
+            .querySelector(`.city-square[data-x="${x}"]`) as HTMLElement;
+
+      // The small world has a square's border: the city's is at 2, its neighbours at 1 and 3.
+      at(3).focus();
+
+      dataChanges.collect([start.id]);
+      dataChanges.notify({
+        player: { cities: [twin([centre, left])] },
+      } as unknown as GameData);
+
+      expect(
+        'two alike that swap: the keyboard is on the same square, which now reads as the other did',
+        [
+          focused === at(3),
+          focused?.getAttribute('aria-label'),
+          at(1).getAttribute('aria-label'),
+        ],
+        [true, 'Grassland, not worked. Food: 2', 'Grassland, worked. Food: 2']
+      );
+
+      twins.close();
+    }
+
     HTMLElement.prototype.focus = focus;
     delete (document as any).activeElement;
-    mapScreen.close();
 
     // A city only looked at has no squares to choose.
     const looked = openCity(mapped([centre, east]), portal, transport, {
