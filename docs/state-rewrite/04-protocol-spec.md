@@ -1,7 +1,7 @@
 # 04 — Transport Protocol
 
 > **Historical document.** It was last revised on 2026-10-21 (`14e0560d`) and describes the code as it stood then
-> (two paths were brought up to date in #834).
+> (one path was brought up to date in #834).
 > Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
 > see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
 
