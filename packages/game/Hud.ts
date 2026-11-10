@@ -7,8 +7,6 @@ import {
 import Actions from '@civ-clone/ui-windows/components/Actions';
 import GameDetails from '@civ-clone/ui-windows/components/GameDetails';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
-import NextTurn from '@civ-clone/ui-windows/components/NextTurn';
-import NotificationRows from '@civ-clone/ui-windows/components/NotificationRows';
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import PlayerDetails from '@civ-clone/ui-windows/components/PlayerDetails';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -17,24 +15,25 @@ import PowerList from '@civ-clone/ui-windows/components/PowerList';
 import { openTradeReport } from '@civ-clone/ui-windows/components/reports';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UnitPanel } from '@civ-clone/ui-windows/components/unitPanel';
-import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
-import nextTurnQueue, {
-  actionKey,
-} from '@civ-clone/ui-client/lib/nextTurnQueue';
+import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import partitionActions from '@civ-clone/ui-client/lib/playerActionPanels';
-import { s } from '@dom111/element';
+import turnControls, {
+  NextTurnControl,
+  TurnControls,
+} from '@civ-clone/ui-windows/components/turnControls';
 import { t } from 'i18next';
 
-// The panels around the map: the player's actions (the end-turn area and the secondary panel), the active unit's
-//  action buttons, and the game and player details. Rebuilt from the latest data on every render. The sidebar's Power
-//  list is told the turn, and asks for itself on a new one (#701, #708).
+// The panels around the map: the player's actions (the end-turn area, which the interface's `turnControls` fill
+//  (#860), and the secondary panel), the active unit's action buttons, and the game and player details. Rebuilt from
+//  the latest data on every render. The sidebar's Power list is told the turn, and asks for itself on a new one (#701,
+//  #708).
 //
 // Reaches beyond its own panels in one place: `build` moves the primary panel to the end of `gameArea` when it isn't
 //  there already. Not every time: a panel put back in the page plays its rows' entrance again (#416).
 
 export type HudDeps = {
   actionArea: HTMLElement;
-  // The Next Turn button's units item (#702): the map centred on the active unit.
+  // The Next Turn button's units item (#702), under an interface that has one: the map centred on the active unit.
   centreActiveUnit?: () => void;
   // A notification dismissed (#416): drawn again, and auto end turn looked at again, now rather than at the next update.
   changed?: () => void;
@@ -60,12 +59,10 @@ export type HudDeps = {
 
 export class Hud {
   #deps: HudDeps;
-  // Under the new interface (#735), the Next Turn button (#702) takes the primary panel's place.
-  #nextTurn: NextTurn | null = null;
-  #notificationRows: NotificationRows | null = null;
   #dismissals: Dismissals;
   #turn = 0;
-  #primaryActions: Actions | null = null;
+  // The end-turn area, as the interface fills it (#860).
+  #turnControls: TurnControls;
   #secondaryActions: Actions;
 
   constructor(deps: HudDeps) {
@@ -75,26 +72,12 @@ export class Hud {
 
     this.#dismissals = deps.dismissals ?? new Dismissals();
 
-    if (hasFeature('nextTurn')) {
-      // The notification rows (#416) over the Next Turn button (#702), in the primary panel's place.
-      const rows = s('<div class="ui-notification-rows"></div>'),
-        next = s('<div class="ui-next-turn-area"></div>');
-
-      actionArea.replaceChildren(rows, next);
-
-      this.#notificationRows = new NotificationRows(rows, {
-        dismiss: (action): void => this.#dismiss(action),
-        portal,
-        transport,
-      });
-      this.#nextTurn = new NextTurn(next, {
-        centreActiveUnit: deps.centreActiveUnit ?? (() => {}),
-        portal,
-        transport,
-      });
-    } else {
-      this.#primaryActions = new Actions(actionArea, portal, transport);
-    }
+    this.#turnControls = turnControls.current()(actionArea, {
+      centreActiveUnit: deps.centreActiveUnit ?? (() => {}),
+      dismiss: (action): void => this.#dismiss(action),
+      portal,
+      transport,
+    });
     this.#secondaryActions = new Actions(
       secondaryActionArea,
       portal,
@@ -116,9 +99,9 @@ export class Hud {
     this.#deps.changed?.();
   }
 
-  /** The Next Turn button, under the new interface: Enter and Shift+Enter press and skip it (`InputController`). */
-  nextTurn(): NextTurn | null {
-    return this.#nextTurn;
+  /** The Next Turn button, if the interface has one: Enter and Shift+Enter press and skip it (`InputController`). */
+  nextTurn(): NextTurnControl | null {
+    return this.#turnControls.nextTurn();
   }
 
   build(data: GameData, activeUnit: Unit | null, waiting: boolean): void {
@@ -139,25 +122,19 @@ export class Hud {
       waiting
     );
 
-    this.#primaryActions?.build(primary, data.player);
-
     this.#turn = Number(data.turn?.value ?? 0);
 
-    // What the player hasn't dismissed this turn (#416).
-    const kept = primary.filter(
-      (action) => !this.#dismissals.has(actionKey(action), this.#turn)
-    );
-
-    this.#notificationRows?.build(
-      kept.filter((action) => ['CivilDisorder', 'Notice'].includes(action._)),
-      data.player
-    );
-    this.#nextTurn?.build(
-      nextTurnQueue(kept, data.player.actions, waiting),
+    this.#turnControls.build({
+      primary,
+      // What the player hasn't dismissed this turn (#416).
+      kept: primary.filter(
+        (action) => !this.#dismissals.has(actionKey(action), this.#turn)
+      ),
+      actions: data.player.actions,
       waiting,
-      data.player,
-      this.#turn
-    );
+      player: data.player,
+      turn: this.#turn,
+    });
 
     this.#secondaryActions.build(secondary);
 

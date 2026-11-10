@@ -1,13 +1,14 @@
 import { City, Player } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import { NextTurnItem } from '@civ-clone/ui-client/lib/nextTurnQueue';
-import Action from './Actions/Action';
-import Notice from './Actions/Notice';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
+import Action from '@civ-clone/ui-windows/components/Actions/Action';
+import Notice from '@civ-clone/ui-windows/components/Actions/Notice';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import button from '@civ-clone/ui-component-button/button';
-import { createAction } from './Actions';
+import { createAction } from '@civ-clone/ui-windows/components/Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { setNoticeCategory } from './lib/noticeCategory';
@@ -24,9 +25,6 @@ const waitingKeys: Record<string, string> = {
   'Game.progress.player': 'NextTurn.waiting.player',
   'Game.progress.unmet-player': 'NextTurn.waiting.unmet-player',
 };
-
-/** Talks the engine is waiting on an answer to (#702): who they're with, and how to bring their window back. */
-export type PendingMeeting = { leader: string; show: () => void };
 
 export type NextTurnDeps = {
   portal: Portal;

@@ -12,7 +12,8 @@
     "choiceList": "selectionWindow",
     "unitPanel": "details",
     "talks": "windows",
-    "mapMenus": "popups"
+    "mapMenus": "popups",
+    "turnControls": "orbs"
   },
   "features": []
 }

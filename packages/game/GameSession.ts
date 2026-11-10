@@ -35,7 +35,7 @@ import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
 import { AppElements } from './app/elements';
-import { PendingMeeting } from '@civ-clone/ui-windows/components/NextTurn';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
 import NotificationBar from './app/NotificationBar';
 import ObserverBar from '@civ-clone/ui-windows/components/ObserverBar';
 import {
