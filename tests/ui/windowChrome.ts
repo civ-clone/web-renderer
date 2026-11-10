@@ -2,6 +2,8 @@
 //  actions (a window's own footer moved there, the primary last, a quiet Close where there are none),
 //  Enter for the primary, Escape for the cancel action, focus back where it was, and a copy that fades as the window
 //  closes. With the flag off, an action window is built exactly as before.
+// A window is moved by dragging its title bar with a mouse, a finger or a pen (#858), and can't be dragged so far
+//  that the bar is out of reach.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import './lib/dom';
@@ -472,6 +474,175 @@ const run = async (): Promise<void> => {
       focused,
       0
     );
+  }
+
+  for (const mode of ['modern', 'classic'] as const) {
+    applyInterface(mode, null);
+
+    const dragged = new Window('Dragged', 'Body'),
+      element = dragged.element(),
+      header = element.querySelector(':scope > header') as HTMLElement,
+      held: number[] = [];
+    await settle();
+
+    // linkedom lays nothing out: a window 300 wide with a 30px bar, at 100, 100 on a page of 800 by 600.
+    Object.entries({
+      offsetLeft: 100,
+      offsetTop: 100,
+      offsetWidth: 300,
+    }).forEach(([name, value]) =>
+      Object.defineProperty(element, name, { value })
+    );
+    Object.defineProperty(header, 'offsetHeight', { value: 30 });
+    Object.defineProperty(header, 'offsetWidth', { value: 300 });
+
+    // The bar's own buttons, where it has any, take its last 30px.
+    const barButton = header.querySelector(':scope > button'),
+      farLeft = barButton === null ? '-236px' : '-206px';
+
+    if (barButton !== null) {
+      Object.defineProperty(barButton, 'offsetLeft', { value: 270 });
+    }
+    Object.assign(globalThis.window, { innerWidth: 800, innerHeight: 600 });
+
+    header.setPointerCapture = (id: number) => void held.push(id);
+    header.hasPointerCapture = (id: number) => held.includes(id);
+    header.releasePointerCapture = (id: number) =>
+      void held.splice(held.indexOf(id), 1);
+
+    // linkedom has no `PointerEvent`: an event with what the bar reads.
+    const pointer = (
+        type: string,
+        x: number,
+        y: number,
+        {
+          target = header as Element,
+          ...more
+        }: { target?: Element; [key: string]: unknown } = {}
+      ): void => {
+        const event = new Event(type, { bubbles: true, cancelable: true });
+
+        Object.entries({
+          button: 0,
+          clientX: x,
+          clientY: y,
+          isPrimary: true,
+          pointerId: 3,
+          ...more,
+        }).forEach(([key, value]) =>
+          Object.defineProperty(event, key, { value })
+        );
+
+        target.dispatchEvent(event);
+      },
+      at = (): string[] => [
+        element.style.getPropertyValue('left'),
+        element.style.getPropertyValue('top'),
+      ];
+
+    pointer('pointerdown', 150, 110);
+    pointer('pointermove', 170, 140);
+
+    expect(
+      `${mode}: a title bar dragged by a pointer moves its window, and holds the pointer`,
+      [at(), held],
+      [['120px', '130px'], [3]]
+    );
+
+    pointer('pointermove', 180, 150);
+
+    expect(`${mode}: and goes on moving it`, at(), ['130px', '140px']);
+
+    // A finger moves by fractions of a pixel, which add up.
+    for (let step = 1; step <= 40; step++) {
+      pointer('pointermove', 180 + step * 0.25, 150 - step * 0.25);
+    }
+
+    expect(`${mode}: by fractions of a pixel too`, at(), ['140px', '130px']);
+
+    pointer('pointermove', 180, 150);
+
+    pointer('pointermove', 5180, -4850);
+
+    expect(
+      `${mode}: dragged off the top right, the bar stops at the top with a grip of it on the page`,
+      at(),
+      ['736px', '0px']
+    );
+
+    pointer('pointermove', -9820, 5150);
+
+    expect(
+      `${mode}: and off the bottom left, at the foot of the page with a grip of it, clear of its buttons, on the page`,
+      at(),
+      [farLeft, '570px']
+    );
+
+    pointer('pointerup', -9820, 5150);
+    pointer('pointermove', 400, 300);
+
+    expect(
+      `${mode}: let go, the window stays where it was put and the pointer is free`,
+      [at(), held],
+      [[farLeft, '570px'], []]
+    );
+
+    pointer('pointerdown', 10, 580, { isPrimary: false, pointerId: 4 });
+    pointer('pointermove', 60, 500, { isPrimary: false, pointerId: 4 });
+    pointer('pointerdown', 10, 580, { button: 2 });
+    pointer('pointermove', 60, 500);
+
+    if (barButton !== null) {
+      pointer('pointerdown', 10, 580, { target: barButton });
+      pointer('pointermove', 60, 500);
+    }
+
+    expect(
+      `${mode}: a second finger, another mouse button or a press on one of the bar's buttons drags nothing`,
+      [at(), held],
+      [[farLeft, '570px'], []]
+    );
+
+    // The pointer taken away mid-drag, with no word of its release: the drag is over.
+    pointer('pointerdown', 10, 580);
+    pointer('lostpointercapture', 10, 580);
+    pointer('pointermove', 60, 500);
+
+    expect(`${mode}: a pointer lost mid-drag stops dragging`, at(), [
+      farLeft,
+      '570px',
+    ]);
+
+    dragged.close();
+
+    // A maximised window fills the page, and stays put.
+    const filling = new Window('Filling', 'Body', { canMaximise: true }),
+      fillingBar = filling
+        .element()
+        .querySelector(':scope > header') as HTMLElement;
+    await settle();
+
+    filling.maximise();
+
+    [
+      ['pointerdown', 150, 10],
+      ['pointermove', 250, 110],
+      ['pointerup', 250, 110],
+    ].forEach(([type, x, y]) =>
+      pointer(type as string, x as number, y as number, { target: fillingBar })
+    );
+
+    expect(
+      `${mode}: a maximised window is not moved by its bar`,
+      [
+        filling.hasClass('maximised'),
+        filling.element().style.getPropertyValue('left'),
+        filling.element().style.getPropertyValue('top'),
+      ],
+      [true, '', '']
+    );
+
+    filling.close();
   }
 
   applyInterface('classic', null);
