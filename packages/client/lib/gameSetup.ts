@@ -275,7 +275,7 @@ export class GameSetup {
         .reverse()
         .find((seat) => seat.kind === 'computer');
 
-      this.seats.splice(this.seats.indexOf(last ?? this.seats[0]), 1);
+      this.seats.splice(this.seats.indexOf(last ?? this.seats[0]!), 1);
     }
   }
 
@@ -343,7 +343,7 @@ export class GameSetup {
 
     const leaders = this.civilization(seat)?.leaders ?? [];
 
-    seat.leader = leaders.length === 1 ? leaders[0] : RANDOM;
+    seat.leader = leaders.length === 1 ? leaders[0]! : RANDOM;
   }
 
   /** What's wrong with the size typed in, if anything, for the field it's in. */

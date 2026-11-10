@@ -99,7 +99,7 @@ export const renameRetiredPlugins = (file: SaveGame): void => {
     }
 
     if (!(to in plugins)) {
-      plugins[to] = plugins[from];
+      plugins[to] = plugins[from]!;
     }
 
     delete plugins[from];
@@ -110,7 +110,7 @@ export const renameRetiredPlugins = (file: SaveGame): void => {
       return;
     }
 
-    idCounters[to] = Math.max(idCounters[to] ?? 0, idCounters[from]);
+    idCounters[to] = Math.max(idCounters[to] ?? 0, idCounters[from]!);
 
     delete idCounters[from];
   });
@@ -243,7 +243,7 @@ export const chooseDifficulty = async (game = defaultGame): Promise<void> => {
   game.difficulty.set(
     human
       ? await human.chooseFromList(new ChoiceMeta(levels, 'choose-difficulty'))
-      : levels[0]
+      : levels[0]!
   );
 };
 

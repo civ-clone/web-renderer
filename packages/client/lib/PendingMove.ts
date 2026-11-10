@@ -28,7 +28,7 @@ const sameTile = (a: Coordinate, b: Coordinate): boolean =>
  * engine, since what it shows next depends on the answer.
  */
 export const plainMove = (actions: UnitAction[]): UnitAction | null =>
-  actions.length === 1 && actions[0]._ === 'Move' ? actions[0] : null;
+  actions.length === 1 && actions[0]!._ === 'Move' ? actions[0]! : null;
 
 /**
  * A move the frontend has drawn before the engine has answered it, and the keys typed while it is answered (#326).

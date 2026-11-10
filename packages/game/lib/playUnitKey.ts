@@ -57,7 +57,7 @@ export const playUnitKey = (
   }
 
   if (key in keyToActionsMap) {
-    const actions = [...keyToActionsMap[key]];
+    const actions = [...keyToActionsMap[key]!];
 
     while (actions.length) {
       const actionName = actions.shift(),
@@ -107,7 +107,7 @@ export const playUnitKey = (
     return null;
   }
 
-  const directionActions = neighbourActions(unit, keyDirections[key]),
+  const directionActions = neighbourActions(unit, keyDirections[key]!),
     // Taken now: a window below isn't modal, and another unit can be active by the time it's answered
     //  (#57).
     unitId = unit.id,

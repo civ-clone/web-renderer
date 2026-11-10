@@ -131,7 +131,7 @@ export class ChoicePrompt {
       return;
     }
 
-    const [prompt] = this.#open;
+    const prompt = this.#open.values().next().value!;
 
     this.#open.delete(prompt);
 

@@ -9,7 +9,7 @@ import {
 
 export class Cities extends Map {
   // The city glyph is drawn the tileset's inset right of and below the tile's corner (Civ1's, a scale step).
-  protected reach(): Reach {
+  protected override reach(): Reach {
     const reach = super.reach(),
       inset = this.inset();
 
@@ -25,7 +25,11 @@ export class Cities extends Map {
     return this.tileset().cities.inset * this.scale();
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     if (!tile.city) {
       return;
     }
@@ -43,7 +47,8 @@ export class Cities extends Map {
       this.context().fillRect(offsetX, offsetY, width, height);
     }
 
-    this.context().fillStyle = playerColour[0];
+    // Every civilization has at least one colour.
+    this.context().fillStyle = playerColour[0]!;
     this.context().fillRect(
       offsetX + inset,
       offsetY + inset,

@@ -183,7 +183,7 @@ export class UIStressRunner {
         this.#transport.send('action', {
           name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
           id: cityBuild.id,
-          chosen: available[turn % available.length].item._,
+          chosen: available[turn % available.length]!.item._,
         });
       })
       // Not answered: the page has said so, and the run goes on (#580).
@@ -200,7 +200,7 @@ export class UIStressRunner {
     }
 
     const advance =
-      playerResearch.available[turn % playerResearch.available.length];
+      playerResearch.available[turn % playerResearch.available.length]!;
 
     this.#transport.send('action', {
       name: 'ChooseResearch',
@@ -219,7 +219,7 @@ export class UIStressRunner {
     }
 
     const government =
-      playerGovernment.available[turn % playerGovernment.available.length];
+      playerGovernment.available[turn % playerGovernment.available.length]!;
 
     this.#transport.send('action', {
       name: 'ChooseGovernment',
@@ -258,7 +258,7 @@ export class UIStressRunner {
       .map((action) => action.value as Unit);
 
     if (units.length) {
-      const unit = units[this.#tick % units.length];
+      const unit = units[this.#tick % units.length]!;
 
       this.#setActiveUnit(unit);
       this.#portal.setCenter(unit.tile.x, unit.tile.y);
@@ -267,7 +267,7 @@ export class UIStressRunner {
     }
 
     if (data.player.cities.length) {
-      const city = data.player.cities[this.#tick % data.player.cities.length];
+      const city = data.player.cities[this.#tick % data.player.cities.length]!;
 
       this.#portal.setCenter(city.tile.x, city.tile.y);
     }
@@ -301,13 +301,14 @@ export class UIStressRunner {
           return null;
         }
 
-        const city = data.player.cities[this.#tick % data.player.cities.length];
+        const city =
+          data.player.cities[this.#tick % data.player.cities.length]!;
 
         return openCity(city, this.#portal, this.#transport);
       },
     ];
 
-    const factory = factories[this.#tick % factories.length],
+    const factory = factories[this.#tick % factories.length]!,
       windowLike = factory();
 
     if (!windowLike) {
@@ -371,7 +372,7 @@ export class UIStressRunner {
       this.#transport.send('action', {
         name: 'CompleteProduction',
         id: completeProductionAction.id,
-        treasury: player.treasuries[0].id,
+        treasury: player.treasuries[0]!.id,
       });
 
       return;
@@ -390,7 +391,7 @@ export class UIStressRunner {
     );
 
     if (activeUnitActions.length) {
-      const activeUnit = activeUnitActions[turn % activeUnitActions.length]
+      const activeUnit = activeUnitActions[turn % activeUnitActions.length]!
           .value as Unit,
         unitAction = this.selectUnitAction(activeUnit);
 

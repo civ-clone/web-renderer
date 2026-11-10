@@ -43,7 +43,7 @@ export const maintenance = (cities: CityData[]): MaintenanceRow[] =>
             cost: Math.abs(value),
           };
 
-          rows[cityImprovement._].count++;
+          rows[cityImprovement._]!.count++;
         });
 
       return rows;
@@ -107,10 +107,10 @@ export class TradeTable extends FilterableWindow {
         ...(['income', 'upkeep', 'left'] as const).map((key, index) => ({
           key,
           ...figureHeading(key),
-          cell: (city: CityData): ReportCell => gold(city)[index],
-          sortValue: (city: CityData) => gold(city)[index],
+          cell: (city: CityData): ReportCell => gold(city)[index]!,
+          sortValue: (city: CityData) => gold(city)[index]!,
           tone: (city: CityData) =>
-            key === 'left' && gold(city)[index] < 0
+            key === 'left' && gold(city)[index]! < 0
               ? ('negative' as const)
               : null,
         })),
@@ -121,7 +121,7 @@ export class TradeTable extends FilterableWindow {
         Object.fromEntries(
           (['income', 'upkeep', 'left'] as const).map((key, index) => [
             key,
-            sum(cities.map((city) => gold(city)[index])),
+            sum(cities.map((city) => gold(city)[index]!)),
           ])
         ),
     });
@@ -182,7 +182,7 @@ export class TradeTable extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
@@ -196,7 +196,7 @@ export class TradeTable extends FilterableWindow {
     return this.#improvements;
   }
 
-  update() {
+  override update() {
     this.#anarchy.hidden = !isAnarchy(this.#player);
     this.#table.update(this.#cities);
     this.#improvements.update(maintenance(this.#cities));

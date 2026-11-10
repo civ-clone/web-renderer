@@ -1,5 +1,5 @@
 // The tileset's sprite for each group of yields.
-export const groupIcons: { [key: string]: string } = {
+const icons = {
   Food: 'city/food',
   Production: 'city/production',
   Trade: 'city/trade',
@@ -9,3 +9,6 @@ export const groupIcons: { [key: string]: string } = {
   Research: 'city/bulb',
   Unhappiness: 'city/sad',
 };
+
+// Named here (`groupIcons.Gold`), or looked up by a yield's name from the engine, which may have none.
+export const groupIcons: typeof icons & { [group: string]: string } = icons;

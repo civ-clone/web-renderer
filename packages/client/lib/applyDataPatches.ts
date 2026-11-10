@@ -77,7 +77,8 @@ export const applyDataPatches = (
           key in (value!.objects as PlainObject);
 
       if (index) {
-        setObjectPath(objectMap.objects[key], index, value!.hierarchy);
+        // A patch at a path is to an object the map already holds.
+        setObjectPath(objectMap.objects[key]!, index, value!.hierarchy);
       } else {
         objectMap.objects[key] = value!.hierarchy;
 

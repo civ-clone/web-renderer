@@ -238,7 +238,7 @@ export class NextTurn extends Element {
   #label(item: NextTurnItem | undefined): string {
     if (this.#waiting && this.#waitingFor !== null) {
       return String(
-        t(waitingKeys[this.#waitingFor.key], {
+        t(waitingKeys[this.#waitingFor.key]!, {
           ...this.#waitingFor.data,
           skipOnVariables: false,
         })

@@ -53,7 +53,8 @@ export const askMapGrid = (
   ask(
     t('NewGameWindow.map-grid'),
     grids.map((grid) => ({ label: t(`Grid.${grid}`) as string, value: grid })),
-    grids[0],
+    // Square, at least, can always be drawn.
+    grids[0]!,
     (selection) => onChoose(selection as TopologyId)
   );
 
@@ -165,7 +166,8 @@ export const askWorldSize = (
 ): void => {
   // The size New Game selects, in `sizes`' own dimensions.
   const defaultSize =
-    sizes.find(({ key }) => key === defaultWorldSize.key) ?? sizes[0];
+    // Its callers offer at least one size.
+    sizes.find(({ key }) => key === defaultWorldSize.key) ?? sizes[0]!;
 
   ask(
     t('NewGameWindow.world-size'),

@@ -7,6 +7,6 @@ export const singleChoice = <Option>(
   optionList: Option[],
   autoChooseSingle: boolean = true
 ): Option | null =>
-  autoChooseSingle && optionList.length === 1 ? optionList[0] : null;
+  autoChooseSingle && optionList.length === 1 ? optionList[0]! : null;
 
 export default singleChoice;

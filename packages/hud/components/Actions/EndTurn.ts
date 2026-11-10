@@ -5,7 +5,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 export class EndTurn extends Action {
-  activate(): void {
+  override activate(): void {
     // `element()` is the wrapping `.action` div, and `disabled` means nothing
     // on a `div`: it has to go on the `button` (#11). Both the click handler
     // and the keyboard handler in `Actions` route here, and the turn ends
@@ -22,7 +22,7 @@ export class EndTurn extends Action {
     endTurn(this.transport());
   }
 
-  build(): void {
+  override build(): void {
     this.append(
       s(
         `<button class="btn-bare large gradient endTurn" aria-keyshortcuts="Enter" title="${t(

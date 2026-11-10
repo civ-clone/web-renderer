@@ -219,7 +219,7 @@ export class AssetStore extends Store<{
     setSprites(loaded);
   }
 
-  async get(path: string): Promise<Asset> {
+  override async get(path: string): Promise<Asset> {
     if (!this.#cachedAssets.has(path)) {
       this.#cachedAssets.set(path, (await super.get(path))!);
     }
@@ -236,7 +236,8 @@ export class AssetStore extends Store<{
       }
     }
 
-    return paths[paths.length - 1];
+    // Its callers always name at least one path.
+    return paths[paths.length - 1]!;
   }
 
   async getScaled(path: string, scale: number): Promise<HTMLCanvasElement> {

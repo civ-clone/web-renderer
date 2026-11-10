@@ -68,7 +68,7 @@ const describedBy = (
   description: HTMLElement[]
 ): void => {
   if (description.length > 0) {
-    control.setAttribute('aria-describedby', description[0].id);
+    control.setAttribute('aria-describedby', description[0]!.id);
   }
 };
 

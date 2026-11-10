@@ -78,7 +78,7 @@ export class ResumeGameWindow extends Window {
     });
   }
 
-  close(): void {
+  override close(): void {
     super.close();
 
     if (!this.#done) {

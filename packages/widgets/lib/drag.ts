@@ -22,8 +22,8 @@ export const releaseVelocity = (
     return { x: 0, y: 0 };
   }
 
-  const first = recent[0],
-    last = recent[recent.length - 1],
+  const first = recent[0]!,
+    last = recent[recent.length - 1]!,
     elapsed = last.time - first.time;
 
   if (elapsed <= 0) {

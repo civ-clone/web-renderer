@@ -252,7 +252,7 @@ export class HappinessTable extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
@@ -288,7 +288,7 @@ export class HappinessTable extends FilterableWindow {
     );
   }
 
-  protected escaped(): boolean {
+  protected override escaped(): boolean {
     if (this.#chosen === null) {
       return false;
     }
@@ -324,7 +324,7 @@ export class HappinessTable extends FilterableWindow {
     this.#marked = id;
   }
 
-  update() {
+  override update() {
     this.#table.update(this.#cities);
     this.#showDetails();
 

@@ -57,7 +57,8 @@ export const meetingTalks: OpenTalksStep = ({
     );
 
   if (stressRunner) {
-    stressRunner.automateChoice(meetingWindow, choices[0].id, reply);
+    // The engine offers at least one choice.
+    stressRunner.automateChoice(meetingWindow, choices[0]!.id, reply);
   }
 
   return {

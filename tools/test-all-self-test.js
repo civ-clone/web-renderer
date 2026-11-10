@@ -43,11 +43,12 @@ const everything = list(),
   tests = Object.keys(scripts).filter((name) => name.startsWith('test:'));
 
 expect(
-  'everything is both type-checks and every `test:*` script, but the ones that rewrite a fixture and the browser check',
+  'everything is the type-checks and every `test:*` script, but the ones that rewrite a fixture and the browser check',
   [...everything].sort(),
   [
     'ts:compile',
     'ts:compile:tests',
+    'ts:compile:strict',
     ...tests.filter(
       (name) => !name.endsWith(':update') && name !== 'test:browser'
     ),
@@ -55,8 +56,13 @@ expect(
 );
 expect(
   'the type-checks and the longest suites start first',
-  everything.slice(0, 3),
-  ['ts:compile', 'ts:compile:tests', 'test:overlap-draw:1of4']
+  everything.slice(0, 4),
+  [
+    'ts:compile',
+    'ts:compile:tests',
+    'ts:compile:strict',
+    'test:overlap-draw:1of4',
+  ]
 );
 expect('nothing is run twice', new Set(everything).size, everything.length);
 

@@ -149,7 +149,8 @@ export class PlayerDetails extends Element {
       'gold',
       text('PlayerDetails.Treasury.title'),
       this.#reports.trade,
-      text('PlayerDetails.Treasury.value', { value: goldTreasury.value }),
+      // Every player keeps a treasury of gold.
+      text('PlayerDetails.Treasury.value', { value: goldTreasury!.value }),
       text('PlayerDetails.Treasury.detail', {
         perTurn: totalGold,
         context: anarchy ? 'anarchy' : undefined,
@@ -183,7 +184,7 @@ export class PlayerDetails extends Element {
             [
               text('PlayerDetails.Treasury.Breakdown.treasury'),
               text('PlayerDetails.Treasury.value', {
-                value: goldTreasury.value,
+                value: goldTreasury!.value,
               }),
             ],
             [

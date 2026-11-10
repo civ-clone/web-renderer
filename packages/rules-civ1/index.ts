@@ -65,7 +65,7 @@ export const civ1Rules: WorkerRules = {
 
     return {
       rating: value,
-      famousLeader: leaderIndex === null ? null : FAMOUS_LEADERS[leaderIndex],
+      famousLeader: leaderIndex === null ? null : FAMOUS_LEADERS[leaderIndex]!,
     };
   },
   needsFuel: (unit) =>

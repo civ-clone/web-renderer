@@ -62,13 +62,13 @@ export class ScienceReport extends Window {
     });
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
   }
 
-  update() {
+  override update() {
     template(this.#player.research, combinedYields(this.#player)).then(
       (template) => super.update(template)
     );

@@ -25,10 +25,10 @@ export const darkenTopArrow = (
         y >= 0 &&
         x < width &&
         y < height &&
-        pixels[index + 3] > 0 &&
-        pixels[index] >= WHITE &&
-        pixels[index + 1] >= WHITE &&
-        pixels[index + 2] >= WHITE
+        pixels[index + 3]! > 0 &&
+        pixels[index]! >= WHITE &&
+        pixels[index + 1]! >= WHITE &&
+        pixels[index + 2]! >= WHITE
       );
     },
     pending: [number, number][] = [];
@@ -59,7 +59,7 @@ export const darkenTopArrow = (
       [-1, 1],
       [0, 1],
       [1, 1],
-    ]) {
+    ] as const) {
       pending.push([x + stepX, y + stepY]);
     }
   }

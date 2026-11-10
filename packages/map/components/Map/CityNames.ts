@@ -13,7 +13,7 @@ export class CityNames extends Map {
   //  needn't touch a tile that has no city and had none.
   #labelled: Set<string> = new Set();
 
-  render(tiles: Tile[] = this.visibleTiles()): void {
+  override render(tiles: Tile[] = this.visibleTiles()): void {
     this.#labelled.clear();
 
     super.render(tiles);
@@ -21,7 +21,7 @@ export class CityNames extends Map {
 
   // A label is wider than its tile and overlaps its neighbours' labels, so it is redrawn as a region (`reach()`): the
   //  labels it overlaps are cleared and drawn again with it, rather than drawn over themselves (#486).
-  update(tilesToUpdate: Tile[]): void {
+  override update(tilesToUpdate: Tile[]): void {
     const changed = tilesToUpdate.filter(
       ({ x, y }: Tile) =>
         this.#labelled.has(`${x},${y}`) || Boolean(this.world().get(x, y).city)
@@ -38,7 +38,11 @@ export class CityNames extends Map {
     });
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     if (!tile.city) {
       return;
     }
@@ -58,7 +62,7 @@ export class CityNames extends Map {
   //  lists, "Augusta Praetoria Salassorum" and "Raurkela Industrial Township" (28 characters), reach about three
   //  and a quarter tiles past their tile in a bold sans-serif at the tileset's size; four leaves room for a wider
   //  system font.
-  protected overhang(): number {
+  protected override overhang(): number {
     return this.tileSize() * 4;
   }
 
@@ -67,7 +71,7 @@ export class CityNames extends Map {
   //  than the font size, and to fall two below its baseline, with a pixel more each way for rounding, so the region
   //  never crops a glyph. The unhappy citizen in place of the size, a citizen no taller than the tile drawn a scale
   //  step down, ends well above the name; its image isn't looked at here, as it is only drawn for a city in disorder.
-  protected reach(): Reach {
+  protected override reach(): Reach {
     const reach = super.reach(),
       overhang = this.overhang(),
       scale = this.scale(),
@@ -97,8 +101,8 @@ export class CityNames extends Map {
     return {
       x: Math.floor(offsetX + x * scale),
       y: Math.floor(offsetY + y * scale),
-      width: Math.ceil(width),
-      height: Math.ceil(height),
+      width: Math.ceil(width!),
+      height: Math.ceil(height!),
     };
   }
 

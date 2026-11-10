@@ -43,14 +43,17 @@ export const replacementColours = (
   playerColours: string[]
 ): string[] =>
   keys.map(
-    (key, index) => playerColours[colours?.[index] ?? index] ?? playerColours[0]
+    (key, index) =>
+      // Every civilization has at least one colour.
+      playerColours[colours?.[index] ?? index] ?? playerColours[0]!
   );
 
 /** A player's colours, as their civilization's `colors` attribute lists them. */
 export const playerColours = (player: UnitData['player']): string[] =>
   player.civilization.attributes.filter(
     (attribute) => attribute.name === 'colors'
-  )[0].value;
+    // Every civilization carries its colours.
+  )[0]!.value;
 
 /**
  * Writes a busy unit's letter onto `context`, over the unit drawn at

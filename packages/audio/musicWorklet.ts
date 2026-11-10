@@ -152,14 +152,14 @@ class MusicProcessor extends AudioWorkletProcessor {
 
   private queueWrites(writes: TimedWrite[]): void {
     const pending = this.queue.slice(this.next),
-      last = pending.length ? pending[pending.length - 1][0] : -Infinity;
+      last = pending.length ? pending[pending.length - 1]![0] : -Infinity;
 
     writes.forEach(({ time, register, value }) =>
       pending.push([Math.round(time * sampleRate), register, value])
     );
 
     // Batches normally arrive in time order; if one doesn't, sort, keeping the posted order of writes on the same frame.
-    if (Math.round(writes[0].time * sampleRate) < last) {
+    if (Math.round(writes[0]!.time * sampleRate) < last) {
       pending.sort((a, b) => a[0] - b[0]);
     }
 
@@ -214,7 +214,7 @@ class MusicProcessor extends AudioWorkletProcessor {
       return true;
     }
 
-    const out = channels[0],
+    const out = channels[0]!,
       frames = out.length,
       start = currentFrame;
     let done = 0;
@@ -227,7 +227,7 @@ class MusicProcessor extends AudioWorkletProcessor {
       const irqAt = this.driver ? this.nextIrqFrame() - start : Infinity,
         writeAt =
           this.next < this.queue.length
-            ? this.queue[this.next][0] - start
+            ? this.queue[this.next]![0] - start
             : Infinity,
         at = Math.max(done, Math.min(irqAt, writeAt));
 
@@ -241,7 +241,8 @@ class MusicProcessor extends AudioWorkletProcessor {
       }
 
       if (writeAt <= irqAt) {
-        const [, register, value] = this.queue[this.next++];
+        // A finite `writeAt`: there is a write left.
+        const [, register, value] = this.queue[this.next++]!;
 
         this.chip.write(register, value);
       } else {
@@ -259,7 +260,7 @@ class MusicProcessor extends AudioWorkletProcessor {
     this.applyGain(out);
 
     for (let i = 1; i < channels.length; i++) {
-      channels[i].set(out);
+      channels[i]!.set(out);
     }
 
     return true;
@@ -271,7 +272,7 @@ class MusicProcessor extends AudioWorkletProcessor {
     let peak = 0;
 
     for (let i = 0; i < out.length; i++) {
-      const sample = out[i];
+      const sample = out[i]!;
 
       peak = Math.max(peak, Math.abs(sample));
 

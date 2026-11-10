@@ -75,8 +75,8 @@ export const civilizationSwatch = (colours: string[] | null): HTMLElement => {
   }
 
   // The civilization's own colours, which are data, not the theme's.
-  swatch.style.setProperty('--swatch-first', colours[0]);
-  swatch.style.setProperty('--swatch-second', colours[1] ?? colours[0]);
+  swatch.style.setProperty('--swatch-first', colours[0]!);
+  swatch.style.setProperty('--swatch-second', colours[1] ?? colours[0]!);
 
   return swatch;
 };
@@ -557,7 +557,7 @@ export class GameSetupForm extends Window {
     remove.name = 'remove';
 
     if (leaders.length === 1) {
-      leader.textContent = leaderName(leaders[0]);
+      leader.textContent = leaderName(leaders[0]!);
     }
 
     leader.hidden = civilization === null;
@@ -633,9 +633,10 @@ export class GameSetupForm extends Window {
       return;
     }
 
+    // The three land inputs, in order.
     const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
       (input) => input.value
-    );
+    ) as [string, string, string];
 
     this.close();
 

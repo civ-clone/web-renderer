@@ -234,7 +234,7 @@ export class ChoiceWindow extends FilterableWindow {
     return this.#chosen ? this.#rows.get(this.#chosen)!.value : null;
   }
 
-  close(): void {
+  override close(): void {
     // Never shown, so there's nothing to take down, nor focus to give back.
     if (this.#autoChosen) {
       this.emit(new CustomEvent('close'));
@@ -245,7 +245,7 @@ export class ChoiceWindow extends FilterableWindow {
     super.close();
   }
 
-  display(focus?: boolean): void {
+  override display(focus?: boolean): void {
     super.display(focus);
 
     // Shown again after `close()`, say: there's a row to put the focus on. Never before the rows are in.
@@ -257,7 +257,7 @@ export class ChoiceWindow extends FilterableWindow {
     this.#scrollTo(this.#chosen);
   }
 
-  refilter(): void {
+  override refilter(): void {
     super.refilter();
 
     if (!(#rows in this)) {
@@ -292,7 +292,7 @@ export class ChoiceWindow extends FilterableWindow {
     }
   }
 
-  protected entered(): boolean {
+  protected override entered(): boolean {
     const row = this.#typeAhead && this.#chosen && this.#rows.get(this.#chosen);
 
     if (!row) {
@@ -478,7 +478,7 @@ export class ChoiceWindow extends FilterableWindow {
     event.stopPropagation();
 
     const row =
-      shown[Math.min(shown.length - 1, Math.max(0, target[key]))] ?? null;
+      shown[Math.min(shown.length - 1, Math.max(0, target[key]!))] ?? null;
 
     this.#select(row);
     row?.focus();

@@ -71,9 +71,11 @@ const renderYieldRow = (
     bar = s(
       `<span class="bar" aria-hidden="true"><span class="used"></span><span class="free"></span><span class="deficit"></span></span>`
     ),
-    [usedPart, freePart, deficitPart] = Array.from(
-      bar.children
-    ) as HTMLElement[];
+    [usedPart, freePart, deficitPart] = Array.from(bar.children) as [
+      HTMLElement,
+      HTMLElement,
+      HTMLElement
+    ];
 
   usedPart.style.width = percent(used);
   freePart.style.width = percent(free);

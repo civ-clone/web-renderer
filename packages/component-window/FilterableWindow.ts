@@ -171,7 +171,7 @@ export class FilterableWindow extends Window {
     }
   }
 
-  display(focus?: boolean): void {
+  override display(focus?: boolean): void {
     super.display(focus);
 
     this.element().querySelector(':scope > header')?.after(this.#bar);
@@ -180,7 +180,7 @@ export class FilterableWindow extends Window {
     this.#watchRows();
   }
 
-  close() {
+  override close() {
     this.#observer?.disconnect();
     this.#observer = null;
 
@@ -265,7 +265,7 @@ export class FilterableWindow extends Window {
     return this.#input.value;
   }
 
-  update(content: string | Node): void {
+  override update(content: string | Node): void {
     super.update(content);
 
     this.#filter.forget();

@@ -34,7 +34,7 @@ const scripts = require(path.join(webRenderer, 'package.json')).scripts,
   // Written before anything is bundled: every engine suite imports the plugin list, every ui suite the translations.
   FIRST = ['build:generate-plugins-ts', 'build:generate-translations-ts'],
   // Alongside the suites: they read the source and write nothing (`noEmit`).
-  TYPE_CHECKS = ['ts:compile', 'ts:compile:tests'],
+  TYPE_CHECKS = ['ts:compile', 'ts:compile:tests', 'ts:compile:strict'],
   // Started first, as they take longest: left to their place in package.json they start late, and everything waits
   //  for them at the end.
   LONGEST_FIRST = [

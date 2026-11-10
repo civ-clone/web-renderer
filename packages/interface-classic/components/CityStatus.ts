@@ -2,6 +2,7 @@ import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import {
   turnsLeft,
+  YieldTotals,
   yieldData,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -27,7 +28,15 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       'Research',
       'Gold',
       'Luxuries',
-    ].map((yieldName) => yieldData(city, yieldName)),
+    ].map((yieldName) => yieldData(city, yieldName)) as [
+      // One for each name.
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals
+    ],
     [
       foodIcon,
       productionIcon,
@@ -36,14 +45,15 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       goldIcon,
       luxuriesIcon,
     ] = await Promise.all(
-      ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'].map(
-        (yieldName) =>
-          assetStore
-            .shownAtURL(
-              spriteKey(currentTileset(), groupIcons[yieldName]),
-              currentTileset().ui.icon
-            )
-            .then((url) => `<img src="${url}">`)
+      (
+        ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'] as const
+      ).map((yieldName) =>
+        assetStore
+          .shownAtURL(
+            spriteKey(currentTileset(), groupIcons[yieldName]),
+            currentTileset().ui.icon
+          )
+          .then((url) => `<img src="${url}">`)
       )
     );
 
@@ -97,6 +107,8 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
 
 export class CityStatus extends FilterableWindow {
   #cities: CityData[];
+  // Counts the tables asked for, so that one whose rows took longer to build than a later one's isn't shown over it.
+  #updates = 0;
   #portal: Portal;
   #unwatch: () => void;
 
@@ -117,14 +129,23 @@ export class CityStatus extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
   }
 
-  update() {
-    Promise.all(this.#cities.map((city) => buildCityRow(city))).then((rows) =>
+  override update() {
+    // The cities these rows are of: by the time one is clicked, `#cities` may be a newer list, whose rows are still
+    //  being built.
+    const cities = this.#cities,
+      asked = ++this.#updates;
+
+    Promise.all(cities.map((city) => buildCityRow(city))).then((rows) => {
+      if (asked !== this.#updates) {
+        return;
+      }
+
       super.update(
         s(
           '<table></table>',
@@ -149,12 +170,13 @@ export class CityStatus extends FilterableWindow {
             );
 
             return h(row, {
-              click: () => this.#portal.openCity(this.#cities[index]),
+              // A row for each of them.
+              click: () => this.#portal.openCity(cities[index]!),
             });
           })
         )
-      )
-    );
+      );
+    });
   }
 }
 

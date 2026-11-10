@@ -170,9 +170,10 @@ export class NotificationRows extends Element {
     const count = group.actions.length;
 
     row.dataset.kind = group.kind;
-    setNoticeCategory(row, group.actions[0]);
+    // A group is made with its first action.
+    setNoticeCategory(row, group.actions[0]!);
     row.querySelector('.ui-notification-title')!.textContent = this.#title(
-      group.actions[0]
+      group.actions[0]!
     );
 
     const badge = row.querySelector('.ui-notification-count') as HTMLElement;
@@ -207,7 +208,8 @@ export class NotificationRows extends Element {
         return;
       }
 
-      const [first] = current.actions;
+      // A group is made with its first action.
+      const first = current.actions[0]!;
 
       // Made when it's opened, from the action as it is now: a notice's city is the city as it is now (`Notices`).
       createAction(

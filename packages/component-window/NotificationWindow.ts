@@ -25,7 +25,7 @@ export class NotificationWindow extends Window implements INotificationWindow {
     this.#options = options;
   }
 
-  bindClose(): void {
+  override bindClose(): void {
     this.on('keydown', (event) => {
       // Closing this can open the next notice straight away, and a key left to the browser would close that one too,
       //  leaving a window that isn't drawn but has the keys (#351). Escape is the browser's whether or not this can
@@ -52,7 +52,7 @@ export class NotificationWindow extends Window implements INotificationWindow {
     });
   }
 
-  display(focus = true): Promise<void> {
+  override display(focus = true): Promise<void> {
     super.display();
 
     if (focus) {

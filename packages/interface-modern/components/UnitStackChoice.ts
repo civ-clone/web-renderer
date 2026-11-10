@@ -106,7 +106,7 @@ export class UnitStackChoice extends ChoiceWindow {
     );
   }
 
-  close(): void {
+  override close(): void {
     this.#unwatch();
 
     super.close();

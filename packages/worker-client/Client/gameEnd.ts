@@ -53,7 +53,7 @@ export const gameOver = (
     discovery:
       discoveries.length === 0
         ? null
-        : typeNameOf(discoveries[discoveries.length - 1].sourceClass()),
+        : typeNameOf(discoveries[discoveries.length - 1]!.sourceClass()),
     hasMet: (player: Player) => ctx.hasMet(player),
     level: workerRules().difficultyLevel(ctx.difficulties),
     score: ctx.civilizationScore(),

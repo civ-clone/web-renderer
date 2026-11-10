@@ -66,7 +66,7 @@ const buildCityRow = async (
       s(
         `<div class="detail"></div>`,
         happinessReasons[cause.yield._]
-          ? happinessReasons[cause.yield._](cause.yield)
+          ? happinessReasons[cause.yield._]!(cause.yield)
           : cause.yield._
       )
     )
@@ -138,13 +138,13 @@ export class HappinessReport extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
   }
 
-  update() {
+  override update() {
     Promise.all(
       this.#player.cities.map((city) =>
         buildCityRow(city, this.#portal, this.#transport)

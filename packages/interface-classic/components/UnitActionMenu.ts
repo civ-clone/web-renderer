@@ -37,7 +37,7 @@ export class UnitActionMenu extends PopupMenu {
     this.addClass('unit-actions');
   }
 
-  build() {
+  override build() {
     bodyListener = (event: PointerEvent) => {
       const target = document.elementFromPoint(event.clientX, event.clientY);
 
@@ -55,7 +55,7 @@ export class UnitActionMenu extends PopupMenu {
     super.build();
   }
 
-  remove() {
+  override remove() {
     super.remove();
 
     off(document.body, 'pointerup', bodyListener);

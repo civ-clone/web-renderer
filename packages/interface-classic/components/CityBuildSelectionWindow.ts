@@ -109,7 +109,7 @@ export class CityBuildSelectionWindow extends SelectionWindow {
     this.#transport = transport;
   }
 
-  close(hasSelected: boolean = false): void {
+  override close(hasSelected: boolean = false): void {
     super.close();
 
     if (hasSelected) {

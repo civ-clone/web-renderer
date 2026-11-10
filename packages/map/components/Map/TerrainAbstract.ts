@@ -6,7 +6,7 @@ import {
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class TerrainAbstract extends Map implements IMap {
-  update(tilesToUpdate: Tile[]): void {
+  override update(tilesToUpdate: Tile[]): void {
     // A tile's terrain joins up with its neighbours', so they are drawn again too, each of them once. Told apart by
     //  where they are, as the tiles an update names aren't the world's own objects and an unseen tile is a new object
     //  each time it is asked for: comparing objects drew most tiles of a whole-map update (a change of government)

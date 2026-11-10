@@ -38,7 +38,7 @@ export class ChooseResearch extends Action {
     this.#player = player;
   }
 
-  activate(): void {
+  override activate(): void {
     const playerResearch = this.value(),
       yields = this.#player ? combinedYields(this.#player) : null,
       turns = (advance: string): number | null => {
@@ -147,7 +147,7 @@ export class ChooseResearch extends Action {
     );
   }
 
-  build(): void {
+  override build(): void {
     assetStore
       .spriteURL(spriteKey(currentTileset(), 'city/bulb'))
       .then((url) =>
@@ -161,7 +161,7 @@ export class ChooseResearch extends Action {
       );
   }
 
-  value(): PlayerResearch {
+  override value(): PlayerResearch {
     return super.value() as PlayerResearch;
   }
 }

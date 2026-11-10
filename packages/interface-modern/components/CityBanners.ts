@@ -82,14 +82,14 @@ export class CityBanners extends CityNames {
   #cachedStyle: BannerStyle | null = null;
 
   // The tokens are read again for each whole drawing: the theme, light or dark, or the fonts loaded, may have changed.
-  render(tiles: Tile[] = this.visibleTiles()): void {
+  override render(tiles: Tile[] = this.visibleTiles()): void {
     this.#cachedStyle = null;
 
     super.render(tiles);
   }
 
   /** The city whose banner is under `x`, `y` on the canvas, if there is one: of banners that overlap, the one on top. */
-  bannerAt(x: number, y: number): { city: City; box: Rect } | null {
+  override bannerAt(x: number, y: number): { city: City; box: Rect } | null {
     if (!this.isVisible() || !this.#full()) {
       return null;
     }
@@ -118,7 +118,11 @@ export class CityBanners extends CityNames {
     return null;
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     if (!tile.city || !this.#full()) {
       super.drawTile(tile, offsetX, offsetY);
 
@@ -131,12 +135,12 @@ export class CityBanners extends CityNames {
 
   // A banner is wider than the classic label by its badge, what's being built and its flags, nearly two tiles either side
   //  for the widest name with both flags: two more, so a wider fallback font, before the theme's has loaded, still fits.
-  protected overhang(): number {
+  protected override overhang(): number {
     return super.overhang() + this.tileSize() * 2;
   }
 
   // As the label's, and down to the bottom of the banner and its food bar.
-  protected reach(): Reach {
+  protected override reach(): Reach {
     const reach = super.reach(),
       { height } = this.projection().footprint(),
       bottom = this.#top(0) + this.#pillHeight() + this.#foodHeight() * 2;
@@ -347,14 +351,15 @@ export class CityBanners extends CityNames {
     context.fill();
     context.stroke();
 
-    context.fillStyle = primary;
+    // Every civilization has at least one colour.
+    context.fillStyle = primary!;
     context.beginPath();
     context.roundRect(badge.x, badge.y, badge.width, badge.height, radius);
     context.fill();
 
     // The size in the civilization's second colour, where it reads on its first, which a sliver of a city's sprite
     //  doesn't need to (#778).
-    context.fillStyle = readableOn(primary, secondary ?? style.foreground, [
+    context.fillStyle = readableOn(primary!, secondary ?? style.foreground, [
       style.shade,
       style.light,
     ]);

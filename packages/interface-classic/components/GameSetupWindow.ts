@@ -35,12 +35,12 @@ export { GameSetupPreset, RANDOM };
  *  lone one, and a leader chosen by hand is sent, even a lone one (#868).
  */
 class ClassicGameSetup extends GameSetup {
-  setCivilization(seat: SeatState, civilization: string): void {
+  override setCivilization(seat: SeatState, civilization: string): void {
     seat.civilization = civilization;
     seat.leader = RANDOM;
   }
 
-  sendsLeader(seat: SeatState): boolean {
+  override sendsLeader(seat: SeatState): boolean {
     return seat.civilization !== RANDOM && seat.leader !== RANDOM;
   }
 }
@@ -520,9 +520,10 @@ export class GameSetupWindow extends Window {
       return;
     }
 
+    // The three land inputs, in order.
     const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
       (input) => input.value
-    );
+    ) as [string, string, string];
 
     this.close();
 

@@ -111,7 +111,7 @@ export class UnitActions extends Element {
 
       // Once it is on the page, so the picture can be drawn at the size it is shown at.
       this.#canvases.add(button.querySelector('canvas')!, (canvas) =>
-        this.#draw(canvas, layers[index])
+        this.#draw(canvas, layers[index]!)
       );
     });
   }

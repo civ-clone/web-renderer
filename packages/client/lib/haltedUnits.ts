@@ -34,7 +34,7 @@ export class HaltedUnits {
     }
 
     while (this.#halts.length > 0) {
-      const [halt] = this.#halts,
+      const halt = this.#halts[0]!,
         unit = units.find((unit) => unit.id === halt.unit);
 
       if (!unit) {

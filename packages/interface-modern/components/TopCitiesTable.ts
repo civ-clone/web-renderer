@@ -69,7 +69,7 @@ export const ownCity = (row: TopCitiesRow, player: Player): CityData | null => {
         ? named.filter((city) => city.growth.size === row.size)
         : named;
 
-  return candidates.length === 1 ? candidates[0] : null;
+  return candidates.length === 1 ? candidates[0]! : null;
 };
 
 /**
@@ -178,7 +178,7 @@ export class TopCitiesTable extends Window {
   }
 
   // Asked for afresh each time the report opens; it doesn't follow the game while it's open.
-  update(): void {
+  override update(): void {
     this.#transport
       .request(new TopCities(limit))
       .then((rows: TopCitiesRow[]) => this.show(rows))

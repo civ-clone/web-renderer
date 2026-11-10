@@ -119,7 +119,8 @@ export const registerCheats = (
         // A bit nasty... I wonder how slow this data transfer will be...
         const [tile] = playerWorld.entries();
 
-        tile
+        // A world has squares.
+        tile!
           .tile()
           .map()
           .entries()

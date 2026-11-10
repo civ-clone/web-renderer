@@ -192,6 +192,7 @@
     "test:government-yields": "node tools/run-suite.js engine governmentYields",
     "ts:compile": "tsc --build tsconfig.json",
     "ts:compile:tests": "node tools/typecheck-tests.js",
+    "ts:compile:strict": "node tools/strict-types.js",
     "watch": "node esbuild.js watch",
     "test:run-suite": "node tools/run-suite-self-test.js",
     "test:test-all": "node tools/test-all-self-test.js",

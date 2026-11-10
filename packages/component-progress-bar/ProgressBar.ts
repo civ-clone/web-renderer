@@ -46,7 +46,7 @@ export const progressBar = ({
     done = clamp(stored, capacity) - loss,
     next = loss > 0 ? loss : clamp(perTurn, capacity - done),
     tick = 10 * Math.ceil(capacity / 300),
-    [fill, coming] = Array.from(bar.children) as HTMLElement[];
+    [fill, coming] = Array.from(bar.children) as [HTMLElement, HTMLElement];
 
   fill.style.width = percent(done);
   coming.style.width = percent(next);

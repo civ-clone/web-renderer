@@ -429,7 +429,7 @@ export class ReportTable<Row> {
         const cell = document.createElement(index === 0 ? 'th' : 'td'),
           content =
             column.key in totals
-              ? totals[column.key]
+              ? totals[column.key]!
               : index === 0
               ? t('ReportTable.total')
               : null;

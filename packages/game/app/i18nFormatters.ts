@@ -10,7 +10,7 @@ const entities: { [character: string]: string } = {
     '/': '&#x2F;',
   },
   escapeHtml = (value: string): string =>
-    value.replace(/[&<>"'\/]/g, (character) => entities[character]);
+    value.replace(/[&<>"'\/]/g, (character) => entities[character]!);
 
 // What `cityName` reads of a city given whole.
 type CityLike = {

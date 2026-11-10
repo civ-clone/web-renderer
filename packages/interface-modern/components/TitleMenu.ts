@@ -301,7 +301,7 @@ export class TitleMenu extends Element {
     item.action();
   }
 
-  remove(): void {
+  override remove(): void {
     this.#removed = true;
 
     document.removeEventListener('keydown', this.#keydown);

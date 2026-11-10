@@ -133,11 +133,11 @@ export const mergeRects = (rects: Rect[]): Rect[] => {
       absorbed = false;
 
       for (let index = merged.length - 1; index >= 0; index--) {
-        if (!rectsIntersect(merged[index], current)) {
+        if (!rectsIntersect(merged[index]!, current)) {
           continue;
         }
 
-        current = unionRect(merged[index], current);
+        current = unionRect(merged[index]!, current);
 
         merged.splice(index, 1);
 

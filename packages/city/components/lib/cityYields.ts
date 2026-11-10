@@ -119,7 +119,8 @@ const drawCitizens = <SpecialistType extends { _: string }>(
 
   specialists.forEach((specialist, index) => {
     const citizen = renderCitizen(
-      sprites[index],
+      // One for each specialist.
+      sprites[index]!,
       t(`City.Specialist.${specialist._}`)
     );
 
@@ -187,8 +188,11 @@ export const renderCitizenCounts = (
 export const turnsText = (turns: number) =>
   t('Progress.turns', { count: turns });
 
+/** A yield's total, the part of it used and the part left over. */
+export type YieldTotals = [total: number, used: number, free: number];
+
 export const yieldData = (city: CityData, yieldName: string) =>
-  city.yields.reduce(
+  city.yields.reduce<YieldTotals>(
     ([total, used, free], cityYield) => {
       const isKnown = yieldGroup(cityYield) === yieldName;
 
@@ -214,13 +218,16 @@ export const yieldData = (city: CityData, yieldName: string) =>
  *  loaded. Decorative: wherever an amount is shown, its number is there as text too (#683).
  */
 export const yieldIcon = (group: string): HTMLElement => {
-  const icon = s('<span class="yield-icon"></span>');
+  const icon = s('<span class="yield-icon"></span>'),
+    path = groupIcons[group];
+
+  // A group without a picture: the amount beside it says it all, as below.
+  if (path === undefined) {
+    return icon;
+  }
 
   assetStore
-    .shownAtURL(
-      spriteKey(currentTileset(), groupIcons[group]),
-      currentTileset().ui.icon
-    )
+    .shownAtURL(spriteKey(currentTileset(), path), currentTileset().ui.icon)
     .then((url) => icon.append(s(`<img src="${url}" alt="">`)))
     // A tileset without the picture: the amount beside it says it all.
     .catch(() => {});

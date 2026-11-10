@@ -9,11 +9,11 @@ import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { t } from 'i18next';
 
 type SpaceshipYieldMap = {
-  [key: string]: [number, number];
-};
+  [key in 'Energy' | 'LifeSupport' | 'Mass' | 'Population']: [number, number];
+} & { [key: string]: [number, number] | undefined };
 
 export class Spaceship extends Action {
-  activate(): void {
+  override activate(): void {
     const spaceship = this.value(),
       yields = spaceship.yields.reduce(
         (yieldMap: SpaceshipYieldMap, spaceshipYield) => {
@@ -22,12 +22,12 @@ export class Spaceship extends Action {
           }
 
           if (spaceshipYield.value < 0) {
-            yieldMap[spaceshipYield._][1] += Math.abs(spaceshipYield.value);
+            yieldMap[spaceshipYield._]![1] += Math.abs(spaceshipYield.value);
 
             return yieldMap;
           }
 
-          yieldMap[spaceshipYield._][0] += spaceshipYield.value;
+          yieldMap[spaceshipYield._]![0] += spaceshipYield.value;
 
           return yieldMap;
         },
@@ -44,7 +44,7 @@ export class Spaceship extends Action {
             return partMap;
           }
 
-          partMap[part._]++;
+          partMap[part._]!++;
 
           return partMap;
         },
@@ -63,7 +63,7 @@ export class Spaceship extends Action {
             return partMap;
           }
 
-          partMap[part._]++;
+          partMap[part._]!++;
 
           return partMap;
         },
@@ -191,7 +191,7 @@ export class Spaceship extends Action {
     window.addClass('spaceship');
   }
 
-  build(): void {
+  override build(): void {
     this.append(
       s(
         `<button class="btn-bare spaceship" title="${t(
@@ -201,7 +201,7 @@ export class Spaceship extends Action {
     );
   }
 
-  value(): SpaceshipData {
+  override value(): SpaceshipData {
     return super.value() as SpaceshipData;
   }
 }

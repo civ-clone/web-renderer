@@ -128,7 +128,7 @@ export const dropRepeatedContacts = (file: SaveGame, game: Game): void => {
   file.entities = file.entities.filter(({ id }) => !dropped.has(id));
 
   Object.keys(file.registries).forEach((slot: string): void => {
-    file.registries[slot] = file.registries[slot].filter(
+    file.registries[slot] = file.registries[slot]!.filter(
       (id: string) => !dropped.has(id)
     );
   });

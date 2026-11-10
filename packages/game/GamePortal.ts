@@ -75,7 +75,7 @@ export class GamePortal extends Portal {
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
 
-  protected bindEvents(): void {
+  protected override bindEvents(): void {
     // A tooltip goes with anything that moves the map under it, a press, a key, or the mouse leaving.
     this.on('focus-changed', () => this.endHover());
     on(this.canvas(), 'pointerleave', () => this.endHover());
@@ -483,7 +483,7 @@ export class GamePortal extends Portal {
   }
 
   // The square an open tooltip is about has changed: it says what's there now, and moves with its banner, or goes.
-  build(updatedTiles: Tile[]): void {
+  override build(updatedTiles: Tile[]): void {
     super.build(updatedTiles);
 
     const hover = this.#hover;
@@ -571,7 +571,7 @@ export class GamePortal extends Portal {
     this.#activeUnit = unit;
   }
 
-  setCenter(x: number, y: number): void {
+  override setCenter(x: number, y: number): void {
     // Anything that asks for a particular tile — a unit becoming active, a
     // click on the minimap — wins over a glide that was heading elsewhere.
     this.stopGlide();

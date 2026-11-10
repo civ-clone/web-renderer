@@ -154,7 +154,7 @@ export const cityNotifications: NotificationTable = [
       return notifications.length === 0
         ? null
         : notifications.length === 1
-        ? notifications[0]
+        ? notifications[0]!
         : notifications;
     },
   ],

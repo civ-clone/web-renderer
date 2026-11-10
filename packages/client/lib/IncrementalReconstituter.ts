@@ -190,7 +190,7 @@ export class IncrementalReconstituter {
         keys.some((key, i) => key !== rawKeys[i])
       ) {
         for (let i = 0; i < keys.length; i++) {
-          delete updated[keys[i]];
+          delete updated[keys[i]!];
         }
       }
 
@@ -322,7 +322,7 @@ export class IncrementalReconstituter {
     }
 
     for (let i = 0; i < queue.length; i++) {
-      const id = queue[i];
+      const id = queue[i]!;
 
       // Already filled on this call, as a new id found inside another one is,
       //  or no longer held.

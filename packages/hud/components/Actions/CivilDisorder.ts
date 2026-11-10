@@ -20,7 +20,7 @@ export class CivilDisorder extends Action {
     this.#portal = portal;
   }
 
-  activate() {
+  override activate() {
     const city = this.value() as City;
 
     new ActionWindow(
@@ -39,7 +39,7 @@ export class CivilDisorder extends Action {
     );
   }
 
-  build() {
+  override build() {
     const city = this.value() as City;
 
     assetStore

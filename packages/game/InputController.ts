@@ -144,7 +144,8 @@ export class InputController {
 
     // Not over a modal window, which would leave the screen drawn but out of reach until the modal one closes (#183).
     if (key in leaderScreensMap && !modalWindow) {
-      leaderScreensMap[event.key]();
+      // Checked by `key`, as mapped, but run by `event.key`: for these keys the two are the same.
+      leaderScreensMap[event.key]!();
 
       event.preventDefault();
     }

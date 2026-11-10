@@ -46,7 +46,7 @@ export class Notice extends Action {
     this.#portal = portal;
   }
 
-  activate(): void {
+  override activate(): void {
     const { city, dismiss } = this.value() as unknown as NoticeData;
 
     dismiss();
@@ -63,7 +63,7 @@ export class Notice extends Action {
     this.complete();
   }
 
-  build(): void {
+  override build(): void {
     const { colours, notification } = this.value() as unknown as NoticeData;
 
     // A city we've lost is one of our cities on the map, with no size (#420).
