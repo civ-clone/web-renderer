@@ -107,6 +107,8 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
 
 export class CityStatus extends FilterableWindow {
   #cities: CityData[];
+  // Counts the tables asked for, so that one whose rows took longer to build than a later one's isn't shown over it.
+  #updates = 0;
   #portal: Portal;
   #unwatch: () => void;
 
@@ -136,9 +138,14 @@ export class CityStatus extends FilterableWindow {
   override update() {
     // The cities these rows are of: by the time one is clicked, `#cities` may be a newer list, whose rows are still
     //  being built.
-    const cities = this.#cities;
+    const cities = this.#cities,
+      asked = ++this.#updates;
 
-    Promise.all(cities.map((city) => buildCityRow(city))).then((rows) =>
+    Promise.all(cities.map((city) => buildCityRow(city))).then((rows) => {
+      if (asked !== this.#updates) {
+        return;
+      }
+
       super.update(
         s(
           '<table></table>',
@@ -168,8 +175,8 @@ export class CityStatus extends FilterableWindow {
             });
           })
         )
-      )
-    );
+      );
+    });
   }
 }
 

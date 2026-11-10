@@ -28,7 +28,10 @@ const EXEMPT = [
     'packages/audio/opl/Opl2.ts',
   ],
   // "This member must have an 'override' modifier…" and the rest of `override`'s own diagnostics.
-  OVERRIDE = (code) => code >= 4112 && code <= 4123,
+  OVERRIDE = (code) =>
+    (code >= 4112 && code <= 4123 && code !== 4118) ||
+    code === 4127 ||
+    code === 4128,
   relative = (fileName) => path.relative(webRenderer, fileName),
   // The engine's packages, however they're installed: anything in a `node_modules`, or outside the repository.
   isOurs = (fileName) => {
