@@ -81,9 +81,11 @@
   // A notice by what it's about (#416): military, science, gold, Wonders and civics, and diplomacy. Any other notice
   //  keeps `--ui-action-notice`.
   --ui-notice-military: var(--ui-negative);
-  --ui-notice-science: var(--y-science);
-  --ui-notice-gold: var(--y-gold);
-  --ui-notice-civics: var(--ui-warn);
+  // Science as research's orb, not the yields' purple, which the units have; civics and gold in their own EGA colours,
+  //  clear of disorder's red and the plain notice's gold.
+  --ui-notice-science: var(--ui-action-research);
+  --ui-notice-gold: #ffff55;
+  --ui-notice-civics: #aa55aa;
   --ui-notice-diplomacy: var(--y-trade);
   --ui-orb-ring: radial-gradient(
     circle,

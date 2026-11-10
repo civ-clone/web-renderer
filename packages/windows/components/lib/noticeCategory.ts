@@ -62,14 +62,7 @@ const categories: [NoticeCategory, string[]][] = [
       'Wonder',
     ],
   ],
-  [
-    'diplomacy',
-    [
-      'Player.declaration-broken',
-      'Player.declaration-expired',
-      'Player.respawned',
-    ],
-  ],
+  ['diplomacy', ['Player.declaration-broken', 'Player.declaration-expired']],
 ];
 
 export const noticeCategory = (key: string): NoticeCategory | null =>

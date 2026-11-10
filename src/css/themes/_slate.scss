@@ -80,7 +80,8 @@
   //  keeps `--ui-action-notice`.
   --ui-notice-military: var(--ui-negative);
   --ui-notice-science: var(--y-science);
-  --ui-notice-gold: var(--y-gold);
+  // Brighter than the yields' gold, which is too near the plain notice's brass.
+  --ui-notice-gold: #e0bb45;
   --ui-notice-civics: var(--ui-warn);
   --ui-notice-diplomacy: var(--y-trade);
   --ui-orb-ring: radial-gradient(

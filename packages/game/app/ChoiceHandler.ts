@@ -207,7 +207,10 @@ export const ChoiceHandler = {
           );
 
         meeting?.({
-          leader: them === null ? title : playerName(them),
+          leader:
+            them === null
+              ? t('Generic.unknown-civilization')
+              : playerName(them),
           show: (): void => meetingWindow.display(true),
         });
 
