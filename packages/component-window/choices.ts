@@ -10,7 +10,7 @@ import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // Where the "pick one from a list" windows are put together (#735): the interface's `choices` slot (#824), which each
 //  interface in `interfaces/` fills (#825): the classic ones or the ones drawn with the choice window (#745). Everything that opens one of these lists comes here, or to
-//  `openChoice` (`choiceList.ts` in `windows`) for a list of plain rows.
+//  `openChoice` (`choiceList.ts` in `hud`) for a list of plain rows.
 
 export interface Choices {
   cityBuild(

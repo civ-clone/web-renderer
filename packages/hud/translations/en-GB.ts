@@ -7,4 +7,5 @@ i18next.addResources('en-GB', 'default', {
   'Observer.civilizations': 'As these civilisations see it',
   'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
   'SquareTooltip.defence': 'Defence',
+  'Game.waiting': 'Waiting for the other civilisations…',
 });

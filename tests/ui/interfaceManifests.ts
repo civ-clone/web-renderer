@@ -252,7 +252,7 @@ expect(
     .filter((path) => readFileSync(path, 'utf8').includes('interfaceMode()'))
     .map((path) => path.slice(srcRoot.length + 1))
     .sort(),
-  ['windows/components/GameOptions.ts']
+  ['menus/components/GameOptions.ts']
 );
 
 if (failures.length) {

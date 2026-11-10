@@ -18,4 +18,8 @@ i18next.addResources('en-GB', 'default', {
   'GameOver.spaceship.body_unknown':
     'A civilisation we have never met has reached Alpha Centauri first. The stars will have to wait for the {{nation}}.',
   'HallOfFame.column.civilization': 'Civilisation',
+  'IntelligenceReport.empty': 'We have not met any other civilisations yet.',
+  'IntelligenceReport.no-foreign-affairs':
+    'No contact with other civilisations.',
+  'IntelligenceReport.trait.Civilized': 'Civilised',
 });

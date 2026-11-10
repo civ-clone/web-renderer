@@ -114,4 +114,4 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 
 - `changelog/*.json`: release snapshots.
 - `changelog/releases.json`: aggregate release feed.
-- `packages/windows/components/ReleaseWindow.ts`: in-app release viewer.
+- `packages/menus/components/ReleaseWindow.ts`: in-app release viewer.

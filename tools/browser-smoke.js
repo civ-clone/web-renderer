@@ -9,7 +9,7 @@
 // What it does, in headless Chrome, under each interface:
 //   - opens the page and waits for the title menu;
 //   - loads a save made here, by the engine, a few turns in (`tests/engine/load.ts --save`), with its first seat
-//     given to a person, the way Load game hands a save over (`packages/windows/lib/savedGame.ts`);
+//     given to a person, the way Load game hands a save over (`packages/menus/lib/savedGame.ts`);
 //   - opens each report by its key and closes it with Escape;
 //   - opens a city from the City Status report, and closes it.
 // Then, once: the same save as one written before a plugin was renamed loads too (#915), and with site data blocked
@@ -48,7 +48,7 @@ const NAME = 'browser-smoke',
   ],
   INTERFACES = ['modern', 'classic'],
   // The hand-over `loadSaveFromFile` makes before it reloads the page: the save in IndexedDB, a marker and the seats
-  //  in `sessionStorage`. Kept in step with `packages/windows/lib/savedGame.ts` by this test failing when it isn't.
+  //  in `sessionStorage`. Kept in step with `packages/menus/lib/savedGame.ts` by this test failing when it isn't.
   PENDING = 'civ-clone:pending-save',
   PENDING_SEATS = 'civ-clone:pending-save-seats',
   PENDING_DB = 'civ-clone-saved-game',

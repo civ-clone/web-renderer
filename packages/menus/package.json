@@ -1,5 +1,5 @@
 {
-  "name": "@civ-clone/ui-windows",
+  "name": "@civ-clone/ui-menus",
   "version": "0.1.0",
   "private": true,
   "description": "The game's menus, options and saves, shared by every interface that wants them: the Game menu, the options, a new game, loading, resuming and importing, the release notes and the title screen.",

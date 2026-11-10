@@ -11,7 +11,7 @@ import './lib/interfaces';
 
 import ReleaseWindow, {
   fetchReleases,
-} from '@civ-clone/ui-windows/components/ReleaseWindow';
+} from '@civ-clone/ui-menus/components/ReleaseWindow';
 import { Release } from '@civ-clone/ui-client/lib/releaseDays';
 import i18next from 'i18next';
 

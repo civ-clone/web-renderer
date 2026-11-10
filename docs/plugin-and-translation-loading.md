@@ -50,7 +50,7 @@ In `Game.load(file)` (a saved game):
   called, so `engine:start` never fires and the rules that build a world and place settlers do not run.
 
 Because the plugins' rules close over the singleton registries, a game cannot be loaded over one in progress. Loading
-reloads the page and hands the save to a fresh worker (see `packages/windows/lib/savedGame.ts`).
+reloads the page and hands the save to a fresh worker (see `packages/menus/lib/savedGame.ts`).
 
 ## Translation loading strategy
 

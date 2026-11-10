@@ -37,4 +37,38 @@ i18next.addResources('en', 'default', {
     '{{- icon}} $t(Progress.per-turn, { "count": {{count}} })',
   'TradeReport.ImprovementList.cost-title': 'Total cost',
   'TradeReport.ImprovementList.surplus-title': 'Total surplus',
+  'Buildable.label-empty': `Nothing`,
+  // This can include the resource being using to buy with via {{spendCost}} which allows support for `Faith`, etc used in later games.
+  // 'City.Build.buy-with': 'Buy with $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })',
+  'City.Build.buy-with': 'Buy',
+  'City.GarrisonedUnits.title': 'Garrisoned units',
+  'City.Growth.title': 'Growth',
+  'City.SupportedUnits.title': 'Supported units',
+  'CityStatus.build_empty':
+    '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) $t(Buildable.label-empty)',
+  'CityStatus.build_nonempty':
+    '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) {{buildable}} $t(Progress.data, { "progress": {{build.progress.value}}, "total": {{build.cost.value}} }) ($t(Progress.turns, { "count": {{turns}} }))',
+  'CityStatus.totals_equal': '{{free, number}}',
+  'CityStatus.totals_unequal': '{{free, number}} [{{total, number}}]',
+  'GameOptions.theme-choice.civ1-classic': 'Civ1 classic',
+  'IntelligenceReport.leader_traits': 'Leader: {{leader}} ({{traits}})',
+  'IntelligenceReport.military_one': 'Military: {{count, number}} Unit.',
+  'IntelligenceReport.military_other': 'Military: {{count, number}} Units.',
+  'IntelligenceReport.relations-peace': 'We are at PEACE with them.',
+  'IntelligenceReport.relations-war': 'We are at WAR with them.',
+  'MilitaryReport.active_one': '{{count, number}} active',
+  'MilitaryReport.active_other': '{{count, number}} active',
+  'MilitaryReport.in-production_one': '{{count, number}} in production',
+  'MilitaryReport.in-production_other': '{{count, number}} in production',
+  'MilitaryReport.lost_one': '{{count, number}} lost',
+  'MilitaryReport.lost_other': '{{count, number}} lost',
+  // The active unit's card in the sidebar (#699).
+  'UnitDetails.attack': 'A',
+  'UnitDetails.defence': 'D',
+  'UnitDetails.moves':
+    '{{remaining, number(minimumFractionDigits: 0; maximumFractionDigits: 2)}} / {{total, number}} moves',
+  'UnitDetails.tile':
+    '{{parts, list(type: unit)}} ($t(Generic.coordinates, { "x": {{x}}, "y": {{y}} }))',
+  'UnitDetails.value': '{{value, number}}',
+  'UnitDetails.visibility': 'V',
 });

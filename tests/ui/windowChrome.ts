@@ -11,7 +11,7 @@ import './lib/interfaces';
 
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
-import LoadGameWindow from '@civ-clone/ui-windows/components/LoadGameWindow';
+import LoadGameWindow from '@civ-clone/ui-menus/components/LoadGameWindow';
 import Window from '@civ-clone/ui-component-window/Window';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';

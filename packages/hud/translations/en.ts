@@ -149,4 +149,13 @@ i18next.addResources('en', 'default', {
   // A unit's name, then its state, in the stack window and the active unit's card (#694).
   'UnitLabel.label': '{{unit}}',
   'UnitLabel.label_state': '{{unit}} ({{states, list(type: unit)}})',
+  // The active unit's square and stack, as both interfaces' unit details show them, and the wait between turns.
+  'Generic.coordinates': '{{x, number}}, {{y, number}}',
+  'Game.waiting': 'Waiting for the other civilizations…',
+  'UnitDetails.home-city': 'Home city: {{city}} (opens the city)',
+  'UnitDetails.tile-units_one':
+    '{{count, number}} other unit here (choose a unit)',
+  'UnitDetails.tile-units_other':
+    '{{count, number}} other units here (choose a unit)',
+  'UnitSelectionWindow.title': 'Activate unit',
 });

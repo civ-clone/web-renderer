@@ -18,7 +18,7 @@ import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
-import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
+import mapMenus from '@civ-clone/ui-menus/components/mapMenus';
 import { on } from '@dom111/element';
 
 // How far, in px, a press has to move before it is a drag rather than a click

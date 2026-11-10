@@ -16,7 +16,7 @@ import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
 import civilizationAttribute from '@civ-clone/ui-client/lib/civilizationAttribute';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 
-/** A notice as the page receives it (`components/Notifications.ts` in `windows`), which isn't imported, so this checks on its own. */
+/** A notice as the page receives it (`components/Notifications.ts` in `hud`), which isn't imported, so this checks on its own. */
 export interface Notification {
   key: string;
   data: any;

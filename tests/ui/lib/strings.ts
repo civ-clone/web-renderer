@@ -6,7 +6,7 @@ import '@civ-clone/ui-game/translations/en';
 import '@civ-clone/ui-hud/translations/en';
 import '@civ-clone/ui-interface-classic/translations/en';
 import '@civ-clone/ui-interface-modern/translations/en';
+import '@civ-clone/ui-menus/translations/en';
 import '@civ-clone/ui-protocol/translations/en';
 import '@civ-clone/ui-reports/translations/en';
 import '@civ-clone/ui-widgets/translations/en';
-import '@civ-clone/ui-windows/translations/en';
