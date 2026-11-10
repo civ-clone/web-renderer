@@ -4,7 +4,7 @@ import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import GamePortal from '../GamePortal';
-import Minimap from '@civ-clone/ui-map-square/Minimap';
+import { GridMinimap } from '@civ-clone/ui-map/lib/projectionFor';
 import NotificationBar from '../app/NotificationBar';
 import Transport from '@civ-clone/ui-client/Transport';
 import UIStressRunner from '../lib/UIStressRunner';
@@ -24,7 +24,7 @@ export type DebugPanelDeps = {
   currentObjectCount: () => number;
   currentTurn: () => number;
   data: () => GameData;
-  minimap: Minimap;
+  minimap: GridMinimap;
   // Where the panel's notices show. Not `transport.send('notification')`: that
   // channel only comes from the worker.
   notificationBar: NotificationBar;

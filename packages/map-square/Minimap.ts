@@ -1,16 +1,17 @@
-import Overview from './Overview';
+import {
+  ActiveUnitMarker,
+  GridMinimap,
+} from '@civ-clone/ui-map/lib/projectionFor';
+import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import World from '@civ-clone/ui-map/components/World';
-import { Coordinate } from '@civ-clone/ui-protocol/types';
 import { on } from '@dom111/element';
 
-export type ActiveUnitMarker = () => Coordinate | null;
-
-export class Minimap {
+export class Minimap implements GridMinimap {
   #activeUnitMarker: ActiveUnitMarker;
   #context: CanvasRenderingContext2D;
   #element: HTMLCanvasElement;
-  #layer: Overview;
+  #layer: MapLayer;
   #portal: Portal;
   #world: World;
 
@@ -18,7 +19,7 @@ export class Minimap {
     element: HTMLCanvasElement,
     world: World,
     portal: Portal,
-    layer: Overview,
+    layer: MapLayer,
     activeUnitMarker: ActiveUnitMarker = () => null
   ) {
     this.#element = element;

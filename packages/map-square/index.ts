@@ -1,5 +1,11 @@
 import { WorldDimensions } from '@civ-clone/ui-map/lib/projection';
-import { registerGrid, refuse } from '@civ-clone/ui-map/lib/projectionFor';
+import {
+  GridOverview,
+  registerGrid,
+  refuse,
+} from '@civ-clone/ui-map/lib/projectionFor';
+import Minimap from './Minimap';
+import Overview from './Overview';
 import SquareProjection from './SquareProjection';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
@@ -52,4 +58,10 @@ export const squareProjection = (
   );
 };
 
-registerGrid('square', squareProjection);
+/** The square grid's minimap: the world a flat square a tile, and the box the map shows drawn over it. */
+export const squareOverview: GridOverview = {
+  layer: Overview,
+  minimap: Minimap,
+};
+
+registerGrid('square', squareProjection, squareOverview);

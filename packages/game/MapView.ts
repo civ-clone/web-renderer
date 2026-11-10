@@ -11,8 +11,6 @@ import GamePortal from './GamePortal';
 import IntervalHandler from '@civ-clone/ui-client/lib/IntervalHandler';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
-import Minimap from '@civ-clone/ui-map-square/Minimap';
-import Overview from '@civ-clone/ui-map-square/Overview';
 import Transport from '@civ-clone/ui-client/Transport';
 import UnitMarker, {
   UnitMarkerMode,
@@ -24,6 +22,7 @@ import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import currentTileset, {
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { GridMinimap, overviewFor } from '@civ-clone/ui-map/lib/projectionFor';
 
 // The map: the world the layers look tiles up in, the portal and its layers, the minimap, the active unit's blink, and
 //  the tiles waiting to be redrawn.
@@ -60,8 +59,9 @@ export class MapView {
   readonly activeUnitLayer: ActiveUnit;
   readonly citiesLayer: Cities;
   readonly cityNamesLayer: MapLayer;
-  readonly minimap: Minimap;
-  readonly overviewLayer: Overview;
+  // The grid's own (#867): the tileset's grid registered them with its projection.
+  readonly minimap: GridMinimap;
+  readonly overviewLayer: MapLayer;
   readonly portal: GamePortal;
   readonly unitsLayer: Units;
   readonly world: World;
@@ -124,6 +124,7 @@ export class MapView {
     const world = new World(worldData),
       intervalHandler = new IntervalHandler(),
       tileset = currentTileset(),
+      overview = overviewFor(tileset),
       portal = new GamePortal(
         world,
         transport,
@@ -138,7 +139,7 @@ export class MapView {
         Landscape,
         // Never composited onto the map; it rides in the layer list so
         // `portal.build()` feeds it tile updates like any other layer.
-        Overview,
+        overview.layer,
         Fog,
         Yields,
         Units,
@@ -147,7 +148,7 @@ export class MapView {
         this.#cityLabels.layer,
         ActiveUnit
       ),
-      overviewMap = portal.getLayer(Overview) as Overview,
+      overviewMap = portal.getLayer(overview.layer)!,
       activeUnitsMap = portal.getLayer(ActiveUnit) as ActiveUnit;
 
     this.world = world;
@@ -159,7 +160,7 @@ export class MapView {
     this.citiesLayer = portal.getLayer(Cities) as Cities;
     this.cityNamesLayer = portal.getLayer(this.#cityLabels.layer) as MapLayer;
     this.activeUnitLayer = activeUnitsMap;
-    this.minimap = new Minimap(
+    this.minimap = new overview.minimap(
       minimapCanvas,
       world,
       portal,
