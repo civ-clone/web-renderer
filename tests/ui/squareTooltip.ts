@@ -11,7 +11,7 @@ import './lib/grids';
 
 import { City, Tile, Yield } from '@civ-clone/ui-protocol/types';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from '@civ-clone/ui-game/GamePortal';
 import Map from '@civ-clone/ui-map/components/Map';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import World from '@civ-clone/ui-map/components/World';

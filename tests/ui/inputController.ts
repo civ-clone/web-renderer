@@ -12,7 +12,7 @@ import './lib/interfaces';
 import { GameData, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import InputController from '@civ-clone/ui-game/InputController';
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from '@civ-clone/ui-game/GamePortal';
 import Transport from '@civ-clone/ui-client/Transport';
 
 const failures: string[] = [];

@@ -20,6 +20,7 @@ import openUnitMenu, {
 } from '@civ-clone/ui-interface-modern/components/UiUnitMenu';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import cheatRows from '@civ-clone/ui-game/debug/cheats';
 import PopupMenu from '@civ-clone/ui-component-popup-menu/PopupMenu';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
@@ -853,14 +854,19 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
     document.body.append(holder);
 
-    const gameMenu = new GameMenu(
-      holder,
-      () => ({ civilization: { _: 'Roman' } } as any),
-      () => 1,
-      () => -4000,
-      {} as any,
-      { send: () => {} } as any
-    );
+    const transport = { send: () => {} } as any,
+      gameMenu = new GameMenu(
+        holder,
+        () => ({ civilization: { _: 'Roman' } } as any),
+        () => 1,
+        () => -4000,
+        {} as any,
+        transport,
+        false,
+        undefined,
+        // The game's debug code brings the cheat items (#863).
+        () => cheatRows({} as any, transport)
+      );
 
     gameMenu.build();
 
@@ -945,6 +951,13 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
         openMenu()!.element().querySelectorAll('.ui-menu-eyebrow')
       ).map((eyebrow) => eyebrow.textContent),
       ['Reports', 'Reference', 'Cheats']
+    );
+    expect(
+      'and its items',
+      rows(openMenu()!)
+        .map((row) => row.querySelector('.ui-menu-label')!.textContent)
+        .slice(-6, -2),
+      ['Reveal Map', 'Grant Advance', 'Create Unit', 'Grant Gold']
     );
     openMenu()!.close();
 

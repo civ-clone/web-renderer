@@ -5,6 +5,8 @@ import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-windows/components/openCity';
 import CitiesList from '@civ-clone/ui-windows/components/CitiesList';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
+import { GameMenuItem } from '@civ-clone/ui-windows/components/mapMenus';
+import cheatRows from './debug/cheats';
 import openFindCity from '@civ-clone/ui-windows/components/FindCity';
 import {
   allowLeaving,
@@ -367,7 +369,9 @@ export class GameSession {
           portal,
           transport,
           cheatsEnabled,
-          findCity
+          findCity,
+          // The cheat items (#863): the debug code's, as the menu can't reach the game's.
+          (): GameMenuItem[] => cheatRows(portal, transport)
         );
 
       this.#unitController = unitController;

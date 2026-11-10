@@ -7,7 +7,7 @@ import cityLabels, {
   CityLabels,
 } from '@civ-clone/ui-map/components/Map/cityLabels';
 import Fog from '@civ-clone/ui-map/components/Map/Fog';
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from './GamePortal';
 import IntervalHandler from '@civ-clone/ui-client/lib/IntervalHandler';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';

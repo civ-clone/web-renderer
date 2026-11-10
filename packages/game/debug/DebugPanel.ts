@@ -3,7 +3,7 @@ import createMemoryTestbed, { MemoryTestbed } from '../lib/memoryTestbed';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from '../GamePortal';
 import Minimap from '@civ-clone/ui-map-square/Minimap';
 import NotificationBar from '../app/NotificationBar';
 import Transport from '@civ-clone/ui-client/Transport';

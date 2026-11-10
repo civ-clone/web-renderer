@@ -430,6 +430,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-component-tooltip':
+        specifier: workspace:*
+        version: link:../component-tooltip
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
