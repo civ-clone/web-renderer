@@ -128,36 +128,48 @@ const engineSources = () => ({
           : args.resolveDir,
       ].join('\0');
 
+      // The answer is remembered from the moment it is asked for, not from when it comes: the builds of one
+      //  `npm test -- --for` all ask at once, and each would otherwise ask esbuild for itself.
       if (!named.has(key)) {
-        const resolved = await build.resolve(args.path, {
-          importer: args.importer,
-          kind: args.kind,
-          namespace: args.namespace,
-          pluginData: { [NESTED]: true },
-          resolveDir: args.resolveDir,
-        });
-
-        // Not remembered: esbuild reports it when the plugin steps aside.
-        if (resolved.errors.length > 0) {
-          return;
-        }
-
-        const source = resolved.external ? null : sourceOf(resolved.path);
-
         named.set(
           key,
-          source === null
-            ? null
-            : {
-                namespace: resolved.namespace,
-                path: source,
-                sideEffects: resolved.sideEffects,
-                suffix: resolved.suffix,
+          build
+            .resolve(args.path, {
+              importer: args.importer,
+              kind: args.kind,
+              namespace: args.namespace,
+              pluginData: { [NESTED]: true },
+              resolveDir: args.resolveDir,
+            })
+            .then((resolved) => {
+              // Not remembered: esbuild reports it when the plugin steps aside, and it may be there next time.
+              if (resolved.errors.length > 0) {
+                named.delete(key);
+
+                return undefined;
               }
+
+              const source = resolved.external ? null : sourceOf(resolved.path);
+
+              return source === null
+                ? undefined
+                : {
+                    namespace: resolved.namespace,
+                    path: source,
+                    sideEffects: resolved.sideEffects,
+                    suffix: resolved.suffix,
+                  };
+            })
+            // The build that asked was stopped before esbuild answered: the next one asks again.
+            .catch(() => {
+              named.delete(key);
+
+              return undefined;
+            })
         );
       }
 
-      return named.get(key) ?? undefined;
+      return named.get(key);
     });
   },
 });
