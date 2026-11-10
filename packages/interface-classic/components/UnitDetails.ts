@@ -1,26 +1,18 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import Portal from '@civ-clone/ui-map/components/Portal';
-import Transport from '@civ-clone/ui-client/Transport';
-import Unit from './Unit';
-import { openUnitSelection } from './choices';
+import { UnitPanelDeps } from '@civ-clone/ui-windows/components/unitPanel';
+import Unit from '@civ-clone/ui-windows/components/Unit';
+import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import unitLabel from '../lib/unitLabel';
+import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
 
-export type UnitDetailsDeps = {
-  // Opens the unit's home city, as a click on it on the map does.
-  portal: Pick<Portal, 'openCity'>;
-  // For the stack window, which wakes the unit chosen.
-  transport: Transport;
-  // Makes the unit chosen in the stack window the active one, as choosing it from the map does (#482).
-  setActiveUnit: (unit: UnitData) => void;
-};
+export type UnitDetailsDeps = Omit<UnitPanelDeps, 'unitAction'>;
 
 // One pip a whole move, the moves left lit: a fraction of a move (a road's third) lights part of a pip.
 const movePips = (unit: UnitData): HTMLElement => {

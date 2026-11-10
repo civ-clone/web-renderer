@@ -7,7 +7,10 @@ import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { keyForAction } from '@civ-clone/ui-client/lib/unitActionKeys';
-import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
+import {
+  nameOf,
+  performWithPrompts,
+} from '@civ-clone/ui-windows/lib/unitActionPrompts';
 import { t } from 'i18next';
 import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 

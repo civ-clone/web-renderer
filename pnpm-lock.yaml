@@ -499,6 +499,12 @@ importers:
       '@civ-clone/ui-component-report-table':
         specifier: workspace:*
         version: link:../component-report-table
+      '@civ-clone/ui-component-stat-pill':
+        specifier: workspace:*
+        version: link:../component-stat-pill
+      '@civ-clone/ui-component-tooltip':
+        specifier: workspace:*
+        version: link:../component-tooltip
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
@@ -1294,7 +1300,6 @@ packages:
   '@civ-clone/base-unit-action-land-aircraft@0.1.0':
     resolution: {integrity: sha512-SFEGMxuQfotPE6k2of/tS0Tg/F0eiSwZGC9zcKmuymr2Lnj3t68ESrTS6pI4Fbcc0dlzIyZXuR98vxZ6nJm5QA==}
 
-
   '@civ-clone/base-unit-action-meet-with-leader@0.1.0':
     resolution: {integrity: sha512-JbMMMmT1Yw8Dp1RSi+fVXvZvSwX39IpnaDrhDpRPzCIG6CAlOsm+RFCwDTSbkH7v1tOnE+fp/9J50H+Xs4mdww==}
 
@@ -1630,7 +1635,6 @@ packages:
   '@civ-clone/core-data-client@0.1.1':
     resolution: {integrity: sha512-qCAc3vutY2niNYvl1oGwX3ts4RieZ1RWEOinbcAqN4AIcC/PMQqfu9/5gcC9e/xTFYWJsD0ayednaO/MspqGuw==}
 
-
   '@civ-clone/core-data-object@0.1.19':
     resolution: {integrity: sha512-K4n8yvnzPYlgL1thcdrD1XFzQQn694g0nQ4Rtu64xsJvte39LapcLHgW3Ey0GhpS4rosMmAtoVu6nvgwq3+h3g==}
 
@@ -1753,7 +1757,6 @@ packages:
 
   '@civ-clone/library-science@0.1.0':
     resolution: {integrity: sha512-4nBw38Wa64HniBNKmGtVPQMALeDQzRkjvI2C6nyfHjrQf1jHo8LQWlJBuCDXZ6JCz+JNsXJPskD3qQ2PBbELyg==}
-
 
   '@civ-clone/library-unit@0.1.15':
     resolution: {integrity: sha512-LayVGqRsxEtrD0+9JP0HSkZT7zk/sMESC/TyxSGjlMCnl9CLnNOdgZA39IVd6K7NnN7vQRbujTIrUodkApLEbQ==}
@@ -3613,7 +3616,6 @@ snapshots:
       '@civ-clone/core-unit-transport': 0.1.10
       '@civ-clone/core-world': 0.1.22
 
-
   '@civ-clone/base-unit-action-meet-with-leader@0.1.0':
     dependencies:
       '@civ-clone/core-data-object': 0.1.19
@@ -4681,7 +4683,6 @@ snapshots:
     dependencies:
       '@civ-clone/core-data-object': 0.1.19
 
-
   '@civ-clone/core-data-object@0.1.19':
     dependencies:
       '@civ-clone/core-registry': 0.1.6
@@ -5158,7 +5159,6 @@ snapshots:
       '@civ-clone/base-science-advance-trade': 0.1.0
       '@civ-clone/base-science-advance-university': 0.1.1
       '@civ-clone/base-science-advance-writing': 0.1.0
-
 
   '@civ-clone/library-unit@0.1.15':
     dependencies:

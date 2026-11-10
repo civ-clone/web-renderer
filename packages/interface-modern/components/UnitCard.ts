@@ -1,13 +1,13 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import { unitName, unitStates } from '../lib/unitLabel';
+import { unitName, unitStates } from '@civ-clone/ui-windows/lib/unitLabel';
 import currentTileset, {
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
-import Unit from './Unit';
-import { UnitDetailsDeps } from './UnitDetails';
-import { openUnitSelection } from './choices';
+import Unit from '@civ-clone/ui-windows/components/Unit';
+import { UnitPanelDeps } from '@civ-clone/ui-windows/components/unitPanel';
+import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import glyph, { GlyphName } from '@civ-clone/ui-assets/lib/glyphs';
 import statPill from '@civ-clone/ui-component-stat-pill/StatPill';
@@ -20,7 +20,7 @@ import tooltip, {
 const text = (key: string, options: TOptions = {}): string =>
   t(key, { ...options, interpolation: { escapeValue: false } });
 
-export type UnitCardDeps = UnitDetailsDeps;
+export type UnitCardDeps = Omit<UnitPanelDeps, 'unitAction'>;
 
 // How many of the other units' portraits fit on a row when the card can't be measured (it's hidden): the sidebar's.
 const fallbackPerRow = 6;

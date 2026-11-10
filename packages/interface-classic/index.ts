@@ -10,6 +10,8 @@ import MilitaryReport from './components/MilitaryReport';
 import SelectionWindow from '@civ-clone/ui-component-selection-window/SelectionWindow';
 import TopCitiesReport from './components/TopCitiesReport';
 import TradeReport from './components/TradeReport';
+import UnitActions from './components/UnitActions';
+import UnitDetails from './components/UnitDetails';
 import UnitSelectionWindow from '@civ-clone/ui-windows/components/UnitSelectionWindow';
 import { choiceList } from '@civ-clone/ui-windows/components/choiceList';
 import { choices } from '@civ-clone/ui-windows/components/choices';
@@ -20,6 +22,7 @@ import manifest from './manifest.json';
 import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
 // The classic interface (#735, #825), after Civ1's own: its manifest, and the pieces it fills its slots with.
 
@@ -86,5 +89,17 @@ choiceList.provide(
     return window;
   }
 );
+
+// The unit's details in the sidebar, and its actions in the strip at the bottom left.
+unitPanel.provide('details', ({ unitInfo, unitActionArea }, deps) => {
+  const details = new UnitDetails(unitInfo, deps),
+    actions = new UnitActions(unitActionArea, deps.unitAction);
+
+  return {
+    update: (unit) => details.update(unit),
+    actions: (unit, tile) => actions.build(unit, tile),
+    dispose: () => {},
+  };
+});
 
 registerInterface(manifest);

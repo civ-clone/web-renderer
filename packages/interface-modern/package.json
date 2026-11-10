@@ -11,6 +11,8 @@
     "@civ-clone/ui-component-choice-window": "workspace:*",
     "@civ-clone/ui-component-progress-bar": "workspace:*",
     "@civ-clone/ui-component-report-table": "workspace:*",
+    "@civ-clone/ui-component-stat-pill": "workspace:*",
+    "@civ-clone/ui-component-tooltip": "workspace:*",
     "@civ-clone/ui-component-window": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",

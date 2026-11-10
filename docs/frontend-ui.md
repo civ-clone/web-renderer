@@ -199,7 +199,9 @@ ask before leaving a game in progress.
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
   `TopCitiesReport` (F8).
-- Details: `UnitDetails`, `PlayerDetails`, `GameDetails`. `UnitDetails` is the
+- Details: `PlayerDetails`, `GameDetails`, and the active unit's panel, which
+  each interface fills through the `unitPanel` slot (#860): classic's
+  `UnitDetails` and strip, or modern's `UnitCard`. `UnitDetails` is the
   active unit's card (#699): its icon, name and state (`lib/unitLabel.ts`, as
   the stack window's rows say it, #694), its moves as pips, attack, defence and
   visibility, its home city (a button that opens it), the square, and the other
