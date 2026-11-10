@@ -67,6 +67,14 @@ i18next.addResources('en', 'default', {
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(Progress.turns, { "count": {{turns}} })',
   'CityBanner.starving':
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(CitiesList.starving)',
+  'CitySquares.city': '{{- square}}, the city. {{- yields}}',
+  'CitySquares.free': '{{- square}}, not worked. {{- yields}}',
+  'CitySquares.label':
+    "The city's squares: arrow keys move, Enter works or frees a square",
+  'CitySquares.no-yields': 'Yields nothing',
+  'CitySquares.taken': '{{- square}}, worked by another city',
+  'CitySquares.worked': '{{- square}}, worked. {{- yields}}',
+  'CitySquares.yield': '{{- name}}: {{value, number}}',
   'CityWindow.garrison_zero': 'No units in the city',
   'CityWindow.garrison_one': '{{count, number}} unit in the city',
   'CityWindow.garrison_other': '{{count, number}} units in the city',

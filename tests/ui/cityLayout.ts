@@ -914,6 +914,233 @@ const run = async (): Promise<void> => {
   delete (document as any).activeElement;
   queued.close();
 
+  // The city's squares from the keyboard (#854): a button over each, one stop for Tab, the arrow keys from square to
+  //  square, a press doing what a click does, and the keyboard still on the square once the city is drawn again.
+  {
+    const square = (
+        x: number,
+        y: number,
+        terrain: string,
+        yields: [string, number][]
+      ) => ({
+        _: 'PlayerTile',
+        id: `Tile-${x}-${y}`,
+        x,
+        y,
+        city: null,
+        goodyHut: null,
+        improvements: [],
+        isCoast: false,
+        isLand: true,
+        isWater: false,
+        terrain: { _: terrain, __: [terrain, 'Terrain'], features: [] },
+        units: [],
+        workedBy: null as { id: string } | null,
+        yields: yields.map(([name, value]) => ({
+          _: name,
+          __: [name, 'Yield'],
+          value,
+        })),
+      }),
+      centre = square(2, 2, 'Plains', [
+        ['Food', 2],
+        ['Production', 1],
+      ]),
+      east = square(3, 2, 'Grassland', [['Food', 2]]),
+      west = square(1, 2, 'Hills', [['Food', 1]]),
+      north = square(2, 1, 'Desert', []),
+      south = square(2, 3, 'Forest', [
+        ['Food', 1],
+        ['Production', 2],
+      ]),
+      tiles = [west, north, centre, south, east],
+      mapped = (worked: typeof tiles, extra: object = {}) => {
+        const city = cityData('City-M', 'Mari', {
+          player: { ...player, world: { ...player.world, tiles } },
+          tile: centre,
+          tiles,
+          tilesWorked: worked,
+          ...extra,
+        });
+
+        return city;
+      };
+
+    // Worked by another city: it says so.
+    north.workedBy = { id: 'City-Other' };
+
+    const first = mapped([centre, east]),
+      mapScreen = openCity(first, portal, transport),
+      squares = (): HTMLButtonElement[] =>
+        Array.from(mapScreen.element().querySelectorAll('.city-square')),
+      labelled = (start: string): HTMLButtonElement | undefined =>
+        squares().find((button) =>
+          button.getAttribute('aria-label')?.startsWith(start)
+        );
+
+    expect(
+      'a button over each of the city’s squares, saying what it is, whether it’s worked and what it yields',
+      squares()
+        .map((button) => button.getAttribute('aria-label'))
+        .sort(),
+      [
+        'Desert, worked by another city',
+        'Forest, not worked. Food: 1, Production: 2',
+        'Grassland, worked. Food: 2',
+        'Hills, not worked. Food: 1',
+        'Plains, the city. Food: 2, Production: 1',
+      ]
+    );
+    expect(
+      'one stop for Tab, on the city’s own square, in a group that says how to use it',
+      [
+        squares()
+          .filter((button) => button.getAttribute('tabindex') === '0')
+          .map((button) => button.getAttribute('aria-label')),
+        mapScreen
+          .element()
+          .querySelector('.city-squares')
+          ?.getAttribute('aria-label'),
+      ],
+      [
+        ['Plains, the city. Food: 2, Production: 1'],
+        "The city's squares: arrow keys move, Enter works or frees a square",
+      ]
+    );
+    expect(
+      'each is placed by its square’s share of the canvas',
+      squares().every((button) =>
+        ['left', 'top', 'width', 'height'].every((side) =>
+          /^\d+(\.\d+)?%$/.test(button.style.getPropertyValue(side))
+        )
+      ),
+      true
+    );
+
+    sent = [];
+    labelled('Forest')!.click();
+
+    expect('a press on one sends what a click on its square does', sent, [
+      { name: 'ChangeWorkedTile', id: 'City-M', tile: south.id },
+    ]);
+
+    // linkedom has no focus: tracked by hand, as the keyboard's. (Typed so: `focus` sets it, which the compiler can't
+    //  see.)
+    let focused = null as Element | null;
+
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => focused,
+    });
+
+    const focus = HTMLElement.prototype.focus;
+
+    HTMLElement.prototype.focus = function (this: HTMLElement) {
+      focused = this;
+      this.dispatchEvent(new Event('focusin', { bubbles: true }));
+    };
+
+    // The arrow keys the map takes never reach the screen, where Left and Right are the previous and next city.
+    let reached = 0;
+
+    const count = (event: Event): void => {
+      if ((event as KeyboardEvent).key.startsWith('Arrow')) {
+        reached++;
+      }
+    };
+
+    mapScreen.element().addEventListener('keydown', count);
+
+    const arrow = (direction: string): boolean => {
+      const event = new KeyboardEvent('keydown', {
+        bubbles: true,
+        cancelable: true,
+        key: `Arrow${direction}`,
+      });
+
+      focused!.dispatchEvent(event);
+
+      return event.defaultPrevented;
+    };
+
+    labelled('Plains')!.focus();
+
+    const taken = [arrow('Right')];
+
+    expect(
+      'Right from the city’s square: on the square to its east, which is now the stop for Tab',
+      [
+        focused?.getAttribute('aria-label'),
+        squares()
+          .filter((button) => button.getAttribute('tabindex') === '0')
+          .map((button) => button.getAttribute('aria-label')),
+      ],
+      ['Grassland, worked. Food: 2', ['Grassland, worked. Food: 2']]
+    );
+
+    taken.push(arrow('Right'));
+
+    expect(
+      'Right again, with no square of the city’s that way: it stays',
+      focused?.getAttribute('aria-label'),
+      'Grassland, worked. Food: 2'
+    );
+
+    taken.push(arrow('Left'), arrow('Left'), arrow('Right'), arrow('Up'));
+
+    expect(
+      'Left twice, Right, then Up: the west, back to the city, then north',
+      focused?.getAttribute('aria-label'),
+      'Desert, worked by another city'
+    );
+    expect(
+      'the arrow keys are the map’s: none reached the screen, and none scrolls the window',
+      [reached, taken],
+      [0, [true, true, true, true, true, true]]
+    );
+
+    // The city drawn again with the square freed: the keyboard is on that square's new button.
+    labelled('Grassland')!.focus();
+
+    const before = focused;
+
+    dataChanges.collect([first.id]);
+    dataChanges.notify({
+      player: { cities: [mapped([centre])] },
+    } as unknown as GameData);
+
+    expect(
+      'the city drawn again: the keyboard is on the same square, which now says it isn’t worked',
+      [
+        focused !== before,
+        focused?.getAttribute('aria-label'),
+        focused !== null && mapScreen.element().contains(focused),
+      ],
+      [true, 'Grassland, not worked. Food: 2', true]
+    );
+
+    mapScreen.element().removeEventListener('keydown', count);
+    HTMLElement.prototype.focus = focus;
+    delete (document as any).activeElement;
+    mapScreen.close();
+
+    // A city only looked at has no squares to choose.
+    const looked = openCity(mapped([centre, east]), portal, transport, {
+      readOnly: true,
+    });
+
+    expect(
+      'a city only looked at has its map, and no buttons over it',
+      [
+        looked.element().querySelector('.city-map canvas') !== null,
+        looked.element().querySelectorAll('.city-square').length,
+      ],
+      [true, 0]
+    );
+
+    looked.close();
+  }
+
   // The classic layout is still `City`'s own.
   const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
 
