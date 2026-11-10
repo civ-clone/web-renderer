@@ -41,7 +41,7 @@ import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
 
 export const civ1Rules: WorkerRules = {
-  // In the order the client's `if` chain once tested them, among the shared ones (#449).
+  // After the shared ones, in the order the client's `if` chain once tested them among those (#449).
   actionHandlers: [
     [CompleteProduction, handleCompleteProduction],
     [SellImprovement, handleSellImprovement],

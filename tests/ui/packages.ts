@@ -374,6 +374,17 @@ expect(
   [[], []]
 );
 expect(
+  'the worker client imports none of Civ1’s packages: it asks its rule set’s worker rules (#865)',
+  sourcesUnder(join(packagesRoot, 'worker-client'))
+    .filter((path) =>
+      specifiersOf(readFileSync(path, 'utf8')).some((specifier) =>
+        specifier.startsWith('@civ-clone/civ1-')
+      )
+    )
+    .map((path) => relative(root, path)),
+  []
+);
+expect(
   'the worker starts from `backend.ts`, which uses only the worker client, the protocol and civ.one’s plugins',
   [
     importsOf(backend).some((target) => packageOf(target) === 'worker-client'),
