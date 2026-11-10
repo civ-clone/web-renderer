@@ -100,7 +100,7 @@ export class UnitSelectionWindow extends Window {
     this.update(build(units, transport, choose));
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     super.close();

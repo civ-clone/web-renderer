@@ -48,7 +48,7 @@ export class Unit extends Element {
     drawUnitStatus(context, unit, 0, 0, this.#scale, this.#tileSize);
   }
 
-  element(): HTMLCanvasElement {
+  override element(): HTMLCanvasElement {
     return super.element() as HTMLCanvasElement;
   }
 

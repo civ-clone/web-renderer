@@ -6,7 +6,7 @@ import { tileYieldIcons } from '@civ-clone/ui-client/lib/yieldMap';
 export class Yields extends Map {
   // Six columns at most, the last starting five sixths of the way across, and an icon no wider than half the box, as
   //  two rows of them have to fit down it.
-  protected reach(): Reach {
+  protected override reach(): Reach {
     const reach = super.reach(),
       { width } = this.projection().footprint();
 
@@ -16,7 +16,11 @@ export class Yields extends Map {
     };
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     const { width, height } = this.projection().footprint();
 
     // Each icon's place is a fraction of the tile's box.

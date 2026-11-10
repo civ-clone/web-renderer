@@ -169,7 +169,7 @@ export class MainMenu extends Element {
     );
   }
 
-  remove(): void {
+  override remove(): void {
     this.queryAll('button').forEach((button) =>
       button.setAttribute('disabled', '')
     );

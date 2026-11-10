@@ -2,7 +2,11 @@ import TerrainAbstract from './TerrainAbstract';
 import { Tile } from '@civ-clone/ui-protocol/types';
 
 export class Fog extends TerrainAbstract {
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     if (tile.terrain._ === 'Unknown') {
       return;
     }

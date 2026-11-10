@@ -27,7 +27,7 @@ export class CityBuild extends Action {
     this.#portal = portal;
   }
 
-  async activate(): Promise<void> {
+  override async activate(): Promise<void> {
     // Pressed again before the first answer came: one picker is enough (#484).
     if (this.#opening) {
       return;
@@ -66,7 +66,7 @@ export class CityBuild extends Action {
     );
   }
 
-  build(): void {
+  override build(): void {
     const cityBuild = this.value();
 
     assetStore
@@ -85,7 +85,7 @@ export class CityBuild extends Action {
       );
   }
 
-  value(): CityBuildObject {
+  override value(): CityBuildObject {
     return super.value() as CityBuildObject;
   }
 }

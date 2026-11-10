@@ -63,12 +63,12 @@ export class Overview extends Map {
 
   // The portal never draws this layer; it rides in the layer list only so that
   // `build()` feeds it tile updates alongside every other layer.
-  composited(): boolean {
+  override composited(): boolean {
     return false;
   }
 
   // Squares at the overview's own tile size, whatever projection the map has.
-  protected projection(): Projection {
+  protected override projection(): Projection {
     if (this.#projection === null) {
       this.#projection = new SquareProjection(this.tileSize(), this.world());
     }
@@ -79,27 +79,31 @@ export class Overview extends Map {
   // Every tile is drawn as a flat square of exactly its own size, and the
   // canvas is exactly a world across, so nothing reaches past a tile and
   // nothing wraps.
-  protected overhang(): number {
+  protected override overhang(): number {
     return 0;
   }
 
   // The whole world is the point, so this layer keeps a canvas of its own size
   // rather than taking the portal's window on the world.
-  setViewport(): void {}
+  override setViewport(): void {}
 
   // Likewise the portal's scale — see `tileSize()` — and whether it stops at
   // the poles: the minimap always shows the world whole.
-  setScale(): void {}
+  override setScale(): void {}
 
-  setWrapVertical(): void {}
+  override setWrapVertical(): void {}
 
   // Deliberately ignores the portal's scale and tile size: the minimap is an
   // overview at its own fixed size, not a scaled view of the map.
-  tileSize(): number {
+  override tileSize(): number {
     return Math.max(1, Math.trunc(OVERVIEW_WIDTH / this.world().width()));
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     const size = this.tileSize(),
       context = this.context();
 

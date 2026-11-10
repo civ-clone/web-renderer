@@ -511,7 +511,7 @@ export class Game implements IGame {
     const Paced = class extends (AIClientType as new (
       player: Player
     ) => Client) {
-      async takeTurn(): Promise<any> {
+      override async takeTurn(): Promise<any> {
         await new Promise((resolve) => setTimeout(resolve, 0));
 
         return super.takeTurn();

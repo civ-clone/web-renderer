@@ -13,7 +13,7 @@ type SpaceshipYieldMap = {
 };
 
 export class Spaceship extends Action {
-  activate(): void {
+  override activate(): void {
     const spaceship = this.value(),
       yields = spaceship.yields.reduce(
         (yieldMap: SpaceshipYieldMap, spaceshipYield) => {
@@ -191,7 +191,7 @@ export class Spaceship extends Action {
     window.addClass('spaceship');
   }
 
-  build(): void {
+  override build(): void {
     this.append(
       s(
         `<button class="btn-bare spaceship" title="${t(
@@ -201,7 +201,7 @@ export class Spaceship extends Action {
     );
   }
 
-  value(): SpaceshipData {
+  override value(): SpaceshipData {
     return super.value() as SpaceshipData;
   }
 }

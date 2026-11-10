@@ -296,7 +296,7 @@ export class MeetingWindow extends Window {
     this.display();
   }
 
-  display(focus?: boolean): void {
+  override display(focus?: boolean): void {
     super.display(focus);
 
     // Not before the replies are in: `Window` displays as it's made where it's asked to.

@@ -11,7 +11,11 @@ export class Units extends Map implements IMap {
   //  tile it left.
   #pendingTile: Coordinate | null = null;
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     const activeTile = this.activeTile();
 
     // The active unit's own layer draws that tile.
@@ -60,7 +64,7 @@ export class Units extends Map implements IMap {
 
   // The copy behind a stack reaches past the tile on the sides the tileset moves it to (Civ1's, a scale step up and
   //  left).
-  protected reach(): Reach {
+  protected override reach(): Reach {
     const reach = super.reach(),
       [stackX, stackY] = this.stackOffset();
 

@@ -78,7 +78,7 @@ export class MilitaryReport extends FilterableWindow {
   }
 
   // Asked for afresh each time the report opens; it doesn't follow the game while it's open.
-  update(): void {
+  override update(): void {
     this.#transport
       .request(new Military())
       .then((report: MilitaryReportData) =>

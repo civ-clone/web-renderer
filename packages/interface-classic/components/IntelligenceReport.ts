@@ -148,7 +148,7 @@ export class IntelligenceReport extends FilterableWindow {
   }
 
   // Asked for afresh each time the report opens; it doesn't follow the game while it's open.
-  update(): void {
+  override update(): void {
     this.#transport
       .request(new Intelligence())
       .then((rows: IntelligenceRow[]) => {

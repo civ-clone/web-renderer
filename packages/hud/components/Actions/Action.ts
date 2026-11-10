@@ -66,7 +66,7 @@ export class Action extends Element implements IAction {
   // The buttons an action adds, some once an icon has loaded, have the interface's tooltip rather than the browser's
   //  (#703): it shows on keyboard focus too. Their title names them for a screen reader, as their icon can't, and their
   //  key, if they have one, follows it.
-  append(...nodes: (Node | Element)[]): void {
+  override append(...nodes: (Node | Element)[]): void {
     super.append(...nodes);
 
     nodes.forEach((node) => {
@@ -93,7 +93,7 @@ export class Action extends Element implements IAction {
   build(): void {}
 
   // Its tooltip with it: a removed button fires no `mouseleave` or `blur`, which would otherwise close it.
-  remove(): void {
+  override remove(): void {
     hideTooltipWithin(this.element());
 
     super.remove();

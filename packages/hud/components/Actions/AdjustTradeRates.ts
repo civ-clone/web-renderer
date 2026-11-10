@@ -80,11 +80,11 @@ export const openTradeRates = (
 };
 
 export class AdjustTradeRates extends Action {
-  activate(): void {
+  override activate(): void {
     openTradeRates(this.value(), this.transport());
   }
 
-  build(): void {
+  override build(): void {
     // `Plus` is `tradeRatesKey` as `aria-keyshortcuts` writes it, where `+` joins keys.
     assetStore
       .spriteURL(spriteKey(currentTileset(), 'city/trade'))
@@ -99,7 +99,7 @@ export class AdjustTradeRates extends Action {
       );
   }
 
-  value(): PlayerTradeRates {
+  override value(): PlayerTradeRates {
     return super.value() as PlayerTradeRates;
   }
 }

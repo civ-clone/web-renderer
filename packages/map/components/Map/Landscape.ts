@@ -111,7 +111,11 @@ const buildCoastTile = (
  * sixth of the compositing.
  */
 export class Landscape extends TerrainAbstract {
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     if (tile.terrain._ === 'Unknown') {
       return;
     }

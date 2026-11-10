@@ -47,13 +47,13 @@ export class TradeReport extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
   }
 
-  async update() {
+  override async update() {
     const goldIcon = await assetStore
         .shownAtURL(
           spriteKey(currentTileset(), groupIcons.Gold),

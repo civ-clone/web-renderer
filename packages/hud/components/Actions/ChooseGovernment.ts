@@ -9,7 +9,7 @@ import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 export class ChooseGovernment extends Action {
-  activate(): void {
+  override activate(): void {
     openChoice(
       t('Actions.ChooseGovernment.title'),
       this.value().available.map(({ _: government }) => {
@@ -50,7 +50,7 @@ export class ChooseGovernment extends Action {
     );
   }
 
-  build(): void {
+  override build(): void {
     assetStore
       .spriteURL(spriteKey(currentTileset(), 'city/people_content_m'))
       .then((url) =>
@@ -64,7 +64,7 @@ export class ChooseGovernment extends Action {
       );
   }
 
-  value(): PlayerGovernment {
+  override value(): PlayerGovernment {
     return super.value() as PlayerGovernment;
   }
 }

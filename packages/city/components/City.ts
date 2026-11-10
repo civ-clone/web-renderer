@@ -424,7 +424,7 @@ export class City extends Window {
     });
   }
 
-  close(): void {
+  override close(): void {
     this.#unwatch?.();
 
     super.close();

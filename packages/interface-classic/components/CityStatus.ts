@@ -117,13 +117,13 @@ export class CityStatus extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
   }
 
-  update() {
+  override update() {
     Promise.all(this.#cities.map((city) => buildCityRow(city))).then((rows) =>
       super.update(
         s(

@@ -12,7 +12,7 @@ export class ActiveUnit extends Units implements IMap {
   //  square (Civ1's are a pixel short of it), so the ring is round the unit rather than off to one side of it.
   #squares: Rect[] = [];
 
-  render(): void {
+  override render(): void {
     this.#drawn.forEach(({ x, y, width, height }) => {
       this.context().clearRect(x, y, width, height);
 
@@ -80,7 +80,7 @@ export class ActiveUnit extends Units implements IMap {
     });
   }
 
-  update(): void {
+  override update(): void {
     this.render();
   }
 
@@ -91,7 +91,7 @@ export class ActiveUnit extends Units implements IMap {
 
   // The blink flips this layer on and off twice a second; all the portal has to
   // put back is the tile the unit is on.
-  protected markContentDirty(): void {
+  protected override markContentDirty(): void {
     this.#drawn.forEach(({ x, y, width, height }) =>
       this.markDirty(x, y, width, height)
     );
@@ -99,7 +99,7 @@ export class ActiveUnit extends Units implements IMap {
 
   // One tile is cheaper to draw again than to blit and patch up, and it saves
   // having to move `#drawn` along with the rest of the canvas.
-  protected scrollTo(originX: number, originY: number): void {
+  protected override scrollTo(originX: number, originY: number): void {
     this.setOrigin(originX, originY);
 
     this.clear();

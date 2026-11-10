@@ -236,7 +236,7 @@ export class DataTransferClient extends Client implements IClient {
     this.#context.automation.setEnabled(enabled);
   }
 
-  async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
+  override async chooseFromList<Name extends keyof ChoiceMetaDataMap>(
     meta: ChoiceMeta<Name>
   ): Promise<DataForChoiceMeta<ChoiceMeta<Name>>> {
     // A client done with asks nothing more (`dispose`).
@@ -359,7 +359,7 @@ export class DataTransferClient extends Client implements IClient {
   }
 
   // The player's turn, handed to the UI, or played by automation (see `Client/TurnHandover.ts`).
-  takeTurn(): Promise<void> {
+  override takeTurn(): Promise<void> {
     return this.#turnHandover.takeTurn();
   }
 }

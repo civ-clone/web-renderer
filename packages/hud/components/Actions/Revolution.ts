@@ -34,11 +34,11 @@ export const confirmRevolution = (
   );
 
 export class Revolution extends Action {
-  activate(): void {
+  override activate(): void {
     confirmRevolution(this.value(), this.transport(), () => this.complete());
   }
 
-  build(): void {
+  override build(): void {
     assetStore
       .spriteURL(spriteKey(currentTileset(), 'city/sad'))
       .then((url) =>
@@ -52,7 +52,7 @@ export class Revolution extends Action {
       );
   }
 
-  value(): PlayerGovernment {
+  override value(): PlayerGovernment {
     return super.value() as PlayerGovernment;
   }
 }

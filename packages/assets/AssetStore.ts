@@ -219,7 +219,7 @@ export class AssetStore extends Store<{
     setSprites(loaded);
   }
 
-  async get(path: string): Promise<Asset> {
+  override async get(path: string): Promise<Asset> {
     if (!this.#cachedAssets.has(path)) {
       this.#cachedAssets.set(path, (await super.get(path))!);
     }

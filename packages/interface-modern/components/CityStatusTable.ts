@@ -212,7 +212,7 @@ export class CityStatusTable extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
@@ -222,7 +222,7 @@ export class CityStatusTable extends FilterableWindow {
     return this.#table;
   }
 
-  update() {
+  override update() {
     this.#table.update(this.#cities);
 
     // The rows keep their elements, so their text is read again.

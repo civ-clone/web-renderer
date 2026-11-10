@@ -8,7 +8,11 @@ export class Unworkable extends Map {
     this.#city = city;
   }
 
-  protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
+  protected override drawTile(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
     const { width, height } = this.projection().footprint();
 
     if (

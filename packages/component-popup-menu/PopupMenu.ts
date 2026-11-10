@@ -227,7 +227,7 @@ export class PopupMenu extends Element {
     event.stopPropagation();
   }
 
-  remove() {
+  override remove() {
     this.addClass('hide');
 
     setTimeout(() => {

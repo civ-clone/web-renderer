@@ -206,7 +206,7 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     this.on('focus', () => this.selectionList().focus());
   }
 
-  close() {
+  override close() {
     // Never displayed, so there is nothing to remove, and closing it mustn't
     //  move the focus or bring on the next queued notification.
     if (this.#autoChosen) {
@@ -222,7 +222,7 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
     return this.#autoChosen;
   }
 
-  display(): Promise<any> {
+  override display(): Promise<any> {
     // `Window`'s constructor displays the window before this class's fields
     //  exist, hence the `in`.
     if (#autoChosen in this && this.#autoChosen) {

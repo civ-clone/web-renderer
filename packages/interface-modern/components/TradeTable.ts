@@ -182,7 +182,7 @@ export class TradeTable extends FilterableWindow {
     this.update();
   }
 
-  close() {
+  override close() {
     this.#unwatch();
 
     return super.close();
@@ -196,7 +196,7 @@ export class TradeTable extends FilterableWindow {
     return this.#improvements;
   }
 
-  update() {
+  override update() {
     this.#anarchy.hidden = !isAnarchy(this.#player);
     this.#table.update(this.#cities);
     this.#improvements.update(maintenance(this.#cities));

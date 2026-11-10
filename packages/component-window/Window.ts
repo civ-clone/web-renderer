@@ -180,7 +180,7 @@ export class Window
     this.build();
   }
 
-  build(): void {
+  override build(): void {
     this.#chrome.building();
     this.empty();
     this.#chrome.build();
@@ -326,7 +326,7 @@ export class Window
     (windows[windows.length - 1] as HTMLDialogElement).focus();
   }
 
-  display(focus = this.options.autofocus): void {
+  override display(focus = this.options.autofocus): void {
     this.#closed = false;
 
     this.#chrome.opening();
