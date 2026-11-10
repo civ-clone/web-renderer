@@ -10,6 +10,7 @@
 // The yields (#719): a row each, drawn to one scale, with what's used, spare and short, and said in words.
 // Why the production picker has opened (#716): the item finished or no longer buildable, a new or captured city, or
 //  nothing for a reason it has no words for, or one an older save doesn't know.
+// Each screen opens through `openCity`, so it has the classic interface's layout, the one this suite pins.
 // Updates reach the screen as they do in the game: collected into the shared `DataChanges` instance and `notify`d.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -21,6 +22,7 @@ import './lib/grids';
 import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import City from '@civ-clone/ui-windows/components/City';
+import openCity from '@civ-clone/ui-windows/components/openCity';
 import CityBuildAction from '@civ-clone/ui-windows/components/Actions/CityBuild';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { turnsLeft } from '@civ-clone/ui-windows/components/lib/cityYields';
@@ -166,7 +168,7 @@ const run = async (): Promise<void> => {
 
   // Enter on a focused button.
 
-  let screen = new City(cityData(['S-1', 'S-2']), portal, transport);
+  let screen = openCity(cityData(['S-1', 'S-2']), portal, transport);
 
   const button = screen.element().querySelector('div.build button')!;
 
@@ -182,7 +184,7 @@ const run = async (): Promise<void> => {
 
   expect('Enter anywhere else closes it', screen.element().isConnected, false);
 
-  screen = new City(cityData(['S-1', 'S-2']), portal, transport);
+  screen = openCity(cityData(['S-1', 'S-2']), portal, transport);
   key(
     screen.element(),
     'x',
@@ -198,7 +200,7 @@ const run = async (): Promise<void> => {
   // A second specialist change before the city is updated.
 
   sent = [];
-  screen = new City(cityData(['S-1', 'S-2']), portal, transport);
+  screen = openCity(cityData(['S-1', 'S-2']), portal, transport);
 
   const specialists = () =>
     screen.element().querySelectorAll('.specialist.clickable');
@@ -364,7 +366,7 @@ const run = async (): Promise<void> => {
 
   // The production picker.
 
-  screen = new City(cityData(['S-1', 'S-2']), portal, transport);
+  screen = openCity(cityData(['S-1', 'S-2']), portal, transport);
 
   const before = windows();
 
@@ -459,7 +461,7 @@ const run = async (): Promise<void> => {
 
     city.tradeRoutes = [{ civilization: 'Babylonian', name: 'Ur', trade: 3 }];
 
-    const tradeScreen = new City(city, portal, transport),
+    const tradeScreen = openCity(city, portal, transport),
       route = tradeScreen.element().querySelector('.trade-route');
 
     expect(
@@ -501,7 +503,7 @@ const run = async (): Promise<void> => {
 
     owner.cities.push(first, second, third);
 
-    const stepping = new City(first, portal, transport),
+    const stepping = openCity(first, portal, transport),
       title = () =>
         stepping.element().querySelector(':scope > header > h3')?.textContent,
       click = (selector: string) =>
@@ -652,7 +654,7 @@ const run = async (): Promise<void> => {
     // A name the player typed is text, not HTML, in the title.
     stepping.close();
 
-    const tagged = new City(
+    const tagged = openCity(
       named('City-D', '<b>Kish</b>', owner as any),
       portal,
       transport
@@ -667,7 +669,7 @@ const run = async (): Promise<void> => {
     tagged.close();
 
     // A single city has nowhere to step to; a rival's city has none of the buttons.
-    const alone = new City(
+    const alone = openCity(
       named('City-E', 'Lagash', { ...player, cities: [] } as any),
       portal,
       transport
@@ -687,7 +689,7 @@ const run = async (): Promise<void> => {
 
     alone.close();
 
-    const rival = new City(first, portal, transport, { readOnly: true });
+    const rival = openCity(first, portal, transport, { readOnly: true });
 
     expect(
       'a read-only screen has no city buttons',
@@ -713,7 +715,7 @@ const run = async (): Promise<void> => {
 
     sent = [];
 
-    const selling = new City(city, portal, transport),
+    const selling = openCity(city, portal, transport),
       rows = selling.element().querySelectorAll('.improvements .improvement');
 
     expect('each improvement has a row', rows.length, 2);
@@ -782,7 +784,7 @@ const run = async (): Promise<void> => {
       '{{count, number(signDisplay: exceptZero)}} / turn'
     );
 
-    let meters = new City(
+    let meters = openCity(
       meterCity(
         {
           building: {
@@ -822,7 +824,7 @@ const run = async (): Promise<void> => {
     );
     meters.close();
 
-    meters = new City(
+    meters = openCity(
       meterCity(
         {
           building: {
@@ -855,7 +857,7 @@ const run = async (): Promise<void> => {
     );
     meters.close();
 
-    meters = new City(
+    meters = openCity(
       meterCity({}, { progress: { value: 20 }, cost: { value: 40 } }, [
         yieldOf('Food', -4),
       ]),
@@ -877,7 +879,7 @@ const run = async (): Promise<void> => {
     );
     meters.close();
 
-    meters = new City(
+    meters = openCity(
       meterCity({ progress: { value: 17 } }, {}),
       portal,
       transport
@@ -893,7 +895,7 @@ const run = async (): Promise<void> => {
     );
     meters.close();
 
-    meters = new City(meterCity({}, {}), portal, transport);
+    meters = openCity(meterCity({}, {}), portal, transport);
 
     expect(
       'with no item and nothing stored, there is no meter and no line',
@@ -951,7 +953,7 @@ const run = async (): Promise<void> => {
       )
     );
 
-    const screen = new City(city, portal, transport),
+    const screen = openCity(city, portal, transport),
       rows = [
         ...screen.element().querySelectorAll('.yields-detail .yield-row'),
       ],
@@ -1031,7 +1033,7 @@ const run = async (): Promise<void> => {
     city.yields = [yieldOf('Food', 40)] as CityData['yields'];
     (city as { pollution?: number }).pollution = NaN;
 
-    const large = new City(city, portal, transport),
+    const large = openCity(city, portal, transport),
       largeRows = [
         ...large.element().querySelectorAll('.yields-detail .yield-row'),
       ];

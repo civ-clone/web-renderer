@@ -12,7 +12,8 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import City, { classicCityLayout } from '@civ-clone/ui-windows/components/City';
+import City from '@civ-clone/ui-windows/components/City';
+import classicCityLayout from '@civ-clone/ui-interface-classic/components/classicCityLayout';
 import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -1257,11 +1258,13 @@ const run = async (): Promise<void> => {
     looked.close();
   }
 
-  // The classic layout is still `City`'s own.
-  const plain = new City(cityData('City-E', 'Lagash'), portal, transport);
+  // The classic layout, given to `City` as the classic interface's slot gives it (#861).
+  const plain = new City(cityData('City-E', 'Lagash'), portal, transport, {
+    layout: classicCityLayout,
+  });
 
   expect(
-    'without a layout, City draws the classic one',
+    'given the classic layout, City draws it',
     plain.hasClass(`${classicCityLayout.window.classes}`),
     true
   );
