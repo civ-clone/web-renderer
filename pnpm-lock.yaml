@@ -124,6 +124,9 @@ importers:
       '@civ-clone/core-city-build':
         specifier: ^0.1.20
         version: 0.1.20
+      '@civ-clone/core-city-growth':
+        specifier: ^0.1.6
+        version: 0.1.6
       '@civ-clone/core-city-improvement':
         specifier: ^0.1.7
         version: 0.1.7
@@ -157,6 +160,9 @@ importers:
       '@civ-clone/core-goody-hut':
         specifier: ^0.1.6
         version: 0.1.7
+      '@civ-clone/core-government':
+        specifier: ^0.1.6
+        version: 0.1.6
       '@civ-clone/core-player':
         specifier: ^0.1.10
         version: 0.1.10
@@ -187,6 +193,15 @@ importers:
       '@civ-clone/core-spaceship':
         specifier: ^0.1.10
         version: 0.1.10
+      '@civ-clone/core-terrain':
+        specifier: ^0.1.4
+        version: 0.1.4
+      '@civ-clone/core-tile-improvement':
+        specifier: ^0.1.6
+        version: 0.1.6
+      '@civ-clone/core-trade-rate':
+        specifier: ^0.1.6
+        version: 0.1.6
       '@civ-clone/core-treasury':
         specifier: ^0.1.10
         version: 0.1.10
@@ -196,9 +211,21 @@ importers:
       '@civ-clone/core-unit':
         specifier: ^0.1.29
         version: 0.1.29
+      '@civ-clone/core-wonder':
+        specifier: ^0.1.5
+        version: 0.1.5
       '@civ-clone/core-world':
         specifier: ^0.1.22
         version: 0.1.22
+      '@civ-clone/core-yield':
+        specifier: ^0.1.6
+        version: 0.1.6
+      '@civ-clone/library-city':
+        specifier: ^0.1.4
+        version: 0.1.4
+      '@civ-clone/library-diplomacy':
+        specifier: ^0.1.4
+        version: 0.1.4
       '@civ-clone/library-unit':
         specifier: ^0.1.15
         version: 0.1.15

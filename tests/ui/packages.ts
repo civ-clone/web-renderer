@@ -120,6 +120,39 @@ expect(
   ['./c', './d', './e', './f', './g', './h', '@civ-clone/ui-client/i']
 );
 
+// Every engine package the UI packages import is in the root `package.json`, which is where their npm dependencies stay
+//  for now (#862): one that isn't resolves only through another package's install and the hoisting, and goes the day
+//  that one stops needing it.
+const rootManifest = JSON.parse(
+    readFileSync(join(root, 'package.json'), 'utf8')
+  ) as Manifest & { devDependencies?: { [name: string]: string } },
+  rootDependencies = {
+    ...rootManifest.dependencies,
+    ...rootManifest.devDependencies,
+  };
+
+expect(
+  'every engine package the UI packages import is a dependency in the root package.json',
+  Array.from(
+    new Set(
+      names.flatMap((name) =>
+        sourcesUnder(join(packagesRoot, name)).flatMap((path) =>
+          specifiersOf(readFileSync(path, 'utf8'))
+            .filter(
+              (specifier) =>
+                specifier.startsWith('@civ-clone/') &&
+                !specifier.startsWith(scope)
+            )
+            .map((specifier) => specifier.split('/').slice(0, 2).join('/'))
+        )
+      )
+    )
+  )
+    .filter((dependency) => !(dependency in rootDependencies))
+    .sort(),
+  []
+);
+
 const edges = names.flatMap((name) =>
   sourcesUnder(join(packagesRoot, name)).flatMap((path) =>
     importsOf(path).map((target) => ({
