@@ -25,7 +25,7 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
-} from '@civ-clone/ui-windows/components/reports';
+} from '@civ-clone/ui-reports/components/reports';
 import CivilizationScoreTable from '@civ-clone/ui-interface-modern/components/CivilizationScoreTable';
 import IntelligenceTable from '@civ-clone/ui-interface-modern/components/IntelligenceTable';
 import HappinessTable from '@civ-clone/ui-interface-modern/components/HappinessTable';

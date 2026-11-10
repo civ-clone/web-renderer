@@ -4,7 +4,7 @@ import ChoiceWindow, {
   ChoiceRow,
 } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
-import CityBuildUnavailableWindow from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
+import CityBuildUnavailableWindow from '@civ-clone/ui-reports/components/CityBuildUnavailableWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import Unit from '@civ-clone/ui-windows/components/Unit';
 import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';

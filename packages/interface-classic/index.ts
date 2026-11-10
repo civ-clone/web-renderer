@@ -3,7 +3,7 @@ import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { CityStatus } from './components/CityStatus';
 import CityBuildSelectionWindow from './components/CityBuildSelectionWindow';
 import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
-import CivilizationScoreReport from '@civ-clone/ui-windows/components/CivilizationScoreReport';
+import CivilizationScoreReport from '@civ-clone/ui-reports/components/CivilizationScoreReport';
 import HappinessReport from './components/HappinessReport';
 import IntelligenceReport from './components/IntelligenceReport';
 import MainMenu from './components/MainMenu';
@@ -28,7 +28,7 @@ import {
   registerInterface,
 } from '@civ-clone/ui-client/lib/interfaceMode';
 import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
-import { reports } from '@civ-clone/ui-windows/components/reports';
+import { reports } from '@civ-clone/ui-reports/components/reports';
 import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import turnControls from '@civ-clone/ui-windows/components/turnControls';

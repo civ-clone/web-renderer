@@ -8,7 +8,9 @@ import {
 import DataChanges, {
   instance as dataChanges,
 } from '@civ-clone/ui-client/lib/DataChanges';
-import watchPlayer, { cityRowIds } from './lib/watchPlayer';
+import watchPlayer, {
+  cityRowIds,
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';

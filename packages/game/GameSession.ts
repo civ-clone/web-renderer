@@ -11,7 +11,7 @@ import openFindCity from '@civ-clone/ui-city/components/FindCity';
 import {
   allowLeaving,
   guardLeaving,
-} from '@civ-clone/ui-windows/lib/leaveGuard';
+} from '@civ-clone/ui-component-window/leaveGuard';
 import { gridName } from '@civ-clone/ui-windows/lib/savedGame';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
@@ -19,7 +19,7 @@ import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindo
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import Notifications from '@civ-clone/ui-windows/components/Notifications';
 import PowerList from '@civ-clone/ui-windows/components/PowerList';
-import { openIntelligenceReport } from '@civ-clone/ui-windows/components/reports';
+import { openIntelligenceReport } from '@civ-clone/ui-reports/components/reports';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';

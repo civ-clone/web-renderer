@@ -7,8 +7,12 @@ import Action from './Action';
 import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
-import { combinedYields } from '../lib/playerYields';
-import { advanceName, held, researchClearedLabel } from '../lib/advances';
+import { combinedYields } from '@civ-clone/ui-client/lib/playerYields';
+import {
+  advanceName,
+  held,
+  researchClearedLabel,
+} from '@civ-clone/ui-client/lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import {

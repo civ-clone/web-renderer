@@ -28,7 +28,7 @@ import {
   registerInterface,
 } from '@civ-clone/ui-client/lib/interfaceMode';
 import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
-import { reports } from '@civ-clone/ui-windows/components/reports';
+import { reports } from '@civ-clone/ui-reports/components/reports';
 import { s } from '@dom111/element';
 import talks from '@civ-clone/ui-windows/components/talks';
 import nextTurnQueue from '@civ-clone/ui-client/lib/nextTurnQueue';

@@ -15,7 +15,7 @@ import watchPlayer, {
   cityIds,
   cityRowIds,
   researchIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';

@@ -17,7 +17,7 @@ import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBu
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import watchPlayer, {
   cityRowIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
   const [food, production, trade, research, gold, luxuries] = [

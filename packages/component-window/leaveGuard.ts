@@ -39,24 +39,22 @@ const pushGuardEntry = (): void =>
 
     asking = true;
 
-    import('@civ-clone/ui-component-window/ConfirmationWindow').then(
-      ({ ConfirmationWindow }) => {
-        const confirmation = new ConfirmationWindow(
-          t('LeaveGuard.title'),
-          t('LeaveGuard.body'),
-          () => {
-            allowLeaving();
+    import('./ConfirmationWindow').then(({ ConfirmationWindow }) => {
+      const confirmation = new ConfirmationWindow(
+        t('LeaveGuard.title'),
+        t('LeaveGuard.body'),
+        () => {
+          allowLeaving();
 
-            // Past our entry and the one beneath it, to wherever Back was going.
-            history.go(-2);
-          }
-        );
+          // Past our entry and the one beneath it, to wherever Back was going.
+          history.go(-2);
+        }
+      );
 
-        confirmation.on('close', () => {
-          asking = false;
-        });
-      }
-    );
+      confirmation.on('close', () => {
+        asking = false;
+      });
+    });
   },
   beforeUnloadHandler = (event: BeforeUnloadEvent): void => {
     if (!guarding || leaving) {

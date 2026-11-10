@@ -17,7 +17,7 @@ import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import i18next from 'i18next';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
-import GameOverWindow from '@civ-clone/ui-windows/components/GameOverWindow';
+import GameOverWindow from '@civ-clone/ui-reports/components/GameOverWindow';
 import GameSession from '@civ-clone/ui-game/GameSession';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import NotificationBar from '@civ-clone/ui-game/app/NotificationBar';

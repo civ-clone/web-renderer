@@ -10,10 +10,10 @@ import './lib/interfaces';
 import Civilopedia, {
   CivilopediaData,
   entryHtml,
-} from '@civ-clone/ui-windows/components/Civilopedia';
+} from '@civ-clone/ui-reports/components/Civilopedia';
 import CityBuildUnavailableWindow, {
   reasons,
-} from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
+} from '@civ-clone/ui-reports/components/CityBuildUnavailableWindow';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import i18next from 'i18next';

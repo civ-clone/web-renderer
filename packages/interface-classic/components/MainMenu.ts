@@ -1,6 +1,6 @@
 import { Element, s } from '@dom111/element';
 import GameSetupWindow from './GameSetupWindow';
-import HallOfFameWindow from '@civ-clone/ui-windows/components/HallOfFameWindow';
+import HallOfFameWindow from '@civ-clone/ui-reports/components/HallOfFameWindow';
 import ImportAssetsWindow from '@civ-clone/ui-windows/components/ImportAssetsWindow';
 import ReleaseWindow, {
   fetchReleases,

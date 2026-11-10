@@ -15,7 +15,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {
   cityRowIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 import { yieldData } from '@civ-clone/ui-city/components/lib/cityYields';
 
 export interface MaintenanceRow {

@@ -27,7 +27,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {
   cityIds,
-} from '@civ-clone/ui-windows/components/lib/watchPlayer';
+} from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
 const buildCityRow = async (
   city: CityData,

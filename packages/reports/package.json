@@ -1,0 +1,17 @@
+{
+  "name": "@civ-clone/ui-reports",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The reports and what the player looks things up in: the `reports` slot, the Science Report, the Civilization Score, the Civilopedia (and why a city can't build something), the Hall of Fame and the end of the game.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-city": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-button": "workspace:*",
+    "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

@@ -17,6 +17,7 @@
     "@civ-clone/ui-component-window": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
+    "@civ-clone/ui-reports": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",
     "@civ-clone/ui-windows": "workspace:*"
   }

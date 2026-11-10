@@ -1,6 +1,6 @@
 import { BuildItem, CityBuild } from '@civ-clone/ui-protocol/types';
 import { ActionWindowActions } from '@civ-clone/ui-component-window/ActionWindow';
-import CityBuildUnavailableWindow from '@civ-clone/ui-windows/components/CityBuildUnavailableWindow';
+import CityBuildUnavailableWindow from '@civ-clone/ui-reports/components/CityBuildUnavailableWindow';
 import SelectionWindow from '@civ-clone/ui-component-selection-window/SelectionWindow';
 import Transport from '@civ-clone/ui-client/Transport';
 import {
