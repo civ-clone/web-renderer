@@ -263,16 +263,19 @@ export class NotificationRows extends Element {
     return row;
   }
 
+  // As text: it's set as the row's `textContent` (#855).
   #title(action: PlayerAction): string {
     if (action._ === 'CivilDisorder') {
       return t('Actions.CivilDisorder.title', {
         city: action.value as unknown as City,
+        interpolation: { escapeValue: false },
       });
     }
 
     return noticeText(
       (action.value as unknown as NoticeData).notification,
-      'title'
+      'title',
+      true
     );
   }
 }

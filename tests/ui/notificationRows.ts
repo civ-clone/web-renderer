@@ -17,6 +17,7 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 
@@ -81,6 +82,8 @@ const city = (name: string) => ({
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
+  // As the page has them: a city is named by the `cityName` formatter (#855).
+  addFormatters(i18next);
   await import('./lib/strings');
 
   const area = document.createElement('div'),

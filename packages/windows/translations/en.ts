@@ -20,18 +20,16 @@ i18next.addResources('en', 'default', {
     '{{- advance}} ($t(Progress.turns, { "count": {{turns}} }))',
   'Actions.ChooseResearch.title': 'Choose research',
   'Actions.CityBuildSelectionWindow.title':
-    'What would you like to build in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })?',
+    'What would you like to build in {{- city, cityName}}?',
   'Actions.CivilDisorder.body':
-    'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }), mayor flees in panic!',
-  'Actions.CivilDisorder.title':
-    'Civil disorder in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })!',
+    'Civil disorder in {{- city, cityName}}, mayor flees in panic!',
+  'Actions.CivilDisorder.title': 'Civil disorder in {{- city, cityName}}!',
   'Actions.EndTurn.title': 'End turn',
   'Actions.Revolution.body':
     'Overthrow your government? Your civilization will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'Actions.Revolution.confirm': 'Revolution!',
   'Actions.Revolution.title': 'Revolution',
-  'Actions.ShowCity.label':
-    '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
+  'Actions.ShowCity.label': '$t(Generic.view-city)',
   'Actions.ShowOnMap.label': 'Show on map',
   'Actions.Spaceship.chance-of-success': 'Chance of success',
   'Actions.Spaceship.energy': 'Energy',
@@ -76,8 +74,7 @@ i18next.addResources('en', 'default', {
   'ChoiceWindow.Research.research': 'Research {{- advance}}',
   'ChoiceWindow.civilopedia': 'More in the Civilopedia',
   'ChoiceWindow.turns': 'Turns',
-  'CityBuildUnavailable.title':
-    'What $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" }) can’t build',
+  'CityBuildUnavailable.title': 'What {{- city, cityName}} can’t build',
   'CityBuildUnavailable.none': 'There is nothing this city can’t build.',
   'CityBuildUnavailable.other': 'Not available in this city',
   'Civilopedia.title': 'Civilopedia',
@@ -382,8 +379,7 @@ i18next.addResources('en', 'default', {
   'Observer.civilizations': 'As these civilizations see it',
   'Observer.view-as': 'See the game as',
   'Observer.whole-map': 'The whole map',
-  'NextTurn.CityBuild':
-    'Choose production in $t(Generic.city-name, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}", "ns": "default" })',
+  'NextTurn.CityBuild': 'Choose production in {{- city, cityName}}',
   'NextTurn.Keys.press': 'Do this',
   'NextTurn.Keys.skip': 'Skip to the next',
   'NextTurn.meeting': 'Meeting with {{- leader}}',

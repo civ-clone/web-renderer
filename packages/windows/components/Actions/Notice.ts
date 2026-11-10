@@ -19,16 +19,22 @@ const cityNotices = [
   'City.destroyed-by',
 ];
 
-/** A notice's title or body, as its window shows them: for the Next Turn button and the notification rows (#702, #416). */
+/**
+ * A notice's title or body, as its window shows them: for the Next Turn button and the notification rows (#702, #416).
+ *  As HTML, for the window, or as text for a text node (`asText`), where an escaped name would show as "O&#39;Brien"
+ *  (#472, #855).
+ */
 export const noticeText = (
   notification: NoticeData['notification'],
-  part: 'body' | 'title'
+  part: 'body' | 'title',
+  asText = false
 ): string =>
   t(`${notification.key}.${part}`, {
     ...notification.data,
     defaultValue: part === 'title' ? t('Notification.title') : undefined,
     ns: 'notification',
     skipOnVariables: false,
+    ...(asText ? { interpolation: { escapeValue: false } } : {}),
   }) as unknown as string;
 
 export class Notice extends Action {
@@ -92,11 +98,12 @@ export class Notice extends Action {
       );
   }
 
-  // Its title and body, as the notice's window shows them: the Next Turn button names it by its title (#702).
-  text(part: 'body' | 'title'): string {
+  // Its title and body, as the notice's window shows them, or as text: the Next Turn button names it by its title (#702).
+  text(part: 'body' | 'title', asText = false): string {
     return noticeText(
       (this.value() as unknown as NoticeData).notification,
-      part
+      part,
+      asText
     );
   }
 }

@@ -13,8 +13,7 @@ i18next.addResources('en', 'default', {
   'CityStatus.growth':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) ($t(Progress.turns, {"count": {{turns}} }))',
   'HappinessReport.breakdown': 'Breakdown',
-  'HappinessReport.view-city':
-    '$t(Generic.view-city, { "name": "{{- city.name}}", "civilization": "{{city.originalPlayer.civilization._}}" })',
+  'HappinessReport.view-city': '$t(Generic.view-city)',
   'MainMenu.customize-world': '$t(CustomizeWorld.title)',
   'MainMenu.customise': 'Customize…',
   'MainMenu.earth': 'Earth',
