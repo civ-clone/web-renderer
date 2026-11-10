@@ -284,8 +284,9 @@ const renderQueue = (
           'Production'
         );
 
+      // Named by what it is, so the keyboard stays on an item as it moves (#852).
       return s(
-        '<li class="ui-city-queued"></li>',
+        `<li class="ui-city-queued" data-key="${buildItem.item._}"></li>`,
         instanceOf(buildItem.item, 'CityImprovement') ||
           instanceOf(buildItem.item, 'Wonder')
           ? buildingIcon(buildItem.item._, instanceOf(buildItem.item, 'Wonder'))
