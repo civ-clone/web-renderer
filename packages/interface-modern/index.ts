@@ -1,4 +1,4 @@
-import CityBanners from '@civ-clone/ui-map/components/Map/CityBanners';
+import CityBanners from './components/CityBanners';
 import CityBuildChoice from './components/CityBuildChoice';
 import CityStatusTable from './components/CityStatusTable';
 import ChoiceWindow from '@civ-clone/ui-component-choice-window/ChoiceWindow';

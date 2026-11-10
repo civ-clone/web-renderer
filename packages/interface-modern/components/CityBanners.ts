@@ -1,7 +1,7 @@
 import { City, Tile } from '@civ-clone/ui-protocol/types';
-import { CityNames } from './CityNames';
-import { Reach } from '../../lib/projection';
-import { Rect } from '../../lib/viewport';
+import { CityNames } from '@civ-clone/ui-map/components/Map/CityNames';
+import { Reach } from '@civ-clone/ui-map/lib/projection';
+import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import { buildTurns } from '@civ-clone/ui-client/lib/cityTurns';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import {
