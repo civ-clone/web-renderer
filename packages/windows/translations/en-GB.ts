@@ -8,6 +8,7 @@ i18next.addResources('en-GB', 'default', {
     'Play as a random civilisation',
   'GameOptions.colour-scheme': 'Colours',
   'Game.waiting': 'Waiting for the other civilisations…',
+  'NextTurn.waiting.unmet-player': 'Waiting for an unknown civilisation…',
   'GameMenu.retire-confirm':
     'Retiring ends the game now, and you see your Civilisation Score. You can keep playing afterwards, but nothing more is scored.',
   'GameMenu.civilization-score': 'Civilisation Score',

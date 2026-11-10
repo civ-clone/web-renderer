@@ -73,6 +73,7 @@ const transport = {
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('./lib/strings');
+  await import('../../translations/civ1-civilization/en');
 
   const research = action('ChooseResearch', 'r', { id: 'research' }),
     buildKish = action('CityBuild', 'b1', { id: 'b1', city: city('Kish') }),
@@ -359,6 +360,42 @@ const run = async (): Promise<void> => {
     'secondary',
     true,
   ]);
+
+  // Whose turn it is, from the worker's notice for the line along the top of the page (#588).
+  next.waitingFor({
+    key: 'Game.progress.player',
+    data: { civilization: 'German' },
+  });
+
+  expect(
+    'waiting: names the civilization moving',
+    shown()[0],
+    'Waiting for the Germans…'
+  );
+
+  next.waitingFor({ key: 'Game.progress.unmet-player', data: {} });
+
+  expect(
+    'and not one the player has not met',
+    shown()[0],
+    'Waiting for an unknown civilization…'
+  );
+
+  next.waitingFor({ key: 'Game.progress.turn', data: { turn: 3 } });
+
+  expect(
+    'and nobody in particular as a turn starts',
+    shown()[0],
+    'Waiting for the other civilizations…'
+  );
+
+  next.waitingFor({
+    key: 'Game.progress.player',
+    data: { civilization: 'German' },
+  });
+  next.build(nextTurnQueue([end], [end], false), false, player, 3);
+
+  expect("not once the turn is the player's", shown()[0], 'End turn');
 
   area.remove();
 

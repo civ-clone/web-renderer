@@ -588,6 +588,16 @@ export class GameSession {
         })
       );
 
+      // Whose turn it is, for the Next Turn button while waiting (#702): the notice the line along the top of the page
+      //  shows (#588), which names only a civilization the player has met.
+      transportDisposers.push(
+        transport.receive('notification', (notice): void => {
+          if (typeof notice !== 'string') {
+            hud.nextTurn()?.waitingFor(notice);
+          }
+        })
+      );
+
       transportDisposers.push(
         transport.receive('turnEnded', (): void => {
           gameState.setWaiting(true);
@@ -617,6 +627,7 @@ export class GameSession {
           gameState.setWaiting(false);
           portal.setWaiting(false);
           waitingBanner.textContent = '';
+          hud.nextTurn()?.waitingFor(null);
 
           gameState.update();
 

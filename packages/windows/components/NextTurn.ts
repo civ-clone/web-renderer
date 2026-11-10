@@ -5,6 +5,7 @@ import Action from './Actions/Action';
 import Notice from './Actions/Notice';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
+import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
@@ -16,6 +17,12 @@ import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 //  the player next and does it when pressed, the item's place in the queue under it, and End turn once nothing is
 //  left. Enter presses it and Shift+Enter skips to the next item (`InputController`). Each item runs the same `Action`
 //  its orb would, so the windows it opens are the ones the orbs open.
+
+// The worker's notices for whose turn it is, and what the button says for each while waiting.
+const waitingKeys: Record<string, string> = {
+  'Game.progress.player': 'NextTurn.waiting.player',
+  'Game.progress.unmet-player': 'NextTurn.waiting.unmet-player',
+};
 
 export type NextTurnDeps = {
   portal: Portal;
@@ -39,6 +46,8 @@ export class NextTurn extends Element {
   // The turn the queue is for: a new one starts it afresh, even if no waiting build came between (#702).
   #turn: number | null = null;
   #waiting = false;
+  // Whose turn it is while waiting, from the line along the top of the page (#588): "Waiting for the Germans…" (#702).
+  #waitingFor: TransportTranslatedNotice | null = null;
 
   constructor(element: HTMLElement, deps: NextTurnDeps) {
     super(element);
@@ -143,6 +152,17 @@ export class NextTurn extends Element {
     this.#draw();
   }
 
+  /** Who the game is waiting for: the worker's `Game.progress.player` or `Game.progress.unmet-player` notice, which
+   *  names only a civilization the player has met (#59). Anything else, or null, says the other civilizations. */
+  waitingFor(notice: TransportTranslatedNotice | null): void {
+    this.#waitingFor =
+      notice !== null && notice.key in waitingKeys ? notice : null;
+
+    if (this.#waiting) {
+      this.#draw();
+    }
+  }
+
   /** On to the next item, back to the first after the last. End turn is one of them when it's offered, which is when
    *  only the notices, which don't hold up the turn, are left. */
   skip(): void {
@@ -193,6 +213,15 @@ export class NextTurn extends Element {
   }
 
   #label(item: NextTurnItem | undefined): string {
+    if (this.#waiting && this.#waitingFor !== null) {
+      return String(
+        t(waitingKeys[this.#waitingFor.key], {
+          ...this.#waitingFor.data,
+          skipOnVariables: false,
+        })
+      );
+    }
+
     if (this.#waiting || !item) {
       return t('Game.waiting');
     }

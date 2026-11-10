@@ -389,6 +389,9 @@ i18next.addResources('en', 'default', {
   'NextTurn.place': '{{place, number}} of {{count, number}}',
   'NextTurn.units_one': '{{count, number}} unit needs orders',
   'NextTurn.units_other': '{{count, number}} units need orders',
+  'NextTurn.waiting.player':
+    'Waiting for the $t({{civilization}}.plural, { "defaultValue": "{{civilization}}", "ns": "civilization" })…',
+  'NextTurn.waiting.unmet-player': 'Waiting for an unknown civilization…',
   'NotificationRows.count': '×{{count, number}}',
   'NotificationRows.dismiss': 'Dismiss for this turn',
   'NotificationRows.fewer': 'Show fewer',
