@@ -207,6 +207,7 @@
     "test:meeting-window": "node tools/run-suite.js ui meetingWindow",
     "test:report-text": "node tools/run-suite.js ui reportText",
     "test:tilesets": "node tools/run-suite.js ui tilesets",
+    "test:json-schema": "node tools/run-suite.js ui jsonSchema",
     "test:asset-store": "node tools/run-suite.js ui assetStore",
     "test:tileset-drawing": "node tools/run-suite.js ui tilesetDrawing",
     "test:overlap-draw:1of4": "node tools/run-suite.js ui overlapDraw --part 1/4",

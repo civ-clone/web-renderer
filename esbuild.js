@@ -28,6 +28,25 @@
       plugins: [
         engineSources(),
         sassPlugin(),
+        // A schema's titles, descriptions and examples are for pack authors' editors (#869): the game only checks
+        //  against it, so they are left out of the bundle.
+        {
+          name: 'schema-annotations',
+          setup(build) {
+            build.onLoad({ filter: /\.schema\.json$/ }, ({ path }) => ({
+              contents: JSON.stringify(
+                JSON.parse(require('fs').readFileSync(path, 'utf8')),
+                (key, value) =>
+                  (['title', 'description'].includes(key) &&
+                    typeof value === 'string') ||
+                  (key === 'examples' && Array.isArray(value))
+                    ? undefined
+                    : value
+              ),
+              loader: 'json',
+            }));
+          },
+        },
       ],
       loader: {
         '.jpg': 'file',
@@ -45,6 +64,13 @@
         'changelog/releases.json',
         'dist/releases.json'
       ),
+    // Whole, with its titles and descriptions, for a pack author's editor to be pointed at (#869):
+    //  https://civ.one/dist/tileset.schema.json, the schema's `$id`.
+    copySchema = () =>
+      require('fs').copyFileSync(
+        'packages/assets/tilesets/tileset.schema.json',
+        'dist/tileset.schema.json'
+      ),
     failed = (e) => {
       console.log(`\x1b[31mfailed.\x1b[0m`);
       console.log('');
@@ -60,6 +86,7 @@
       .build(buildOptions)
       .then(() => {
         copyReleases();
+        copySchema();
 
         console.log('\x1b[32mdone.\x1b[0m');
       })
@@ -95,6 +122,9 @@
               if (!built) {
                 copyReleases();
               }
+
+              // After every build, as the schema may have changed with it.
+              copySchema();
 
               console.log(
                 built ? '\x1b[32mRebuilt.\x1b[0m' : '\x1b[32mdone.\x1b[0m'

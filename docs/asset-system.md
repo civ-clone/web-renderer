@@ -97,6 +97,33 @@ error per missing sprite rather than one per draw. Caches built from the sprites
 `renderUnit` and the coast tiles, hand out shared entries that callers must treat as immutable, and are cleared
 through `onPreloadedImagesChanged` on each load.
 
+## Tileset descriptor and its schema
+
+A tileset pack describes itself in a JSON descriptor (Civ1's is `packages/assets/tilesets/civ1.json`): its grid, tile
+size and map scales, the sprites it has, how each kind of thing's sprites are named and put together, and how player
+colours go on. `packages/assets/tilesets/tileset.schema.json` is a JSON Schema (draft 2020-12) for it, with a title or
+description on each field, so a pack author's editor can complete and explain the fields and flag a wrong one as it is
+typed (#869). A descriptor names it with `"$schema"`, as Civ1's does (`"./tileset.schema.json"`, beside it); another
+pack points it at `https://civ.one/dist/tileset.schema.json`, where the build puts a copy (the schema's `$id`), or the
+editor is told which schema the pack's descriptor has (VS Code's `json.schemas` setting). The game ignores `$schema`,
+and the build leaves the schema's titles and descriptions out of the game's bundle (`esbuild.js`).
+
+`validateDescriptor` (`packages/assets/tilesets/TilesetDescriptor.ts`) checks a descriptor against the same schema first,
+with the small checker in `packages/assets/lib/jsonSchema.ts`, which knows only the keywords the schema uses and refuses
+a schema with any other. Its `x-message` annotations (ignored by other validators) are the sentences a refused pack is
+told, such as `Tileset "civ1": families.road.method "dither" cannot be drawn yet (#92).`. Then it checks what a schema
+cannot say:
+
+- the grid is one the engine knows (the engine's list, so a new grid needs no change to the schema);
+- `defaultScale` is one of `scales`, and no sprite is listed twice across `assets.required` and `assets.optional`;
+- the coast strip's `cell` is two `quarter`s, and its `order` names each of a square tile's eight neighbours once;
+- each sprite name has only the placeholders the map fills there (`{terrain}`, `{dirs}` for a `bitmask` family, `{dir}`
+  for `edges`, `{unit}`, …);
+- a colouring's `colours` has one entry per key, and a city's `disorderIcon` is within the tile.
+
+So a descriptor the schema accepts can still be refused; one it refuses always is. What the format names but the map cannot
+draw yet (a `corners` or `dither` map family, an `overlay` colouring, `styles` cities) is refused by the schema too.
+
 ## Runtime usage patterns
 
 - Main menu checks `assetStore.hasAllAssets()` to gate gameplay options (new game, Earth, customise world, load game).
@@ -117,6 +144,8 @@ through `onPreloadedImagesChanged` on each load.
   window when `navigator.brave` is present).
 - The required list is large, so any mismatch in naming/path conventions fails readiness. `npm run test:tilesets`
   checks that the extractor cuts out every sprite the tileset lists, and no other.
+- `npm run test:json-schema` checks the schema checker keyword by keyword, and that it refuses a schema with a keyword
+  it doesn't know.
 - An image that fails to load is not cached, so a later import can replace it.
 - `npm run test:asset-slices` checks that every unit sprite in `extract-data.json` is cut out at 15×15 (#12).
 - `npm run test:sprite-keys` checks that every sprite the map asks for is found as it was before lookups took the whole
