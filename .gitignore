@@ -211,6 +211,7 @@ GitHub.sublime-settings
 
 tools/.dts-baseline
 src/js/plugins.ts
+src/js/plugins.ts.*.tmp
 .dist/*
 build.json
 src/js/translations.ts
