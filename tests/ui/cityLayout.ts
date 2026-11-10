@@ -881,6 +881,25 @@ const run = async (): Promise<void> => {
     true,
   ]);
 
+  // Two alike, the first moved up to first, where it has no Up: on its own row, not on the other's Up, which the
+  //  next Enter would press.
+  requeue('Temple', 'Granary', 'Library', 'Granary');
+  focused = queueButton('Move Granary up');
+  requeue('Granary', 'Temple', 'Library', 'Granary');
+
+  expect(
+    "the first of two alike moved to first: on its own row's button, not the other's Up",
+    [
+      ...focusedNow(),
+      focused ===
+        queued
+          .element()
+          .querySelector('.ui-city-queued')
+          ?.querySelector('button'),
+    ],
+    ['Move Granary down', true, true]
+  );
+
   requeue('Granary');
   focused = queueButton('Remove Granary from the queue');
   requeue();

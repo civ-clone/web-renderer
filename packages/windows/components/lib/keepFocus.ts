@@ -3,8 +3,9 @@
 
 const CONTROLS =
     'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-  // What a control sits in: the queue, a list of improvements, the production panel, the citizens' strip.
-  GROUPS = 'ol, ul, section, header, footer';
+  // What a control sits in: the queue, a list of improvements, the production panel, the citizens' strip, or the
+  //  nearest box with a class of its own (the classic screen's `.population` and `.build-actions`).
+  GROUPS = 'ol, ul, section, header, footer, div[class]';
 
 const controls = (within: ParentNode): HTMLElement[] =>
   Array.from(within.querySelectorAll<HTMLElement>(CONTROLS)).filter(
@@ -43,15 +44,16 @@ const placeAmong = <T extends Element>(like: T[], element: T): number =>
 /**
  * Call before the redraw; call what it returns after. That puts the focus on, in order of preference:
  *
- * 1. the control with the same name (its tag, classes and label), the same one of several alike;
+ * 1. the control with the same name (its tag, classes and label), the same one of several alike, as long as there
+ *    are as many of that name as before: where one has gone, which of the rest is "the same" can't be told by name
+ *    (two Warriors queued, one now first with no Up);
  * 2. the first control of the same row, where the row carries a `data-key` (a queued item whose "move up" has gone
  *    because it is now first);
  * 3. the control of the same kind (tag and classes) in the same place in the same group: the same citizen when a
  *    specialist changes, the item now where a removed one was. Never one of another kind, where Enter would do
  *    something else.
  *
- * A control marked `data-destructive` keeps the focus only while it is still itself (nothing of its name has gone);
- * the focus is never moved onto another.
+ * The focus is never moved onto a control marked `data-destructive`, which keeps it only by the first of these.
  *
  * It answers whether the focus is now on a control inside `root`: `false` leaves the caller to put it somewhere
  * sensible, as when nothing inside `root` had it to begin with, or a pointer put it there.
@@ -82,7 +84,8 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
             ),
             row!
           ),
-    group = focused.closest<HTMLElement>(GROUPS),
+    // From its parent: a control with a class of its own is not its own group.
+    group = focused.parentElement?.closest<HTMLElement>(GROUPS) ?? null,
     groupKind =
       group !== null && group !== root && root.contains(group)
         ? kindOf(group)
@@ -137,9 +140,7 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
               (control) => kindOf(control) === kind && safe(control)
             ),
       target =
-        (safe(focused) || alike.length === alikeBefore.length
-          ? alike[Math.min(place, alike.length - 1)]
-          : undefined) ??
+        (alike.length === alikeBefore.length ? alike[place] : undefined) ??
         (sameRow === undefined
           ? undefined
           : controls(sameRow).filter(safe)[0]) ??

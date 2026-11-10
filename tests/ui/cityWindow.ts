@@ -306,6 +306,51 @@ const run = async (): Promise<void> => {
     1
   );
 
+  byKeyboard = true;
+
+  // A specialist whose kind changes has a new label: the keyboard stays on the citizen in its place, not on the other
+  //  of the two, which still has the old one.
+  const citizens = (): Element[] =>
+      Array.from(screen.element().querySelectorAll('.specialist.clickable')),
+    oneChanged = cityData(['S-3', 'S-5']);
+
+  (oneChanged.specialists[1] as { _: string })._ = 'Taxman';
+
+  focused = citizens()[1];
+  update(oneChanged);
+
+  expect(
+    'the second of two specialists changed: the focus is on the second, not on the one that still reads the same',
+    [citizens().length, focusedOn === citizens()[1]],
+    [2, true]
+  );
+
+  // Auto turned on: its button reads differently, and is still where the keyboard is.
+  const autoButton = (): Element | null =>
+      screen.element().querySelector('.build-actions button.auto'),
+    onAuto = cityData(['S-3', 'S-5']);
+
+  (onAuto.build as { auto: boolean }).auto = true;
+
+  const autoBefore = autoButton();
+
+  focused = autoBefore;
+  update(onAuto);
+
+  expect(
+    'a button whose label changed keeps the focus, in its place among its own',
+    [
+      autoBefore !== null,
+      autoButton() !== autoBefore,
+      autoButton()?.textContent !== autoBefore?.textContent,
+      focusedOn === autoButton(),
+    ],
+    [true, true, true, true]
+  );
+
+  focused = document.body;
+  update(cityData(['S-3', 'S-5']));
+
   HTMLElement.prototype.focus = focusOn;
   HTMLElement.prototype.matches = matches;
   expect(
