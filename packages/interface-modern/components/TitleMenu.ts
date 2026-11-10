@@ -18,7 +18,7 @@ import { h } from '@civ-clone/ui-widgets/lib/html';
 import { loadSaveFromFile } from '@civ-clone/ui-windows/lib/savedGame';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { version } from '../../../build.json';
+import build from '@civ-clone/ui-client/lib/build';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
@@ -205,7 +205,9 @@ export class TitleMenu extends Element {
         ),
         s(
           '<p class="ui-title-menu-footer"></p>',
-          s(`<span>${t('TitleMenu.version', { version })}</span>`),
+          s(
+            `<span>${t('TitleMenu.version', { version: build.version })}</span>`
+          ),
           h(
             s(
               `<button type="button" class="btn-bare ui-title-menu-link">${t(
@@ -214,7 +216,7 @@ export class TitleMenu extends Element {
             ),
             {
               click: (): void =>
-                void new ReleaseWindow(() => fetchReleases(version)),
+                void new ReleaseWindow(() => fetchReleases(build.version)),
             }
           )
         )

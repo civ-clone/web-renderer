@@ -53,7 +53,8 @@ const toggleExpanded = (target: Node | null, expectedSelector: string) => {
 
 /**
  * The release notes, fetched when the window opens rather than bundled into `frontend.js`, where they were most of
- * its size (#476). `version` (from `build.json`) keeps a cached copy from outliving a deploy.
+ * its size (#476). `version`, the build's as the entry gives it (`@civ-clone/ui-client/lib/build`), keeps a cached
+ * copy from outliving a deploy.
  */
 export const fetchReleases = (version: string): Promise<Release[]> =>
   fetch(`dist/releases.json?v=${encodeURIComponent(version)}`).then(

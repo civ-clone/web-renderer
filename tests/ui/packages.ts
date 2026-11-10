@@ -145,11 +145,9 @@ expect(
   [true, true, true]
 );
 
-// What the packages still reach outside themselves for, by path, until each is a package too (#825): the list only
-//  shrinks: the music player, the generated list of translations, and the build's version.
+// What the packages still reach outside themselves for, by path (#825): the list only shrinks: the generated list of
+//  translations. The build's version and its files' URLs are the entry's to tell them (#866).
 const reachesOut: { [path: string]: string[] } = {
-  'build.json': ['game', 'interface-classic', 'interface-modern'],
-  'src/js/Audio/': ['game', 'windows'],
   'src/js/translations.ts': ['game'],
 };
 
@@ -394,9 +392,9 @@ const reachedFrom = (starts: string[], enter: (path: string) => boolean) => {
   interfaces = names.filter(isInterface),
   // Everything civ.one's own entries reach, but through an interface: the page's, the worker's and their generated lists.
   sharedReach = reachedFrom(
-    sourcesUnder(join(root, 'src/js'))
-      .filter((path) => !path.startsWith(join(root, 'src/js/Audio') + '/'))
-      .filter((path) => path !== join(root, 'src/js/interfaces.ts')),
+    sourcesUnder(join(root, 'src/js')).filter(
+      (path) => path !== join(root, 'src/js/interfaces.ts')
+    ),
     (path) => {
       const name = packageOf(path);
 

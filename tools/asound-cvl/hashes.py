@@ -1,5 +1,5 @@
 """SHA-256 of sim.py's register-write stream for every ID and level, the fixture the TypeScript
-driver (src/js/Audio/cvl/) is checked against in tests/ui/cvlDriver.ts.
+driver (packages/audio/cvl/) is checked against in tests/ui/cvlDriver.ts.
 
     python3 hashes.py "$CVL" > ../../tests/ui/fixtures/cvl-driver.json
     python3 hashes.py "$CVL" --dump 33 3      # one stream's writes, one per line, for debugging

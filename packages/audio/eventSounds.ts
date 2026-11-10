@@ -2,7 +2,7 @@
 //  original's sound driver plays them. Only a mapping from what the page is told to a tune: nothing here works out
 //  any rule. The tunes are PlayTune IDs in ASOUND.CVL, so without one, or with the sound off, nothing is heard.
 //
-// Kept apart from `app/music.ts`, which reads the build, so that it can be tested with a stand-in for the player.
+// Kept apart from the game's `app/music.ts`, which makes the player, so that it can be tested with a stand-in for it.
 
 import {
   Civilization,
@@ -13,10 +13,10 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import type { BattleSound } from '@civ-clone/ui-protocol/battles';
 import { GameOverDetails } from '@civ-clone/ui-protocol/reports';
-import civilizationAttribute from '../components/lib/civilizationAttribute';
+import civilizationAttribute from '@civ-clone/ui-client/lib/civilizationAttribute';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 
-/** A notice as the page receives it (`components/Notifications.ts`), which isn't imported, so this checks on its own. */
+/** A notice as the page receives it (`components/Notifications.ts` in `windows`), which isn't imported, so this checks on its own. */
 export interface Notification {
   key: string;
   data: any;

@@ -1,4 +1,4 @@
-// Renders a tune offline: src/js/Audio/cvl/Driver.ts makes the register
+// Renders a tune offline: packages/audio/cvl/Driver.ts makes the register
 // writes and Opl2 plays them, each write landing on its own frame. Ticks are
 // sampleRate / 60 frames apart and the fast worker's five calls a tick
 // sampleRate / 300, so a write labelled (tick, sub) lands at

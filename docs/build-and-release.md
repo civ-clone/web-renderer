@@ -20,8 +20,10 @@
 have to be served from `dist/`. It also copies `changelog/releases.json` to
 `dist/releases.json`, which the Releases window fetches when it opens (#476).
 
-`build.json`'s version goes on the URLs as `?v=`: on the worker's and the
-release notes' in the code, and on `index.html`'s stylesheet and script when the
+`build.json`'s version goes on the URLs as `?v=`: on the worker's, the music
+worklet's and the release notes' in the code (only `src/js/frontend.ts` reads
+it, and gives the packages the version and the worklet's URL through
+`@civ-clone/ui-client/lib/build`), and on `index.html`'s stylesheet and script when the
 deploy workflow copies it to the site. The site is served with a ten-minute
 cache, so without it a cached `frontend.js` could start a newer `backend.js`.
 

@@ -1,6 +1,6 @@
 // Civilization's AdLib music as an AudioWorkletProcessor, registered as 'opl2' (#126): the player's ASOUND.CVL driver
-// (src/js/Audio/cvl/Driver.ts) and the OPL2 synth (src/js/Audio/opl/Opl2.ts) side by side, so the driver's 60 Hz and
-// 300 Hz interrupts fall on exact frames of the output, with no main-thread timer to jitter them. src/js/Audio/Music.ts
+// (packages/audio/cvl/Driver.ts) and the OPL2 synth (packages/audio/opl/Opl2.ts) side by side, so the driver's 60 Hz and
+// 300 Hz interrupts fall on exact frames of the output, with no main-thread timer to jitter them. packages/audio/Music.ts
 // loads it and talks to it:
 //
 //   node.port.postMessage({ load: cvlBytes });        // an ArrayBuffer of ASOUND.CVL: a fresh driver and chip

@@ -1,7 +1,7 @@
 // A Yamaha YM3812 (OPL2) FM synthesiser, written for this project (#126) from
 // the chip's documented behaviour: the YM3812 application manual, and the
 // published reverse-engineering of its log-sine and exponent tables and its
-// envelope generator. It plays the register writes src/js/Audio/cvl/Driver.ts
+// envelope generator. It plays the register writes packages/audio/cvl/Driver.ts
 // makes, so it covers what Civilization's AdLib tunes use: the nine melodic
 // two-operator channels (FM and additive), feedback, the four waveforms (with
 // register 01's waveform-select enable), multipliers, key scale level and

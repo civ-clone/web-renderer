@@ -10,7 +10,7 @@ import {
   assetFromURI,
   assetStore,
 } from '@civ-clone/ui-assets/AssetStore';
-import CvlImage from '../../../src/js/Audio/cvl/Image';
+import CvlImage from '@civ-clone/ui-audio/cvl/Image';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import { allowLeaving } from '../lib/leaveGuard';
 import { button } from '@civ-clone/ui-component-button/button';

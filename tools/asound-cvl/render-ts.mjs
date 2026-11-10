@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Renders a sound ID to a WAV file through the renderer's own OPL2 synth
-// (src/js/Audio/opl/), as render.py does through pyopl, so the two can be
+// (packages/audio/opl/), as render.py does through pyopl, so the two can be
 // compared (#126). The TypeScript is bundled with esbuild first, as
 // tools/lib/suite.js bundles the test suites.
 //
@@ -38,7 +38,7 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'render-ts-')),
 
 try {
   await build({
-    entryPoints: [path.join(root, 'src', 'js', 'Audio', 'opl', 'render.ts')],
+    entryPoints: [path.join(root, 'packages', 'audio', 'opl', 'render.ts')],
     bundle: true,
     format: 'cjs',
     platform: 'node',
