@@ -192,9 +192,10 @@ ask before leaving a game in progress.
   `Cities`, `Units`, `Yields`, `Unworkable`). Clicking a tile changes which
   tiles the city works; keys 1–8 change specialists, `c` changes production and
   `b` buys. `CityBuildSelectionWindow` chooses production. Every way in goes
-  through `openCity` (`components/openCity.ts`), which gives `City` its layout:
-  the window of `CityLayout.ts` (#746), or under `?interface=classic` the
-  classic page (`classicCityLayout`). The behaviour is `City`'s whichever layout draws
+  through `openCity` (`components/openCity.ts`), which gives `City` its layout
+  from the `cityScreen` slot, as `City` has no default (#861): the window of
+  interface-modern's `CityLayout.ts` (#746), or under `?interface=classic` the
+  page of interface-classic's `classicCityLayout.ts`. The behaviour is `City`'s whichever layout draws
   it; the parts both draw, the yield bars and the map, are in
   `components/lib/cityParts.ts`. The new layout's production card lists the
   city's build queue (core-city-build's `CityBuild#queue`, #774), each with

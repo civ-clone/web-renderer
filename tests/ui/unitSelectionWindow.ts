@@ -18,7 +18,7 @@ import { DataPatch, GameData, Unit } from '@civ-clone/ui-protocol/types';
 import { ObjectMap, PlainObject } from '@civ-clone/core-data-object/DataObject';
 import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalReconstituter';
 import Transport from '@civ-clone/ui-client/Transport';
-import UnitSelectionWindow from '@civ-clone/ui-windows/components/UnitSelectionWindow';
+import UnitSelectionWindow from '@civ-clone/ui-interface-classic/components/UnitSelectionWindow';
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 

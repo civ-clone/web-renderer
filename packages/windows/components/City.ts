@@ -1,43 +1,26 @@
 import {
   City as CityData,
   CityImprovement,
-  CityImprovementMaintenanceGold,
   Player,
   Specialist,
   SpendCost,
-  Unit as UnitData,
-  Yield,
 } from '@civ-clone/ui-protocol/types';
 import { emit, s } from '@dom111/element';
 import {
-  getAutoLabel,
-  getLabelForBuildable,
   getLabelForBuildableEntity,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
-import {
-  renderFigures,
-  renderPopulation,
-  turnsLeft,
-  yieldImages,
-} from './lib/cityYields';
-import { renderMap, renderYields } from './lib/cityParts';
+import { renderFigures, turnsLeft, yieldImages } from './lib/cityYields';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
 import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import SupportedUnit from './SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from './Unit';
-import UnitSelectionWindow from './UnitSelectionWindow';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { escape } from './lib/requirements';
-import { h } from '@civ-clone/ui-widgets/lib/html';
-import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import keepFocus from './lib/keepFocus';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { specialistForKey } from '@civ-clone/ui-client/lib/specialists';
@@ -45,83 +28,9 @@ import { t } from 'i18next';
 import watchCity from './lib/watchCity';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
-const renderBuild = (
-    city: CityData,
-    chooseProduction: () => void,
-    completeProduction: (spendCost: SpendCost) => void,
-    readOnly: boolean,
-    toggleAutoProduction: () => void
-  ): HTMLElement =>
-    s(
-      `<div class="build"></div>`,
-      s(
-        `<header></header>`,
-        city.build.building && instanceOf(city.build.building.item, 'Unit')
-          ? new Unit({
-              ...city.build.building.item,
-              player: city.player,
-              improvements: [],
-              busy: null,
-            })
-          : (t('City.Build.title', {
-              item: getLabelForBuildable(city.build.building),
-            }) as string),
-        city.build.auto
-          ? s(`<span class="auto">${t('City.Build.auto-marker')}</span>`)
-          : ''
-      ),
-      ...renderBuildProgress(city),
-      readOnly
-        ? ''
-        : s(
-            '<div class="build-actions"></div>',
-            h(
-              s(
-                `<button class="btn-secondary">${t(
-                  city.build.building
-                    ? 'City.Build.change'
-                    : 'City.Build.choose'
-                )}</button>`
-              ),
-              {
-                click() {
-                  chooseProduction();
-                },
-              }
-            ),
-            h(
-              s(
-                `<button class="btn-secondary auto">${getAutoLabel(
-                  city.build
-                )}</button>`
-              ),
-              {
-                click() {
-                  toggleAutoProduction();
-                },
-              }
-            ),
-            ...city.build.spendCost.map((spendCost) =>
-              h(
-                s(
-                  `<button class="btn-secondary buy" data-resource="${
-                    spendCost.resource._
-                  }">${t('City.Build.buy-with', {
-                    spendCost,
-                  })}</button>`
-                ),
-                {
-                  click() {
-                    completeProduction(spendCost);
-                  },
-                }
-              )
-            )
-          )
-    ),
-  // The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
-  //  next, so they are said on their own.
-  renderBuildProgress = (city: CityData): Node[] => {
+// The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
+//  next, so they are said on their own.
+const renderBuildProgress = (city: CityData): Node[] => {
     const progress = city.build.progress.value;
 
     if (city.build.building) {
@@ -153,119 +62,6 @@ const renderBuild = (
       ),
     ];
   },
-  // The food stored towards the next size (#686).
-  renderGrowth = (city: CityData): Node => {
-    const perTurn = reduceKnownYield(city.yields, 'Food');
-
-    return s(
-      `<div class="growth"><header><span>${t(
-        'City.Growth.title'
-      )}</span><span class="size">${t('City.Growth.size', {
-        size: localeProvider.number(city.growth.size),
-      })}</span></header></div>`,
-      progressBar({
-        group: 'Food',
-        stored: city.growth.progress.value,
-        capacity: city.growth.cost.value,
-        perTurn,
-      }),
-      renderFigures(
-        'Food',
-        city.growth,
-        perTurn,
-        turnsLeft(city.growth, city.yields, 'Food')
-      )
-    );
-  },
-  renderImprovements = (
-    city: CityData,
-    sellImprovement: (
-      improvement: CityImprovement,
-      saleValue: SpendCost
-    ) => void,
-    readOnly: boolean
-  ): Node => {
-    return s(
-      `<div class="improvements"></div>`,
-      s(
-        `<div></div>`,
-        ...city.improvements.map((improvement) => {
-          const [saleValue] = readOnly
-            ? []
-            : (improvement.saleValue ?? []).filter(
-                (saleValue) => saleValue.resource._ === 'Gold'
-              );
-
-          return s(
-            '<div class="improvement"></div>',
-            s(
-              '<span class="name"></span>',
-              s(`<span>${getLabelForBuildableEntity(improvement)}</span>`),
-              ...city.yields
-                .filter(
-                  (
-                    cityYield: Yield | CityImprovementMaintenanceGold
-                  ): cityYield is CityImprovementMaintenanceGold =>
-                    cityYield._ === 'CityImprovementMaintenanceGold' &&
-                    (cityYield as CityImprovementMaintenanceGold)
-                      .cityImprovement.id === improvement.id
-                )
-                .flatMap((cityYield) => yieldImages(cityYield, true))
-            ),
-            // Selling it (#31), from a button of its own (#684). The confirmation says what it fetches.
-            saleValue
-              ? h(
-                  s(
-                    `<button class="btn-danger sell">${t(
-                      'City.SellImprovement.sell'
-                    )}</button>`
-                  ),
-                  {
-                    click() {
-                      sellImprovement(improvement, saleValue);
-                    },
-                  }
-                )
-              : ''
-          );
-        })
-      )
-    );
-  },
-  renderGarrisonedUnits = (
-    city: CityData,
-    portal: Portal,
-    transport: Transport,
-    readOnly: boolean
-  ): Node => {
-    return h(
-      s(
-        `<div class="garrisoned-units"><header>${t(
-          'City.GarrisonedUnits.title'
-        )}</header></div>`,
-        s(
-          '<div class="units"></div>',
-          ...city.tile.units.map((unit) => new Unit(unit).element())
-        )
-      ),
-      {
-        click() {
-          const cityPlayerUnits = city.tile.units.filter(
-            (unit: UnitData) => unit.player.id === city.player.id
-          );
-
-          if (readOnly || cityPlayerUnits.length === 0) {
-            return;
-          }
-
-          // The unit chosen is made the active one, as it is from the map (#482).
-          new UnitSelectionWindow(cityPlayerUnits, transport, (unit) =>
-            portal.emit('activate-unit', unit)
-          );
-        },
-      }
-    );
-  },
   // The routes this city holds, and what each adds to its trade (#57).
   renderTradeRoutes = (city: CityData): Node | string =>
     city.tradeRoutes?.length
@@ -295,93 +91,6 @@ const renderBuild = (
           })
         )
       : '',
-  renderSupportedUnits = (city: CityData): Node => {
-    return s(
-      `<div class="supported-units"><header>${t(
-        'City.SupportedUnits.title'
-      )}</header></div>`,
-      s(
-        '<div class="units"></div>',
-        ...city.units.map((unit) => new SupportedUnit(city, unit))
-      )
-    );
-  },
-  cityDetails = (
-    city: CityData,
-    portal: Portal,
-    transport: Transport,
-    chooseProduction: () => void,
-    completeProduction: (spendCost: SpendCost) => void,
-    sellImprovement: (
-      improvement: CityImprovement,
-      saleValue: SpendCost
-    ) => void,
-    changeSpecialist: (specialist: Specialist) => void,
-    readOnly: boolean,
-    cityActions: Node | string = ''
-  ) => {
-    return s(
-      '<div class="city-screen"></div>',
-      s(
-        '<div class="top-row"></div>',
-        s(
-          '<div class="yield-details"></div>',
-          renderPopulation(
-            city,
-            undefined,
-            readOnly ? undefined : changeSpecialist
-          ),
-          renderYields(city),
-          renderSupportedUnits(city)
-        ),
-        renderMap(portal, city, transport, readOnly),
-        renderImprovements(city, sellImprovement, readOnly)
-      ),
-      s(
-        '<div class="bottom-row"></div>',
-        renderGrowth(city),
-        s(
-          '<div class="tabbed-details"></div>',
-          // TODO: add a tab bar
-          s(
-            '<div class="info"></div>',
-            renderGarrisonedUnits(city, portal, transport, readOnly),
-            renderTradeRoutes(city)
-          )
-        ),
-        renderBuild(city, chooseProduction, completeProduction, readOnly, () =>
-          toggleAuto(city.build, transport)
-        )
-      ),
-      cityActions
-    );
-  },
-  // The player's other cities, either side of this one (#678), and renaming it (#676). With one city there is nowhere
-  //  to step to, and the buttons do nothing: the list is read when one is pressed, as a city can be gained or lost
-  //  while the screen is open.
-  renderCityActions = (step: (by: number) => void, rename: () => void): Node =>
-    s(
-      '<div class="city-actions"></div>',
-      h(
-        s(
-          `<button class="btn-secondary previous">${t(
-            'City.previous'
-          )}</button>`
-        ),
-        {
-          click: () => step(-1),
-        }
-      ),
-      h(
-        s(`<button class="btn-secondary rename">${t('City.rename')}</button>`),
-        {
-          click: () => rename(),
-        }
-      ),
-      h(s(`<button class="btn-secondary next">${t('City.next')}</button>`), {
-        click: () => step(1),
-      })
-    ),
   // The step through the player's cities, in the order the engine lists them, wrapping at either end (#678).
   steppedCity = (cities: CityData[], city: CityData, by: number): CityData => {
     const index = cities.findIndex(({ id }) => id === city.id);
@@ -428,28 +137,6 @@ export interface CityLayout {
   window: WindowOptions;
 }
 
-/** The classic city screen: a page over the map, the yields and improvements beside the map, the meters below. */
-export const classicCityLayout: CityLayout = {
-  render: (city, context) =>
-    cityDetails(
-      city,
-      context.portal,
-      context.transport,
-      context.chooseProduction,
-      context.completeProduction,
-      context.sellImprovement,
-      context.changeSpecialist,
-      context.readOnly,
-      context.readOnly ? '' : renderCityActions(context.step, context.rename)
-    ),
-  window: {
-    canResize: true,
-    canMaximise: true,
-    classes: 'city-screen-window',
-    size: 'maximised',
-  },
-};
-
 export class City extends Window {
   #city: CityData;
   // Whether the city screen is waiting for what the city can build, to open the production picker (#484).
@@ -468,16 +155,13 @@ export class City extends Window {
   /**
    * With `readOnly`, as for a rival's city a Diplomat has investigated (#58), the screen shows the city as it was sent
    * and changes nothing: no production, worked tiles, specialists or buying, and no updates. `layout` is how it's drawn
-   * (#746), the classic page by default.
+   * (#746): the interface's own, from its `cityScreen` slot (`openCity`), as there is no default (#861).
    */
   constructor(
     city: CityData,
     portal: Portal,
     transport: Transport,
-    {
-      readOnly = false,
-      layout = classicCityLayout,
-    }: { readOnly?: boolean; layout?: CityLayout } = {}
+    { readOnly = false, layout }: { readOnly?: boolean; layout: CityLayout }
   ) {
     const context: CityScreenContext = {
       portal,
