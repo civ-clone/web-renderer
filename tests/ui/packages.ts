@@ -547,8 +547,8 @@ const definesMixins = (partial: string): boolean => {
       readFileSync(join(packagesRoot, name, 'styles', `_${file}.scss`), 'utf8')
     );
   },
-  usedByPartials = new Set(
-    partials.flatMap((partial) => {
+  usedByPartials = new Set([
+    ...partials.flatMap((partial) => {
       const [name, file] = partial.split('/');
 
       return [
@@ -557,14 +557,20 @@ const definesMixins = (partial: string): boolean => {
           'utf8'
         ).matchAll(/^@use '(?:\.\.\/\.\.\/([^/]+)\/styles\/)?([^'/]+)'/gm),
       ].map(([, other, used]) => `${other ?? name}/${used}`);
-    })
-  );
+    }),
+    // The stylesheet's own: the themes' tokens, which the interfaces that bring them keep (#861).
+    ...[
+      ...readFileSync(join(root, 'src/css/app.scss'), 'utf8').matchAll(
+        /^@use '\.\.\/\.\.\/packages\/([^/]+)\/styles\/([^']+)';$/gm
+      ),
+    ].map(([, name, used]) => `${name}/${used}`),
+  ]);
 
 expect(
   'civ.one’s stylesheet imports every package’s partials, each once, and no other',
   [
     imported.length > 40,
-    // A partial of mixins that others `@use` is in through them.
+    // A partial of mixins that others `@use`, or the stylesheet does, is in through them.
     partials.filter(
       (partial) =>
         !imported.includes(partial) &&

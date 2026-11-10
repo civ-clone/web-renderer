@@ -45,12 +45,9 @@ export interface InterfaceManifest {
   // Which of a slot's implementations to use, by the slot's name: every slot, and nothing else.
   slots: { [slot in SlotName]: string };
   features: FeatureName[];
+  // The ids it had before it was renamed, so a stored choice or an old link still finds it.
+  formerly?: InterfaceMode[];
 }
-
-export const DEFAULT_INTERFACE: InterfaceMode = 'modern';
-
-// Interfaces that have been renamed, so a stored choice or an old link still finds them.
-const RENAMED: { [id: string]: InterfaceMode } = { new: 'modern' };
 
 const manifests = new Map<InterfaceMode, InterfaceManifest>();
 
@@ -72,7 +69,10 @@ const isManifest = (value: any): value is InterfaceManifest =>
   Object.keys(value.slots).every(isSlotName) &&
   SLOTS.every((slot) => typeof value.slots[slot] === 'string') &&
   Array.isArray(value.features) &&
-  value.features.every(isFeatureName);
+  value.features.every(isFeatureName) &&
+  (value.formerly === undefined ||
+    (Array.isArray(value.formerly) &&
+      value.formerly.every((id: unknown) => typeof id === 'string')));
 
 /** Makes an interface available, replacing any with the same `id`. A manifest may come from outside, so it's checked. */
 export const registerInterface = (manifest: unknown): void => {
@@ -85,10 +85,26 @@ export const registerInterface = (manifest: unknown): void => {
   manifests.set(manifest.id, manifest);
 };
 
-let mode: InterfaceMode = DEFAULT_INTERFACE,
+/** The interface used when nothing names another: the first registered, as `src/js/interfaces.ts` lists them. */
+export const defaultInterface = (): InterfaceMode => {
+  const [first] = manifests.keys();
+
+  if (first === undefined) {
+    throw new TypeError(
+      "No interface is registered: the page's entry imports `UI/interfaces`, and a test suite `tests/ui/lib/interfaces`."
+    );
+  }
+
+  return first;
+};
+
+// Until the page applies one, the default.
+let mode: InterfaceMode | null = null,
   // What the player last chose, which differs from `mode` until the page next loads: the interface can't change under
   //  a game in play.
-  chosen: InterfaceMode = mode;
+  chosen: InterfaceMode | null = null;
+
+const inUse = (): InterfaceMode => mode ?? defaultInterface();
 
 const isInterface = (value: unknown): value is InterfaceMode =>
   manifests.has(value as InterfaceMode);
@@ -102,22 +118,27 @@ const copyOf = (manifest: InterfaceManifest): InterfaceManifest => ({
   features: [...manifest.features],
 });
 
+// An id an interface had before, as the first registered that had it lists it, is that interface's id now.
 const renamed = (value: unknown): unknown =>
-  typeof value === 'string' && value in RENAMED ? RENAMED[value] : value;
+  typeof value === 'string' && !manifests.has(value)
+    ? [...manifests.values()].find(({ formerly = [] }) =>
+        formerly.includes(value)
+      )?.id ?? value
+    : value;
 
 /** The interfaces to choose from. */
 export const interfaces = (): InterfaceManifest[] => [...manifests.values()];
 
 /** The interface in use. */
-export const interfaceMode = (): InterfaceMode => mode;
+export const interfaceMode = (): InterfaceMode => inUse();
 
 /** The manifest of the interface in use. */
 export const currentInterface = (): InterfaceManifest => {
-  const manifest = active ?? manifests.get(mode);
+  const manifest = active ?? manifests.get(inUse());
 
   if (manifest === undefined) {
     throw new TypeError(
-      `No interface '${mode}' is registered: the page's entry imports \`UI/interfaces\`, and a test suite \`tests/ui/lib/interfaces\`.`
+      `No interface '${inUse()}' is registered: the page's entry imports \`UI/interfaces\`, and a test suite \`tests/ui/lib/interfaces\`.`
     );
   }
 
@@ -169,7 +190,7 @@ export const defineSlot = <Implementation>(
 };
 
 /** The interface the next page load will use. */
-export const chosenInterface = (): InterfaceMode => chosen;
+export const chosenInterface = (): InterfaceMode => chosen ?? inUse();
 
 /** Remembers the player's choice, for `chosenInterface`. The `interface` option is what keeps it. */
 export const chooseInterface = (choice: InterfaceMode): void => {
@@ -188,17 +209,19 @@ export const applyInterface = (
   param = renamed(param) as string | null;
   option = renamed(option);
 
-  mode = isInterface(param)
+  const applied = isInterface(param)
     ? param
     : isInterface(option)
     ? option
-    : DEFAULT_INTERFACE;
-  chosen = mode;
-  active = isInterface(mode) ? copyOf(manifests.get(mode)!) : null;
+    : defaultInterface();
 
-  root.setAttribute('data-interface', mode);
+  mode = applied;
+  chosen = applied;
+  active = copyOf(manifests.get(applied)!);
 
-  return mode;
+  root.setAttribute('data-interface', applied);
+
+  return applied;
 };
 
 export default interfaceMode;
