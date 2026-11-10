@@ -1,0 +1,1 @@
+{"version":"0.1.0@0db65b06","date":"2026-11-10T19:21:45.000Z","localChanges":["chore: the game is built with a current esbuild, and the tests check that no rule is registered where a save would lose it (#869) (#947)"],"externalChanges":{}}
