@@ -1,4 +1,4 @@
-// The new window chrome (#738), behind the interface flag (#735): the eyebrow over the title, the footer with its
+// The modern interface's window chrome (#738), its `windowChrome` slot's `framed` (#860): the eyebrow over the title, the footer with its
 //  actions (a window's own footer moved there, the primary last, a quiet Close where there are none),
 //  Enter for the primary, Escape for the cancel action, focus back where it was, and a copy that fades as the window
 //  closes. With the flag off, an action window is built exactly as before.

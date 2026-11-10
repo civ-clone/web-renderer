@@ -243,6 +243,10 @@ ask before leaving a game in progress.
 - Generic window primitives: `Window`, `SelectionWindow`, `MandatorySelection`,
   `ConfirmationWindow`, `NotificationWindow`, `PopupMenu`. A list with one
   option is chosen for the player rather than shown (`lib/singleChoice.ts`).
+  What a `Window` looks like around its body is the `windowChrome` slot (#860),
+  which `ui-component-window` defines: classic's plain title bar
+  (`plainChrome`), or modern's eyebrow, footer of actions and focus return
+  (`framedChrome`, #738).
 
 ### Map rendering
 

@@ -13,7 +13,8 @@
     "unitPanel": "details",
     "talks": "windows",
     "mapMenus": "popups",
-    "turnControls": "orbs"
+    "turnControls": "orbs",
+    "windowChrome": "plain"
   },
   "features": []
 }
