@@ -10,7 +10,6 @@
     "@civ-clone/ui-component-button": "workspace:*",
     "@civ-clone/ui-component-choice-window": "workspace:*",
     "@civ-clone/ui-component-progress-bar": "workspace:*",
-    "@civ-clone/ui-component-selection-window": "workspace:*",
     "@civ-clone/ui-component-stat-pill": "workspace:*",
     "@civ-clone/ui-component-tooltip": "workspace:*",
     "@civ-clone/ui-component-window": "workspace:*",

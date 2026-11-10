@@ -1,7 +1,7 @@
 import { GameData, Unit } from '@civ-clone/ui-protocol/types';
 import createMemoryTestbed, { MemoryTestbed } from '../lib/memoryTestbed';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
-import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
+import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
 import Minimap from '@civ-clone/ui-map-square/Minimap';
@@ -19,7 +19,8 @@ import { s } from '@dom111/element';
 // the one there was when the panel was made.
 export type DebugPanelDeps = {
   citiesMap: Cities;
-  cityNamesMap: CityNames;
+  // Whichever names the cities (`cityLabels`).
+  cityNamesMap: MapLayer;
   currentObjectCount: () => number;
   currentTurn: () => number;
   data: () => GameData;

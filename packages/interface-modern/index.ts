@@ -1,4 +1,4 @@
-import CityBanners from '@civ-clone/ui-map/components/Map/CityBanners';
+import CityBanners from './components/CityBanners';
 import CityBuildChoice from './components/CityBuildChoice';
 import CityStatusTable from './components/CityStatusTable';
 import ChoiceWindow from '@civ-clone/ui-component-choice-window/ChoiceWindow';
@@ -23,7 +23,10 @@ import meetingTalks from './components/meetingTalks';
 import manifest from './manifest.json';
 import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
 import sharedMenus from './components/sharedMenus';
-import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import {
+  InterfaceManifest,
+  registerInterface,
+} from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
 import talks from '@civ-clone/ui-windows/components/talks';
@@ -39,7 +42,12 @@ import framedChrome from './components/framedChrome';
 
 titleScreen.provide('titleMenu', TitleMenu);
 
-cityLabels.provide('banners', CityBanners);
+// The banners (#747), drawn with the theme's tokens and fonts, and wide enough to cover a row of the yields.
+cityLabels.provide('banners', {
+  layer: CityBanners,
+  followTheme: true,
+  giveWayToYields: true,
+});
 
 cityScreen.provide('window', cityLayout);
 
@@ -153,4 +161,7 @@ turnControls.provide(
 
 windowChrome.provide('framed', framedChrome);
 
-registerInterface(manifest);
+// It fills every slot, which the build checks; what it names as features is checked as it registers (#861).
+const checked: Pick<InterfaceManifest, 'slots'> = manifest;
+
+registerInterface(checked);

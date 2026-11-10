@@ -535,9 +535,6 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
-      '@civ-clone/ui-widgets':
-        specifier: workspace:*
-        version: link:../widgets
 
   packages/map-square:
     dependencies:
@@ -579,9 +576,6 @@ importers:
       '@civ-clone/ui-component-progress-bar':
         specifier: workspace:*
         version: link:../component-progress-bar
-      '@civ-clone/ui-component-selection-window':
-        specifier: workspace:*
-        version: link:../component-selection-window
       '@civ-clone/ui-component-stat-pill':
         specifier: workspace:*
         version: link:../component-stat-pill

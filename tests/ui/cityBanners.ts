@@ -10,7 +10,7 @@ import './lib/grids';
 
 import CityBanners, {
   BannerStyle,
-} from '@civ-clone/ui-map/components/Map/CityBanners';
+} from '@civ-clone/ui-interface-modern/components/CityBanners';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
 import i18next from 'i18next';

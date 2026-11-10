@@ -263,8 +263,11 @@ compositing order:
   the whole world as soon as it is built, so a loaded game's minimap is not
   blank (#270).
 
-Under the modern interface, `MapView` mounts `CityBanners` in
-place of `CityNames` (#747). It extends `CityNames`, and the theme's
+Under the modern interface, `MapView` mounts `CityBanners`
+(`packages/interface-modern/components/CityBanners.ts`) in place of
+`CityNames` (#747), as the `cityLabels` slot names it: the slot gives the
+layer, and whether it follows the theme and gives way to the yields overlay,
+so `MapView` names neither (#861). It extends `CityNames`, and the theme's
 `--ui-city-banner` token picks what it draws: `label` gives the classic size
 and name, and `full` gives a banner below the city's square (size badge, name,
 production turns, food bar, disorder and celebration flags). The banner's

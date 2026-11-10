@@ -37,7 +37,7 @@ const ask = (
   openChoice(title, rows, onChoose, {
     chosen,
     modal: true,
-    classicIntro: t('MandatorySelection.default-body'),
+    plainIntro: t('MandatorySelection.default-body'),
   });
 };
 

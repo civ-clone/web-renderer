@@ -1,8 +1,7 @@
-import ChoiceWindow, {
+import {
   ChoiceDescriber,
   ChoiceRow,
 } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
-import SelectionWindow from '@civ-clone/ui-component-selection-window/SelectionWindow';
 import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
 
 // A list of plain rows, the classic list or the choice window (#745). Apart from `choices.ts` so that what imports it
@@ -20,10 +19,20 @@ export interface ChoiceListOptions {
   // The window's classes, for its eyebrow.
   classes?: string[];
   describe?: ChoiceDescriber | null;
-  // What the classic list says for a row, where it says more than the name ("Alphabet (5 turns)").
-  classicLabel?: (row: ChoiceRow) => string;
-  // What the classic list says over it, where the title alone is the question for the new one ("Please choose…").
-  classicIntro?: string | Node | null;
+  // What a list that shows each row as one line of text says for it, where that says more than the name ("Alphabet (5
+  //  turns)"): such a list has no room for `describe`.
+  plainLabel?: (row: ChoiceRow) => string;
+  // What a list of plain rows says over it, where the title alone is the question for one that shows more ("Please
+  //  choose…"). By default `intro`.
+  plainIntro?: string | Node | null;
+}
+
+/** What the list is to whoever opened it, whichever interface shows it. */
+export interface ChoiceList {
+  /** Whether it answered itself as it opened, having only one row. */
+  autoChosen(): boolean;
+  close(): void;
+  on(event: 'close', listener: () => void): unknown;
 }
 
 type OpenChoice = (
@@ -31,7 +40,7 @@ type OpenChoice = (
   rows: ChoiceRow[],
   onChoose: (value: string) => void,
   options?: ChoiceListOptions
-) => ChoiceWindow | SelectionWindow;
+) => ChoiceList;
 
 // The interface's `choiceList` slot (#824), which each interface in `interfaces/` fills (#825).
 export const choiceList = defineSlot<OpenChoice>('choiceList');

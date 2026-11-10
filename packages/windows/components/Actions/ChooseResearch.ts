@@ -126,7 +126,7 @@ export class ChooseResearch extends Action {
         // What the advance needs and leads to (#183).
         describe: ({ value }) =>
           entryDetails(this.transport(), value, ['advance']),
-        classicLabel: ({ value, label }) => {
+        plainLabel: ({ value, label }) => {
           const left = turns(value);
 
           return left === null
