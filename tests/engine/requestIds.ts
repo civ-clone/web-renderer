@@ -10,6 +10,7 @@ import AbstractTransport, {
   RequestFailed,
   TransportTimers,
   defaultSilenceTimeout,
+  startingSilenceFactor,
 } from '@civ-clone/core-data-client/AbstractTransport';
 import ParentTransport from '@civ-clone/worker-transport/ParentTransport';
 import Request from '@civ-clone/core-data-client/Request';
@@ -233,9 +234,12 @@ const run = async (): Promise<void> => {
       transport = new StubTransport({ timers }),
       lost = track(transport.request(new Ask('topCities', 'lost')));
 
+    // From the first request (#871), so a worker that never starts is reported; for longer until it has spoken, as
+    //  it may only be slow to load.
     check(
-      'silence is not timed before the worker has said anything',
-      timers.pending.size === 0,
+      'silence is timed before the worker has said anything, and for longer',
+      JSON.stringify(timers.timeouts()) ===
+        JSON.stringify([defaultSilenceTimeout * startingSilenceFactor]),
       JSON.stringify(timers.timeouts())
     );
 
@@ -244,7 +248,7 @@ const run = async (): Promise<void> => {
     const armed = [...timers.pending.keys()];
 
     check(
-      'silence is timed once the worker has said something, while a request waits',
+      'silence is timed afresh, for the usual time, once the worker has said something',
       JSON.stringify(timers.timeouts()) ===
         JSON.stringify([defaultSilenceTimeout]),
       JSON.stringify(timers.timeouts())
@@ -611,7 +615,7 @@ const run = async (): Promise<void> => {
   }
 
   console.log(
-    'PASS requestIds (replies matched by id out of order; stale and unknown replies dropped; silence timed only once the worker has spoken, reported once per silence and per request, without giving up on the request; a failed reply rejects and is reported once; ParentTransport, answer and WorkerTransport round trip ids over the wire; nothing left waiting)'
+    'PASS requestIds (replies matched by id out of order; stale and unknown replies dropped; silence timed from the first request, for longer until the worker has spoken, reported once per silence and per request, without giving up on the request; a failed reply rejects and is reported once; ParentTransport, answer and WorkerTransport round trip ids over the wire; nothing left waiting)'
   );
 };
 

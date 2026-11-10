@@ -11,7 +11,8 @@ export interface WorkerFailuresDeps {
 // What went wrong in the worker (#470), which the player would otherwise never hear of: an error or a rejection nothing
 //  handled, a game that could not start, an action that threw, a request it could not answer, or a worker that has
 //  said nothing for a while with a request waiting on it (`workerError`, the last two from `WorkerTransport`), each
-//  said in a window, a load that failed (`loadFailed`), said, then back to the main menu, and a save that could not
+//  said in a window (one for each thing said: the same again while its window is open says nothing more, #859), a load
+//  that failed (`loadFailed`), said, then back to the main menu, and a save that could not
 //  be built (`saveFailed`), said. The worker's message goes as text: it can hold text from a save file. Returns the
 //  disposer for `Renderer`'s `transportDisposers`.
 export const WorkerFailures = {
@@ -22,7 +23,16 @@ export const WorkerFailures = {
       reload = (): void => window.location.reload(),
     }: Partial<WorkerFailuresDeps> = {}
   ): () => void {
-    const show = (message: string, notAnswering?: boolean): void => {
+    // What is being said now, by what it says: a long turn can go quiet more than once, and a failure can repeat.
+    const showing = new Map<string, NotificationWindow>(),
+      show = (message: string, notAnswering?: boolean): void => {
+        const saying = `${notAnswering ? 'quiet' : 'error'}|${message}`;
+
+        // Said, and still on the page: once is enough (#859).
+        if (showing.get(saying)?.element().isConnected) {
+          return;
+        }
+
         const body = document.createElement('div'),
           what = document.createElement('p');
 
@@ -38,7 +48,11 @@ export const WorkerFailures = {
           body.append(detail);
         }
 
-        new NotificationWindow(t('WorkerFailure.title'), body).display();
+        const said = new NotificationWindow(t('WorkerFailure.title'), body);
+
+        showing.set(saying, said);
+        said.on('close', () => showing.delete(saying));
+        said.display();
       },
       disposers = [
         transport.receive('workerError', ({ message, notAnswering }): void =>

@@ -37,6 +37,8 @@ export class ImportAssetsWindow extends Window {
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
   #replaceExistingInput: HTMLInputElement;
+  // The browser keeps nothing for this site (#850): no files can be chosen, whatever else happens.
+  #blocked = false;
 
   constructor(windowOptions: WindowOptions = {}) {
     const fileInput = s<HTMLInputElement>(
@@ -55,6 +57,10 @@ export class ImportAssetsWindow extends Window {
       ),
       progressInformation = s<HTMLParagraphElement>(
         '<p class="loading" hidden></p>'
+      ),
+      // Said first, above everything else, when nothing imported could be kept (#850).
+      storageBlocked = s<HTMLDivElement>(
+        '<div class="storage-blocked" role="alert" hidden></div>'
       );
 
     super(
@@ -110,6 +116,24 @@ export class ImportAssetsWindow extends Window {
     this.#chosen = chosen;
     this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
+
+    // A browser that blocks this site's data would keep nothing that was imported (#850): said before any files are
+    //  chosen, at the top of the window, and the choosing is put out of reach rather than left to fail.
+    this.element().querySelector('.import-assets')?.prepend(storageBlocked);
+
+    assetStore.usable().then((usable): void => {
+      if (usable) {
+        return;
+      }
+
+      this.#blocked = true;
+
+      storageBlocked.textContent = t('ImportAssetsWindow.storage-blocked');
+      storageBlocked.removeAttribute('hidden');
+      fileInput.setAttribute('disabled', '');
+      chooseButton.disabled = true;
+      replaceExistingInput.disabled = true;
+    });
   }
 
   async handleFileUpload(event: InputEvent) {
@@ -379,8 +403,13 @@ export class ImportAssetsWindow extends Window {
   #fail(message: string): void {
     this.#progressInformation.classList.add('failed');
     this.#progressInformation.innerText = message;
-    this.#fileInput.removeAttribute('disabled');
-    this.#chooseButton.disabled = false;
+
+    // Chosen before the browser was found to keep nothing: there is no trying again.
+    if (!this.#blocked) {
+      this.#fileInput.removeAttribute('disabled');
+      this.#chooseButton.disabled = false;
+    }
+
     // So choosing the same files again counts as a change.
     this.#fileInput.value = '';
     this.#showChosen([]);

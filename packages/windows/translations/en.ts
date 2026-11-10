@@ -335,6 +335,8 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.progress-building': 'Building image assets...',
   'ImportAssetsWindow.progress-writing': 'Writing to database...',
   'ImportAssetsWindow.replace-existing': 'Replace existing assets?',
+  'ImportAssetsWindow.storage-blocked':
+    "Your browser is blocking this site from storing data, so imported assets can't be kept. Allow site data (cookies and storage) for this site, then reload the page.",
   'ImportAssetsWindow.title': 'Import assets',
   'ImportAssetsWindow.unsupported-file':
     "{{file}} doesn't look like a supported Civilization file, so no assets were extracted. Check it is the original file from Civilization for DOS and try again.",
