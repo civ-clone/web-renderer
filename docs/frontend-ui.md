@@ -191,7 +191,8 @@ ask before leaving a game in progress.
 - `Notices`: `bubble` notifications (such as an obsolete Wonder) wait as buttons
   beside End Turn until opened or the turn ends.
 - `GameMenu`: save, load, `GameOptions`, the reports, and the cheat items
-  (shown with `?cheat=1`, or Shift+5 then Shift+6), in the interface's menu
+  (shown with `?cheat=1`, or Shift+5 then Shift+6; `GameSession` hands them in
+  from `packages/game/debug/cheats.ts`, #863), in the interface's menu
   from the same `mapMenus` slot: a popup, or modern's `UiMenu`.
 - City screen: `City`, with its own small `Portal` (`Landscape`, `Fog`,
   `Cities`, `Units`, `Yields`, `Unworkable`). Clicking a tile changes which
