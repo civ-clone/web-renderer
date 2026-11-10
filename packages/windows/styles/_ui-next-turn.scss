@@ -50,6 +50,27 @@
     --next-turn-tint: var(--ui-action-units);
   }
 
+  // A notice by what it's about, as its row is (#416).
+  &[data-category='military'] {
+    --next-turn-tint: var(--ui-notice-military);
+  }
+
+  &[data-category='science'] {
+    --next-turn-tint: var(--ui-notice-science);
+  }
+
+  &[data-category='gold'] {
+    --next-turn-tint: var(--ui-notice-gold);
+  }
+
+  &[data-category='civics'] {
+    --next-turn-tint: var(--ui-notice-civics);
+  }
+
+  &[data-category='diplomacy'] {
+    --next-turn-tint: var(--ui-notice-diplomacy);
+  }
+
   // The tint down its leading edge too, so the kind shows at a glance.
   &[data-kind] {
     border-left: 4px solid var(--next-turn-tint);

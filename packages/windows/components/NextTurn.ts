@@ -10,6 +10,7 @@ import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { setNoticeCategory } from './lib/noticeCategory';
 import { t } from 'i18next';
 import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 
@@ -270,6 +271,10 @@ export class NextTurn extends Element {
     } else if (item && !this.#waiting) {
       // A small orb in the tint the item's own orb has, so each kind has its colour (#702).
       next.dataset.kind = item.kind === 'units' ? 'units' : item.action._;
+
+      if (item.kind === 'action') {
+        setNoticeCategory(next, item.action);
+      }
       next.prepend(
         s('<span class="ui-next-turn-swatch" aria-hidden="true"></span>')
       );

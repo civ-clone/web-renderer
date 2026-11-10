@@ -39,6 +39,27 @@
     --notification-tint: var(--ui-action-disorder);
   }
 
+  // A notice by what it's about (#416).
+  &[data-category='military'] {
+    --notification-tint: var(--ui-notice-military);
+  }
+
+  &[data-category='science'] {
+    --notification-tint: var(--ui-notice-science);
+  }
+
+  &[data-category='gold'] {
+    --notification-tint: var(--ui-notice-gold);
+  }
+
+  &[data-category='civics'] {
+    --notification-tint: var(--ui-notice-civics);
+  }
+
+  &[data-category='diplomacy'] {
+    --notification-tint: var(--ui-notice-diplomacy);
+  }
+
   // A new row slides in from the right.
   @media (prefers-reduced-motion: no-preference) {
     transition: opacity var(--ui-notification-motion-in) var(--ui-ease),
