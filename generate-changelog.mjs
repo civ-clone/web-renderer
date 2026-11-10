@@ -3,8 +3,7 @@
 // runs *before* the build. The deploy workflow runs `--release` itself; the next commit on top of
 // `main` commits what it generated. See `docs/build-and-release.md`.
 //
-//   node generate-changelog.mjs <sha>     one entry, printed (what
-//                                         generate-changelog.sh redirects)
+//   node generate-changelog.mjs <sha>     one entry, printed
 //   node generate-changelog.mjs --release every commit after the newest entry
 //                                         in releases.json: writes
 //                                         changelog/<sha>.json for each and
