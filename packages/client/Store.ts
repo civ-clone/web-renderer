@@ -33,6 +33,20 @@ export class Store<Types extends DBSchema> {
     this.#connection.catch((): void => {});
   }
 
+  /**
+   * Whether the browser let the database be opened. A browser that blocks this site's data doesn't (#850). Only the
+   * opening is asked about: a read that fails later, for some passing reason, says nothing of that.
+   */
+  async opens(): Promise<boolean> {
+    try {
+      await this.#connection;
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async get(key: StoreKey<Types, StoreNames<Types>>) {
     return (await this.#connection).get(this.#store, key);
   }

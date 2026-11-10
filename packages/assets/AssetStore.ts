@@ -331,14 +331,8 @@ export class AssetStore extends Store<{
    * Whether the browser lets the store be opened at all. With site data blocked it doesn't (#850): nothing imported
    * could be kept, which the Import Assets window says before any files are chosen.
    */
-  async usable(): Promise<boolean> {
-    try {
-      await this.keys();
-
-      return true;
-    } catch {
-      return false;
-    }
+  usable(): Promise<boolean> {
+    return this.opens();
   }
 
   /** How many of the tileset's sprites, required or optional, are imported: for Options to say (#749). */

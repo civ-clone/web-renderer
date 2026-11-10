@@ -37,6 +37,8 @@ export class ImportAssetsWindow extends Window {
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
   #replaceExistingInput: HTMLInputElement;
+  // The browser keeps nothing for this site (#850): no files can be chosen, whatever else happens.
+  #blocked = false;
 
   constructor(windowOptions: WindowOptions = {}) {
     const fileInput = s<HTMLInputElement>(
@@ -123,6 +125,8 @@ export class ImportAssetsWindow extends Window {
       if (usable) {
         return;
       }
+
+      this.#blocked = true;
 
       storageBlocked.textContent = t('ImportAssetsWindow.storage-blocked');
       storageBlocked.removeAttribute('hidden');
@@ -399,8 +403,13 @@ export class ImportAssetsWindow extends Window {
   #fail(message: string): void {
     this.#progressInformation.classList.add('failed');
     this.#progressInformation.innerText = message;
-    this.#fileInput.removeAttribute('disabled');
-    this.#chooseButton.disabled = false;
+
+    // Chosen before the browser was found to keep nothing: there is no trying again.
+    if (!this.#blocked) {
+      this.#fileInput.removeAttribute('disabled');
+      this.#chooseButton.disabled = false;
+    }
+
     // So choosing the same files again counts as a change.
     this.#fileInput.value = '';
     this.#showChosen([]);
