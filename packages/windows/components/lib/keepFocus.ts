@@ -147,7 +147,7 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
         (ownKey === undefined
           ? undefined
           : controls(root).find(
-              (control) => control.dataset.focusKey === ownKey
+              (control) => control.dataset.focusKey === ownKey && safe(control)
             )) ??
         (alike.length === alikeBefore.length ? alike[place] : undefined) ??
         (sameRow === undefined
