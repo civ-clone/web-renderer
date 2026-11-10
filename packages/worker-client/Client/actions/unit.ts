@@ -1,8 +1,11 @@
 // A unit's actions (#449), moved out of `DataTransferClient#handleAction`: the active unit acting, and an inactive
 //  (asleep or fortified) unit woken.
 
-import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
-import { Activate } from '@civ-clone/civ1-unit/Actions';
+import {
+  ActiveUnit,
+  InactiveUnit,
+} from '@civ-clone/library-unit/PlayerActions';
+import { Activate } from '@civ-clone/library-unit/Actions';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import { ActionHandler } from './ActionContext';

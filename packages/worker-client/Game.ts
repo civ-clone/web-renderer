@@ -30,14 +30,13 @@ import requirementsData from './lib/requirements';
 import { applyRuleSets, ruleSetsData } from './lib/ruleSets';
 import civilopediaData from './lib/civilopedia';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
+import { Seat, seatsFromOptions } from '@civ-clone/ui-protocol/lib/seats';
 import {
-  Seat,
   SeatChoice,
   TakenCivilizations,
   applySeatChoice,
   resolveSeatChoice,
-  seatsFromOptions,
-} from '@civ-clone/ui-protocol/lib/seats';
+} from './lib/seats';
 import hasMet from './lib/hasMet';
 import { playerProgress, turnProgress } from './lib/progress';
 import registries from './Client/registries';

@@ -1,6 +1,6 @@
 // What a square's terrain does for a unit on it reaches the UI with the terrain (#748): a defender's multiplier and a
-//  land unit's cost to move onto it, as Civ1's tables in civ1-unit have them, through the providers the client
-//  registers. The map's tooltip says them; the renderer knows no rules (#274).
+//  land unit's cost to move onto it, as Civ1's tables in civ1-unit have them, through the providers Civ1's worker
+//  rules register (#865). The map's tooltip says them; the renderer knows no rules (#274).
 
 import {
   Grassland,
@@ -9,7 +9,7 @@ import {
   Ocean,
   River,
 } from '@civ-clone/civ1-world/Terrains';
-import '@civ-clone/ui-worker-client/Client/registerAdditionalData';
+import '@civ-clone/ui-rules-civ1';
 
 const cases: [string, any, { defence: number; movementCost: number | null }][] =
   [

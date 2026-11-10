@@ -7,7 +7,7 @@ import Engine from '@civ-clone/core-engine/Engine';
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
 import Player from '@civ-clone/core-player/Player';
 import endGame from '@civ-clone/core-turn-based-game/lib/endGame';
-import { levelOf } from '@civ-clone/civ1-difficulty/level';
+import { workerRules } from '../workerRules';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { ClientContext, Disposer, Registries } from './ClientContext';
 import { TransportDisposer } from '@civ-clone/core-data-client/Transport';
@@ -55,7 +55,7 @@ export const gameOver = (
         ? null
         : typeNameOf(discoveries[discoveries.length - 1].sourceClass()),
     hasMet: (player: Player) => ctx.hasMet(player),
-    level: levelOf(ctx.difficulties),
+    level: workerRules().difficultyLevel(ctx.difficulties),
     score: ctx.civilizationScore(),
     year: ctx.year.value(gameResult.turn()),
   });

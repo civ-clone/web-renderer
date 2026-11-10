@@ -1,9 +1,5 @@
 // The Top Cities in the World report (#124), worked out in the worker so the UI only ever sees the finished rows.
 
-import {
-  calculateCitizenState,
-  citizenSummary,
-} from '@civ-clone/civ1-city-happiness/lib/calculateCitizenState';
 import City from '@civ-clone/core-city/City';
 import { CityGrowthRegistry } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
@@ -12,6 +8,7 @@ import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldReg
 import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import { workerRules } from '../workerRules';
 import {
   TopCitiesCitizens,
   TopCitiesRow,
@@ -108,12 +105,9 @@ export const topCitiesEntries = (
   return cities.entries().map((city: City) => {
     const owner = city.player(),
       cityGrowth = cityGrowths.getByCity(city),
-      [unhappy, content, happy] = citizenSummary(
-        calculateCitizenState(
-          cityGrowth,
-          cityGrowth.city().yields(),
-          specialists
-        )
+      [unhappy, content, happy] = workerRules().citizenMoods(
+        cityGrowth,
+        specialists
       ),
       colors = owner
         .civilization()

@@ -1,19 +1,10 @@
-// The player's own actions (#449), moved out of `DataTransferClient#handleAction`: research, government, the trade
-//  rates and launching the spaceship.
+// The player's own actions (#449), moved out of `DataTransferClient#handleAction`: research, the trade rates and
+//  launching the spaceship. Government is a rule set's own (#865).
 
-import {
-  ChooseGovernment,
-  Revolution,
-} from '@civ-clone/civ1-government/PlayerActions';
-import {
-  chooseGovernment,
-  revolution,
-} from '@civ-clone/civ1-government/lib/revolution';
 import Advance from '@civ-clone/core-science/Advance';
-import { AdjustTradeRates } from '@civ-clone/civ1-trade-rate/PlayerActions';
-import ChooseResearch from '@civ-clone/civ1-science/PlayerActions/ChooseResearch';
-import { LaunchSpaceship } from '@civ-clone/civ1-spaceship/PlayerActions';
-import PlayerGovernment from '@civ-clone/core-government/PlayerGovernment';
+import AdjustTradeRates from '@civ-clone/base-player-action-adjust-trade-rates/AdjustTradeRates';
+import ChooseResearch from '@civ-clone/library-science/PlayerActions/ChooseResearch';
+import LaunchSpaceship from '@civ-clone/base-player-action-launch-spaceship/LaunchSpaceship';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
 import PlayerTradeRates from '@civ-clone/core-trade-rate/PlayerTradeRates';
 import TradeRate from '@civ-clone/core-trade-rate/TradeRate';
@@ -46,42 +37,6 @@ export const handleChooseResearch: ActionHandler<ChooseResearch> = async (
   playerResearch.research(ChosenAdvance);
 
   ctx.patches.playerObject(playerResearch);
-
-  return false;
-};
-
-export const handleRevolution: ActionHandler<Revolution> = async (
-  ctx,
-  action,
-  playerAction
-) => {
-  revolution(playerAction.value() as PlayerGovernment);
-
-  ctx.patches.player();
-
-  return false;
-};
-
-export const handleChooseGovernment: ActionHandler<ChooseGovernment> = async (
-  ctx,
-  action,
-  playerAction
-) => {
-  const playerGovernment = playerAction.value() as PlayerGovernment,
-    { chosen } = action,
-    [GovernmentType] = playerGovernment
-      .available()
-      .filter((GovernmentType) => GovernmentType.name === chosen);
-
-  if (!GovernmentType) {
-    console.error(`Government type: '${chosen}' not found.`);
-
-    return false;
-  }
-
-  chooseGovernment(playerGovernment, GovernmentType);
-
-  ctx.patches.player();
 
   return false;
 };

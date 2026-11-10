@@ -2,7 +2,7 @@ import CoreCity from '@civ-clone/core-city/City';
 import DataObject from '@civ-clone/core-data-object/DataObject';
 import Player from '@civ-clone/core-player/Player';
 import Tile from '@civ-clone/core-world/Tile';
-import { civilDisorder } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
+import { workerRules } from '../workerRules';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 
 export class City extends DataObject {
@@ -58,7 +58,7 @@ export class City extends DataObject {
       city.player(),
       cityGrowth.size(),
       city.originalPlayer(),
-      civilDisorder(city) !== null
+      workerRules().civilDisorder(city)
     );
   }
 
@@ -98,7 +98,7 @@ export class City extends DataObject {
     this.#name = city.name();
     this.#player = city.player();
     this.#growth.size = cityGrowth.size();
-    this.#civilDisorderDeclared = civilDisorder(city) !== null;
+    this.#civilDisorderDeclared = workerRules().civilDisorder(city);
   }
 }
 

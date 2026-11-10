@@ -6,20 +6,18 @@ import {
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
 import {
-  CompleteProduction,
-  SellImprovement,
-} from '@civ-clone/civ1-treasury/PlayerActions';
-import {
   changeSpecialist,
   changeWorkedTile,
   reassignWorkers,
-} from '@civ-clone/civ1-city/lib/assignWorkers';
+} from '@civ-clone/library-city/lib/assignWorkers';
 import BuildItem from '@civ-clone/core-city-build/BuildItem';
 import ChangeSpecialist from '@civ-clone/core-city/PlayerActions/ChangeSpecialist';
 import ChangeWorkedTile from '@civ-clone/core-city/PlayerActions/ChangeWorkedTile';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
-import autoBuild from '@civ-clone/civ1-city/lib/autoBuild';
 import { ActionContext, ActionHandler } from './ActionContext';
+import City from '@civ-clone/core-city/City';
+import PlayerAction from '@civ-clone/core-player/PlayerAction';
+import { workerRules } from '../../workerRules';
 import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
 
 // Not one of the player's actions, so looked for by name alone, before them.
@@ -150,7 +148,7 @@ export const handleCityBuild: ActionHandler<
     cityBuild.setAuto(auto);
 
     if (auto) {
-      autoBuild(cityBuild, ctx.rules);
+      workerRules().autoBuild(cityBuild, ctx.rules);
     }
 
     return false;
@@ -180,8 +178,10 @@ export const handleCityBuild: ActionHandler<
   return false;
 };
 
+// Buying what a city is building, and selling one of its improvements, are a rule set's own actions (Civ1's are in
+//  civ1-treasury), which its worker rules hand these (#865).
 export const handleCompleteProduction: ActionHandler<
-  CompleteProduction
+  PlayerAction<CityBuildItem>
 > = async (ctx, action, playerAction) => {
   const cityBuild = playerAction.value(),
     [playerTreasury] = ctx.playerTreasuries.getBy('id', action.treasury);
@@ -201,7 +201,7 @@ export const handleCompleteProduction: ActionHandler<
 };
 
 // Selling one of the city's improvements (#31): the rules decide whether it can be sold, and for what.
-export const handleSellImprovement: ActionHandler<SellImprovement> = async (
+export const handleSellImprovement: ActionHandler<PlayerAction<City>> = async (
   ctx,
   action,
   playerAction

@@ -9,6 +9,8 @@ import {
   dropRepeatedContacts,
   registerDiplomacyClasses,
 } from '@civ-clone/ui-worker-client/diplomacy';
+// Civ1's worker rules, which the client asks for once it acts (#865).
+import '@civ-clone/ui-rules-civ1';
 
 const failures: string[] = [];
 let checks = 0,

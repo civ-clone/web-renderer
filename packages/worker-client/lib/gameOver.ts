@@ -1,9 +1,4 @@
 import {
-  FAMOUS_LEADERS,
-  famousLeader,
-  rating,
-} from '@civ-clone/civ1-game-end/lib/scoring';
-import {
   CivilizationScore,
   GameOverCivilization,
   GameOverDetails,
@@ -11,6 +6,7 @@ import {
 import GameResult from '@civ-clone/core-turn-based-game/GameResult';
 import Player from '@civ-clone/core-player/Player';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
+import { workerRules } from '../workerRules';
 
 const civilizationOf = (player: Player): GameOverCivilization => {
   const leader = player.civilization().leader();
@@ -42,8 +38,7 @@ export const gameOverDetails = (
 ): GameOverDetails => {
   const destroyed = gameResult.reason() === 'destroyed',
     winner = gameResult.winner(),
-    ratingValue = destroyed ? null : rating(score.total, level),
-    leaderIndex = ratingValue === null ? null : famousLeader(ratingValue);
+    rated = destroyed ? null : workerRules().rating(score.total, level);
 
   return {
     id: gameResult.id(),
@@ -61,8 +56,8 @@ export const gameOverDetails = (
     year,
     difficulty,
     score: destroyed ? null : score,
-    rating: ratingValue,
-    famousLeader: leaderIndex === null ? null : FAMOUS_LEADERS[leaderIndex],
+    rating: rated?.rating ?? null,
+    famousLeader: rated?.famousLeader ?? null,
     discovery: destroyed ? discovery : null,
     scoringComplete: gameResult.scoringComplete(),
     keepPlaying: !destroyed,

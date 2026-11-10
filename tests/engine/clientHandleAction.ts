@@ -1,7 +1,7 @@
 // Acting on what the UI sends (#449), checked with plain data: `findPlayerAction` finds the player's action by name and
-//  value id, the handler table has one entry for each action the client acts on, in the order its `if` chain tested
-//  them, End Turn, Reassign Workers and the actions the client can't act on answer as they did, and a unit's action
-//  waits for the talks under way, then offers talks with the players met on the way, inside the hold on flushes, in
+//  value id, the handler table has one entry for each action the client acts on, the shared ones then Civ1's (#865),
+//  End Turn, Reassign Workers and the actions the client can't act on answer as they did, and a unit's action waits
+//  for the talks under way, then offers talks with the players met on the way, inside the hold on flushes, in
 //  the same number of microtasks as before the move (#503): counted through `handleAction` and through the client.
 
 import { ActiveUnit, InactiveUnit } from '@civ-clone/civ1-unit/PlayerActions';
@@ -29,11 +29,15 @@ import {
 } from '@civ-clone/ui-worker-client/Client/actions/unit';
 import {
   handleAdjustTradeRates,
-  handleChooseGovernment,
   handleChooseResearch,
   handleLaunchSpaceship,
-  handleRevolution,
 } from '@civ-clone/ui-worker-client/Client/actions/player';
+import {
+  handleChooseGovernment,
+  handleRevolution,
+} from '@civ-clone/ui-rules-civ1/actions/government';
+// Civ1's worker rules, which hand the client its own actions (#865).
+import '@civ-clone/ui-rules-civ1';
 import {
   handleChangeSpecialist,
   handleChangeWorkedTile,
@@ -157,50 +161,53 @@ expect(
   null
 );
 
-// The table: each action the client acted on, once, in the order its `if` chain tested them, with its handler.
+// The table: each action the client acts on, once, with its handler: the ones every rule set shares in the order the
+//  client's `if` chain tested them, then Civ1's own, which its worker rules hand in (#865).
 const expectedTable: [Function, Function][] = [
   [ActiveUnit, handleActiveUnit],
   [InactiveUnit, handleInactiveUnit],
   [CityBuild, handleCityBuild],
   [ChangeProduction, handleCityBuild],
   [ChooseResearch, handleChooseResearch],
-  [CompleteProduction, handleCompleteProduction],
-  [SellImprovement, handleSellImprovement],
-  [Revolution, handleRevolution],
-  [ChooseGovernment, handleChooseGovernment],
   [AdjustTradeRates, handleAdjustTradeRates],
   [ChangeWorkedTile, handleChangeWorkedTile],
   [ChangeSpecialist, handleChangeSpecialist],
   [LaunchSpaceship, handleLaunchSpaceship],
+  [CompleteProduction, handleCompleteProduction],
+  [SellImprovement, handleSellImprovement],
+  [Revolution, handleRevolution],
+  [ChooseGovernment, handleChooseGovernment],
 ];
 
+const table = actionHandlers();
+
 expect(
-  'the table lists the actions in the order the client tested them',
-  actionHandlers.map(([ActionType]) => ActionType.name),
+  'the table lists the shared actions, then the rule set’s own',
+  table.map(([ActionType]) => ActionType.name),
   expectedTable.map(([ActionType]) => ActionType.name)
 );
 expectedTable.forEach(([ActionType, handler], index) => {
   same(
     `entry ${index} is ${ActionType.name} itself`,
-    actionHandlers[index]?.[0],
+    table[index]?.[0],
     ActionType
   );
   same(
     `${ActionType.name} is acted on by ${handler.name}`,
-    actionHandlers[index]?.[1],
+    table[index]?.[1],
     handler
   );
   expect(
     `${ActionType.name} has one entry`,
-    actionHandlers.filter(([Type]) => Type === ActionType).length,
+    table.filter(([Type]) => Type === ActionType).length,
     1
   );
 });
 // No action in the table is an instance of another's class, so which comes first can't change which handler acts.
 expect(
   'no two classes in the table are one a subclass of the other',
-  actionHandlers.flatMap(([A]) =>
-    actionHandlers
+  table.flatMap(([A]) =>
+    table
       .filter(([B]) => A !== B && A.prototype instanceof B)
       .map(([B]) => `${A.name} < ${B.name}`)
   ),

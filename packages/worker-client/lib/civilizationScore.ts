@@ -5,8 +5,8 @@ import { GameResultRegistry } from '@civ-clone/core-turn-based-game/GameResultRe
 import Player from '@civ-clone/core-player/Player';
 import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
-import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
 import { CivilizationScore } from '@civ-clone/ui-protocol/reports';
+import { workerRules } from '../workerRules';
 
 export type CivilizationScoreDependencies = {
   gameResults: GameResultRegistry;
@@ -19,7 +19,7 @@ export const civilizationScore = (
   { gameResults, playerWorlds, rules }: CivilizationScoreDependencies
 ): CivilizationScore => {
   const gameResult = gameResults.get(),
-    bonus = conquestBonusFor(player, gameResults, playerWorlds),
+    bonus = workerRules().conquestBonus(player, gameResults, playerWorlds),
     total = score(player, rules);
 
   return {

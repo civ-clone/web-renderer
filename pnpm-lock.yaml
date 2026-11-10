@@ -19,6 +19,15 @@ importers:
       '@civ-clone/base-leader-personality':
         specifier: ^0.1.2
         version: 0.1.2
+      '@civ-clone/base-player-action-adjust-trade-rates':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@civ-clone/base-player-action-end-turn':
+        specifier: ^0.1.0
+        version: 0.1.0
+      '@civ-clone/base-player-action-launch-spaceship':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/base-strategy-victory':
         specifier: ^0.1.1
         version: 0.1.1
@@ -223,9 +232,18 @@ importers:
       '@civ-clone/library-city':
         specifier: ^0.1.4
         version: 0.1.4
+      '@civ-clone/library-civilization':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/library-diplomacy':
         specifier: ^0.1.4
         version: 0.1.4
+      '@civ-clone/library-government':
+        specifier: ^0.1.1
+        version: 0.1.1
+      '@civ-clone/library-science':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@civ-clone/library-unit':
         specifier: ^0.1.15
         version: 0.1.15
@@ -295,6 +313,9 @@ importers:
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:packages/protocol
+      '@civ-clone/ui-rules-civ1':
+        specifier: workspace:*
+        version: link:packages/rules-civ1
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:packages/widgets
@@ -770,6 +791,12 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/rules-civ1:
+    dependencies:
+      '@civ-clone/ui-worker-client':
+        specifier: workspace:*
+        version: link:../worker-client
 
   packages/widgets:
     dependencies:

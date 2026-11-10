@@ -43,6 +43,8 @@ import diplomatNotifications, {
 import i18next from 'i18next';
 import playerNotifications from '@civ-clone/ui-worker-client/Client/notifications/player';
 import unitNotifications from '@civ-clone/ui-worker-client/Client/notifications/unit';
+// Civ1's worker rules, which the client asks for once it acts (#865).
+import '@civ-clone/ui-rules-civ1';
 
 const failures: string[] = [];
 let checks = 0,
