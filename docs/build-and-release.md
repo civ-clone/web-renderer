@@ -52,8 +52,9 @@ Notable options:
 - `ts:compile:tests`: a typecheck of `tests/` (`tsconfig.tests.json`, via
   `tools/typecheck-tests.js`)
 - `prettier:format` / `prettier:check`: Prettier over `src/**/*.{ts,scss}`
-- `test`: generate the import lists, `ts:compile`, `ts:compile:tests`, then the
-  `test:*` suites in turn (most through `tools/run-suite.js`)
+- `test`: generate the import lists, then `ts:compile`, `ts:compile:tests` and
+  every `test:*` script side by side (`tools/test-all.js`; most are suites run
+  through `tools/run-suite.js`)
 - `arena`: seeded headless games comparing a candidate AI with the baseline (`tools/arena.js`; see [`arena.md`](arena.md))
 - `civ`: the engine multi-repo tool (`tools/civ`), used below
 - `release:changelog`: add release-note entries for every commit since the newest one — see [Releasing](#releasing)
@@ -116,8 +117,8 @@ npm test                    # typechecks src/ first — see below
 
 `npm test` starts by generating `src/js/plugins.ts` and `translations.ts` —
 git-ignored, so a clean checkout has neither, and the first deploy run failed
-typechecking because only this machine had them — then runs `ts:compile`,
-because nothing else typechecks the
+typechecking because only this machine had them — and runs `ts:compile`
+alongside the suites, because nothing else typechecks the
 renderer's own source: the suites are bundled with esbuild, which strips types
 without checking them, and `civ typecheck` compiles the engine checkouts. A
 type error there surfaced only when `npm run build` ran `prebuild` — as

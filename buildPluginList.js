@@ -103,12 +103,23 @@ if (entrypoints.length === 0) {
   process.exit(1);
 }
 
-fsModule.writeFileSync(
-  __dirname + '/src/js/plugins.ts',
-  entrypoints.map(({ entrypoint }) => `import '${entrypoint}';`).join('\n') +
+// Written only when it would change, and then put in place whole: the engine suites each ask for it before they run,
+//  several at a time under `npm test` (#879), and one must never read a list another is halfway through writing.
+const target = __dirname + '/src/js/plugins.ts',
+  contents =
+    entrypoints.map(({ entrypoint }) => `import '${entrypoint}';`).join('\n') +
     `\n\nexport const plugins: { [name: string]: string } = ${JSON.stringify(
       manifest,
       null,
       2
-    )};\n`
-);
+    )};\n`;
+
+if (
+  !fsModule.existsSync(target) ||
+  fsModule.readFileSync(target, 'utf8') !== contents
+) {
+  const partial = `${target}.${process.pid}.tmp`;
+
+  fsModule.writeFileSync(partial, contents);
+  fsModule.renameSync(partial, target);
+}

@@ -95,6 +95,41 @@ const bundle = async (kind, name, { esbuild = {}, entryPoint } = {}) => {
   return { directory, outfile };
 };
 
+// Every suite in `names`, of one kind, in a single build, as `<directory>/<kind>/<name>.js`: what `bundle` makes of
+//  each, but with the code they share read once rather than once per suite (#879). `npm test` does this up front
+//  and points the suites at the result with `SUITE_BUNDLES`.
+const bundleAll = async (kind, names, directory) => {
+  await require('esbuild').build({
+    entryPoints: Object.fromEntries(
+      names.map((name) => [
+        name,
+        path.join(webRenderer, 'tests', kind, `${name}.ts`),
+      ])
+    ),
+    bundle: true,
+    keepNames: true,
+    platform: 'node',
+    format: 'cjs',
+    target: 'node18',
+    outdir: path.join(directory, kind),
+    logLevel: 'silent',
+    ...bundleOptions(kind),
+  });
+};
+
+// A suite's bundle made earlier by `bundleAll`, where `SUITE_BUNDLES` names the directory and it has one.
+const bundled = (kind, name) => {
+  const directory = process.env.SUITE_BUNDLES;
+
+  if (!directory) {
+    return null;
+  }
+
+  const outfile = path.join(directory, kind, `${name}.js`);
+
+  return fs.existsSync(outfile) ? outfile : null;
+};
+
 // One process. True when it exited 0 and printed a `PASS` line in time.
 const runOnce = (
   outfile,
@@ -143,14 +178,18 @@ const runSuite = async (
   name,
   { runs = [{}], esbuild, entryPoint } = {}
 ) => {
-  if (kind === 'engine') {
+  // Bundled already, with every other suite, by whoever is running them all: only a suite bundled its own way
+  //  (other options, or another entry point) makes its own.
+  const ready = esbuild || entryPoint ? null : bundled(kind, name);
+
+  if (ready === null && kind === 'engine') {
     regeneratePlugins();
   }
 
-  const { directory, outfile } = await bundle(kind, name, {
-    esbuild,
-    entryPoint,
-  });
+  const { directory, outfile } =
+    ready === null
+      ? await bundle(kind, name, { esbuild, entryPoint })
+      : { directory: null, outfile: ready };
 
   const timeout = Number(process.env.SUITE_TIMEOUT_MS) || DEFAULT_TIMEOUT;
 
@@ -165,7 +204,9 @@ const runSuite = async (
       return !runOnce(outfile, { timeout, ...run });
     });
   } finally {
-    fs.rmSync(directory, { recursive: true, force: true });
+    if (directory !== null) {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
   }
 
   if (runs.length > 1) {
@@ -181,4 +222,12 @@ const runSuite = async (
   process.exit(failed.length > 0 ? 1 : 0);
 };
 
-module.exports = { bundle, passLine, regeneratePlugins, runOnce, runSuite };
+module.exports = {
+  bundle,
+  bundleAll,
+  bundleOptions,
+  passLine,
+  regeneratePlugins,
+  runOnce,
+  runSuite,
+};

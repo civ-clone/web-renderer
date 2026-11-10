@@ -102,7 +102,9 @@ npm run prettier:check                      # formatting; prettier:format fixes 
 npm run ts:compile                          # typecheck src/
 node tools/run-suite.js ui citizens         # one suite, tests/ui/citizens.ts
 npm run test:observer                       # the same through its npm script
-npm test                                    # everything: about five minutes
+npm test                                    # everything, several at a time: about a minute
+npm test -- city window                     # only the scripts with "city" or "window" in their name
+npm test -- --for packages/map              # only the suites whose imports reach that path
 npm run build && npm run test:browser       # the built game in headless Chrome
 ```
 
@@ -114,6 +116,13 @@ and compares its checksums to a committed fixture: it is the regression net for
 the whole engine, and `--update` rewrites the fixture when a change to the rules
 is meant to move it.
 
+`npm test` (`tools/test-all.js`) runs every script named `test:*` in
+`package.json`, and the two type-checks, as many at a time as the machine has
+cores; `--jobs 1` runs them one after another. A new suite needs its
+`test:<name>` script and nothing else: there is no list to add it to. Each
+script's output is printed whole when it finishes, and the ones that failed
+are named, with their output, again at the end.
+
 `npm run test:browser` is the one check that opens the game in a browser
 (`tools/browser-smoke.js`). It needs `npm run build` first, and a Chrome: it
 looks in `CHROME`, on the `PATH`, in Playwright's cache and where macOS keeps
@@ -121,10 +130,12 @@ it, and is skipped when there is none (a failure on CI). It loads a save the
 engine makes on the spot, opens every report and a city under both interfaces,
 loads the same save as one from before a plugin was renamed, and opens the
 page with site data blocked, failing on any error the page reports. It is not
-part of `npm test`; the test workflow runs it as its own job.
+part of `npm test`; the test workflow runs it after the build.
 
 Open a pull request against `main`. The test workflow runs
-`npm run prettier:check` and the same `npm test`, and merging to `main`
+`npm run prettier:check`, the same `npm test`, then the build and
+`npm run test:browser` (a pull request that only changes docs runs none of
+it), and merging to `main`
 deploys to civ.one. **Commit messages are the release
 notes**: every commit body on `main` is shown to players in the game's release
 window, one bullet per paragraph, so write it for a player ("When choosing your

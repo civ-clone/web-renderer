@@ -178,7 +178,7 @@ const serve = () =>
   });
 
 // A page in a headless Chrome of its own, driven over the DevTools protocol.
-const launch = async (chrome) => {
+const launchOnce = async (chrome) => {
   const port = await freePort(),
     profile = fs.mkdtempSync(path.join(os.tmpdir(), `${NAME}-`)),
     child = spawn(
@@ -194,16 +194,31 @@ const launch = async (chrome) => {
         '--no-first-run',
         '--no-default-browser-check',
         '--disable-gpu',
+        // Nothing a test needs, and each one more thing to wait for as the browser starts.
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-component-update',
+        // Its shared memory in the temporary directory: /dev/shm is small on some runners.
+        '--disable-dev-shm-usage',
         // A hosted runner has no user namespaces for Chrome's sandbox to use.
         ...(process.env.CI ? ['--no-sandbox'] : []),
         'about:blank',
       ],
-      { stdio: 'ignore' }
-    );
+      { stdio: ['ignore', 'ignore', 'pipe'] }
+    ),
+    // What the browser said as it started, for when it doesn't.
+    said = [];
+
+  child.stderr.on('data', (chunk) => said.push(chunk));
 
   let target;
 
-  for (let attempt = 0; attempt < 100 && !target; attempt++) {
+  // Half a minute: a cold runner can take ten seconds over it. Not once the browser has gone, though.
+  for (
+    let attempt = 0;
+    attempt < 300 && !target && child.exitCode === null;
+    attempt++
+  ) {
     await sleep(100);
 
     try {
@@ -234,7 +249,18 @@ const launch = async (chrome) => {
   if (!target) {
     discard();
 
-    throw new Error(`${chrome} did not start`);
+    throw new Error(
+      `${chrome} did not start${
+        child.exitCode === null ? '' : ` (it exited with ${child.exitCode})`
+      }: ${
+        Buffer.concat(said)
+          .toString('utf8')
+          .trim()
+          .split('\n')
+          .slice(-5)
+          .join(' | ') || 'it said nothing'
+      }`
+    );
   }
 
   const socket = new WebSocket(target.webSocketDebuggerUrl),
@@ -406,6 +432,22 @@ const launch = async (chrome) => {
       discard();
     },
   };
+};
+
+// A browser that doesn't start is tried again, twice: it is the runner's doing, not the game's, and a second go
+//  costs seconds where a failed run costs the whole job again.
+const launch = async (chrome) => {
+  let last;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await launchOnce(chrome);
+    } catch (error) {
+      last = error;
+    }
+  }
+
+  throw last;
 };
 
 // Until `check` in the page gives something truthy, which is returned, or `false` when it never does.

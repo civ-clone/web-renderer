@@ -43,7 +43,7 @@ cd web-renderer
 pnpm install --frozen-lockfile
 npm run build        # or build:dev, or watch
 docker compose up    # serves on http://127.0.0.1:8080; or any static server
-npm test             # about five minutes
+npm test             # about a minute: every suite, several at a time
 ```
 
 The rest of [`docs/`](./docs/README.md) describes the implementation: the

@@ -3,14 +3,24 @@
 # after the merge; until now that was the first time they ran, and a failure
 # there left `main` undeployable with player-facing fixes queued behind it.
 #
-# The same install and `npm test` as deploy.yml, plus `prettier:check`: the
-# build only formats (`prettier:format` in `prebuild`), so nothing failed on
-# unformatted source. Nothing here builds or deploys.
+# The same install and `npm test` as deploy.yml, plus `prettier:check` (the
+# build only formats, `prettier:format` in `prebuild`, so nothing failed on
+# unformatted source), then the build and the built game in a real browser
+# (#878). Nothing here deploys.
+#
+# One job, not one for the tests and one for the browser: a job is billed by
+# the whole minute and pays for its own checkout and install, and `npm test`
+# runs its suites side by side now (#879), so the lot fits in about two.
+# A pull request that changes only the docs runs none of it: no suite reads
+# them.
 
 name: Test
 
 on:
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
 
 # A newer push to the same pull request replaces the run under way.
@@ -45,27 +55,8 @@ jobs:
 
       - run: npm test
 
-  # The built game in a real browser (#878): the page comes up, a save loads, and the reports and a city open under
-  # both interfaces. Its own job, as it needs the build and a browser, which `npm test` does not; the runner's Chrome
-  # is found on the PATH.
-  browser:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 11.5.2
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
+      # The built game in a real browser (#878): the page comes up, a save loads, and the reports and a city open
+      # under both interfaces. The runner's own Chrome is found on the PATH.
       - run: npm run build
 
       - run: npm run test:browser

@@ -15,7 +15,19 @@ const getTranslations = (glob = globModule, fs = fsModule) =>
     .flatMap((pathName) => glob.sync(pathName) || [])
     .sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 
-fsModule.writeFileSync(
-  __dirname + '/src/js/translations.ts',
-  getTranslations().map((fullPath) => `import '${fullPath}';`).join('\n')
-);
+// Written only when it would change, and then put in place whole, as `buildPluginList.js` writes its own: the ui
+//  suites read this while others may be asking for it again (#879).
+const target = __dirname + '/src/js/translations.ts',
+  contents = getTranslations()
+    .map((fullPath) => `import '${fullPath}';`)
+    .join('\n');
+
+if (
+  !fsModule.existsSync(target) ||
+  fsModule.readFileSync(target, 'utf8') !== contents
+) {
+  const partial = `${target}.${process.pid}.tmp`;
+
+  fsModule.writeFileSync(partial, contents);
+  fsModule.renameSync(partial, target);
+}
