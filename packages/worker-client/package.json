@@ -28,7 +28,7 @@
     "@civ-clone/core-city-improvement": "^0.1.7",
     "@civ-clone/core-civilization": "^0.1.8",
     "@civ-clone/core-client": "^0.1.4",
-    "@civ-clone/core-data-client": "^0.1.1",
+    "@civ-clone/core-data-client": "^0.1.2",
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-difficulty": "^0.1.0",
     "@civ-clone/core-diplomacy": "^0.1.8",

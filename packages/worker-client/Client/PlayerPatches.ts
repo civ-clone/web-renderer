@@ -487,11 +487,14 @@ export class PlayerPatches {
       return;
     }
 
-    // Emptied whether it went or not: kept, what couldn't be sent would stop every later patch the same way (#470).
+    // Taken out of the queue before it is built, so it is emptied whether it goes or not: kept, what couldn't be sent
+    //  would stop every later patch the same way (#470). A patch queued while these are built (by one of their value
+    //  functions) stays for the next flush, where it used to be thrown away with them (#877). What was queued is
+    //  forgotten only after the build, which reads it (`governmentChanged`), so such a patch's object may be queued
+    //  once more before it goes: sent twice, which does no harm.
     try {
-      this.#transport.send('gameDataPatch', this.#dataQueue.transferData());
+      this.#transport.send('gameDataPatch', this.#dataQueue.take());
     } finally {
-      this.#dataQueue.clear();
       this.#queuedTiles.clear();
       this.#governmentTiles.clear();
       this.#queued.clear();

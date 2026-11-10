@@ -1,6 +1,6 @@
 // The flush of the client's patches (#321, #449), checked with a stub transport and plain data: a flush sends what is
 //  queued as one patch and empties the queue, sends nothing while held, and a hold is let go of when what it holds for
-//  is done, whether that returned or threw.
+//  is done, whether that returned or threw. What is queued while a flush is being built waits for the next (#877).
 
 import ActionsState from '@civ-clone/ui-worker-client/Client/ActionsState';
 import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
@@ -197,6 +197,29 @@ const sent: [string, unknown][] = [],
   expect('a patch that could not be sent is not sent again', sent, [
     ['gameDataPatch', [patch('i', { value: 9 })]],
   ]);
+
+  sent.splice(0);
+
+  // A patch queued while the flush builds its values goes with the next flush (#877): it used to be emptied out
+  //  with the ones being sent, and never went.
+  patches.update('j', () => {
+    patches.update('k', patchValue(11));
+
+    return patchValue(10);
+  });
+  patches.flush();
+  patches.flush();
+  patches.flush();
+
+  expect(
+    'a patch queued while a flush is built goes with the next, once',
+    sent,
+    [
+      ['gameDataPatch', [patch('j', { value: 10 })]],
+      ['gameDataPatch', [patch('k', { value: 11 })]],
+      ['gameDataPatch', []],
+    ]
+  );
 
   finished = true;
 
