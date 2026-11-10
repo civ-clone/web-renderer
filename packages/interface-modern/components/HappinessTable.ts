@@ -10,7 +10,7 @@ import {
 import {
   citizenFace,
   renderPopulation,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import {
   groupIcons,
   reduceKnownYield,

@@ -1,0 +1,18 @@
+{
+  "name": "@civ-clone/ui-city",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The city screen and what it is made of (its map of squares, yields, citizens and keeping the focus as it redraws), renaming a city and Find City.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-button": "workspace:*",
+    "@civ-clone/ui-component-choice-window": "workspace:*",
+    "@civ-clone/ui-component-progress-bar": "workspace:*",
+    "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}

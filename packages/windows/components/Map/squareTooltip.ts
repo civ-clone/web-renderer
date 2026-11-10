@@ -8,7 +8,7 @@ import { Tile } from '@civ-clone/ui-protocol/types';
 import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import { netTileYields } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
-import { yieldIcon } from '../lib/cityYields';
+import { yieldIcon } from '@civ-clone/ui-city/components/lib/cityYields';
 
 // What a map square is, as the Civilopedia and the square itself would tell you (#748): its terrain and special
 //  resource, what it yields now, what it does for a unit there, what's been built on it, and the city on it or working

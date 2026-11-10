@@ -38,7 +38,7 @@ import IncrementalReconstituter from '@civ-clone/ui-client/lib/IncrementalRecons
 import applyDataPatches from '@civ-clone/ui-client/lib/applyDataPatches';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import { toggleAuto } from '@civ-clone/ui-client/components/lib/cityBuild';
-import watchCity from '@civ-clone/ui-windows/components/lib/watchCity';
+import watchCity from '@civ-clone/ui-city/components/lib/watchCity';
 
 const failures: string[] = [];
 let checks = 0,

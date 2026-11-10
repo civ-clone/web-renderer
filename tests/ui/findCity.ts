@@ -11,7 +11,7 @@ import { City, Tile } from '@civ-clone/ui-protocol/types';
 import {
   findCityRows,
   openFindCity,
-} from '@civ-clone/ui-windows/components/FindCity';
+} from '@civ-clone/ui-city/components/FindCity';
 import eyebrowFor from '@civ-clone/ui-component-window/windowEyebrows';
 import { matchRank } from '@civ-clone/ui-widgets/lib/filterRows';
 import i18next from 'i18next';

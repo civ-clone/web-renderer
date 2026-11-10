@@ -2,7 +2,7 @@
   "name": "@civ-clone/ui-component-window",
   "version": "0.1.0",
   "private": true,
-  "description": "The window every interface builds on: its chrome, closing, dragging and filtering, and the notification, confirmation and action windows made from it, with their styles.",
+  "description": "The window every interface builds on: its chrome, closing, dragging and filtering, the notification, confirmation and action windows made from it, with their styles, and the `choices` slot every pick-one list (what a city builds, which unit in a stack) opens through.",
   "license": "MIT",
   "dependencies": {
     "@civ-clone/ui-assets": "workspace:*",

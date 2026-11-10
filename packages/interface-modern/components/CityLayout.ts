@@ -10,7 +10,7 @@ import {
   CityScreenContext,
   renderBuildProgress,
   renderTradeRoutes,
-} from '@civ-clone/ui-windows/components/City';
+} from '@civ-clone/ui-city/components/City';
 import {
   editQueue,
   getAutoLabel,
@@ -23,11 +23,11 @@ import {
   renderPopulation,
   turnsText,
   yieldIcon,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import {
   renderMap,
   renderYields,
-} from '@civ-clone/ui-windows/components/lib/cityParts';
+} from '@civ-clone/ui-city/components/lib/cityParts';
 import { growthLimitText } from '@civ-clone/ui-client/components/lib/city';
 import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
 import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
@@ -38,7 +38,7 @@ import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
+import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';

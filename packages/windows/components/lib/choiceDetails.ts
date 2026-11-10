@@ -1,8 +1,7 @@
 import Civilopedia, { entryHtml, loadCivilopedia } from '../Civilopedia';
 import { CivilopediaKind } from '@civ-clone/ui-protocol/civilopedia';
 import Transport from '@civ-clone/ui-client/Transport';
-import { escape } from './requirements';
-import { h } from '@civ-clone/ui-widgets/lib/html';
+import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

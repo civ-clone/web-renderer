@@ -11,7 +11,7 @@ import {
 } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean, ...args: any[]) => void;
 

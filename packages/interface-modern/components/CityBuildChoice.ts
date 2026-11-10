@@ -22,7 +22,7 @@ import { t } from 'i18next';
 import {
   turnsLeft,
   yieldIcon,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 
 type onCompleteHandler = (hasSelected: boolean) => void;
 

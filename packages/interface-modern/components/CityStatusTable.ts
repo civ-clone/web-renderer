@@ -13,7 +13,7 @@ import {
   turnsText,
   yieldData,
   yieldIcon,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import corruptionIcon from '@civ-clone/ui-assets/components/lib/corruptionIcon';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';

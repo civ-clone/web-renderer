@@ -13,13 +13,13 @@ import {
 import { renderFigures, turnsLeft, yieldImages } from './lib/cityYields';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
-import { openCityBuild } from './choices';
+import { openCityBuild } from '@civ-clone/ui-component-window/choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from './lib/requirements';
+import { escape } from '@civ-clone/ui-widgets/lib/html';
 import keepFocus from './lib/keepFocus';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';

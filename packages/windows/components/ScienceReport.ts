@@ -9,7 +9,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { combinedYields } from './lib/playerYields';
-import { turnsLeft } from './lib/cityYields';
+import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, { researchIds } from './lib/watchPlayer';

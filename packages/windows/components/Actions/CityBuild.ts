@@ -4,7 +4,7 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import Action from './Action';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
-import { openCityBuild } from '../choices';
+import { openCityBuild } from '@civ-clone/ui-component-window/choices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

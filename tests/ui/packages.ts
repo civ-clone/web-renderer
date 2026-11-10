@@ -170,8 +170,8 @@ expect(
     edges.length > 1000,
     edges.some(
       ({ path, target }) =>
-        relative(packagesRoot, path) === 'windows/components/openCity.ts' &&
-        relative(packagesRoot, target) === 'windows/components/City.ts'
+        relative(packagesRoot, path) === 'city/components/openCity.ts' &&
+        relative(packagesRoot, target) === 'city/components/City.ts'
     ),
     edges.some(({ from, to }) => from === 'windows' && to === 'client'),
   ],

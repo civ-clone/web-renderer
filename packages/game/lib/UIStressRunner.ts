@@ -6,7 +6,7 @@ import {
   UnitAction,
 } from '@civ-clone/ui-protocol/types';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
-import openCity from '@civ-clone/ui-windows/components/openCity';
+import openCity from '@civ-clone/ui-city/components/openCity';
 import {
   openCityStatus,
   openHappinessReport,

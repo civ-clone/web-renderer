@@ -1,7 +1,10 @@
 import { City, Player } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import i18next, { TOptions, t } from 'i18next';
-import { buildTurns, turnsText } from './lib/cityYields';
+import {
+  buildTurns,
+  turnsText,
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import DataChanges, {
   instance as dataChanges,
 } from '@civ-clone/ui-client/lib/DataChanges';

@@ -9,7 +9,7 @@ import {
   cityNameText,
   viewCityText,
 } from '@civ-clone/ui-client/components/lib/city';
-import { renderCitizenCounts } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { renderCitizenCounts } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
