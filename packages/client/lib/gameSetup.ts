@@ -1,6 +1,6 @@
 // What the game setup (#605) holds and sends, apart from how it is drawn: the world, the seats, and the request that
-//  starts the game. The new interface's form (`GameSetupForm`, #750) draws it; the classic `GameSetupWindow` keeps its
-//  own copy until the switch-over retires it (#735).
+//  starts the game. Both interfaces draw it: the new interface's form (`GameSetupForm`, #750) and the classic
+//  `GameSetupWindow`, which differs only in how it treats a civilization's lone leader (#868).
 
 import {
   WorldSize,
@@ -332,9 +332,18 @@ export class GameSetup {
       : customSizeProblem(this.topologyId, width, height);
   }
 
+  /** A chosen leader is sent, but not a civilization's lone one, which the worker would choose anyway. */
+  sendsLeader(seat: SeatState): boolean {
+    return (
+      seat.civilization !== RANDOM &&
+      seat.leader !== RANDOM &&
+      (this.civilization(seat)?.leaders.length ?? 0) > 1
+    );
+  }
+
   /**
-   * The seats as the worker takes them: random and the default AI left out, and a civilization's lone leader too,
-   *  which is shown but is the only one the worker could choose anyway, as the classic setup sends it.
+   * The seats as the worker takes them: random and the default AI left out, and a leader only as `sendsLeader()`
+   *  says.
    */
   seatsPayload(): object[] {
     return this.seats.map((seat) => ({
@@ -345,11 +354,7 @@ export class GameSetup {
       ...(seat.civilization !== RANDOM
         ? { civilization: seat.civilization }
         : {}),
-      ...(seat.civilization !== RANDOM &&
-      seat.leader !== RANDOM &&
-      (this.civilization(seat)?.leaders.length ?? 0) > 1
-        ? { leader: seat.leader }
-        : {}),
+      ...(this.sendsLeader(seat) ? { leader: seat.leader } : {}),
       ...(seat.kind === 'computer' &&
       seat.ai !== '' &&
       seat.ai !== this.data.aiClients[0]
