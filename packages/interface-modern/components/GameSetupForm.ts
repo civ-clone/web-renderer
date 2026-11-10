@@ -19,6 +19,7 @@ import {
   preselectedDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
+import { ruleSetsSection } from '@civ-clone/ui-menus/lib/ruleSetControls';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
@@ -151,7 +152,13 @@ export class GameSetupForm extends Window {
       // Made, not parsed: `s()` parses inside a `<div>`, where a browser drops a bare `<thead>` or `<tr>`.
       table = document.createElement('table'),
       head = document.createElement('thead'),
-      headRow = document.createElement('tr');
+      headRow = document.createElement('tr'),
+      // The rule sets the game can be started with or without (#158), when the rules offer any.
+      rules = ruleSetsSection(
+        setup,
+        this.#transport,
+        'ui-game-setup-rules rule-sets-section'
+      );
 
     table.className = 'ui-game-setup-seats';
     headRow.append(
@@ -304,6 +311,7 @@ export class GameSetupForm extends Window {
           field(t('GameSetup.difficulty'), this.#difficultySelect, {
             hint: this.#difficultyHint,
           }),
+          ...(rules === null ? [] : [rules]),
           advanced
         ),
         s(
@@ -336,7 +344,8 @@ export class GameSetupForm extends Window {
     this.#renderDifficulty();
 
     this.on('keydown', (event) => {
-      // Not from a select, a button, a toggle or the Advanced summary, which Enter works, nor mid-composition.
+      // Not from a select, a button, a toggle, a rule set's checkbox or the Advanced summary, which Enter works or
+      //  which it would be a surprise to start a game from, nor mid-composition.
       if (
         event.key === 'Enter' &&
         !event.repeat &&
@@ -345,7 +354,7 @@ export class GameSetupForm extends Window {
         !(event.target instanceof HTMLButtonElement) &&
         !(
           event.target instanceof HTMLInputElement &&
-          event.target.type === 'radio'
+          ['checkbox', 'radio'].includes(event.target.type)
         ) &&
         !(
           event.target instanceof HTMLElement && event.target.closest('summary')

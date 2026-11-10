@@ -14,6 +14,14 @@
     }
   }
 
+  details.rules {
+    margin: 0.5rem;
+
+    summary {
+      cursor: pointer;
+    }
+  }
+
   h4 {
     margin: 1rem 0.5rem 0;
   }
@@ -51,5 +59,56 @@
     button.resume {
       margin: 0.5rem;
     }
+  }
+}
+
+// The rule sets a new game can switch (#158), in either interface's setup: a set's checkbox, a line on what it does,
+//  and the sets inside it beneath, indented. A choice between alternatives is a group of radio buttons under its name.
+.rule-sets-section {
+  .rule-sets {
+    list-style: none;
+    margin: 0.25rem 0 0;
+    padding: 0;
+
+    // The sets inside a set.
+    .rule-sets {
+      padding-left: 1.5rem;
+    }
+  }
+
+  .rule-set {
+    margin: 0.25rem 0 0;
+
+    > label,
+    .rule-set-alternative > label {
+      align-items: center;
+      cursor: pointer;
+      display: flex;
+      gap: 0.5em;
+    }
+
+    fieldset {
+      border: 0;
+      margin: 0;
+      min-width: 0;
+      padding: 0;
+    }
+
+    legend,
+    .rule-set-heading {
+      font-weight: var(--type-strong-weight);
+      padding: 0;
+    }
+  }
+
+  // Under its checkbox, in line with the name and not the box.
+  p.rule-set-description {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+    margin: 0 0 0 1.75rem;
+  }
+
+  fieldset > p.rule-set-description {
+    margin-left: 0;
   }
 }

@@ -230,9 +230,9 @@ const run = async (): Promise<void> => {
   let view = await open();
 
   expect(
-    'it asks the worker for the civilizations, AI clients, difficulties and options, and nothing else',
+    'it asks the worker for the civilizations, AI clients, difficulties, rule sets and options, and nothing else',
     view.log.map(({ channel }) => channel).sort(),
-    ['aiClients', 'civilizations', 'difficulties', 'getOptions']
+    ['aiClients', 'civilizations', 'difficulties', 'getOptions', 'ruleSets']
   );
   expect(
     'the options asked for are the ones the Advanced section shows',
@@ -770,6 +770,8 @@ const run = async (): Promise<void> => {
       landSize: '0.2',
       maxIterations: '20',
       difficulty: 'Prince',
+      // No rule set switched (#158): this worker offers none.
+      ruleSets: [],
       seats: [{ kind: 'human' }, ...new Array(6).fill({ kind: 'computer' })],
     }
   );

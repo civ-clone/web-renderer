@@ -17,6 +17,11 @@ import Difficulties, {
   DifficultyOption,
 } from '@civ-clone/ui-protocol/Requests/Difficulties';
 import Options from '@civ-clone/ui-protocol/Requests/Options';
+import RuleSets, {
+  RuleSetChoice,
+  RuleSetNode,
+  RuleSetsAnswer,
+} from '@civ-clone/ui-protocol/Requests/RuleSets';
 import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from './topologyFor';
 import Transport from '../Transport';
@@ -49,6 +54,8 @@ export type SetupData = {
   civilizations: CivilizationOption[];
   difficulties: DifficultyOption[];
   existing: { [key: string]: any };
+  /** The rule sets a new game can switch (#158), as they start. None, from a worker that offers none. */
+  ruleSets?: RuleSetsAnswer;
 };
 
 /** The world's land, as the Advanced section sets it. */
@@ -71,22 +78,24 @@ export const RANDOM = 'random';
 export const requestSetupData = async (
   transport: Transport
 ): Promise<SetupData> => {
-  const [civilizations, aiClients, difficulties, existing] = await Promise.all([
-    transport.request(new Civilizations()),
-    transport.request(new AIClients()),
-    transport.request(new Difficulties()),
-    transport.request(
-      new Options([
-        'width',
-        'height',
-        'landCoverage',
-        'landSize',
-        'maxIterations',
-      ])
-    ),
-  ]);
+  const [civilizations, aiClients, difficulties, ruleSets, existing] =
+    await Promise.all([
+      transport.request(new Civilizations()),
+      transport.request(new AIClients()),
+      transport.request(new Difficulties()),
+      transport.request(new RuleSets()),
+      transport.request(
+        new Options([
+          'width',
+          'height',
+          'landCoverage',
+          'landSize',
+          'maxIterations',
+        ])
+      ),
+    ]);
 
-  return { aiClients, civilizations, difficulties, existing };
+  return { aiClients, civilizations, difficulties, existing, ruleSets };
 };
 
 export class GameSetup {
@@ -101,8 +110,20 @@ export class GameSetup {
   // In player order.
   seats: SeatState[];
 
+  // The rule sets (#158) as the worker last described them, and the choices that make them so, which `start` sends.
+  //  What is drawn comes from the worker each time: what switching a set does to what is beneath it is the rules' to
+  //  say.
+  ruleSets: RuleSetNode[];
+  ruleSetChoices: RuleSetChoice[];
+  // One change at a time, each made to the choices the one before it left: two sent together would both start from
+  //  the same choices, and the second answer would undo the first.
+  #ruleSetChange: Promise<void> = Promise.resolve();
+
   constructor(data: SetupData, preset: GameSetupPreset = {}) {
     this.data = data;
+
+    this.ruleSets = data.ruleSets?.sets ?? [];
+    this.ruleSetChoices = data.ruleSets?.choices ?? [];
 
     if (preset.earth) {
       this.earth = true;
@@ -364,6 +385,27 @@ export class GameSetup {
   }
 
   /**
+   * Switches a rule set or a rule on or off (`value` a boolean), or picks the member of a choice (its id), and takes
+   *  the sets as the worker says they then are. Not answered, the player has been told, and the sets are as they were.
+   */
+  changeRuleSet(transport: Transport, change: RuleSetChoice): Promise<void> {
+    this.#ruleSetChange = this.#ruleSetChange.then(async (): Promise<void> => {
+      try {
+        const { sets, choices } = await transport.request(
+          new RuleSets({ choices: this.ruleSetChoices, change })
+        );
+
+        this.ruleSets = sets;
+        this.ruleSetChoices = choices;
+      } catch (error) {
+        unlessRequestFailed(error);
+      }
+    });
+
+    return this.#ruleSetChange;
+  }
+
+  /**
    * Sends the world options and the seats as one `setOptions`, then `start`. Not answered, the player has been told,
    *  and the main menu is still there, with no game started (#580).
    */
@@ -377,6 +419,9 @@ export class GameSetup {
       rememberDifficulty(difficulty);
     }
 
+    // A rule set switched a moment ago is part of what is sent.
+    await this.#ruleSetChange;
+
     try {
       await transport.request(
         new Request('setOptions', {
@@ -386,6 +431,7 @@ export class GameSetup {
           height: this.height,
           ...land,
           difficulty,
+          ruleSets: this.ruleSetChoices,
           seats: this.seatsPayload(),
         })
       );

@@ -129,6 +129,8 @@ export const askPlayerCount = (
           new Request('setOptions', {
             ...worldOptions,
             players: parseInt(selection, 10),
+            // Every rule set as it starts (#158), whatever a game setup that was opened first, and not started, chose.
+            ruleSets: [],
           })
         );
       } catch (error) {

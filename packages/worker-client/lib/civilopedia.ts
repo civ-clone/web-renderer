@@ -26,6 +26,7 @@ import Unit from '@civ-clone/core-unit/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
 import Yield from '@civ-clone/core-yield/Yield';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import { entriesInForce } from './requirements';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import {
   CivilopediaKind,
@@ -47,8 +48,11 @@ const kinds: [CivilopediaKind, Class][] = [
 export const kindOf = (Item: Class): CivilopediaKind | null =>
   kinds.find(([, Base]) => Item.prototype instanceof Base)?.[0] ?? null;
 
-const ids = (entries: Requirement[]): string[] =>
-  entries.map((entry: Requirement): string => entry.id);
+// Those in force, as `requirementsData` sends them: an entry left out there must not be named here.
+const ids = (entries: Requirement[], kept: Set<Requirement>): string[] =>
+  entries
+    .filter((entry: Requirement): boolean => kept.has(entry))
+    .map((entry: Requirement): string => entry.id);
 
 // A rule a plugin wrote for a city may not expect to be asked without one: the item then shows no cost.
 const costOf = (Item: Class, game: Game): number | null => {
@@ -84,19 +88,20 @@ export const unitStats = (UnitType: Class, rules: RuleRegistry): UnitStats => ({
 export const civilopediaData = (
   game: Game = defaultGame
 ): CivilopediaEntry[] => {
-  const entry = (
-    Item: Class,
-    kind: CivilopediaKind,
-    buildable: boolean = false
-  ): CivilopediaEntry => ({
-    key: typeNameOf(Item),
-    name: Item.name,
-    kind,
-    requires: ids(game.requirements.for(Item as any)),
-    leadsTo: ids(game.requirements.leadsTo(Item as any)),
-    cost: buildable ? costOf(Item, game) : null,
-    stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
-  });
+  const kept = new Set(entriesInForce(game.requirements, game.rules)),
+    entry = (
+      Item: Class,
+      kind: CivilopediaKind,
+      buildable: boolean = false
+    ): CivilopediaEntry => ({
+      key: typeNameOf(Item),
+      name: Item.name,
+      kind,
+      requires: ids(game.requirements.for(Item as any), kept),
+      leadsTo: ids(game.requirements.leadsTo(Item as any), kept),
+      cost: buildable ? costOf(Item, game) : null,
+      stats: kind === 'unit' ? unitStats(Item, game.rules) : null,
+    });
 
   return [
     ...(game.advances.entries() as Class[])

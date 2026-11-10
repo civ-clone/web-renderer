@@ -34,10 +34,22 @@ type Seat = {
   name?: string;
 };
 
-type Setup = { seats?: Seat[]; players?: number };
+type RuleSetChoice = { id: string; value: boolean | string };
+type Setup = { seats?: Seat[]; players?: number; ruleSets?: RuleSetChoice[] };
 
-// A game that can't start: the seats it was given, and what the `workerError` should name.
-const FAILURES: { [name: string]: { seats: Seat[]; names: string[] } } = {
+// "Units go obsolete" (#158), switched off.
+const OBSOLESCENCE = 'civ1-unit:obsolescence',
+  OBSOLESCENCE_OFF: RuleSetChoice = { id: OBSOLESCENCE, value: false };
+
+// A game that can't start: the seats it was given, and what the `workerError` should name. And a game set up with a
+//  rule set that isn't here (#158), which doesn't start either.
+const FAILURES: {
+    [name: string]: {
+      seats: Seat[];
+      ruleSets?: RuleSetChoice[];
+      names: string[];
+    };
+  } = {
     'two-humans': {
       seats: [{ kind: 'human' }, { kind: 'human' }],
       names: ['Only one human seat'],
@@ -68,6 +80,11 @@ const FAILURES: { [name: string]: { seats: Seat[]; names: string[] } } = {
       seats: [{ kind: 'human' }, { kind: 'computer', ai: 'NoSuchAI' }],
       names: ['NoSuchAI'],
     },
+    'unknown-rule-set': {
+      seats: [{ kind: 'human' }, { kind: 'computer' }],
+      ruleSets: [OBSOLESCENCE_OFF, { id: 'nowhere:set', value: false }],
+      names: ['nowhere:set', 'rule sets'],
+    },
   },
   SMALL_MAP = { width: 40, height: 30, difficulty: 'Chieftain' };
 
@@ -84,10 +101,12 @@ const SCENARIOS: { [name: string]: Setup } = {
     seats: [{ kind: 'computer' }, { kind: 'computer' }, { kind: 'computer' }],
   },
   requests: { players: 3 },
+  // Started without units going obsolete (#158).
+  rules: { players: 3, ruleSets: [OBSOLESCENCE_OFF] },
   ...Object.fromEntries(
-    Object.entries(FAILURES).map(([name, { seats }]) => [
+    Object.entries(FAILURES).map(([name, { seats, ruleSets }]) => [
       `fail:${name}`,
-      { seats },
+      { seats, ...(ruleSets ? { ruleSets } : {}) },
     ])
   ),
 };
@@ -190,8 +209,18 @@ const play = (name: string, setup: Setup): void => {
   if (name === 'requests') {
     receivers.get('civilizations')!(null, { id: 1 });
     receivers.get('aiClients')!(null, { id: 2 });
+    // The rule sets as they start (#158), and then as they are with one switched off.
+    receivers.get('ruleSets')!(null, { id: 3 });
 
-    until(() => report.replies.length >= 2).then(finish);
+    until(() => report.replies.length >= 3)
+      .then(() =>
+        receivers.get('ruleSets')!(
+          { choices: [], change: OBSOLESCENCE_OFF },
+          { id: 4 }
+        )
+      )
+      .then(() => until(() => report.replies.length >= 4))
+      .then(finish);
 
     return;
   }
@@ -225,6 +254,22 @@ const play = (name: string, setup: Setup): void => {
   if (name === 'computers') {
     // The turn loop with nobody to wait for: two turns started is it running.
     until(() => report.turnStarts >= 2).then(finish);
+
+    return;
+  }
+
+  if (name === 'rules') {
+    // Once the game has started, the page asks to switch the set back on: it is told how the game is played, and
+    //  nothing is switched.
+    until(() => report.players.length > 0)
+      .then(() =>
+        receivers.get('ruleSets')!(
+          { choices: [], change: { id: OBSOLESCENCE, value: true } },
+          { id: 5 }
+        )
+      )
+      .then(() => until(() => report.replies.length >= 1))
+      .then(finish);
 
     return;
   }
@@ -432,6 +477,47 @@ if (scenario !== null) {
       'and not the barbarians',
       aiClients.includes('BarbarianClient'),
       false
+    );
+
+    // The rule sets (#158), asked for twice: as they start, then with a change.
+    const [asStarted, switched] = replies
+        .filter(([channel]) => channel === 'ruleSets')
+        .map(([, answer]) => answer),
+      obsolescence = (answer: any): any =>
+        answer?.sets.find(({ id }: { id: string }) => id === OBSOLESCENCE);
+
+    expect(
+      'ruleSets lists units going obsolete, on, with nothing chosen',
+      [obsolescence(asStarted)?.state, asStarted?.choices],
+      ['on', []]
+    );
+    expect(
+      'and, asked with a change, answers the set off and the choice that says so',
+      [obsolescence(switched)?.state, switched?.choices],
+      ['off', [OBSOLESCENCE_OFF]]
+    );
+  }
+
+  // A game set up without units going obsolete (#158) is started without them, and that is fixed from then on.
+  {
+    const report = run('rules'),
+      answer: any = report.replies.find(
+        ([channel]) => channel === 'ruleSets'
+      )?.[1];
+
+    expect(
+      'a game set up with a rule set off starts, and no error is sent',
+      [report.players.length, report.workerErrors],
+      [3, []]
+    );
+    expect(
+      'asked to switch it back on once the game is being played, the worker answers it still off',
+      [
+        answer?.sets.find(({ id }: { id: string }) => id === OBSOLESCENCE)
+          ?.state,
+        answer?.choices,
+      ],
+      ['off', [OBSOLESCENCE_OFF]]
     );
   }
 

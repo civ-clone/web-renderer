@@ -90,6 +90,7 @@ i18next.addResources('en', 'default', {
   'GameSetup.name': 'Name',
   'GameSetup.random': 'Random',
   'GameSetup.remove-seat': 'Remove this seat',
+  'GameSetup.rules': 'Rules',
   'GameSetup.seat': '#',
   'GameSetup.seats': 'Seats',
   'GameSetup.start': 'Start',

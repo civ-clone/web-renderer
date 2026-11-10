@@ -141,3 +141,10 @@ i18next.addResources('en', 'unit', {
   'Busy.Automated.icon': 'W',
   'Busy.BuildingRoute.icon': 'R',
 });
+
+// The rule sets this ruleset's units register (#158), by id with `:` and `/` as `.`.
+i18next.addResources('en', 'ruleset', {
+  'civ1-unit.obsolescence.name': 'Units go obsolete',
+  'civ1-unit.obsolescence.description':
+    'A city can no longer build a unit once its civilization knows the advance that makes it obsolete.',
+});
