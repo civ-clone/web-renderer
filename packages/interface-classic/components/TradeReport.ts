@@ -87,7 +87,7 @@ export class TradeReport extends FilterableWindow {
                   };
                 }
 
-                improvements[improvement._].count++;
+                improvements[improvement._]!.count++;
               }
             }
           );

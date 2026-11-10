@@ -223,7 +223,7 @@ export class MeetingWindow extends Window {
       {
         autoDisplay: false,
         canClose: false,
-        cancel: leave === -1 ? null : () => buttons[leave].click(),
+        cancel: leave === -1 ? null : () => buttons[leave]!.click(),
         classes: ['negotiation', 'ui-meeting-window'],
       }
     );
@@ -253,7 +253,7 @@ export class MeetingWindow extends Window {
       if (number !== null && this.#replies[number - 1]) {
         event.preventDefault();
 
-        this.#replies[number - 1].click();
+        this.#replies[number - 1]!.click();
 
         return;
       }

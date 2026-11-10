@@ -165,7 +165,8 @@ const inciteWindow = (
       (action) => action._ === 'SubvertCity'
     ) as CostedAction[],
     { cost } = (incite ? asked(incite) : subvert) as CostedAction,
-    city = cityName(incite ?? subvert);
+    // Asked with one or the other, as `cost` is.
+    city = cityName((incite ?? subvert)!);
 
   new ActionWindow(
     t('Diplomat.incite.title'),
@@ -321,7 +322,7 @@ export const openArrivalWindow = (
         nation: civilization(unit.player, 'name'),
         city: cityName(
           actionsOnTile.find((action) =>
-            diplomat[0][1].includes(nameOf(action))
+            diplomat[0]![1].includes(nameOf(action))
           )!
         ),
       }),

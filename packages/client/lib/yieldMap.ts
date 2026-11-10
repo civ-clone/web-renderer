@@ -9,25 +9,26 @@ import instanceOf from './instanceOf';
 export const yieldGroup = (cityYield: { _: string; __?: string[] }): string => {
   const index = cityYield.__?.indexOf('Yield') ?? -1;
 
-  return index > 0 ? cityYield.__![index - 1] : cityYield._;
+  return index > 0 ? cityYield.__![index - 1]! : cityYield._;
 };
 
-export const reduceKnownYields = (
+export const reduceKnownYields = <Names extends string[]>(
   yields: Yield[],
-  ...yieldNames: string[]
-): number[] =>
+  ...yieldNames: Names
+): { [index in keyof Names]: number } =>
+  // One total for each name.
   yields.reduce(
     (yields, cityYield) => {
       yieldNames.forEach((yieldName, index) => {
         if (instanceOf(cityYield, yieldName)) {
-          yields[index] += cityYield.value;
+          yields[index]! += cityYield.value;
         }
       });
 
       return yields;
     },
     yieldNames.map(() => 0)
-  );
+  ) as { [index in keyof Names]: number };
 
 export const reduceKnownYield = (yields: Yield[], yieldName: string): number =>
   reduceKnownYields(yields, yieldName)[0];

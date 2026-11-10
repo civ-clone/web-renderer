@@ -16,8 +16,9 @@ const swatch = (city: City): Node => {
     ),
     [first, second] = playerColours(city.player);
 
-  element.style.setProperty('--swatch-first', first);
-  element.style.setProperty('--swatch-second', second ?? first);
+  // Every civilization has at least one colour.
+  element.style.setProperty('--swatch-first', first!);
+  element.style.setProperty('--swatch-second', second ?? first!);
 
   return element;
 };

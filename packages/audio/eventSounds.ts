@@ -163,7 +163,7 @@ export const battleTune = ({ sound, won }: BattleSound): number | null => {
     Object.prototype.hasOwnProperty.call(battleTunes, word)
   );
 
-  return known === undefined ? null : battleTunes[known][won ? 'won' : 'lost'];
+  return known === undefined ? null : battleTunes[known]![won ? 'won' : 'lost'];
 };
 
 /** The ending's tune: celebration for a win, the lament for anything else. */

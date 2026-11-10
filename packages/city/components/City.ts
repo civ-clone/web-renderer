@@ -99,7 +99,7 @@ const renderBuildProgress = (city: CityData): Node[] => {
       return city;
     }
 
-    return cities[(index + by + cities.length) % cities.length];
+    return cities[(index + by + cities.length) % cities.length]!;
   },
   // Enter or X closes the screen, but Enter on a focused button presses that button instead (#484).
   closesScreen = (event: KeyboardEvent): boolean =>
@@ -231,7 +231,7 @@ export class City extends Window {
         //
         // }
 
-        emit(buyButtons[0], new MouseEvent('click'));
+        emit(buyButtons[0]!, new MouseEvent('click'));
 
         event.preventDefault();
         event.stopPropagation();
@@ -439,7 +439,8 @@ export class City extends Window {
       return;
     }
 
-    const treasury = getTreasuryForYield(city.player, spendCost.resource._);
+    // The engine only asks for a yield the player keeps a treasury of.
+    const treasury = getTreasuryForYield(city.player, spendCost.resource._)!;
 
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),
@@ -460,7 +461,8 @@ export class City extends Window {
   sellImprovement(improvement: CityImprovement, saleValue: SpendCost): void {
     // As for buying: the city it was opened for (#678).
     const city = this.#city,
-      treasury = getTreasuryForYield(city.player, saleValue.resource._);
+      // As above: a yield the player keeps a treasury of.
+      treasury = getTreasuryForYield(city.player, saleValue.resource._)!;
 
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),

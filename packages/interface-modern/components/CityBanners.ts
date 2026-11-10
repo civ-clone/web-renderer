@@ -351,14 +351,15 @@ export class CityBanners extends CityNames {
     context.fill();
     context.stroke();
 
-    context.fillStyle = primary;
+    // Every civilization has at least one colour.
+    context.fillStyle = primary!;
     context.beginPath();
     context.roundRect(badge.x, badge.y, badge.width, badge.height, radius);
     context.fill();
 
     // The size in the civilization's second colour, where it reads on its first, which a sliver of a city's sprite
     //  doesn't need to (#778).
-    context.fillStyle = readableOn(primary, secondary ?? style.foreground, [
+    context.fillStyle = readableOn(primary!, secondary ?? style.foreground, [
       style.shade,
       style.light,
     ]);

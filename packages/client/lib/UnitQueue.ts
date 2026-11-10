@@ -42,7 +42,7 @@ export class UnitQueue {
     ) {
       const [oldestId] = this.#waited;
 
-      this.#waited.delete(oldestId);
+      this.#waited.delete(oldestId!);
     }
   }
 
@@ -79,7 +79,7 @@ export class UnitQueue {
     return (
       others.find((unit) => !this.#waited.has(unit.id)) ??
       others.find((unit) => unit.id === oldestId) ??
-      others[0]
+      others[0]!
     );
   }
 

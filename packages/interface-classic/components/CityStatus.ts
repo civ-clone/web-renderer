@@ -2,6 +2,7 @@ import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import {
   turnsLeft,
+  YieldTotals,
   yieldData,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -27,7 +28,15 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       'Research',
       'Gold',
       'Luxuries',
-    ].map((yieldName) => yieldData(city, yieldName)),
+    ].map((yieldName) => yieldData(city, yieldName)) as [
+      // One for each name.
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals,
+      YieldTotals
+    ],
     [
       foodIcon,
       productionIcon,
@@ -36,14 +45,15 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       goldIcon,
       luxuriesIcon,
     ] = await Promise.all(
-      ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'].map(
-        (yieldName) =>
-          assetStore
-            .shownAtURL(
-              spriteKey(currentTileset(), groupIcons[yieldName]),
-              currentTileset().ui.icon
-            )
-            .then((url) => `<img src="${url}">`)
+      (
+        ['Food', 'Production', 'Trade', 'Research', 'Gold', 'Luxuries'] as const
+      ).map((yieldName) =>
+        assetStore
+          .shownAtURL(
+            spriteKey(currentTileset(), groupIcons[yieldName]),
+            currentTileset().ui.icon
+          )
+          .then((url) => `<img src="${url}">`)
       )
     );
 
@@ -149,7 +159,8 @@ export class CityStatus extends FilterableWindow {
             );
 
             return h(row, {
-              click: () => this.#portal.openCity(this.#cities[index]),
+              // A row for each of the cities.
+              click: () => this.#portal.openCity(this.#cities[index]!),
             });
           })
         )

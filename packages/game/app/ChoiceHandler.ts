@@ -83,9 +83,9 @@ export const ChoiceHandler = {
         debugFlags.uiStressRunner &&
         !debugFlags.stressUiWindowsEnabled &&
         choices.length > 0 &&
-        debugFlags.uiStressRunner.isAutomatingChoice(choices[0].id)
+        debugFlags.uiStressRunner.isAutomatingChoice(choices[0]!.id)
       ) {
-        transport.send('chooseFromList', choices[0].id);
+        transport.send('chooseFromList', choices[0]!.id);
 
         return;
       }
@@ -196,7 +196,7 @@ export const ChoiceHandler = {
             : []),
           ...choices.map(({ id, value }, index) => {
             const label = difficultyChoiceLabels
-              ? difficultyChoiceLabels[index].label
+              ? difficultyChoiceLabels[index]!.label
               : chooseFromListChoice(key, value);
 
             return {
@@ -205,7 +205,7 @@ export const ChoiceHandler = {
               primary: t(`ChoiceWindow.ChooseFromList.${key}.primary`, {
                 // "Play at Prince level", "Play as the Romans".
                 choice: difficulties
-                  ? difficultyName(difficulties[index].name)
+                  ? difficultyName(difficulties[index]!.name)
                   : key === 'choose-civilization'
                   ? t('Generic.civilization-name.plural', {
                       civilization: (value as { _: string })._,
@@ -222,13 +222,13 @@ export const ChoiceHandler = {
             const chosen = choices.findIndex(({ id }) => id === choice);
 
             if (chosen > -1) {
-              rememberDifficulty(difficulties[chosen].name);
+              rememberDifficulty(difficulties[chosen]!.name);
             }
           }
 
           reply(
             offerRandom && choice === randomChoice
-              ? choices[Math.floor(Math.random() * choices.length)].id
+              ? choices[Math.floor(Math.random() * choices.length)]!.id
               : choice
           );
         },
@@ -237,7 +237,8 @@ export const ChoiceHandler = {
           canClose: false,
           classes: [`choose-from-list`],
           // The stress runner takes the engine's first choice, as an automated seat does.
-          chosen: debugFlags.uiStressRunner ? choices[0].id : preselected,
+          // The engine offers at least one choice.
+          chosen: debugFlags.uiStressRunner ? choices[0]!.id : preselected,
           describe: advances
             ? ({ value }) => {
                 const advance = choices.find(({ id }) => id === value)
@@ -254,7 +255,7 @@ export const ChoiceHandler = {
       if (debugFlags.uiStressRunner && !selectionWindow.autoChosen()) {
         debugFlags.uiStressRunner.automateChoice(
           selectionWindow,
-          choices[0].id,
+          choices[0]!.id,
           (choiceId) => reply(choiceId)
         );
       }

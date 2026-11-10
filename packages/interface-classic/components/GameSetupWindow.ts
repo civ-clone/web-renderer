@@ -520,9 +520,10 @@ export class GameSetupWindow extends Window {
       return;
     }
 
+    // The three land inputs, in order.
     const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
       (input) => input.value
-    );
+    ) as [string, string, string];
 
     this.close();
 

@@ -66,7 +66,7 @@ const buildCityRow = async (
       s(
         `<div class="detail"></div>`,
         happinessReasons[cause.yield._]
-          ? happinessReasons[cause.yield._](cause.yield)
+          ? happinessReasons[cause.yield._]!(cause.yield)
           : cause.yield._
       )
     )

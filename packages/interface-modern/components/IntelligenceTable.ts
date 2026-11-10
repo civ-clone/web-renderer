@@ -256,7 +256,7 @@ export class IntelligenceTable extends FilterableWindow {
 
     // An embassy just established: what it tells us, straight away.
     if (this.#civilization !== null && shown.length === 1) {
-      this.#showDetails(shown[0]);
+      this.#showDetails(shown[0]!);
     }
 
     this.reread();

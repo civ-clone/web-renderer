@@ -166,7 +166,7 @@ const drawnArea = (
 
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {
-          if (data[(y * width + x) * 4 + 3] > 0) {
+          if (data[(y * width + x) * 4 + 3]! > 0) {
             left = Math.min(left, x);
             right = Math.max(right, x);
             top = Math.min(top, y);

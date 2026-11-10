@@ -69,7 +69,7 @@ export const ownCity = (row: TopCitiesRow, player: Player): CityData | null => {
         ? named.filter((city) => city.growth.size === row.size)
         : named;
 
-  return candidates.length === 1 ? candidates[0] : null;
+  return candidates.length === 1 ? candidates[0]! : null;
 };
 
 /**

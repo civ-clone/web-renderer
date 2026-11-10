@@ -159,7 +159,7 @@ export class Actions extends Element implements IActions {
 
     if (['ArrowUp', 'ArrowLeft'].includes(key)) {
       if (currentIndex > 0) {
-        children[currentIndex - 1].querySelector('button')?.focus();
+        children[currentIndex - 1]!.querySelector('button')?.focus();
 
         return;
       }

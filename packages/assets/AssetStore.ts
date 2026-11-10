@@ -236,7 +236,8 @@ export class AssetStore extends Store<{
       }
     }
 
-    return paths[paths.length - 1];
+    // Its callers always name at least one path.
+    return paths[paths.length - 1]!;
   }
 
   async getScaled(path: string, scale: number): Promise<HTMLCanvasElement> {

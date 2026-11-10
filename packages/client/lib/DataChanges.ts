@@ -68,9 +68,7 @@ export class DataChanges {
 
     const watchers = this.#watchers.slice();
 
-    for (let i = 0; i < watchers.length; i++) {
-      const watcher = watchers[i];
-
+    for (const watcher of watchers) {
       if (!watcher.watching) {
         continue;
       }

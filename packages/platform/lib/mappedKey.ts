@@ -20,7 +20,7 @@ export const mappedKeyFromEvent = (
     event.location === KeyboardEvent.DOM_KEY_LOCATION_NUMPAD &&
     event.key in numpadMap
   ) {
-    return numpadMap[event.key];
+    return numpadMap[event.key]!;
   }
 
   return event.key;

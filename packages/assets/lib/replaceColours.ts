@@ -71,9 +71,9 @@ export const replaceColours = (
           )) !== null
         ) {
           color = {
-            r: parseInt(match[1], 16),
-            g: parseInt(match[2], 16),
-            b: parseInt(match[3], 16),
+            r: parseInt(match[1]!, 16),
+            g: parseInt(match[2]!, 16),
+            b: parseInt(match[3]!, 16),
             a: 1,
           };
         } else if (
@@ -82,9 +82,9 @@ export const replaceColours = (
           )) !== null
         ) {
           color = {
-            r: parseInt(match[1] + match[1], 16),
-            g: parseInt(match[2] + match[2], 16),
-            b: parseInt(match[3] + match[3], 16),
+            r: parseInt(match[1]! + match[1]!, 16),
+            g: parseInt(match[2]! + match[2]!, 16),
+            b: parseInt(match[3]! + match[3]!, 16),
             a: 1,
           };
         } else if (
@@ -93,9 +93,9 @@ export const replaceColours = (
           )) !== null
         ) {
           color = {
-            r: parseInt(match[1]),
-            g: parseInt(match[2]),
-            b: parseInt(match[3]),
+            r: parseInt(match[1]!),
+            g: parseInt(match[2]!),
+            b: parseInt(match[3]!),
             a: 1,
           };
         } else if (
@@ -104,10 +104,10 @@ export const replaceColours = (
           )) !== null
         ) {
           color = {
-            r: parseInt(match[1]),
-            g: parseInt(match[2]),
-            b: parseInt(match[3]),
-            a: parseFloat(match[4] ?? 1),
+            r: parseInt(match[1]!),
+            g: parseInt(match[2]!),
+            b: parseInt(match[3]!),
+            a: parseFloat(match[4]!),
           };
         }
       } else if ('length' in input) {
@@ -133,11 +133,12 @@ export const replaceColours = (
         imageData.data[i + 2] === color.b &&
         imageData.data[i + 3] === color.a * 255
       ) {
-        imageData.data[i] = (replaceColors[n] || replaceColors[0]).r;
-        imageData.data[i + 1] = (replaceColors[n] || replaceColors[0]).g;
-        imageData.data[i + 2] = (replaceColors[n] || replaceColors[0]).b;
+        // Its callers always pass at least one replacement colour.
+        imageData.data[i] = (replaceColors[n] || replaceColors[0]!).r;
+        imageData.data[i + 1] = (replaceColors[n] || replaceColors[0]!).g;
+        imageData.data[i + 2] = (replaceColors[n] || replaceColors[0]!).b;
         imageData.data[i + 3] = Math.trunc(
-          (replaceColors[n] || replaceColors[0]).a * 255
+          (replaceColors[n] || replaceColors[0]!).a * 255
         );
       }
     });

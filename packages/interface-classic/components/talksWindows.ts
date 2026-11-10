@@ -64,7 +64,7 @@ export const talksWindows: OpenTalksStep = ({
       title,
       negotiationLines([
         ...(last === null ? [] : [negotiationLine(last, us)]),
-        negotiationLine(choices[0].value as Interactions, us),
+        negotiationLine(choices[0]!.value as Interactions, us),
       ]),
       {
         canClose: false,
@@ -89,9 +89,9 @@ export const talksWindows: OpenTalksStep = ({
     });
 
     if (stressRunner) {
-      stressRunner.automateChoice(window, choices[0].id, reply);
+      stressRunner.automateChoice(window, choices[0]!.id, reply);
     } else {
-      window.once('close', () => reply(choices[0].id));
+      window.once('close', () => reply(choices[0]!.id));
     }
 
     return null;
@@ -111,12 +111,13 @@ export const talksWindows: OpenTalksStep = ({
       canClose: false,
       classes: ['negotiation'],
       // The stress runner takes the engine's first choice, as an automated seat does, not Good bye (#502).
-      chosen: stressRunner ? choices[0].id : null,
+      // The engine offers at least one choice.
+      chosen: stressRunner ? choices[0]!.id : null,
     }
   );
 
   if (stressRunner && !talksWindow.autoChosen()) {
-    stressRunner.automateChoice(talksWindow, choices[0].id, reply);
+    stressRunner.automateChoice(talksWindow, choices[0]!.id, reply);
   }
 
   return null;

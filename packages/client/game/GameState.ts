@@ -280,7 +280,8 @@ export class GameState {
         return;
       }
 
-      queueTiles(city.tile, previous?.tile);
+      // Drawn, so the city is there.
+      queueTiles(city!.tile, previous?.tile);
     });
 
     // What the new interface's banner shows of your own city (#747): what it's building and how far along, and how it's

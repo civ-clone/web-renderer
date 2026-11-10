@@ -248,7 +248,7 @@ export class UiMenu {
 
   /** The row hovered, by its label, or `null`. */
   hovered(): string | null {
-    return this.#hover === null ? null : this.#items[this.#hover].label;
+    return this.#hover === null ? null : this.#items[this.#hover]!.label;
   }
 
   close({ restoreFocus = false }: { restoreFocus?: boolean } = {}): void {
@@ -431,7 +431,7 @@ export class UiMenu {
       return 0;
     }
 
-    const row = this.#rows[index].getBoundingClientRect(),
+    const row = this.#rows[index]!.getBoundingClientRect(),
       menu = this.#element.getBoundingClientRect();
 
     return row.top - menu.top + row.height / 2;
@@ -490,7 +490,7 @@ export class UiMenu {
         // Drawn pressed for the button that would run it.
         if (index !== null && (event.button ?? 0) === 0) {
           this.#hoverRow(index);
-          this.#rows[index].dataset.pressed = '';
+          this.#rows[index]!.dataset.pressed = '';
         }
 
         // Not the map's, nor the page's: a press in the menu is only the menu's.
@@ -710,7 +710,7 @@ export class UiMenu {
     for (let i = 1; i <= count; i++) {
       const index = (((from + step * i) % count) + count) % count;
 
-      if (!this.#items[index].disabled) {
+      if (!this.#items[index]!.disabled) {
         return index;
       }
     }
@@ -737,7 +737,7 @@ export class UiMenu {
 
   #hoverRow(index: number | null, focus: boolean = false): void {
     if (this.#hover !== null) {
-      delete this.#rows[this.#hover].dataset.hover;
+      delete this.#rows[this.#hover]!.dataset.hover;
     }
 
     this.#hover = index;
@@ -746,7 +746,7 @@ export class UiMenu {
       return;
     }
 
-    const row = this.#rows[index];
+    const row = this.#rows[index]!;
 
     row.dataset.hover = '';
 

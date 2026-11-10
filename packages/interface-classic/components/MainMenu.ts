@@ -144,7 +144,7 @@ export class MainMenu extends Element {
               step = key === 'ArrowDown' ? 1 : key === 'ArrowUp' ? -1 : 0;
 
             if (step !== 0 && buttons[index + step]) {
-              buttons[index + step].focus();
+              buttons[index + step]!.focus();
             }
           },
         }
