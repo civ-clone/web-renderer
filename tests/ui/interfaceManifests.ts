@@ -7,16 +7,19 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 
 import {
+  ChoiceList,
   choiceList,
   openChoice,
 } from '@civ-clone/ui-windows/components/choiceList';
-import ChoiceWindow from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   DEFAULT_INTERFACE,
+  FEATURES,
+  SLOTS,
   applyInterface,
   currentInterface,
   defineSlot,
+  definedSlots,
   hasFeature,
   interfaces,
   registerInterface,
@@ -61,6 +64,29 @@ expect(
   Object.keys(classic.slots).sort(),
   Object.keys(modern.slots).sort()
 );
+
+// Every slot and feature is named in one place (#861), which a typo in the code fails to compile against; the manifests
+//  are JSON, so they're held to it here, and refused as they register.
+expect(
+  'every slot named is defined by what fills it',
+  [...definedSlots()].sort(),
+  [...SLOTS].sort()
+);
+
+interfaces().forEach(({ id, slots, features }) => {
+  expect(
+    `${id} fills every slot, and nothing else`,
+    Object.keys(slots).sort(),
+    [...SLOTS].sort()
+  );
+  expect(
+    `${id} has only features that are named`,
+    features.filter(
+      (feature) => !(FEATURES as readonly string[]).includes(feature)
+    ),
+    []
+  );
+});
 
 // A slot, and an interface that differs from `modern` only there.
 const slot = defineSlot<string>('cityScreen');
@@ -114,7 +140,7 @@ expect('and does when it next loads', hasFeature('squareTooltips'), false);
   choiceList.provide('test', (title) => {
     opened.push(title);
 
-    return null as unknown as ChoiceWindow;
+    return null as unknown as ChoiceList;
   });
 
   registerInterface({
@@ -128,9 +154,13 @@ expect('and does when it next loads', hasFeature('squareTooltips'), false);
   expect('a real slot opens what the manifest names', opened, ['Which one?']);
 }
 
-const broken = defineSlot<string>('nothingProvides');
+const broken = defineSlot<string>('cityScreen');
 
-registerInterface({ ...modern, id: 'broken', slots: { nothingProvides: 'x' } });
+registerInterface({
+  ...modern,
+  id: 'broken',
+  slots: { ...modern.slots, cityScreen: 'x' },
+});
 use('broken');
 
 let message = '';
@@ -144,7 +174,7 @@ try {
 expect(
   'an implementation nobody provides says which',
   message,
-  "Interface 'broken' fills slot 'nothingProvides' with 'x', which nothing provides."
+  "Interface 'broken' fills slot 'cityScreen' with 'x', which nothing provides."
 );
 
 [
@@ -155,6 +185,10 @@ expect(
   { ...modern, slots: { reports: 7 } },
   { ...modern, slots: [] },
   { ...modern, features: 'squareTooltips' },
+  // A slot or a feature that isn't one, and a slot left out.
+  { ...modern, slots: { ...modern.slots, cityScren: 'window' } },
+  { ...modern, features: ['squareTooltip'] },
+  (({ cityScreen, ...slots }) => ({ ...modern, slots }))(modern.slots),
 ].forEach((manifest) => {
   let threw = false;
 

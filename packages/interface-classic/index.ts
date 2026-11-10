@@ -23,7 +23,10 @@ import talksWindows from './components/talksWindows';
 import manifest from './manifest.json';
 import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
 import popupMenus from './components/popupMenus';
-import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import {
+  InterfaceManifest,
+  registerInterface,
+} from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
@@ -36,7 +39,12 @@ import plainChrome from './components/plainChrome';
 
 titleScreen.provide('mainMenu', MainMenu);
 
-cityLabels.provide('names', CityNames);
+// The names alone, which neither follow the theme nor cover the yields.
+cityLabels.provide('names', {
+  layer: CityNames,
+  followTheme: false,
+  giveWayToYields: false,
+});
 
 cityScreen.provide('page', classicCityLayout);
 
@@ -70,19 +78,19 @@ choiceList.provide(
       chosen = null,
       canClose = true,
       modal = false,
-      classicLabel = ({ label }: ChoiceRow) => label,
-      classicIntro = intro,
+      plainLabel = ({ label }: ChoiceRow) => label,
+      plainIntro = intro,
     } = {}
   ) => {
     const window = new SelectionWindow(
       title,
       rows.map((row) => ({
-        label: classicLabel(row),
+        label: plainLabel(row),
         value: row.value,
         ...(row.group === undefined ? {} : { group: row.group }),
       })),
       onChoose,
-      classicIntro,
+      plainIntro,
       {
         canClose,
         displayAll: true,
@@ -126,4 +134,7 @@ turnControls.provide('orbs', (actionArea, { portal, transport }) => {
 
 windowChrome.provide('plain', plainChrome);
 
-registerInterface(manifest);
+// It fills every slot, which the build checks; what it names as features is checked as it registers (#861).
+const checked: Pick<InterfaceManifest, 'slots'> = manifest;
+
+registerInterface(checked);

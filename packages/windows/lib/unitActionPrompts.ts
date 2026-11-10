@@ -6,7 +6,7 @@ import {
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
-import { openChoice } from '../components/choiceList';
+import { ChoiceList, openChoice } from '../components/choiceList';
 import Window from '@civ-clone/ui-component-window/Window';
 import { t } from 'i18next';
 
@@ -300,7 +300,7 @@ export const openArrivalWindow = (
   unit: UnitData,
   actionsOnTile: UnitAction[],
   perform: Perform
-): Window | null => {
+): Window | ChoiceList | null => {
   const treaty = actionsOnTile.find((action) => nameOf(action) === 'SneakMove');
 
   if (treaty) {

@@ -7,8 +7,33 @@
 //  `defineSlot` where it is put together, and provides what it has; the manifest picks. A feature is a behaviour inside
 //  a shared component that an interface either has or doesn't, read with `hasFeature`. Nothing but Options, which
 //  offers the choice, needs to know which interface is in use.
+//
+// Every slot and feature is named here (#861), so a name that isn't one fails to compile, and a manifest that names one
+//  that isn't is refused.
 
 export type InterfaceMode = string;
+
+/** The slots, each defined once where its family of components is put together, and filled by every manifest. */
+export const SLOTS = [
+  'titleScreen',
+  'cityLabels',
+  'cityScreen',
+  'reports',
+  'choices',
+  'choiceList',
+  'unitPanel',
+  'talks',
+  'mapMenus',
+  'turnControls',
+  'windowChrome',
+] as const;
+
+export type SlotName = (typeof SLOTS)[number];
+
+/** The features, each a behaviour inside a shared component that a manifest either lists or doesn't. */
+export const FEATURES = ['assetsInOptions', 'squareTooltips'] as const;
+
+export type FeatureName = (typeof FEATURES)[number];
 
 export interface InterfaceManifest {
   schema: number;
@@ -17,9 +42,9 @@ export interface InterfaceManifest {
   name: string;
   // The theme it comes with, which the player's own choice of theme outranks.
   theme: string;
-  // Which of a slot's implementations to use, by the slot's name.
-  slots: { [slot: string]: string };
-  features: string[];
+  // Which of a slot's implementations to use, by the slot's name: every slot, and nothing else.
+  slots: { [slot in SlotName]: string };
+  features: FeatureName[];
 }
 
 export const DEFAULT_INTERFACE: InterfaceMode = 'modern';
@@ -31,6 +56,11 @@ const manifests = new Map<InterfaceMode, InterfaceManifest>();
 
 const SCHEMA = 1;
 
+const isSlotName = (value: unknown): value is SlotName =>
+    (SLOTS as readonly unknown[]).includes(value),
+  isFeatureName = (value: unknown): value is FeatureName =>
+    (FEATURES as readonly unknown[]).includes(value);
+
 const isManifest = (value: any): value is InterfaceManifest =>
   value?.schema === SCHEMA &&
   typeof value.id === 'string' &&
@@ -39,9 +69,10 @@ const isManifest = (value: any): value is InterfaceManifest =>
   typeof value.slots === 'object' &&
   value.slots !== null &&
   !Array.isArray(value.slots) &&
-  Object.values(value.slots).every((slot) => typeof slot === 'string') &&
+  Object.keys(value.slots).every(isSlotName) &&
+  SLOTS.every((slot) => typeof value.slots[slot] === 'string') &&
   Array.isArray(value.features) &&
-  value.features.every((feature: unknown) => typeof feature === 'string');
+  value.features.every(isFeatureName);
 
 /** Makes an interface available, replacing any with the same `id`. A manifest may come from outside, so it's checked. */
 export const registerInterface = (manifest: unknown): void => {
@@ -94,7 +125,7 @@ export const currentInterface = (): InterfaceManifest => {
 };
 
 /** Whether the interface in use has `feature`. */
-export const hasFeature = (feature: string): boolean =>
+export const hasFeature = (feature: FeatureName): boolean =>
   currentInterface().features.includes(feature);
 
 export interface Slot<Implementation> {
@@ -104,11 +135,19 @@ export interface Slot<Implementation> {
   current(): Implementation;
 }
 
+// The slots defined so far, for a test to hold against `SLOTS`.
+const defined = new Set<SlotName>();
+
+/** The slots that have been defined: once everything that defines one has loaded, every one in `SLOTS`. */
+export const definedSlots = (): SlotName[] => [...defined];
+
 /** A part of the interface that manifests fill: `name` is its key in their `slots`. */
 export const defineSlot = <Implementation>(
-  name: string
+  name: SlotName
 ): Slot<Implementation> => {
   const implementations = new Map<string, Implementation>();
+
+  defined.add(name);
 
   return {
     provide: (implementationName, implementation) => {

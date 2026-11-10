@@ -3,13 +3,14 @@ import { CityOpener } from '@civ-clone/ui-windows/lib/cityOpeners';
 import { off, on } from '@dom111/element';
 import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
-import CityBanners from '@civ-clone/ui-map/components/Map/CityBanners';
-import CityNames from '@civ-clone/ui-map/components/Map/CityNames';
-import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
+import cityLabels, {
+  CityLabels,
+} from '@civ-clone/ui-map/components/Map/cityLabels';
 import Fog from '@civ-clone/ui-map/components/Map/Fog';
 import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
 import IntervalHandler from '@civ-clone/ui-client/lib/IntervalHandler';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
+import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import Minimap from '@civ-clone/ui-map-square/Minimap';
 import Overview from '@civ-clone/ui-map-square/Overview';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -58,7 +59,7 @@ export type MapViewDeps = {
 export class MapView {
   readonly activeUnitLayer: ActiveUnit;
   readonly citiesLayer: Cities;
-  readonly cityNamesLayer: CityNames;
+  readonly cityNamesLayer: MapLayer;
   readonly minimap: Minimap;
   readonly overviewLayer: Overview;
   readonly portal: GamePortal;
@@ -66,6 +67,8 @@ export class MapView {
   readonly world: World;
   readonly yieldsLayer: Yields;
 
+  // What names the cities, and what it asks of the map (#861).
+  #cityLabels: CityLabels;
   #coveredBy: HTMLElement[];
   #intervalHandler: IntervalHandler;
   #mapPortal: HTMLCanvasElement;
@@ -110,6 +113,7 @@ export class MapView {
     transport,
     world: worldData,
   }: MapViewDeps) {
+    this.#cityLabels = cityLabels.current();
     this.#coveredBy = coveredBy;
     this.#mapPortal = mapPortal;
     this.#marker = new UnitMarker(mapPortal);
@@ -140,7 +144,7 @@ export class MapView {
         Units,
         Cities,
         // The banners, which the classic theme draws as these labels, or the classic labels (#747).
-        cityLabels.current(),
+        this.#cityLabels.layer,
         ActiveUnit
       ),
       overviewMap = portal.getLayer(Overview) as Overview,
@@ -153,7 +157,7 @@ export class MapView {
     this.yieldsLayer = portal.getLayer(Yields) as Yields;
     this.unitsLayer = portal.getLayer(Units) as Units;
     this.citiesLayer = portal.getLayer(Cities) as Cities;
-    this.cityNamesLayer = portal.getLayer(CityNames) as CityNames;
+    this.cityNamesLayer = portal.getLayer(this.#cityLabels.layer) as MapLayer;
     this.activeUnitLayer = activeUnitsMap;
     this.minimap = new Minimap(
       minimapCanvas,
@@ -209,7 +213,7 @@ export class MapView {
 
     // Not everywhere the map is built has these (the tests' DOM doesn't).
     if (
-      this.cityNamesLayer instanceof CityBanners &&
+      this.#cityLabels.followTheme &&
       typeof MutationObserver !== 'undefined'
     ) {
       this.#themeObserver = new MutationObserver(this.#restyleHandler);
@@ -348,10 +352,7 @@ export class MapView {
   #showCityNames(): void {
     this.cityNamesLayer.setVisible(
       this.#unitsShown &&
-        !(
-          this.cityNamesLayer instanceof CityBanners &&
-          this.yieldsLayer.isVisible()
-        )
+        !(this.#cityLabels.giveWayToYields && this.yieldsLayer.isVisible())
     );
   }
 
@@ -419,7 +420,7 @@ export class MapView {
 
   // The banners read the theme's tokens again, and are drawn with them and the fonts loaded now.
   #restyle(): void {
-    if (!(this.cityNamesLayer instanceof CityBanners)) {
+    if (!this.#cityLabels.followTheme) {
       return;
     }
 
