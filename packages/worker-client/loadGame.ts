@@ -71,6 +71,51 @@ export const restoreTransportRegistries = (game = defaultGame): void =>
     }
   });
 
+// Plugins replaced by another under a new name, and the classes renamed with them: a save made before records the old
+//  ones. Diplomats meet a leader, not a king (#304, #915).
+const renamedPlugins: { [plugin: string]: string } = {
+    '@civ-clone/base-unit-action-meet-with-king':
+      '@civ-clone/base-unit-action-meet-with-leader',
+  },
+  renamedClasses: { [type: string]: string } = {
+    MeetWithKing: 'MeetWithLeader',
+  };
+
+/**
+ * Name the plugins and classes a save records as the ones that replaced them.
+ *
+ * A save lists every plugin its game was played with, and `hydrate` refuses one that names a plugin not loaded, so
+ *  a plugin renamed would leave every save made before it unloadable, as #304's rename did (#915). Its id counters are
+ *  by class name too: carried over, so the renamed class goes on from where the old one was.
+ */
+export const renameRetiredPlugins = (file: SaveGame): void => {
+  // Neither is checked here: a file without them is `hydrate`'s to refuse, saying why.
+  const plugins = file.engine?.plugins ?? {},
+    idCounters = file.idCounters ?? {};
+
+  Object.entries(renamedPlugins).forEach(([from, to]) => {
+    if (!(from in plugins)) {
+      return;
+    }
+
+    if (!(to in plugins)) {
+      plugins[to] = plugins[from];
+    }
+
+    delete plugins[from];
+  });
+
+  Object.entries(renamedClasses).forEach(([from, to]) => {
+    if (!(from in idCounters)) {
+      return;
+    }
+
+    idCounters[to] = Math.max(idCounters[to] ?? 0, idCounters[from]);
+
+    delete idCounters[from];
+  });
+};
+
 /**
  * Put a saved game back into a freshly started engine.
  *
@@ -117,6 +162,7 @@ export const restoreGame = (
 
   engine.registerPlugins(manifest);
 
+  renameRetiredPlugins(file);
   stripInteractionCollaborators(file, defaultGame);
   dropRepeatedContacts(file, defaultGame);
 
