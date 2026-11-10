@@ -100,6 +100,7 @@ Checks, from quickest to slowest:
 ```bash
 npm run prettier:check                      # formatting; prettier:format fixes it
 npm run ts:compile                          # typecheck src/
+npm run ts:compile:strict                   # the same, stricter: docs/build-and-release.md
 node tools/run-suite.js ui citizens         # one suite, tests/ui/citizens.ts
 npm run test:observer                       # the same through its npm script
 npm test                                    # everything, several at a time: about a minute

@@ -16,7 +16,7 @@ export const actionKey = (action: PlayerAction): string => {
   }`;
 };
 
-export const awaitTimeout = (delay: number, reason?: any) =>
+export const awaitTimeout = (delay: number, reason?: unknown) =>
   new Promise<void>((resolve, reject) =>
     setTimeout(() => (reason === undefined ? resolve() : reject(reason)), delay)
   );

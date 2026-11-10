@@ -11,6 +11,4 @@ const icons = {
 };
 
 // Named here (`groupIcons.Gold`), or looked up by a yield's name from the engine, which may have none.
-export const groupIcons: typeof icons & {
-  [group: string]: string | undefined;
-} = icons;
+export const groupIcons: typeof icons & { [group: string]: string } = icons;

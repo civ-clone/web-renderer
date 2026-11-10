@@ -67,10 +67,23 @@ Notable options:
   `packages/*` (#339), with TypeScript 5 (#361)
 - `ts:compile:tests`: a typecheck of `tests/` (`tsconfig.tests.json`, via
   `tools/typecheck-tests.js`)
+- `ts:compile:strict`: the same code as `ts:compile`, checked stricter
+  (`tsconfig.strict.json`, via `tools/strict-types.js`, #869): a method that
+  replaces its parent's says `override` (`noImplicitOverride`), and what is read
+  from a list or looked up by key may be `undefined` until shown otherwise
+  (`noUncheckedIndexedAccess`). The check also reads the engine's packages,
+  which ship their TypeScript and don't pass these flags, and can't be fixed
+  here: their errors are counted and left out, which is why the flags aren't in
+  `tsconfig.json` itself. So are the second flag's in three byte-for-byte ports,
+  the music driver and the OPL2 chip (`packages/audio/cvl/Driver.ts`,
+  `cvl/Image.ts`, `opl/Opl2.ts`), which are all typed-array indexing. `tests/`
+  isn't covered. Run it alone with `npm run ts:compile:strict`. An editor shows
+  these errors only if it is pointed at `tsconfig.strict.json`; it uses
+  `tsconfig.json` otherwise.
 - `prettier:format` / `prettier:check`: Prettier over `src/**/*.{ts,scss}`
-- `test`: generate the import lists, then `ts:compile`, `ts:compile:tests` and
-  every `test:*` script side by side (`tools/test-all.js`; most are suites run
-  through `tools/run-suite.js`)
+- `test`: generate the import lists, then `ts:compile`, `ts:compile:tests`,
+  `ts:compile:strict` and every `test:*` script side by side
+  (`tools/test-all.js`; most are suites run through `tools/run-suite.js`)
 - `arena`: seeded headless games comparing a candidate AI with the baseline (`tools/arena.js`; see [`arena.md`](arena.md))
 - `civ`: the engine multi-repo tool (`tools/civ`), used below
 - `release:changelog`: add release-note entries for every commit since the newest one — see [Releasing](#releasing)
