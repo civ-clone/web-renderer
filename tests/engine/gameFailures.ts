@@ -4,6 +4,8 @@
 //  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
 
 import Game from '@civ-clone/ui-worker-client/Game';
+import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
+import { renameRetiredPlugins } from '@civ-clone/ui-worker-client/loadGame';
 import civOnePlugins from './lib/plugins';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 
@@ -146,6 +148,41 @@ engine.on = on;
       ['alive', null],
       ['alive', null],
     ]
+  );
+
+  // A save from before #304 names the plugin and class it had then, which are renamed to the ones that replaced them
+  //  before it's checked (#915): the counter goes on from the higher of the two, and nothing else is touched.
+  const renamed = (idCounters: { [type: string]: number }) => {
+    const file = {
+      engine: {
+        plugins: {
+          '@civ-clone/base-unit-action-meet-with-king': '0.1.4',
+          '@civ-clone/core-unit': '0.1.30',
+        },
+      },
+      idCounters: { ...idCounters, Unit: 352 },
+    } as unknown as SaveGame;
+
+    renameRetiredPlugins(file);
+
+    return [file.engine.plugins, file.idCounters];
+  };
+
+  expect(
+    "an old save's retired plugin and class are renamed",
+    renamed({ MeetWithKing: 108 }),
+    [
+      {
+        '@civ-clone/core-unit': '0.1.30',
+        '@civ-clone/base-unit-action-meet-with-leader': '0.1.4',
+      },
+      { Unit: 352, MeetWithLeader: 108 },
+    ]
+  );
+  expect(
+    'keeping the higher counter where both are there',
+    renamed({ MeetWithKing: 108, MeetWithLeader: 200 })[1],
+    { MeetWithLeader: 200, Unit: 352 }
   );
 
   finished = true;

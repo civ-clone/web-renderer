@@ -85,7 +85,7 @@ const renamedPlugins: { [plugin: string]: string } = {
  * Name the plugins and classes a save records as the ones that replaced them.
  *
  * A save lists every plugin its game was played with, and `hydrate` refuses one that names a plugin not loaded, so
- *  a plugin renamed would leave every save made before it unloadable, as #304's rename did (#915). Its id counters are
+ *  renaming a plugin would leave every save made before it unloadable, as #304's rename did (#915). Its id counters are
  *  by class name too: carried over, so the renamed class goes on from where the old one was.
  */
 export const renameRetiredPlugins = (file: SaveGame): void => {
