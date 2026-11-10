@@ -261,6 +261,11 @@ const renderQueue = (
       element.setAttribute('aria-label', label);
       element.title = label;
 
+      // Gone at a press, with no question asked: the keyboard is never moved onto it (#852).
+      if (edit.op === 'remove') {
+        element.dataset.destructive = '';
+      }
+
       return h(element, {
         click: () => editQueue(city.build, transport, edit),
       });
@@ -284,8 +289,9 @@ const renderQueue = (
           'Production'
         );
 
+      // Named by what it is, so the keyboard stays on an item as it moves (#852).
       return s(
-        '<li class="ui-city-queued"></li>',
+        `<li class="ui-city-queued" data-key="${buildItem.item._}"></li>`,
         instanceOf(buildItem.item, 'CityImprovement') ||
           instanceOf(buildItem.item, 'Wonder')
           ? buildingIcon(buildItem.item._, instanceOf(buildItem.item, 'Wonder'))

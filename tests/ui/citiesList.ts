@@ -2,6 +2,8 @@
 //  build before them all and flagged, a build that never finishes last, a city in disorder (from the player's
 //  `CivilDisorder` actions, #274) or starving flagged, five rows and then "Show all", a row opening its city, and the
 //  list following the cities through `DataChanges` (#344), not every render.
+// A city sent again with nothing a row shows changed leaves the list's elements as they are (#851), and a row opens
+//  the city as the page holds it now.
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -78,9 +80,11 @@ const yieldOf = (name: string, value: number) => ({
     } as unknown as Player);
 
 const opened: string[] = [],
+  openedCities: City[] = [],
   portal = {
     openCity: (city: City) => {
       opened.push(city.name);
+      openedCities.push(city);
 
       return true;
     },
@@ -191,6 +195,74 @@ const run = async (): Promise<void> => {
 
     HTMLElement.prototype.focus = focus;
     element.remove();
+  }
+
+  {
+    // What a unit moving beside a city does (#851): the city is sent again, and reads as it did.
+    const roma = city('Roma', 'Warrior', { cost: 10, progress: 6 }),
+      veii = city('Veii', 'Settlers', { cost: 30 }),
+      changes = new DataChanges(),
+      element = document.createElement('div'),
+      data = player([roma, veii]);
+
+    new CitiesList(element, data, portal, changes);
+
+    const list = element.querySelector('.cities-list'),
+      row = element.querySelector('[data-city="City-Roma"]');
+
+    changes.collect([roma.id, roma.build.id, roma.growth.id, data.id]);
+    changes.notify({ player: data } as GameData);
+
+    expect(
+      'a city sent again that reads the same: the list and its rows are left as they are',
+      [
+        element.querySelector('.cities-list') === list,
+        element.querySelector('[data-city="City-Roma"]') === row,
+      ],
+      [true, true]
+    );
+
+    // Everything rebuilt: new objects that read the same. The row stays, and opens the city held now.
+    const romaNow = city('Roma', 'Warrior', { cost: 10, progress: 6 }),
+      dataNow = player([romaNow, city('Veii', 'Settlers', { cost: 30 })]);
+
+    changes.collect(null);
+    changes.notify({ player: dataNow } as GameData);
+
+    (element.querySelector('[data-city="City-Roma"]') as HTMLElement).click();
+
+    expect(
+      'everything rebuilt to the same: the row is left, and opens the city as the page holds it now',
+      [
+        element.querySelector('[data-city="City-Roma"]') === row,
+        openedCities[openedCities.length - 1] === romaNow,
+      ],
+      [true, true]
+    );
+
+    // What a row shows changes: drawn again.
+    (romaNow.build.progress as any).value = 8;
+
+    changes.collect([romaNow.build.id]);
+    changes.notify({ player: dataNow } as GameData);
+
+    expect(
+      'a build moved on: the list is drawn again',
+      [element.querySelector('.cities-list') === list, rows(element)[0]],
+      [false, 'Roma | Warrior1 turn']
+    );
+
+    // A city falls into disorder, which only the player's actions say.
+    const disordered = player(dataNow.cities, [dataNow.cities[1]]);
+
+    changes.collect([disordered.id]);
+    changes.notify({ player: disordered } as GameData);
+
+    expect(
+      'a city in disorder, from the player alone: drawn again, and flagged',
+      rows(element)[1],
+      'Veii | Settlers15 turns | Civil disorder'
+    );
   }
 
   {

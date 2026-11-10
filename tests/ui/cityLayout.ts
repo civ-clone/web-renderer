@@ -13,11 +13,12 @@ import './lib/interfaces';
 import './lib/grids';
 
 import City, { classicCityLayout } from '@civ-clone/ui-windows/components/City';
-import { City as CityData } from '@civ-clone/ui-protocol/types';
+import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-windows/components/openCity';
@@ -783,6 +784,134 @@ const run = async (): Promise<void> => {
     },
   ]);
 
+  // The keyboard on a queue button when the city is updated (#852): the screen is drawn afresh, and the focus goes to
+  //  that item's button, wherever the item now is. linkedom has no focus, so it's tracked by hand.
+  let focused: Element | null = null;
+
+  Object.defineProperty(document, 'activeElement', {
+    configurable: true,
+    get: () => focused,
+  });
+
+  const focus = HTMLElement.prototype.focus;
+
+  HTMLElement.prototype.focus = function (this: HTMLElement) {
+    focused = this;
+  };
+
+  const queueItem = (name: string) => ({
+      item: { _: name, __: [name, 'CityImprovement', 'Buildable'] },
+      cost: { value: 40 },
+    }),
+    // The city as the worker sends it after an edit, drawn on the next render.
+    requeue = (...names: string[]): void => {
+      const city = {
+        ...queuedCity,
+        build: { ...queuedCity.build, queue: names.map(queueItem) },
+      } as unknown as CityData;
+
+      dataChanges.collect([queuedCity.build.id]);
+      dataChanges.notify({
+        player: { cities: [city] },
+      } as unknown as GameData);
+    },
+    queueButton = (label: string): HTMLElement | null =>
+      Array.from(
+        queued.element().querySelectorAll<HTMLElement>('.ui-city-queue button')
+      ).find((button) => button.getAttribute('aria-label') === label) ?? null,
+    // What has the focus, and whether it's in the screen as drawn now.
+    focusedNow = (): unknown[] => [
+      focused?.getAttribute('aria-label') ?? null,
+      focused !== null && queued.element().contains(focused),
+    ];
+
+  requeue('Temple', 'Library', 'Granary');
+
+  focused = queueButton('Move Granary up');
+  requeue('Temple', 'Granary', 'Library');
+
+  expect(
+    "an item moved up: the keyboard is on that item's Up, in its new place",
+    [...focusedNow(), focused === queueButton('Move Granary up')],
+    ['Move Granary up', true, true]
+  );
+
+  requeue('Granary', 'Temple', 'Library');
+
+  expect(
+    'moved up to first, which has no Up: on its next button, not another item',
+    focusedNow(),
+    ['Move Granary down', true]
+  );
+
+  focused = queueButton('Remove Temple from the queue');
+  requeue('Granary', 'Library');
+
+  expect(
+    'an item removed: on the item now in its place, and not on its Remove, which a second Enter would press',
+    focusedNow(),
+    ['Move Library up', true]
+  );
+
+  // The build finishes while the keyboard is on the last item's Up: it's now the only one queued, with Remove alone.
+  requeue('Granary', 'Library');
+  focused = queueButton('Move Library up');
+  requeue('Library');
+
+  expect(
+    'an item left with Remove alone: the screen has the focus, not Remove',
+    [
+      queueButton('Remove Library from the queue') !== null,
+      focused === queued.element(),
+    ],
+    [true, true]
+  );
+
+  // Two alike: the second's Remove pressed, and the first's is not where the focus goes.
+  requeue('Temple', 'Granary', 'Temple');
+  focused = Array.from(
+    queued
+      .element()
+      .querySelectorAll<HTMLElement>('.ui-city-queue button[data-destructive]')
+  )[2];
+  requeue('Temple', 'Granary');
+
+  expect("one of two alike removed: not on the other's Remove", focusedNow(), [
+    'Move Granary up',
+    true,
+  ]);
+
+  // Two alike, the first moved up to first, where it has no Up: on its own row, not on the other's Up, which the
+  //  next Enter would press.
+  requeue('Temple', 'Granary', 'Library', 'Granary');
+  focused = queueButton('Move Granary up');
+  requeue('Granary', 'Temple', 'Library', 'Granary');
+
+  expect(
+    "the first of two alike moved to first: on its own row's button, not the other's Up",
+    [
+      ...focusedNow(),
+      focused ===
+        queued
+          .element()
+          .querySelector('.ui-city-queued')
+          ?.querySelector('button'),
+    ],
+    ['Move Granary down', true, true]
+  );
+
+  requeue('Granary');
+  focused = queueButton('Remove Granary from the queue');
+  requeue();
+
+  expect(
+    'the last item removed: nothing like it is left, so the screen has the focus',
+    focused === queued.element(),
+    true
+  );
+
+  HTMLElement.prototype.focus = focus;
+  delete (document as any).activeElement;
   queued.close();
 
   // The classic layout is still `City`'s own.

@@ -1,6 +1,6 @@
 import { City, Player } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
-import { TOptions, t } from 'i18next';
+import i18next, { TOptions, t } from 'i18next';
 import { buildTurns, turnsText } from './lib/cityYields';
 import DataChanges, {
   instance as dataChanges,
@@ -51,6 +51,24 @@ export const cityRows = (player: Player): CityRow[] => {
     .sort((a, b) => sortKey(a) - sortKey(b));
 };
 
+// Everything a row shows, and the language it's said in: two lists with the same one look the same.
+const shown = (rows: CityRow[], showAll: boolean): string =>
+  JSON.stringify([
+    i18next.language,
+    showAll,
+    rows.length,
+    ...(showAll ? rows : rows.slice(0, citiesShown)).map(
+      ({ city, turns, disorder, starving }) => [
+        city.id,
+        cityName(city),
+        turns === null ? null : getLabelForBuildable(city.build.building),
+        turns === null ? null : turnsText(turns),
+        disorder,
+        starving,
+      ]
+    ),
+  ]);
+
 const flag = (className: string, label: string): HTMLElement => {
   const element = s(`<span class="flag ${className}"></span>`);
 
@@ -65,11 +83,14 @@ const flag = (className: string, label: string): HTMLElement => {
  *  "Show all". A row opens its city.
  *
  * It follows the cities, their builds and their growth through `DataChanges` (#344), as the reports do, rather than
- *  being rebuilt every render.
+ *  being rebuilt every render. Most of what wakes it changes nothing it shows (a unit moving beside a city has the
+ *  city sent again), so it is drawn again only when a row would read differently (#851).
  */
 export class CitiesList extends Element {
   #player: Player;
   #portal: Pick<Portal, 'openCity'>;
+  // What the list last drew, as `shown` says it.
+  #shown: string | null = null;
   #showAll = false;
   #unwatch: () => void;
 
@@ -104,7 +125,14 @@ export class CitiesList extends Element {
           ? (document.activeElement as HTMLElement)
           : null
       )?.dataset.city,
-      rows = cityRows(this.#player);
+      rows = cityRows(this.#player),
+      shownNow = shown(rows, this.#showAll);
+
+    if (shownNow === this.#shown) {
+      return;
+    }
+
+    this.#shown = shownNow;
 
     this.empty();
 
@@ -201,7 +229,12 @@ export class CitiesList extends Element {
       button.append(flags);
     }
 
-    button.addEventListener('click', () => this.#portal.openCity(city));
+    // The city as the page holds it when the row is clicked: the row can outlast the object it was drawn from.
+    button.addEventListener('click', () =>
+      this.#portal.openCity(
+        this.#player.cities.find(({ id }) => id === city.id) ?? city
+      )
+    );
 
     item.append(button);
 

@@ -36,6 +36,7 @@ import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { escape } from './lib/requirements';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
+import keepFocus from './lib/keepFocus';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
@@ -605,7 +606,9 @@ export class City extends Window {
       update: (updatedCity, _data, goldOnly) => {
         // Read before the redraw, which takes away whatever had the focus inside the screen.
         const focusedWindow =
-          document.activeElement?.closest('dialog.window') ?? null;
+            document.activeElement?.closest('dialog.window') ?? null,
+          // The control the keyboard is on, to put it back on its like in what is drawn next (#852).
+          restoreFocus = keepFocus(this.element());
 
         this.#city = updatedCity;
 
@@ -620,8 +623,9 @@ export class City extends Window {
         //  production picker or a confirmation, where the next Enter is meant for that window (#484); and for a
         //  change to the player's gold alone, which can come at any time, not from anywhere else either (#503).
         if (
-          focusedWindow === this.element() ||
-          (focusedWindow === null && !goldOnly)
+          !restoreFocus() &&
+          (focusedWindow === this.element() ||
+            (focusedWindow === null && !goldOnly))
         ) {
           this.element().focus();
         }

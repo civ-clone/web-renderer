@@ -267,13 +267,92 @@ const run = async (): Promise<void> => {
     focusesTaken(document.body, ['Treasury-1']),
     0
   );
+  // What the keyboard was on inside the screen goes with the redraw: the focus is put on its like in what is drawn
+  //  next (#852), not on the screen. A pointer's click focuses a button too, and then the screen takes it, as before.
+  const focusOn = HTMLElement.prototype.focus,
+    matches = HTMLElement.prototype.matches;
+  let byKeyboard = true,
+    focusedOn: Element | null = null;
+
+  HTMLElement.prototype.focus = function (this: HTMLElement) {
+    focusedOn = this;
+  };
+  HTMLElement.prototype.matches = function (
+    this: HTMLElement,
+    selector: string
+  ) {
+    return selector === ':focus-visible'
+      ? byKeyboard
+      : matches.call(this, selector);
+  };
+
+  const changeButton = (): Element | null =>
+    screen.element().querySelector('div.build button');
+
   expect(
-    'but gives it back to the screen when the redraw took it from inside',
-    focusesTaken(screen.element().querySelector('div.build button'), [
-      'Treasury-1',
-    ]),
+    'a button the keyboard was on is redrawn: the focus goes to the new one, not the screen',
+    [
+      focusesTaken(changeButton(), ['Treasury-1']),
+      focusedOn === changeButton(),
+    ],
+    [0, true]
+  );
+
+  byKeyboard = false;
+
+  expect(
+    'but a button a pointer clicked gives it back to the screen, as before',
+    focusesTaken(changeButton(), ['Treasury-1']),
     1
   );
+
+  byKeyboard = true;
+
+  // A specialist whose kind changes has a new label: the keyboard stays on the citizen in its place, not on the other
+  //  of the two, which still has the old one.
+  const citizens = (): Element[] =>
+      Array.from(screen.element().querySelectorAll('.specialist.clickable')),
+    oneChanged = cityData(['S-3', 'S-5']);
+
+  (oneChanged.specialists[1] as { _: string })._ = 'Taxman';
+
+  focused = citizens()[1];
+  update(oneChanged);
+
+  expect(
+    'the second of two specialists changed: the focus is on the second, not on the one that still reads the same',
+    [citizens().length, focusedOn === citizens()[1]],
+    [2, true]
+  );
+
+  // Auto turned on: its button reads differently, and is still where the keyboard is.
+  const autoButton = (): Element | null =>
+      screen.element().querySelector('.build-actions button.auto'),
+    onAuto = cityData(['S-3', 'S-5']);
+
+  (onAuto.build as { auto: boolean }).auto = true;
+
+  const autoBefore = autoButton();
+
+  focused = autoBefore;
+  update(onAuto);
+
+  expect(
+    'a button whose label changed keeps the focus, in its place among its own',
+    [
+      autoBefore !== null,
+      autoButton() !== autoBefore,
+      autoButton()?.textContent !== autoBefore?.textContent,
+      focusedOn === autoButton(),
+    ],
+    [true, true, true, true]
+  );
+
+  focused = document.body;
+  update(cityData(['S-3', 'S-5']));
+
+  HTMLElement.prototype.focus = focusOn;
+  HTMLElement.prototype.matches = matches;
   expect(
     'while a change of its own takes it from the page',
     focusesTaken(document.body),
