@@ -13,7 +13,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from '@civ-clone/ui-game/GamePortal';
 import World from '@civ-clone/ui-map/components/World';
 import {
   clampOrigin,

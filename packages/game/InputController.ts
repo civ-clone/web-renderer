@@ -11,7 +11,7 @@ import {
   openTradeReport,
 } from '@civ-clone/ui-windows/components/reports';
 import Civilopedia from '@civ-clone/ui-windows/components/Civilopedia';
-import GamePortal from '@civ-clone/ui-windows/components/GamePortal';
+import GamePortal from './GamePortal';
 import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
 import Transport from '@civ-clone/ui-client/Transport';
 import { PlayerTradeRates } from '@civ-clone/ui-protocol/types';

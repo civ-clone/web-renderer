@@ -6,15 +6,19 @@ import {
   showTooltipOver,
   tooltipOpenOver,
 } from '@civ-clone/ui-component-tooltip/Tooltip';
-import cityBannerTooltip, { hasBannerTooltip } from './Map/cityBannerTooltip';
-import squareTooltip, { hasSquareTooltip } from './Map/squareTooltip';
+import cityBannerTooltip, {
+  hasBannerTooltip,
+} from '@civ-clone/ui-windows/components/Map/cityBannerTooltip';
+import squareTooltip, {
+  hasSquareTooltip,
+} from '@civ-clone/ui-windows/components/Map/squareTooltip';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
-import { openUnitSelection } from './choices';
+import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
-import mapMenus from './mapMenus';
+import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
 import { on } from '@dom111/element';
 
 // How far, in px, a press has to move before it is a drag rather than a click
