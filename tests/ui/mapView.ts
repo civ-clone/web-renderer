@@ -15,7 +15,7 @@ import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import CityBanners from '@civ-clone/ui-interface-modern/components/CityBanners';
 import MapView from '@civ-clone/ui-game/MapView';
 import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
-import { playerCityOpener } from '@civ-clone/ui-windows/lib/cityOpeners';
+import { playerCityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 

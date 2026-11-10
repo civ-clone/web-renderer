@@ -11,7 +11,7 @@ import {
   chooseUnitAction,
   nameOf,
   performWithPrompts,
-} from '@civ-clone/ui-windows/lib/unitActionPrompts';
+} from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import {
   neighbourActions,
   unitActions,

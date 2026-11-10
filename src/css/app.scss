@@ -75,7 +75,7 @@ input {
 
 @import '../../packages/component-button/styles/buttons';
 @import '../../packages/component-controls/styles/controls';
-@import '../../packages/windows/styles/actions';
+@import '../../packages/hud/styles/actions';
 @import '../../packages/city/styles/city';
 @import '../../packages/windows/styles/city-status';
 @import '../../packages/reports/styles/civilopedia';
@@ -92,7 +92,7 @@ input {
 @import '../../packages/game/styles/map';
 @import '../../packages/windows/styles/military-report';
 @import '../../packages/game/styles/notification-area';
-@import '../../packages/windows/styles/notification-window';
+@import '../../packages/hud/styles/notification-window';
 @import '../../packages/component-popup-menu/styles/popup-menu';
 @import '../../packages/component-progress-bar/styles/progress-bar';
 @import '../../packages/component-report-table/styles/report-table';
@@ -101,11 +101,11 @@ input {
 @import '../../packages/windows/styles/releases';
 @import '../../packages/reports/styles/science-report';
 @import '../../packages/component-selection-window/styles/selection-window';
-@import '../../packages/windows/styles/sidebar';
-@import '../../packages/windows/styles/spaceship-window';
+@import '../../packages/hud/styles/sidebar';
+@import '../../packages/hud/styles/spaceship-window';
 @import '../../packages/component-stat-pill/styles/stat-pill';
-@import '../../packages/windows/styles/supported-unit';
-@import '../../packages/windows/styles/top-bar';
+@import '../../packages/hud/styles/supported-unit';
+@import '../../packages/hud/styles/top-bar';
 @import '../../packages/component-tooltip/styles/tooltip';
 @import '../../packages/windows/styles/top-cities-report';
 @import '../../packages/windows/styles/trade-report';

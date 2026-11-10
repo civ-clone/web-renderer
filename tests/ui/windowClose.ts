@@ -12,7 +12,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
-import Notifications from '@civ-clone/ui-windows/components/Notifications';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
 import Window from '@civ-clone/ui-component-window/Window';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';

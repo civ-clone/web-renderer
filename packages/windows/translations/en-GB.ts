@@ -2,8 +2,6 @@
 import i18next from 'i18next';
 
 i18next.addResources('en-GB', 'default', {
-  'Actions.Revolution.body':
-    'Overthrow your government? Your civilisation will fall into Anarchy for a few turns before you can choose a new one, unless you have the Pyramids.',
   'ChoiceWindow.ChooseFromList.choose-civilization.random':
     'Play as a random civilisation',
   'GameOptions.colour-scheme': 'Colours',
@@ -25,11 +23,8 @@ i18next.addResources('en-GB', 'default', {
   'NewGameWindow.customize': 'Customise…',
   'NewGameWindow.customize-meta':
     'Choose the civilisations, seats, rules and the exact world',
-  'Observer.civilizations': 'As these civilisations see it',
   'IntelligenceReport.empty': 'We have not met any other civilisations yet.',
   'IntelligenceReport.no-foreign-affairs':
     'No contact with other civilisations.',
   'IntelligenceReport.trait.Civilized': 'Civilised',
-  'Senate.overruled': 'Overruled by the Senate. Action cancelled.',
-  'SquareTooltip.defence': 'Defence',
 });

@@ -13,6 +13,7 @@
     "@civ-clone/ui-component-progress-bar": "workspace:*",
     "@civ-clone/ui-component-selection-window": "workspace:*",
     "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-hud": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-reports": "workspace:*",

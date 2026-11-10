@@ -29,9 +29,9 @@ import {
   renderYields,
 } from '@civ-clone/ui-city/components/lib/cityParts';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
+import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from '@civ-clone/ui-windows/components/Unit';
+import Unit from '@civ-clone/ui-hud/components/Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';

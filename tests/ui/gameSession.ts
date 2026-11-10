@@ -18,15 +18,15 @@ import GameSession from '@civ-clone/ui-game/GameSession';
 import {
   observerCityOpener,
   playerCityOpener,
-} from '@civ-clone/ui-windows/lib/cityOpeners';
+} from '@civ-clone/ui-hud/lib/cityOpeners';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { City as CityData, Tile } from '@civ-clone/ui-protocol/types';
 import { MapView } from '@civ-clone/ui-game/MapView';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
-import Notices from '@civ-clone/ui-windows/components/Notices';
-import Notifications from '@civ-clone/ui-windows/components/Notifications';
+import Notices from '@civ-clone/ui-hud/components/Notices';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
 import NotificationBar from '@civ-clone/ui-game/app/NotificationBar';
 import Transport from '@civ-clone/ui-client/Transport';
 import appElements from '@civ-clone/ui-game/app/elements';

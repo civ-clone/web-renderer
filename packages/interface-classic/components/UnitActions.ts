@@ -10,7 +10,7 @@ import { keyForAction } from '@civ-clone/ui-client/lib/unitActionKeys';
 import {
   nameOf,
   performWithPrompts,
-} from '@civ-clone/ui-windows/lib/unitActionPrompts';
+} from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import { t } from 'i18next';
 import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 

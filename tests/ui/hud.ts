@@ -17,7 +17,7 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import UnitActions from '@civ-clone/ui-interface-classic/components/UnitActions';
 import Hud from '@civ-clone/ui-game/Hud';
-import Notices from '@civ-clone/ui-windows/components/Notices';
+import Notices from '@civ-clone/ui-hud/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

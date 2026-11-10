@@ -30,8 +30,8 @@ import {
 } from '@civ-clone/ui-city/components/lib/cityParts';
 import { growthLimitText } from '@civ-clone/ui-client/components/lib/city';
 import buildingIcon from '@civ-clone/ui-assets/components/lib/buildingIcon';
-import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
-import Unit from '@civ-clone/ui-windows/components/Unit';
+import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
+import Unit from '@civ-clone/ui-hud/components/Unit';
 import button from '@civ-clone/ui-component-button/button';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
@@ -43,7 +43,7 @@ import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
+import unitLabel from '@civ-clone/ui-hud/lib/unitLabel';
 
 // The city screen under the new interface (#746): a window over the map, with a strip across the top for the city's
 //  size, growth and citizens, three columns below it (what the city makes, its map, what it's building and has built)

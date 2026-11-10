@@ -1,12 +1,12 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import { unitName, unitStates } from '@civ-clone/ui-windows/lib/unitLabel';
+import { unitName, unitStates } from '@civ-clone/ui-hud/lib/unitLabel';
 import currentTileset, {
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
-import Unit from '@civ-clone/ui-windows/components/Unit';
-import { UnitPanelDeps } from '@civ-clone/ui-windows/components/unitPanel';
+import Unit from '@civ-clone/ui-hud/components/Unit';
+import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
 import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import glyph, { GlyphName } from '@civ-clone/ui-assets/lib/glyphs';

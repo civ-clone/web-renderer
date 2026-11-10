@@ -10,7 +10,7 @@ import './lib/interfaces';
 import { GameData, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Hud from '@civ-clone/ui-game/Hud';
 import NextTurn from '@civ-clone/ui-interface-modern/components/NextTurn';
-import Notices from '@civ-clone/ui-windows/components/Notices';
+import Notices from '@civ-clone/ui-hud/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';

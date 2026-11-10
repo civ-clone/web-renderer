@@ -17,7 +17,7 @@ import Difficulties from '@civ-clone/ui-protocol/Requests/Difficulties';
 import Request from '@civ-clone/core-data-client/Request';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
-import { openChoice } from './choiceList';
+import { openChoice } from '@civ-clone/ui-hud/components/choiceList';
 import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

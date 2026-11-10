@@ -10,7 +10,7 @@ Primary files:
 - `src/js/interfaces.ts` (the interfaces civ.one offers)
 - `packages/*`, one workspace package per part of the frontend (see Packages below)
 - `packages/game/bootstrap.ts` (page start-up), and the rest of `packages/game/` (one game)
-- `packages/windows/components/*` (the windows), `packages/reports/components/*` (the reports, the Civilopedia, the Hall of Fame and the game's end) and `packages/map/components/Map/*` (the map's layers)
+- `packages/windows/components/*` (the menus, options and saves), `packages/hud/components/*` (the actions, notices, top bar, sidebar lists, unit and map tooltips around the map), `packages/reports/components/*` (the reports, the Civilopedia, the Hall of Fame and the game's end) and `packages/map/components/Map/*` (the map's layers)
 - `src/css/app.scss`, civ.one's stylesheet: the themes, and each package's own partials (`packages/<name>/styles/`)
   in cascade order
 
@@ -115,23 +115,24 @@ civ.one's in them: `@civ-clone/core-data-client` (the transport contract, reques
 patches and rebuilding them) and `@civ-clone/worker-transport` (both ends of a transport over a web worker's
 messages, which `frontend.ts` and `backend.ts` start, telling the page's end that `gameData` arrives raw).
 
-| Package             | Holds                                                                                                                                                                                       | Depends on                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `protocol`          | What the page and the worker say to each other: requests, messages, the game's data                                                                                                         | nothing else                                                 |
-| `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts                                                                                                                      | protocol                                                     |
-| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves                                                                                                            | protocol                                                     |
-| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                                                                                                                          | protocol, client                                             |
-| `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, client, assets, protocol              |
-| `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | client, assets                                               |
-| `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, client, assets, widgets                            |
-| `map-square`        | The square grid: its projection and minimap                                                                                                                                                 | protocol, assets, map                                        |
-| `audio`             | Civ1's music and sounds: the AdLib driver, the OPL2 synth, the worklet, and which tune each moment gets                                                                                     | protocol, client                                             |
-| `city`              | The city screen and its parts (the squares, the yields, the citizens), renaming a city and Find City                                                                                        | protocol, client, assets, widgets, map                       |
-| `reports`           | The reports, the Civilopedia (and why a city can't build something), the Hall of Fame and the game's end                                                                                    | protocol, client, assets, widgets, map, city                 |
-| `windows`           | The game's windows, shared by every interface that wants them                                                                                                                               | protocol, client, assets, widgets, map, audio, city, reports |
-| `game`              | The page itself: starting up, a game in play, the keys, the debug tools                                                                                                                     | everything above it but the worker's                         |
-| `interface-modern`  | The modern interface, with Slate and brass, see above                                                                                                                                       | the page's packages but `game`                               |
-| `interface-classic` | The classic interface, with Civ1 classic, see above                                                                                                                                         | the page's packages but `game`                               |
+| Package             | Holds                                                                                                                                                                                       | Depends on                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `protocol`          | What the page and the worker say to each other: requests, messages, the game's data                                                                                                         | nothing else                                                |
+| `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts                                                                                                                      | protocol                                                    |
+| `client`            | The game as the page holds it, drawing nothing: transport, state, options, saves                                                                                                            | protocol                                                    |
+| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                                                                                                                          | protocol, client                                            |
+| `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, client, assets, protocol             |
+| `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | client, assets                                              |
+| `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, client, assets, widgets                           |
+| `map-square`        | The square grid: its projection and minimap                                                                                                                                                 | protocol, assets, map                                       |
+| `audio`             | Civ1's music and sounds: the AdLib driver, the OPL2 synth, the worklet, and which tune each moment gets                                                                                     | protocol, client                                            |
+| `city`              | The city screen and its parts (the squares, the yields, the citizens), renaming a city and Find City                                                                                        | protocol, client, assets, widgets, map                      |
+| `reports`           | The reports, the Civilopedia (and why a city can't build something), the Hall of Fame and the game's end                                                                                    | protocol, client, assets, widgets, map, city                |
+| `hud`               | What's around the map in play: the actions and notices, the top bar's year and empire, the sidebar's lists, the observer's bar, the unit and its prompts, and the map's tooltips            | protocol, client, assets, widgets, map, city, reports       |
+| `windows`           | The game's menus, options and saves: the Game menu, the options, a new game, loading, resuming and importing, the release notes and the title screen                                        | protocol, client, assets, widgets, map, audio, reports, hud |
+| `game`              | The page itself: starting up, a game in play, the keys, the debug tools                                                                                                                     | everything above it but the worker's                        |
+| `interface-modern`  | The modern interface, with Slate and brass, see above                                                                                                                                       | the page's packages but `game`                              |
+| `interface-classic` | The classic interface, with Civ1 classic, see above                                                                                                                                         | the page's packages but `game`                              |
 
 The components (#825) are packages of their own so any interface can build on any of them, each bringing its styles:
 `@civ-clone/ui-component-window` is the window every interface builds on, `ui-component-button` the button system, and
@@ -184,6 +185,9 @@ handed over in IndexedDB (`civ-clone-saved-game`) with a marker in
 ask before leaving a game in progress.
 
 ### Gameplay overlays/windows
+
+What surrounds the map in play (the actions, notices, details, sidebar lists, unit prompts and map tooltips) is in
+`packages/hud` (#863); the menus, options and saves are in `packages/windows`.
 
 - Action panels: `Actions` (buttons from `components/Actions/*`: `EndTurn`,
   `CityBuild`, `ChooseResearch`, `ChooseGovernment`, `Revolution`,

@@ -65,9 +65,6 @@ i18next.addResources('en', 'default', {
     'Mountains or a River next to the city',
   'Civilopedia.condition.civ1-spaceship.unlaunched-spaceship':
     'a spaceship that hasn’t been launched',
-  'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
-  'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',
-  'Progress.per-turn': '{{count, number}} / turn',
   'ScienceReport.progress_notresearching': '',
   'ScienceReport.progress_researching':
     '$t(Progress.body, { "progress": {{progress}}, "total": {{total}}, "turns": {{turns }} })',

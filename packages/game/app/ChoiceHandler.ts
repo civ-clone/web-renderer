@@ -13,10 +13,10 @@ import { speakerOf } from '@civ-clone/ui-client/lib/interactionLabels';
 import { Interactions, Negotiation } from '@civ-clone/ui-protocol/types';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import Transport from '@civ-clone/ui-client/Transport';
-import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';
-import { openChoice } from '@civ-clone/ui-windows/components/choiceList';
-import talks from '@civ-clone/ui-windows/components/talks';
-import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
+import entryDetails from '@civ-clone/ui-hud/components/lib/choiceDetails';
+import { openChoice } from '@civ-clone/ui-hud/components/choiceList';
+import talks from '@civ-clone/ui-hud/components/talks';
+import { PendingMeeting } from '@civ-clone/ui-hud/components/turnControls';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {

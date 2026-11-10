@@ -1,12 +1,12 @@
 import { City, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
-import { noticeText } from '@civ-clone/ui-windows/components/Actions/Notice';
-import { Notice as NoticeData } from '@civ-clone/ui-windows/components/Notices';
+import { noticeText } from '@civ-clone/ui-hud/components/Actions/Notice';
+import { Notice as NoticeData } from '@civ-clone/ui-hud/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import button from '@civ-clone/ui-component-button/button';
-import { createAction } from '@civ-clone/ui-windows/components/Actions';
+import { createAction } from '@civ-clone/ui-hud/components/Actions';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { setNoticeCategory } from './lib/noticeCategory';
 import { t } from 'i18next';

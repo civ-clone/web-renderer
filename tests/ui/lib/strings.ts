@@ -3,6 +3,7 @@
 import '@civ-clone/ui-city/translations/en';
 import '@civ-clone/ui-client/translations/en';
 import '@civ-clone/ui-game/translations/en';
+import '@civ-clone/ui-hud/translations/en';
 import '@civ-clone/ui-interface-classic/translations/en';
 import '@civ-clone/ui-interface-modern/translations/en';
 import '@civ-clone/ui-protocol/translations/en';

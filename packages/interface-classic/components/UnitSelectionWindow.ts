@@ -1,5 +1,5 @@
 import Transport from '@civ-clone/ui-client/Transport';
-import Unit from '@civ-clone/ui-windows/components/Unit';
+import Unit from '@civ-clone/ui-hud/components/Unit';
 import { GameData, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import Window from '@civ-clone/ui-component-window/Window';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
@@ -7,7 +7,7 @@ import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
-import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
+import unitLabel from '@civ-clone/ui-hud/lib/unitLabel';
 
 type OnComplete = (unit: UnitData) => void;
 

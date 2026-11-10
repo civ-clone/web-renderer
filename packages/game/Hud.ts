@@ -4,23 +4,23 @@ import {
   Tile,
   Unit,
 } from '@civ-clone/ui-protocol/types';
-import Actions from '@civ-clone/ui-windows/components/Actions';
-import GameDetails from '@civ-clone/ui-windows/components/GameDetails';
+import Actions from '@civ-clone/ui-hud/components/Actions';
+import GameDetails from '@civ-clone/ui-hud/components/GameDetails';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
-import Notices from '@civ-clone/ui-windows/components/Notices';
-import PlayerDetails from '@civ-clone/ui-windows/components/PlayerDetails';
+import Notices from '@civ-clone/ui-hud/components/Notices';
+import PlayerDetails from '@civ-clone/ui-hud/components/PlayerDetails';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ScienceReport from '@civ-clone/ui-reports/components/ScienceReport';
-import PowerList from '@civ-clone/ui-windows/components/PowerList';
+import PowerList from '@civ-clone/ui-hud/components/PowerList';
 import { openTradeReport } from '@civ-clone/ui-reports/components/reports';
 import Transport from '@civ-clone/ui-client/Transport';
-import { UnitPanel } from '@civ-clone/ui-windows/components/unitPanel';
+import { UnitPanel } from '@civ-clone/ui-hud/components/unitPanel';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import partitionActions from '@civ-clone/ui-client/lib/playerActionPanels';
 import turnControls, {
   NextTurnControl,
   TurnControls,
-} from '@civ-clone/ui-windows/components/turnControls';
+} from '@civ-clone/ui-hud/components/turnControls';
 import { t } from 'i18next';
 
 // The panels around the map: the player's actions (the end-turn area, which the interface's `turnControls` fill

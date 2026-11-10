@@ -8,10 +8,10 @@ import {
 } from '@civ-clone/ui-component-tooltip/Tooltip';
 import cityBannerTooltip, {
   hasBannerTooltip,
-} from '@civ-clone/ui-windows/components/Map/cityBannerTooltip';
+} from '@civ-clone/ui-hud/components/Map/cityBannerTooltip';
 import squareTooltip, {
   hasSquareTooltip,
-} from '@civ-clone/ui-windows/components/Map/squareTooltip';
+} from '@civ-clone/ui-hud/components/Map/squareTooltip';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';

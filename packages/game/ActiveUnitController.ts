@@ -14,7 +14,7 @@ import {
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import chooseActiveUnit from '@civ-clone/ui-client/lib/chooseActiveUnit';
 import UnitQueue from '@civ-clone/ui-client/lib/UnitQueue';
-import { openArrivalWindow } from '@civ-clone/ui-windows/lib/unitActionPrompts';
+import { openArrivalWindow } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import {
   UnitActionsRequest,
