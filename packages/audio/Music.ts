@@ -32,7 +32,8 @@ export interface MusicOptions {
   sound: () => Promise<ArrayBuffer | null>;
   /** The output gain, 0 (off) to 1, read whenever it may have changed. */
   gain: () => number;
-  workletUrl: string;
+  /** The worklet's script, asked for when the music first starts. */
+  workletUrl: () => string;
   /** Null where there's no Web Audio. */
   createContext?: () => MusicContext | null;
   createNode?: (context: MusicContext) => MusicNode;
@@ -317,7 +318,7 @@ export class Music {
     this.#run(true);
 
     const started = context.audioWorklet
-      .addModule(this.#options.workletUrl)
+      .addModule(this.#options.workletUrl())
       .then((): boolean => {
         const node = (this.#options.createNode ?? defaultNode)(context!);
 

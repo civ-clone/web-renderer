@@ -3,14 +3,23 @@ import './interfaces.ts';
 import '@civ-clone/ui-map-square';
 import Renderer from '@civ-clone/ui-game/bootstrap';
 import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';
+import { setBuild } from '@civ-clone/ui-client/lib/build';
 import { version } from '../../build.json';
 
-// The build's version on the worker's URL, as on the page's own script and
-//  stylesheet (#476): a `frontend.js` and a `backend.js` from different deploys
-//  can't work together.
+// The build's version on the URLs of its own files, as on the page's own script and stylesheet (#476): a
+//  `frontend.js` and a `backend.js` (or `musicWorklet.js`) from different deploys can't work together. The packages
+//  are told it, and where the files are, rather than reading the build themselves (#866).
+const versioned = (file: string) =>
+  `dist/${file}?v=${encodeURIComponent(version)}`;
+
+setBuild({
+  version,
+  musicWorkletUrl: versioned('musicWorklet.js'),
+});
+
 const renderer = new Renderer(
   new WorkerTransport(
-    new Worker(`dist/backend.js?v=${encodeURIComponent(version)}`),
+    new Worker(versioned('backend.js')),
     // The game data is rebuilt incrementally by the page itself (#333).
     { rawChannels: ['gameData'] }
   )

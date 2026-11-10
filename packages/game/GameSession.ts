@@ -35,7 +35,7 @@ import GameState from '@civ-clone/ui-client/game/GameState';
 import InputController from './InputController';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
-import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
+import EventSounds from '@civ-clone/ui-audio/eventSounds';
 import { AppElements } from './app/elements';
 import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
 import NotificationBar from './app/NotificationBar';

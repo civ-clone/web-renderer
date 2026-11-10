@@ -1,4 +1,4 @@
-// The music worklet (src/js/Audio/musicWorklet.ts) under a stubbed AudioWorkletGlobalScope (#126): it loads the
+// The music worklet (packages/audio/musicWorklet.ts) under a stubbed AudioWorkletGlobalScope (#126): it loads the
 // player's ASOUND.CVL and plays from it, and a tune the driver can't play (a damaged file, which the driver throws on
 // rather than hang) is reported as an error and silenced, with the audio thread still running.
 //
@@ -54,7 +54,7 @@ scope.AudioWorkletProcessor = class {
 
 // After the scope's names: the module registers its processor as it loads.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-require('../../src/js/Audio/musicWorklet');
+require('@civ-clone/ui-audio/musicWorklet');
 
 const make = () => {
   const processor = new Processor(),

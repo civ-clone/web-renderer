@@ -40,7 +40,7 @@ import WorkerFailures from './app/WorkerFailures';
 import buildSidebar from './app/sidebar';
 import music from './app/music';
 import showStartFailure from './app/startFailure';
-import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
+import EventSounds from '@civ-clone/ui-audio/eventSounds';
 
 // TODO: !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 //  ! Break this down and use a front-end framework? !

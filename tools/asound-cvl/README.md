@@ -30,7 +30,7 @@ points when `asound.json` is given:
 `sim.py` is the piece to port to TypeScript for playback in the renderer: `Driver.play(id,
 level)`, `sound_worker()` at 60 Hz and `fast_worker()` at 300 Hz while `sound_worker()` last
 returned 1, collecting `(tick, register, value)` for an OPL2 emulator. That port is
-`src/js/Audio/cvl/`, and `hashes.py` (stdlib only) writes the fixture it is checked against:
+`packages/audio/cvl/`, and `hashes.py` (stdlib only) writes the fixture it is checked against:
 
 ```bash
 python3 hashes.py "$CVL" > ../../tests/ui/fixtures/cvl-driver.json
@@ -38,7 +38,7 @@ python3 hashes.py "$CVL" --dump 42 3          # one ID's writes as `tick sub reg
 CVL="$CVL" npm run test:cvl-driver            # from the repository root
 ```
 
-The renderer's own OPL2 synth (`src/js/Audio/opl/`, MIT, written from the chip's documented
+The renderer's own OPL2 synth (`packages/audio/opl/`, MIT, written from the chip's documented
 behaviour) plays those writes. `render-ts.mjs` renders an ID through it, taking the same
 arguments as `render.py` plus an output rate, so the two renders can be compared:
 

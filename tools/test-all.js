@@ -109,7 +109,7 @@ const inputsOf = async ({ kind, name }) => {
 
   return (
     Object.keys(metafile.inputs)
-      // Not what a plugin made up (the stand-in for `build.json` is `build-json:build.json`): only files.
+      // Not what a plugin made up (a `namespace:path` input): only files.
       .filter((input) => !/^[\w-]+:/.test(input))
       .map((input) =>
         // A package in the workspace is reached through its link in node_modules: asked about by where it really is.

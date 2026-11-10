@@ -1,4 +1,4 @@
-// The TypeScript AdLib driver (src/js/Audio/cvl/) makes the same OPL2 register
+// The TypeScript AdLib driver (packages/audio/cvl/) makes the same OPL2 register
 // writes as tools/asound-cvl/sim.py, which matches the original driver under
 // emulation (#126): every PlayTune ID 0–44 at every level 0–3, over 2,400
 // ticks, labelled with the same tick and sub-tick, and PlayTune calls on a
@@ -14,8 +14,8 @@ import { createHash } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 
-import Driver, { RegisterWrite } from '../../src/js/Audio/cvl/Driver';
-import Image from '../../src/js/Audio/cvl/Image';
+import Driver, { RegisterWrite } from '@civ-clone/ui-audio/cvl/Driver';
+import Image from '@civ-clone/ui-audio/cvl/Image';
 
 interface Scenario {
   ticks: number;

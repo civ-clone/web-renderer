@@ -1,9 +1,9 @@
-// The music player (src/js/Audio/Music.ts) with a stubbed AudioContext and worklet port (#126): nothing is made before
+// The music player (packages/audio/Music.ts) with a stubbed AudioContext and worklet port (#126): nothing is made before
 // the player's first key or click, and then only with an ASOUND.CVL and the sound on; the worklet gets the CVL, the
 // volume and the tune asked for; stop is the driver's fade; and no CVL, no AudioWorklet, a module that won't load and a
 // context that won't start are all silent, with nothing in the console. `soundGain` turns the options into the gain.
 
-import Music, { MusicContext, MusicNode } from '../../src/js/Audio/Music';
+import Music, { MusicContext, MusicNode } from '@civ-clone/ui-audio/Music';
 import soundGain from '@civ-clone/ui-assets/lib/soundGain';
 
 const failures: string[] = [];
@@ -196,7 +196,7 @@ const player = ({
     music = new Music({
       sound: async () => sound,
       gain: () => gain.value,
-      workletUrl: 'dist/musicWorklet.js?v=test',
+      workletUrl: () => 'dist/musicWorklet.js?v=test',
       gestureTarget: gestures,
       createContext: () => {
         if (context.throws) {
@@ -607,7 +607,7 @@ const run = async (): Promise<void> => {
         throw new Error('The database is blocked.');
       },
       gain: () => 1,
-      workletUrl: 'x',
+      workletUrl: () => 'x',
       gestureTarget: new EventTarget(),
     });
 

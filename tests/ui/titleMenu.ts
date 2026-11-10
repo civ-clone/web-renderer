@@ -32,6 +32,10 @@ import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import GameOptions from '@civ-clone/ui-windows/components/GameOptions';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import { resetStore } from './lib/FakeStore';
+import { setBuild } from '@civ-clone/ui-client/lib/build';
+
+// The build the entry would name (#866).
+setBuild({ version: '0.0.0@test', musicWorkletUrl: 'dist/musicWorklet.js' });
 
 const failures: string[] = [];
 let checks = 0,

@@ -1,4 +1,4 @@
-// The OPL2 synth (src/js/Audio/opl/Opl2.ts) behaves as the chip does where
+// The OPL2 synth (packages/audio/opl/Opl2.ts) behaves as the chip does where
 // Civilization's AdLib music depends on it (#126): pitch follows the chip's
 // 49,716 Hz clock at any output rate, a key-on only sounds on a key that was
 // off, frequency and level writes leave the phase alone, the envelopes'
@@ -8,7 +8,7 @@
 
 import { createHash } from 'crypto';
 
-import Opl2, { CHIP_RATE } from '../../src/js/Audio/opl/Opl2';
+import Opl2, { CHIP_RATE } from '@civ-clone/ui-audio/opl/Opl2';
 
 const failures: string[] = [];
 let checks = 0;

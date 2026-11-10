@@ -1,0 +1,11 @@
+{
+  "name": "@civ-clone/ui-audio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Civ1's music and sounds from the player's own ASOUND.CVL: its AdLib driver, an OPL2 synth, the worklet that plays them, and which tune each of the game's moments gets.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*"
+  }
+}

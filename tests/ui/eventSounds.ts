@@ -1,4 +1,4 @@
-// The game's moments as Civ1's tunes (packages/windows/lib/eventSounds.ts, #126): each notice as its tune, from the player's
+// The game's moments as Civ1's tunes (packages/audio/eventSounds.ts, #126): each notice as its tune, from the player's
 // civilization, the rival's or none, with the main theme or nothing for a civilization without a national theme; the
 // battles' tunes, won and lost; the talks' themes, the rival's, short as their emissary arrives and long at the table, faded as the player leaves or
 // once no step follows; the new game's theme over the welcome; notices added together heard as one; and the ending.
@@ -14,7 +14,7 @@ import EventSounds, {
   rivalStarted,
   shortTheme,
   tunes,
-} from '@civ-clone/ui-windows/lib/eventSounds';
+} from '@civ-clone/ui-audio/eventSounds';
 import {
   Civilization,
   Negotiation,

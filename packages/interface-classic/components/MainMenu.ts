@@ -10,7 +10,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { chooseSave } from '@civ-clone/ui-windows/components/LoadGameWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
-import { version } from '../../../build.json';
+import build from '@civ-clone/ui-client/lib/build';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import { askEarth, askNewGame } from '@civ-clone/ui-windows/components/newGame';
@@ -154,14 +154,14 @@ export class MainMenu extends Element {
         h(
           s(
             `<a href="#releases">${t('MainMenu.version', {
-              version,
+              version: build.version,
             })}</a>`
           ),
           {
             click(event) {
               event.preventDefault();
 
-              new ReleaseWindow(() => fetchReleases(version));
+              new ReleaseWindow(() => fetchReleases(build.version));
             },
           }
         )

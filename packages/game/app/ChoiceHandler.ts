@@ -28,7 +28,7 @@ export interface ChoiceHandlerDeps {
   // The same object `DebugPanel` writes: `uiStressRunner` and `stressUiWindowsEnabled` are read on every list, not
   //  copied when this starts listening.
   debugFlags: DebugFlags;
-  // The talks' music (#126): told of each step shown and of the reply to it. Structural, as `lib/eventSounds.ts`'s
+  // The talks' music (#126): told of each step shown and of the reply to it. Structural, as the `audio` package's
   //  `EventSounds` is made with the page's music, which this doesn't import.
   sounds?: {
     negotiationStep(negotiation: Negotiation): void;
