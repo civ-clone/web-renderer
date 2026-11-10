@@ -18,9 +18,11 @@ import { choices } from '@civ-clone/ui-windows/components/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
 import { classicCityLayout } from '@civ-clone/ui-windows/components/City';
 import { cityScreen } from '@civ-clone/ui-windows/components/openCity';
+import talksWindows from './components/talksWindows';
 import manifest from './manifest.json';
 import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
+import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
@@ -101,5 +103,7 @@ unitPanel.provide('details', ({ unitInfo, unitActionArea }, deps) => {
     dispose: () => {},
   };
 });
+
+talks.provide('windows', talksWindows);
 
 registerInterface(manifest);
