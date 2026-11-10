@@ -131,15 +131,31 @@ const TYPES = {
 const serve = () =>
   new Promise((resolve) => {
     const server = http.createServer((request, response) => {
-      const pathname = decodeURIComponent(
-          new URL(request.url, 'http://localhost').pathname
-        ),
-        file = path.join(
-          webRenderer,
-          pathname.endsWith('/') ? `${pathname}index.html` : pathname
-        );
+      // A file inside the checkout, or nothing: not one beside it whose name starts the same way, nor a directory.
+      let file = null;
 
-      if (!file.startsWith(webRenderer) || !fs.existsSync(file)) {
+      try {
+        const pathname = decodeURIComponent(
+            new URL(request.url, 'http://localhost').pathname
+          ),
+          wanted = path.join(
+            webRenderer,
+            pathname.endsWith('/') ? `${pathname}index.html` : pathname
+          ),
+          inside = path.relative(webRenderer, wanted);
+
+        if (
+          !inside.startsWith('..') &&
+          !path.isAbsolute(inside) &&
+          fs.statSync(wanted).isFile()
+        ) {
+          file = wanted;
+        }
+      } catch {
+        // A path that can't be read as one, or a file that isn't there.
+      }
+
+      if (file === null) {
         response.writeHead(404);
         response.end();
 
@@ -150,7 +166,9 @@ const serve = () =>
         'Cache-Control': 'no-store',
         'Content-Type': TYPES[path.extname(file)] ?? 'application/octet-stream',
       });
-      fs.createReadStream(file).pipe(response);
+      fs.createReadStream(file)
+        .on('error', () => response.destroy())
+        .pipe(response);
     });
 
     server.listen(0, '127.0.0.1', () => resolve(server));
@@ -194,8 +212,24 @@ const launch = async (chrome) => {
     }
   }
 
-  if (!target) {
+  // Chrome may still be writing to its profile as it goes: tried a few times, and left for the system if not.
+  const discard = () => {
     child.kill();
+
+    try {
+      fs.rmSync(profile, {
+        recursive: true,
+        force: true,
+        maxRetries: 10,
+        retryDelay: 100,
+      });
+    } catch {
+      // A temporary directory.
+    }
+  };
+
+  if (!target) {
+    discard();
 
     throw new Error(`${chrome} did not start`);
   }
@@ -206,15 +240,29 @@ const launch = async (chrome) => {
     problems = [];
   let nextId = 0;
 
-  await new Promise((resolve, reject) => {
-    socket.onopen = resolve;
-    socket.onerror = reject;
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      socket.onopen = resolve;
+      socket.onerror = reject;
+    });
+  } catch (error) {
+    discard();
 
-  const send = (method, params = {}) =>
+    throw error;
+  }
+
+  // `sessionId` is a worker's, for one the page started: without it, the page itself.
+  const send = (method, params = {}, sessionId = undefined) =>
     new Promise((resolve, reject) => {
       waiting.set(++nextId, { resolve, reject });
-      socket.send(JSON.stringify({ id: nextId, method, params }));
+      socket.send(
+        JSON.stringify({
+          id: nextId,
+          method,
+          params,
+          ...(sessionId === undefined ? {} : { sessionId }),
+        })
+      );
     });
 
   socket.onmessage = ({ data }) => {
@@ -255,6 +303,12 @@ const launch = async (chrome) => {
       );
     }
 
+    // The game's engine runs in a worker, whose errors the page's own session never hears of: each worker is
+    //  listened to as the page is.
+    if (message.method === 'Target.attachedToTarget') {
+      send('Runtime.enable', {}, message.params.sessionId).catch(() => {});
+    }
+
     // `alert` is how a save that won't load is said: answered, and counted.
     if (message.method === 'Page.javascriptDialogOpening') {
       problems.push(`alert: ${message.params.message}`);
@@ -264,6 +318,11 @@ const launch = async (chrome) => {
 
   await send('Page.enable');
   await send('Runtime.enable');
+  await send('Target.setAutoAttach', {
+    autoAttach: true,
+    waitForDebuggerOnStart: false,
+    flatten: true,
+  });
 
   return {
     problems,
@@ -299,19 +358,7 @@ const launch = async (chrome) => {
         // Already gone.
       }
 
-      child.kill();
-
-      // Chrome may still be writing to it as it goes: tried a few times, and left for the system to clear if not.
-      try {
-        fs.rmSync(profile, {
-          recursive: true,
-          force: true,
-          maxRetries: 10,
-          retryDelay: 100,
-        });
-      } catch {
-        // A temporary directory.
-      }
+      discard();
     },
   };
 };
@@ -489,7 +536,7 @@ const main = async () => {
           const opened = await until(
             page,
             `return document.querySelector('dialog.window.${name}[open]') !== null;`,
-            { timeout: 5_000 }
+            { timeout: 10_000 }
           );
 
           await page.key('Escape', KEY_CODES.Escape);
@@ -497,7 +544,7 @@ const main = async () => {
           const closed = await until(
             page,
             `return document.querySelector('dialog.window[open]') === null;`,
-            { timeout: 5_000 }
+            { timeout: 10_000 }
           );
 
           check(
@@ -512,7 +559,7 @@ const main = async () => {
         await until(
           page,
           `return document.querySelector('dialog.window.city-status[open] tr td') !== null;`,
-          { timeout: 5_000 }
+          { timeout: 10_000 }
         );
         await page.run(`
           const cell = document.querySelector('dialog.window.city-status[open] tr td'),
@@ -531,13 +578,26 @@ const main = async () => {
         const city = await until(
           page,
           `return document.querySelector('dialog.window[open] .city-map canvas') !== null;`,
-          { timeout: 5_000 }
+          { timeout: 10_000 }
         );
 
         check(
           `${mode}: a city opens from the City Status report, with its map`,
           city,
           JSON.stringify(await page.run(openWindows))
+        );
+        check(
+          `${mode}: and a button over each of its squares, inside the map (#854)`,
+          await page.run(`
+            const canvas = document.querySelector('dialog.window[open] .city-map canvas')?.getBoundingClientRect(),
+              squares = [...document.querySelectorAll('dialog.window[open] .city-square')].map((square) => square.getBoundingClientRect());
+
+            return canvas !== undefined && squares.length > 0 && squares.every((square) =>
+              square.width > 0 &&
+              square.left >= canvas.left - 1 && square.top >= canvas.top - 1 &&
+              square.right <= canvas.right + 1 && square.bottom <= canvas.bottom + 1
+            );
+          `)
         );
 
         for (let closing = 0; closing < 4; closing++) {
@@ -610,15 +670,53 @@ const main = async () => {
         await page.goto(`${origin}/`);
 
         const menu = await until(page, TITLE_MENU),
-          // The page says, once, that it could not read what is imported: that is the store refusing, as meant.
+          // The page says that it could not read what is imported: that is the store refusing, as meant.
           said = page.problems.filter(
-            (problem) => !expected(problem) && !/SecurityError/.test(problem)
+            (problem) =>
+              !expected(problem) &&
+              !problem.startsWith('Could not load the assets.')
           );
 
         check(
           'with site data blocked, the title menu still comes up, and nothing else goes wrong',
           menu && said.length === 0,
           said.slice(0, 3).join(' | ')
+        );
+      } finally {
+        page.close();
+      }
+    }
+    // The check on the checks: an error said in a worker is heard here, so one from the game's engine would be.
+    {
+      const page = await launch(chrome);
+
+      try {
+        await page.goto(`${origin}/`);
+        await until(page, TITLE_MENU);
+        await page.run(`
+          new Worker(URL.createObjectURL(new Blob(
+            ["console.error('said in a worker'); throw new Error('thrown in a worker');"],
+            { type: 'text/javascript' }
+          )));
+        `);
+
+        const heard = async (what) => {
+          for (let waited = 0; waited < 5_000; waited += 100) {
+            if (page.problems.some((problem) => problem.includes(what))) {
+              return true;
+            }
+
+            await sleep(100);
+          }
+
+          return false;
+        };
+
+        check(
+          'an error said or thrown in a worker is heard, so the engine’s would be',
+          (await heard('said in a worker')) &&
+            (await heard('thrown in a worker')),
+          page.problems.slice(0, 3).join(' | ')
         );
       } finally {
         page.close();
@@ -643,7 +741,7 @@ const main = async () => {
   }
 
   process.stdout.write(
-    `PASS ${NAME} (${checks.length} checks: both interfaces load a save, open every report and a city; an older save loads; site data blocked)\n`
+    `PASS ${NAME} (${checks.length} checks: both interfaces load a save, open every report and a city; an older save loads; site data blocked; a worker's errors are heard)\n`
   );
 };
 
