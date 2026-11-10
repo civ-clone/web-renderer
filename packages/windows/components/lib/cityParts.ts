@@ -241,6 +241,10 @@ const squareLabel = (tile: PlayerTile, city: CityData): string => {
   });
 };
 
+// The square the keyboard was last on in each city's map, by the city's id: the map is drawn afresh on every update,
+//  and Tab should come back to where it left, not to the city's own square each time.
+const lastSquare = new Map<string, string>();
+
 // Which way each arrow key goes on the map.
 const arrows: { [key: string]: [number, number] } = {
   ArrowUp: [0, -1],
@@ -293,7 +297,8 @@ const renderSquares = (
     //  square is doing, and two squares can read alike.
     button.dataset.focusKey = `square:${at(localTile)}`;
     // One stop for Tab: the city's own square, until another has had the focus.
-    button.setAttribute('tabindex', tile.id === city.tile.id ? '0' : '-1');
+    button.setAttribute('tabindex', '-1');
+    button.dataset.own = String(tile.id === city.tile.id);
     button.setAttribute('aria-label', squareLabel(tile, city));
     button.addEventListener('click', () => toggle(tile));
 
@@ -301,14 +306,16 @@ const renderSquares = (
     squares.append(button);
   });
 
-  // A city whose own square isn't among those the engine sent still has a way in.
-  if (
-    ![...buttons.values()].some(
-      (button) => button.getAttribute('tabindex') === '0'
-    )
-  ) {
-    buttons.values().next().value?.setAttribute('tabindex', '0');
-  }
+  // One stop for Tab: the square the keyboard was last on here, else the city's own, else (a city whose own square
+  //  isn't among those the engine sent) the first.
+  const all = [...buttons.values()],
+    remembered = lastSquare.get(city.id);
+
+  (
+    all.find((button) => button.dataset.focusKey === remembered) ??
+    all.find((button) => button.dataset.own === 'true') ??
+    all[0]
+  )?.setAttribute('tabindex', '0');
 
   // A pointer's press works the square without taking the keyboard there: Enter is still the screen's, and the
   //  arrow keys still the previous and next city, as they were when the press landed on the canvas.
@@ -316,6 +323,14 @@ const renderSquares = (
 
   // The square the keyboard is on is the one Tab comes back to.
   squares.addEventListener('focusin', (event) => {
+    const key = (event.target as HTMLElement).dataset.focusKey;
+
+    if (key === undefined) {
+      return;
+    }
+
+    lastSquare.set(city.id, key);
+
     buttons.forEach((button) =>
       button.setAttribute('tabindex', button === event.target ? '0' : '-1')
     );

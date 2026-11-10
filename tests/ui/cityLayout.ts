@@ -1177,6 +1177,22 @@ const run = async (): Promise<void> => {
       [true, 'Grassland, not worked. Food: 2', true]
     );
 
+    // The keyboard gone elsewhere in the screen, and the city drawn again: Tab still comes back to that square.
+    focused = mapScreen.element();
+
+    dataChanges.collect([first.id]);
+    dataChanges.notify({
+      player: { cities: [mapped([centre])] },
+    } as unknown as GameData);
+
+    expect(
+      'drawn again with the keyboard elsewhere: the square it was last on is still the stop for Tab',
+      squares()
+        .filter((button) => button.getAttribute('tabindex') === '0')
+        .map((button) => button.getAttribute('aria-label')),
+      ['Grassland, not worked. Food: 2']
+    );
+
     mapScreen.element().removeEventListener('keydown', count);
     mapScreen.close();
 
