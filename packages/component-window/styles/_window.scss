@@ -65,6 +65,8 @@
   }
 
   > header {
+    // Dragged to move the window, by a finger too (#858): the page mustn't scroll or zoom under it.
+    touch-action: none;
     background: var(--ui-title-bg);
     color: var(--ui-title-fg);
     display: flex;

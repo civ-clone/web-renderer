@@ -3,7 +3,9 @@
 // how fast a drag was going when it was let go. And where the view stops when
 // it is locked to the poles (#13). And that a press on the map is the map's
 // until it is let go, wherever that is, while one that started elsewhere
-// isn't a click on it (#490), with the real `GamePortal` under linkedom.
+// isn't a click on it (#490), with the real `GamePortal` under linkedom. And
+// that a map let go mid-drag glides on, but not for a player who has asked
+// their system for less motion (#856).
 
 // Must stay first: `GamePortal` reaches windows that read `document.body` as
 //  they load.
@@ -215,6 +217,39 @@ expect(
   clicked.length,
   1
 );
+
+// A fling: pressed, dragged and let go. The map glides on, a frame at a time, unless less motion is asked for.
+let frames = 0,
+  lessMotion = false;
+
+(window as any).requestAnimationFrame = () => ++frames;
+(window as any).cancelAnimationFrame = () => {};
+(window as any).matchMedia = (query: string) => ({
+  matches: lessMotion && query === '(prefers-reduced-motion: reduce)',
+});
+
+const fling = (): number => {
+  const before = frames;
+
+  pointer('pointerdown', 40, 40);
+  pointer('pointermove', 60, 40);
+  pointer('pointermove', 90, 40);
+  pointer('pointerup', 90, 40);
+
+  return frames - before;
+};
+
+expect('a map let go mid-drag glides on', fling(), 1);
+
+lessMotion = true;
+
+expect(
+  'but stops where it is let go when less motion is asked for',
+  fling(),
+  0
+);
+
+lessMotion = false;
 
 if (failures.length) {
   console.error(`FAIL map navigation\n  ${failures.join('\n  ')}`);

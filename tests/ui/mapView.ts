@@ -449,6 +449,40 @@ expect(
   ['both', 'ring', 'both', 'blink', 'blink']
 );
 
+// A player who has asked their system for less motion (#856): the ring where the theme would blink, and what they
+//  chose in Options as chosen.
+expect(
+  'less motion asked for: the ring in place of the theme’s blink, and a chosen blink kept',
+  [
+    unitMarkerMode(
+      'theme',
+      () => 'blink',
+      () => true
+    ),
+    unitMarkerMode(
+      'theme',
+      () => 'both',
+      () => true
+    ),
+    unitMarkerMode(
+      'theme',
+      () => '',
+      () => true
+    ),
+    unitMarkerMode(
+      'blink',
+      () => 'ring',
+      () => true
+    ),
+    unitMarkerMode(
+      'theme',
+      () => 'blink',
+      () => false
+    ),
+  ],
+  ['ring', 'ring', 'ring', 'blink', 'blink']
+);
+
 // How the unit is marked (#753). The test's page has no theme, so the theme's way is the blink, as above, with no
 //  ring. A ring alone: the unit is drawn throughout, nothing is drawn again for it, and the ring is round its square.
 const rings = (): Array<[string, string, string, string]> =>

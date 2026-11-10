@@ -13,6 +13,7 @@ import { openUnitSelection } from './choices';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
+import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import UnitActionMenu from './UnitActionMenu';
 import openUnitMenu from './UiUnitMenu';
 import { openMenu } from './UiMenu';
@@ -96,7 +97,10 @@ export class GamePortal extends Portal {
       this.#drag = null;
 
       if (drag.dragging) {
-        this.glide(releaseVelocity(drag.samples, event.timeStamp));
+        // The map stops where it was let go for a player who has asked for less motion (#856).
+        if (!prefersReducedMotion()) {
+          this.glide(releaseVelocity(drag.samples, event.timeStamp));
+        }
 
         return;
       }

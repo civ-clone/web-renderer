@@ -36,6 +36,10 @@ export type WindowSettings = {
 
 export type WindowOptions = { [K in keyof WindowSettings]?: WindowSettings[K] };
 
+// How much of a title bar stays on the page, in px, when its window is dragged off the side (#858): enough to take hold
+//  of with a finger.
+const TITLE_BAR_GRIP = 64;
+
 const defaultOptions: WindowSettings = {
   autoDisplay: true,
   autofocus: true,
@@ -227,45 +231,56 @@ export class Window
       .map(([, element]) => element);
   }
 
-  // A title bar that moves the window when dragged, and maximises it when double-clicked.
+  // A title bar that moves the window when dragged, by a mouse, a finger or a pen (#858), and maximises it when
+  //  double-clicked.
   #draggable(header: HTMLElement): HTMLElement {
-    let isDragging = false;
+    // The pointer dragging the bar, and where it was last seen.
+    let dragging: { id: number; x: number; y: number } | null = null;
+
+    const stop = (event: PointerEvent): void => {
+      if (dragging === null || event.pointerId !== dragging.id) {
+        return;
+      }
+
+      dragging = null;
+
+      if (header.hasPointerCapture?.(event.pointerId)) {
+        header.releasePointerCapture(event.pointerId);
+      }
+    };
 
     return h(header, {
       dblclick: () => this.maximise(),
-      mousedown: (event) => {
-        if (event.target.closest('button')) {
+      pointerdown: (event: PointerEvent) => {
+        // The main button of the main pointer, and not on one of the bar's own buttons.
+        if (
+          event.isPrimary === false ||
+          (event.button ?? 0) !== 0 ||
+          (event.target as Element).closest('button')
+        ) {
           return;
         }
 
-        isDragging = true;
+        dragging = { id: event.pointerId, x: event.clientX, y: event.clientY };
 
-        const moveHandler = (event: MouseEvent) => {
-          if (!isDragging) {
-            return;
-          }
-
-          this.move({
-            x: event.movementX,
-            y: event.movementY,
-          });
-        };
-
-        on(document, 'mousemove', moveHandler);
-
-        on(
-          document,
-          'mouseup',
-          () => {
-            off(document, 'mousemove', moveHandler);
-
-            isDragging = false;
-          },
-          {
-            once: true,
-          }
-        );
+        // Held, so the drag goes on when the pointer leaves the bar or the page.
+        header.setPointerCapture?.(event.pointerId);
       },
+      pointermove: (event: PointerEvent) => {
+        if (dragging === null || event.pointerId !== dragging.id) {
+          return;
+        }
+
+        this.move({
+          x: event.clientX - dragging.x,
+          y: event.clientY - dragging.y,
+        });
+
+        dragging.x = event.clientX;
+        dragging.y = event.clientY;
+      },
+      pointerup: stop,
+      pointercancel: stop,
     });
   }
 
@@ -633,18 +648,50 @@ export class Window
 
       this.removeClass('position-auto');
 
-      this.element().style.setProperty('top', y + 'px');
-      this.element().style.setProperty('left', x + 'px');
+      this.#place({ x, y });
 
       return;
     }
 
-    const elementComputedStyle = getComputedStyle(this.element()),
-      currentTop = parseInt(elementComputedStyle.getPropertyValue('top'), 10),
-      currentLeft = parseInt(elementComputedStyle.getPropertyValue('left'), 10);
+    // Where it was last put, which is on the element itself once it has been moved.
+    const style = this.element().style,
+      current = (side: 'top' | 'left'): number =>
+        parseInt(
+          style.getPropertyValue(side) ||
+            getComputedStyle(this.element()).getPropertyValue(side),
+          10
+        );
 
-    this.element().style.setProperty('top', currentTop + y + 'px');
-    this.element().style.setProperty('left', currentLeft + x + 'px');
+    this.#place({ x: current('left') + x, y: current('top') + y });
+  }
+
+  // Puts the window's corner as near `x`, `y` as leaves its title bar in reach (#858): never above the top of the page
+  //  or below its foot, and with a grip's width of it on the page at either side. The bar's own buttons, at its far
+  //  end, are no grip, so that much more of it stays when it goes off the near side. A page with no size keeps it as
+  //  asked.
+  #place({ x, y }: Coordinate): void {
+    const width = this.element().offsetWidth,
+      header = this.element().querySelector<HTMLElement>(':scope > header'),
+      firstButton = header?.querySelector<HTMLElement>(':scope > button'),
+      buttons =
+        header && firstButton ? header.offsetWidth - firstButton.offsetLeft : 0,
+      within = (value: number, least: number, most: number): number =>
+        Number.isFinite(least) && Number.isFinite(most)
+          ? Math.min(Math.max(value, least), Math.max(least, most))
+          : value;
+
+    this.element().style.setProperty(
+      'top',
+      within(y, 0, window.innerHeight - (header?.offsetHeight ?? 0)) + 'px'
+    );
+    this.element().style.setProperty(
+      'left',
+      within(
+        x,
+        TITLE_BAR_GRIP + (Number.isFinite(buttons) ? buttons : 0) - width,
+        window.innerWidth - TITLE_BAR_GRIP
+      ) + 'px'
+    );
   }
 
   // The title as HTML, as the constructor takes it, for a window that shows something else now (#678).

@@ -1,8 +1,10 @@
 import { Rect } from '../../lib/viewport';
+import prefersReducedMotion from '../../lib/reducedMotion';
 
 // How the unit awaiting orders is marked on the map (#753): Civ1's blink, a ring round its square that pulses softly,
 //  or both. The player's choice in Options (`unitMarker`), or by default the theme's (`--ui-unit-marker`): the Civ1 set
-//  blinks, slate rings.
+//  blinks, slate rings. A player who has asked their system for less motion gets the ring where the theme would blink
+//  (#856); the blink chosen in Options is still theirs to have.
 
 export type UnitMarkerMode = 'blink' | 'ring' | 'both';
 
@@ -12,7 +14,10 @@ export const UNIT_MARKER_CHOICES = ['theme', 'blink', 'ring', 'both'] as const;
 const isMode = (value: unknown): value is UnitMarkerMode =>
   value === 'blink' || value === 'ring' || value === 'both';
 
-/** The mode for `choice` (the `unitMarker` option): itself, or for `theme` (or anything else) the theme's, else blink. */
+/**
+ * The mode for `choice` (the `unitMarker` option): itself, or for `theme` (or anything else) the theme's, else blink,
+ *  and for a player who wants less motion the ring in place of a blink that wasn't chosen.
+ */
 export const unitMarkerMode = (
   choice: unknown,
   // Where the page can't say (a document with no styles), no theme: the blink.
@@ -21,13 +26,18 @@ export const unitMarkerMode = (
       ? getComputedStyle(document.documentElement)
           .getPropertyValue('--ui-unit-marker')
           .trim()
-      : ''
+      : '',
+  reducedMotion: () => boolean = prefersReducedMotion
 ): UnitMarkerMode => {
   if (isMode(choice)) {
     return choice;
   }
 
   const fromTheme = themed();
+
+  if (reducedMotion()) {
+    return 'ring';
+  }
 
   return isMode(fromTheme) ? fromTheme : 'blink';
 };
