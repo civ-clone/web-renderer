@@ -31,8 +31,8 @@ const installedEngine = (file) => INSTALLED.test(file) && ENGINE.test(file);
 const folders = new Map(),
   named = new Map();
 
-// What a folder holds, by name: read whole, so that a name is matched exactly, as esbuild matches it, where the disk
-//  itself (a Mac's) would take `foo` for `Foo`.
+// What a folder holds, by name: read whole, and a name matched exactly, so that on a disk that would take `foo` for
+//  `Foo` (a Mac's) a file and a folder whose names differ only in case stay two things.
 const entriesOf = (directory) => {
   if (!folders.has(directory)) {
     const entries = new Map();
@@ -91,30 +91,45 @@ const sourceOf = (compiled) => {
 };
 
 // What one file of an installed engine package means by `./other`, when that is TypeScript: as esbuild finds it, a
-//  file before a folder, but the `.ts` before the `.js`. `null` leaves it to esbuild: a `.js` with no `.ts`, a
-//  `.json`, a folder with a package.json of its own.
-const relativeSource = (asked) => {
-  if (asked.endsWith('.js')) {
-    const source = `${asked.slice(0, -3)}.ts`;
+//  file before a folder (unless only a folder was asked for: `.`, `..`, `./rules/`), but the `.ts` before the `.js`.
+//  `null` leaves it to esbuild: a `.js` with no `.ts`, a `.json`, a folder with a package.json of its own.
+//
+// Not allowed for, as no engine package has one: a file or folder that is a link (it would be bundled under the
+//  link's path, and again under its own if it is also asked for by that). `npm run test:engine-sources` fails if a
+//  file is ever in the game twice, or in it compiled.
+const relativeSource = (asked, folderOnly) => {
+  if (!folderOnly) {
+    if (asked.endsWith('.js')) {
+      const source = `${asked.slice(0, -3)}.ts`;
 
-    return isFile(source) ? source : null;
+      return isFile(source) ? source : null;
+    }
+
+    if (isFile(`${asked}.ts`)) {
+      return `${asked}.ts`;
+    }
+
+    if (isFile(`${asked}.js`)) {
+      return null;
+    }
   }
 
-  if (isFile(`${asked}.ts`)) {
-    return `${asked}.ts`;
-  }
-
-  if (
-    isFile(`${asked}.js`) ||
-    !isFolder(asked) ||
-    isFile(path.join(asked, 'package.json'))
-  ) {
+  if (!isFolder(asked) || isFile(path.join(asked, 'package.json'))) {
     return null;
   }
 
   const index = path.join(asked, 'index.ts');
 
   return isFile(index) ? index : null;
+};
+
+// Where pnpm keeps each package, by version, for a file in one of them: a new folder there is an install, which a
+//  watching build has to hear of from here, as it watches for itself only what it found for itself.
+const storeOf = (file) => {
+  const marker = `${path.sep}node_modules${path.sep}.pnpm${path.sep}`,
+    at = file.indexOf(marker);
+
+  return at === -1 ? [] : [file.slice(0, at + marker.length - 1)];
 };
 
 // The folder of the installed package `directory` is in, which is where a package's name is resolved from.
@@ -147,6 +162,10 @@ const engineSources = () => ({
         options.resolveExtensions,
         options.alias,
         options.nodePaths,
+        options.packages,
+        options.preserveSymlinks,
+        options.tsconfig,
+        options.tsconfigRaw,
         (options.plugins ?? []).map((plugin) => plugin.name),
       ]);
 
@@ -182,7 +201,10 @@ const engineSources = () => ({
           return;
         }
 
-        const source = relativeSource(path.join(args.resolveDir, args.path));
+        const source = relativeSource(
+          path.join(args.resolveDir, args.path),
+          /(^|[\\/])\.{1,2}$|[\\/]$/.test(args.path)
+        );
 
         return source === null ? undefined : { path: source };
       }
@@ -232,6 +254,7 @@ const engineSources = () => ({
                     path: source,
                     sideEffects: resolved.sideEffects,
                     suffix: resolved.suffix,
+                    watchDirs: storeOf(source),
                   };
             })
             // The build that asked was stopped before esbuild answered: the next one asks again.
