@@ -27,6 +27,8 @@
     "test:orders-across-turns": "node tools/run-suite.js ui ordersAcrossTurns",
     "test:join-city": "node tools/run-suite.js engine joinCity",
     "test:renamed-city": "node tools/run-suite.js engine renamedCity",
+    "test:engine-sources": "node tools/engine-sources.js",
+    "test:rule-lint": "node tools/rule-lint.js",
     "test:asset-slices": "node tools/asset-slices.js",
     "test:changelog": "node tools/changelog.js",
     "test:release-days": "node tools/run-suite.js ui releaseDays",
@@ -230,13 +232,14 @@
   "devDependencies": {
     "@fontsource/cinzel": "5.3.0",
     "@fontsource/source-sans-3": "5.3.1",
-    "@types/node": "^14.0.0",
-    "esbuild": "^0.14.32",
-    "esbuild-sass-plugin": "^2.4.0",
+    "@types/node": "^24.19.2",
+    "esbuild": "^0.28.2",
+    "esbuild-sass-plugin": "^3.7.0",
     "glob": "^13.0.6",
     "linkedom": "^0.18.13",
     "prettier": "^2.0.0",
-    "sass": "^1.59.2",
+    "sass": "^1.108.1",
+    "sass-embedded": "^1.108.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {

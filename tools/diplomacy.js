@@ -10,12 +10,13 @@ const os = require('os');
 const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'diplomacy-'));
 const outfile = path.join(directory, 'diplomacy.js');
 const saveFile = path.join(directory, 'game.json');
 
-require('esbuild').buildSync({
+buildSync({
   entryPoints: [path.join(webRenderer, 'tests', 'engine', 'diplomacy.ts')],
   bundle: true,
   keepNames: true,

@@ -11,13 +11,14 @@ const os = require('os');
 const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const index = process.argv.indexOf('--turns');
 const turns = Number(index === -1 ? 30 : process.argv[index + 1]);
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'rule-profile-'));
 const bundle = path.join(directory, 'ruleProfile.js');
 
-require('esbuild').buildSync({
+buildSync({
   entryPoints: [path.join(webRenderer, 'tests', 'engine', 'ruleProfile.ts')],
   bundle: true,
   keepNames: true,

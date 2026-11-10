@@ -178,6 +178,17 @@ const outsidePackagesOf = (name: string): string[] =>
 //  peerDependencies, at the range the root package.json installs, and it names no other. The root's install is the one
 //  they get: `autoInstallPeers: false` (pnpm-workspace.yaml) keeps a second copy out of packages/*/node_modules, where
 //  it would hide what `civ sync` links into the root's.
+// A package the root takes from GitHub (`github:civ-clone/<name>`) has no range to repeat, and pnpm refuses anything
+//  else as a peer's value (`ERR_PNPM_INVALID_PEER_DEPENDENCY_SPECIFICATION`, at the first install that has to resolve
+//  something), so its peer is `*`: whichever one the root installs.
+const peerRange = (dependency: string): string | undefined => {
+  const installed = rootDependencies[dependency];
+
+  return installed !== undefined && /^[a-z+]+:/.test(installed)
+    ? '*'
+    : installed;
+};
+
 expect(
   'every package’s peerDependencies are what it imports from outside, at the root’s ranges',
   names.flatMap((name) => {
@@ -194,10 +205,12 @@ expect(
           (dependency) => `${name}: ${dependency} is a peer it never imports`
         ),
       ...Object.entries(declared)
-        .filter(([dependency, range]) => rootDependencies[dependency] !== range)
+        .filter(([dependency, range]) => peerRange(dependency) !== range)
         .map(
           ([dependency, range]) =>
-            `${name}: ${dependency}@${range}, the root has ${rootDependencies[dependency]}`
+            `${name}: ${dependency}@${range}, the root has ${
+              rootDependencies[dependency]
+            } (so ${peerRange(dependency)} here)`
         ),
     ];
   }),
@@ -775,10 +788,11 @@ expect(
   [true, [], []]
 );
 
-// esbuild compiles each file with the nearest tsconfig.json, but none at all for a file it reaches through
-//  node_modules, which is where the workspace links the packages. So each tsconfig.json a build or a suite starts from
-//  maps the packages to their folders, and the packages' own extends the one they were built with under src/js, which
-//  lowers their class fields as before.
+// esbuild used to compile each file with the nearest tsconfig.json, and none at all for a file it reached through
+//  node_modules, which is where the workspace links the packages. Every build is now given the root tsconfig.json by
+//  name, for every file (`tools/lib/engineSources.js`), but `tsc` and an editor still read the nearest. So each
+//  tsconfig.json a build or a suite starts from maps the packages to their folders, and the packages' own extends the
+//  one they were built with under src/js, which lowers their class fields as before.
 const tsconfig = (path: string) =>
   JSON.parse(readFileSync(join(root, path), 'utf8')) as {
     extends?: string;

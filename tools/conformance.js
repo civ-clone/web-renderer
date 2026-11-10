@@ -13,6 +13,7 @@ const os = require('os');
 const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const START = '<<<conformance';
 const END = 'conformance>>>';
@@ -32,7 +33,7 @@ const bundle = () => {
 
   // Same resolution order as the app's bundle: `.ts` ahead of `.js`, and
   // `keepNames` because DataObject ids are derived from `constructor.name`.
-  require('esbuild').buildSync({
+  buildSync({
     entryPoints: [path.join(webRenderer, 'tests', 'engine', 'run.ts')],
     bundle: true,
     keepNames: true,

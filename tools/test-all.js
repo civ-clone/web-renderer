@@ -28,6 +28,7 @@ const path = require('path');
 
 const { bundleAll, bundleOptions } = require('./lib/suite');
 const { webRenderer } = require('./lib/paths');
+const { withEngineSources } = require('./lib/engineSources');
 
 const scripts = require(path.join(webRenderer, 'package.json')).scripts,
   // Written before anything is bundled: every engine suite imports the plugin list, every ui suite the translations.
@@ -95,17 +96,19 @@ const suiteOf = (name) => {
 // The files a suite is made of, as esbuild finds them when it is bundled the way the suites are: what `--for` asks
 //  about.
 const inputsOf = async ({ kind, name }) => {
-  const { metafile } = await require('esbuild').build({
-    entryPoints: [path.join(webRenderer, 'tests', kind, `${name}.ts`)],
-    bundle: true,
-    platform: 'node',
-    format: 'cjs',
-    write: false,
-    metafile: true,
-    logLevel: 'silent',
-    absWorkingDir: webRenderer,
-    ...bundleOptions(kind),
-  });
+  const { metafile } = await require('esbuild').build(
+    withEngineSources({
+      entryPoints: [path.join(webRenderer, 'tests', kind, `${name}.ts`)],
+      bundle: true,
+      platform: 'node',
+      format: 'cjs',
+      write: false,
+      metafile: true,
+      logLevel: 'silent',
+      absWorkingDir: webRenderer,
+      ...bundleOptions(kind),
+    })
+  );
 
   return (
     Object.keys(metafile.inputs)

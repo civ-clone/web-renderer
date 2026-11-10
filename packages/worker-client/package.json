@@ -62,7 +62,7 @@
     "@civ-clone/library-government": "^0.1.1",
     "@civ-clone/library-science": "^0.1.0",
     "@civ-clone/library-unit": "^0.1.15",
-    "@civ-clone/simple-ai-client": "github:civ-clone/simple-ai-client",
+    "@civ-clone/simple-ai-client": "*",
     "@dom111/typed-event-emitter": "^0.1.2"
   }
 }

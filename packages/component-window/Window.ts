@@ -68,6 +68,9 @@ export class Window
   #body: string | Node;
   // Closed and not shown since: a second `close()` does nothing.
   #closed: boolean = false;
+  // The keys are bound the first time the window is shown, and stay bound: bound again each time, a window shown
+  //  twice answered one Escape twice, running its cancel twice (#869).
+  #closeBound: boolean = false;
   #title: string;
   // What the window looks like around its body, which the interface says (#860): chosen once, as the window is made.
   #chrome: WindowChrome = windowChrome.current()({
@@ -330,7 +333,11 @@ export class Window
 
     super.display();
 
-    this.bindClose();
+    if (!this.#closeBound) {
+      this.#closeBound = true;
+
+      this.bindClose();
+    }
 
     this.showDialog();
 

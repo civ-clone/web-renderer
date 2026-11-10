@@ -104,7 +104,8 @@ that list what is installed in the scope (`scan`, `collisions`, `duplicates`) sk
 
 A package's `package.json` says what it needs and what it offers (#862). Its `dependencies` are the sibling packages
 it uses (`workspace:*`). Its `peerDependencies` are the engine and npm packages its files import (i18next, the
-engine's `@civ-clone/*` packages), each at the range the root `package.json` installs them at. The root's install is
+engine's `@civ-clone/*` packages), each at the range the root `package.json` installs them at, or `*` for one the
+root takes from GitHub (pnpm accepts only a range as a peer's value). The root's install is
 the one they get, where `civ sync` links engine checkouts: `autoInstallPeers: false` in `pnpm-workspace.yaml` keeps a
 second copy out of `packages/*/node_modules`. Its `exports` are the modules other packages and civ.one's own code
 import from it, and no others, so a module newly imported from another package is added there on purpose; the builds

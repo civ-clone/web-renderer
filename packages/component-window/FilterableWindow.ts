@@ -118,7 +118,7 @@ export class FilterableWindow extends Window {
       this.#empty
     );
 
-    // Heard before `Window`'s own keydown, which is added each time the window is shown.
+    // Heard before `Window`'s own keydown, which is added when the window is first shown.
     this.on('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape' && this.escaped()) {
         event.preventDefault();

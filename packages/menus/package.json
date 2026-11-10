@@ -33,7 +33,7 @@
     "./lib/setupControls": "./lib/setupControls.ts"
   },
   "peerDependencies": {
-    "@civ-clone/civ1-asset-extractor": "github:civ-clone/civ1-asset-extractor",
+    "@civ-clone/civ1-asset-extractor": "*",
     "@civ-clone/core-data-client": "^0.1.1",
     "@dom111/element": "^0.2.0",
     "i18next": "^26.4.3",

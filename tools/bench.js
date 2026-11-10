@@ -20,6 +20,7 @@ const os = require('os');
 const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const argument = (name, fallback) => {
   const index = process.argv.indexOf(`--${name}`);
@@ -32,7 +33,7 @@ const profiling = process.argv.includes('--profile');
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'bench-'));
 const bundle = path.join(directory, 'run.js');
 
-require('esbuild').buildSync({
+buildSync({
   entryPoints: [path.join(webRenderer, 'tests', 'engine', 'run.ts')],
   bundle: true,
   keepNames: true,

@@ -139,6 +139,39 @@ const run = async (): Promise<void> => {
     );
   });
 
+  // Shown a second time, while open (the worker's failure notice is) or after it was closed: one Escape is still
+  //  one cancel (#869). Each `display()` used to bind the keys again.
+  ([Window, NotificationWindow] as (typeof Window)[]).forEach((Type) => {
+    const cancelled = { count: 0 },
+      shownTwice = new Type('Choose', 'Body', {
+        cancel: () => {
+          cancelled.count++;
+
+          shownTwice.close();
+        },
+      });
+
+    shownTwice.display();
+
+    press(shownTwice.element(), 'Escape');
+
+    expect(
+      `Escape on a ${Type.name} displayed twice runs its cancel once`,
+      [cancelled.count, inPage(shownTwice)],
+      [1, [false, false]]
+    );
+
+    shownTwice.display();
+
+    press(shownTwice.element(), 'Escape');
+
+    expect(
+      'and once more when it is closed, shown again and cancelled again',
+      [cancelled.count, inPage(shownTwice)],
+      [2, [false, false]]
+    );
+  });
+
   // Closed by the browser.
   const heardFixed = closesHeard(fixed);
 
