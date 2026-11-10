@@ -103,10 +103,11 @@ that list what is installed in the scope (`scan`, `collisions`, `duplicates`) sk
 (`isUiPackage` in `tools/lib/paths.js`). An engine package must never be named `ui-…`.
 
 A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
-so they resolve from the root, where `civ sync` links engine checkouts. A few things the packages still reach for by
+so they resolve from the root, where `civ sync` links engine checkouts. One thing the packages still reach for by
 path isn't a package yet: the generated `src/js/translations.ts`. The build's version and the URLs of its files are
-the entry's (`src/js/frontend.ts`), which tells the packages them through `@civ-clone/ui-client/lib/build`. The generated
-`src/js/plugins.ts` is civ.one's choice of rules, which `backend.ts` hands the worker client. The test lists them, and the list only shrinks.
+the entry's (`src/js/frontend.ts`), which passes them to the packages through `@civ-clone/ui-client/lib/build`. The
+generated `src/js/plugins.ts` is civ.one's choice of rules, which `backend.ts` hands the worker client. The test lists
+what's left, and the list only shrinks.
 
 The worker (`worker-client`, which `backend.ts` starts) shares only `protocol` with the page: it imports no other
 package, and no package imports from it. Under them are two packages in repositories of their own, with nothing of
