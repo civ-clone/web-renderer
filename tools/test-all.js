@@ -26,7 +26,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { bundleAll } = require('./lib/suite');
+const { bundleAll, bundleOptions } = require('./lib/suite');
 const { webRenderer } = require('./lib/paths');
 
 const scripts = require(path.join(webRenderer, 'package.json')).scripts,
@@ -92,7 +92,8 @@ const suiteOf = (name) => {
   return match === null ? null : { kind: match[1], name: match[2] };
 };
 
-// The files a suite is made of, as esbuild finds them: what `--for` asks about.
+// The files a suite is made of, as esbuild finds them when it is bundled the way the suites are: what `--for` asks
+//  about.
 const inputsOf = async ({ kind, name }) => {
   const { metafile } = await require('esbuild').build({
     entryPoints: [path.join(webRenderer, 'tests', kind, `${name}.ts`)],
@@ -102,17 +103,21 @@ const inputsOf = async ({ kind, name }) => {
     write: false,
     metafile: true,
     logLevel: 'silent',
-    loader: { '.png': 'dataurl', '.svg': 'dataurl' },
-    external: ['canvas'],
     absWorkingDir: webRenderer,
+    ...bundleOptions(kind),
   });
 
-  return Object.keys(metafile.inputs).map((input) =>
-    // A package in the workspace is reached through its link in node_modules: asked about by where it really is.
-    path.relative(
-      webRenderer,
-      fs.realpathSync(path.resolve(webRenderer, input))
-    )
+  return (
+    Object.keys(metafile.inputs)
+      // Not what a plugin made up (the stand-in for `build.json` is `build-json:build.json`): only files.
+      .filter((input) => !/^[\w-]+:/.test(input))
+      .map((input) =>
+        // A package in the workspace is reached through its link in node_modules: asked about by where it really is.
+        path.relative(
+          webRenderer,
+          fs.realpathSync(path.resolve(webRenderer, input))
+        )
+      )
   );
 };
 
@@ -149,7 +154,11 @@ const select = async ({ names, paths }) => {
           try {
             return (await inputsOf(suite)).some((input) =>
               wanted.some(
-                (prefix) => input === prefix || input.startsWith(`${prefix}/`)
+                (prefix) =>
+                  // The whole checkout, asked for as `.`, is everything.
+                  prefix === '' ||
+                  input === prefix ||
+                  input.startsWith(`${prefix}/`)
               )
             );
           } catch {

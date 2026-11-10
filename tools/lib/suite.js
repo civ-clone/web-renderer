@@ -225,6 +225,7 @@ const runSuite = async (
 module.exports = {
   bundle,
   bundleAll,
+  bundleOptions,
   passLine,
   regeneratePlugins,
   runOnce,

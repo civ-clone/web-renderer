@@ -92,6 +92,30 @@ expect(
   [true, true, false, false]
 );
 
+// The same of two ui suites, which are bundled with more than the engine's are: one reaches the file, and one, which
+//  loads no interface, doesn't. (Most ui suites load them all, and so reach most of the interface.)
+const reachedMap = list(
+  '--for',
+  'packages/map/lib/reducedMotion.ts',
+  'map-view',
+  'data-changes'
+);
+
+expect(
+  '--for a file: the ui suite that imports it, and not the one that doesn’t',
+  [
+    reachedMap.includes('test:map-view'),
+    reachedMap.includes('test:data-changes'),
+  ],
+  [true, false]
+);
+
+expect(
+  '--for the whole checkout is every suite asked of',
+  list('--for', '.', 'map-view', 'progress-bar', 'join-city').sort(),
+  ['test:join-city', 'test:map-view', 'test:progress-bar']
+);
+
 expect(
   'an option it doesn’t know is refused',
   runner(['--parallel']).status,
