@@ -11,16 +11,20 @@ const controls = (within: ParentNode): HTMLElement[] =>
     (control) => !control.hasAttribute('disabled')
   );
 
+// Its tag and classes. Read as an attribute: an SVG element's `className` is not a string.
+const kindOf = (element: Element): string =>
+  `${element.tagName}|${element.getAttribute('class') ?? ''}`;
+
 // What a control is, wherever it is: "Move Temple up" is the same button after the Temple has moved.
 const nameOf = (control: Element): string =>
-  [
-    control.tagName,
-    control.className,
-    control.getAttribute('aria-label') ?? control.textContent ?? '',
-  ].join('|');
+  `${kindOf(control)}|${
+    control.getAttribute('aria-label') ?? control.textContent ?? ''
+  }`;
 
-const kindOf = (element: Element): string =>
-  `${element.tagName}|${element.className}`;
+// One that undoes something at a press, with no question asked (a queued item's Remove, marked `data-destructive`).
+//  The focus is never moved onto one: a second Enter, or a held one, would take something the player never chose.
+const safe = (control: Element): boolean =>
+  !control.hasAttribute('data-destructive');
 
 // Whether the keyboard put the focus there. A pointer's click focuses a button too, but then the next Enter is meant
 //  for the window, as it always was. Where the question can't be asked, it is taken as the keyboard's.
@@ -43,7 +47,11 @@ const placeAmong = <T extends Element>(like: T[], element: T): number =>
  * 2. the first control of the same row, where the row carries a `data-key` (a queued item whose "move up" has gone
  *    because it is now first);
  * 3. the control of the same kind (tag and classes) in the same place in the same group: the same citizen when a
- *    specialist changes. Never one of another kind, where Enter would do something else.
+ *    specialist changes, the item now where a removed one was. Never one of another kind, where Enter would do
+ *    something else.
+ *
+ * A control marked `data-destructive` keeps the focus only while it is still itself (nothing of its name has gone);
+ * the focus is never moved onto another.
  *
  * It answers whether the focus is now on a control inside `root`: `false` leaves the caller to put it somewhere
  * sensible, as when nothing inside `root` had it to begin with, or a pointer put it there.
@@ -61,10 +69,8 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
   }
 
   const name = nameOf(focused),
-    place = placeAmong(
-      controls(root).filter((control) => nameOf(control) === name),
-      focused
-    ),
+    alikeBefore = controls(root).filter((control) => nameOf(control) === name),
+    place = placeAmong(alikeBefore, focused),
     row = focused.closest<HTMLElement>('[data-key]'),
     rowKey = row !== null && root.contains(row) ? row.dataset.key : undefined,
     rowPlace =
@@ -91,13 +97,15 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
             group!
           ),
     kind = kindOf(focused),
-    placeInGroup =
+    // Among those the focus could go to: the ones of its kind before it, itself aside.
+    inGroupBefore =
       groupKind === null
-        ? 0
-        : placeAmong(
-            controls(group!).filter((control) => kindOf(control) === kind),
-            focused
-          );
+        ? []
+        : controls(group!).filter(
+            (control) =>
+              kindOf(control) === kind && (control === focused || safe(control))
+          ),
+    placeInGroup = placeAmong(inGroupBefore, focused);
 
   return (): boolean => {
     // Not redrawn after all: one of the window's own buttons, outside what was replaced.
@@ -125,10 +133,16 @@ export const keepFocus = (root: HTMLElement): (() => boolean) => {
       inGroup =
         sameGroup === undefined
           ? []
-          : controls(sameGroup).filter((control) => kindOf(control) === kind),
+          : controls(sameGroup).filter(
+              (control) => kindOf(control) === kind && safe(control)
+            ),
       target =
-        alike[Math.min(place, alike.length - 1)] ??
-        (sameRow === undefined ? undefined : controls(sameRow)[0]) ??
+        (safe(focused) || alike.length === alikeBefore.length
+          ? alike[Math.min(place, alike.length - 1)]
+          : undefined) ??
+        (sameRow === undefined
+          ? undefined
+          : controls(sameRow).filter(safe)[0]) ??
         inGroup[Math.min(placeInGroup, inGroup.length - 1)];
 
     if (target === undefined) {

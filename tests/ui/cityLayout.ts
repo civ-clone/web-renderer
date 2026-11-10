@@ -847,8 +847,37 @@ const run = async (): Promise<void> => {
   focused = queueButton('Remove Temple from the queue');
   requeue('Granary', 'Library');
 
-  expect('an item removed: on the button now in its place', focusedNow(), [
-    'Remove Library from the queue',
+  expect(
+    'an item removed: on the item now in its place, and not on its Remove, which a second Enter would press',
+    focusedNow(),
+    ['Move Library up', true]
+  );
+
+  // The build finishes while the keyboard is on the last item's Up: it's now the only one queued, with Remove alone.
+  requeue('Granary', 'Library');
+  focused = queueButton('Move Library up');
+  requeue('Library');
+
+  expect(
+    'an item left with Remove alone: the screen has the focus, not Remove',
+    [
+      queueButton('Remove Library from the queue') !== null,
+      focused === queued.element(),
+    ],
+    [true, true]
+  );
+
+  // Two alike: the second's Remove pressed, and the first's is not where the focus goes.
+  requeue('Temple', 'Granary', 'Temple');
+  focused = Array.from(
+    queued
+      .element()
+      .querySelectorAll<HTMLElement>('.ui-city-queue button[data-destructive]')
+  )[2];
+  requeue('Temple', 'Granary');
+
+  expect("one of two alike removed: not on the other's Remove", focusedNow(), [
+    'Move Granary up',
     true,
   ]);
 
@@ -863,6 +892,7 @@ const run = async (): Promise<void> => {
   );
 
   HTMLElement.prototype.focus = focus;
+  delete (document as any).activeElement;
   queued.close();
 
   // The classic layout is still `City`'s own.

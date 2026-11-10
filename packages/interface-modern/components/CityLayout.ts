@@ -261,6 +261,11 @@ const renderQueue = (
       element.setAttribute('aria-label', label);
       element.title = label;
 
+      // Gone at a press, with no question asked: the keyboard is never moved onto it (#852).
+      if (edit.op === 'remove') {
+        element.dataset.destructive = '';
+      }
+
       return h(element, {
         click: () => editQueue(city.build, transport, edit),
       });
