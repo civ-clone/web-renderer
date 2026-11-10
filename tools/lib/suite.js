@@ -18,6 +18,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const { withEngineSources } = require('./engineSources');
 const { webRenderer } = require('./paths');
 
 const DEFAULT_TIMEOUT = 5 * 60 * 1000;
@@ -56,24 +57,26 @@ const bundle = async (kind, name, { esbuild = {}, entryPoint } = {}) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), `${kebab(name)}-`)),
     outfile = path.join(directory, `${name}.js`);
 
-  await require('esbuild').build({
-    entryPoints: [
-      entryPoint ?? path.join(webRenderer, 'tests', kind, `${name}.ts`),
-    ],
-    bundle: true,
-    keepNames: true,
-    platform: 'node',
-    format: 'cjs',
-    target: 'node18',
-    outfile,
-    logLevel: 'error',
-    ...bundleOptions(kind),
-    ...esbuild,
-    plugins: [
-      ...(esbuild.plugins ?? []),
-      ...(bundleOptions(kind).plugins ?? []),
-    ],
-  });
+  await require('esbuild').build(
+    withEngineSources({
+      entryPoints: [
+        entryPoint ?? path.join(webRenderer, 'tests', kind, `${name}.ts`),
+      ],
+      bundle: true,
+      keepNames: true,
+      platform: 'node',
+      format: 'cjs',
+      target: 'node18',
+      outfile,
+      logLevel: 'error',
+      ...bundleOptions(kind),
+      ...esbuild,
+      plugins: [
+        ...(esbuild.plugins ?? []),
+        ...(bundleOptions(kind).plugins ?? []),
+      ],
+    })
+  );
 
   return { directory, outfile };
 };
@@ -82,22 +85,24 @@ const bundle = async (kind, name, { esbuild = {}, entryPoint } = {}) => {
 //  each, but with the code they share read once rather than once per suite (#879). `npm test` does this up front
 //  and points the suites at the result with `SUITE_BUNDLES`.
 const bundleAll = async (kind, names, directory) => {
-  await require('esbuild').build({
-    entryPoints: Object.fromEntries(
-      names.map((name) => [
-        name,
-        path.join(webRenderer, 'tests', kind, `${name}.ts`),
-      ])
-    ),
-    bundle: true,
-    keepNames: true,
-    platform: 'node',
-    format: 'cjs',
-    target: 'node18',
-    outdir: path.join(directory, kind),
-    logLevel: 'silent',
-    ...bundleOptions(kind),
-  });
+  await require('esbuild').build(
+    withEngineSources({
+      entryPoints: Object.fromEntries(
+        names.map((name) => [
+          name,
+          path.join(webRenderer, 'tests', kind, `${name}.ts`),
+        ])
+      ),
+      bundle: true,
+      keepNames: true,
+      platform: 'node',
+      format: 'cjs',
+      target: 'node18',
+      outdir: path.join(directory, kind),
+      logLevel: 'silent',
+      ...bundleOptions(kind),
+    })
+  );
 };
 
 // A suite's bundle made earlier by `bundleAll`, where `SUITE_BUNDLES` names the directory and it has one.

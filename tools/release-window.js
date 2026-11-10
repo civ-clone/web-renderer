@@ -8,33 +8,36 @@ const path = require('path');
 
 const { runSuite } = require('./lib/suite');
 const { webRenderer } = require('./lib/paths');
+const { withEngineSources } = require('./lib/engineSources');
 
 (async () => {
-  const { metafile } = await require('esbuild').build({
-    entryPoints: [path.join(webRenderer, 'src', 'js', 'frontend.ts')],
-    bundle: true,
-    write: false,
-    metafile: true,
-    outdir: path.join(webRenderer, 'dist'),
-    logLevel: 'error',
-    loader: { '.jpg': 'file', '.png': 'dataurl', '.svg': 'dataurl' },
-    plugins: [
-      {
-        // `build.json` is written by the build, not the tests.
-        name: 'build-json',
-        setup(build) {
-          build.onResolve({ filter: /\/build\.json$/ }, () => ({
-            path: 'build.json',
-            namespace: 'build-json',
-          }));
-          build.onLoad({ filter: /.*/, namespace: 'build-json' }, () => ({
-            contents: '{"version": "0.0.0@test"}',
-            loader: 'json',
-          }));
+  const { metafile } = await require('esbuild').build(
+    withEngineSources({
+      entryPoints: [path.join(webRenderer, 'src', 'js', 'frontend.ts')],
+      bundle: true,
+      write: false,
+      metafile: true,
+      outdir: path.join(webRenderer, 'dist'),
+      logLevel: 'error',
+      loader: { '.jpg': 'file', '.png': 'dataurl', '.svg': 'dataurl' },
+      plugins: [
+        {
+          // `build.json` is written by the build, not the tests.
+          name: 'build-json',
+          setup(build) {
+            build.onResolve({ filter: /\/build\.json$/ }, () => ({
+              path: 'build.json',
+              namespace: 'build-json',
+            }));
+            build.onLoad({ filter: /.*/, namespace: 'build-json' }, () => ({
+              contents: '{"version": "0.0.0@test"}',
+              loader: 'json',
+            }));
+          },
         },
-      },
-    ],
-  });
+      ],
+    })
+  );
 
   const bundled = Object.keys(metafile.inputs).filter((input) =>
     input.endsWith('releases.json')

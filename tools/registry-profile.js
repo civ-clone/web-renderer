@@ -12,13 +12,14 @@ const os = require('os');
 const path = require('path');
 
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const index = process.argv.indexOf('--turns');
 const turns = Number(index === -1 ? 30 : process.argv[index + 1]);
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'registry-profile-'));
 const bundle = path.join(directory, 'registryProfile.js');
 
-require('esbuild').buildSync({
+buildSync({
   entryPoints: [
     path.join(webRenderer, 'tests', 'engine', 'registryProfile.ts'),
   ],

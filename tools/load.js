@@ -14,6 +14,7 @@ const path = require('path');
 
 const { envForSeed, seedsToRun } = require('./lib/seeds');
 const { webRenderer } = require('./lib/paths');
+const { buildSync } = require('./lib/engineSources');
 
 const SEEDS = [1, 2, 3, 4, 5, 6];
 
@@ -21,7 +22,7 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'load-'));
 const outfile = path.join(directory, 'load.js');
 const saveFile = path.join(directory, 'game.json');
 
-require('esbuild').buildSync({
+buildSync({
   entryPoints: [path.join(webRenderer, 'tests', 'engine', 'load.ts')],
   bundle: true,
   keepNames: true,

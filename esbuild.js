@@ -1,6 +1,8 @@
 (async () => {
-  const { build } = require('esbuild'),
+  const esbuild = require('esbuild'),
     { sassPlugin } = require('esbuild-sass-plugin'),
+    { engineSources, tsconfig } = require('./tools/lib/engineSources'),
+    watching = process.argv.includes('watch'),
     buildOptions = {
       entryPoints: [
         'src/css/app.scss',
@@ -11,11 +13,19 @@
       ],
       bundle: true,
       keepNames: true,
-      minify: true,
+      minify: !process.argv.includes('dev'),
       sourcemap: true,
-      watch: false,
+      // Said here because esbuild no longer takes it from tsconfig.json (since 0.18), and without one it writes the
+      //  newest syntax there is. Private fields and methods are left as the browser's own, which the engine's
+      //  packages already needed of it; anything newer than ES2022 is rewritten.
+      target: 'es2022',
+      // Except the one piece of ES2022 that the old build never wrote: with `keepNames`, esbuild would name every
+      //  class in a static block, which Safari only has from 16.4.
+      supported: { 'class-static-blocks': false },
+      tsconfig,
       outdir: 'dist',
       plugins: [
+        engineSources(),
         sassPlugin(),
       ],
       loader: {
@@ -26,49 +36,76 @@
         '.woff2': 'file'
       },
       entryNames: '[name]',
-    };
-
-  process.argv.forEach((arg) => {
-    if (arg === 'watch') {
-      buildOptions.watch = {
-        onRebuild(error, result) {
-          if (error) {
-            console.log('\x1b[31mError rebuilding:\x1b[0m');
-            console.error(error);
-
-            return;
-          }
-
-          console.log('\x1b[32mRebuilt.\x1b[0m');
-        },
-      };
-    }
-
-    if (arg === 'dev') {
-      buildOptions.minify = false;
-    }
-  });
-
-  process.stdout.write(`Building... `);
-
-  build(buildOptions)
-    .then(() => {
-      // Fetched by the Releases window when it opens, rather than bundled into
-      // frontend.js (#476).
+    },
+    // Fetched by the Releases window when it opens, rather than bundled into
+    // frontend.js (#476).
+    copyReleases = () =>
       require('fs').copyFileSync(
         'changelog/releases.json',
         'dist/releases.json'
-      );
-
-
-      console.log('\x1b[32mdone.\x1b[0m');
-    })
-    .catch((e) => {
+      ),
+    failed = (e) => {
       console.log(`\x1b[31mfailed.\x1b[0m`);
       console.log('');
       console.error(e);
 
       process.exit(1);
-    });
+    };
 
+  process.stdout.write(`Building... `);
+
+  if (!watching) {
+    esbuild
+      .build(buildOptions)
+      .then(() => {
+        copyReleases();
+
+        console.log('\x1b[32mdone.\x1b[0m');
+      })
+      .catch(failed);
+
+    return;
+  }
+
+  // `watch` was a build option until esbuild 0.17; it is now a context that is told to watch, and what follows each
+  //  build is a plugin's `onEnd`. The first build is reported as the one-off build is, the ones after it as rebuilds.
+  let built = false;
+
+  const context = await esbuild
+    .context({
+      ...buildOptions,
+      plugins: [
+        ...buildOptions.plugins,
+        {
+          name: 'report',
+          setup(build) {
+            build.onEnd((result) => {
+              if (result.errors.length > 0) {
+                // esbuild has already written the errors themselves.
+                console.log(
+                  built
+                    ? '\x1b[31mError rebuilding.\x1b[0m'
+                    : '\x1b[31mfailed.\x1b[0m'
+                );
+
+                return;
+              }
+
+              if (!built) {
+                copyReleases();
+              }
+
+              console.log(
+                built ? '\x1b[32mRebuilt.\x1b[0m' : '\x1b[32mdone.\x1b[0m'
+              );
+
+              built = true;
+            });
+          },
+        },
+      ],
+    })
+    .catch(failed);
+
+  await context.watch();
 })();

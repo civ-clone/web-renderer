@@ -17,6 +17,7 @@ const os = require('os');
 const path = require('path');
 
 const { checkoutPath, webRenderer } = require('./lib/paths');
+const { withEngineSources } = require('./lib/engineSources');
 
 const START = '<<<arena';
 const END = 'arena>>>';
@@ -547,67 +548,71 @@ const bundle = async (root, { pluginPath, variantsPath }) => {
   const pluginsSource = path.join(webRenderer, 'src', 'js', 'plugins.ts');
   const installed = /\/@civ-clone\/simple-ai-client\//;
 
-  const result = await require('esbuild').build({
-    entryPoints: [path.join(webRenderer, 'tests', 'engine', 'arena.ts')],
-    absWorkingDir: webRenderer,
-    bundle: true,
-    keepNames: true,
-    platform: 'node',
-    format: 'cjs',
-    target: 'node18',
-    outfile,
-    logLevel: 'error',
-    metafile: true,
-    // The variants live outside any `node_modules`, so their `@civ-clone`
-    // imports resolve here, to the same copies the plugin list loads.
-    nodePaths: [path.join(webRenderer, 'node_modules')],
-    plugins: [
-      {
-        name: 'arena',
-        setup(build) {
-          build.onResolve({ filter: /^arena:variants$/ }, () => ({
-            path: variantsPath,
-          }));
+  const result = await require('esbuild').build(
+    withEngineSources({
+      entryPoints: [path.join(webRenderer, 'tests', 'engine', 'arena.ts')],
+      absWorkingDir: webRenderer,
+      bundle: true,
+      keepNames: true,
+      platform: 'node',
+      format: 'cjs',
+      target: 'node18',
+      outfile,
+      logLevel: 'error',
+      metafile: true,
+      // The variants live outside any `node_modules`, so their `@civ-clone`
+      // imports resolve here, to the same copies the plugin list loads.
+      nodePaths: [path.join(webRenderer, 'node_modules')],
+      plugins: [
+        {
+          name: 'arena',
+          setup(build) {
+            build.onResolve({ filter: /^arena:variants$/ }, () => ({
+              path: variantsPath,
+            }));
 
-          build.onLoad(
-            { filter: /[\\/]src[\\/]js[\\/]plugins\.ts$/ },
-            (args) => {
-              if (path.resolve(args.path) !== pluginsSource) {
-                return undefined;
-              }
+            build.onLoad(
+              { filter: /[\\/]src[\\/]js[\\/]plugins\.ts$/ },
+              (args) => {
+                if (path.resolve(args.path) !== pluginsSource) {
+                  return undefined;
+                }
 
-              const lines = fs.readFileSync(pluginsSource, 'utf8').split('\n');
-              const index = lines.findIndex(
-                (line) => line.startsWith('import ') && installed.test(line)
-              );
-
-              if (
-                index === -1 ||
-                lines.findIndex(
-                  (line, i) =>
-                    i > index &&
-                    line.startsWith('import ') &&
-                    installed.test(line)
-                ) !== -1
-              ) {
-                throw new Error(
-                  'expected exactly one simple-ai-client import in src/js/plugins.ts'
+                const lines = fs
+                  .readFileSync(pluginsSource, 'utf8')
+                  .split('\n');
+                const index = lines.findIndex(
+                  (line) => line.startsWith('import ') && installed.test(line)
                 );
+
+                if (
+                  index === -1 ||
+                  lines.findIndex(
+                    (line, i) =>
+                      i > index &&
+                      line.startsWith('import ') &&
+                      installed.test(line)
+                  ) !== -1
+                ) {
+                  throw new Error(
+                    'expected exactly one simple-ai-client import in src/js/plugins.ts'
+                  );
+                }
+
+                lines[index] = `import ${JSON.stringify(pluginPath)};`;
+
+                return {
+                  contents: lines.join('\n'),
+                  loader: 'ts',
+                  resolveDir: path.dirname(pluginsSource),
+                };
               }
-
-              lines[index] = `import ${JSON.stringify(pluginPath)};`;
-
-              return {
-                contents: lines.join('\n'),
-                loader: 'ts',
-                resolveDir: path.dirname(pluginsSource),
-              };
-            }
-          );
+            );
+          },
         },
-      },
-    ],
-  });
+      ],
+    })
+  );
 
   return { outfile, inputs: Object.keys(result.metafile.inputs) };
 };

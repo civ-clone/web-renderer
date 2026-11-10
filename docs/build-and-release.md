@@ -3,7 +3,7 @@
 ## Build toolchain
 
 - Bundler: `esbuild` (`esbuild.js`)
-- Styles: `sass` via `esbuild-sass-plugin`
+- Styles: Sass via `esbuild-sass-plugin` (which compiles with `sass-embedded`; `tools/theme-tokens.js` uses `sass`)
 - Language: TypeScript
 - Formatter: Prettier
 - Package manager: pnpm (settings in `pnpm-workspace.yaml`, lockfile `pnpm-lock.yaml`)
@@ -33,7 +33,13 @@ Notable options:
 - `keepNames: true`
 - `sourcemap: true`
 - `minify: true` by default (`dev` arg disables minify)
-- Optional watch mode (`watch` arg)
+- Optional watch mode (`watch` arg): an esbuild context told to watch, which rebuilds when a file changes
+- `target: 'es2022'`, less class static blocks (`supported`): esbuild no longer reads the target from
+  `tsconfig.json`, and would otherwise write the newest syntax there is. Private fields stay the browser's own
+- The engine's TypeScript, not the JavaScript compiled from it, and the project's own `tsconfig.json` for every
+  file: `tools/lib/engineSources.js`, which every esbuild build here (the game, the suites, the tools) is given.
+  The engine's packages ship both, and esbuild takes the `.js` inside `node_modules` unless told otherwise, which
+  made the worker's bundle two thirds larger
 - Loaders: `.png` and `.svg` are inlined as data URLs, `.jpg` is emitted as a file
   named by content hash (the main menu background, `main-menu-bg-<hash>.jpg`), and
   `.build` is loaded as text
