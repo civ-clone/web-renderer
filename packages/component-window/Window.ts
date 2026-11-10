@@ -252,8 +252,10 @@ export class Window
     return h(header, {
       dblclick: () => this.maximise(),
       pointerdown: (event: PointerEvent) => {
-        // The main button of the main pointer, and not on one of the bar's own buttons.
+        // The main button of the main pointer, and not on one of the bar's own buttons. A maximised window stays
+        //  where it is: moved, it would jump there when next restored.
         if (
+          this.hasClass('maximised') ||
           event.isPrimary === false ||
           (event.button ?? 0) !== 0 ||
           (event.target as Element).closest('button')
@@ -281,6 +283,8 @@ export class Window
       },
       pointerup: stop,
       pointercancel: stop,
+      // Let go where the page never heard of it: another app taken to the front mid-drag, say.
+      lostpointercapture: stop,
     });
   }
 

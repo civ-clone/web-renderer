@@ -594,7 +594,46 @@ const run = async (): Promise<void> => {
       [[farLeft, '570px'], []]
     );
 
+    // The pointer taken away mid-drag, with no word of its release: the drag is over.
+    pointer('pointerdown', 10, 580);
+    pointer('lostpointercapture', 10, 580);
+    pointer('pointermove', 60, 500);
+
+    expect(`${mode}: a pointer lost mid-drag stops dragging`, at(), [
+      farLeft,
+      '570px',
+    ]);
+
     dragged.close();
+
+    // A maximised window fills the page, and stays put.
+    const filling = new Window('Filling', 'Body', { canMaximise: true }),
+      fillingBar = filling
+        .element()
+        .querySelector(':scope > header') as HTMLElement;
+    await settle();
+
+    filling.maximise();
+
+    [
+      ['pointerdown', 150, 10],
+      ['pointermove', 250, 110],
+      ['pointerup', 250, 110],
+    ].forEach(([type, x, y]) =>
+      pointer(type as string, x as number, y as number, { target: fillingBar })
+    );
+
+    expect(
+      `${mode}: a maximised window is not moved by its bar`,
+      [
+        filling.hasClass('maximised'),
+        filling.element().style.getPropertyValue('left'),
+        filling.element().style.getPropertyValue('top'),
+      ],
+      [true, '', '']
+    );
+
+    filling.close();
   }
 
   applyInterface('classic', null);
