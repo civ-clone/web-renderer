@@ -17,10 +17,12 @@ import { choices } from '@civ-clone/ui-windows/components/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
 import cityLayout from './components/CityLayout';
 import { cityScreen } from '@civ-clone/ui-windows/components/openCity';
+import meetingTalks from './components/meetingTalks';
 import manifest from './manifest.json';
 import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
+import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
@@ -96,5 +98,7 @@ unitPanel.provide('card', ({ unitInfo, unitActionArea }, deps) => {
     dispose: () => card.dispose(),
   };
 });
+
+talks.provide('meetingWindow', meetingTalks);
 
 registerInterface(manifest);

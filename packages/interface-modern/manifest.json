@@ -10,11 +10,11 @@
     "reports": "tables",
     "choices": "choiceWindows",
     "choiceList": "choiceWindow",
-    "unitPanel": "card"
+    "unitPanel": "card",
+    "talks": "meetingWindow"
   },
   "features": [
     "assetsInOptions",
-    "meetingWindow",
     "nextTurn",
     "sharedMenus",
     "squareTooltips",
