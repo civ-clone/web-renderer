@@ -8,5 +8,11 @@
     "@civ-clone/ui-assets": "workspace:*",
     "@civ-clone/ui-map": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0"
   }
 }

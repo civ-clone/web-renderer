@@ -7,5 +7,10 @@
   "dependencies": {
     "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*"
+  },
+  "exports": {
+    "./Music": "./Music.ts",
+    "./cvl/Image": "./cvl/Image.ts",
+    "./eventSounds": "./eventSounds.ts"
   }
 }

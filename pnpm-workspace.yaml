@@ -1,5 +1,6 @@
-# The frontend's own packages (#825), each `@civ-clone/ui-<folder>`. Their npm dependencies stay in the root
-# package.json, so they get the engine packages `civ sync` links there.
+# The frontend's own packages (#825), each `@civ-clone/ui-<folder>`. The engine and npm packages they import are
+# their peerDependencies (#862), which the root package.json installs, so they get the engine packages `civ sync`
+# links there.
 packages:
   - 'packages/*'
 
@@ -34,3 +35,8 @@ allowBuilds:
 # project's own 62 packages were published minutes ago, and resolution silently
 # picked the previous version instead.
 minimumReleaseAge: 0
+
+# Each package lists the engine and npm packages it imports as peerDependencies (#862), which the root's own
+# dependencies provide: installing them again under packages/*/node_modules would hide what `civ sync` links
+# into the root's.
+autoInstallPeers: false

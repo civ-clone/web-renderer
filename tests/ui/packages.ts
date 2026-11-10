@@ -33,6 +33,8 @@ type Manifest = {
   description?: string;
   private?: boolean;
   dependencies?: { [name: string]: string };
+  peerDependencies?: { [name: string]: string };
+  exports?: { [subpath: string]: string };
 };
 
 const root = process.cwd(),
@@ -87,7 +89,7 @@ expect(
       ([dependency, range]) => {
         if (!dependency.startsWith(scope)) {
           problems.push(
-            `${name}: ${dependency} (its npm dependencies stay in the root package.json, so the engine checkouts \`civ sync\` links are the ones it gets)`
+            `${name}: ${dependency} (an engine or npm package is one of its peerDependencies, which the root package.json installs, so the engine checkouts \`civ sync\` links are the ones it gets)`
           );
         } else if (range !== 'workspace:*') {
           problems.push(`${name}: ${dependency}@${range}`);
@@ -120,9 +122,8 @@ expect(
   ['./c', './d', './e', './f', './g', './h', '@civ-clone/ui-client/i']
 );
 
-// Every engine package the UI packages import is in the root `package.json`, which is where their npm dependencies stay
-//  for now (#862): one that isn't resolves only through another package's install and the hoisting, and goes the day
-//  that one stops needing it.
+// Every engine package the UI packages import is in the root `package.json`, which installs them all (#862): one that
+//  isn't resolves only through another package's install and the hoisting, and goes the day that one stops needing it.
 const rootManifest = JSON.parse(
     readFileSync(join(root, 'package.json'), 'utf8')
   ) as Manifest & { devDependencies?: { [name: string]: string } },
@@ -150,6 +151,126 @@ expect(
   )
     .filter((dependency) => !(dependency in rootDependencies))
     .sort(),
+  []
+);
+
+// What a package imports from outside the frontend, engine or npm, by package name.
+const outsidePackagesOf = (name: string): string[] =>
+  Array.from(
+    new Set(
+      sourcesUnder(join(packagesRoot, name)).flatMap((path) =>
+        specifiersOf(readFileSync(path, 'utf8'))
+          .filter(
+            (specifier) =>
+              !specifier.startsWith('.') && !specifier.startsWith(scope)
+          )
+          .map((specifier) =>
+            specifier
+              .split('/')
+              .slice(0, specifier.startsWith('@') ? 2 : 1)
+              .join('/')
+          )
+      )
+    )
+  ).sort();
+
+// Each package says what it needs from outside (#862): every engine and npm package its files import is one of its
+//  peerDependencies, at the range the root package.json installs, and it names no other. The root's install is the one
+//  they get: `autoInstallPeers: false` (pnpm-workspace.yaml) keeps a second copy out of packages/*/node_modules, where
+//  it would hide what `civ sync` links into the root's.
+expect(
+  'every package’s peerDependencies are what it imports from outside, at the root’s ranges',
+  names.flatMap((name) => {
+    const imported = outsidePackagesOf(name),
+      declared = manifests[name].peerDependencies ?? {};
+
+    return [
+      ...imported
+        .filter((dependency) => !(dependency in declared))
+        .map((dependency) => `${name}: imports ${dependency}, not a peer`),
+      ...Object.keys(declared)
+        .filter((dependency) => !imported.includes(dependency))
+        .map(
+          (dependency) => `${name}: ${dependency} is a peer it never imports`
+        ),
+      ...Object.entries(declared)
+        .filter(([dependency, range]) => rootDependencies[dependency] !== range)
+        .map(
+          ([dependency, range]) =>
+            `${name}: ${dependency}@${range}, the root has ${rootDependencies[dependency]}`
+        ),
+    ];
+  }),
+  []
+);
+
+// And what it offers (#862): its `exports` are the modules other packages and civ.one's own code import from it, each
+//  one there, and no other. The builds find the packages by path (below), so nothing else holds a package to them: a
+//  module newly imported from another package is added here on purpose. The suites may reach into any package.
+// The generated plugin list (`src/js/plugins.ts`, git-ignored) is left out, whether or not it has been written yet:
+//  what it imports from the frontend is the rule set's worker rules, which `package.json`'s `civ-clone.rules` names.
+const rulesPackage = (
+    rootManifest as Manifest & { 'civ-clone'?: { rules?: string } }
+  )['civ-clone']?.rules,
+  importedFrom = (name: string): string[] =>
+    Array.from(
+      new Set([
+        ...(rulesPackage === `${scope}${name}` ? ['.'] : []),
+        ...[
+          ...names
+            .filter((other) => other !== name)
+            .flatMap((other) => sourcesUnder(join(packagesRoot, other))),
+          ...sourcesUnder(join(root, 'src')).filter(
+            (path) => path !== join(root, 'src/js/plugins.ts')
+          ),
+        ].flatMap((path) =>
+          specifiersOf(readFileSync(path, 'utf8'))
+            .filter(
+              (specifier) =>
+                specifier === `${scope}${name}` ||
+                specifier.startsWith(`${scope}${name}/`)
+            )
+            .map((specifier) =>
+              specifier === `${scope}${name}`
+                ? '.'
+                : `./${specifier.slice(scope.length + name.length + 1)}`
+            )
+        ),
+      ])
+    ).sort();
+
+// The file a subpath names, as the builds' `paths` find it: `x.ts`, then `x.d.ts`, then `x/index.ts`.
+const resolvedIn = (name: string, subpath: string): string | null =>
+  ['.ts', '.d.ts', '/index.ts']
+    .map((extension) =>
+      subpath === '.'
+        ? `./index${extension === '/index.ts' ? '.ts' : extension}`
+        : `${subpath}${extension}`
+    )
+    .find((candidate) => existsSync(join(packagesRoot, name, candidate))) ??
+  null;
+
+expect(
+  'every package’s exports are what is imported from it, each to the file it names',
+  names.flatMap((name) => {
+    const imported = importedFrom(name),
+      exported = manifests[name].exports ?? {};
+
+    return [
+      ...imported
+        .filter((subpath) => !(subpath in exported))
+        .map((subpath) => `${name}: ${subpath} is imported, not exported`),
+      ...Object.keys(exported)
+        .filter((subpath) => !imported.includes(subpath))
+        .map((subpath) => `${name}: ${subpath} is exported, never imported`),
+      ...Object.entries(exported)
+        .filter(([subpath, target]) => resolvedIn(name, subpath) !== target)
+        .map(
+          ([subpath, target]) =>
+            `${name}: ${subpath} is ${target}, not ${resolvedIn(name, subpath)}`
+        ),
+    ];
+  }),
   []
 );
 
@@ -335,8 +456,14 @@ const outside = [
 //  other (#825), over `@civ-clone/worker-transport`. The worker never runs the page's code, nor the page the
 //  worker's.
 const backend = join(root, 'src/js/backend.ts'),
-  // civ.one's choice of rules, which the entry hands the worker client: every installed plugin.
-  backendMayUse = ['worker-client', 'protocol', 'src/js/plugins.ts'];
+  // civ.one's choice of rules, which the entry hands the worker client: every installed plugin (`src/js/plugins`
+  //  until `buildPluginList.js` has written it, as it's git-ignored).
+  backendMayUse = [
+    'worker-client',
+    'protocol',
+    'src/js/plugins.ts',
+    'src/js/plugins',
+  ];
 
 expect(
   'the worker client depends on the protocol, and on nothing of the page',

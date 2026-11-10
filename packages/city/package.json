@@ -15,5 +15,17 @@
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./components/City": "./components/City.ts",
+    "./components/FindCity": "./components/FindCity.ts",
+    "./components/choices": "./components/choices.ts",
+    "./components/lib/cityParts": "./components/lib/cityParts.ts",
+    "./components/lib/cityYields": "./components/lib/cityYields.ts",
+    "./components/openCity": "./components/openCity.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

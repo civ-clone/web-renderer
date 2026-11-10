@@ -8,5 +8,19 @@
     "@civ-clone/ui-component-button": "workspace:*",
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./ActionWindow": "./ActionWindow.ts",
+    "./ConfirmationWindow": "./ConfirmationWindow.ts",
+    "./FilterableWindow": "./FilterableWindow.ts",
+    "./NotificationWindow": "./NotificationWindow.ts",
+    "./Window": "./Window.ts",
+    "./leaveGuard": "./leaveGuard.ts",
+    "./windowChrome": "./windowChrome.ts",
+    "./windowEyebrows": "./windowEyebrows.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

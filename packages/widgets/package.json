@@ -6,5 +6,20 @@
   "license": "MIT",
   "dependencies": {
     "@civ-clone/ui-platform": "workspace:*"
+  },
+  "exports": {
+    "./components/LockedSlider": "./components/LockedSlider.ts",
+    "./components/LockedSliderGroup": "./components/LockedSliderGroup.ts",
+    "./components/SidebarSection": "./components/SidebarSection.ts",
+    "./lib/cannotHover": "./lib/cannotHover.ts",
+    "./lib/contrast": "./lib/contrast.ts",
+    "./lib/drag": "./lib/drag.ts",
+    "./lib/filterRows": "./lib/filterRows.ts",
+    "./lib/html": "./lib/html.ts",
+    "./lib/theme": "./lib/theme.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

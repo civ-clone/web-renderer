@@ -3,5 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "description": "What the interface stands on, knowing nothing of the game: options, storage, the locale's formatting, the interfaces and their slots, the glyphs, and key and address helpers.",
-  "license": "MIT"
+  "license": "MIT",
+  "exports": {
+    "./GameOptionsRegistry": "./GameOptionsRegistry.ts",
+    "./LocaleProvider": "./LocaleProvider.ts",
+    "./Store": "./Store.ts",
+    "./lib/entity": "./lib/entity.ts",
+    "./lib/forgetVisitParam": "./lib/forgetVisitParam.ts",
+    "./lib/glyphs": "./lib/glyphs.ts",
+    "./lib/interfaceMode": "./lib/interfaceMode.ts",
+    "./lib/mappedKey": "./lib/mappedKey.ts",
+    "./lib/singleChoice": "./lib/singleChoice.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/core-registry": "^0.1.6",
+    "i18next": "^26.4.3",
+    "idb": "^7.1.1"
+  }
 }
