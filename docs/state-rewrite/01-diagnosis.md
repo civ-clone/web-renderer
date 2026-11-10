@@ -1,5 +1,9 @@
 # 01 — Diagnosis
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** The diagnosis was correct and its main finding, the whole-graph `reconstituteData` on every patch, has been fixed by `IncrementalReconstituter` (#322, #327). Line numbers and measurements are from 2026-08-31.
 
 What is actually wrong with the current renderer, with evidence. Read this

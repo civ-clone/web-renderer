@@ -189,8 +189,7 @@ dev-only commits (`chore:`, `test:`, `docs:` and so on) go under a collapsed
 Before 2026-09-27 each release had its own `release:` commit carrying the
 entries up to its parent. Those commits stay in the history and in the notes.
 
-`node generate-changelog.mjs <sha>` prints a single entry, and
-`generate-changelog.sh <sha>` writes it to `changelog/<sha>.json`.
+`node generate-changelog.mjs <sha>` prints a single entry.
 There is no script to rebuild `releases.json` from scratch: doing so would
 delete the `0.0.0` entry.
 

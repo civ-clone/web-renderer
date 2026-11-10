@@ -1,5 +1,9 @@
 # Review: src/js/Engine/DataTransferClient.ts (origin/main 18f28b0)
 
+> **Historical document.** It was last revised on 2026-10-21 (`d736e636`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 ## Area health
 
 The patch machinery is in good shape. Builders are lazy, there is one entry per object per flush (`#queuedTiles`/`#queued`), held actions go as refs, and the stand-ins (`unitWithoutActions`, `playerWithoutActions`, `withoutAvailable`) work: each consumer either reads through to the real object or serialises additional data from the real object. I found no consumer that receives a stand-in where it needs the real object. `#dataFilter` also holds for every payload that is not a city investigation.

@@ -1,5 +1,9 @@
 # Performance Review (2026-06-10)
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](frontend-ui.md) for where things are now.
+
 This review focuses on memory growth, CPU hotspots, and long-session behavior in the current implementation.
 
 ## Status (2026-10-08)

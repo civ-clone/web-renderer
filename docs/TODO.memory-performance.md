@@ -1,5 +1,9 @@
 # TODO: Memory and Performance Stabilization
 
+> **Historical document.** It was last revised on 2026-10-25 (`f0092491`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](frontend-ui.md) for where things are now.
+
 Last updated: 2026-10-08
 
 > See `docs/memory-growth-analysis-2026-07.md` for the July 2026 leak analysis

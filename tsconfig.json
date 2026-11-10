@@ -12,6 +12,6 @@
     "strict": true,
     "target": "ES2018"
   },
-  "include": ["main.ts", "build.json.d.ts", "src/js/**/*", "packages/**/*"],
+  "include": ["build.json.d.ts", "src/js/**/*", "packages/**/*"],
   "exclude": ["**/node_modules"]
 }

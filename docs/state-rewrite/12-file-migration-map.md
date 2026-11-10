@@ -1,5 +1,9 @@
 # 12 — File Migration Map
 
+> **Historical document.** It was last revised on 2026-10-21 (`14e0560d`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** This map was not followed and its line counts date from 2026-08-31. See the README's Status section for what happened instead.
 
 Every TypeScript file in `src/js/`, with what happens to it and when. Use this

@@ -1,5 +1,9 @@
 # 10 — Phase 5: The Map Renderer
 
+> **Historical document.** It was last revised on 2026-10-21 (`14e0560d`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** Done in substance by `4880639` (viewport-sized layers), `7e1f687` (minimap layer) and `74773f1`; not with the `StaticBuffer`/`TilePainter` design. See the README's Status section.
 
 **Goal.** Replace twelve world-sized canvases with one static viewport buffer

@@ -1,5 +1,8 @@
 # Review: map rendering (origin/main 18f28b0)
 
+> **Historical document.** It was last revised on 2026-10-21 (`d736e636`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
 
 ## Area health
 

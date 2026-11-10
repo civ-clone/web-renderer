@@ -1,5 +1,9 @@
 # 02 — Target Architecture
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 > **Status (2026-10-08):** This target design was not built. Its per-patch cost goal was met by `IncrementalReconstituter` (#322, #327) instead of a normalised store; see the Status section of the README.
 
 The design being built. Every piece here exists to remove a specific root cause

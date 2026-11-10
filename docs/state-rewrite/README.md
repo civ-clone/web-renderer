@@ -1,5 +1,9 @@
 # State-Based Renderer Rewrite
 
+> **Historical document.** It was last revised on 2026-10-23 (`26de2c4b`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 Working documents for converting `@civ-clone/web-renderer` from its current
 "rebuild the whole object graph on every patch" model to a state-based one:
 a normalised entity store, dependency-tracked selectors, and views that update

@@ -1,5 +1,9 @@
 # 05 — Engine Implementation Plan
 
+> **Historical document.** It was last revised on 2026-10-08 (`7c9c73a7`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 Eight stages. Each lands as a set of published patch releases and leaves the
 engine working. Read [`04-package-workflow.md`](./04-package-workflow.md) first —
 every stage assumes its tooling and its version strategy.

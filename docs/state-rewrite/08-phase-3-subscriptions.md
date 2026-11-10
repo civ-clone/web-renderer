@@ -1,5 +1,9 @@
 # 08 — Phase 3: Subscriptions and the `Renderer` Split (re-planned)
 
+> **Historical document.** It was last revised on 2026-10-23 (`54579dea`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 ## As built (2026-10-21)
 
 Both tracks landed on 2026-10-21, each step its own PR with a clean-context review before merging, and #344 is

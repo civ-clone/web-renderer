@@ -1,5 +1,9 @@
 # Code review, 2026-10-21
 
+> **Historical document.** It was last revised on 2026-10-21 (`d736e636`) and describes the code as it stood then.
+> Paths under `src/js/UI` and `src/js/Engine` have since moved to `packages/` (#825):
+> see [`frontend-ui.md`](../frontend-ui.md) for where things are now.
+
 A read-only review of the whole of `web-renderer` at `main` `18f28b0`, done in six areas by six independent
 reviewers working from one brief: verify every finding end to end (callers, callees, the data the engine sends, the
 tests), state a concrete failure scenario, mark it CONFIRMED or PLAUSIBLE, and dedupe against the open issues.
