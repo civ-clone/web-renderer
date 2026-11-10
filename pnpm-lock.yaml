@@ -439,9 +439,6 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
-      '@civ-clone/ui-map-square':
-        specifier: workspace:*
-        version: link:../map-square
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol

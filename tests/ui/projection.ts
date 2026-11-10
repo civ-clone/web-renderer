@@ -5,12 +5,16 @@
 
 import './lib/grids';
 import { Placement, tileBounds } from '@civ-clone/ui-map/lib/projection';
+import Minimap from '@civ-clone/ui-map-square/Minimap';
+import Overview from '@civ-clone/ui-map-square/Overview';
 import SquareProjection from '@civ-clone/ui-map-square/SquareProjection';
 import { tileRange, wrapIndices } from '@civ-clone/ui-map/lib/viewport';
 import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor, {
+  GridOverview,
   drawableGrids,
+  overviewFor,
   registerGrid,
 } from '@civ-clone/ui-map/lib/projectionFor';
 import validateDescriptor from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
@@ -496,13 +500,35 @@ expect(
 // A grid's own code makes it drawable (#825): the map asks whichever projection is registered for the tileset's grid.
 //  These stay last: the registry is the suite's own, and the checks above want hex unregistered.
 const hexStub = tilesetWith({ id: 'hex-stub', grid: 'hex-odd-r' }),
-  hexAsked: unknown[] = [];
+  hexAsked: unknown[] = [],
+  // Stand-ins: only which ones the registry hands back is checked.
+  hexOverview = { layer: Overview, minimap: Minimap } as GridOverview,
+  hexOverviewAgain = { layer: Overview, minimap: Minimap } as GridOverview;
 
-registerGrid('hex-odd-r', (tileset, world, tileSize, wrapVertical) => {
-  hexAsked.push([tileset.id, tileSize, wrapVertical]);
+// The minimap comes from the grid too (#867): the square grid's own, and none for a grid nothing has registered.
+expect(
+  'the square grid brings its overview and minimap, and an unregistered grid is refused',
+  [
+    overviewFor(civ1).layer === Overview,
+    overviewFor(civ1).minimap === Minimap,
+    thrown(() => overviewFor(hexStub)),
+  ],
+  [
+    true,
+    true,
+    'Tileset "hex-stub": no projection is loaded for the hex-odd-r grid (isometric comes with #97, hex with #94).',
+  ]
+);
 
-  return new SquareProjection(tileSize, world, wrapVertical);
-});
+registerGrid(
+  'hex-odd-r',
+  (tileset, world, tileSize, wrapVertical) => {
+    hexAsked.push([tileset.id, tileSize, wrapVertical]);
+
+    return new SquareProjection(tileSize, world, wrapVertical);
+  },
+  hexOverview
+);
 
 expect(
   'a registered grid is drawable, and its projection is the one the map gets',
@@ -510,19 +536,25 @@ expect(
     drawableGrids().sort(),
     projectionFor(hexStub, world, 24, false).footprint(),
     hexAsked,
+    overviewFor(hexStub) === hexOverview,
   ],
   [
     ['hex-odd-r', 'square'],
     { width: 24, height: 24 },
     [['hex-stub', 24, false]],
+    true,
   ]
 );
 
-registerGrid('hex-odd-r', (tileset, world, tileSize, wrapVertical) => {
-  hexAsked.push(['again', tileset.id, tileSize, wrapVertical]);
+registerGrid(
+  'hex-odd-r',
+  (tileset, world, tileSize, wrapVertical) => {
+    hexAsked.push(['again', tileset.id, tileSize, wrapVertical]);
 
-  return new SquareProjection(tileSize * 2, world, wrapVertical);
-});
+    return new SquareProjection(tileSize * 2, world, wrapVertical);
+  },
+  hexOverviewAgain
+);
 
 expect(
   'a grid registered again is listed once, and the map gets the latest projection',
@@ -530,11 +562,13 @@ expect(
     drawableGrids().sort(),
     projectionFor(hexStub, world, 16).footprint(),
     hexAsked.slice(1),
+    overviewFor(hexStub) === hexOverviewAgain,
   ],
   [
     ['hex-odd-r', 'square'],
     { width: 32, height: 32 },
     [['again', 'hex-stub', 16, true]],
+    true,
   ]
 );
 
