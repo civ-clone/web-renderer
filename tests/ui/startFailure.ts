@@ -7,7 +7,7 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { AssetStore } from '@civ-clone/ui-assets/AssetStore';
-import { Store } from '@civ-clone/ui-client/Store';
+import { Store } from '@civ-clone/ui-platform/Store';
 import showStartFailure from '@civ-clone/ui-game/app/startFailure';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

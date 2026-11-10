@@ -9,7 +9,7 @@ import './lib/interfaces';
 
 import GameOptionsRegistry, {
   OptionStorage,
-} from '@civ-clone/ui-client/GameOptionsRegistry';
+} from '@civ-clone/ui-platform/GameOptionsRegistry';
 import SidebarSection from '@civ-clone/ui-widgets/components/SidebarSection';
 
 const failures: string[] = [];

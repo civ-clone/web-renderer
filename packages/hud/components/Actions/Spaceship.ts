@@ -3,9 +3,9 @@ import { Spaceship as SpaceshipData } from '@civ-clone/ui-protocol/types';
 import Window from '@civ-clone/ui-component-window/Window';
 import civilizationAttribute from '@civ-clone/ui-client/lib/civilizationAttribute';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { instance as localeProviderInstance } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProviderInstance } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { t } from 'i18next';
 
 type SpaceshipYieldMap = {

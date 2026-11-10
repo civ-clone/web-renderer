@@ -15,7 +15,7 @@ import UnitActions from './components/UnitActions';
 import UnitDetails from './components/UnitDetails';
 import UnitSelectionWindow from './components/UnitSelectionWindow';
 import { choiceList } from '@civ-clone/ui-hud/components/choiceList';
-import { choices } from '@civ-clone/ui-component-window/choices';
+import { choices } from '@civ-clone/ui-city/components/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
 import classicCityLayout from './components/classicCityLayout';
 import { cityScreen } from '@civ-clone/ui-city/components/openCity';
@@ -26,7 +26,7 @@ import popupMenus from './components/popupMenus';
 import {
   InterfaceManifest,
   registerInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
 import { reports } from '@civ-clone/ui-reports/components/reports';
 import talks from '@civ-clone/ui-hud/components/talks';

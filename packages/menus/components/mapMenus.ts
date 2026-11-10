@@ -1,6 +1,6 @@
 import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `mapMenus` slot (#860): the menus over the game, the Game menu its button opens and the unit's menu a
 //  long press on the map opens. The classic interface has popups; the modern one its own menu for both (#808), which a

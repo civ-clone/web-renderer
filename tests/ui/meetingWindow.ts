@@ -16,7 +16,7 @@ import DebugFlags, {
 import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
 import { PendingMeeting } from '@civ-clone/ui-hud/components/turnControls';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 

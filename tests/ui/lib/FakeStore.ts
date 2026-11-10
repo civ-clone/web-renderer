@@ -1,4 +1,4 @@
-// Stands in for `packages/client/Store.ts` — see `tools/saved-game.js`, which
+// Stands in for `packages/platform/Store.ts` — see `tools/saved-game.js`, which
 // resolves that module here when bundling the saved-game suite.
 //
 // Node has no `indexedDB`, and `idb` type-checks its own wrappers with

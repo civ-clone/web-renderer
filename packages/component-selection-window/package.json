@@ -5,8 +5,8 @@
   "description": "A window that lists choices to pick one from, as a plain list.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
   }
 }

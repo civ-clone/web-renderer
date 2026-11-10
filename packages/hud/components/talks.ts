@@ -1,6 +1,6 @@
 import { Negotiation, Player } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `talks` slot (#860): how a step of the talks with another leader is shown, and answered. The classic
 //  interface has a window with Continue for a step with one answer and a list for several; the modern one its meeting

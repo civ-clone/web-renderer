@@ -22,7 +22,7 @@ import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import GameMenu from '@civ-clone/ui-menus/components/GameMenu';
 import cheatRows from '@civ-clone/ui-game/debug/cheats';
 import PopupMenu from '@civ-clone/ui-component-popup-menu/PopupMenu';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 

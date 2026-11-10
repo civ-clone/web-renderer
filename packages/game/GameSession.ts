@@ -23,7 +23,7 @@ import { openIntelligenceReport } from '@civ-clone/ui-reports/components/reports
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
 import unitPanel from '@civ-clone/ui-hud/components/unitPanel';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import shouldAutoEndTurn from '@civ-clone/ui-client/lib/autoEndTurn';

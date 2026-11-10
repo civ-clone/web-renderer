@@ -2,7 +2,6 @@
 import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
-  'Generic.just-now': 'just now',
   'Generic.civilization-name.plural':
     '$t({{- civilization}}.plural, { "defaultValue": "{{player.civilization._}}", "ns": "civilization" })',
   'ChooseFromList.capture-city.steal-advance.body':

@@ -1,10 +1,12 @@
 import { TransientElement, ITransientElement } from './TransientElement';
 import { s } from '@dom111/element';
-import { Coordinate } from '@civ-clone/ui-protocol/types';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { t } from 'i18next';
 import windowChrome, { WindowChrome } from './windowChrome';
+
+// Where on the page, in pixels, or by how far to move.
+type Position = { x: number; y: number };
 
 export interface IWindow extends ITransientElement {
   close(): void;
@@ -363,7 +365,7 @@ export class Window
     );
   }
 
-  move({ x, y }: Coordinate): void {
+  move({ x, y }: Position): void {
     if (this.hasClass('position-auto')) {
       // Ensure the auto position is accounted for
       x += this.element().offsetLeft;
@@ -392,7 +394,7 @@ export class Window
   //  or below its foot, and with a grip's width of it on the page at either side. The bar's own buttons, at its far
   //  end, are no grip, so that much more of it stays when it goes off the near side. A page with no size keeps it as
   //  asked.
-  #place({ x, y }: Coordinate): void {
+  #place({ x, y }: Position): void {
     const width = this.element().offsetWidth,
       header = this.element().querySelector<HTMLElement>(':scope > header'),
       firstButton = header?.querySelector<HTMLElement>(':scope > button'),

@@ -16,7 +16,7 @@ import {
   getLabelForBuildable,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import {

@@ -23,8 +23,8 @@ import {
 } from '@civ-clone/ui-client/components/lib/city';
 import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
 import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { progressBar } from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';

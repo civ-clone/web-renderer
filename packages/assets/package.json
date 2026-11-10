@@ -5,7 +5,7 @@
   "description": "Sprites, tilesets and sounds, and drawing a sprite: what any part that shows the game draws with.",
   "license": "MIT",
   "dependencies": {
-    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*"
   }
 }

@@ -1,8 +1,10 @@
-import { Entity } from '@civ-clone/ui-protocol/types';
 import { t } from 'i18next';
 
+// Anything the engine names by its class, `_`: a unit, an advance, a civilization.
+type Named = { _: string };
+
 export const entityName = (
-  entity: Entity | null,
+  entity: Named | null,
   namespace?: string,
   prefix?: string,
   key: string = 'name',

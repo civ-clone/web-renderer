@@ -1,4 +1,4 @@
-import { Record, Store } from '@civ-clone/ui-client/Store';
+import { Record, Store } from '@civ-clone/ui-platform/Store';
 import { TilesetDescriptor, spriteKey } from './tilesets/TilesetDescriptor';
 import currentTileset from './lib/tilesets';
 import { imageSize } from './lib/imageSize';

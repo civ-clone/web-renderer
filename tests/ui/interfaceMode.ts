@@ -7,7 +7,7 @@ import './lib/interfaces';
 
 import interfaceMode, {
   applyInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0;

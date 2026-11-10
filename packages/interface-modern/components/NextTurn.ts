@@ -10,7 +10,7 @@ import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import button from '@civ-clone/ui-component-button/button';
 import { createAction } from '@civ-clone/ui-hud/components/Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { setNoticeCategory } from './lib/noticeCategory';
 import { t } from 'i18next';
 import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';

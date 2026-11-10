@@ -11,10 +11,8 @@ import {
   citizenFace,
   renderPopulation,
 } from '@civ-clone/ui-city/components/lib/cityYields';
-import {
-  groupIcons,
-  reduceKnownYield,
-} from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
+import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import Element from '@dom111/element';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
@@ -30,9 +28,9 @@ import {
 } from '@civ-clone/ui-client/components/lib/city';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { t } from 'i18next';

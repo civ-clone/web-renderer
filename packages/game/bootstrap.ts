@@ -22,7 +22,7 @@ import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import setOptionDefaults from './app/options';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
   applyColourScheme,
   applyUiTheme,
@@ -31,8 +31,8 @@ import {
 import {
   applyInterface,
   currentInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
-import { installGlyphs } from '@civ-clone/ui-assets/lib/glyphs';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
+import { installGlyphs } from '@civ-clone/ui-platform/lib/glyphs';
 import ReloadGuard from './app/ReloadGuard';
 import NotificationBar from './app/NotificationBar';
 import ChoiceHandler from './app/ChoiceHandler';

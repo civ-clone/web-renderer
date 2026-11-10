@@ -15,14 +15,14 @@ import GamePortal from '@civ-clone/ui-game/GamePortal';
 import Map from '@civ-clone/ui-map/components/Map';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import World from '@civ-clone/ui-map/components/World';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import {
   TooltipContent,
   TooltipText,
 } from '@civ-clone/ui-component-tooltip/Tooltip';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import squareTooltip, {
   hasSquareTooltip,
 } from '@civ-clone/ui-hud/components/Map/squareTooltip';

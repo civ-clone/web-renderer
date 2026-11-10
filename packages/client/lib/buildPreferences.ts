@@ -1,5 +1,5 @@
 import Transport from '../Transport';
-import { instance as options } from '../GameOptionsRegistry';
+import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 
 // The player's build options (#690, #691), sent to the game, whose rules act on them: as a game starts or loads, and
 //  whenever one changes.

@@ -15,7 +15,7 @@ import UnitCard from './components/UnitCard';
 import UnitCardActions from './components/UnitCardActions';
 import UnitStackChoice from './components/UnitStackChoice';
 import { choiceList } from '@civ-clone/ui-hud/components/choiceList';
-import { choices } from '@civ-clone/ui-component-window/choices';
+import { choices } from '@civ-clone/ui-city/components/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
 import cityLayout from './components/CityLayout';
 import { cityScreen } from '@civ-clone/ui-city/components/openCity';
@@ -26,7 +26,7 @@ import sharedMenus from './components/sharedMenus';
 import {
   InterfaceManifest,
   registerInterface,
-} from '@civ-clone/ui-client/lib/interfaceMode';
+} from '@civ-clone/ui-platform/lib/interfaceMode';
 import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
 import { reports } from '@civ-clone/ui-reports/components/reports';
 import { s } from '@dom111/element';

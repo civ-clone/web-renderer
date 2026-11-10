@@ -1,5 +1,5 @@
 import type { WindowSettings } from './Window';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `windowChrome` slot (#860): what a window looks like around its body, and what that brings with it,
 //  its keys and where focus goes as it closes. Each window has a chrome of its own, made as the window is, so it can

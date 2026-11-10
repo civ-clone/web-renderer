@@ -1,8 +1,8 @@
 import { Element, s } from '@dom111/element';
 import GameOptionsRegistry, {
   instance as defaultOptions,
-} from '@civ-clone/ui-client/GameOptionsRegistry';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+} from '@civ-clone/ui-platform/GameOptionsRegistry';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 
 // The client option holding the keys of the collapsed sections, kept in browser storage like the others (#343).
 export const collapsedOption = 'sidebarCollapsed';

@@ -35,7 +35,7 @@ import Unit from '@civ-clone/ui-hud/components/Unit';
 import UnitSelectionWindow from './UnitSelectionWindow';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { s } from '@dom111/element';

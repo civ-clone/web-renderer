@@ -31,7 +31,7 @@ import {
   citizenSprites,
   specialistSprites,
 } from '@civ-clone/ui-client/lib/citizens';
-import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
+import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 
 const failures: string[] = [];
 let checks = 0,

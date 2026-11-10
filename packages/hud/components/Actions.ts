@@ -14,7 +14,7 @@ import Spaceship from './Actions/Spaceship';
 import Transport from '@civ-clone/ui-client/Transport';
 import { getClosestAncestorMatching } from '@civ-clone/ui-widgets/lib/html';
 import { hideTooltipWithin } from '@civ-clone/ui-component-tooltip/Tooltip';
-import { mappedKeyFromEvent } from '@civ-clone/ui-client/lib/mappedKey';
+import { mappedKeyFromEvent } from '@civ-clone/ui-platform/lib/mappedKey';
 
 declare global {
   interface GlobalEventHandlersEventMap {

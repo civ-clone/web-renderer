@@ -13,7 +13,7 @@ import {
 import { renderFigures, turnsLeft, yieldImages } from './lib/cityYields';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
-import { openCityBuild } from '@civ-clone/ui-component-window/choices';
+import { openCityBuild } from './choices';
 import CityNameWindow from './CityNameWindow';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import Portal from '@civ-clone/ui-map/components/Portal';

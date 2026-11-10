@@ -25,7 +25,7 @@ import {
 } from '@civ-clone/ui-menus/lib/setupControls';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
-import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { t } from 'i18next';
 
 export { GameSetupPreset, RANDOM };

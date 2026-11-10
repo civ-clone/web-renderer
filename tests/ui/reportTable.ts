@@ -7,10 +7,10 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { City, Player } from '@civ-clone/ui-protocol/types';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import CityStatusTable from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import Portal from '@civ-clone/ui-map/components/Portal';
-import LocaleProvider from '@civ-clone/ui-client/LocaleProvider';
+import LocaleProvider from '@civ-clone/ui-platform/LocaleProvider';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
 import TradeTable from '@civ-clone/ui-interface-modern/components/TradeTable';
 import Transport from '@civ-clone/ui-client/Transport';

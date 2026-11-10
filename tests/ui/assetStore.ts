@@ -8,7 +8,7 @@ import './lib/dom';
 import './lib/interfaces';
 
 import { AssetStore, decodeSprite } from '@civ-clone/ui-assets/AssetStore';
-import { Store } from '@civ-clone/ui-client/Store';
+import { Store } from '@civ-clone/ui-platform/Store';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,

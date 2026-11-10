@@ -2,7 +2,7 @@ import { Tile } from '@civ-clone/ui-protocol/types';
 import { Map } from '../Map';
 import { Reach } from '../../lib/projection';
 import { Rect } from '../../lib/viewport';
-import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
+import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 

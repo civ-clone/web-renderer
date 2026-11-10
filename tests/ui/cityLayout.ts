@@ -17,7 +17,7 @@ import classicCityLayout from '@civ-clone/ui-interface-classic/components/classi
 import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
-import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import i18next from 'i18next';

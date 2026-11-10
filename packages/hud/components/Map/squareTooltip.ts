@@ -1,4 +1,4 @@
-import { GlyphName, glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { GlyphName, glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { TOptions, t } from 'i18next';
 import {
   TooltipContent,

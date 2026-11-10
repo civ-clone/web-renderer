@@ -1,7 +1,7 @@
 import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // The interface's `unitPanel` slot (#860): what shows the active unit and its actions. The classic interface has its
 //  details in the sidebar and a strip of buttons at the bottom left; the modern one a card with the buttons in it

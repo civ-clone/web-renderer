@@ -356,9 +356,9 @@ importers:
 
   packages/assets:
     dependencies:
-      '@civ-clone/ui-client':
+      '@civ-clone/ui-platform':
         specifier: workspace:*
-        version: link:../client
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -395,6 +395,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -404,6 +407,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -412,18 +418,15 @@ importers:
 
   packages/component-choice-window:
     dependencies:
-      '@civ-clone/ui-assets':
-        specifier: workspace:*
-        version: link:../assets
-      '@civ-clone/ui-client':
-        specifier: workspace:*
-        version: link:../client
       '@civ-clone/ui-component-button':
         specifier: workspace:*
         version: link:../component-button
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -432,9 +435,9 @@ importers:
 
   packages/component-popup-menu:
     dependencies:
-      '@civ-clone/ui-assets':
+      '@civ-clone/ui-platform':
         specifier: workspace:*
-        version: link:../assets
+        version: link:../platform
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -443,21 +446,21 @@ importers:
 
   packages/component-report-table:
     dependencies:
-      '@civ-clone/ui-client':
+      '@civ-clone/ui-platform':
         specifier: workspace:*
-        version: link:../client
+        version: link:../platform
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
 
   packages/component-selection-window:
     dependencies:
-      '@civ-clone/ui-client':
-        specifier: workspace:*
-        version: link:../client
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -472,18 +475,12 @@ importers:
 
   packages/component-window:
     dependencies:
-      '@civ-clone/ui-assets':
-        specifier: workspace:*
-        version: link:../assets
-      '@civ-clone/ui-client':
-        specifier: workspace:*
-        version: link:../client
       '@civ-clone/ui-component-button':
         specifier: workspace:*
         version: link:../component-button
-      '@civ-clone/ui-protocol':
+      '@civ-clone/ui-platform':
         specifier: workspace:*
-        version: link:../protocol
+        version: link:../platform
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
@@ -517,6 +514,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:../menus
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -556,6 +556,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -601,6 +604,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:../menus
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -652,6 +658,9 @@ importers:
       '@civ-clone/ui-menus':
         specifier: workspace:*
         version: link:../menus
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -670,6 +679,9 @@ importers:
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -712,6 +724,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -721,6 +736,8 @@ importers:
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:../widgets
+
+  packages/platform: {}
 
   packages/protocol: {}
 
@@ -744,6 +761,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
+      '@civ-clone/ui-platform':
+        specifier: workspace:*
+        version: link:../platform
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
@@ -753,12 +773,9 @@ importers:
 
   packages/widgets:
     dependencies:
-      '@civ-clone/ui-assets':
+      '@civ-clone/ui-platform':
         specifier: workspace:*
-        version: link:../assets
-      '@civ-clone/ui-client':
-        specifier: workspace:*
-        version: link:../client
+        version: link:../platform
 
   packages/worker-client:
     dependencies:

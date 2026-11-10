@@ -2,7 +2,7 @@ import {
   ChoiceDescriber,
   ChoiceRow,
 } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
-import { defineSlot } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defineSlot } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 // A list of plain rows, the classic list or the choice window (#745). Apart from `choices.ts` so that what imports it
 //  (the arrival prompts, the engine's lists) doesn't load the build list and the unit sprites with it.
