@@ -46,22 +46,46 @@ const text = (tag: string, className: string, content: string): HTMLElement => {
   return element;
 };
 
+// Ids for what a control is described by and a list is labelled by: unique on the page, and nothing else.
+let ids = 0;
+
+const identified = <T extends HTMLElement>(element: T): T => {
+  element.id = `rule-set-${++ids}`;
+
+  return element;
+};
+
 const described = (id: string): HTMLElement[] => {
   const description = ruleSetDescription(id);
 
   return description === ''
     ? []
-    : [text('p', 'rule-set-description', description)];
+    : [identified(text('p', 'rule-set-description', description))];
 };
+
+const describedBy = (
+  control: HTMLElement,
+  description: HTMLElement[]
+): void => {
+  if (description.length > 0) {
+    control.setAttribute('aria-describedby', description[0].id);
+  }
+};
+
+// Where a control is in the tree, which is what it is found again by after a redraw: a rule that two sets hold is
+//  drawn under each, and the keyboard goes back to the one it was on.
+const under = (path: string, id: string): string =>
+  path === '' ? id : `${path}\n${id}`;
 
 const input = (
   type: 'checkbox' | 'radio',
   focusKey: string,
   label: string,
   { checked = false, disabled = false, mixed = false, name = '', value = '' }
-): [HTMLInputElement, HTMLLabelElement] => {
+): [HTMLInputElement, HTMLLabelElement, HTMLElement] => {
   const control = document.createElement('input'),
-    wrapper = document.createElement('label');
+    wrapper = document.createElement('label'),
+    named = identified(text('span', 'rule-set-name', label));
 
   control.type = type;
   control.checked = checked;
@@ -74,45 +98,67 @@ const input = (
     control.value = value;
   }
 
-  wrapper.append(control, text('span', 'rule-set-name', label));
+  wrapper.append(control, named);
 
-  return [control, wrapper];
+  return [control, wrapper, named];
 };
 
 const item = (
   node: RuleSetNode,
-  parent: RuleSetNode | null,
+  path: string,
   change: (choice: RuleSetChoice) => void
 ): HTMLLIElement => {
   const element = document.createElement('li'),
-    inside = (members: RuleSetNode[], of: RuleSetNode): HTMLElement[] => {
+    here = under(path, node.id),
+    // What is beneath `of`, as a list named by what it is beneath.
+    inside = (
+      members: RuleSetNode[],
+      of: RuleSetNode,
+      at: string,
+      label: HTMLElement
+    ): HTMLElement[] => {
       const shown = members.filter((member) => worthDrawing(member, of));
 
-      return shown.length === 0 ? [] : [list(shown, of, change)];
+      if (shown.length === 0) {
+        return [];
+      }
+
+      const beneath = list(shown, of, at, change);
+
+      beneath.setAttribute('aria-labelledby', label.id);
+
+      return [beneath];
     };
 
   element.className = 'rule-set';
   element.dataset.kind = node.kind;
 
   if (node.kind === 'choice') {
-    const group = document.createElement('fieldset');
+    const group = document.createElement('fieldset'),
+      about = described(node.id);
 
     group.disabled = !node.active;
+    describedBy(group, about);
     group.append(
       text('legend', 'rule-set-name', ruleSetName(node.id)),
-      ...described(node.id),
+      ...about,
+      // Each alternative is a radio button, with what is beneath it: a rule here is drawn by its choice, and a set
+      //  that is an alternative has no checkbox of its own.
       ...node.members.map((member) => {
-        const [control, wrapper] = input(
+        const aboutMember = described(member.id),
+          [control, wrapper, label] = input(
             'radio',
-            `${node.id}\n${member.id}`,
+            under(here, member.id),
             ruleSetName(member.id),
             {
               checked: member.id === node.chosen,
-              name: `rule-set:${node.id}`,
+              name: `rule-set:${here}`,
               value: member.id,
             }
           ),
           alternative = document.createElement('div');
+
+        describedBy(control, aboutMember);
 
         control.addEventListener('change', () => {
           if (control.checked) {
@@ -123,8 +169,8 @@ const item = (
         alternative.className = 'rule-set-alternative';
         alternative.append(
           wrapper,
-          ...described(member.id),
-          ...inside(member.members, member)
+          ...aboutMember,
+          ...inside(member.members, member, under(here, member.id), label)
         );
 
         return alternative;
@@ -136,29 +182,41 @@ const item = (
     return element;
   }
 
+  const about = described(node.id);
+
   // A set with nothing of its own to switch is a heading over what is beneath it.
   if (node.kind === 'set' && !node.switchable) {
+    const heading = identified(
+      text('span', 'rule-set-name rule-set-heading', ruleSetName(node.id))
+    );
+
     element.append(
-      text('span', 'rule-set-name rule-set-heading', ruleSetName(node.id)),
-      ...described(node.id),
-      ...inside(node.members, node)
+      heading,
+      ...about,
+      ...inside(node.members, node, here, heading)
     );
 
     return element;
   }
 
-  // An alternative is drawn by its choice, as a radio button: here it is only what is beneath it.
-  const [control, wrapper] = input('checkbox', node.id, ruleSetName(node.id), {
-    checked: node.state === 'on',
-    disabled: !node.active,
-    mixed: node.state === 'mixed',
-  });
+  const [control, wrapper, label] = input(
+    'checkbox',
+    here,
+    ruleSetName(node.id),
+    {
+      checked: node.state === 'on',
+      disabled: !node.active,
+      mixed: node.state === 'mixed',
+    }
+  );
+
+  describedBy(control, about);
 
   control.addEventListener('change', () =>
     change({ id: node.id, value: control.checked })
   );
 
-  element.append(wrapper, ...described(node.id), ...inside(node.members, node));
+  element.append(wrapper, ...about, ...inside(node.members, node, here, label));
 
   return element;
 };
@@ -166,12 +224,13 @@ const item = (
 const list = (
   nodes: RuleSetNode[],
   parent: RuleSetNode | null,
+  path: string,
   change: (choice: RuleSetChoice) => void
 ): HTMLUListElement => {
   const element = document.createElement('ul');
 
   element.className = 'rule-sets';
-  element.append(...nodes.map((node) => item(node, parent, change)));
+  element.append(...nodes.map((node) => item(node, path, change)));
 
   return element;
 };
@@ -201,6 +260,7 @@ export const renderRuleSets = (
     list(
       sets.filter((node) => worthDrawing(node, null)),
       null,
+      '',
       change
     )
   );

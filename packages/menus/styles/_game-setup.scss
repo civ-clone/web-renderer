@@ -92,10 +92,6 @@
       margin: 0;
       min-width: 0;
       padding: 0;
-
-      &:disabled {
-        opacity: 0.6;
-      }
     }
 
     legend,
@@ -107,9 +103,9 @@
 
   // Under its checkbox, in line with the name and not the box.
   p.rule-set-description {
+    color: var(--ui-fg-muted);
     font-size: var(--type-detail-size);
     margin: 0 0 0 1.75rem;
-    opacity: 0.8;
   }
 
   fieldset > p.rule-set-description {

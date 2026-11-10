@@ -77,12 +77,6 @@
   }
 }
 
-// A rule set's line on what it does, in the theme's muted text, as a field's hint is.
-.ui-game-setup-rules p.rule-set-description {
-  color: var(--ui-fg-muted);
-  opacity: 1;
-}
-
 // It gives way to the world first, down to its heading, a few seats and Add a seat: past that the body scrolls.
 .ui-game-setup-seating {
   display: flex;

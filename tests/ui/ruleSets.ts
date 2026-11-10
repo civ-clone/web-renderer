@@ -17,6 +17,7 @@ import {
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import Request from '@civ-clone/core-data-client/Request';
+import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -95,7 +96,8 @@ const worker = (offers: boolean = true) => {
   const log: { channel: string; args: unknown[] }[] = [],
     held: (() => void)[] = [];
 
-  let holding = false;
+  let holding = false,
+    failing = false;
 
   const describe = (choices: RuleSetChoice[]): RuleSetNode[] => {
     const off = new Set<string>(),
@@ -230,6 +232,13 @@ const worker = (offers: boolean = true) => {
               ...(query?.change ? [query.change] : []),
             ];
 
+          if (failing && query?.change) {
+            failing = false;
+
+            // As `Transport` rejects a request the worker could not answer, having told the player (#470).
+            throw new RequestFailed('ruleSets', 'not answered');
+          }
+
           if (holding && query?.change) {
             await new Promise<void>((resolve) => held.push(resolve));
           }
@@ -245,6 +254,7 @@ const worker = (offers: boolean = true) => {
   return {
     log,
     transport,
+    fail: () => (failing = true),
     hold: () => (holding = true),
     release: () => {
       holding = false;
@@ -321,22 +331,28 @@ const run = async (): Promise<void> => {
       element = setup.element(),
       section = (): HTMLDetailsElement =>
         element.querySelector(sectionSelector) as HTMLDetailsElement,
+      // A control is keyed by where it is in the tree: found here by what it ends with.
       box = (id: string): HTMLInputElement =>
         [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].find(
-          (input) => input.dataset.ruleSet === id
+          (input) =>
+            input.dataset.ruleSet === id ||
+            input.dataset.ruleSet!.endsWith(`\n${id}`)
         ) as HTMLInputElement,
       item = (id: string): HTMLElement => box(id).closest('li') as HTMLElement,
       boxes = (): string[] =>
         [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].map(
           (input) =>
-            `${input.type} ${input.dataset.ruleSet!.replace('\n', ' > ')}${
+            `${input.type} ${input.dataset
+              .ruleSet!.split('\n')
+              .slice(input.type === 'radio' ? -2 : -1)
+              .join(' > ')}${
               input.indeterminate ? ' mixed' : input.checked ? ' on' : ' off'
-            }${
-              input.disabled || input.closest('fieldset:disabled')
-                ? ' (disabled)'
-                : ''
-            }`
-        );
+            }${input.disabled ? ' (disabled)' : ''}`
+        ),
+      byId = (id: string | null): string | null =>
+        id === null
+          ? null
+          : element.querySelector(`#${id}`)?.textContent ?? null;
 
     expect(
       `${name}: the Rules section is there, open, under its name`,
@@ -394,6 +410,40 @@ const run = async (): Promise<void> => {
       ['test:unnamed', null]
     );
 
+    expect(
+      `${name}: a control is described by its line, and what is beneath a set, a heading or an alternative is a list named by it`,
+      [
+        byId(box(OBSOLESCENCE).getAttribute('aria-describedby')),
+        byId(
+          item('test:unnamed')
+            .querySelector('ul')
+            ?.getAttribute('aria-labelledby') ?? null
+        ),
+        byId(
+          element
+            .querySelector('.rule-set-heading + ul')
+            ?.getAttribute('aria-labelledby') ?? null
+        ),
+        byId(
+          box('test:settlers/extra')
+            .closest('ul')
+            ?.getAttribute('aria-labelledby') ?? null
+        ),
+        new Set(
+          [...element.querySelectorAll('.rule-sets-section [id]')].map(
+            ({ id }) => id
+          )
+        ).size === element.querySelectorAll('.rule-sets-section [id]').length,
+      ],
+      [
+        'A city can no longer build a unit once its civilization knows the advance that makes it obsolete.',
+        'test:unnamed',
+        'Compatibility',
+        'Waits to grow',
+        true,
+      ]
+    );
+
     // --- switching a set ---------------------------------------------------------------------------------------
     box(OBSOLESCENCE).focus();
     tick(box(OBSOLESCENCE), false);
@@ -410,8 +460,21 @@ const run = async (): Promise<void> => {
       [`checkbox ${OBSOLESCENCE} off`, true]
     );
 
+    // --- a change the worker does not answer -------------------------------------------------------------------
+    fake.fail();
+    box('test:unnamed').focus();
+    tick(box('test:unnamed'), false);
+    await settle();
+
+    expect(
+      `${name}: a change the worker could not make leaves the sets as they were, and the checkbox says so again`,
+      [boxes().slice(-2), focused === box('test:unnamed')],
+      [['checkbox test:unnamed on', 'checkbox test:named-rule on'], true]
+    );
+
     // --- a choice ----------------------------------------------------------------------------------------------
-    tick(box('test:settlers\ntest:settlers/enhanced'), true);
+    box('test:settlers/enhanced').focus();
+    tick(box('test:settlers/enhanced'), true);
     await settle();
 
     expect(
@@ -425,12 +488,15 @@ const run = async (): Promise<void> => {
       ]
     );
     expect(
-      `${name}: and what is beneath it can now be switched`,
-      boxes().slice(1, 4),
+      `${name}: and what is beneath it can now be switched, with the keyboard on the alternative picked`,
+      [boxes().slice(1, 4), focused === box('test:settlers/enhanced')],
       [
-        'radio test:settlers > test:settlers/original off',
-        'radio test:settlers > test:settlers/enhanced on',
-        'checkbox test:settlers/extra on',
+        [
+          'radio test:settlers > test:settlers/original off',
+          'radio test:settlers > test:settlers/enhanced on',
+          'checkbox test:settlers/extra on',
+        ],
+        true,
       ]
     );
 
@@ -443,8 +509,9 @@ const run = async (): Promise<void> => {
 
     expect(
       `${name}: a second change waits for the first, and Start for both`,
+      // Asked so far: as the setup opened, the set, the change that failed, the choice, and the first of these two.
       [fake.asked().length, fake.options()],
-      [4, undefined]
+      [5, undefined]
     );
 
     fake.release();

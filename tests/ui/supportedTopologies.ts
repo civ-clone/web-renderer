@@ -470,6 +470,8 @@ const text = (element: Element | null): string =>
         height: 65,
         difficulty: '',
         players: 9,
+        // Every rule set as it starts (#158).
+        ruleSets: [],
       },
     ]
   );
@@ -515,6 +517,8 @@ const text = (element: Element | null): string =>
         height: 50,
         difficulty: '',
         players: 7,
+        // Every rule set as it starts (#158).
+        ruleSets: [],
       },
     ]
   );
