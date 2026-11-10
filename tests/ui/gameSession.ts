@@ -356,6 +356,7 @@ const run = async (): Promise<void> => {
     [
       'gameData',
       'actionHandled',
+      'notification',
       'turnEnded',
       'turnStarted',
       'gameDataPatch',
@@ -369,7 +370,7 @@ const run = async (): Promise<void> => {
   expect(
     "the page's disposers stay first, then the render frame's, the state's and one per receiver",
     transportDisposers.length,
-    1 + 3 + 10
+    1 + 3 + 11
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);
@@ -461,6 +462,7 @@ const run = async (): Promise<void> => {
       'page',
       'gameData',
       'actionHandled',
+      'notification',
       'turnEnded',
       'turnStarted',
       'gameDataPatch',

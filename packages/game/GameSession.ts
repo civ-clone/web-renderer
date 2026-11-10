@@ -39,6 +39,7 @@ import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import EventSounds from '@civ-clone/ui-windows/lib/eventSounds';
 import { AppElements } from './app/elements';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/NextTurn';
 import NotificationBar from './app/NotificationBar';
 import ObserverBar from '@civ-clone/ui-windows/components/ObserverBar';
 import {
@@ -95,10 +96,16 @@ export type GameSessionDeps = {
 export class GameSession {
   #deps: GameSessionDeps;
   // Made once the game data, and the map it draws on, have arrived.
+  #hud: Hud | null = null;
   #unitController: ActiveUnitController | null = null;
 
   constructor(deps: GameSessionDeps) {
     this.#deps = deps;
+  }
+
+  /** Talks waiting on the player's answer, for the Next Turn button (#702): the choice windows' receiver calls this. */
+  meeting(meeting: PendingMeeting | null): void {
+    this.#hud?.nextTurn()?.meeting(meeting);
   }
 
   /** Forgets the keys kept for a unit: the choice windows' receiver, registered before the game, calls this. */
@@ -369,6 +376,7 @@ export class GameSession {
         );
 
       this.#unitController = unitController;
+      this.#hud = hud;
 
       // The unit's actions are in its card under the new interface (#743): no strip at the bottom left.
       if (unitCard) {

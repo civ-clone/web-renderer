@@ -50,6 +50,11 @@
     --next-turn-tint: var(--ui-action-units);
   }
 
+  // Talks waiting on an answer, in diplomacy's tint (#702).
+  &[data-kind='meeting'] {
+    --next-turn-tint: var(--ui-notice-diplomacy);
+  }
+
   // A notice by what it's about, as its row is (#416).
   &[data-category='military'] {
     --next-turn-tint: var(--ui-notice-military);

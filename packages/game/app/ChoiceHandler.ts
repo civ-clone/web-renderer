@@ -25,12 +25,16 @@ import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { openChoice } from '@civ-clone/ui-windows/components/choiceList';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/NextTurn';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {
   // Forgets the keys `PendingMove` kept while a move was being answered.
   clearKeys: () => void;
+  // Talks waiting on the player's answer in the meeting window, for the Next Turn button (#702), and null once it's
+  //  given.
+  meeting?: (meeting: PendingMeeting | null) => void;
   // The same object `DebugPanel` writes: `uiStressRunner` and `stressUiWindowsEnabled` are read on every list, not
   //  copied when this starts listening.
   debugFlags: DebugFlags;
@@ -92,7 +96,7 @@ const advanceKeys = [
 export const ChoiceHandler = {
   listen(
     transport: Transport,
-    { clearKeys, debugFlags, sounds }: ChoiceHandlerDeps
+    { clearKeys, debugFlags, meeting, sounds }: ChoiceHandlerDeps
   ): () => void {
     return transport.receive('chooseFromList', ({ choices, key, data }) => {
       // The worker waits for this before it answers the action that asked
@@ -128,6 +132,9 @@ export const ChoiceHandler = {
 
       const reply = (choiceId: string): void => {
         if (key === 'negotiation.next-step') {
+          // Answered: off the Next Turn button until the talks' next step, if there is one.
+          meeting?.(null);
+
           sounds?.negotiationReplied(
             (choices.find(({ id }) => id === choiceId)?.value as
               | Interactions
@@ -198,6 +205,11 @@ export const ChoiceHandler = {
               intelligence: transport.request(new Intelligence()),
             }
           );
+
+        meeting?.({
+          leader: them === null ? title : playerName(them),
+          show: (): void => meetingWindow.display(true),
+        });
 
         if (stressRunner) {
           stressRunner.automateChoice(meetingWindow, choices[0].id, reply);

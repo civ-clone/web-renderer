@@ -25,6 +25,9 @@ const waitingKeys: Record<string, string> = {
   'Game.progress.unmet-player': 'NextTurn.waiting.unmet-player',
 };
 
+/** Talks the engine is waiting on an answer to (#702): who they're with, and how to bring their window back. */
+export type PendingMeeting = { leader: string; show: () => void };
+
 export type NextTurnDeps = {
   portal: Portal;
   transport: Transport;
@@ -38,6 +41,9 @@ export class NextTurn extends Element {
   // Where the button is in the queue: kept across rebuilds, so a skipped item stays skipped until the queue wraps.
   #index = 0;
   #items: NextTurnItem[] = [];
+  // Talks waiting on the player's answer: ahead of everything else, even while waiting for the other civilizations,
+  //  as they may have started them, and nothing goes on until they're answered.
+  #meeting: PendingMeeting | null = null;
   #player: Player | null = null;
   // Standing notices opened this turn, which leave the queue until the next: civil disorder stays until it's put
   //  right, and doesn't hold up the turn (a notice of its own dismisses itself when opened).
@@ -101,9 +107,26 @@ export class NextTurn extends Element {
     this.#draw();
   }
 
+  /** Whether talks are waiting on the player's answer: Enter presses the button for them even while waiting. */
+  hasMeeting(): boolean {
+    return this.#meeting !== null;
+  }
+
+  /** Talks waiting on the player's answer, or null once it's given. */
+  meeting(meeting: PendingMeeting | null): void {
+    this.#meeting = meeting;
+    this.#draw();
+  }
+
   /** Does what the button says: the item's own action, or End turn. */
   press(): void {
     const item = this.#items[this.#index];
+
+    if (this.#meeting !== null) {
+      this.#meeting.show();
+
+      return;
+    }
 
     if (this.#waiting || this.#sent || !item) {
       return;
@@ -167,7 +190,7 @@ export class NextTurn extends Element {
   /** On to the next item, back to the first after the last. End turn is one of them when it's offered, which is when
    *  only the notices, which don't hold up the turn, are left. */
   skip(): void {
-    if (this.#waiting || this.#items.length < 2) {
+    if (this.#meeting !== null || this.#waiting || this.#items.length < 2) {
       return;
     }
 
@@ -251,15 +274,21 @@ export class NextTurn extends Element {
   }
 
   #draw(): void {
-    const item = this.#items[this.#index],
+    const meeting = this.#meeting,
+      // Nothing to press but the talks' window while they wait on an answer.
+      idle = meeting === null && this.#waiting,
+      item = meeting === null ? this.#items[this.#index] : undefined,
       ready = this.#isEndTurn(item),
-      label = this.#label(item),
+      label =
+        meeting === null
+          ? this.#label(item)
+          : t('NextTurn.meeting', { leader: meeting.leader }),
       count = this.#count(),
       next = button('', {
         variant: ready ? 'primary' : 'secondary',
-        hotkey: this.#waiting ? null : 'Enter',
+        hotkey: idle ? null : 'Enter',
         className: 'ui-next-turn',
-        disabled: this.#waiting || this.#sent || !item,
+        disabled: meeting === null && (this.#waiting || this.#sent || !item),
       }),
       text = s('<span class="ui-next-turn-label"></span>');
 
@@ -268,19 +297,25 @@ export class NextTurn extends Element {
 
     if (ready) {
       next.insertAdjacentHTML('afterbegin', glyph('end-turn'));
-    } else if (item && !this.#waiting) {
+    } else if (meeting !== null || (item && !this.#waiting)) {
       // A small orb in the tint the item's own orb has, so each kind has its colour (#702).
-      next.dataset.kind = item.kind === 'units' ? 'units' : item.action._;
+      next.dataset.kind =
+        meeting !== null
+          ? 'meeting'
+          : item!.kind === 'units'
+          ? 'units'
+          : item!.action._;
 
-      if (item.kind === 'action') {
+      if (item?.kind === 'action') {
         setNoticeCategory(next, item.action);
       }
+
       next.prepend(
         s('<span class="ui-next-turn-swatch" aria-hidden="true"></span>')
       );
     }
 
-    if (!ready && !this.#waiting && count > 0) {
+    if (meeting === null && !ready && !this.#waiting && count > 0) {
       const place = s('<span class="ui-next-turn-place"></span>');
 
       place.textContent = t('NextTurn.place', {
@@ -303,11 +338,11 @@ export class NextTurn extends Element {
       next,
       () => ({
         title: label,
-        rows: this.#waiting
+        rows: idle
           ? []
           : [
               ['Enter', t('NextTurn.Keys.press')],
-              ...(this.#items.length > 1
+              ...(meeting === null && this.#items.length > 1
                 ? ([['Shift+Enter', t('NextTurn.Keys.skip')]] as [
                     string,
                     string

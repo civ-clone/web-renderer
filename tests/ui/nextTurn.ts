@@ -397,6 +397,45 @@ const run = async (): Promise<void> => {
 
   expect("not once the turn is the player's", shown()[0], 'End turn');
 
+  // Talks waiting on an answer (#702): ahead of everything, even while waiting, and pressing brings their window back.
+  let shownMeeting = 0;
+
+  next.build(nextTurnQueue([research, end], [end], false), false, player, 3);
+  next.meeting({ leader: 'Hammurabi', show: () => shownMeeting++ });
+
+  expect('talks first, with nothing else counted', shown(), [
+    'Meeting with Hammurabi',
+    null,
+    'secondary',
+    false,
+  ]);
+
+  next.skip();
+  next.press();
+
+  expect(
+    'not skipped, and pressing shows their window',
+    [shown()[0], shownMeeting, next.hasMeeting()],
+    ['Meeting with Hammurabi', 1, true]
+  );
+
+  next.build(nextTurnQueue([end], [end], true), true, player, 3);
+
+  expect('and while waiting too', shown(), [
+    'Meeting with Hammurabi',
+    null,
+    'secondary',
+    false,
+  ]);
+
+  next.meeting(null);
+
+  expect(
+    'answered, the button is as it was',
+    [shown()[0], shown()[3], next.hasMeeting()],
+    ['Waiting for the Germans…', true, false]
+  );
+
   area.remove();
 
   // The HUD mounts it only under the new interface.

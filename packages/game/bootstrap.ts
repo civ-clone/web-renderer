@@ -240,6 +240,7 @@ export class Renderer {
         ChoiceHandler.listen(transport, {
           clearKeys: (): void => gameSession?.clearKeys(),
           debugFlags,
+          meeting: (meeting): void => gameSession?.meeting(meeting),
           sounds,
         })
       );
