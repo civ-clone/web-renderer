@@ -59,6 +59,9 @@ const NAME = 'browser-smoke',
     '@civ-clone/base-unit-action-meet-with-king',
   ];
 
+// How long the browser has to answer any one command.
+const COMMAND_TIMEOUT = 20_000;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const findChrome = () => {
@@ -251,13 +254,55 @@ const launch = async (chrome) => {
     throw error;
   }
 
-  // `sessionId` is a worker's, for one the page started: without it, the page itself.
+  let closed = false;
+
+  // A browser that has gone answers nothing: whatever waits on it is told so, rather than left waiting for the
+  //  job to be cancelled.
+  socket.onclose = () => {
+    closed = true;
+
+    waiting.forEach(({ reject }) =>
+      reject(new Error('the browser closed the connection'))
+    );
+    waiting.clear();
+  };
+
+  // `sessionId` is a worker's, for one the page started: without it, the page itself. A command the browser never
+  //  answers (a page that has hung) is given up on after `COMMAND_TIMEOUT`.
   const send = (method, params = {}, sessionId = undefined) =>
     new Promise((resolve, reject) => {
-      waiting.set(++nextId, { resolve, reject });
+      if (closed) {
+        reject(new Error('the browser closed the connection'));
+
+        return;
+      }
+
+      const id = ++nextId,
+        deadline = setTimeout(() => {
+          if (waiting.delete(id)) {
+            reject(
+              new Error(
+                `${method} was not answered in ${
+                  COMMAND_TIMEOUT / 1000
+                } seconds`
+              )
+            );
+          }
+        }, COMMAND_TIMEOUT);
+
+      waiting.set(id, {
+        resolve: (value) => {
+          clearTimeout(deadline);
+          resolve(value);
+        },
+        reject: (error) => {
+          clearTimeout(deadline);
+          reject(error);
+        },
+      });
       socket.send(
         JSON.stringify({
-          id: nextId,
+          id,
           method,
           params,
           ...(sessionId === undefined ? {} : { sessionId }),
@@ -533,9 +578,15 @@ const main = async () => {
         for (const [key, name] of REPORTS) {
           await page.key(key, KEY_CODES[key]);
 
+          // Open, and with something in it: some reports ask the worker for what they show, and are an empty
+          //  window until it answers. One with nothing to list still says so.
           const opened = await until(
             page,
-            `return document.querySelector('dialog.window.${name}[open]') !== null;`,
+            `
+              const body = document.querySelector('dialog.window.${name}[open] > .body');
+
+              return body !== null && body.innerText.trim() !== '';
+            `,
             { timeout: 10_000 }
           );
 
@@ -548,7 +599,7 @@ const main = async () => {
           );
 
           check(
-            `${mode}: ${key} opens the ${name} window, and Escape closes it`,
+            `${mode}: ${key} opens the ${name} window with what it reports, and Escape closes it`,
             opened && closed,
             JSON.stringify(await page.run(openWindows))
           );
