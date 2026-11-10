@@ -426,6 +426,53 @@ expect(
   ].map((schema) => thrown(() => firstFailure(schema, 1))),
   [loop, loop, loop, loop]
 );
+// Many ways to the same schema are not a way back to it: each is followed once, however many lead there. Followed
+//  way by way, forty levels that each name the next twice would be 2^40 walks.
+const wide: { [name: string]: unknown } = {};
+
+for (let level = 0; level < 40; level++) {
+  wide[`l${level}`] =
+    level === 39
+      ? { type: 'number' }
+      : {
+          anyOf: [
+            { $ref: `#/$defs/l${level + 1}` },
+            { $ref: `#/$defs/l${level + 1}` },
+          ],
+        };
+}
+
+expect(
+  'schemas that many ways lead to are each read once, and are not taken for a way back',
+  [
+    firstFailure({ $ref: '#/$defs/l0', $defs: wide }, 1),
+    firstFailure(
+      {
+        allOf: [{ $ref: '#/$defs/a' }, { $ref: '#/$defs/b' }],
+        $defs: {
+          a: { $ref: '#/$defs/c' },
+          b: { $ref: '#/$defs/c' },
+          c: { type: 'number' },
+        },
+      },
+      1
+    ),
+  ],
+  [null, null]
+);
+expect(
+  "a required property is looked for among the schema's own properties: one named for something every object has gets the object's sentence",
+  firstFailure(
+    {
+      type: 'object',
+      properties: { a: true },
+      required: ['toString'],
+      'x-message': 'needs a toString of its own',
+    },
+    {}
+  )?.message,
+  'needs a toString of its own'
+);
 expect(
   'while one that reaches a property or an item first is a tree, checked as deep as the document goes',
   passes(

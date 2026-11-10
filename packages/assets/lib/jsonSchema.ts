@@ -231,7 +231,7 @@ const keywords: {
       return (
         key === undefined ||
         missing(
-          (isObject(schema.properties)
+          (isObject(schema.properties) && own(schema.properties, key)
             ? (schema.properties[key] as Schema | undefined)
             : undefined) ?? true,
           [...path, key],
@@ -391,24 +391,31 @@ const assertKnown = (
 const assertEnds = (
   schema: Schema,
   root: Schemas,
-  chain: Schema[] = []
+  // Those already followed to their ends, so each is followed once however many ways lead to it.
+  ended: Set<Schema>,
+  chain: Set<Schema> = new Set()
 ): void => {
-  if (!isObject(schema)) {
+  if (!isObject(schema) || ended.has(schema)) {
     return;
   }
 
-  if (chain.includes(schema)) {
+  if (chain.has(schema)) {
     throw new Error(
       'Schema: its "$ref"s lead back to where they started, without reaching a property or an item.'
     );
   }
+
+  chain.add(schema);
 
   [
     ...(typeof schema.$ref === 'string' ? [resolve(schema.$ref, root)] : []),
     ...((schema.allOf ?? []) as Schema[]),
     ...((schema.anyOf ?? []) as Schema[]),
     ...(own(schema, 'not') ? [schema.not as Schema] : []),
-  ].forEach((each) => assertEnds(each, root, [...chain, schema]));
+  ].forEach((each) => assertEnds(each, root, ended, chain));
+
+  chain.delete(schema);
+  ended.add(schema);
 };
 
 const known = new WeakSet<Schemas>();
@@ -427,7 +434,9 @@ export const firstFailure = (
     const found: Schemas[] = [];
 
     assertKnown(schema, root, found);
-    found.forEach((each) => assertEnds(each, root));
+    const ended = new Set<Schema>();
+
+    found.forEach((each) => assertEnds(each, root, ended));
     known.add(root);
   }
 
