@@ -162,7 +162,8 @@ const keywords: {
         .concat(argument)
         .every((type) => typeof type === 'string' && own(types, type)),
     (argument, { value }) =>
-      ([] as string[]).concat(argument).some((type) => types[type](value)),
+      // Each is a type this checker has: the line above says so, when the schema is read.
+      ([] as string[]).concat(argument).some((type) => types[type]!(value)),
   ],
   const: [isPrimitive, (argument, { value }) => value === argument],
   enum: [
@@ -278,7 +279,8 @@ const check = (
       continue;
     }
 
-    const result = keywords[keyword][1](schema[keyword], {
+    // A keyword it knows, or `assertKnown` would have refused the schema.
+    const result = keywords[keyword]![1](schema[keyword], {
       schema,
       value,
       path,
@@ -362,7 +364,7 @@ const assertKnown = (
       );
     }
 
-    if (!keywords[keyword][0](argument)) {
+    if (!keywords[keyword]![0](argument)) {
       throw new Error(
         `Schema: "${keyword}" cannot be ${JSON.stringify(argument)}.`
       );

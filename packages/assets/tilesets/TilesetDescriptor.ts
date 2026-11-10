@@ -241,7 +241,8 @@ const familyValues: { [key in keyof TilesetFamilies]?: string[] } = {
 
 /** The placeholders in a sprite name: `terrain/{terrain}_{dirs}` has `terrain` and `dirs`. */
 const placeholders = (template: string): string[] =>
-  Array.from(template.matchAll(/\{([a-z]+)\}/gi), ([, name]) => name);
+  // The one group always matches.
+  Array.from(template.matchAll(/\{([a-z]+)\}/gi), ([, name]) => name!);
 
 const listed = (names: string[]): string =>
   names.length > 0 ? `{${names.join('}, {')}}` : 'none';
@@ -289,7 +290,8 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
         message ?? '{path} is not what a tileset has there ({keyword}).'
       ).replace(
         /\{(path|parent|value|grids|directions|twoQuarters|keyword)\}/g,
-        (_, token: string) => tokens[token]
+        // Only the tokens named in the pattern, each of which `tokens` has.
+        (_, token: string) => tokens[token]!
       )
     );
   }
@@ -452,16 +454,17 @@ export const expandName = (
     templateParts.set(template, parts);
   }
 
-  let name = parts[0];
+  // A split always gives a first part, and a name after each placeholder: the parts are odd in number.
+  let name = parts[0]!;
 
   for (let i = 1; i < parts.length; i += 2) {
-    const placeholder = parts[i];
+    const placeholder = parts[i]!;
 
     if (!Object.prototype.hasOwnProperty.call(values, placeholder)) {
       throw new Error(`No value for {${placeholder}} in "${template}".`);
     }
 
-    name += values[placeholder] + parts[i + 1];
+    name += values[placeholder]! + parts[i + 1]!;
   }
 
   return name;
