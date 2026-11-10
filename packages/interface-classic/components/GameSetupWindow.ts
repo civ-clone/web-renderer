@@ -15,6 +15,7 @@ import {
   preselectedDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
+import { ruleSetsSection } from '@civ-clone/ui-menus/lib/ruleSetControls';
 import {
   cell,
   civilizationName,
@@ -127,6 +128,12 @@ export class GameSetupWindow extends Window {
       advanced = s<HTMLDetailsElement>(
         `<details class="advanced"${preset.advanced ? ' open' : ''}></details>`,
         s(`<summary>${t('GameSetup.advanced')}</summary>`)
+      ),
+      // The rule sets the game can be started with or without (#158), when the rules offer any.
+      rules = ruleSetsSection(
+        setup,
+        this.#transport,
+        'rules rule-sets-section'
       ),
       // The table parts are made, not parsed: `s()` parses inside a `<div>`, where a browser drops a bare `<thead>` or
       //  `<tr>` (the test DOM doesn't, so a test would not have said).
@@ -278,6 +285,7 @@ export class GameSetupWindow extends Window {
             )}">${t('GameSetup.difficulty')}</label></div>`,
             difficultySelect
           ),
+          ...(rules === null ? [] : [rules]),
           advanced
         ),
         s(`<h4>${t('GameSetup.seats')}</h4>`),
@@ -297,12 +305,17 @@ export class GameSetupWindow extends Window {
     this.#renderMap();
 
     this.on('keydown', (event) => {
-      // Not from a select, a button or the Advanced summary, which Enter works, nor mid-composition in the name.
+      // Not from a select, a button, a rule set's checkbox or the Advanced summary, which Enter works or which it
+      //  would be a surprise to start a game from, nor mid-composition in the name.
       if (
         event.key === 'Enter' &&
         !event.isComposing &&
         !(event.target instanceof HTMLSelectElement) &&
         !(event.target instanceof HTMLButtonElement) &&
+        !(
+          event.target instanceof HTMLInputElement &&
+          ['checkbox', 'radio'].includes(event.target.type)
+        ) &&
         !(
           event.target instanceof HTMLElement && event.target.closest('summary')
         )

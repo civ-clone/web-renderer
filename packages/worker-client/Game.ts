@@ -27,6 +27,7 @@ import { DescribedClient, save } from '@civ-clone/core-save-game/save';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import requirementsData from './lib/requirements';
+import { applyRuleSets, ruleSetsData } from './lib/ruleSets';
 import civilopediaData from './lib/civilopedia';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import {
@@ -54,6 +55,8 @@ type ResolvedSeat = {
 export class Game implements IGame {
   #automateLocalPlayer: boolean = false;
   #eventsBound: boolean = false;
+  // A game is being played, started or loaded: its rule sets are fixed from then on (#158).
+  #playing: boolean = false;
   #observer: Observer | null = null;
   #localPlayerClient: DataTransferClient | null = null;
   // The seat each client was made from (#608), for a save to record: who played it, and a person's name. Weak, so
@@ -80,6 +83,17 @@ export class Game implements IGame {
         this.#createClient(player, { kind: 'computer' })
       );
     });
+
+    // A loaded game chose a rule set this build has no such set for (#158): it is played without, and says which.
+    engine.on(
+      'save:rule-sets-unknown',
+      (unknown: { id: string; value: boolean | string }[]): void =>
+        console.warn(
+          `The saved game chose rule sets that are not here, and is played without them: ${unknown
+            .map(({ id, value }) => `${id} (${value})`)
+            .join(', ')}.`
+        )
+    );
 
     // A sign of life as each player's turn starts (#470), so that the page, waiting on a request while the AI players
     //  take their turns, doesn't take a long round for a game that has stopped. Bound here, so a loaded game sends it
@@ -254,6 +268,12 @@ export class Game implements IGame {
               ?.value() ?? [],
         }))
       )
+    );
+
+    // The rule sets a new game can switch (#158), from the rules as the levels are, and with the page's choices and
+    //  its one change made: what switching a set does to what is beneath it is the rules' to say.
+    answer(transport, 'ruleSets', (query) =>
+      this.#plugins.load().then(() => ruleSetsData(query, this.#playing))
     );
 
     answer(transport, 'aiClients', () =>
@@ -578,9 +598,15 @@ export class Game implements IGame {
     this.#observer?.dispose();
     this.#observer = observed ? new Observer(this.#transport) : null;
 
+    // The file says which rule sets its game is played under (#158), and they are not the page's to change.
+    this.#playing = true;
+
     this.#plugins
       .load()
       .then(() => {
+        // A set that names a rule nothing registered is a plugin's mistake, and is said before the game is put back.
+        defaultGame.ruleSets.check();
+
         this.#stopAtEnding(observed);
 
         // Each client from the seat the save records, or the one the page reassigned it to (#608): a person's
@@ -613,6 +639,10 @@ export class Game implements IGame {
 
     try {
       seats = this.#resolveSeats();
+
+      // The rule sets the game was set up with (#158), before anything is made under the rules. Refused with the
+      //  seats, and for the same reason: a game that starts otherwise than it was set up should not start.
+      applyRuleSets(engine.option('ruleSets', []));
     } catch (error: unknown) {
       console.error(error);
 
@@ -620,6 +650,8 @@ export class Game implements IGame {
 
       return;
     }
+
+    this.#playing = true;
 
     // A game nobody here plays is watched instead (#607): the page sees it as one of its players, and can hold the
     //  turns. Made before the engine starts, so it hears the game start.

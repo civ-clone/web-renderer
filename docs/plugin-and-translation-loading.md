@@ -52,6 +52,17 @@ In `Game.load(file)` (a saved game):
 Because the plugins' rules close over the singleton registries, a game cannot be loaded over one in progress. Loading
 reloads the page and hands the save to a fresh worker (see `packages/menus/lib/savedGame.ts`).
 
+## Rule sets
+
+A plugin can group its rules into **rule sets**, which a new game can switch on or off (#158). The engine's `core-rule` has the model (`RuleSet`, `RuleSetRegistry`); a game's are in `defaultGame.ruleSets`.
+
+- **A plugin registers a set** in its `registerRules(game)`: `game.ruleSets.register(new RuleSet('civ1-unit:obsolescence', ...ruleIds))`. Members are rule ids, or other sets, so sets nest.
+- **A choice between alternatives** is a set with `{ exclusive: true }`: exactly one member is in force, the first until another is chosen. For two rules that must not both run, such as an enhanced rule against the Civ1-compatible one.
+- **A plugin adds to another plugin's set** with `game.ruleSets.extend(id, ...members)`, whichever of the two loads first.
+- **The worker checks them** (`ruleSets.check()`) once the plugins are in, before a setup is shown or a game starts or loads: a set that names a rule nothing registered is refused there.
+- **The page works none of it out.** It asks `ruleSets` for the tree (`packages/worker-client/lib/ruleSets.ts`), and for each change the player makes asks again with the choices so far and the change; `packages/menus/lib/ruleSetControls.ts` draws the answer in both interfaces' setup. The choices go with `setOptions` as `ruleSets`, are applied as the game starts, and are fixed from then on. A save records them and a load puts them back (`core-save-game`).
+- **Names** are translations in the `ruleset` namespace, keyed by the id with `:` and `/` as `.`: `civ1-unit.obsolescence.name`, and an optional `.description`. A set without one shows its id. A rule inside a plain set is drawn only if it has a name; the alternatives of a choice always are.
+
 ## Translation loading strategy
 
 `buildTranslationList.js` (`npm run build:generate-translations-ts`):
