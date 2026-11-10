@@ -19,7 +19,6 @@ export type ActionContext = Pick<
   Registries<{
     cities: 'getBy' | 'getByPlayer';
     cityImprovements: 'getByCity';
-    cityNames: 'claim';
     playerTreasuries: 'getBy';
   }> & {
     // The talks a unit's action waits for, and those it offers with the players it met on the way. `EndTurn` waits for
