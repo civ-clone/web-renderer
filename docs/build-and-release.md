@@ -3,7 +3,8 @@
 ## Build toolchain
 
 - Bundler: `esbuild` (`esbuild.js`)
-- Styles: Sass via `esbuild-sass-plugin` (which compiles with `sass-embedded`; `tools/theme-tokens.js` uses `sass`)
+- Styles: `sass` via `esbuild-sass-plugin` (`sass-embedded` is installed only because the plugin names it as a
+  peer: it is used with the plugin's `embedded` option, which isn't set)
 - Language: TypeScript
 - Formatter: Prettier
 - Package manager: pnpm (settings in `pnpm-workspace.yaml`, lockfile `pnpm-lock.yaml`)
@@ -39,7 +40,8 @@ Notable options:
   esbuild rewrite the fields and private members of named classes to WeakMaps, as the old build did for the
   frontend's own code
 - The engine's TypeScript, not the JavaScript compiled from it, and the project's own `tsconfig.json` for every
-  file: `tools/lib/engineSources.js`, which every esbuild build here (the game, the suites, the tools) is given.
+  file: `tools/lib/engineSources.js`, which every esbuild build here that bundles the engine (the game, the
+  suites, the tools) is given.
   The engine's packages ship both, and esbuild takes the `.js` inside `node_modules` unless told otherwise, which
   made the worker's bundle two thirds larger. `npm run test:engine-sources` builds the worker and checks that no
   engine file in it is the compiled one, and that none is there twice

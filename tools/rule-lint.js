@@ -76,12 +76,17 @@ ruleRegistry.register(new Started(new Effect(() => {})));`,
   fs.rmSync(directory, { recursive: true, force: true });
 }
 
-// Each engine package as it is installed (or linked in by `civ sync`), the frontend's own, and civ.one's entry
-//  points.
+// Each engine package as it is installed (with whatever `civ sync` has copied over it), the frontend's own, and
+//  civ.one's entry points.
 const roots = [
   ...fs
     .readdirSync(scope)
-    .filter((name) => !isUiPackage(name))
+    // Not whatever else is in the folder (a `.DS_Store`).
+    .filter(
+      (name) =>
+        !isUiPackage(name) &&
+        fs.existsSync(path.join(scope, name, 'package.json'))
+    )
     .map((name) => {
       const link = path.join(scope, name);
 

@@ -4,14 +4,15 @@ const path = require('path');
 
 const { webRenderer } = require('./paths');
 
-// What every esbuild build of this project is given, so the game, the suites and the tools bundle the same code.
+// What every esbuild build here that bundles the engine is given, so the game, the suites and the tools bundle the
+// same code.
 //
 // The engine's packages are published with their TypeScript beside the JavaScript compiled from it (`Unit.ts`,
 // `Unit.js`), and are imported without an extension (`@civ-clone/core-unit/Unit`). esbuild used to take the `.ts`;
 // since 0.18 it takes the `.js` for anything inside `node_modules`. That is CommonJS, which it can't tree-shake and
-// has to wrap module by module: the worker's bundle came out two thirds larger (670 KB to 1.1 MB minified). And a
-// checkout linked in by `civ sync` is outside `node_modules`, so it would still be bundled from its `.ts`: a linked
-// package and an installed one would no longer be the same code.
+// has to wrap module by module: the worker's bundle came out two thirds larger (670 KB to 1.1 MB minified). And
+// `civ sync` copies a checkout's TypeScript over an installed package's, removing the `.js` beside each file it
+// changed: a synced package would be bundled partly from each.
 //
 // So this plugin takes the `.ts` wherever an installed engine package has one beside the `.js`, however the file
 // was asked for: without an extension, by the package's name alone (its `main` is `index.js`), or by the full path
@@ -24,25 +25,51 @@ const ENGINE = /[\\/]@civ-clone[\\/]/,
 
 const installedEngine = (file) => INSTALLED.test(file) && ENGINE.test(file);
 
-// Both remembered for as long as the process runs, as one `npm test -- --for` makes a build per suite, each asking
-//  the same questions: what is on the disk, and what a package's name resolves to from each place it is imported.
-//  A watching build therefore doesn't notice a `.ts` that appears beside a `.js` it has already bundled.
-const files = new Map(),
+// Both remembered while the process runs, as one `npm test -- --for` makes a build per suite, each asking the same
+//  questions: what is in a folder, and what a package's name resolves to from each place it is imported. A build
+//  that is run again (`npm run watch`) forgets both first, as an install in the meantime moves the packages.
+const folders = new Map(),
   named = new Map();
 
-const isFile = (file) => {
-  if (!files.has(file)) {
-    let found = false;
+// What a folder holds, by name: read whole, so that a name is matched exactly, as esbuild matches it, where the disk
+//  itself (a Mac's) would take `foo` for `Foo`.
+const entriesOf = (directory) => {
+  if (!folders.has(directory)) {
+    const entries = new Map();
 
     try {
-      found = fs.statSync(file).isFile();
+      fs.readdirSync(directory, { withFileTypes: true }).forEach((entry) => {
+        let kind = entry.isFile()
+          ? 'file'
+          : entry.isDirectory()
+          ? 'folder'
+          : null;
+
+        if (entry.isSymbolicLink()) {
+          try {
+            const linked = fs.statSync(path.join(directory, entry.name));
+
+            kind = linked.isFile()
+              ? 'file'
+              : linked.isDirectory()
+              ? 'folder'
+              : null;
+          } catch (e) {}
+        }
+
+        entries.set(entry.name, kind);
+      });
     } catch (e) {}
 
-    files.set(file, found);
+    folders.set(directory, entries);
   }
 
-  return files.get(file);
+  return folders.get(directory);
 };
+
+const kindOf = (file) => entriesOf(path.dirname(file)).get(path.basename(file)),
+  isFile = (file) => kindOf(file) === 'file',
+  isFolder = (file) => kindOf(file) === 'folder';
 
 const realPath = (file) => {
   try {
@@ -61,6 +88,33 @@ const sourceOf = (compiled) => {
   const source = `${compiled.slice(0, -3)}.ts`;
 
   return isFile(source) ? source : null;
+};
+
+// What one file of an installed engine package means by `./other`, when that is TypeScript: as esbuild finds it, a
+//  file before a folder, but the `.ts` before the `.js`. `null` leaves it to esbuild: a `.js` with no `.ts`, a
+//  `.json`, a folder with a package.json of its own.
+const relativeSource = (asked) => {
+  if (asked.endsWith('.js')) {
+    const source = `${asked.slice(0, -3)}.ts`;
+
+    return isFile(source) ? source : null;
+  }
+
+  if (isFile(`${asked}.ts`)) {
+    return `${asked}.ts`;
+  }
+
+  if (
+    isFile(`${asked}.js`) ||
+    !isFolder(asked) ||
+    isFile(path.join(asked, 'package.json'))
+  ) {
+    return null;
+  }
+
+  const index = path.join(asked, 'index.ts');
+
+  return isFile(index) ? index : null;
 };
 
 // The folder of the installed package `directory` is in, which is where a package's name is resolved from.
@@ -83,6 +137,30 @@ const packageRoot = (directory) => {
 const engineSources = () => ({
   name: 'engine-sources',
   setup(build) {
+    const options = build.initialOptions,
+      // What else decides where a name leads: a build that differs in any of it keeps its own answers.
+      variant = JSON.stringify([
+        options.platform,
+        options.external,
+        options.mainFields,
+        options.conditions,
+        options.resolveExtensions,
+        options.alias,
+        options.nodePaths,
+        (options.plugins ?? []).map((plugin) => plugin.name),
+      ]);
+
+    let built = false;
+
+    build.onStart(() => {
+      if (built) {
+        folders.clear();
+        named.clear();
+      }
+
+      built = true;
+    });
+
     build.onResolve({ filter: /.*/, namespace: 'file' }, async (args) => {
       if (args.pluginData?.[NESTED]) {
         return;
@@ -104,13 +182,8 @@ const engineSources = () => ({
           return;
         }
 
-        const asked = path.join(args.resolveDir, args.path),
-          compiled = [asked, `${asked}.js`, path.join(asked, 'index.js')].find(
-            (candidate) => candidate.endsWith('.js') && isFile(candidate)
-          ),
-          source = compiled === undefined ? null : sourceOf(compiled);
+        const source = relativeSource(path.join(args.resolveDir, args.path));
 
-        // With no `.js` there (a `.json`, a folder with its own package.json), esbuild finds it as it would have.
         return source === null ? undefined : { path: source };
       }
 
@@ -126,6 +199,7 @@ const engineSources = () => ({
         INSTALLED.test(args.resolveDir)
           ? packageRoot(args.resolveDir)
           : args.resolveDir,
+        variant,
       ].join('\0');
 
       // The answer is remembered from the moment it is asked for, not from when it comes: the builds of one
