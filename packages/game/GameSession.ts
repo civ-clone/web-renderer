@@ -20,11 +20,7 @@ import PowerList from '@civ-clone/ui-windows/components/PowerList';
 import { openIntelligenceReport } from '@civ-clone/ui-windows/components/reports';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
-import UnitCard from '@civ-clone/ui-windows/components/UnitCard';
-import UnitDetails, {
-  UnitDetailsDeps,
-} from '@civ-clone/ui-windows/components/UnitDetails';
-import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
+import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
@@ -269,24 +265,25 @@ export class GameSession {
           world: gameState.data().player.world,
         }),
         { portal, world } = mapView,
-        unitDetailsDeps: UnitDetailsDeps = {
-          portal,
-          transport,
-          // As the map's stack window does: nothing while waiting for the turn.
-          setActiveUnit: (unit): void => {
-            if (gameState.waiting()) {
-              return;
-            }
+        // The active unit and its actions, as the interface shows them (#860): kept for the game, redrawing only what
+        //  has changed.
+        unitDetails = unitPanel.current()(
+          { unitInfo, unitActionArea },
+          {
+            portal,
+            transport,
+            // As the map's stack window does: nothing while waiting for the turn.
+            setActiveUnit: (unit): void => {
+              if (gameState.waiting()) {
+                return;
+              }
 
-            unitController.set(unit);
-          },
-        },
-        // The active unit's card (#699), kept for the game: it redraws only what has changed. Where the interface
-        //  has it, the card with the unit's actions in it (#743), so the strip at the bottom left goes.
-        unitCard = hasFeature('unitCard')
-          ? new UnitCard(unitInfo, unitDetailsDeps)
-          : null,
-        unitDetails = unitCard ?? new UnitDetails(unitInfo, unitDetailsDeps),
+              unitController.set(unit);
+            },
+            unitAction: (unitId, unitAction): void =>
+              void unitController.act(unitId, unitAction),
+          }
+        ),
         // The sidebar's cities (#700), following them through `dataChanges`, and power (#701, #708), told the turn by the HUD.
         citiesList = citiesListElement
           ? new CitiesList(citiesListElement, gameState.data().player, portal)
@@ -349,9 +346,7 @@ export class GameSession {
           power: powerList,
           secondaryActionArea,
           transport,
-          unitAction: (unitId, unitAction): void =>
-            void unitController.act(unitId, unitAction),
-          unitActionArea: unitCard?.actionArea() ?? unitActionArea,
+          unitActions: unitDetails,
           world,
         }),
         findCity = (): void => {
@@ -378,11 +373,7 @@ export class GameSession {
       this.#unitController = unitController;
       this.#hud = hud;
 
-      // The unit's actions are in its card under the new interface (#743): no strip at the bottom left.
-      if (unitCard) {
-        unitActionArea.remove();
-        transportDisposers.push((): void => unitCard.dispose());
-      }
+      transportDisposers.push((): void => unitDetails.dispose());
 
       if (citiesList) {
         transportDisposers.push((): void => citiesList.dispose());

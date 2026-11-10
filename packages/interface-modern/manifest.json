@@ -9,7 +9,8 @@
     "cityScreen": "window",
     "reports": "tables",
     "choices": "choiceWindows",
-    "choiceList": "choiceWindow"
+    "choiceList": "choiceWindow",
+    "unitPanel": "card"
   },
   "features": [
     "assetsInOptions",
@@ -17,7 +18,6 @@
     "nextTurn",
     "sharedMenus",
     "squareTooltips",
-    "unitCard",
     "windowChrome"
   ]
 }

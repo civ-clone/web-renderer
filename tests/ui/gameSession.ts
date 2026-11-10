@@ -368,9 +368,9 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    "the page's disposers stay first, then the render frame's, the state's and one per receiver",
+    "the page's disposers stay first, then the render frame's, the state's, one per receiver and the unit panel's",
     transportDisposers.length,
-    1 + 3 + 11
+    1 + 3 + 11 + 1
   );
   expect('nothing went wrong starting', errors, []);
   expect('the game has started', gameStarted, true);

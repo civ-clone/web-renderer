@@ -15,6 +15,7 @@ import {
   Tile,
   Unit,
 } from '@civ-clone/ui-protocol/types';
+import UnitActions from '@civ-clone/ui-interface-classic/components/UnitActions';
 import Hud from '@civ-clone/ui-game/Hud';
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -110,28 +111,31 @@ const run = async (): Promise<void> => {
   };
   notices.add({ bubble: true, key: 'SomethingHappened', data: {} });
 
-  const hud = new Hud({
-    actionArea,
-    gameArea,
-    gameInfo,
-    notices,
-    playerInfo,
-    portal: {} as Portal,
-    secondaryActionArea,
-    transport: {
-      send: () => {},
-      receive: () => () => {},
-    } as unknown as Transport,
-    unitAction: () => {},
-    unitActionArea,
-    world: {
-      get: (x: number, y: number): Tile => {
-        tilesLookedUp.push(`${x},${y}`);
-
-        return unitTile;
+  const strip = new UnitActions(unitActionArea, () => {}),
+    hud = new Hud({
+      actionArea,
+      gameArea,
+      gameInfo,
+      notices,
+      playerInfo,
+      portal: {} as Portal,
+      secondaryActionArea,
+      transport: {
+        send: () => {},
+        receive: () => () => {},
+      } as unknown as Transport,
+      // The classic strip at the bottom left, as the interface's unit panel fills it (#860).
+      unitActions: {
+        actions: (unit, tile) => strip.build(unit, tile),
       },
-    },
-  });
+      world: {
+        get: (x: number, y: number): Tile => {
+          tilesLookedUp.push(`${x},${y}`);
+
+          return unitTile;
+        },
+      },
+    });
 
   const action = (name: string, value: any = {}): PlayerAction =>
       ({ _: name, id: `${name}-1`, value } as unknown as PlayerAction),

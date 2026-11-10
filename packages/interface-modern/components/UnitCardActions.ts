@@ -12,7 +12,10 @@ import tooltip, {
 import button from '@civ-clone/ui-component-button/button';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
-import { nameOf, performWithPrompts } from '../lib/unitActionPrompts';
+import {
+  nameOf,
+  performWithPrompts,
+} from '@civ-clone/ui-windows/lib/unitActionPrompts';
 import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as

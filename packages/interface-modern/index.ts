@@ -9,6 +9,8 @@ import MilitaryTable from './components/MilitaryTable';
 import TitleMenu from './components/TitleMenu';
 import TopCitiesTable from './components/TopCitiesTable';
 import TradeTable from './components/TradeTable';
+import UnitCard from './components/UnitCard';
+import UnitCardActions from './components/UnitCardActions';
 import UnitStackChoice from './components/UnitStackChoice';
 import { choiceList } from '@civ-clone/ui-windows/components/choiceList';
 import { choices } from '@civ-clone/ui-windows/components/choices';
@@ -20,6 +22,7 @@ import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
 // The modern interface (#735, #825): its manifest, and the pieces it fills its slots with. Those only it uses are its
 //  own, in `components/`; the rest are shared.
@@ -79,5 +82,19 @@ choiceList.provide(
     });
   }
 );
+
+// The unit's card, with its actions in it (#743): no strip at the bottom left.
+unitPanel.provide('card', ({ unitInfo, unitActionArea }, deps) => {
+  const card = new UnitCard(unitInfo, deps),
+    actions = new UnitCardActions(card.actionArea(), deps.unitAction);
+
+  unitActionArea.remove();
+
+  return {
+    update: (unit) => card.update(unit),
+    actions: (unit, tile) => actions.build(unit, tile),
+    dispose: () => card.dispose(),
+  };
+});
 
 registerInterface(manifest);

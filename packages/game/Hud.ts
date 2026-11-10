@@ -16,8 +16,7 @@ import ScienceReport from '@civ-clone/ui-windows/components/ScienceReport';
 import PowerList from '@civ-clone/ui-windows/components/PowerList';
 import { openTradeReport } from '@civ-clone/ui-windows/components/reports';
 import Transport from '@civ-clone/ui-client/Transport';
-import UnitActions from '@civ-clone/ui-windows/components/UnitActions';
-import UnitCardActions from '@civ-clone/ui-windows/components/UnitCardActions';
+import { UnitPanel } from '@civ-clone/ui-windows/components/unitPanel';
 import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import nextTurnQueue, {
   actionKey,
@@ -53,9 +52,8 @@ export type HudDeps = {
   power?: Pick<PowerList, 'turn'> | null;
   secondaryActionArea: HTMLElement;
   transport: Transport;
-  // A unit's action button clicked: the active unit's controller sends it, as its key would (#543).
-  unitAction: (unitId: string, unitAction: string) => void;
-  unitActionArea: HTMLElement;
+  // The active unit's actions, as the interface shows them (#860).
+  unitActions: Pick<UnitPanel, 'actions'>;
   // For the active unit's tile, as the world holds it.
   world: { get(x: number, y: number): Tile };
 };
@@ -69,19 +67,11 @@ export class Hud {
   #turn = 0;
   #primaryActions: Actions | null = null;
   #secondaryActions: Actions;
-  #unitActionButtons: UnitActions | UnitCardActions;
 
   constructor(deps: HudDeps) {
     this.#deps = deps;
 
-    const {
-      actionArea,
-      portal,
-      secondaryActionArea,
-      transport,
-      unitAction,
-      unitActionArea,
-    } = deps;
+    const { actionArea, portal, secondaryActionArea, transport } = deps;
 
     this.#dismissals = deps.dismissals ?? new Dismissals();
 
@@ -110,10 +100,6 @@ export class Hud {
       portal,
       transport
     );
-    // With the unit card, inside the active unit's card (#743), which `unitActionArea` is then.
-    this.#unitActionButtons = hasFeature('unitCard')
-      ? new UnitCardActions(unitActionArea, unitAction)
-      : new UnitActions(unitActionArea, unitAction);
   }
 
   // A notice is gone for good, as opening it makes it; a city in disorder for the rest of the turn.
@@ -175,7 +161,7 @@ export class Hud {
 
     this.#secondaryActions.build(secondary);
 
-    this.#unitActionButtons.build(
+    this.#deps.unitActions.actions(
       waiting ? null : activeUnit,
       activeUnit ? world.get(activeUnit.tile.x, activeUnit.tile.y) : null
     );

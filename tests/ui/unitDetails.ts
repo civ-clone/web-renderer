@@ -10,7 +10,7 @@ import './lib/classicInterface';
 
 import { City, Unit } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
-import UnitDetails from '@civ-clone/ui-windows/components/UnitDetails';
+import UnitDetails from '@civ-clone/ui-interface-classic/components/UnitDetails';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 

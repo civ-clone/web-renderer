@@ -434,7 +434,7 @@ const run = async (): Promise<void> => {
       notices: { actions: () => [] } as unknown as Notices,
       portal,
       transport,
-      unitAction: () => {},
+      unitActions: { actions: () => {} },
       world: { get: () => ({} as any) },
     }),
     state = () => [
