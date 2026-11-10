@@ -2,7 +2,7 @@
 //  worker's message as text (it can hold text from a save file), or that the game has stopped answering, and
 //  `loadFailed` says so and goes back to the main menu, by reloading the page, and `saveFailed` says so and the game
 //  goes on (#581). A request the worker could not answer reaches it as a `workerError` from `WorkerTransport`
-//  (tests/engine/requestIds.ts).
+//  (tests/engine/requestIds.ts). The same thing said again while its window is open opens no second one (#859).
 
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
@@ -49,8 +49,9 @@ const receivers = new Map<string, (data: any) => void>(),
   deliver = (channel: string, data: unknown): void =>
     receivers.get(channel)!(data),
   windows = (): string[] =>
-    Array.from(document.querySelectorAll('.notificationWindow')).map((window) =>
-      (window as HTMLElement).textContent!.replace(/\s+/g, ' ')
+    // The windows themselves: one that has closed leaves a copy fading in its place, which is no `dialog`.
+    Array.from(document.querySelectorAll('dialog.notificationWindow')).map(
+      (window) => (window as HTMLElement).textContent!.replace(/\s+/g, ' ')
     ),
   closeAll = (): void =>
     document
@@ -128,6 +129,50 @@ const run = async (): Promise<void> => {
         !text.includes('Something went wrong.')
     ),
     [true]
+  );
+
+  // A long turn goes quiet again while the window is still open (#859): it has been said.
+  deliver('workerError', { message: '', notAnswering: true });
+  deliver('workerError', { message: '', notAnswering: true });
+
+  expect(
+    'the same thing again while its window is open opens no other',
+    windows().length,
+    1
+  );
+
+  deliver('workerError', { message: 'A rule threw.' });
+  deliver('workerError', { message: 'A rule threw.' });
+  deliver('workerError', { message: 'Another did.' });
+
+  expect(
+    'something else gets a window of its own, once each',
+    windows().length,
+    3
+  );
+
+  // Closed with its own button, then said again: shown again.
+  (document.querySelector('.notificationWindow .close') as HTMLElement).click();
+
+  const afterClose = windows().length;
+
+  deliver('workerError', { message: '', notAnswering: true });
+  deliver('workerError', { message: 'A rule threw.' });
+  deliver('workerError', { message: 'Another did.' });
+
+  expect(
+    'a window that was closed is opened again when it is said again, and the open ones are not',
+    [afterClose, windows().length],
+    [2, 3]
+  );
+
+  closeAll();
+  deliver('workerError', { message: 'Another did.' });
+
+  expect(
+    'and one taken off the page some other way is too',
+    windows().length,
+    1
   );
 
   closeAll();
