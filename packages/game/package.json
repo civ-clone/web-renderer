@@ -18,5 +18,14 @@
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-reports": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./bootstrap": "./bootstrap.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/core-data-object": "^0.1.19",
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3",
+    "i18next-browser-languagedetector": "^8.2.1"
   }
 }

@@ -17,5 +17,26 @@
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-reports": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./components/GameMenu": "./components/GameMenu.ts",
+    "./components/GameOptions": "./components/GameOptions.ts",
+    "./components/ImportAssetsWindow": "./components/ImportAssetsWindow.ts",
+    "./components/LoadGameWindow": "./components/LoadGameWindow.ts",
+    "./components/ReleaseWindow": "./components/ReleaseWindow.ts",
+    "./components/ResumeGameWindow": "./components/ResumeGameWindow.ts",
+    "./components/mapMenus": "./components/mapMenus.ts",
+    "./components/newGame": "./components/newGame.ts",
+    "./components/titleScreen": "./components/titleScreen.ts",
+    "./lib/ruleSetControls": "./lib/ruleSetControls.ts",
+    "./lib/savedGame": "./lib/savedGame.ts",
+    "./lib/setupControls": "./lib/setupControls.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/civ1-asset-extractor": "github:civ-clone/civ1-asset-extractor",
+    "@civ-clone/core-data-client": "^0.1.1",
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3",
+    "marked": "^18.1.1"
   }
 }

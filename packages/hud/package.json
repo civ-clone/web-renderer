@@ -18,5 +18,35 @@
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-reports": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./components/Actions": "./components/Actions.ts",
+    "./components/Actions/Action": "./components/Actions/Action.ts",
+    "./components/Actions/AdjustTradeRates": "./components/Actions/AdjustTradeRates.ts",
+    "./components/Actions/Notice": "./components/Actions/Notice.ts",
+    "./components/CitiesList": "./components/CitiesList.ts",
+    "./components/GameDetails": "./components/GameDetails.ts",
+    "./components/Map/cityBannerTooltip": "./components/Map/cityBannerTooltip.ts",
+    "./components/Map/squareTooltip": "./components/Map/squareTooltip.ts",
+    "./components/Notices": "./components/Notices.ts",
+    "./components/Notifications": "./components/Notifications.ts",
+    "./components/ObserverBar": "./components/ObserverBar.ts",
+    "./components/PlayerDetails": "./components/PlayerDetails.ts",
+    "./components/PowerList": "./components/PowerList.ts",
+    "./components/SupportedUnit": "./components/SupportedUnit.ts",
+    "./components/Unit": "./components/Unit.ts",
+    "./components/choiceList": "./components/choiceList.ts",
+    "./components/lib/choiceDetails": "./components/lib/choiceDetails.ts",
+    "./components/talks": "./components/talks.ts",
+    "./components/turnControls": "./components/turnControls.ts",
+    "./components/unitPanel": "./components/unitPanel.ts",
+    "./lib/cityOpeners": "./lib/cityOpeners.ts",
+    "./lib/unitActionPrompts": "./lib/unitActionPrompts.ts",
+    "./lib/unitLabel": "./lib/unitLabel.ts",
+    "./lib/unitMenuActions": "./lib/unitMenuActions.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

@@ -9,5 +9,33 @@
     "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*"
+  },
+  "exports": {
+    "./components/Map": "./components/Map.ts",
+    "./components/Map/ActiveUnit": "./components/Map/ActiveUnit.ts",
+    "./components/Map/Cities": "./components/Map/Cities.ts",
+    "./components/Map/CityNames": "./components/Map/CityNames.ts",
+    "./components/Map/Fog": "./components/Map/Fog.ts",
+    "./components/Map/Landscape": "./components/Map/Landscape.ts",
+    "./components/Map/UnitMarker": "./components/Map/UnitMarker.ts",
+    "./components/Map/Units": "./components/Map/Units.ts",
+    "./components/Map/Unworkable": "./components/Map/Unworkable.ts",
+    "./components/Map/Yields": "./components/Map/Yields.ts",
+    "./components/Map/cityLabels": "./components/Map/cityLabels.ts",
+    "./components/Portal": "./components/Portal.ts",
+    "./components/World": "./components/World.ts",
+    "./lib/ActiveUnitTiles": "./lib/ActiveUnitTiles.ts",
+    "./lib/cityMapLayout": "./lib/cityMapLayout.ts",
+    "./lib/projection": "./lib/projection.ts",
+    "./lib/projectionFor": "./lib/projectionFor.ts",
+    "./lib/reducedMotion": "./lib/reducedMotion.ts",
+    "./lib/supportedTopologies": "./lib/supportedTopologies.ts",
+    "./lib/viewport": "./lib/viewport.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/core-registry": "^0.1.6",
+    "@civ-clone/core-world": "^0.1.22",
+    "@dom111/element": "^0.2.0",
+    "@dom111/typed-event-emitter": "^0.1.2"
   }
 }

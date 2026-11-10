@@ -9,5 +9,12 @@
     "@civ-clone/ui-component-window": "workspace:*",
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./ChoiceWindow": "./ChoiceWindow.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

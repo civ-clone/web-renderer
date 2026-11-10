@@ -102,8 +102,14 @@ They share the engine's `@civ-clone` scope, and the `ui-` prefix keeps them apar
 that list what is installed in the scope (`scan`, `collisions`, `duplicates`) skip every `@civ-clone/ui-*`
 (`isUiPackage` in `tools/lib/paths.js`). An engine package must never be named `ui-…`.
 
-A package's npm dependencies (i18next, the engine's `@civ-clone/*` packages) stay in the root `package.json` for now,
-so they resolve from the root, where `civ sync` links engine checkouts. One thing the packages still reach for by
+A package's `package.json` says what it needs and what it offers (#862). Its `dependencies` are the sibling packages
+it uses (`workspace:*`). Its `peerDependencies` are the engine and npm packages its files import (i18next, the
+engine's `@civ-clone/*` packages), each at the range the root `package.json` installs them at. The root's install is
+the one they get, where `civ sync` links engine checkouts: `autoInstallPeers: false` in `pnpm-workspace.yaml` keeps a
+second copy out of `packages/*/node_modules`. Its `exports` are the modules other packages and civ.one's own code
+import from it, and no others, so a module newly imported from another package is added there on purpose; the builds
+find the packages by path, so only `tests/ui/packages.ts` holds a package to them, and the suites may reach into any
+package. One thing the packages still reach for by
 path isn't a package yet: the generated `src/js/translations.ts`. The build's version and the URLs of its files are
 the entry's (`src/js/frontend.ts`), which passes them to the packages through `@civ-clone/ui-client/lib/build`. The
 generated `src/js/plugins.ts` is civ.one's choice of rules, which `backend.ts` hands the worker client. The test lists

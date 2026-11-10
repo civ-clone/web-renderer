@@ -7,5 +7,24 @@
   "dependencies": {
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*"
+  },
+  "exports": {
+    "./AssetStore": "./AssetStore.ts",
+    "./components/lib/buildingIcon": "./components/lib/buildingIcon.ts",
+    "./components/lib/corruptionIcon": "./components/lib/corruptionIcon.ts",
+    "./lib/getPreloadedImage": "./lib/getPreloadedImage.ts",
+    "./lib/groupIcons": "./lib/groupIcons.ts",
+    "./lib/imageSize": "./lib/imageSize.ts",
+    "./lib/renderUnit": "./lib/renderUnit.ts",
+    "./lib/replaceColours": "./lib/replaceColours.ts",
+    "./lib/scaledCanvases": "./lib/scaledCanvases.ts",
+    "./lib/soundGain": "./lib/soundGain.ts",
+    "./lib/tilesets": "./lib/tilesets.ts",
+    "./lib/unitActionIcon": "./lib/unitActionIcon.ts",
+    "./tilesets/TilesetDescriptor": "./tilesets/TilesetDescriptor.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/core-world": "^0.1.22",
+    "@dom111/element": "^0.2.0"
   }
 }

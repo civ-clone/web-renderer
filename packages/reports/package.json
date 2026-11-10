@@ -14,5 +14,19 @@
     "@civ-clone/ui-platform": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./components/CityBuildUnavailableWindow": "./components/CityBuildUnavailableWindow.ts",
+    "./components/CivilizationScoreReport": "./components/CivilizationScoreReport.ts",
+    "./components/Civilopedia": "./components/Civilopedia.ts",
+    "./components/GameOverWindow": "./components/GameOverWindow.ts",
+    "./components/HallOfFameWindow": "./components/HallOfFameWindow.ts",
+    "./components/ScienceReport": "./components/ScienceReport.ts",
+    "./components/lib/watchPlayer": "./components/lib/watchPlayer.ts",
+    "./components/reports": "./components/reports.ts"
+  },
+  "peerDependencies": {
+    "@dom111/element": "^0.2.0",
+    "i18next": "^26.4.3"
   }
 }

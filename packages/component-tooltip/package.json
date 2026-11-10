@@ -6,5 +6,8 @@
   "license": "MIT",
   "dependencies": {
     "@civ-clone/ui-widgets": "workspace:*"
+  },
+  "exports": {
+    "./Tooltip": "./Tooltip.ts"
   }
 }
