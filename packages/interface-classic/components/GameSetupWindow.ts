@@ -1,26 +1,18 @@
-import AIClients from '@civ-clone/ui-protocol/Requests/AIClients';
-import Civilizations, {
-  CivilizationOption,
-} from '@civ-clone/ui-protocol/Requests/Civilizations';
-import Difficulties, {
-  DifficultyOption,
-} from '@civ-clone/ui-protocol/Requests/Difficulties';
-import Options from '@civ-clone/ui-protocol/Requests/Options';
-import Request from '@civ-clone/core-data-client/Request';
+import GameSetup, {
+  FinishedHandler,
+  GameSetupPreset,
+  RANDOM,
+  SeatKind,
+  SeatState,
+  SetupData,
+  requestSetupData,
+} from '@civ-clone/ui-client/lib/gameSetup';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
 import {
-  WorldSize,
-  customSizeProblem,
-  defaultWorldSize,
-  earthWorldSizes,
-  worldSizesFor,
-} from '@civ-clone/ui-client/lib/worldSizes';
-import {
   difficultyLabels,
   preselectedDifficulty,
-  rememberDifficulty,
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import {
@@ -34,34 +26,23 @@ import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { t } from 'i18next';
-import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
-type FinishedHandler = () => void | Promise<void>;
+export { GameSetupPreset, RANDOM };
 
-/** What the window opens with: Earth selected, or the Advanced section open, as Customize World. */
-export type GameSetupPreset = {
-  advanced?: boolean;
-  earth?: boolean;
-};
+/**
+ * The shared setup, with the classic window's leader rules: choosing a civilization leaves the leader to chance, even a
+ *  lone one, and a leader chosen by hand is sent, even a lone one (#868).
+ */
+class ClassicGameSetup extends GameSetup {
+  setCivilization(seat: SeatState, civilization: string): void {
+    seat.civilization = civilization;
+    seat.leader = RANDOM;
+  }
 
-/** A seat as the table holds it; `random` and the default AI are sent as nothing (#604). */
-type SeatState = {
-  kind: 'human' | 'computer';
-  name: string;
-  civilization: string;
-  leader: string;
-  ai: string;
-};
-
-/** What the worker answers before the window is built. */
-type SetupData = {
-  aiClients: string[];
-  civilizations: CivilizationOption[];
-  difficulties: DifficultyOption[];
-  existing: { [key: string]: any };
-};
-
-export const RANDOM = 'random';
+  sendsLeader(seat: SeatState): boolean {
+    return seat.civilization !== RANDOM && seat.leader !== RANDOM;
+  }
+}
 
 const numberInput = (
   name: string,
@@ -81,19 +62,9 @@ const numberInput = (
  * (the world's exact size and land) open. One human seat for now: hot-seat and network play come with #161.
  */
 export class GameSetupWindow extends Window {
-  #data: SetupData;
+  #setup: GameSetup;
   #onFinished?: FinishedHandler;
   #transport: Transport;
-
-  // The world.
-  #topologyId: TopologyId = 'square';
-  #earth: boolean = false;
-  #size: WorldSize | null = defaultWorldSize;
-  #width: number = defaultWorldSize.width;
-  #height: number = defaultWorldSize.height;
-
-  // The seats, in player order.
-  #seats: SeatState[] = [];
 
   #mapSelect!: HTMLSelectElement;
   #gridSelect!: HTMLSelectElement;
@@ -115,36 +86,9 @@ export class GameSetupWindow extends Window {
       modal: true,
     });
 
-    this.#data = data;
+    this.#setup = new ClassicGameSetup(data, preset);
     this.#onFinished = onFinished;
     this.#transport = transport;
-
-    if (preset.earth) {
-      this.#earth = true;
-    }
-
-    // Customize World opens on the world last set, as its own window did: one of the sizes, or a custom one.
-    const width = Number(data.existing.width),
-      height = Number(data.existing.height);
-
-    if (preset.advanced && width > 0 && height > 0) {
-      this.#size =
-        worldSizesFor(this.#topologyId).find(
-          (size) => size.width === width && size.height === height
-        ) ?? null;
-      this.#width = width;
-      this.#height = height;
-    }
-
-    this.#seats = new Array(this.#defaultSeatCount()).fill(0).map(
-      (value: 0, index: number): SeatState => ({
-        kind: index === 0 ? 'human' : 'computer',
-        name: '',
-        civilization: RANDOM,
-        leader: RANDOM,
-        ai: data.aiClients[0] ?? '',
-      })
-    );
 
     this.#build(preset);
   }
@@ -155,25 +99,9 @@ export class GameSetupWindow extends Window {
     onFinished?: FinishedHandler,
     preset: GameSetupPreset = {}
   ): Promise<GameSetupWindow> {
-    const [civilizations, aiClients, difficulties, existing] =
-      await Promise.all([
-        transport.request(new Civilizations()),
-        transport.request(new AIClients()),
-        transport.request(new Difficulties()),
-        transport.request(
-          new Options([
-            'width',
-            'height',
-            'landCoverage',
-            'landSize',
-            'maxIterations',
-          ])
-        ),
-      ]);
-
     return new GameSetupWindow(
       transport,
-      { aiClients, civilizations, difficulties, existing },
+      await requestSetupData(transport),
       onFinished,
       preset
     );
@@ -181,30 +109,12 @@ export class GameSetupWindow extends Window {
 
   /** The seats a game has, as the window holds them. */
   seats(): SeatState[] {
-    return this.#seats.map((seat) => ({ ...seat }));
-  }
-
-  #defaultSeatCount(): number {
-    return Math.min(
-      this.#size?.players ?? defaultWorldSize.players,
-      this.#maxSeats()
-    );
-  }
-
-  // As many seats as the map has room for, or as there are civilizations to play.
-  #maxSeats(): number {
-    return Math.min(
-      this.#size?.maxPlayers ?? this.#data.civilizations.length,
-      this.#data.civilizations.length
-    );
-  }
-
-  #sizes(): WorldSize[] {
-    return this.#earth ? earthWorldSizes : worldSizesFor(this.#topologyId);
+    return this.#setup.seats.map((seat) => ({ ...seat }));
   }
 
   #build(preset: GameSetupPreset): void {
-    const data = this.#data,
+    const setup = this.#setup,
+      data = setup.data,
       grids = supportedTopologies(),
       difficultySelect = select(
         'difficulty',
@@ -249,12 +159,14 @@ export class GameSetupWindow extends Window {
     this.#gridSelect = select(
       'topologyId',
       grids.map((grid) =>
-        option(grid, t(`Grid.${grid}`), { selected: grid === this.#topologyId })
+        option(grid, t(`Grid.${grid}`), {
+          selected: grid === setup.topologyId,
+        })
       )
     );
     this.#mapSelect = select('map', []);
-    this.#widthInput = numberInput('width', this.#width, 'step="1" min="1"');
-    this.#heightInput = numberInput('height', this.#height, 'step="1" min="1"');
+    this.#widthInput = numberInput('width', setup.width, 'step="1" min="1"');
+    this.#heightInput = numberInput('height', setup.height, 'step="1" min="1"');
     this.#landInputs = [
       numberInput(
         'landCoverage',
@@ -279,13 +191,7 @@ export class GameSetupWindow extends Window {
       ),
       {
         click: () => {
-          this.#seats.push({
-            kind: 'computer',
-            name: '',
-            civilization: RANDOM,
-            leader: RANDOM,
-            ai: data.aiClients[0] ?? '',
-          });
+          setup.addSeat();
 
           this.#renderSeats();
         },
@@ -296,17 +202,7 @@ export class GameSetupWindow extends Window {
 
     h(this.#gridSelect, {
       change: () => {
-        this.#topologyId = this.#gridSelect.value as TopologyId;
-
-        // The same size on the new grid has its own width and height.
-        if (this.#size) {
-          this.#size =
-            worldSizesFor(this.#topologyId).find(
-              (size) => size.key === this.#size!.key
-            ) ?? null;
-          this.#width = this.#size?.width ?? this.#width;
-          this.#height = this.#size?.height ?? this.#height;
-        }
+        setup.chooseGrid(this.#gridSelect.value as TopologyId);
 
         this.#renderMap();
       },
@@ -314,15 +210,7 @@ export class GameSetupWindow extends Window {
 
     h(this.#mapSelect, {
       change: () => {
-        const [kind, key] = this.#mapSelect.value.split(':');
-
-        this.#earth = kind === 'earth';
-        this.#size = this.#sizes().find((size) => size.key === key) ?? null;
-
-        if (this.#size) {
-          this.#width = this.#size.width;
-          this.#height = this.#size.height;
-        }
+        setup.chooseMap(this.#mapSelect.value);
 
         this.#renderMap();
       },
@@ -334,10 +222,10 @@ export class GameSetupWindow extends Window {
         input: () => {
           input.setCustomValidity('');
 
-          this.#width = Number(this.#widthInput.value);
-          this.#height = Number(this.#heightInput.value);
-          this.#size = null;
-          this.#earth = false;
+          setup.setCustomSize(
+            Number(this.#widthInput.value),
+            Number(this.#heightInput.value)
+          );
 
           this.#renderMap();
         },
@@ -427,91 +315,43 @@ export class GameSetupWindow extends Window {
     });
   }
 
-  // The map list: this grid's sizes, Earth's sizes, and the custom size when one is typed. Earth is square only, and
-  //  its land is the map's, so those controls are held while it's chosen.
+  // The map list, as the setup has it. Earth is square only, and its land is the map's, so those controls are held
+  //  while it's chosen.
   #renderMap(): void {
-    const sizes = worldSizesFor(this.#topologyId),
-      current = this.#size
-        ? `${this.#earth ? 'earth' : 'size'}:${this.#size.key}`
-        : 'custom',
-      options = [
-        ...sizes.map((size) =>
-          option(
-            `size:${size.key}`,
-            t(`NewGameWindow.WorldSize.${size.key}`, {
-              width: size.width,
-              height: size.height,
-            }),
-            { selected: current === `size:${size.key}` }
-          )
-        ),
-        ...earthWorldSizes.map((size) =>
-          option(
-            `earth:${size.key}`,
-            t('GameSetup.earth', {
-              size: t(`NewGameWindow.WorldSize.${size.key}`, {
-                width: size.width,
-                height: size.height,
-              }),
-            }),
-            { selected: current === `earth:${size.key}` }
-          )
-        ),
-        ...(this.#size
-          ? []
-          : [
-              option(
-                'custom',
-                t('GameSetup.custom', {
-                  width: this.#width,
-                  height: this.#height,
-                }),
-                { selected: true }
-              ),
-            ]),
-      ];
+    const setup = this.#setup,
+      current = setup.map();
 
-    this.#mapSelect.replaceChildren(...options);
+    this.#mapSelect.replaceChildren(
+      ...setup
+        .maps()
+        .map(({ value, label }) =>
+          option(value, label, { selected: value === current })
+        )
+    );
 
-    if (this.#earth) {
-      this.#topologyId = 'square';
+    if (setup.earth) {
       this.#gridSelect.value = 'square';
     }
 
-    this.#gridSelect.disabled = this.#earth;
-    this.#widthInput.disabled = this.#earth;
-    this.#heightInput.disabled = this.#earth;
-    this.#landInputs.forEach((input) => (input.disabled = this.#earth));
+    this.#gridSelect.disabled = setup.earth;
+    this.#widthInput.disabled = setup.earth;
+    this.#heightInput.disabled = setup.earth;
+    this.#landInputs.forEach((input) => (input.disabled = setup.earth));
 
     if (document.activeElement !== this.#widthInput) {
-      this.#widthInput.value = String(this.#width);
+      this.#widthInput.value = String(setup.width);
     }
 
     if (document.activeElement !== this.#heightInput) {
-      this.#heightInput.value = String(this.#height);
-    }
-
-    // A smaller map has room for fewer: computer seats go first, from the end, so the human's stays.
-    while (this.#seats.length > this.#maxSeats()) {
-      const last = [...this.#seats]
-        .reverse()
-        .find((seat) => seat.kind === 'computer');
-
-      this.#seats.splice(this.#seats.indexOf(last ?? this.#seats[0]), 1);
+      this.#heightInput.value = String(setup.height);
     }
 
     this.#renderSeats();
   }
 
   #renderSeats(): void {
-    const data = this.#data,
-      humanSeated = this.#seats.some((seat) => seat.kind === 'human'),
-      chosen = (except: SeatState): Set<string> =>
-        new Set(
-          this.#seats
-            .filter((seat) => seat !== except && seat.civilization !== RANDOM)
-            .map((seat) => seat.civilization)
-        );
+    const setup = this.#setup,
+      data = setup.data;
 
     // The rows are rebuilt, so whatever had the focus is put back by its row and control.
     const active = document.activeElement,
@@ -526,16 +366,14 @@ export class GameSetupWindow extends Window {
           : null;
 
     this.#seatsBody.replaceChildren(
-      ...this.#seats.map((seat, index) => {
-        const taken = chosen(seat),
-          civilization = data.civilizations.find(
-            ({ name }) => name === seat.civilization
-          ),
+      ...setup.seats.map((seat, index) => {
+        const taken = setup.taken(seat),
+          civilization = setup.civilization(seat),
           kindSelect = select('kind', [
             option('human', t('GameSetup.human'), {
               selected: seat.kind === 'human',
               // One human player for now (#161).
-              disabled: humanSeated && seat.kind !== 'human',
+              disabled: !setup.canBeHuman(seat),
             }),
             option('computer', t('GameSetup.computer'), {
               selected: seat.kind === 'computer',
@@ -579,7 +417,7 @@ export class GameSetupWindow extends Window {
             ),
             {
               click: () => {
-                this.#seats.splice(index, 1);
+                setup.removeSeat(index);
 
                 this.#renderSeats();
               },
@@ -601,12 +439,11 @@ export class GameSetupWindow extends Window {
         ).forEach(([element, key]) =>
           element.setAttribute('aria-label', `${t(key)} ${index + 1}`)
         );
-        // The last seat stays: a game needs one.
-        remove.disabled = this.#seats.length <= 1;
+        remove.disabled = !setup.canRemoveSeat();
 
         h(kindSelect, {
           change: () => {
-            seat.kind = kindSelect.value as SeatState['kind'];
+            setup.setKind(seat, kindSelect.value as SeatKind);
 
             this.#renderSeats();
           },
@@ -614,8 +451,7 @@ export class GameSetupWindow extends Window {
         h(nameInput, { input: () => (seat.name = nameInput.value) });
         h(civilizationSelect, {
           change: () => {
-            seat.civilization = civilizationSelect.value;
-            seat.leader = RANDOM;
+            setup.setCivilization(seat, civilizationSelect.value);
 
             this.#renderSeats();
           },
@@ -642,7 +478,7 @@ export class GameSetupWindow extends Window {
       })
     );
 
-    this.#addSeat.disabled = this.#seats.length >= this.#maxSeats();
+    this.#addSeat.disabled = !setup.canAddSeat();
 
     if (focused) {
       const row = this.#seatsBody.children[focused.row];
@@ -656,77 +492,33 @@ export class GameSetupWindow extends Window {
   }
 
   async #start(difficulty: string): Promise<void> {
-    if (!this.#earth) {
-      const problem = customSizeProblem(
-        this.#topologyId,
-        this.#widthInput.value,
-        this.#heightInput.value
-      );
+    const problem = this.#setup.problem(
+      this.#widthInput.value,
+      this.#heightInput.value
+    );
 
-      if (problem !== null) {
-        const input =
-          problem.field === 'width' ? this.#widthInput : this.#heightInput;
+    if (problem !== null) {
+      const input =
+        problem.field === 'width' ? this.#widthInput : this.#heightInput;
 
-        input.setCustomValidity(t(problem.message));
-        input.reportValidity();
-
-        return;
-      }
-    }
-
-    const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
-        (input) => input.value
-      ),
-      seats = this.#seats.map((seat) => ({
-        kind: seat.kind,
-        ...(seat.kind === 'human' && seat.name.trim() !== ''
-          ? { name: seat.name.trim() }
-          : {}),
-        ...(seat.civilization !== RANDOM
-          ? { civilization: seat.civilization }
-          : {}),
-        ...(seat.civilization !== RANDOM && seat.leader !== RANDOM
-          ? { leader: seat.leader }
-          : {}),
-        ...(seat.kind === 'computer' &&
-        seat.ai !== '' &&
-        seat.ai !== this.#data.aiClients[0]
-          ? { ai: seat.ai }
-          : {}),
-      }));
-
-    if (difficulty !== '') {
-      rememberDifficulty(difficulty);
-    }
-
-    this.close();
-
-    try {
-      await this.#transport.request(
-        new Request('setOptions', {
-          topologyId: this.#topologyId,
-          earth: this.#earth,
-          width: this.#width,
-          height: this.#height,
-          landCoverage,
-          landSize,
-          maxIterations,
-          difficulty,
-          seats,
-        })
-      );
-    } catch (error) {
-      // Not answered: the player has been told, and the main menu is still there, with no game started (#580).
-      unlessRequestFailed(error);
+      input.setCustomValidity(t(problem.message));
+      input.reportValidity();
 
       return;
     }
 
-    if (this.#onFinished) {
-      await this.#onFinished();
-    }
+    const [landCoverage, landSize, maxIterations] = this.#landInputs.map(
+      (input) => input.value
+    );
 
-    this.#transport.send('start', null);
+    this.close();
+
+    await this.#setup.start(
+      this.#transport,
+      { landCoverage, landSize, maxIterations },
+      difficulty,
+      this.#onFinished
+    );
   }
 }
 
