@@ -1,4 +1,5 @@
 {
+  "$schema": "./tileset.schema.json",
   "schema": 1,
   "kind": "tileset",
   "id": "civ1",

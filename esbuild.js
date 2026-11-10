@@ -28,6 +28,25 @@
       plugins: [
         engineSources(),
         sassPlugin(),
+        // A schema's titles, descriptions and examples are for pack authors' editors (#869): the game only checks
+        //  against it, so they are left out of the bundle.
+        {
+          name: 'schema-annotations',
+          setup(build) {
+            build.onLoad({ filter: /\.schema\.json$/ }, ({ path }) => ({
+              contents: JSON.stringify(
+                JSON.parse(require('fs').readFileSync(path, 'utf8')),
+                (key, value) =>
+                  (['title', 'description'].includes(key) &&
+                    typeof value === 'string') ||
+                  (key === 'examples' && Array.isArray(value))
+                    ? undefined
+                    : value
+              ),
+              loader: 'json',
+            }));
+          },
+        },
       ],
       loader: {
         '.jpg': 'file',

@@ -666,6 +666,19 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
   expect(
+    'and a join that is not text, or an anchor or overhang left out, saying which (#869)',
+    [
+      withFamily('road', { ...civ1.families.road, join: 0 }),
+      civ1With({ geometry: { ...civ1.geometry, anchor: undefined } }),
+      civ1With({ geometry: { ...civ1.geometry, overhang: 0 } }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      'Tileset "civ1": families.road.join must be a string, what goes between the directions in {dirs}.',
+      'Tileset "civ1": geometry.anchor must have a whole x and y in px.',
+      'Tileset "civ1": geometry.overhang must have a whole top, right, bottom and left of 0 px or more.',
+    ]
+  );
+  expect(
     'irrigation may be drawn over the terrain, said with true or false, and nothing else may',
     [
       withFamily('irrigation', {

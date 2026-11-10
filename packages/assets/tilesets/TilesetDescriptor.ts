@@ -3,6 +3,8 @@ import {
   createTopology,
   topologyIds,
 } from '@civ-clone/core-world/topologies';
+import firstFailure, { pathName } from '../lib/jsonSchema';
+import schema from './tileset.schema.json';
 
 // What a tileset says about itself (#56, #92): the grid it is drawn for, its native tile size, the map scales it can be
 //  shown at, the sprites it has, how the sprites for each kind of thing are named and put together, and how player
@@ -12,8 +14,14 @@ import {
 // Sprite names leave out the store's prefix and extension (`terrain/hills_nes`, not `./assets/terrain/hills_nes.png`),
 //  as the renderer asks for them. Sizes and offsets are in the pack's native pixels; the renderer multiplies them by
 //  the map scale.
+//
+// `tileset.schema.json` describes the JSON, field by field, for pack authors and their editors as well as for
+//  `validateDescriptor`, which checks it first and then what a schema cannot say.
 
-/** The one descriptor format this renderer reads. Any other number is refused, so a newer pack is not half-drawn. */
+/**
+ * The one descriptor format this renderer reads, the schema's `schema` too. Any other number is refused, so a newer
+ * pack is not half-drawn.
+ */
 export const TILESET_SCHEMA = 1;
 
 export interface Size {
@@ -216,190 +224,89 @@ export interface TilesetDescriptor {
   ui: TilesetUi;
 }
 
-/**
- * The families the map draws with `drawFamily`, besides the base and the coast: whether each joins its neighbours, and
- * the placeholders the map fills in its names besides the directions (`{dir}` for `edges`, `{dirs}` for `bitmask`).
- */
-const mapFamilies: {
-  [key in keyof TilesetFamilies]?: { joins: boolean; values: string[] };
-} = {
-  terrain: { joins: true, values: ['terrain'] },
-  riverMouth: { joins: true, values: [] },
-  road: { joins: true, values: [] },
-  railroad: { joins: true, values: [] },
-  fog: { joins: true, values: [] },
-  irrigation: { joins: false, values: [] },
-  mine: { joins: false, values: [] },
-  pollution: { joins: false, values: [] },
-  special: { joins: false, values: ['special'] },
-  hut: { joins: false, values: [] },
+// The placeholders the map fills in each map family's names besides the directions (`{dir}` for `edges`, `{dirs}` for
+//  `bitmask`): the families it draws with `drawFamily`, besides the base and the coast.
+const familyValues: { [key in keyof TilesetFamilies]?: string[] } = {
+  terrain: ['terrain'],
+  riverMouth: [],
+  road: [],
+  railroad: [],
+  fog: [],
+  irrigation: [],
+  mine: [],
+  pollution: [],
+  special: ['special'],
+  hut: [],
 };
 
 /** The placeholders in a sprite name: `terrain/{terrain}_{dirs}` has `terrain` and `dirs`. */
 const placeholders = (template: string): string[] =>
   Array.from(template.matchAll(/\{([a-z]+)\}/gi), ([, name]) => name);
 
-// The colours `replaceColours` can read: `#rgb`, `#rrggbb`, `rgb(…)` and `rgba(…)`. Any other would match a sprite's
-//  transparent pixels, or be ignored by the canvas and leave the last colour drawn in its place.
-const colourPattern = /^(#[0-9a-f]{3}|#[0-9a-f]{6}|rgba?\([\d\s.,]+\))$/i;
-
-const isObject = (value: unknown): value is { [key: string]: unknown } =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-const isWholeNumber = (value: unknown, minimum: number): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= minimum;
-
-const isStringList = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === 'string');
-
-const isObjectOf = (
-  value: unknown,
-  isItem: (item: unknown) => boolean
-): boolean => isObject(value) && Object.values(value).every(isItem);
+const listed = (names: string[]): string =>
+  names.length > 0 ? `{${names.join('}, {')}}` : 'none';
 
 /**
- * `json` as a tileset descriptor, once it is one this renderer can draw from: the schema it reads, a grid the engine
- * knows, whole-pixel sizes, scales it can be shown at, and the lists of sprites it has. Throws an `Error` saying what
- * is wrong otherwise.
+ * `json` as a tileset descriptor, once it is one this renderer can draw from: one `tileset.schema.json` accepts (the
+ * schema it reads, whole-pixel sizes, the lists of sprites it has, families the map can put together), whose grid the
+ * engine knows, whose names have only the placeholders the map fills, and whose sizes agree. Throws an `Error` saying
+ * what is wrong otherwise.
  */
 export const validateDescriptor = (json: unknown): TilesetDescriptor => {
-  if (!isObject(json)) {
+  if (typeof json !== 'object' || json === null || Array.isArray(json)) {
     throw new Error('A tileset descriptor must be an object.');
   }
 
-  const name =
-      typeof json.id === 'string' && json.id !== ''
-        ? `"${json.id}"`
-        : 'descriptor',
+  const id = (json as { id?: unknown }).id,
+    name = typeof id === 'string' && id !== '' ? `"${id}"` : 'descriptor',
     refuse = (problem: string): never => {
       throw new Error(`Tileset ${name}: ${problem}`);
-    };
+    },
+    // The topology's names for a square tile's eight neighbours, as the coast's bitmask has them.
+    squareDirections = createTopology('square', 2, 2).directions(),
+    failure = firstFailure(schema, json);
 
-  if (json.schema !== TILESET_SCHEMA) {
+  // What a schema can say, in its own words: see `x-message` in the schema.
+  if (failure !== null) {
+    const { path, value, keyword, message } = failure,
+      tokens: { [token: string]: string } = {
+        path: pathName(path),
+        parent: pathName(path.slice(0, -1)),
+        value: `${JSON.stringify(value)}`,
+        grids: topologyIds.join(', '),
+        directions: squareDirections.join(', '),
+        keyword,
+      };
+
     refuse(
-      `schema ${JSON.stringify(
-        json.schema
-      )} cannot be read here, only schema ${TILESET_SCHEMA}. A newer civ.one may read it.`
+      (
+        message ?? '{path} is not what a tileset has there ({keyword}).'
+      ).replace(
+        /\{(path|parent|value|grids|directions|keyword)\}/g,
+        (_, token: string) => tokens[token]
+      )
     );
   }
 
-  if (json.kind !== 'tileset') {
-    refuse(`kind must be "tileset", not ${JSON.stringify(json.kind)}.`);
-  }
+  // And what it can't: the engine's names, the placeholders the map fills, and sizes that agree with each other.
+  const descriptor = json as TilesetDescriptor,
+    { grid, scales, defaultScale, assets, families, units, cities, tile } =
+      descriptor,
+    { strip, order } = families.coast as CornersFamily & { strip: CoastStrip };
 
-  if (typeof json.id !== 'string' || json.id === '') {
-    refuse('id must be a non-empty string.');
-  }
-
-  if (typeof json.name !== 'string' || json.name === '') {
-    refuse('name must be a non-empty string.');
-  }
-
-  if (!(topologyIds as readonly unknown[]).includes(json.grid)) {
+  if (!(topologyIds as readonly string[]).includes(grid)) {
     refuse(
-      `grid ${JSON.stringify(json.grid)} is not one of ${topologyIds.join(
-        ', '
-      )}.`
+      `grid ${JSON.stringify(grid)} is not one of ${topologyIds.join(', ')}.`
     );
   }
 
-  const tile = json.tile;
-
-  if (
-    !isObject(tile) ||
-    !isWholeNumber(tile.width, 1) ||
-    !isWholeNumber(tile.height, 1)
-  ) {
-    refuse('tile must have a whole width and height of at least 1 px.');
-  }
-
-  const geometry = json.geometry;
-
-  if (
-    !isObject(geometry) ||
-    !isWholeNumber(geometry.columnStep, 1) ||
-    !isWholeNumber(geometry.rowStep, 1) ||
-    !isWholeNumber(geometry.oddRowShift, 0) ||
-    !isObject(geometry.anchor) ||
-    !isObject(geometry.overhang)
-  ) {
-    refuse(
-      'geometry must have whole column and row steps of at least 1 px, an odd row shift, an anchor and an overhang.'
-    );
-  }
-
-  const { anchor, overhang } = geometry as {
-    [key: string]: { [key: string]: unknown };
-  };
-
-  if (!Number.isInteger(anchor.x) || !Number.isInteger(anchor.y)) {
-    refuse('geometry.anchor must have a whole x and y in px.');
-  }
-
-  if (
-    !(['top', 'right', 'bottom', 'left'] as const).every((side) =>
-      isWholeNumber(overhang[side], 0)
-    )
-  ) {
-    refuse(
-      'geometry.overhang must have a whole top, right, bottom and left of 0 px or more.'
-    );
-  }
-
-  const scales = json.scales;
-
-  if (
-    !Array.isArray(scales) ||
-    scales.length === 0 ||
-    !scales.every((scale) => isWholeNumber(scale, 1))
-  ) {
-    refuse('scales must list at least one whole scale of 1 or more.');
-  }
-
-  if (!(scales as unknown[]).includes(json.defaultScale)) {
-    refuse(
-      `defaultScale ${JSON.stringify(json.defaultScale)} is not in scales.`
-    );
-  }
-
-  const storage = json.storage;
-
-  if (
-    !isObject(storage) ||
-    typeof storage.prefix !== 'string' ||
-    typeof storage.ext !== 'string'
-  ) {
-    refuse('storage must have a prefix and an ext.');
-  }
-
-  if (json.fallback !== null && typeof json.fallback !== 'string') {
-    refuse('fallback must be a tileset id or null.');
-  }
-
-  const assets = json.assets;
-
-  if (
-    !isObject(assets) ||
-    !isStringList(assets.required) ||
-    !isStringList(assets.optional) ||
-    !isStringList(assets.ui)
-  ) {
-    refuse('assets must list its required, optional and ui sprites.');
-  }
-
-  const { required, optional } = assets as { [key: string]: string[] };
-
-  if (required.length === 0) {
-    refuse('assets.required must list at least one sprite.');
+  if (!scales.includes(defaultScale)) {
+    refuse(`defaultScale ${defaultScale} is not in scales.`);
   }
 
   const seen = new Set<string>();
 
-  [...required, ...optional].forEach((sprite) => {
-    if (sprite === '') {
-      refuse('assets lists an empty sprite name.');
-    }
-
+  [...assets.required, ...assets.optional].forEach((sprite) => {
     if (seen.has(sprite)) {
       refuse(`assets lists "${sprite}" more than once.`);
     }
@@ -407,70 +314,18 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
     seen.add(sprite);
   });
 
-  (['names', 'families', 'units', 'cities'] as const).forEach((section) => {
-    if (!isObject(json[section])) {
-      refuse(`${section} must be an object.`);
-    }
-  });
-
-  // What the map reads as it draws, checked here so a broken pack is refused rather than drawn wrong.
-  const { families, units, cities } = json as {
-      [section: string]: { [key: string]: unknown };
-    },
-    fontSize = (label: unknown): unknown =>
-      isObject(label) ? label.fontSize : undefined;
-
-  if (!isWholeNumber(fontSize(units.status), 1)) {
-    refuse('units.status.fontSize must be a whole number of px, 1 or more.');
-  }
-
-  if (!isWholeNumber(fontSize(cities.labels), 1)) {
-    refuse('cities.labels.fontSize must be a whole number of px, 1 or more.');
-  }
-
-  const coast = families.coast;
-
-  if (!isObject(coast) || coast.method !== 'corners') {
-    refuse('families.coast must be a corners family.');
-  }
-
-  const { strip } = coast as { strip?: unknown };
-
-  // Named quarter sprites are typed for other packs, but only a coast cut from one strip can be drawn yet (#92).
-  if (!isObject(strip)) {
-    refuse(
-      'families.coast must have a strip: only a coast cut from one strip can be drawn yet.'
-    );
-  }
-
-  const { sprite, cell, quarter } = strip as { [key: string]: unknown };
-
-  if (typeof sprite !== 'string' || sprite === '') {
-    refuse('families.coast.strip.sprite must name a sprite.');
-  }
-
-  if (!isWholeNumber(quarter, 1)) {
-    refuse(
-      'families.coast.strip.quarter must be a whole number of px, 1 or more.'
-    );
-  }
-
   // A coast tile is two quarters across, and the strip's columns are tiles side by side.
-  if (cell !== (quarter as number) * 2) {
+  if (strip.cell !== strip.quarter * 2) {
     refuse(
       `families.coast.strip.cell must be two quarters, ${
-        (quarter as number) * 2
-      } px, not ${JSON.stringify(cell)}.`
+        strip.quarter * 2
+      } px, not ${JSON.stringify(strip.cell)}.`
     );
   }
 
   // The coast's bitmask has one bit per neighbour, and a strip's columns are cut for a square tile's eight (Civ1's),
   //  so the order names each of those once. Coasts for other grids come with their packs (#94/#97).
-  const squareDirections = createTopology('square', 2, 2).directions(),
-    { order } = coast as { order?: unknown };
-
   if (
-    !isStringList(order) ||
     order.length !== squareDirections.length ||
     !squareDirections.every((direction) => order.includes(direction))
   ) {
@@ -481,328 +336,91 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
     );
   }
 
-  if (!isObject(families.base)) {
-    refuse('families.base must name the land and ocean sprites.');
-  }
+  // The map fills only the placeholders it has for a name, so a name with any other is refused here rather than
+  //  failing on every tile.
+  const fills = (where: string, template: string, given: string[]): void => {
+    const unknown = placeholders(template).filter(
+      (placeholder) => !given.includes(placeholder)
+    );
 
-  const base = families.base as { [key: string]: unknown };
-
-  if (
-    typeof base.land !== 'string' ||
-    base.land === '' ||
-    typeof base.ocean !== 'string' ||
-    base.ocean === ''
-  ) {
-    refuse('families.base must name the land and ocean sprites.');
-  }
-
-  const names = json.names as { [key: string]: unknown };
-
-  // The words the map puts in sprite names, by engine name.
-  (['terrain', 'special', 'unit'] as const).forEach((kind) => {
-    if (!isObjectOf(names[kind], (word) => typeof word === 'string')) {
-      refuse(`names.${kind} must map engine names to words in sprite names.`);
-    }
-  });
-
-  // The families the map draws as `drawFamily` puts them together: one sprite, one per neighbour, or one for all of
-  //  them. `corners` and `dither` are typed for other packs, but cannot be drawn for these yet (#92). The map fills only
-  //  the placeholders it has for a family, so a name with any other is refused here rather than failing on every tile.
-  (
-    Object.entries(mapFamilies) as [
-      string,
-      { joins: boolean; values: string[] }
-    ][]
-  ).forEach(([key, { joins, values }]) => {
-    const family = families[key],
-      where = `families.${key}`;
-
-    if (!isObject(family)) {
-      refuse(`${where} must be an object.`);
-    }
-
-    const {
-      method,
-      neighbours,
-      sprite,
-      isolated,
-      skip,
-      matches,
-      anchors,
-      overTerrain,
-    } = family as { [key: string]: unknown };
-
-    if (
-      overTerrain !== undefined &&
-      (key !== 'irrigation' || typeof overTerrain !== 'boolean')
-    ) {
-      refuse(`${where}.overTerrain is for irrigation only: true or false.`);
-    }
-
-    if (typeof sprite !== 'string' || sprite === '') {
-      refuse(`${where}.sprite must name a sprite.`);
-    }
-
-    if (method === 'corners' || method === 'dither') {
-      refuse(`${where}.method "${method}" cannot be drawn yet (#92).`);
-    }
-
-    if (joins && method !== 'bitmask' && method !== 'edges') {
+    if (unknown.length > 0) {
       refuse(
-        `${where}.method must be "bitmask" or "edges": it joins its neighbours.`
+        `${where} has ${listed(unknown)}, but the map fills ${
+          given.length > 0 ? `only ${listed(given)}` : 'none'
+        } here.`
       );
     }
+  };
 
-    if (!joins && method !== undefined) {
-      refuse(
-        `${where} is one sprite, drawn whatever its neighbours: it has no method.`
-      );
-    }
+  (Object.entries(familyValues) as [keyof TilesetFamilies, string[]][]).forEach(
+    ([key, values]) => {
+      const { method, sprite, isolated } = families[key] as SpriteFamily;
 
-    if (joins && neighbours !== 'edges' && neighbours !== 'all') {
-      refuse(`${where}.neighbours must be "edges" or "all".`);
-    }
-
-    const given = [
+      fills(`families.${key}.sprite`, sprite, [
         ...values,
         ...(method === 'bitmask'
           ? ['dirs']
           : method === 'edges'
           ? ['dir']
           : []),
-      ],
-      unknown = (template: string): string[] =>
-        placeholders(template).filter((name) => !given.includes(name));
-
-    if (unknown(sprite as string).length > 0) {
-      refuse(
-        `${where}.sprite has {${unknown(sprite as string).join(
-          '}, {'
-        )}}, but the map fills ${
-          given.length > 0 ? `only {${given.join('}, {')}}` : 'none'
-        } here.`
-      );
-    }
-
-    if (typeof isolated === 'string') {
-      const missing = placeholders(isolated).filter(
-        (name) => !values.includes(name)
-      );
-
-      if (isolated === '' || missing.length > 0) {
-        refuse(
-          `${where}.isolated must name a sprite with no placeholders but ${
-            values.length > 0 ? `{${values.join('}, {')}}` : 'none'
-          }.`
-        );
-      }
-    }
-
-    if (
-      isolated !== undefined &&
-      typeof isolated !== 'string' &&
-      !(
-        isObject(isolated) &&
-        typeof isolated.dot === 'string' &&
-        colourPattern.test(isolated.dot) &&
-        isWholeNumber(isolated.size, 1)
-      )
-    ) {
-      refuse(
-        `${where}.isolated must be a sprite, or a dot with a colour and a whole size of 1 px or more.`
-      );
-    }
-
-    if (skip !== undefined && !isStringList(skip)) {
-      refuse(`${where}.skip must list terrain names.`);
-    }
-
-    if (matches !== undefined && !isObjectOf(matches, isStringList)) {
-      refuse(`${where}.matches must list, for each terrain, what joins it.`);
-    }
-
-    if (
-      anchors !== undefined &&
-      !isObjectOf(
-        anchors,
-        (anchor) =>
-          isObject(anchor) &&
-          Number.isInteger(anchor.x) &&
-          Number.isInteger(anchor.y)
-      )
-    ) {
-      refuse(`${where}.anchors must give a whole x and y in px for each name.`);
-    }
-  });
-
-  // What the units and cities layers read as they draw (#56 d3).
-  const isColour = (value: unknown): boolean =>
-      typeof value === 'string' && colourPattern.test(value),
-    isPoint = (value: unknown, whole: boolean): boolean =>
-      isObject(value) &&
-      (whole
-        ? Number.isInteger(value.x) && Number.isInteger(value.y)
-        : Number.isFinite(value.x) && Number.isFinite(value.y)),
-    checkSprite = (where: string, sprite: unknown, allowed: string[]): void => {
-      if (typeof sprite !== 'string' || sprite === '') {
-        refuse(`${where} must name a sprite.`);
-      }
-
-      const unknown = placeholders(sprite as string).filter(
-        (name) => !allowed.includes(name)
-      );
-
-      if (unknown.length > 0) {
-        refuse(
-          `${where} has {${unknown.join('}, {')}}, but the map fills ${
-            allowed.length > 0 ? `only {${allowed.join('}, {')}}` : 'none'
-          } here.`
-        );
-      }
-    },
-    checkColouring = (where: string, colouring: unknown): void => {
-      if (!isObject(colouring)) {
-        refuse(`${where} must say how player colours go on.`);
-      }
-
-      const { mode, keys, colours } = colouring as { [key: string]: unknown };
-
-      // An overlay in the player's colour is typed for Civ2's shield, but cannot be drawn yet (#152).
-      if (mode !== 'replaceColours') {
-        refuse(
-          `${where}.mode ${JSON.stringify(
-            mode
-          )} cannot be drawn yet: only replaceColours.`
-        );
-      }
-
-      if (!isStringList(keys) || keys.length === 0 || !keys.every(isColour)) {
-        refuse(`${where}.keys must list the colours to replace.`);
-      }
+      ]);
 
       if (
-        colours !== undefined &&
-        !(
-          Array.isArray(colours) &&
-          colours.length === (keys as string[]).length &&
-          colours.every((index) => isWholeNumber(index, 0))
+        typeof isolated === 'string' &&
+        placeholders(isolated).some(
+          (placeholder) => !values.includes(placeholder)
         )
       ) {
         refuse(
-          `${where}.colours must give a player's colour, by whole index, for each key.`
+          `families.${key}.isolated must name a sprite with no placeholders but ${listed(
+            values
+          )}.`
         );
       }
+    }
+  );
+
+  fills('units.sprite', units.sprite, ['unit']);
+  fills('units.fortified', units.fortified, []);
+  fills('cities.sprite', cities.sprite, []);
+
+  (['units', 'cities'] as const).forEach((section) => {
+    const { keys, colours } = descriptor[section].colouring as {
+      keys: string[];
+      colours?: number[];
     };
 
-  checkSprite('units.sprite', units.sprite, ['unit']);
-  checkSprite('units.fortified', units.fortified, []);
-  checkColouring('units.colouring', units.colouring);
+    if (colours !== undefined && colours.length !== keys.length) {
+      refuse(
+        `${section}.colouring.colours must give a player's colour, by whole index, for each key.`
+      );
+    }
+  });
 
-  if (!isPoint(units.stackOffset, true)) {
-    refuse('units.stackOffset must have a whole x and y in px.');
-  }
+  const icon = cities.labels.disorderIcon;
 
-  const status = units.status as { [key: string]: unknown };
-
-  if (!isPoint({ x: status.x, y: status.baseline }, false)) {
-    refuse('units.status must have an x and a baseline, as parts of the tile.');
-  }
-
-  // Each city a sprite per style, size and walls is typed for Civ2, but cannot be drawn yet (#152).
-  if (cities.mode !== 'box') {
-    refuse(
-      `cities.mode ${JSON.stringify(
-        cities.mode
-      )} cannot be drawn yet: only box.`
-    );
-  }
-
-  checkSprite('cities.sprite', cities.sprite, []);
-  checkColouring('cities.colouring', cities.colouring);
-
-  if (!isWholeNumber(cities.inset, 0)) {
-    refuse('cities.inset must be a whole number of px, 0 or more.');
-  }
-
-  if (!isColour(cities.occupied)) {
-    refuse('cities.occupied must be a colour.');
-  }
-
-  const labels = cities.labels as { [key: string]: unknown };
-
-  if (
-    !(['x', 'sizeBaseline', 'nameBaseline'] as const).every((anchor) =>
-      Number.isFinite(labels[anchor])
-    )
-  ) {
-    refuse(
-      'cities.labels must have an x, a sizeBaseline and a nameBaseline, as parts of the tile.'
-    );
-  }
-
-  // Within the tile, where the region a label is redrawn in reaches (`CityNames.reach()`).
-  if (!((labels.x as number) >= 0 && (labels.x as number) <= 1)) {
-    refuse('cities.labels.x must be within the tile, from 0 to 1.');
-  }
-
-  const { width, height } = json.tile as { [key: string]: number },
-    icon = labels.disorderIcon as { [key: string]: number };
-
-  if (
-    !isPoint(icon, true) ||
-    icon.x < 0 ||
-    icon.y < 0 ||
-    icon.x >= width ||
-    icon.y >= height
-  ) {
+  if (icon.x >= tile.width || icon.y >= tile.height) {
     refuse(
       'cities.labels.disorderIcon must have a whole x and y in px, within the tile.'
     );
   }
 
-  return {
-    ...json,
-    ui: checkUi(json.ui, refuse),
-  } as unknown as TilesetDescriptor;
-};
-
-// `ui` with Civ1's size for each one it leaves out, all of them when there is none, once every size it gives is a whole
-//  number of px. A new object each time, so no two tilesets share one.
-const checkUi = (
-  ui: unknown = {},
-  refuse: (problem: string) => never
-): TilesetUi => {
-  if (!isObject(ui) || (ui.citizen !== undefined && !isObject(ui.citizen))) {
-    refuse('ui must be an object, and its citizen too.');
-  }
-
-  const {
-      icon,
-      citizen = {},
-      cursor,
-    } = ui as {
-      [key: string]: unknown;
-      citizen?: { [key: string]: unknown };
-    },
-    size = (path: string, value: unknown, fallback: number): number => {
-      if (value === undefined) {
-        return fallback;
-      }
-
-      if (!isWholeNumber(value, 1)) {
-        refuse(`${path} must be a whole number of px, 1 or more.`);
-      }
-
-      return value as number;
-    };
+  // Civ1's size for each one `ui` leaves out, all of them when there is none. A new object each time, so no two
+  //  tilesets share one.
+  const ui: Partial<Omit<TilesetUi, 'citizen'>> & {
+    citizen?: Partial<TilesetUi['citizen']>;
+  } = descriptor.ui ?? {};
 
   return {
-    icon: size('ui.icon', icon, defaultUi.icon),
-    citizen: {
-      width: size('ui.citizen.width', citizen.width, defaultUi.citizen.width),
-      step: size('ui.citizen.step', citizen.step, defaultUi.citizen.step),
+    ...descriptor,
+    ui: {
+      icon: ui.icon ?? defaultUi.icon,
+      citizen: {
+        width: ui.citizen?.width ?? defaultUi.citizen.width,
+        step: ui.citizen?.step ?? defaultUi.citizen.step,
+      },
+      cursor: ui.cursor ?? defaultUi.cursor,
     },
-    cursor: size('ui.cursor', cursor, defaultUi.cursor),
   };
 };
 
