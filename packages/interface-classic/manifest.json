@@ -11,7 +11,8 @@
     "choices": "classic",
     "choiceList": "selectionWindow",
     "unitPanel": "details",
-    "talks": "windows"
+    "talks": "windows",
+    "mapMenus": "popups"
   },
   "features": []
 }

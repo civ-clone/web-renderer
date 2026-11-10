@@ -14,10 +14,10 @@ import UiMenu, {
   UiMenuOptions,
   openMenu,
   placeMenu,
-} from '@civ-clone/ui-windows/components/UiMenu';
+} from '@civ-clone/ui-interface-modern/components/UiMenu';
 import openUnitMenu, {
   squareLine,
-} from '@civ-clone/ui-windows/components/UiUnitMenu';
+} from '@civ-clone/ui-interface-modern/components/UiUnitMenu';
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
 import PopupMenu from '@civ-clone/ui-component-popup-menu/PopupMenu';

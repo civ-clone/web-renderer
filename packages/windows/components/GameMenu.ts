@@ -17,11 +17,7 @@ import Civilopedia from './Civilopedia';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
 import GameOptions from './GameOptions';
 import { Player } from '@civ-clone/ui-protocol/types';
-import PopupMenu, {
-  hasPopupMenu,
-} from '@civ-clone/ui-component-popup-menu/PopupMenu';
-import UiMenu, { UiMenuItem } from './UiMenu';
-import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
+import { GameMenuItem, GameMenuRows, mapMenus } from './mapMenus';
 import { windowKey } from '@civ-clone/ui-component-window/windowEyebrows';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ScienceReport from './ScienceReport';
@@ -272,7 +268,6 @@ export class GameMenu extends Element {
   #portal: Portal;
   #transport: Transport;
   #cheatsEnabled: boolean;
-  #menu: UiMenu | null = null;
 
   constructor(
     element: HTMLElement,
@@ -348,16 +343,10 @@ export class GameMenu extends Element {
     });
   }
 
-  // What the menu offers (#808), worked out as it opens, as the cheats can be turned on mid-game: the classic menu lists
-  //  them in its old order, and the new one in sections, with the rows that end the game last.
-  #rows(): {
-    game: UiMenuItem[];
-    reports: UiMenuItem[];
-    reference: UiMenuItem[];
-    cheats: UiMenuItem[];
-    end: UiMenuItem[];
-  } {
-    const game: UiMenuItem[] = [
+  // What the menu offers (#808), worked out as it opens, as the cheats can be turned on mid-game: the interface's menu
+  //  lays the sections out (#860).
+  #rows(): GameMenuRows {
+    const game: GameMenuItem[] = [
         {
           label: t('GameMenu.save-game'),
           key: 'Shift+S',
@@ -385,7 +374,7 @@ export class GameMenu extends Element {
       ],
       // Retire ends the game with your score (#176); Quit leaves it for the main menu, reloading for a fresh worker as
       //  loading a save does (#362).
-      end: UiMenuItem[] = [
+      end: GameMenuItem[] = [
         {
           label: t('GameMenu.retire'),
           danger: true,
@@ -413,7 +402,7 @@ export class GameMenu extends Element {
           },
         },
       ],
-      reports: UiMenuItem[] = [
+      reports: GameMenuItem[] = [
         {
           label: t('GameMenu.city-status'),
           key: windowKey('city-status'),
@@ -475,7 +464,7 @@ export class GameMenu extends Element {
           },
         },
       ],
-      reference: UiMenuItem[] = [
+      reference: GameMenuItem[] = [
         {
           label: t('GameMenu.find-city'),
           key: windowKey('find-city'),
@@ -491,7 +480,7 @@ export class GameMenu extends Element {
           },
         },
       ],
-      cheats: UiMenuItem[] = this.#cheatsEnabled
+      cheats: GameMenuItem[] = this.#cheatsEnabled
         ? [
             {
               label: t('GameMenu.cheat.reveal-map'),
@@ -632,98 +621,13 @@ export class GameMenu extends Element {
         'menu'
       )}</button>`
     );
-    // Whether the classic menu was open as the button was pressed: that press closes it, as any press does, and its
-    //  click mustn't open it again (#710).
-    let openAtPress = false;
 
     button.setAttribute('aria-haspopup', 'menu');
 
-    if (hasFeature('sharedMenus')) {
-      button.setAttribute('aria-expanded', 'false');
-    }
+    // The interface's menu (#860): its own, under the button, or a popup.
+    mapMenus.current().gameMenuButton(button, this, () => this.#rows());
 
-    this.append(
-      h(button, {
-        // Enter and Space on the classic button are the button's own, to open its menu (#853): kept from the game,
-        //  where Enter ends the turn and Space is an order, either of which would be done instead. The new interface's
-        //  menu takes its keys from the page while it is open, so its button is left alone.
-        keydown: (event: KeyboardEvent) => {
-          if (
-            !hasFeature('sharedMenus') &&
-            (event.key === 'Enter' || event.key === ' ')
-          ) {
-            event.stopPropagation();
-          }
-        },
-        pointerdown: () => {
-          openAtPress = hasPopupMenu(this);
-        },
-        click: (event: MouseEvent) => {
-          if (hasFeature('sharedMenus')) {
-            // From the keyboard, a click with no pointer behind it.
-            this.#toggle(button, event.detail === 0);
-
-            return;
-          }
-
-          const closedByThisPress = openAtPress && event.detail !== 0;
-
-          openAtPress = false;
-
-          if (closedByThisPress) {
-            return;
-          }
-
-          // Where the button is on the page: the menu is appended to the body, and the button is in the top bar's
-          //  flow, not placed by the game menu itself (#697).
-          const { left, top } = button.getBoundingClientRect(),
-            { game, reports, reference, cheats, end } = this.#rows();
-
-          new PopupMenu(
-            this,
-            left + window.scrollX,
-            top + window.scrollY,
-            [...game, ...end, ...reports, ...reference, ...cheats].map(
-              ({ label, action }) => ({ label, action: () => action() })
-            ),
-            {
-              align: 'right',
-              // From the keyboard, a click with no pointer behind it: the first item takes the focus (#853).
-              byKeyboard: event.detail === 0,
-              fullWidth: true,
-              label: t('GameMenu.label'),
-              restoreFocus: button,
-            }
-          );
-        },
-      })
-    );
-  }
-
-  // The new interface's menu (#808) under the button, or closed when it's open: the button toggles it.
-  #toggle(button: HTMLButtonElement, byKeyboard: boolean): void {
-    if (this.#menu?.isOpen()) {
-      this.#menu.close({ restoreFocus: byKeyboard });
-
-      return;
-    }
-
-    const { game, reports, reference, cheats, end } = this.#rows();
-
-    this.#menu = new UiMenu({
-      label: t('GameMenu.label'),
-      launcher: button,
-      byKeyboard,
-      anchor: { below: button.getBoundingClientRect() },
-      className: 'ui-game-menu',
-      sections: [
-        { items: game },
-        { heading: t('GameMenu.section.reports'), items: reports },
-        { heading: t('GameMenu.section.reference'), items: reference },
-        { heading: t('GameMenu.section.cheats'), items: cheats },
-        { rule: true, items: end },
-      ],
-    });
+    this.append(button);
   }
 }
 

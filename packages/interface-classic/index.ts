@@ -20,6 +20,8 @@ import { classicCityLayout } from '@civ-clone/ui-windows/components/City';
 import { cityScreen } from '@civ-clone/ui-windows/components/openCity';
 import talksWindows from './components/talksWindows';
 import manifest from './manifest.json';
+import mapMenus from '@civ-clone/ui-windows/components/mapMenus';
+import popupMenus from './components/popupMenus';
 import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import talks from '@civ-clone/ui-windows/components/talks';
@@ -105,5 +107,7 @@ unitPanel.provide('details', ({ unitInfo, unitActionArea }, deps) => {
 });
 
 talks.provide('windows', talksWindows);
+
+mapMenus.provide('popups', popupMenus);
 
 registerInterface(manifest);
