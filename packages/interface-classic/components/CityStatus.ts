@@ -134,7 +134,11 @@ export class CityStatus extends FilterableWindow {
   }
 
   override update() {
-    Promise.all(this.#cities.map((city) => buildCityRow(city))).then((rows) =>
+    // The cities these rows are of: by the time one is clicked, `#cities` may be a newer list, whose rows are still
+    //  being built.
+    const cities = this.#cities;
+
+    Promise.all(cities.map((city) => buildCityRow(city))).then((rows) =>
       super.update(
         s(
           '<table></table>',
@@ -159,8 +163,8 @@ export class CityStatus extends FilterableWindow {
             );
 
             return h(row, {
-              // A row for each of the cities.
-              click: () => this.#portal.openCity(this.#cities[index]!),
+              // A row for each of them.
+              click: () => this.#portal.openCity(cities[index]!),
             });
           })
         )
