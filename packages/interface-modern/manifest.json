@@ -16,5 +16,6 @@
     "turnControls": "nextTurn",
     "windowChrome": "framed"
   },
-  "features": ["assetsInOptions", "squareTooltips"]
+  "features": ["assetsInOptions", "squareTooltips"],
+  "formerly": ["new"]
 }

@@ -13,11 +13,11 @@ import {
 } from '@civ-clone/ui-windows/components/choiceList';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
-  DEFAULT_INTERFACE,
   FEATURES,
   SLOTS,
   applyInterface,
   currentInterface,
+  defaultInterface,
   defineSlot,
   definedSlots,
   hasFeature,
@@ -25,7 +25,11 @@ import {
   registerInterface,
 } from '@civ-clone/ui-client/lib/interfaceMode';
 import { join } from 'path';
-import { uiThemeFrom } from '@civ-clone/ui-widgets/lib/theme';
+import {
+  defaultUiTheme,
+  uiThemeFrom,
+  uiThemes,
+} from '@civ-clone/ui-widgets/lib/theme';
 
 const failures: string[] = [];
 let checks = 0;
@@ -51,11 +55,7 @@ expect(
   ['modern', 'classic']
 );
 
-expect(
-  'the default is one of them',
-  interfaces().some(({ id }) => id === DEFAULT_INTERFACE),
-  true
-);
+expect('the default is the first of them', defaultInterface(), 'modern');
 
 const [modern, classic] = interfaces();
 
@@ -188,6 +188,9 @@ expect(
   // A slot or a feature that isn't one, and a slot left out.
   { ...modern, slots: { ...modern.slots, cityScren: 'window' } },
   { ...modern, features: ['squareTooltip'] },
+  // Former ids that aren't a list of them.
+  { ...modern, formerly: 'new' },
+  { ...modern, formerly: [7] },
   (({ cityScreen, ...slots }) => ({ ...modern, slots }))(modern.slots),
 ].forEach((manifest) => {
   let threw = false;
@@ -200,6 +203,15 @@ expect(
 
   expect(`${JSON.stringify(manifest)?.slice(0, 40)} is refused`, threw, true);
 });
+
+// Each theme is registered by the interface that brings it (#861), in the same order, and the default is the one the
+//  stylesheet draws with no attribute.
+expect(
+  'the interfaces register their themes',
+  uiThemes().map(({ id }) => id),
+  [modern.theme, classic.theme]
+);
+expect('Slate and brass is the default', defaultUiTheme(), 'slate');
 
 expect(
   'an interface brings its theme',

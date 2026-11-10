@@ -63,6 +63,11 @@ manifest (#824) and an `index.ts` that provides the pieces it uses to the slots 
 (#167) carries no layout. An interface carries the layout and names the theme it comes with, which the player's own
 choice of theme outranks.
 
+An interface also brings its theme (#861): its `index.ts` registers it with `registerTheme` (`widgets/lib/theme.ts`),
+and its tokens are in its own `styles/` (`interface-modern/styles/_slate.scss`,
+`interface-classic/styles/_civ1-classic.scss`), which `src/css/app.scss` puts on `:root`. Options lists the themes registered, in order. The one registered as the
+default (Slate and brass) is the one `app.scss` draws on `:root` with no `data-ui-theme`; the others are named by it.
+
 - **Slots** are parts of the interface with more than one implementation. Shared code calls `defineSlot` where the part
   is put together, such as `reports.ts`, and uses whatever the interface in use provided. A manifest's `slots` says
   which implementation to use.
@@ -75,11 +80,11 @@ choice of theme outranks.
   a shared package. Each slot is typed by what its callers need (`Window`, `CityLayout`, `TitleScreen`), so shared
   code names no interface's pieces.
 - **Boundaries:** nothing depends on an interface, an interface doesn't depend on `game`, and only
-  `src/js/interfaces.ts`, which `frontend.ts` loads and which lists what civ.one offers, imports one.
-  `DEFAULT_INTERFACE` must be one of them.
+  `src/js/interfaces.ts`, which `frontend.ts` loads and which lists what civ.one offers, imports one. The first it
+  lists is the default (`defaultInterface()`).
 - Only Options asks which interface is in use. `interfaceManifests` holds that, and `packages` the boundaries.
-- An interface that's renamed keeps its old id in `RENAMED` (`lib/interfaceMode.ts`), so stored choices and old links
-  still find it: `new` is now `modern`.
+- An interface that's renamed lists its old ids in its manifest's `formerly`, so stored choices and old links still
+  find it: `new` is now `modern`.
 
 A new interface is a package beside these two, with its manifest and an `index.ts` providing what it fills its slots
 with, a line in `src/js/interfaces.ts` and one in the root `package.json`. Test suites import `tests/ui/lib/interfaces.ts` straight after `./lib/dom`

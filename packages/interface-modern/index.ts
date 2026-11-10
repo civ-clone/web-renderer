@@ -27,6 +27,7 @@ import {
   InterfaceManifest,
   registerInterface,
 } from '@civ-clone/ui-client/lib/interfaceMode';
+import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
 import talks from '@civ-clone/ui-windows/components/talks';
@@ -160,6 +161,14 @@ turnControls.provide(
 );
 
 windowChrome.provide('framed', framedChrome);
+
+// The theme it comes with (#736), Slate and brass, whose tokens are in `styles/_slate.scss`: the default, which the
+//  stylesheet draws on `:root` with no `data-ui-theme`.
+registerTheme({
+  id: 'slate',
+  name: 'GameOptions.theme-choice.slate',
+  default: true,
+});
 
 // It fills every slot, which the build checks; what it names as features is checked as it registers (#861).
 const checked: Pick<InterfaceManifest, 'slots'> = manifest;

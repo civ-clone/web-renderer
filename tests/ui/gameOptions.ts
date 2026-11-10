@@ -2,6 +2,11 @@
 // back on the next page load, falling back to the defaults when storage can't
 // be used (#343).
 
+// Must stay first: modules read `document` as they load. The interfaces registered, as the page does, give the
+//  `interface` option its default.
+import './lib/dom';
+import './lib/interfaces';
+
 import GameOptionsRegistry, {
   OptionStorage,
   instance as options,

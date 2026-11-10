@@ -1,4 +1,4 @@
-import { DEFAULT_INTERFACE } from '@civ-clone/ui-client/lib/interfaceMode';
+import { defaultInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 
@@ -24,8 +24,8 @@ export const setOptionDefaults = (): void => {
     // Light, dark or the system's (#706): see `COLOUR_SCHEMES`.
     colourScheme: 'system',
     // Which interface (#735): see `interfaces()`.
-    interface: DEFAULT_INTERFACE,
-    // Which theme the interface is drawn in (#735), or nothing for the one it comes with (#824): see `UI_THEMES`.
+    interface: defaultInterface(),
+    // Which theme the interface is drawn in (#735), or nothing for the one it comes with (#824): see `uiThemes()`.
     uiTheme: '',
     // How the unit awaiting orders is marked (#753): the theme's, or the blink, the ring or both. See `UNIT_MARKER_CHOICES`.
     unitMarker: 'theme',

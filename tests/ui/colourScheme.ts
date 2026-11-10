@@ -13,6 +13,7 @@ import {
   COLOUR_SCHEMES,
   applyColourScheme,
   applyUiTheme,
+  registerTheme,
 } from '@civ-clone/ui-widgets/lib/theme';
 
 const failures: string[] = [];
@@ -82,6 +83,16 @@ expect(
   root.hasAttribute('data-ui-theme'),
   false
 );
+
+// A theme is whatever an interface registers (#861).
+registerTheme({ id: 'test', name: 'test' });
+applyUiTheme('test', root);
+expect(
+  'a theme registered later is named by data-ui-theme',
+  root.getAttribute('data-ui-theme'),
+  'test'
+);
+applyUiTheme('slate', root);
 
 {
   const items: { [key: string]: string } = {},

@@ -1,10 +1,10 @@
 import { AUTOSAVE_CHOICES } from '@civ-clone/ui-client/lib/browserSaves';
 import {
   COLOUR_SCHEMES,
-  UI_THEMES,
   applyColourScheme,
   applyUiTheme,
   currentUiTheme,
+  uiThemes,
 } from '@civ-clone/ui-widgets/lib/theme';
 import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -180,13 +180,18 @@ export const interfaceRows = (
 /** Theme (#735), applied as it's chosen. Choosing also drops the visit's `?theme=`, which would outrank it next load. */
 export const themeRow = (): HTMLElement => {
   const current = currentUiTheme(),
+    // The interfaces that bring them register them (#861), so what one says is never treated as markup either.
     select = s<HTMLSelectElement>(
-      `<select>${UI_THEMES.map(
-        (choice) =>
-          `<option value="${choice}"${
-            choice === current ? ' selected' : ''
-          }>${t(`GameOptions.theme-choice.${choice}`)}</option>`
-      ).join('')}</select>`
+      '<select></select>',
+      ...uiThemes().map(({ id, name }) => {
+        const option = s<HTMLOptionElement>('<option></option>');
+
+        option.value = id;
+        option.textContent = t(name);
+        option.toggleAttribute('selected', id === current);
+
+        return option;
+      })
     );
 
   return s(

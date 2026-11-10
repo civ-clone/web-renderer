@@ -1,5 +1,6 @@
-@use 'themes/civ1-classic';
-@use 'themes/slate';
+// Each theme's tokens come with the interface that brings it (#861), which registers it for Options.
+@use '../../packages/interface-classic/styles/civ1-classic';
+@use '../../packages/interface-modern/styles/slate';
 
 @import 'fonts';
 
@@ -20,7 +21,8 @@
   @include slate.dark();
 }
 
-// The theme in use (#736), until #167's manifests: Slate and brass unless `data-ui-theme` names another.
+// The theme in use (#736), until #167's manifests: Slate and brass, the default `registerTheme` names, unless
+//  `data-ui-theme` names another.
 :root[data-ui-theme='civ1-classic'] {
   @include civ1-classic.light();
 }

@@ -27,6 +27,7 @@ import {
   InterfaceManifest,
   registerInterface,
 } from '@civ-clone/ui-client/lib/interfaceMode';
+import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
@@ -133,6 +134,12 @@ turnControls.provide('orbs', (actionArea, { portal, transport }) => {
 });
 
 windowChrome.provide('plain', plainChrome);
+
+// The theme it comes with (#736), Civ1 classic, whose tokens are in `styles/_civ1-classic.scss`.
+registerTheme({
+  id: 'civ1-classic',
+  name: 'GameOptions.theme-choice.civ1-classic',
+});
 
 // It fills every slot, which the build checks; what it names as features is checked as it registers (#861).
 const checked: Pick<InterfaceManifest, 'slots'> = manifest;
