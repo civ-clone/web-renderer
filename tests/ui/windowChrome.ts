@@ -553,6 +553,15 @@ const run = async (): Promise<void> => {
 
     expect(`${mode}: and goes on moving it`, at(), ['130px', '140px']);
 
+    // A finger moves by fractions of a pixel, which add up.
+    for (let step = 1; step <= 40; step++) {
+      pointer('pointermove', 180 + step * 0.25, 150 - step * 0.25);
+    }
+
+    expect(`${mode}: by fractions of a pixel too`, at(), ['140px', '130px']);
+
+    pointer('pointermove', 180, 150);
+
     pointer('pointermove', 5180, -4850);
 
     expect(

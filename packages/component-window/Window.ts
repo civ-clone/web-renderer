@@ -657,13 +657,13 @@ export class Window
       return;
     }
 
-    // Where it was last put, which is on the element itself once it has been moved.
+    // Where it was last put, which is on the element itself once it has been moved. To the fraction of a pixel: a
+    //  finger or a pen moves by less than one at a time, and many of those add up.
     const style = this.element().style,
       current = (side: 'top' | 'left'): number =>
-        parseInt(
+        parseFloat(
           style.getPropertyValue(side) ||
-            getComputedStyle(this.element()).getPropertyValue(side),
-          10
+            getComputedStyle(this.element()).getPropertyValue(side)
         );
 
     this.#place({ x: current('left') + x, y: current('top') + y });
