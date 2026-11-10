@@ -265,6 +265,53 @@ const run = async (): Promise<void> => {
     [null, 3]
   );
 
+  // Each notice tinted by what it's about (#416): the first group naming its key, or none for any other.
+  const categoryOf = (key: string) => {
+    rows.build([notice(`notice-${key}`, key)], player);
+
+    return (area.querySelector('.ui-notification-row') as HTMLElement).dataset
+      .category;
+  };
+
+  expect(
+    'a notice tinted by what it is about',
+    [
+      'City.captured-from-us',
+      'Barbarians.uprising.guerrilla',
+      'Barbarians.ransom',
+      'Diplomat.advance-stolen',
+      'Diplomat.sabotaged.production.wonder',
+      'Player.research-complete',
+      'Wonder.obsolete',
+      'City.building-complete.wonder',
+      'Player.declaration-broken',
+      'City.building-complete.unit',
+    ].map(categoryOf),
+    [
+      'military',
+      'military',
+      'gold',
+      'science',
+      'military',
+      'science',
+      'civics',
+      'civics',
+      'diplomacy',
+      undefined,
+    ]
+  );
+
+  expect(
+    'and a city in disorder by its kind alone',
+    (() => {
+      rows.build([disorder('Ur')], player);
+
+      return (area.querySelector('.ui-notification-row') as HTMLElement).dataset
+        .category;
+    })(),
+    undefined
+  );
+
   // Where the theme moves them (#753), a row going fades first: it stays, taking no input, until its animation ends,
   //  and the rows staying are drawn in order around it. linkedom draws nothing, so the stylesheet's answer is given
   //  here.

@@ -79,7 +79,11 @@ let activeUnit: Unit | null = unit,
   actions: Array<{ _: string; value?: unknown }> = [];
 
 // The Next Turn button under the new interface (#702): null, as under the classic one, but for its own checks.
-let nextTurnButton: { press(): void; skip(): void } | null = null;
+let nextTurnButton: {
+  hasMeeting?(): boolean;
+  press(): void;
+  skip(): void;
+} | null = null;
 
 const actionArea = document.createElement('div');
 
@@ -774,6 +778,17 @@ const run = async (): Promise<void> => {
   waiting = false;
 
   expect('nor while waiting', [calls, sent], [[], []]);
+
+  // Talks waiting on an answer (#702): Enter presses for them even while waiting.
+  nextTurnButton.hasMeeting = () => true;
+  waiting = true;
+  press({ key: 'Enter' });
+  waiting = false;
+  nextTurnButton.hasMeeting = () => false;
+
+  expect('but talks waiting on an answer are pressed then', calls, [
+    'next turn',
+  ]);
 
   sidebarButton.remove();
   report.remove();

@@ -15,6 +15,7 @@ import DebugFlags, {
 } from '@civ-clone/ui-client/debug/DebugFlags';
 import { IntelligenceRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/NextTurn';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -104,11 +105,15 @@ const sent: unknown[] = [],
     send: (name: string, data: unknown) => sent.push([name, data]),
   } as unknown as Transport;
 
-const debugFlags = new DebugFlags(false),
-  dispose = ChoiceHandler.listen(transport, {
-    clearKeys: () => {},
-    debugFlags,
-  });
+const debugFlags = new DebugFlags(false);
+// What the Next Turn button is told of the talks waiting on an answer (#702).
+const meetings: (PendingMeeting | null)[] = [];
+
+const dispose = ChoiceHandler.listen(transport, {
+  clearKeys: () => {},
+  debugFlags,
+  meeting: (meeting) => meetings.push(meeting),
+});
 
 const action = (_: string, kinds: string[], fields: object) => ({
     _,
@@ -217,6 +222,11 @@ const run = async (): Promise<void> => {
     ],
     ['Frederick the Great', 'Germans']
   );
+  expect(
+    'the Next Turn button is told the talks wait on an answer',
+    meetings.map((meeting) => meeting?.leader ?? null),
+    ['Frederick the Great']
+  );
   expect('and asks for what the player knows of them', requests, [
     'intelligence',
   ]);
@@ -305,6 +315,9 @@ const run = async (): Promise<void> => {
   key('1');
 
   expect('its number takes it', sent, [['chooseFromList', 'ok']]);
+  expect('and that they no longer do once answered', meetings.slice(-1), [
+    null,
+  ]);
 
   // A demand for tribute: the refusal first, as the engine offers it (#674).
   const demand = demandTribute(germans, { _: 'Gold', value: 100 }, 'gold'),
@@ -520,6 +533,35 @@ const run = async (): Promise<void> => {
       open().length,
     ],
     ['Frederick the Great', 0, 1]
+  );
+
+  // Two talks waiting at once: answering one leaves the other on the Next Turn button (#702).
+  top().querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+  reset();
+
+  // Earlier windows here were taken out of the page unanswered: what the button had before these two.
+  const before = meetings[meetings.length - 1] ?? null;
+
+  intelligence = Promise.resolve(rows);
+  step([initiate], [['first', answer('Accept', initiate)]]);
+
+  const first = top();
+
+  step([initiate], [['second', answer('Accept', initiate)]]);
+  top().querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+
+  expect(
+    'answering one of two talks leaves the other waiting',
+    [sent, meetings[meetings.length - 1]?.leader ?? null],
+    [[['chooseFromList', 'second']], 'Frederick the Great']
+  );
+
+  first.querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+
+  expect(
+    'and answering both leaves none',
+    [sent.length, meetings[meetings.length - 1] ?? null],
+    [2, before]
   );
 
   reset();

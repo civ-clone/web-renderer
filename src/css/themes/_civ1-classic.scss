@@ -78,6 +78,15 @@
   --ui-action-end-turn: #25b906;
   // The units awaiting orders, on the Next Turn button (#702), which have no orb of their own.
   --ui-action-units: #7a4fa8;
+  // A notice by what it's about (#416): military, science, gold, Wonders and civics, and diplomacy. Any other notice
+  //  keeps `--ui-action-notice`.
+  --ui-notice-military: var(--ui-negative);
+  // Science as research's orb, not the yields' purple, which the units have; civics and gold in their own EGA colours,
+  //  clear of disorder's red and the plain notice's gold.
+  --ui-notice-science: var(--ui-action-research);
+  --ui-notice-gold: #ffff55;
+  --ui-notice-civics: #aa55aa;
+  --ui-notice-diplomacy: var(--y-trade);
   --ui-orb-ring: radial-gradient(
     circle,
     transparent 60%,

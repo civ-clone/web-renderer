@@ -59,7 +59,12 @@ export type InputControllerDeps = {
   gameMenu: { enableCheats(): void; findCity(): void; saveGame(): void };
   // Under the new interface (#702): Enter presses the Next Turn button and Shift+Enter skips its item, in place of
   //  Enter ending the turn. Read on every key press, as the HUD makes it.
-  nextTurn?: () => { press(): void; skip(): void } | null;
+  //  While waiting, only talks waiting on the player's answer are pressed (`hasMeeting`).
+  nextTurn?: () => {
+    hasMeeting?(): boolean;
+    press(): void;
+    skip(): void;
+  } | null;
   mapView: {
     centre(tile: Tile): void;
     toggleUnits(): void;
@@ -207,7 +212,7 @@ export class InputController {
       button !== null &&
       (key === 'Enter' || (event.key === 'Enter' && event.shiftKey)) &&
       !modalWindow &&
-      !waiting() &&
+      (!waiting() || (button.hasMeeting?.() ?? false)) &&
       // Once for a key held down: not a run through the queue.
       !event.repeat &&
       (!takesEnter(event.target) ||

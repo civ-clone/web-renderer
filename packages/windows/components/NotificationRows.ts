@@ -8,6 +8,7 @@ import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
 import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { setNoticeCategory } from './lib/noticeCategory';
 import { t } from 'i18next';
 
 // The notification rows (#416), above the Next Turn button under the new interface (#735): one row for each notice or
@@ -169,6 +170,7 @@ export class NotificationRows extends Element {
     const count = group.actions.length;
 
     row.dataset.kind = group.kind;
+    setNoticeCategory(row, group.actions[0]);
     row.querySelector('.ui-notification-title')!.textContent = this.#title(
       group.actions[0]
     );

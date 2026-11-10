@@ -5,10 +5,12 @@ import Action from './Actions/Action';
 import Notice from './Actions/Notice';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
+import { TransportTranslatedNotice } from '@civ-clone/ui-protocol/Transport';
 import button from '@civ-clone/ui-component-button/button';
 import { createAction } from './Actions';
 import endTurn from '@civ-clone/ui-client/lib/endTurn';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
+import { setNoticeCategory } from './lib/noticeCategory';
 import { t } from 'i18next';
 import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 
@@ -16,6 +18,15 @@ import tooltip from '@civ-clone/ui-component-tooltip/Tooltip';
 //  the player next and does it when pressed, the item's place in the queue under it, and End turn once nothing is
 //  left. Enter presses it and Shift+Enter skips to the next item (`InputController`). Each item runs the same `Action`
 //  its orb would, so the windows it opens are the ones the orbs open.
+
+// The worker's notices for whose turn it is, and what the button says for each while waiting.
+const waitingKeys: Record<string, string> = {
+  'Game.progress.player': 'NextTurn.waiting.player',
+  'Game.progress.unmet-player': 'NextTurn.waiting.unmet-player',
+};
+
+/** Talks the engine is waiting on an answer to (#702): who they're with, and how to bring their window back. */
+export type PendingMeeting = { leader: string; show: () => void };
 
 export type NextTurnDeps = {
   portal: Portal;
@@ -30,6 +41,9 @@ export class NextTurn extends Element {
   // Where the button is in the queue: kept across rebuilds, so a skipped item stays skipped until the queue wraps.
   #index = 0;
   #items: NextTurnItem[] = [];
+  // Talks waiting on the player's answer: ahead of everything else, even while waiting for the other civilizations,
+  //  as they may have started them, and nothing goes on until they're answered.
+  #meeting: PendingMeeting | null = null;
   #player: Player | null = null;
   // Standing notices opened this turn, which leave the queue until the next: civil disorder stays until it's put
   //  right, and doesn't hold up the turn (a notice of its own dismisses itself when opened).
@@ -39,6 +53,8 @@ export class NextTurn extends Element {
   // The turn the queue is for: a new one starts it afresh, even if no waiting build came between (#702).
   #turn: number | null = null;
   #waiting = false;
+  // Whose turn it is while waiting, from the line along the top of the page (#588): "Waiting for the Germans…" (#702).
+  #waitingFor: TransportTranslatedNotice | null = null;
 
   constructor(element: HTMLElement, deps: NextTurnDeps) {
     super(element);
@@ -91,9 +107,26 @@ export class NextTurn extends Element {
     this.#draw();
   }
 
+  /** Whether talks are waiting on the player's answer: Enter presses the button for them even while waiting. */
+  hasMeeting(): boolean {
+    return this.#meeting !== null;
+  }
+
+  /** Talks waiting on the player's answer, or null once it's given. */
+  meeting(meeting: PendingMeeting | null): void {
+    this.#meeting = meeting;
+    this.#draw();
+  }
+
   /** Does what the button says: the item's own action, or End turn. */
   press(): void {
     const item = this.#items[this.#index];
+
+    if (this.#meeting !== null) {
+      this.#meeting.show();
+
+      return;
+    }
 
     if (this.#waiting || this.#sent || !item) {
       return;
@@ -143,10 +176,21 @@ export class NextTurn extends Element {
     this.#draw();
   }
 
+  /** Who the game is waiting for: the worker's `Game.progress.player` or `Game.progress.unmet-player` notice, which
+   *  names only a civilization the player has met (#59). Anything else, or null, says the other civilizations. */
+  waitingFor(notice: TransportTranslatedNotice | null): void {
+    this.#waitingFor =
+      notice !== null && notice.key in waitingKeys ? notice : null;
+
+    if (this.#waiting) {
+      this.#draw();
+    }
+  }
+
   /** On to the next item, back to the first after the last. End turn is one of them when it's offered, which is when
    *  only the notices, which don't hold up the turn, are left. */
   skip(): void {
-    if (this.#waiting || this.#items.length < 2) {
+    if (this.#meeting !== null || this.#waiting || this.#items.length < 2) {
       return;
     }
 
@@ -193,6 +237,15 @@ export class NextTurn extends Element {
   }
 
   #label(item: NextTurnItem | undefined): string {
+    if (this.#waiting && this.#waitingFor !== null) {
+      return String(
+        t(waitingKeys[this.#waitingFor.key], {
+          ...this.#waitingFor.data,
+          skipOnVariables: false,
+        })
+      );
+    }
+
     if (this.#waiting || !item) {
       return t('Game.waiting');
     }
@@ -221,15 +274,21 @@ export class NextTurn extends Element {
   }
 
   #draw(): void {
-    const item = this.#items[this.#index],
+    const meeting = this.#meeting,
+      // Nothing to press but the talks' window while they wait on an answer.
+      idle = meeting === null && this.#waiting,
+      item = meeting === null ? this.#items[this.#index] : undefined,
       ready = this.#isEndTurn(item),
-      label = this.#label(item),
+      label =
+        meeting === null
+          ? this.#label(item)
+          : t('NextTurn.meeting', { leader: meeting.leader }),
       count = this.#count(),
       next = button('', {
         variant: ready ? 'primary' : 'secondary',
-        hotkey: this.#waiting ? null : 'Enter',
+        hotkey: idle ? null : 'Enter',
         className: 'ui-next-turn',
-        disabled: this.#waiting || this.#sent || !item,
+        disabled: meeting === null && (this.#waiting || this.#sent || !item),
       }),
       text = s('<span class="ui-next-turn-label"></span>');
 
@@ -238,15 +297,25 @@ export class NextTurn extends Element {
 
     if (ready) {
       next.insertAdjacentHTML('afterbegin', glyph('end-turn'));
-    } else if (item && !this.#waiting) {
+    } else if (meeting !== null || (item && !this.#waiting)) {
       // A small orb in the tint the item's own orb has, so each kind has its colour (#702).
-      next.dataset.kind = item.kind === 'units' ? 'units' : item.action._;
+      next.dataset.kind =
+        meeting !== null
+          ? 'meeting'
+          : item!.kind === 'units'
+          ? 'units'
+          : item!.action._;
+
+      if (item?.kind === 'action') {
+        setNoticeCategory(next, item.action);
+      }
+
       next.prepend(
         s('<span class="ui-next-turn-swatch" aria-hidden="true"></span>')
       );
     }
 
-    if (!ready && !this.#waiting && count > 0) {
+    if (meeting === null && !ready && !this.#waiting && count > 0) {
       const place = s('<span class="ui-next-turn-place"></span>');
 
       place.textContent = t('NextTurn.place', {
@@ -269,11 +338,11 @@ export class NextTurn extends Element {
       next,
       () => ({
         title: label,
-        rows: this.#waiting
+        rows: idle
           ? []
           : [
               ['Enter', t('NextTurn.Keys.press')],
-              ...(this.#items.length > 1
+              ...(meeting === null && this.#items.length > 1
                 ? ([['Shift+Enter', t('NextTurn.Keys.skip')]] as [
                     string,
                     string
