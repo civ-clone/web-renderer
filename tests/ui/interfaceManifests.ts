@@ -92,7 +92,7 @@ expect(
 );
 expect(
   'with its own features',
-  [hasFeature('squareTooltips'), hasFeature('windowChrome')],
+  [hasFeature('squareTooltips'), hasFeature('assetsInOptions')],
   [true, false]
 );
 

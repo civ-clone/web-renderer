@@ -31,6 +31,8 @@ import nextTurnQueue from '@civ-clone/ui-client/lib/nextTurnQueue';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import turnControls from '@civ-clone/ui-windows/components/turnControls';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
+import windowChrome from '@civ-clone/ui-component-window/windowChrome';
+import framedChrome from './components/framedChrome';
 
 // The modern interface (#735, #825): its manifest, and the pieces it fills its slots with. Those only it uses are its
 //  own, in `components/`; the rest are shared.
@@ -148,5 +150,7 @@ turnControls.provide(
     };
   }
 );
+
+windowChrome.provide('framed', framedChrome);
 
 registerInterface(manifest);

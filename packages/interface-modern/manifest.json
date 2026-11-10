@@ -13,7 +13,8 @@
     "unitPanel": "card",
     "talks": "meetingWindow",
     "mapMenus": "shared",
-    "turnControls": "nextTurn"
+    "turnControls": "nextTurn",
+    "windowChrome": "framed"
   },
-  "features": ["assetsInOptions", "squareTooltips", "windowChrome"]
+  "features": ["assetsInOptions", "squareTooltips"]
 }

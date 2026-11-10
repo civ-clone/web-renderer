@@ -29,6 +29,8 @@ import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
 import turnControls from '@civ-clone/ui-windows/components/turnControls';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
+import windowChrome from '@civ-clone/ui-component-window/windowChrome';
+import plainChrome from './components/plainChrome';
 
 // The classic interface (#735, #825), after Civ1's own: its manifest, and the pieces it fills its slots with.
 
@@ -121,5 +123,7 @@ turnControls.provide('orbs', (actionArea, { portal, transport }) => {
     nextTurn: () => null,
   };
 });
+
+windowChrome.provide('plain', plainChrome);
 
 registerInterface(manifest);

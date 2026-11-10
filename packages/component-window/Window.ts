@@ -1,12 +1,10 @@
 import { TransientElement, ITransientElement } from './TransientElement';
-import { off, on, s } from '@dom111/element';
+import { s } from '@dom111/element';
 import { Coordinate } from '@civ-clone/ui-protocol/types';
-import { button } from '@civ-clone/ui-component-button/button';
-import eyebrowFor from './windowEyebrows';
 import { glyph } from '@civ-clone/ui-assets/lib/glyphs';
 import { h } from '@civ-clone/ui-widgets/lib/html';
-import { hasFeature } from '@civ-clone/ui-client/lib/interfaceMode';
 import { t } from 'i18next';
+import windowChrome, { WindowChrome } from './windowChrome';
 
 export interface IWindow extends ITransientElement {
   close(): void;
@@ -27,7 +25,8 @@ export type WindowSettings = {
   // Run on Escape, whether or not the window can be closed: the window's own way out, such as a "Cancel" button's.
   cancel: (() => void) | null;
   classes: string | string[];
-  // The line over the title in the new chrome (#738): what kind of window, and its key. By default from its classes.
+  // The line over the title in a chrome that shows one (#738): what kind of window, and its key. By default from its
+  //  classes.
   eyebrow: string | null;
   modal: boolean;
   parent: HTMLElement;
@@ -67,14 +66,21 @@ export class Window
   #body: string | Node;
   // Closed and not shown since: a second `close()` does nothing.
   #closed: boolean = false;
-  // The new chrome (#738), behind the interface flag (#735): read once, as the window is made.
-  #newChrome: boolean = hasFeature('windowChrome');
-  // What had focus as the window opened, to have it back as it closes (#738).
-  #opener: HTMLElement | null = null;
-  // What the new chrome moved out of the body into its footer, and where from: put back before the window is built
-  //  again, so the body it's built from is whole (#738).
-  #adopted: [Element, Element][] = [];
   #title: string;
+  // What the window looks like around its body, which the interface says (#860): chosen once, as the window is made.
+  #chrome: WindowChrome = windowChrome.current()({
+    element: () => this.element(),
+    settings: () => this.options,
+    title: () => this.#title,
+    body: () =>
+      s(
+        '<div class="body"></div>',
+        this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
+      ),
+    headerActions: () => this.#headerActions(),
+    draggable: (header) => this.#draggable(header),
+    close: () => this.close(),
+  });
 
   constructor(title: string, body: string | Node, options: WindowOptions = {}) {
     super(
@@ -125,10 +131,7 @@ export class Window
       this.addClass('modal');
     }
 
-    if (this.#newChrome) {
-      this.addClass('ui-window');
-      this.#bindNewKeys();
-    }
+    this.#chrome.attach();
 
     if (this.options.size === 'auto') {
       this.addClass('size-auto');
@@ -173,26 +176,9 @@ export class Window
   }
 
   build(): void {
-    this.#restoreAdopted();
+    this.#chrome.building();
     this.empty();
-
-    if (this.#newChrome) {
-      this.#buildNew();
-
-      return;
-    }
-
-    const headerActions = this.#headerActions();
-
-    this.append(
-      this.#draggable(
-        s(`<header><h3>${this.#title}</h3></header>`, ...headerActions)
-      ),
-      s(
-        '<div class="body"></div>',
-        this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
-      )
-    );
+    this.#chrome.build();
   }
 
   // The title bar's buttons: maximise and close, where the window can.
@@ -288,201 +274,6 @@ export class Window
     });
   }
 
-  /**
-   * The new chrome (#738): an eyebrow over the title, the body, which is the part that scrolls, and a footer with the
-   *  window's actions, the primary last, showing Enter. A window's own footer, at the end of its body, is moved into it,
-   *  so no window needs to know which chrome it's in; one with none gets a quiet Close.
-   */
-  #buildNew(): void {
-    const eyebrow =
-        this.options.eyebrow ??
-        eyebrowFor(
-          Array.isArray(this.options.classes)
-            ? this.options.classes
-            : `${this.options.classes}`.split(' ')
-        ),
-      titles = s(`<div class="ui-window-titles"><h3>${this.#title}</h3></div>`);
-
-    if (eyebrow !== null) {
-      const line = s('<p class="ui-window-eyebrow"></p>');
-
-      line.textContent = eyebrow;
-      titles.prepend(line);
-    }
-
-    this.append(
-      this.#draggable(
-        s(
-          '<header class="ui-window-header"></header>',
-          titles,
-          ...this.#headerActions()
-        )
-      ),
-      s(
-        '<div class="body"></div>',
-        this.#body instanceof Node ? this.#body : s(`<p>${this.#body}</p>`)
-      ),
-      s(
-        '<footer class="ui-window-footer"><div class="ui-window-actions"></div></footer>'
-      )
-    );
-
-    this.#adoptFooter();
-  }
-
-  // Moves the body's own footer (one that holds only buttons), or the primary button the body ends in, into the
-  //  chrome's. The footer itself moves, so a window that keeps it and adds to it later still has it. What it then
-  //  holds is put in order, and Enter shown on the primary, once the window has finished building (#738).
-  #adoptFooter(): void {
-    const footer = this.element().querySelector(':scope > .ui-window-footer'),
-      actions = footer?.querySelector('.ui-window-actions');
-
-    if (!footer || !actions) {
-      return;
-    }
-
-    const own = Array.from(
-        this.element().querySelectorAll(
-          ':scope > .body > footer:last-child, :scope > .body > :last-child > footer:last-child'
-        )
-      ).find((candidate) =>
-        // Buttons, or nothing yet: not a footer of words.
-        Array.from(candidate.childNodes).every((node) =>
-          node instanceof Element
-            ? node.matches('button')
-            : !node.textContent?.trim()
-        )
-      ),
-      lone = this.element().querySelector(
-        ':scope > .body > button.btn-primary:last-child, :scope > .body > :last-child > button.btn-primary:last-child'
-      );
-
-    this.#adopted = [own, lone]
-      .filter((item): item is Element => item !== null && item !== undefined)
-      .map((item) => [item, item.parentElement!]);
-
-    // A body drawn again brings its own buttons, or none: what the last one gave goes either way.
-    actions.replaceChildren(
-      ...([own, lone].filter(
-        (item) => item !== null && item !== undefined
-      ) as Element[])
-    );
-
-    queueMicrotask(() => this.#settleFooter());
-  }
-
-  #restoreAdopted(): void {
-    this.#adopted.forEach(([element, parent]) => parent.append(element));
-    this.#adopted = [];
-  }
-
-  // The footer's buttons in order, the quiet first and the primary last, focus kept where it was, a quiet Close where
-  //  there are none, and Enter shown on the primary.
-  #settleFooter(): void {
-    const footer = this.element().querySelector(':scope > .ui-window-footer'),
-      actions = footer?.querySelector(
-        '.ui-window-actions'
-      ) as HTMLElement | null;
-
-    if (!footer || !actions) {
-      return;
-    }
-
-    const rank = (element: Element) =>
-        element.classList.contains('btn-quiet')
-          ? 0
-          : element.classList.contains('btn-primary')
-          ? 2
-          : 1,
-      focused = document.activeElement;
-
-    [
-      actions,
-      ...Array.from(actions.querySelectorAll(':scope > footer')),
-    ].forEach((holder) => {
-      const buttons = Array.from(holder.children).filter((child) =>
-        child.matches('button')
-      );
-
-      buttons
-        .sort((a, b) => rank(a) - rank(b))
-        .forEach((button) => holder.append(button));
-    });
-
-    // Moving a button takes focus off it.
-    if (focused instanceof HTMLElement && actions.contains(focused)) {
-      focused.focus();
-    }
-
-    // The window's own footer before its lone primary, which goes last.
-    const lone = actions.querySelector(':scope > button.btn-primary');
-
-    if (lone) {
-      actions.append(lone);
-    }
-
-    actions.querySelector(':scope > .ui-window-close')?.remove();
-
-    if (!actions.querySelector('button') && this.options.canClose) {
-      actions.append(
-        h(
-          button(t('Window.close'), {
-            variant: 'quiet',
-            hotkey: 'Escape',
-            className: 'ui-window-close',
-          }),
-          {
-            click: () => this.close(),
-          }
-        )
-      );
-    }
-
-    // The primary's key on it, as Cancel has Esc.
-    const primary = actions.querySelector('.btn-primary');
-
-    if (primary instanceof HTMLElement && !primary.dataset.hotkey) {
-      primary.dataset.hotkey = 'Enter';
-      primary.setAttribute('aria-keyshortcuts', 'Enter');
-    }
-  }
-
-  // Enter runs the primary action, unless it's pressed on something that takes Enter itself. Caught on the way in,
-  //  before a window's own keys, which close it on Enter (#738).
-  #bindNewKeys(): void {
-    this.element().addEventListener(
-      'keydown',
-      (event: KeyboardEvent) => {
-        if (
-          event.key !== 'Enter' ||
-          event.repeat ||
-          event.isComposing ||
-          (event.target instanceof Element &&
-            event.target !== this.element() &&
-            event.target.closest(
-              'button, a[href], input, select, textarea, summary, [contenteditable], [role="button"]'
-            ))
-        ) {
-          return;
-        }
-
-        const primary = this.element().querySelector(
-          ':scope > .ui-window-footer .btn-primary'
-        ) as HTMLButtonElement | null;
-
-        if (!primary || primary.disabled || primary.closest('[hidden]')) {
-          return;
-        }
-
-        event.preventDefault();
-        event.stopImmediatePropagation();
-
-        primary.click();
-      },
-      true
-    );
-  }
-
   bindClose(): void {
     this.on('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -510,33 +301,15 @@ export class Window
 
     this.#closed = true;
 
-    if (this.#newChrome) {
-      this.#fadeOut();
-    }
+    this.#chrome.closing();
 
     this.element().close();
     this.remove();
 
     this.emit(new CustomEvent('close'));
 
-    if (this.#newChrome) {
-      const active = document.activeElement;
-
-      // Something has focus already: the window that closing this one opened (the next notice).
-      if (
-        active instanceof HTMLElement &&
-        active !== document.body &&
-        active.isConnected
-      ) {
-        return;
-      }
-
-      // Back to what had focus as it opened, where that can take it (#738); not behind a modal window, say.
-      this.#opener?.focus();
-
-      if (this.#opener !== null && document.activeElement === this.#opener) {
-        return;
-      }
+    if (this.#chrome.closed()) {
+      return;
     }
 
     const windows = document.querySelectorAll('dialog.window');
@@ -551,17 +324,7 @@ export class Window
   display(focus = this.options.autofocus): void {
     this.#closed = false;
 
-    // Once: shown again, it would find its own focus.
-    if (this.#newChrome && this.#opener === null) {
-      const active = document.activeElement;
-
-      this.#opener =
-        active instanceof HTMLElement &&
-        active !== document.body &&
-        !this.element().contains(active)
-          ? active
-          : null;
-    }
+    this.#chrome.opening();
 
     super.display();
 
@@ -574,50 +337,6 @@ export class Window
     }
 
     this.element().focus();
-  }
-
-  // The window closes at once; a copy of it, which takes no input, fades in its place (#738).
-  #fadeOut(): void {
-    if (
-      !this.element().isConnected ||
-      this.hasClass('maximised') ||
-      // A copy of a canvas is blank.
-      this.element().querySelector('canvas') ||
-      window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    ) {
-      return;
-    }
-
-    const box = this.element().getBoundingClientRect(),
-      ghost = this.element().cloneNode(true) as HTMLElement,
-      shell = document.createElement('div');
-
-    // Not a second element of the same id, nor anything that can take focus.
-    [ghost, ...Array.from(ghost.querySelectorAll('[id], [for]'))].forEach(
-      (element) => {
-        element.removeAttribute('id');
-        element.removeAttribute('for');
-      }
-    );
-    shell.setAttribute('inert', '');
-    // Drawn as the window was, where it was: without the classes that place it or lift it into a stacking order.
-    shell.className = [
-      ...Array.from(this.element().classList).filter(
-        (name) => !['modal', 'position-auto'].includes(name)
-      ),
-      'ui-window-ghost',
-    ].join(' ');
-    shell.setAttribute('aria-hidden', 'true');
-    shell.style.left = `${box.left}px`;
-    shell.style.top = `${box.top}px`;
-    shell.style.width = `${box.width}px`;
-    shell.style.height = `${box.height}px`;
-    shell.append(...Array.from(ghost.childNodes));
-    shell.addEventListener('animationend', () => shell.remove());
-    document.body.append(shell);
-
-    // Gone even where the animation never runs.
-    setTimeout(() => shell.remove(), 200);
   }
 
   private showDialog(): void {
@@ -719,9 +438,7 @@ export class Window
         content instanceof Node ? content : s(`<p>${content}</p>`)
       );
 
-    if (this.#newChrome) {
-      this.#adoptFooter();
-    }
+    this.#chrome.updated();
   }
 }
 
