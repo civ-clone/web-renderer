@@ -55,8 +55,8 @@ expect(
 );
 expect(
   'the type-checks and the longest suites start first',
-  everything.slice(0, 4),
-  ['ts:compile', 'ts:compile:tests', 'test:overlap-draw', 'test:banner-tooltip']
+  everything.slice(0, 3),
+  ['ts:compile', 'ts:compile:tests', 'test:overlap-draw:1of4']
 );
 expect('nothing is run twice', new Set(everything).size, everything.length);
 

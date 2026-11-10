@@ -34,9 +34,15 @@ const scripts = require(path.join(webRenderer, 'package.json')).scripts,
   FIRST = ['build:generate-plugins-ts', 'build:generate-translations-ts'],
   // Alongside the suites: they read the source and write nothing (`noEmit`).
   TYPE_CHECKS = ['ts:compile', 'ts:compile:tests'],
-  // Started first, as they take longest (half a minute for the first): left to their place in package.json they
-  //  start late, and everything waits for them at the end.
-  LONGEST_FIRST = ['test:overlap-draw', 'test:banner-tooltip'],
+  // Started first, as they take longest: left to their place in package.json they start late, and everything waits
+  //  for them at the end.
+  LONGEST_FIRST = [
+    'test:overlap-draw:1of4',
+    'test:overlap-draw:2of4',
+    'test:overlap-draw:3of4',
+    'test:overlap-draw:4of4',
+    'test:banner-tooltip',
+  ],
   // `test:*` scripts that are not part of `npm test`: the browser check needs the build and a browser, and has its
   //  own step in CI.
   NOT_PART_OF_IT = ['test:browser'],

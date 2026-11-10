@@ -31,7 +31,8 @@
 //  order, clearing each tile's box before drawing it, a reach too small for what a layer draws, and a layer that draws
 //  past its box on the square grid declaring no reach, as all of them did before #486) fails a check by name.
 //
-// `--measure` prints what updating one tile costs on each projection, rather than running the checks.
+// `--measure` prints what updating one tile costs on each projection, rather than running the checks. `--part k/n`
+//  runs one share of the projections: `npm test` runs four, side by side.
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
@@ -81,7 +82,28 @@ i18next.init({
 
 const failures: string[] = [],
   errors: string[] = [],
-  measure = process.argv.includes('--measure');
+  measure = process.argv.includes('--measure'),
+  // `--part k/n`: the kth of n shares of the projections, which is where the time goes (half a minute for them
+  //  all), so that `npm test` can run the shares side by side (#879). Without it, everything.
+  part = ((): { k: number; n: number } | null => {
+    const index = process.argv.indexOf('--part'),
+      match = /^(\d+)\/(\d+)$/.exec(process.argv[index + 1] ?? '');
+
+    if (index === -1) {
+      return null;
+    }
+
+    if (match === null || Number(match[1]) < 1 || match[1] > match[2]) {
+      throw new TypeError('--part needs a share, as in --part 1/4');
+    }
+
+    return { k: Number(match[1]), n: Number(match[2]) };
+  })(),
+  // This part's share of a list: every nth, from the kth.
+  mine = <Item>(list: Item[]): Item[] =>
+    part === null
+      ? list
+      : list.filter((_, index) => index % part.n === part.k - 1);
 
 // Where failed checks go: `failures`, except while a deliberately broken layer is checked.
 let collect: string[] = failures;
@@ -1568,7 +1590,7 @@ if (measure) {
   process.exit(errors.length ? 1 : 0);
 }
 
-projectionSpecs.forEach((projection) =>
+mine(projectionSpecs).forEach((projection) =>
   layerSpecs
     .filter((spec) => checksOn(projection, spec))
     .forEach((spec) =>
@@ -1589,30 +1611,33 @@ const plain = layerSpecs.find(({ name }) => name === 'Plain')!,
   brick = projectionSpecs.find(({ name }) => name === 'brick')!,
   tall = projectionSpecs.find(({ name }) => name === 'tall')!;
 
-caught(
-  'drawing brick tiles column by column',
-  brokenOrder,
-  plain,
-  'a full render draws back to front'
-);
-caught(
-  "clearing each brick tile's box before drawing it",
-  brick,
-  { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
-  'a full render draws back to front'
-);
-caught(
-  'a tall layer with no reach',
-  tall,
-  { ...tallPlain, name: 'ReachTooSmall', Type: ReachTooSmall },
-  'updating a tile leaves what a full redraw would'
-);
-caught(
-  'units on the square grid with no reach, each tile cleared in its own box',
-  square,
-  { ...units, name: 'UnitsWithoutReach', Type: UnitsWithoutReach },
-  'updating a tile leaves what a full redraw would'
-);
+// The mistakes made on purpose aren't any one projection's: checked once, with the first part.
+if (part === null || part.k === 1) {
+  caught(
+    'drawing brick tiles column by column',
+    brokenOrder,
+    plain,
+    'a full render draws back to front'
+  );
+  caught(
+    "clearing each brick tile's box before drawing it",
+    brick,
+    { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
+    'a full render draws back to front'
+  );
+  caught(
+    'a tall layer with no reach',
+    tall,
+    { ...tallPlain, name: 'ReachTooSmall', Type: ReachTooSmall },
+    'updating a tile leaves what a full redraw would'
+  );
+  caught(
+    'units on the square grid with no reach, each tile cleared in its own box',
+    square,
+    { ...units, name: 'UnitsWithoutReach', Type: UnitsWithoutReach },
+    'updating a tile leaves what a full redraw would'
+  );
+}
 
 // A terrain layer draws an updated tile's neighbours again too, as its terrain joins up with theirs, but each tile only
 //  once however many of the updated tiles it is next to (#488). The tiles an update names are copies, as a patch's
@@ -1692,7 +1717,7 @@ const eachTileOnce = (projection: ProjectionSpec, spec: LayerSpec): void => {
   });
 };
 
-projectionSpecs.forEach((projection) =>
+mine(projectionSpecs).forEach((projection) =>
   layerSpecs
     .filter(({ name }) => name === 'Landscape' || name === 'Fog')
     .forEach((spec) => eachTileOnce(projection, spec))
@@ -1778,7 +1803,7 @@ const cityGoesWhileScrolling = (
   );
 };
 
-projectionSpecs.forEach((projection) =>
+mine(projectionSpecs).forEach((projection) =>
   scenarios.forEach((scenario) => cityGoesWhileScrolling(projection, scenario))
 );
 
@@ -1798,4 +1823,8 @@ if (failures.length) {
   process.exitCode = 1;
 }
 
-console.log(`PASS overlapDraw (${checks} checks)`);
+console.log(
+  `PASS overlapDraw${
+    part === null ? '' : ` part ${part.k} of ${part.n}`
+  } (${checks} checks)`
+);
