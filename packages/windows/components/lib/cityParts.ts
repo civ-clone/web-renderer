@@ -1,5 +1,14 @@
-import { City as CityData, PlainObject } from '@civ-clone/ui-protocol/types';
-import { splitYield, yieldGroup } from '@civ-clone/ui-client/lib/yieldMap';
+import {
+  City as CityData,
+  PlainObject,
+  PlayerTile,
+} from '@civ-clone/ui-protocol/types';
+import { TOptions, t } from 'i18next';
+import {
+  netTileYields,
+  splitYield,
+  yieldGroup,
+} from '@civ-clone/ui-client/lib/yieldMap';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import Fog from '@civ-clone/ui-map/components/Map/Fog';
 import Landscape from '@civ-clone/ui-map/components/Map/Landscape';
@@ -10,11 +19,9 @@ import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
-import { h } from '@civ-clone/ui-widgets/lib/html';
 import isAnarchy from './government';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
-import { t } from 'i18next';
 import { tileBounds } from '@civ-clone/ui-map/lib/projection';
 import { yieldIcon } from './cityYields';
 
@@ -193,6 +200,190 @@ export const renderYields = (
   );
 };
 
+// Set as an attribute, where i18next's HTML escaping would show a name with `&` or `'` in it escaped (#704).
+const plain = (key: string, options: TOptions = {}): string =>
+  t(key, { ...options, interpolation: { escapeValue: false } });
+
+// A square in words, for the button over it: what it is, whether the city works it, and what it yields.
+const squareLabel = (tile: PlayerTile, city: CityData): string => {
+  const { terrain } = tile,
+    square = plain('SquareTooltip.list', {
+      items: [
+        plain(`${terrain._}.name`, { defaultValue: terrain._, ns: 'world' }),
+        ...(terrain.features ?? []).map(({ _ }) =>
+          plain(`Feature.${_}.name`, { defaultValue: _, ns: 'world' })
+        ),
+      ],
+    }),
+    yields = netTileYields(tile.yields ?? [])
+      // Food, Production, Trade, as the map draws them.
+      .sort((a, b) => a._.charCodeAt(0) - b._.charCodeAt(0))
+      .map(({ _, value }) =>
+        plain('CitySquares.yield', {
+          name: plain(`${_}.name`, { defaultValue: _, ns: 'yield' }),
+          value,
+        })
+      ),
+    state =
+      tile.id === city.tile.id
+        ? 'city'
+        : tile.workedBy !== null && tile.workedBy.id !== city.id
+        ? 'taken'
+        : city.tilesWorked.some(({ id }) => id === tile.id)
+        ? 'worked'
+        : 'free';
+
+  return plain(`CitySquares.${state}`, {
+    square,
+    yields: yields.length
+      ? plain('SquareTooltip.list', { items: yields })
+      : plain('CitySquares.no-yields'),
+  });
+};
+
+// The square the keyboard was last on in each city's map, by the city's id: the map is drawn afresh on every update,
+//  and Tab should come back to where it left, not to the city's own square each time.
+const lastSquare = new Map<string, string>();
+
+// Which way each arrow key goes on the map.
+const arrows: { [key: string]: [number, number] } = {
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+};
+
+/**
+ * A button over each of the city's squares (#854), so one can be worked or freed without a pointer: Tab reaches the
+ *  map (one stop, on the city's own square to begin with), the arrow keys move from square to square, and Enter or
+ *  Space does what a click does. Each says what it is, whether it's worked and what it yields. They are placed over
+ *  the canvas by where the portal draws each square, as fractions of the canvas, so they follow it at any size; a
+ *  click on a square lands on its button, and does the same.
+ */
+const renderSquares = (
+  city: CityData,
+  cityPortal: Portal,
+  localTiles: PlayerTile[],
+  canvas: HTMLCanvasElement,
+  toggle: (tile: PlayerTile) => void
+): HTMLElement => {
+  const squares = s('<div class="city-squares" role="group"></div>'),
+    buttons = new Map<string, HTMLButtonElement>(),
+    at = ({ x, y }: { x: number; y: number }): string => `${x},${y}`;
+
+  squares.setAttribute('aria-label', plain('CitySquares.label'));
+
+  localTiles.forEach((localTile) => {
+    const tile = city.tiles.find(({ id }) => id === localTile.id);
+
+    if (!tile) {
+      return;
+    }
+
+    const button = s<HTMLButtonElement>(
+        '<button type="button" class="btn-bare city-square"></button>'
+      ),
+      box = cityPortal.boxOf(localTile),
+      percent = (part: number, whole: number): string =>
+        `${(part / whole) * 100}%`;
+
+    button.style.left = percent(box.x, canvas.width);
+    button.style.top = percent(box.y, canvas.height);
+    button.style.width = percent(box.width, canvas.width);
+    button.style.height = percent(box.height, canvas.height);
+    button.dataset.x = String(localTile.x);
+    button.dataset.y = String(localTile.y);
+    // Which square it is, for the keyboard to be put back on once the city is drawn again: its label says what the
+    //  square is doing, and two squares can read alike.
+    button.dataset.focusKey = `square:${at(localTile)}`;
+    // One stop for Tab: the city's own square, until another has had the focus.
+    button.setAttribute('tabindex', '-1');
+    button.dataset.own = String(tile.id === city.tile.id);
+    button.setAttribute('aria-label', squareLabel(tile, city));
+    button.addEventListener('click', () => toggle(tile));
+
+    buttons.set(at(localTile), button);
+    squares.append(button);
+  });
+
+  // One stop for Tab: the square the keyboard was last on here, else the city's own, else (a city whose own square
+  //  isn't among those the engine sent) the first.
+  const all = [...buttons.values()],
+    remembered = lastSquare.get(city.id);
+
+  (
+    all.find((button) => button.dataset.focusKey === remembered) ??
+    all.find((button) => button.dataset.own === 'true') ??
+    all[0]
+  )?.setAttribute('tabindex', '0');
+
+  // A pointer's press works the square without taking the keyboard there: Enter is still the screen's, and the
+  //  arrow keys still the previous and next city, as they were when the press landed on the canvas.
+  squares.addEventListener('mousedown', (event) => event.preventDefault());
+
+  // The square the keyboard is on is the one Tab comes back to.
+  squares.addEventListener('focusin', (event) => {
+    const key = (event.target as HTMLElement).dataset.focusKey;
+
+    if (key === undefined) {
+      return;
+    }
+
+    lastSquare.set(city.id, key);
+
+    buttons.forEach((button) =>
+      button.setAttribute('tabindex', button === event.target ? '0' : '-1')
+    );
+  });
+
+  squares.addEventListener('keydown', (event) => {
+    const step = arrows[event.key],
+      from = event.target as HTMLElement;
+
+    // A key held down presses once: each press draws the city again and puts the keyboard back here, so a repeat
+    //  would work the square and free it, over and over.
+    if (event.repeat && ['Enter', ' '].includes(event.key)) {
+      event.preventDefault();
+
+      return;
+    }
+
+    // With Shift too: left to the screen, it would be the next city.
+    if (
+      step === undefined ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      from.dataset.x === undefined
+    ) {
+      return;
+    }
+
+    // The map's own, here: not the previous or next city, nor a scroll of the window.
+    event.preventDefault();
+    event.stopPropagation();
+
+    // The next of the city's squares that way, over any that aren't its own.
+    let x = Number(from.dataset.x) + step[0],
+      y = Number(from.dataset.y) + step[1];
+
+    for (let steps = 0; steps < buttons.size; steps++) {
+      const next = buttons.get(at({ x, y }));
+
+      if (next) {
+        next.focus();
+
+        return;
+      }
+
+      x += step[0];
+      y += step[1];
+    }
+  });
+
+  return squares;
+};
+
 /** The city's squares, the worked ones with their yields, a click on one working it or not (#9). */
 export const renderMap = (
   portal: Portal,
@@ -267,29 +458,23 @@ export const renderMap = (
 
   cityPortal.render();
 
-  return h(s('<div class="city-map"></div>', portalCanvas), {
-    click: (event: MouseEvent) => {
-      if (readOnly || event.target !== portalCanvas) {
-        return;
-      }
+  const toggle = (tile: PlayerTile): void =>
+    transport.send('action', {
+      name: 'ChangeWorkedTile',
+      id: city.id,
+      tile: tile.id,
+    });
 
-      // The canvas is scaled by CSS, so `offsetX`/`offsetY` need mapping
-      // back onto its own pixels before they can be turned into a tile.
-      const localTile = cityPortal.tileAt(
-          (event.offsetX * portalCanvas.width) / portalCanvas.offsetWidth,
-          (event.offsetY * portalCanvas.height) / portalCanvas.offsetHeight
-        ),
-        tile = city.tiles.find((tile) => tile.id === localTile?.id);
-
-      if (!tile) {
-        return;
-      }
-
-      transport.send('action', {
-        name: 'ChangeWorkedTile',
-        id: city.id,
-        tile: tile.id,
-      });
-    },
-  });
+  // A click on a square lands on its button (#854), which does what the click on the canvas used to.
+  return s(
+    '<div class="city-map"></div>',
+    // The canvas and the buttons over it, in one box the size of the canvas.
+    s(
+      '<div class="city-map-frame"></div>',
+      portalCanvas,
+      readOnly
+        ? ''
+        : renderSquares(city, cityPortal, localTiles, portalCanvas, toggle)
+    )
+  );
 };

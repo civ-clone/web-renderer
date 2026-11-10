@@ -691,6 +691,21 @@ export class Portal
     };
   }
 
+  /** The box on the canvas the square at `x`, `y` is drawn in: what `squareAt` gives for a pixel inside it. */
+  boxOf({ x, y }: Coordinate): Rect {
+    this.syncViewport();
+
+    const [left, top] = this.#projection.tileToPixel(x, y),
+      { width, height } = this.#projection.footprint();
+
+    return {
+      x: left - this.#viewport.x,
+      y: top - this.#viewport.y,
+      width,
+      height,
+    };
+  }
+
   /** Where tiles go on the world in pixels, at this portal's scale. */
   projection(): Projection {
     return this.#projection;

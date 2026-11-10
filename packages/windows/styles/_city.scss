@@ -350,3 +350,42 @@
     width: calc(100% - 1em);
   }
 }
+
+// The city's map and the buttons over its squares (#854), in one box the size of the canvas: a grid of one cell, so
+//  the buttons' box is the canvas's at whatever size it is drawn. Later in the page than the canvas, so over it.
+.city-map-frame {
+  display: inline-grid;
+  max-width: 100%;
+  vertical-align: top;
+
+  > canvas,
+  > .city-squares {
+    grid-area: 1 / 1;
+  }
+
+  > canvas {
+    display: block;
+  }
+}
+
+.city-squares {
+  position: relative;
+}
+
+// Placed by its square's share of the canvas. Nothing of its own to see until the keyboard is on it. Named this
+//  closely so that the space a window gives its buttons (`.window :not(header) button`) doesn't move it off its square.
+.city-squares > button.city-square {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  margin: 0;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  position: absolute;
+
+  &:focus-visible {
+    outline: var(--ui-focus-outline);
+    outline-offset: -2px;
+  }
+}
