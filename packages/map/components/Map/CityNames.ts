@@ -101,8 +101,8 @@ export class CityNames extends Map {
     return {
       x: Math.floor(offsetX + x * scale),
       y: Math.floor(offsetY + y * scale),
-      width: Math.ceil(width),
-      height: Math.ceil(height),
+      width: Math.ceil(width!),
+      height: Math.ceil(height!),
     };
   }
 

@@ -23,7 +23,7 @@ export const fold = (text: string): string =>
     .replace(/\p{M}/gu, '')
     // Not `toLocaleLowerCase`: in Turkish, `I` would become `ı`, and `i` would no longer find it.
     .toLowerCase()
-    .replace(/[æðđıłøœßþ]/g, (letter) => letters[letter])
+    .replace(/[æðđıłøœßþ]/g, (letter) => letters[letter]!)
     .replace(/\s+/g, ' ');
 
 /**

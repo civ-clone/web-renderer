@@ -55,7 +55,7 @@ export const militaryReport = (
           return index === -1 ? buildOrder.length : index;
         });
 
-        return aIndex - bIndex || a.name.localeCompare(b.name);
+        return aIndex! - bIndex! || a.name.localeCompare(b.name);
       }),
     active = count(
       units.getByPlayer(player).map((unit) => unit.sourceClass() as UnitType)

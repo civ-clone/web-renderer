@@ -47,7 +47,7 @@ export const handleActiveUnit: ActionHandler<ActiveUnit> = async (
     ctx.patches.unit(previous)
   );
 
-  actionToPerform.perform();
+  actionToPerform!.perform();
 
   await ctx.talks.pending;
 

@@ -131,7 +131,8 @@ export class Overview extends Map {
       return;
     }
 
-    context.fillStyle = colours.value[0];
+    // Every civilization has at least one colour.
+    context.fillStyle = colours.value[0]!;
     context.fillRect(offsetX, offsetY, size, size);
   }
 

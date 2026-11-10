@@ -478,7 +478,7 @@ export class ChoiceWindow extends FilterableWindow {
     event.stopPropagation();
 
     const row =
-      shown[Math.min(shown.length - 1, Math.max(0, target[key]))] ?? null;
+      shown[Math.min(shown.length - 1, Math.max(0, target[key]!))] ?? null;
 
     this.#select(row);
     row?.focus();

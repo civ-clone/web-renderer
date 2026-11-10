@@ -34,7 +34,7 @@ export const eyebrowFor = (classes: string[]): string | null => {
     return null;
   }
 
-  const [kind, key] = eyebrows[found];
+  const [kind, key] = eyebrows[found]!;
 
   return t(`Window.Eyebrow.${kind}`, {
     key,

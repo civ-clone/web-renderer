@@ -47,7 +47,8 @@ export class Cities extends Map {
       this.context().fillRect(offsetX, offsetY, width, height);
     }
 
-    this.context().fillStyle = playerColour[0];
+    // Every civilization has at least one colour.
+    this.context().fillStyle = playerColour[0]!;
     this.context().fillRect(
       offsetX + inset,
       offsetY + inset,

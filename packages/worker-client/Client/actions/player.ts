@@ -55,7 +55,8 @@ export const handleAdjustTradeRates: ActionHandler<AdjustTradeRates> = async (
         .all()
         .filter((rate) => rate.constructor.name === name);
 
-      return [rate.constructor as typeof TradeRate, value];
+      // One of the player's rates: the page sends back the names it was given.
+      return [rate!.constructor as typeof TradeRate, value];
     })
   );
 

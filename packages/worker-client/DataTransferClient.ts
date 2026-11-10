@@ -254,7 +254,7 @@ export class DataTransferClient extends Client implements IClient {
       const [choice] = meta.choices();
 
       return new Promise<DataForChoiceMeta<ChoiceMeta<Name>>>((resolve) =>
-        resolve(choice.value())
+        resolve(choice!.value())
       );
     }
 

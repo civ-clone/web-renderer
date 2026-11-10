@@ -101,7 +101,8 @@ export class SelectionWindow extends ActionWindow implements ISelectionWindow {
                 elements.push(groupElement);
               }
 
-              elements[elements.length - 1].append(optionElement);
+              // The group's heading, just added or the previous option's.
+              elements[elements.length - 1]!.append(optionElement);
 
               return elements;
             },

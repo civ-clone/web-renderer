@@ -72,11 +72,13 @@ export const unionView = (
   members: Player[],
   dependencies: ViewDependencies
 ): ObserverView => {
-  const [primary] = members,
+  // Called with two or more members.
+  const primary = members[0]!,
     registered = members.map((member) =>
       dependencies.playerWorlds.getByPlayer(member)
     ),
-    world = registered[0].entries()[0].tile().map(),
+    // A player's world has at least the squares they started with.
+    world = registered[0]!.entries()[0]!.tile().map(),
     playerWorld = privateWorld(
       primary,
       world,
@@ -121,7 +123,8 @@ export const worldView = (
 ): ObserverView => {
   const world = dependencies.playerWorlds
       .getByPlayer(primary)
-      .entries()[0]
+      // As above: at least the squares the player started with.
+      .entries()[0]!
       .tile()
       .map(),
     playerWorld = privateWorld(primary, world, world.entries()),

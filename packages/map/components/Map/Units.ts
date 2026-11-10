@@ -33,9 +33,9 @@ export class Units extends Map implements IMap {
       return;
     }
 
-    const [unit] = [...units].sort(
+    const unit = [...units].sort(
         (a: Unit, b: Unit): number => b.defence?.value - a.defence?.value
-      ),
+      )[0]!,
       image = this.renderUnit(unit);
 
     if (units.length > 1) {
