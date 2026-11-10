@@ -58,6 +58,7 @@
     "test:stat-pill": "node tools/run-suite.js ui statPill",
     "test:tooltip": "node tools/run-suite.js ui tooltip",
     "test:start-failure": "node tools/run-suite.js ui startFailure",
+    "test:browser": "node tools/browser-smoke.js",
     "test:action-buttons": "node tools/run-suite.js ui actionButtons",
     "test:next-turn": "node tools/run-suite.js ui nextTurn",
     "test:notification-rows": "node tools/run-suite.js ui notificationRows",

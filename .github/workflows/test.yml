@@ -44,3 +44,28 @@ jobs:
       - run: npm run prettier:check
 
       - run: npm test
+
+  # The built game in a real browser (#878): the page comes up, a save loads, and the reports and a city open under
+  # both interfaces. Its own job, as it needs the build and a browser, which `npm test` does not; the runner's Chrome
+  # is found on the PATH.
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.5.2
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: npm run build
+
+      - run: npm run test:browser
