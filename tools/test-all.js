@@ -248,19 +248,20 @@ const bundleSuites = async (queue) => {
 
   bundles = directory;
 
-  try {
-    await Promise.all(
-      Object.entries(byKind)
-        .filter(([, names]) => names.size > 0)
-        .map(([kind, names]) => bundleAll(kind, [...names], directory))
-    );
+  // Both builds are waited for, whichever fails: one still writing would put back a directory just removed.
+  const built = await Promise.allSettled(
+    Object.entries(byKind)
+      .filter(([, names]) => names.size > 0)
+      .map(([kind, names]) => bundleAll(kind, [...names], directory))
+  );
 
-    return { SUITE_BUNDLES: directory };
-  } catch {
+  if (built.some(({ status }) => status === 'rejected')) {
     discardBundles();
 
     return {};
   }
+
+  return { SUITE_BUNDLES: directory };
 };
 
 const main = async () => {

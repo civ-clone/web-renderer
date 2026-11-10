@@ -93,7 +93,11 @@ const failures: string[] = [],
       return null;
     }
 
-    if (match === null || Number(match[1]) < 1 || match[1] > match[2]) {
+    if (
+      match === null ||
+      Number(match[1]) < 1 ||
+      Number(match[1]) > Number(match[2])
+    ) {
       throw new TypeError('--part needs a share, as in --part 1/4');
     }
 
