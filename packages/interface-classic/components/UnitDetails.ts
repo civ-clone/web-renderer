@@ -1,11 +1,11 @@
 import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import { UnitPanelDeps } from '@civ-clone/ui-windows/components/unitPanel';
-import Unit from '@civ-clone/ui-windows/components/Unit';
+import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
+import Unit from '@civ-clone/ui-hud/components/Unit';
 import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
+import unitLabel from '@civ-clone/ui-hud/lib/unitLabel';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).

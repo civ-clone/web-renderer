@@ -508,6 +508,9 @@ importers:
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-hud':
+        specifier: workspace:*
+        version: link:../hud
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -523,6 +526,45 @@ importers:
       '@civ-clone/ui-windows':
         specifier: workspace:*
         version: link:../windows
+
+  packages/hud:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-city':
+        specifier: workspace:*
+        version: link:../city
+      '@civ-clone/ui-client':
+        specifier: workspace:*
+        version: link:../client
+      '@civ-clone/ui-component-choice-window':
+        specifier: workspace:*
+        version: link:../component-choice-window
+      '@civ-clone/ui-component-progress-bar':
+        specifier: workspace:*
+        version: link:../component-progress-bar
+      '@civ-clone/ui-component-stat-pill':
+        specifier: workspace:*
+        version: link:../component-stat-pill
+      '@civ-clone/ui-component-tooltip':
+        specifier: workspace:*
+        version: link:../component-tooltip
+      '@civ-clone/ui-component-window':
+        specifier: workspace:*
+        version: link:../component-window
+      '@civ-clone/ui-map':
+        specifier: workspace:*
+        version: link:../map
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+      '@civ-clone/ui-reports':
+        specifier: workspace:*
+        version: link:../reports
+      '@civ-clone/ui-widgets':
+        specifier: workspace:*
+        version: link:../widgets
 
   packages/interface-classic:
     dependencies:
@@ -550,6 +592,9 @@ importers:
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-hud':
+        specifier: workspace:*
+        version: link:../hud
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -598,6 +643,9 @@ importers:
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-hud':
+        specifier: workspace:*
+        version: link:../hud
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map
@@ -684,9 +732,6 @@ importers:
       '@civ-clone/ui-audio':
         specifier: workspace:*
         version: link:../audio
-      '@civ-clone/ui-city':
-        specifier: workspace:*
-        version: link:../city
       '@civ-clone/ui-client':
         specifier: workspace:*
         version: link:../client
@@ -696,18 +741,12 @@ importers:
       '@civ-clone/ui-component-choice-window':
         specifier: workspace:*
         version: link:../component-choice-window
-      '@civ-clone/ui-component-progress-bar':
-        specifier: workspace:*
-        version: link:../component-progress-bar
-      '@civ-clone/ui-component-stat-pill':
-        specifier: workspace:*
-        version: link:../component-stat-pill
-      '@civ-clone/ui-component-tooltip':
-        specifier: workspace:*
-        version: link:../component-tooltip
       '@civ-clone/ui-component-window':
         specifier: workspace:*
         version: link:../component-window
+      '@civ-clone/ui-hud':
+        specifier: workspace:*
+        version: link:../hud
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:../map

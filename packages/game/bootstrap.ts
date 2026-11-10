@@ -10,8 +10,8 @@ import {
   takePendingSave,
 } from '@civ-clone/ui-windows/lib/savedGame';
 import { keepSave } from '@civ-clone/ui-client/lib/browserSaves';
-import Notices from '@civ-clone/ui-windows/components/Notices';
-import Notifications from '@civ-clone/ui-windows/components/Notifications';
+import Notices from '@civ-clone/ui-hud/components/Notices';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
 import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';

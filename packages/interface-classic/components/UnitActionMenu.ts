@@ -5,7 +5,7 @@ import {
 import { Tile, Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import Transport from '@civ-clone/ui-client/Transport';
 import { off, on } from '@dom111/element';
-import unitMenuActions from '@civ-clone/ui-windows/lib/unitMenuActions';
+import unitMenuActions from '@civ-clone/ui-hud/lib/unitMenuActions';
 
 // The orders, as the new interface's menu has them too (#808).
 const buildActions = (

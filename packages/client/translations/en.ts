@@ -91,4 +91,8 @@ i18next.addResources('en', 'default', {
     '{{- advance}} was acquired before its research finished',
   'Actions.ChooseResearch.cleared.completed':
     'Research complete: {{- advance}}',
+  // The year and an amount a turn, as the HUD, the reports and the meeting window all show them.
+  'GameDetails.year_bce': '{{year, number(useGrouping: false)}} BCE',
+  'GameDetails.year_ce': '{{year, number(useGrouping: false)}} CE',
+  'Progress.per-turn': '{{count, number}} / turn',
 });

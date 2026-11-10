@@ -4,9 +4,9 @@ import {
 } from '@civ-clone/ui-client/lib/interactionLabels';
 import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { Interactions } from '@civ-clone/ui-protocol/types';
-import { OpenTalksStep } from '@civ-clone/ui-windows/components/talks';
+import { OpenTalksStep } from '@civ-clone/ui-hud/components/talks';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
-import { openChoice } from '@civ-clone/ui-windows/components/choiceList';
+import { openChoice } from '@civ-clone/ui-hud/components/choiceList';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

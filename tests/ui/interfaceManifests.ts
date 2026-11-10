@@ -10,7 +10,7 @@ import {
   ChoiceList,
   choiceList,
   openChoice,
-} from '@civ-clone/ui-windows/components/choiceList';
+} from '@civ-clone/ui-hud/components/choiceList';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import {
   FEATURES,

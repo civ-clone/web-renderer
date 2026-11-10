@@ -20,8 +20,8 @@ import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { filteredOutClass } from '@civ-clone/ui-widgets/lib/filterRows';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import ReportTable from '@civ-clone/ui-component-report-table/ReportTable';
-import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
-import Unit from '@civ-clone/ui-windows/components/Unit';
+import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
+import Unit from '@civ-clone/ui-hud/components/Unit';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
 import {

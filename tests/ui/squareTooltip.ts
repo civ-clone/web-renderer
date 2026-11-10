@@ -25,7 +25,7 @@ import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import squareTooltip, {
   hasSquareTooltip,
-} from '@civ-clone/ui-windows/components/Map/squareTooltip';
+} from '@civ-clone/ui-hud/components/Map/squareTooltip';
 
 const failures: string[] = [];
 let checks = 0,

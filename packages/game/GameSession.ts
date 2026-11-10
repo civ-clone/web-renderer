@@ -3,7 +3,7 @@ import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import openCity from '@civ-clone/ui-city/components/openCity';
-import CitiesList from '@civ-clone/ui-windows/components/CitiesList';
+import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
 import GameMenu from '@civ-clone/ui-windows/components/GameMenu';
 import { GameMenuItem } from '@civ-clone/ui-windows/components/mapMenus';
 import cheatRows from './debug/cheats';
@@ -16,13 +16,13 @@ import { gridName } from '@civ-clone/ui-windows/lib/savedGame';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
-import Notices from '@civ-clone/ui-windows/components/Notices';
-import Notifications from '@civ-clone/ui-windows/components/Notifications';
-import PowerList from '@civ-clone/ui-windows/components/PowerList';
+import Notices from '@civ-clone/ui-hud/components/Notices';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
+import PowerList from '@civ-clone/ui-hud/components/PowerList';
 import { openIntelligenceReport } from '@civ-clone/ui-reports/components/reports';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
-import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
+import unitPanel from '@civ-clone/ui-hud/components/unitPanel';
 import { instance as options } from '@civ-clone/ui-client/GameOptionsRegistry';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import { actionKey } from '@civ-clone/ui-client/lib/nextTurnQueue';
@@ -37,13 +37,13 @@ import DebugFlags from '@civ-clone/ui-client/debug/DebugFlags';
 import DebugPanel from './debug/DebugPanel';
 import EventSounds from '@civ-clone/ui-audio/eventSounds';
 import { AppElements } from './app/elements';
-import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
+import { PendingMeeting } from '@civ-clone/ui-hud/components/turnControls';
 import NotificationBar from './app/NotificationBar';
-import ObserverBar from '@civ-clone/ui-windows/components/ObserverBar';
+import ObserverBar from '@civ-clone/ui-hud/components/ObserverBar';
 import {
   observerCityOpener,
   playerCityOpener,
-} from '@civ-clone/ui-windows/lib/cityOpeners';
+} from '@civ-clone/ui-hud/lib/cityOpeners';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import sendBuildPreferences from '@civ-clone/ui-client/lib/buildPreferences';
 

@@ -6,7 +6,7 @@ import {
 import { Interactions } from '@civ-clone/ui-protocol/types';
 import Intelligence from '@civ-clone/ui-protocol/Requests/Intelligence';
 import MeetingWindow from './MeetingWindow';
-import { OpenTalksStep } from '@civ-clone/ui-windows/components/talks';
+import { OpenTalksStep } from '@civ-clone/ui-hud/components/talks';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { t } from 'i18next';
 

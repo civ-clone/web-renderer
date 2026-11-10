@@ -1,4 +1,4 @@
-import Actions from '@civ-clone/ui-windows/components/Actions';
+import Actions from '@civ-clone/ui-hud/components/Actions';
 import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { CityStatus } from './components/CityStatus';
 import CityBuildSelectionWindow from './components/CityBuildSelectionWindow';
@@ -14,7 +14,7 @@ import TradeReport from './components/TradeReport';
 import UnitActions from './components/UnitActions';
 import UnitDetails from './components/UnitDetails';
 import UnitSelectionWindow from './components/UnitSelectionWindow';
-import { choiceList } from '@civ-clone/ui-windows/components/choiceList';
+import { choiceList } from '@civ-clone/ui-hud/components/choiceList';
 import { choices } from '@civ-clone/ui-component-window/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
 import classicCityLayout from './components/classicCityLayout';
@@ -29,10 +29,10 @@ import {
 } from '@civ-clone/ui-client/lib/interfaceMode';
 import { registerTheme } from '@civ-clone/ui-widgets/lib/theme';
 import { reports } from '@civ-clone/ui-reports/components/reports';
-import talks from '@civ-clone/ui-windows/components/talks';
+import talks from '@civ-clone/ui-hud/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
-import turnControls from '@civ-clone/ui-windows/components/turnControls';
-import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
+import turnControls from '@civ-clone/ui-hud/components/turnControls';
+import unitPanel from '@civ-clone/ui-hud/components/unitPanel';
 import windowChrome from '@civ-clone/ui-component-window/windowChrome';
 import plainChrome from './components/plainChrome';
 

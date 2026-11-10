@@ -9,7 +9,7 @@ import './lib/interfaces';
 import { Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import PlayerDetails, {
   PlayerDetailsReports,
-} from '@civ-clone/ui-windows/components/PlayerDetails';
+} from '@civ-clone/ui-hud/components/PlayerDetails';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';

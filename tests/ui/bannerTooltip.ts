@@ -16,7 +16,7 @@ import Map from '@civ-clone/ui-map/components/Map';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import World from '@civ-clone/ui-map/components/World';
 import { hideTooltip } from '@civ-clone/ui-component-tooltip/Tooltip';
-import cityBannerTooltip from '@civ-clone/ui-windows/components/Map/cityBannerTooltip';
+import cityBannerTooltip from '@civ-clone/ui-hud/components/Map/cityBannerTooltip';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 

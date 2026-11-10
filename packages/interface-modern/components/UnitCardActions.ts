@@ -15,7 +15,7 @@ import { keyForAction, keyName } from '@civ-clone/ui-client/lib/unitActionKeys';
 import {
   nameOf,
   performWithPrompts,
-} from '@civ-clone/ui-windows/lib/unitActionPrompts';
+} from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as

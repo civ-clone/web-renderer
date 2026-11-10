@@ -23,7 +23,7 @@ import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';
 import City from '@civ-clone/ui-city/components/City';
 import openCity from '@civ-clone/ui-city/components/openCity';
-import CityBuildAction from '@civ-clone/ui-windows/components/Actions/CityBuild';
+import CityBuildAction from '@civ-clone/ui-hud/components/Actions/CityBuild';
 import progressBar from '@civ-clone/ui-component-progress-bar/ProgressBar';
 import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
 import Portal from '@civ-clone/ui-map/components/Portal';

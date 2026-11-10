@@ -1,0 +1,21 @@
+{
+  "name": "@civ-clone/ui-hud",
+  "version": "0.1.0",
+  "private": true,
+  "description": "What's on screen around the map while a game is played: the actions and notices, the top bar's year and empire, the sidebar's power list and cities, the observer's bar, the unit and its prompts, the map's tooltips, and the `unitPanel`, `talks`, `turnControls` and `choiceList` slots.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-city": "workspace:*",
+    "@civ-clone/ui-client": "workspace:*",
+    "@civ-clone/ui-component-choice-window": "workspace:*",
+    "@civ-clone/ui-component-progress-bar": "workspace:*",
+    "@civ-clone/ui-component-stat-pill": "workspace:*",
+    "@civ-clone/ui-component-tooltip": "workspace:*",
+    "@civ-clone/ui-component-window": "workspace:*",
+    "@civ-clone/ui-map": "workspace:*",
+    "@civ-clone/ui-protocol": "workspace:*",
+    "@civ-clone/ui-reports": "workspace:*",
+    "@civ-clone/ui-widgets": "workspace:*"
+  }
+}
