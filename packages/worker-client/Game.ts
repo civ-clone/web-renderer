@@ -66,12 +66,31 @@ export class Game implements IGame {
   // The rules this game is played with, which the worker's entry hands in (#825).
   #plugins: Plugins;
 
+  // What is set up for every game in this worker, new or loaded, each in the order it has always been registered
+  //  (#869): the engine's events the page hears of, then the page's messages and requests, each to its own handler.
   constructor(transport: Transport<TransportDataMap>, plugins: Plugins) {
     this.#transport = transport;
     this.#plugins = plugins;
 
-    // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
-    //  makes one itself. Bound here rather than in `bindEvents`, so a loaded game answers too.
+    this.#spawnClients();
+    this.#warnOfUnknownRuleSets();
+    this.#reportTurns();
+
+    transport.receive('save', (request): void => this.#saveReceived(request));
+    transport.receive('load', (request): void => this.#loadReceived(request));
+
+    this.#answerSetup();
+
+    transport.receive('start', (): void => this.#startReceived());
+    transport.receive('setOption', (option): void => this.#setOption(option));
+
+    this.#answerCivilopedia();
+    this.#answerOptions();
+  }
+
+  // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
+  //  makes one itself. Bound here rather than in `bindEvents`, so a loaded game answers too.
+  #spawnClients(): void {
     engine.on('player:spawned', (player: Player): void => {
       if (clientRegistryInstance.getBy('player', player).length > 0) {
         return;
@@ -82,8 +101,10 @@ export class Game implements IGame {
         this.#createClient(player, { kind: 'computer' })
       );
     });
+  }
 
-    // A loaded game chose a rule set this build has no such set for (#158): it is played without, and says which.
+  // A loaded game chose a rule set this build has no such set for (#158): it is played without, and says which.
+  #warnOfUnknownRuleSets(): void {
     engine.on(
       'save:rule-sets-unknown',
       (unknown: { id: string; value: boolean | string }[]): void =>
@@ -93,7 +114,10 @@ export class Game implements IGame {
             .join(', ')}.`
         )
     );
+  }
 
+  // What the page hears as the turns go round, for a new game and a loaded one alike.
+  #reportTurns(): void {
     // A sign of life as each player's turn starts (#470), so that the page, waiting on a request while the AI players
     //  take their turns, doesn't take a long round for a game that has stopped. Bound here, so a loaded game sends it
     //  too.
@@ -127,122 +151,122 @@ export class Game implements IGame {
         this.#transport.send('notification', notice);
       }
     });
+  }
 
-    transport.receive(
-      'save',
-      ({
-        name,
-        autosave,
-        details,
-      }: {
-        name: string;
-        autosave?: 'start' | 'autosave';
-        details?: SaveDetails;
-      }): void => {
-        let data: string;
+  // The page's `save`: the game written out and sent back, as a download's or an autosave's.
+  #saveReceived({
+    name,
+    autosave,
+    details,
+  }: {
+    name: string;
+    autosave?: 'start' | 'autosave';
+    details?: SaveDetails;
+  }): void {
+    let data: string;
 
-        try {
-          data = JSON.stringify(
-            save(defaultGame, {
-              name,
-              describeClient: (client: unknown): DescribedClient =>
-                this.#describeClient(client as Client),
-            })
-          );
-        } catch (error) {
-          // Reported rather than thrown: the worker would otherwise die silently
-          // mid-game, and a save that cannot be written is not a reason to lose
-          // the game it was taken from. Said by the page as one it can't write
-          // is, not as a passing notification that is easily missed (#581). An
-          // autosave nobody asked for is only mentioned: the turn goes on (#653).
-          if (autosave !== undefined) {
-            this.#transport.send('notification', {
-              key: 'SavedGame.autosave-failed',
-              data: { error: describeError(error) },
-            });
+    try {
+      data = JSON.stringify(
+        save(defaultGame, {
+          name,
+          describeClient: (client: unknown): DescribedClient =>
+            this.#describeClient(client as Client),
+        })
+      );
+    } catch (error) {
+      // Reported rather than thrown: the worker would otherwise die silently
+      // mid-game, and a save that cannot be written is not a reason to lose
+      // the game it was taken from. Said by the page as one it can't write
+      // is, not as a passing notification that is easily missed (#581). An
+      // autosave nobody asked for is only mentioned: the turn goes on (#653).
+      if (autosave !== undefined) {
+        this.#transport.send('notification', {
+          key: 'SavedGame.autosave-failed',
+          data: { error: describeError(error) },
+        });
 
-            return;
-          }
-
-          this.#transport.send('saveFailed', { message: describeError(error) });
-
-          return;
-        }
-
-        if (autosave === undefined) {
-          this.#transport.send('saveGame', { name, data, details });
-
-          return;
-        }
-
-        // Compressed here rather than on the page (#653): late in a game the JSON is 15–30MB, and a Blob crosses to the
-        //  page without a copy. Plain where the browser can't compress, as a download is. Read from `globalThis`: the
-        //  TypeScript this builds with has no type for it yet.
-        const Compression = (
-          globalThis as {
-            CompressionStream?: new (format: 'gzip') => TransformStream<
-              Uint8Array,
-              Uint8Array
-            >;
-          }
-        ).CompressionStream;
-
-        (Compression === undefined
-          ? Promise.resolve(new Blob([data], { type: 'application/json' }))
-          : new Response(
-              new Blob([data]).stream().pipeThrough(new Compression('gzip'))
-            ).blob()
-        )
-          .then((blob: Blob): void =>
-            this.#transport.send('autosaveGame', {
-              name,
-              kind: autosave,
-              data: blob,
-              details,
-            })
-          )
-          .catch((error: Error): void =>
-            this.#transport.send('notification', {
-              key: 'SavedGame.autosave-failed',
-              data: { error: describeError(error) },
-            })
-          );
+        return;
       }
-    );
 
-    transport.receive(
-      'load',
-      ({ data, seats }: { data: string; seats?: SeatChanges }): void => {
-        this.#transport.send('notification', 'loading saved game...');
+      this.#transport.send('saveFailed', { message: describeError(error) });
 
-        let file: SaveGame;
+      return;
+    }
 
-        try {
-          file = JSON.parse(data) as SaveGame;
+    if (autosave === undefined) {
+      this.#transport.send('saveGame', { name, data, details });
 
-          // The seats reassigned before loading (#608), by player id: a wrong shape is refused as a wrong file is.
-          if (seats !== undefined && !isSeatChanges(seats)) {
-            throw new TypeError(
-              "The seats to load with must be { [playerId]: { kind: 'human' | 'computer', … } }."
-            );
-          }
-        } catch (error) {
-          // As any other failed load (#470).
-          this.#transport.send('loadFailed', {
-            message: describeError(error),
-          });
+      return;
+    }
 
-          return;
-        }
-
-        this.load(file, seats ?? {});
+    // Compressed here rather than on the page (#653): late in a game the JSON is 15–30MB, and a Blob crosses to the
+    //  page without a copy. Plain where the browser can't compress, as a download is. Read from `globalThis`: the
+    //  TypeScript this builds with has no type for it yet.
+    const Compression = (
+      globalThis as {
+        CompressionStream?: new (format: 'gzip') => TransformStream<
+          Uint8Array,
+          Uint8Array
+        >;
       }
-    );
+    ).CompressionStream;
 
+    (Compression === undefined
+      ? Promise.resolve(new Blob([data], { type: 'application/json' }))
+      : new Response(
+          new Blob([data]).stream().pipeThrough(new Compression('gzip'))
+        ).blob()
+    )
+      .then((blob: Blob): void =>
+        this.#transport.send('autosaveGame', {
+          name,
+          kind: autosave,
+          data: blob,
+          details,
+        })
+      )
+      .catch((error: Error): void =>
+        this.#transport.send('notification', {
+          key: 'SavedGame.autosave-failed',
+          data: { error: describeError(error) },
+        })
+      );
+  }
+
+  // The page's `load`: a save's file, checked before it is put back.
+  #loadReceived({ data, seats }: { data: string; seats?: SeatChanges }): void {
+    this.#transport.send('notification', 'loading saved game...');
+
+    let file: SaveGame;
+
+    try {
+      file = JSON.parse(data) as SaveGame;
+
+      // The seats reassigned before loading (#608), by player id: a wrong shape is refused as a wrong file is.
+      if (seats !== undefined && !isSeatChanges(seats)) {
+        throw new TypeError(
+          "The seats to load with must be { [playerId]: { kind: 'human' | 'computer', … } }."
+        );
+      }
+    } catch (error) {
+      // As any other failed load (#470).
+      this.#transport.send('loadFailed', {
+        message: describeError(error),
+      });
+
+      return;
+    }
+
+    this.load(file, seats ?? {});
+  }
+
+  // What the game setup asks of the rules before a game starts: the levels, the civilizations, the rule sets and the
+  //  AI clients.
+  #answerSetup(): void {
     // The levels come from the rules rather than a list here, so a ruleset with other levels needs no change to the menu
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
     //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).
-    answer(transport, 'difficulties', () =>
+    answer(this.#transport, 'difficulties', () =>
       this.#plugins.load().then(() =>
         defaultGame.availableDifficulties.sorted().map((Level) => ({
           name: typeNameOf(Level),
@@ -253,7 +277,7 @@ export class Game implements IGame {
 
     // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer
     //  seat can be given. Answered as `difficulties` is, with the plugins imported first.
-    answer(transport, 'civilizations', () =>
+    answer(this.#transport, 'civilizations', () =>
       this.#plugins.load().then(() =>
         defaultGame.civilizations.entries().map((CivilizationType) => ({
           name: typeNameOf(CivilizationType),
@@ -271,11 +295,11 @@ export class Game implements IGame {
 
     // The rule sets a new game can switch (#158), from the rules as the levels are, and with the page's choices and
     //  its one change made: what switching a set does to what is beneath it is the rules' to say.
-    answer(transport, 'ruleSets', (query) =>
+    answer(this.#transport, 'ruleSets', (query) =>
       this.#plugins.load().then(() => ruleSetsData(query, this.#playing))
     );
 
-    answer(transport, 'aiClients', () =>
+    answer(this.#transport, 'aiClients', () =>
       this.#plugins
         .load()
         .then(() =>
@@ -284,56 +308,62 @@ export class Game implements IGame {
           )
         )
     );
+  }
 
-    transport.receive('start', () => {
-      // Once: a start refused for its seats (#604) can be tried again on the same game.
-      if (!this.#eventsBound) {
-        this.#eventsBound = true;
-        this.bindEvents();
-      }
+  // The page's `start`: a new game, once the plugins are in.
+  #startReceived(): void {
+    // Once: a start refused for its seats (#604) can be tried again on the same game.
+    if (!this.#eventsBound) {
+      this.#eventsBound = true;
+      this.bindEvents();
+    }
 
-      // The plugins are in first: the seats name civilizations, leaders and AI clients that they register, so rules
-      //  handed in to load lazily are in before the seats are checked against them (#825). civ.one's are in already.
-      this.#plugins
-        .load()
-        .then(() => this.start())
-        .catch((error: unknown): void => {
-          console.error(error);
+    // The plugins are in first: the seats name civilizations, leaders and AI clients that they register, so rules
+    //  handed in to load lazily are in before the seats are checked against them (#825). civ.one's are in already.
+    this.#plugins
+      .load()
+      .then(() => this.start())
+      .catch((error: unknown): void => {
+        console.error(error);
 
-          this.#transport.send('workerError', {
-            message: describeError(error),
-          });
+        this.#transport.send('workerError', {
+          message: describeError(error),
         });
-    });
+      });
+  }
 
-    transport.receive('setOption', ({ name, value }) => {
-      if (name === 'automateLocalPlayer') {
-        this.#automateLocalPlayer = !!value;
-        this.#localPlayerClient?.setAutomationEnabled(
-          this.#automateLocalPlayer
-        );
+  // The page's `setOption`: one engine option, or the local player's automation.
+  #setOption({ name, value }: { name: string; value: any }): void {
+    if (name === 'automateLocalPlayer') {
+      this.#automateLocalPlayer = !!value;
+      this.#localPlayerClient?.setAutomationEnabled(this.#automateLocalPlayer);
 
-        this.#transport.send(
-          'notification',
-          `local player automation ${
-            this.#automateLocalPlayer ? 'enabled' : 'disabled'
-          }`
-        );
+      this.#transport.send(
+        'notification',
+        `local player automation ${
+          this.#automateLocalPlayer ? 'enabled' : 'disabled'
+        }`
+      );
 
-        return;
-      }
+      return;
+    }
 
-      this.#transport.send('notification', `setting ${name} to ${value}`);
-      engine.setOption(name, value);
-    });
+    this.#transport.send('notification', `setting ${name} to ${value}`);
+    engine.setOption(name, value);
+  }
 
+  // What the civilopedia asks for.
+  #answerCivilopedia(): void {
     // What the ruleset's things need, make obsolete and are replaced by, for the civilopedia (#37, #183).
-    answer(transport, 'getRequirements', () => requirementsData());
+    answer(this.#transport, 'getRequirements', () => requirementsData());
 
     // Every entry the civilopedia shows, with the requirement entries about it and a unit's numbers (#183).
-    answer(transport, 'getCivilopedia', () => civilopediaData());
+    answer(this.#transport, 'getCivilopedia', () => civilopediaData());
+  }
 
-    answer(transport, 'getOptions', (values: string[]) =>
+  // The engine's options, read and set by the page.
+  #answerOptions(): void {
+    answer(this.#transport, 'getOptions', (values: string[]) =>
       values.reduce((options, optionName) => {
         options[optionName] = engine.option(optionName);
 
@@ -341,7 +371,7 @@ export class Game implements IGame {
       }, {} as { [key: string]: any })
     );
 
-    answer(transport, 'setOptions', (values: { [key: string]: any }) => {
+    answer(this.#transport, 'setOptions', (values: { [key: string]: any }) => {
       Object.entries(values).forEach(([option, value]) => {
         if (option === 'automateLocalPlayer') {
           this.#automateLocalPlayer = !!value;
