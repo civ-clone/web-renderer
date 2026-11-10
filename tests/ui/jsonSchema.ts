@@ -337,6 +337,147 @@ expect(
   ]
 );
 
+// `$ref` beside other keywords: both apply, as 2020-12 has it, and inside an `allOf` (as the tileset schema writes it,
+//  for editors that copy a `$ref`'s schema over its neighbours).
+const defs = {
+  whole: { type: 'integer', 'x-message': '{path} must be whole' },
+};
+
+expect(
+  '$ref with keywords beside it, directly or in an allOf, checks both',
+  [
+    passes({ $ref: '#/$defs/whole', minimum: 1, $defs: defs }, [1, 0, 1.5]),
+    passes(
+      { allOf: [{ $ref: '#/$defs/whole' }], minimum: 1, $defs: defs },
+      [1, 0, 1.5]
+    ),
+  ],
+  [
+    [true, false, false],
+    [true, false, false],
+  ]
+);
+expect(
+  'a missing property is told with the message of what it refers to, through a $ref or an allOf of one',
+  [
+    { properties: { a: { $ref: '#/$defs/whole' } } },
+    { properties: { a: { allOf: [{ $ref: '#/$defs/whole' }] } } },
+    {
+      properties: {
+        a: { allOf: [{ $ref: '#/$defs/whole' }, { minimum: 1 }] },
+      },
+      'x-message': 'the object',
+    },
+  ].map(
+    (schema) =>
+      failureOf({ ...schema, required: ['a'], $defs: defs }, {})?.message
+  ),
+  ['{path} must be whole', '{path} must be whole', 'the object']
+);
+
+// Only a schema's own keys, and a document's own properties, are read: never `Object.prototype`'s.
+expect(
+  "names that are Object.prototype's are not taken for types, keywords, definitions or properties",
+  [
+    ...[
+      { type: 'constructor' },
+      { type: 'toString' },
+      { $ref: '#/$defs/toString', $defs: {} },
+      JSON.parse('{"constructor": 1}'),
+      JSON.parse('{"toString": 1}'),
+      JSON.parse('{"__proto__": 1}'),
+      { 'x-message': { toString: 'no' } },
+    ].map((schema) => thrown(() => firstFailure(schema, 'x'))),
+    passes({ properties: { a: true }, additionalProperties: false }, [
+      JSON.parse('{"toString": 1}'),
+      JSON.parse('{"__proto__": 1}'),
+      { a: 1 },
+    ]),
+  ],
+  [
+    'Schema: "type" cannot be "constructor".',
+    'Schema: "type" cannot be "toString".',
+    'Schema: "#/$defs/toString" names no schema in its $defs.',
+    'Schema: the keyword "constructor" is not one this checker knows.',
+    'Schema: the keyword "toString" is not one this checker knows.',
+    'Schema: the keyword "__proto__" is not one this checker knows.',
+    'Schema: "x-message" is a sentence, or sentences by keywords this checker knows, not {"toString":"no"}.',
+    [false, false, true],
+  ]
+);
+
+// A `$ref` that comes back to itself, never reaching a property or an item, would be followed for ever.
+const loop =
+  'Schema: its "$ref"s lead back to where they started, without reaching a property or an item.';
+
+expect(
+  'a $ref that leads back to itself is refused, directly or through allOf, anyOf or not',
+  [
+    { $ref: '#/$defs/a', $defs: { a: { $ref: '#/$defs/a' } } },
+    {
+      $ref: '#/$defs/a',
+      $defs: {
+        a: { allOf: [{ $ref: '#/$defs/b' }] },
+        b: { $ref: '#/$defs/a' },
+      },
+    },
+    { $defs: { a: { anyOf: [true, { $ref: '#/$defs/a' }] } } },
+    { $defs: { a: { not: { $ref: '#/$defs/a' } } } },
+  ].map((schema) => thrown(() => firstFailure(schema, 1))),
+  [loop, loop, loop, loop]
+);
+expect(
+  'while one that reaches a property or an item first is a tree, checked as deep as the document goes',
+  passes(
+    {
+      $ref: '#/$defs/tree',
+      $defs: {
+        tree: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            kids: { type: 'array', items: { $ref: '#/$defs/tree' } },
+            parent: { $ref: '#/$defs/tree' },
+          },
+        },
+      },
+    },
+    [
+      { name: 'a', kids: [{ name: 'b', kids: [{ name: 'c' }] }] },
+      { name: 'a', kids: [{ name: 'b', kids: [{ name: 3 }] }] },
+      { parent: { parent: { name: 'x' } } },
+      { parent: { parent: 'x' } },
+    ]
+  ),
+  [true, false, true, false]
+);
+
+// Arguments it would misread are refused when the schema is read, not when a document reaches them.
+expect(
+  'an invalid pattern, no types, a negative or fractional count, or a message for an unknown keyword is refused',
+  [
+    { properties: { a: { pattern: '(' } } },
+    { type: [] },
+    { minLength: -1 },
+    { minLength: 1.5 },
+    { minItems: -1 },
+    { 'x-message': { mimItems: 'none' } },
+    { 'x-message': 5 },
+    // A misspelt x-message is an x- annotation like any other.
+    { 'x-messge': { mimItems: 'none' } },
+  ].map((schema) => thrown(() => firstFailure(schema, 'x'))),
+  [
+    'Schema: "pattern" cannot be "(".',
+    'Schema: "type" cannot be [].',
+    'Schema: "minLength" cannot be -1.',
+    'Schema: "minLength" cannot be 1.5.',
+    'Schema: "minItems" cannot be -1.',
+    'Schema: "x-message" is a sentence, or sentences by keywords this checker knows, not {"mimItems":"none"}.',
+    'Schema: "x-message" is a sentence, or sentences by keywords this checker knows, not 5.',
+    null,
+  ]
+);
+
 // The tileset descriptor's schema is one it reads, and Civ1's descriptor passes it.
 expect(
   "the tileset schema uses only what it knows, and Civ1's descriptor passes",

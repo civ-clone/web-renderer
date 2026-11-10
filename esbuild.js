@@ -121,8 +121,10 @@
 
               if (!built) {
                 copyReleases();
-                copySchema();
               }
+
+              // After every build, as the schema may have changed with it.
+              copySchema();
 
               console.log(
                 built ? '\x1b[32mRebuilt.\x1b[0m' : '\x1b[32mdone.\x1b[0m'

@@ -73,7 +73,7 @@
         },
         "anchor": {
           "description": "Where a tile-sized sprite's top-left corner goes in the tile.",
-          "$ref": "#/$defs/point"
+          "allOf": [{ "$ref": "#/$defs/point" }]
         },
         "overhang": {
           "description": "How far tall sprites reach out of their tile, for the layers to leave room for.",
@@ -164,15 +164,15 @@
       "properties": {
         "terrain": {
           "description": "By terrain, such as Ocean.",
-          "$ref": "#/$defs/words"
+          "allOf": [{ "$ref": "#/$defs/words" }]
         },
         "special": {
           "description": "By terrain and feature, such as Forest:Game.",
-          "$ref": "#/$defs/words"
+          "allOf": [{ "$ref": "#/$defs/words" }]
         },
         "unit": {
           "description": "By unit, such as Settlers.",
-          "$ref": "#/$defs/words"
+          "allOf": [{ "$ref": "#/$defs/words" }]
         }
       },
       "required": ["terrain", "special", "unit"],
@@ -195,7 +195,7 @@
         },
         "terrain": {
           "description": "Terrain, joined to its neighbours. Its names may have {terrain}.",
-          "$ref": "#/$defs/joiningFamily"
+          "allOf": [{ "$ref": "#/$defs/joiningFamily" }]
         },
         "coast": {
           "description": "The coast: quarter-tile corners, each picked by the neighbours touching it. Only a coast cut from one strip can be drawn yet.",
@@ -210,15 +210,15 @@
                 "sprite": { "$ref": "#/$defs/sprite" },
                 "quarter": {
                   "description": "A corner's size, in native px.",
-                  "$ref": "#/$defs/px"
+                  "allOf": [{ "$ref": "#/$defs/px" }]
                 },
                 "cell": {
                   "description": "A column's width, in native px: two quarters.",
                   "type": "integer",
-                  "x-message": "{path} must be two quarters, a whole number of px, not {value}."
+                  "x-message": "{path} must be two quarters, {twoQuarters}, not {value}."
                 }
               },
-              "required": ["sprite", "quarter"],
+              "required": ["sprite", "quarter", "cell"],
               "x-message": "families.coast must have a strip: only a coast cut from one strip can be drawn yet."
             },
             "sprite": {
@@ -243,11 +243,11 @@
         },
         "riverMouth": {
           "description": "Where a river meets the sea.",
-          "$ref": "#/$defs/joiningFamily"
+          "allOf": [{ "$ref": "#/$defs/joiningFamily" }]
         },
         "irrigation": {
           "description": "Irrigation: one sprite.",
-          "$ref": "#/$defs/mapFamily",
+          "allOf": [{ "$ref": "#/$defs/mapFamily" }],
           "properties": {
             "method": { "$ref": "#/$defs/noMethod" },
             "overTerrain": {
@@ -259,31 +259,31 @@
         },
         "mine": {
           "description": "A mine: one sprite.",
-          "$ref": "#/$defs/singleFamily"
+          "allOf": [{ "$ref": "#/$defs/singleFamily" }]
         },
         "pollution": {
           "description": "Pollution: one sprite.",
-          "$ref": "#/$defs/singleFamily"
+          "allOf": [{ "$ref": "#/$defs/singleFamily" }]
         },
         "road": {
           "description": "Roads, joined to their neighbours.",
-          "$ref": "#/$defs/joiningFamily"
+          "allOf": [{ "$ref": "#/$defs/joiningFamily" }]
         },
         "railroad": {
           "description": "Railroads, joined to their neighbours.",
-          "$ref": "#/$defs/joiningFamily"
+          "allOf": [{ "$ref": "#/$defs/joiningFamily" }]
         },
         "fog": {
           "description": "The edge of what a player has seen.",
-          "$ref": "#/$defs/joiningFamily"
+          "allOf": [{ "$ref": "#/$defs/joiningFamily" }]
         },
         "special": {
           "description": "Special resources: one sprite each. Its names may have {special}.",
-          "$ref": "#/$defs/singleFamily"
+          "allOf": [{ "$ref": "#/$defs/singleFamily" }]
         },
         "hut": {
           "description": "A hut: one sprite.",
-          "$ref": "#/$defs/singleFamily"
+          "allOf": [{ "$ref": "#/$defs/singleFamily" }]
         }
       },
       "required": [
@@ -308,16 +308,16 @@
       "properties": {
         "sprite": {
           "description": "A unit's sprite. Its name may have {unit}.",
-          "$ref": "#/$defs/sprite"
+          "allOf": [{ "$ref": "#/$defs/sprite" }]
         },
         "fortified": {
           "description": "Drawn over a fortified unit.",
-          "$ref": "#/$defs/sprite"
+          "allOf": [{ "$ref": "#/$defs/sprite" }]
         },
         "colouring": { "$ref": "#/$defs/colouring" },
         "stackOffset": {
           "description": "Where the copy that shows a stack is drawn, from the unit.",
-          "$ref": "#/$defs/point"
+          "allOf": [{ "$ref": "#/$defs/point" }]
         },
         "status": {
           "description": "The busy unit's letter: across at x of the tile, on a baseline at baseline of it, fontSize native px.",
@@ -359,7 +359,7 @@
         },
         "occupied": {
           "description": "The box's colour when the city has units in it.",
-          "$ref": "#/$defs/colour",
+          "allOf": [{ "$ref": "#/$defs/colour" }],
           "x-message": "cities.occupied must be a colour."
         },
         "labels": {
@@ -423,7 +423,7 @@
       "properties": {
         "icon": {
           "description": "A yield's icon. 14 when left out.",
-          "$ref": "#/$defs/px"
+          "allOf": [{ "$ref": "#/$defs/px" }]
         },
         "citizen": {
           "description": "A citizen, step apart, so they overlap where step is less than width. 16 and 12 when left out.",
@@ -436,7 +436,7 @@
         },
         "cursor": {
           "description": "The cursor. 26 when left out.",
-          "$ref": "#/$defs/px"
+          "allOf": [{ "$ref": "#/$defs/px" }]
         }
       },
       "x-message": "ui must be an object, and its citizen too."
@@ -491,7 +491,7 @@
     "colour": {
       "description": "A colour as #rgb, #rrggbb, rgb(…) or rgba(…).",
       "type": "string",
-      "pattern": "^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgba?\\([\\d\\s.,]+\\))$"
+      "pattern": "^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|[rR][gG][bB][aA]?\\([\\d\\s.,]+\\))$"
     },
     "words": {
       "type": "object",
@@ -523,7 +523,7 @@
       "properties": {
         "sprite": {
           "description": "The sprite's name, with {placeholders} filled from engine names and directions: {dir} for edges, {dirs} for bitmask.",
-          "$ref": "#/$defs/sprite"
+          "allOf": [{ "$ref": "#/$defs/sprite" }]
         },
         "isolated": {
           "description": "What is drawn with no matching neighbour: a sprite, or a square of colour dot, size px across, in the middle.",
@@ -579,7 +579,7 @@
     },
     "joiningFamily": {
       "description": "A family joined to its neighbours: one whole-tile sprite per combination of them (bitmask), or one overlay per matching neighbour (edges).",
-      "$ref": "#/$defs/mapFamily",
+      "allOf": [{ "$ref": "#/$defs/mapFamily" }],
       "properties": {
         "method": {
           "allOf": [{ "$ref": "#/$defs/methodDrawn" }],
@@ -593,9 +593,12 @@
     },
     "singleFamily": {
       "description": "A family of one sprite, drawn whatever its neighbours.",
-      "$ref": "#/$defs/mapFamily",
+      "allOf": [{ "$ref": "#/$defs/mapFamily" }],
       "properties": {
         "method": { "$ref": "#/$defs/noMethod" },
+        "neighbours": {
+          "description": "Not read: a family of one sprite is drawn whatever its neighbours."
+        },
         "overTerrain": { "$ref": "#/$defs/noOverTerrain" }
       }
     },

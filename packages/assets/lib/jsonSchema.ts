@@ -58,9 +58,26 @@ const isSchema = (value: unknown): boolean =>
 
 const isNumber = (value: unknown): boolean => typeof value === 'number';
 
+// Whether `object` has `key` itself: a name from a schema or a document is never one of `Object.prototype`'s.
+const own = (object: object, key: string): boolean =>
+  Object.prototype.hasOwnProperty.call(object, key);
+
 // Present, as JSON has it: a property set to `undefined` is missing.
 const has = (value: { [key: string]: unknown }, key: string): boolean =>
-  Object.prototype.hasOwnProperty.call(value, key) && value[key] !== undefined;
+  own(value, key) && value[key] !== undefined;
+
+const isCount = (value: unknown): boolean =>
+  Number.isInteger(value) && (value as number) >= 0;
+
+const compiles = (pattern: string): boolean => {
+  try {
+    new RegExp(pattern, 'u');
+
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 // Whether `value` is of each JSON type. A number is finite: JSON has no other.
 const types: { [type: string]: (value: unknown) => boolean } = {
@@ -82,7 +99,9 @@ const messageFor = (schema: Schema, keyword: string | null): string | null => {
     return typeof message === 'string' ? message : null;
   }
 
-  return isObject(message) && typeof message[keyword] === 'string'
+  return isObject(message) &&
+    own(message, keyword) &&
+    typeof message[keyword] === 'string'
     ? (message[keyword] as string)
     : null;
 };
@@ -92,7 +111,7 @@ const resolve = (reference: string, root: Schemas): Schema => {
   const name = /^#\/\$defs\/([^/~%]+)$/.exec(reference)?.[1],
     definitions = root.$defs;
 
-  if (name === undefined || !isObject(definitions) || !(name in definitions)) {
+  if (name === undefined || !isObject(definitions) || !own(definitions, name)) {
     throw new Error(`Schema: "${reference}" names no schema in its $defs.`);
   }
 
@@ -109,12 +128,20 @@ const firstOf = <T>(
     null
   );
 
-// A required property that is missing, told with its own schema's message when it (or what it refers to) has one.
+// A required property that is missing, told with its own schema's message when it, or what it refers to (by `$ref`,
+//  or an `allOf` of one schema), has one.
 const missing = (schema: Schema, path: Path, root: Schemas): SchemaFailure => {
-  const message = messageFor(schema, 'required');
+  const message = messageFor(schema, 'required'),
+    within = !isObject(schema)
+      ? undefined
+      : typeof schema.$ref === 'string'
+      ? resolve(schema.$ref, root)
+      : Array.isArray(schema.allOf) && schema.allOf.length === 1
+      ? (schema.allOf[0] as Schema)
+      : undefined;
 
-  return message === null && isObject(schema) && typeof schema.$ref === 'string'
-    ? missing(resolve(schema.$ref, root), path, root)
+  return message === null && within !== undefined
+    ? missing(within, path, root)
     : { path, value: undefined, keyword: 'required', message };
 };
 
@@ -130,9 +157,10 @@ const keywords: {
 } = {
   type: [
     (argument) =>
+      ([] as unknown[]).concat(argument).length > 0 &&
       ([] as unknown[])
         .concat(argument)
-        .every((type) => typeof type === 'string' && type in types),
+        .every((type) => typeof type === 'string' && own(types, type)),
     (argument, { value }) =>
       ([] as string[]).concat(argument).some((type) => types[type](value)),
   ],
@@ -150,17 +178,17 @@ const keywords: {
     (argument, { value }) => typeof value !== 'number' || value <= argument,
   ],
   minLength: [
-    Number.isInteger,
+    isCount,
     (argument, { value }) =>
       typeof value !== 'string' || [...value].length >= argument,
   ],
   pattern: [
-    (argument) => typeof argument === 'string',
+    (argument) => typeof argument === 'string' && compiles(argument),
     (argument, { value }) =>
       typeof value !== 'string' || new RegExp(argument, 'u').test(value),
   ],
   minItems: [
-    Number.isInteger,
+    isCount,
     (argument, { value }) => !Array.isArray(value) || value.length >= argument,
   ],
   items: [
@@ -186,7 +214,7 @@ const keywords: {
     (argument, { schema, value, path, root }) =>
       !isObject(value) ||
       firstOf(Object.keys(value), (key) =>
-        isObject(schema.properties) && key in schema.properties
+        isObject(schema.properties) && own(schema.properties, key)
           ? null
           : check(argument, value[key], [...path, key], root)
       ),
@@ -276,8 +304,16 @@ const check = (
   return null;
 };
 
-// Throws if `schema`, or any schema within it, has a keyword this checker doesn't know, or one it can't read.
-const assertKnown = (schema: unknown, root: Schemas): void => {
+// The keywords whose arguments are, or hold, schemas.
+const subschemas = ['items', 'additionalProperties', 'not', 'allOf', 'anyOf'];
+
+// Throws if `schema`, or any schema within it, has a keyword this checker doesn't know, or one it can't read. Each
+//  schema it finds is added to `found`.
+const assertKnown = (
+  schema: unknown,
+  root: Schemas,
+  found: Schemas[]
+): void => {
   if (typeof schema === 'boolean') {
     return;
   }
@@ -290,10 +326,29 @@ const assertKnown = (schema: unknown, root: Schemas): void => {
     );
   }
 
+  found.push(schema);
+
   Object.entries(schema).forEach(([keyword, argument]) => {
     if (keyword === '$defs') {
       Object.values(isObject(argument) ? argument : [argument]).forEach(
-        (each) => assertKnown(each, root)
+        (each) => assertKnown(each, root, found)
+      );
+    }
+
+    if (
+      keyword === 'x-message' &&
+      typeof argument !== 'string' &&
+      !(
+        isObject(argument) &&
+        Object.entries(argument).every(
+          ([key, message]) => own(keywords, key) && typeof message === 'string'
+        )
+      )
+    ) {
+      throw new Error(
+        `Schema: "x-message" is a sentence, or sentences by keywords this checker knows, not ${JSON.stringify(
+          argument
+        )}.`
       );
     }
 
@@ -301,7 +356,7 @@ const assertKnown = (schema: unknown, root: Schemas): void => {
       return;
     }
 
-    if (!(keyword in keywords)) {
+    if (!own(keywords, keyword)) {
       throw new Error(
         `Schema: the keyword "${keyword}" is not one this checker knows.`
       );
@@ -317,14 +372,43 @@ const assertKnown = (schema: unknown, root: Schemas): void => {
       resolve(argument as string, root);
     }
 
-    // The schemas within it.
-    (keyword === 'properties'
-      ? Object.values(argument as Schemas)
-      : ([] as unknown[]).concat(argument)
-    )
-      .filter(isSchema)
-      .forEach((each) => assertKnown(each, root));
+    if (keyword === 'properties') {
+      Object.values(argument as Schemas).forEach((each) =>
+        assertKnown(each, root, found)
+      );
+    }
+
+    if (subschemas.includes(keyword)) {
+      ([] as unknown[])
+        .concat(argument)
+        .forEach((each) => assertKnown(each, root, found));
+    }
   });
+};
+
+// Throws if following `schema`'s `$ref`s, and the schemas `allOf`, `anyOf` and `not` check the same value against,
+//  comes back to a schema on the way, which would be checked for ever: only a property or an item moves on.
+const assertEnds = (
+  schema: Schema,
+  root: Schemas,
+  chain: Schema[] = []
+): void => {
+  if (!isObject(schema)) {
+    return;
+  }
+
+  if (chain.includes(schema)) {
+    throw new Error(
+      'Schema: its "$ref"s lead back to where they started, without reaching a property or an item.'
+    );
+  }
+
+  [
+    ...(typeof schema.$ref === 'string' ? [resolve(schema.$ref, root)] : []),
+    ...((schema.allOf ?? []) as Schema[]),
+    ...((schema.anyOf ?? []) as Schema[]),
+    ...(own(schema, 'not') ? [schema.not as Schema] : []),
+  ].forEach((each) => assertEnds(each, root, [...chain, schema]));
 };
 
 const known = new WeakSet<Schemas>();
@@ -340,7 +424,10 @@ export const firstFailure = (
   const root = typeof schema === 'boolean' ? {} : schema;
 
   if (!known.has(root)) {
-    assertKnown(schema, root);
+    const found: Schemas[] = [];
+
+    assertKnown(schema, root, found);
+    found.forEach((each) => assertEnds(each, root));
     known.add(root);
   }
 

@@ -269,12 +269,18 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
   // What a schema can say, in its own words: see `x-message` in the schema.
   if (failure !== null) {
     const { path, value, keyword, message } = failure,
+      quarter = (json as { families?: { coast?: { strip?: CoastStrip } } })
+        .families?.coast?.strip?.quarter,
       tokens: { [token: string]: string } = {
         path: pathName(path),
         parent: pathName(path.slice(0, -1)),
         value: `${JSON.stringify(value)}`,
         grids: topologyIds.join(', '),
         directions: squareDirections.join(', '),
+        // The coast strip's cell, as wide as two of its quarters.
+        twoQuarters: Number.isInteger(quarter)
+          ? `${(quarter as number) * 2} px`
+          : 'a whole number of px',
         keyword,
       };
 
@@ -282,7 +288,7 @@ export const validateDescriptor = (json: unknown): TilesetDescriptor => {
       (
         message ?? '{path} is not what a tileset has there ({keyword}).'
       ).replace(
-        /\{(path|parent|value|grids|directions|keyword)\}/g,
+        /\{(path|parent|value|grids|directions|twoQuarters|keyword)\}/g,
         (_, token: string) => tokens[token]
       )
     );

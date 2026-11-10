@@ -679,6 +679,31 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
   expect(
+    'a colour is read in any case, as before the schema; a cell that is not whole says the size it must be',
+    [
+      withCities({ ...civ1.cities, occupied: 'RGB(0, 0, 0)' }),
+      withUnits({
+        ...civ1.units,
+        colouring: { mode: 'replaceColours', keys: ['Rgba(0,0,0,1)', '#ABC'] },
+      }),
+      withFamily('road', {
+        ...civ1.families.road,
+        isolated: { dot: '#8C5828', size: 2 },
+      }),
+      withCities({ ...civ1.cities, occupied: 'rgbx(0, 0, 0)' }),
+      withStrip({ cell: 'x' }),
+      withStrip({ cell: 16.5 }),
+    ].map((json) => thrown(() => validateDescriptor(json))),
+    [
+      null,
+      null,
+      null,
+      'Tileset "civ1": cities.occupied must be a colour.',
+      'Tileset "civ1": families.coast.strip.cell must be two quarters, 16 px, not "x".',
+      'Tileset "civ1": families.coast.strip.cell must be two quarters, 16 px, not 16.5.',
+    ]
+  );
+  expect(
     'irrigation may be drawn over the terrain, said with true or false, and nothing else may',
     [
       withFamily('irrigation', {
