@@ -6,7 +6,6 @@ import { instance as availableCityBuildItemsRegistryInstance } from '@civ-clone/
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
-import { instance as cityNameRegistryInstance } from '@civ-clone/core-civilization/CityNameRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as currentPlayerRegistryInstance } from '@civ-clone/core-player/CurrentPlayerRegistry';
@@ -33,7 +32,6 @@ export const registries: ClientRegistries = {
   cityBuilds: cityBuildRegistryInstance,
   cityGrowths: cityGrowthRegistryInstance,
   cityImprovements: cityImprovementRegistryInstance,
-  cityNames: cityNameRegistryInstance,
   clients: clientRegistryInstance,
   currentPlayers: currentPlayerRegistryInstance,
   difficulties: gameDifficultyRegistryInstance,
