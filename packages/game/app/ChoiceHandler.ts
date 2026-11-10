@@ -16,7 +16,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import entryDetails from '@civ-clone/ui-windows/components/lib/choiceDetails';
 import { openChoice } from '@civ-clone/ui-windows/components/choiceList';
 import talks from '@civ-clone/ui-windows/components/talks';
-import { PendingMeeting } from '@civ-clone/ui-windows/components/NextTurn';
+import { PendingMeeting } from '@civ-clone/ui-windows/components/turnControls';
 import { t } from 'i18next';
 
 export interface ChoiceHandlerDeps {

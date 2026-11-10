@@ -73,7 +73,7 @@ registerInterface({
   ...modern,
   id: 'test',
   slots: { ...modern.slots, cityScreen: 'scroll' },
-  features: ['nextTurn'],
+  features: ['squareTooltips'],
   theme: 'civ1-classic',
 });
 
@@ -92,7 +92,7 @@ expect(
 );
 expect(
   'with its own features',
-  [hasFeature('nextTurn'), hasFeature('windowChrome')],
+  [hasFeature('squareTooltips'), hasFeature('windowChrome')],
   [true, false]
 );
 
@@ -101,11 +101,11 @@ expect(
 registerInterface({ ...currentInterface(), features: [] });
 expect(
   'replacing the interface in use changes nothing yet',
-  hasFeature('nextTurn'),
+  hasFeature('squareTooltips'),
   true
 );
 use('test');
-expect('and does when it next loads', hasFeature('nextTurn'), false);
+expect('and does when it next loads', hasFeature('squareTooltips'), false);
 
 // And what uses a real slot follows it, unchanged.
 {
@@ -154,7 +154,7 @@ expect(
   { ...modern, id: 7 },
   { ...modern, slots: { reports: 7 } },
   { ...modern, slots: [] },
-  { ...modern, features: 'nextTurn' },
+  { ...modern, features: 'squareTooltips' },
 ].forEach((manifest) => {
   let threw = false;
 

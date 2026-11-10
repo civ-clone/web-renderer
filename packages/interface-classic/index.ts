@@ -1,3 +1,4 @@
+import Actions from '@civ-clone/ui-windows/components/Actions';
 import { ChoiceRow } from '@civ-clone/ui-component-choice-window/ChoiceWindow';
 import { CityStatus } from './components/CityStatus';
 import CityBuildSelectionWindow from './components/CityBuildSelectionWindow';
@@ -26,6 +27,7 @@ import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import talks from '@civ-clone/ui-windows/components/talks';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import turnControls from '@civ-clone/ui-windows/components/turnControls';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
 // The classic interface (#735, #825), after Civ1's own: its manifest, and the pieces it fills its slots with.
@@ -109,5 +111,15 @@ unitPanel.provide('details', ({ unitInfo, unitActionArea }, deps) => {
 talks.provide('windows', talksWindows);
 
 mapMenus.provide('popups', popupMenus);
+
+// The orbs: a button for each of the player's actions, End Turn among them.
+turnControls.provide('orbs', (actionArea, { portal, transport }) => {
+  const orbs = new Actions(actionArea, portal, transport);
+
+  return {
+    build: ({ primary, player }) => orbs.build(primary, player),
+    nextTurn: () => null,
+  };
+});
 
 registerInterface(manifest);

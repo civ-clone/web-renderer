@@ -2,7 +2,7 @@
 //  gold, Wonders and civics, or diplomacy. By the notice's key, as its text is: a key, or the keys under it, in the
 //  first group that names it. Anything else is a plain notice, in the notice tint.
 
-import { Notice } from '../Notices';
+import { Notice } from '@civ-clone/ui-windows/components/Notices';
 import { PlayerAction } from '@civ-clone/ui-protocol/types';
 
 export type NoticeCategory =

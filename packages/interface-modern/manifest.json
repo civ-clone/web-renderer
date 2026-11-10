@@ -12,7 +12,8 @@
     "choiceList": "choiceWindow",
     "unitPanel": "card",
     "talks": "meetingWindow",
-    "mapMenus": "shared"
+    "mapMenus": "shared",
+    "turnControls": "nextTurn"
   },
-  "features": ["assetsInOptions", "nextTurn", "squareTooltips", "windowChrome"]
+  "features": ["assetsInOptions", "squareTooltips", "windowChrome"]
 }

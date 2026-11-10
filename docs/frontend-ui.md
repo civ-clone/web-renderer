@@ -68,7 +68,8 @@ choice of theme outranks.
   which implementation to use.
 - **Features** are behaviours inside a shared component that an interface has or doesn't, read with `hasFeature`.
 - **What's its own:** a window or map piece that only one interface uses lives in that interface's package
-  (`components/`): the modern report tables, title menu, setup form, city layout and choice windows, and the classic
+  (`components/`): the modern report tables, title menu, setup form, city layout, choice windows, notification rows and
+  Next Turn button, and the classic
   reports, main menu, setup window and build list. The `packages` test holds it. The building blocks (`client`,
   `assets`, `widgets`) stay shared, as any interface can build on them, and a piece a second interface wants moves to
   a shared package. Each slot is typed by what its callers need (`Window`, `CityLayout`, `TitleScreen`), so shared
@@ -177,7 +178,9 @@ ask before leaving a game in progress.
 - Action panels: `Actions` (buttons from `components/Actions/*`: `EndTurn`,
   `CityBuild`, `ChooseResearch`, `ChooseGovernment`, `Revolution`,
   `CivilDisorder`, `AdjustTradeRates`, `Spaceship`, and `Notice` for held
-  notices), `ActionWindow`, and the unit's menu (a long press on the map), which
+  notices), which fill the end-turn area under classic and the secondary panel under both (the end-turn area is the
+  `turnControls` slot, #860: classic's orbs, or modern's `NotificationRows` over `NextTurn`), `ActionWindow`, and the
+  unit's menu (a long press on the map), which
   each interface fills through the `mapMenus` slot (#860): classic's
   `UnitActionMenu` popup, or modern's `UiUnitMenu`, which a right-click opens too.
 - `Notices`: `bubble` notifications (such as an obsolete Wonder) wait as buttons

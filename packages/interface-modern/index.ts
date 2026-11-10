@@ -6,6 +6,8 @@ import CivilizationScoreTable from './components/CivilizationScoreTable';
 import HappinessTable from './components/HappinessTable';
 import IntelligenceTable from './components/IntelligenceTable';
 import MilitaryTable from './components/MilitaryTable';
+import NextTurn from './components/NextTurn';
+import NotificationRows from './components/NotificationRows';
 import TitleMenu from './components/TitleMenu';
 import TopCitiesTable from './components/TopCitiesTable';
 import TradeTable from './components/TradeTable';
@@ -25,7 +27,9 @@ import { registerInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { reports } from '@civ-clone/ui-windows/components/reports';
 import { s } from '@dom111/element';
 import talks from '@civ-clone/ui-windows/components/talks';
+import nextTurnQueue from '@civ-clone/ui-client/lib/nextTurnQueue';
 import titleScreen from '@civ-clone/ui-windows/components/titleScreen';
+import turnControls from '@civ-clone/ui-windows/components/turnControls';
 import unitPanel from '@civ-clone/ui-windows/components/unitPanel';
 
 // The modern interface (#735, #825): its manifest, and the pieces it fills its slots with. Those only it uses are its
@@ -104,5 +108,45 @@ unitPanel.provide('card', ({ unitInfo, unitActionArea }, deps) => {
 talks.provide('meetingWindow', meetingTalks);
 
 mapMenus.provide('shared', sharedMenus);
+
+// The notification rows (#416) over the Next Turn button (#702), in place of the orbs.
+turnControls.provide(
+  'nextTurn',
+  (actionArea, { centreActiveUnit, dismiss, portal, transport }) => {
+    const rows = s('<div class="ui-notification-rows"></div>'),
+      next = s('<div class="ui-next-turn-area"></div>');
+
+    actionArea.replaceChildren(rows, next);
+
+    const notificationRows = new NotificationRows(rows, {
+        dismiss,
+        portal,
+        transport,
+      }),
+      nextTurn = new NextTurn(next, {
+        centreActiveUnit,
+        portal,
+        transport,
+      });
+
+    return {
+      build: ({ kept, actions, waiting, player, turn }) => {
+        notificationRows.build(
+          kept.filter((action) =>
+            ['CivilDisorder', 'Notice'].includes(action._)
+          ),
+          player
+        );
+        nextTurn.build(
+          nextTurnQueue(kept, actions, waiting),
+          waiting,
+          player,
+          turn
+        );
+      },
+      nextTurn: () => nextTurn,
+    };
+  }
+);
 
 registerInterface(manifest);

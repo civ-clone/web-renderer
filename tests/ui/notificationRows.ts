@@ -11,7 +11,7 @@ import './lib/interfaces';
 import { GameData, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';
 import Hud from '@civ-clone/ui-game/Hud';
-import NotificationRows from '@civ-clone/ui-windows/components/NotificationRows';
+import NotificationRows from '@civ-clone/ui-interface-modern/components/NotificationRows';
 import Notices from '@civ-clone/ui-windows/components/Notices';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
