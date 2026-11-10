@@ -63,7 +63,8 @@ const playSeed = (seed) => {
     played = run('save', seed);
     stage = 'the loading run';
     loaded = run('load', seed);
-    stage = 'the run loading it as a save with no level (#173)';
+    stage =
+      'the run loading it as a save with no level (#173), made before Meet with Leader (#915)';
     loadedOld = run('load', seed, '--old');
   } catch (error) {
     process.stdout.write((error.stdout || '') + (error.stderr || ''));

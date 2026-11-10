@@ -289,6 +289,20 @@ if (mode === 'load') {
 
     delete file_.registries.difficulty;
     file_.entities = file_.entities.filter(({ id }) => id !== gameDifficultyId);
+
+    // And before #304: a Diplomat met a king, from a plugin by that name, and the class's id counter went with it
+    //  (#915).
+    const leader = '@civ-clone/base-unit-action-meet-with-leader';
+
+    if (!(leader in file_.engine.plugins)) {
+      throw new Error(`The save's manifest has no ${leader} to make old.`);
+    }
+
+    file_.engine.plugins['@civ-clone/base-unit-action-meet-with-king'] =
+      file_.engine.plugins[leader];
+    delete file_.engine.plugins[leader];
+    file_.idCounters.MeetWithKing = file_.idCounters.MeetWithLeader ?? 108;
+    delete file_.idCounters.MeetWithLeader;
   }
 
   // No `engine.start()`: that is what generates a world. Plugins are imported
