@@ -535,6 +535,35 @@ const run = async (): Promise<void> => {
     ['Frederick the Great', 0, 1]
   );
 
+  // Two talks waiting at once: answering one leaves the other on the Next Turn button (#702).
+  top().querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+  reset();
+
+  // Earlier windows here were taken out of the page unanswered: what the button had before these two.
+  const before = meetings[meetings.length - 1] ?? null;
+
+  intelligence = Promise.resolve(rows);
+  step([initiate], [['first', answer('Accept', initiate)]]);
+
+  const first = top();
+
+  step([initiate], [['second', answer('Accept', initiate)]]);
+  top().querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+
+  expect(
+    'answering one of two talks leaves the other waiting',
+    [sent, meetings[meetings.length - 1]?.leader ?? null],
+    [[['chooseFromList', 'second']], 'Frederick the Great']
+  );
+
+  first.querySelector<HTMLButtonElement>('.ui-meeting-reply')!.click();
+
+  expect(
+    'and answering both leaves none',
+    [sent.length, meetings[meetings.length - 1] ?? null],
+    [2, before]
+  );
+
   reset();
   dispose();
 

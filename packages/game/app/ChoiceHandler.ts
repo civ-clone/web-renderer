@@ -98,7 +98,26 @@ export const ChoiceHandler = {
     transport: Transport,
     { clearKeys, debugFlags, meeting, sounds }: ChoiceHandlerDeps
   ): () => void {
+    // The talks waiting on an answer, oldest first: more than one can wait at once, so the Next Turn button is given
+    //  the latest still waiting, and null only once every one is answered.
+    const meetings: PendingMeeting[] = [],
+      publish = (): void => meeting?.(meetings[meetings.length - 1] ?? null);
+
     return transport.receive('chooseFromList', ({ choices, key, data }) => {
+      // These talks' entry in `meetings`, once their window is open.
+      let pending: PendingMeeting | null = null;
+
+      // Off the Next Turn button: answered, or their window gone some other way.
+      const answered = (): void => {
+        if (pending === null) {
+          return;
+        }
+
+        meetings.splice(meetings.indexOf(pending), 1);
+        pending = null;
+        publish();
+      };
+
       // The worker waits for this before it answers the action that asked
       // (talks a move started, say), so the window can close before the
       // move's answer arrives: the keys kept while it was answered were
@@ -133,7 +152,7 @@ export const ChoiceHandler = {
       const reply = (choiceId: string): void => {
         if (key === 'negotiation.next-step') {
           // Answered: off the Next Turn button until the talks' next step, if there is one.
-          meeting?.(null);
+          answered();
 
           sounds?.negotiationReplied(
             (choices.find(({ id }) => id === choiceId)?.value as
@@ -206,13 +225,16 @@ export const ChoiceHandler = {
             }
           );
 
-        meeting?.({
+        pending = {
           leader:
             them === null
               ? t('Generic.unknown-civilization')
               : playerName(them),
           show: (): void => meetingWindow.display(true),
-        });
+        };
+        meetings.push(pending);
+        publish();
+        meetingWindow.once('close', answered);
 
         if (stressRunner) {
           stressRunner.automateChoice(meetingWindow, choices[0].id, reply);
