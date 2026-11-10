@@ -103,6 +103,7 @@ npm run ts:compile                          # typecheck src/
 node tools/run-suite.js ui citizens         # one suite, tests/ui/citizens.ts
 npm run test:observer                       # the same through its npm script
 npm test                                    # everything: about five minutes
+npm run build && npm run test:browser       # the built game in headless Chrome
 ```
 
 Suites live in `tests/engine` and `tests/ui` and are plain TypeScript programs:
@@ -112,6 +113,15 @@ no browser to start. `npm run test:conformance` plays a seeded four-player game
 and compares its checksums to a committed fixture: it is the regression net for
 the whole engine, and `--update` rewrites the fixture when a change to the rules
 is meant to move it.
+
+`npm run test:browser` is the one check that opens the game in a browser
+(`tools/browser-smoke.js`). It needs `npm run build` first, and a Chrome: it
+looks in `CHROME`, on the `PATH`, in Playwright's cache and where macOS keeps
+it, and is skipped when there is none (a failure on CI). It loads a save the
+engine makes on the spot, opens every report and a city under both interfaces,
+loads the same save as one from before a plugin was renamed, and opens the
+page with site data blocked, failing on any error the page reports. It is not
+part of `npm test`; the test workflow runs it as its own job.
 
 Open a pull request against `main`. The test workflow runs
 `npm run prettier:check` and the same `npm test`, and merging to `main`
