@@ -1,6 +1,11 @@
-// Why the import stopped (#736: the theme's colour for something gone wrong).
-.import-assets .loading.failed {
+// Why the import stopped, or can't start (#850) (#736: the theme's colour for something gone wrong).
+.import-assets .loading.failed,
+.import-assets .storage-blocked {
   color: var(--ui-negative);
+}
+
+.import-assets .storage-blocked {
+  margin-bottom: 1em;
 }
 
 // The button that opens the (hidden) file input, and the names of the files chosen beside it (#739).

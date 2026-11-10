@@ -55,6 +55,10 @@ export class ImportAssetsWindow extends Window {
       ),
       progressInformation = s<HTMLParagraphElement>(
         '<p class="loading" hidden></p>'
+      ),
+      // Said first, above everything else, when nothing imported could be kept (#850).
+      storageBlocked = s<HTMLDivElement>(
+        '<div class="storage-blocked" role="alert" hidden></div>'
       );
 
     super(
@@ -110,6 +114,22 @@ export class ImportAssetsWindow extends Window {
     this.#chosen = chosen;
     this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
+
+    // A browser that blocks this site's data would keep nothing that was imported (#850): said before any files are
+    //  chosen, at the top of the window, and the choosing is put out of reach rather than left to fail.
+    this.element().querySelector('.import-assets')?.prepend(storageBlocked);
+
+    assetStore.usable().then((usable): void => {
+      if (usable) {
+        return;
+      }
+
+      storageBlocked.textContent = t('ImportAssetsWindow.storage-blocked');
+      storageBlocked.removeAttribute('hidden');
+      fileInput.setAttribute('disabled', '');
+      chooseButton.disabled = true;
+      replaceExistingInput.disabled = true;
+    });
   }
 
   async handleFileUpload(event: InputEvent) {

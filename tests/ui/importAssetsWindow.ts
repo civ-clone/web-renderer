@@ -551,6 +551,63 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // A browser that blocks this site's data keeps nothing imported (#850): the window says so before any files are
+  //  chosen, and the choosing is out of reach. One that doesn't is as before.
+  {
+    const usable = assetStore.usable,
+      notice = (window: ImportAssetsWindow) =>
+        window.element().querySelector('.storage-blocked') as HTMLElement,
+      chooseOf = (window: ImportAssetsWindow) =>
+        window
+          .element()
+          .querySelector('.file-picker button') as HTMLButtonElement;
+
+    assetStore.usable = async () => false;
+
+    const blocked = new ImportAssetsWindow();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      'storage blocked: the window says so first, as an alert, and no files can be chosen',
+      [
+        notice(blocked).hasAttribute('hidden'),
+        notice(blocked).getAttribute('role'),
+        notice(blocked).textContent?.startsWith(
+          'Your browser is blocking this site from storing data'
+        ),
+        blocked.element().querySelector('.import-assets')?.firstElementChild ===
+          notice(blocked),
+        chooseOf(blocked).disabled,
+        fileInput(blocked).hasAttribute('disabled'),
+      ],
+      [false, 'alert', true, true, true, true]
+    );
+
+    blocked.close();
+
+    assetStore.usable = async () => true;
+
+    const open = new ImportAssetsWindow();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      'storage usable: nothing is said, and files can be chosen',
+      [
+        notice(open).hasAttribute('hidden'),
+        notice(open).textContent,
+        chooseOf(open).disabled,
+        fileInput(open).hasAttribute('disabled'),
+      ],
+      [true, '', false, false]
+    );
+
+    open.close();
+
+    assetStore.usable = usable;
+  }
+
   // SP299.PIC, the improvement and Wonder icons, is optional (#64): the instructions say so, an import goes ahead
   //  without it, and the files asked for when one is missing are the required ones.
   {
