@@ -67,7 +67,8 @@ export class Game implements IGame {
   #plugins: Plugins;
 
   // What is set up for every game in this worker, new or loaded, each in the order it has always been registered
-  //  (#869): the engine's events the page hears of, then the page's messages and requests, each to its own handler.
+  //  (#869): the engine's events the page hears of, then the page's messages and requests, the larger each to a
+  //  handler of its own and the rest answered in groups.
   constructor(transport: Transport<TransportDataMap>, plugins: Plugins) {
     this.#transport = transport;
     this.#plugins = plugins;

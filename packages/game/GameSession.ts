@@ -111,7 +111,8 @@ export class GameSession {
   #mapView!: MapView;
   #dismissals!: Dismissals;
   #gameMenuItem!: GameMenu;
-  // `#render` and `#scheduleRender`'s.
+  // The frame a redraw is waiting for, if any: `#scheduleRender` asks for one, and `#render`, a turn starting and
+  //  the session's end each give it up.
   #renderFrame: number | null = null;
   #firstRender: boolean = true;
   // Whether an End Turn is on its way, sent by hand or by auto end of turn, until the worker answers it. The patch
@@ -137,7 +138,8 @@ export class GameSession {
     this.#unitController?.clearKeys();
   }
 
-  // Each phase in turn (#869), all of them synchronous: see the note at the top of this file.
+  // Each phase in turn (#869), all of them synchronous: see the note at the top of this file. Once for a session:
+  //  what the phases share is kept on it, so a second game is a second `GameSession`, as the page makes one.
   start(
     // The map as it arrived: the transport does not rebuild it, so that
     // it is rebuilt once, here (#333).
@@ -653,8 +655,8 @@ export class GameSession {
     transportDisposers.push((): void => gameState.dispose());
   }
 
-  // What the worker sends during the game, each to its own handler below, in the order they have always been
-  //  registered.
+  // What the worker sends during the game, in the order they have always been registered: the larger ones each to
+  //  a handler of its own below, the few-line ones here.
   #receiveGame(): void {
     const { transport, transportDisposers } = this.#deps;
 
