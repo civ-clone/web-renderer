@@ -12,7 +12,7 @@ import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
 
-import City from '@civ-clone/ui-windows/components/City';
+import City from '@civ-clone/ui-city/components/City';
 import classicCityLayout from '@civ-clone/ui-interface-classic/components/classicCityLayout';
 import { City as CityData, GameData } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -22,9 +22,9 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import openCity from '@civ-clone/ui-windows/components/openCity';
+import openCity from '@civ-clone/ui-city/components/openCity';
 import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
-import { turnsText } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { turnsText } from '@civ-clone/ui-city/components/lib/cityYields';
 
 const failures: string[] = [];
 let checks = 0,

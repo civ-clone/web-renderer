@@ -11,7 +11,7 @@ import {
   CityLayout,
   renderBuildProgress,
   renderTradeRoutes,
-} from '@civ-clone/ui-windows/components/City';
+} from '@civ-clone/ui-city/components/City';
 import {
   getAutoLabel,
   getLabelForBuildable,
@@ -23,11 +23,11 @@ import {
   renderPopulation,
   turnsLeft,
   yieldImages,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import {
   renderMap,
   renderYields,
-} from '@civ-clone/ui-windows/components/lib/cityParts';
+} from '@civ-clone/ui-city/components/lib/cityParts';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import SupportedUnit from '@civ-clone/ui-windows/components/SupportedUnit';
 import Transport from '@civ-clone/ui-client/Transport';

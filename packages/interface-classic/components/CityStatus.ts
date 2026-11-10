@@ -3,19 +3,18 @@ import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
 import {
   turnsLeft,
   yieldData,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
-import { h } from '@civ-clone/ui-widgets/lib/html';
+import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
 import watchPlayer, {
   cityRowIds,
 } from '@civ-clone/ui-windows/components/lib/watchPlayer';

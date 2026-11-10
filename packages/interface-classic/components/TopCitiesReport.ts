@@ -2,7 +2,7 @@ import TopCities from '@civ-clone/ui-protocol/Requests/TopCities';
 import { TopCitiesRow } from '@civ-clone/ui-protocol/reports';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
-import { renderCitizenCounts } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { renderCitizenCounts } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';

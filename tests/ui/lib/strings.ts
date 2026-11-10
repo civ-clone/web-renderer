@@ -1,5 +1,6 @@
 // The frontend packages' own text in en (#825), as the page loads it with the rest: imported by a suite that reads
 //  what the interface says. The `packages` test holds that every package's is here.
+import '@civ-clone/ui-city/translations/en';
 import '@civ-clone/ui-client/translations/en';
 import '@civ-clone/ui-game/translations/en';
 import '@civ-clone/ui-interface-classic/translations/en';

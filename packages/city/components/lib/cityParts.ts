@@ -19,7 +19,7 @@ import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
-import isAnarchy from './government';
+import isAnarchy from '@civ-clone/ui-client/lib/government';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { s } from '@dom111/element';
 import { tileBounds } from '@civ-clone/ui-map/lib/projection';

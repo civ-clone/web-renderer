@@ -88,7 +88,7 @@ During the player's turn `GameState` rebuilds synchronously on every patch, so i
 
 - After each rebuild, `GameState` `collect`s into `lib/DataChanges.ts` the ids the patches changed and the ids the rebuild filled, or `null` for a rebuild of everything (#344).
 - At the start of each render, `notify` runs, once, each watcher whose ids (read then, so they can follow what the window shows) were among those collected since the last render, or every watcher after a rebuild of everything.
-- A window `watch`es the ids it shows and unwatches when it closes: the city screen through `components/lib/watchCity.ts`, the four reports through `components/lib/watchPlayer.ts`, and the unit stack window directly. There are no `document` events for this any more.
+- A window `watch`es the ids it shows and unwatches when it closes: the city screen through `packages/city/components/lib/watchCity.ts`, the four reports through `packages/windows/components/lib/watchPlayer.ts`, and the unit stack window directly. There are no `document` events for this any more.
 
 ## Choice/interaction flow
 

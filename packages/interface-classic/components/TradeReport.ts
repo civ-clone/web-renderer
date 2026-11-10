@@ -11,17 +11,16 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { h } from '@civ-clone/ui-widgets/lib/html';
-import isAnarchy from '@civ-clone/ui-windows/components/lib/government';
+import { escape, h } from '@civ-clone/ui-widgets/lib/html';
+import isAnarchy from '@civ-clone/ui-client/lib/government';
 import { groupIcons } from '@civ-clone/ui-client/lib/yieldMap';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {
   cityRowIds,
 } from '@civ-clone/ui-windows/components/lib/watchPlayer';
-import { yieldData } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { yieldData } from '@civ-clone/ui-city/components/lib/cityYields';
 
 export class TradeReport extends FilterableWindow {
   #cities: CityData[];

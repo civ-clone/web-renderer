@@ -6,6 +6,7 @@
   "license": "MIT",
   "dependencies": {
     "@civ-clone/ui-assets": "workspace:*",
+    "@civ-clone/ui-city": "workspace:*",
     "@civ-clone/ui-client": "workspace:*",
     "@civ-clone/ui-component-choice-window": "workspace:*",
     "@civ-clone/ui-component-popup-menu": "workspace:*",

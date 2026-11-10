@@ -60,7 +60,7 @@ Not every extracted sprite is required. The women specialists are deliberately l
 
 Code that draws an optional sprite falls back to an older one. `assetStore.firstImported(paths)` returns the first of
 `paths` that has been imported, or the last of them if none has. The city screen's citizens (`renderCitizen` in
-`packages/windows/components/lib/cityYields.ts`) ask for `[people_<type>_f, people_<type>]` for a woman specialist (from
+`packages/city/components/lib/cityYields.ts`) ask for `[people_<type>_f, people_<type>]` for a woman specialist (from
 `specialistSprites` in `packages/client/lib/citizens.ts`), so they show the man until the player imports again.
 
 ## Asset persistence and loading

@@ -20,7 +20,7 @@ import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import { askNewGame } from '@civ-clone/ui-windows/components/newGame';
 import { instance as dataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import { openArrivalWindow } from '@civ-clone/ui-windows/lib/unitActionPrompts';
-import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
+import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

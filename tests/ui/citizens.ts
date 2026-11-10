@@ -12,7 +12,7 @@ import './lib/interfaces';
 import {
   renderCitizenCounts,
   renderPopulation,
-} from '@civ-clone/ui-windows/components/lib/cityYields';
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import i18next from 'i18next';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 

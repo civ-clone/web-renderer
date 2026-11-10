@@ -9,6 +9,14 @@ export const h = <T extends HTMLElement>(
   return element;
 };
 
+// Text made safe to put in markup, as an element's content or an attribute's value.
+export const escape = (text: string): string =>
+  text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+
 const idMap = new Map<Function, number>(),
   generateId = (element: Node) => {
     if (!idMap.has(element.constructor)) {

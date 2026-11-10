@@ -19,11 +19,10 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { escape } from '@civ-clone/ui-windows/components/lib/requirements';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { h } from '@civ-clone/ui-widgets/lib/html';
+import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
-import { renderPopulation } from '@civ-clone/ui-windows/components/lib/cityYields';
+import { renderPopulation } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {

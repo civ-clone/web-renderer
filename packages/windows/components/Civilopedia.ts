@@ -6,7 +6,6 @@ import {
   EntriesByKey,
   classLink,
   entryName,
-  escape,
   subjectLine,
   targetLine,
   whereHtml,
@@ -16,7 +15,7 @@ import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import Requirements from '@civ-clone/ui-protocol/Requests/Requirements';
 import Transport from '@civ-clone/ui-client/Transport';
 import FilterableWindow from '@civ-clone/ui-component-window/FilterableWindow';
-import { h } from '@civ-clone/ui-widgets/lib/html';
+import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 

@@ -1,7 +1,7 @@
 import { City, Unit as UnitData, Yield } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import Unit from './Unit';
-import { yieldImages } from './lib/cityYields';
+import { yieldImages } from '@civ-clone/ui-city/components/lib/cityYields';
 
 type YieldWithUnit = Yield & { unit: UnitData };
 

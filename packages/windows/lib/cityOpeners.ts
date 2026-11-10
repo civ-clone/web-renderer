@@ -3,7 +3,7 @@
 //  opens it read-only. Every way in goes through `Portal#openCity`, so one choice covers them all.
 
 import { City as CityData } from '@civ-clone/ui-protocol/types';
-import openCity from '../components/openCity';
+import openCity from '@civ-clone/ui-city/components/openCity';
 import ObserveCity from '@civ-clone/ui-protocol/Requests/ObserveCity';
 import { ObserverState } from '@civ-clone/ui-protocol/observer';
 import Portal, { CityOpener } from '@civ-clone/ui-map/components/Portal';

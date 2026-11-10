@@ -16,7 +16,7 @@ import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
 import { applyInterface } from '@civ-clone/ui-client/lib/interfaceMode';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
-import { openCityBuild } from '@civ-clone/ui-windows/components/choices';
+import { openCityBuild } from '@civ-clone/ui-component-window/choices';
 
 const failures: string[] = [];
 let checks = 0,

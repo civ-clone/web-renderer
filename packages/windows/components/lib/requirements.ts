@@ -11,6 +11,7 @@ import {
   RequirementTargetData,
 } from '@civ-clone/ui-protocol/requirements';
 import { advanceName } from './advances';
+import { escape } from '@civ-clone/ui-widgets/lib/html';
 import { t } from 'i18next';
 
 export type EntriesByKey = Map<string, CivilopediaEntry>;
@@ -42,13 +43,6 @@ export const className = (key: string, entries: EntriesByKey): string => {
     ? entryName(entry)
     : t(`Civilopedia.class.${key}`, { defaultValue: key });
 };
-
-export const escape = (text: string): string =>
-  text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 
 // A class as a link to its entry, or as plain text when it has none.
 export const classLink = (key: string, entries: EntriesByKey): string =>

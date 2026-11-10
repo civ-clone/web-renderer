@@ -3,7 +3,7 @@ import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { UnitPanelDeps } from '@civ-clone/ui-windows/components/unitPanel';
 import Unit from '@civ-clone/ui-windows/components/Unit';
-import { openUnitSelection } from '@civ-clone/ui-windows/components/choices';
+import { openUnitSelection } from '@civ-clone/ui-component-window/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import unitLabel from '@civ-clone/ui-windows/lib/unitLabel';
 

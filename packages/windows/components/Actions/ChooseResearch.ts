@@ -11,7 +11,10 @@ import { combinedYields } from '../lib/playerYields';
 import { advanceName, held, researchClearedLabel } from '../lib/advances';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { turnsLeft, yieldIcon } from '../lib/cityYields';
+import {
+  turnsLeft,
+  yieldIcon,
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import entryDetails from '../lib/choiceDetails';
 import { instance as localeProvider } from '@civ-clone/ui-client/LocaleProvider';
 import { openChoice } from '../choiceList';
