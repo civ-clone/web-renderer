@@ -2,7 +2,8 @@
 //  rule brings the barbarian player into the game at a turn past Emperor's gate, the host gives it a `BarbarianClient`,
 //  the client takes a turn (a ship put beside the human's city lands its raiders, who move the turn after), the human
 //  is told of a landing and an uprising next to their city (and not of one they can't see), a barbarian leader killed
-//  in a stack pays the human a ransom (#171), the barbarians are named but kept out of the intelligence report and the
+//  in a stack pays the human a ransom (#171), and with the enhanced ransom switched off (#954) only one who defends and
+//  loses does, as in the original, the barbarians are named but kept out of the intelligence report and the
 //  cheat list, and a save names classes a load can resolve.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
@@ -16,6 +17,10 @@ import {
   Settlers,
   Swordman,
 } from '@civ-clone/civ1-unit/Units';
+import {
+  BARBARIAN_LEADER_RANSOM,
+  ENHANCED,
+} from '@civ-clone/civ1-enhanced/RuleSets';
 import Defeated from '@civ-clone/core-unit/Rules/Defeated';
 import Gold from '@civ-clone/base-city-yield-gold/Gold';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -41,6 +46,7 @@ import isHuman from '@civ-clone/civ1-difficulty/isHuman';
 import { registerBarbarianClasses } from '@civ-clone/ui-worker-client/barbarians';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import { registerDiplomacyClasses } from '@civ-clone/ui-worker-client/diplomacy';
+import { applyRuleSets } from '@civ-clone/ui-worker-client/lib/ruleSets';
 import { save } from '@civ-clone/core-save-game/save';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -254,6 +260,112 @@ const run = async (): Promise<void> => {
     fail(`the human was told ${JSON.stringify(told)}`);
   }
 
+  // 3c. The ransom under each setting of the enhanced rules (#954): what the human is paid when a barbarian stack of
+  //     `kinds` loses with the unit at `defender` defending. As the game starts, a leader pays however he dies, and
+  //     once; with the enhanced ransom off, or the enhanced rules as a whole, only one who defends and loses pays, as
+  //     in the original.
+  const paid = async (
+    kinds: (typeof Unit)[],
+    defender: number
+  ): Promise<number> => {
+    const free = seen
+        .getNeighbours()
+        .find(
+          (tile: Tile) =>
+            tile.isLand() &&
+            cityRegistryInstance.getByTile(tile) === null &&
+            unitRegistryInstance.getByTile(tile).length === 0
+        ),
+      before = treasury.value();
+
+    if (!free) {
+      return fail('there is no free land next to the human city');
+    }
+
+    const units = spawnUnits(
+        barbarians!,
+        free,
+        kinds as any,
+        ruleRegistryInstance
+      ),
+      by = createUnit(Swordman, humanPlayer!, seen, ruleRegistryInstance);
+
+    ruleRegistryInstance.process(Defeated, units[defender]!, by, {
+      unit: () => by,
+    } as any);
+
+    await settle();
+
+    if (!units.every((unit) => unit.destroyed())) {
+      fail(
+        `a barbarian stack of ${kinds.map(
+          ({ name }) => name
+        )} outlived its defender`
+      );
+    }
+
+    by.destroy();
+
+    await settle();
+
+    return treasury.value() - before;
+  };
+
+  const ransoms: [string, number][] = [];
+
+  ransoms.push(
+    [
+      'as the game starts, a leader in a stack',
+      await paid([Horseman, Diplomat], 0),
+    ],
+    ['as the game starts, a lone leader', await paid([Diplomat], 0)],
+    [
+      'as the game starts, a leader defending his stack',
+      await paid([Diplomat, Horseman], 0),
+    ]
+  );
+  applyRuleSets([{ id: BARBARIAN_LEADER_RANSOM, value: false }]);
+  ransoms.push(
+    [
+      'with the enhanced ransom off, a leader in a stack',
+      await paid([Horseman, Diplomat], 0),
+    ],
+    ['with the enhanced ransom off, a lone leader', await paid([Diplomat], 0)],
+    [
+      'with the enhanced ransom off, a leader defending his stack',
+      await paid([Diplomat, Horseman], 0),
+    ]
+  );
+  applyRuleSets([{ id: ENHANCED, value: false }]);
+  ransoms.push(
+    [
+      'with the enhanced rules off, a leader in a stack',
+      await paid([Horseman, Diplomat], 0),
+    ],
+    ['with the enhanced rules off, a lone leader', await paid([Diplomat], 0)]
+  );
+  applyRuleSets([]);
+  ransoms.push([
+    'as the game starts again, a leader in a stack',
+    await paid([Horseman, Diplomat], 0),
+  ]);
+
+  const expectedRansoms = [100, 100, 100, 0, 100, 100, 0, 100, 100];
+
+  if (
+    JSON.stringify(ransoms.map(([, gold]) => gold)) !==
+    JSON.stringify(expectedRansoms)
+  ) {
+    fail(
+      `the ransoms were ${ransoms
+        .map(
+          ([when, gold], index) =>
+            `${when}: ${gold} (not ${expectedRansoms[index]})`
+        )
+        .join('; ')}`
+    );
+  }
+
   // 4. Named, but in neither the intelligence report nor the cheat list.
   if (
     !hasMet(humanPlayer!, barbarians!, {
@@ -438,7 +550,7 @@ const run = async (): Promise<void> => {
       ship!.constructor.name
     }, played by BarbarianClient; a ship beside the capital landed ${
       raiders.length
-    } raiders who moved the turn after; landing, uprising and guerrilla notices; a leader killed in a stack paid 100 ransom; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact)`
+    } raiders who moved the turn after; landing, uprising and guerrilla notices; a leader killed in a stack paid 100 ransom, and with the enhanced ransom off only one who defended; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact)`
   );
 
   process.exit(0);

@@ -121,6 +121,8 @@ export class GameSetup {
   // One change at a time, each made to the choices the one before it left: two sent together would both start from
   //  the same choices, and the second answer would undo the first.
   #ruleSetChange: Promise<void> = Promise.resolve();
+  // From Start until the game goes ahead, or the rule sets turn it down (#954): Start is held meanwhile.
+  #starting: boolean = false;
 
   constructor(data: SetupData, preset: GameSetupPreset = {}) {
     this.data = data;
@@ -410,6 +412,11 @@ export class GameSetup {
     return this.#ruleSetChange;
   }
 
+  /** Whether Start has been pressed, and the game is going ahead or waiting on a rule set switched a moment ago. */
+  starting(): boolean {
+    return this.#starting;
+  }
+
   /** Whether the rule sets, as the worker last described them, have a problem that keeps a game from starting (#954). */
   ruleSetsBlockStart(): boolean {
     return this.ruleSetProblems.some(({ blocking }) => blocking);
@@ -418,19 +425,33 @@ export class GameSetup {
   /**
    * Sends the world options and the seats as one `setOptions`, then `start`. Not answered, the player has been told,
    *  and the main menu is still there, with no game started (#580).
+   *
+   * A rule set switched a moment ago is waited for, as it is part of what is sent, and the game doesn't start if it
+   *  left the rule sets with a problem that blocks (#954): nothing is sent, and this resolves `false` for the setup to
+   *  stay open and show it. Otherwise `goingAhead` is called before anything is sent, and this resolves `true`.
    */
   async start(
     transport: Transport,
     land: LandOptions,
     difficulty: string,
-    onFinished?: FinishedHandler
-  ): Promise<void> {
+    onFinished?: FinishedHandler,
+    goingAhead: () => void = () => {}
+  ): Promise<boolean> {
+    this.#starting = true;
+
+    await this.#ruleSetChange;
+
+    if (this.ruleSetsBlockStart()) {
+      this.#starting = false;
+
+      return false;
+    }
+
+    goingAhead();
+
     if (difficulty !== '') {
       rememberDifficulty(difficulty);
     }
-
-    // A rule set switched a moment ago is part of what is sent.
-    await this.#ruleSetChange;
 
     try {
       await transport.request(
@@ -448,7 +469,7 @@ export class GameSetup {
     } catch (error) {
       unlessRequestFailed(error);
 
-      return;
+      return true;
     }
 
     if (onFinished) {
@@ -456,6 +477,8 @@ export class GameSetup {
     }
 
     transport.send('start', null);
+
+    return true;
   }
 }
 

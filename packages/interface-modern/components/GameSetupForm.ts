@@ -100,6 +100,7 @@ export class GameSetupForm extends Window {
   #mapSelect!: HTMLSelectElement;
   #seatsBody!: HTMLTableSectionElement;
   #seatsNote!: HTMLElement;
+  #startButton!: HTMLButtonElement;
   #widthInput!: HTMLInputElement;
 
   constructor(
@@ -141,7 +142,7 @@ export class GameSetupForm extends Window {
 
   #build(preset: GameSetupPreset): void {
     // Made first, for the Rules section to hold while the rule sets have a problem that blocks (#954).
-    const start = h(
+    const start = (this.#startButton = h(
       button(t('GameSetup.start'), {
         variant: 'primary',
         className: 'start',
@@ -149,7 +150,7 @@ export class GameSetupForm extends Window {
       {
         click: () => this.#start(),
       }
-    );
+    ));
 
     const setup = this.#setup,
       data = setup.data,
@@ -617,8 +618,8 @@ export class GameSetupForm extends Window {
   }
 
   async #start(): Promise<void> {
-    // Held, and said why, in the Rules section (#954): Enter is held too.
-    if (this.#setup.ruleSetsBlockStart()) {
+    // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
+    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
       return;
     }
 
@@ -644,14 +645,21 @@ export class GameSetupForm extends Window {
       (input) => input.value
     ) as [string, string, string];
 
-    this.close();
+    this.#startButton.disabled = true;
 
-    await this.#setup.start(
+    // Closed once the game is going ahead: a rule set switched a moment ago can leave the sets with a problem that
+    //  keeps it from starting (#954), and then the window stays, showing it.
+    const started = await this.#setup.start(
       this.#transport,
       { landCoverage, landSize, maxIterations },
       this.#difficultySelect.value,
-      this.#onFinished
+      this.#onFinished,
+      () => this.close()
     );
+
+    if (!started) {
+      this.#startButton.disabled = this.#setup.ruleSetsBlockStart();
+    }
   }
 }
 

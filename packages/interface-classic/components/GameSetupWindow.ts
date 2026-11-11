@@ -509,8 +509,8 @@ export class GameSetupWindow extends Window {
   }
 
   async #start(difficulty: string): Promise<void> {
-    // Held, and said why, in the Rules section (#954): Enter is held too.
-    if (this.#setup.ruleSetsBlockStart()) {
+    // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
+    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
       return;
     }
 
@@ -534,14 +534,21 @@ export class GameSetupWindow extends Window {
       (input) => input.value
     ) as [string, string, string];
 
-    this.close();
+    this.#startButton.disabled = true;
 
-    await this.#setup.start(
+    // Closed once the game is going ahead: a rule set switched a moment ago can leave the sets with a problem that
+    //  keeps it from starting (#954), and then the window stays, showing it.
+    const started = await this.#setup.start(
       this.#transport,
       { landCoverage, landSize, maxIterations },
       difficulty,
-      this.#onFinished
+      this.#onFinished,
+      () => this.close()
     );
+
+    if (!started) {
+      this.#startButton.disabled = this.#setup.ruleSetsBlockStart();
+    }
   }
 }
 

@@ -280,7 +280,10 @@ const worker = (offers: boolean = true) => {
 // A worker whose sets have problems (#954): two sets, each replacing the one rule of a third, both on to begin with,
 //  which can't both be; and a set that names a rule that isn't loaded. As the registry says them, from the choices.
 const troubled = () => {
-  const log: { channel: string; args: unknown[] }[] = [];
+  const log: { channel: string; args: unknown[] }[] = [],
+    held: (() => void)[] = [];
+
+  let holding = false;
 
   const answer = (choices: RuleSetChoice[]) => {
     const off = new Set(
@@ -364,6 +367,11 @@ const troubled = () => {
         case 'ruleSets': {
           const query = request.args()[0] as RuleSetsQuery | null;
 
+          // A change the worker is slow to answer, as one is still on its way when Start is pressed.
+          if (holding && query?.change) {
+            await new Promise<void>((resolve) => held.push(resolve));
+          }
+
           return answer([
             ...(query?.choices ?? []).filter(
               ({ id }) => id !== query?.change?.id
@@ -379,6 +387,11 @@ const troubled = () => {
 
   return {
     transport,
+    hold: () => (holding = true),
+    release: () => {
+      holding = false;
+      held.splice(0).forEach((resolve) => resolve());
+    },
     started: (): string[] =>
       log
         .map(({ channel }) => channel)
@@ -767,7 +780,7 @@ const run = async (): Promise<void> => {
     expect(
       `${name}: a set that names a rule that isn't loaded is a quiet note, once`,
       lines('rule-set-note'),
-      ['Orphaned refers to a rule that isn’t loaded.']
+      ['Orphaned refers to a rule or rule set that isn’t loaded.']
     );
     expect(
       `${name}: the rule both replace says so beside its name, inside its label, apart from the name`,
@@ -823,7 +836,7 @@ const run = async (): Promise<void> => {
         [],
         [],
         false,
-        ['Orphaned refers to a rule that isn’t loaded.'],
+        ['Orphaned refers to a rule or rule set that isn’t loaded.'],
         'replaced by First replacement',
       ]
     );
@@ -840,6 +853,85 @@ const run = async (): Promise<void> => {
       `${name}: so the game starts, the note notwithstanding`,
       fake.started(),
       ['setOptions', 'start']
+    );
+
+    setup.close();
+  }
+
+  // Start pressed while a change is still on its way (#954): the start waits for it, and a change that leaves the two
+  //  sets both on keeps the game from starting, with the setup still open to say so.
+  for (const [name, , ask] of interfaces) {
+    const fake = troubled(),
+      setup = await ask(fake.transport),
+      element = setup.element(),
+      start = element.querySelector('button.start') as HTMLButtonElement,
+      box = (id: string): HTMLInputElement =>
+        [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].find(
+          (input) => input.dataset.ruleSet!.split('\n').pop() === id
+        ) as HTMLInputElement,
+      errors = (): number => element.querySelectorAll('.rule-set-error').length;
+
+    tick(box('test:second'), false);
+    await settle();
+
+    const note = element.querySelector('.rule-set-note');
+
+    tick(box('test:base'), false);
+    await settle();
+
+    expect(
+      `${name}: a change that leaves the problems as they were leaves what says them alone, so it isn't said again`,
+      element.querySelector('.rule-set-note') === note,
+      true
+    );
+
+    fake.hold();
+    tick(box('test:second'), true);
+    await settle();
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: Start pressed with a change on its way waits for it, holds Start, and sends nothing`,
+      [start.disabled, fake.started(), element.isConnected],
+      [true, [], true]
+    );
+
+    click(start);
+    fake.release();
+    await settle();
+    await settle();
+
+    expect(
+      `${name}: the change left the two sets both on, so the game doesn't start: the setup stays open, says why, and holds Start`,
+      [fake.started(), element.isConnected, errors(), start.disabled],
+      [[], true, 1, true]
+    );
+
+    tick(box('test:second'), false);
+    await settle();
+    fake.hold();
+    tick(box('test:base'), true);
+    await settle();
+    click(start);
+    click(start);
+    press(element.querySelector('input[name="name"]') as Element, 'Enter');
+    await settle();
+
+    expect(
+      `${name}: a start waiting on a change that is fine holds Start against a second`,
+      [start.disabled, fake.started()],
+      [true, []]
+    );
+
+    fake.release();
+    await settle();
+    await settle();
+
+    expect(
+      `${name}: and once it is answered the game starts, once, and the setup closes`,
+      [fake.started(), element.isConnected],
+      [['setOptions', 'start'], false]
     );
 
     setup.close();

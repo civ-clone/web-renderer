@@ -1,9 +1,14 @@
 // What the worker's `Game` says when it can't do what the page asked (#470), over a stub transport: a save that can't
 //  be loaded (one that needs a plugin that isn't there) is answered on `loadFailed`, not as a passing `notification`,
 //  so the page can say so and go back to its menu, and one that can't be built on `saveFailed` (#581). And a game that was never started, as a loaded one isn't, still
-//  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470).
+//  sends a sign of life as each player's turn starts, which the page counts as the worker answering (#470). A save whose
+//  rule sets, as it chose them, can't be used together is answered on `loadFailed` before anything of it is put back,
+//  and one whose sets only name something not loaded gets past them, said in the console (#954).
 
 import Game from '@civ-clone/ui-worker-client/Game';
+import Rule from '@civ-clone/core-rule/Rule';
+import RuleSet from '@civ-clone/core-rule/RuleSet';
+import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import { renameRetiredPlugins } from '@civ-clone/ui-worker-client/loadGame';
 import civOnePlugins from './lib/plugins';
@@ -183,6 +188,84 @@ engine.on = on;
     'keeping the higher counter where both are there',
     renamed({ MeetWithKing: 108, MeetWithLeader: 200 })[1],
     { MeetWithLeader: 200, Unit: 352 }
+  );
+
+  // A save's rule sets (#954): two sets that replace one rule, the second off to start with, so that a save that
+  //  switched it on has both in force; and a set that names a rule nothing registers.
+  ['test:original', 'test:first/rule', 'test:second/rule'].forEach((id) =>
+    defaultGame.rules.register(new Rule(id))
+  );
+  defaultGame.ruleSets.register(
+    new RuleSet(
+      'test:first',
+      { supersedes: ['test:original'] },
+      'test:first/rule'
+    ),
+    new RuleSet(
+      'test:second',
+      { supersedes: ['test:original'], enabled: false },
+      'test:second/rule'
+    ),
+    new RuleSet('test:orphan', 'test:not-loaded')
+  );
+
+  const warned: string[] = [],
+    warn = console.warn,
+    // An empty game, under the rule sets `choices` says.
+    loadChoosing = async (
+      choices: { id: string; value: boolean }[]
+    ): Promise<any> => {
+      sent.splice(0);
+      warned.splice(0);
+
+      receivers.get('load')!({
+        data: JSON.stringify({
+          format: 2,
+          entities: [],
+          meta: { name: 'rule sets', createdAt: 0, turn: 1 },
+          engine: { plugins: civOnePlugins.manifest },
+          rng: { seed: 1, calls: 0 },
+          idCounters: {},
+          registries: {},
+          clients: [],
+          ruleSets: { choices },
+        }),
+      });
+
+      return await until('loadFailed');
+    };
+
+  console.error = () => {};
+  console.warn = (message: string) => warned.push(String(message));
+
+  const blocked = await loadChoosing([{ id: 'test:second', value: true }]);
+
+  expect(
+    "a save whose rule sets can't be used together is answered on loadFailed, saying so, before anything is put back",
+    [
+      String(blocked?.message).startsWith(
+        "The saved game's rule sets can't be used as they are: Rule sets 'test:first' and 'test:second'"
+      ),
+      warned,
+    ],
+    [true, []]
+  );
+
+  // An empty game has nobody to take a turn, so it fails once it is back, which is after the rule sets.
+  const orphaned = await loadChoosing([{ id: 'test:first', value: false }]);
+
+  console.error = logged;
+  console.warn = warn;
+
+  expect(
+    "a save whose sets only name a rule that isn't loaded gets past them, put back under the sets it chose, and the console says what",
+    [
+      String(orphaned?.message).includes('rule sets'),
+      defaultGame.ruleSets.state('test:first'),
+      warned.length,
+      warned[0]?.includes("Rule set 'test:orphan' names 'test:not-loaded'"),
+    ],
+    [false, 'off', 1, true]
   );
 
   finished = true;

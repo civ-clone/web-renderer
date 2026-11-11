@@ -8,7 +8,7 @@ i18next.addResources('en', 'ruleset', {
   'civ1-enhanced.description':
     'Rules where this game can play differently from the original Civilization. One left unticked plays as the original did.',
   'civ1-enhanced.hydro-plant-site.name':
-    'A city on a River or Mountains can build a Hydro Plant',
+    'A city that stands on a River or Mountains can also build a Hydro Plant',
   'civ1-enhanced.hydro-plant-site.description':
     'In the original, only the eight squares around the city count, not the square it stands on.',
   'civ1-enhanced.barbarian-leader-ransom.name':

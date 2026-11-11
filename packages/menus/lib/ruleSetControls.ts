@@ -325,15 +325,30 @@ export const hasRuleSets = (sets: RuleSetNode[]): boolean =>
 /** What `renderRuleSetProblems` drew: the lines that keep a game from starting, and the sets a line is about. */
 export type DrawnProblems = { blocking: string[]; marked: Marked };
 
+// What each container last drew, and from what: a live region, it says again whatever is put back into it, so the
+//  same problems are left as they are.
+const drawnIn = new WeakMap<
+  HTMLElement,
+  { problems: string; drawn: DrawnProblems }
+>();
+
 /**
  * Draws what is wrong with the sets (#954) into `container`, in place of what it held, as the worker found it: nothing
  *  is worked out here. A conflict names both sets; a package's mistakes are one line, with the rules' own words for
- *  each beneath; a set naming a rule that isn't loaded is a quiet note, once for each set, and holds nothing up.
+ *  each beneath; a set naming a rule that isn't loaded is a quiet note, once for each set, and holds nothing up. The
+ *  same problems as the container shows already are left as they are.
  */
 export const renderRuleSetProblems = (
   container: HTMLElement,
   problems: RuleSetProblem[]
 ): DrawnProblems => {
+  const said = JSON.stringify(problems),
+    shown = drawnIn.get(container);
+
+  if (shown?.problems === said) {
+    return shown.drawn;
+  }
+
   const drawn: DrawnProblems = { blocking: [], marked: new Map() },
     lines: HTMLElement[] = [],
     line = (className: string, content: string): HTMLElement =>
@@ -407,6 +422,8 @@ export const renderRuleSetProblems = (
     )
   );
 
+  drawnIn.set(container, { problems: said, drawn });
+
   if (lines.length === 0) {
     container.replaceChildren();
 
@@ -428,9 +445,11 @@ export const renderRuleSetProblems = (
  */
 export const holdStart = (
   start: HTMLButtonElement,
-  { blocking }: DrawnProblems
+  { blocking }: DrawnProblems,
+  // A start already on its way, waiting on a change: held until it goes ahead or is turned down.
+  starting: boolean = false
 ): void => {
-  start.disabled = blocking.length > 0;
+  start.disabled = blocking.length > 0 || starting;
 
   if (blocking.length > 0) {
     start.setAttribute('aria-describedby', blocking.join(' '));
@@ -498,7 +517,7 @@ export const ruleSetsSection = (
     render = (): void => {
       const drawn = renderRuleSetProblems(problems, setup.ruleSetProblems);
 
-      holdStart(start, drawn);
+      holdStart(start, drawn, setup.starting());
       renderRuleSets(
         holder,
         setup.ruleSets,

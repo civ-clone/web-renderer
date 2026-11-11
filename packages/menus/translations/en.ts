@@ -171,7 +171,8 @@ i18next.addResources('en', 'default', {
 i18next.addResources('en', 'ruleset', {
   'RuleSets.conflict':
     '{{- first}} and {{- second}} can’t both be on. Switch one of them off.',
-  'RuleSets.not-loaded': '{{- name}} refers to a rule that isn’t loaded.',
+  'RuleSets.not-loaded':
+    '{{- name}} refers to a rule or rule set that isn’t loaded.',
   'RuleSets.replaced-by': 'replaced by {{names, list}}',
   'RuleSets.unusable':
     'The rule sets can’t be used as they are: a package that provides them needs fixing.',

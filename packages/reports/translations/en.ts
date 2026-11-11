@@ -63,6 +63,9 @@ i18next.addResources('en', 'default', {
     'a city that hasn’t built one already',
   'Civilopedia.condition.civ1-city-improvement.mountains-or-river-nearby':
     'Mountains or a River next to the city',
+  // The Hydro Plant's site with the enhanced rule on (#954), which counts the city's own square.
+  'Civilopedia.condition.civ1-enhanced.mountains-or-river-on-or-nearby':
+    'Mountains or a River on or next to the city',
   'Civilopedia.condition.civ1-spaceship.unlaunched-spaceship':
     'a spaceship that hasn’t been launched',
   'ScienceReport.progress_notresearching': '',
