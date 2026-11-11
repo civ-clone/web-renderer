@@ -95,6 +95,23 @@ there are start tiles.
 npm run arena -- --candidate fix/a --earth --civilizations English,Japanese
 ```
 
+## Grids
+
+`--grid staggered-iso` lays the world out on the staggered isometric grid
+instead of the square one, and `--grid hex-odd-r` on the hexagonal grid: the
+engine's `topologyId` option (#86). Both wrap north to south as well as east
+to west, so `--height` must be even, and Earth is only played on the square
+grid. A game whose world isn't on the grid asked for fails. The default is
+`square`, and a square run sets no option, so it plays exactly as before.
+`--self-check`'s conformance game is always square, as the fixture is.
+
+```sh
+npm run arena -- --self-check --games 4 --turns 100 --grid staggered-iso
+```
+
+`npm run test:staggered-iso-game` plays one such game and checks that cities
+and moves follow the grid.
+
 ## What is measured
 
 Per player, at the start of the last turn:

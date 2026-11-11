@@ -224,6 +224,7 @@
     "test:window-filter": "node tools/run-suite.js ui windowFilter",
     "test:import-assets-window": "node tools/run-suite.js ui importAssetsWindow",
     "test:barbarians": "node tools/run-suite.js engine barbarians",
+    "test:staggered-iso-game": "node tools/run-suite.js engine staggeredIsoGame",
     "test:cvl-driver": "node tools/run-suite.js ui cvlDriver",
     "test:opl2": "node tools/run-suite.js ui opl2",
     "test:music": "node tools/run-suite.js ui music",
