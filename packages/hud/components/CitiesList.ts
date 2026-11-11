@@ -236,7 +236,6 @@ export class CitiesList extends Element {
         marker.textContent = text('City.Build.Held.marker');
         said.textContent = words;
         turns.title = words;
-        turns.classList.add('held');
         turns.append(marker, said);
       } else {
         turns.textContent = turnsText(build.turns);

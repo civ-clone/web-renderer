@@ -13,9 +13,9 @@ i18next.addResources('en', 'default', {
   'CitySquares.yield': '{{- name}}: {{value, number}}',
   'City.CompleteProduction.body':
     'Do you want to rush building of {{- item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available.',
-  // After the question, for a build that will wait once paid for (#959): `held` is what it waits for, as the city
-  //  screen says it.
-  'City.CompleteProduction.held': '{{- held}}.',
+  // For a build a rule holds back (#959): `held` says, of the item, that it can't be completed yet.
+  'City.CompleteProduction.body_held':
+    'Do you want to rush building of {{- item}} for {{spendCost.value, number}} $t({{spendCost.resource._}}.name, { "defaultValue": "{{spendCost.resource._}}", "ns": "yield" })? You currently have {{treasury.value, number}} $t({{treasury.yield._}}.name, { "defaultValue": "{{treasury.yield._}}", "ns": "yield" }) available. {{- held}}',
   'City.SellImprovement.body':
     'Do you want to sell your {{- item}} for {{saleValue.value, number}} $t({{saleValue.resource._}}.name, { "defaultValue": "{{saleValue.resource._}}", "ns": "yield" })?',
   'City.Progress.per-turn': '{{count, number(signDisplay: exceptZero)}} / turn',

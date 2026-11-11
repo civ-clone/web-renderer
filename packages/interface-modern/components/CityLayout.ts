@@ -10,6 +10,7 @@ import {
   CityScreenContext,
   describeBuy,
   renderBuildProgress,
+  renderHeldNote,
   renderTradeRoutes,
 } from '@civ-clone/ui-city/components/City';
 import {
@@ -369,6 +370,8 @@ const renderProduction = (
     ),
     ...renderBuildProgress(city),
     renderQueue(city, context),
+    // Beside Buy, which points to it: after the queue, so the queue doesn't come between them (#959).
+    renderHeldNote(city),
     readOnly
       ? ''
       : s(

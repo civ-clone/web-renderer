@@ -11,6 +11,7 @@ import {
   CityLayout,
   describeBuy,
   renderBuildProgress,
+  renderHeldNote,
   renderTradeRoutes,
 } from '@civ-clone/ui-city/components/City';
 import {
@@ -69,6 +70,8 @@ const renderBuild = (
           : ''
       ),
       ...renderBuildProgress(city),
+      // Just above the buttons, Buy among them, which points to it (#959).
+      renderHeldNote(city),
       readOnly
         ? ''
         : s(

@@ -8,6 +8,7 @@ import {
 import { emit, s } from '@dom111/element';
 import {
   getLabelForBuildableEntity,
+  heldPurchaseText,
   heldText,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
@@ -30,11 +31,11 @@ import { t } from 'i18next';
 import watchCity from './lib/watchCity';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
-// The id of the note that a city's build will wait once paid for (#959), which its Buy buttons are described by.
+// The id of the note that a city's build can't be completed yet (#959), which its Buy buttons are described by.
 const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
   // The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
   //  next, so they are said on their own. A build a rule holds (#959) says what it waits for in place of its turns once
-  //  paid for, and beneath them before, where the Buy buttons point to it.
+  //  paid for; before, `renderHeldNote` says so, which each layout puts just above its buttons.
   renderBuildProgress = (city: CityData): Node[] => {
     const progress = city.build.progress.value;
 
@@ -56,7 +57,6 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
           turnsLeft(city.build, city.yields, 'Production'),
           hold?.now ? heldText(hold) : null
         ),
-        ...(hold && !hold.now ? [renderHeldNote(city, heldText(hold))] : []),
       ];
     }
 
@@ -70,8 +70,8 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
       ),
     ];
   },
-  // A Buy button for a build that will wait once paid for points to the note that says so (#959): it is said with the
-  //  button, and not only seen beside it.
+  // A Buy button for a build a rule holds back points to the note that says so (#959): it is said with the button, and
+  //  not only seen beside it.
   describeBuy = <T extends HTMLElement>(city: CityData, buy: T): T => {
     const hold = buildHold(city.build);
 
@@ -81,10 +81,18 @@ const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
 
     return buy;
   },
-  renderHeldNote = (city: CityData, text: string): HTMLElement => {
+  // That a build a rule holds back can't be completed yet, while it still has something to pay (#959): placed by each
+  //  layout directly above its buttons, so it sits beside Buy, which points to it. Nothing for any other build.
+  renderHeldNote = (city: CityData): HTMLElement | '' => {
+    const hold = city.build.building ? buildHold(city.build) : null;
+
+    if (hold === null || hold.now) {
+      return '';
+    }
+
     const note = s(`<p class="held-note" id="${heldNoteId(city)}"></p>`);
 
-    note.textContent = text;
+    note.textContent = heldText(hold);
 
     return note;
   },
@@ -468,21 +476,20 @@ export class City extends Window {
     // The engine only asks for a yield the player keeps a treasury of.
     const treasury = getTreasuryForYield(city.player, spendCost.resource._)!;
 
-    // A build that will wait once paid for says so before the gold is spent (#959).
-    const hold = buildHold(cityBuild);
+    // A build a rule holds back says so before the gold is spent (#959), in a sentence about the item.
+    const hold = buildHold(cityBuild),
+      item = getLabelForBuildableEntity(cityBuild.building.item);
 
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),
       t('City.CompleteProduction.body', {
-        item: getLabelForBuildableEntity(cityBuild.building.item),
+        item,
         spendCost,
         treasury,
-      }) +
-        (hold && !hold.now
-          ? ` ${t('City.CompleteProduction.held', {
-              held: heldText(hold),
-            })}`
-          : ''),
+        ...(hold
+          ? { context: 'held', held: heldPurchaseText(hold, item) }
+          : {}),
+      }),
       () =>
         this.#transport.send('action', {
           name: 'CompleteProduction',
@@ -516,6 +523,6 @@ export class City extends Window {
 }
 
 // Drawn by the new layout too (#746).
-export { describeBuy, heldNoteId, renderBuildProgress, renderTradeRoutes };
+export { describeBuy, renderBuildProgress, renderHeldNote, renderTradeRoutes };
 
 export default City;

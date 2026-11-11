@@ -28,7 +28,7 @@ const buildProgress = (city: City, build: City['build']): string => {
     return t('CityBanner.progress', { ...figures, turns });
   }
 
-  return t(hold.now ? 'CityBanner.held' : 'CityBanner.will-wait', {
+  return t(hold.now ? 'CityBanner.held' : 'CityBanner.cannot-complete', {
     ...figures,
     turns,
     held: heldText(hold),
