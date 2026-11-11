@@ -1806,11 +1806,11 @@ packages:
     version: 0.1.5
 
   '@civ-clone/civ1-unit@https://codeload.github.com/civ-clone/civ1-unit/tar.gz/eb6021af3ef6d488b48c9c77fa93062c36f60236':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-unit/tar.gz/eb6021af3ef6d488b48c9c77fa93062c36f60236}
+    resolution: {gitHosted: true, integrity: sha512-qa2Uz1pnqBEy795SGm2iMLxwj1n0hRqVE7uWirsbzX4PWQ9ZMPdZV+MqzwoFbTJ5GWPFmRmqU3usFM/vHdq3vw==, tarball: https://codeload.github.com/civ-clone/civ1-unit/tar.gz/eb6021af3ef6d488b48c9c77fa93062c36f60236}
     version: 0.1.27
 
   '@civ-clone/civ1-wonder@https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/982347812da0fa1043408009c52545e51abfe90d':
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/982347812da0fa1043408009c52545e51abfe90d}
+    resolution: {gitHosted: true, integrity: sha512-ikUTKEUdj8V0Fx1Wg6iRIhDtBYP75a73W0Pa3vvb64s5nHBp/qmb/ejSvusC1Napi+2j6qHsyUNa2uWCXUnEAQ==, tarball: https://codeload.github.com/civ-clone/civ1-wonder/tar.gz/982347812da0fa1043408009c52545e51abfe90d}
     version: 0.1.10
 
   '@civ-clone/civ1-world-civilizations@https://codeload.github.com/civ-clone/civ1-world-civilizations/tar.gz/b07753c355fb801eaa262235db3315c2747fedd3':
