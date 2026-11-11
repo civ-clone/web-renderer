@@ -92,6 +92,8 @@
     "test:hydration": "node tools/run-suite.js engine hydration",
     "test:improvement-obsolete": "node tools/run-suite.js engine improvementObsolete",
     "test:sell-improvement": "node tools/run-suite.js engine sellImprovement",
+    "test:held-build": "node tools/run-suite.js engine heldBuild",
+    "test:held-build-display": "node tools/run-suite.js ui heldBuildDisplay",
     "test:future-technology": "node tools/run-suite.js engine futureTechnology",
     "test:requirements": "node tools/run-suite.js engine requirements",
     "test:rule-sets": "node tools/run-suite.js engine ruleSets",

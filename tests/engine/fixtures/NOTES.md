@@ -322,10 +322,10 @@ random-call counts are unchanged. `dto.bytes` rises by 120 at turn 10 and 1,150
 at turn 50, so `dto.hash` moves: every city build now carries `"held":[]`. Run
 again with `held` deleted from every object before the digest, the bytes and
 hashes are the previous fixture's (`412168 / 304a8001`, `10967183 /
-793bb0a3`). In `client-transcript.json` three messages change (a
-`gameDataPatch`, the `gameNotification` and the `investigateCity` answer, each
-carrying a city's build), and with every `"held":[…]` taken back out of the
-transcript, all 263 messages match the previous fixture.
+793bb0a3`). In `client-transcript.json` 33 of the 263 messages change (31
+`gameDataPatch`es, the one `gameNotification` and the one `investigateCity`
+answer, each carrying a city's build), and with every `"held":[…]` (40 of them)
+taken back out of the transcript, all 263 messages match the previous fixture.
 
 None of this says the new rules are right: in its 50 turns this game completes
 no Settlers in a size-1 city (computer players start Settlers only from size 2),
