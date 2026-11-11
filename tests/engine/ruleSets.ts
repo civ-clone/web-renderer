@@ -3,7 +3,9 @@
 //  once its player knows a later advance. This checks what the setup is told and what switching does, with the plugins
 //  the game is built with: that the page is answered from the rules and keeps nothing here between askings, that a game
 //  started with the set off lets a city go on building Warriors after Gunpowder, that a save carries the choice and a
-//  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't.
+//  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
+//  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
+//  that a game is not started or loaded under sets with a problem that blocks.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -11,8 +13,12 @@ import './lib/seed';
 import { Musketman, Warrior } from '@civ-clone/civ1-unit/Units';
 import {
   applyRuleSets,
+  checkSavedRuleSets,
   ruleSetsData,
 } from '@civ-clone/ui-worker-client/lib/ruleSets';
+import Rule from '@civ-clone/core-rule/Rule';
+import RuleSet from '@civ-clone/core-rule/RuleSet';
+import RuleSetRegistry from '@civ-clone/core-rule/RuleSetRegistry';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import Build from '@civ-clone/core-city-build/Rules/Build';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
@@ -71,7 +77,131 @@ const find = (sets: RuleSetNode[], id: string): RuleSetNode | null =>
     null
   );
 
+// What is wrong with the sets (#954), with sets and rules made here, in a registry of their own: two sets that replace
+//  the same rule, a set that names a rule that isn't loaded, and, apart, a set two packages declare differently.
+const problems = (): void => {
+  const rules = new RuleRegistry(),
+    ruleSets = RuleSetRegistry.of(rules),
+    kinds = (answer: { problems: { kind: string; blocking: boolean }[] }) =>
+      answer.problems.map(({ kind, blocking }) => `${kind} ${blocking}`);
+
+  [
+    'test:original',
+    'test:a/replacement',
+    'test:b/replacement',
+    'test:orphan/rule',
+  ].forEach((id) => rules.register(new Rule(id)));
+
+  ruleSets.register(
+    new RuleSet('test:base', 'test:original'),
+    new RuleSet(
+      'test:a',
+      { supersedes: ['test:original'] },
+      'test:a/replacement'
+    ),
+    new RuleSet(
+      'test:b',
+      { supersedes: ['test:original'] },
+      'test:b/replacement'
+    ),
+    new RuleSet('test:orphan', 'test:orphan/rule', 'test:not-loaded')
+  );
+
+  const both = ruleSetsData(null, false, ruleSets),
+    conflict = both.problems.find(({ kind }) => kind === 'conflict');
+
+  expect(
+    'two sets on that replace the same rule are a conflict that blocks, about both, and the set naming a rule that is not loaded is said and does not block; the page is answered all the same',
+    [kinds(both).sort(), conflict?.ids, typeof conflict?.message],
+    [['conflict true', 'unknown-member false'], ['test:a', 'test:b'], 'string']
+  );
+
+  const one = ruleSetsData(
+    { choices: both.choices, change: { id: 'test:b', value: false } },
+    false,
+    ruleSets
+  );
+
+  expect(
+    'with one of them switched off the conflict is gone, the orphan is still said, and the rule replaced says by what',
+    [
+      kinds(one),
+      one.problems[0]?.ids,
+      find(one.sets, 'test:original')?.supersededBy,
+      find(one.sets, 'test:original')?.active,
+      find(one.sets, 'test:a')?.supersedes,
+    ],
+    [
+      ['unknown-member false'],
+      ['test:orphan', 'test:not-loaded'],
+      ['test:a'],
+      false,
+      ['test:original'],
+    ]
+  );
+
+  expect(
+    'and switched back on, the conflict is back: nothing is kept between askings',
+    kinds(
+      ruleSetsData(
+        { choices: one.choices, change: { id: 'test:b', value: true } },
+        false,
+        ruleSets
+      )
+    ).sort(),
+    ['conflict true', 'unknown-member false']
+  );
+
+  expect(
+    'a game is not started under the two, and is under one, the orphan notwithstanding',
+    [
+      throws(() => applyRuleSets([], ruleSets)),
+      throws(() => applyRuleSets(one.choices, ruleSets)),
+    ],
+    ['Error', null]
+  );
+
+  expect(
+    'nor is a save loaded that chose the two, while one that chose one is, with the orphan to say',
+    [
+      throws(() => checkSavedRuleSets([], ruleSets)),
+      throws(() => checkSavedRuleSets(undefined, ruleSets)),
+      checkSavedRuleSets(one.choices, ruleSets).map(({ kind }) => kind),
+    ],
+    ['Error', 'Error', ['unknown-member']]
+  );
+
+  ruleSets.dispose();
+
+  // A package's mistake: two declarations of one set that disagree on whether it starts on.
+  const mistaken = new RuleRegistry(),
+    mistakes = RuleSetRegistry.of(mistaken);
+
+  mistaken.register(new Rule('test:mistake/rule'));
+  mistakes.register(
+    new RuleSet('test:mistake', { enabled: true }, 'test:mistake/rule'),
+    new RuleSet('test:mistake', { enabled: false })
+  );
+
+  const mistake = ruleSetsData(null, false, mistakes);
+
+  expect(
+    "a package's mistake is answered, not thrown, and blocks: no game starts, and no save loads, under it",
+    [
+      kinds(mistake),
+      mistake.sets.map(({ id }) => id),
+      throws(() => applyRuleSets([], mistakes)),
+      throws(() => checkSavedRuleSets([], mistakes)),
+    ],
+    [['option-conflict true'], ['test:mistake'], 'Error', 'Error']
+  );
+
+  mistakes.dispose();
+};
+
 const check = async (): Promise<void> => {
+  problems();
+
   const { rules, ruleSets } = defaultGame,
     // The units' entries, and not the Wonders', which go obsolete by rules of their own.
     obsolete = (): string[] =>
@@ -80,9 +210,9 @@ const check = async (): Promise<void> => {
         .filter((id) => id.startsWith('civ1-unit:city/build/obsolete/'));
 
   expect(
-    "the plugins' sets name only rules and sets that are registered",
-    throws(() => ruleSets.check()),
-    null
+    "the plugins' sets name only rules and sets that are registered, and nothing is wrong with them",
+    [throws(() => ruleSets.check()), ruleSets.validate()],
+    [null, []]
   );
 
   // --- what the setup is told ------------------------------------------------------------------------------------

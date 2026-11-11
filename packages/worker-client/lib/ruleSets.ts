@@ -1,9 +1,12 @@
 // The rule sets a new game can switch (#158): named groups of rules, some of them choices between alternatives, that
 //  the plugins register in `game.ruleSets`. The page draws what `describe()` says and sends back what was chosen;
-//  what switching a set does to the rules beneath it is decided here, by the registry, and nowhere on the page.
+//  what switching a set does to the rules beneath it is decided here, by the registry, and nowhere on the page. So is
+//  what is wrong with them (#954): `validate()`'s problems go with each answer, for the page to show, and one that
+//  blocks keeps a game from starting or loading.
 
 import {
   RuleSetChoice,
+  RuleSetProblem,
   RuleSetsAnswer,
   RuleSetsQuery,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
@@ -22,7 +25,21 @@ const isChoices = (value: unknown): value is RuleSetChoice[] =>
 const answer = (ruleSets: RuleSetRegistry): RuleSetsAnswer => ({
   sets: ruleSets.describe(),
   choices: ruleSets.choices(),
+  problems: ruleSets.validate(),
 });
+
+// A game is not started or loaded while a problem that blocks stands: the setup holds Start, so this is a backstop.
+const refuseBlocked = (problems: RuleSetProblem[], what: string): void => {
+  const blocking = problems.filter(({ blocking }) => blocking);
+
+  if (blocking.length > 0) {
+    throw new Error(
+      `${what} can't be used as they are: ${blocking
+        .map(({ message }) => message)
+        .join(' ')}`
+    );
+  }
+};
 
 /**
  * The sets as they are with the page's choices made, and its one change after them.
@@ -52,8 +69,7 @@ export const ruleSetsData = (
     );
   }
 
-  // A rule or a set that a plugin names and nothing registered: said now, before a game is set up on it.
-  ruleSets.check();
+  // What is wrong with the sets is answered, not thrown: the setup shows it, and holds Start while it blocks.
   ruleSets.restore(query?.choices ?? []);
 
   if (query?.change) {
@@ -73,7 +89,8 @@ export const ruleSetsData = (
  * Puts a game that is about to start under the rule sets it was set up with (the `ruleSets` option).
  *
  * Every one of them has to be made: a game that starts without a rule its player switched on, or with one they
- *  switched off, is not the game they set up, so it does not start.
+ *  switched off, is not the game they set up, so it does not start. Nor does one whose sets, as chosen, have a problem
+ *  that blocks (#954).
  */
 export const applyRuleSets = (
   choices: unknown,
@@ -82,8 +99,6 @@ export const applyRuleSets = (
   if (!isChoices(choices)) {
     throw new TypeError('The `ruleSets` option is a list of { id, value }.');
   }
-
-  ruleSets.check();
 
   const unknown = ruleSets.restore(choices);
 
@@ -94,4 +109,31 @@ export const applyRuleSets = (
         .join(', ')}.`
     );
   }
+
+  refuseBlocked(ruleSets.validate(), 'The rule sets the game was set up with');
+};
+
+/**
+ * Before a save is put back: its rule sets, as it chose them, are refused if they have a problem that blocks (#954),
+ *  as a new game's would be. Returns those that don't, a set naming something that isn't loaded, for the host to say:
+ *  the game is played without it.
+ *
+ * Choices that aren't a list of them, or none at all, are the load's to refuse or to start from the defaults: the sets
+ *  are checked as they start.
+ */
+export const checkSavedRuleSets = (
+  choices: unknown,
+  ruleSets: RuleSetRegistry = defaultGame.ruleSets
+): RuleSetProblem[] => {
+  if (isChoices(choices)) {
+    ruleSets.restore(choices);
+  } else {
+    ruleSets.reset();
+  }
+
+  const problems = ruleSets.validate();
+
+  refuseBlocked(problems, "The saved game's rule sets");
+
+  return problems;
 };

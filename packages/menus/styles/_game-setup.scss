@@ -111,4 +111,53 @@
   fieldset > p.rule-set-description {
     margin-left: 0;
   }
+
+  // What is wrong with the sets (#954), above them: an error that holds Start in the negative colour, a note muted.
+  .rule-set-problems {
+    list-style: none;
+    margin: 0.25rem 0 0.5rem;
+    padding: 0;
+  }
+
+  .rule-set-problem {
+    margin: 0.25rem 0 0;
+  }
+
+  .rule-set-error {
+    color: var(--ui-negative);
+  }
+
+  .rule-set-note {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+  }
+
+  // The rules' own words on a package's mistake, for whoever made it.
+  .rule-set-problem-details {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+    list-style: none;
+    margin: 0.125rem 0 0;
+    padding: 0 0 0 1rem;
+  }
+
+  // A set a conflict is about: a bar down its row, and its name in the error's colour, so the two to choose between
+  //  can be found.
+  .rule-set-conflict {
+    border-left: 2px solid var(--ui-negative);
+    padding-left: 0.375rem;
+
+    > label > .rule-set-name,
+    > .rule-set-heading,
+    > fieldset > legend {
+      color: var(--ui-negative);
+    }
+  }
+
+  // What has replaced a rule or a set just now, beside its name.
+  .rule-set-replaced {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+    font-weight: normal;
+  }
 }

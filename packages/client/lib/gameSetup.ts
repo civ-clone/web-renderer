@@ -20,6 +20,7 @@ import Options from '@civ-clone/ui-protocol/Requests/Options';
 import RuleSets, {
   RuleSetChoice,
   RuleSetNode,
+  RuleSetProblem,
   RuleSetsAnswer,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import Request from '@civ-clone/core-data-client/Request';
@@ -115,6 +116,8 @@ export class GameSetup {
   //  say.
   ruleSets: RuleSetNode[];
   ruleSetChoices: RuleSetChoice[];
+  // What is wrong with them, as the worker found it (#954): a game doesn't start while one that blocks stands.
+  ruleSetProblems: RuleSetProblem[];
   // One change at a time, each made to the choices the one before it left: two sent together would both start from
   //  the same choices, and the second answer would undo the first.
   #ruleSetChange: Promise<void> = Promise.resolve();
@@ -124,6 +127,7 @@ export class GameSetup {
 
     this.ruleSets = data.ruleSets?.sets ?? [];
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
+    this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
     if (preset.earth) {
       this.earth = true;
@@ -391,18 +395,24 @@ export class GameSetup {
   changeRuleSet(transport: Transport, change: RuleSetChoice): Promise<void> {
     this.#ruleSetChange = this.#ruleSetChange.then(async (): Promise<void> => {
       try {
-        const { sets, choices } = await transport.request(
+        const { sets, choices, problems } = await transport.request(
           new RuleSets({ choices: this.ruleSetChoices, change })
         );
 
         this.ruleSets = sets;
         this.ruleSetChoices = choices;
+        this.ruleSetProblems = problems ?? [];
       } catch (error) {
         unlessRequestFailed(error);
       }
     });
 
     return this.#ruleSetChange;
+  }
+
+  /** Whether the rule sets, as the worker last described them, have a problem that keeps a game from starting (#954). */
+  ruleSetsBlockStart(): boolean {
+    return this.ruleSetProblems.some(({ blocking }) => blocking);
   }
 
   /**

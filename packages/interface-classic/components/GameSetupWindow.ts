@@ -114,6 +114,16 @@ export class GameSetupWindow extends Window {
   }
 
   #build(preset: GameSetupPreset): void {
+    // Made first, for the Rules section to hold while the rule sets have a problem that blocks (#954).
+    this.#startButton = h(
+      s<HTMLButtonElement>(
+        `<button class="btn-primary start">${t('GameSetup.start')}</button>`
+      ),
+      {
+        click: () => this.#start(difficultySelect.value),
+      }
+    );
+
     const setup = this.#setup,
       data = setup.data,
       grids = supportedTopologies(),
@@ -133,7 +143,8 @@ export class GameSetupWindow extends Window {
       rules = ruleSetsSection(
         setup,
         this.#transport,
-        'rules rule-sets-section'
+        'rules rule-sets-section',
+        this.#startButton
       ),
       // The table parts are made, not parsed: `s()` parses inside a `<div>`, where a browser drops a bare `<thead>` or
       //  `<tr>` (the test DOM doesn't, so a test would not have said).
@@ -291,14 +302,7 @@ export class GameSetupWindow extends Window {
         s(`<h4>${t('GameSetup.seats')}</h4>`),
         table,
         s('<div class="actions"></div>', this.#addSeat),
-        (this.#startButton = h(
-          s<HTMLButtonElement>(
-            `<button class="btn-primary start">${t('GameSetup.start')}</button>`
-          ),
-          {
-            click: () => this.#start(difficultySelect.value),
-          }
-        ))
+        this.#startButton
       )
     );
 
@@ -505,6 +509,11 @@ export class GameSetupWindow extends Window {
   }
 
   async #start(difficulty: string): Promise<void> {
+    // Held, and said why, in the Rules section (#954): Enter is held too.
+    if (this.#setup.ruleSetsBlockStart()) {
+      return;
+    }
+
     const problem = this.#setup.problem(
       this.#widthInput.value,
       this.#heightInput.value

@@ -140,6 +140,17 @@ export class GameSetupForm extends Window {
   }
 
   #build(preset: GameSetupPreset): void {
+    // Made first, for the Rules section to hold while the rule sets have a problem that blocks (#954).
+    const start = h(
+      button(t('GameSetup.start'), {
+        variant: 'primary',
+        className: 'start',
+      }),
+      {
+        click: () => this.#start(),
+      }
+    );
+
     const setup = this.#setup,
       data = setup.data,
       grids = supportedTopologies(),
@@ -157,7 +168,8 @@ export class GameSetupForm extends Window {
       rules = ruleSetsSection(
         setup,
         this.#transport,
-        'ui-game-setup-rules rule-sets-section'
+        'ui-game-setup-rules rule-sets-section',
+        start
       );
 
     table.className = 'ui-game-setup-seats';
@@ -325,18 +337,7 @@ export class GameSetupForm extends Window {
           this.#addSeat
         ),
         // Moved into the window's footer, Start as its primary (#738).
-        s(
-          '<footer></footer>',
-          h(
-            button(t('GameSetup.start'), {
-              variant: 'primary',
-              className: 'start',
-            }),
-            {
-              click: () => this.#start(),
-            }
-          )
-        )
+        s('<footer></footer>', start)
       )
     );
 
@@ -616,6 +617,11 @@ export class GameSetupForm extends Window {
   }
 
   async #start(): Promise<void> {
+    // Held, and said why, in the Rules section (#954): Enter is held too.
+    if (this.#setup.ruleSetsBlockStart()) {
+      return;
+    }
+
     const problem = this.#setup.problem(
       this.#widthInput.value,
       this.#heightInput.value

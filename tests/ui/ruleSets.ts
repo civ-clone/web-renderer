@@ -2,7 +2,10 @@
 //  worker that holds the sets as the real one does: a set as a checkbox with what it does beneath it, a set whose rules
 //  differ as neither ticked nor clear, a choice as radio buttons, a rule drawn only where it is named, and nothing
 //  worked out on the page: each change is asked of the worker with the choices so far, and the answer is drawn. Start
-//  sends the choices, after any change still on its way.
+//  sends the choices, after any change still on its way. What is wrong with the sets (#954) is drawn as the worker
+//  says it: two sets that can't both be on as an error naming both, with their rows marked and Start held until one is
+//  switched off; a package's mistake as one line with the rules' words beneath; a set naming a rule that isn't loaded
+//  as a quiet note that holds nothing; and a rule another set has replaced says so beside its name.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -12,6 +15,7 @@ import './lib/grids';
 import {
   RuleSetChoice,
   RuleSetNode,
+  RuleSetProblem,
   RuleSetsQuery,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
@@ -243,7 +247,11 @@ const worker = (offers: boolean = true) => {
             await new Promise<void>((resolve) => held.push(resolve));
           }
 
-          return { sets: describe(choices), choices: said(choices) };
+          return {
+            sets: describe(choices),
+            choices: said(choices),
+            problems: [],
+          };
         }
         default:
           return undefined;
@@ -266,6 +274,115 @@ const worker = (offers: boolean = true) => {
         .map(({ args }) => args[0]),
     options: (): any =>
       log.find(({ channel }) => channel === 'setOptions')?.args[0],
+  };
+};
+
+// A worker whose sets have problems (#954): two sets, each replacing the one rule of a third, both on to begin with,
+//  which can't both be; and a set that names a rule that isn't loaded. As the registry says them, from the choices.
+const troubled = () => {
+  const log: { channel: string; args: unknown[] }[] = [];
+
+  const answer = (choices: RuleSetChoice[]) => {
+    const off = new Set(
+        choices.filter(({ value }) => value === false).map(({ id }) => id)
+      ),
+      on = ['test:first', 'test:second'].filter((id) => !off.has(id)),
+      set = (
+        id: string,
+        members: RuleSetNode[],
+        extra: Partial<RuleSetNode> = {}
+      ): RuleSetNode => ({
+        id,
+        kind: 'set',
+        state: off.has(id) ? 'off' : 'on',
+        active: true,
+        switchable: true,
+        members,
+        ...extra,
+      }),
+      rule = (id: string, extra: Partial<RuleSetNode> = {}): RuleSetNode => ({
+        id,
+        kind: 'rule',
+        state: 'on',
+        active: true,
+        switchable: true,
+        members: [],
+        ...extra,
+      }),
+      problems: RuleSetProblem[] = [
+        ...(on.length === 2
+          ? [
+              {
+                kind: 'conflict' as const,
+                ids: ['test:first', 'test:second'],
+                message:
+                  "Rule sets 'test:first' and 'test:second' both replace 'test:original', and only one of them can be in force.",
+                blocking: true,
+              },
+            ]
+          : []),
+        {
+          kind: 'unknown-member',
+          ids: ['test:orphan', 'test:not-loaded'],
+          message:
+            "Rule set 'test:orphan' names 'test:not-loaded', which is neither a registered rule nor a registered rule set.",
+          blocking: false,
+        },
+      ];
+
+    return {
+      sets: [
+        set('test:base', [
+          rule('test:original', {
+            active: on.length === 0,
+            ...(on.length > 0 ? { supersededBy: on } : {}),
+          }),
+        ]),
+        set('test:first', [], { supersedes: ['test:original'] }),
+        set('test:second', [], { supersedes: ['test:original'] }),
+        set('test:orphan', []),
+      ],
+      choices: choices.filter(({ value }) => value === false),
+      problems,
+    };
+  };
+
+  const transport = {
+    send: (channel: string, ...args: unknown[]) => log.push({ channel, args }),
+    request: async (request: Request): Promise<unknown> => {
+      log.push({ channel: request.channel(), args: request.args() });
+
+      switch (request.channel()) {
+        case 'civilizations':
+          return [{ name: 'Roman', leaders: ['JuliusCaesar'], colours: [] }];
+        case 'aiClients':
+          return ['SimpleAIClient'];
+        case 'difficulties':
+          return [{ name: 'Prince', level: 2 }];
+        case 'getOptions':
+          return {};
+        case 'ruleSets': {
+          const query = request.args()[0] as RuleSetsQuery | null;
+
+          return answer([
+            ...(query?.choices ?? []).filter(
+              ({ id }) => id !== query?.change?.id
+            ),
+            ...(query?.change ? [query.change] : []),
+          ]);
+        }
+        default:
+          return undefined;
+      }
+    },
+  } as unknown as Transport;
+
+  return {
+    transport,
+    started: (): string[] =>
+      log
+        .map(({ channel }) => channel)
+        .filter((channel) => ['setOptions', 'start'].includes(channel)),
   };
 };
 
@@ -577,6 +694,218 @@ const run = async (): Promise<void> => {
 
     again.close();
   }
+
+  // --- what is wrong with the sets (#954) ------------------------------------------------------------------------
+  i18next.addResources('en', 'ruleset', {
+    'test.base.name': 'Base',
+    'test.original.name': 'The original rule',
+    'test.first.name': 'First replacement',
+    'test.second.name': 'Second replacement',
+    'test.orphan.name': 'Orphaned',
+  });
+
+  for (const [name, , ask] of interfaces) {
+    const fake = troubled(),
+      setup = await ask(fake.transport),
+      element = setup.element(),
+      start = element.querySelector('button.start') as HTMLButtonElement,
+      box = (id: string): HTMLInputElement =>
+        [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].find(
+          (input) => input.dataset.ruleSet!.split('\n').pop() === id
+        ) as HTMLInputElement,
+      item = (id: string): HTMLElement => box(id).closest('li') as HTMLElement,
+      lines = (className: string): string[] =>
+        [...element.querySelectorAll(`.rule-set-problem.${className}`)].map(
+          (line) => line.textContent ?? ''
+        ),
+      marked = (): string[] =>
+        [...element.querySelectorAll('.rule-set-conflict')].map(
+          (row) =>
+            (row.querySelector('[data-rule-set]') as HTMLElement).dataset
+              .ruleSet!
+        ),
+      byIds = (ids: string | null): string[] =>
+        (ids ?? '')
+          .split(' ')
+          .filter((id) => id !== '')
+          .map((id) => element.querySelector(`#${id}`)?.textContent ?? '');
+
+    expect(
+      `${name}: two sets on that replace the same rule are an error naming both, above the sets`,
+      [
+        lines('rule-set-error'),
+        element
+          .querySelector(
+            '.rule-sets-section > [aria-live] + div > ul.rule-sets'
+          )
+          ?.tagName.toLowerCase(),
+      ],
+      [
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+        'ul',
+      ]
+    );
+    expect(
+      `${name}: both their rows are marked, and their checkboxes in error, described by it`,
+      [
+        marked(),
+        box('test:first').getAttribute('aria-invalid'),
+        byIds(box('test:second').getAttribute('aria-describedby')),
+        box('test:base').hasAttribute('aria-invalid'),
+      ],
+      [
+        ['test:first', 'test:second'],
+        'true',
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+        false,
+      ]
+    );
+    expect(
+      `${name}: a set that names a rule that isn't loaded is a quiet note, once`,
+      lines('rule-set-note'),
+      ['Orphaned refers to a rule that isn’t loaded.']
+    );
+    expect(
+      `${name}: the rule both replace says so beside its name, inside its label, apart from the name`,
+      [
+        item('test:original').querySelector('label .rule-set-replaced')
+          ?.textContent,
+        item('test:original').querySelector('label')?.textContent,
+      ],
+      [
+        'replaced by First replacement and Second replacement',
+        'The original rule replaced by First replacement and Second replacement',
+      ]
+    );
+    expect(
+      `${name}: Start is held, described by the error`,
+      [start.disabled, byIds(start.getAttribute('aria-describedby'))],
+      [
+        true,
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+      ]
+    );
+
+    // Enter, from the name, would start a game.
+    const nameInput = element.querySelector(
+      'input[name="name"]'
+    ) as HTMLInputElement;
+
+    press(nameInput, 'Enter');
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: and no game is started from it, by Enter or by a click that gets through`,
+      fake.started(),
+      []
+    );
+
+    tick(box('test:second'), false);
+    await settle();
+
+    expect(
+      `${name}: with one switched off, the error and the marks go, the note stays, and the rule says what replaced it`,
+      [
+        lines('rule-set-error'),
+        marked(),
+        box('test:first').hasAttribute('aria-invalid'),
+        lines('rule-set-note'),
+        item('test:original').querySelector('.rule-set-replaced')?.textContent,
+      ],
+      [
+        [],
+        [],
+        false,
+        ['Orphaned refers to a rule that isn’t loaded.'],
+        'replaced by First replacement',
+      ]
+    );
+    expect(
+      `${name}: and Start is free again, described by nothing`,
+      [start.disabled, start.hasAttribute('aria-describedby')],
+      [false, false]
+    );
+
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: so the game starts, the note notwithstanding`,
+      fake.started(),
+      ['setOptions', 'start']
+    );
+
+    setup.close();
+  }
+
+  // A package's mistake, which the player can't settle: one line, and the rules' words beneath it as detail.
+  const { renderRuleSetProblems, holdStart } = await import(
+      '@civ-clone/ui-menus/lib/ruleSetControls'
+    ),
+    problemsHolder = document.createElement('div'),
+    held = document.createElement('button'),
+    mistakes: RuleSetProblem[] = [
+      {
+        kind: 'option-conflict',
+        ids: ['test:mistake'],
+        message:
+          "The declarations of rule set 'test:mistake' disagree on `enabled`.",
+        blocking: true,
+      },
+      {
+        kind: 'cycle',
+        ids: ['test:loop'],
+        message: "Rule set 'test:loop' is inside itself.",
+        blocking: true,
+      },
+    ];
+
+  document.body.append(problemsHolder);
+
+  const mistaken = renderRuleSetProblems(problemsHolder, mistakes);
+
+  holdStart(held, mistaken);
+
+  expect(
+    "a package's mistakes are one error line, with each of the rules' messages beneath it, and they hold Start",
+    [
+      [...problemsHolder.querySelectorAll('.rule-set-error')].map(
+        (line) => line.firstChild?.textContent
+      ),
+      [...problemsHolder.querySelectorAll('.rule-set-problem-detail')].map(
+        (line) => line.textContent
+      ),
+      held.disabled,
+      mistaken.blocking.length,
+      mistaken.marked.size,
+    ],
+    [
+      [
+        'The rule sets can’t be used as they are: a package that provides them needs fixing.',
+      ],
+      mistakes.map(({ message }) => message),
+      true,
+      1,
+      0,
+    ]
+  );
+
+  holdStart(held, renderRuleSetProblems(problemsHolder, []));
+
+  expect(
+    'and with nothing wrong, nothing is drawn and Start is free',
+    [problemsHolder.childNodes.length, held.disabled],
+    [0, false]
+  );
+
+  problemsHolder.remove();
 
   // A set whose rules differ is neither ticked nor clear: drawn from the worker's `mixed`.
   const { renderRuleSets } = await import(
