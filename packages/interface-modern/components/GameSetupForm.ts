@@ -20,6 +20,9 @@ import {
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import { ruleSetsSection } from '@civ-clone/ui-menus/lib/ruleSetControls';
+import startFromSetup, {
+  cancelStartOnClose,
+} from '@civ-clone/ui-menus/lib/setupStart';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import Window from '@civ-clone/ui-component-window/Window';
@@ -119,6 +122,9 @@ export class GameSetupForm extends Window {
     this.#transport = transport;
 
     this.#build(preset);
+
+    // Closed while a start waits on a rule set switched a moment ago: it doesn't start (#954).
+    cancelStartOnClose(this, this.#setup);
   }
 
   /** Asks the worker what there is to choose from, then shows the form. */
@@ -645,21 +651,17 @@ export class GameSetupForm extends Window {
       (input) => input.value
     ) as [string, string, string];
 
-    this.#startButton.disabled = true;
-
     // Closed once the game is going ahead: a rule set switched a moment ago can leave the sets with a problem that
     //  keeps it from starting (#954), and then the window stays, showing it.
-    const started = await this.#setup.start(
-      this.#transport,
-      { landCoverage, landSize, maxIterations },
-      this.#difficultySelect.value,
-      this.#onFinished,
-      () => this.close()
+    await startFromSetup(this, this.#setup, this.#startButton, (goingAhead) =>
+      this.#setup.start(
+        this.#transport,
+        { landCoverage, landSize, maxIterations },
+        this.#difficultySelect.value,
+        this.#onFinished,
+        goingAhead
+      )
     );
-
-    if (!started) {
-      this.#startButton.disabled = this.#setup.ruleSetsBlockStart();
-    }
   }
 }
 

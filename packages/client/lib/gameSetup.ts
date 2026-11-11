@@ -120,9 +120,15 @@ export class GameSetup {
   ruleSetProblems: RuleSetProblem[];
   // One change at a time, each made to the choices the one before it left: two sent together would both start from
   //  the same choices, and the second answer would undo the first.
+  //  Never rejected, so that one change that fails doesn't stop every one after it.
   #ruleSetChange: Promise<void> = Promise.resolve();
-  // From Start until the game goes ahead, or the rule sets turn it down (#954): Start is held meanwhile.
+  // A change failed for a reason other than going unanswered (the player has been told of that, #470) since Start was
+  //  pressed: the game doesn't start on choices that may not be the player's.
+  #changeFailed: boolean = false;
+  // From Start until the game goes ahead, or doesn't (#954): Start is held meanwhile.
   #starting: boolean = false;
+  // The setup closed while a start waited on a change: nothing is sent.
+  #cancelled: boolean = false;
 
   constructor(data: SetupData, preset: GameSetupPreset = {}) {
     this.data = data;
@@ -395,7 +401,7 @@ export class GameSetup {
    *  the sets as the worker says they then are. Not answered, the player has been told, and the sets are as they were.
    */
   changeRuleSet(transport: Transport, change: RuleSetChoice): Promise<void> {
-    this.#ruleSetChange = this.#ruleSetChange.then(async (): Promise<void> => {
+    const made = this.#ruleSetChange.then(async (): Promise<void> => {
       try {
         const { sets, choices, problems } = await transport.request(
           new RuleSets({ choices: this.ruleSetChoices, change })
@@ -409,7 +415,20 @@ export class GameSetup {
       }
     });
 
-    return this.#ruleSetChange;
+    // The caller hears of anything other than a request not answered, as the surprise it is (#580).
+    this.#ruleSetChange = made.catch((): void => {
+      this.#changeFailed = true;
+    });
+
+    return made;
+  }
+
+  /**
+   * The setup was closed: a start waiting on a rule set switched a moment ago sends nothing. One that has gone ahead
+   *  is not stopped.
+   */
+  cancelStart(): void {
+    this.#cancelled = true;
   }
 
   /** Whether Start has been pressed, and the game is going ahead or waiting on a rule set switched a moment ago. */
@@ -426,9 +445,10 @@ export class GameSetup {
    * Sends the world options and the seats as one `setOptions`, then `start`. Not answered, the player has been told,
    *  and the main menu is still there, with no game started (#580).
    *
-   * A rule set switched a moment ago is waited for, as it is part of what is sent, and the game doesn't start if it
-   *  left the rule sets with a problem that blocks (#954): nothing is sent, and this resolves `false` for the setup to
-   *  stay open and show it. Otherwise `goingAhead` is called before anything is sent, and this resolves `true`.
+   * Every rule set switched a moment ago is waited for, as it is part of what is sent (#954), and nothing is sent, and
+   *  this resolves `false`, if one of them failed for a reason other than going unanswered, if they left the rule sets
+   *  with a problem that blocks, or if the setup was closed meanwhile (`cancelStart`): for the setup to stay open and
+   *  show why, or to go. Otherwise `goingAhead` is called before anything is sent, and this resolves `true`.
    */
   async start(
     transport: Transport,
@@ -438,10 +458,19 @@ export class GameSetup {
     goingAhead: () => void = () => {}
   ): Promise<boolean> {
     this.#starting = true;
+    this.#cancelled = false;
+    this.#changeFailed = false;
 
-    await this.#ruleSetChange;
+    // Until the changes are still: one made while waiting is waited for too.
+    let pending: Promise<void>;
 
-    if (this.ruleSetsBlockStart()) {
+    do {
+      pending = this.#ruleSetChange;
+
+      await pending;
+    } while (pending !== this.#ruleSetChange);
+
+    if (this.#changeFailed || this.#cancelled || this.ruleSetsBlockStart()) {
       this.#starting = false;
 
       return false;

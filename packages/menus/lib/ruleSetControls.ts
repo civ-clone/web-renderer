@@ -522,7 +522,8 @@ export const ruleSetsSection = (
         holder,
         setup.ruleSets,
         (change: RuleSetChoice): void => {
-          void setup.changeRuleSet(transport, change).then(render);
+          // Drawn again however it went: a change that failed puts the controls back as the sets are.
+          void setup.changeRuleSet(transport, change).finally(render);
         },
         drawn.marked
       );

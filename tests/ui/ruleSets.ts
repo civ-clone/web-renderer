@@ -283,7 +283,9 @@ const troubled = () => {
   const log: { channel: string; args: unknown[] }[] = [],
     held: (() => void)[] = [];
 
-  let holding = false;
+  let holding = false,
+    // The next change fails, as a request a worker could not answer does or as a surprise does.
+    failing: '' | 'request' | 'error' = '';
 
   const answer = (choices: RuleSetChoice[]) => {
     const off = new Set(
@@ -372,6 +374,18 @@ const troubled = () => {
             await new Promise<void>((resolve) => held.push(resolve));
           }
 
+          if (failing !== '' && query?.change) {
+            const mode = failing;
+
+            failing = '';
+
+            if (mode === 'request') {
+              throw new RequestFailed('ruleSets', 'not answered');
+            }
+
+            throw new Error('a surprise');
+          }
+
           return answer([
             ...(query?.choices ?? []).filter(
               ({ id }) => id !== query?.change?.id
@@ -392,6 +406,13 @@ const troubled = () => {
       holding = false;
       held.splice(0).forEach((resolve) => resolve());
     },
+    // The one change waiting, answered, and the next held as it comes.
+    releaseOne: () => held.shift()?.(),
+    fail: (mode: 'request' | 'error') => (failing = mode),
+    ruleSetsSent: (): unknown[] =>
+      log
+        .filter(({ channel }) => channel === 'setOptions')
+        .map(({ args }) => (args[0] as { ruleSets: unknown }).ruleSets),
     started: (): string[] =>
       log
         .map(({ channel }) => channel)
@@ -903,9 +924,15 @@ const run = async (): Promise<void> => {
     await settle();
 
     expect(
-      `${name}: the change left the two sets both on, so the game doesn't start: the setup stays open, says why, and holds Start`,
-      [fake.started(), element.isConnected, errors(), start.disabled],
-      [[], true, 1, true]
+      `${name}: the change left the two sets both on, so the game doesn't start: the setup stays open, usable, says why, and holds Start`,
+      [
+        fake.started(),
+        element.isConnected,
+        element.querySelector('[inert]'),
+        errors(),
+        start.disabled,
+      ],
+      [[], true, null, 1, true]
     );
 
     tick(box('test:second'), false);
@@ -935,6 +962,176 @@ const run = async (): Promise<void> => {
     );
 
     setup.close();
+  }
+
+  // While a start waits (#954): the setup can't be changed, closing it calls the start off, a change made all the same
+  //  is waited for, and a change that fails leaves the setup to be used again. Each from a setup with no conflict.
+  const surprises: string[] = [];
+
+  process.on('unhandledRejection', (reason: unknown): void => {
+    surprises.push(String((reason as Error)?.message ?? reason));
+  });
+
+  const asks: [
+    string,
+    (transport: Transport, onFinished: () => void) => Promise<Setup>
+  ][] = [
+    [
+      'modern',
+      (transport, onFinished) => GameSetupForm.ask(transport, onFinished),
+    ],
+    [
+      'classic',
+      (transport, onFinished) => GameSetupWindow.ask(transport, onFinished),
+    ],
+  ];
+
+  for (const [name, ask] of asks) {
+    const make = async () => {
+      const fake = troubled(),
+        finished: string[] = [],
+        setup = await ask(fake.transport, () => {
+          finished.push('finished');
+        }),
+        element = setup.element(),
+        start = element.querySelector('button.start') as HTMLButtonElement,
+        body = element.querySelector(':scope > .body') as HTMLElement,
+        box = (id: string): HTMLInputElement =>
+          [
+            ...element.querySelectorAll<HTMLInputElement>('[data-rule-set]'),
+          ].find(
+            (input) => input.dataset.ruleSet!.split('\n').pop() === id
+          ) as HTMLInputElement;
+
+      tick(box('test:second'), false);
+      await settle();
+
+      return { fake, finished, setup, element, start, body, box };
+    };
+
+    // Closed while waiting.
+    {
+      const { fake, finished, setup, element, start, body, box } = await make();
+
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      start.focus();
+      click(start);
+      await settle();
+
+      expect(
+        `${name}: while a start waits on a change, the setup can't be changed, Start is held, and the keyboard is on the title bar's button, for Escape`,
+        [
+          body.hasAttribute('inert'),
+          box('test:first').closest('[inert]') === body,
+          start.disabled,
+          focused instanceof HTMLButtonElement &&
+            focused !== start &&
+            element.contains(focused) &&
+            !body.contains(focused),
+        ],
+        [true, true, true, true]
+      );
+
+      press(element, 'Escape');
+      await settle();
+      fake.release();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: closed while the start waits, nothing is sent once the change is answered, and the game isn't started`,
+        [element.isConnected, fake.started(), finished],
+        [false, [], []]
+      );
+
+      setup.close();
+    }
+
+    // A change made all the same while waiting: waited for, and sent.
+    {
+      const { fake, setup, start, box } = await make();
+
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      click(start);
+      await settle();
+      tick(box('test:first'), false);
+      fake.releaseOne();
+      await settle();
+
+      expect(
+        `${name}: a change answered while a start still waits on another leaves Start held`,
+        [start.disabled, fake.started()],
+        [true, []]
+      );
+
+      fake.release();
+      await settle();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: and the start waits for every change made, so the game starts with the last of them`,
+        [fake.started(), fake.ruleSetsSent()],
+        [
+          ['setOptions', 'start'],
+          [
+            [
+              { id: 'test:second', value: false },
+              { id: 'test:base', value: false },
+              { id: 'test:first', value: false },
+            ],
+          ],
+        ]
+      );
+
+      setup.close();
+    }
+
+    // A change that fails as a surprise, while waiting.
+    {
+      const { fake, setup, element, start, body, box } = await make();
+
+      surprises.length = 0;
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      click(start);
+      await settle();
+      fake.fail('error');
+      fake.release();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: a change that fails as a surprise keeps the game from starting, says so as the surprise it is, and the setup can be used again`,
+        [
+          fake.started(),
+          element.isConnected,
+          body.hasAttribute('inert'),
+          start.disabled,
+          surprises,
+        ],
+        [[], true, false, false, ['a surprise']]
+      );
+
+      tick(box('test:base'), false);
+      await settle();
+      click(start);
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: and another change and Start then start the game`,
+        [fake.started(), element.isConnected],
+        [['setOptions', 'start'], false]
+      );
+
+      setup.close();
+    }
   }
 
   // A package's mistake, which the player can't settle: one line, and the rules' words beneath it as detail.
