@@ -61,9 +61,9 @@ export class CityNames extends Map {
   //  name reach on to it, and the region an update clears has to be as wide as the widest name. The widest in the city
   //  lists, "Augusta Praetoria Salassorum" and "Raurkela Industrial Township" (28 characters), reach about three
   //  and a quarter tiles past their tile in a bold sans-serif at the tileset's size; four leaves room for a wider
-  //  system font.
+  //  system font. Tiles across, as names run across.
   protected override overhang(): number {
-    return this.tileSize() * 4;
+    return this.tileSize().width * 4;
   }
 
   // As far as a label can reach past its tile: the overhang either side, and from the top of the size to the bottom of

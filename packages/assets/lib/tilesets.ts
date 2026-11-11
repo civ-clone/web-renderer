@@ -1,4 +1,5 @@
 import validateDescriptor, {
+  Size,
   TilesetDescriptor,
 } from '../tilesets/TilesetDescriptor';
 import civ1 from '../tilesets/civ1.json';
@@ -14,20 +15,11 @@ export const installedTilesets = (): TilesetDescriptor[] => [civ1Tileset];
 export const currentTileset = (): TilesetDescriptor => civ1Tileset;
 
 /**
- * `tileset`'s native tile size in px, as the map takes it: one number, while every grid the map draws is square. A
- * tileset whose tiles are not square is refused here until the map can draw one (#92).
+ * `tileset`'s native tile size in px, across and down, as the map takes it: the map scales both by its scale. A grid
+ * draws only the sizes its projection can lay out, and refuses the rest when it is asked for one (`projectionFor`).
  */
 export const nativeTileSize = ({
-  id,
   tile: { width, height },
-}: TilesetDescriptor): number => {
-  if (width !== height) {
-    throw new Error(
-      `Tileset "${id}": its ${width} × ${height} tiles are not square, and only square tiles can be drawn yet.`
-    );
-  }
-
-  return width;
-};
+}: TilesetDescriptor): Size => ({ width, height });
 
 export default currentTileset;

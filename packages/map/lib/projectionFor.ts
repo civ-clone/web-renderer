@@ -1,4 +1,4 @@
-import { Projection, WorldDimensions } from './projection';
+import { Projection, Size, WorldDimensions } from './projection';
 import type { Map as MapLayer } from '../components/Map';
 import type { Portal } from '../components/Portal';
 import type World from '../components/World';
@@ -20,11 +20,17 @@ import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 /**
  * Makes the projection for `tileset` on one grid, or throws (through `refuse`) for geometry that grid's projection
  * cannot draw.
+ *
+ * `tileSize` is one tile on screen, across and down: the tileset's native `tile` scaled, usually by the map's scale,
+ * though a caller can ask for any size (the overview's are its own). The descriptor's geometry is in native px, so a
+ * grid scales it by the same factors, each by its own axis: `columnStep`, `oddRowShift`, `anchor.x` and the left and
+ * right overhang by `tileSize.width / tile.width`; `rowStep`, `anchor.y` and the top and bottom overhang by
+ * `tileSize.height / tile.height`. Tiles need not be square: a staggered isometric tile is twice as wide as it is tall.
  */
 export type GridProjection = (
   tileset: TilesetDescriptor,
   world: WorldDimensions,
-  tileSize: number,
+  tileSize: Size,
   wrapVertical: boolean
 ) => Projection;
 
@@ -78,8 +84,8 @@ export const refuse = (tileset: TilesetDescriptor, problem: string): never => {
 };
 
 /**
- * The projection the map draws `tileset` with, over `world`, each tile `tileSize` px across on screen: the tileset's
- * native tile, scaled up. `wrapVertical` is whether the world's copies go on above and below it, as over the poles.
+ * The projection the map draws `tileset` with, over `world`, each tile `tileSize` px across and down on screen: the
+ * tileset's native tile, scaled up. `wrapVertical` is whether the world's copies go on above and below it, as over the poles.
  *
  * Throws for a grid there is no projection for, and for geometry its grid's projection cannot draw, so a tileset that
  * would be drawn wrong is refused instead.
@@ -87,7 +93,7 @@ export const refuse = (tileset: TilesetDescriptor, problem: string): never => {
 export const projectionFor = (
   tileset: TilesetDescriptor,
   world: WorldDimensions,
-  tileSize: number,
+  tileSize: Size,
   wrapVertical: boolean = true
 ): Projection => {
   return registered(tileset).projection(tileset, world, tileSize, wrapVertical);

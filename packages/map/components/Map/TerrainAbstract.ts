@@ -102,13 +102,15 @@ export class TerrainAbstract extends Map implements IMap {
     offsetY: number
   ): void {
     const side = size * this.scale(),
-      center = Math.floor(this.tileSize() / 2) - Math.floor(side / 2);
+      { width, height } = this.tileSize(),
+      centerX = Math.floor(width / 2) - Math.floor(side / 2),
+      centerY = Math.floor(height / 2) - Math.floor(side / 2);
 
     this.context().fillStyle = dot;
     // `rect()` without a `beginPath()` appends to the path the last tile
     // left behind, so every `fill()` used to re-fill every dot drawn so far.
     this.context().beginPath();
-    this.context().rect(offsetX + center, offsetY + center, side, side);
+    this.context().rect(offsetX + centerX, offsetY + centerY, side, side);
     this.context().fill();
   }
 

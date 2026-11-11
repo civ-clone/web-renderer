@@ -194,7 +194,7 @@ const portal = new GamePortal(
   {
     playerId: 'Player-1',
     scale: 1,
-    tileSize: 16,
+    tileSize: { width: 16, height: 16 },
     cityOpener: { opens: () => false, open: () => {} },
   },
   Banners
@@ -393,7 +393,7 @@ const run = async (): Promise<void> => {
 
   await wait(250);
 
-  const size = portal.tileSize(),
+  const size = portal.tileSize().width,
     { box } = portal.squareAt(40, 45)!;
 
   expect(

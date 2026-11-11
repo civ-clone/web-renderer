@@ -910,17 +910,23 @@ const projectionSpecs: ProjectionSpec[] = [
   {
     name: 'square, through the overlap path',
     make: (layer) =>
-      new OverlappingSquare(layer.tileSize(), layer.world(), layer.wraps()),
+      new OverlappingSquare(
+        layer.tileSize().width,
+        layer.world(),
+        layer.wraps()
+      ),
     mask: scatteredMask,
   },
   {
     name: 'brick',
-    make: (layer) => new Brick(layer.tileSize(), layer.world(), layer.wraps()),
+    make: (layer) =>
+      new Brick(layer.tileSize().width, layer.world(), layer.wraps()),
     mask: diamondMask,
   },
   {
     name: 'tall',
-    make: (layer) => new Tall(layer.tileSize(), layer.world(), layer.wraps()),
+    make: (layer) =>
+      new Tall(layer.tileSize().width, layer.world(), layer.wraps()),
     mask: scatteredMask,
   },
 ];
@@ -928,7 +934,7 @@ const projectionSpecs: ProjectionSpec[] = [
 const brokenOrder: ProjectionSpec = {
   name: 'brick, drawn column by column',
   make: (layer) =>
-    new BrickByColumn(layer.tileSize(), layer.world(), layer.wraps()),
+    new BrickByColumn(layer.tileSize().width, layer.world(), layer.wraps()),
   mask: diamondMask,
 };
 
@@ -953,7 +959,7 @@ const makeLayer = (
 
   const canvas = softwareCanvas(0, 0),
     Probe = probe(spec.Type),
-    layer = new Probe(world, scale, 16, canvas);
+    layer = new Probe(world, scale, { width: 16, height: 16 }, canvas);
 
   layer.useProjection(projection.make);
   layer.setWrapVertical(wrapVertical);

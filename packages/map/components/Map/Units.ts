@@ -57,7 +57,7 @@ export class Units extends Map implements IMap {
       offsetX,
       offsetY,
       this.scale(),
-      this.tileSize() / this.scale(),
+      this.nativeTileSize(),
       this.tileset()
     );
   }

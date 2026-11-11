@@ -8,6 +8,8 @@ import { FakeImage, fakeCanvas, preloadImage } from './lib/fakeCanvas';
 import i18next from 'i18next';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import Units from '@civ-clone/ui-map/components/Map/Units';
+import HudUnit from '@civ-clone/ui-hud/components/Unit';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { Tile, Unit } from '@civ-clone/ui-protocol/types';
 
 const failures: string[] = [];
@@ -58,10 +60,14 @@ const texts = (canvas: HTMLCanvasElement, calls: any[][]) => {
     );
 };
 
-const draw = (scale: number, busy: string | null) => {
+const draw = (
+  scale: number,
+  busy: string | null,
+  tileSize = { width: 16, height: 16 }
+) => {
   const { calls, canvas } = fakeCanvas(320, 320),
     written = texts(canvas, calls),
-    layer = new TestUnits({} as any, scale, 16, canvas),
+    layer = new TestUnits({} as any, scale, tileSize, canvas),
     tile = {
       x: 0,
       y: 0,
@@ -86,6 +92,71 @@ expect('at scale 3, at 24px', draw(3, 'Fortified'), [
   ['bold 24px sans-serif', 'F', 24, 33],
 ]);
 expect('a unit with nothing to do has no letter', draw(2, null), []);
+expect(
+  'on a tile wider than it is tall, the letter is across by its width and down by its height',
+  draw(2, 'Fortified', { width: 32, height: 16 }),
+  [
+    ['bold 16px sans-serif', 'F', 34, 24],
+    ['bold 16px sans-serif', 'F', 32, 22],
+  ]
+);
+
+// A unit as a window shows it is on a canvas the tileset's tile across and down, at the window's scale: a tile wider
+//  than it is tall, put in place of Civ1's for the one check.
+const hudCanvas = (tile: { width: number; height: number }, scale: number) => {
+  const tileset = currentTileset(),
+    native = tileset.tile,
+    fakeDocument = (globalThis as any).document;
+
+  tileset.tile = tile;
+  // The hud's unit makes its canvases from markup (`s()`): each a fake canvas the size the markup says.
+  fakeDocument.createElement = () => {
+    let element: HTMLCanvasElement | null = null;
+
+    return {
+      set innerHTML(html: string) {
+        const [, width = '0'] = /width="(\d+)"/.exec(html) ?? [],
+          [, height = '0'] = /height="(\d+)"/.exec(html) ?? [];
+
+        element = fakeCanvas(Number(width), Number(height)).canvas;
+      },
+      get firstElementChild() {
+        return element;
+      },
+    };
+  };
+
+  try {
+    const { width, height } = new HudUnit(
+      {
+        _: 'Settlers',
+        busy: null,
+        improvements: [],
+        player: {
+          civilization: { attributes: [{ name: 'colors', value: ['#fff'] }] },
+        },
+      } as unknown as Unit,
+      scale
+    ).element();
+
+    return [width, height];
+  } finally {
+    tileset.tile = native;
+    delete fakeDocument.createElement;
+  }
+};
+
+expect(
+  "a unit in a window is on a canvas the tile's width across and its height down, at the window's scale",
+  [
+    hudCanvas({ width: 16, height: 16 }, 2),
+    hudCanvas({ width: 32, height: 16 }, 2),
+  ],
+  [
+    [32, 32],
+    [64, 32],
+  ]
+);
 
 // The action buttons.
 const icon = (clientWidth: number, devicePixelRatio: number) => {

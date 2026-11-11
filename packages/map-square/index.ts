@@ -1,4 +1,4 @@
-import { WorldDimensions } from '@civ-clone/ui-map/lib/projection';
+import { Size, WorldDimensions } from '@civ-clone/ui-map/lib/projection';
 import {
   GridOverview,
   registerGrid,
@@ -15,7 +15,7 @@ import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescript
 export const squareProjection = (
   tileset: TilesetDescriptor,
   world: WorldDimensions,
-  tileSize: number,
+  tileSize: Size,
   wrapVertical: boolean
 ): SquareProjection => {
   const {
@@ -49,10 +49,20 @@ export const squareProjection = (
     );
   }
 
+  // The square tile is drawn square: a size asked for wider than tall (or the reverse) would leave the layers, which
+  //  scale each axis on its own, disagreeing with these steps.
+  if (tileSize.width !== tileSize.height) {
+    refuse(
+      tileset,
+      `a square grid's tiles are drawn as tall as they are wide, not ${tileSize.width} × ${tileSize.height}.`
+    );
+  }
+
   // `tileSize` is the native tile scaled, so the steps scale with it. On a square grid the step is the tile, so this is
-  //  `tileSize` exactly (multiplied first, so no rounding creeps in); it is written as a step for the grids to come.
+  //  `tileSize.width` exactly (multiplied first, so no rounding creeps in); it is written as a step for the grids to
+  //  come. The tile is square, so its height scales the same.
   return new SquareProjection(
-    (columnStep * tileSize) / width,
+    (columnStep * tileSize.width) / width,
     world,
     wrapVertical
   );

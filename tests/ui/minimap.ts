@@ -47,8 +47,8 @@ const width = 5,
   ),
   world = new World({ width, height, tiles } as any),
   { calls, canvas } = fakeCanvas(0, 0),
-  overview = new Overview(world, 2, 16, canvas),
-  size = overview.tileSize(),
+  overview = new Overview(world, 2, { width: 16, height: 16 }, canvas),
+  size = overview.tileSize().width,
   filled = calls
     .filter(([name]) => name === 'fillRect')
     .map(([, x, y]) => `${x / size},${y / size}`)

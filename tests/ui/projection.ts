@@ -334,7 +334,12 @@ worlds.forEach(([width, height]) =>
   [16, 32, 48, 64, 17].forEach((tileSize) =>
     [true, false].forEach((wrapVertical) => {
       const world = dimensions(width, height),
-        fromTileset = projectionFor(civ1, world, tileSize, wrapVertical),
+        fromTileset = projectionFor(
+          civ1,
+          world,
+          { width: tileSize, height: tileSize },
+          wrapVertical
+        ),
         byHand = new SquareProjection(tileSize, world, wrapVertical),
         name = `Civ1 on ${width}x${height} at ${tileSize}px${
           wrapVertical ? '' : ', stopping at the poles'
@@ -436,15 +441,20 @@ const tilesetWith = (changes: { [key: string]: unknown }) =>
 
 expect(
   'a 32px tileset at 32px is the same squares as Civ1 at 32px',
-  answers(projectionFor(stub32, world, 32)),
-  answers(projectionFor(civ1, world, 32))
+  answers(projectionFor(stub32, world, { width: 32, height: 32 })),
+  answers(projectionFor(civ1, world, { width: 32, height: 32 }))
 );
 
 // A tileset the map can't draw yet is refused, saying why, rather than drawn wrong.
 expect(
   'there is no projection for isometric or hex grids yet',
   (['staggered-iso', 'hex-odd-r'] as const).map((grid) =>
-    thrown(() => projectionFor(tilesetWith({ id: grid, grid }), world, 32))
+    thrown(() =>
+      projectionFor(tilesetWith({ id: grid, grid }), world, {
+        width: 32,
+        height: 32,
+      })
+    )
   ),
   [
     'Tileset "staggered-iso": no projection is loaded for the staggered-iso grid (isometric comes with #97, hex with #94).',
@@ -464,7 +474,7 @@ const squareGeometry = (
         geometry: { ...civ1.geometry, ...geometry },
       }),
       world,
-      32
+      { width: 32, height: 32 }
     )
   );
 
@@ -525,23 +535,23 @@ registerGrid(
   (tileset, world, tileSize, wrapVertical) => {
     hexAsked.push([tileset.id, tileSize, wrapVertical]);
 
-    return new SquareProjection(tileSize, world, wrapVertical);
+    return new SquareProjection(tileSize.width, world, wrapVertical);
   },
   hexOverview
 );
 
 expect(
-  'a registered grid is drawable, and its projection is the one the map gets',
+  'a registered grid is drawable, its projection is the one the map gets, and it is asked for the tile across and down',
   [
     drawableGrids().sort(),
-    projectionFor(hexStub, world, 24, false).footprint(),
+    projectionFor(hexStub, world, { width: 24, height: 12 }, false).footprint(),
     hexAsked,
     overviewFor(hexStub) === hexOverview,
   ],
   [
     ['hex-odd-r', 'square'],
     { width: 24, height: 24 },
-    [['hex-stub', 24, false]],
+    [['hex-stub', { width: 24, height: 12 }, false]],
     true,
   ]
 );
@@ -551,7 +561,7 @@ registerGrid(
   (tileset, world, tileSize, wrapVertical) => {
     hexAsked.push(['again', tileset.id, tileSize, wrapVertical]);
 
-    return new SquareProjection(tileSize * 2, world, wrapVertical);
+    return new SquareProjection(tileSize.width * 2, world, wrapVertical);
   },
   hexOverviewAgain
 );
@@ -560,14 +570,14 @@ expect(
   'a grid registered again is listed once, and the map gets the latest projection',
   [
     drawableGrids().sort(),
-    projectionFor(hexStub, world, 16).footprint(),
+    projectionFor(hexStub, world, { width: 16, height: 16 }).footprint(),
     hexAsked.slice(1),
     overviewFor(hexStub) === hexOverviewAgain,
   ],
   [
     ['hex-odd-r', 'square'],
     { width: 32, height: 32 },
-    [['again', 'hex-stub', 16, true]],
+    [['again', 'hex-stub', { width: 16, height: 16 }, true]],
     true,
   ]
 );

@@ -25,6 +25,10 @@ export type UnitCardDeps = Omit<UnitPanelDeps, 'unitAction'>;
 // How many of the other units' portraits fit on a row when the card can't be measured (it's hidden): the sidebar's.
 const fallbackPerRow = 6;
 
+// The other units' portraits, each the hud's unit (a tile at 2×) and as wide: CSS lays them out by one length, so a
+//  tile that isn't square is laid out by its width.
+const portraitSize = (): number => nativeTileSize(currentTileset()).width * 2;
+
 // The card each element shows, so a card a later game has replaced stops listening for resizes.
 const cards = new WeakMap<HTMLElement, UnitCard>();
 
@@ -261,8 +265,7 @@ export class UnitCard extends Element {
           if (
             cards.get(element) === this &&
             this.#drawnPerRow !== null &&
-            this.#perRow(nativeTileSize(currentTileset()) * 2) !==
-              this.#drawnPerRow
+            this.#perRow(portraitSize()) !== this.#drawnPerRow
           ) {
             this.#redrawOthers();
           }
@@ -437,7 +440,7 @@ export class UnitCard extends Element {
     const strip = s<HTMLButtonElement>(
         '<button type="button" class="btn-bare ui-unit-card-others"><span class="visually-hidden"></span></button>'
       ),
-      size = nativeTileSize(currentTileset()) * 2,
+      size = portraitSize(),
       perRow = this.#perRow(size),
       fits = others.length <= perRow,
       drawn = fits ? others : others.slice(0, perRow - 1);

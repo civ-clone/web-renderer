@@ -543,7 +543,12 @@ const record = (): { [key: string]: unknown } => {
         world,
         {} as any,
         portalCanvas,
-        { playerId: player.id, scale, tileSize: 16, lockVerticalEdges: lock },
+        {
+          playerId: player.id,
+          scale,
+          tileSize: { width: 16, height: 16 },
+          lockVerticalEdges: lock,
+        },
         ...(layerTypes as (typeof Map)[])
       ),
       layers = layerTypes.map((Type) => portal.getLayer(Type as any)!),
@@ -715,7 +720,7 @@ const record = (): { [key: string]: unknown } => {
         world,
         {} as any,
         portalCanvas,
-        { playerId: player.id, scale, tileSize: 16 },
+        { playerId: player.id, scale, tileSize: { width: 16, height: 16 } },
         Plain,
         Yields,
         Unworkable
@@ -778,7 +783,7 @@ const record = (): { [key: string]: unknown } => {
               {
                 playerId: player.id,
                 scale,
-                tileSize: 16,
+                tileSize: { width: 16, height: 16 },
                 lockVerticalEdges: lock,
               },
               Landscape,
@@ -983,7 +988,11 @@ const record = (): { [key: string]: unknown } => {
             ),
             {} as any,
             portalCanvas,
-            { playerId: city.player.id, scale, tileSize: 16 },
+            {
+              playerId: city.player.id,
+              scale,
+              tileSize: { width: 16, height: 16 },
+            },
             Landscape,
             Fog,
             TestCities,

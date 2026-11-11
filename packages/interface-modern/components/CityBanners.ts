@@ -137,7 +137,7 @@ export class CityBanners extends CityNames {
   // A banner is wider than the classic label by its badge, what's being built and its flags, nearly two tiles either side
   //  for the widest name with both flags: two more, so a wider fallback font, before the theme's has loaded, still fits.
   protected override overhang(): number {
-    return super.overhang() + this.tileSize() * 2;
+    return super.overhang() + this.tileSize().width * 2;
   }
 
   // As the label's, and down to the bottom of the banner and its food bar.

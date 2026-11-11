@@ -143,7 +143,8 @@ const player = {
 const portal = {
   emit: () => {},
   scale: () => 1,
-  tileSize: () => 16,
+  tileSize: () => ({ width: 16, height: 16 }),
+  nativeTileSize: () => ({ width: 16, height: 16 }),
 } as unknown as Portal;
 
 // What was sent, and the `CityBuildAvailable` requests, answered when the test says.
