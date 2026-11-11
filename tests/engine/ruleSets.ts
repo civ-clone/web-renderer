@@ -588,8 +588,8 @@ const check = async (): Promise<void> => {
   );
 
   // --- the enhanced rules started, saved and loaded (#954) ------------------------------------------------------
-  // The Hydro Plant's and the SDI Defense's ticked, and all but the obsolete build and defectors otherwise as they
-  //  start unticked.
+  // The Hydro Plant's and SDI Defense's ticked, and every set that starts on unticked but the obsolete build; defectors,
+  //  which start off, left off.
   const enhancedChoices = [
       { id: HYDRO_PLANT_SITE, value: true },
       { id: BARBARIAN_LEADER_RANSOM, value: false },

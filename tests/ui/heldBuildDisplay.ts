@@ -16,7 +16,11 @@ import {
   buildOutlook,
   buildTurnsOrder,
 } from '@civ-clone/ui-client/lib/cityTurns';
-import { City as CityData, Player } from '@civ-clone/ui-protocol/types';
+import {
+  City as CityData,
+  GameData,
+  Player,
+} from '@civ-clone/ui-protocol/types';
 import CitiesList from '@civ-clone/ui-hud/components/CitiesList';
 import { DataChanges } from '@civ-clone/ui-client/lib/DataChanges';
 import Portal from '@civ-clone/ui-map/components/Portal';
@@ -24,7 +28,12 @@ import Transport from '@civ-clone/ui-client/Transport';
 import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import cityBannerTooltip from '@civ-clone/ui-hud/components/Map/cityBannerTooltip';
-import { heldText } from '@civ-clone/ui-client/components/lib/cityBuild';
+import {
+  heldPurchaseText,
+  heldText,
+} from '@civ-clone/ui-client/components/lib/cityBuild';
+import CityStatus from '@civ-clone/ui-interface-classic/components/CityStatus';
+import { cityStatusColumns } from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
@@ -160,8 +169,8 @@ const text = (element: Element | null | undefined) =>
     element!.dispatchEvent(new Event('click', { bubbles: true })),
   confirmations = () => document.querySelectorAll('.confirmationWindow');
 
-// What a city screen says of a build: its figures, its turns, the note beneath them, each Buy and what it is described
-//  by, and the confirmation Buy opens.
+// What a city screen says of a build: its figures, its turns, the note, what comes straight after the note, each Buy
+//  and what it is described by, and the confirmation Buy opens.
 const screenSays = (city: CityData) => {
   const screen = openCity(city, portal, transport),
     element = screen.element(),
@@ -186,8 +195,12 @@ const screenSays = (city: CityData) => {
     ),
     turns: text(figures?.querySelector('.turns')),
     note: text(note),
+    afterNote: note?.nextElementSibling?.className ?? null,
     buy: buy !== null,
-    buyDescribedByNote: describedBy !== null && describedBy === note?.id,
+    buyDescribedByNote:
+      describedBy !== null &&
+      describedBy === note?.id &&
+      document.getElementById(describedBy) === note,
     confirmation: text(confirmations()[0]),
   };
 
@@ -197,9 +210,26 @@ const screenSays = (city: CityData) => {
   return said;
 };
 
+// The words for both rules and both fallbacks, as `heldText` and `heldPurchaseText` give them now.
+const words = () => [
+  heldText({ now: true, held: [WAIT] }),
+  heldText({ now: false, held: [WAIT] }),
+  heldText({ now: true, held: [CHIEFTAIN] }),
+  heldText({ now: false, held: [CHIEFTAIN] }),
+  heldText({ now: true, held: [null] }),
+  heldText({ now: false, held: ['someone:city/hold/else'] }),
+  heldText({ now: true, held: [null, CHIEFTAIN] }),
+  heldPurchaseText({ now: false, held: [WAIT] }, 'Settlers'),
+  heldPurchaseText({ now: false, held: [CHIEFTAIN] }, 'Settlers'),
+  heldPurchaseText({ now: false, held: [null] }, 'Settlers'),
+];
+
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('./lib/strings');
+  // The rules' own sentences are their packages' text, loaded with the rest of them.
+  await import('../../translations/civ1-enhanced/en');
+  await import('../../translations/civ1-unit/en');
 
   // --- the one function ----------------------------------------------------------------------------------------------
   const will = cityData('City-1', 'Kish', { progress: 12, held: [WAIT] }),
@@ -208,7 +238,7 @@ const run = async (): Promise<void> => {
     paid = cityData('City-4', 'Lagash', { progress: 42, held: [] });
 
   expect(
-    'held and something still to pay: it will wait; held and paid for: it waits now; not held: nothing',
+    'held and something still to pay: not yet; held and paid for: it waits now; not held: nothing',
     [now, will, free, paid].map(({ build }) => buildHold(build)),
     [{ now: true, held: [WAIT] }, { now: false, held: [WAIT] }, null, null]
   );
@@ -235,30 +265,46 @@ const run = async (): Promise<void> => {
   );
 
   // --- the words -----------------------------------------------------------------------------------------------------
+  const expectedWords = [
+    'Waiting until the city is size 2',
+    'Can’t be completed until the city is size 2',
+    'Waiting until the city is size 2',
+    'Can’t be completed until the city is size 2',
+    'Waiting',
+    'Can’t be completed yet',
+    'Waiting until the city is size 2',
+    'Settlers can’t be completed until the city is size 2.',
+    'Settlers can’t be completed until the city is size 2.',
+    'Settlers can’t be completed yet.',
+  ];
+
   expect(
-    'each rule that holds Settlers until size 2 says so, waiting or before; any other id, or none, has the plain words',
-    [
-      heldText({ now: true, held: [WAIT] }),
-      heldText({ now: false, held: [WAIT] }),
-      heldText({ now: true, held: [CHIEFTAIN] }),
-      heldText({ now: false, held: [CHIEFTAIN] }),
-      heldText({ now: true, held: [null] }),
-      heldText({ now: false, held: ['someone:city/hold/else'] }),
-      heldText({ now: true, held: [null, CHIEFTAIN] }),
-    ],
-    [
-      'Waiting until the city is size 2',
-      'Will wait until the city is size 2',
-      'Waiting until the city is size 2',
-      'Will wait until the city is size 2',
-      'Waiting',
-      'Will wait when finished',
-      'Waiting until the city is size 2',
-    ]
+    "each rule that holds Settlers until size 2 says so, from its own package's text, paid for or not; any other id, or none, has the plain words",
+    words(),
+    expectedWords
   );
 
   // --- the city screen, both interfaces -----------------------------------------------------------------------------
-  (['modern', 'classic'] as const).forEach((mode) => {
+  // With something queued after it: the modern screen draws the queue between the figures and the buttons.
+  const queued = {
+    ...will,
+    build: {
+      ...will.build,
+      queue: [
+        {
+          item: { _: 'Warrior', __: ['Warrior', 'Buildable'] },
+          cost: { value: 10 },
+        },
+      ],
+    },
+  } as unknown as CityData;
+
+  (
+    [
+      ['modern', 'ui-city-production-actions'],
+      ['classic', 'build-actions'],
+    ] as const
+  ).forEach(([mode, actions]) => {
     applyInterface(mode, null);
 
     expect(
@@ -268,40 +314,52 @@ const run = async (): Promise<void> => {
         stored: '42 / 40',
         turns: 'Waiting until the city is size 2',
         note: null,
+        afterNote: null,
         buy: false,
         buyDescribedByNote: false,
         confirmation: null,
       }
     );
 
-    const before = screenSays(will);
+    const before = screenSays(mode === 'modern' ? queued : will);
 
     expect(
-      `${mode}: before it is paid for, the turns, the reason beneath them, Buy described by it and its confirmation saying it`,
+      `${mode}: before it is paid for, the turns, the reason straight above the buttons${
+        mode === 'modern' ? ', after the queue' : ''
+      }, Buy described by it, and its confirmation saying it of the item`,
       [
         before.stored,
         before.turns,
         before.note,
+        before.afterNote,
         before.buy,
         before.buyDescribedByNote,
         before.confirmation?.includes(
-          'available. Will wait until the city is size 2.'
+          'available. Settlers can’t be completed until the city is size 2.'
         ),
       ],
       [
         '12 / 40',
         '14 turns',
-        'Will wait until the city is size 2',
+        'Can’t be completed until the city is size 2',
+        actions,
         true,
         true,
         true,
       ]
     );
 
+    const plain = screenSays(free);
+
     expect(
-      `${mode}: a build nothing holds says none of it`,
-      [screenSays(free).note, screenSays(free).buyDescribedByNote],
-      [null, false]
+      `${mode}: a build nothing holds says none of it, and its confirmation is as it was`,
+      [
+        plain.note,
+        plain.buyDescribedByNote,
+        plain.confirmation?.includes('available.') &&
+          !plain.confirmation.includes('completed'),
+      ],
+      [null, false, true]
     );
   });
 
@@ -342,16 +400,91 @@ const run = async (): Promise<void> => {
     ]
   );
 
+  // From 39 of 40 (1 turn) to 40 of 40 (waiting): the turns read "1 turn" either way, so only the hold in what the
+  //  list compares makes it draw the row again.
+  {
+    const nearly = cityData('City-6', 'Nippur', { progress: 39, held: [WAIT] }),
+      data = { ...player, cities: [nearly] } as unknown as Player,
+      changes = new DataChanges(),
+      list = document.createElement('div'),
+      turnsShown = () =>
+        list.querySelector('.city-row .turns')?.textContent ?? null;
+
+    new CitiesList(list, data, portal as any, changes);
+
+    const before = turnsShown();
+
+    (nearly.build.progress as any).value = 40;
+    (nearly.build as any).remaining = 0;
+    nearly.build.spendCost = [];
+    changes.collect([nearly.build.id]);
+    changes.notify({ player: data } as GameData);
+
+    expect(
+      'a build paid for in the list goes from "1 turn" to waiting, drawn again',
+      [before, turnsShown()],
+      ['1 turn', '…Waiting until the city is size 2']
+    );
+  }
+
+  // --- City Status ---------------------------------------------------------------------------------------------------
+  const buildColumn = cityStatusColumns().find(({ key }) => key === 'build')!;
+
+  expect(
+    'modern City Status: the words in place of the turns while it waits, the turns before',
+    [now, will].map((city) =>
+      text(
+        (buildColumn.cell!(city) as HTMLElement).querySelector(
+          '.ui-report-meter-turns'
+        )
+      )
+    ),
+    ['Waiting until the city is size 2', '14 turns']
+  );
+  expect(
+    'and sorted after a build that will finish, before one that never will',
+    [will, now, never].map((city) => buildColumn.sortValue!(city) as number),
+    [14, Number.MAX_SAFE_INTEGER, Infinity]
+  );
+
+  // The classic report draws its rows once the yield icons are in.
+  assetStore.shownAtURL = () => Promise.resolve('');
+
+  const classicStatus = new CityStatus(
+    { ...player, cities: [now] } as unknown as Player,
+    portal,
+    transport
+  );
+
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(
+    'classic City Status: the words in place of the turns while it waits',
+    text(classicStatus.element().querySelector('tr .build')),
+    '2 Settlers 42 / 40 (Waiting until the city is size 2)'
+  );
+
+  classicStatus.close();
+
   // --- the map banner's tooltip --------------------------------------------------------------------------------------
   expect(
     "the banner's tooltip: the reason in place of the turns once paid for, and after them before",
     [now, will, free].map((city) => cityBannerTooltip(city).rows[0]![1]),
     [
       '42 / 40 · Waiting until the city is size 2',
-      '12 / 40 · 14 turns · Will wait until the city is size 2',
+      '12 / 40 · 14 turns · Can’t be completed until the city is size 2',
       '12 / 40 · 14 turns',
     ]
   );
+
+  // --- en-GB ---------------------------------------------------------------------------------------------------------
+  // Nothing here is spelt differently: the British page reads the same, through its fallback to en.
+  await import('../../translations/civ1-enhanced/en-GB');
+  await import('../../translations/civ1-unit/en-GB');
+  await import('@civ-clone/ui-client/translations/en-GB');
+  await i18next.changeLanguage('en-GB');
+
+  expect('in en-GB, the same words', words(), expectedWords);
 
   finished = true;
 
