@@ -7,5 +7,5 @@ i18next.addResources('en-GB', 'ruleset', {
   'civ1-enhanced.barbarian-city-builds.name':
     'Barbarian cities build any attacking land unit that at least two civilisations can build',
   'civ1-enhanced.barbarian-uprisings.name':
-    'Barbarian uprisings can break out near any civilisation’s cities',
+    'Any civilisation’s cities can set off a Barbarian uprising',
 });

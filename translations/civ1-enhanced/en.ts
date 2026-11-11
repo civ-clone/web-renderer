@@ -22,7 +22,7 @@ i18next.addResources('en', 'ruleset', {
   'civ1-enhanced.captured-city-build.name':
     'A city you capture stops building what it was, and you choose again',
   'civ1-enhanced.captured-city-build.description':
-    'In the original, you go on building what it was, from no shields and at your price, even something you couldn’t otherwise build. A computer player that captures a city chooses again either way. While “A city stops building what a discovery makes obsolete” is ticked, a kept item you couldn’t otherwise build is dropped at your next discovery.',
+    'In the original, you go on building what it was, from no shields and at your price, even something you couldn’t otherwise build. A computer player that captures a city chooses again either way. While “A city stops building what a discovery makes obsolete” is ticked, a kept item you couldn’t otherwise build is dropped as soon as you gain an advance that still doesn’t let you build it, which may be the one you take with the city.',
   'civ1-enhanced.pollution-in-every-city.name':
     'Every civilization’s cities can cause pollution',
   'civ1-enhanced.pollution-in-every-city.description':
@@ -32,7 +32,7 @@ i18next.addResources('en', 'ruleset', {
   'civ1-enhanced.barbarian-city-builds.description':
     'In the original, they build only one unit: a Swordman, or a Knight once anyone has discovered Explosives, and a Warrior when the Barbarians have no units left.',
   'civ1-enhanced.barbarian-uprisings.name':
-    'Barbarian uprisings can break out near any civilization’s cities',
+    'Any civilization’s cities can set off a Barbarian uprising',
   'civ1-enhanced.barbarian-uprisings.description':
-    'In the original, only near yours.',
+    'In the original, only your cities can.',
 });
