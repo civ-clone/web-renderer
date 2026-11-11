@@ -334,3 +334,40 @@ The held build is covered by `tests/engine/heldBuild.ts`, which plays it
 through the full plugin set, and the five sets' defaults and switches by
 `tests/engine/ruleSets.ts`; the behaviour of each rule is tested in its own
 package.
+
+## Accepted change: turn 50 renumbered, a city stops building what it can no longer build (#965)
+
+civ1-enhanced 0.1.5 splits `civ1-enhanced:obsolete-builds` into a rule for
+each reason a build can no longer be built, fired when it happens: the
+discovery rule now drops only what an advance makes obsolete, and new rules
+drop a build whose improvement was sold, sabotaged or lost to unpaid upkeep,
+and a plant ruled out by a Hoover Dam its player completes or captures.
+civ1-wonder 0.1.11 adds the entries naming the Hoover Dam's plant rules that
+the last two read.
+
+The rule totals at turns 1, 10 and 50 rise from 1113 to 1120 (`BuildingComplete`
+9 → 10, `Captured` 17 → 18, `CitySabotaged` 1 → 3, `ProcessYield` 6 → 8, `Sold`
+1 → 2). Turns 1 and 10 are otherwise unchanged (`a7518c6d / d3c8debf`, state and
+DTO hashes included), and so are the random-call counts at all three. Turn 50's
+checksum (`81c20b4c` → `a12b897c`), state hash (`8c184339` → `58a00551`) and DTO
+(`10968333 / f9f583b0` → `10968102 / 8cf1bc6f`) move, with play unchanged:
+
+- The old discovery rule called `CityBuild#revalidate()`, whose `available()`
+  makes a `BuildItem` and a `BuildCost` for every item a city could build, each
+  taking an id. The new one asks only about the item being built. In this game
+  `revalidate()` ran 9 times before turn 50 on main and `available()` 227 times,
+  against 0 and 218 here; `build` (23), `check` (194) and `setCleared` (5) are
+  called as often on both.
+- Dumping every saved entity's fields at turns 1, 10 and 50 on main and here
+  (references as ids), and the DTO of every player, city and unit: turns 1 and
+  10 are byte-identical. At turn 50 only ids differ (5 `BuildItem` references in
+  the state; 2,862 `BuildItem` and 2,862 `BuildCost` ids in the DTO, which is
+  231 bytes shorter as the ids are lower). With each `Type-id` renumbered by its
+  first appearance, state and DTO are equal to main's.
+
+None of this says the new rules are right: no city's build is cancelled for
+any reason in this game's 50 turns, on main or here, so it exercises none of
+the new drops (nor did it drop anything at a discovery before). They are played
+through the full plugin set by `tests/engine/obsoleteBuilds.ts` and tested in
+civ1-enhanced itself. `client-transcript.json` passes unchanged and is not
+re-recorded.
