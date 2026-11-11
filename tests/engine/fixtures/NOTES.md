@@ -262,3 +262,16 @@ byte-identical to the previous `baseline.json`, checksums `11b928fc / e024fabe /
 6eba621c` included. In `client-transcript.json` only the one `gameData` message
 (and so the `gameData` channel and sequence hashes) changed; with the key taken
 back out of it, every hash matches the previous fixture.
+
+## Accepted change: rule counts, the enhanced rules (#954)
+
+civ1-enhanced 0.1.0 holds the rules where play departs from v474.05, each in a
+rule set that supersedes the Civ1 rule while it is on. civ1-barbarians 0.1.4
+gains v474.05's ransom (a `Defeated` rule, superseded by civ1-enhanced's
+`Destroyed` one, which is the ransom as it was), civ1-enhanced adds a Hydro
+Plant site rule (`Build`, off to start with), and the obsolete build dropped
+moves from civ1-unit to civ1-enhanced (one `Complete` either way). The rule
+totals at turns 1, 10 and 50 rise from 1100 to 1102 (`Build` 105 → 106,
+`Defeated` 13 → 14) and nothing else moves: the engine-state checksums, the
+random-call counts and the DTO hashes are unchanged, which is play with the
+default sets as it was.

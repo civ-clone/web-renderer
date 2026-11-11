@@ -165,3 +165,15 @@ i18next.addResources('en', 'default', {
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',
 });
+
+// What the setup says about the rule sets themselves (#954), beside the sets' own names, which are their packages'.
+//  Under `RuleSets.`, which no package's id can be.
+i18next.addResources('en', 'ruleset', {
+  'RuleSets.conflict':
+    '{{- first}} and {{- second}} can’t both be on. Switch one of them off.',
+  'RuleSets.not-loaded':
+    '{{- name}} refers to a rule or rule set that isn’t loaded.',
+  'RuleSets.replaced-by': 'replaced by {{names, list}}',
+  'RuleSets.unusable':
+    'The rule sets can’t be used as they are: a package that provides them needs fixing.',
+});

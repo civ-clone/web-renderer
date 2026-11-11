@@ -2,7 +2,10 @@
 //  worker that holds the sets as the real one does: a set as a checkbox with what it does beneath it, a set whose rules
 //  differ as neither ticked nor clear, a choice as radio buttons, a rule drawn only where it is named, and nothing
 //  worked out on the page: each change is asked of the worker with the choices so far, and the answer is drawn. Start
-//  sends the choices, after any change still on its way.
+//  sends the choices, after any change still on its way. What is wrong with the sets (#954) is drawn as the worker
+//  says it: two sets that can't both be on as an error naming both, with their rows marked and Start held until one is
+//  switched off; a package's mistake as one line with the rules' words beneath; a set naming a rule that isn't loaded
+//  as a quiet note that holds nothing; and a rule another set has replaced says so beside its name.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -12,6 +15,7 @@ import './lib/grids';
 import {
   RuleSetChoice,
   RuleSetNode,
+  RuleSetProblem,
   RuleSetsQuery,
 } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
@@ -243,7 +247,11 @@ const worker = (offers: boolean = true) => {
             await new Promise<void>((resolve) => held.push(resolve));
           }
 
-          return { sets: describe(choices), choices: said(choices) };
+          return {
+            sets: describe(choices),
+            choices: said(choices),
+            problems: [],
+          };
         }
         default:
           return undefined;
@@ -266,6 +274,149 @@ const worker = (offers: boolean = true) => {
         .map(({ args }) => args[0]),
     options: (): any =>
       log.find(({ channel }) => channel === 'setOptions')?.args[0],
+  };
+};
+
+// A worker whose sets have problems (#954): two sets, each replacing the one rule of a third, both on to begin with,
+//  which can't both be; and a set that names a rule that isn't loaded. As the registry says them, from the choices.
+const troubled = () => {
+  const log: { channel: string; args: unknown[] }[] = [],
+    held: (() => void)[] = [];
+
+  let holding = false,
+    // The next change fails, as a request a worker could not answer does or as a surprise does.
+    failing: '' | 'request' | 'error' = '';
+
+  const answer = (choices: RuleSetChoice[]) => {
+    const off = new Set(
+        choices.filter(({ value }) => value === false).map(({ id }) => id)
+      ),
+      on = ['test:first', 'test:second'].filter((id) => !off.has(id)),
+      set = (
+        id: string,
+        members: RuleSetNode[],
+        extra: Partial<RuleSetNode> = {}
+      ): RuleSetNode => ({
+        id,
+        kind: 'set',
+        state: off.has(id) ? 'off' : 'on',
+        active: true,
+        switchable: true,
+        members,
+        ...extra,
+      }),
+      rule = (id: string, extra: Partial<RuleSetNode> = {}): RuleSetNode => ({
+        id,
+        kind: 'rule',
+        state: 'on',
+        active: true,
+        switchable: true,
+        members: [],
+        ...extra,
+      }),
+      problems: RuleSetProblem[] = [
+        ...(on.length === 2
+          ? [
+              {
+                kind: 'conflict' as const,
+                ids: ['test:first', 'test:second'],
+                message:
+                  "Rule sets 'test:first' and 'test:second' both replace 'test:original', and only one of them can be in force.",
+                blocking: true,
+              },
+            ]
+          : []),
+        {
+          kind: 'unknown-member',
+          ids: ['test:orphan', 'test:not-loaded'],
+          message:
+            "Rule set 'test:orphan' names 'test:not-loaded', which is neither a registered rule nor a registered rule set.",
+          blocking: false,
+        },
+      ];
+
+    return {
+      sets: [
+        set('test:base', [
+          rule('test:original', {
+            active: on.length === 0,
+            ...(on.length > 0 ? { supersededBy: on } : {}),
+          }),
+        ]),
+        set('test:first', [], { supersedes: ['test:original'] }),
+        set('test:second', [], { supersedes: ['test:original'] }),
+        set('test:orphan', []),
+      ],
+      choices: choices.filter(({ value }) => value === false),
+      problems,
+    };
+  };
+
+  const transport = {
+    send: (channel: string, ...args: unknown[]) => log.push({ channel, args }),
+    request: async (request: Request): Promise<unknown> => {
+      log.push({ channel: request.channel(), args: request.args() });
+
+      switch (request.channel()) {
+        case 'civilizations':
+          return [{ name: 'Roman', leaders: ['JuliusCaesar'], colours: [] }];
+        case 'aiClients':
+          return ['SimpleAIClient'];
+        case 'difficulties':
+          return [{ name: 'Prince', level: 2 }];
+        case 'getOptions':
+          return {};
+        case 'ruleSets': {
+          const query = request.args()[0] as RuleSetsQuery | null;
+
+          // A change the worker is slow to answer, as one is still on its way when Start is pressed.
+          if (holding && query?.change) {
+            await new Promise<void>((resolve) => held.push(resolve));
+          }
+
+          if (failing !== '' && query?.change) {
+            const mode = failing;
+
+            failing = '';
+
+            if (mode === 'request') {
+              throw new RequestFailed('ruleSets', 'not answered');
+            }
+
+            throw new Error('a surprise');
+          }
+
+          return answer([
+            ...(query?.choices ?? []).filter(
+              ({ id }) => id !== query?.change?.id
+            ),
+            ...(query?.change ? [query.change] : []),
+          ]);
+        }
+        default:
+          return undefined;
+      }
+    },
+  } as unknown as Transport;
+
+  return {
+    transport,
+    hold: () => (holding = true),
+    release: () => {
+      holding = false;
+      held.splice(0).forEach((resolve) => resolve());
+    },
+    // The one change waiting, answered, and the next held as it comes.
+    releaseOne: () => held.shift()?.(),
+    fail: (mode: 'request' | 'error') => (failing = mode),
+    ruleSetsSent: (): unknown[] =>
+      log
+        .filter(({ channel }) => channel === 'setOptions')
+        .map(({ args }) => (args[0] as { ruleSets: unknown }).ruleSets),
+    started: (): string[] =>
+      log
+        .map(({ channel }) => channel)
+        .filter((channel) => ['setOptions', 'start'].includes(channel)),
   };
 };
 
@@ -577,6 +728,486 @@ const run = async (): Promise<void> => {
 
     again.close();
   }
+
+  // --- what is wrong with the sets (#954) ------------------------------------------------------------------------
+  i18next.addResources('en', 'ruleset', {
+    'test.base.name': 'Base',
+    'test.original.name': 'The original rule',
+    'test.first.name': 'First replacement',
+    'test.second.name': 'Second replacement',
+    'test.orphan.name': 'Orphaned',
+  });
+
+  for (const [name, , ask] of interfaces) {
+    const fake = troubled(),
+      setup = await ask(fake.transport),
+      element = setup.element(),
+      start = element.querySelector('button.start') as HTMLButtonElement,
+      box = (id: string): HTMLInputElement =>
+        [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].find(
+          (input) => input.dataset.ruleSet!.split('\n').pop() === id
+        ) as HTMLInputElement,
+      item = (id: string): HTMLElement => box(id).closest('li') as HTMLElement,
+      lines = (className: string): string[] =>
+        [...element.querySelectorAll(`.rule-set-problem.${className}`)].map(
+          (line) => line.textContent ?? ''
+        ),
+      marked = (): string[] =>
+        [...element.querySelectorAll('.rule-set-conflict')].map(
+          (row) =>
+            (row.querySelector('[data-rule-set]') as HTMLElement).dataset
+              .ruleSet!
+        ),
+      byIds = (ids: string | null): string[] =>
+        (ids ?? '')
+          .split(' ')
+          .filter((id) => id !== '')
+          .map((id) => element.querySelector(`#${id}`)?.textContent ?? '');
+
+    expect(
+      `${name}: two sets on that replace the same rule are an error naming both, above the sets`,
+      [
+        lines('rule-set-error'),
+        element
+          .querySelector(
+            '.rule-sets-section > [aria-live] + div > ul.rule-sets'
+          )
+          ?.tagName.toLowerCase(),
+      ],
+      [
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+        'ul',
+      ]
+    );
+    expect(
+      `${name}: both their rows are marked, and their checkboxes in error, described by it`,
+      [
+        marked(),
+        box('test:first').getAttribute('aria-invalid'),
+        byIds(box('test:second').getAttribute('aria-describedby')),
+        box('test:base').hasAttribute('aria-invalid'),
+      ],
+      [
+        ['test:first', 'test:second'],
+        'true',
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+        false,
+      ]
+    );
+    expect(
+      `${name}: a set that names a rule that isn't loaded is a quiet note, once`,
+      lines('rule-set-note'),
+      ['Orphaned refers to a rule or rule set that isn’t loaded.']
+    );
+    expect(
+      `${name}: the rule both replace says so beside its name, inside its label, apart from the name`,
+      [
+        item('test:original').querySelector('label .rule-set-replaced')
+          ?.textContent,
+        item('test:original').querySelector('label')?.textContent,
+      ],
+      [
+        'replaced by First replacement and Second replacement',
+        'The original rule replaced by First replacement and Second replacement',
+      ]
+    );
+    expect(
+      `${name}: Start is held, described by the error`,
+      [start.disabled, byIds(start.getAttribute('aria-describedby'))],
+      [
+        true,
+        [
+          'First replacement and Second replacement can’t both be on. Switch one of them off.',
+        ],
+      ]
+    );
+
+    // Enter, from the name, would start a game.
+    const nameInput = element.querySelector(
+      'input[name="name"]'
+    ) as HTMLInputElement;
+
+    press(nameInput, 'Enter');
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: and no game is started from it, by Enter or by a click that gets through`,
+      fake.started(),
+      []
+    );
+
+    tick(box('test:second'), false);
+    await settle();
+
+    expect(
+      `${name}: with one switched off, the error and the marks go, the note stays, and the rule says what replaced it`,
+      [
+        lines('rule-set-error'),
+        marked(),
+        box('test:first').hasAttribute('aria-invalid'),
+        lines('rule-set-note'),
+        item('test:original').querySelector('.rule-set-replaced')?.textContent,
+      ],
+      [
+        [],
+        [],
+        false,
+        ['Orphaned refers to a rule or rule set that isn’t loaded.'],
+        'replaced by First replacement',
+      ]
+    );
+    expect(
+      `${name}: and Start is free again, described by nothing`,
+      [start.disabled, start.hasAttribute('aria-describedby')],
+      [false, false]
+    );
+
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: so the game starts, the note notwithstanding`,
+      fake.started(),
+      ['setOptions', 'start']
+    );
+
+    setup.close();
+  }
+
+  // Start pressed while a change is still on its way (#954): the start waits for it, and a change that leaves the two
+  //  sets both on keeps the game from starting, with the setup still open to say so.
+  for (const [name, , ask] of interfaces) {
+    const fake = troubled(),
+      setup = await ask(fake.transport),
+      element = setup.element(),
+      start = element.querySelector('button.start') as HTMLButtonElement,
+      box = (id: string): HTMLInputElement =>
+        [...element.querySelectorAll<HTMLInputElement>('[data-rule-set]')].find(
+          (input) => input.dataset.ruleSet!.split('\n').pop() === id
+        ) as HTMLInputElement,
+      errors = (): number => element.querySelectorAll('.rule-set-error').length;
+
+    tick(box('test:second'), false);
+    await settle();
+
+    const note = element.querySelector('.rule-set-note');
+
+    tick(box('test:base'), false);
+    await settle();
+
+    expect(
+      `${name}: a change that leaves the problems as they were leaves what says them alone, so it isn't said again`,
+      element.querySelector('.rule-set-note') === note,
+      true
+    );
+
+    fake.hold();
+    tick(box('test:second'), true);
+    await settle();
+    start.focus();
+    click(start);
+    await settle();
+
+    expect(
+      `${name}: Start pressed with a change on its way waits for it, holds Start, and sends nothing`,
+      [start.disabled, fake.started(), element.isConnected],
+      [true, [], true]
+    );
+
+    click(start);
+    fake.release();
+    await settle();
+    await settle();
+
+    expect(
+      `${name}: the change left the two sets both on, so the game doesn't start: the setup stays open, usable, says why, and holds Start`,
+      [
+        fake.started(),
+        element.isConnected,
+        element.querySelector('[inert]'),
+        errors(),
+        start.disabled,
+      ],
+      [[], true, null, 1, true]
+    );
+
+    expect(
+      `${name}: with Start held again, the keyboard is on one of the two sets that hold it, not on the button that closes the setup`,
+      [
+        focused instanceof HTMLInputElement &&
+          focused.getAttribute('aria-invalid'),
+        element.querySelector(':scope > .body')?.contains(focused),
+      ],
+      ['true', true]
+    );
+
+    tick(box('test:second'), false);
+    await settle();
+    fake.hold();
+    tick(box('test:base'), true);
+    await settle();
+    click(start);
+    click(start);
+    press(element.querySelector('input[name="name"]') as Element, 'Enter');
+    await settle();
+
+    expect(
+      `${name}: a start waiting on a change that is fine holds Start against a second`,
+      [start.disabled, fake.started()],
+      [true, []]
+    );
+
+    fake.release();
+    await settle();
+    await settle();
+
+    expect(
+      `${name}: and once it is answered the game starts, once, and the setup closes`,
+      [fake.started(), element.isConnected],
+      [['setOptions', 'start'], false]
+    );
+
+    setup.close();
+  }
+
+  // While a start waits (#954): the setup can't be changed, closing it calls the start off, a change made all the same
+  //  is waited for, and a change that fails leaves the setup to be used again. Each from a setup with no conflict.
+  const surprises: string[] = [];
+
+  process.on('unhandledRejection', (reason: unknown): void => {
+    surprises.push(String((reason as Error)?.message ?? reason));
+  });
+
+  const asks: [
+    string,
+    (transport: Transport, onFinished: () => void) => Promise<Setup>
+  ][] = [
+    [
+      'modern',
+      (transport, onFinished) => GameSetupForm.ask(transport, onFinished),
+    ],
+    [
+      'classic',
+      (transport, onFinished) => GameSetupWindow.ask(transport, onFinished),
+    ],
+  ];
+
+  for (const [name, ask] of asks) {
+    const make = async () => {
+      const fake = troubled(),
+        finished: string[] = [],
+        setup = await ask(fake.transport, () => {
+          finished.push('finished');
+        }),
+        element = setup.element(),
+        start = element.querySelector('button.start') as HTMLButtonElement,
+        body = element.querySelector(':scope > .body') as HTMLElement,
+        box = (id: string): HTMLInputElement =>
+          [
+            ...element.querySelectorAll<HTMLInputElement>('[data-rule-set]'),
+          ].find(
+            (input) => input.dataset.ruleSet!.split('\n').pop() === id
+          ) as HTMLInputElement;
+
+      tick(box('test:second'), false);
+      await settle();
+
+      return { fake, finished, setup, element, start, body, box };
+    };
+
+    // Closed while waiting.
+    {
+      const { fake, finished, setup, element, start, body, box } = await make();
+
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      start.focus();
+      click(start);
+      await settle();
+
+      expect(
+        `${name}: while a start waits on a change, the setup can't be changed, Start is held, and the keyboard is on the title bar's button, for Escape`,
+        [
+          body.hasAttribute('inert'),
+          box('test:first').closest('[inert]') === body,
+          start.disabled,
+          focused instanceof HTMLButtonElement &&
+            focused !== start &&
+            element.contains(focused) &&
+            !body.contains(focused),
+        ],
+        [true, true, true, true]
+      );
+
+      press(element, 'Escape');
+      await settle();
+      fake.release();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: closed while the start waits, nothing is sent once the change is answered, and the game isn't started`,
+        [element.isConnected, fake.started(), finished],
+        [false, [], []]
+      );
+
+      setup.close();
+    }
+
+    // A change made all the same while waiting: waited for, and sent.
+    {
+      const { fake, setup, start, box } = await make();
+
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      click(start);
+      await settle();
+      tick(box('test:first'), false);
+      fake.releaseOne();
+      await settle();
+
+      expect(
+        `${name}: a change answered while a start still waits on another leaves Start held`,
+        [start.disabled, fake.started()],
+        [true, []]
+      );
+
+      fake.release();
+      await settle();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: and the start waits for every change made, so the game starts with the last of them`,
+        [fake.started(), fake.ruleSetsSent()],
+        [
+          ['setOptions', 'start'],
+          [
+            [
+              { id: 'test:second', value: false },
+              { id: 'test:base', value: false },
+              { id: 'test:first', value: false },
+            ],
+          ],
+        ]
+      );
+
+      setup.close();
+    }
+
+    // A change that fails as a surprise, while waiting.
+    {
+      const { fake, setup, element, start, body, box } = await make();
+
+      surprises.length = 0;
+      fake.hold();
+      tick(box('test:base'), false);
+      await settle();
+      start.focus();
+      click(start);
+      await settle();
+      fake.fail('error');
+      fake.release();
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: a change that fails as a surprise keeps the game from starting, says so as the surprise it is, and the setup can be used again`,
+        [
+          fake.started(),
+          element.isConnected,
+          body.hasAttribute('inert'),
+          start.disabled,
+          surprises,
+          focused === start,
+        ],
+        [[], true, false, false, ['a surprise'], true]
+      );
+
+      tick(box('test:base'), false);
+      await settle();
+      click(start);
+      await settle();
+      await settle();
+
+      expect(
+        `${name}: and another change and Start then start the game`,
+        [fake.started(), element.isConnected],
+        [['setOptions', 'start'], false]
+      );
+
+      setup.close();
+    }
+  }
+
+  // A package's mistake, which the player can't settle: one line, and the rules' words beneath it as detail.
+  const { renderRuleSetProblems, holdStart } = await import(
+      '@civ-clone/ui-menus/lib/ruleSetControls'
+    ),
+    problemsHolder = document.createElement('div'),
+    held = document.createElement('button'),
+    mistakes: RuleSetProblem[] = [
+      {
+        kind: 'option-conflict',
+        ids: ['test:mistake'],
+        message:
+          "The declarations of rule set 'test:mistake' disagree on `enabled`.",
+        blocking: true,
+      },
+      {
+        kind: 'cycle',
+        ids: ['test:loop'],
+        message: "Rule set 'test:loop' is inside itself.",
+        blocking: true,
+      },
+    ];
+
+  document.body.append(problemsHolder);
+
+  const mistaken = renderRuleSetProblems(problemsHolder, mistakes);
+
+  holdStart(held, mistaken);
+
+  expect(
+    "a package's mistakes are one error line, with each of the rules' messages beneath it, and they hold Start",
+    [
+      [...problemsHolder.querySelectorAll('.rule-set-error')].map(
+        (line) => line.firstChild?.textContent
+      ),
+      [...problemsHolder.querySelectorAll('.rule-set-problem-detail')].map(
+        (line) => line.textContent
+      ),
+      held.disabled,
+      mistaken.blocking.length,
+      mistaken.marked.size,
+    ],
+    [
+      [
+        'The rule sets can’t be used as they are: a package that provides them needs fixing.',
+      ],
+      mistakes.map(({ message }) => message),
+      true,
+      1,
+      0,
+    ]
+  );
+
+  holdStart(held, renderRuleSetProblems(problemsHolder, []));
+
+  expect(
+    'and with nothing wrong, nothing is drawn and Start is free',
+    [problemsHolder.childNodes.length, held.disabled],
+    [0, false]
+  );
+
+  problemsHolder.remove();
 
   // A set whose rules differ is neither ticked nor clear: drawn from the worker's `mixed`.
   const { renderRuleSets } = await import(

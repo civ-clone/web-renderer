@@ -30,7 +30,8 @@
     "./components/titleScreen": "./components/titleScreen.ts",
     "./lib/ruleSetControls": "./lib/ruleSetControls.ts",
     "./lib/savedGame": "./lib/savedGame.ts",
-    "./lib/setupControls": "./lib/setupControls.ts"
+    "./lib/setupControls": "./lib/setupControls.ts",
+    "./lib/setupStart": "./lib/setupStart.ts"
   },
   "peerDependencies": {
     "@civ-clone/civ1-asset-extractor": "*",

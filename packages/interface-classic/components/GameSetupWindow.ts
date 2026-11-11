@@ -16,6 +16,9 @@ import {
 } from '@civ-clone/ui-client/lib/difficulty';
 import { elementId, h } from '@civ-clone/ui-widgets/lib/html';
 import { ruleSetsSection } from '@civ-clone/ui-menus/lib/ruleSetControls';
+import startFromSetup, {
+  cancelStartOnClose,
+} from '@civ-clone/ui-menus/lib/setupStart';
 import {
   cell,
   civilizationName,
@@ -92,6 +95,9 @@ export class GameSetupWindow extends Window {
     this.#transport = transport;
 
     this.#build(preset);
+
+    // Closed while a start waits on a rule set switched a moment ago: it doesn't start (#954).
+    cancelStartOnClose(this, this.#setup);
   }
 
   /** Asks the worker what there is to choose from, then shows the window. */
@@ -114,6 +120,16 @@ export class GameSetupWindow extends Window {
   }
 
   #build(preset: GameSetupPreset): void {
+    // Made first, for the Rules section to hold while the rule sets have a problem that blocks (#954).
+    this.#startButton = h(
+      s<HTMLButtonElement>(
+        `<button class="btn-primary start">${t('GameSetup.start')}</button>`
+      ),
+      {
+        click: () => this.#start(difficultySelect.value),
+      }
+    );
+
     const setup = this.#setup,
       data = setup.data,
       grids = supportedTopologies(),
@@ -133,7 +149,8 @@ export class GameSetupWindow extends Window {
       rules = ruleSetsSection(
         setup,
         this.#transport,
-        'rules rule-sets-section'
+        'rules rule-sets-section',
+        this.#startButton
       ),
       // The table parts are made, not parsed: `s()` parses inside a `<div>`, where a browser drops a bare `<thead>` or
       //  `<tr>` (the test DOM doesn't, so a test would not have said).
@@ -291,14 +308,7 @@ export class GameSetupWindow extends Window {
         s(`<h4>${t('GameSetup.seats')}</h4>`),
         table,
         s('<div class="actions"></div>', this.#addSeat),
-        (this.#startButton = h(
-          s<HTMLButtonElement>(
-            `<button class="btn-primary start">${t('GameSetup.start')}</button>`
-          ),
-          {
-            click: () => this.#start(difficultySelect.value),
-          }
-        ))
+        this.#startButton
       )
     );
 
@@ -505,6 +515,11 @@ export class GameSetupWindow extends Window {
   }
 
   async #start(difficulty: string): Promise<void> {
+    // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
+    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
+      return;
+    }
+
     const problem = this.#setup.problem(
       this.#widthInput.value,
       this.#heightInput.value
@@ -525,13 +540,16 @@ export class GameSetupWindow extends Window {
       (input) => input.value
     ) as [string, string, string];
 
-    this.close();
-
-    await this.#setup.start(
-      this.#transport,
-      { landCoverage, landSize, maxIterations },
-      difficulty,
-      this.#onFinished
+    // Closed once the game is going ahead: a rule set switched a moment ago can leave the sets with a problem that
+    //  keeps it from starting (#954), and then the window stays, showing it.
+    await startFromSetup(this, this.#setup, this.#startButton, (goingAhead) =>
+      this.#setup.start(
+        this.#transport,
+        { landCoverage, landSize, maxIterations },
+        difficulty,
+        this.#onFinished,
+        goingAhead
+      )
     );
   }
 }

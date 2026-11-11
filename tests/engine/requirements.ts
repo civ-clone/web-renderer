@@ -140,10 +140,17 @@ const check = async (): Promise<void> => {
   // As the page gets them: every entry, classes named as saves name them (Railroad the advance is `RailroadAdvance`).
   const data = requirementsData();
 
+  // But the enhanced Hydro Plant site's (#954), whose rule starts switched off: the original's is in force instead.
   expect(
-    'getRequirements answers with every entry',
-    data.length,
-    requirements.length
+    'getRequirements answers with every entry in force: all but the enhanced Hydro Plant site, which starts off',
+    [
+      data.length,
+      requirements
+        .entries()
+        .filter(({ id }: Requirement) => !data.some((sent) => sent.id === id))
+        .map(({ id }: Requirement) => id),
+    ],
+    [requirements.length - 1, ['civ1-enhanced:city/build/hydro-plant-site']]
   );
   expect(
     'naming classes as saves do, and conditions by their ids',

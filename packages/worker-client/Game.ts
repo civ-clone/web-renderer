@@ -27,7 +27,11 @@ import { DescribedClient, save } from '@civ-clone/core-save-game/save';
 import Civilization from '@civ-clone/core-civilization/Civilization';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import requirementsData from './lib/requirements';
-import { applyRuleSets, ruleSetsData } from './lib/ruleSets';
+import {
+  applyRuleSets,
+  checkSavedRuleSets,
+  ruleSetsData,
+} from './lib/ruleSets';
 import civilopediaData from './lib/civilopedia';
 import { instance as aiClientRegistryInstance } from '@civ-clone/core-ai-client/AIClientRegistry';
 import { Seat, seatsFromOptions } from '@civ-clone/ui-protocol/lib/seats';
@@ -634,8 +638,18 @@ export class Game implements IGame {
     this.#plugins
       .load()
       .then(() => {
-        // A set that names a rule nothing registered is a plugin's mistake, and is said before the game is put back.
-        defaultGame.ruleSets.check();
+        // Sets that can't be used as the save chose them are said before the game is put back, and it isn't (#954).
+        //  A set that names something not loaded is played without it, and said as a set the save chose that isn't
+        //  here is.
+        const orphans = checkSavedRuleSets(file.ruleSets?.choices);
+
+        if (orphans.length > 0) {
+          console.warn(
+            `The saved game's rule sets name rules that are not here, and it is played without them: ${orphans
+              .map(({ message }) => message)
+              .join(' ')}`
+          );
+        }
 
         this.#stopAtEnding(observed);
 
