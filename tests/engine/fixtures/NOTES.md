@@ -275,3 +275,24 @@ totals at turns 1, 10 and 50 rise from 1100 to 1102 (`Build` 105 → 106,
 `Defeated` 13 → 14) and nothing else moves: the engine-state checksums, the
 random-call counts and the DTO hashes are unchanged, which is play with the
 default sets as it was.
+
+## Accepted change: rule counts, four more enhanced rules (#954)
+
+civ1-city 0.1.10, civ1-city-improvement 0.1.11 and civ1-barbarians 0.1.5 play
+four rules as v474.05 does: a city the human captures keeps its build (a new
+`Captured` rule, `civ1-city:city/captured/keep-build`, beside the computer
+player's `clear-build`), pollution is rolled only in the human's cities, a
+barbarian city builds one unit, and uprisings break out only near the human's
+cities. civ1-enhanced 0.1.3 holds the play as it was for all four, each in a set
+that is on to start with and supersedes the v474.05 rule while it is on: a
+`Captured`, a `ProcessYield`, a `Build` and a `Start` rule. The rule totals at
+turns 1, 10 and 50 rise from 1102 to 1107 (`Build` 106 → 107, `Captured` 15 →
+17, `ProcessYield` 5 → 6, `Start` 8 → 9) and nothing else moves: the
+engine-state checksums, the random-call counts and the DTO hashes are
+unchanged, which is play with the default sets as it was. (Every seat in this
+game is a computer player's, so it is the computer players' pollution,
+uprisings and captures that would have moved had the defaults changed play.)
+civ1-enhanced 0.1.3 also loads civ1-world-civilizations itself, so its twelve
+civilizations are registered earlier than before; the checksums above, which
+include each player's civilization, say the order they are drawn in is as it
+was.

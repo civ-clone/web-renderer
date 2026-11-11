@@ -4,7 +4,10 @@
 //  is told of a landing and an uprising next to their city (and not of one they can't see), a barbarian leader killed
 //  in a stack pays the human a ransom (#171), and with the enhanced ransom switched off (#954) only one who defends and
 //  loses does, as in the original, the barbarians are named but kept out of the intelligence report and the
-//  cheat list, and a save names classes a load can resolve.
+//  cheat list, and a save names classes a load can resolve. Then (#954) an uprising can break out beside a computer
+//  player's city as the game starts, and can't with the enhanced uprisings switched off, as in the original; and a
+//  barbarian city may build any attacking land unit two civilizations can build as the game starts, and only the
+//  original's one unit with the enhanced builds switched off.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -18,9 +21,15 @@ import {
   Swordman,
 } from '@civ-clone/civ1-unit/Units';
 import {
+  BARBARIAN_CITY_BUILDS,
   BARBARIAN_LEADER_RANSOM,
+  BARBARIAN_UPRISINGS,
   ENHANCED,
 } from '@civ-clone/civ1-enhanced/RuleSets';
+import City from '@civ-clone/core-city/City';
+import { LAND_UPRISING_RULE as CIV1_LAND_UPRISING_RULE } from '@civ-clone/civ1-barbarians/RuleIds';
+import { LAND_UPRISING_RULE } from '@civ-clone/civ1-enhanced/RuleIds';
+import { createRng } from '@civ-clone/core-random/Rng';
 import Defeated from '@civ-clone/core-unit/Rules/Defeated';
 import Gold from '@civ-clone/base-city-yield-gold/Gold';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -545,12 +554,201 @@ const run = async (): Promise<void> => {
     fail('the loaded game has no barbarian player to give a client to');
   }
 
+  // 7. Uprisings (#954). A rival's city, with gold enough that an uprising drawn for it always breaks out, and a stream
+  //    position whose first draw is that city's slot: with the enhanced uprisings unticked, as in the original, nothing
+  //    rises there and only the slot is drawn; as the game starts, the same draws raise an uprising beside it. Each
+  //    uprising rule is processed as the turn's `Start` would, whichever is in force.
+  const uprisingRules = [CIV1_LAND_UPRISING_RULE, LAND_UPRISING_RULE].map(
+      (id) => ruleRegistryInstance.getById(id)!
+    ),
+    startUprisings = (): void =>
+      uprisingRules.forEach((rule) => {
+        if (rule.validate(turnInstance)) {
+          rule.process(turnInstance);
+        }
+      });
+
+  if (uprisingRules.some((rule) => !rule)) {
+    fail('an uprising rule is not loaded');
+  }
+
+  if (!rival || isHuman(rival, clientRegistryInstance)) {
+    fail('there is no computer player');
+  }
+
+  let [rivalCity] = cityRegistryInstance.getByPlayer(rival!);
+
+  if (!rivalCity) {
+    const rivalSettlers = unitRegistryInstance
+        .getByPlayer(rival!)
+        .find((unit) => unit instanceof Settlers),
+      rivalFound = rivalSettlers
+        ?.actions()
+        .find((action) => action instanceof FoundCity);
+
+    if (!rivalSettlers || !rivalFound) {
+      fail('the computer player cannot found a city');
+    }
+
+    rivalSettlers!.action(rivalFound!);
+
+    await settle();
+
+    [rivalCity] = cityRegistryInstance.getByPlayer(rival!);
+  }
+
+  if (!rivalCity) {
+    fail('the computer player has no city');
+  }
+
+  defaultGame.playerTreasuries.getByPlayerAndType(rival!, Gold).add(10000);
+
+  const rng = defaultGame.rng,
+    slots = cityRegistryInstance
+      .entries()
+      .filter((city) => !city.destroyed() && !isBarbarian(city.player())),
+    rivalSlot = slots.indexOf(rivalCity),
+    probe = createRng(rng.seed()),
+    uprisings: unknown[] = [];
+
+  engine.on('barbarians:uprising', (...args: unknown[]) =>
+    uprisings.push(args[1])
+  );
+
+  // Each stream position from here whose first draw is the rival's slot, in turn, until one raises an uprising as the
+  //  game starts: the square's search can come up empty.
+  const outcomes: string[] = [];
+  let tried = 0;
+
+  for (
+    let position = rng.calls();
+    tried < 10 && position < rng.calls() + 100000;
+    position++
+  ) {
+    probe.restore(rng.seed(), position);
+
+    if (Math.floor(probe() * 128) !== rivalSlot) {
+      continue;
+    }
+
+    tried++;
+
+    applyRuleSets([{ id: BARBARIAN_UPRISINGS, value: false }]);
+    rng.restore(rng.seed(), position);
+    startUprisings();
+
+    const offRolls = rng.calls() - position,
+      offUprisings = uprisings.length;
+
+    applyRuleSets([{ id: ENHANCED, value: false }]);
+    rng.restore(rng.seed(), position);
+    startUprisings();
+
+    const parentOffRolls = rng.calls() - position,
+      parentOffUprisings = uprisings.length;
+
+    applyRuleSets([]);
+    rng.restore(rng.seed(), position);
+    startUprisings();
+
+    outcomes.push(
+      `${offUprisings} ${offRolls} ${parentOffUprisings} ${parentOffRolls} ${uprisings.length}`
+    );
+
+    if (
+      offUprisings > 0 ||
+      offRolls !== 1 ||
+      parentOffUprisings > 0 ||
+      parentOffRolls !== 1
+    ) {
+      fail(
+        `with the enhanced uprisings off, the rival's slot raised ${offUprisings} uprising(s) and drew ${offRolls} time(s), and with the enhanced rules off ${parentOffUprisings} and ${parentOffRolls}`
+      );
+    }
+
+    if (uprisings.length > 0) {
+      break;
+    }
+  }
+
+  if (uprisings.length !== 1 || uprisings[0] !== rivalCity) {
+    fail(
+      `as the game starts, the draws for the rival's slot raised no uprising beside its city (${tried} tried: ${outcomes.join(
+        '; '
+      )})`
+    );
+  }
+
+  // 8. What a barbarian city may build (#954), on free land: as the game starts, any attacking land unit two
+  //    civilizations can build (a Warrior needs nothing), and never Settlers or an improvement; with the enhanced
+  //    builds unticked, or the enhanced rules as a whole, one unit, as in the original: a Swordman, as the barbarians
+  //    have units and no one has Explosives.
+  const campAt = rivalCity!
+    .tile()
+    .map()
+    .entries()
+    .find(
+      (tile: Tile) =>
+        tile.isLand() &&
+        cityRegistryInstance
+          .entries()
+          .every((city) => city.tile().distanceFrom(tile) >= 4) &&
+        unitRegistryInstance.getByTile(tile).length === 0
+    );
+
+  if (!campAt) {
+    fail('there is no free land for a barbarian city');
+  }
+
+  const camp = new City(barbarians!, campAt!, 'Camp'),
+    campBuild = defaultGame.cityBuilds.getByCity(camp),
+    buildable = (): string[] =>
+      campBuild
+        .available()
+        .map((buildItem) => buildItem.item().name)
+        .sort();
+
+  const asStarted = buildable();
+
+  applyRuleSets([{ id: BARBARIAN_CITY_BUILDS, value: false }]);
+
+  const buildsOff = buildable();
+
+  applyRuleSets([{ id: ENHANCED, value: false }]);
+
+  const parentOff = buildable();
+
+  applyRuleSets([]);
+
+  if (
+    !asStarted.includes('Warrior') ||
+    asStarted.some((name) =>
+      ['Settlers', 'Diplomat', 'Caravan'].includes(name)
+    ) ||
+    !campBuild
+      .available()
+      .every((buildItem) => (buildItem.item() as any).prototype instanceof Unit)
+  ) {
+    fail(`as the game starts, a barbarian city may build ${asStarted}`);
+  }
+
+  if (
+    JSON.stringify([buildsOff, parentOff]) !==
+    JSON.stringify([['Swordman'], ['Swordman']])
+  ) {
+    fail(
+      `with the enhanced builds off a barbarian city may build ${buildsOff}, and with the enhanced rules off ${parentOff}`
+    );
+  }
+
   console.log(
     `PASS barbarians (player made on turn 41 with a ${
       ship!.constructor.name
     }, played by BarbarianClient; a ship beside the capital landed ${
       raiders.length
-    } raiders who moved the turn after; landing, uprising and guerrilla notices; a leader killed in a stack paid 100 ransom, and with the enhanced ransom off only one who defended; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact)`
+    } raiders who moved the turn after; landing, uprising and guerrilla notices; a leader killed in a stack paid 100 ransom, and with the enhanced ransom off only one who defended; named, unlisted; a rival's landing is not ours; save names Barbarian, Attila and BarbarianClient, and hydrates with the barbarians intact; an uprising beside a computer player's city as the game starts, and none with the enhanced uprisings off; a barbarian city builds ${asStarted.join(
+      ', '
+    )} as the game starts, and only ${buildsOff} with the enhanced builds off)`
   );
 
   process.exit(0);

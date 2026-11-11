@@ -1,6 +1,8 @@
 // Pollution (#32):
 //  a. a city's smokestacks pollute a square around it, and its owner is told ("Pollution near …");
 //  b. a rival's city polluting tells us nothing;
+//  b2. with the enhanced pollution in every city unticked (#954), or the enhanced rules as a whole, only our cities
+//      pollute, as in the original: a rival's never does;
 //  c. a polluted square gives half its Food (rounded up);
 //  d. Settlers on a polluted square are offered CleanPollution, take Civ1's 4 turns, and the square is sent to the UI
 //     again once clean, with its yields back.
@@ -18,6 +20,10 @@ import { Grassland } from '@civ-clone/civ1-world/Terrains';
 import { Settlers } from '@civ-clone/civ1-unit/Units';
 import { Pollution } from '@civ-clone/civ1-world/TileImprovements';
 import { Production } from '@civ-clone/civ1-city-improvement/Yields';
+import {
+  ENHANCED,
+  POLLUTION_IN_EVERY_CITY,
+} from '@civ-clone/civ1-enhanced/RuleSets';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
@@ -26,6 +32,8 @@ import ProcessYield from '@civ-clone/core-city/Rules/ProcessYield';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
+import { applyRuleSets } from '@civ-clone/ui-worker-client/lib/ruleSets';
+import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -313,6 +321,59 @@ const order = async (): Promise<void> => {
     notificationsNamed('City.polluted', notificationsFromB).length === 0,
     JSON.stringify(notifications.slice(notificationsFromB))
   );
+
+  // b2. Only in our cities, as in the original, with the enhanced rule unticked, or the enhanced rules as a whole
+  //     (#954): a rival's city never pollutes, however much it smokes, and nothing is rolled for it; ours still does.
+  for (const [what, choices] of [
+    [
+      'with pollution in every city unticked',
+      [{ id: POLLUTION_IN_EVERY_CITY, value: false }],
+    ],
+    ['with the enhanced rules unticked', [{ id: ENHANCED, value: false }]],
+  ] as [string, { id: string; value: boolean }[]][]) {
+    applyRuleSets(choices);
+
+    const siteRival = findSite(),
+      cityRival = new City(rival!, siteRival, `Cleanton ${what}`),
+      landRival = around(siteRival),
+      rolledBefore = defaultGame.rng.calls();
+
+    for (let attempt = 0; attempt < 30; attempt++) {
+      ruleRegistryInstance.process(
+        ProcessYield,
+        new Production(300, 'Consolidated'),
+        cityRival,
+        [new Production(300)]
+      );
+    }
+
+    const rolled = defaultGame.rng.calls() - rolledBefore,
+      siteOurs = findSite(),
+      cityOurs = new City(humanPlayer!, siteOurs, `Smogtown ${what}`),
+      landOurs = around(siteOurs);
+
+    landOurs.forEach((tile) => playerTileOf(tile));
+
+    const pollutedOurs = smoke(cityOurs, siteOurs);
+
+    await settle();
+
+    check(
+      `b2. ${what}, a rival's city never pollutes, and nothing is rolled for it`,
+      countPollution(landRival) === 0 && rolled === 0,
+      `polluted: ${landRival
+        .filter(pollutionOn)
+        .map(describeTile)
+        .join(' ')}; ${rolled} roll(s)`
+    );
+    check(
+      `b2. ${what}, ours still pollutes`,
+      pollutedOurs !== null && countPollution(landOurs) === 1,
+      `polluted: ${landOurs.filter(pollutionOn).map(describeTile).join(' ')}`
+    );
+  }
+
+  applyRuleSets([]);
 
   // c. Yield. A plain Grassland, with nothing special on it.
   const siteC = findSite(0);

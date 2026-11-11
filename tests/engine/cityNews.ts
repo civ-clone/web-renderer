@@ -2,7 +2,10 @@
 //  size, and says nothing more: it shrinks for Settlers built and for want of an Aqueduct as well. Famine is announced.
 //  A city lost to a rival, captured or (at size 1) destroyed by the capture, leaves one bubble notice beside End Turn,
 //  and so does one destroyed some other way. A rival's city tells us nothing, and nor does one we capture beyond
-//  the capture itself (#501).
+//  the capture itself (#501). And what a captured city goes on building (#954): as the game starts, a city we capture
+//  stops building and we choose; with the enhanced rule unticked, or the enhanced rules as a whole, we keep the item, as
+//  in the original, from no shields, at our price, without the previous owner's queue. A city a computer player captures
+//  stops building whichever way it is set.
 //
 // Drives a seeded game with a human `DataTransferClient`, as `improvementObsolete` does. On the human's first turn the
 // test founds a city with the starting Settlers, then builds more cities directly and makes things happen to them.
@@ -11,14 +14,22 @@
 import { config } from './lib/seed';
 import './lib/spawnedClients';
 
+import {
+  CAPTURED_CITY_BUILD,
+  ENHANCED,
+} from '@civ-clone/civ1-enhanced/RuleSets';
+import { Settlers, Warrior } from '@civ-clone/civ1-unit/Units';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
 import FoodExhausted from '@civ-clone/core-city-growth/Rules/FoodExhausted';
 import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
-import { Settlers } from '@civ-clone/civ1-unit/Units';
 import Tile from '@civ-clone/core-world/Tile';
+import { applyRuleSets } from '@civ-clone/ui-worker-client/lib/ruleSets';
+import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
+import { instance as gameDifficultyRegistryInstance } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
+import { Chieftain } from '@civ-clone/civ1-difficulty/Difficulties';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
@@ -330,8 +341,111 @@ const run = async (): Promise<void> => {
     { key: 'City.captured-by-us', bubble: false },
   ]);
 
+  // What a captured city goes on building (#954), in a game started with `choices`: a size 3 city of the other player
+  //  building Warriors, 5 shields in, with Warriors queued after, captured by `captor`.
+  const capturedBuild = async (
+    captor: Player,
+    choices: { id: string; value: boolean }[]
+  ) => {
+    applyRuleSets(choices);
+
+    const owner = captor === humanPlayer ? rival : humanPlayer!,
+      city = new City(owner, site(capital.tile()), `Building${captor.id()}`),
+      cityBuild = cityBuildRegistryInstance.getByCity(city);
+
+    growTo(city, 3);
+    cityBuild.build(Warrior);
+    cityBuild.progress().add(5);
+    cityBuild.enqueue(Warrior);
+
+    const before = cityBuild.cost().value();
+
+    city.capture(captor);
+    await settle();
+
+    return {
+      before,
+      building: cityBuild.building()?.item().name ?? null,
+      cleared: cityBuild.cleared()?.reason ?? null,
+      progress: cityBuild.progress().value(),
+      // `Infinity` would go as `null`.
+      cost: String(cityBuild.cost().value()),
+      queued: cityBuild.queued().length,
+    };
+  };
+
+  // On Chieftain, so a computer player pays more than we do (16 shields for Warriors to our 10), and a kept build
+  //  shows whose price it is at.
+  gameDifficultyRegistryInstance.set(Chieftain);
+
+  // What Warriors cost us, for the price a kept build should be at, and a computer player.
+  const theirPrice = 16,
+    ourPrice = cityBuildRegistryInstance
+      .getByCity(capital)
+      .getAvailable(Warrior)
+      .cost()
+      .value(),
+    // Captured from a computer player, at its price, or from us, at ours.
+    clearedBuild = (before: number) => ({
+      before,
+      building: null,
+      cleared: 'captured',
+      progress: 0,
+      cost: 'Infinity',
+      queued: 0,
+    }),
+    keptBuild = {
+      before: theirPrice,
+      building: 'Warrior',
+      cleared: null,
+      progress: 0,
+      cost: String(ourPrice),
+      queued: 0,
+    },
+    builds = [
+      [
+        'as the game starts, a city we capture',
+        await capturedBuild(humanPlayer!, []),
+        clearedBuild(theirPrice),
+      ],
+      [
+        'with the captured build unticked, a city we capture',
+        await capturedBuild(humanPlayer!, [
+          { id: CAPTURED_CITY_BUILD, value: false },
+        ]),
+        keptBuild,
+      ],
+      [
+        'with the enhanced rules unticked, a city we capture',
+        await capturedBuild(humanPlayer!, [{ id: ENHANCED, value: false }]),
+        keptBuild,
+      ],
+      [
+        'as the game starts, a city a computer player captures',
+        await capturedBuild(rival, []),
+        clearedBuild(ourPrice),
+      ],
+      [
+        'with the captured build unticked, a city a computer player captures',
+        await capturedBuild(rival, [{ id: CAPTURED_CITY_BUILD, value: false }]),
+        clearedBuild(ourPrice),
+      ],
+    ] as const;
+
+  applyRuleSets([]);
+
+  builds.forEach(([what, actual, expected]): void => {
+    if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+      fail(
+        `${what}: expected ${JSON.stringify(expected)}, got ${JSON.stringify(
+          actual
+        )}`
+      );
+    }
+  });
+
   console.log(
-    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, a city lost leaves one notice, a rival's city says nothing, nor one we capture)"
+    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, a city lost leaves one notice, a rival's city says nothing, nor one we capture; a city we capture stops building as the game starts, and keeps its build at our price with the enhanced rule off; a computer player's capture stops building either way)"
   );
 
   process.exit(0);
