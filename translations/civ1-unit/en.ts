@@ -148,3 +148,14 @@ i18next.addResources('en', 'ruleset', {
   'civ1-unit.obsolescence.description':
     'A city can no longer build a unit once its civilization knows the advance that makes it obsolete.',
 });
+
+// What a build this package's rule holds back says (#959), in the client's words for a held build (`City.Build.Held.*`
+//  in `packages/client/translations`), keyed by the rule's id with `:` and `/` as `.`.
+i18next.addResources('en', 'default', {
+  'City.Build.Held.waiting.civ1-unit.city.hold.chieftain-settlers':
+    'Waiting until the city is size 2',
+  'City.Build.Held.cannot-complete.civ1-unit.city.hold.chieftain-settlers':
+    'Can’t be completed until the city is size 2',
+  'City.Build.Held.purchase.civ1-unit.city.hold.chieftain-settlers':
+    '{{- item}} can’t be completed until the city is size 2.',
+});

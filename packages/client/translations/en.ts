@@ -39,6 +39,16 @@ i18next.addResources('en', 'default', {
   'City.Build.cleared.completed': 'Production complete: {{- item}}',
   'City.Build.cleared.created': 'City founded',
   'City.Build.cleared.unavailable': '{{- item}} can no longer be built',
+  // A build held back by a rule (#959), for a rule without a sentence of its own: those are in its package's
+  //  translations, keyed by its id with `:` and `/` as `.` after the kind (`City.Build.Held.waiting.<id>`). `waiting` is
+  //  in place of the turns once it is paid for; `cannot-complete` beside them before; `purchase` ends the Buy
+  //  confirmation, about the item.
+  'City.Build.Held.waiting': 'Waiting',
+  'City.Build.Held.cannot-complete': 'Can’t be completed yet',
+  'City.Build.Held.purchase': '{{- item}} can’t be completed yet.',
+  // Where there is room only for a number of turns (a banner, a list), in its place while the build waits, with the
+  //  words above beside it for a screen reader and as its tooltip.
+  'City.Build.Held.marker': '…',
   'City.Build.nothing': 'Nothing',
   'City.Build.stored_one': '{{count, number}} shield kept for the next item',
   'City.Build.stored_other': '{{count, number}} shields kept for the next item',

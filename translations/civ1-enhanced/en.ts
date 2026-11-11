@@ -35,4 +35,35 @@ i18next.addResources('en', 'ruleset', {
     'Any civilization’s cities can set off a Barbarian uprising',
   'civ1-enhanced.barbarian-uprisings.description':
     'In the original, only your cities can.',
+  'civ1-enhanced.settlers-wait-for-size-two.name':
+    'A city of size 1 waits until it is size 2 to complete Settlers',
+  'civ1-enhanced.settlers-wait-for-size-two.description':
+    'In the original, the city only waits on Chieftain. On other levels your only city builds them and stays at size 1, and any other city is given up, leaving the Settlers on its square.',
+  'civ1-enhanced.united-nations-stops-computer-wars.name':
+    'The United Nations stops computer players going to war with its owner',
+  'civ1-enhanced.united-nations-stops-computer-wars.description':
+    'In the original, it only stops computer players going to war with you, not with a computer player that owns it.',
+  'civ1-enhanced.even-advance-stealing.name':
+    'Every advance a Diplomat could steal is equally likely',
+  'civ1-enhanced.even-advance-stealing.description':
+    'In the original, a Diplomat takes the first advance it can from a random place in the list of advances, so some are likelier than others.',
+  'civ1-enhanced.sdi-defense-spares-cities.name':
+    'SDI Defense spares its city from a nuclear attack',
+  'civ1-enhanced.sdi-defense-spares-cities.description':
+    'In the original, SDI Defense only saves the units inside, and the city is still halved.',
+  'civ1-enhanced.defectors-stay-veteran.name':
+    'Bribed and defecting units stay veteran',
+  'civ1-enhanced.defectors-stay-veteran.description':
+    'In the original, a unit that changes sides arrives as a new unit and is no longer a veteran.',
+});
+
+// What a build this package's rule holds back says (#959), in the client's words for a held build (`City.Build.Held.*`
+//  in `packages/client/translations`), keyed by the rule's id with `:` and `/` as `.`.
+i18next.addResources('en', 'default', {
+  'City.Build.Held.waiting.civ1-enhanced.city.hold.settlers-until-size-two':
+    'Waiting until the city is size 2',
+  'City.Build.Held.cannot-complete.civ1-enhanced.city.hold.settlers-until-size-two':
+    'Can’t be completed until the city is size 2',
+  'City.Build.Held.purchase.civ1-enhanced.city.hold.settlers-until-size-two':
+    '{{- item}} can’t be completed until the city is size 2.',
 });

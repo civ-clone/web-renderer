@@ -1,6 +1,7 @@
 import i18next, { t } from 'i18next';
 import { BuildItem, CityBuild, Entity } from '@civ-clone/ui-protocol/types';
 import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
+import { BuildHold } from '../../lib/cityTurns';
 import Transport from '../../Transport';
 
 export const getLabelForBuildable = (buildable: BuildItem | null): string =>
@@ -20,6 +21,36 @@ export const getLabelForBuildableEntity = (buildable: Entity): string =>
       defaultValue: buildable._,
     }
   );
+
+// A held build's sentence (#959): the first of the rules holding it with one of its own (`City.Build.Held.<kind>.<id>`,
+//  its id with `:` and `/` as `.`, in the rule's package's translations), or the plain one (`City.Build.Held.<kind>`)
+//  for a rule with none, or no id. Never worked out from the city: the page knows no rules.
+const heldSentence = (
+  kind: string,
+  held: (string | null)[],
+  options: object = {}
+): string =>
+  t(
+    [
+      ...held
+        .filter((id): id is string => id !== null)
+        .map((id) => `City.Build.Held.${kind}.${id.replace(/[:/]/g, '.')}`),
+      `City.Build.Held.${kind}`,
+    ],
+    { ...options, interpolation: { escapeValue: false } }
+  );
+
+/**
+ * What holds a build back, in words (#959): "Waiting until the city is size 2" once it is paid for, and "Can’t be
+ *  completed until the city is size 2" before, which is true whether or not it ever comes to wait: the page doesn't
+ *  foresee the city's growth. "Waiting" / "Can’t be completed yet" for a rule without a sentence of its own.
+ */
+export const heldText = ({ now, held }: BuildHold): string =>
+  heldSentence(now ? 'waiting' : 'cannot-complete', held);
+
+/** The same, as a sentence about `item`, for the Buy confirmation: "Settlers can’t be completed until the city is size 2." */
+export const heldPurchaseText = ({ held }: BuildHold, item: string): string =>
+  heldSentence('purchase', held, { item });
 
 // Why a city building nothing is asked what to build (#716), or `null` when it is building something, the reason isn't
 //  known (an older save), or it's one with no words here.

@@ -94,7 +94,14 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
     item: Entity | null;
   } | null;
   cost: Yield;
+  // The ids of the rules holding the item being built (#959), from the moment it's chosen, `null` for a rule without
+  //  one: with something still to pay (`remaining > 0`) it will wait once paid for, and with nothing left it is waiting
+  //  now. Empty while nothing holds it or nothing is being built. Missing from an engine before core-city-build 0.1.21.
+  //  The page reads the state from this and `remaining` alone, through `buildHold` (`ui-client/lib/cityTurns`).
+  held?: (string | null)[];
   progress: Yield;
+  // The cost less the progress: at or below 0 once the item is paid for.
+  remaining?: number;
   // What it builds after its current item, in order, priced for the city now (#774), and what the last move to the next
   //  of them dropped as it could no longer be built. Missing from an engine without the queue.
   queue?: BuildItem[];

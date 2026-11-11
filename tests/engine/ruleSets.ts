@@ -6,8 +6,9 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954): where play departs from the original, each of the seven a set that a game can switch
-//  back, as it starts (all but the Hydro Plant's on, which is play as it has been), switched, started, saved and loaded.
+//  rules (`civ1-enhanced`, #954, #959, #960): where play departs from the original, each of the twelve a set that a game
+//  can switch back, as it starts (all but the three new variants on, which is play as it has been: the Hydro Plant on
+//  its own square, SDI Defense sparing its city, defectors staying veteran), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -27,10 +28,15 @@ import {
   BARBARIAN_LEADER_RANSOM,
   BARBARIAN_UPRISINGS,
   CAPTURED_CITY_BUILD,
+  DEFECTORS_STAY_VETERAN,
   ENHANCED,
+  EVEN_ADVANCE_STEALING,
   HYDRO_PLANT_SITE,
   OBSOLETE_BUILDS,
   POLLUTION_IN_EVERY_CITY,
+  SDI_DEFENSE_SPARES_CITIES,
+  SETTLERS_WAIT_FOR_SIZE_TWO,
+  UNITED_NATIONS_STOPS_COMPUTER_WARS,
 } from '@civ-clone/civ1-enhanced/RuleSets';
 import {
   HYDRO_PLANT_SITE_RULE as CIV1_HYDRO_PLANT_SITE_RULE,
@@ -38,13 +44,25 @@ import {
 } from '@civ-clone/civ1-city-improvement/RuleIds';
 import {
   CLEAR_CAPTURED_BUILD_RULE,
+  HALVE_CITIES_RULE,
   HYDRO_PLANT_SITE_RULE,
+  KEEP_VETERAN_RULE,
   LAND_UPRISING_RULE,
   POLLUTION_RULE,
   RAIDERS_ONLY_RULE,
   RANSOM_RULE,
   REVALIDATE_BUILDS_RULE,
+  SETTLERS_WAIT_RULE,
+  STEAL_RULE,
+  UNITED_NATIONS_PACIFIED_RULE,
 } from '@civ-clone/civ1-enhanced/RuleIds';
+import {
+  CHIEFTAIN_SETTLERS_RULE as CIV1_CHIEFTAIN_SETTLERS_RULE,
+  HALVE_CITIES_RULE as CIV1_HALVE_CITIES_RULE,
+  START_AFRESH_RULE as CIV1_START_AFRESH_RULE,
+  STEAL_RULE as CIV1_STEAL_RULE,
+} from '@civ-clone/civ1-unit/RuleIds';
+import { UNITED_NATIONS_PACIFIED_RULE as CIV1_UNITED_NATIONS_PACIFIED_RULE } from '@civ-clone/civ1-wonder/RuleIds';
 import {
   LAND_UPRISING_RULE as CIV1_LAND_UPRISING_RULE,
   RAIDERS_ONLY_RULE as CIV1_RAIDERS_ONLY_RULE,
@@ -317,9 +335,28 @@ const check = async (): Promise<void> => {
       [POLLUTION_IN_EVERY_CITY, POLLUTION_RULE, CIV1_POLLUTION_RULE],
       [BARBARIAN_CITY_BUILDS, RAIDERS_ONLY_RULE, CIV1_RAIDERS_ONLY_RULE],
       [BARBARIAN_UPRISINGS, LAND_UPRISING_RULE, CIV1_LAND_UPRISING_RULE],
+      [
+        UNITED_NATIONS_STOPS_COMPUTER_WARS,
+        UNITED_NATIONS_PACIFIED_RULE,
+        CIV1_UNITED_NATIONS_PACIFIED_RULE,
+      ],
+      [EVEN_ADVANCE_STEALING, STEAL_RULE, CIV1_STEAL_RULE],
+      [SDI_DEFENSE_SPARES_CITIES, HALVE_CITIES_RULE, CIV1_HALVE_CITIES_RULE],
+      [DEFECTORS_STAY_VETERAN, KEEP_VETERAN_RULE, CIV1_START_AFRESH_RULE],
+      [
+        SETTLERS_WAIT_FOR_SIZE_TWO,
+        SETTLERS_WAIT_RULE,
+        CIV1_CHIEFTAIN_SETTLERS_RULE,
+      ],
     ],
-    // As the game has been played: every one on but the Hydro Plant's.
-    asPlayed = sets.map(([id]) => id).filter((id) => id !== HYDRO_PLANT_SITE),
+    // The new variants, each off to start with.
+    startsOff = [
+      HYDRO_PLANT_SITE,
+      SDI_DEFENSE_SPARES_CITIES,
+      DEFECTORS_STAY_VETERAN,
+    ],
+    // As the game has been played: every one on but the new variants.
+    asPlayed = sets.map(([id]) => id).filter((id) => !startsOff.includes(id)),
     // Which of the rules they switch run, enhanced and original.
     running = (): string[] =>
       sets
@@ -349,12 +386,12 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the Hydro Plant on its own square off, the other six on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the three new variants off, the other nine on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
     [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the original's Hydro Plant site runs, and each other enhanced rule in place of the original's",
+    "and so the originals of the three variants run, and each other enhanced rule in place of the original's",
     running(),
     inForce(asPlayed)
   );
@@ -376,16 +413,21 @@ const check = async (): Promise<void> => {
     };
   };
 
-  expect(
-    'the Hydro Plant on its own square ticked: the set is on, and its rule runs in place of the original',
-    switched({ id: HYDRO_PLANT_SITE, value: true }).seen,
-    [
-      ['set', 'on', true, drawn(sets.map(([id]) => id))],
-      [{ id: HYDRO_PLANT_SITE, value: true }],
-      [],
-      inForce(sets.map(([id]) => id)),
-    ]
-  );
+  // Each that starts off, ticked alone: its rule runs in place of the original, and only that one.
+  startsOff.forEach((id: string): void => {
+    const on = [...asPlayed, id];
+
+    expect(
+      `${id} ticked: the set is on, and its rule runs in place of the original`,
+      switched({ id, value: true }).seen,
+      [
+        ['set', 'mixed', true, drawn(on)],
+        [{ id, value: true }],
+        [],
+        inForce(on),
+      ]
+    );
+  });
 
   // Each that starts on, unticked alone: the parent mixed, the choice that one, and its original running again.
   asPlayed.forEach((id: string): void => {
@@ -410,18 +452,18 @@ const check = async (): Promise<void> => {
     allOff.seen,
     [
       ['set', 'off', true, drawn([])],
-      // The shortest list that says so: the Hydro Plant's starts off.
+      // The shortest list that says so: the three variants start off.
       asPlayed.map((id) => ({ id, value: false })),
       [],
       inForce([]),
     ]
   );
   expect(
-    'and ticked again as one: every one on, the Hydro Plant on its own square too',
+    'and ticked again as one: every one on, the three variants too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
       ['set', 'on', true, drawn(sets.map(([id]) => id))],
-      [{ id: HYDRO_PLANT_SITE, value: true }],
+      startsOff.map((id) => ({ id, value: true })),
       [],
       inForce(sets.map(([id]) => id)),
     ]
@@ -546,7 +588,8 @@ const check = async (): Promise<void> => {
   );
 
   // --- the enhanced rules started, saved and loaded (#954) ------------------------------------------------------
-  // The Hydro Plant's ticked, and one of the first three and every one of the four after it unticked.
+  // The Hydro Plant's and SDI Defense's ticked, and every set that starts on unticked but the obsolete build; defectors,
+  //  which start off, left off.
   const enhancedChoices = [
       { id: HYDRO_PLANT_SITE, value: true },
       { id: BARBARIAN_LEADER_RANSOM, value: false },
@@ -554,8 +597,12 @@ const check = async (): Promise<void> => {
       { id: POLLUTION_IN_EVERY_CITY, value: false },
       { id: BARBARIAN_CITY_BUILDS, value: false },
       { id: BARBARIAN_UPRISINGS, value: false },
+      { id: UNITED_NATIONS_STOPS_COMPUTER_WARS, value: false },
+      { id: EVEN_ADVANCE_STEALING, value: false },
+      { id: SDI_DEFENSE_SPARES_CITIES, value: true },
+      { id: SETTLERS_WAIT_FOR_SIZE_TWO, value: false },
     ],
-    enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS];
+    enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS, SDI_DEFENSE_SPARES_CITIES];
 
   // What the civilopedia and the build-refusal window are told a Hydro Plant needs where it stands (#954): the
   //  conditions of its requirements in force, as the worker sends them when asked.
@@ -600,7 +647,7 @@ const check = async (): Promise<void> => {
   );
 
   expect(
-    'a game started with the Hydro Plant on its own square and the original ransom, captured build, pollution, Barbarian builds and uprisings saves them, and loads under them again',
+    'a game started with the Hydro Plant on its own square, SDI Defense sparing its city, and the original ransom, captured build, pollution, Barbarian builds and uprisings, United Nations, stealing and Settlers saves them, and loads under them again',
     [
       startedRunning,
       enhancedFile.ruleSets,

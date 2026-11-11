@@ -48,6 +48,9 @@ i18next.addResources('en', 'default', {
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) $t(Buildable.label-empty)',
   'CityStatus.build_nonempty':
     '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) {{buildable}} $t(Progress.data, { "progress": {{build.progress.value}}, "total": {{build.cost.value}} }) ($t(Progress.turns, { "count": {{turns}} }))',
+  // A build a rule holds once paid for (#959): what it waits for in place of its turns.
+  'CityStatus.build_held':
+    '$t(CityStatus.totals, { "free": {{free}}, "total": {{total}}, "context": "{{totals_context}}" }) {{buildable}} $t(Progress.data, { "progress": {{build.progress.value}}, "total": {{build.cost.value}} }) ({{held}})',
   'CityStatus.totals_equal': '{{free, number}}',
   'CityStatus.totals_unequal': '{{free, number}} [{{total, number}}]',
   'GameOptions.theme-choice.civ1-classic': 'Civ1 classic',

@@ -8,7 +8,9 @@ import {
 import {
   CityLayout,
   CityScreenContext,
+  describeBuy,
   renderBuildProgress,
+  renderHeldNote,
   renderTradeRoutes,
 } from '@civ-clone/ui-city/components/City';
 import {
@@ -368,6 +370,8 @@ const renderProduction = (
     ),
     ...renderBuildProgress(city),
     renderQueue(city, context),
+    // Beside Buy, which points to it: after the queue, so the queue doesn't come between them (#959).
+    renderHeldNote(city),
     readOnly
       ? ''
       : s(
@@ -382,15 +386,18 @@ const renderProduction = (
           // The price on the button, as the Buy confirmation says it (#713).
           ...city.build.spendCost.map((spendCost) =>
             h(
-              button(
-                t('CityWindow.buy', {
-                  cost: spendCost.value,
-                  resource: t(`${spendCost.resource._}.name`, {
-                    defaultValue: spendCost.resource._,
-                    ns: 'yield',
+              describeBuy(
+                city,
+                button(
+                  t('CityWindow.buy', {
+                    cost: spendCost.value,
+                    resource: t(`${spendCost.resource._}.name`, {
+                      defaultValue: spendCost.resource._,
+                      ns: 'yield',
+                    }),
                   }),
-                }),
-                { className: 'buy', hotkey: 'b' }
+                  { className: 'buy', hotkey: 'b' }
+                )
               ),
               { click: () => completeProduction(spendCost) }
             )
