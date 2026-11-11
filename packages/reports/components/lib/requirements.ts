@@ -1,6 +1,7 @@
 // Requirement entries (#37) in words, for the civilopedia and the build list's Can't build window (#183). Only what the
 //  engine sends is read: an entry's relation, targets, mode, range and terrains, and each civilopedia entry's kind.
-//  Nothing here decides whether a requirement is met.
+//  Nothing here decides whether a requirement is met. An entry whose relation and range can't say what its rule does has
+//  its own wording, keyed by its id (`ruleKey`), as a condition has (#965).
 
 import {
   CivilopediaEntry,
@@ -56,6 +57,14 @@ export const classLink = (key: string, entries: EntriesByKey): string =>
 export const conditionText = (id: string): string =>
   t(`Civilopedia.condition.${id.replace(/:/g, '.')}`, { defaultValue: id });
 
+/**
+ * The key of an entry's own wording, as its subject (`subject`) or as one of its targets (`target`) reads it, for an
+ *  entry whose rule the generic wording would misstate: the Hoover Dam's plant rules (#965) are `excludedBy`, range
+ *  `player`, but refuse a plant only in its owner's cities on its continent. `:` and `/` are `.` in the key.
+ */
+export const ruleKey = (id: string, side: 'subject' | 'target'): string =>
+  `Civilopedia.rule.${id.replace(/[:/]/g, '.')}.${side}`;
+
 const targetHtml = (
   target: RequirementTargetData,
   entries: EntriesByKey
@@ -91,6 +100,7 @@ export const subjectLine = (
     // A relation a plugin adds, with no wording of its own, reads as a requirement.
     line = t(
       [
+        ruleKey(requirement.id, 'subject'),
         `Civilopedia.subject.${requirement.relation}`,
         'Civilopedia.subject.requires',
       ],
@@ -137,6 +147,7 @@ export const targetLine = (
 ): string =>
   t(
     [
+      ruleKey(requirement.id, 'target'),
       `Civilopedia.target.${requirement.relation}`,
       'Civilopedia.target.requires',
     ],

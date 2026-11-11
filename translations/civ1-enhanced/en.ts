@@ -16,13 +16,13 @@ i18next.addResources('en', 'ruleset', {
   'civ1-enhanced.barbarian-leader-ransom.description':
     'In the original, he pays only when he is the unit that defends and loses.',
   'civ1-enhanced.obsolete-builds.name':
-    'A city stops building what a discovery makes obsolete',
+    'A city stops building what it can no longer build',
   'civ1-enhanced.obsolete-builds.description':
-    'You choose what it builds instead. In the original, the city goes on and finishes it.',
+    'You choose again when a discovery makes the item obsolete, when the city loses an improvement the item needs, or when you gain the Hoover Dam and the item is a power plant it rules out. In the original, the city goes on and finishes it.',
   'civ1-enhanced.captured-city-build.name':
     'A city you capture stops building what it was, and you choose again',
   'civ1-enhanced.captured-city-build.description':
-    'In the original, you go on building what it was, from no shields and at your price, even something you couldn’t otherwise build. A computer player that captures a city chooses again either way. While “A city stops building what a discovery makes obsolete” is ticked, a kept item you couldn’t otherwise build is dropped as soon as you gain an advance that still doesn’t let you build it, which may be the one you take with the city.',
+    'In the original, you go on building what it was, from no shields and at your price, even something you couldn’t otherwise build. A computer player that captures a city chooses again either way.',
   'civ1-enhanced.pollution-in-every-city.name':
     'Every civilization’s cities can cause pollution',
   'civ1-enhanced.pollution-in-every-city.description':
