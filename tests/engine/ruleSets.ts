@@ -6,8 +6,8 @@
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
 //  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
-//  rules (`civ1-enhanced`, #954): where play departs from the original, each a set that a game can switch back, as it
-//  starts (all but the Hydro Plant's on, which is play as it has been), switched, started, saved and loaded.
+//  rules (`civ1-enhanced`, #954): where play departs from the original, each of the seven a set that a game can switch
+//  back, as it starts (all but the Hydro Plant's on, which is play as it has been), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -23,19 +23,35 @@ import RuleSet from '@civ-clone/core-rule/RuleSet';
 import RuleSetRegistry from '@civ-clone/core-rule/RuleSetRegistry';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
 import {
+  BARBARIAN_CITY_BUILDS,
   BARBARIAN_LEADER_RANSOM,
+  BARBARIAN_UPRISINGS,
+  CAPTURED_CITY_BUILD,
   ENHANCED,
   HYDRO_PLANT_SITE,
   OBSOLETE_BUILDS,
+  POLLUTION_IN_EVERY_CITY,
 } from '@civ-clone/civ1-enhanced/RuleSets';
 import {
+  HYDRO_PLANT_SITE_RULE as CIV1_HYDRO_PLANT_SITE_RULE,
+  POLLUTION_RULE as CIV1_POLLUTION_RULE,
+} from '@civ-clone/civ1-city-improvement/RuleIds';
+import {
+  CLEAR_CAPTURED_BUILD_RULE,
   HYDRO_PLANT_SITE_RULE,
+  LAND_UPRISING_RULE,
+  POLLUTION_RULE,
+  RAIDERS_ONLY_RULE,
   RANSOM_RULE,
   REVALIDATE_BUILDS_RULE,
 } from '@civ-clone/civ1-enhanced/RuleIds';
+import {
+  LAND_UPRISING_RULE as CIV1_LAND_UPRISING_RULE,
+  RAIDERS_ONLY_RULE as CIV1_RAIDERS_ONLY_RULE,
+  RANSOM_RULE as CIV1_RANSOM_RULE,
+} from '@civ-clone/civ1-barbarians/RuleIds';
 import Build from '@civ-clone/core-city-build/Rules/Build';
-import { HYDRO_PLANT_SITE_RULE as CIV1_HYDRO_PLANT_SITE_RULE } from '@civ-clone/civ1-city-improvement/RuleIds';
-import { RANSOM_RULE as CIV1_RANSOM_RULE } from '@civ-clone/civ1-barbarians/RuleIds';
+import { KEEP_BUILD_RULE as CIV1_KEEP_BUILD_RULE } from '@civ-clone/civ1-city/RuleIds';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Gunpowder } from '@civ-clone/civ1-science/Advances';
 import { OBSOLESCENCE } from '@civ-clone/civ1-unit/RuleSets';
@@ -291,18 +307,37 @@ const check = async (): Promise<void> => {
   );
 
   // --- the enhanced rules (#954) -------------------------------------------------------------------------------------
-  // Which of the rules they switch run, enhanced and original, in that order: the Hydro Plant's site, the ransom, and
-  //  the obsolete build dropped, which replaces nothing.
-  const running = (): boolean[] =>
-      [
-        HYDRO_PLANT_SITE_RULE,
-        CIV1_HYDRO_PLANT_SITE_RULE,
-        RANSOM_RULE,
-        CIV1_RANSOM_RULE,
-        REVALIDATE_BUILDS_RULE,
-      ].map((id) => rules.getById(id)?.enabled() ?? false),
-    enhanced = (sets: RuleSetNode[]): unknown => {
-      const node = find(sets, ENHANCED);
+  // Each set beneath them, in the order the setup draws them, with its enhanced rule and the original it replaces (none
+  //  for the obsolete build dropped, which is a rule added to the original's).
+  const sets: [string, string, string | null][] = [
+      [HYDRO_PLANT_SITE, HYDRO_PLANT_SITE_RULE, CIV1_HYDRO_PLANT_SITE_RULE],
+      [BARBARIAN_LEADER_RANSOM, RANSOM_RULE, CIV1_RANSOM_RULE],
+      [OBSOLETE_BUILDS, REVALIDATE_BUILDS_RULE, null],
+      [CAPTURED_CITY_BUILD, CLEAR_CAPTURED_BUILD_RULE, CIV1_KEEP_BUILD_RULE],
+      [POLLUTION_IN_EVERY_CITY, POLLUTION_RULE, CIV1_POLLUTION_RULE],
+      [BARBARIAN_CITY_BUILDS, RAIDERS_ONLY_RULE, CIV1_RAIDERS_ONLY_RULE],
+      [BARBARIAN_UPRISINGS, LAND_UPRISING_RULE, CIV1_LAND_UPRISING_RULE],
+    ],
+    // As the game has been played: every one on but the Hydro Plant's.
+    asPlayed = sets.map(([id]) => id).filter((id) => id !== HYDRO_PLANT_SITE),
+    // Which of the rules they switch run, enhanced and original.
+    running = (): string[] =>
+      sets
+        .flatMap(([, enhanced, original]) => [enhanced, original])
+        .filter(
+          (id): id is string =>
+            id !== null && (rules.getById(id)?.enabled() ?? false)
+        ),
+    // Which of them should run with `on` the sets in force: each one's enhanced rule, or else its original.
+    inForce = (on: string[]): string[] =>
+      sets.flatMap(([id, enhanced, original]) =>
+        on.includes(id) ? [enhanced] : original === null ? [] : [original]
+      ),
+    // How the setup should draw each set with `on` the sets in force.
+    drawn = (on: string[]): string[] =>
+      sets.map(([id]) => `${id} ${on.includes(id) ? 'on' : 'off'}`),
+    enhanced = (nodes: RuleSetNode[]): unknown => {
+      const node = find(nodes, ENHANCED);
 
       return [
         node?.kind,
@@ -314,36 +349,19 @@ const check = async (): Promise<void> => {
     asStarted = ruleSetsData(null);
 
   expect(
-    'the enhanced rules are a set the setup is told of, mixed: the Hydro Plant on its own square off, the ransom and the obsolete build on, as the game has been played; nothing is chosen, and nothing is wrong',
+    'the enhanced rules are a set the setup is told of, mixed: the Hydro Plant on its own square off, the other six on, as the game has been played; nothing is chosen, and nothing is wrong',
     [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
-    [
-      [
-        'set',
-        'mixed',
-        true,
-        [
-          `${HYDRO_PLANT_SITE} off`,
-          `${BARBARIAN_LEADER_RANSOM} on`,
-          `${OBSOLETE_BUILDS} on`,
-        ],
-      ],
-      [],
-      [],
-    ]
+    [['set', 'mixed', true, drawn(asPlayed)], [], []]
   );
   expect(
-    "and so the original's Hydro Plant site runs, and the enhanced ransom and obsolete build in place of the original's",
+    "and so the original's Hydro Plant site runs, and each other enhanced rule in place of the original's",
     running(),
-    [false, true, true, false, true]
+    inForce(asPlayed)
   );
   expect(
-    'each that replaces an original rule says so, and the ransom the original says what replaced it',
-    [
-      find(asStarted.sets, HYDRO_PLANT_SITE)?.supersedes,
-      find(asStarted.sets, BARBARIAN_LEADER_RANSOM)?.supersedes,
-      find(asStarted.sets, OBSOLETE_BUILDS)?.supersedes ?? [],
-    ],
-    [[CIV1_HYDRO_PLANT_SITE_RULE], [CIV1_RANSOM_RULE], []]
+    'each that replaces an original rule says so',
+    sets.map(([id]) => find(asStarted.sets, id)?.supersedes ?? []),
+    sets.map(([, , original]) => (original === null ? [] : [original]))
   );
 
   const switched = (
@@ -362,39 +380,28 @@ const check = async (): Promise<void> => {
     'the Hydro Plant on its own square ticked: the set is on, and its rule runs in place of the original',
     switched({ id: HYDRO_PLANT_SITE, value: true }).seen,
     [
-      [
-        'set',
-        'on',
-        true,
-        [
-          `${HYDRO_PLANT_SITE} on`,
-          `${BARBARIAN_LEADER_RANSOM} on`,
-          `${OBSOLETE_BUILDS} on`,
-        ],
-      ],
+      ['set', 'on', true, drawn(sets.map(([id]) => id))],
       [{ id: HYDRO_PLANT_SITE, value: true }],
       [],
-      [true, false, true, false, true],
+      inForce(sets.map(([id]) => id)),
     ]
   );
-  expect(
-    "the ransom unticked: the original's ransom runs again",
-    switched({ id: BARBARIAN_LEADER_RANSOM, value: false }).seen.slice(1),
-    [
-      [{ id: BARBARIAN_LEADER_RANSOM, value: false }],
-      [],
-      [false, true, false, true, true],
-    ]
-  );
-  expect(
-    'the obsolete build unticked: the build is no longer dropped',
-    switched({ id: OBSOLETE_BUILDS, value: false }).seen.slice(1),
-    [
-      [{ id: OBSOLETE_BUILDS, value: false }],
-      [],
-      [false, true, true, false, false],
-    ]
-  );
+
+  // Each that starts on, unticked alone: the parent mixed, the choice that one, and its original running again.
+  asPlayed.forEach((id: string): void => {
+    const on = asPlayed.filter((other) => other !== id);
+
+    expect(
+      `${id} unticked: the original's rule runs again, and only that one`,
+      switched({ id, value: false }).seen,
+      [
+        ['set', 'mixed', true, drawn(on)],
+        [{ id, value: false }],
+        [],
+        inForce(on),
+      ]
+    );
+  });
 
   const allOff = switched({ id: ENHANCED, value: false });
 
@@ -402,60 +409,27 @@ const check = async (): Promise<void> => {
     'the enhanced rules unticked as one: every one off, and the original rules run',
     allOff.seen,
     [
-      [
-        'set',
-        'off',
-        true,
-        [
-          `${HYDRO_PLANT_SITE} off`,
-          `${BARBARIAN_LEADER_RANSOM} off`,
-          `${OBSOLETE_BUILDS} off`,
-        ],
-      ],
+      ['set', 'off', true, drawn([])],
       // The shortest list that says so: the Hydro Plant's starts off.
-      [
-        { id: BARBARIAN_LEADER_RANSOM, value: false },
-        { id: OBSOLETE_BUILDS, value: false },
-      ],
+      asPlayed.map((id) => ({ id, value: false })),
       [],
-      [false, true, false, true, false],
+      inForce([]),
     ]
   );
   expect(
     'and ticked again as one: every one on, the Hydro Plant on its own square too',
     switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
     [
-      [
-        'set',
-        'on',
-        true,
-        [
-          `${HYDRO_PLANT_SITE} on`,
-          `${BARBARIAN_LEADER_RANSOM} on`,
-          `${OBSOLETE_BUILDS} on`,
-        ],
-      ],
+      ['set', 'on', true, drawn(sets.map(([id]) => id))],
       [{ id: HYDRO_PLANT_SITE, value: true }],
       [],
-      [true, false, true, false, true],
+      inForce(sets.map(([id]) => id)),
     ]
   );
   expect(
     '(and asked with nothing, they are as they start)',
     [enhanced(ruleSetsData(null).sets), running()],
-    [
-      [
-        'set',
-        'mixed',
-        true,
-        [
-          `${HYDRO_PLANT_SITE} off`,
-          `${BARBARIAN_LEADER_RANSOM} on`,
-          `${OBSOLETE_BUILDS} on`,
-        ],
-      ],
-      [false, true, true, false, true],
-    ]
+    [['set', 'mixed', true, drawn(asPlayed)], inForce(asPlayed)]
   );
 
   expect(
@@ -572,10 +546,16 @@ const check = async (): Promise<void> => {
   );
 
   // --- the enhanced rules started, saved and loaded (#954) ------------------------------------------------------
+  // The Hydro Plant's ticked, and one of the first three and every one of the four after it unticked.
   const enhancedChoices = [
-    { id: HYDRO_PLANT_SITE, value: true },
-    { id: BARBARIAN_LEADER_RANSOM, value: false },
-  ];
+      { id: HYDRO_PLANT_SITE, value: true },
+      { id: BARBARIAN_LEADER_RANSOM, value: false },
+      { id: CAPTURED_CITY_BUILD, value: false },
+      { id: POLLUTION_IN_EVERY_CITY, value: false },
+      { id: BARBARIAN_CITY_BUILDS, value: false },
+      { id: BARBARIAN_UPRISINGS, value: false },
+    ],
+    enhancedOn = [HYDRO_PLANT_SITE, OBSOLETE_BUILDS];
 
   // What the civilopedia and the build-refusal window are told a Hydro Plant needs where it stands (#954): the
   //  conditions of its requirements in force, as the worker sends them when asked.
@@ -620,7 +600,7 @@ const check = async (): Promise<void> => {
   );
 
   expect(
-    'a game started with the Hydro Plant on its own square and the original ransom saves both, and loads under them again',
+    'a game started with the Hydro Plant on its own square and the original ransom, captured build, pollution, Barbarian builds and uprisings saves them, and loads under them again',
     [
       startedRunning,
       enhancedFile.ruleSets,
@@ -629,10 +609,10 @@ const check = async (): Promise<void> => {
       ruleSets.choices(),
     ],
     [
-      [true, false, false, true, true],
+      inForce(enhancedOn),
       { choices: enhancedChoices },
-      [false, true, true, false, true],
-      [true, false, false, true, true],
+      inForce(asPlayed),
+      inForce(enhancedOn),
       enhancedChoices,
     ]
   );
