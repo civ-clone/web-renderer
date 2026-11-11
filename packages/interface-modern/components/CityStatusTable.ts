@@ -7,7 +7,6 @@ import ReportTable, {
   ReportColumn,
 } from '@civ-clone/ui-component-report-table/ReportTable';
 import {
-  buildTurns,
   citizenFace,
   growthTurns,
   turnsText,
@@ -22,7 +21,14 @@ import {
   growthLimitText,
 } from '@civ-clone/ui-client/components/lib/city';
 import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
-import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
+import {
+  buildOutlook,
+  buildTurnsOrder,
+} from '@civ-clone/ui-client/lib/cityTurns';
+import {
+  getLabelForBuildable,
+  heldText,
+} from '@civ-clone/ui-client/components/lib/cityBuild';
 import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { progressBar } from '@civ-clone/ui-component-progress-bar/ProgressBar';
@@ -58,8 +64,13 @@ const meter = (
 const net = (city: CityData, group: string): number =>
   yieldData(city, group)[2];
 
-// Never comes after any number of turns.
-const turnsOrder = (turns: number): number => (turns === 0 ? Infinity : turns);
+// A build's turns, or, while a rule holds it once paid for, what it waits for in their place (#959), as the growth says
+//  "Needs an Aqueduct".
+const buildTurnsShown = (city: CityData): number | string => {
+  const { turns, hold } = buildOutlook(city);
+
+  return hold?.now ? heldText(hold) : turns;
+};
 
 const moodCount = (city: CityData, mood: CitizenMood): number =>
   citizenMoods(city).filter((cityMood) => cityMood === mood).length;
@@ -134,10 +145,10 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
             total: city.build.cost.value,
           }),
         }),
-        city.build.building ? buildTurns(city) : null
+        city.build.building ? buildTurnsShown(city) : null
       ),
     sortValue: (city) =>
-      city.build.building ? turnsOrder(buildTurns(city)) : Infinity,
+      city.build.building ? buildTurnsOrder(buildOutlook(city)) : Infinity,
     sortFirst: 'ascending',
   },
   ...(

@@ -8,6 +8,7 @@ import {
 import {
   CityLayout,
   CityScreenContext,
+  describeBuy,
   renderBuildProgress,
   renderTradeRoutes,
 } from '@civ-clone/ui-city/components/City';
@@ -382,15 +383,18 @@ const renderProduction = (
           // The price on the button, as the Buy confirmation says it (#713).
           ...city.build.spendCost.map((spendCost) =>
             h(
-              button(
-                t('CityWindow.buy', {
-                  cost: spendCost.value,
-                  resource: t(`${spendCost.resource._}.name`, {
-                    defaultValue: spendCost.resource._,
-                    ns: 'yield',
+              describeBuy(
+                city,
+                button(
+                  t('CityWindow.buy', {
+                    cost: spendCost.value,
+                    resource: t(`${spendCost.resource._}.name`, {
+                      defaultValue: spendCost.resource._,
+                      ns: 'yield',
+                    }),
                   }),
-                }),
-                { className: 'buy', hotkey: 'b' }
+                  { className: 'buy', hotkey: 'b' }
+                )
               ),
               { click: () => completeProduction(spendCost) }
             )

@@ -1,6 +1,7 @@
 import i18next, { t } from 'i18next';
 import { BuildItem, CityBuild, Entity } from '@civ-clone/ui-protocol/types';
 import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
+import { BuildHold } from '../../lib/cityTurns';
 import Transport from '../../Transport';
 
 export const getLabelForBuildable = (buildable: BuildItem | null): string =>
@@ -20,6 +21,28 @@ export const getLabelForBuildableEntity = (buildable: Entity): string =>
       defaultValue: buildable._,
     }
   );
+
+/**
+ * What a held build waits for, in words (#959): "Waiting until the city is size 2" while it is paid for and waiting,
+ *  "Will wait until the city is size 2" before. Worded from the ids of the rules holding it, the first with a sentence
+ *  of its own (`City.Build.Held.waiting-for.<id>`, its id with `:` and `/` as `.`), or the plain "Waiting" / "Will
+ *  wait when finished" for a rule with none, or no id. Never worked out from the city: the page knows no rules.
+ */
+export const heldText = ({ now, held }: BuildHold): string => {
+  const state = now ? 'waiting' : 'will-wait';
+
+  return t(
+    [
+      ...held
+        .filter((id): id is string => id !== null)
+        .map(
+          (id) => `City.Build.Held.${state}-for.${id.replace(/[:/]/g, '.')}`
+        ),
+      `City.Build.Held.${state}`,
+    ],
+    { interpolation: { escapeValue: false } }
+  );
+};
 
 // Why a city building nothing is asked what to build (#716), or `null` when it is building something, the reason isn't
 //  known (an older save), or it's one with no words here.

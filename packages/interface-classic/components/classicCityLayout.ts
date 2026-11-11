@@ -9,6 +9,7 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import {
   CityLayout,
+  describeBuy,
   renderBuildProgress,
   renderTradeRoutes,
 } from '@civ-clone/ui-city/components/City';
@@ -100,12 +101,15 @@ const renderBuild = (
             ),
             ...city.build.spendCost.map((spendCost) =>
               h(
-                s(
-                  `<button class="btn-secondary buy" data-resource="${
-                    spendCost.resource._
-                  }">${t('City.Build.buy-with', {
-                    spendCost,
-                  })}</button>`
+                describeBuy(
+                  city,
+                  s(
+                    `<button class="btn-secondary buy" data-resource="${
+                      spendCost.resource._
+                    }">${t('City.Build.buy-with', {
+                      spendCost,
+                    })}</button>`
+                  )
                 ),
                 {
                   click() {

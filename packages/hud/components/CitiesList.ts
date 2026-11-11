@@ -2,9 +2,15 @@ import { City, Player } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import i18next, { TOptions, t } from 'i18next';
 import {
-  buildTurns,
-  turnsText,
-} from '@civ-clone/ui-city/components/lib/cityYields';
+  BuildOutlook,
+  buildOutlook,
+  buildTurnsOrder,
+} from '@civ-clone/ui-client/lib/cityTurns';
+import {
+  getLabelForBuildable,
+  heldText,
+} from '@civ-clone/ui-client/components/lib/cityBuild';
+import { turnsText } from '@civ-clone/ui-city/components/lib/cityYields';
 import DataChanges, {
   instance as dataChanges,
 } from '@civ-clone/ui-client/lib/DataChanges';
@@ -13,7 +19,6 @@ import watchPlayer, {
 } from '@civ-clone/ui-reports/components/lib/watchPlayer';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
-import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
@@ -26,16 +31,21 @@ export const citiesShown = 5;
 
 type CityRow = {
   city: City;
-  // `null` with nothing to build.
-  turns: number | null;
+  // `null` with nothing to build: otherwise its turns, and what holds it back (#959).
+  build: BuildOutlook | null;
   disorder: boolean;
   starving: boolean;
 };
 
-// Nothing to build first, then the soonest done. A build that never finishes (no production to spare: 0 turns, as
-//  `turnsLeft` says `Never`) goes last. The sort is stable, so cities otherwise keep the player's order.
-const sortKey = ({ turns }: CityRow): number =>
-  turns === null ? -1 : turns === 0 ? Infinity : turns;
+// Nothing to build first, then the soonest done. A build waiting now (#959) comes after those, and one that never
+//  finishes (no production to spare: 0 turns, as `turnsLeft` says `Never`) last. The sort is stable, so cities
+//  otherwise keep the player's order.
+const sortKey = ({ build }: CityRow): number =>
+  build === null ? -1 : buildTurnsOrder(build);
+
+// What a row says in place of its turns: a build waiting now has a marker, the words it stands for, said too.
+const turnsShown = (build: BuildOutlook): string =>
+  build.hold?.now ? heldText(build.hold) : turnsText(build.turns);
 
 export const cityRows = (player: Player): CityRow[] => {
   // The engine's own signal, the cities it asks the player to deal with (#274), not a rule worked out here.
@@ -48,7 +58,7 @@ export const cityRows = (player: Player): CityRow[] => {
   return player.cities
     .map((city) => ({
       city,
-      turns: city.build.building ? buildTurns(city) : null,
+      build: city.build.building ? buildOutlook(city) : null,
       disorder: disorder.has(city.id),
       // Short of food, as the city screen's growth counts it: its food after upkeep comes to less than nothing.
       starving: reduceKnownYield(city.yields, 'Food') < 0,
@@ -63,11 +73,11 @@ const shown = (rows: CityRow[], showAll: boolean): string =>
     showAll,
     rows.length,
     ...(showAll ? rows : rows.slice(0, citiesShown)).map(
-      ({ city, turns, disorder, starving }) => [
+      ({ city, build, disorder, starving }) => [
         city.id,
         cityName(city),
-        turns === null ? null : getLabelForBuildable(city.build.building),
-        turns === null ? null : turnsText(turns),
+        build === null ? null : getLabelForBuildable(city.build.building),
+        build === null ? null : turnsShown(build),
         disorder,
         starving,
       ]
@@ -196,7 +206,7 @@ export class CitiesList extends Element {
     this.#unwatch();
   }
 
-  #row({ city, turns, disorder, starving }: CityRow): HTMLElement {
+  #row({ city, build, disorder, starving }: CityRow): HTMLElement {
     const item = s('<li></li>'),
       button = s<HTMLButtonElement>(
         '<button type="button" class="btn-bare city-row"><span class="name"></span><span class="build"><span class="item"></span><span class="turns"></span></span></button>'
@@ -205,7 +215,7 @@ export class CitiesList extends Element {
     button.dataset.city = city.id;
     button.querySelector('.name')!.textContent = cityName(city);
 
-    if (turns === null) {
+    if (build === null) {
       button.classList.add('no-build');
       const build = button.querySelector('.build')!;
 
@@ -215,7 +225,22 @@ export class CitiesList extends Element {
       button.querySelector('.item')!.textContent = getLabelForBuildable(
         city.build.building
       );
-      button.querySelector('.turns')!.textContent = turnsText(turns);
+      const turns = button.querySelector<HTMLElement>('.turns')!;
+
+      if (build.hold?.now) {
+        // Only a marker fits (#959): the words are its tooltip, and what a screen reader says.
+        const words = heldText(build.hold),
+          marker = s('<span aria-hidden="true"></span>'),
+          said = s('<span class="visually-hidden"></span>');
+
+        marker.textContent = text('City.Build.Held.marker');
+        said.textContent = words;
+        turns.title = words;
+        turns.classList.add('held');
+        turns.append(marker, said);
+      } else {
+        turns.textContent = turnsText(build.turns);
+      }
     }
 
     if (disorder || starving) {

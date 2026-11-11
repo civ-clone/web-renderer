@@ -8,8 +8,10 @@ import {
 import { emit, s } from '@dom111/element';
 import {
   getLabelForBuildableEntity,
+  heldText,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { buildHold } from '@civ-clone/ui-client/lib/cityTurns';
 import { renderFigures, turnsLeft, yieldImages } from './lib/cityYields';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import CityBuildAvailable from '@civ-clone/ui-protocol/Requests/CityBuildAvailable';
@@ -28,13 +30,17 @@ import { t } from 'i18next';
 import watchCity from './lib/watchCity';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 
-// The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
-//  next, so they are said on their own.
-const renderBuildProgress = (city: CityData): Node[] => {
+// The id of the note that a city's build will wait once paid for (#959), which its Buy buttons are described by.
+const heldNoteId = (city: CityData): string => `city-held-${city.id}`,
+  // The shields built up towards the item (#687). With no item chosen they are still there, kept for whatever is chosen
+  //  next, so they are said on their own. A build a rule holds (#959) says what it waits for in place of its turns once
+  //  paid for, and beneath them before, where the Buy buttons point to it.
+  renderBuildProgress = (city: CityData): Node[] => {
     const progress = city.build.progress.value;
 
     if (city.build.building) {
-      const perTurn = reduceKnownYield(city.yields, 'Production');
+      const perTurn = reduceKnownYield(city.yields, 'Production'),
+        hold = buildHold(city.build);
 
       return [
         progressBar({
@@ -47,8 +53,10 @@ const renderBuildProgress = (city: CityData): Node[] => {
           'Production',
           city.build,
           perTurn,
-          turnsLeft(city.build, city.yields, 'Production')
+          turnsLeft(city.build, city.yields, 'Production'),
+          hold?.now ? heldText(hold) : null
         ),
+        ...(hold && !hold.now ? [renderHeldNote(city, heldText(hold))] : []),
       ];
     }
 
@@ -61,6 +69,24 @@ const renderBuildProgress = (city: CityData): Node[] => {
         `<p class="figures">${t('City.Build.stored', { count: progress })}</p>`
       ),
     ];
+  },
+  // A Buy button for a build that will wait once paid for points to the note that says so (#959): it is said with the
+  //  button, and not only seen beside it.
+  describeBuy = <T extends HTMLElement>(city: CityData, buy: T): T => {
+    const hold = buildHold(city.build);
+
+    if (hold && !hold.now) {
+      buy.setAttribute('aria-describedby', heldNoteId(city));
+    }
+
+    return buy;
+  },
+  renderHeldNote = (city: CityData, text: string): HTMLElement => {
+    const note = s(`<p class="held-note" id="${heldNoteId(city)}"></p>`);
+
+    note.textContent = text;
+
+    return note;
   },
   // The routes this city holds, and what each adds to its trade (#57).
   renderTradeRoutes = (city: CityData): Node | string =>
@@ -442,13 +468,21 @@ export class City extends Window {
     // The engine only asks for a yield the player keeps a treasury of.
     const treasury = getTreasuryForYield(city.player, spendCost.resource._)!;
 
+    // A build that will wait once paid for says so before the gold is spent (#959).
+    const hold = buildHold(cityBuild);
+
     new ConfirmationWindow(
       t('ConfirmationWindow.Generic.title'),
       t('City.CompleteProduction.body', {
         item: getLabelForBuildableEntity(cityBuild.building.item),
         spendCost,
         treasury,
-      }),
+      }) +
+        (hold && !hold.now
+          ? ` ${t('City.CompleteProduction.held', {
+              held: heldText(hold),
+            })}`
+          : ''),
       () =>
         this.#transport.send('action', {
           name: 'CompleteProduction',
@@ -482,6 +516,6 @@ export class City extends Window {
 }
 
 // Drawn by the new layout too (#746).
-export { renderBuildProgress, renderTradeRoutes };
+export { describeBuy, heldNoteId, renderBuildProgress, renderTradeRoutes };
 
 export default City;

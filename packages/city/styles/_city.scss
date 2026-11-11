@@ -87,6 +87,13 @@
     }
   }
 
+  // A build that will wait once paid for (#959): said beneath its figures, where the Buy buttons point.
+  .held-note {
+    font-size: var(--type-detail-size);
+    margin: 0;
+    text-align: right;
+  }
+
   // The city's yields, a row each (#719): the icon, a bar of what it makes (what it uses, then what's spare, then in red
   //  what it's short), and the figures. The ticks are drawn after the parts, so over them.
   .yields-detail {

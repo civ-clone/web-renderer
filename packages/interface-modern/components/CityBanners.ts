@@ -2,7 +2,7 @@ import { City, Tile } from '@civ-clone/ui-protocol/types';
 import { CityNames } from '@civ-clone/ui-map/components/Map/CityNames';
 import { Reach } from '@civ-clone/ui-map/lib/projection';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
-import { buildTurns } from '@civ-clone/ui-client/lib/cityTurns';
+import { buildOutlook } from '@civ-clone/ui-client/lib/cityTurns';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
@@ -10,6 +10,7 @@ import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { playerColours } from '@civ-clone/ui-assets/lib/renderUnit';
 import { readableOn } from '@civ-clone/ui-widgets/lib/contrast';
+import { t } from 'i18next';
 
 // The cities on the map under the new interface (#747): a banner below each city's square, as Civ V draws them, so the
 //  empire reads without opening anything. The theme says which, through `--ui-city-banner`: `full` draws the banner,
@@ -225,10 +226,16 @@ export class CityBanners extends CityNames {
       compact = this.#compact(),
       name = cityName(city),
       nameWidth = this.#measure(name),
-      // What a city seen in full is building, and in how many turns; a dash for nothing, or for never.
+      // What a city seen in full is building, and in how many turns; a dash for nothing, or for never, and a marker
+      //  for a build a rule holds once paid for (#959), which the banner's tooltip words.
       building = !compact && city.build ? city.build : null,
-      turns = building?.building ? buildTurns(city) : 0,
-      productionText = turns > 0 ? localeProvider.number(turns) : '–',
+      outlook = building?.building ? buildOutlook(city) : null,
+      turns = outlook?.turns ?? 0,
+      productionText = outlook?.hold?.now
+        ? t('City.Build.Held.marker')
+        : turns > 0
+        ? localeProvider.number(turns)
+        : '–',
       iconSize = fontSize,
       productionWidth =
         building === null

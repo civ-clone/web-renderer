@@ -43,6 +43,11 @@ i18next.addResources('en', 'default', {
   'CityBanner.grows': 'Grows to size {{size, number}}',
   'CityBanner.progress':
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(Progress.turns, { "count": {{turns}} })',
+  // A build a rule holds (#959): `held` says what it waits for, in place of the turns once paid for, after them before.
+  'CityBanner.held':
+    '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · {{- held}}',
+  'CityBanner.will-wait':
+    '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(Progress.turns, { "count": {{turns}} }) · {{- held}}',
   'CityBanner.starving':
     '$t(Progress.data, { "progress": {{progress}}, "total": {{total}} }) · $t(CitiesList.starving)',
   'CityWindow.nothing': 'Nothing in production',

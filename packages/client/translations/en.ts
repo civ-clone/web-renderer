@@ -39,6 +39,21 @@ i18next.addResources('en', 'default', {
   'City.Build.cleared.completed': 'Production complete: {{- item}}',
   'City.Build.cleared.created': 'City founded',
   'City.Build.cleared.unavailable': '{{- item}} can no longer be built',
+  // A build held back by a rule (#959), in place of its turns while it waits, and beside them before. A rule's own
+  //  sentence is keyed by its id with `:` and `/` as `.`; one with none, or with no id, has the plain one.
+  'City.Build.Held.waiting': 'Waiting',
+  'City.Build.Held.will-wait': 'Will wait when finished',
+  'City.Build.Held.waiting-for.civ1-enhanced.city.hold.settlers-until-size-two':
+    'Waiting until the city is size 2',
+  'City.Build.Held.will-wait-for.civ1-enhanced.city.hold.settlers-until-size-two':
+    'Will wait until the city is size 2',
+  'City.Build.Held.waiting-for.civ1-unit.city.hold.chieftain-settlers':
+    'Waiting until the city is size 2',
+  'City.Build.Held.will-wait-for.civ1-unit.city.hold.chieftain-settlers':
+    'Will wait until the city is size 2',
+  // Where there is room only for a number of turns (a banner, a list), in its place while the build waits, with the
+  //  words above beside it for a screen reader and as its tooltip.
+  'City.Build.Held.marker': '…',
   'City.Build.nothing': 'Nothing',
   'City.Build.stored_one': '{{count, number}} shield kept for the next item',
   'City.Build.stored_other': '{{count, number}} shields kept for the next item',

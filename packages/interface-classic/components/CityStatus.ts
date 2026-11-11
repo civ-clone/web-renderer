@@ -14,13 +14,20 @@ import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
-import { getLabelForBuildable } from '@civ-clone/ui-client/components/lib/cityBuild';
+import {
+  getLabelForBuildable,
+  heldText,
+} from '@civ-clone/ui-client/components/lib/cityBuild';
+import { buildOutlook } from '@civ-clone/ui-client/lib/cityTurns';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import watchPlayer, {
   cityRowIds,
 } from '@civ-clone/ui-reports/components/lib/watchPlayer';
 
 const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
+  // What it waits for in place of its turns, while a rule holds its build once paid for (#959).
+  const { turns: buildTurns, hold } = buildOutlook(city);
+
   const [food, production, trade, research, gold, luxuries] = [
       'Food',
       'Production',
@@ -73,13 +80,16 @@ const buildCityRow = async (city: CityData): Promise<HTMLElement[]> => {
       `<div class="build">${productionIcon}  ${t('CityStatus.build', {
         free: production[2],
         total: production[0],
-        context: city.build.building ? 'nonempty' : 'empty',
+        context: !city.build.building
+          ? 'empty'
+          : hold?.now
+          ? 'held'
+          : 'nonempty',
+        held: hold ? heldText(hold) : null,
         totals_context: production[0] === production[2] ? 'equal' : 'unequal',
         buildable: getLabelForBuildable(city.build.building),
         build: city.build,
-        turns: city.build.building
-          ? turnsLeft(city.build, city.yields, 'Production')
-          : Infinity,
+        turns: city.build.building ? buildTurns : Infinity,
       })}</div>`
     ),
     s(
