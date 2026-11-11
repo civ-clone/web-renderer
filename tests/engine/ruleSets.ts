@@ -5,7 +5,9 @@
 //  started with the set off lets a city go on building Warriors after Gunpowder, that a save carries the choice and a
 //  load puts it back, and that the civilopedia stops saying a unit goes obsolete in a game where it doesn't. And, with
 //  sets of its own in rules of its own (#954), that what is wrong with the sets goes to the page with each answer, and
-//  that a game is not started or loaded under sets with a problem that blocks.
+//  that a game is not started or loaded under sets with a problem that blocks. With the plugins again, the enhanced
+//  rules (`civ1-enhanced`, #954): where play departs from the original, each a set that a game can switch back, as it
+//  starts (all but the Hydro Plant's on, which is play as it has been), switched, started, saved and loaded.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import './lib/seed';
@@ -20,7 +22,20 @@ import Rule from '@civ-clone/core-rule/Rule';
 import RuleSet from '@civ-clone/core-rule/RuleSet';
 import RuleSetRegistry from '@civ-clone/core-rule/RuleSetRegistry';
 import { defaultGame, defaultSlots } from '@civ-clone/core-game/defaultGame';
+import {
+  BARBARIAN_LEADER_RANSOM,
+  ENHANCED,
+  HYDRO_PLANT_SITE,
+  OBSOLETE_BUILDS,
+} from '@civ-clone/civ1-enhanced/RuleSets';
+import {
+  HYDRO_PLANT_SITE_RULE,
+  RANSOM_RULE,
+  REVALIDATE_BUILDS_RULE,
+} from '@civ-clone/civ1-enhanced/RuleIds';
 import Build from '@civ-clone/core-city-build/Rules/Build';
+import { HYDRO_PLANT_SITE_RULE as CIV1_HYDRO_PLANT_SITE_RULE } from '@civ-clone/civ1-city-improvement/RuleIds';
+import { RANSOM_RULE as CIV1_RANSOM_RULE } from '@civ-clone/civ1-barbarians/RuleIds';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import { Gunpowder } from '@civ-clone/civ1-science/Advances';
 import { OBSOLESCENCE } from '@civ-clone/civ1-unit/RuleSets';
@@ -275,6 +290,174 @@ const check = async (): Promise<void> => {
     ['on', true]
   );
 
+  // --- the enhanced rules (#954) -------------------------------------------------------------------------------------
+  // Which of the rules they switch run, enhanced and original, in that order: the Hydro Plant's site, the ransom, and
+  //  the obsolete build dropped, which replaces nothing.
+  const running = (): boolean[] =>
+      [
+        HYDRO_PLANT_SITE_RULE,
+        CIV1_HYDRO_PLANT_SITE_RULE,
+        RANSOM_RULE,
+        CIV1_RANSOM_RULE,
+        REVALIDATE_BUILDS_RULE,
+      ].map((id) => rules.getById(id)?.enabled() ?? false),
+    enhanced = (sets: RuleSetNode[]): unknown => {
+      const node = find(sets, ENHANCED);
+
+      return [
+        node?.kind,
+        node?.state,
+        node?.switchable,
+        node?.members.map(({ id, state }) => `${id} ${state}`),
+      ];
+    },
+    asStarted = ruleSetsData(null);
+
+  expect(
+    'the enhanced rules are a set the setup is told of, mixed: the Hydro Plant on its own square off, the ransom and the obsolete build on, as the game has been played; nothing is chosen, and nothing is wrong',
+    [enhanced(asStarted.sets), asStarted.choices, asStarted.problems],
+    [
+      [
+        'set',
+        'mixed',
+        true,
+        [
+          `${HYDRO_PLANT_SITE} off`,
+          `${BARBARIAN_LEADER_RANSOM} on`,
+          `${OBSOLETE_BUILDS} on`,
+        ],
+      ],
+      [],
+      [],
+    ]
+  );
+  expect(
+    "and so the original's Hydro Plant site runs, and the enhanced ransom and obsolete build in place of the original's",
+    running(),
+    [false, true, true, false, true]
+  );
+  expect(
+    'each that replaces an original rule says so, and the ransom the original says what replaced it',
+    [
+      find(asStarted.sets, HYDRO_PLANT_SITE)?.supersedes,
+      find(asStarted.sets, BARBARIAN_LEADER_RANSOM)?.supersedes,
+      find(asStarted.sets, OBSOLETE_BUILDS)?.supersedes ?? [],
+    ],
+    [[CIV1_HYDRO_PLANT_SITE_RULE], [CIV1_RANSOM_RULE], []]
+  );
+
+  const switched = (
+    change: { id: string; value: boolean },
+    choices = asStarted.choices
+  ) => {
+    const answer = ruleSetsData({ choices, change });
+
+    return {
+      answer,
+      seen: [enhanced(answer.sets), answer.choices, answer.problems, running()],
+    };
+  };
+
+  expect(
+    'the Hydro Plant on its own square ticked: the set is on, and its rule runs in place of the original',
+    switched({ id: HYDRO_PLANT_SITE, value: true }).seen,
+    [
+      [
+        'set',
+        'on',
+        true,
+        [
+          `${HYDRO_PLANT_SITE} on`,
+          `${BARBARIAN_LEADER_RANSOM} on`,
+          `${OBSOLETE_BUILDS} on`,
+        ],
+      ],
+      [{ id: HYDRO_PLANT_SITE, value: true }],
+      [],
+      [true, false, true, false, true],
+    ]
+  );
+  expect(
+    "the ransom unticked: the original's ransom runs again",
+    switched({ id: BARBARIAN_LEADER_RANSOM, value: false }).seen.slice(1),
+    [
+      [{ id: BARBARIAN_LEADER_RANSOM, value: false }],
+      [],
+      [false, true, false, true, true],
+    ]
+  );
+  expect(
+    'the obsolete build unticked: the build is no longer dropped',
+    switched({ id: OBSOLETE_BUILDS, value: false }).seen.slice(1),
+    [
+      [{ id: OBSOLETE_BUILDS, value: false }],
+      [],
+      [false, true, true, false, false],
+    ]
+  );
+
+  const allOff = switched({ id: ENHANCED, value: false });
+
+  expect(
+    'the enhanced rules unticked as one: every one off, and the original rules run',
+    allOff.seen,
+    [
+      [
+        'set',
+        'off',
+        true,
+        [
+          `${HYDRO_PLANT_SITE} off`,
+          `${BARBARIAN_LEADER_RANSOM} off`,
+          `${OBSOLETE_BUILDS} off`,
+        ],
+      ],
+      // The shortest list that says so: the Hydro Plant's starts off.
+      [
+        { id: BARBARIAN_LEADER_RANSOM, value: false },
+        { id: OBSOLETE_BUILDS, value: false },
+      ],
+      [],
+      [false, true, false, true, false],
+    ]
+  );
+  expect(
+    'and ticked again as one: every one on, the Hydro Plant on its own square too',
+    switched({ id: ENHANCED, value: true }, allOff.answer.choices).seen,
+    [
+      [
+        'set',
+        'on',
+        true,
+        [
+          `${HYDRO_PLANT_SITE} on`,
+          `${BARBARIAN_LEADER_RANSOM} on`,
+          `${OBSOLETE_BUILDS} on`,
+        ],
+      ],
+      [{ id: HYDRO_PLANT_SITE, value: true }],
+      [],
+      [true, false, true, false, true],
+    ]
+  );
+  expect(
+    '(and asked with nothing, they are as they start)',
+    [enhanced(ruleSetsData(null).sets), running()],
+    [
+      [
+        'set',
+        'mixed',
+        true,
+        [
+          `${HYDRO_PLANT_SITE} off`,
+          `${BARBARIAN_LEADER_RANSOM} on`,
+          `${OBSOLETE_BUILDS} on`,
+        ],
+      ],
+      [false, true, true, false, true],
+    ]
+  );
+
   expect(
     'a choice nothing answers to is left out, a change nothing answers to is refused, and so is a wrong shape',
     [
@@ -388,6 +571,43 @@ const check = async (): Promise<void> => {
     [{ choices: [OFF] }, 'on', true]
   );
 
+  // --- the enhanced rules started, saved and loaded (#954) ------------------------------------------------------
+  const enhancedChoices = [
+    { id: HYDRO_PLANT_SITE, value: true },
+    { id: BARBARIAN_LEADER_RANSOM, value: false },
+  ];
+
+  applyRuleSets(enhancedChoices);
+
+  const startedRunning = running(),
+    enhancedFile = save(defaultGame, { name: 'enhanced', createdAt: 0 });
+
+  ruleSets.reset();
+
+  const resetRunning = running();
+
+  hydrate(enhancedFile, loaded);
+
+  expect(
+    'a game started with the Hydro Plant on its own square and the original ransom saves both, and loads under them again',
+    [
+      startedRunning,
+      enhancedFile.ruleSets,
+      resetRunning,
+      running(),
+      ruleSets.choices(),
+    ],
+    [
+      [true, false, false, true, true],
+      { choices: enhancedChoices },
+      [false, true, true, false, true],
+      [true, false, false, true, true],
+      enhancedChoices,
+    ]
+  );
+
+  ruleSets.reset();
+
   // --- what it does to a city --------------------------------------------------------------------------------------
   // An inland city, with the build rules of every plugin, of a player who has Gunpowder.
   const cityRules = new RuleRegistry(),
@@ -417,6 +637,53 @@ const check = async (): Promise<void> => {
     'in a game started without units going obsolete, it builds Musketmen and Warriors still',
     [buildable(Musketman), buildable(Warrior)],
     [true, true]
+  );
+
+  // --- the obsolete build dropped (#693, #954) -------------------------------------------------------------------
+  // A city of a player who doesn't know Gunpowder, building Warriors, in a game started with `choices`: what it is
+  //  building once Gunpowder is discovered.
+  const buildingAfterGunpowder = async (
+    choices: { id: string; value: boolean }[]
+  ): Promise<string | null> => {
+    applyRuleSets(choices);
+
+    const ownRules = new RuleRegistry(),
+      ownCity = await setUpCity({ ruleRegistry: ownRules }),
+      ownResearch = new PlayerResearch(
+        ownCity.player(),
+        defaultGame.advances,
+        rules
+      ),
+      ownBuild = new CityBuild(
+        ownCity,
+        defaultGame.availableCityBuildItems,
+        ownRules
+      );
+
+    ownRules.register(...rules.get(Build));
+    defaultGame.playerResearch.register(ownResearch);
+    defaultGame.cities.register(ownCity);
+    defaultGame.cityBuilds.register(ownBuild);
+    ownBuild.build(Warrior);
+    ownResearch.addAdvance(Gunpowder);
+
+    const building = ownBuild.building()?.item().name ?? null;
+
+    defaultGame.cityBuilds.unregister(ownBuild);
+    defaultGame.cities.unregister(ownCity);
+    defaultGame.playerResearch.unregister(ownResearch);
+
+    return building;
+  };
+
+  expect(
+    'a city building Warriors when its player discovers Gunpowder stops building them, as the game is by default; with the obsolete build unticked, or the enhanced rules, it goes on',
+    [
+      await buildingAfterGunpowder([]),
+      await buildingAfterGunpowder([{ id: OBSOLETE_BUILDS, value: false }]),
+      await buildingAfterGunpowder([{ id: ENHANCED, value: false }]),
+    ],
+    [null, 'Warrior', 'Warrior']
   );
 
   ruleSets.reset();

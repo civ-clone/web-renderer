@@ -145,6 +145,28 @@ input[type='checkbox']:checked::before {
   width: calc(var(--ui-check-size) * 0.38);
 }
 
+// Neither ticked nor clear, as a rule set whose rules differ is (#954): the box filled as a ticked one, with a dash.
+input[type='checkbox']:indeterminate {
+  background: var(--ui-check-on);
+  border-color: var(--ui-check-on);
+
+  &:hover:not(:disabled) {
+    background: var(--ui-check-on-hover);
+    border-color: var(--ui-check-on-hover);
+  }
+
+  &::before {
+    background: var(--ui-check-mark);
+    content: '';
+    height: calc(var(--ui-check-size) * 0.18);
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: calc(var(--ui-check-size) * 0.56);
+  }
+}
+
 // The dot: the box's own colour inside a ring of the field's.
 input[type='radio'] {
   border-radius: 50%;

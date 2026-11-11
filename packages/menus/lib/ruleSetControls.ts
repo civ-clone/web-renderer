@@ -159,7 +159,10 @@ const input = (
     control.value = value;
   }
 
-  wrapper.append(control, named, ...note);
+  // In the name's own line, and not beside it as a flex item of its own, so that the two wrap as one sentence where
+  //  the window is narrow.
+  named.append(...note);
+  wrapper.append(control, named);
 
   return [control, wrapper, named];
 };
