@@ -1,7 +1,9 @@
 // The Civilopedia window (#183) draws what the engine sends: an index by section, and an entry's page with its
 //  requirements in words, each class a link. Following "Needs Gunpowder" from Musketmen shows Gunpowder, Back returns,
 //  and an entry on a base class (`Naval`) or a condition reads as words. The build list's Can't build window words each
-//  refusing rule from its requirement entry, says "not available" for a rule without one, and links each item.
+//  refusing rule from its requirement entry, says "not available" for a rule without one, and links each item. An
+//  entry whose relation and range would misstate its rule has wording of its own, keyed by its id: the Hoover Dam's,
+//  which rule a plant out only in its owner's cities on its continent (#965), in `en` and `en-GB`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -15,6 +17,7 @@ import CityBuildUnavailableWindow, {
   reasons,
 } from '@civ-clone/ui-reports/components/CityBuildUnavailableWindow';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
+import { HOOVER_DAM_PLANT_RULE_PREFIX } from '@civ-clone/civ1-wonder/RuleIds';
 import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -100,6 +103,27 @@ const requirements = [
       range: 'tile',
       where: ['Desert', 'Grassland'],
     }),
+    // As civ1-city-improvement and civ1-wonder send them (#965): one plant in a city rules the others out, and the
+    //  Hoover Dam rules each out in its owner's cities on its continent, which its range, `player`, can't say.
+    requirement(
+      'civ1-city-improvement:city/build/excluded-by/PowerPlant',
+      'PowerPlant',
+      'excludedBy',
+      [{ class: 'HydroPlant' }, { class: 'NuclearPlant' }],
+      { mode: 'any', range: 'city' }
+    ),
+    ...['PowerPlant', 'HydroPlant', 'NuclearPlant'].map((plant) =>
+      requirement(
+        `${HOOVER_DAM_PLANT_RULE_PREFIX}/${plant}`,
+        plant,
+        'excludedBy',
+        [{ class: 'HooverDam' }]
+      )
+    ),
+    // A plugin's own `excludedBy` entry of range `player`, with no wording of its own, reads as the relation does.
+    requirement('plugin:excluded', 'Factory', 'excludedBy', [
+      { class: 'HooverDam' },
+    ]),
   ],
   entries = [
     entry('Musketman', 'unit', {
@@ -122,6 +146,26 @@ const requirements = [
     }),
     entry('Desert', 'terrain'),
     entry('Grassland', 'terrain'),
+    entry('PowerPlant', 'improvement', {
+      requires: [
+        'civ1-city-improvement:city/build/excluded-by/PowerPlant',
+        `${HOOVER_DAM_PLANT_RULE_PREFIX}/PowerPlant`,
+      ],
+    }),
+    entry('HydroPlant', 'improvement', {
+      requires: [`${HOOVER_DAM_PLANT_RULE_PREFIX}/HydroPlant`],
+    }),
+    entry('NuclearPlant', 'improvement', {
+      requires: [`${HOOVER_DAM_PLANT_RULE_PREFIX}/NuclearPlant`],
+    }),
+    entry('Factory', 'improvement', { requires: ['plugin:excluded'] }),
+    entry('HooverDam', 'wonder', {
+      leadsTo: [
+        `${HOOVER_DAM_PLANT_RULE_PREFIX}/PowerPlant`,
+        `${HOOVER_DAM_PLANT_RULE_PREFIX}/HydroPlant`,
+        `${HOOVER_DAM_PLANT_RULE_PREFIX}/NuclearPlant`,
+      ],
+    }),
   ],
   data: CivilopediaData = {
     entries: new Map(entries.map((entry) => [entry.key, entry])),
@@ -146,6 +190,8 @@ const wait = () => new Promise((resolve) => setTimeout(resolve, 0));
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
   await import('./lib/strings');
+  await import('../../translations/civ1-city-improvement/en');
+  await import('../../translations/civ1-city-improvement/en-GB');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-science/en');
   await import('../../translations/civ1-wonder/en');
@@ -193,6 +239,47 @@ const run = async (): Promise<void> => {
     [true, true]
   );
 
+  // The Hoover Dam's plants, and what it rules out, in each language (#965).
+  const hoover = () => ({
+    plants: ['PowerPlant', 'HydroPlant', 'NuclearPlant'].map((plant) =>
+      text(entryHtml(data.entries.get(plant)!, data))
+    ),
+    dam: text(entryHtml(data.entries.get('HooverDam')!, data)),
+    reasons: reasons(
+      {
+        key: 'PowerPlant',
+        name: 'PowerPlant',
+        refusedBy: [`${HOOVER_DAM_PLANT_RULE_PREFIX}/PowerPlant`],
+      },
+      data
+    ).map(text),
+    plugin: text(entryHtml(data.entries.get('Factory')!, data)),
+  });
+
+  for (const language of ['en', 'en-GB']) {
+    await i18next.changeLanguage(language);
+
+    expect(
+      `the Hoover Dam's plants and what it rules out, in ${language}`,
+      hoover(),
+      {
+        plants: [
+          'Power PlantCity ImprovementRequirementsCan’t be built alongside any of Hydro Plant, Nuclear PlantCan’t be built by the owner of Hoover Dam in a city on its continent',
+          'Hydro PlantCity ImprovementRequirementsCan’t be built by the owner of Hoover Dam in a city on its continent',
+          'Nuclear PlantCity ImprovementRequirementsCan’t be built by the owner of Hoover Dam in a city on its continent',
+        ],
+        dam: 'Hoover DamWonder of the WorldLeads toRules out Power Plant in its owner’s cities on its continentRules out Hydro Plant in its owner’s cities on its continentRules out Nuclear Plant in its owner’s cities on its continent',
+        reasons: [
+          'Can’t be built by the owner of Hoover Dam in a city on its continent',
+        ],
+        plugin:
+          'FactoryCity ImprovementRequirementsCan’t be built alongside Hoover Dam',
+      }
+    );
+  }
+
+  await i18next.changeLanguage('en');
+
   // The window itself, with a transport that answers from the data above.
   const transport = {
       request: async (request: { channel(): string }) => {
@@ -235,6 +322,7 @@ const run = async (): Promise<void> => {
     ),
     [
       'Civilization Advances',
+      'City Improvements',
       'Wonders of the World',
       'Units',
       'Tile Improvements',
