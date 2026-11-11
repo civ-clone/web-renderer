@@ -1,4 +1,5 @@
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
+import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import { ITopology } from '@civ-clone/core-world/Topology';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import { Direction } from '@civ-clone/ui-protocol/topology';
@@ -9,8 +10,7 @@ import { Direction } from '@civ-clone/ui-protocol/topology';
 //
 // The world says which grid it is on (#89), and a world that does not (one sent by an older engine, or a save made
 //  before the grid was recorded) is square. Only square worlds can be started or loaded for now (see
-//  `supportedTopologies`), so the direction types (in the protocol, with the data) are still square's: they widen to
-//  every grid's when another grid can be drawn.
+//  `supportedTopologies`); the direction types (in the protocol, with the data) already cover the isometric grid too.
 
 export type Topology = ITopology<Direction>;
 
@@ -21,11 +21,15 @@ export type {
 } from '@civ-clone/ui-protocol/topology';
 
 /** The grids there are, for what the UI keeps per grid (the keys that move a unit). */
-export type TopologyName = 'square';
+export type TopologyName = 'square' | 'staggered-iso';
 
 /** Which grid `topology` is, or `null` for one the UI has nothing for. */
 export const topologyName = (topology: Topology): TopologyName | null =>
-  topology instanceof SquareTopology ? 'square' : null;
+  topology instanceof SquareTopology
+    ? 'square'
+    : (topology as unknown) instanceof StaggeredIsoTopology
+    ? 'staggered-iso'
+    : null;
 
 /**
  * The topology of a world on the `topologyId` grid (square if it does not say), `width` tiles across and `height` down,
@@ -41,7 +45,6 @@ export const topologyFor = ({
   topologyId?: string;
   width: number;
 }): Topology =>
-  // Only a square world reaches here until another grid can be drawn: see the direction types above.
   createTopology(topologyId, width, height) as unknown as Topology;
 
 export default topologyFor;

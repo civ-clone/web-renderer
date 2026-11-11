@@ -24,7 +24,9 @@ import {
   keyToActionsMap,
 } from '@civ-clone/ui-client/lib/unitActionKeys';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
-import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
+import topologyFor, {
+  topologyName,
+} from '@civ-clone/ui-client/lib/topologyFor';
 
 const failures: string[] = [];
 let checks = 0;
@@ -316,6 +318,45 @@ expect(
     })
   ),
   { ArrowUp: 'n', ArrowRight: 'e', ArrowDown: 's', ArrowLeft: 'w' }
+);
+
+const iso = topologyFor({ topologyId: 'staggered-iso', width: 10, height: 8 });
+
+expect(
+  'an isometric grid is named for the key tables',
+  topologyName(iso),
+  'staggered-iso'
+);
+expect(
+  'on an isometric grid the keys are the same screen-relative ones: 8 moves n (a corner) and 9 moves ne (an edge)',
+  directionKeys(iso),
+  directionKeys(square)
+);
+expect(
+  'an isometric grid has a key for each of its directions, and no other',
+  Object.values(directionKeys(iso)).sort(),
+  [...iso.directions()].sort()
+);
+expect(
+  'ArrowUp moves a corner (two rows up) and PageUp an edge (one row up) on an isometric grid',
+  [
+    iso.neighbour(4, 4, directionKeys(iso).ArrowUp!),
+    iso.neighbour(4, 4, directionKeys(iso).PageUp!),
+    iso.edgeDirections().includes(directionKeys(iso).ArrowUp!),
+    iso.edgeDirections().includes(directionKeys(iso).PageUp!),
+  ],
+  [[4, 2], [4, 3], false, true]
+);
+expect(
+  'on an odd row of an isometric grid PageUp and PageDown move along the staggered edges',
+  [
+    iso.neighbour(4, 3, directionKeys(iso).PageUp!),
+    iso.neighbour(4, 3, directionKeys(iso).PageDown!),
+  ],
+  [
+    [5, 2],
+    [5, 4],
+  ]
 );
 
 // The engine side.
