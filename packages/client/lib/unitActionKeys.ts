@@ -21,19 +21,24 @@ export const keyToActionsMap: { [key: string]: string[] } = {
 
 // The keys that move a unit, or do whatever it can do to the tile that way, for each grid (#88). The numeric keypad
 //  reaches these too, through `mappedKey`.
+//  The isometric grid names its directions as they look on screen, so its keys are square's: ArrowUp (8) moves `n`,
+//  straight up two rows (a corner), and PageUp (9) moves `ne`, to the tile up and right (an edge).
+const screenRelativeKeys: { [key: string]: string } = {
+  ArrowUp: 'n',
+  PageUp: 'ne',
+  ArrowRight: 'e',
+  PageDown: 'se',
+  ArrowDown: 's',
+  End: 'sw',
+  ArrowLeft: 'w',
+  Home: 'nw',
+};
+
 export const directionKeyTables: {
   [name in TopologyName]: { [key: string]: string };
 } = {
-  square: {
-    ArrowUp: 'n',
-    PageUp: 'ne',
-    ArrowRight: 'e',
-    PageDown: 'se',
-    ArrowDown: 's',
-    End: 'sw',
-    ArrowLeft: 'w',
-    Home: 'nw',
-  },
+  square: screenRelativeKeys,
+  'staggered-iso': screenRelativeKeys,
 };
 
 const directionKeysByTopology = new WeakMap<
