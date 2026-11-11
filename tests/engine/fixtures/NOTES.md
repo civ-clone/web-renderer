@@ -301,3 +301,36 @@ civ1-enhanced 0.1.3 also loads civ1-world-civilizations itself, so its twelve
 civilizations are registered earlier than before; the checksums above, which
 include each player's civilization, say the order they are drawn in is as it
 was.
+
+## Accepted change: a held build, and four more enhanced rules (#959, #960)
+
+core-city-build 0.1.21 adds the `Hold` rule type: a build whose `Hold` rule
+holds it is not completed, and every city build now sends `held`, the ids of the
+rules holding its item. civ1-unit 0.1.27 holds Settlers in a size-1 city on
+Chieftain (`civ1-unit:city/hold/chieftain-settlers`), and civ1-enhanced 0.1.4
+holds them in any size-1 city until it is size 2 (a set on to start with that
+supersedes the Chieftain hold). civ1-unit 0.1.27 and civ1-wonder 0.1.10 also
+play stealing an advance and the United Nations as v474.05 does, and
+civ1-enhanced keeps today's play for both in sets on to start with; it adds two
+variants that start off (SDI Defense sparing its city, defectors staying
+veteran).
+
+The rule totals at turns 1, 10 and 50 rise from 1107 to 1113 (`Hold` 0 → 2,
+`Detonated` 5 → 6, `Pacified` 2 → 3, `TechnologyStolen` 1 → 2, `Transferred`
+2 → 3). The engine-state checksums (`a7518c6d / d3c8debf / 81c20b4c`) and the
+random-call counts are unchanged. `dto.bytes` rises by 120 at turn 10 and 1,150
+at turn 50, so `dto.hash` moves: every city build now carries `"held":[]`. Run
+again with `held` deleted from every object before the digest, the bytes and
+hashes are the previous fixture's (`412168 / 304a8001`, `10967183 /
+793bb0a3`). In `client-transcript.json` three messages change (a
+`gameDataPatch`, the `gameNotification` and the `investigateCity` answer, each
+carrying a city's build), and with every `"held":[…]` taken back out of the
+transcript, all 263 messages match the previous fixture.
+
+None of this says the new rules are right: in its 50 turns this game completes
+no Settlers in a size-1 city (computer players start Settlers only from size 2),
+steals nothing, detonates nothing, bribes no unit and has no United Nations.
+The held build is covered by `tests/engine/heldBuild.ts`, which plays it
+through the full plugin set, and the five sets' defaults and switches by
+`tests/engine/ruleSets.ts`; the behaviour of each rule is tested in its own
+package.
