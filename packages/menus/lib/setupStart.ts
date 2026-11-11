@@ -21,7 +21,13 @@ export const startFromSetup = async (
   begin: (goingAhead: () => void) => Promise<boolean>
 ): Promise<void> => {
   const element = window.element(),
-    body = element.querySelector<HTMLElement>(':scope > .body') ?? element;
+    body = element.querySelector<HTMLElement>(':scope > .body') ?? element,
+    held =
+      document.activeElement instanceof HTMLElement &&
+      (document.activeElement === start ||
+        body.contains(document.activeElement))
+        ? document.activeElement
+        : null;
 
   start.disabled = true;
   body.setAttribute('inert', '');
@@ -29,10 +35,7 @@ export const startFromSetup = async (
   // The keyboard can't stay on what can't be used, Start included, which may be in the window's footer: it goes to the
   //  first other button outside the body (the title bar's close button, in either interface's frame), or the window
   //  itself, so that Escape still closes it.
-  if (
-    document.activeElement === start ||
-    body.contains(document.activeElement)
-  ) {
+  if (held) {
     (
       [...element.querySelectorAll<HTMLElement>('button')].find(
         (button) => button !== start && !body.contains(button)
@@ -46,6 +49,16 @@ export const startFromSetup = async (
 
   body.removeAttribute('inert');
   start.disabled = setup.ruleSetsBlockStart();
+
+  // The keyboard goes back to where it was, so that a second Enter isn't the close button's: or, where that was Start
+  //  and Start is now held, to the first of the sets that hold it, and failing that the setup's first control.
+  if (held && element.isConnected) {
+    (held.isConnected && !(held === start && start.disabled)
+      ? held
+      : body.querySelector<HTMLElement>('[aria-invalid="true"]') ??
+        body.querySelector<HTMLElement>('input, select, button')
+    )?.focus();
+  }
 };
 
 export default startFromSetup;

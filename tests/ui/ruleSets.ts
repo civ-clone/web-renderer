@@ -909,6 +909,7 @@ const run = async (): Promise<void> => {
     fake.hold();
     tick(box('test:second'), true);
     await settle();
+    start.focus();
     click(start);
     await settle();
 
@@ -933,6 +934,16 @@ const run = async (): Promise<void> => {
         start.disabled,
       ],
       [[], true, null, 1, true]
+    );
+
+    expect(
+      `${name}: with Start held again, the keyboard is on one of the two sets that hold it, not on the button that closes the setup`,
+      [
+        focused instanceof HTMLInputElement &&
+          focused.getAttribute('aria-invalid'),
+        element.querySelector(':scope > .body')?.contains(focused),
+      ],
+      ['true', true]
     );
 
     tick(box('test:second'), false);
@@ -1099,6 +1110,7 @@ const run = async (): Promise<void> => {
       fake.hold();
       tick(box('test:base'), false);
       await settle();
+      start.focus();
       click(start);
       await settle();
       fake.fail('error');
@@ -1114,8 +1126,9 @@ const run = async (): Promise<void> => {
           body.hasAttribute('inert'),
           start.disabled,
           surprises,
+          focused === start,
         ],
-        [[], true, false, false, ['a surprise']]
+        [[], true, false, false, ['a surprise'], true]
       );
 
       tick(box('test:base'), false);
