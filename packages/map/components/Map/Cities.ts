@@ -22,7 +22,8 @@ export class Cities extends Map {
 
   /** How far in from the tile the player's box and the city's sprite go, in px at this scale. */
   protected inset(): number {
-    return this.tileset().cities.inset * this.scale();
+    // A box city's: `validateDescriptor` refuses the others (#152).
+    return this.tileset().cities.inset! * this.scale();
   }
 
   protected override drawTile(
@@ -43,7 +44,7 @@ export class Cities extends Map {
       inset = this.inset();
 
     if (tile.units.length > 0) {
-      this.context().fillStyle = occupied;
+      this.context().fillStyle = occupied!;
       this.context().fillRect(offsetX, offsetY, width, height);
     }
 

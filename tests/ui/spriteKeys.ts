@@ -134,7 +134,7 @@ const edges = new SquareTopology(3, 3).edgeDirections() as string[],
     // A terrain a unit's action leaves, as `unitActionIcon` draws it.
     ...Object.keys(Terrains).map((terrain) => `terrain/${lower(terrain)}`),
     ...edges.map((dir) => expandName(families.riverMouth.sprite, { dir })),
-    ...edges.map((dir) => expandName(families.fog.sprite, { dir })),
+    ...edges.map((dir) => expandName(families.fog!.sprite, { dir })),
     ...all.map((dir) => expandName(families.road.sprite, { dir })),
     ...all.map((dir) => expandName(families.railroad.sprite, { dir })),
     ...Object.keys(TerrainFeatures).map((special) =>

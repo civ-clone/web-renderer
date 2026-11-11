@@ -82,7 +82,8 @@ export class Units extends Map implements IMap {
 
   /** Where the copy behind a stack is drawn from the unit, in px at this scale, as the tileset says. */
   protected stackOffset(): [number, number] {
-    const { x, y } = this.tileset().units.stackOffset,
+    // `validateDescriptor` refuses a tileset without one until a stack can be shown by its colouring alone (#152).
+    const { x, y } = this.tileset().units.stackOffset!,
       scale = this.scale();
 
     return [x * scale, y * scale];

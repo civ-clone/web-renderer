@@ -1,0 +1,145 @@
+{
+  "$schema": "../../../packages/assets/tilesets/tileset.schema.json",
+  "schema": 1,
+  "kind": "tileset",
+  "id": "iso-test",
+  "name": "Isometric test pack",
+  "grid": "staggered-iso",
+  "tile": { "width": 64, "height": 32 },
+  "geometry": {
+    "columnStep": 64,
+    "rowStep": 16,
+    "oddRowShift": 32,
+    "anchor": { "x": 0, "y": 0 },
+    "overhang": { "top": 16, "right": 0, "bottom": 0, "left": 0 }
+  },
+  "scales": [1, 2],
+  "defaultScale": 1,
+  "storage": { "prefix": "./assets/iso-test/", "ext": ".png" },
+  "fallback": "civ1",
+  "assets": {
+    "required": [
+      "terrain/grassland/base-0",
+      "terrain/ocean/base-0",
+      "terrain/coast/n-011",
+      "units/settlers",
+      "units/shield",
+      "units/shield-back",
+      "city/ancient/0",
+      "city/ancient/walled-3",
+      "city/flag"
+    ],
+    "optional": ["terrain/glacier/ivory"],
+    "ui": []
+  },
+  "names": {
+    "terrain": { "Arctic": "glacier" },
+    "special": {
+      "Arctic:Seal": "glacier/ivory",
+      "Plains:Horse": "plains/buffalo"
+    },
+    "unit": { "Spearman": "phalanx" }
+  },
+  "families": {
+    "base": {
+      "land": "terrain/{terrain}/base-0",
+      "ocean": "terrain/ocean/base-0",
+      "under": {
+        "Forest": "Grassland",
+        "Hills": "Grassland",
+        "Mountains": "Grassland",
+        "River": "Grassland"
+      }
+    },
+    "terrain": {
+      "method": "bitmask",
+      "neighbours": "edges",
+      "sprite": "terrain/{terrain}/{dirs}",
+      "isolated": "terrain/{terrain}/isolated",
+      "join": "-",
+      "skip": [
+        "Arctic",
+        "Desert",
+        "Grassland",
+        "Jungle",
+        "Ocean",
+        "Plains",
+        "Swamp",
+        "Tundra"
+      ],
+      "matches": { "River": ["River", "@water"] }
+    },
+    "coast": {
+      "method": "corners",
+      "neighbours": "all",
+      "sprite": "terrain/coast/{corner}-{bits}",
+      "corners": {
+        "n": { "at": { "x": 16, "y": 0 }, "neighbours": ["nw", "n", "ne"] },
+        "e": { "at": { "x": 32, "y": 8 }, "neighbours": ["ne", "e", "se"] },
+        "s": { "at": { "x": 16, "y": 16 }, "neighbours": ["se", "s", "sw"] },
+        "w": { "at": { "x": 0, "y": 8 }, "neighbours": ["sw", "w", "nw"] }
+      }
+    },
+    "riverMouth": {
+      "method": "edges",
+      "neighbours": "edges",
+      "sprite": "terrain/river-mouth/{dir}"
+    },
+    "irrigation": { "sprite": "improvements/irrigation" },
+    "mine": { "sprite": "improvements/mine" },
+    "pollution": { "sprite": "improvements/pollution" },
+    "road": {
+      "method": "edges",
+      "neighbours": "all",
+      "sprite": "improvements/road/{dir}",
+      "isolated": "improvements/road/isolated"
+    },
+    "railroad": {
+      "method": "edges",
+      "neighbours": "all",
+      "sprite": "improvements/railroad/{dir}",
+      "isolated": "improvements/railroad/isolated"
+    },
+    "special": { "sprite": "terrain/{special}" },
+    "hut": { "sprite": "map/hut" }
+  },
+  "units": {
+    "sprite": "units/{unit}",
+    "anchor": { "x": 0, "y": -16 },
+    "colouring": {
+      "mode": "overlay",
+      "sprite": "units/shield",
+      "keys": ["#ff0000"],
+      "anchor": "shield",
+      "stack": { "sprite": "units/shield-back", "offset": { "x": -4, "y": -4 } }
+    },
+    "fortified": "map/fortify",
+    "status": { "x": 0.5, "baseline": 0.75, "fontSize": 8 }
+  },
+  "cities": {
+    "mode": "styles",
+    "sprite": "city/{style}/{walls}{size}",
+    "anchor": { "x": 0, "y": -16 },
+    "styles": {
+      "names": ["ancient", "medieval"],
+      "default": "ancient",
+      "civilizations": { "English": "medieval" },
+      "sizes": [1, 4, 8, 12],
+      "walls": { "plain": "", "walled": "walled-" }
+    },
+    "colouring": {
+      "mode": "overlay",
+      "sprite": "city/flag",
+      "keys": ["#ff0000", "#800000"],
+      "anchor": "flag"
+    },
+    "labels": {
+      "x": 0.5,
+      "sizeBaseline": 0.75,
+      "nameBaseline": 1.6,
+      "fontSize": 8,
+      "disorderIcon": { "x": 5, "y": 1 },
+      "size": "size"
+    }
+  }
+}
