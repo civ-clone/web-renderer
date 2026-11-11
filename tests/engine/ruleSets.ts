@@ -577,16 +577,47 @@ const check = async (): Promise<void> => {
     { id: BARBARIAN_LEADER_RANSOM, value: false },
   ];
 
+  // What the civilopedia and the build-refusal window are told a Hydro Plant needs where it stands (#954): the
+  //  conditions of its requirements in force, as the worker sends them when asked.
+  const hydroSite = (): string[] =>
+    requirementsData()
+      .filter(
+        ({ subject, relation }) =>
+          subject === 'HydroPlant' && relation === 'requires'
+      )
+      .flatMap(({ targets }) =>
+        targets.flatMap((target) =>
+          'condition' in target ? [target.condition] : []
+        )
+      );
+
+  applyRuleSets([]);
+
+  const defaultSite = hydroSite();
+
   applyRuleSets(enhancedChoices);
 
   const startedRunning = running(),
+    startedSite = hydroSite(),
     enhancedFile = save(defaultGame, { name: 'enhanced', createdAt: 0 });
 
   ruleSets.reset();
 
-  const resetRunning = running();
+  const resetRunning = running(),
+    resetSite = hydroSite();
 
   hydrate(enhancedFile, loaded);
+
+  expect(
+    'a Hydro Plant needs Mountains or a River next to the city as the game starts, and on or next to it in a game started with the enhanced site, or loaded from one: one or the other, never both',
+    [defaultSite, startedSite, resetSite, hydroSite()],
+    [
+      ['civ1-city-improvement:mountains-or-river-nearby'],
+      ['civ1-enhanced:mountains-or-river-on-or-nearby'],
+      ['civ1-city-improvement:mountains-or-river-nearby'],
+      ['civ1-enhanced:mountains-or-river-on-or-nearby'],
+    ]
+  );
 
   expect(
     'a game started with the Hydro Plant on its own square and the original ransom saves both, and loads under them again',
