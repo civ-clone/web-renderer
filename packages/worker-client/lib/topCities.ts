@@ -130,7 +130,8 @@ export const cityKnowledge = (
   };
 };
 
-// What `player` knows about every city in the world, in founding order, ready for `topCitiesRows` to rank.
+// What `player` knows about every city still in the world, in founding order, ready for `topCitiesRows` to rank. A
+//  destroyed city stays in the registry, so it's left out here, as v474.05's report never sees one (#995).
 export const topCitiesEntries = (
   player: Player,
   {
@@ -144,34 +145,37 @@ export const topCitiesEntries = (
 ): TopCitiesEntry[] => {
   const knowledge = cityKnowledge(player, { playerWorlds, hasMet });
 
-  return cities.entries().map((city: City) => {
-    const owner = city.player(),
-      cityGrowth = cityGrowths.getByCity(city),
-      [unhappy, content, happy] = workerRules().citizenMoods(
-        cityGrowth,
-        specialists
-      );
+  return cities
+    .entries()
+    .filter((city: City) => !city.destroyed())
+    .map((city: City) => {
+      const owner = city.player(),
+        cityGrowth = cityGrowths.getByCity(city),
+        [unhappy, content, happy] = workerRules().citizenMoods(
+          cityGrowth,
+          specialists
+        );
 
-    return {
-      name: city.name(),
-      originalCivilization: typeNameOf(
-        city.originalPlayer().civilization().sourceClass()
-      ),
-      owner: civilizationOf(owner),
-      size: cityGrowths.getByCity(city).size(),
-      citizens: {
-        happy,
-        content,
-        unhappy,
-        specialists: specialists
+      return {
+        name: city.name(),
+        originalCivilization: typeNameOf(
+          city.originalPlayer().civilization().sourceClass()
+        ),
+        owner: civilizationOf(owner),
+        size: cityGrowths.getByCity(city).size(),
+        citizens: {
+          happy,
+          content,
+          unhappy,
+          specialists: specialists
+            .getByCity(city)
+            .map((specialist) => typeNameOf(specialist.sourceClass())),
+        },
+        wonders: wonders
           .getByCity(city)
-          .map((specialist) => typeNameOf(specialist.sourceClass())),
-      },
-      wonders: wonders
-        .getByCity(city)
-        .map((wonder) => typeNameOf(wonder.sourceClass())),
-      seen: knowledge.seen(city),
-      met: knowledge.met(owner),
-    };
-  });
+          .map((wonder) => typeNameOf(wonder.sourceClass())),
+        seen: knowledge.seen(city),
+        met: knowledge.met(owner),
+      };
+    });
 };
