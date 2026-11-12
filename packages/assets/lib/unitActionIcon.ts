@@ -2,7 +2,7 @@ import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import getPreloadedImage from './getPreloadedImage';
 import { imageSize, isDrawable } from './imageSize';
 import { Colouring, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
-import currentTileset from './tilesets';
+import { interfaceTileset } from './tilesets';
 import replaceColours from './replaceColours';
 import renderUnit, { replacementColours } from './renderUnit';
 
@@ -49,7 +49,7 @@ export const unitActionIconLayers = (
   unit: Unit,
   tile: Tile | null,
   status: string,
-  tileset: TilesetDescriptor = currentTileset()
+  tileset: TilesetDescriptor = interfaceTileset()
 ): IconLayer[] => {
   const fallback = [unitLayer(unit, status)];
 
@@ -246,21 +246,24 @@ export const drawUnitActionIcon = (
   context.setTransform(scale, 0, 0, scale, 0, 0);
   context.imageSmoothingEnabled = false;
 
-  const stacked = layers.filter((layer) => layer.type === 'unit').length > 1;
+  // The interface's own art: a button's picture is the same whatever pack the map is drawn with.
+  const tileset = interfaceTileset(),
+    stacked = layers.filter((layer) => layer.type === 'unit').length > 1;
 
   layers.forEach((layer, index) => {
     if (layer.type === 'image') {
-      drawCentred(context, getPreloadedImage(layer.path), 0, scale);
+      drawCentred(context, getPreloadedImage(layer.path, tileset), 0, scale);
 
       return;
     }
 
     if (layer.type === 'city') {
       // As the map does (`Cities`): the civilization's first colour behind the city, inset as the tileset says, and
-      //  the city's colour keys swapped for the ones the tileset names. Only colour keys can be drawn yet (#152).
-      const { sprite, colouring } = currentTileset().cities,
-        // A box city's: `validateDescriptor` refuses the others.
-        inset = currentTileset().cities.inset!,
+      //  the city's colour keys swapped for the ones the tileset names: the interface's tileset, Civ1's, which boxes its
+      //  cities.
+      const { sprite, colouring } = tileset.cities,
+        // Civ1's box city, whose inset is always given.
+        inset = tileset.cities.inset!,
         replaceKeys = colouring as Extract<
           Colouring,
           { mode: 'replaceColours' }
@@ -278,7 +281,7 @@ export const drawUnitActionIcon = (
         );
       }
 
-      const city = getPreloadedImage(sprite),
+      const city = getPreloadedImage(sprite, tileset),
         // Recoloured only when the civilization has every colour the keys take.
         replacements = replacementColours(replaceKeys, colours);
 
@@ -304,11 +307,14 @@ export const drawUnitActionIcon = (
 
     drawCentred(
       context,
-      renderUnit({
-        _: layer.unit._,
-        player: layer.unit.player,
-        improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
-      }),
+      renderUnit(
+        {
+          _: layer.unit._,
+          player: layer.unit.player,
+          improvements: layer.fortified ? [{ _: 'Fortified' } as any] : [],
+        },
+        tileset
+      ),
       offset,
       scale
     );

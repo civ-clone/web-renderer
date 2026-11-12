@@ -731,7 +731,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
   expect(
-    'units and cities the map cannot draw are refused',
+    "units and cities the map cannot draw are refused, and Civ2's shields and styles cities are drawn",
     [
       withUnits({ ...civ1.units, sprite: 'units/{terrain}' }),
       withUnits({ ...civ1.units, fortified: '' }),
@@ -778,13 +778,14 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     [
       'Tileset "civ1": units.sprite has {terrain}, but the map fills only {unit} here.',
       'Tileset "civ1": units.fortified must name a sprite.',
-      'Tileset "civ1": units.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
+      // A unit's shield, with a copy behind a stack as Civ1's has.
+      null,
       'Tileset "civ1": units.colouring.keys must list the colours to replace.',
       'Tileset "civ1": units.colouring.colours must give a player\'s colour, by whole index, for each key.',
       'Tileset "civ1": units.colouring.colours must give a player\'s colour, by whole index, for each key.',
       'Tileset "civ1": units.stackOffset must have a whole x and y in px.',
       'Tileset "civ1": units.status must have an x and a baseline, as parts of the tile.',
-      'Tileset "civ1": cities.mode "styles" cannot be drawn yet: only box.',
+      null,
       'Tileset "civ1": cities.sprite has {size}, but the map fills none here.',
       'Tileset "civ1": cities.inset must be a whole number of px, 0 or more.',
       'Tileset "civ1": cities.occupied must be a colour.',
@@ -865,9 +866,9 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ]
   );
   expect(
-    'but cannot be drawn yet, saying the first thing the map cannot draw',
+    'and can be drawn, all of it: its base per terrain, coast quarters, shields, styles cities and tall sprites',
     thrown(() => validateDescriptor(isoJson)),
-    'Tileset "iso-test": units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.'
+    null
   );
 
   // Each thing the map cannot draw yet, on Civ1's descriptor, which it can.
@@ -875,7 +876,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     notDrawnYet(readDescriptor(civ1With(changes)));
 
   expect(
-    'what the map cannot draw yet is each named, and Civ1 has none of it; a land sprite per terrain and named coast quarters it can',
+    "what the map cannot draw yet is each named, and Civ1 has none of it; a land sprite per terrain, named coast quarters, Civ2's shields, styles cities and tall sprites it can",
     [
       notDrawnYet(civ1),
       civ1Read({
@@ -911,12 +912,30 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       null,
       null,
       null,
-      'units.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
-      'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.',
-      'cities.mode "styles" cannot be drawn yet: only box.',
-      'cities.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
-      'cities.labels.size cannot be drawn yet: only x and sizeBaseline.',
-      "units.anchor cannot be drawn yet: only a sprite at the tile's top-left corner.",
+      null,
+      null,
+      null,
+      // A flag over a box city is not drawn: a box city's colours are its keys swapped (Civ1's) only.
+      'cities.colouring.mode "overlay" cannot be drawn yet for box cities: only replaceColours.',
+      null,
+      null,
+    ]
+  );
+  expect(
+    "a box city is drawn inset from the tile's corner, so one with an anchor is refused, as a styles city's is not",
+    [
+      civ1Read({
+        geometry: {
+          ...civ1.geometry,
+          overhang: { ...civ1.geometry.overhang, top: 4 },
+        },
+        cities: { ...civ1.cities, anchor: { x: 0, y: -4 } },
+      }),
+      civ1Read({ cities: { ...civ1.cities, anchor: { x: 0, y: 0 } } }),
+    ],
+    [
+      "cities.anchor cannot be drawn yet for box cities: only a sprite at the tile's corner, inset as they say.",
+      null,
     ]
   );
   expect(

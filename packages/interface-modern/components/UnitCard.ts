@@ -2,10 +2,8 @@ import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { unitName, unitStates } from '@civ-clone/ui-hud/lib/unitLabel';
-import currentTileset, {
-  nativeTileSize,
-} from '@civ-clone/ui-assets/lib/tilesets';
-import Unit from '@civ-clone/ui-hud/components/Unit';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import Unit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
 import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
@@ -25,9 +23,14 @@ export type UnitCardDeps = Omit<UnitPanelDeps, 'unitAction'>;
 // How many of the other units' portraits fit on a row when the card can't be measured (it's hidden): the sidebar's.
 const fallbackPerRow = 6;
 
-// The other units' portraits, each the hud's unit (a tile at 2×) and as wide: CSS lays them out by one length, so a
-//  tile that isn't square is laid out by its width.
-const portraitSize = (): number => nativeTileSize(currentTileset()).width * 2;
+// The other units' portraits, each the hud's unit (a tile at 2×, and the room above it a tall unit takes) and as wide:
+//  CSS lays them out by their width, and the "+N" in the last place is as tall as they are.
+const portraitBox = (): { width: number; height: number } => {
+    const { width, height } = unitBox(currentTileset());
+
+    return { width: width * 2, height: height * 2 };
+  },
+  portraitSize = (): number => portraitBox().width;
 
 // The card each element shows, so a card a later game has replaced stops listening for resizes.
 const cards = new WeakMap<HTMLElement, UnitCard>();
@@ -447,6 +450,7 @@ export class UnitCard extends Element {
 
     this.#drawnPerRow = perRow;
     strip.style.setProperty('--portrait-size', `${size}px`);
+    strip.style.setProperty('--portrait-height', `${portraitBox().height}px`);
     strip.title = text('UnitDetails.tile-units', { count: others.length });
     strip.querySelector('.visually-hidden')!.textContent = strip.title;
     strip.append(...drawn.map((other) => new Unit(other).element()));

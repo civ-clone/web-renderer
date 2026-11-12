@@ -200,7 +200,7 @@
     box-sizing: border-box;
     display: flex;
     font-weight: var(--type-strong-weight);
-    height: var(--portrait-size);
+    height: var(--portrait-height, var(--portrait-size));
     justify-content: center;
     width: var(--portrait-size);
   }

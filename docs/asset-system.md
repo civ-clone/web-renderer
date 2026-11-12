@@ -200,7 +200,11 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
 - **Anchors per sprite.** An `anchor` is a point in native px, or the name of an anchor each sprite carries, such as
   `"shield"`. Those come with the pack's sprites, not its descriptor: `SpriteAnchors`, by sprite and then anchor name
   (`{ "units/settlers": { "shield": { "x": 12, "y": 12 } } }`), as the Civ2 extractor's `metadata.json` gives them from
-  marker pixels in the player's own copy.
+  marker pixels in the player's own copy. At runtime the map reads them through `spriteAnchors(tileset)` and
+  `resolveAnchor(tileset, sprite, anchor)` (`packages/assets/lib/spriteAnchors.ts`), a registry by tileset id that
+  whatever loads a pack's sprites fills with `setSpriteAnchors(id, anchors)` (the Civ2 import, when it comes). A sprite
+  without the anchor named has nothing drawn there: no shield, no flag, and its size written where `labels.x` and
+  `labels.sizeBaseline` put it.
 - **City styles.** `cities.mode: "styles"` with `sprite: "city/{style}/{walls}{size}"`, `styles` (the style names, a
   default, a style by civilization as the engine names it, the city size each `{size}` bucket starts at, and the
   `{walls}` words), and `labels.size`, where the size is written. The player's flag is the cities' `overlay` colouring:
@@ -216,10 +220,20 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
   prefixes it does not have, and missing optional sprites. Nothing looks sprites up there yet.
 
 `validateDescriptor` is `readDescriptor` and then `notDrawnYet`, which names the first thing in a descriptor that the map
-cannot draw yet: a units descriptor without `stackOffset`, an `overlay` colouring,
-`styles` cities, `labels.size`, and a units or cities `anchor` off the tile's corner. Every tileset the game uses goes
-through `validateDescriptor`, so the layers that take a colouring as `replaceColours`, or read a box city's `inset`, can
-rely on it. Each of those leaves the list as the map learns to draw it. What the format itself refuses (a `corners` or
+cannot draw yet: a `box` city with an `overlay` colouring, or with an `anchor` (its sprite goes `inset` in from the
+tile's corner). Every tileset the game
+uses goes through `validateDescriptor`, so `Cities`, which takes a box city's colouring as `replaceColours`, can rely on
+it. Each of those leaves the list as the map learns to draw it.
+
+The map draws the shields, styles cities and tall sprites (#97): `renderUnit` draws a unit's sprite as it is, then the
+back-shield for a unit in a stack and the shield over it, both recoloured, cut off at the unit sprite's edges; `Units`
+and `ActiveUnit` draw it at `units.anchor`, with no copy behind a stack when there is no `stackOffset`; `Cities` draws
+a `styles` city's sprite at `cities.anchor` with no box, and its flag, recoloured, at the sprite's `flag` anchor (a
+rival's city is drawn without walls, as the page is not told its improvements, #688); `CityNames` writes the size from
+the sprite's `labels.size` anchor, left-aligned; and `Unworkable` fills the projection's `outline()`, a diamond on the
+isometric grid, rather than the tile's box. The interface's own art the map draws over its tiles (the yields, a city's
+unhappy citizen, the banners' icons, the action buttons' pictures) comes from `interfaceTileset()`, Civ1's, whatever the
+map is drawn with, through `Map.getInterfaceImage`. What the format itself refuses (a `corners` or
 `dither` family other than the coast) is refused by the schema.
 
 ## Runtime usage patterns

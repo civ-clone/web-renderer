@@ -404,9 +404,9 @@ export class CityBanners extends CityNames {
     context.restore();
   }
 
-  // An icon from the tileset, fitted to `rect` and kept sharp.
+  // An icon from the interface's tileset, whatever the map is drawn with, fitted to `rect` and kept sharp.
   #drawIcon(path: string, rect: Rect): void {
-    const image = this.getPreloadedImage(path),
+    const image = this.getInterfaceImage(path),
       [width, height] = imageSize(image);
 
     // A missing icon is the placeholder, which has no size, and `drawImage` throws on a zero-sized source.

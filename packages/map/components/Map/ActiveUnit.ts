@@ -33,23 +33,30 @@ export class ActiveUnit extends Units implements IMap {
     const tile = this.world().get(activeTile.x, activeTile.y),
       { width, height } = this.projection().footprint(),
       reach = this.reach(),
+      // Not yet listed on a tile it is moving to, and still listed on its own.
+      stacked = this.otherUnits(tile).length > 0,
+      // A stack shown by a copy of the unit behind it, or by the unit's colouring alone.
+      byCopy = stacked && this.showsStackByCopy(),
       [stackX, stackY] = this.stackOffset(),
-      image = this.renderUnit(activeUnit),
+      [anchorX, anchorY] = this.anchor(),
+      image = this.renderUnit(activeUnit, stacked),
       [imageWidth, imageHeight] = imageSize(image),
       // A missing sprite has no size: the square, then.
       [ringWidth, ringHeight] =
         imageWidth > 0 && imageHeight > 0
           ? [imageWidth * this.scale(), imageHeight * this.scale()]
-          : [width, height],
-      // Not yet listed on a tile it is moving to, and still listed on its own.
-      stacked = this.otherUnits(tile).length > 0;
+          : [width, height];
 
     this.placements(tile).forEach(([offsetX, offsetY]) => {
-      if (stacked) {
-        this.putImage(image, offsetX + stackX, offsetY + stackY);
+      // Where the sprite goes: the tile's corner, or above it for a sprite taller than the tile.
+      const unitX = offsetX + anchorX,
+        unitY = offsetY + anchorY;
+
+      if (byCopy) {
+        this.putImage(image, unitX + stackX, unitY + stackY);
       }
 
-      this.putImage(image, offsetX, offsetY);
+      this.putImage(image, unitX, unitY);
 
       this.drawStatus(activeUnit, offsetX, offsetY);
 
@@ -65,15 +72,15 @@ export class ActiveUnit extends Units implements IMap {
 
       this.#drawn.push(drawn);
       // Round the stacked copy behind it too, where the tileset moves it out from under the unit.
-      const [backX, backY] = stacked ? [stackX, stackY] : [0, 0],
-        left = offsetX + Math.min(0, backX),
-        top = offsetY + Math.min(0, backY);
+      const [backX, backY] = byCopy ? [stackX, stackY] : [0, 0],
+        left = unitX + Math.min(0, backX),
+        top = unitY + Math.min(0, backY);
 
       this.#squares.push({
         x: left,
         y: top,
-        width: offsetX + Math.max(0, backX) + ringWidth - left,
-        height: offsetY + Math.max(0, backY) + ringHeight - top,
+        width: unitX + Math.max(0, backX) + ringWidth - left,
+        height: unitY + Math.max(0, backY) + ringHeight - top,
       });
 
       this.markDirty(drawn.x, drawn.y, drawn.width, drawn.height);
