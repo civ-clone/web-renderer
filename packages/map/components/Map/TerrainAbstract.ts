@@ -95,6 +95,19 @@ export class TerrainAbstract extends Map implements IMap {
     this.drawDot(family.isolated, offsetX, offsetY);
   }
 
+  /**
+   * Where a tile-sized sprite's top-left corner goes for the tile whose box is at `offsetX`, `offsetY`: moved by the
+   *  tileset's `geometry.anchor`, at this layer's scale. Nothing for Civ1's and Civ2's scenery, whose sprites are their
+   *  tiles' size and fill their boxes; the terrain layers apply it once a tile, so a pack whose scenery sits otherwise
+   *  in its tiles is drawn where it says.
+   */
+  protected anchored(offsetX: number, offsetY: number): [number, number] {
+    const { x, y } = this.tileset().geometry.anchor,
+      scale = this.scale();
+
+    return [offsetX + x * scale, offsetY + y * scale];
+  }
+
   /** A square of `dot`'s colour, `size` native px across, in the middle of the tile. */
   protected drawDot(
     { dot, size }: { dot: string; size: number },

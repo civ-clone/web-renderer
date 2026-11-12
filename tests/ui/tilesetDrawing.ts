@@ -143,9 +143,15 @@ Object.assign((globalThis as any).document, {
         html = value;
       },
       get firstElementChild() {
-        const size = (attribute: string): number =>
-            Number(html.match(new RegExp(`${attribute}="(\\d+)"`))?.[1] ?? 0),
-          { calls, canvas } = recordingCanvas(size('width'), size('height'));
+        // A canvas given no size is 300 × 150, as in a browser, so a lookup that forgets to size its canvas shows.
+        const size = (attribute: string, unset: number): number =>
+            Number(
+              html.match(new RegExp(`${attribute}="(\\d+)"`))?.[1] ?? unset
+            ),
+          { calls, canvas } = recordingCanvas(
+            size('width', 300),
+            size('height', 150)
+          );
 
         madeCanvases.push(calls);
 
@@ -841,6 +847,429 @@ const madeDraws = (draw: () => unknown): string[] => {
         /^drawImage\([a-z-]+\/[a-z_-]+,/.test(call)
     );
 };
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Isometric scenery (#97): the Civ2-shaped fixture, tests/ui/fixtures/iso-tileset.json, on the staggered isometric
+//  grid, with synthetic 64 × 32 tiles. Each check names exactly the sprites drawn and where, at 2×.
+// ---------------------------------------------------------------------------------------------------------------------
+
+const isoTileset: TilesetDescriptor =
+    require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').readDescriptor(
+      require('./fixtures/iso-tileset.json')
+    ),
+  isoTile = { width: 64, height: 32 },
+  isoTopology = createTopology('staggered-iso', 6, 8),
+  // Where each neighbour of 2,4 (an even row) is, by the name the topology gives it.
+  isoAt = (direction: string): string =>
+    isoTopology.neighbour(2, 4, direction as any)!.join(','),
+  // A staggered isometric world 6 × 8 with `centre` on 2,4 and `around` on the neighbours it names. `makeWorld` works
+  //  a coast out over the square grid's neighbours, so it is worked out again here over the topology's.
+  isoWorld = (
+    centre: TileChanges,
+    around: { [direction: string]: TileChanges } = {}
+  ): World => {
+    const world = makeWorld(
+      6,
+      8,
+      {
+        '2,4': centre,
+        ...Object.fromEntries(
+          Object.entries(around).map(([direction, changes]) => [
+            isoAt(direction),
+            changes,
+          ])
+        ),
+      },
+      'staggered-iso'
+    );
+
+    world.tiles().forEach((tile) => {
+      (tile as { isCoast: boolean }).isCoast =
+        tile.isWater &&
+        isoTopology
+          .directions()
+          .some(
+            (direction) => world.getNeighbour(tile, direction as any).isLand
+          );
+    });
+
+    return world;
+  },
+  // The quarters put on the canvases a draw made.
+  isoMadeDraws = (draw: () => unknown): string[] => {
+    madeCanvases.length = 0;
+
+    draw();
+
+    return madeCanvases
+      .flat()
+      .filter((call) => call.startsWith('drawImage(iso-test/'));
+  },
+  isoDrawn = (
+    Layer: typeof Landscape | typeof Fog,
+    world: World,
+    tileset: TilesetDescriptor = isoTileset
+  ): string[] => drawn(Layer, tileset, world, 2, 4, isoTile);
+
+expect(
+  "the isometric fixture is read, and what the map can't draw yet is only its units' and cities'",
+  require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').notDrawnYet(
+    isoTileset
+  ),
+  'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.'
+);
+
+expect(
+  "isometric land: each terrain's own base, named as the tileset names the terrain; one with no overlay has only that",
+  [
+    isoDrawn(Landscape, isoWorld({ terrain: 'Grassland' })),
+    isoDrawn(Landscape, isoWorld({ terrain: 'Arctic' })),
+  ],
+  [['terrain/grassland/base-0@0,0'], ['terrain/glacier/base-0@0,0']]
+);
+
+expect(
+  'hills, forest and mountains over the base they are drawn on, joined over the four edges, written ne-se-sw-nw',
+  [
+    // A corner neighbour (`n`) of the same terrain is not a join: only the edges are.
+    isoDrawn(
+      Landscape,
+      isoWorld(
+        { terrain: 'Hills' },
+        {
+          ne: { terrain: 'Hills' },
+          sw: { terrain: 'Hills' },
+          n: { terrain: 'Hills' },
+        }
+      )
+    ),
+    isoDrawn(
+      Landscape,
+      isoWorld(
+        { terrain: 'Forest' },
+        {
+          ne: { terrain: 'Forest' },
+          se: { terrain: 'Forest' },
+          sw: { terrain: 'Forest' },
+          nw: { terrain: 'Forest' },
+        }
+      )
+    ),
+    isoDrawn(
+      Landscape,
+      isoWorld({ terrain: 'Mountains' }, { e: { terrain: 'Mountains' } })
+    ),
+  ],
+  [
+    ['terrain/grassland/base-0@0,0', 'terrain/hills/ne-sw@0,0'],
+    ['terrain/grassland/base-0@0,0', 'terrain/forest/ne-se-sw-nw@0,0'],
+    ['terrain/grassland/base-0@0,0', 'terrain/mountains/isolated@0,0'],
+  ]
+);
+
+expect(
+  "a terrain the tileset doesn't put over another's base is drawn over its own",
+  isoDrawn(Landscape, isoWorld({ terrain: 'Forest' }), {
+    ...isoTileset,
+    families: {
+      ...isoTileset.families,
+      base: { ...isoTileset.families.base, under: { River: 'Grassland' } },
+    },
+  }),
+  ['terrain/forest/base-0@0,0', 'terrain/forest/isolated@0,0']
+);
+
+expect(
+  "Civ1's River: the grassland base, and the river over it, joined to River and to water over the edges",
+  isoDrawn(
+    Landscape,
+    isoWorld(
+      { terrain: 'River' },
+      {
+        se: { terrain: 'River' },
+        nw: { terrain: 'Ocean' },
+        // A corner neighbour is not a join, of River or of water.
+        s: { terrain: 'River' },
+        w: { terrain: 'Ocean' },
+      }
+    )
+  ),
+  ['terrain/grassland/base-0@0,0', 'terrain/river/se-nw@0,0']
+);
+
+// The coast's quarters, loaded under the fixture's own prefix so they can be drawn. Coast tiles are cached by tileset
+//  and the bits each quarter was picked by, so each set of neighbours below is drawn here and nowhere else.
+[
+  'n-011',
+  'e-100',
+  's-000',
+  'w-000',
+  'n-000',
+  'e-000',
+  's-001',
+  'n-100',
+  'w-111',
+  'e-011',
+  's-100',
+].forEach((quarter) =>
+  preloadImage(`iso-test/terrain/coast/${quarter}`, 32, 16)
+);
+
+const isoCoastWorld = () =>
+  isoWorld(
+    { terrain: 'Ocean' },
+    {
+      // The top quarter touches nw, n and ne; the right-hand one ne, e and se.
+      n: { terrain: 'Grassland' },
+      ne: { terrain: 'Grassland' },
+      nw: { terrain: 'Ocean' },
+      e: { terrain: 'Ocean' },
+      se: { terrain: 'Ocean' },
+      s: { terrain: 'Ocean' },
+      sw: { terrain: 'Ocean' },
+      w: { terrain: 'Ocean' },
+    }
+  );
+
+expect(
+  "a coast tile: the ocean's base, then the tile put together from the four named quarters, each at its place",
+  [
+    isoMadeDraws(() => isoDrawn(Landscape, isoCoastWorld())),
+    isoDrawn(Landscape, isoCoastWorld()),
+    // Asked again, the tile comes from the cache.
+    isoMadeDraws(() => isoDrawn(Landscape, isoCoastWorld())),
+  ],
+  [
+    [
+      // Land to the n and ne: the top quarter is 011, the right one 100, and the two with no land beside them 000.
+      'drawImage(iso-test/terrain/coast/n-011,16,0)',
+      'drawImage(iso-test/terrain/coast/e-100,32,8)',
+      'drawImage(iso-test/terrain/coast/s-000,16,16)',
+      'drawImage(iso-test/terrain/coast/w-000,0,8)',
+    ],
+    ['terrain/ocean/base-0@0,0', 'drawImage(object,0,0,128,64)'],
+    [],
+  ]
+);
+
+const isoMouthWorld = () =>
+  isoWorld(
+    { terrain: 'Ocean' },
+    {
+      sw: { terrain: 'River' },
+      n: { terrain: 'Ocean' },
+      ne: { terrain: 'Ocean' },
+      e: { terrain: 'Ocean' },
+      se: { terrain: 'Ocean' },
+      s: { terrain: 'Ocean' },
+      w: { terrain: 'Ocean' },
+      nw: { terrain: 'Ocean' },
+    }
+  );
+
+expect(
+  'a river mouth by the edge the River is on; a quarter not loaded is left out, and the tile is not kept without it',
+  [
+    isoMadeDraws(() => isoDrawn(Landscape, isoMouthWorld())),
+    // Not kept without the quarter, so drawn again in full.
+    isoMadeDraws(() => isoDrawn(Landscape, isoMouthWorld())),
+    // The sprites first, then what else was drawn on the canvas.
+    isoDrawn(Landscape, isoMouthWorld()),
+  ],
+  [
+    [
+      'drawImage(iso-test/terrain/coast/n-000,16,0)',
+      'drawImage(iso-test/terrain/coast/e-000,32,8)',
+      'drawImage(iso-test/terrain/coast/s-001,16,16)',
+    ],
+    [
+      'drawImage(iso-test/terrain/coast/n-000,16,0)',
+      'drawImage(iso-test/terrain/coast/e-000,32,8)',
+      'drawImage(iso-test/terrain/coast/s-001,16,16)',
+    ],
+    [
+      'terrain/ocean/base-0@0,0',
+      'terrain/river-mouth/sw@0,0',
+      'drawImage(object,0,0,128,64)',
+    ],
+  ]
+);
+
+// An ocean tile with land on `land`'s sides and water on the rest.
+const isoShoreWorld = (...land: string[]) =>
+  isoWorld(
+    { terrain: 'Ocean' },
+    Object.fromEntries(
+      isoTopology
+        .directions()
+        .map((direction) => [
+          direction,
+          { terrain: land.includes(direction) ? 'Grassland' : 'Ocean' },
+        ])
+    )
+  );
+
+expect(
+  "each quarter at its own place, by its own neighbours in its own order: the left-hand quarter's are sw, w and nw",
+  [
+    // Land on the whole left side: w-111, the top quarter's nw (its first) and the bottom one's sw (its last).
+    isoMadeDraws(() => isoDrawn(Landscape, isoShoreWorld('sw', 'w', 'nw'))),
+    // Land to the e and se: the right-hand quarter's last two, the bottom one's first.
+    isoMadeDraws(() => isoDrawn(Landscape, isoShoreWorld('e', 'se'))),
+  ],
+  [
+    [
+      'drawImage(iso-test/terrain/coast/n-100,16,0)',
+      'drawImage(iso-test/terrain/coast/e-000,32,8)',
+      'drawImage(iso-test/terrain/coast/s-001,16,16)',
+      'drawImage(iso-test/terrain/coast/w-111,0,8)',
+    ],
+    [
+      'drawImage(iso-test/terrain/coast/n-000,16,0)',
+      'drawImage(iso-test/terrain/coast/e-011,32,8)',
+      'drawImage(iso-test/terrain/coast/s-100,16,16)',
+      'drawImage(iso-test/terrain/coast/w-000,0,8)',
+    ],
+  ]
+);
+
+// A coast tile whose only land the player has not seen: an unseen tile is not land to the map.
+const isoUnseenShoreWorld = () => {
+  const world = isoWorld(
+    { terrain: 'Ocean' },
+    Object.fromEntries(
+      isoTopology
+        .directions()
+        .map((direction) => [
+          direction,
+          { terrain: direction === 'ne' ? 'Unknown' : 'Ocean' },
+        ])
+    )
+  );
+
+  Object.assign(world.get(2, 4), { isCoast: true });
+  Object.assign(
+    world.get(...(isoAt('ne').split(',').map(Number) as [number, number])),
+    {
+      isLand: false,
+      isWater: false,
+    }
+  );
+
+  return world;
+};
+
+expect(
+  'a coast tile whose land is unseen has no coast drawn, only the ocean',
+  [
+    isoMadeDraws(() => isoDrawn(Landscape, isoUnseenShoreWorld())),
+    isoDrawn(Landscape, isoUnseenShoreWorld()),
+  ],
+  [[], ['terrain/ocean/base-0@0,0']]
+);
+
+expect(
+  'the open ocean, water on every side, is its base alone',
+  isoDrawn(Landscape, isoShoreWorld()),
+  ['terrain/ocean/base-0@0,0']
+);
+
+expect(
+  'roads and railroads join over all eight directions, in the order the topology gives them, or are drawn on their own',
+  [
+    isoDrawn(
+      Landscape,
+      isoWorld(
+        { improvements: ['Road', 'Railroad'] },
+        {
+          n: { improvements: ['Road'] },
+          e: { improvements: ['Road', 'Railroad'] },
+          sw: { improvements: ['Road'] },
+        }
+      )
+    ),
+    isoDrawn(Landscape, isoWorld({ improvements: ['Road'] })),
+    isoDrawn(Landscape, isoWorld({ improvements: ['Road', 'Railroad'] })),
+  ],
+  [
+    [
+      'terrain/grassland/base-0@0,0',
+      'improvements/road/n@0,0',
+      'improvements/road/sw@0,0',
+      'improvements/railroad/e@0,0',
+    ],
+    ['terrain/grassland/base-0@0,0', 'improvements/road/isolated@0,0'],
+    ['terrain/grassland/base-0@0,0', 'improvements/railroad/isolated@0,0'],
+  ]
+);
+
+expect(
+  'irrigation, mines, pollution, specials by the names the tileset gives them, and huts',
+  [
+    isoDrawn(
+      Landscape,
+      isoWorld({
+        terrain: 'Plains',
+        features: ['Horse'],
+        improvements: ['Irrigation', 'Mine', 'Pollution'],
+        goodyHut: true,
+      })
+    ),
+    isoDrawn(Landscape, isoWorld({ terrain: 'Arctic', features: ['Seal'] })),
+  ],
+  [
+    [
+      'terrain/plains/base-0@0,0',
+      'improvements/irrigation@0,0',
+      'improvements/mine@0,0',
+      'improvements/pollution@0,0',
+      'terrain/plains/buffalo@0,0',
+      'map/hut@0,0',
+    ],
+    ['terrain/glacier/base-0@0,0', 'terrain/glacier/ivory@0,0'],
+  ]
+);
+
+expect(
+  'no fog edges on the isometric map: the fixture, as Civ2, has no fog',
+  isoDrawn(
+    Fog,
+    isoWorld({}, { ne: { terrain: 'Unknown' }, n: { terrain: 'Unknown' } })
+  ),
+  []
+);
+
+const isoAnchored: TilesetDescriptor = {
+  ...isoTileset,
+  geometry: { ...isoTileset.geometry, anchor: { x: 2, y: -8 } },
+};
+
+expect(
+  "the scenery goes where the tileset's geometry anchors a tile-sized sprite, at the map's scale: the coast tile too",
+  [
+    isoDrawn(
+      Landscape,
+      isoWorld({ terrain: 'Hills', improvements: ['Road'] }),
+      isoAnchored
+    ),
+    // The coast tile put together above, from the cache, moved as a whole.
+    isoDrawn(Landscape, isoCoastWorld(), isoAnchored),
+    // And no fog, wherever it is anchored.
+    isoDrawn(Fog, isoWorld({}, { ne: { terrain: 'Unknown' } }), isoAnchored),
+  ],
+  [
+    [
+      'terrain/grassland/base-0@4,-16',
+      'terrain/hills/isolated@4,-16',
+      'improvements/road/isolated@4,-16',
+    ],
+    ['terrain/ocean/base-0@4,-16', 'drawImage(object,4,-16,128,64)'],
+    [],
+  ]
+);
+
+// End of the isometric scenery checks.
+// ---------------------------------------------------------------------------------------------------------------------
 
 const stackWorld = () =>
   makeWorld(5, 5, {

@@ -3,7 +3,12 @@ import {
   NeighbourDirection,
   Tile,
 } from '@civ-clone/ui-protocol/types';
-import { CoastStrip } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import {
+  CoastCorner,
+  CoastStrip,
+  TilesetDescriptor,
+  expandName,
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import TerrainAbstract from './TerrainAbstract';
 import { isDrawable } from '@civ-clone/ui-assets/lib/imageSize';
 import { onPreloadedImagesChanged } from '@civ-clone/ui-assets/lib/getPreloadedImage';
@@ -18,6 +23,8 @@ type ImprovementLookup = {
 // The composed coast tile is a pure function of the tileset and the 8-neighbour
 // bitmask, and is always built at the sprite's own size, so this tops out at 256
 // small canvases a tileset instead of allocating one per coast tile per render.
+// A coast of named quarters is cached the same way, by the bits each quarter was
+// picked by.
 const coastTileCache = new Map<string, HTMLCanvasElement>();
 
 onPreloadedImagesChanged(() => coastTileCache.clear());
@@ -101,6 +108,38 @@ const buildCoastTile = (
 };
 
 /**
+ * A coast tile put together from named quarter sprites (Civ2's): each of `quarters`, the sprite its neighbours picked,
+ *  at its `at` in a canvas the tile's size. Cached by `key` only when every quarter could be drawn,
+ *  so a sprite that is not loaded yet is not left out for the rest of the session.
+ */
+const buildCornersTile = (
+  quarters: { at: CoastCorner['at']; sprite: CanvasImageSource }[],
+  key: string,
+  { width, height }: TilesetDescriptor['tile']
+): HTMLCanvasElement | null => {
+  const drawable = quarters.filter(({ sprite }) => isDrawable(sprite));
+
+  if (drawable.length === 0) {
+    return null;
+  }
+
+  const image = s<HTMLCanvasElement>(
+      `<canvas height="${height}" width="${width}"></canvas>`
+    ),
+    imageContext = image.getContext('2d') as CanvasRenderingContext2D;
+
+  drawable.forEach(({ at: { x, y }, sprite }) =>
+    imageContext.drawImage(sprite, x, y)
+  );
+
+  if (drawable.length === quarters.length) {
+    coastTileCache.set(key, image);
+  }
+
+  return image;
+};
+
+/**
  * The tile's own scenery: land/ocean, irrigation, terrain, improvements,
  * terrain features and goody huts.
  *
@@ -119,6 +158,8 @@ export class Landscape extends TerrainAbstract {
     if (tile.terrain._ === 'Unknown') {
       return;
     }
+
+    [offsetX, offsetY] = this.anchored(offsetX, offsetY);
 
     // Under the terrain, as Civ1's terrain leaves most of the land showing, unless the tileset's terrain covers it.
     const irrigationOverTerrain =
@@ -146,7 +187,17 @@ export class Landscape extends TerrainAbstract {
       { base, coast, riverMouth } = tileset.families;
 
     if (tile.isLand) {
-      this.drawImage(base.land, offsetX, offsetY);
+      // A sprite per terrain (Civ2's), or one under all land (Civ1's, whose name has no `{terrain}`). A terrain drawn over
+      //  another's base, as Civ1's River is over Grassland's, is drawn on that one's.
+      const name = base.under?.[tile.terrain._] ?? tile.terrain._;
+
+      this.drawImage(
+        expandName(base.land, {
+          terrain: tileset.names.terrain[name] ?? name.toLowerCase(),
+        }),
+        offsetX,
+        offsetY
+      );
 
       return;
     }
@@ -161,32 +212,11 @@ export class Landscape extends TerrainAbstract {
       return;
     }
 
-    const { order, strip } = coast,
-      sprite = strip ? this.getPreloadedImage(strip.sprite) : null,
-      // formula from: http://forums.civfanatics.com/showpost.php?p=13507808&postcount=40
-      // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
-      // ocean tile, in the order the tileset gives, least significant first. Civ1's starts
-      // with the tile to the left and goes clockwise, as its coast sprite is laid out.
-      // A strip has its order: `validateDescriptor` says so, and refuses named quarters (#152).
-      bitmask = order!.reduce(
-        (bitmask: number, direction: string, bit: number): number =>
-          this.world().getNeighbour(tile, direction as NeighbourDirection)
-            .isLand
-            ? bitmask | (1 << bit)
-            : bitmask,
-        0
-      );
-
-    // There is at least one surrounding tile that is not ocean, so we need
-    // to render coast. The sprite check covers a strip that is missing, which
-    // would be an empty coast tile cached for the rest of the session. Only a
-    // coast cut from one strip, as Civ1's is, can be drawn yet (#92).
-    if (bitmask > 0 && strip && sprite && isDrawable(sprite)) {
-      this.putImage(
-        buildCoastTile(sprite, bitmask, tileset.id, strip),
-        offsetX,
-        offsetY
-      );
+    // A strip has its order, and named quarters their corners: `readDescriptor` says so.
+    if (coast.strip !== undefined) {
+      this.renderCoastStrip(tile, coast.strip, coast.order!, offsetX, offsetY);
+    } else {
+      this.renderCoastCorners(tile, offsetX, offsetY);
     }
 
     this.drawFamily(
@@ -200,6 +230,94 @@ export class Landscape extends TerrainAbstract {
       offsetX,
       offsetY
     );
+  }
+
+  /** Civ1's coast: a coast square cut from one strip, by a bitmask of all eight neighbours in the tileset's order. */
+  protected renderCoastStrip(
+    tile: Tile,
+    strip: CoastStrip,
+    order: string[],
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const sprite = this.getPreloadedImage(strip.sprite),
+      // formula from: http://forums.civfanatics.com/showpost.php?p=13507808&postcount=40
+      // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
+      // ocean tile, in the order the tileset gives, least significant first. Civ1's starts
+      // with the tile to the left and goes clockwise, as its coast sprite is laid out.
+      bitmask = order.reduce(
+        (bitmask: number, direction: string, bit: number): number =>
+          this.world().getNeighbour(tile, direction as NeighbourDirection)
+            .isLand
+            ? bitmask | (1 << bit)
+            : bitmask,
+        0
+      );
+
+    // There is at least one surrounding tile that is not ocean, so we need
+    // to render coast. The sprite check covers a strip that is missing, which
+    // would be an empty coast tile cached for the rest of the session.
+    if (bitmask > 0 && isDrawable(sprite)) {
+      this.putImage(
+        buildCoastTile(sprite, bitmask, this.tileset().id, strip),
+        offsetX,
+        offsetY
+      );
+    }
+  }
+
+  /**
+   * A coast of named quarters (Civ2's): each quarter's sprite named for the neighbours it touches, `1` for land, in its
+   *  own order, and drawn at its place in the tile. A quarter with no land beside it (Civ2's `n-000`) is drawn too, as
+   *  Civ1's coast square has its open-water quarters: a coast quarter's water is not the open ocean's, so a coast tile
+   *  is all coast water. Only a coast tile has them; the open ocean is its base alone.
+   */
+  protected renderCoastCorners(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const tileset = this.tileset(),
+      { sprite, corners } = tileset.families.coast,
+      quarters = Object.entries(corners!).map(
+        ([corner, { at, neighbours }]) => ({
+          corner,
+          at,
+          bits: neighbours
+            .map((direction) =>
+              this.world().getNeighbour(tile, direction as NeighbourDirection)
+                .isLand
+                ? '1'
+                : '0'
+            )
+            .join(''),
+        })
+      );
+
+    // A coast tile has land beside it, but the map may not have seen it (an unseen tile is not land to the map), or it
+    //  may be where no quarter looks: then there is no coast to draw, only the ocean's base.
+    if (quarters.every(({ bits }) => !bits.includes('1'))) {
+      return;
+    }
+
+    // The sprites are only looked up for a tile not already put together.
+    const key = `${tileset.id}:${quarters.map(({ bits }) => bits).join(':')}`,
+      image =
+        coastTileCache.get(key) ??
+        buildCornersTile(
+          quarters.map(({ corner, at, bits }) => ({
+            at,
+            sprite: this.getPreloadedImage(
+              expandName(sprite!, { corner, bits })
+            ),
+          })),
+          key,
+          tileset.tile
+        );
+
+    if (image !== null) {
+      this.putImage(image, offsetX, offsetY);
+    }
   }
 
   protected renderIrrigation(

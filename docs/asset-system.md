@@ -144,17 +144,22 @@ The format can say what a pack shaped like Civ2's needs (#152), so its descripto
 map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in the Civ2 extractor's style, with no sprites):
 
 - **A base per terrain.** `families.base.land` with `{terrain}` (`terrain/{terrain}/base-0`), and `under` for a
-  terrain drawn over another's base: Forest, Hills, Mountains and River over Grassland. The overlays (forest, hills,
-  mountains, river) are the terrain family as a `bitmask` over the grid's edge neighbours, joined with `-`. Only one base
-  variant per terrain is used: Civ2's `base-1` alternatives are left out.
+  terrain drawn over another's base: Forest, Hills, Mountains and River over Grassland. A terrain `under` leaves out is
+  drawn over its own base (Civ2's forest, hills and mountains each have one). The overlays (forest, hills, mountains,
+  river) are the terrain family as a `bitmask` over the grid's edge neighbours, joined with `-`, so Civ1's River is the
+  grassland base with the river over it. Only one base variant per terrain is used: Civ2's `base-1` alternatives are
+  left out.
 - **Roads and railroads over all eight neighbours**, with an `isolated` sprite rather than a dot.
 - **A coast of named quarters.** `sprite: "terrain/coast/{corner}-{bits}"` and `corners`, each with its top-left `at`
   in the tile and its `neighbours` in the order `{bits}` writes them, one digit each, `1` for land: Civ2's top quarter
-  `n` is picked by `nw`, `n` and `ne`, so `n-011` has land to the N and NE.
+  `n` is picked by `nw`, `n` and `ne`, so `n-011` has land to the N and NE. A coast tile is drawn with all four, those
+  with no land beside them (`n-000`) too, as a coast quarter's water is not the open ocean's (Civ1's coast square has its
+  open-water quarters the same way); the open ocean is its base alone. Each tile put together is cached by tileset and
+  the quarters' bits.
 - **River mouths by direction.** `families.riverMouth` is `edges` with `{dir}`: the Civ2 extractor names its four mouths
   `terrain/river-mouth/ne`, `se`, `sw` and `nw` (civ-clone/civ2-asset-extractor#1), the river bitmask's edge order.
-- **No fog.** `families.fog` may be left out; the edge of what a player has seen is then drawn without one. Nor do
-  cursor or dither sprites have to be listed.
+- **No fog.** `families.fog` may be left out; the edge of what a player has seen is then drawn without one, a hard edge
+  as Civ2 has. Nor do cursor or dither sprites have to be listed: dither is not drawn.
 - **Shields.** An `overlay` colouring: `sprite` (the shield) drawn over the unit with its `keys` swapped for the
   player's colours, its top-left corner at `anchor`, and `stack.sprite` (the back-shield) drawn behind it, `stack.offset`
   from it, for a unit in a stack. `units.stackOffset`, Civ1's copy of the whole unit behind a stack, may then be left
@@ -178,7 +183,7 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
   prefixes it does not have, and missing optional sprites. Nothing looks sprites up there yet.
 
 `validateDescriptor` is `readDescriptor` and then `notDrawnYet`, which names the first thing in a descriptor that the map
-cannot draw yet: a base per terrain, named quarters, a units descriptor without `stackOffset`, an `overlay` colouring,
+cannot draw yet: a units descriptor without `stackOffset`, an `overlay` colouring,
 `styles` cities, `labels.size`, and a units or cities `anchor` off the tile's corner. Every tileset the game uses goes
 through `validateDescriptor`, so the layers that take a colouring as `replaceColours`, or read a box city's `inset`, can
 rely on it. Each of those leaves the list as the map learns to draw it. What the format itself refuses (a `corners` or

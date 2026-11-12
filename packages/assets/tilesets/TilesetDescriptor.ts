@@ -17,7 +17,7 @@ import schema from './tileset.schema.json';
 //
 // `tileset.schema.json` describes the JSON, field by field, for pack authors and their editors as well as for
 //  `readDescriptor`, which checks it first and then what a schema cannot say. The format says more than the map draws
-//  yet (Civ2's shields, city styles and named coast quarters, #152): `validateDescriptor` refuses those, saying which.
+//  yet (Civ2's shields and city styles, #152): `validateDescriptor` refuses those, saying which.
 
 /**
  * The one descriptor format this renderer reads, the schema's `schema` too. Any other number is refused, so a newer
@@ -799,22 +799,13 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
 
 /**
  * What in `descriptor` the map cannot draw yet, said as `validateDescriptor` refuses it, or `null` when it can draw it
- * all. The format says more than the map draws (#152): Civ2's base per terrain, named coast quarters, shields and city
- * styles, and sprites taller than their tile. Each goes from this list as the map learns to draw it.
+ * all. The format says more than the map draws (#152): Civ2's shields and city styles, and sprites taller than their
+ * tile. Each goes from this list as the map learns to draw it (Civ2's base per terrain and named coast quarters have).
  */
 export const notDrawnYet = ({
-  families: { base, coast },
   units,
   cities,
 }: TilesetDescriptor): string | null => {
-  if (placeholders(base.land).includes('terrain') || base.under !== undefined) {
-    return 'families.base cannot be drawn yet with a land sprite per terrain: only one under all land.';
-  }
-
-  if (coast.strip === undefined) {
-    return 'families.coast must have a strip: only a coast cut from one strip can be drawn yet.';
-  }
-
   if (units.stackOffset === undefined) {
     return 'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.';
   }
