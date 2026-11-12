@@ -25,6 +25,7 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
+  openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import CivilizationScoreTable from '@civ-clone/ui-interface-modern/components/CivilizationScoreTable';
 import IntelligenceTable from '@civ-clone/ui-interface-modern/components/IntelligenceTable';
@@ -1347,6 +1348,7 @@ const run = async (): Promise<void> => {
     openCivilizationScore(pending),
     openHappinessReport(player, portal, pending),
     openTopCities(player, portal, pending),
+    openWondersReport(player, portal, pending),
   ];
 
   applyInterface('modern', null);
@@ -1359,6 +1361,7 @@ const run = async (): Promise<void> => {
     openCivilizationScore(pending),
     openHappinessReport(player, portal, pending),
     openTopCities(player, portal, pending),
+    openWondersReport(player, portal, pending),
   ];
 
   await settle();
@@ -1374,6 +1377,7 @@ const run = async (): Promise<void> => {
       'CivilizationScoreReport',
       'HappinessReport',
       'TopCitiesReport',
+      'WondersReport',
       'CityStatusTable',
       'TradeTable',
       'MilitaryTable',
@@ -1381,6 +1385,7 @@ const run = async (): Promise<void> => {
       'CivilizationScoreTable',
       'HappinessTable',
       'TopCitiesTable',
+      'WondersTable',
     ]
   );
 

@@ -39,6 +39,7 @@ import { civilDisorder } from '@civ-clone/civ1-city-happiness/lib/cityStatus';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import conquestBonusFor from '@civ-clone/civ1-game-end/lib/conquestBonusFor';
 import { levelOf } from '@civ-clone/civ1-difficulty/level';
+import { wonderHistory } from '@civ-clone/civ1-wonder/lib/wonderHistory';
 
 export const civ1Rules: WorkerRules = {
   // After the shared ones, in the order the client's `if` chain once tested them among those (#449).
@@ -70,6 +71,9 @@ export const civ1Rules: WorkerRules = {
   },
   needsFuel: (unit) =>
     aircraftRange.some(([UnitType]) => unit instanceof UnitType),
+  // Standing or lost, in Civ1's order (#971), for the Wonders of the World report (#992).
+  wonderHistory: (wonders, cityImprovements) =>
+    wonderHistory(wonders, cityImprovements),
 };
 
 let registered = false;

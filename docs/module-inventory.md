@@ -38,14 +38,14 @@ Quick reference map of key code areas.
   - `TurnHandover.ts`: hands the turn to the UI and back: the first `gameData`, the hand-over patch, `turnStarted`, the held notices and halts, each action's patch and `actionHandled`, and `turnEnded`; an automated turn instead.
   - `Automation.ts`: whether the player's turns are automated, and the computer player that plays them; read live, as it is toggled mid-game.
   - `cheats.ts`: the `cheat` receiver and the cheat menu's lists, with the plain-data checks for `CreateUnit` and `ModifyUnit`.
-  - `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
+  - `requests.ts`: what the UI asks for: Top Cities, the Wonders of the World, intelligence, the Civilization Score, a city's build list and a unit's actions.
   - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
 - The worker's end of the messaging, `ParentTransport`, is in `@civ-clone/worker-transport` with the page's end; what the two
   say is in the protocol package, and the transport itself and the patch queue (`DataQueue`, owned by
   `Client/PlayerPatches.ts`) are `@civ-clone/core-data-client`'s (below).
 - `TransferObject.ts`: the root of the initial snapshot (player, turn, year).
 - `AdditionalData/*`: extra fields added to engine objects for the UI (`actionResult`, `anarchyTurns`, `civilDisorderDeclared`, `researchCosts`, `terrainRules`, `tradeRoutes`), registered by `Client/registerAdditionalData.ts`.
-- `lib/*`: worker-side helpers (their row and entry types are the protocol's): report rows for Top Cities and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
+- `lib/*`: worker-side helpers (their row and entry types are the protocol's): report rows for Top Cities, the Wonders of the World (`wonders.ts`, #992) and the intelligence report, the Civilization Score, the ending window's details (`gameOver.ts`), whether we have met a player (`hasMet.ts`), and the stand-ins that send a unit or the player without its actions (`unitWithoutActions.ts`, `playerWithoutActions.ts`).
 - `UnknownObjects/*`: wrappers for partially-known entities.
 - `Error/*`: `Timeout`, the error a computer player's answer in a meeting times out with.
 
@@ -68,7 +68,7 @@ package but this, and no package imports the worker.
 
 - `Transport.ts`: civ.one's channels and their payloads (`TransportDataMap`).
 - `Notification.ts`: the `gameNotification` payload (key, data, and whether it is a bubble notice).
-- `Requests/*`: the requests the page asks (`Request`s from `core-data-client`) (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
+- `Requests/*`: the requests the page asks (`Request`s from `core-data-client`) (`Options`, `Difficulties`, `CityBuildAvailable`, `TopCities`, `Wonders`, `Intelligence`, `CivilizationScore`, `CheatAdvances`, `CheatPlayers`, `CheatUnitTypes`).
 - `types.d.ts`: the game's data as the page gets it.
 - `reports.ts`, `civilopedia.ts`, `requirements.ts`, `observer.ts`, `battles.ts`, `topology.ts`: the rows, entries and
   states the worker sends.

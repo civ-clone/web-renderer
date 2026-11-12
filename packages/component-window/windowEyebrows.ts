@@ -10,6 +10,7 @@ const eyebrows: { [windowClass: string]: [kind: string, key: string | null] } =
     'happiness-report': ['report', 'F4'],
     'trade-report': ['report', 'F5'],
     'science-report': ['report', 'F6'],
+    'wonders-report': ['report', 'F7'],
     'top-cities-report': ['report', 'F8'],
     'civilization-score-report': ['report', 'F9'],
     civilopedia: ['reference', null],

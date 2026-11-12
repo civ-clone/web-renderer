@@ -49,6 +49,9 @@ export interface ReportTableOptions<Row> {
   rowKey: (row: Row) => string;
   // What clicking a row, or Enter on it, opens: the city, or the unit's Civilopedia entry. Without it, rows are text.
   open?: (row: Row) => void;
+  // A row of the player's own, among everyone's (a Wonder of yours, #992): marked as the sidebar's Power list marks
+  //  yours, and named so for a screen reader (`aria-current`).
+  current?: (row: Row) => boolean;
   // The footer, by column key; the first column says what it is unless it's given.
   totals?: (rows: Row[]) => { [key: string]: ReportCell };
   caption?: string;
@@ -108,6 +111,7 @@ const fill = (cell: HTMLElement, content: ReportCell, kind?: string): void => {
 export class ReportTable<Row> {
   #body: HTMLTableSectionElement = document.createElement('tbody');
   #columns: ReportColumn<Row>[];
+  #current: ((row: Row) => boolean) | null;
   #foot: HTMLTableSectionElement = document.createElement('tfoot');
   #headings: Map<string, HTMLTableCellElement> = new Map();
   #open: ((row: Row) => void) | null;
@@ -121,6 +125,7 @@ export class ReportTable<Row> {
     columns,
     rowKey,
     open,
+    current,
     totals,
     caption,
     label,
@@ -129,6 +134,7 @@ export class ReportTable<Row> {
   }: ReportTableOptions<Row>) {
     this.#columns = columns;
     this.#open = open ?? null;
+    this.#current = current ?? null;
     this.#rowKey = rowKey;
     this.#sort = sort;
     this.#totals = totals ?? null;
@@ -218,6 +224,12 @@ export class ReportTable<Row> {
       entry.row = row;
       entry.index = index;
       entry.element.replaceChildren(...this.#cells(entry));
+
+      if (this.#current?.(row)) {
+        entry.element.setAttribute('aria-current', 'true');
+      } else {
+        entry.element.removeAttribute('aria-current');
+      }
 
       return entry;
     });

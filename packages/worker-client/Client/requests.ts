@@ -1,10 +1,11 @@
-// What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities and intelligence reports,
-//  the Civilization Score and the sidebar's Power list (#701, #708), what a city can and can't build and a unit's actions, each
+// What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities, Wonders (#992) and
+//  intelligence reports, the Civilization Score and the sidebar's Power list (#701, #708), what a city can and can't build and a unit's actions, each
 //  answered on the channel it was asked on.
 //  The client's `topCities` and `civilizationScore` are two of these: `topCities` for its test (`topCities.ts`), and
 //  `civilizationScore` for the ending window (`gameEnd.ts`).
 
 import Player from '@civ-clone/core-player/Player';
+import Tile from '@civ-clone/core-world/Tile';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import Transport, {
@@ -19,7 +20,9 @@ import {
   TopCitiesRow,
   CivilizationScore,
   CivilizationPowerRow,
+  WondersRow,
 } from '@civ-clone/ui-protocol/reports';
+import { builtWonders, wondersEntries, wondersRows } from '../lib/wonders';
 import { civilizationScore as civilizationScoreOf } from '../lib/civilizationScore';
 import { civilizationPowerRows } from '../lib/civilizationPower';
 import { ClientContext, Registries } from './ClientContext';
@@ -37,14 +40,15 @@ export type RequestsContext = Pick<
   | 'player'
   // Which players are our own.
   | 'view'
-  // Whether we have met a player, which says what the reports may show of them.
+  // Whether the view has met a player and seen a square, which say what the reports may show of them.
   | 'hasMet'
+  | 'hasSeen'
   // What the player may see, which a city's build list and a unit's actions go through.
   | 'dataFilter'
   // The unit the UI has the actions of (#323), which `unitActions` changes.
   | 'actions'
   | 'patches'
-  // Each handed whole to the Top Cities report or the Civilization Score.
+  // Each handed whole to the Top Cities report, the Wonders report or the Civilization Score.
   | 'cities'
   | 'cityGrowths'
   | 'gameResults'
@@ -56,6 +60,8 @@ export type RequestsContext = Pick<
   | 'wonders'
   // The Military report's (#405).
   | 'availableCityBuildItems'
+  // Every Wonder ever built, standing or lost, for the Wonders report (#971, #992).
+  | 'cityImprovements'
 > &
   Registries<{
     cities: 'getByPlayer';
@@ -74,10 +80,27 @@ export const topCities = (
       cityGrowths: ctx.cityGrowths,
       specialists: ctx.specialists,
       wonders: ctx.wonders,
-      playerWorlds: ctx.playerWorlds,
+      hasSeen: (tile: Tile) => ctx.hasSeen(tile),
       hasMet: (player: Player) => ctx.hasMet(player),
     }),
     Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
+  );
+
+// Every Wonder built (#992), standing or lost (#971), in the order the rule set lists them.
+export const wonders = (ctx: RequestsContext): WondersRow[] =>
+  wondersRows(
+    wondersEntries(
+      ctx.player(),
+      builtWonders({
+        wonders: ctx.wonders,
+        cityImprovements: ctx.cityImprovements,
+      }),
+      {
+        hasSeen: (tile: Tile) => ctx.hasSeen(tile),
+        hasMet: (player: Player) => ctx.hasMet(player),
+        owns: (player: Player) => ctx.view.owns(player),
+      }
+    )
   );
 
 export const civilizationScore = (ctx: RequestsContext): CivilizationScore =>
@@ -139,6 +162,9 @@ export const registerRequests = (
   disposers.push(
     answer(transport, 'topCities', (limit) => topCities(ctx, limit))
   );
+
+  // The Wonders of the World (F7, #992), worked out here for the same reason.
+  disposers.push(answer(transport, 'wonders', () => wonders(ctx)));
 
   // The engine's `Score` rules add it up (#149).
   disposers.push(

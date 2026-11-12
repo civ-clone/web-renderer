@@ -551,6 +551,20 @@ const run = async (): Promise<void> => {
     [['%', 'F8', '^'], []]
   );
 
+  // The Wonders of the World (F7, #992).
+  reset();
+  event = press({ code: 'F7', key: 'F7' });
+
+  const wonders = document.querySelector('dialog.wonders-report');
+
+  expect(
+    'F7 opens the Wonders of the World',
+    [wonders !== null, event.defaultPrevented],
+    [true, true]
+  );
+
+  wonders?.remove();
+
   // The Civilopedia (`?`, #183): it opens, and `?` again finds the one already open rather than another.
   reset();
   event = press({ code: 'Slash', key: '?', shiftKey: true });

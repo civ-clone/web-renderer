@@ -171,6 +171,8 @@
     "test:terrain-job": "node tools/run-suite.js engine terrainJob",
     "test:pillage": "node tools/run-suite.js engine pillage",
     "test:top-cities": "node tools/run-suite.js engine topCities",
+    "test:wonders": "node tools/run-suite.js engine wonders",
+    "test:wonders-report": "node tools/run-suite.js ui wondersReport",
     "test:civilization-score": "node tools/run-suite.js engine civilizationScore",
     "test:civilization-power": "node tools/run-suite.js engine civilizationPower",
     "test:game-end": "node tools/game-end.js",

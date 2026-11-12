@@ -191,6 +191,8 @@ i18next.addResources('en', 'default', {
   'TopCitiesReport.empty': 'No cities have been founded yet.',
   'TopCitiesReport.title': 'Top Cities in the World',
   'TopCitiesReport.unknown-city': 'Unknown city',
+  'WondersReport.empty': 'No Wonders of the World have been built yet.',
+  'WondersReport.title': 'Wonders of the World',
   'TradeReport.anarchy':
     'No taxes are collected and no upkeep is paid during Anarchy.',
   'TradeReport.title': 'Trade report',

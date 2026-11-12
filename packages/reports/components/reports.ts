@@ -15,6 +15,7 @@ export interface Reports {
   civilizationScore(transport: Transport): Window;
   happiness(player: Player, portal: Portal, transport: Transport): Window;
   topCities(player: Player, portal: Portal, transport: Transport): Window;
+  wonders(player: Player, portal: Portal, transport: Transport): Window;
 }
 
 export const reports = defineSlot<Reports>('reports');
@@ -53,6 +54,13 @@ export const openHappinessReport = (
   portal: Portal,
   transport: Transport
 ): Window => reports.current().happiness(player, portal, transport);
+
+/** The Wonders of the World (F7). */
+export const openWondersReport = (
+  player: Player,
+  portal: Portal,
+  transport: Transport
+): Window => reports.current().wonders(player, portal, transport);
 
 /** Top Cities in the World (F8). */
 export const openTopCities = (

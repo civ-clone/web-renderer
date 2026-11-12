@@ -16,8 +16,19 @@ import type RuleRegistry from '@civ-clone/core-rule/RuleRegistry';
 import type { SaveableClass } from '@civ-clone/core-data-object/ClassRegistry';
 import type { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
 import type Unit from '@civ-clone/core-unit/Unit';
+import type Wonder from '@civ-clone/core-wonder/Wonder';
+import type { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
+import type { CityImprovementRegistry } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 
 export type PlayerActionType = new (...args: any[]) => PlayerAction;
+
+/** A Wonder as the rule set's history of them gives it: standing (in `city`, `owner`'s), lost with its city, or never built. */
+export type WonderStatus = {
+  type: typeof Wonder;
+  state: 'standing' | 'lost' | 'never';
+  city: City | null;
+  owner: Player | null;
+};
 
 export type WorkerRules = {
   /** The rule set's own player actions and what acts on each, tried after the ones every rule set shares. */
@@ -48,6 +59,11 @@ export type WorkerRules = {
   ) => { rating: number; famousLeader: string | null };
   /** Whether `unit` needs fuel, so a loss at the end of a turn was running out of it rather than being lost at sea. */
   needsFuel: (unit: Unit) => boolean;
+  /** Every Wonder ever built, standing or lost, in the order the rule set's Wonders report lists them (#971, #992). */
+  wonderHistory: (
+    wonders: WonderRegistry,
+    cityImprovements: CityImprovementRegistry
+  ) => WonderStatus[];
 };
 
 let current: WorkerRules | null = null;

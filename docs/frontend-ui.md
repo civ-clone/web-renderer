@@ -244,7 +244,7 @@ What surrounds the map in play (the actions, notices, details, sidebar lists, un
   `packages/worker-client/Client/actions/city.ts`).
 - Reports, by key: `CityStatus` (F1), `IntelligenceReport` (F3),
   `HappinessReport` (F4), `TradeReport` (F5), `ScienceReport` (F6),
-  `TopCitiesReport` (F8).
+  `WondersReport` (F7, #992), `TopCitiesReport` (F8).
 - Details: `PlayerDetails`, `GameDetails`, and the active unit's panel, which
   each interface fills through the `unitPanel` slot (#860): classic's
   `UnitDetails` and strip, or modern's `UnitCard`. `UnitDetails` is the

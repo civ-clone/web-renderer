@@ -1,0 +1,39 @@
+// The Wonders of the World (F7, #992): a box for each Wonder in its owner's colours, its icon then its sentence, as Civ1
+//  draws them. A lost Wonder's box is plain.
+.wonders-report {
+  .wonder {
+    align-items: center;
+    border: 2px solid var(--owner-primary, var(--ui-unknown-owner));
+    box-shadow: inset 0 0 0 1px
+      var(--owner-secondary, var(--ui-unknown-owner-edge));
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    min-height: 2rem;
+    padding: 0.25rem 0.5rem;
+
+    &.unknown-owner .name,
+    &.destroyed .name {
+      font-style: italic;
+    }
+
+    .name {
+      font-weight: var(--type-strong-weight);
+    }
+  }
+
+  // At its own size; none imported, no gap for it.
+  .building-icon {
+    display: inline-flex;
+    flex: none;
+    line-height: 0;
+
+    &:empty {
+      display: none;
+    }
+
+    img {
+      image-rendering: pixelated;
+    }
+  }
+}

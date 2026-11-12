@@ -68,7 +68,7 @@ The modules, all under `packages/worker-client/Client/`:
 - `TurnHandover.ts`: hands the turn to the UI and back: the first `gameData`, the hand-over patch, `turnStarted`, the held notices and halts, each action's patch and `actionHandled`, and `turnEnded`; an automated turn instead.
 - `Automation.ts`: whether the player's turns are automated, and the computer player that plays them; read live, as it is toggled mid-game.
 - `cheats.ts`: the `cheat` receiver and the cheat menu's lists, with the plain-data checks for `CreateUnit` and `ModifyUnit`.
-- `requests.ts`: what the UI asks for: Top Cities, intelligence, the Civilization Score, a city's build list and a unit's actions.
+- `requests.ts`: what the UI asks for: Top Cities, the Wonders of the World, intelligence, the Civilization Score, a city's build list and a unit's actions.
 - `gameEnd.ts`: how the game ends for the player: Retire, keep playing, the ending window, and our own destruction.
 
 ### Input handling
@@ -78,7 +78,7 @@ Receives frontend events over transport:
 - `action`: all player actions (unit movement, end turn, city actions, etc.).
 - `cheat`: ad-hoc debug operations (`RevealMap`, `GrantAdvance`, `GrantGold`, `ModifyUnit`, `CreateUnit`). `GrantAdvance` and `GrantGold` can target any player.
 - `unitActions`: the UI asks for the actions of the unit it has made active.
-- Requests answered on the same channel: `cityBuildAvailable`, `topCities`, `civilizationScore`, `civilizationPower`, `intelligence`, `cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`.
+- Requests answered on the same channel: `cityBuildAvailable`, `topCities`, `wonders`, `civilizationScore`, `civilizationPower`, `intelligence`, `cheatUnitTypes`, `cheatAdvances`, `cheatPlayers`.
 - `retire`, `gameContinue`: Game → Retire, and keeping playing after the game has ended.
 
 ### Output handling

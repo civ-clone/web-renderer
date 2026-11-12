@@ -19,6 +19,7 @@
     "@civ-clone/civ1-government": "*",
     "@civ-clone/civ1-treasury": "*",
     "@civ-clone/civ1-unit": "*",
+    "@civ-clone/civ1-wonder": "*",
     "@civ-clone/core-city": "^0.1.24",
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-government": "^0.1.6",

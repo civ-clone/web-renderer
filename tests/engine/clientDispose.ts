@@ -255,6 +255,7 @@ const run = async (): Promise<void> => {
         // The player's build options (#690, #691).
         'buildPreferences',
         'topCities',
+        'wonders',
         'civilizationScore',
         'civilizationPower',
         'cityBuildAvailable',

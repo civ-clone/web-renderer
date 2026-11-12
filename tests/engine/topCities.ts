@@ -29,6 +29,8 @@ import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
+import { instance as wonderRegistryInstance } from '@civ-clone/core-wonder/WonderRegistry';
+import { Colossus } from '@civ-clone/civ1-wonder/Wonders';
 
 let started = false,
   humanPlayer: Player | null = null,
@@ -139,9 +141,11 @@ const checkEntries = (): void => {
       size: number,
       yields: unknown[],
       specialists: string[],
-      wonders: string[]
+      wonders: string[],
+      destroyed: boolean = false
     ) => {
       const created: any = {
+        destroyed: () => destroyed,
         name: () => name,
         player: () => owner,
         originalPlayer: () => original,
@@ -185,23 +189,22 @@ const checkEntries = (): void => {
       city('Ulundi', unmet, unmet, seenTile, 1, [], [], []),
       // A second city of an owner already asked about, so that asking once per owner takes a cache (#503).
       city('Antium', met, met, seenTile, 2, [], [], []),
+      // Destroyed cities stay in the registry, with or without a Wonder against them: never listed (#995).
+      city('Ruined', met, met, seenTile, 0, [], [], [], true),
+      city('Lost', met, met, seenTile, 0, [], [], ['Colossus'], true),
     ],
     asked: string[] = [],
+    seenAsked: object[] = [],
     dependencies = {
       cities: { entries: () => cities },
       cityGrowths: { getByCity: (city: any) => city.growth },
       specialists: { getByCity: (city: any) => city.specialists },
       wonders: { getByCity: (city: any) => city.wonders },
-      playerWorlds: {
-        getByPlayer: (owner: Player) => {
-          if (owner !== reader) {
-            fail("topCitiesEntries read a world other than the reader's");
-          }
+      // What the view has seen, asked once for each city.
+      hasSeen: (tile: object) => {
+        seenAsked.push(tile);
 
-          return {
-            getByTile: (tile: object) => (tile === seenTile ? tile : null),
-          };
-        },
+        return tile === seenTile;
       },
       hasMet: (other: Player) => {
         asked.push(other.civilization().sourceClass().name);
@@ -264,6 +267,11 @@ const checkEntries = (): void => {
         entries
       )}, expected ${JSON.stringify(expected)}`
     );
+  }
+
+  // Asked once for each standing city: four.
+  if (seenAsked.length !== 4) {
+    fail(`hasSeen was asked ${seenAsked.length} times, not once per city`);
   }
 
   if (asked.join(',') !== 'Babylonian,Roman,Zulu') {
@@ -423,12 +431,46 @@ const run = async (): Promise<void> => {
     );
   }
 
+  // A rival's size-1 city captured is destroyed (civ1-city), and stays in the registry: never listed, even with a
+  //  Wonder still registered against it (#995).
+  const ruinSite = rivalTile
+    .getSurroundingArea(4)
+    .entries()
+    .find(
+      (tile) =>
+        !tile.isWater() &&
+        cityRegistryInstance.getByTile(tile) === null &&
+        tile !== elsewhere
+    );
+
+  if (!ruinSite) {
+    fail('no land tile for a city to destroy');
+  }
+
+  humanWorld.register(ruinSite!);
+
+  const ruined = new City(rival!, ruinSite!, 'Ruinville');
+
+  ruined.capture(humanPlayer!);
+  wonderRegistryInstance.register(new Colossus(ruined));
+
+  if (
+    !ruined.destroyed() ||
+    cityRegistryInstance.entries().indexOf(ruined) === -1
+  ) {
+    fail('the captured size-1 city was not destroyed and kept in the registry');
+  }
+
+  if (rows(10).some((row) => row.city?.name === 'Ruinville')) {
+    fail(`a destroyed city is listed: ${JSON.stringify(rows(10))}`);
+  }
+
   if (rows(1).length !== 1) {
     fail(`a limit of 1 gave ${rows(1).length} rows`);
   }
 
   console.log(
-    'PASS topCities (ranking, the limit, and only what the player has seen or met is named)'
+    'PASS topCities (ranking, the limit, only what the player has seen or met is named, and no destroyed city)'
   );
 
   process.exit(0);

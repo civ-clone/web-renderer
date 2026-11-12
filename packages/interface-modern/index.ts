@@ -14,6 +14,7 @@ import TradeTable from './components/TradeTable';
 import UnitCard from './components/UnitCard';
 import UnitCardActions from './components/UnitCardActions';
 import UnitStackChoice from './components/UnitStackChoice';
+import WondersTable from './components/WondersTable';
 import { choiceList } from '@civ-clone/ui-hud/components/choiceList';
 import { choices } from '@civ-clone/ui-city/components/choices';
 import cityLabels from '@civ-clone/ui-map/components/Map/cityLabels';
@@ -62,6 +63,8 @@ reports.provide('tables', {
   happiness: (player, portal) => new HappinessTable(player, portal),
   topCities: (player, portal, transport) =>
     new TopCitiesTable(player, portal, transport),
+  wonders: (player, portal, transport) =>
+    new WondersTable(player, portal, transport),
 });
 
 choices.provide('choiceWindows', {

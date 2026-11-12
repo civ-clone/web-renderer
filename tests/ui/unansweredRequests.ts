@@ -9,6 +9,8 @@ import './lib/interfaces';
 
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import TopCitiesReport from '@civ-clone/ui-interface-classic/components/TopCitiesReport';
+import WondersReport from '@civ-clone/ui-interface-classic/components/WondersReport';
+import WondersTable from '@civ-clone/ui-interface-modern/components/WondersTable';
 import Transport from '@civ-clone/ui-client/Transport';
 import i18next from 'i18next';
 import unlessRequestFailed from '@civ-clone/ui-client/lib/unlessRequestFailed';
@@ -92,6 +94,22 @@ const failingWith = (error: Error): Transport =>
   expect(
     'one that fails some other way closes too, and the error reaches the console',
     [reports(), unhandled],
+    [0, ['a bug']]
+  );
+
+  // The Wonders of the World (#992), in both interfaces, the same way.
+  new WondersReport(failingWith(new RequestFailed('wonders', 'no answer')));
+  new WondersTable(
+    {} as any,
+    {} as any,
+    failingWith(new RequestFailed('wonders', 'no answer'))
+  );
+
+  await settle();
+
+  expect(
+    'the Wonders of the World, unanswered, closes in both interfaces, with nothing unhandled',
+    [document.querySelectorAll('dialog.wonders-report').length, unhandled],
     [0, ['a bug']]
   );
 

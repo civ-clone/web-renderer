@@ -255,6 +255,33 @@
     white-space: normal;
   }
 
+  // A row of your own among everyone's, as the sidebar's Power list marks yours.
+  tbody tr[aria-current='true'] {
+    background: var(--ui-sunken);
+    font-weight: var(--type-strong-weight);
+  }
+
+  // A Wonder's name, after its icon (#992). The icon is at its own size, and takes no room when it isn't imported.
+  .ui-report-wonder {
+    align-items: center;
+    display: inline-flex;
+    gap: 0.5em;
+
+    .building-icon {
+      display: inline-flex;
+      flex: none;
+      line-height: 0;
+
+      &:empty {
+        display: none;
+      }
+
+      img {
+        image-rendering: pixelated;
+      }
+    }
+  }
+
   // A civilization's name, after its colours.
   .ui-report-nation {
     align-items: center;

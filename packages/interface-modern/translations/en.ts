@@ -80,6 +80,10 @@ i18next.addResources('en', 'default', {
   'ReportTable.TopCities.rank': 'Rank',
   'ReportTable.TopCities.wonders': 'Wonders',
   'ReportTable.Trade.cities': 'Cities',
+  'ReportTable.Wonders.wonder': 'Wonder',
+  // A row of your own among everyone's, for a screen reader (#992).
+  'ReportTable.you': '(you)',
+  'WondersReport.destroyed-state': 'Destroyed',
   'ReportTable.Trade.cost': 'Each',
   'ReportTable.Trade.count': 'Number',
   'ReportTable.Trade.improvement': 'Improvement',
