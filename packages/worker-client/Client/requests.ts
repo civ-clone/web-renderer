@@ -21,12 +21,7 @@ import {
   CivilizationPowerRow,
   WondersRow,
 } from '@civ-clone/ui-protocol/reports';
-import {
-  builtWonders,
-  wonderOrder,
-  wondersEntries,
-  wondersRows,
-} from '../lib/wonders';
+import { builtWonders, wondersEntries, wondersRows } from '../lib/wonders';
 import { civilizationScore as civilizationScoreOf } from '../lib/civilizationScore';
 import { civilizationPowerRows } from '../lib/civilizationPower';
 import { ClientContext, Registries } from './ClientContext';
@@ -61,8 +56,10 @@ export type RequestsContext = Pick<
   | 'rules'
   | 'specialists'
   | 'wonders'
-  // The Military report's (#405), and the Wonders' order (#992).
+  // The Military report's (#405).
   | 'availableCityBuildItems'
+  // Every Wonder ever built, standing or lost, for the Wonders report (#971, #992).
+  | 'cityImprovements'
 > &
   Registries<{
     cities: 'getByPlayer';
@@ -87,15 +84,21 @@ export const topCities = (
     Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
   );
 
-// Every Wonder built (#992), in the order the game gives the Wonders.
+// Every Wonder built (#992), standing or lost (#971), in the order the rule set lists them.
 export const wonders = (ctx: RequestsContext): WondersRow[] =>
   wondersRows(
-    wondersEntries(ctx.player(), builtWonders({ wonders: ctx.wonders }), {
-      playerWorlds: ctx.playerWorlds,
-      hasMet: (player: Player) => ctx.hasMet(player),
-      owns: (player: Player) => ctx.view.owns(player),
-    }),
-    wonderOrder(ctx.availableCityBuildItems)
+    wondersEntries(
+      ctx.player(),
+      builtWonders({
+        wonders: ctx.wonders,
+        cityImprovements: ctx.cityImprovements,
+      }),
+      {
+        playerWorlds: ctx.playerWorlds,
+        hasMet: (player: Player) => ctx.hasMet(player),
+        owns: (player: Player) => ctx.view.owns(player),
+      }
+    )
   );
 
 export const civilizationScore = (ctx: RequestsContext): CivilizationScore =>

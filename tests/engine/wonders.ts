@@ -1,8 +1,9 @@
 // The Wonders of the World report (F7, #992) is worked out in the worker and sent as finished rows, as the Top Cities
 //  are (#124). This checks the rows with plain data (standing, captured, lost, an unmet owner, an unseen city, your own,
 //  the order and none at all), what is known about each Wonder (`wondersEntries`) with stand-ins, then, in a seeded game
-//  driven through a human `DataTransferClient` as `topCities` does, the rows sent on the `wonders` channel: in the order
-//  the game gives the Wonders rather than the order they were built, and with nothing that ties a row to an object.
+//  driven through a human `DataTransferClient` as `topCities` does, the rows sent on the `wonders` channel: in Civ1's
+//  order (#971's `wonderHistory`) rather than the order they were built, a Wonder lost with its captured city listed as
+//  destroyed, and nothing that ties a row to an object.
 
 // Must stay first: it seeds the engine's random source before any engine module evaluates.
 import { config } from './lib/seed';
@@ -13,11 +14,18 @@ import {
   WondersDependencies,
   WondersEntry,
   builtWonders,
-  wonderOrder,
   wondersEntries,
   wondersRows,
 } from '@civ-clone/ui-worker-client/lib/wonders';
-import { Colossus, Pyramids } from '@civ-clone/civ1-wonder/Wonders';
+import {
+  Colossus,
+  GreatLibrary,
+  Pyramids,
+} from '@civ-clone/civ1-wonder/Wonders';
+import {
+  setWorkerRules,
+  workerRules,
+} from '@civ-clone/ui-worker-client/workerRules';
 import ChoiceMeta from '@civ-clone/core-client/ChoiceMeta';
 import City from '@civ-clone/core-city/City';
 import DataTransferClient from '@civ-clone/ui-worker-client/DataTransferClient';
@@ -25,7 +33,6 @@ import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Settlers } from '@civ-clone/civ1-unit/Units';
 import { WondersRow } from '@civ-clone/ui-protocol/reports';
-import { instance as availableCityBuildItemsInstance } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -92,14 +99,12 @@ const standing = (
   },
 });
 
-const order = ['Pyramids', 'HangingGardens', 'Colossus', 'Lighthouse'];
-
 const checkRows = (): void => {
-  expect('no Wonder built: no rows', wondersRows([], order), []);
+  expect('no Wonder built: no rows', wondersRows([]), []);
 
   expect(
     'a standing Wonder: its city by its founder, and its owner now',
-    wondersRows([standing('Pyramids')], order),
+    wondersRows([standing('Pyramids')]),
     [
       {
         wonder: 'Pyramids',
@@ -113,10 +118,9 @@ const checkRows = (): void => {
 
   expect(
     'a captured Wonder goes with its city: the founder names the city, the captor owns it',
-    wondersRows(
-      [standing('Colossus', { owner: 'Roman', colors: ['#f00', '#fff'] })],
-      order
-    ).map(({ city, owner }) => [city, owner]),
+    wondersRows([
+      standing('Colossus', { owner: 'Roman', colors: ['#f00', '#fff'] }),
+    ]).map(({ city, owner }) => [city, owner]),
     [
       [
         { name: 'Thebes', civilization: 'Egyptian' },
@@ -127,13 +131,10 @@ const checkRows = (): void => {
 
   expect(
     "lost Wonders: destroyed, with no city, no owner and nobody's",
-    wondersRows(
-      [
-        { wonder: 'Colossus', city: null },
-        { wonder: 'Lighthouse', city: null },
-      ],
-      order
-    ),
+    wondersRows([
+      { wonder: 'Colossus', city: null },
+      { wonder: 'Lighthouse', city: null },
+    ]),
     [
       {
         wonder: 'Colossus',
@@ -154,14 +155,11 @@ const checkRows = (): void => {
 
   expect(
     "an unmet owner isn't named; a city you haven't seen isn't either",
-    wondersRows(
-      [
-        standing('Pyramids', { met: false }),
-        standing('Colossus', { seen: false }),
-        standing('Lighthouse', { seen: false, met: false }),
-      ],
-      order
-    ).map(({ wonder, city, owner }) => [
+    wondersRows([
+      standing('Pyramids', { met: false }),
+      standing('Colossus', { seen: false }),
+      standing('Lighthouse', { seen: false, met: false }),
+    ]).map(({ wonder, city, owner }) => [
       wonder,
       city?.name ?? null,
       owner?.civilization ?? null,
@@ -175,13 +173,10 @@ const checkRows = (): void => {
 
   expect(
     'your own: marked, and always named',
-    wondersRows(
-      [
-        standing('Pyramids', { own: true, seen: false, met: false }),
-        standing('Colossus'),
-      ],
-      order
-    ).map(({ own, city, owner }) => [own, city?.name, owner?.civilization]),
+    wondersRows([
+      standing('Pyramids', { own: true, seen: false, met: false }),
+      standing('Colossus'),
+    ]).map(({ own, city, owner }) => [own, city?.name, owner?.civilization]),
     [
       [true, 'Thebes', 'Egyptian'],
       [false, 'Thebes', 'Egyptian'],
@@ -189,23 +184,20 @@ const checkRows = (): void => {
   );
 
   expect(
-    "in the game's order, not the order built; a Wonder it doesn't name comes last, lost ones in their place",
-    wondersRows(
-      [
-        standing('Lighthouse'),
-        standing('NewWonder'),
-        { wonder: 'HangingGardens', city: null },
-        standing('Pyramids'),
-        standing('OtherWonder'),
-      ],
-      order
-    ).map(({ wonder }) => wonder),
-    ['Pyramids', 'HangingGardens', 'Lighthouse', 'NewWonder', 'OtherWonder']
+    'in the order the entries come, lost ones in their place',
+    wondersRows([
+      standing('Pyramids'),
+      { wonder: 'HangingGardens', city: null },
+      standing('Lighthouse'),
+    ]).map(({ wonder }) => wonder),
+    ['Pyramids', 'HangingGardens', 'Lighthouse']
   );
 };
 
 // What the reader knows of each Wonder, read through the registries it is given, so plain stand-ins will do.
 const checkEntries = (): void => {
+  const rules = workerRules();
+
   const civilization = (name: string, colors: [string, string] | null) => ({
       sourceClass: () => ({ name }),
       attributes: () =>
@@ -227,13 +219,32 @@ const checkEntries = (): void => {
         originalPlayer: () => original,
         tile: () => tile,
       } as unknown as City),
+    // Standing in a city, and whose the rules say it is now.
+    standingIn = (
+      cityName: string,
+      owner: Player,
+      original: Player,
+      tile: object
+    ) => ({ city: city(cityName, owner, original, tile), owner }),
     built: BuiltWonder[] = [
-      { wonder: 'Pyramids', city: city('Babylon', reader, reader, unseenTile) },
+      {
+        wonder: 'Pyramids',
+        standing: standingIn('Babylon', reader, reader, unseenTile),
+      },
       // Founded by the Zulus, taken by the Romans: the Romans own its Wonder now.
-      { wonder: 'Colossus', city: city('Ulundi', captor, unmet, seenTile) },
-      { wonder: 'Lighthouse', city: city('Zimbabwe', unmet, unmet, seenTile) },
-      { wonder: 'GreatWall', city: city('Antium', captor, captor, unseenTile) },
-      { wonder: 'Oracle', city: null },
+      {
+        wonder: 'Colossus',
+        standing: standingIn('Ulundi', captor, unmet, seenTile),
+      },
+      {
+        wonder: 'Lighthouse',
+        standing: standingIn('Zimbabwe', unmet, unmet, seenTile),
+      },
+      {
+        wonder: 'GreatWall',
+        standing: standingIn('Antium', captor, captor, unseenTile),
+      },
+      { wonder: 'Oracle', standing: null },
     ],
     asked: string[] = [],
     dependencies = {
@@ -320,18 +331,53 @@ const checkEntries = (): void => {
     [false, true]
   );
 
+  // The rule set's history, as it gives it: a lost Wonder's destroyed city and a never-built one are passed on to no
+  //  one.
+  const delphi = city('Delphi', captor, captor, seenTile),
+    carthage = city('Carthage', unmet, unmet, seenTile);
+
+  setWorkerRules({
+    ...workerRules(),
+    wonderHistory: () =>
+      [
+        {
+          type: { name: 'Oracle' },
+          state: 'standing',
+          city: delphi,
+          owner: captor,
+        },
+        {
+          type: { name: 'Colossus' },
+          state: 'lost',
+          city: carthage,
+          owner: null,
+        },
+        {
+          type: { name: 'Lighthouse' },
+          state: 'never',
+          city: null,
+          owner: null,
+        },
+      ] as any,
+  });
+
+  const fromHistory = builtWonders({} as any);
+
   expect(
-    'builtWonders: each standing Wonder by its type name, with its city',
-    builtWonders({
-      wonders: {
-        entries: () =>
-          [
-            { sourceClass: () => ({ name: 'Oracle' }), city: () => 'Delphi' },
-          ] as any,
-      },
-    }),
-    [{ wonder: 'Oracle', city: 'Delphi' }]
+    "builtWonders: the rule set's history, a standing Wonder with its city and owner, a lost one with neither, a never-built one left out",
+    fromHistory.map(({ wonder, standing }) => [
+      wonder,
+      standing?.city === delphi,
+      standing?.owner === captor,
+      standing === null,
+    ]),
+    [
+      ['Oracle', true, true, false],
+      ['Colossus', false, false, true],
+    ]
   );
+
+  setWorkerRules(rules);
 };
 
 // Any key in the rows that could tie a row to an object or a place.
@@ -348,20 +394,6 @@ const leakedKeys = (value: any, path: string = 'rows'): string[] =>
 const run = async (): Promise<void> => {
   checkRows();
   checkEntries();
-
-  // The game's order: its build items', Wonders only.
-  const gameOrder = wonderOrder(availableCityBuildItemsInstance);
-
-  expect(
-    "wonderOrder: the game's Wonders, in the order they were made available",
-    [
-      gameOrder.length,
-      gameOrder.includes('Pyramids'),
-      gameOrder.includes('Colossus'),
-      gameOrder.some((name) => ['Settlers', 'Temple'].includes(name)),
-    ],
-    [21, true, true, false]
-  );
 
   const [founder] = unitRegistryInstance
     .getByPlayer(humanPlayer!)
@@ -395,12 +427,40 @@ const run = async (): Promise<void> => {
 
   expect('none built yet: no rows', wondersSent, []);
 
-  // Built in the opposite order to the game's.
-  const [first, second] = [Pyramids, Colossus].sort(
-    (a, b) => gameOrder.indexOf(b.name) - gameOrder.indexOf(a.name)
+  // Two of ours, built the other way round from Civ1's order (the Great Library is its 5th, the Pyramids its 1st), as
+  //  `building-complete` registers them.
+  wonderRegistryInstance.register(
+    new GreatLibrary(ownCity!),
+    new Pyramids(ownCity!)
   );
 
-  wonderRegistryInstance.register(new first!(ownCity!), new second!(ownCity!));
+  // And a rival's Colossus, lost with its city: a size-1 city captured is destroyed (civ1-city), and its Wonder with it.
+  const [rival, captor] = playerRegistryInstance
+      .entries()
+      .filter((player) => player !== humanPlayer),
+    site = ownCity!
+      .tile()
+      .getSurroundingArea(4)
+      .entries()
+      .find(
+        (tile) =>
+          !tile.isWater() &&
+          tile.distanceFrom(ownCity!.tile()) > 2 &&
+          cityRegistryInstance.getByTile(tile) === null
+      );
+
+  if (!rival || !captor || !site) {
+    fail('no rival, captor or site for the lost Colossus');
+  }
+
+  const lost = new City(rival!, site!, 'Lostville');
+
+  wonderRegistryInstance.register(new Colossus(lost));
+  lost.capture(captor!);
+
+  if (!lost.destroyed() || wonderRegistryInstance.getByCity(lost).length > 0) {
+    fail('the Colossus was not lost with its city');
+  }
 
   wondersHandler!(null);
   await settle();
@@ -412,23 +472,21 @@ const run = async (): Promise<void> => {
   const civilization = humanPlayer!.civilization().sourceClass().name;
 
   expect(
-    "your Wonders, in the game's order rather than the order built",
+    "asked over the transport: in Civ1's order, not the order built, the lost Colossus destroyed and nobody's",
     (wondersSent as WondersRow[]).map(
       ({ wonder, own, destroyed, city, owner }) => [
         wonder,
         own,
         destroyed,
-        city?.name,
-        owner?.civilization,
+        city?.name ?? null,
+        owner?.civilization ?? null,
       ]
     ),
-    [second!, first!].map((Type) => [
-      Type.name,
-      true,
-      false,
-      ownCity!.name(),
-      civilization,
-    ])
+    [
+      ['Pyramids', true, false, ownCity!.name(), civilization],
+      ['Colossus', false, true, null, null],
+      ['GreatLibrary', true, false, ownCity!.name(), civilization],
+    ]
   );
 
   console.log(`PASS wonders (${checks} checks)`);

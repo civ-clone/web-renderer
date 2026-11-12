@@ -48,7 +48,7 @@ export interface ClientRegistries {
   cities: Pick<CityRegistry, 'entries' | 'getBy' | 'getByPlayer' | 'getByTile'>;
   cityBuilds: Pick<CityBuildRegistry, 'getBy'>;
   cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
-  cityImprovements: Pick<CityImprovementRegistry, 'getByCity'>;
+  cityImprovements: CityImprovementRegistry;
   clients: Pick<ClientRegistry, 'getByPlayer'>;
   currentPlayers: Pick<CurrentPlayerRegistry, 'entries'>;
   difficulties: GameDifficultyRegistry;
@@ -66,7 +66,7 @@ export interface ClientRegistries {
   turn: Turn;
   unitLosses: Pick<UnitLossRegistry, 'getByPlayer'>;
   units: Pick<UnitRegistry, 'getBy' | 'getByPlayer' | 'getByTile'>;
-  wonders: Pick<WonderRegistry, 'entries' | 'getByCity'>;
+  wonders: WonderRegistry;
   year: Year;
 }
 

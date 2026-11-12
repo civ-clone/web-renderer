@@ -2,9 +2,8 @@
 //  sees the finished rows: every Wonder built, its city and that city's owner now, and the ones lost with their city.
 
 import City from '@civ-clone/core-city/City';
+import { CityImprovementRegistry } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 import Player from '@civ-clone/core-player/Player';
-import { AvailableCityBuildItemsRegistry } from '@civ-clone/core-city-build/AvailableCityBuildItemsRegistry';
-import Wonder from '@civ-clone/core-wonder/Wonder';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { WondersRow } from '@civ-clone/ui-protocol/reports';
@@ -13,27 +12,44 @@ import {
   civilizationOf,
   cityKnowledge,
 } from './topCities';
+import { workerRules } from '../workerRules';
 
-// A Wonder that has been built: standing in its city, or lost with it (`city` is `null`).
+// A Wonder that has been built: standing in a city, and whose it is now, or lost with its city (`standing` is `null`).
 export type BuiltWonder = {
   wonder: string;
-  city: City | null;
+  standing: {
+    city: City;
+    owner: Player;
+  } | null;
 };
 
 /**
- * Every Wonder ever built. Today only the standing ones: the registry forgets a Wonder once its city is destroyed, so
- *  none comes back lost yet. The engine's answer for those (#971) goes here, each as `{ wonder, city: null }`, and
- *  nothing after this needs to change.
+ * Every Wonder ever built, standing or lost, in the order the rule set's report lists them (Civ1's: Pyramids … Cure for
+ *  Cancer), as the rule set's `wonderHistory` gives them (#971). A lost Wonder is nobody's: its destroyed city isn't
+ *  passed on.
  */
 export const builtWonders = ({
   wonders,
+  cityImprovements,
 }: {
-  wonders: Pick<WonderRegistry, 'entries'>;
+  wonders: WonderRegistry;
+  cityImprovements: CityImprovementRegistry;
 }): BuiltWonder[] =>
-  wonders.entries().map((wonder: Wonder) => ({
-    wonder: typeNameOf(wonder.sourceClass()),
-    city: wonder.city(),
-  }));
+  workerRules()
+    .wonderHistory(wonders, cityImprovements)
+    .flatMap(({ type, state, city, owner }): BuiltWonder[] =>
+      state === 'never'
+        ? []
+        : [
+            {
+              wonder: typeNameOf(type),
+              standing:
+                state === 'standing' && city !== null && owner !== null
+                  ? { city, owner }
+                  : null,
+            },
+          ]
+    );
 
 // What the worker knows about one Wonder. `seen` and `met` decide how much of its city and owner the player is told.
 export type WondersEntry = {
@@ -54,52 +70,36 @@ export type WondersEntry = {
   } | null;
 };
 
-/**
- * The rows, in `order` (the Wonders' type names, as the game gives them), any Wonder it doesn't name after those, in the
- *  order they came. A lost Wonder has no place, no owner and isn't anyone's.
- */
-export const wondersRows = (
-  entries: WondersEntry[],
-  order: string[]
-): WondersRow[] => {
-  const place = (wonder: string): number => {
-    const index = order.indexOf(wonder);
+/** The rows, in the order the entries came. A lost Wonder has no place, no owner and isn't anyone's. */
+export const wondersRows = (entries: WondersEntry[]): WondersRow[] =>
+  entries.map(({ wonder, city }): WondersRow => {
+    if (city === null) {
+      return { wonder, destroyed: true, own: false, city: null, owner: null };
+    }
 
-    return index === -1 ? order.length : index;
-  };
+    // Your own are always known to you.
+    const known = city.own || city.met;
 
-  return entries
-    .map((entry, index) => ({ entry, index, place: place(entry.wonder) }))
-    .sort((a, b) => a.place - b.place || a.index - b.index)
-    .map(({ entry: { wonder, city } }): WondersRow => {
-      if (city === null) {
-        return { wonder, destroyed: true, own: false, city: null, owner: null };
-      }
-
-      // Your own are always known to you.
-      const known = city.own || city.met;
-
-      return {
-        wonder,
-        destroyed: false,
-        own: city.own,
-        city:
-          city.own || city.seen
-            ? { name: city.name, civilization: city.originalCivilization }
-            : null,
-        owner: known
-          ? { civilization: city.owner.civilization, colors: city.owner.colors }
+    return {
+      wonder,
+      destroyed: false,
+      own: city.own,
+      city:
+        city.own || city.seen
+          ? { name: city.name, civilization: city.originalCivilization }
           : null,
-      };
-    });
-};
+      owner: known
+        ? { civilization: city.owner.civilization, colors: city.owner.colors }
+        : null,
+    };
+  });
 
 export type WondersDependencies = CityKnowledgeDependencies & {
   // Whose Wonders are the view's own (`ClientView.owns`): the reader's alone, unless the view says otherwise (#607).
   owns?: (player: Player) => boolean;
 };
 
-// What `player` knows about each Wonder built, in the order `built` gives them, ready for `wondersRows` to order.
+// What `player` knows about each Wonder built, in the order `built` gives them, ready for `wondersRows`.
 export const wondersEntries = (
   player: Player,
   built: BuiltWonder[],
@@ -107,12 +107,13 @@ export const wondersEntries = (
 ): WondersEntry[] => {
   const knowledge = cityKnowledge(player, { playerWorlds, hasMet });
 
-  return built.map(({ wonder, city }) => {
-    if (city === null) {
+  return built.map(({ wonder, standing }) => {
+    if (standing === null) {
       return { wonder, city: null };
     }
 
-    const owner = city.player(),
+    // The owner the rules give: the city's player now, a captor once it's taken.
+    const { city, owner } = standing,
       own = owns ? owns(owner) : owner === player;
 
     return {
@@ -130,11 +131,3 @@ export const wondersEntries = (
     };
   });
 };
-
-/** The Wonders' type names in the order the game gives them: the order its build items were made available in. */
-export const wonderOrder = (
-  availableCityBuildItems: Pick<AvailableCityBuildItemsRegistry, 'entries'>
-): string[] =>
-  (availableCityBuildItems.entries() as unknown as Function[])
-    .filter((Item) => Item.prototype instanceof Wonder)
-    .map((Item) => typeNameOf(Item as typeof Wonder));
