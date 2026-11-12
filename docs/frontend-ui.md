@@ -161,7 +161,10 @@ for a tile, on whatever grid. The grid is always named in full: the square grid.
 packages of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
 projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the grids it draws, as `frontend.ts` loads
 `map-square`. The minimap, which draws every world as squares in storage order, is the square grid's too. Suites that
-draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`.
+draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`. The portal centres, drags and culls by asking
+the projection too (the tile under a pixel, and `tileStep` to count columns and rows), never by stepping a square, so a
+new grid's projection keeps to the rules `lib/projection.ts` sets out and `Portal` needs nothing. `tests/ui/lib/staggered.ts`
+is a staggered isometric stand-in that `tests/ui/staggeredPortal.ts` drives the portal on.
 
 ## Major UI modules
 

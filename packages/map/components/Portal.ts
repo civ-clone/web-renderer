@@ -111,9 +111,9 @@ export class Portal
   // Whether the view stops at the top and bottom rows of the world rather
   // than wrapping over the poles.
   #lockVerticalEdges: boolean;
-  // How far, in px, the view has been dragged off the centre tile. Kept within
-  // half a tile of it, so `#center` is always the tile under the middle of the
-  // canvas.
+  // How far, in px, the view has been dragged off the centre tile's middle.
+  // Kept inside that tile, as the projection says where its edges are, so
+  // `#center` is always the tile under the middle of the canvas.
   #offset: Coordinate = { x: 0, y: 0 };
   #playerId: string | null = null;
   // Where tiles go on the world in pixels, at this portal's scale; made again
@@ -149,7 +149,7 @@ export class Portal
     this.#tileSize = { ...settings.tileSize };
     this.#scale = settings.scale;
     this.#transport = transport;
-    this.#projection = this.#createProjection();
+    this.#projection = this.createProjection();
 
     layers.forEach((MapType) => {
       const layer = new MapType(this.#world, this.scale(), this.#tileSize);
@@ -206,31 +206,59 @@ export class Portal
    * Whether the tile at `x`, `y` is in view — and, given a `margin`, at least
    * that many tiles in from the edge of it, which is what recentring on a unit
    * wants: one on the very edge is technically visible but hard to see.
+   *
+   * Counted in the projection's steps, columns across and rows down, so on a staggered grid twice as many rows fit as
+   *  boxes would, and a tile on a shifted row is half a column further along than its column says.
+   *
+   * Approximate: whole steps from the centre tile, with the drag offset ignored. On the square grid that only says a
+   *  tile up to half a column inside the edge is hidden; on a staggered grid a margin-0 answer can be off by up to
+   *  half a column either way (docs/known-issues-and-rewrite-notes.md).
    */
   isVisible(x: number, y: number, margin: number = 0): boolean {
-    const { width, height } = this.#projection.footprint();
+    const projection = this.#projection,
+      step = projection.tileStep(),
+      [tileX, tileY] = projection.tileToPixel(x, y),
+      [centerX, centerY] = projection.tileToPixel(
+        this.#center.x,
+        this.#center.y
+      );
 
     return (
       isWithinView(
-        x,
-        this.#center.x,
-        Math.floor(this.#canvas.width / width),
+        (tileX - centerX) / step.x,
+        0,
+        Math.floor(this.#canvas.width / step.x),
         this.#world.width(),
         margin
       ) &&
       (isWithinView(
-        y,
-        this.#center.y,
-        Math.floor(this.#canvas.height / height),
+        (tileY - centerY) / step.y,
+        0,
+        Math.floor(this.#canvas.height / step.y),
         this.#world.height(),
         margin
       ) ||
         // Near a locked edge the view cannot get any closer to centring the
         // tile than it already is, and asking it to would recentre forever.
+        // Moved only up or down, from where it is across, as a staggered
+        // grid's centre depends on where across the middle is too.
         (this.#lockVerticalEdges &&
-          this.clampedCenterY(y, 0)[0] === this.#center.y)) &&
+          this.#centredAlready(
+            this.#middleOf(x, y)[1] -
+              this.#middleOf(this.#center.x, this.#center.y)[1]
+          ))) &&
       !this.#isCovered(x, y, margin)
     );
+  }
+
+  /** Whether the view, moved `down` px to centre on a row, would stop at the pole where it is. */
+  #centredAlready(down: number): boolean {
+    const [center] = this.clampedCenter(this.#center, {
+      x: this.#offset.x,
+      y: down,
+    });
+
+    return center.x === this.#center.x && center.y === this.#center.y;
   }
 
   /**
@@ -245,20 +273,22 @@ export class Portal
     }
 
     const { width, height } = this.#projection.footprint(),
+      step = this.#projection.tileStep(),
       canvasWidth = this.#canvas.width,
       canvasHeight = this.#canvas.height;
 
     // A view as big as the world shows each tile more than once, so one copy under the interface leaves another in
     //  sight.
     if (
-      Math.floor(canvasWidth / width) >= this.#world.width() ||
-      Math.floor(canvasHeight / height) >= this.#world.height()
+      Math.floor(canvasWidth / step.x) >= this.#world.width() ||
+      Math.floor(canvasHeight / step.y) >= this.#world.height()
     ) {
       return false;
     }
 
-    const reachX = Math.max(0, margin) * width,
-      reachY = Math.max(0, margin) * height,
+    // `margin` tiles is that many columns across and rows down.
+    const reachX = Math.max(0, margin) * step.x,
+      reachY = Math.max(0, margin) * step.y,
       areas = this.#covered.map((rect) => ({
         left: rect.x - reachX,
         top: rect.y - reachY,
@@ -383,28 +413,82 @@ export class Portal
   }
 
   /**
-   * The centre row and offset the view would have if it centred on row `y`
-   * `offset` px down from its middle, once kept from running past the top or
-   * bottom of the world.
+   * The centre tile and offset the view would have if it centred on `center`, `offset` px from its middle, once kept
+   *  from running past the top or bottom of the world: the pixel at the canvas's middle is moved up or down until the
+   *  view stops at the pole, and the tile under it is the centre. On a staggered grid that can be the tile beside the
+   *  one above or below, so the column can change as well as the row. The row is not wrapped.
    */
-  protected clampedCenterY(y: number, offset: number): [number, number] {
+  protected clampedCenter(
+    center: Coordinate,
+    offset: Coordinate
+  ): [Coordinate, Coordinate] {
     const projection = this.#projection,
-      tileHeight = projection.footprint().height,
-      half = Math.trunc(tileHeight / 2),
       canvasHalf = Math.trunc(this.#canvas.height / 2),
-      middle = projection.tileToPixel(0, y)[1] + half + offset,
+      [middleX, middleY] = this.#middleOf(center.x, center.y),
       clamped =
         clampOrigin(
-          middle - canvasHalf,
+          middleY + offset.y - canvasHalf,
           this.#canvas.height,
           projection.worldSize().height
         ) + canvasHalf,
-      row = Math.round((clamped - half) / tileHeight);
+      [column, row] = projection.pixelToTile(middleX + offset.x, clamped),
+      [columnX, rowY] = this.#middleOf(column, row),
+      worldWidth = this.#world.width();
 
-    return [row, clamped - half - projection.tileToPixel(0, row)[1]];
+    return [
+      { x: ((column % worldWidth) + worldWidth) % worldWidth, y: row },
+      { x: offset.x - (columnX - middleX), y: clamped - rowY },
+    ];
   }
 
-  #createProjection(): Projection {
+  /**
+   * The middle of the tile at `x`, `y`, in world px, as the portal centres it: the middle of its sprite box, with the
+   *  box's corner rounded to a whole pixel first. A tile's pixel need not be whole (an odd-sized tile's shifted row is
+   *  half a pixel along), and the canvas is drawn at whole pixels, so the middle is one too: the offset a drag leaves
+   *  is then all that rounds, and only a fraction of a pixel of drag can put the centre a pixel off the tile drawn
+   *  under the canvas's middle, as on the square grid, whose pixels are all whole.
+   */
+  #middleOf(x: number, y: number): [number, number] {
+    const projection = this.#projection,
+      { width, height } = projection.footprint(),
+      [left, top] = projection.tileToPixel(x, y);
+
+    return [
+      Math.round(left) + Math.trunc(width / 2),
+      Math.round(top) + Math.trunc(height / 2),
+    ];
+  }
+
+  /**
+   * The tile under the canvas's middle, when that is `offset` px from `center`'s middle, and how far it is from that
+   *  tile's middle: the tile is the projection's, so a drag on a staggered grid crosses into the diamond beside as
+   *  well as the one below. Neither is wrapped.
+   */
+  #retarget(
+    center: Coordinate,
+    offset: Coordinate
+  ): [[number, number], Coordinate] {
+    const [middleX, middleY] = this.#middleOf(center.x, center.y),
+      tile = this.#projection.pixelToTile(
+        middleX + offset.x,
+        middleY + offset.y
+      ),
+      [tileX, tileY] = this.#middleOf(...tile);
+
+    // The difference of two tiles' middles, taken off the offset, rather than the offset worked out again from the
+    //  pixel: both are whole pixels, so a slow drag's fractions add up exactly, as before.
+    return [
+      tile,
+      { x: offset.x - (tileX - middleX), y: offset.y - (tileY - middleY) },
+    ];
+  }
+
+  /**
+   * Where tiles go on the world in pixels, at this portal's scale and wrap: the current tileset's projection. Made
+   *  again whenever the scale or the vertical wrap changes, and first from the constructor, before a subclass's own
+   *  fields are set.
+   */
+  protected createProjection(): Projection {
     return projectionFor(
       currentTileset(),
       this.#world,
@@ -470,32 +554,24 @@ export class Portal
     if (this.#lockVerticalEdges) {
       // Here rather than where the centre is set, so a resize that would
       // uncover a pole is caught too.
-      [this.#center.y, this.#offset.y] = this.clampedCenterY(
-        this.#center.y,
-        this.#offset.y
-      );
+      // In place: `center()` hands out this object.
+      const [center, offset] = this.clampedCenter(this.#center, this.#offset);
+
+      Object.assign(this.#center, center);
+      Object.assign(this.#offset, offset);
     }
 
-    const { width, height } = this.#projection.footprint(),
-      [centerX, centerY] = this.#projection.tileToPixel(
-        this.#center.x,
-        this.#center.y
-      ),
-      // Where the world pixel at the canvas's top left corner is. The half-tile
-      // step is what centres the middle tile rather than its corner; it was
-      // `tileSize / scale`, which is half a tile only at a scale of 2.
-      // The drag offset is rounded here rather than where it is kept, so a
-      // slow drag still adds up, while the layers only ever scroll by whole
-      // pixels and never smear.
+    const [middleX, middleY] = this.#middleOf(this.#center.x, this.#center.y),
+      // Where the world pixel at the canvas's top left corner is: the centre tile's middle, as far off it as the
+      //  view has been dragged, half the canvas up and left. The drag offset is rounded here rather than where it is
+      //  kept, so a slow drag still adds up, while the layers only ever scroll by whole pixels and never smear.
       originX =
-        centerX +
-        Math.round(this.#offset.x) +
-        Math.trunc(width / 2) -
+        middleX +
+        Math.round(this.#offset.x) -
         Math.trunc(this.#canvas.width / 2),
       originY =
-        centerY +
-        Math.round(this.#offset.y) +
-        Math.trunc(height / 2) -
+        middleY +
+        Math.round(this.#offset.y) -
         Math.trunc(this.#canvas.height / 2);
 
     if (
@@ -536,17 +612,14 @@ export class Portal
    * whichever tile ends up under the middle of the canvas.
    */
   scrollBy(deltaX: number, deltaY: number): void {
-    const { width: tileWidth, height: tileHeight } =
-        this.#projection.footprint(),
-      offsetX = this.#offset.x + deltaX,
-      offsetY = this.#offset.y + deltaY,
-      stepX = Math.round(offsetX / tileWidth),
-      stepY = Math.round(offsetY / tileHeight);
+    const [[column, row], offset] = this.#retarget(this.#center, {
+      x: this.#offset.x + deltaX,
+      y: this.#offset.y + deltaY,
+    });
 
-    this.#offset.x = offsetX - stepX * tileWidth;
-    this.#offset.y = offsetY - stepY * tileHeight;
+    Object.assign(this.#offset, offset);
 
-    if (stepX === 0 && stepY === 0) {
+    if (column === this.#center.x && row === this.#center.y) {
       this.render();
 
       return;
@@ -555,13 +628,13 @@ export class Portal
     const width = this.#world.width(),
       height = this.#world.height();
 
-    this.#center.x = (((this.#center.x + stepX) % width) + width) % width;
+    this.#center.x = ((column % width) + width) % width;
     // Locked to the poles, the row is left for the clamp in `syncViewport`
     // to stop at the edge: wrapping it first would carry a drag that runs past
     // one pole to the other.
     this.#center.y = this.#lockVerticalEdges
-      ? this.#center.y + stepY
-      : (((this.#center.y + stepY) % height) + height) % height;
+      ? row
+      : ((row % height) + height) % height;
 
     this.render();
 
@@ -574,7 +647,7 @@ export class Portal
     }
 
     this.#lockVerticalEdges = lock;
-    this.#projection = this.#createProjection();
+    this.#projection = this.createProjection();
 
     // The layers have the far pole drawn beyond each edge, or not, so all of
     // them have to be redrawn either way.
@@ -596,7 +669,7 @@ export class Portal
     }
 
     this.#scale = scale;
-    this.#projection = this.#createProjection();
+    this.#projection = this.createProjection();
     this.#offset.x = 0;
     this.#offset.y = 0;
 
@@ -740,9 +813,9 @@ export class Portal
   }
 
   visibleRange(): [Coordinate, Coordinate] {
-    const { width, height } = this.#projection.footprint(),
-      tileRangeX = Math.floor(Math.floor(this.#canvas.width / width) / 2),
-      tileRangeY = Math.floor(Math.floor(this.#canvas.height / height) / 2);
+    const step = this.#projection.tileStep(),
+      tileRangeX = Math.floor(Math.floor(this.#canvas.width / step.x) / 2),
+      tileRangeY = Math.floor(Math.floor(this.#canvas.height / step.y) / 2);
 
     return [
       {
@@ -761,9 +834,9 @@ export class Portal
   }
 
   rawVisibleRange(): [Coordinate, Coordinate] {
-    const { width, height } = this.#projection.footprint(),
-      tileRangeX = Math.floor(Math.floor(this.#canvas.width / width) / 2),
-      tileRangeY = Math.floor(Math.floor(this.#canvas.height / height) / 2);
+    const step = this.#projection.tileStep(),
+      tileRangeX = Math.floor(Math.floor(this.#canvas.width / step.x) / 2),
+      tileRangeY = Math.floor(Math.floor(this.#canvas.height / step.y) / 2);
 
     return [
       {

@@ -131,6 +131,7 @@
     "test:map-view": "node tools/run-suite.js ui mapView",
     "test:map-navigation": "node tools/run-suite.js ui mapNavigation",
     "test:projection": "node tools/run-suite.js ui projection",
+    "test:staggered-portal": "node tools/run-suite.js ui staggeredPortal",
     "test:render-geometry": "node tools/run-suite.js ui renderGeometry",
     "test:render-geometry:update": "node tools/run-suite.js ui renderGeometry -- --update",
     "test:patch-refs": "node tools/run-suite.js engine patchRefs",

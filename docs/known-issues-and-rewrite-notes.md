@@ -45,6 +45,7 @@ From `README.md` known issues/TODO:
 
 - Some civilization colors are poor. No issue; #167 (renderer themes, including colour keys) is related.
 - Map portal recentring can fail in some situations. #14 (276fdc0) now brings a unit near the edge back to the middle, and #189 fixed a unit losing focus, and the map jumping, after a move. Whether that covers the README's case is not known; the README still lists it.
+- `Portal.isVisible` is approximate: it counts whole columns and rows from the centre tile and ignores how far the map has been dragged off it. On the square grid that only counts a tile up to half a column inside the edge as hidden, which callers tolerate (recentring uses a margin of 2, and `setCenter` drops the drag). On a staggered isometric grid a margin-0 answer can also be off by up to half a column the other way (#97).
 - Trade-rate slider behavior can be inconsistent. Not checked; no issue.
 - Minimap highlight render position/wrapping needs work. Fixed: the viewport box wraps (91fe1f6) and a click lands on the tile clicked (#54). The README's TODO list still has it.
 
