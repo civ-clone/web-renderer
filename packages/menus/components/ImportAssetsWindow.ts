@@ -10,7 +10,20 @@ import {
   assetFromURI,
   assetStore,
 } from '@civ-clone/ui-assets/AssetStore';
+import {
+  civ2Definition,
+  civ2Key,
+  extractCiv2,
+  isCiv2File,
+  isCiv2Rules,
+  mergeMetadata,
+  metadataAsset,
+  spritePng,
+  StoredMetadata,
+} from '../lib/civ2Import';
 import CvlImage from '@civ-clone/ui-audio/cvl/Image';
+import { FlagColours, civ2Pack } from '@civ-clone/ui-assets/lib/packs';
+import { Sprite } from '@civ-clone/civ2-asset-extractor/extractSprites';
 import Window, { WindowOptions } from '@civ-clone/ui-component-window/Window';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
 import { button } from '@civ-clone/ui-component-button/button';
@@ -26,7 +39,13 @@ const optionalFiles = (extractData as ExtractData).optional ?? [],
   ),
   // Civilization's AdLib sound driver, kept as it is for the music (#126) rather than cut up.
   soundFile = 'ASOUND.CVL',
-  isSoundFile = (file: File): boolean => file.name.toUpperCase() === soundFile;
+  isSoundFile = (file: File): boolean => file.name.toUpperCase() === soundFile,
+  // One of Civilization's own files, the ones its extractor cuts up.
+  isCiv1File = (file: File): boolean =>
+    Object.prototype.hasOwnProperty.call(
+      extractData.files,
+      file.name.toUpperCase()
+    );
 
 export class ImportAssetsWindow extends Window {
   // The browser's own file input can't take the theme (#739): it stays, hidden, and this button opens it.
@@ -146,13 +165,14 @@ export class ImportAssetsWindow extends Window {
       filenames: string[] = files.map((file: File) => file.name),
       expectedFilenames = requiredFiles,
       expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i')),
-      // ASOUND.CVL alone is enough once the sprites are in (#126): the music can be added later.
-      addingSound =
-        files.some(isSoundFile) &&
+      // ASOUND.CVL alone is enough once the sprites are in (#126): the music can be added later. So are Civilization
+      //  II's sheets (#97), for its map.
+      adding =
+        files.some((file) => isSoundFile(file) || isCiv2File(file)) &&
         (await assetStore.hasAllAssets().catch((): boolean => false));
 
     if (
-      !addingSound &&
+      !adding &&
       !expectedMatches.every((expectedMatch) =>
         filenames.some((filename) => filename.match(expectedMatch))
       )
@@ -213,14 +233,34 @@ export class ImportAssetsWindow extends Window {
     // ASOUND.CVL, checked before anything is cut up: kept as the file it is.
     const sound = await this.#sound(files.find(isSoundFile));
 
-    let results: ImageMap[];
+    // What an earlier import said about Civilization II's sprites (#97), read first: a grid whose anchors it hasn't got
+    //  is cut again, and the rest are kept beside the new ones. One that can't be read is cut again in full, rather
+    //  than kept in part.
+    const civ2Files = files.filter(isCiv2File),
+      stored: StoredMetadata =
+        civ2Files.length === 0
+          ? null
+          : await assetStore.readMetadata(civ2Pack).catch((error) => {
+              console.error(error);
+
+              return 'unreadable' as const;
+            }),
+      // With Civilization's own files in the import, a Civilization II sheet that can't be read is left out, rather
+      //  than stopping theirs.
+      civ1Chosen = files.some(isCiv1File);
+
+    let results: ImageMap[], civ2: Civ2Result[];
 
     try {
-      // Every file, read and its sprites extracted.
-      results = (
-        await Promise.all(
+      // Every file, read and its sprites extracted: Civilization's by its extractor, Civilization II's by its own
+      //  (#97). RULES.TXT is left alone: its units keep their default names for now.
+      [results, civ2] = await Promise.all([
+        Promise.all(
           files
-            .filter((file) => !isSoundFile(file))
+            .filter(
+              (file) =>
+                !isSoundFile(file) && !isCiv2File(file) && !isCiv2Rules(file)
+            )
             .map((file) =>
               this.#extract(
                 file,
@@ -230,8 +270,28 @@ export class ImportAssetsWindow extends Window {
                 wanted
               )
             )
-        )
-      ).flat();
+        ).then((results) => results.flat()),
+        Promise.all(
+          civ2Files.map((file) =>
+            this.#extractCiv2(
+              file,
+              existingKeys,
+              replaceExisting,
+              stored,
+              progress,
+              wanted
+            ).catch((error): Civ2Result => {
+              if (!civ1Chosen) {
+                throw error;
+              }
+
+              console.warn(`Could not read ${file.name}, skipping.`, error);
+
+              return { sprites: [] };
+            })
+          )
+        ),
+      ]);
     } finally {
       extracting = false;
     }
@@ -246,6 +306,7 @@ export class ImportAssetsWindow extends Window {
       ...(await Promise.all(
         results.map(({ name, uri }) => assetFromURI(name, uri))
       )),
+      ...(await this.#civ2Assets(civ2, stored)),
       ...sound,
     ]);
 
@@ -360,6 +421,80 @@ export class ImportAssetsWindow extends Window {
   }
 
   /**
+   * Reads `file`, one of Civilization II's sheets (#97), and cuts out the sprites it holds that are wanted, as
+   *  `#extract` does Civilization's. Rejects, naming the file, when it can't be read, and resolves with nothing once the
+   *  file is no longer `wanted`.
+   */
+  async #extractCiv2(
+    file: File,
+    existingKeys: string[],
+    replaceExisting: boolean,
+    stored: StoredMetadata,
+    progress: (message: string) => void,
+    wanted: () => boolean
+  ): Promise<Civ2Result> {
+    const definition = civ2Definition(
+        file,
+        existingKeys,
+        replaceExisting,
+        stored
+      ),
+      nothing: Civ2Result = { sprites: [] };
+
+    if (definition === null) {
+      return nothing;
+    }
+
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+
+      // The import failed on another file while this one was being read.
+      if (!wanted()) {
+        return nothing;
+      }
+
+      return extractCiv2(bytes, definition, progress);
+    } catch (cause) {
+      throw Object.assign(
+        new Error(`Could not extract sprites from ${file.name}`, { cause }),
+        { file: file.name }
+      ) as UnsupportedFile;
+    }
+  }
+
+  /**
+   * The Civilization II sprites cut out, as the records to store: each as its PNG under Civ2's pack's key for it, and
+   *  their anchors and the flag colours in one record beside them, over what an earlier import kept there (`stored`).
+   */
+  async #civ2Assets(
+    results: Civ2Result[],
+    stored: StoredMetadata
+  ): Promise<Asset[]> {
+    const sprites = results.flatMap(({ sprites }) => sprites),
+      colours = results.flatMap(({ colours }) =>
+        colours === undefined ? [] : [colours]
+      );
+
+    if (sprites.length === 0 && colours.length === 0) {
+      return [];
+    }
+
+    return [
+      ...(await Promise.all(
+        sprites.map(
+          async (sprite): Promise<Asset> => ({
+            name: civ2Key(sprite.name),
+            blob: await spritePng(sprite),
+          })
+        )
+      )),
+      metadataAsset(
+        mergeMetadata(stored === 'unreadable' ? null : stored, sprites, colours)
+      ),
+    ];
+  }
+
+  /**
    * ASOUND.CVL as a record to store, once `cvl/Image` has read it as the AdLib driver (#126), or nothing if it wasn't
    *  chosen. Rejects, naming the file, when it isn't the driver.
    */
@@ -415,6 +550,9 @@ export class ImportAssetsWindow extends Window {
     this.#showChosen([]);
   }
 }
+
+/** What `#extractCiv2` cuts out of one of Civilization II's sheets. */
+type Civ2Result = { sprites: Sprite[]; colours?: FlagColours };
 
 /** The error `#extract` rejects with: which file it was that couldn't be read. */
 type UnsupportedFile = Error & { file: string };

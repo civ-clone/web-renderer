@@ -2,7 +2,7 @@ import { TilesetDescriptor, spriteKey } from '../tilesets/TilesetDescriptor';
 import currentTileset from './tilesets';
 import { s } from '@dom111/element';
 
-// The sprites of the tileset in use, decoded, by their whole key (`spriteKey`): filled by `AssetStore.load` (#730),
+// The sprites of the packs in use, decoded, by their whole key (`spriteKey`): filled by `AssetStore.load` (#730),
 //  which awaits them all before the first draw, so a sprite is either here or missing, never on its way.
 let sprites: Map<string, CanvasImageSource> = new Map();
 // The keys a lookup has missed and said so: a sprite that is not there is reported once, not on every draw of it.

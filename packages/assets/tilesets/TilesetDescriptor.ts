@@ -898,7 +898,7 @@ export const expandName = (
  * `./assets/<id>/`, so the same name in two packs is two keys. Sprites are only ever looked up by this whole key.
  */
 export const spriteKey = (
-  { storage: { prefix, ext } }: TilesetDescriptor,
+  { storage: { prefix, ext } }: Pick<TilesetDescriptor, 'storage'>,
   name: string
 ): string => `${prefix}${name}${ext}`;
 

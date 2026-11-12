@@ -397,9 +397,14 @@ expect(
 );
 
 // And nothing builds Civ1's key by hand (`'./assets/city/food.png'`), which finds Civ1's sprite under any tileset.
-//  Civ1's import is the exception: it stores what it extracts under the extractor's own paths.
+//  Civ1's import is the exception: it stores what it extracts under the extractor's own paths. So is where Civ2's pack
+//  says where its sprites are kept (#97), as civ1.json does Civ1's.
 const handBuilt = frontendSources()
-  .filter((file) => !file.endsWith('ImportAssetsWindow.ts'))
+  .filter(
+    (file) =>
+      !file.endsWith('ImportAssetsWindow.ts') &&
+      !file.endsWith(path.join('assets', 'lib', 'packs.ts'))
+  )
   .flatMap((file) =>
     fs
       .readFileSync(file, 'utf8')
