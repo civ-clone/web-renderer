@@ -10,7 +10,6 @@ import GifImage from '@civ-clone/civ2-asset-extractor/GifImage';
 import {
   FlagColours,
   PackMetadata,
-  civ2Pack,
   isFlagRow,
   metadataKey,
 } from '@civ-clone/ui-assets/lib/packs';
@@ -20,14 +19,25 @@ import {
   PackImport,
   PackImportResult,
   PackImportStatus,
-  registerPackImport,
   unsupportedFile,
 } from '@civ-clone/ui-assets/lib/packImports';
 import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { packFor } from '@civ-clone/ui-assets/lib/installPacks';
+import civ2 from '../civ2.json';
 import { t } from 'i18next';
 import extractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+
+/**
+ * Civ2's pack (#97), as the import stores the sprites cut from the player's own copy of Civilization II: each under
+ *  `./assets/civ2/<name>.png`, by the name the Civ2 extractor gives it (`units/settlers`), beside Civ1's, which keep
+ *  their own keys, as its descriptor says, with a record of their anchors and the flags' colours beside them.
+ */
+export const civ2Pack = {
+  id: civ2.id,
+  storage: civ2.storage,
+  metadata: true,
+} as const;
 
 // The sheets Civilization II's map is cut from (#97), by their names upper-cased: TERRAIN1.GIF, TERRAIN2.GIF,
 //  UNITS.GIF and CITIES.GIF.
@@ -287,8 +297,8 @@ export const civ2Status = async (): Promise<string[] | null> => {
 /** What `civ2Status` found, as the Import assets window and Options say it: complete, or the sheets to import. */
 export const civ2StatusText = (toImport: string[]): string =>
   toImport.length === 0
-    ? t('ImportAssetsWindow.civ2-complete')
-    : t('ImportAssetsWindow.civ2-incomplete', { files: toImport });
+    ? t('TilesetCiv2.complete')
+    : t('TilesetCiv2.incomplete', { files: toImport });
 
 /** What `extractFile` cuts out of one of Civilization II's sheets. */
 type Civ2Result = { sprites: Sprite[]; colours?: FlagColours };
@@ -375,7 +385,7 @@ export const civ2Import: PackImport = {
   accepts: isCiv2File,
   ignores: isCiv2Rules,
   instructions: (): string =>
-    t('ImportAssetsWindow.optional-civ2', { files: civ2Files() }),
+    t('TilesetCiv2.import-optional', { files: civ2Files() }),
   import: async (
     files: File[],
     options: ImportOptions
@@ -417,9 +427,7 @@ export const civ2Import: PackImport = {
 
     return {
       lines: [
-        ...skipped.map((file) =>
-          t('ImportAssetsWindow.civ2-skipped', { file })
-        ),
+        ...skipped.map((file) => t('TilesetCiv2.skipped', { file })),
         ...(toImport === null ? [] : [civ2StatusText(toImport)]),
       ],
       incomplete:
@@ -428,4 +436,4 @@ export const civ2Import: PackImport = {
   },
 };
 
-registerPackImport(civ2Import);
+export default civ2Import;

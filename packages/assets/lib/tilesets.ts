@@ -1,16 +1,12 @@
-import validateDescriptor, {
-  Size,
-  TilesetDescriptor,
-} from '../tilesets/TilesetDescriptor';
-import { PackMetadata, civ2Pack, isFlagRow } from './packs';
+import { Size, TilesetDescriptor } from '../tilesets/TilesetDescriptor';
+import { PackMetadata, isFlagRow } from './packs';
 import type { TopologyId } from '@civ-clone/core-world/topologies';
-import civ2 from '../tilesets/civ2.json';
 
-// The tilesets the map can be drawn with (#56), as their packages register them (#97): Civ1's
-//  (`@civ-clone/ui-tileset-civ1`), on the square grid and the interface's, and Civ2's, on the staggered isometric grid
-//  (#152), drawn with the sprites the player imports from their own copy of Civilization II. Each is bundled, but a
-//  pack is only installed once its sprites have been imported (`installTilesets`), so the grids a game can be on are
-//  the ones the player can see drawn. One pack per grid: the world's grid picks the pack, with no choosing.
+// The tilesets the map can be drawn with (#56), as their packages register them (#97): one the interface's (such as
+//  `@civ-clone/ui-tileset-civ1`), and others for other grids (#152), each drawn with the sprites the player imports from
+//  their own copy of the game it comes from. Each is bundled, but a pack is only installed once its sprites have been
+//  imported (`installTilesets`), so the grids a game can be on are the ones the player can see drawn. One pack per
+//  grid: the world's grid picks the pack, with no choosing.
 
 /** What a pack's package says of it as it registers it (`registerTileset`), besides its descriptor. */
 export interface TilesetOptions {
@@ -19,7 +15,7 @@ export interface TilesetOptions {
    *  store is ready, and the game can start, only once every sprite it requires has been imported. One pack is.
    */
   interface?: boolean;
-  /** Whether its import keeps a record of its sprites beside them (`PackMetadata`): Civ2's does, Civ1's doesn't. */
+  /** Whether its import keeps a record of its sprites beside them (`PackMetadata`), as some packs' do. */
   metadata?: boolean;
 }
 
@@ -110,9 +106,9 @@ export interface PackState {
 
 /**
  * `tileset` as its import says it is drawn: an overlay colouring whose keys are the colours of the player's own copy's
- *  first flag (`colours.flag[0]` in Civ2's metadata), primary then secondary, in place of the descriptor's, which are
- *  Civ2's own as shipped. The flag is recoloured by swapping exactly those colours, and a copy could differ. Throws
- *  when the import has no such flag, or its colours aren't colours: its cities' flags couldn't be drawn.
+ *  first flag (`colours.flag[0]` in its `PackMetadata`), primary then secondary, in place of the descriptor's, which
+ *  are the pack's own as shipped. The flag is recoloured by swapping exactly those colours, and a copy could differ.
+ *  Throws when the import has no such flag, or its colours aren't colours: its cities' flags couldn't be drawn.
  */
 export const withImportedKeys = (
   tileset: TilesetDescriptor,
@@ -255,8 +251,5 @@ export const shownScale = (scale: number, tileset: TilesetDescriptor): number =>
   tileset.tile.width > interfaceTileset().tile.width
     ? Math.min(scale, tileset.defaultScale)
     : scale;
-
-// Civ2's, bundled here until it is a package of its own, as Civ1's is.
-registerTileset(validateDescriptor(civ2), { metadata: civ2Pack.metadata });
 
 export default currentTileset;

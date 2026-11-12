@@ -34,9 +34,12 @@ import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { Colour, encodeGif } from './lib/encodeGif';
-import { civ2Pack, metadataKey } from '@civ-clone/ui-assets/lib/packs';
-import { civ2Definition } from '@civ-clone/ui-menus/lib/civ2Import';
-import civ2Json from '@civ-clone/ui-assets/tilesets/civ2.json';
+import {
+  civ2Definition,
+  civ2Pack,
+} from '@civ-clone/ui-tileset-civ2/lib/civ2Import';
+import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
+import { metadataKey } from '@civ-clone/ui-assets/lib/packs';
 import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
@@ -647,8 +650,9 @@ const run = async (): Promise<void> => {
     assetStore.usable = usable;
   }
 
-  // The window names no pack (#97): it takes the files the registered packs' imports read, Civ1's (its package,
-  //  `tileset-civ1`) and Civ2's, and the music's, and no other. Each pack is registered beside its tileset.
+  // The window names no pack (#97): it takes the files the registered packs' imports read, Civ1's and Civ2's (their
+  //  packages, `tileset-civ1` and `tileset-civ2`), and the music's, and no other. Each pack is registered beside its
+  //  tileset.
   {
     const civ1Files = Object.keys(extractData.files),
       civ2Files = Object.keys(civ2ExtractData.files);

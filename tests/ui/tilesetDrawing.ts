@@ -1068,7 +1068,7 @@ expect(
 {
   const civ2 =
       require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').validateDescriptor(
-        require('@civ-clone/ui-assets/tilesets/civ2.json')
+        require('@civ-clone/ui-tileset-civ2/civ2.json')
       ) as TilesetDescriptor,
     ocean = Object.fromEntries(
       ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map((direction) => [

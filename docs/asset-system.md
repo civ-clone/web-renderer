@@ -19,6 +19,11 @@ Without imported assets, gameplay options are hidden and import is the primary o
   - Civ1's art pack: its descriptor (`civ1.json`) and its import (`lib/civ1Import.ts`), which loading the package
     registers (`registerTileset`, as the interface's, and `registerPackImport`). `src/js/frontend.ts` loads it before
     anything else.
+- `packages/tileset-civ2` (`@civ-clone/ui-tileset-civ2`, #97)
+  - Civ2's art pack: its descriptor (`civ2.json`), on the staggered isometric grid, and its import
+    (`lib/civ2Import.ts`), which loading the package registers (`registerTileset`, with `metadata: true`, and
+    `registerPackImport`). `src/js/frontend.ts` loads it after `tileset-civ1`. Its text is its own
+    (`translations/en.ts`, `TilesetCiv2.*`).
 - `packages/assets/AssetStore.ts`
   - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730).
 - `packages/assets/lib/getPreloadedImage.ts`
@@ -32,7 +37,7 @@ Without imported assets, gameplay options are hidden and import is the primary o
 - `@civ-clone/civ2-asset-extractor` (#97)
   - Cuts the map's sprites from a player's own Civilization II sheets (`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF`,
     `CITIES.GIF`), with each unit's and city's anchors and the flags' colours. A GitHub dependency excluded from the
-    plugins like Civ1's. `packages/menus/lib/civ2Import.ts` drives it for the import window.
+    plugins like Civ1's. `tileset-civ2/lib/civ2Import.ts` drives it for the import window.
 
 ## Asset import flow
 
@@ -58,11 +63,12 @@ Without imported assets, gameplay options are hidden and import is the primary o
 ### Civilization II's sheets (#97)
 
 The same window takes Civ2's four sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
-sprites are in, on their own (as `ASOUND.CVL` is): its import (`civ2Import` in `packages/menus/lib/civ2Import.ts`,
-registered there until Civ2's pack is a package of its own) has no `requiredFiles`. The instructions name them as optional, for the isometric map; once
+sprites are in, on their own (as `ASOUND.CVL` is): its import (`civ2Import` in
+`packages/tileset-civ2/lib/civ2Import.ts`) has no `requiredFiles`. The instructions name them as optional, for the isometric map; once
 any are imported, the window says whether Civ2's art is complete or which sheets are still to import
 (`civ2FilesToImport`: those holding a sprite `civ2.json` requires that isn't stored, or whose anchors or flag colours the
-stored record lacks, flag colours that aren't a flag's being lacking). Options' Assets row says the same (`civ2Status`).
+stored record lacks, flag colours that aren't a flag's being lacking). Options' Assets row says the same: it asks each
+pack's import for its `status`, as the window does.
 Flag colours are held to one rule wherever they're read (`isFlagRow` in `packages/assets/lib/packs.ts`): the import
 cuts the flags again for a record that fails it, the window lists CITIES.GIF for it, and the installer leaves the pack
 out.
@@ -75,8 +81,8 @@ out.
 - A sheet that can't be read stops the import, naming it, when only Civ2's sheets were chosen. Among Civ1's files it
   is left out with a console warning, Civ1's are imported, and the window names the sheet it left out.
 - Each sprite's RGBA is put on a canvas and stored as its PNG (`toBlob`) under Civ2's pack's key, `spriteKey(civ2Pack,
-name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/packs.ts`) is the pack's id, `civ2`,
-  and its storage; the descriptor that says which sprites it requires is bundled separately.
+name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`tileset-civ2/lib/civ2Import.ts`) is the pack's id, `civ2`,
+  and its storage, as its descriptor gives them.
 - The anchors and the flags' colours go in one record beside the sprites, `./assets/civ2/metadata.json`
   (`metadataKey`), as a JSON `blob` shaped as the extractor's `metadata.json`: `{ anchors: SpriteAnchors, colours }`.
   An import of some of the sheets is put over what the record held, so the others' anchors are kept; a record that
@@ -90,7 +96,7 @@ name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/pac
 
 Both tilesets are bundled (`bundledTilesets()` in `packages/assets/lib/tilesets.ts`, the interface's first): Civ1's
 `civ1.json` on the square grid, which `tileset-civ1` registers as the interface's, and Civ2's `civ2.json` on the
-staggered isometric grid, which `tilesets.ts` registers itself for now (`registerTileset(tileset, { metadata: true })`). A pack is _installed_ once its sprites are imported:
+staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tileset, { metadata: true })`). A pack is _installed_ once its sprites are imported:
 
 - At start-up `installPacks()` (`packages/assets/lib/installPacks.ts`) adds every bundled pack to the asset store
   (`packFor`: Civ2's with `metadata: true`, as it was registered), loads them, sets each pack's sprite anchors from its import's record

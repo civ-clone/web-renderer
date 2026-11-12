@@ -195,7 +195,7 @@ export const gridName = (topologyId: string): string =>
 
 /**
  * Why a world on `topologyId`'s grid can't be drawn here, for telling the player: the art its map needs hasn't been
- *  imported (Civ2's, for the isometric grid, #97), or the grid can't be drawn at all.
+ *  imported (its art pack's, #97), or the grid can't be drawn at all.
  */
 export const unsupportedGridMessage = (topologyId: string): string => {
   const tileset = tilesetToImport(topologyId);
