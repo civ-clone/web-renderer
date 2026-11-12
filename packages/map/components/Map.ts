@@ -327,8 +327,8 @@ export class Map implements IMap {
 
   /**
    * The interface's sprite `path` (`city/food`, a citizen), from the interface's tileset rather than the map's: a
-   *  layer drawing the interface's art over the map (the yields, a city's unhappy citizen) draws the same art whatever
-   *  pack the map is drawn with (#97).
+   *  layer drawing the interface's art over the map (a city's unhappy citizen, the yields of a pack without icons of
+   *  its own) draws the same art whatever pack the map is drawn with (#97).
    */
   protected getInterfaceImage(path: string): CanvasImageSource {
     return getPreloadedImage(path, this.interfaceTileset());

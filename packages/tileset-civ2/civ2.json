@@ -266,7 +266,14 @@
       "city/modern-alt/walled-3",
       "city/flag"
     ],
-    "optional": [],
+    "optional": [
+      "icons/small/food",
+      "icons/small/shield",
+      "icons/small/trade",
+      "icons/small/luxury",
+      "icons/small/gold",
+      "icons/small/science"
+    ],
     "ui": []
   },
   "names": {
@@ -510,6 +517,23 @@
         "y": 2
       },
       "size": "size"
+    }
+  },
+  "yields": {
+    "sprite": "icons/small/{yield}",
+    "names": {
+      "Food": "food",
+      "Production": "shield",
+      "Trade": "trade",
+      "Luxuries": "luxury",
+      "Gold": "gold",
+      "Research": "science"
+    },
+    "area": {
+      "x": 0.25,
+      "y": 0.1875,
+      "width": 0.5,
+      "height": 0.625
     }
   }
 }

@@ -33,6 +33,7 @@ import HudUnit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
 import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import isoJson from './fixtures/iso-tileset.json';
+import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import {
   clearSpriteAnchors,
   setSpriteAnchors,
@@ -1854,6 +1855,118 @@ expect(
     })(),
     ['./assets/city/people_unhappy_m.png', './assets/city/food.png']
   );
+
+  // Civ2's own yield icons (#999): the map takes them from its pack when the player has imported ICONS.GIF, and the
+  //  interface's (Civ1's) otherwise, icon by icon, laid out in the middle of the diamond rather than from the box's
+  //  corner, which is the neighbours'. Synthetic sprites: Civ1's 8 × 8, Civ2's small ones 10 × 10.
+  {
+    const civ2 = validateDescriptor(civ2Json),
+      squareYields = [
+        { _: 'Food', value: 2 },
+        { _: 'Production', value: 1 },
+        { _: 'Trade', value: 1 },
+      ],
+      yieldsDrawn = (yields: unknown[], scale = 1): string[] => {
+        const { calls, canvas } = recordingCanvas(200, 200),
+          world = isoWorld({});
+
+        class Civ2Yields extends Yields {
+          override tileset(): TilesetDescriptor {
+            return civ2;
+          }
+
+          draw(tile: Tile): void {
+            this.drawTile(tile, 0, 0);
+          }
+        }
+
+        new Civ2Yields(world, scale, { width: 64, height: 32 }, canvas).draw({
+          ...world.get(1, 1),
+          yields,
+        } as unknown as Tile);
+
+        return calls.filter((call) => call.startsWith('drawImage('));
+      };
+
+    ['food', 'production', 'trade'].forEach((name) =>
+      preloadImage(`city/${name}`, 8, 8)
+    );
+
+    expect(
+      "Civ2's map without ICONS.GIF: the interface's icons, two by two in the middle of the diamond",
+      yieldsDrawn(squareYields),
+      [
+        'drawImage(city/food,24,8,8,8)',
+        'drawImage(city/food,32,8,8,8)',
+        'drawImage(city/production,24,16,8,8)',
+        'drawImage(city/trade,32,16,8,8)',
+      ]
+    );
+
+    ['food', 'shield'].forEach((name) =>
+      preloadImage(`civ2/icons/small/${name}`, 10, 10)
+    );
+
+    expect(
+      "Civ2's map with some of its icons imported: its own where it has them, the interface's for the rest, spaced for the larger and centred in its place",
+      yieldsDrawn(squareYields),
+      [
+        'drawImage(civ2/icons/small/food,22,6,10,10)',
+        'drawImage(civ2/icons/small/food,32,6,10,10)',
+        'drawImage(civ2/icons/small/shield,22,16,10,10)',
+        'drawImage(city/trade,33,17,8,8)',
+      ]
+    );
+
+    preloadImage('civ2/icons/small/trade', 10, 10);
+
+    expect(
+      "Civ2's map with ICONS.GIF: its own food, shield and trade, centred, and at 2× twice as far in and twice the size",
+      [yieldsDrawn(squareYields), yieldsDrawn(squareYields, 2)],
+      [
+        [
+          'drawImage(civ2/icons/small/food,22,6,10,10)',
+          'drawImage(civ2/icons/small/food,32,6,10,10)',
+          'drawImage(civ2/icons/small/shield,22,16,10,10)',
+          'drawImage(civ2/icons/small/trade,32,16,10,10)',
+        ],
+        [
+          'drawImage(civ2/icons/small/food,44,12,20,20)',
+          'drawImage(civ2/icons/small/food,64,12,20,20)',
+          'drawImage(civ2/icons/small/shield,44,32,20,20)',
+          'drawImage(civ2/icons/small/trade,64,32,20,20)',
+        ],
+      ]
+    );
+    expect(
+      "Civ2's map: one icon alone is in the diamond's middle, and twelve, six across, close up to stay within its middle half",
+      [
+        yieldsDrawn([{ _: 'Food', value: 1 }]),
+        yieldsDrawn([
+          { _: 'Food', value: 4 },
+          { _: 'Production', value: 4 },
+          { _: 'Trade', value: 4 },
+        ]).map((call) => call.replace(/^drawImage\([^,]*,|,10,10\)$/g, '')),
+      ],
+      [
+        ['drawImage(civ2/icons/small/food,27,11,10,10)'],
+        [
+          '16,6',
+          '20,6',
+          '25,6',
+          '29,6',
+          '34,6',
+          '38,6',
+          '16,16',
+          '20,16',
+          '25,16',
+          '29,16',
+          '34,16',
+          '38,16',
+        ],
+      ]
+    );
+  }
 
   expect(
     "a square the city can't work is filled as the tile's diamond, not its box",

@@ -52,22 +52,41 @@ export const netTileYields = (
     .filter(({ value }) => value > 0);
 
 /**
- * Where each of a square's yield icons goes, as a fraction of the square: two rows, with more columns the more icons
- * there are. A square with more icons than the widest layout has room for draws as many as fit.
+ * A square's yield icons in a grid: two rows, with more columns the more icons there are, each icon's column and row.
+ * A square with more icons than the widest layout has room for has as many as fit.
  */
-export const tileYieldIcons = (
+export const tileYieldGrid = (
   yields: Pick<Yield<string>, '_' | 'value'>[]
-): { _: string; x: number; y: number }[] => {
+): { columns: number; icons: { _: string; column: number; row: number }[] } => {
   const icons = netTileYields(yields)
       // TODO: use a more effective sort than this, this only works by luck (Food -> Production -> Trade)
       .sort((a, b) => a._.charCodeAt(0) - b._.charCodeAt(0))
       .flatMap(({ _, value }) => Array.from({ length: value }, () => _)),
     columns = Math.min(6, Math.max(2, Math.ceil(icons.length / 2)));
 
-  return icons.slice(0, columns * 2).map((_, index) => ({
+  return {
+    columns,
+    icons: icons.slice(0, columns * 2).map((_, index) => ({
+      _,
+      column: index % columns,
+      row: Math.floor(index / columns),
+    })),
+  };
+};
+
+/**
+ * Where each of a square's yield icons goes, as a fraction of the square: `tileYieldGrid`'s columns across it, and its
+ * two rows down it.
+ */
+export const tileYieldIcons = (
+  yields: Pick<Yield<string>, '_' | 'value'>[]
+): { _: string; x: number; y: number }[] => {
+  const { columns, icons } = tileYieldGrid(yields);
+
+  return icons.map(({ _, column, row }) => ({
     _,
-    x: (index % columns) / columns,
-    y: Math.floor(index / columns) / 2,
+    x: column / columns,
+    y: row / 2,
   }));
 };
 

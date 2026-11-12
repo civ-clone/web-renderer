@@ -39,8 +39,9 @@ export const civ2Pack = {
   metadata: true,
 } as const;
 
-// The sheets Civilization II's map is cut from (#97), by their names upper-cased: TERRAIN1.GIF, TERRAIN2.GIF,
-//  UNITS.GIF and CITIES.GIF.
+// The sheets Civilization II's art is cut from (#97), by their names upper-cased: the map's, TERRAIN1.GIF,
+//  TERRAIN2.GIF, UNITS.GIF and CITIES.GIF, and ICONS.GIF, whose yield icons the map takes when they're there (#999),
+//  which the extractor marks optional.
 const definitions = (extractData as ExtractData).files;
 
 /** Whether `file` is one of Civilization II's sheets, whatever the case of its name. */
@@ -237,6 +238,14 @@ export const metadataAsset = (metadata: PackMetadata): Asset => ({
 /** Civilization II's sheets, by their names upper-cased, in the extractor's order. */
 export const civ2Files = (): string[] => Object.keys(definitions);
 
+/** The sheets the isometric map is drawn from: every one the extractor doesn't mark optional. */
+export const civ2MapFiles = (): string[] =>
+  civ2Files().filter((file) => definitions[file]!.optional !== true);
+
+/** The sheets that add to the map but that it can do without (#999): ICONS.GIF, the yield icons. */
+export const civ2OptionalFiles = (): string[] =>
+  civ2Files().filter((file) => definitions[file]!.optional === true);
+
 /**
  * The sheets still to import for Civ2's pack to be complete (#97): each one that holds a sprite of `missing`, the
  *  names the pack requires that haven't been imported, and, when what an import says about the sprites (`metadata`) is
@@ -250,7 +259,8 @@ export const civ2FilesToImport = (
   const wanted = new Set(missing),
     known = metadata === 'unreadable' ? null : metadata;
 
-  return civ2Files().filter((file) => {
+  // Only the map's sheets: the pack is complete without the others, whose sprites it doesn't require (#999).
+  return civ2MapFiles().filter((file) => {
     const { grids, flags } = definitions[file]!;
 
     return (
@@ -300,8 +310,11 @@ export const civ2StatusText = (toImport: string[]): string =>
     ? t('TilesetCiv2.complete')
     : t('TilesetCiv2.incomplete', { files: toImport });
 
-/** What `extractFile` cuts out of one of Civilization II's sheets. */
-type Civ2Result = { sprites: Sprite[]; colours?: FlagColours };
+/**
+ * What `extractFile` cuts out of one of Civilization II's sheets, and whether that is one of the map's, whose sprites
+ *  carry anchors or whose flags give colours, which the import keeps a record of.
+ */
+type Civ2Result = { sprites: Sprite[]; colours?: FlagColours; map?: boolean };
 
 /**
  * Reads `file`, one of Civilization II's sheets (#97), and cuts out the sprites it holds that are wanted, as Civ1's
@@ -333,7 +346,10 @@ const extractFile = async (
       return nothing;
     }
 
-    return extractCiv2(bytes, definition, progress);
+    return {
+      ...extractCiv2(bytes, definition, progress),
+      map: definitions[file.name.toUpperCase()]!.optional !== true,
+    };
   } catch (cause) {
     throw unsupportedFile(
       file.name,
@@ -346,6 +362,8 @@ const extractFile = async (
 /**
  * The Civilization II sprites cut out, as the records to store: each as its PNG under Civ2's pack's key for it, and
  *  their anchors and the flag colours in one record beside them, over what an earlier import kept there (`stored`).
+ *  The record is left as it is when nothing was cut from the map's sheets (ICONS.GIF alone, #999): it has nothing to
+ *  add, and a record written for nothing would be taken for some of the map's art.
  */
 const civ2Assets = async (
   results: Civ2Result[],
@@ -360,15 +378,26 @@ const civ2Assets = async (
     return [];
   }
 
+  const pngs = await Promise.all(
+    sprites.map(
+      async (sprite): Promise<Asset> => ({
+        name: civ2Key(sprite.name),
+        blob: await spritePng(sprite),
+      })
+    )
+  );
+
+  if (
+    !results.some(
+      ({ map, sprites: cut, colours: read }) =>
+        map === true && (cut.length > 0 || read !== undefined)
+    )
+  ) {
+    return pngs;
+  }
+
   return [
-    ...(await Promise.all(
-      sprites.map(
-        async (sprite): Promise<Asset> => ({
-          name: civ2Key(sprite.name),
-          blob: await spritePng(sprite),
-        })
-      )
-    )),
+    ...pngs,
     metadataAsset(
       mergeMetadata(stored === 'unreadable' ? null : stored, sprites, colours)
     ),
@@ -376,8 +405,9 @@ const civ2Assets = async (
 };
 
 /**
- * Civ2's import (#97): its four sheets, optional, as Civilization's own files are all a game needs, and importable on
- *  their own once those are in. RULES.TXT is taken and left alone.
+ * Civ2's import (#97): its sheets, optional, as Civilization's own files are all a game needs, and importable on their
+ *  own once those are in: the map's four, and ICONS.GIF, whose yield icons the map takes when they're there (#999).
+ *  RULES.TXT is taken and left alone.
  */
 export const civ2Import: PackImport = {
   id: civ2Pack.id,
@@ -385,7 +415,12 @@ export const civ2Import: PackImport = {
   accepts: isCiv2File,
   ignores: isCiv2Rules,
   instructions: (): string =>
-    t('TilesetCiv2.import-optional', { files: civ2Files() }),
+    [
+      t('TilesetCiv2.import-optional', { files: civ2MapFiles() }),
+      ...(civ2OptionalFiles().length > 0
+        ? [t('TilesetCiv2.import-icons', { files: civ2OptionalFiles() })]
+        : []),
+    ].join(' '),
   import: async (
     files: File[],
     options: ImportOptions

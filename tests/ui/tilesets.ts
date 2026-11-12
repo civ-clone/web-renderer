@@ -840,6 +840,98 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       null,
     ]
   );
+  // A pack's own yield icons for the map (#999): each one a sprite it lists, by the engine's yield names, laid out
+  //  within the tile. Civ1's has none, so its map draws the interface's as it always has.
+  {
+    const withYields = (yields: unknown, optional: string[] = []) =>
+      civ1With({
+        assets: {
+          ...civ1.assets,
+          optional: [...civ1.assets.optional, ...optional],
+        },
+        yields,
+      });
+
+    expect(
+      'a pack may declare its own yield icons; Civ1 has none',
+      [
+        civ1.yields,
+        validateDescriptor(
+          withYields(
+            {
+              sprite: 'icons/{yield}',
+              names: { Food: 'food' },
+              area: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+            },
+            ['icons/food']
+          )
+        ).yields,
+        thrown(() =>
+          validateDescriptor(
+            withYields({ sprite: 'icons/{yield}', names: { Food: 'food' } }, [
+              'icons/food',
+            ])
+          )
+        ),
+      ],
+      [
+        undefined,
+        {
+          sprite: 'icons/{yield}',
+          names: { Food: 'food' },
+          area: { x: 0.25, y: 0.25, width: 0.5, height: 0.5 },
+        },
+        null,
+      ]
+    );
+    expect(
+      "and is refused one it can't draw: without {yield}, with another placeholder, naming an icon it doesn't list, or laid out outside the tile",
+      [
+        withYields({ sprite: 'icons/food', names: { Food: 'food' } }, [
+          'icons/food',
+        ]),
+        withYields({ sprite: 'icons/{yield}-{unit}', names: {} }),
+        withYields({ sprite: 'icons/{yield}', names: { Food: 'food' } }),
+        withYields({ sprite: 'icons/{yield}' }),
+        withYields({ sprite: 'icons/{yield}', names: { Food: 1 } }),
+        withYields(
+          {
+            sprite: 'icons/{yield}',
+            names: { Food: 'food' },
+            area: { x: 0.5, y: 0, width: 0.75, height: 1 },
+          },
+          ['icons/food']
+        ),
+        withYields(
+          {
+            sprite: 'icons/{yield}',
+            names: { Food: 'food' },
+            area: { x: -0.1, y: 0, width: 1, height: 1 },
+          },
+          ['icons/food']
+        ),
+        withYields(
+          {
+            sprite: 'icons/{yield}',
+            names: { Food: 'food' },
+            area: { x: 0, y: 0, width: 1 },
+          },
+          ['icons/food']
+        ),
+      ].map((json) => thrown(() => validateDescriptor(json))),
+      [
+        'Tileset "civ1": yields.sprite must have {yield}, so that each yield has an icon of its own.',
+        'Tileset "civ1": yields.sprite has {unit}, but the map fills only {yield} here.',
+        'Tileset "civ1": yields names the icon "icons/food", which is not in assets.required or assets.optional.',
+        'Tileset "civ1": yields.names must map engine names to words in sprite names.',
+        'Tileset "civ1": yields.names must map engine names to words in sprite names.',
+        'Tileset "civ1": yields.area must be within the tile.',
+        'Tileset "civ1": yields.area must have an x, a y, a width and a height, each a part of the tile from 0 to 1.',
+        'Tileset "civ1": yields.area must have an x, a y, a width and a height, each a part of the tile from 0 to 1.',
+      ]
+    );
+  }
+
   // A pack shaped like Civ2's (#152): a staggered-iso grid of 64 × 32 tiles, a base per terrain with forest, hills,
   //  mountains and river over grassland's, a coast of named quarters, roads over all eight neighbours with an isolated
   //  sprite, no fog, shields over units at each sprite's own anchor with a back-shield for stacks, and cities by style,
@@ -1712,6 +1804,32 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       "Civ2's pack: and it requires nothing the map won't ask for",
       civ2.assets.required.filter((name) => !asked.includes(name)),
       []
+    );
+    expect(
+      "Civ2's pack: its own yield icons, the small ones, for each yield a square has (Food, Production, Trade) and the city's others, all optional, so the isometric map doesn't need ICONS.GIF, and laid out in the diamond's middle (#999)",
+      [
+        civ2.yields!.sprite,
+        ['Food', 'Production', 'Trade'].map((name) => civ2.yields!.names[name]),
+        Object.values(civ2.yields!.names).map((word) =>
+          expandName(civ2.yields!.sprite, { yield: word })
+        ),
+        civ2.assets.optional,
+        civ2.yields!.area,
+      ],
+      [
+        'icons/small/{yield}',
+        ['food', 'shield', 'trade'],
+        civ2.assets.optional,
+        [
+          'icons/small/food',
+          'icons/small/shield',
+          'icons/small/trade',
+          'icons/small/luxury',
+          'icons/small/gold',
+          'icons/small/science',
+        ],
+        { x: 0.25, y: 0.1875, width: 0.5, height: 0.625 },
+      ]
     );
     expect(
       "Civ2's pack: each of Civilization's units, terrains' specials and civilizations has a Civ2 sprite or style of its own",

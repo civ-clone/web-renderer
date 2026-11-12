@@ -60,4 +60,13 @@ export const getPreloadedImage = (
   return missingImagePlaceholder;
 };
 
+/**
+ * Whether `tileset`'s sprite `path` is loaded, without reporting it missing: for drawing code that takes an optional
+ *  sprite when the player has imported it and another one when not (#999).
+ */
+export const hasPreloadedImage = (
+  path: string,
+  tileset: TilesetDescriptor = currentTileset()
+): boolean => sprites.has(spriteKey(tileset, path));
+
 export default getPreloadedImage;
