@@ -13,7 +13,9 @@ import Transport from '@civ-clone/ui-client/Transport';
 import WondersReport, {
   wondersRowText,
 } from '@civ-clone/ui-interface-classic/components/WondersReport';
-import WondersTable from '@civ-clone/ui-interface-modern/components/WondersTable';
+import WondersTable, {
+  ownWonderCity,
+} from '@civ-clone/ui-interface-modern/components/WondersTable';
 import { WondersRow } from '@civ-clone/ui-protocol/reports';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18next from 'i18next';
@@ -172,6 +174,27 @@ const run = async (): Promise<void> => {
     'The Pyramids of Thebes. (Egyptian)'
   );
 
+  // A city you haven't seen has a sentence of its own, for a translator to word.
+  i18next.addResource(
+    'en',
+    'default',
+    'WondersReport.unseen',
+    '{{- wonder}}, somewhere ({{- civilization}})'
+  );
+
+  expect(
+    'classic: the unseen city has its own key',
+    wondersRowText(rows[2]!),
+    'The Great Wall, somewhere (an unknown civilization)'
+  );
+
+  i18next.addResource(
+    'en',
+    'default',
+    'WondersReport.unseen',
+    '{{- wonder}}. ({{- civilization}})'
+  );
+
   classic.show([]);
 
   expect(
@@ -266,6 +289,37 @@ const run = async (): Promise<void> => {
       'Pyramids',
       'United Nations',
     ]
+  );
+
+  // Not yours, though its city has the name and founder of one of yours: no View (the row's `own` decides).
+  const lookalike: WondersRow = {
+    wonder: 'Oracle',
+    destroyed: false,
+    own: false,
+    city: { name: "Xi'an", civilization: 'Chinese' },
+    owner: { civilization: 'Chinese', colors: null },
+  };
+
+  modern.show([lookalike]);
+
+  expect(
+    "modern: a rival's city named like one of yours gets no View",
+    [
+      ownWonderCity(lookalike, player),
+      tableRows()[0]!.querySelectorAll('[data-column="view"] button').length,
+      tableRows()[0]!.getAttribute('aria-current'),
+    ],
+    [null, 0, null]
+  );
+
+  // A row that stops being yours (a Wonder taken with its city) loses the mark when it's drawn again.
+  modern.show([rows[3]!]);
+  modern.show([{ ...rows[3]!, own: false }]);
+
+  expect(
+    'modern: a row no longer yours loses its mark',
+    tableRows().map((row) => row.getAttribute('aria-current')),
+    [null]
   );
 
   modern.show([]);
