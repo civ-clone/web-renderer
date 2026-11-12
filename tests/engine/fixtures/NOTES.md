@@ -381,3 +381,18 @@ the new drops (nor did it drop anything at a discovery before). They are played
 through the full plugin set by `tests/engine/obsoleteBuilds.ts` and tested in
 civ1-enhanced itself. `client-transcript.json` passes unchanged and is not
 re-recorded.
+
+## Accepted change: rule counts, a lost Wonder is never built again (#971)
+
+civ1-wonder 0.1.12 makes `once` refuse a Wonder that has ever been built, lost
+with its city or not, and adds `civ1-wonder:city/process-yield/drop-built-wonder`
+(a `ProcessYield`): in a game saved before #971, a city building a lost Wonder
+again has that build dropped, its shields kept. civ1-spaceship 0.1.6 and core-city-improvement
+0.1.8 come with it. The rule totals at turns 1, 10 and 50 rise from 1120 to
+1121 (`ProcessYield` 8 → 9) and nothing else moves: the engine-state checksums
+(`a7518c6d / d3c8debf / a12b897c`), the random-call counts and the DTO hashes
+are unchanged, so play is as it was: that says little about the new rules,
+which decide something only once a Wonder has been lost or an old save is
+loaded. `client-transcript.json` passes
+unchanged and is not re-recorded. The rules are played through the full plugin
+set, a save and a load by `tests/engine/lostWonders.ts`.
