@@ -46,9 +46,6 @@ i18next.addResources('en', 'default', {
   'City.Build.Held.waiting': 'Waiting',
   'City.Build.Held.cannot-complete': 'Can’t be completed yet',
   'City.Build.Held.purchase': '{{- item}} can’t be completed yet.',
-  // Where there is room only for a number of turns (a banner, a list), in its place while the build waits, with the
-  //  words above beside it for a screen reader and as its tooltip.
-  'City.Build.Held.marker': '…',
   'City.Build.nothing': 'Nothing',
   'City.Build.stored_one': '{{count, number}} shield kept for the next item',
   'City.Build.stored_other': '{{count, number}} shields kept for the next item',

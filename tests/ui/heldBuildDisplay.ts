@@ -3,8 +3,9 @@
 //  place asks (`buildOutlook`, `buildHold`, `buildTurnsOrder`); the words for a rule's id, and the plain ones for a rule
 //  it has none for; the city screen under both interfaces, waiting now (the reason in place of the turns, the figures
 //  still "42 / 40", no Buy) and waiting once paid for (the turns, the reason beneath them, Buy pointing to it and its
-//  confirmation saying so); the sidebar's list, with a marker in place of "1 turn", its words as its tooltip and for a
-//  screen reader, sorted after the builds that will be done; and the map banner's tooltip.
+//  confirmation saying so); the sidebar's list, with the hold glyph (#970) in place of "1 turn", its words as its tooltip and for a
+//  screen reader, sorted after the builds that will be done; the map banner's tooltip; the queue, both build menus and the notice that a build is waiting (#970), which
+//  say an item would wait before it is chosen, beside its turns or, when the shields stored pay for it, in their place.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -18,6 +19,7 @@ import {
   buildTurnsOrder,
 } from '@civ-clone/ui-client/lib/cityTurns';
 import {
+  BuildItem,
   City as CityData,
   GameData,
   Player,
@@ -36,8 +38,13 @@ import {
 import CityStatus from '@civ-clone/ui-interface-classic/components/CityStatus';
 import { cityStatusColumns } from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import i18next from 'i18next';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
+import Notices from '@civ-clone/ui-hud/components/Notices';
+import { noticeText } from '@civ-clone/ui-hud/components/Actions/Notice';
+import { openCityBuild } from '@civ-clone/ui-city/components/choices';
 
 const failures: string[] = [];
 let checks = 0,
@@ -228,6 +235,8 @@ const words = () => [
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
+  // City names, as the notices word them.
+  addFormatters(i18next);
   await import('./lib/strings');
   // The rules' own sentences are their packages' text, loaded with the rest of them.
   await import('../../translations/civ1-enhanced/en');
@@ -365,6 +374,234 @@ const run = async (): Promise<void> => {
     );
   });
 
+  // --- the queue (#970) ------------------------------------------------------------------------------------------------
+  // Only the modern city screen draws the queue. Each queued item's ids come by its place; an older worker sends none.
+  {
+    applyInterface('modern', null);
+
+    const queuedItems = [
+        {
+          item: { _: 'Settlers', __: ['Settlers', 'Buildable'] },
+          cost: { value: 40 },
+        },
+        {
+          item: { _: 'Warrior', __: ['Warrior', 'Buildable'] },
+          cost: { value: 10 },
+        },
+      ],
+      queueSays = (queueHeld?: (string | null)[][]) => {
+        const city = {
+            ...free,
+            build: {
+              ...free.build,
+              queue: queuedItems,
+              ...(queueHeld ? { queueHeld } : {}),
+            },
+          } as unknown as CityData,
+          screen = openCity(city, portal, transport),
+          rows = Array.from(
+            screen.element().querySelectorAll('.ui-city-queued')
+          ).map((row) => [
+            text(row.querySelector('.name')),
+            text(row.querySelector('.held')),
+            text(row.querySelector('.turns')),
+          ]);
+
+        screen.close();
+
+        return rows;
+      };
+
+    expect(
+      "the queue: queued Settlers say what would hold them as the city is now, under their name, in the menu's words, and keep their turns; a Warrior says nothing",
+      queueSays([[WAIT], []]),
+      [
+        [
+          'Then: Settlers',
+          'Can’t be completed until the city is size 2',
+          '20 turns',
+        ],
+        ['Then: Warrior', null, '5 turns'],
+      ]
+    );
+    expect(
+      'the queue from a worker that sends no ids says nothing of holds',
+      queueSays(undefined).map(([, held]) => held),
+      [null, null]
+    );
+  }
+
+  // --- the build menus, both interfaces (#970) -----------------------------------------------------------------------
+  // What a city could build, with the ids the worker sends with each: Settlers would wait, a Warrior wouldn't, and one
+  //  sent without them (an older worker) is like the Warrior.
+  const offered = [
+      {
+        _: 'BuildItem',
+        id: 'Offer-1',
+        item: { _: 'Settlers', __: ['Settlers', 'Buildable'] },
+        cost: { value: 40 },
+        held: [WAIT],
+      },
+      {
+        _: 'BuildItem',
+        id: 'Offer-2',
+        item: { _: 'Warrior', __: ['Warrior', 'Buildable'] },
+        cost: { value: 10 },
+        held: [],
+      },
+      {
+        _: 'BuildItem',
+        id: 'Offer-3',
+        item: { _: 'Temple', __: ['Temple', 'Buildable'] },
+        cost: { value: 40 },
+      },
+    ] as unknown as BuildItem[],
+    menuSays = (
+      mode: 'classic' | 'modern',
+      city: CityData,
+      items: BuildItem[] = offered
+    ) => {
+      applyInterface(mode, null);
+
+      const menu = openCityBuild(city.build, items, transport),
+        said =
+          mode === 'classic'
+            ? Array.from(menu.element().querySelectorAll('option')).map(
+                (option) => [option.value, text(option)]
+              )
+            : Array.from(menu.element().querySelectorAll('.ui-choice-row')).map(
+                (row) => [
+                  text(row.querySelector('.ui-choice-name')),
+                  text(row.querySelector('.ui-choice-meta')),
+                  Array.from(row.querySelectorAll('.ui-choice-fact')).map(
+                    (fact) => fact.getAttribute('title')
+                  ),
+                ]
+              );
+
+      menu.close();
+
+      return said;
+    };
+
+  expect(
+    'classic menu, 12 shields stored: Settlers say they can’t be completed until size 2 after their turns; the others are as they were',
+    menuSays('classic', will),
+    [
+      [
+        'Settlers',
+        'Settlers (Cost: 40 / 14 turns) – Can’t be completed until the city is size 2',
+      ],
+      ['Warrior', 'Warrior (Cost: 10 / 1 turn)'],
+      ['Temple', 'Temple (Cost: 40 / 14 turns)'],
+    ]
+  );
+  // A city building a Warrior with 42 shields stored, which would pay for Settlers at once: they aren't chosen, so they
+  //  can't be completed, not "waiting".
+  const covered = {
+    ...now,
+    build: {
+      ...now.build,
+      building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+      cost: { value: 10 },
+      remaining: -32,
+      held: [],
+    },
+  } as unknown as CityData;
+
+  expect(
+    'classic menu, building the paid-for, waiting Settlers: said in place of their turns',
+    menuSays('classic', now)[0],
+    ['Settlers', 'Settlers (Cost: 40 / Waiting until the city is size 2)']
+  );
+  expect(
+    'classic menu, 42 shields stored but building a Warrior: Settlers can’t be completed, after their turn, not "waiting"',
+    menuSays('classic', covered)[0],
+    [
+      'Settlers',
+      'Settlers (Cost: 40 / 1 turn) – Can’t be completed until the city is size 2',
+    ]
+  );
+  expect(
+    'modern menu, 12 shields stored: Settlers say it under their name, and still count their turns',
+    menuSays('modern', will),
+    [
+      [
+        'Settlers',
+        'Can’t be completed until the city is size 2',
+        ['Cost in shields', 'Turns'],
+      ],
+      ['Warrior', null, ['Cost in shields', 'Turns']],
+      ['Temple', null, ['Cost in shields', 'Turns']],
+    ]
+  );
+  expect(
+    'modern menu, building the paid-for, waiting Settlers: no turns are promised',
+    menuSays('modern', now)[0],
+    ['Settlers', 'Waiting until the city is size 2', ['Cost in shields']]
+  );
+  expect(
+    'modern menu, 42 shields stored but building a Warrior: Settlers can’t be completed, with their turn, not "waiting"',
+    menuSays('modern', covered)[0],
+    [
+      'Settlers',
+      'Can’t be completed until the city is size 2',
+      ['Cost in shields', 'Turns'],
+    ]
+  );
+
+  // Building the paid-for, waiting Settlers, with a Temple a rule would hold too: only the Settlers are "waiting".
+  const alsoHeld = offered.map((buildItem) =>
+    buildItem.item._ === 'Temple' ? { ...buildItem, held: [WAIT] } : buildItem
+  ) as BuildItem[];
+
+  expect(
+    'both menus, building the waiting Settlers: another item a rule holds says it can’t be completed, not "waiting"',
+    [
+      menuSays('classic', now, alsoHeld)[2],
+      menuSays('modern', now, alsoHeld)[2],
+    ],
+    [
+      [
+        'Temple',
+        'Temple (Cost: 40 / 1 turn) – Can’t be completed until the city is size 2',
+      ],
+      [
+        'Temple',
+        'Can’t be completed until the city is size 2',
+        ['Cost in shields', 'Turns'],
+      ],
+    ]
+  );
+
+  // The pane beside the modern list says it for the highlighted item, at once, before its Civilopedia entry (which
+  //  never comes here); nothing for an item nothing would hold.
+  {
+    applyInterface('modern', null);
+
+    const menu = openCityBuild(will.build, offered, transport),
+      pane = () =>
+        text(
+          menu.element().querySelector('.ui-choice-details .ui-choice-note')
+        ),
+      rows = Array.from(menu.element().querySelectorAll('.ui-choice-row'));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const onSettlers = pane();
+
+    click(rows[1]!);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      'modern menu: the pane beside the list gives the reason for highlighted Settlers, and none for a Warrior',
+      [onSettlers, pane()],
+      ['Can’t be completed until the city is size 2', null]
+    );
+
+    menu.close();
+  }
+
   // --- the sidebar's list --------------------------------------------------------------------------------------------
   const element = document.createElement('div'),
     never = cityData('City-5', 'Eridu', { progress: 0, held: [] });
@@ -389,14 +626,16 @@ const run = async (): Promise<void> => {
     ['Kish', 'Uruk', 'Ur', 'Eridu']
   );
   expect(
-    'the one waiting now has a marker, not "1 turn", with the words as its tooltip and for a screen reader',
+    'the one waiting now has the hold glyph (#970), not "1 turn" or "…", with the words as its tooltip and for a screen reader',
     [
-      held?.querySelector('[aria-hidden="true"]')?.textContent,
+      held?.querySelector('svg.glyph-hold use')?.getAttribute('href'),
+      held?.querySelector('svg.glyph-hold')?.getAttribute('aria-hidden'),
       held?.querySelector('.visually-hidden')?.textContent,
       held?.getAttribute('title'),
     ],
     [
-      '…',
+      '#g-hold',
+      'true',
       'Waiting until the city is size 2',
       'Waiting until the city is size 2',
     ]
@@ -425,7 +664,7 @@ const run = async (): Promise<void> => {
     expect(
       'a build paid for in the list goes from "1 turn" to waiting, drawn again',
       [before, turnsShown()],
-      ['1 turn', '…Waiting until the city is size 2']
+      ['1 turn', 'Waiting until the city is size 2']
     );
   }
 
@@ -478,6 +717,174 @@ const run = async (): Promise<void> => {
       '12 / 40 · 14 turns',
     ]
   );
+
+  // --- the notice that a paid-for build is waiting (#970) --------------------------------------------------------------
+  // As the worker sends it, worded in both places a notice is: its window, and the notice beside End Turn.
+  {
+    const notice = (held: (string | null)[]) => ({
+        key: 'City.building-held.unit',
+        bubble: true,
+        data: {
+          city: { name: 'Kish', originalPlayer: player },
+          item: { _: 'Settlers' },
+          held,
+        },
+      }),
+      windowSays = (held: (string | null)[]) => {
+        const container = document.createElement('div');
+
+        document.body.append(container);
+        new Notifications(container).receive(notice(held));
+
+        const window = document.querySelector('.notificationWindow'),
+          said = text(window);
+
+        window?.remove();
+        container.remove();
+
+        return said;
+      };
+
+    expect(
+      'the notice beside End Turn: its title, and its body worded from the rule, as the city screen words a build waiting now',
+      [
+        noticeText(notice([WAIT]), 'title', true),
+        noticeText(notice([WAIT]), 'body', true),
+        noticeText(notice([CHIEFTAIN]), 'body', true),
+        noticeText(notice([null]), 'body', true),
+      ],
+      [
+        'Production waiting',
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.',
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.',
+        'Production of Settlers in Kish is paid for. Waiting.',
+      ]
+    );
+    expect(
+      'and its window says the same',
+      windowSays([WAIT])?.includes(
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.'
+      ),
+      true
+    );
+
+    // Beside End Turn, it stands while the city's build is the same item, paid for and held, and is withdrawn once it
+    //  isn't, as the data the notices are rebuilt from says, rather than going on saying something untrue: but only data
+    //  for the notice's own turn or later says so.
+    const dataWith = (cities: CityData[], turn = 5) =>
+        ({
+          player: { ...player, cities },
+          turn: { value: turn },
+        } as unknown as GameData),
+      waitingNotice = (city: CityData, turn = 5) => ({
+        key: 'City.building-held.unit',
+        bubble: true,
+        data: {
+          city: { id: city.id },
+          item: { _: 'Settlers' },
+          held: [WAIT],
+          turn,
+        },
+      }),
+      // A fresh set of notices holding `notice`, and what each data shown in turn leaves of it.
+      shownOver = (notice: object, ...data: GameData[]) => {
+        const notices = new Notices();
+
+        notices.add(notice as any);
+
+        return data.map(
+          (game) =>
+            notices.actions(game).map(({ value }) => value.notification.key)
+              .length
+        );
+      },
+      withBuild = (build: object) =>
+        ({ ...now, build: { ...now.build, ...build } } as unknown as CityData),
+      completed = withBuild({
+        building: null,
+        remaining: undefined,
+        held: [],
+        progress: { value: 0 },
+      }),
+      changed = withBuild({
+        building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+        held: [],
+      }),
+      // Changed to another item a rule holds too, paid for: still "waiting", but not on what the notice said.
+      changedToHeld = withBuild({
+        building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+        held: [WAIT],
+        cost: { value: 10 },
+        remaining: -32,
+      }),
+      sabotaged = withBuild({ progress: { value: 0 }, remaining: 40 }),
+      // The turn before, as a watcher has it when the notice comes: still being paid for.
+      payingLastTurn = withBuild({ progress: { value: 38 }, remaining: 2 });
+
+    expect(
+      'the notice stands while its build waits, and is withdrawn once it completes, changes item (even to another held one), or loses its shields',
+      [
+        shownOver(waitingNotice(now), dataWith([now]), dataWith([now])),
+        shownOver(waitingNotice(now), dataWith([completed])),
+        shownOver(waitingNotice(now), dataWith([changed])),
+        shownOver(waitingNotice(now), dataWith([changedToHeld])),
+        shownOver(waitingNotice(now), dataWith([sabotaged])),
+      ],
+      [[1, 1], [0], [0], [0], [0]]
+    );
+    expect(
+      "a watcher's notice, which comes before its turn's data: the turn before's, still paying, leaves it; its own turn's judges it",
+      [
+        shownOver(
+          waitingNotice(now, 5),
+          dataWith([payingLastTurn], 4),
+          dataWith([now], 5)
+        ),
+        shownOver(
+          waitingNotice(now, 5),
+          dataWith([payingLastTurn], 4),
+          dataWith([now], 5),
+          dataWith([completed], 6)
+        ),
+      ],
+      [
+        [1, 1],
+        [1, 1, 0],
+      ]
+    );
+    expect(
+      'its city lost (captured, destroyed, given away) after being ours: withdrawn; a city never in the data (a watched civilisation other than the one shown) leaves it standing',
+      [
+        shownOver(waitingNotice(now), dataWith([now]), dataWith([])),
+        shownOver(waitingNotice(now), dataWith([]), dataWith([])),
+        shownOver(waitingNotice(now, 5), dataWith([now], 4), dataWith([], 5)),
+      ],
+      [
+        [1, 0],
+        [1, 1],
+        [1, 0],
+      ]
+    );
+    expect(
+      'any other notice is untouched by it: one about a city whose build is not waiting, and one about no city',
+      [
+        shownOver(
+          {
+            key: 'City.polluted',
+            bubble: true,
+            data: { city: { id: completed.id } },
+          },
+          dataWith([completed]),
+          dataWith([])
+        ),
+        shownOver(
+          { key: 'Game.retirement-warning', bubble: true, data: {} },
+          dataWith([completed])
+        ),
+      ],
+      [[1, 1], [1]]
+    );
+  }
 
   // --- en-GB ---------------------------------------------------------------------------------------------------------
   // Nothing here is spelt differently: the British page reads the same, through its fallback to en.

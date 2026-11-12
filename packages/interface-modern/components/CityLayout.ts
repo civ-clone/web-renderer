@@ -19,6 +19,7 @@ import {
   getAutoLabel,
   getLabelForBuildable,
   getLabelForBuildableEntity,
+  heldText,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
 import {
   growthTurns,
@@ -37,7 +38,11 @@ import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Unit from '@civ-clone/ui-hud/components/Unit';
 import button from '@civ-clone/ui-component-button/button';
 import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
-import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
+import {
+  BuildHold,
+  queuedHold,
+  turnsLeft,
+} from '@civ-clone/ui-client/lib/cityTurns';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import instanceOf from '@civ-clone/ui-client/lib/instanceOf';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
@@ -245,8 +250,20 @@ const textSpan = (className: string, text: string): HTMLElement => {
   return span;
 };
 
+// A queued item's name, with what would hold it beneath (#970), or the name alone.
+const heldBeneath = (name: HTMLElement, hold: BuildHold | null): HTMLElement =>
+  hold === null
+    ? name
+    : s(
+        '<span class="ui-city-queued-text"></span>',
+        name,
+        textSpan('held', heldText(hold))
+      );
+
 // What the city builds after its current item (#774), each with the turns it takes at the city's production now, from
-//  nothing, as it starts once the one before it is done. Its own can be moved up or down, or removed.
+//  nothing, as it starts once the one before it is done. Its own can be moved up or down, or removed. One a rule would
+//  hold says so under its name (#970), in the build menu's words: as the city is now, which is all the engine says, so
+//  "can't be completed until…", never that it will wait.
 const renderQueue = (
   city: CityData,
   { readOnly, transport }: CityScreenContext
@@ -299,7 +316,10 @@ const renderQueue = (
           instanceOf(buildItem.item, 'Wonder')
           ? buildingIcon(buildItem.item._, instanceOf(buildItem.item, 'Wonder'))
           : '',
-        textSpan('name', t('CityWindow.then', { item })),
+        heldBeneath(
+          textSpan('name', t('CityWindow.then', { item })),
+          queuedHold(city.build, index)
+        ),
         s(`<span class="turns">${turnsText(turns)}</span>`),
         ...(readOnly
           ? []

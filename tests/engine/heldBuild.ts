@@ -1,13 +1,24 @@
 // A held build (#959): a city of size 1 doesn't complete Settlers until it is size 2, and the page is told why with the
 //  build's `held`, the ids of the rules holding the item, from the moment it is chosen. With the plugins the game is
 //  built with and the rule sets as they start, through a human `DataTransferClient`, checking what the page is sent:
-//  T1. a new city of size 1 chooses Settlers: `held` names `civ1-enhanced`'s rule with shields still to pay (it will
-//      wait), and again once they are paid for (it is waiting), with nothing to buy;
-//  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up;
-//  T3. the turn it grows to size 2 it completes them, and is size 1 again;
-//  T4. a city that grows before its Settlers are paid for is no longer held.
-// Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule, and on King a
-//  size-1 city with others is removed by its Settlers, which stand on its square.
+//  T1. a new city of size 1 is offered Settlers with the id of `civ1-enhanced`'s rule beside them in its build list
+//      (#970), and nothing else with any; it chooses them: `held` names that rule with shields still to pay (it will
+//      wait), and again once they are paid for (it is waiting), with nothing to buy; more Settlers queued behind them
+//      are sent with the same id, and a queued Warrior with none (`queueHeld`);
+//  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up, and the
+//      player is told so once (#970);
+//  T3. still waiting, and not told again; the player chooses Settlers again, and changes away and back;
+//  T4. still the same wait, not told again; a rival Diplomat's sabotage takes the shields;
+//  T5. being paid for again, not waiting, nothing said; paid for;
+//  T6. waiting again after a turn without: a new wait, told again;
+//  T7. the turn it grows to size 2 it completes them, and is size 1 again; Settlers chosen and paid for again;
+//  T8. a new wait after a completion, told again;
+//  T9. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
+//      them.
+// Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule (which the
+//  build list and the queue name too, and whose wait is told once, however often checked or chosen again in the turn),
+//  and a computer player's waiting build is told to a watcher of a group with them, never to the human player; and on
+//  King a size-1 city with others is removed by its Settlers, which stand on its square.
 // And, on the same game, "Bribed and defecting units stay veteran" (#960): off to start with, then ticked.
 //
 // This is also the only guard against two copies of `@civ-clone/core-city-build` being installed: `CityBuild#held()`
@@ -35,6 +46,9 @@ import { Veteran } from '@civ-clone/civ1-unit/UnitImprovements';
 import { instance as unitImprovementRegistryInstance } from '@civ-clone/core-unit-improvement/UnitImprovementRegistry';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import Tile from '@civ-clone/core-world/Tile';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
+import { registerNotifications } from '@civ-clone/ui-worker-client/Client/notifications/registerNotifications';
+import { unionView } from '@civ-clone/ui-worker-client/ObserverViews';
 import { applyRuleSets } from '@civ-clone/ui-worker-client/lib/ruleSets';
 import { instance as cityBuildRegistryInstance } from '@civ-clone/core-city-build/CityBuildRegistry';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
@@ -52,6 +66,11 @@ let humanPlayer: Player | null = null,
   humanClient: DataTransferClient | null = null,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => unknown) | null = null,
+  // The worker's answer to the build list's `cityBuildAvailable` (#970), and what it last sent.
+  buildListHandler: ((cityBuildId: string) => unknown) | null = null,
+  buildListSent: any = null,
+  // Every notification sent to the human, as the page gets it.
+  noticesSent: any[] = [],
   pendingChoice: ((value: any) => void) | null = null,
   city: City | null = null,
   // The human turns played so far, and the shields stored when the last one ended.
@@ -140,6 +159,31 @@ const shape = (build: any) =>
         spendCost: build.spendCost.length,
       };
 
+// The ids sent with each item the build list offers `of` (#970), by name: the rules that would hold it there now.
+const offeredHeld = (of: City): Record<string, unknown> => {
+  buildListSent = null;
+  buildListHandler!(cityBuildRegistryInstance.getByCity(of).id());
+
+  return Object.fromEntries(
+    (buildListSent.hierarchy as { '#ref': string }[]).map(({ '#ref': id }) => [
+      buildListSent.objects[id].item._,
+      buildListSent.objects[id].held,
+    ])
+  );
+};
+
+// The notices sent that a build is waiting (#970), since the game began: key, bubble, city, item and ids.
+const heldNotices = () =>
+  noticesSent
+    .filter((notice) => notice.key.startsWith('City.building-held.'))
+    .map((notice) => [
+      notice.key,
+      notice.bubble,
+      notice.data.city?.id,
+      notice.data.item?._,
+      notice.data.held,
+    ]);
+
 const ourSettlers = (): number =>
   unitRegistryInstance
     .getByPlayer(humanPlayer!)
@@ -147,6 +191,21 @@ const ourSettlers = (): number =>
 
 const sizeOf = (of: City): number =>
   cityGrowthRegistryInstance.getByCity(of).size();
+
+// Doesn't grow at the start of the human's next turn: no food stored.
+const holdGrowth = (of: City): void => {
+  cityGrowthRegistryInstance.getByCity(of).progress().set(0);
+};
+
+// The player's choice of what `of` builds, as the page sends it.
+const choose = (chosen: string): Promise<unknown> =>
+  Promise.resolve(
+    actionHandler!({
+      name: 'ChangeProduction',
+      id: cityBuildRegistryInstance.getByCity(city!).id(),
+      chosen,
+    })
+  ).then(settle);
 
 // Grows at the start of the human's next turn: the food stored is the cost.
 const growNextTurn = (of: City): void => {
@@ -202,7 +261,20 @@ const firstTurn = async (): Promise<void> => {
     fail('the starting Settlers could not found a city');
   }
 
-  const cityBuild = cityBuildRegistryInstance.getByCity(city!);
+  const cityBuild = cityBuildRegistryInstance.getByCity(city!),
+    offered = offeredHeld(city!);
+
+  expect(
+    "T1: the build list of a city of size 1 says, before they are chosen, that Settlers would wait, by civ1-enhanced's rule, and that nothing else would",
+    [
+      offered.Settlers,
+      Object.entries(offered)
+        .filter(([name]) => name !== 'Settlers')
+        .every(([, held]) => JSON.stringify(held) === '[]'),
+      Object.keys(offered).length > 1,
+    ],
+    [[SETTLERS_WAIT_RULE], true, true]
+  );
 
   cityBuild.build(Settlers);
 
@@ -216,6 +288,20 @@ const firstTurn = async (): Promise<void> => {
     ],
     [1, [SETTLERS_WAIT_RULE], false, true]
   );
+
+  // Queued behind them, more Settlers and a Warrior: each queued item's ids go with the build, by its place (#970).
+  cityBuild.enqueue(Settlers);
+  cityBuild.enqueue(Warrior);
+
+  expect(
+    "T1: queued, more Settlers are sent with civ1-enhanced's rule beside them, and a Warrior with none",
+    buildAsSent(city!)?.queueHeld,
+    [[SETTLERS_WAIT_RULE], []]
+  );
+
+  cityBuild.clearQueue();
+
+  expect('T1: with nothing queued, none', buildAsSent(city!)?.queueHeld, []);
 
   cityBuild.add(new Production(cityBuild.cost().value()));
 
@@ -257,13 +343,105 @@ const playTurn = async (): Promise<void> => {
         true,
       ]
     );
+    expect(
+      'T2: and the player is told so once, as a notice beside End Turn that opens the city, in the words of the rule',
+      heldNotices(),
+      [
+        [
+          'City.building-held.unit',
+          true,
+          city!.id(),
+          'Settlers',
+          [SETTLERS_WAIT_RULE],
+        ],
+      ]
+    );
+
+    holdGrowth(city!);
+
+    return;
+  }
+
+  if (turnsPlayed === 3) {
+    expect(
+      'T3: still waiting a turn later, and not told again',
+      [
+        shape(buildInPatches(city!))?.waiting,
+        sizeOf(city!),
+        heldNotices().length,
+      ],
+      [true, 1, 1]
+    );
+
+    // Chosen again, and changed away and back, as the player does: the same wait goes on.
+    const chosenBefore = cityBuild.building();
+
+    await choose('Settlers');
+
+    const chosenAgain = cityBuild.building();
+
+    await choose('Warrior');
+
+    const changedTo = cityBuild.building()?.item();
+
+    await choose('Settlers');
+
+    expect(
+      'T3: each choice is made: Settlers chosen again afresh, a Warrior, then Settlers',
+      [
+        chosenAgain !== chosenBefore,
+        chosenAgain?.item() === Settlers,
+        changedTo === Warrior,
+        cityBuild.building()?.item() === Settlers,
+      ],
+      [true, true, true, true]
+    );
+
+    holdGrowth(city!);
+
+    return;
+  }
+
+  if (turnsPlayed === 4) {
+    expect(
+      'T4: Settlers chosen again, and changed away and back, still waiting: the same wait, not told again',
+      [shape(buildInPatches(city!))?.waiting, heldNotices().length],
+      [true, 1]
+    );
+
+    // A rival Diplomat's sabotage, as `civ1-unit`'s rule does it: the build's shields are lost, the item kept.
+    cityBuild.progress().set(0);
+    holdGrowth(city!);
+
+    return;
+  }
+
+  if (turnsPlayed === 5) {
+    expect(
+      'T5: its shields lost, the Settlers are being paid for again, not waiting, and nothing is said',
+      [shape(buildInPatches(city!))?.waiting, heldNotices().length],
+      [false, 1]
+    );
+
+    cityBuild.add(new Production(cityBuild.cost().value()));
+    holdGrowth(city!);
+
+    return;
+  }
+
+  if (turnsPlayed === 6) {
+    expect(
+      'T6: paid for again, they wait again after a turn without waiting: a new wait, told again',
+      [shape(buildInPatches(city!))?.waiting, heldNotices().length],
+      [true, 2]
+    );
 
     growNextTurn(city!);
 
     return;
   }
 
-  if (turnsPlayed === 3) {
+  if (turnsPlayed === 7) {
     const settlers = unitRegistryInstance
       .getByTile(city!.tile())
       .filter(
@@ -272,23 +450,37 @@ const playTurn = async (): Promise<void> => {
 
     // Food is processed before production at the start of a turn, so the city grows and completes them in one.
     expect(
-      'T3: the turn it grows to size 2 it completes the Settlers, on its square, and is size 1 again',
+      'T7: the turn it grows to size 2 it completes the Settlers, on its square, and is size 1 again',
       [settlers.length, turnCompleted === turnInstance.value(), sizeOf(city!)],
       [1, true, 1]
     );
 
+    // Settlers again, paid for at once: a new wait after the last one completed.
     cityBuild.build(Settlers);
+    cityBuild.add(new Production(cityBuild.cost().value()));
+    holdGrowth(city!);
+
+    return;
+  }
+
+  if (turnsPlayed === 8) {
+    expect(
+      'T8: Settlers chosen after the last ones completed, paid for and waiting: told again',
+      [shape(buildInPatches(city!))?.waiting, heldNotices().length],
+      [true, 3]
+    );
+
     cityBuild.progress().set(0);
     growNextTurn(city!);
 
     return;
   }
 
-  if (turnsPlayed === 4) {
+  if (turnsPlayed === 9) {
     const sent = buildInPatches(city!);
 
     expect(
-      'T4: a city that grows before its Settlers are paid for is no longer held, as the turn sent it',
+      'T9: a city that grows before its Settlers are paid for is no longer held, as the turn sent it',
       [
         sizeOf(city!),
         cityBuild.building()?.item() === Settlers,
@@ -296,6 +488,11 @@ const playTurn = async (): Promise<void> => {
         sent?.remaining > 0,
       ],
       [2, true, [], true]
+    );
+    expect(
+      'T9: and the build list of the city at size 2 says nothing would hold Settlers',
+      offeredHeld(city!).Settlers,
+      []
     );
 
     await originals();
@@ -316,19 +513,116 @@ const originals = async (): Promise<void> => {
   otherBuild.add(new Production(otherBuild.cost().value()));
   gameDifficultyRegistryInstance.set(Chieftain);
 
+  otherBuild.enqueue(Settlers);
+
   const onChieftain = shape(buildAsSent(other)),
-    completed = otherBuild.check();
+    offeredOnChieftain = offeredHeld(other).Settlers,
+    queuedOnChieftain = buildAsSent(other)?.queueHeld;
+
+  otherBuild.clearQueue();
+
+  const completed = otherBuild.check();
 
   expect(
     "unticked, on Chieftain: a city of size 1 holds paid-for Settlers by the original's rule, and completes nothing",
-    [onChieftain, completed, other.destroyed(), sizeOf(other)],
+    [
+      onChieftain,
+      offeredOnChieftain,
+      queuedOnChieftain,
+      completed,
+      other.destroyed(),
+      sizeOf(other),
+    ],
     [
       { held: [CHIEFTAIN_SETTLERS_RULE], waiting: true, spendCost: 0 },
+      [CHIEFTAIN_SETTLERS_RULE],
+      [[CHIEFTAIN_SETTLERS_RULE]],
       null,
       false,
       1,
     ]
   );
+
+  // Told once per wait, on the real engine (#970): the `check()` above waited and told; another in the same turn
+  //  doesn't, nor does one after the Settlers are chosen afresh in that turn, which is the same wait.
+  const toldOfOther = () =>
+      heldNotices().filter(([, , cityId]) => cityId === other.id()),
+    afterFirst = toldOfOther();
+
+  otherBuild.check();
+
+  const afterSecond = toldOfOther();
+
+  otherBuild.build(Settlers);
+  otherBuild.add(new Production(otherBuild.cost().value()));
+  otherBuild.check();
+
+  expect(
+    "the human's city on Chieftain: told once that its Settlers wait, by the original's rule; not again in the turn, even chosen afresh",
+    [afterFirst, afterSecond.length, toldOfOther().length],
+    [
+      [
+        [
+          'City.building-held.unit',
+          true,
+          other.id(),
+          'Settlers',
+          [CHIEFTAIN_SETTLERS_RULE],
+        ],
+      ],
+      1,
+      1,
+    ]
+  );
+
+  // A computer player's waiting build (#970): the human, whose client this is, is never told of it; a watcher of a group
+  //  that includes that player is, as it is told of their completed builds.
+  {
+    const [rival] = playerRegistryInstance
+        .entries()
+        .filter((player) => player !== humanPlayer),
+      rivalCity = new City(rival!, site(city!.tile()), 'Rival'),
+      rivalBuild = cityBuildRegistryInstance.getByCity(rivalCity),
+      group = unionView([humanPlayer!, rival!], {
+        interactions: interactionRegistryInstance,
+        cities: cityRegistryInstance,
+        playerWorlds: playerWorldRegistryInstance,
+      }),
+      watcherTold: any[] = [],
+      disposeWatcher = registerNotifications(engine, {
+        view: group.view,
+        turn: turnInstance,
+        notifier: {
+          notify: (notification: any) =>
+            watcherTold.push([
+              notification.key(),
+              notification.data().city?.id?.(),
+            ]),
+        },
+      } as any),
+      toldBefore = heldNotices().length;
+
+    rivalBuild.build(Settlers);
+    rivalBuild.add(new Production(rivalBuild.cost().value()));
+    rivalBuild.check();
+
+    disposeWatcher();
+    group.dispose();
+
+    expect(
+      "a computer player's Settlers waiting: held, not told to the human player, told to a watcher of a group with that player",
+      [
+        rivalBuild.held(),
+        heldNotices().length - toldBefore,
+        watcherTold.filter(([key]) => key.startsWith('City.building-held.')),
+      ],
+      [
+        [CHIEFTAIN_SETTLERS_RULE],
+        0,
+        [['City.building-held.unit', rivalCity.id()]],
+      ]
+    );
+  }
 
   gameDifficultyRegistryInstance.set(King);
 
@@ -412,7 +706,7 @@ const report = (): void => {
   }
 
   console.log(
-    `PASS heldBuild (${checks} checks: a size-1 city's Settlers are held from the moment they are chosen, paid for and waiting, completed the turn it grows to 2, and not held once it grows first; unticked, held on Chieftain by the original's rule, and on King the city is removed and its Settlers live; a veteran that defects stays one only with the box ticked)`
+    `PASS heldBuild (${checks} checks: a size-1 city's Settlers are held from the moment they are chosen, said so in the build list and the queue, paid for and waiting, told once per wait (not again chosen again or changed back, again after sabotage and after a completion), completed the turn it grows to 2, and not held once it grows first; unticked, held on Chieftain by the original's rule, and on King the city is removed and its Settlers live; a veteran that defects stays one only with the box ticked)`
   );
 
   process.exit(0);
@@ -445,6 +739,10 @@ const transport = {
       actionHandler = handler;
     }
 
+    if (channel === 'cityBuildAvailable') {
+      buildListHandler = handler;
+    }
+
     return () => false;
   },
   receiveOnce: (channel: string, handler: (value: any) => void) => {
@@ -457,6 +755,34 @@ const transport = {
     };
   },
   send: (channel: string, data: any): void => {
+    if (channel === 'cityBuildAvailable') {
+      buildListSent = data;
+
+      return;
+    }
+
+    if (channel === 'gameNotification') {
+      const { hierarchy, objects } = JSON.parse(JSON.stringify(data)),
+        // One level of references resolved, as the page reads them: the notice, and the objects in its data.
+        deref = (value: any): any =>
+          value && typeof value === 'object' && '#ref' in value
+            ? objects[value['#ref']]
+            : value,
+        notice = deref(hierarchy);
+
+      noticesSent.push({
+        ...notice,
+        data: Object.fromEntries(
+          Object.entries(notice.data ?? {}).map(([key, value]) => [
+            key,
+            deref(value),
+          ])
+        ),
+      });
+
+      return;
+    }
+
     if (channel === 'gameDataPatch') {
       collectObjects(JSON.parse(JSON.stringify(data)));
 

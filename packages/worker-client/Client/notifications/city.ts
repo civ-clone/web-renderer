@@ -97,6 +97,58 @@ const queueDropped = (
   );
 };
 
+// The waits each client has seen (#970): for each city build, the item it last waited on and the turn it last did. The
+//  engine says a paid-for build is waiting on every turn's check while it waits, so a wait is a run of consecutive turns
+//  with the event for the same build and item: told on the first, and not while it goes on, however the item is chosen
+//  again in the meantime. A turn without the event ends it, whatever the reason (completed, cancelled, changed, or its
+//  shields lost to sabotage), and the next wait is told afresh. Nothing is saved: after loading a game the builds are
+//  new and none has been seen, so a build still waiting is told once more.
+const waitsSeen: WeakMap<
+  NotificationContext,
+  WeakMap<CityBuildItem, { Item: Function; turn: number }>
+> = new WeakMap();
+
+// Our build, paid for and waiting, as `Hold` rules hold it (#970): what it is and the ids of the rules, which the page
+//  words as the city screen does. A bubble, as it asks nothing, opening the city; the page withdraws it once the city's
+//  build is no longer waiting (`judgeHeldNotice`).
+const buildingHeld = (
+  ctx: NotificationContext,
+  cityBuild: CityBuildItem,
+  Item: Function,
+  held: (string | null)[]
+): Notification | null => {
+  if (!ctx.view.owns(cityBuild.city().player())) {
+    return null;
+  }
+
+  if (!waitsSeen.has(ctx)) {
+    waitsSeen.set(ctx, new WeakMap());
+  }
+
+  const seen = waitsSeen.get(ctx)!,
+    last = seen.get(cityBuild),
+    turn = ctx.turn.value();
+
+  seen.set(cityBuild, { Item, turn });
+
+  // The same wait, seen this turn or the one before.
+  if (last !== undefined && last.Item === Item && last.turn >= turn - 1) {
+    return null;
+  }
+
+  return new Notification(
+    'City.building-held.' + buildingCompleteKind(Item.prototype),
+    {
+      city: cityBuild.city(),
+      item: { _: Item.name },
+      held,
+      // The turn it waits from: the page judges whether it still waits only on data for this turn or later.
+      turn,
+    },
+    true
+  );
+};
+
 export const cityNotifications: NotificationTable = [
   // Our capture of a city. Losing one is the city's news (`Client/cityNews.ts`).
   [
@@ -158,6 +210,9 @@ export const cityNotifications: NotificationTable = [
         : notifications;
     },
   ],
+
+  // Told once while it waits (#970).
+  ['city:building-held', buildingHeld],
 
   [
     'wonder:obsolete',

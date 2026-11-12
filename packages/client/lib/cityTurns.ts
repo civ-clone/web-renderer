@@ -1,4 +1,9 @@
-import { City, CityBuild, Yield } from '@civ-clone/ui-protocol/types';
+import {
+  BuildItem,
+  City,
+  CityBuild,
+  Yield,
+} from '@civ-clone/ui-protocol/types';
 import { reduceKnownYield } from './yieldMap';
 
 // How many turns a city has left to build or grow, as plain sums: the map's banners (#747) count them without the
@@ -37,17 +42,58 @@ export const buildTurns = (city: City) =>
  */
 export type BuildHold = { now: boolean; held: (string | null)[] };
 
-export const buildHold = (build: CityBuild): BuildHold | null => {
-  const held = build.held ?? [];
+// The ids as a hold, waiting `now` with nothing `remaining` to pay; `null` when nothing holds it.
+const holdOf = (
+  held: (string | null)[] | undefined,
+  remaining: number
+): BuildHold | null =>
+  held === undefined || held.length === 0
+    ? null
+    : { now: remaining <= 0, held };
 
-  if (!build.building || held.length === 0) {
-    return null;
-  }
+export const buildHold = (build: CityBuild): BuildHold | null =>
+  build.building
+    ? holdOf(
+        build.held,
+        build.remaining ?? build.cost.value - build.progress.value
+      )
+    : null;
 
-  return {
-    now: (build.remaining ?? build.cost.value - build.progress.value) <= 0,
-    held,
-  };
+/**
+ * What would hold an item a city's build list offers (#970), from the ids sent with it, for the city as it is now. Only
+ *  the item the city is building, paid for and held, is waiting `now`; any other, even one the stored shields would
+ *  pay for at once, is one that can't be completed yet, as it isn't chosen.
+ */
+export const offeredHold = (
+  cityBuild: CityBuild,
+  buildItem: BuildItem
+): BuildHold | null => {
+  const hold = holdOf(buildItem.held, Infinity);
+
+  return hold === null
+    ? null
+    : {
+        ...hold,
+        now:
+          cityBuild.building?.item?._ === buildItem.item._ &&
+          buildHold(cityBuild)?.now === true,
+      };
+};
+
+/**
+ * What would hold the queued item at `index` (#970), from the ids sent for the queue. Queued items are counted from no
+ *  shields, so one is never waiting `now`; and the ids are for the city as it is now, not as it will be when the item
+ *  is reached, so they say what holds it as things stand.
+ */
+export const queuedHold = (
+  cityBuild: CityBuild,
+  index: number
+): BuildHold | null => {
+  const buildItem = cityBuild.queue?.[index];
+
+  return buildItem === undefined
+    ? null
+    : holdOf(cityBuild.queueHeld?.[index], buildItem.cost.value);
 };
 
 /**

@@ -291,6 +291,117 @@ const contextOf = ({
     expect(`the kind of ${kind}`, buildingCompleteKind(build), kind);
   });
 
+  // A build paid for and waiting, which the engine says on every turn's check while it waits (#970): a wait is a run of
+  //  consecutive turns with the event for the same build and item, told on its first turn only, whatever is chosen in
+  //  between; only in our cities, by kind, as a bubble, with the city, the item and the ids the page words it from.
+  {
+    const WAIT = 'civ1-enhanced:city/hold/settlers-until-size-two',
+      clock = { turn: 1 },
+      // A client's context, with the turn the engine is on.
+      clientContext = () =>
+        ({
+          ...contextOf(),
+          turn: { value: () => clock.turn },
+        } as unknown as NotificationContext),
+      ctx = clientContext(),
+      heldHandler = handlerOf(cityNotifications, 'city:building-held'),
+      waiting = (build: unknown, Item: Function, context = ctx) => {
+        const notification = heldHandler(context, build, Item, [WAIT]);
+
+        if (notification !== null && !Array.isArray(notification)) {
+          keysMade.add(notification.key());
+        }
+
+        return describe(notification as Notification | null);
+      },
+      // Whether each turn's event, from `from` on, is told.
+      toldOver = (build: unknown, Item: Function, turns: number) =>
+        Array.from({ length: turns }, () => {
+          clock.turn++;
+
+          return waiting(build, Item) !== null;
+        }),
+      ourBuild = named('build', { city: () => ourCity }),
+      rivalBuild = named('build', { city: () => rivalCity });
+
+    expect(
+      'our Settlers paid for and waiting: told on the first turn, as a bubble with the city, the item, the ids and the turn',
+      waiting(ourBuild, Settlers),
+      [
+        'City.building-held.unit',
+        true,
+        { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT], turn: 1 },
+      ]
+    );
+    expect(
+      'and not on the turns they go on waiting, nor again on a turn checked twice',
+      [...toldOver(ourBuild, Settlers, 3), waiting(ourBuild, Settlers)],
+      [false, false, false, null]
+    );
+
+    // A turn without the event (completed, cancelled, changed, or its shields lost to sabotage) ends the wait.
+    clock.turn++;
+
+    expect(
+      'after a turn without waiting, waiting again: a new wait, told once',
+      toldOver(ourBuild, Settlers, 2),
+      [true, false]
+    );
+    expect(
+      'waiting on another item the turn after: a new wait, told',
+      toldOver(ourBuild, Barracks, 1),
+      [true]
+    );
+    expect(
+      'the same wait, for another client (as after loading a game, whose builds are all new): told once there too',
+      [
+        waiting(ourBuild, Barracks, clientContext())?.[0],
+        waiting(named('build', { city: () => ourCity }), Barracks)?.[0],
+      ],
+      [
+        'City.building-held.city-improvement',
+        'City.building-held.city-improvement',
+      ]
+    );
+    expect(
+      "a computer player's city waiting, to a client for a human player: not told",
+      waiting(rivalBuild, Settlers),
+      null
+    );
+
+    expect(
+      'a Wonder waiting, by kind, with the plain words for no rule of its own',
+      describe(
+        heldHandler(ctx, named('build', { city: () => ourCity }), Pyramids, [
+          null,
+        ]) as Notification | null
+      ),
+      [
+        'City.building-held.wonder',
+        true,
+        {
+          city: 'Rome',
+          item: { _: 'Pyramids' },
+          held: [null],
+          turn: clock.turn,
+        },
+      ]
+    );
+
+    keysMade.add('City.building-held.wonder');
+
+    [Structural, named('Coinage')].forEach((Item: any) => {
+      const notification = heldHandler(
+        ctx,
+        named('build', { city: () => ourCity }),
+        Item,
+        []
+      ) as Notification;
+
+      keysMade.add(notification.key());
+    });
+  }
+
   // A unit built again without asking (#690) isn't told of; another unit next, or a unit chosen by hand, still is.
   {
     const unit = unitOf(us, Trireme.prototype),
@@ -859,6 +970,11 @@ const contextOf = ({
     'City.building-complete.spaceship-part',
     'City.building-complete.unit',
     'City.building-complete.wonder',
+    'City.building-held.city-improvement',
+    'City.building-held.other',
+    'City.building-held.spaceship-part',
+    'City.building-held.unit',
+    'City.building-held.wonder',
     'City.captured-by-us',
     'City.civil-disorder',
     'City.improvement-unsupported',
@@ -1005,6 +1121,7 @@ const contextOf = ({
       'city:incited',
       'unit:bribed',
       'city:building-complete',
+      'city:building-held',
       'player:research-complete',
       'wonder:obsolete',
       'city-improvement:obsolete',

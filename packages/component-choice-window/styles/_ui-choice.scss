@@ -209,6 +209,14 @@
     margin: 0 0 0.5rem;
   }
 
+  // A note on the chosen row that comes before its entry, as what would hold a build (#970): in the muted tone the
+  //  row's own line under its name has, aligned with the entry's text.
+  .ui-choice-note {
+    color: var(--ui-fg-muted);
+    margin: 0 0 0.5rem;
+    text-align: start;
+  }
+
   h4 {
     color: var(--type-eyebrow-colour);
     font-size: var(--type-eyebrow-size);

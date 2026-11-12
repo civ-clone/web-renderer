@@ -14,8 +14,10 @@ import {
   getAutoLabel,
   getClearedLabel,
   getLabelForBuildable,
+  heldText,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { offeredHold } from '@civ-clone/ui-client/lib/cityTurns';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -42,7 +44,9 @@ const unitFacts = (stats: NonNullable<BuildItem['stats']>): ChoiceFact[] =>
 
 /**
  * One thing the city can build, as a row: its sprite where it's a unit, or its icon where it's an improvement or a Wonder
- *  (#64), its numbers, its cost and how long it takes.
+ *  (#64), its numbers, its cost and how long it takes. One a rule would hold says so under its name before it is chosen
+ *  (#970), as the city screen does for its build: beside its turns, or, for the build the city is already waiting on,
+ *  paid for, in their place.
  */
 export const buildRow = (
   cityBuild: CityBuild,
@@ -53,11 +57,13 @@ export const buildRow = (
       { ...cityBuild, ...buildItem } as unknown as CityBuild,
       cityBuild.city.yields,
       'Production'
-    );
+    ),
+    hold = offeredHold(cityBuild, buildItem);
 
   return {
     value: buildItem.item._,
     label: item,
+    meta: hold ? heldText(hold) : null,
     ...(buildItem.group
       ? { group: t(`ChoiceWindow.Build.group.${buildItem.group}`) as string }
       : {}),
@@ -87,10 +93,14 @@ export const buildRow = (
         label: t('ChoiceWindow.Build.cost'),
         value: localeProvider.number(buildItem.cost.value),
       },
-      {
-        label: t('ChoiceWindow.turns'),
-        value: t('Progress.turns', { count: turns }),
-      },
+      ...(hold?.now
+        ? []
+        : [
+            {
+              label: t('ChoiceWindow.turns'),
+              value: t('Progress.turns', { count: turns }),
+            },
+          ]),
     ],
     primary: t('ChoiceWindow.Build.build', {
       item,
@@ -117,6 +127,13 @@ export class CityBuildChoice extends ChoiceWindow {
     additionalActions: ActionWindowActions = {}
   ) {
     const cleared = getClearedLabel(cityBuild),
+      // What would hold each item, for the pane beside the list (#970).
+      holds = new Map(
+        available.map((buildItem) => [
+          buildItem.item._,
+          offeredHold(cityBuild, buildItem),
+        ])
+      ),
       intro = cleared === null ? null : s('<p class="build-cleared"></p>');
 
     if (intro !== null) {
@@ -144,13 +161,28 @@ export class CityBuildChoice extends ChoiceWindow {
         autoChooseSingle: false,
         chosen: cityBuild.building?.item._ ?? null,
         intro,
-        describe: (row) =>
-          entryDetails(transport, row.value, [
-            'unit',
-            'improvement',
-            'wonder',
-            'spaceship',
-          ]),
+        // Its Civilopedia entry, after what would hold it (#970), which is there at once.
+        describe: (row) => {
+          const details = entryDetails(transport, row.value, [
+              'unit',
+              'improvement',
+              'wonder',
+              'spaceship',
+            ]),
+            hold = holds.get(row.value) ?? null;
+
+          if (hold === null) {
+            return details;
+          }
+
+          const note = s('<p class="ui-choice-note"></p>'),
+            pane = s('<div class="build-details"></div>', note);
+
+          note.textContent = heldText(hold);
+          details.then((entry) => entry && pane.append(entry));
+
+          return pane;
+        },
         actions: {
           ...additionalActions,
           // What's chosen, after what the city is building now (#774). Building nothing, choosing starts it.

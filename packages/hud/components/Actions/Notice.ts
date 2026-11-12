@@ -5,6 +5,7 @@ import { PlayerAction } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';
 import { s } from '@dom111/element';
 import showCityAction from '../lib/showCityAction';
@@ -31,6 +32,7 @@ export const noticeText = (
 ): string =>
   t(`${notification.key}.${part}`, {
     ...notification.data,
+    ...heldNoticeData(notification),
     defaultValue: part === 'title' ? t('Notification.title') : undefined,
     ns: 'notification',
     skipOnVariables: false,

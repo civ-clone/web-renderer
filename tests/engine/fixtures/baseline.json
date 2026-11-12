@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1121,
+        "total": 1122,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -134,6 +134,7 @@
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
           "BuildingComplete": 10,
+          "BuildingHeld": 1,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
@@ -361,7 +362,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1121,
+        "total": 1122,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -381,6 +382,7 @@
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
           "BuildingComplete": 10,
+          "BuildingHeld": 1,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,
@@ -801,7 +803,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1121,
+        "total": 1122,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -821,6 +823,7 @@
           "BuildCostModifier": 1,
           "BuildingCancelled": 1,
           "BuildingComplete": 10,
+          "BuildingHeld": 1,
           "BuildPriority": 18,
           "BuildWeight": 2,
           "Built": 12,

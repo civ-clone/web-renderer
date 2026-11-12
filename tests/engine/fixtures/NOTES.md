@@ -396,3 +396,46 @@ which decide something only once a Wonder has been lost or an old save is
 loaded. `client-transcript.json` passes
 unchanged and is not re-recorded. The rules are played through the full plugin
 set, a save and a load by `tests/engine/lostWonders.ts`.
+
+## Accepted change: rule counts, a paid-for build that waits is said (#970)
+
+core-city-build 0.1.22 adds `CityBuild#heldFor(item)`, the ids of the `Hold`
+rules that would hold a city's build of any item as the city is now, and the
+`BuildingHeld` rule type, processed each time `check()` declines to complete a
+paid-for build because it is held. civ1-city 0.1.11 turns it into the
+`city:building-held` engine event (`civ1-city:city/building-held/emit`), and
+civ1-enhanced 0.1.6 takes the new core-city-build. The rule totals at turns 1,
+10 and 50 rise from 1121 to 1122 (`BuildingHeld` 0 → 1) and nothing else moves:
+the engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
+counts and the DTO hashes are unchanged. In its 50 turns this game holds no
+paid-for build, so the new rule never fires; it is played through the full
+plugin set by `tests/engine/heldBuild.ts`. `client-transcript.json` passes
+unchanged and is not re-recorded.
+
+## Accepted change: the build list says what would hold each item (#970)
+
+Each item a city's build list offers (the worker's answer to `cityBuildAvailable`)
+now carries `held`, the ids `CityBuild#heldFor` gives for it: the rules that would
+hold the city's build of it as the city is now. `baseline.json` doesn't move: the
+list isn't part of any entity's DTO. In `client-transcript.json` only the two
+`cityBuildAvailable` answers change, ten rows between them, each a size-1 city's,
+whose Settlers carry `["civ1-enhanced:city/hold/settlers-until-size-two"]` and the
+other eight `[]`. With `held` taken back out of every `BuildItem` in the
+transcript, all 263 messages, every channel hash and the sequence hash match the
+previous fixture.
+
+## Accepted change: every city build sends what would hold its queue (#970)
+
+The worker's own `queueHeld` AdditionalData on `CityBuild` (in
+`packages/worker-client/AdditionalData/`) adds, to every city build it sends, the
+ids `CityBuild#heldFor` gives for each queued item, by its place in the queue.
+`baseline.json` doesn't move: the conformance game is played by computer players
+alone and never loads the worker's AdditionalData, so its DTOs are what they were
+(checksums `a7518c6d / d3c8debf / a12b897c`, the DTO hashes and the random-call
+counts unchanged). In `client-transcript.json` 33 of the 263 messages change (31
+`gameDataPatch`es, the one `gameNotification` and the one `investigateCity`
+answer, each carrying a city's build, as for `held` in #959): each of the 40
+builds sent gains `"queueHeld":[]`, nothing being queued in that game. With
+`queueHeld` taken back out of every `CityBuild` in the transcript, all 263
+messages, every channel hash and the sequence hash match the previous fixture,
+so no id moved: `heldFor` makes no `DataObject`.

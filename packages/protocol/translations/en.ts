@@ -75,6 +75,23 @@ i18next.addResources('en', 'notification', {
   'City.queue-dropped.wonder.title': 'Dropped from the queue',
   'City.queue-dropped.spaceship-part.title': 'Dropped from the queue',
   'City.queue-dropped.other.title': 'Dropped from the queue',
+  // A build paid for and waiting, as rules hold it (#970), by kind: `reason` is what it waits for, in the city screen's
+  //  words for a build waiting now, worded by the page from the ids of the rules (`heldNoticeData`).
+  'City.building-held.unit.body':
+    'Production of $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "unit" }) in {{- city, cityName}} is paid for. {{- reason}}.',
+  'City.building-held.unit.title': 'Production waiting',
+  'City.building-held.city-improvement.body':
+    'Production of $t(Improvement.{{item._}}.name, { "defaultValue": "{{item._}}", "ns": "city" }) in {{- city, cityName}} is paid for. {{- reason}}.',
+  'City.building-held.city-improvement.title': 'Production waiting',
+  'City.building-held.wonder.body':
+    'Production of $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "wonder" }) in {{- city, cityName}} is paid for. {{- reason}}.',
+  'City.building-held.wonder.title': 'Production waiting',
+  'City.building-held.spaceship-part.body':
+    'Production of $t({{item._}}.name, { "defaultValue": "{{item._}}", "ns": "spaceship" }) in {{- city, cityName}} is paid for. {{- reason}}.',
+  'City.building-held.spaceship-part.title': 'Production waiting',
+  'City.building-held.other.body':
+    'Production in {{- city, cityName}} is paid for. {{- reason}}.',
+  'City.building-held.other.title': 'Production waiting',
   'City.building-complete.other.body':
     '{{- cityBuild.city, cityName}} has completed work on its build project!',
   'City.building-complete.other.title': 'Building complete!',

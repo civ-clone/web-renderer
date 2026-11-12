@@ -40,6 +40,7 @@ export const registrationOrder: string[] = [
   'city:incited',
   'unit:bribed',
   'city:building-complete',
+  'city:building-held',
   'player:research-complete',
   'wonder:obsolete',
   'city-improvement:obsolete',

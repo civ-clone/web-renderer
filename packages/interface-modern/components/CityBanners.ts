@@ -10,7 +10,7 @@ import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { playerColours } from '@civ-clone/ui-assets/lib/renderUnit';
 import { readableOn } from '@civ-clone/ui-widgets/lib/contrast';
-import { t } from 'i18next';
+import { drawHoldGlyph } from '@civ-clone/ui-platform/lib/glyphs';
 
 // The cities on the map under the new interface (#747): a banner below each city's square, as Civ V draws them, so the
 //  empire reads without opening anything. The theme says which, through `--ui-city-banner`: `full` draws the banner,
@@ -73,7 +73,8 @@ type BannerLayout = {
   fontSize: number;
   // Nothing past the badge when the map is drawn too small for words.
   name: { text: string; x: number } | null;
-  production: { icon: Rect; text: string; x: number } | null;
+  // `hold` where a rule holds the build once paid for (#970): the hold glyph's square, in place of the turns.
+  production: { icon: Rect; text: string; x: number; hold: Rect | null } | null;
   flags: { path: string; rect: Rect }[];
   food: { track: Rect; fill: Rect; starving: boolean } | null;
   baseline: number;
@@ -227,13 +228,14 @@ export class CityBanners extends CityNames {
       compact = this.#compact(),
       name = cityName(city),
       nameWidth = this.#measure(name),
-      // What a city seen in full is building, and in how many turns; a dash for nothing, or for never, and a marker
-      //  for a build a rule holds once paid for (#959), which the banner's tooltip words.
+      // What a city seen in full is building, and in how many turns; a dash for nothing, or for never, and the hold
+      //  glyph for a build a rule holds once paid for (#959, #970), which the banner's tooltip words.
       building = !compact && city.build ? city.build : null,
       outlook = building?.building ? buildOutlook(city) : null,
       turns = outlook?.turns ?? 0,
-      productionText = outlook?.hold?.now
-        ? t('City.Build.Held.marker')
+      held = outlook?.hold?.now ?? false,
+      productionText = held
+        ? ''
         : turns > 0
         ? localeProvider.number(turns)
         : '–',
@@ -241,7 +243,9 @@ export class CityBanners extends CityNames {
       productionWidth =
         building === null
           ? 0
-          : iconSize + scale + this.#measure(productionText),
+          : iconSize +
+            scale +
+            (held ? iconSize : this.#measure(productionText)),
       flagPaths = compact
         ? []
         : [
@@ -275,6 +279,14 @@ export class CityBanners extends CityNames {
             icon: { x: cursor, y: iconTop, width: iconSize, height: iconSize },
             text: productionText,
             x: cursor + iconSize + scale,
+            hold: held
+              ? {
+                  x: cursor + iconSize + scale,
+                  y: iconTop,
+                  width: iconSize,
+                  height: iconSize,
+                }
+              : null,
           };
 
     cursor += productionWidth > 0 ? productionWidth + padding : 0;
@@ -383,11 +395,18 @@ export class CityBanners extends CityNames {
 
     if (layout.production !== null) {
       this.#drawIcon(productionIconPath, layout.production.icon);
-      context.fillText(
-        layout.production.text,
-        layout.production.x,
-        layout.baseline
-      );
+
+      const { hold } = layout.production;
+
+      if (hold === null) {
+        context.fillText(
+          layout.production.text,
+          layout.production.x,
+          layout.baseline
+        );
+      } else {
+        drawHoldGlyph(context, hold.x, hold.y, hold.width, style.foreground);
+      }
     }
 
     layout.flags.forEach(({ path, rect }) => this.#drawIcon(path, rect));

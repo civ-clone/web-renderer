@@ -74,6 +74,10 @@ export interface BuildItem extends EntityInstance<'BuildItem'> {
     movement: number;
     visibility: number;
   } | null;
+  // Only in a city's build list (`CityBuildAvailable`): the ids of the rules that would hold the city's build of the
+  //  item (#970), for the city as it is now, `null` for a rule without one, as a build's `held` is for the item being
+  //  built. Empty when nothing would. Read through `offeredHold` (`ui-client/lib/cityTurns`).
+  held?: (string | null)[];
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {
@@ -105,6 +109,10 @@ export interface CityBuild extends EntityInstance<'CityBuild'> {
   // What it builds after its current item, in order, priced for the city now (#774), and what the last move to the next
   //  of them dropped as it could no longer be built. Missing from an engine without the queue.
   queue?: BuildItem[];
+  // The ids of the rules that would hold each queued item (#970), by its place in `queue`, for the city as it is now:
+  //  by the time it is reached the city may have grown or shrunk, so it says what holds it as things stand. Sent by
+  //  the worker (`AdditionalData/queueHeld`), and missing from an older worker. Read through `queuedHold`.
+  queueHeld?: (string | null)[][];
   queueDropped?: Entity[];
   spendCost: SpendCost[];
 }
