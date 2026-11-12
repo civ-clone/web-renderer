@@ -14,6 +14,9 @@ import './lib/grids';
 import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import CityBanners from '@civ-clone/ui-interface-modern/components/CityBanners';
 import MapView from '@civ-clone/ui-game/MapView';
+import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
+import Units from '@civ-clone/ui-map/components/Map/Units';
+import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import { unitMarkerMode } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import { playerCityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -983,6 +986,49 @@ mapView.toggleYields();
 
 withBanners.dispose();
 applyInterface('classic', null);
+
+// The order the units and cities are drawn in (#97): Civ1's box cities over their units, as always; a pack whose
+//  cities are taller than their tile (Civ2's) with its units over them, so a unit in a city stands in front of it.
+{
+  const isoView = new MapView({
+      activateUnit: () => {},
+      cityOpener: playerCityOpener(),
+      activeUnit: () => null,
+      mapPortal,
+      minimapCanvas,
+      options: { get: (key: string, defaultValue?: any) => defaultValue },
+      playerId: 'Player-1',
+      transport: {
+        send: () => {},
+        receive: () => () => {},
+      } as unknown as Transport,
+      world: {
+        id: 'PlayerWorld-2',
+        width: 4,
+        height: 4,
+        tiles: [],
+        topologyId: 'staggered-iso',
+      } as unknown as WorldData,
+    }),
+    order = (view: MapView): string[] =>
+      view.portal
+        .getLayers(MapLayer)
+        // The units' own layer, not the active unit's, which is drawn over everything.
+        .map((layer): unknown => layer.constructor)
+        .filter((kind) => kind === Units || kind === Cities)
+        .map((kind) => (kind === Units ? 'Units' : 'Cities'));
+
+  expect(
+    "units under Civ1's cities, and over Civ2's on the isometric grid",
+    [order(mapView), order(isoView)],
+    [
+      ['Units', 'Cities'],
+      ['Cities', 'Units'],
+    ]
+  );
+
+  isoView.dispose();
+}
 
 finished = true;
 

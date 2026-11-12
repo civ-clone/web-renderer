@@ -50,7 +50,13 @@ Without imported assets, gameplay options are hidden and import is the primary o
 ### Civilization II's sheets (#97)
 
 The same window takes Civ2's four sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
-sprites are in, on their own (as `ASOUND.CVL` is). Nothing draws them yet, and the window's text doesn't mention them.
+sprites are in, on their own (as `ASOUND.CVL` is). The instructions name them as optional, for the isometric map; once
+any are imported, the window says whether Civ2's art is complete or which sheets are still to import
+(`civ2FilesToImport`: those holding a sprite `civ2.json` requires that isn't stored, or whose anchors or flag colours the
+stored record lacks, flag colours that aren't a flag's being lacking). Options' Assets row says the same (`civ2Status`).
+Flag colours are held to one rule wherever they're read (`isFlagRow` in `packages/assets/lib/packs.ts`): the import
+cuts the flags again for a record that fails it, the window lists CITIES.GIF for it, and the installer leaves the pack
+out.
 
 - Each sheet's bytes go to the Civ2 extractor's `extractSprites`, by its definition in that extractor's
   `extract-data.json`; without "replace existing", a grid whose every sprite is stored is left out, unless it has
@@ -58,16 +64,71 @@ sprites are in, on their own (as `ASOUND.CVL` is). Nothing draws them yet, and t
   nothing left isn't read. The flags' colours are read again only when the record lacks them, after checking that
   the sheet has 256 colours and every flag inside it, and refused unless every flag's colours come out.
 - A sheet that can't be read stops the import, naming it, when only Civ2's sheets were chosen. Among Civ1's files it
-  is left out with a console warning, and Civ1's are imported.
+  is left out with a console warning, Civ1's are imported, and the window names the sheet it left out.
 - Each sprite's RGBA is put on a canvas and stored as its PNG (`toBlob`) under Civ2's pack's key, `spriteKey(civ2Pack,
-  name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/packs.ts`) is the pack's id, `civ2`,
+name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/packs.ts`) is the pack's id, `civ2`,
   and its storage; the descriptor that says which sprites it requires is bundled separately.
 - The anchors and the flags' colours go in one record beside the sprites, `./assets/civ2/metadata.json`
   (`metadataKey`), as a JSON `blob` shaped as the extractor's `metadata.json`: `{ anchors: SpriteAnchors, colours }`.
   An import of some of the sheets is put over what the record held, so the others' anchors are kept; a record that
   can't be read is replaced by what this import cut.
 - `RULES.TXT` is taken and left alone: units keep the extractor's default names for now.
-- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in.
+- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in. When Civ2's sheets were
+  among the files and one was left out or Civ2's art is still incomplete, the page is not reloaded, so the window's
+  message can be read, and files can be chosen again; the player reloads.
+
+## Installed packs (#97)
+
+Both tilesets are bundled (`bundledTilesets()` in `packages/assets/lib/tilesets.ts`): Civ1's `civ1.json` on the square
+grid and Civ2's `civ2.json` on the staggered isometric grid. A pack is _installed_ once its sprites are imported:
+
+- At start-up `installPacks()` (`packages/assets/lib/installPacks.ts`) adds every bundled pack to the asset store
+  (`packFor`: Civ2's with `metadata: true`), loads them, sets each pack's sprite anchors from its import's record
+  (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's and each pack that has every required sprite and a
+  readable record whose flags' colours pass `isFlagRow`. A pack that fails any of that, or a store that fails, is
+  left uninstalled, and the game still starts with Civ1's. The import reloads the page, which runs it again.
+- `installedTilesets()` is then synchronous, so `supportedTopologies()` is `['square', 'staggered-iso']` with Civ2's art
+  imported and `['square']` without. New Game's grid question and the setup forms' grid select appear only with more
+  than one grid.
+- An installed Civ2 pack's flag keys are the import's own red flag's colours (`colours.flag[0]`, primary then
+  secondary), put over the descriptor's `#f30000` and `#a70000` (Civ2's as shipped) by `withImportedKeys`: the flag is
+  recoloured by swapping exactly those colours, and a copy might differ. The unit shield's key is its pure red,
+  `#ff0000`.
+- The map is drawn with `mapTileset(topologyId)`, the installed pack for the world's grid (or the bundled one, sprites
+  missing, if none is installed, which loading refuses before then): `Map.tileset()`, `Portal`'s projection and default
+  tile size and scale, `MapView` and the minimap all take the world's `topologyId()`. `setMapGrid` (from `MapView`)
+  makes it the default for the windows' units (`hud/Unit`, the unit card), which follow the map's pack, at no more than
+  its own default scale (`shownScale`), and for Options' map scale. Each pack keeps its own scale option
+  (`mapScaleOption`: Civ1's `mapScale`, Civ2's `mapScale.civ2`).
+- The interface's art keeps coming from `interfaceTileset()`, Civ1's; `currentTileset()` is the same Civ1 tileset.
+- A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
+  `tilesetToImport`).
+
+### Civ2's descriptor
+
+`civ2.json` names only sprites the Civ2 extractor cuts, under its names, and requires every one the map can ask it for
+(`npm run test:tilesets` checks both). Its choices:
+
+- Terrains by their own name lower-cased, with Arctic as `glacier`; River is drawn on grassland's base with the river
+  overlay; Forest, Hills and Mountains on their own `base-0` with their 16-way overlays. No `base-1`, no dither,
+  no fog (Civ2 has none). Irrigation is drawn over the terrain.
+- Specials: as each terrain's Civ2 resource, with `Swamp:Oil` as `swamp/peat` (Civ2's swamp has no oil).
+- Units by the MGE default names (RULES.TXT is ignored): Horseman `horsemen`, Knight `knights`, MechanizedInfantry
+  `mech-inf`, Musketman `musketeers`, Nuclear `nuclear-msl`, Rifleman `riflemen`, Sail `caravel`, Spearman `phalanx`,
+  Swordman `legion`, Tank `armor`, Warrior `warriors`, the rest their own name.
+- Cities by style per civilization, fixed for the game: Civ2's own style for the civilizations it has (`@LEADERS`),
+  and one by region for the rest, `ancient-classical` for any other. Sizes 1–3, 4–7, 8–11 and 12 and over; walls
+  from `walled-`.
+- Coast quarters are named for their three neighbours last-clockwise first: the top quarter `n` for `ne`, `n`, `nw`,
+  so `n-001` has land along its NW edge (`tests/ui/tilesetDrawing.ts` pins one case per quarter against `civ2.json`).
+- Units and cities are 64 × 48, drawn 16 px above the tile. The map draws its units over its cities for a `styles`
+  pack (`MapView`), so a unit in a city stands in front of it; Civ1's box cities stay over their units.
+- The active unit's ring is the tile's diamond (`Projection.outline`), drawn on the map under the unit
+  (`ActiveUnit.setRing`), in the theme's ring colours over its halo, its line as wide as the map's scale makes it:
+  steady with the ring alone, blinking with the unit with both. Over the map it would cut through the tall sprite. The
+  square grid keeps its pulsing ring over the map.
+- A choice list fits a tall unit's icon in its square (`object-fit: contain`). A stack shows `units/shield-back` 4 px
+  up and left of the shield.
 
 ## Sprite overlays
 
@@ -97,7 +158,8 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
   hold a data URI in `uri` instead; `load` turns each into a `blob` the first time it reads it, and writes it back.
 - The required sprites (286 for Civ1) as the runtime readiness check, and the optional ones. Both lists come from the
   tileset descriptor's `assets` (`packages/assets/tilesets/civ1.json`, through `currentTileset()` in
-  `packages/assets/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
+  `packages/assets/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's. Civ2's pack is loaded beside
+  it (see Installed packs).
 - More packs beside that one (#97): `new AssetStore(tileset, packs)` or `addPack(pack)`, each an `AssetPack` (a
   descriptor's `id`, `storage` and `assets`, and `metadata: true` for a pack whose import keeps a record of its
   sprites' anchors, as Civ2's does), such as the map's when it isn't the interface's. `hasAllAssets(pack)`,
@@ -185,7 +247,8 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
 - **Roads and railroads over all eight neighbours**, with an `isolated` sprite rather than a dot.
 - **A coast of named quarters.** `sprite: "terrain/coast/{corner}-{bits}"` and `corners`, each with its top-left `at`
   in the tile and its `neighbours` in the order `{bits}` writes them, one digit each, `1` for land: Civ2's top quarter
-  `n` is picked by `nw`, `n` and `ne`, so `n-011` has land to the N and NE. A coast tile is drawn with all four, those
+  `n` is named for `ne`, `n` and `nw` in that order (each quarter's last neighbour clockwise first), so `n-011` has
+  land to the N and NW, and `n-001` to the NW alone. A coast tile is drawn with all four, those
   with no land beside them (`n-000`) too, as a coast quarter's water is not the open ocean's (Civ1's coast square has its
   open-water quarters the same way); the open ocean is its base alone. Each tile put together is cached by tileset and
   the quarters' bits.

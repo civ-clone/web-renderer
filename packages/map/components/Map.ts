@@ -10,8 +10,9 @@ import {
 import { getPreloadedImage } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import World from './World';
 import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
-import currentTileset, {
+import {
   interfaceTileset,
+  mapTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
 import projectionFor from '../lib/projectionFor';
@@ -264,9 +265,12 @@ export class Map implements IMap {
     };
   }
 
-  /** The tileset this layer draws with: where its tiles go, and the sprites and how they are put together (#56). */
+  /**
+   * The tileset this layer draws with: where its tiles go, and the sprites and how they are put together (#56). The
+   *  one for the world's grid (#97): Civ1's on the square grid, Civ2's on the isometric one.
+   */
   protected tileset(): TilesetDescriptor {
-    return currentTileset();
+    return mapTileset(this.#world.topologyId());
   }
 
   update(tilesToUpdate: Tile[]): void {

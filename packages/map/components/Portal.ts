@@ -13,9 +13,7 @@ import Transport from '@civ-clone/ui-client/Transport';
 import World from './World';
 import { s } from '@dom111/element';
 import { IConstructor } from '@civ-clone/core-registry/Registry';
-import currentTileset, {
-  nativeTileSize,
-} from '@civ-clone/ui-assets/lib/tilesets';
+import { mapTileset, nativeTileSize } from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor from '../lib/projectionFor';
 import { City as CityData } from '@civ-clone/ui-protocol/types';
 
@@ -65,12 +63,17 @@ type PortalOptions = {
   [K in keyof PortalSettings]?: PortalSettings[K];
 };
 
-const defaultPortalOptions: PortalSettings = {
-  cityOpener: null,
-  lockVerticalEdges: false,
-  playerId: null,
-  scale: currentTileset().defaultScale,
-  tileSize: nativeTileSize(currentTileset()),
+// The scale and tile size are the tileset's for the world's grid (`mapTileset`), unless they are given.
+const defaultPortalOptions = (world: World): PortalSettings => {
+  const tileset = mapTileset(world.topologyId());
+
+  return {
+    cityOpener: null,
+    lockVerticalEdges: false,
+    playerId: null,
+    scale: tileset.defaultScale,
+    tileSize: nativeTileSize(tileset),
+  };
 };
 
 // Past this share of the canvas, working out what changed and compositing it
@@ -135,7 +138,7 @@ export class Portal
     ...layers: (typeof Map)[]
   ) {
     const settings: PortalSettings = {
-      ...defaultPortalOptions,
+      ...defaultPortalOptions(world),
       ...options,
     };
 
@@ -484,13 +487,14 @@ export class Portal
   }
 
   /**
-   * Where tiles go on the world in pixels, at this portal's scale and wrap: the current tileset's projection. Made
+   * Where tiles go on the world in pixels, at this portal's scale and wrap: the projection of the tileset for the
+   *  world's grid (`mapTileset`). Made
    *  again whenever the scale or the vertical wrap changes, and first from the constructor, before a subclass's own
    *  fields are set.
    */
   protected createProjection(): Projection {
     return projectionFor(
-      currentTileset(),
+      mapTileset(this.#world.topologyId()),
       this.#world,
       this.tileSize(),
       !this.#lockVerticalEdges

@@ -12,7 +12,9 @@ draws, and the Web Worker that runs the engine behind them.
 The game needs the graphics from an original copy of Civilization: on the main
 menu choose **Import assets** and give it `TER257.PIC` and `SP257.PIC`, and
 `SP299.PIC` too for the improvement and Wonder icons. They are read in your
-browser and kept in its storage; nothing is uploaded. (On Brave,
+browser and kept in its storage; nothing is uploaded. To play on an isometric
+map, also import `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF`
+from Civilization II (optional). (On Brave,
 put Shields down for importing and playing, or the images come out "farbled".)
 
 What's there, in brief: the whole of Civilization's rules as far as we know them

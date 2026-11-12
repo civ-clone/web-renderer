@@ -86,7 +86,9 @@ const transport = {
 let hasAssets = true;
 
 assetStore.hasAllAssets = async (): Promise<boolean> => hasAssets;
-assetStore.importedCount = async (): Promise<number> => (hasAssets ? 289 : 0);
+// Civ1's sprites: none of Civ2's (#97).
+assetStore.importedCount = async (pack?: { id: string }): Promise<number> =>
+  hasAssets && (pack === undefined || pack.id === 'civ1') ? 289 : 0;
 
 // The shim's `KeyboardEvent` takes only `key` (`lib/dom.ts`): the modifiers are set on it.
 const key = (

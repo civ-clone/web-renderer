@@ -11,9 +11,13 @@ import {
   FlagColours,
   PackMetadata,
   civ2Pack,
+  isFlagRow,
   metadataKey,
 } from '@civ-clone/ui-assets/lib/packs';
-import { Asset } from '@civ-clone/ui-assets/AssetStore';
+import { Asset, assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
+import { packFor } from '@civ-clone/ui-assets/lib/installPacks';
+import { t } from 'i18next';
 import extractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
@@ -45,7 +49,7 @@ export type StoredMetadata = PackMetadata | null | 'unreadable';
  * The part of `file`'s definition to cut out: every grid with `replaceExisting`. Otherwise only the grids with a
  *  sprite the store doesn't have yet, so a re-import picks up sprites added to the extractor since, or, for a grid with
  *  markers, one whose anchors `stored` hasn't got (all of them, when it couldn't be read); and the flags when `stored`
- *  hasn't got their colours. Null when there is nothing to cut, or the file isn't one of Civ2's.
+ *  hasn't got their colours, or has some the map can't draw a flag from (`isFlagRow`). Null when there is nothing to cut, or the file isn't one of Civ2's.
  */
 export const civ2Definition = (
   file: { name: string },
@@ -76,7 +80,7 @@ export const civ2Definition = (
       definition.flags !== undefined &&
       (replaceExisting ||
         definition.flags.rows.some(
-          ({ name }) => known?.colours[name] === undefined
+          ({ name }) => !isFlagRow(known?.colours?.[name])
         ));
 
   if (grids.length === 0 && !flagsWanted) {
@@ -113,11 +117,6 @@ const checkFlags = (image: GifImage, flags: FlagDefinition): void => {
   }
 };
 
-const isColour = (colour: unknown): boolean =>
-  Array.isArray(colour) &&
-  colour.length === 3 &&
-  colour.every((value) => Number.isInteger(value));
-
 /**
  * The sprites and flag colours cut from `bytes`, one of Civ2's sheets, by `definition`, with the flags' layout checked
  *  first and every row of their colours read in full. Throws for a sheet it can't read.
@@ -140,9 +139,7 @@ export const extractCiv2 = (
     !flags.rows.every(
       ({ name }) =>
         result.colours?.[name]?.length === flags.count &&
-        result.colours[name]!.every(
-          ({ primary, secondary }) => isColour(primary) && isColour(secondary)
-        )
+        isFlagRow(result.colours[name])
     )
   ) {
     throw new TypeError("The flags' colours could not be read.");
@@ -218,3 +215,69 @@ export const metadataAsset = (metadata: PackMetadata): Asset => ({
   name: metadataKey(civ2Pack),
   blob: new Blob([JSON.stringify(metadata)], { type: 'application/json' }),
 });
+
+/** Civilization II's sheets, by their names upper-cased, in the extractor's order. */
+export const civ2Files = (): string[] => Object.keys(definitions);
+
+/**
+ * The sheets still to import for Civ2's pack to be complete (#97): each one that holds a sprite of `missing`, the
+ *  names the pack requires that haven't been imported, and, when what an import says about the sprites (`metadata`) is
+ *  missing or can't be read, the ones whose sprites carry anchors or whose flags give the colours, which say it. Flag
+ *  colours the map can't draw from (`isFlagRow`) are missing, as the installer holds them to the same rule.
+ */
+export const civ2FilesToImport = (
+  missing: string[],
+  metadata: StoredMetadata
+): string[] => {
+  const wanted = new Set(missing),
+    known = metadata === 'unreadable' ? null : metadata;
+
+  return civ2Files().filter((file) => {
+    const { grids, flags } = definitions[file]!;
+
+    return (
+      grids.some(
+        ({ path, names, markers }) =>
+          names.some((name) => name !== null && wanted.has(path + name)) ||
+          (markers !== undefined &&
+            names.some(
+              (name) =>
+                name !== null && known?.anchors[path + name] === undefined
+            ))
+      ) ||
+      (flags !== undefined &&
+        flags.rows.some(({ name }) => !isFlagRow(known?.colours?.[name])))
+    );
+  });
+};
+
+/**
+ * Whether Civilization II's map art is all imported (#97), and the sheets to import if not: null when none of it has
+ *  been, which is nothing to say, as it's optional.
+ */
+export const civ2Status = async (): Promise<string[] | null> => {
+  const pack = packFor(bundledTilesets().find(({ id }) => id === civ2Pack.id)!),
+    [imported, missing, metadata] = await Promise.all([
+      assetStore.importedCount(pack),
+      assetStore.missingAssets(pack),
+      assetStore.readMetadata(pack).catch((): StoredMetadata => 'unreadable'),
+    ]);
+
+  // Nothing of it in the store, or a store that can't be read: nothing to say.
+  if (imported === 0 && (metadata === null || metadata === 'unreadable')) {
+    return null;
+  }
+
+  return civ2FilesToImport(
+    missing.map((key) =>
+      key.slice(pack.storage.prefix.length, -pack.storage.ext.length)
+    ),
+    metadata
+  );
+};
+
+/** What `civ2Status` found, as the Import assets window and Options say it: complete, or the sheets to import. */
+export const civ2StatusText = (toImport: string[]): string =>
+  toImport.length === 0
+    ? t('ImportAssetsWindow.civ2-complete')
+    : t('ImportAssetsWindow.civ2-incomplete', { files: toImport });

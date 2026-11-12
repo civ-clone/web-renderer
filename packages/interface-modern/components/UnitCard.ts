@@ -2,7 +2,7 @@ import { Element, s } from '@dom111/element';
 import { TOptions, t } from 'i18next';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
 import { unitName, unitStates } from '@civ-clone/ui-hud/lib/unitLabel';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import { mapTileset, shownScale } from '@civ-clone/ui-assets/lib/tilesets';
 import Unit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
 import { UnitPanelDeps } from '@civ-clone/ui-hud/components/unitPanel';
 import { openUnitSelection } from '@civ-clone/ui-city/components/choices';
@@ -23,12 +23,14 @@ export type UnitCardDeps = Omit<UnitPanelDeps, 'unitAction'>;
 // How many of the other units' portraits fit on a row when the card can't be measured (it's hidden): the sidebar's.
 const fallbackPerRow = 6;
 
-// The other units' portraits, each the hud's unit (a tile at 2×, and the room above it a tall unit takes) and as wide:
-//  CSS lays them out by their width, and the "+N" in the last place is as tall as they are.
+// The other units' portraits, each the hud's unit (a tile at 2×, or a larger pack's at its own size, and the room above
+//  it a tall unit takes) and as wide: CSS lays them out by their width, and the "+N" in the last place is as tall as they are.
 const portraitBox = (): { width: number; height: number } => {
-    const { width, height } = unitBox(currentTileset());
+    const tileset = mapTileset(),
+      { width, height } = unitBox(tileset),
+      scale = shownScale(2, tileset);
 
-    return { width: width * 2, height: height * 2 };
+    return { width: width * scale, height: height * scale };
   },
   portraitSize = (): number => portraitBox().width;
 

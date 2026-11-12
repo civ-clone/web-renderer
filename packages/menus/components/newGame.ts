@@ -43,8 +43,8 @@ const ask = (
 
 /**
  * Which grid the map is on: square, isometric or hex (#89). The first question of New Game and Customize World, and
- *  fixed for the rest of the game. Only the grids that can be drawn are offered, so while that is only square the
- *  question answers itself and is never shown (#148). Earth is square, so it never asks.
+ *  fixed for the rest of the game. Only the grids that can be drawn are offered, so while that is only square (until
+ *  Civ2's art is imported, #97) the question answers itself and is never shown (#148). Earth is square, so it never asks.
  */
 export const askMapGrid = (
   onChoose: (grid: TopologyId) => void,

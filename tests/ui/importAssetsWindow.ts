@@ -27,6 +27,8 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { Colour, encodeGif } from './lib/encodeGif';
 import { civ2Pack, metadataKey } from '@civ-clone/ui-assets/lib/packs';
+import { civ2Definition } from '@civ-clone/ui-menus/lib/civ2Import';
+import civ2Json from '@civ-clone/ui-assets/tilesets/civ2.json';
 import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
@@ -645,7 +647,7 @@ const run = async (): Promise<void> => {
     expect(
       'the instructions ask for the required files, and the icons as well',
       window.element().querySelector('.import-assets p')?.textContent,
-      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music.'
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional).'
     );
 
     await upload(window, [sheet('SP257.PIC')]);
@@ -1418,6 +1420,196 @@ const run = async (): Promise<void> => {
       ]
     );
 
+    // What the window says of Civ2's art (#97): nothing until some is imported, then whether it's complete, naming the
+    //  sheets still to import and any that were left out, and the page left to reload when something is wrong.
+    const { importedCount, missingAssets, readMetadata } = store,
+      civ2Required = civ2Json.assets.required,
+      fullMetadata = {
+        anchors: Object.fromEntries(
+          allSprites
+            .filter((name) => /^(units|city)\//.test(name))
+            .map((name) => [name, { shield: { x: 1, y: 1 } }])
+        ),
+        colours: {
+          flag: [{ primary: [243, 0, 0], secondary: [167, 0, 0] }],
+          'flag-2': [{ primary: [167, 0, 0], secondary: [243, 0, 0] }],
+        },
+      },
+      civ2State = (imported: number, missing: string[], metadata: unknown) => {
+        store.importedCount = async (pack?: { id: string }) =>
+          pack?.id === 'civ2' ? imported : 0;
+        store.missingAssets = async (pack?: { id: string }) =>
+          pack?.id === 'civ2' ? missing.map(civ2Key) : [];
+        store.readMetadata = async () => metadata;
+      },
+      statusOf = (window: ImportAssetsWindow): string | null => {
+        const element = window
+          .element()
+          .querySelector('p.civ2-status') as HTMLElement;
+
+        return element.hasAttribute('hidden') ? null : element.textContent;
+      },
+      settle = () => new Promise((resolve) => setTimeout(resolve, 10)),
+      opened = async (): Promise<string | null> => {
+        const window = new ImportAssetsWindow();
+
+        await settle();
+        window.close();
+
+        return statusOf(window);
+      };
+
+    let civ2Reloads = 0;
+
+    (globalThis as any).location = { reload: () => civ2Reloads++ };
+
+    civ2State(0, civ2Required, null);
+
+    expect(
+      'Civ2 status: nothing is said before any of its art is imported, as it is optional',
+      await opened(),
+      null
+    );
+
+    civ2State(civ2Required.length, [], fullMetadata);
+
+    expect(
+      'Civ2 status: with every sprite and the record of their anchors, it is complete',
+      await opened(),
+      'Civilization II’s map art is imported: new games can be played on the isometric map.'
+    );
+
+    civ2State(
+      civ2Required.length - 2,
+      ['units/settlers', 'terrain/coast/n-011'],
+      fullMetadata
+    );
+
+    expect(
+      'Civ2 status: the sheets holding its missing sprites are named',
+      await opened(),
+      'Civilization II’s map art is not complete yet: add TERRAIN2.GIF and UNITS.GIF to play on the isometric map.'
+    );
+
+    // Flag colours the map can't draw a flag from, held to the installer's rule (`isFlagRow`): CITIES.GIF to import
+    //  again, and choosing it cuts the flags again rather than keeping them.
+    const badFlags = [
+      [],
+      [{ primary: 'red' }],
+      [{ primary: [243, 0, 0], secondary: [300, 0, 0] }],
+    ];
+    const badStatuses: (string | null)[] = [];
+
+    for (const flag of badFlags) {
+      civ2State(civ2Required.length, [], {
+        ...fullMetadata,
+        colours: { ...fullMetadata.colours, flag },
+      });
+      badStatuses.push(await opened());
+    }
+
+    expect(
+      "Civ2 status: a record whose flags' colours can't be drawn from isn't complete, and CITIES.GIF is to import again",
+      badStatuses,
+      badFlags.map(
+        () =>
+          'Civilization II’s map art is not complete yet: add CITIES.GIF to play on the isometric map.'
+      )
+    );
+    expect(
+      "Civ2: choosing CITIES.GIF again with such a record cuts its flags again, even without replacing what's there",
+      badFlags.map(
+        (flag) =>
+          civ2Definition(
+            { name: 'CITIES.GIF' },
+            allSprites.map(civ2Key),
+            false,
+            {
+              ...fullMetadata,
+              colours: { ...fullMetadata.colours, flag },
+            } as any
+          )?.flags !== undefined
+      ),
+      [true, true, true]
+    );
+    expect(
+      'Civ2: and with good colours kept, the flags are left as they are',
+      civ2Definition(
+        { name: 'CITIES.GIF' },
+        allSprites.map(civ2Key),
+        false,
+        fullMetadata as any
+      )?.flags,
+      undefined
+    );
+
+    civ2State(civ2Required.length, [], 'unreadable');
+
+    expect(
+      "Civ2 status: a record of anchors that can't be read names the sheets that say them",
+      await opened(),
+      'Civilization II’s map art is not complete yet: add UNITS.GIF and CITIES.GIF to play on the isometric map.'
+    );
+
+    civ2State(0, civ2Required, null);
+    civ2Reloads = 0;
+
+    {
+      const window = new ImportAssetsWindow();
+
+      written.length = 0;
+      store.hasAllAssets = async (): Promise<boolean> => true;
+      await upload(window, [
+        sheet('SP257.PIC'),
+        sheet('TER257.PIC'),
+        truncated(),
+      ]);
+      window.close();
+
+      expect(
+        "Civ2 status: a sheet left out of an import is named in the window, and the page isn't reloaded from under it, so files can be chosen again",
+        [
+          progress(window).innerText,
+          statusOf(window),
+          civ2Reloads,
+          fileInput(window).hasAttribute('disabled'),
+          (
+            window
+              .element()
+              .querySelector('.file-picker button') as HTMLButtonElement
+          ).disabled,
+        ],
+        [
+          'Done! Please reload the page to utilize the fresh assets.',
+          'UNITS.GIF couldn’t be read as Civilization II’s, so it was skipped.',
+          0,
+          false,
+          false,
+        ]
+      );
+    }
+
+    civ2State(civ2Required.length, [], fullMetadata);
+
+    {
+      const window = new ImportAssetsWindow();
+
+      await upload(window, [sheets['UNITS.GIF']!]);
+      window.close();
+
+      expect(
+        'Civ2 status: an import that completes it says so, and reloads to use it',
+        [statusOf(window), civ2Reloads],
+        [
+          'Civilization II’s map art is imported: new games can be played on the isometric map.',
+          1,
+        ]
+      );
+    }
+
+    store.importedCount = importedCount;
+    store.missingAssets = missingAssets;
+    store.readMetadata = readMetadata;
     store.setAll = setAll;
     store.hasAllAssets = hasAllAssets;
     console.warn = consoleWarn;

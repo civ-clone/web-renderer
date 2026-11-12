@@ -121,6 +121,12 @@
     width: 2rem;
   }
 
+  // A unit taller than its square (Civ2's 64 × 48, #97) is fitted in whole, not squashed: a square one fills it as
+  //  before.
+  canvas {
+    object-fit: contain;
+  }
+
   // An improvement's or a Wonder's icon is wider than it's tall: at its own size (#64).
   .building-icon img {
     height: auto;

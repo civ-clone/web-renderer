@@ -22,6 +22,7 @@ import worldSizes, {
 } from '@civ-clone/ui-client/lib/worldSizes';
 import supportedTopologies, {
   isSupportedTopology,
+  tilesetToImport,
 } from '@civ-clone/ui-map/lib/supportedTopologies';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import HexOddRTopology from '@civ-clone/core-world/HexOddRTopology';
@@ -35,9 +36,14 @@ import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import Transport from '@civ-clone/ui-client/Transport';
 import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import { PackMetadata } from '@civ-clone/ui-assets/lib/packs';
 import i18next from 'i18next';
 import { drawableGrids } from '@civ-clone/ui-map/lib/projectionFor';
-import { installedTilesets } from '@civ-clone/ui-assets/lib/tilesets';
+import {
+  installTilesets,
+  installedTilesets,
+  mapTileset,
+} from '@civ-clone/ui-assets/lib/tilesets';
 import validateDescriptor from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
@@ -638,6 +644,115 @@ const text = (element: Element | null): string =>
     { topologyId: 'square', width: 80, height: 25 }
   );
   expect('then starts', sent, [['start', null]]);
+
+  setup.close();
+  closeAll();
+
+  // With Civ2's art imported (#97): its pack is installed, so the isometric grid is offered, drawn with it.
+  const flagColours = {
+      flag: [
+        { primary: [250, 1, 2], secondary: [160, 3, 4] },
+        { primary: [0, 0, 250], secondary: [0, 0, 160] },
+      ],
+    } as PackMetadata['colours'],
+    civ2Metadata: PackMetadata = { anchors: {}, colours: flagColours };
+
+  expect(
+    "Civ2's pack incomplete, or without the record of its sprites' anchors, isn't installed: only square",
+    [
+      installTilesets({
+        civ2: { complete: false, metadata: civ2Metadata },
+      }).map(({ id }) => id),
+      supportedTopologies(),
+      installTilesets({ civ2: { complete: true, metadata: null } }).map(
+        ({ id }) => id
+      ),
+      supportedTopologies(),
+    ],
+    [['civ1'], ['square'], ['civ1'], ['square']]
+  );
+  expect(
+    "without it, an isometric world is the one that needs Civ2's art imported, and a square one needs nothing",
+    [
+      tilesetToImport('staggered-iso')?.id,
+      tilesetToImport('square'),
+      tilesetToImport('hex-odd-r'),
+    ],
+    ['civ2', null, null]
+  );
+
+  installTilesets({ civ2: { complete: true, metadata: civ2Metadata } });
+
+  expect(
+    "Civ2's pack complete: installed after Civ1's, and the isometric grid supported",
+    [
+      installedTilesets().map(({ id, grid }) => [id, grid]),
+      supportedTopologies(),
+      isSupportedTopology('staggered-iso'),
+      tilesetToImport('staggered-iso'),
+    ],
+    [
+      [
+        ['civ1', 'square'],
+        ['civ2', 'staggered-iso'],
+      ],
+      ['square', 'staggered-iso'],
+      true,
+      null,
+    ]
+  );
+  expect(
+    "the map follows the world's grid: Civ1's on a square world, Civ2's on an isometric one",
+    [mapTileset('square').id, mapTileset('staggered-iso').id],
+    ['civ1', 'civ2']
+  );
+  expect(
+    "Civ2's flag is recoloured by the import's own red flag's colours, primary then secondary",
+    (mapTileset('staggered-iso').cities.colouring as { keys: string[] }).keys,
+    ['#fa0102', '#a00304']
+  );
+
+  askMapGrid((grid) => chosen.push(grid));
+
+  await settle();
+
+  expect("New Game asks for the grid, now there's isometric too", shown(), {
+    title: 'Which map grid?',
+    options: ['Square', 'Isometric'],
+  });
+
+  choose('staggered-iso');
+
+  await settle();
+
+  expect('and isometric can be chosen', chosen.slice(-1), ['staggered-iso']);
+
+  closeAll();
+
+  const isoSetup = await GameSetupWindow.ask(setupTransport, () => {}, {
+      advanced: true,
+    }),
+    gridSelect = isoSetup
+      .element()
+      .querySelector('select[name=topologyId]') as HTMLSelectElement | null;
+
+  expect(
+    "Game setup has the grid select, square and isometric, once there's isometric",
+    gridSelect === null
+      ? null
+      : Array.from(gridSelect.querySelectorAll('option'), (option) => [
+          option.getAttribute('value'),
+          option.textContent,
+        ]),
+    [
+      ['square', 'Square'],
+      ['staggered-iso', 'Isometric'],
+    ]
+  );
+
+  isoSetup.close();
+  closeAll();
+  installTilesets({});
 
   finished = true;
 

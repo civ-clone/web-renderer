@@ -36,6 +36,7 @@ import {
   guardLeaving,
 } from '@civ-clone/ui-component-window/leaveGuard';
 import i18next from 'i18next';
+import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
@@ -282,6 +283,52 @@ Object.assign(globalThis, {
     );
 
     opened?.remove();
+  }
+
+  // The Assets row says whether Civilization II's map art is complete, once any is imported (#97), as Import assets
+  //  does.
+  {
+    const store = assetStore as any,
+      saved = {
+        importedCount: store.importedCount,
+        hasAllAssets: store.hasAllAssets,
+        missingAssets: store.missingAssets,
+        readMetadata: store.readMetadata,
+      },
+      statusOf = async (civ2Missing: string[] | null): Promise<string> => {
+        store.importedCount = async (pack?: { id: string }) =>
+          pack?.id === 'civ2' ? (civ2Missing === null ? 0 : 5) : 289;
+        store.hasAllAssets = async () => true;
+        store.missingAssets = async (pack?: { id: string }) =>
+          pack?.id === 'civ2'
+            ? (civ2Missing ?? []).map((name) => `./assets/civ2/${name}.png`)
+            : [];
+        store.readMetadata = async () =>
+          civ2Missing === null
+            ? null
+            : {
+                // No anchors yet: UNITS.GIF and CITIES.GIF give them.
+                anchors: {},
+                colours: { flag: [], 'flag-2': [] },
+              };
+
+        const row = assetsRow();
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        return row.querySelector('.status')?.textContent ?? '';
+      };
+
+    expect(
+      "the Assets row: Civ1's alone says nothing of Civ2's; with some of Civ2's, the sheets still to import",
+      [await statusOf(null), await statusOf(['terrain/coast/n-011'])],
+      [
+        'Civilization assets imported · 289 sprites',
+        'Civilization assets imported · 289 sprites · Civilization II’s map art is not complete yet: add TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to play on the isometric map.',
+      ]
+    );
+
+    Object.assign(store, saved);
   }
 
   // Interface reloads from the main menu, so Options there must close before a game can start.

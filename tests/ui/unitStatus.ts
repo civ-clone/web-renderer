@@ -67,7 +67,13 @@ const draw = (
 ) => {
   const { calls, canvas } = fakeCanvas(320, 320),
     written = texts(canvas, calls),
-    layer = new TestUnits({} as any, scale, tileSize, canvas),
+    // A square world: the layer draws with the square grid's tileset (#97).
+    layer = new TestUnits(
+      { topologyId: () => 'square' } as any,
+      scale,
+      tileSize,
+      canvas
+    ),
     tile = {
       x: 0,
       y: 0,

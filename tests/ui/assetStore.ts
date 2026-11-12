@@ -10,7 +10,15 @@ import './lib/interfaces';
 
 import { AssetStore, decodeSprite } from '@civ-clone/ui-assets/AssetStore';
 import { Store } from '@civ-clone/ui-platform/Store';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import currentTileset, {
+  bundledTilesets,
+  installTilesets,
+  installedTilesets,
+} from '@civ-clone/ui-assets/lib/tilesets';
+import installPacks from '@civ-clone/ui-assets/lib/installPacks';
+import spriteAnchors, {
+  clearSpriteAnchors,
+} from '@civ-clone/ui-assets/lib/spriteAnchors';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from '@civ-clone/ui-assets/lib/getPreloadedImage';
@@ -391,6 +399,119 @@ onPreloadedImagesChanged(() => changed++);
       'rejected'
     );
 
+    Store.prototype.keys = keys;
+  }
+
+  // Installing the bundled packs (#97): Civ2's sprites are loaded beside Civ1's, its anchors set from what its import
+  //  said, and it is installed, with its flag's colours, only once every sprite it requires is in.
+  {
+    const keys = Store.prototype.keys,
+      civ2 = bundledTilesets().find(({ id }) => id === 'civ2')!,
+      civ2Key = (name: string): string => spriteKey(civ2, name),
+      anchors = { 'units/settlers': { shield: { x: 12, y: 12 } } },
+      colours = {
+        flag: [{ primary: [243, 0, 0], secondary: [167, 0, 0] }],
+      };
+
+    records.set(metadataKey(civ2), {
+      name: metadataKey(civ2),
+      blob: new Blob([JSON.stringify({ anchors, colours })], {
+        type: 'application/json',
+      }),
+    });
+    civ2.assets.required
+      .slice(1)
+      .forEach((name) =>
+        records.set(civ2Key(name), { name: civ2Key(name), blob: png(name) })
+      );
+    Store.prototype.keys = async () => [...records.keys()];
+    clearSpriteAnchors();
+
+    const packs = new AssetStore(tileset),
+      partly = await installPacks(packs);
+
+    expect(
+      "Civ2's pack: loaded beside Civ1's, with its import's record, and its anchors set, but one sprite short it isn't installed",
+      [
+        packs.packs.map(({ id, metadata }) => [id, metadata ?? false]),
+        packs.metadata(civ2),
+        spriteAnchors(civ2),
+        partly.map(({ id }) => id),
+      ],
+      [
+        [
+          [tileset.id, false],
+          ['civ2', true],
+        ],
+        { anchors, colours },
+        anchors,
+        [tileset.id],
+      ]
+    );
+
+    const first = civ2.assets.required[0]!;
+
+    records.set(civ2Key(first), { name: civ2Key(first), blob: png(first) });
+
+    const whole = await installPacks(packs);
+
+    expect(
+      "Civ2's pack: with every sprite in, it is installed, its flag recoloured by its import's own red flag's colours",
+      [
+        whole.map(({ id }) => id),
+        installedTilesets().map(({ id }) => id),
+        (whole[1]?.cities.colouring as { keys: string[] }).keys,
+      ],
+      [
+        [tileset.id, 'civ2'],
+        [tileset.id, 'civ2'],
+        ['#f30000', '#a70000'],
+      ]
+    );
+
+    records.delete(metadataKey(civ2));
+
+    expect(
+      "Civ2's pack: without its import's record of anchors, it isn't installed",
+      (await installPacks(packs)).map(({ id }) => id),
+      [tileset.id]
+    );
+
+    // An import whose record can't be drawn from, or a store that fails: the pack isn't installed, and the game still
+    //  starts with Civ1's, rather than not at all.
+    const errors = logged.length;
+
+    records.set(metadataKey(civ2), {
+      name: metadataKey(civ2),
+      blob: new Blob(
+        [JSON.stringify({ anchors, colours: { flag: [{ primary: 'red' }] } })],
+        { type: 'application/json' }
+      ),
+    });
+
+    const corrupt = await installPacks(packs).then(
+        (installed) => installed.map(({ id }) => id),
+        () => 'rejected'
+      ),
+      failing = new AssetStore(tileset);
+
+    failing.load = () => Promise.reject(new Error('The store failed.'));
+
+    const failed = await installPacks(failing).then(
+      (installed) => installed.map(({ id }) => id),
+      () => 'rejected'
+    );
+
+    expect(
+      "Civ2's pack: a flag whose colours can't be read, or a store that fails, leaves it uninstalled, said, and Civ1's still installed",
+      [corrupt, failed, logged.length > errors],
+      [[tileset.id], [tileset.id], true]
+    );
+
+    records.delete(metadataKey(civ2));
+    civ2.assets.required.forEach((name) => records.delete(civ2Key(name)));
+    clearSpriteAnchors();
+    installTilesets({});
     Store.prototype.keys = keys;
   }
 

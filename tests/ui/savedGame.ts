@@ -393,6 +393,19 @@ const reset = () => {
   );
   expect('and is not handed over either', storedRecords().size, 0);
 
+  reset();
+
+  await loadSaveFromFile(
+    new File([onGrid('staggered-iso')], 'iso.civ-clone.json')
+  ).catch(() => {});
+
+  expect(
+    "an isometric save without Civ2's art imported is refused, saying to import it (#97)",
+    alerts.join(),
+    'That save’s map is Isometric, drawn with art from Civilization II, which hasn’t been imported, so it has not been loaded. Import it in Import assets, then load the save again.'
+  );
+  expect('and is not handed over', storedRecords().size, 0);
+
   for (const topologyId of ['square', undefined]) {
     reset();
 

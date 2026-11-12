@@ -5,6 +5,7 @@ import {
   Unit as UnitData,
   Yield,
 } from '@civ-clone/ui-protocol/types';
+import { mapTileset, shownScale } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   CityLayout,
   CityScreenContext,
@@ -497,16 +498,20 @@ const renderCityButtons = ({ step, rename }: CityScreenContext): HTMLElement =>
     })
   );
 
-// The city's map at twice the size it's drawn at (its canvas is drawn at the map's scale).
+// The city's map at twice the size it's drawn at (its canvas is drawn at the map's scale), or a larger pack's at its own
+//  size (Civ2's, #97).
 const renderDoubledMap = (
   city: CityData,
   { portal, transport, readOnly }: CityScreenContext
 ): Node => {
   const map = renderMap(portal, city, transport, readOnly),
-    canvas = (map as HTMLElement).querySelector('canvas');
+    canvas = (map as HTMLElement).querySelector('canvas'),
+    tileset = mapTileset(city.player.world.topologyId);
 
   if (canvas !== null) {
-    canvas.style.width = `${(canvas.width / portal.scale()) * 2}px`;
+    canvas.style.width = `${
+      (canvas.width / portal.scale()) * shownScale(2, tileset)
+    }px`;
   }
 
   return map;

@@ -1,0 +1,515 @@
+{
+  "$schema": "./tileset.schema.json",
+  "schema": 1,
+  "kind": "tileset",
+  "id": "civ2",
+  "name": "Civilization II",
+  "grid": "staggered-iso",
+  "tile": {
+    "width": 64,
+    "height": 32
+  },
+  "geometry": {
+    "columnStep": 64,
+    "rowStep": 16,
+    "oddRowShift": 32,
+    "anchor": {
+      "x": 0,
+      "y": 0
+    },
+    "overhang": {
+      "top": 16,
+      "right": 0,
+      "bottom": 0,
+      "left": 0
+    }
+  },
+  "scales": [1, 2],
+  "defaultScale": 1,
+  "storage": {
+    "prefix": "./assets/civ2/",
+    "ext": ".png"
+  },
+  "fallback": "civ1",
+  "assets": {
+    "required": [
+      "terrain/glacier/base-0",
+      "terrain/desert/base-0",
+      "terrain/forest/base-0",
+      "terrain/grassland/base-0",
+      "terrain/hills/base-0",
+      "terrain/jungle/base-0",
+      "terrain/mountains/base-0",
+      "terrain/plains/base-0",
+      "terrain/swamp/base-0",
+      "terrain/tundra/base-0",
+      "terrain/ocean/base-0",
+      "terrain/forest/isolated",
+      "terrain/forest/ne",
+      "terrain/forest/se",
+      "terrain/forest/ne-se",
+      "terrain/forest/sw",
+      "terrain/forest/ne-sw",
+      "terrain/forest/se-sw",
+      "terrain/forest/ne-se-sw",
+      "terrain/forest/nw",
+      "terrain/forest/ne-nw",
+      "terrain/forest/se-nw",
+      "terrain/forest/ne-se-nw",
+      "terrain/forest/sw-nw",
+      "terrain/forest/ne-sw-nw",
+      "terrain/forest/se-sw-nw",
+      "terrain/forest/ne-se-sw-nw",
+      "terrain/hills/isolated",
+      "terrain/hills/ne",
+      "terrain/hills/se",
+      "terrain/hills/ne-se",
+      "terrain/hills/sw",
+      "terrain/hills/ne-sw",
+      "terrain/hills/se-sw",
+      "terrain/hills/ne-se-sw",
+      "terrain/hills/nw",
+      "terrain/hills/ne-nw",
+      "terrain/hills/se-nw",
+      "terrain/hills/ne-se-nw",
+      "terrain/hills/sw-nw",
+      "terrain/hills/ne-sw-nw",
+      "terrain/hills/se-sw-nw",
+      "terrain/hills/ne-se-sw-nw",
+      "terrain/mountains/isolated",
+      "terrain/mountains/ne",
+      "terrain/mountains/se",
+      "terrain/mountains/ne-se",
+      "terrain/mountains/sw",
+      "terrain/mountains/ne-sw",
+      "terrain/mountains/se-sw",
+      "terrain/mountains/ne-se-sw",
+      "terrain/mountains/nw",
+      "terrain/mountains/ne-nw",
+      "terrain/mountains/se-nw",
+      "terrain/mountains/ne-se-nw",
+      "terrain/mountains/sw-nw",
+      "terrain/mountains/ne-sw-nw",
+      "terrain/mountains/se-sw-nw",
+      "terrain/mountains/ne-se-sw-nw",
+      "terrain/river/isolated",
+      "terrain/river/ne",
+      "terrain/river/se",
+      "terrain/river/ne-se",
+      "terrain/river/sw",
+      "terrain/river/ne-sw",
+      "terrain/river/se-sw",
+      "terrain/river/ne-se-sw",
+      "terrain/river/nw",
+      "terrain/river/ne-nw",
+      "terrain/river/se-nw",
+      "terrain/river/ne-se-nw",
+      "terrain/river/sw-nw",
+      "terrain/river/ne-sw-nw",
+      "terrain/river/se-sw-nw",
+      "terrain/river/ne-se-sw-nw",
+      "terrain/coast/n-000",
+      "terrain/coast/n-001",
+      "terrain/coast/n-010",
+      "terrain/coast/n-011",
+      "terrain/coast/n-100",
+      "terrain/coast/n-101",
+      "terrain/coast/n-110",
+      "terrain/coast/n-111",
+      "terrain/coast/e-000",
+      "terrain/coast/e-001",
+      "terrain/coast/e-010",
+      "terrain/coast/e-011",
+      "terrain/coast/e-100",
+      "terrain/coast/e-101",
+      "terrain/coast/e-110",
+      "terrain/coast/e-111",
+      "terrain/coast/s-000",
+      "terrain/coast/s-001",
+      "terrain/coast/s-010",
+      "terrain/coast/s-011",
+      "terrain/coast/s-100",
+      "terrain/coast/s-101",
+      "terrain/coast/s-110",
+      "terrain/coast/s-111",
+      "terrain/coast/w-000",
+      "terrain/coast/w-001",
+      "terrain/coast/w-010",
+      "terrain/coast/w-011",
+      "terrain/coast/w-100",
+      "terrain/coast/w-101",
+      "terrain/coast/w-110",
+      "terrain/coast/w-111",
+      "terrain/river-mouth/ne",
+      "terrain/river-mouth/se",
+      "terrain/river-mouth/sw",
+      "terrain/river-mouth/nw",
+      "terrain/glacier/ivory",
+      "terrain/desert/oasis",
+      "terrain/forest/pheasant",
+      "terrain/grassland/resources",
+      "terrain/hills/coal",
+      "terrain/jungle/gems",
+      "terrain/mountains/gold",
+      "terrain/ocean/fish",
+      "terrain/plains/buffalo",
+      "terrain/swamp/peat",
+      "terrain/tundra/game",
+      "improvements/irrigation",
+      "improvements/mine",
+      "improvements/pollution",
+      "improvements/road/isolated",
+      "improvements/road/n",
+      "improvements/road/ne",
+      "improvements/road/e",
+      "improvements/road/se",
+      "improvements/road/s",
+      "improvements/road/sw",
+      "improvements/road/w",
+      "improvements/road/nw",
+      "improvements/railroad/isolated",
+      "improvements/railroad/n",
+      "improvements/railroad/ne",
+      "improvements/railroad/e",
+      "improvements/railroad/se",
+      "improvements/railroad/s",
+      "improvements/railroad/sw",
+      "improvements/railroad/w",
+      "improvements/railroad/nw",
+      "map/hut",
+      "units/artillery",
+      "units/battleship",
+      "units/bomber",
+      "units/cannon",
+      "units/caravan",
+      "units/carrier",
+      "units/catapult",
+      "units/chariot",
+      "units/cruiser",
+      "units/diplomat",
+      "units/fighter",
+      "units/frigate",
+      "units/horsemen",
+      "units/ironclad",
+      "units/knights",
+      "units/mech-inf",
+      "units/musketeers",
+      "units/nuclear-msl",
+      "units/riflemen",
+      "units/caravel",
+      "units/settlers",
+      "units/phalanx",
+      "units/submarine",
+      "units/legion",
+      "units/armor",
+      "units/transport",
+      "units/trireme",
+      "units/warriors",
+      "units/shield",
+      "units/shield-back",
+      "map/fortify",
+      "city/stone-bronze/0",
+      "city/stone-bronze/1",
+      "city/stone-bronze/2",
+      "city/stone-bronze/3",
+      "city/stone-bronze/walled-0",
+      "city/stone-bronze/walled-1",
+      "city/stone-bronze/walled-2",
+      "city/stone-bronze/walled-3",
+      "city/ancient-classical/0",
+      "city/ancient-classical/1",
+      "city/ancient-classical/2",
+      "city/ancient-classical/3",
+      "city/ancient-classical/walled-0",
+      "city/ancient-classical/walled-1",
+      "city/ancient-classical/walled-2",
+      "city/ancient-classical/walled-3",
+      "city/far-east/0",
+      "city/far-east/1",
+      "city/far-east/2",
+      "city/far-east/3",
+      "city/far-east/walled-0",
+      "city/far-east/walled-1",
+      "city/far-east/walled-2",
+      "city/far-east/walled-3",
+      "city/medieval/0",
+      "city/medieval/1",
+      "city/medieval/2",
+      "city/medieval/3",
+      "city/medieval/walled-0",
+      "city/medieval/walled-1",
+      "city/medieval/walled-2",
+      "city/medieval/walled-3",
+      "city/early-industrial/0",
+      "city/early-industrial/1",
+      "city/early-industrial/2",
+      "city/early-industrial/3",
+      "city/early-industrial/walled-0",
+      "city/early-industrial/walled-1",
+      "city/early-industrial/walled-2",
+      "city/early-industrial/walled-3",
+      "city/modern/0",
+      "city/modern/1",
+      "city/modern/2",
+      "city/modern/3",
+      "city/modern/walled-0",
+      "city/modern/walled-1",
+      "city/modern/walled-2",
+      "city/modern/walled-3",
+      "city/modern-alt/0",
+      "city/modern-alt/1",
+      "city/modern-alt/2",
+      "city/modern-alt/3",
+      "city/modern-alt/walled-0",
+      "city/modern-alt/walled-1",
+      "city/modern-alt/walled-2",
+      "city/modern-alt/walled-3",
+      "city/flag"
+    ],
+    "optional": [],
+    "ui": []
+  },
+  "names": {
+    "terrain": {
+      "Arctic": "glacier"
+    },
+    "special": {
+      "Arctic:Seal": "glacier/ivory",
+      "Desert:Oasis": "desert/oasis",
+      "Forest:Game": "forest/pheasant",
+      "Grassland:Shield": "grassland/resources",
+      "Hills:Coal": "hills/coal",
+      "Jungle:Gems": "jungle/gems",
+      "Mountains:Gold": "mountains/gold",
+      "Ocean:Fish": "ocean/fish",
+      "Plains:Horse": "plains/buffalo",
+      "River:Shield": "grassland/resources",
+      "Swamp:Oil": "swamp/peat",
+      "Tundra:Game": "tundra/game"
+    },
+    "unit": {
+      "Artillery": "artillery",
+      "Battleship": "battleship",
+      "Bomber": "bomber",
+      "Cannon": "cannon",
+      "Caravan": "caravan",
+      "Carrier": "carrier",
+      "Catapult": "catapult",
+      "Chariot": "chariot",
+      "Cruiser": "cruiser",
+      "Diplomat": "diplomat",
+      "Fighter": "fighter",
+      "Frigate": "frigate",
+      "Horseman": "horsemen",
+      "Ironclad": "ironclad",
+      "Knight": "knights",
+      "MechanizedInfantry": "mech-inf",
+      "Musketman": "musketeers",
+      "Nuclear": "nuclear-msl",
+      "Rifleman": "riflemen",
+      "Sail": "caravel",
+      "Settlers": "settlers",
+      "Spearman": "phalanx",
+      "Submarine": "submarine",
+      "Swordman": "legion",
+      "Tank": "armor",
+      "Transport": "transport",
+      "Trireme": "trireme",
+      "Warrior": "warriors"
+    }
+  },
+  "families": {
+    "base": {
+      "land": "terrain/{terrain}/base-0",
+      "ocean": "terrain/ocean/base-0",
+      "under": {
+        "River": "Grassland"
+      }
+    },
+    "terrain": {
+      "method": "bitmask",
+      "neighbours": "edges",
+      "sprite": "terrain/{terrain}/{dirs}",
+      "isolated": "terrain/{terrain}/isolated",
+      "join": "-",
+      "skip": [
+        "Arctic",
+        "Desert",
+        "Grassland",
+        "Jungle",
+        "Ocean",
+        "Plains",
+        "Swamp",
+        "Tundra"
+      ],
+      "matches": {
+        "River": ["River", "@water"]
+      }
+    },
+    "coast": {
+      "method": "corners",
+      "neighbours": "all",
+      "sprite": "terrain/coast/{corner}-{bits}",
+      "corners": {
+        "n": {
+          "at": {
+            "x": 16,
+            "y": 0
+          },
+          "neighbours": ["ne", "n", "nw"]
+        },
+        "e": {
+          "at": {
+            "x": 32,
+            "y": 8
+          },
+          "neighbours": ["se", "e", "ne"]
+        },
+        "s": {
+          "at": {
+            "x": 16,
+            "y": 16
+          },
+          "neighbours": ["sw", "s", "se"]
+        },
+        "w": {
+          "at": {
+            "x": 0,
+            "y": 8
+          },
+          "neighbours": ["nw", "w", "sw"]
+        }
+      }
+    },
+    "riverMouth": {
+      "method": "edges",
+      "neighbours": "edges",
+      "sprite": "terrain/river-mouth/{dir}"
+    },
+    "irrigation": {
+      "sprite": "improvements/irrigation",
+      "overTerrain": true
+    },
+    "mine": {
+      "sprite": "improvements/mine"
+    },
+    "pollution": {
+      "sprite": "improvements/pollution"
+    },
+    "road": {
+      "method": "edges",
+      "neighbours": "all",
+      "sprite": "improvements/road/{dir}",
+      "isolated": "improvements/road/isolated"
+    },
+    "railroad": {
+      "method": "edges",
+      "neighbours": "all",
+      "sprite": "improvements/railroad/{dir}",
+      "isolated": "improvements/railroad/isolated"
+    },
+    "special": {
+      "sprite": "terrain/{special}"
+    },
+    "hut": {
+      "sprite": "map/hut"
+    }
+  },
+  "units": {
+    "sprite": "units/{unit}",
+    "anchor": {
+      "x": 0,
+      "y": -16
+    },
+    "colouring": {
+      "mode": "overlay",
+      "sprite": "units/shield",
+      "keys": ["#ff0000"],
+      "anchor": "shield",
+      "stack": {
+        "sprite": "units/shield-back",
+        "offset": {
+          "x": -4,
+          "y": -4
+        }
+      }
+    },
+    "fortified": "map/fortify",
+    "status": {
+      "x": 0.5,
+      "baseline": 0.75,
+      "fontSize": 10
+    }
+  },
+  "cities": {
+    "mode": "styles",
+    "sprite": "city/{style}/{walls}{size}",
+    "anchor": {
+      "x": 0,
+      "y": -16
+    },
+    "styles": {
+      "names": [
+        "stone-bronze",
+        "ancient-classical",
+        "far-east",
+        "medieval",
+        "early-industrial",
+        "modern",
+        "modern-alt"
+      ],
+      "default": "ancient-classical",
+      "civilizations": {
+        "American": "ancient-classical",
+        "Aztec": "stone-bronze",
+        "Babylonian": "stone-bronze",
+        "Chinese": "far-east",
+        "Egyptian": "stone-bronze",
+        "English": "medieval",
+        "French": "medieval",
+        "German": "medieval",
+        "Greek": "ancient-classical",
+        "Indian": "far-east",
+        "Mongol": "stone-bronze",
+        "Roman": "ancient-classical",
+        "Russian": "medieval",
+        "Zulu": "stone-bronze",
+        "Australian": "medieval",
+        "Brazilian": "medieval",
+        "Chukchi": "stone-bronze",
+        "Ethiopian": "ancient-classical",
+        "Inca": "stone-bronze",
+        "Indonesian": "far-east",
+        "Japanese": "far-east",
+        "Khmer": "far-east",
+        "Kongo": "stone-bronze",
+        "Malian": "stone-bronze",
+        "Sioux": "stone-bronze",
+        "Viking": "medieval",
+        "Barbarian": "stone-bronze"
+      },
+      "sizes": [1, 4, 8, 12],
+      "walls": {
+        "plain": "",
+        "walled": "walled-"
+      }
+    },
+    "colouring": {
+      "mode": "overlay",
+      "sprite": "city/flag",
+      "keys": ["#f30000", "#a70000"],
+      "anchor": "flag"
+    },
+    "labels": {
+      "x": 0.5,
+      "sizeBaseline": 0.75,
+      "nameBaseline": 1.5,
+      "fontSize": 10,
+      "disorderIcon": {
+        "x": 2,
+        "y": 2
+      },
+      "size": "size"
+    }
+  }
+}

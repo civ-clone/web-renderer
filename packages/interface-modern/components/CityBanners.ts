@@ -169,9 +169,10 @@ export class CityBanners extends CityNames {
     return this.#style().form === 'full';
   }
 
-  // Too small for more than the size and the name (#822): no production, flags or food bar.
+  // Too small for more than the size and the name (#822): no production, flags or food bar. By the tile's width on
+  //  screen, Civ1's at 1×, so a larger pack's (Civ2's 64 px, #97) is not compact at 1×.
   #compact(): boolean {
-    return this.scale() < 2;
+    return this.tileSize().width < 32;
   }
 
   #fontSize(): number {
