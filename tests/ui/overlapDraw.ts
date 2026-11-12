@@ -795,11 +795,13 @@ class Tall extends OverlappingSquare {
 //  has to be an even number of rows high to wrap over the poles.
 class Brick implements Projection {
   #size: number;
+  #step: { x: number; y: number };
   #world: WorldDimensions;
   #wrapVertical: boolean;
 
   constructor(size: number, world: WorldDimensions, wrapVertical: boolean) {
     this.#size = size;
+    this.#step = { x: size, y: size / 2 };
     this.#world = world;
     this.#wrapVertical = wrapVertical;
   }
@@ -845,6 +847,10 @@ class Brick implements Projection {
         Math.ceil((y + height + overhang) / step),
       ],
     };
+  }
+
+  tileStep() {
+    return this.#step;
   }
 
   tileToPixel(x: number, y: number): [number, number] {

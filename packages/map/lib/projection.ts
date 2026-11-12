@@ -42,6 +42,23 @@ export const noReach: Reach = Object.freeze({
  * lives here and the layers and the portal ask for it (#86).
  *
  * Pixels are world pixels: the top left of tile 0,0 is 0,0, before the portal's viewport is taken off.
+ *
+ * The portal centres, drags and culls by asking these, never by stepping a square tile (#97), so it holds for any grid
+ *  whose projection keeps to three rules, which a staggered isometric grid does as well as the square one:
+ *
+ * - **A tile's middle is its own.** The middle of a tile's sprite box (`tileToPixel` rounded to whole pixels, plus
+ *   half the `footprint`, each half truncated, as the canvas is drawn at whole pixels) is a pixel `pixelToTile` gives
+ *   back that tile for, and every pixel falls on exactly one tile. (On a shifted row of an odd-sized tile that middle is
+ *   half a pixel right of the diamond's own.) The portal keeps the tile under the middle of its canvas as its centre,
+ *   so a pixel that two tiles, or none, claimed
+ *   would make a drag jump or drift. On a staggered isometric grid that is the diamond's hit test, not the box's:
+ *   boxes overlap there, and the four corners of a box belong to its neighbours.
+ * - **The world repeats a whole number of tiles along.** `tileToPixel(x + width, y)` is `wrapPeriod().x` px right of
+ *   `tileToPixel(x, y)`, and, on a world that wraps over the poles, `tileToPixel(x, y + height)` is `wrapPeriod().y`
+ *   px below it, so a column or row the portal wraps lands on the same pixels. A staggered grid wraps over the poles
+ *   only with an even number of rows, so a wrapped row keeps whether it is shifted.
+ * - **The footprint is the tile's own box.** Sprites that reach past it, as a tall city does, say so in `reach()`,
+ *   not by growing the footprint, whose middle is where the portal centres.
  */
 export interface Projection {
   /** The top left of the tile's sprite box. */
@@ -55,6 +72,16 @@ export interface Projection {
 
   /** The size of a tile's sprite box. */
   footprint(): Size;
+
+  /**
+   * How far apart, in px, one column is from the next in the same row (`x`), and one row from the next (`y`): what
+   *  the portal counts tiles by when it says how many fit across and down its canvas, and how many tiles in from its
+   *  edge one is. On the square grid both are the footprint. On a staggered isometric grid a column is a tile's
+   *  width along and a row half its height down, so twice as many rows fit as boxes would; odd rows are shifted half
+   *  a column across as well, which `tileToPixel` says and the portal reads from it (an odd row's tile counts as half
+   *  a column further along). On a hexagonal grid a row is three quarters of a tile down.
+   */
+  tileStep(): { x: number; y: number };
 
   /** The size of the whole world. */
   worldSize(): Size;

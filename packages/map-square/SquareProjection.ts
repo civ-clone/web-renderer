@@ -24,6 +24,7 @@ export class SquareProjection implements Projection {
   // for every tile it draws, so each is made once rather than per call.
   #footprint: Size;
   #size: number;
+  #step: { x: number; y: number };
   #world: WorldDimensions;
   #worldSize: Size | null = null;
   #wrapPeriod: { x: number; y: number | null } | null = null;
@@ -38,6 +39,7 @@ export class SquareProjection implements Projection {
     this.#world = world;
     this.#wrapVertical = wrapVertical;
     this.#footprint = { width: size, height: size };
+    this.#step = { x: size, y: size };
   }
 
   compareDrawOrder(a: Placement, b: Placement): number {
@@ -72,6 +74,11 @@ export class SquareProjection implements Projection {
             ];
 
     return { columns: span(x, width), rows: span(y, height) };
+  }
+
+  // Each square is the next one's neighbour, a whole tile along and down.
+  tileStep(): { x: number; y: number } {
+    return this.#step;
   }
 
   tileToPixel(x: number, y: number): [number, number] {

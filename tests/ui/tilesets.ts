@@ -1204,7 +1204,12 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
 
   class GeometryPortal extends Portal {
     clamped(y: number, offset: number): [number, number] {
-      return this.clampedCenterY(y, offset);
+      const [center, settled] = this.clampedCenter(
+        { x: 0, y },
+        { x: 0, y: offset }
+      );
+
+      return [center.y, settled.y];
     }
   }
 
