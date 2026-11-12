@@ -56,7 +56,7 @@ export type WondersEntry = {
 
 /**
  * The rows, in `order` (the Wonders' type names, as the game gives them), any Wonder it doesn't name after those, in the
- *  order they came. A lost Wonder has no place, no owner and isn't anyone's, whatever its entry says.
+ *  order they came. A lost Wonder has no place, no owner and isn't anyone's.
  */
 export const wondersRows = (
   entries: WondersEntry[],

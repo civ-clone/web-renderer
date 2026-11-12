@@ -45,9 +45,10 @@ process.on('exit', (code: number): void => {
   }
 });
 
-// No IndexedDB under node: no Wonder has a picture, so none is drawn.
+// No IndexedDB under node: only the Pyramids have a picture, shown before, so it's drawn at once; the rest have none.
 (assetStore as any).has = () => Promise.resolve(false);
-(assetStore as any).cachedURL = () => null;
+(assetStore as any).cachedURL = (key: string) =>
+  String(key).includes('wonders/pyramids') ? 'pyramids.png' : null;
 
 const pending = {
     request: () => new Promise(() => {}),
@@ -161,6 +162,11 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
+    'classic: a Wonder with a picture shows it before its sentence; one without takes no room',
+    boxes.map((box) => box.querySelectorAll('.building-icon img').length),
+    [1, 0, 0, 0, 0, 0]
+  );
+  expect(
     'classic: the sentence is the same text on its own',
     wondersRowText(rows[0]!),
     'The Pyramids of Thebes. (Egyptian)'
@@ -222,6 +228,15 @@ const run = async (): Promise<void> => {
       [true, null, 0],
       [false, null, 0],
     ]
+  );
+
+  expect(
+    'modern: the Wonder cell shows its picture where there is one',
+    tableRows().map(
+      (row) =>
+        row.querySelectorAll('[data-column="wonder"] .building-icon img').length
+    ),
+    [1, 0, 0, 0, 0, 0]
   );
 
   const view = tableRows()[3]!.querySelector(

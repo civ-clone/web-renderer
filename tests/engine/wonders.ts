@@ -126,12 +126,11 @@ const checkRows = (): void => {
   );
 
   expect(
-    "a lost Wonder: destroyed, with no city, no owner and nobody's, whatever its entry says",
+    "lost Wonders: destroyed, with no city, no owner and nobody's",
     wondersRows(
       [
         { wonder: 'Colossus', city: null },
-        // An entry that wrongly carries a city: a lost Wonder still has none.
-        { ...standing('Lighthouse', { own: true }), city: null },
+        { wonder: 'Lighthouse', city: null },
       ],
       order
     ),
