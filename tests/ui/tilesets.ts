@@ -554,15 +554,12 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   };
 
   expect(
-    'a corners coast of named quarter sprites is read, but cannot be drawn yet',
+    'a corners coast of named quarter sprites is read, and can be drawn',
     [
       thrown(() => readDescriptor(withCoast(namedQuarters))),
       thrown(() => validateDescriptor(withCoast(namedQuarters))),
     ],
-    [
-      null,
-      'Tileset "civ1": families.coast must have a strip: only a coast cut from one strip can be drawn yet.',
-    ]
+    [null, null]
   );
   const withFamily = (key: string, family: unknown) =>
     civ1With({ families: { ...civ1.families, [key]: family } });
@@ -870,7 +867,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   expect(
     'but cannot be drawn yet, saying the first thing the map cannot draw',
     thrown(() => validateDescriptor(isoJson)),
-    'Tileset "iso-test": families.base cannot be drawn yet with a land sprite per terrain: only one under all land.'
+    'Tileset "iso-test": units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.'
   );
 
   // Each thing the map cannot draw yet, on Civ1's descriptor, which it can.
@@ -878,7 +875,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     notDrawnYet(readDescriptor(civ1With(changes)));
 
   expect(
-    'what the map cannot draw yet is each named, and Civ1 has none of it',
+    'what the map cannot draw yet is each named, and Civ1 has none of it; a land sprite per terrain and named coast quarters it can',
     [
       notDrawnYet(civ1),
       civ1Read({
@@ -912,8 +909,8 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ],
     [
       null,
-      'families.base cannot be drawn yet with a land sprite per terrain: only one under all land.',
-      'families.coast must have a strip: only a coast cut from one strip can be drawn yet.',
+      null,
+      null,
       'units.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
       'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.',
       'cities.mode "styles" cannot be drawn yet: only box.',

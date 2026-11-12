@@ -50,7 +50,11 @@ export const getPreloadedImage = (
   }
 
   if (!missingImagePlaceholder) {
-    missingImagePlaceholder = s<HTMLCanvasElement>('<canvas></canvas>');
+    // Sized 0 × 0 on purpose: a canvas left unsized is 300 × 150 in a browser, which callers would take for a real
+    //  sprite. With no size, `isDrawable` says no and `Map.drawImage` skips it.
+    missingImagePlaceholder = s<HTMLCanvasElement>(
+      '<canvas width="0" height="0"></canvas>'
+    );
   }
 
   return missingImagePlaceholder;

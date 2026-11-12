@@ -407,8 +407,14 @@ export class CityBanners extends CityNames {
   // An icon from the tileset, fitted to `rect` and kept sharp.
   #drawIcon(path: string, rect: Rect): void {
     const image = this.getPreloadedImage(path),
-      [width, height] = imageSize(image),
-      fit = Math.min(rect.width / width, rect.height / height),
+      [width, height] = imageSize(image);
+
+    // A missing icon is the placeholder, which has no size, and `drawImage` throws on a zero-sized source.
+    if (width === 0 || height === 0) {
+      return;
+    }
+
+    const fit = Math.min(rect.width / width, rect.height / height),
       context = this.context();
 
     context.imageSmoothingEnabled = false;

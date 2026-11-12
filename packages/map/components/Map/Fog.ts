@@ -13,10 +13,13 @@ export class Fog extends TerrainAbstract {
 
     const { fog } = this.tileset().families;
 
-    // A tileset with no fog sprites draws the edge of what a player has seen without one.
+    // A tileset with no fog sprites draws the edge of what a player has seen without one: Civ2's, whose map shows a
+    //  hard edge (M1's decision D7).
     if (fog === undefined) {
       return;
     }
+
+    [offsetX, offsetY] = this.anchored(offsetX, offsetY);
 
     this.drawFamily(
       fog,
