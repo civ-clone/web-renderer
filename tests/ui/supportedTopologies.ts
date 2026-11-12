@@ -163,14 +163,31 @@ const text = (element: Element | null): string =>
     installedTilesets().map(({ id, grid }) => [id, grid]),
     [['civ1', 'square']]
   );
-  expect('only square can be drawn for now', supportedTopologies(), ['square']);
+  expect(
+    'only square is offered for now: isometric can be drawn, but no isometric tileset is installed (#97)',
+    supportedTopologies(),
+    ['square']
+  );
   expect(
     "the grids are the installed tilesets' own, that there is a projection for",
     [
       drawableGrids(),
       supportedTopologies(installedTilesets(), drawableGrids()),
     ],
-    [['square'], ['square']]
+    [['square', 'staggered-iso'], ['square']]
+  );
+  expect(
+    'an isometric tileset, once one is installed, is offered after square, as there is an isometric projection (#97)',
+    supportedTopologies([
+      civ1,
+      validateDescriptor({
+        ...JSON.parse(JSON.stringify(civ1Json)),
+        id: 'iso-stub',
+        name: 'An isometric tileset',
+        grid: 'staggered-iso',
+      }),
+    ]),
+    ['square', 'staggered-iso']
   );
   expect(
     'a hex tileset is not offered before there is a hex projection (#94)',

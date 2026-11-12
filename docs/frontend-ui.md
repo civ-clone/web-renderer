@@ -136,6 +136,7 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | platform                                                              |
 | `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, platform, client, assets                                    |
 | `map-square`        | The square grid: its projection and minimap                                                                                                                                                 | protocol, assets, map                                                 |
+| `map-isometric`     | The staggered isometric grid: its projection (diamond hit test, tall sprites' reach) and minimap; not offered until an isometric tileset is installed                                       | protocol, assets, map                                                 |
 | `audio`             | Civ1's music and sounds: the AdLib driver, the OPL2 synth, the worklet, and which tune each moment gets                                                                                     | protocol, client                                                      |
 | `city`              | The city screen and its parts (the squares, the yields, the citizens), renaming a city and Find City, and the `choices` slot every pick-one list opens through                              | protocol, platform, client, assets, widgets, map                      |
 | `reports`           | The reports, the Civilopedia (and why a city can't build something), the Hall of Fame and the game's end                                                                                    | protocol, platform, client, assets, widgets, map, city                |
@@ -152,19 +153,22 @@ dependency instead, so the list could be generated, would change which of two eq
 places (a base `.window .body` and a window's own `.city .body`, say), so each of those has to be settled first.
 
 Inside each package the folders are as they were before the split (`components/`, `lib/`), but for the folder a
-package is named after (`game/`, `map-square/`), whose files are at the package's root. So `client` still has a
+package is named after (`game/`, `map-square/`, `map-isometric/`), whose files are at the package's root. So `client` still has a
 `game/GameState.ts` and `menus` a `components/` folder. Tidying those is for later.
 
 **The map and its grids.** In the code and the game's own text, a _square_ on its own is a map square, Civ1's word
 for a tile, on whatever grid. The grid is always named in full: the square grid. `map` draws every grid through a
-`Projection`, and anything true of the square grid alone lives in `map-square`. Hexagonal and isometric grids get
-packages of their own beside it (`map-hex`, `map-isometric`, #94, #97). `map` names no grid: each grid registers its
-projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the grids it draws, as `frontend.ts` loads
-`map-square`. The minimap, which draws every world as squares in storage order, is the square grid's too. Suites that
-draw the map, or ask which grids it can, import `tests/ui/lib/grids.ts`. The portal centres, drags and culls by asking
-the projection too (the tile under a pixel, and `tileStep` to count columns and rows), never by stepping a square, so a
-new grid's projection keeps to the rules `lib/projection.ts` sets out and `Portal` needs nothing. `tests/ui/lib/staggered.ts`
-is a staggered isometric stand-in that `tests/ui/staggeredPortal.ts` drives the portal on.
+`Projection`, and anything true of the square grid alone lives in `map-square`, of the staggered isometric grid alone
+in `map-isometric` (#97). A hexagonal grid gets a package of its own beside them (`map-hex`, #94). `map` names no grid:
+each grid registers its projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the
+grids it draws, as `frontend.ts` loads `map-square` and `map-isometric`. A grid is offered for a new game only once an
+installed tileset is drawn on it (`supportedTopologies`), so isometric is drawable but not offered yet. Each grid brings
+its own minimap: the square grid's draws the world as squares in storage order, the isometric grid's as bricks in the
+map's staggered rows, so it has the map's shape. Suites that draw the map, or ask which grids it can, import
+`tests/ui/lib/grids.ts`. The portal centres, drags and culls by asking the projection too (the tile under a pixel, and
+`tileStep` to count columns and rows), never by stepping a square, so a new grid's projection keeps to the rules
+`lib/projection.ts` sets out and `Portal` needs nothing. `tests/ui/staggeredPortal.ts` drives the portal on a staggered
+isometric stand-in, `tests/ui/lib/staggered.ts`, and with `--iso` on the real `IsoProjection`.
 
 ## Major UI modules
 

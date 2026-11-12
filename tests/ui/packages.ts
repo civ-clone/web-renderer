@@ -624,7 +624,15 @@ expect(
 );
 expect(
   'a window or map piece only one interface uses is in that interface’s package',
-  ['city', 'hud', 'menus', 'reports', 'map', 'map-square'].flatMap((name) =>
+  [
+    'city',
+    'hud',
+    'menus',
+    'reports',
+    'map',
+    'map-square',
+    'map-isometric',
+  ].flatMap((name) =>
     sourcesUnder(join(packagesRoot, name))
       .filter((path) => !sharedReach.has(path))
       .filter(

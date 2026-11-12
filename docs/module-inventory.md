@@ -89,7 +89,7 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 - `LocaleProvider.ts`: locale-aware number, percentage, list and relative-time formatting.
 - `components/*`: windows, panels, menus, reports, details.
 - `components/Map/*`: map canvas layers, sized to the portal rather than the world.
-- `components/Portal.ts`, `World.ts` and `Minimap.ts` (in `map-square`): compositing the layers, the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
+- `components/Portal.ts`, `World.ts` and `Minimap.ts` (in `map-square` and `map-isometric`, one per grid): compositing the layers, the minimap, and the tile lookup (with stand-ins for tiles the player has not seen).
 - `lib/*`: utility helpers (reconstitution, object-map pruning, key mapping, image scaling/recolouring, viewport geometry, saved games, etc.).
 - `lib/IncrementalReconstituter.ts`: rebuilds the game data from the object map, touching only the ids a patch changed.
 - `lib/DataChanges.ts`: tells the open windows watching ids that one of them changed, once per render (#344); `watchCity.ts` (in `packages/city/components/lib`) and `watchPlayer.ts` (in `packages/reports/components/lib`) do it for the city screen and the reports.
