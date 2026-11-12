@@ -247,12 +247,17 @@ const squareLabel = (tile: PlayerTile, city: CityData): string => {
 //  and Tab should come back to where it left, not to the city's own square each time.
 const lastSquare = new Map<string, string>();
 
-// Which way each arrow key goes on the map.
-const arrows: { [key: string]: [number, number] } = {
-  ArrowUp: [0, -1],
-  ArrowDown: [0, 1],
-  ArrowLeft: [-1, 0],
-  ArrowRight: [1, 0],
+// Which way each arrow key goes on the map: which of the grid's directions that share an edge, in the order the
+//  topology gives them. On the square grid those are `n e s w`, up, right, down and left. On a staggered isometric
+//  grid they are `ne se sw nw`, a quarter turn further round, as the squares that share an edge are the diagonals
+//  there: the corner moves `n e s w` keep to rows of one parity, so they would never reach half the city's squares (#97).
+//  Only for a grid with four edge directions: a hexagonal grid's six need a mapping of their own (#94), and until then
+//  the arrow keys do nothing on its city map.
+const arrows: { [key: string]: number } = {
+  ArrowUp: 0,
+  ArrowRight: 1,
+  ArrowDown: 2,
+  ArrowLeft: 3,
 };
 
 /**
@@ -260,7 +265,10 @@ const arrows: { [key: string]: [number, number] } = {
  *  map (one stop, on the city's own square to begin with), the arrow keys move from square to square, and Enter or
  *  Space does what a click does. Each says what it is, whether it's worked and what it yields. They are placed over
  *  the canvas by where the portal draws each square, as fractions of the canvas, so they follow it at any size; a
- *  click on a square lands on its button, and does the same.
+ *  click on a square lands on its button, and does the same. Where a square isn't its whole box, as a diamond on a
+ *  staggered isometric grid isn't, its button is clipped to the square's outline (#97): `clip-path` clips where the
+ *  button can be clicked as well as what it draws, so a click in a box's corner, which is a neighbour's diamond,
+ *  lands on the neighbour's button, whichever comes later in the page, with nothing stacked over anything.
  */
 const renderSquares = (
   city: CityData,
@@ -271,7 +279,35 @@ const renderSquares = (
 ): HTMLElement => {
   const squares = s('<div class="city-squares" role="group"></div>'),
     buttons = new Map<string, HTMLButtonElement>(),
-    at = ({ x, y }: { x: number; y: number }): string => `${x},${y}`;
+    at = ({ x, y }: { x: number; y: number }): string => `${x},${y}`,
+    topology = cityPortal.world().topology(),
+    outline = cityPortal.projection().outline?.(),
+    corners = (outline ?? []).map(([x, y]) => `${x * 100}% ${y * 100}%`),
+    clipPath = outline === undefined ? null : `polygon(${corners.join(', ')})`,
+    // The focus ring for a clipped button: its outline, less the outline drawn `--ring` in towards the middle, each
+    //  corner moved in across by 2.24 times that and down by 1.12, which is `--ring` in from each side of a diamond
+    //  twice as wide as it is tall, the one outline there is (#97).
+    inward = (fraction: number, factor: number): string =>
+      fraction < 0.5
+        ? ` + var(--ring) * ${factor}`
+        : fraction > 0.5
+        ? ` - var(--ring) * ${factor}`
+        : '',
+    inner = (outline ?? []).map(
+      ([x, y]) =>
+        `calc(${x * 100}%${inward(x, 2.24)}) calc(${y * 100}%${inward(
+          y,
+          1.12
+        )})`
+    ),
+    // Each contour ends on its own first corner, so neither is left open where the two are joined.
+    ring =
+      outline === undefined
+        ? null
+        : `polygon(evenodd, ${[...corners, corners[0]].join(', ')}, ${[
+            ...inner,
+            inner[0],
+          ].join(', ')})`;
 
   squares.setAttribute('aria-label', plain('CitySquares.label'));
 
@@ -293,6 +329,13 @@ const renderSquares = (
     button.style.top = percent(box.y, canvas.height);
     button.style.width = percent(box.width, canvas.width);
     button.style.height = percent(box.height, canvas.height);
+
+    if (clipPath !== null && ring !== null) {
+      button.style.clipPath = clipPath;
+      button.style.setProperty('--focus-ring', ring);
+      button.classList.add('outlined');
+    }
+
     button.dataset.x = String(localTile.x);
     button.dataset.y = String(localTile.y);
     // Which square it is, for the keyboard to be put back on once the city is drawn again: its label says what the
@@ -339,7 +382,11 @@ const renderSquares = (
   });
 
   squares.addEventListener('keydown', (event) => {
-    const step = arrows[event.key],
+    const arrow = arrows[event.key],
+      direction =
+        arrow === undefined || topology.edgeDirections().length !== 4
+          ? undefined
+          : topology.edgeDirections()[arrow],
       from = event.target as HTMLElement;
 
     // A key held down presses once: each press draws the city again and puts the keyboard back here, so a repeat
@@ -352,7 +399,7 @@ const renderSquares = (
 
     // With Shift too: left to the screen, it would be the next city.
     if (
-      step === undefined ||
+      direction === undefined ||
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||
@@ -365,11 +412,18 @@ const renderSquares = (
     event.preventDefault();
     event.stopPropagation();
 
-    // The next of the city's squares that way, over any that aren't its own.
-    let x = Number(from.dataset.x) + step[0],
-      y = Number(from.dataset.y) + step[1];
+    // The next of the city's squares that way, over any that aren't its own. A step is the topology's from the row
+    //  it starts on, which on a staggered grid depends on whether that row is shifted. The small world's squares are
+    //  never across its edges, so the steps aren't wrapped.
+    let x = Number(from.dataset.x),
+      y = Number(from.dataset.y);
 
     for (let steps = 0; steps < buttons.size; steps++) {
+      const [dx, dy] = topology.offset(direction, x, y);
+
+      x += dx;
+      y += dy;
+
       const next = buttons.get(at({ x, y }));
 
       if (next) {
@@ -377,21 +431,26 @@ const renderSquares = (
 
         return;
       }
-
-      x += step[0];
-      y += step[1];
     }
   });
 
   return squares;
 };
 
+/** Makes the city map's portal: a `Portal`, unless a test draws it with a tileset of its own. */
+export type CityPortalFactory = (
+  ...args: ConstructorParameters<typeof Portal>
+) => Portal;
+
+const newPortal: CityPortalFactory = (...args) => new Portal(...args);
+
 /** The city's squares, the worked ones with their yields, a click on one working it or not (#9). */
 export const renderMap = (
   portal: Portal,
   city: CityData,
   transport: Transport,
-  readOnly: boolean
+  readOnly: boolean,
+  makePortal: CityPortalFactory = newPortal
 ): Node => {
   // Remap the city's tiles into a small local coordinate space so each layer
   // canvas is sized to the city's squares rather than the full world (a full
@@ -405,7 +464,7 @@ export const renderMap = (
       width: localWidth,
     } = cityMapLayout(city),
     portalCanvas = s<HTMLCanvasElement>('<canvas></canvas>'),
-    cityPortal = new Portal(
+    cityPortal = makePortal(
       new World(
         {
           ...city.player.world,
@@ -444,19 +503,26 @@ export const renderMap = (
   cityPortal.setCenter(center.x, center.y);
   cityPortal.build(localTiles);
 
-  const unitMap = cityPortal.getLayer(Units)!;
-  unitMap.render(
+  // Every layer is there, but for a test's portal (`makePortal`), which can leave them out to draw none.
+  const layer = <T>(found: T | null, name: string): T | null => {
+    if (found === null && makePortal === newPortal) {
+      throw new Error(`The city map's portal has no ${name} layer.`);
+    }
+
+    return found;
+  };
+
+  layer(cityPortal.getLayer(Units), 'Units')?.render(
     localTiles.filter((tile) =>
       tile.units.some((unit) => unit.player.id !== city.player.id)
     )
   );
+  layer(cityPortal.getLayer(Yields), 'Yields')?.render(localTilesWorked);
 
-  const yieldMap = cityPortal.getLayer(Yields)!;
-  yieldMap.render(localTilesWorked);
+  const unworkable = layer(cityPortal.getLayer(Unworkable), 'Unworkable');
 
-  const unworkable = cityPortal.getLayer(Unworkable)!;
-  unworkable.setCity(city);
-  unworkable.render(localTiles);
+  unworkable?.setCity(city);
+  unworkable?.render(localTiles);
 
   cityPortal.render();
 
