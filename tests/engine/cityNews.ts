@@ -234,6 +234,44 @@ const run = async (): Promise<void> => {
     { key: 'City.food-storage-exhausted', bubble: false },
   ]);
 
+  // Famine in a city that feeds Settlers (#969): it loses them in place of a citizen, and the notice names them, as
+  //  the engine sends them ("Settlers lost.", where the famine above is "Famine feared.").
+  growTo(capital, 2);
+
+  const fed = new Settlers(capital, humanPlayer!, capital.tile());
+
+  await settle();
+  clear();
+
+  ruleRegistryInstance.process(FoodExhausted, capitalGrowth);
+  await settle();
+  flush();
+
+  if (!fed.destroyed()) {
+    fail('famine did not cost the city the Settlers it feeds');
+  }
+
+  if (capitalGrowth.size() !== 2) {
+    fail(
+      `famine that cost Settlers shrank the city to ${capitalGrowth.size()}`
+    );
+  }
+
+  expectNotifications('famine that costs Settlers', [
+    { key: 'City.food-storage-exhausted.unit-lost', bubble: false },
+  ]);
+
+  if (notificationsSent[0].data.unit?._ !== 'Settlers') {
+    fail(
+      `famine that costs Settlers sent its unit as ${JSON.stringify(
+        notificationsSent[0].data.unit
+      )}`
+    );
+  }
+
+  capitalGrowth.shrink();
+  await settle();
+
   // Captured by a rival: one notice, beside End Turn.
   const captured = new City(humanPlayer!, site(capital.tile()), 'Captured');
 
@@ -445,7 +483,7 @@ const run = async (): Promise<void> => {
   });
 
   console.log(
-    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, a city lost leaves one notice, a rival's city says nothing, nor one we capture; a city we capture stops building as the game starts, and keeps its build at our price with the enhanced rule off; a computer player's capture stops building either way)"
+    "PASS cityNews (a city growing or shrinking goes out with its size, famine is announced, with the Settlers it costs, a city lost leaves one notice, a rival's city says nothing, nor one we capture; a city we capture stops building as the game starts, and keeps its build at our price with the enhanced rule off; a computer player's capture stops building either way)"
   );
 
   process.exit(0);

@@ -107,6 +107,7 @@ export const notificationTune = (
 
     case 'City.civil-disorder':
     case 'City.food-storage-exhausted':
+    case 'City.food-storage-exhausted.unit-lost':
       return tunes.disaster;
 
     case 'City.building-complete.unit':

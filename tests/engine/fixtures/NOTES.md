@@ -457,3 +457,20 @@ turns no city is abandoned, incited or destroyed with ships in it, so neither
 new rule fires; the abandoned city and the size-1 incite are played by
 `tests/engine/abandonedCity.ts`. `client-transcript.json` passes unchanged and
 is not re-recorded.
+
+## Accepted change: rule counts, a famine's Settlers and a city that starves away (#969, #975)
+
+civ1-city 0.1.13 loses one unit a starving city feeds (Settlers, in Civ1) only
+once its food store runs out, in place of a citizen, and empties the store
+either way, as v474.05 does: `civ1-city:city/food-exhausted/lose-food-supported-unit`
+and `civ1-city:city/food-exhausted/empty-food-store` are new, the shrink rule
+now applies only when no such unit is lost, and `city:food-storage-exhausted`
+names the unit lost. A city short of food no longer has its units disbanded
+(`Unsupported`) as soon as the turn's net food is negative. civ1-player 0.1.12
+stops processing a city's yields once it has starved away, so a destroyed city
+completes nothing that turn, and civ1-wonder 0.1.13 and civ1-score 0.1.1 count a
+Wonder whose city was destroyed as lost. The rule totals at turns 1, 10 and 50
+rise from 1124 to 1126 (`FoodExhausted` 2 → 4) and nothing else moves: the
+engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
+counts and the DTO hashes are unchanged. `client-transcript.json` passes
+unchanged and is not re-recorded.

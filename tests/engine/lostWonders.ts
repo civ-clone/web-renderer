@@ -42,6 +42,7 @@ import Advance from '@civ-clone/core-science/Advance';
 import Build from '@civ-clone/core-city-build/Rules/Build';
 import City from '@civ-clone/core-city/City';
 import FoodExhausted from '@civ-clone/core-city-growth/Rules/FoodExhausted';
+import Gold from '@civ-clone/base-city-yield-gold/Gold';
 import Player from '@civ-clone/core-player/Player';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
@@ -420,8 +421,12 @@ const playLoad = (): void => {
   );
 
   // Paid for in full, then its player's turn starts, as in play: each city's yields are processed. Another city of
-  //  the same player's has an ordinary build paid for, which completes in the same turn start.
+  //  the same player's has an ordinary build paid for, which completes in the same turn start. That city is short of
+  //  food, with an empty store, and would starve away first, completing nothing (#975): its store is filled for the
+  //  turn. And its player has no gold, so the Temple would be sold for its upkeep as soon as it was built: they are
+  //  given some.
   const paid = rebuildBuild.cost().value(),
+    standingGrowth = g.cityGrowth.getByCity(standing),
     temples = (): number =>
       g.cityImprovements
         .getByCity(standing)
@@ -431,13 +436,15 @@ const playLoad = (): void => {
   rebuildBuild.progress().set(paid);
   standingBuild.build(Temple);
   standingBuild.progress().set(standingBuild.cost().value());
+  standingGrowth.progress().set(Math.floor(standingGrowth.cost().value() / 2));
+  g.playerTreasuries.getByPlayerAndType(standing.player(), Gold).add(100);
 
   g.rules.process(TurnStart, rebuild.player());
 
   const cleared = rebuildBuild.cleared();
 
   expect(
-    'at the turn start the rebuild is not completed: the build is dropped as `unavailable`, its shields kept, and there is still one Manhattan Project, lost',
+    'at the turn start the rebuild is not completed: the build is dropped as `unavailable`, its shields kept, there is still one Manhattan Project, lost, and the city stands',
     [
       rebuildBuild.building(),
       cleared?.reason,
@@ -448,14 +455,15 @@ const playLoad = (): void => {
         .getByCity(rebuild)
         .some((improvement) => improvement instanceof ManhattanProject),
       g.wonders.entries().some((wonder) => wonder instanceof ManhattanProject),
+      rebuild.destroyed(),
     ],
-    [null, 'unavailable', true, true, 1, false, false]
+    [null, 'unavailable', true, true, 1, false, false, false]
   );
 
   expect(
-    "the same turn start completes the other city's paid-for Temple",
-    temples() - templesBefore,
-    1
+    "the same turn start completes the other city's paid-for Temple, and the city stands",
+    [temples() - templesBefore, standing.destroyed()],
+    [1, false]
   );
 
   // A civilization coming into the game now, with the Apollo Program lost (as a destroyed one coming back does, #178).

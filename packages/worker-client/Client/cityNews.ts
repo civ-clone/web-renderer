@@ -7,6 +7,7 @@
 import City from '@civ-clone/core-city/City';
 import Notification from '@civ-clone/ui-protocol/Notification';
 import Player from '@civ-clone/core-player/Player';
+import Unit from '@civ-clone/core-unit/Unit';
 
 // What happened to a city during one engine call (#400, #420).
 export type CityNews = {
@@ -17,6 +18,8 @@ export type CityNews = {
   destroyed: boolean;
   destroyedBy: Player | null;
   famine: boolean;
+  // The unit the famine cost the city in place of a citizen, as the engine says (#969), or `null`.
+  famineUnitLost: Unit | null;
   // Removed by its own Settlers (#969): the engine says so before the build is announced and the city destroyed.
   abandoned: boolean;
 };
@@ -40,6 +43,7 @@ export const cityNewsNotifications = (
         destroyed,
         destroyedBy,
         famine,
+        famineUnitLost,
         abandoned,
       },
     ]) => {
@@ -90,11 +94,17 @@ export const cityNewsNotifications = (
         return;
       }
 
+      // With the unit it cost, "Settlers lost.", or else "Famine feared." (#969).
       if (famine) {
         notifications.push(
-          new Notification('City.food-storage-exhausted', {
-            city,
-          })
+          famineUnitLost
+            ? new Notification('City.food-storage-exhausted.unit-lost', {
+                city,
+                unit: famineUnitLost,
+              })
+            : new Notification('City.food-storage-exhausted', {
+                city,
+              })
         );
       }
     }
@@ -130,6 +140,7 @@ export class CityNewsCollector {
         destroyed: false,
         destroyedBy: null,
         famine: false,
+        famineUnitLost: null,
         abandoned: false,
       });
     }
