@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1120,
+        "total": 1121,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -189,7 +189,7 @@
           "Pillaged": 4,
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
-          "ProcessYield": 8,
+          "ProcessYield": 9,
           "Rank": 4,
           "Removed": 4,
           "Renamed": 1,
@@ -361,7 +361,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1120,
+        "total": 1121,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -436,7 +436,7 @@
           "Pillaged": 4,
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
-          "ProcessYield": 8,
+          "ProcessYield": 9,
           "Rank": 4,
           "Removed": 4,
           "Renamed": 1,
@@ -801,7 +801,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1120,
+        "total": 1121,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -876,7 +876,7 @@
           "Pillaged": 4,
           "PollutionConcern": 4,
           "PollutionDivisor": 4,
-          "ProcessYield": 8,
+          "ProcessYield": 9,
           "Rank": 4,
           "Removed": 4,
           "Renamed": 1,

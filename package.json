@@ -94,6 +94,7 @@
     "test:sell-improvement": "node tools/run-suite.js engine sellImprovement",
     "test:held-build": "node tools/run-suite.js engine heldBuild",
     "test:held-build-display": "node tools/run-suite.js ui heldBuildDisplay",
+    "test:lost-wonders": "node tools/lost-wonders.js",
     "test:obsolete-builds": "node tools/run-suite.js engine obsoleteBuilds",
     "test:obsolete-builds:unticked": "node tools/run-suite.js engine obsoleteBuilds -- --unticked",
     "test:future-technology": "node tools/run-suite.js engine futureTechnology",
