@@ -32,12 +32,13 @@ On `start()`:
 - Hooks `engine:start` to create players.
 - Registers one human `DataTransferClient` (player index 0).
 - Registers AI clients (`SimpleAIClient`) for all other players.
-- Calls `engine.start()` and then loads the plugins `backend.ts` handed `Game` (`Plugins.load()`; civ.one's are the
-  generated `src/js/plugins.ts`).
+- Calls `engine.start()` and then loads the plugin set the game is played with, of those `backend.ts` handed `Game`
+  (civ.one's are the generated `src/js/pluginSets.ts`, #668): the default set, unless one was loaded already.
+  One set per worker: see `plugin-and-translation-loading.md`.
 
 On `load()`:
 
-- Imports the plugins, then calls `loadGame()`. There is no `engine.start()`, so no world is generated and no settlers are spawned.
+- Loads the save's plugin set (its `pluginSet`, or `setForSavesWithoutOne` for a save from before sets), then calls `loadGame()`. There is no `engine.start()`, so no world is generated and no settlers are spawned.
 - `restoreGame()` registers the classes and plugins, strips old diplomacy data, hydrates the save into `defaultGame`, and repairs older saves (tiles held by destroyed cities, ships' registries). It makes a `DataTransferClient` for each player the save records as served by `DataTransferClient`, and a `SimpleAIClient` for the rest.
 - `resumeGame()` hands the turn back to the player who was taking it, or emits `turn:start` if the save was taken between turns.
 

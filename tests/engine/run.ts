@@ -15,6 +15,8 @@ import Player from '@civ-clone/core-player/Player';
 import SimpleAIClient from '@civ-clone/simple-ai-client/SimpleAIClient';
 import { Snapshot, checksum, snapshot } from './lib/checksum';
 import World from '@civ-clone/core-world/World';
+import pluginSets from '../../src/js/pluginSets';
+import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
@@ -213,6 +215,11 @@ process.on('unhandledRejection', (error) => fail('unhandled rejection', error));
 
 engine.start();
 
-import('../../src/js/plugins')
+// The default set (#668), as the worker loads it: each plugin imported in its turn, in name order.
+const plugins = pluginsFrom(pluginSets);
+
+plugins.sets
+  .find(({ id }) => id === plugins.default)!
+  .load()
   .then(() => engine.emit('plugins:load:end'))
   .catch((error) => fail('failed to load plugins', error));

@@ -79,7 +79,7 @@ import { RuleSetNode } from '@civ-clone/ui-protocol/Requests/RuleSets';
 import civilopediaData from '@civ-clone/ui-worker-client/lib/civilopedia';
 import { gameForLoad } from '@civ-clone/core-save-game/gameForLoad';
 import { hydrate } from '@civ-clone/core-save-game/hydrate';
-import civOnePlugins from './lib/plugins';
+import { civOneManifest } from './lib/plugins';
 import { registerClasses } from '@civ-clone/core-save-game/registerClasses';
 import requirementsData from '@civ-clone/ui-worker-client/lib/requirements';
 import { save } from '@civ-clone/core-save-game/save';
@@ -540,7 +540,7 @@ const check = async (): Promise<void> => {
   );
 
   // --- saved and loaded --------------------------------------------------------------------------------------------
-  defaultGame.engine.registerPlugins(civOnePlugins.manifest);
+  defaultGame.engine.registerPlugins(civOneManifest);
   registerClasses(defaultGame);
 
   const file = save(defaultGame, { name: 'rule sets', createdAt: 0 });

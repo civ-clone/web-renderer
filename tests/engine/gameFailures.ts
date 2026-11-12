@@ -11,7 +11,7 @@ import RuleSet from '@civ-clone/core-rule/RuleSet';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
 import { SaveGame } from '@civ-clone/core-save-game/SaveGame';
 import { renameRetiredPlugins } from '@civ-clone/ui-worker-client/loadGame';
-import civOnePlugins from './lib/plugins';
+import civOnePlugins, { civOneManifest } from './lib/plugins';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 
 const failures: string[] = [];
@@ -223,7 +223,7 @@ engine.on = on;
           format: 2,
           entities: [],
           meta: { name: 'rule sets', createdAt: 0, turn: 1 },
-          engine: { plugins: civOnePlugins.manifest },
+          engine: { plugins: civOneManifest },
           rng: { seed: 1, calls: 0 },
           idCounters: {},
           registries: {},

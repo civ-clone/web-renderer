@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { Plugins } from './Plugins';
+import { PluginSet, Plugins } from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -67,8 +67,10 @@ export class Game implements IGame {
   #seats: WeakMap<Client, Seat> = new WeakMap();
   #transport: Transport<TransportDataMap>;
 
-  // The rules this game is played with, which the worker's entry hands in (#825).
+  // The rules this game can be played with, which the worker's entry hands in (#825), and the set of them it is (#668):
+  //  fixed by the first thing that needs them, as plugins can't be unloaded.
   #plugins: Plugins;
+  #set: PluginSet | null = null;
 
   // What is set up for every game in this worker, new or loaded, each in the order it has always been registered
   //  (#869): the engine's events the page hears of, then the page's messages and requests, the larger each to a
@@ -91,6 +93,44 @@ export class Game implements IGame {
 
     this.#answerCivilopedia();
     this.#answerOptions();
+  }
+
+  /**
+   * The set of plugins this game is played with (#668): the one asked for, or the one already loaded, or the default.
+   *  The first fixes it. Plugins register their rules into the engine's registries as they are imported, and can't be
+   *  taken out again, so one set can't be swapped for another: asked for, it is refused, not loaded on top.
+   */
+  #choose(id: unknown = this.#set?.id ?? this.#plugins.default): PluginSet {
+    const set = this.#plugins.sets.find((candidate) => candidate.id === id);
+
+    if (set === undefined) {
+      throw new Error(
+        `There are no ${JSON.stringify(
+          id
+        )} rules here: the rules here are ${this.#plugins.sets
+          .map(({ id }) => id)
+          .join(', ')}.`
+      );
+    }
+
+    if (this.#set !== null && this.#set !== set) {
+      throw new Error(
+        `The ${this.#set.id} rules are loaded here already, and the ${
+          set.id
+        } rules can't be loaded on top of them: they need the page loaded again.`
+      );
+    }
+
+    this.#set = set;
+
+    return set;
+  }
+
+  /** Loads the set of plugins `#choose` fixes: resolves with it once they are all in. */
+  #load(id?: unknown): Promise<PluginSet> {
+    return new Promise<PluginSet>((resolve) =>
+      resolve(id === undefined ? this.#choose() : this.#choose(id))
+    ).then((set: PluginSet) => set.load().then(() => set));
   }
 
   // A player brought into a running game (#168) is a computer player's: the engine asks for its client, as it never
@@ -171,13 +211,19 @@ export class Game implements IGame {
     let data: string;
 
     try {
-      data = JSON.stringify(
-        save(defaultGame, {
-          name,
-          describeClient: (client: unknown): DescribedClient =>
-            this.#describeClient(client as Client),
-        })
-      );
+      const file: SaveGame & { pluginSet?: string } = save(defaultGame, {
+        name,
+        describeClient: (client: unknown): DescribedClient =>
+          this.#describeClient(client as Client),
+      });
+
+      // Which set of plugins the game is played with (#668), for a load to load: the file's own manifest says which
+      //  packages, but not which set they were, and a save without it is taken as made before there were sets.
+      if (this.#set !== null) {
+        file.pluginSet = this.#set.id;
+      }
+
+      data = JSON.stringify(file);
     } catch (error) {
       // Reported rather than thrown: the worker would otherwise die silently
       // mid-game, and a save that cannot be written is not a reason to lose
@@ -272,7 +318,7 @@ export class Game implements IGame {
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
     //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).
     answer(this.#transport, 'difficulties', () =>
-      this.#plugins.load().then(() =>
+      this.#load().then(() =>
         defaultGame.availableDifficulties.sorted().map((Level) => ({
           name: typeNameOf(Level),
           level: Level.level(),
@@ -283,7 +329,7 @@ export class Game implements IGame {
     // What the game setup (#604) offers: the civilizations and leaders still to be chosen, and the AI clients a computer
     //  seat can be given. Answered as `difficulties` is, with the plugins imported first.
     answer(this.#transport, 'civilizations', () =>
-      this.#plugins.load().then(() =>
+      this.#load().then(() =>
         defaultGame.civilizations.entries().map((CivilizationType) => ({
           name: typeNameOf(CivilizationType),
           leaders: defaultGame.leaders
@@ -301,17 +347,15 @@ export class Game implements IGame {
     // The rule sets a new game can switch (#158), from the rules as the levels are, and with the page's choices and
     //  its one change made: what switching a set does to what is beneath it is the rules' to say.
     answer(this.#transport, 'ruleSets', (query) =>
-      this.#plugins.load().then(() => ruleSetsData(query, this.#playing))
+      this.#load().then(() => ruleSetsData(query, this.#playing))
     );
 
     answer(this.#transport, 'aiClients', () =>
-      this.#plugins
-        .load()
-        .then(() =>
-          this.#availableAIClients().map((AIClientType) =>
-            typeNameOf(AIClientType)
-          )
+      this.#load().then(() =>
+        this.#availableAIClients().map((AIClientType) =>
+          typeNameOf(AIClientType)
         )
+      )
     );
   }
 
@@ -324,9 +368,8 @@ export class Game implements IGame {
     }
 
     // The plugins are in first: the seats name civilizations, leaders and AI clients that they register, so rules
-    //  handed in to load lazily are in before the seats are checked against them (#825). civ.one's are in already.
-    this.#plugins
-      .load()
+    //  handed in to load lazily are in before the seats are checked against them (#825), as civ.one's sets are (#668).
+    this.#load()
       .then(() => this.start())
       .catch((error: unknown): void => {
         console.error(error);
@@ -635,9 +678,14 @@ export class Game implements IGame {
     // The file says which rule sets its game is played under (#158), and they are not the page's to change.
     this.#playing = true;
 
-    this.#plugins
-      .load()
-      .then(() => {
+    // And which set of plugins (#668), read before any is loaded: one made before there were sets is loaded with the
+    //  set every plugin was in then.
+    const pluginSet =
+      (file as SaveGame & { pluginSet?: unknown }).pluginSet ??
+      this.#plugins.withoutOne;
+
+    this.#load(pluginSet)
+      .then((set: PluginSet) => {
         // Sets that can't be used as the save chose them are said before the game is put back, and it isn't (#954).
         //  A set that names something not loaded is played without it, and said as a set the save chose that isn't
         //  here is.
@@ -663,7 +711,7 @@ export class Game implements IGame {
               this.#seatAvailableHere(player, changed.get(player.id()) ?? seat),
               observed
             ),
-          this.#plugins.manifest,
+          set.manifest,
           () => this.#observer?.observeFirst()
         );
       })
@@ -679,9 +727,10 @@ export class Game implements IGame {
   }
 
   start(): void {
-    let seats: ResolvedSeat[];
+    let seats: ResolvedSeat[], set: PluginSet;
 
     try {
+      set = this.#choose();
       seats = this.#resolveSeats();
 
       // The rule sets the game was set up with (#158), before anything is made under the rules. Refused with the
@@ -710,7 +759,7 @@ export class Game implements IGame {
       // it against, and the class registry is what turns a saved `type` back
       // into something to allocate. Registered before any player claims a
       // civilisation, because `civ1-player` unregisters one as it is claimed.
-      engine.registerPlugins(this.#plugins.manifest);
+      engine.registerPlugins(set.manifest);
       registerClasses(defaultGame);
       registerDiplomacyClasses(defaultGame);
       registerBarbarianClasses(defaultGame);
@@ -750,8 +799,7 @@ export class Game implements IGame {
     engine.start();
 
     // A game that can't start would otherwise leave the page waiting with nothing to say why (#470).
-    this.#plugins
-      .load()
+    this.#load(set.id)
       .then(() => engine.emit('plugins:load:end'))
       .catch((error: unknown): void => {
         console.error(error);
