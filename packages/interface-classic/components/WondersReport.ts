@@ -30,29 +30,32 @@ export const wondersRowText = (row: WondersRow): string => {
     return t('WondersReport.destroyed', { ...text, wonder });
   }
 
+  const civilization =
+    row.owner === null
+      ? t('Generic.unknown-civilization')
+      : t('Generic.civilization-name.name', {
+          ...text,
+          civilization: row.owner.civilization,
+          player: { civilization: { _: row.owner.civilization } },
+        });
+
+  // A city you haven't seen isn't named: a sentence of its own, for a translator to word.
+  if (row.city === null) {
+    return t('WondersReport.unseen', { ...text, wonder, civilization });
+  }
+
   return t('WondersReport.standing', {
     ...text,
-    // A city you haven't seen isn't named.
-    place:
-      row.city === null
-        ? wonder
-        : t('WondersReport.place', {
-            ...text,
-            context: row.wonder,
-            wonder: wonderName(row.wonder),
-            city: cityNameText({
-              name: row.city.name,
-              originalPlayer: { civilization: { _: row.city.civilization } },
-            }),
-          }),
-    civilization:
-      row.owner === null
-        ? t('Generic.unknown-civilization')
-        : t('Generic.civilization-name.name', {
-            ...text,
-            civilization: row.owner.civilization,
-            player: { civilization: { _: row.owner.civilization } },
-          }),
+    place: t('WondersReport.place', {
+      ...text,
+      context: row.wonder,
+      wonder: wonderName(row.wonder),
+      city: cityNameText({
+        name: row.city.name,
+        originalPlayer: { civilization: { _: row.city.civilization } },
+      }),
+    }),
+    civilization,
   });
 };
 

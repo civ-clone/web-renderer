@@ -36,6 +36,8 @@ i18next.addResources('en', 'default', {
   'WondersReport.wonder': '{{- wonder}}',
   'WondersReport.place': '{{- wonder}} in {{- city}}',
   'WondersReport.standing': '{{- place}}. ({{- civilization}})',
+  // In a city you haven't seen: "The Pyramids. (Aztec)", the Wonder as `WondersReport.wonder` words it.
+  'WondersReport.unseen': '{{- wonder}}. ({{- civilization}})',
   'WondersReport.destroyed': '{{- wonder}} (Destroyed)',
   'TradeReport.ImprovementList.cost': '{{- icon}} {{total, number}}',
   'TradeReport.ImprovementList.item': '{{count, number}} &times; {{name}}',
