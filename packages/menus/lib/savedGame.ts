@@ -5,7 +5,10 @@ import {
   savedSeats,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import { allowLeaving } from '@civ-clone/ui-component-window/leaveGuard';
-import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
+import {
+  isSupportedTopology,
+  tilesetToImport,
+} from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 
 /**
@@ -191,6 +194,21 @@ export const gridName = (topologyId: string): string =>
   t(`Grid.${topologyId}`, { defaultValue: topologyId });
 
 /**
+ * Why a world on `topologyId`'s grid can't be drawn here, for telling the player: the art its map needs hasn't been
+ *  imported (Civ2's, for the isometric grid, #97), or the grid can't be drawn at all.
+ */
+export const unsupportedGridMessage = (topologyId: string): string => {
+  const tileset = tilesetToImport(topologyId);
+
+  return tileset === null
+    ? t('SavedGame.needs-grid', { grid: gridName(topologyId) })
+    : t('SavedGame.needs-import', {
+        grid: gridName(topologyId),
+        tileset: tileset.name,
+      });
+};
+
+/**
  * Reads a save the player chose, or an autosave (#653), shows its seats for reassigning (#608), and reloads into it.
  * Closing the seats window instead loads nothing.
  */
@@ -217,11 +235,12 @@ export const loadSaveFromFile = async (
     throw error;
   }
 
-  // A world on a grid that can't be drawn here would load into a map of nonsense: say so, and stay on the menu.
+  // A world on a grid that can't be drawn here would load into a map of nonsense: say so, and stay on the menu. One
+  //  whose art just hasn't been imported says which to import.
   const topologyId = savedTopologyId(parsed);
 
   if (!isSupportedTopology(topologyId)) {
-    const message = t('SavedGame.needs-grid', { grid: gridName(topologyId) });
+    const message = unsupportedGridMessage(topologyId);
 
     window.alert(message);
 

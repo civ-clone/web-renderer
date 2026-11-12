@@ -118,6 +118,15 @@ i18next.addResources('en', 'default', {
   'ImportAssetsWindow.optional':
     'Add {{files, list}} as well for the improvement and Wonder icons.',
   'ImportAssetsWindow.optional-sound': 'Add {{file}} for the music.',
+  // Civilization II's sheets, for its isometric map (#97): optional, as Civilization's own files are all a game needs.
+  'ImportAssetsWindow.optional-civ2':
+    'To play on an isometric map, add {{files, list}} from Civilization II as well (optional).',
+  'ImportAssetsWindow.civ2-complete':
+    'Civilization II’s map art is imported: new games can be played on the isometric map.',
+  'ImportAssetsWindow.civ2-incomplete':
+    'Civilization II’s map art is not complete yet: add {{files, list}} to play on the isometric map.',
+  'ImportAssetsWindow.civ2-skipped':
+    '{{file}} couldn’t be read as Civilization II’s, so it was skipped.',
   'ImportAssetsWindow.missing-data':
     'Not all expected data was written. Might need to try again... Missing: {{files, list}}.',
   'ImportAssetsWindow.progress-building': 'Building image assets...',
@@ -161,6 +170,9 @@ i18next.addResources('en', 'default', {
   'SavedGame.could-not-write': 'That save could not be written: {{- error}}',
   'SavedGame.needs-grid':
     'That save is on a {{- grid}} map, which can’t be drawn here, so it has not been loaded.',
+  // A save on a grid whose pack's art hasn't been imported (#97): Civilization II's, for the isometric grid.
+  'SavedGame.needs-import':
+    'That save’s map is {{- grid}}, drawn with art from {{- tileset}}, which hasn’t been imported, so it has not been loaded. Import it in Import assets, then load the save again.',
   'SavedGame.no-decompression':
     'this browser cannot read compressed saves — it has no `DecompressionStream`',
   'SavedGame.not-a-save': 'the file is not a civ-clone save',

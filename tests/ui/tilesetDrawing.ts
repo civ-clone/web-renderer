@@ -1062,6 +1062,60 @@ expect(
   ]
 );
 
+// Civ2's own pack (#97): each quarter is named for its neighbours last-clockwise first, as the art is drawn (the top
+//  quarter's `n-001` has land along its NW edge), so land at one edge neighbour picks the quarters on that side.
+{
+  const civ2 =
+      require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').validateDescriptor(
+        require('@civ-clone/ui-assets/tilesets/civ2.json')
+      ) as TilesetDescriptor,
+    ocean = Object.fromEntries(
+      ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map((direction) => [
+        direction,
+        { terrain: 'Ocean' },
+      ])
+    ),
+    quarters = (land: string): string[] => {
+      madeCanvases.length = 0;
+
+      drawn(
+        Landscape,
+        civ2,
+        isoWorld(
+          { terrain: 'Ocean' },
+          { ...ocean, [land]: { terrain: 'Grassland' } }
+        ),
+        2,
+        4,
+        isoTile
+      );
+
+      return madeCanvases
+        .flat()
+        .filter((call) => call.startsWith('drawImage(civ2/terrain/coast/'))
+        .map((call) =>
+          call.replace(/^drawImage\(civ2\/terrain\/coast\/|,.*$/g, '')
+        );
+    };
+
+  ['n', 'e', 's', 'w'].forEach((corner) =>
+    ['000', '001', '100'].forEach((bits) =>
+      preloadImage(`civ2/terrain/coast/${corner}-${bits}`, 32, 16)
+    )
+  );
+
+  expect(
+    "Civ2's coast: land at one edge neighbour picks the two quarters beside it, each named last neighbour first",
+    ['nw', 'ne', 'se', 'sw'].map(quarters),
+    [
+      ['n-001', 'e-000', 's-000', 'w-100'],
+      ['n-100', 'e-001', 's-000', 'w-000'],
+      ['n-000', 'e-100', 's-001', 'w-000'],
+      ['n-000', 'e-000', 's-100', 'w-001'],
+    ]
+  );
+}
+
 const isoMouthWorld = () =>
   isoWorld(
     { terrain: 'Ocean' },
@@ -1844,7 +1898,7 @@ expect(
   );
 
   expect(
-    'the active unit is drawn, and ringed, 16 px above its tile',
+    "the active unit is drawn 16 px above its tile, and ringed by the tile's own diamond round its box, not its sprite's",
     (() => {
       const { canvas } = recordingCanvas(400, 400),
         world = isoWorld({ '1,2': { units: [{ _: 'Settlers' }] } });
@@ -1868,14 +1922,90 @@ expect(
       layer.setActiveUnit(world.get(1, 2).units[0]!, { x: 1, y: 2 });
       layer.render();
 
-      return layer.squares();
+      return [layer.squares(), layer.outline()];
     })(),
     // Tile 1,2's box is at 128,64 at 2×, odd rows half a tile across and each row half a tile down.
-    [{ x: 128, y: 32, width: 128, height: 96 }]
+    [
+      [{ x: 128, y: 64, width: 128, height: 64 }],
+      [
+        [0.5, 0],
+        [1, 0.5],
+        [0.5, 1],
+        [0, 0.5],
+      ],
+    ]
   );
 
   expect(
-    "a window's unit is shown whole, on its tile and the room above it its sprite takes: 64 × 48 for Civ2's",
+    'on the isometric grid the ring is drawn on the map under the unit (#97), as wide as the scale makes it, and taken away with null',
+    (() => {
+      const { canvas, calls } = recordingCanvas(400, 400),
+        world = isoWorld({ '1,2': { units: [{ _: 'Settlers' }] } });
+
+      class IsoActiveUnit extends ActiveUnit {
+        override tileset(): TilesetDescriptor {
+          return isoTileset;
+        }
+      }
+
+      const layer = new IsoActiveUnit(
+        world,
+        2,
+        { width: 64, height: 32 },
+        canvas
+      );
+
+      layer.setWrapVertical(false);
+      layer.setActiveUnit(world.get(1, 2).units[0]!, { x: 1, y: 2 });
+      layer.render();
+
+      const before = calls.filter((call) => call === 'stroke()').length,
+        from = calls.length,
+        changed = layer.setRing({ colour: '#e0b85a', halo: '#000' }),
+        again = layer.setRing({ colour: '#e0b85a', halo: '#000' }),
+        drawn = calls.slice(from),
+        firstStroke = drawn.indexOf('stroke()'),
+        unit = drawn.findIndex((call) => call.startsWith('drawImage(')),
+        widths = drawn.filter((call) => call.startsWith('lineWidth=')),
+        // The corners the ring is drawn through, and so how far its widest stroke, with its round joins, reaches.
+        points = drawn
+          .filter((call) => /^(moveTo|lineTo)\(/.test(call))
+          .map((call) =>
+            call
+              .replace(/^\w+\(|\)$/g, '')
+              .split(',')
+              .map(Number)
+          ),
+        reach = 8 / 2,
+        extent = {
+          left: Math.min(...points.map(([x]) => x!)) - reach,
+          top: Math.min(...points.map(([, y]) => y!)) - reach,
+          right: Math.max(...points.map(([x]) => x!)) + reach,
+          bottom: Math.max(...points.map(([, y]) => y!)) + reach,
+        };
+
+      calls.length = 0;
+      layer.setRing(null);
+
+      return [
+        before,
+        changed,
+        again,
+        firstStroke > -1 && firstStroke < unit,
+        widths,
+        calls.includes('stroke()'),
+        // Inside tile 1,2's box, 128,64 and 128 × 64 at 2×, which the layer clears when the ring moves.
+        extent.left >= 128 &&
+          extent.top >= 64 &&
+          extent.right <= 256 &&
+          extent.bottom <= 128,
+      ];
+    })(),
+    [0, true, false, true, ['lineWidth=8', 'lineWidth=4'], false, true]
+  );
+
+  expect(
+    "a window's unit is shown whole, on its tile and the room above it its sprite takes: 64 × 48 for Civ2's, at its own size when asked for Civ1's 2× (#97)",
     (() => {
       madeCanvases.length = 0;
 
@@ -1900,8 +2030,8 @@ expect(
     [
       { width: 64, height: 48, tileX: 0, tileY: 16 },
       { width: 16, height: 16, tileX: 0, tileY: 0 },
-      [128, 96],
-      ['drawImage(object,0,0,128,96)'],
+      [64, 48],
+      ['drawImage(object,0,0,64,48)'],
     ]
   );
 

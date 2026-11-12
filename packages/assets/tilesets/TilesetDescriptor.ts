@@ -116,8 +116,8 @@ export interface CoastCorner {
 /**
  * A coast, in quarters each picked by the neighbours touching it: cut from one `strip` with the neighbours in `order`
  * (Civ1's), or named quarter sprites, `sprite` filled with each of `corners`' names as `{corner}` and one digit per
- * neighbour as `{bits}`, `1` for land, in the corner's order (Civ2's `terrain/coast/n-011`, the top quarter with land
- * to the N and NE of the three it touches, NW, N and NE). A coast has one or the other.
+ * neighbour as `{bits}`, `1` for land, in the corner's order (Civ2's top quarter is named for the three it touches as NE,
+ * N and NW, so `terrain/coast/n-011` has land to the N and NW). A coast has one or the other.
  */
 export interface CornersFamily {
   method: 'corners';

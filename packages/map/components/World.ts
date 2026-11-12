@@ -3,7 +3,10 @@ import {
   Tile,
   World as WorldData,
 } from '@civ-clone/ui-protocol/types';
-import topologyFor, { Topology } from '@civ-clone/ui-client/lib/topologyFor';
+import topologyFor, {
+  Topology,
+  TopologyId,
+} from '@civ-clone/ui-client/lib/topologyFor';
 
 export class World {
   #unknown = (x: number, y: number): Tile => ({
@@ -33,6 +36,7 @@ export class World {
   #tiles: Tile[];
   #height: number;
   #topology: Topology;
+  #topologyId: TopologyId;
   #width: number;
 
   // `neighbours` are tiles that are only ever a tile's neighbour, never drawn themselves: the squares round a city's on
@@ -42,6 +46,7 @@ export class World {
     this.#width = world.width;
     this.#tiles = world.tiles || [];
     this.#topology = topologyFor(world);
+    this.#topologyId = world.topologyId ?? 'square';
 
     neighbours.forEach((tile) =>
       this.#neighbours.set([tile.x, tile.y].toString(), tile)
@@ -105,6 +110,11 @@ export class World {
   /** The shape of the world's grid: which tile neighbours which, and which ways there are (#88). */
   topology(): Topology {
     return this.#topology;
+  }
+
+  /** Which grid the world is on, as the engine names it (#89): square when it does not say. */
+  topologyId(): TopologyId {
+    return this.#topologyId;
   }
 
   width(): number {

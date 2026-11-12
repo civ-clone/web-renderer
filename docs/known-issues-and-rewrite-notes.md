@@ -47,6 +47,15 @@ From `README.md` known issues/TODO:
 - Map portal recentring can fail in some situations. #14 (276fdc0) now brings a unit near the edge back to the middle, and #189 fixed a unit losing focus, and the map jumping, after a move. Whether that covers the README's case is not known; the README still lists it.
 - `Portal.isVisible` is approximate: it counts whole columns and rows from the centre tile and ignores how far the map has been dragged off it. On the square grid that only counts a tile up to half a column inside the edge as hidden, which callers tolerate (recentring uses a margin of 2, and `setCenter` drops the drag). On a staggered isometric grid a margin-0 answer can also be off by up to half a column the other way (#97).
 - Trade-rate slider behavior can be inconsistent. Not checked; no issue.
+- The isometric map with Civ2's art (#97), as first offered:
+  - The city screen's arrow keys follow the grid's axes, so Up steps to the north-east square, a quarter turn from
+    the screen's up.
+  - A size 1 to 3 city's sprite is small enough that a unit standing in it can cover it.
+  - A tall city's top 16 px reach the tile north of it, where a unit is drawn over that part of the city: units are a
+    layer over every city (so a unit in a city stands in front of it), not interleaved row by row (#86).
+  - The overview (minimap) is scaled to its box by a factor that need not be whole, so its tiles can be uneven.
+  - Loading an isometric save before Civ2's art is imported is refused with an `alert()`, as the existing message for
+    a grid that can't be drawn is.
 - Minimap highlight render position/wrapping needs work. Fixed: the viewport box wraps (91fe1f6) and a click lands on the tile clicked (#54). The README's TODO list still has it.
 
 ## Source-level TODO hotspots

@@ -1,7 +1,9 @@
 import { Element, s } from '@dom111/element';
 import { Unit as UnitData } from '@civ-clone/ui-protocol/types';
-import currentTileset, {
+import {
+  mapTileset,
   nativeTileSize,
+  shownScale,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import {
   Size,
@@ -46,17 +48,20 @@ export class Unit extends Element {
   #tileset: TilesetDescriptor;
 
   /**
-   * `unit` drawn as `tileset` draws it, the map's (#97: the windows' units follow the map's pack, so a unit looks the
-   *  same in both).
+   * `unit` drawn as `tileset` draws it, the game's map's (#97: the windows' units follow the map's pack, so a unit
+   *  looks the same in both), `scale` times its size. The scales are Civ1's 16 px tile's: a pack drawn larger (Civ2's
+   *  64 px) is shown no larger than at its own default scale.
    */
   constructor(
     unit: Pick<UnitData, '_' | 'player' | 'improvements' | 'busy'>,
     scale: number = 2,
-    tileset: TilesetDescriptor = currentTileset()
+    tileset: TilesetDescriptor = mapTileset()
   ) {
-    super(tileCanvas(scale, tileset));
+    const shownAt = shownScale(scale, tileset);
 
-    this.#scale = scale;
+    super(tileCanvas(shownAt, tileset));
+
+    this.#scale = shownAt;
     this.#tileset = tileset;
 
     this.build(unit);

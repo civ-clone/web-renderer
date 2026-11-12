@@ -41,6 +41,13 @@ import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import isoJson from './fixtures/iso-tileset.json';
+import civ2Json from '@civ-clone/ui-assets/tilesets/civ2.json';
+import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
+import * as Civilizations from '@civ-clone/civ1-civilization/Civilizations';
+import * as WorldCivilizations from '@civ-clone/civ1-world-civilizations/Civilizations';
+import { Barbarian } from '@civ-clone/base-civilization-barbarian/Barbarian';
+import { civ2Pack } from '@civ-clone/ui-assets/lib/packs';
+import { createTopology } from '@civ-clone/core-world/topologies';
 
 const failures: string[] = [];
 let checks = 0,
@@ -1409,6 +1416,29 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     [[2, { width: 32, height: 32 }]]
   );
   expect(
+    "a portal over an isometric world takes the isometric grid's pack's (#97): Civ2's 64 × 32 at 1×, drawn with it",
+    (() => {
+      const portal = new Portal(
+        new World({
+          width: 4,
+          height: 4,
+          tiles: [],
+          topologyId: 'staggered-iso',
+        } as any),
+        {} as any,
+        blankCanvas(100, 60)
+      );
+
+      return [
+        portal.scale(),
+        portal.tileSize(),
+        portal.world().topologyId(),
+        portal.projection().footprint(),
+      ];
+    })(),
+    [1, { width: 64, height: 32 }, 'staggered-iso', { width: 64, height: 32 }]
+  );
+  expect(
     "a portal on the square grid told a tile wider than it is tall is refused, as the square grid's steps would disagree with the layers'",
     (() => {
       try {
@@ -1514,6 +1544,200 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ].map(([spriteWidth, width]) => shownAtScale(spriteWidth, width)),
     [2, 2, 2, 1, 1, 1, 3, 1]
   );
+
+  // Civ2's pack (#97): the Civ2 extractor's sprites, by its names, for Civilization's rules on the isometric grid.
+  {
+    const civ2 = validateDescriptor(civ2Json),
+      cut = new Set(
+        Object.values(
+          (
+            civ2ExtractData as {
+              files: {
+                [file: string]: {
+                  grids: { path: string; names: (string | null)[] }[];
+                };
+              };
+            }
+          ).files
+        ).flatMap(({ grids }) =>
+          grids.flatMap(({ path, names }) =>
+            names.flatMap((name) => (name === null ? [] : [path + name]))
+          )
+        )
+      ),
+      required = new Set(civ2.assets.required),
+      { families, names, units, cities } = civ2,
+      terrainNames = Object.keys(Terrains),
+      edgeDirections = createTopology('staggered-iso', 2, 2).edgeDirections(),
+      allDirections = createTopology('staggered-iso', 2, 2).directions(),
+      // Every non-empty set of the edges, in the topology's order, as the bitmask names them.
+      edgeSets = Array.from(
+        { length: 2 ** edgeDirections.length - 1 },
+        (_, index) =>
+          edgeDirections
+            .filter((__, bit) => (index + 1) & (1 << bit))
+            .join(families.terrain.join ?? '')
+      ),
+      terrainWord = (terrain: string): string =>
+        names.terrain[terrain] ?? terrain.toLowerCase(),
+      // Every sprite the map can ask Civ2's pack for, named as the layers name them.
+      asked = [
+        ...terrainNames
+          .filter((terrain) => terrain !== 'Ocean')
+          .map((terrain) =>
+            expandName(families.base.land, {
+              terrain: terrainWord(families.base.under?.[terrain] ?? terrain),
+            })
+          ),
+        families.base.ocean,
+        ...terrainNames
+          .filter((terrain) => !families.terrain.skip!.includes(terrain))
+          .flatMap((terrain) => [
+            expandName(families.terrain.isolated as string, {
+              terrain: terrainWord(terrain),
+            }),
+            ...edgeSets.map((dirs) =>
+              expandName(families.terrain.sprite, {
+                terrain: terrainWord(terrain),
+                dirs,
+              })
+            ),
+          ]),
+        ...Object.entries(families.coast.corners!).flatMap(
+          ([corner, { neighbours }]) =>
+            Array.from({ length: 2 ** neighbours.length }, (_, bits) =>
+              expandName(families.coast.sprite!, {
+                corner,
+                bits: bits.toString(2).padStart(neighbours.length, '0'),
+              })
+            )
+        ),
+        ...edgeDirections.map((dir) =>
+          expandName(families.riverMouth.sprite, { dir })
+        ),
+        ...(['road', 'railroad'] as const).flatMap((family) => [
+          families[family].isolated as string,
+          ...allDirections.map((dir) =>
+            expandName(families[family].sprite, { dir })
+          ),
+        ]),
+        families.irrigation.sprite,
+        families.mine.sprite,
+        families.pollution.sprite,
+        families.hut.sprite,
+        ...Object.values(names.special).map((special) =>
+          expandName(families.special.sprite, { special })
+        ),
+        ...Object.keys(Units).map((unit) =>
+          expandName(units.sprite, {
+            unit: names.unit[unit] ?? unit.toLowerCase(),
+          })
+        ),
+        units.fortified,
+        (units.colouring as { sprite: string }).sprite,
+        (units.colouring as { stack: { sprite: string } }).stack.sprite,
+        (cities.colouring as { sprite: string }).sprite,
+        ...cities.styles!.names.flatMap((style) =>
+          [cities.styles!.walls.plain, cities.styles!.walls.walled].flatMap(
+            (walls) =>
+              cities.styles!.sizes.map((_, size) =>
+                expandName(cities.sprite, {
+                  style,
+                  walls,
+                  size: String(size),
+                })
+              )
+          )
+        ),
+      ],
+      // The specials on each terrain, as Civ1's rules place them (civ1-world's Rules/Terrain/feature.ts).
+      specials = [
+        'Hills:Coal',
+        'Ocean:Fish',
+        'Forest:Game',
+        'Tundra:Game',
+        'Jungle:Gems',
+        'Mountains:Gold',
+        'Plains:Horse',
+        'Desert:Oasis',
+        'Swamp:Oil',
+        'Arctic:Seal',
+        'Grassland:Shield',
+        'River:Shield',
+      ],
+      civilizations = [
+        ...Object.keys(Civilizations),
+        ...Object.keys(WorldCivilizations),
+        Barbarian.name,
+      ];
+
+    expect(
+      "Civ2's pack is the one the import stores: the same id, kept under the same prefix and extension, with a record of its sprites' anchors",
+      [civ2.id, civ2.storage, civ2Pack.metadata],
+      [civ2Pack.id, civ2Pack.storage, true]
+    );
+    expect(
+      "Civ2's pack: every sprite it lists is one the Civ2 extractor cuts",
+      [...civ2.assets.required, ...civ2.assets.optional].filter(
+        (name) => !cut.has(name)
+      ),
+      []
+    );
+    expect(
+      "Civ2's pack: every sprite the map can ask it for is required, so it is only installed with all of them",
+      [...new Set(asked)].filter((name) => !required.has(name)),
+      []
+    );
+    expect(
+      "Civ2's pack: and it requires nothing the map won't ask for",
+      civ2.assets.required.filter((name) => !asked.includes(name)),
+      []
+    );
+    expect(
+      "Civ2's pack: each of Civilization's units, terrains' specials and civilizations has a Civ2 sprite or style of its own",
+      [
+        Object.keys(Units).filter((unit) => names.unit[unit] === undefined),
+        specials.filter((special) => names.special[special] === undefined),
+        Object.keys(names.special).filter(
+          (special) => !specials.includes(special)
+        ),
+        civilizations.filter(
+          (civilization) =>
+            cities.styles!.civilizations[civilization] === undefined
+        ),
+      ],
+      [[], [], [], []]
+    );
+    expect(
+      "Civ2's pack: staggered isometric 64 × 32 at 1× and 2×, its units and cities 64 × 48 reaching 16 px above the tile, no fog, irrigation over the terrain, and the rest from Civ1's",
+      [
+        civ2.grid,
+        civ2.tile,
+        civ2.scales,
+        civ2.defaultScale,
+        units.anchor,
+        cities.anchor,
+        civ2.geometry.overhang.top,
+        families.fog,
+        families.irrigation.overTerrain,
+        civ2.fallback,
+        notDrawnYet(civ2),
+      ],
+      [
+        'staggered-iso',
+        { width: 64, height: 32 },
+        [1, 2],
+        1,
+        { x: 0, y: -16 },
+        { x: 0, y: -16 },
+        16,
+        undefined,
+        true,
+        'civ1',
+        null,
+      ]
+    );
+  }
 
   finished = true;
 

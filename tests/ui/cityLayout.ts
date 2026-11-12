@@ -1587,8 +1587,9 @@ const run = async (): Promise<void> => {
     HTMLElement.prototype.focus = focus;
     delete (document as any).activeElement;
 
-    // The whole screen for a city on an isometric world opens, its map drawn with whichever tileset is current.
-    const isoScreen = openCity(cityAt(5, 3), portal, transport);
+    // The whole screen for a city on an isometric world opens, its map drawn with the isometric grid's pack (#97), as
+    //  the game's own portal on that grid is.
+    const isoScreen = openCity(cityAt(5, 3), isoPortal, transport);
 
     expect(
       'the city screen opens for a city on an isometric world, a button over each of its 21 squares',

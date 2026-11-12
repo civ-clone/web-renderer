@@ -433,6 +433,7 @@ const topology = topologyFor({ width: 10, height: 1 }),
     width: () => 10,
     height: () => 1,
     topology: () => topology,
+    topologyId: () => 'square',
   },
   layer = <T extends typeof Units>(Layer: T) => {
     const { calls, canvas } = fakeCanvas(320, 32);

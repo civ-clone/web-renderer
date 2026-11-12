@@ -10,10 +10,14 @@ import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import ImportAssetsWindow from './ImportAssetsWindow';
+import { civ2Status, civ2StatusText } from '../lib/civ2Import';
 import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { button } from '@civ-clone/ui-component-button/button';
-import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import currentTileset, {
+  mapScaleOption,
+  mapTileset,
+} from '@civ-clone/ui-assets/lib/tilesets';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import {
   hasFeature,
@@ -30,7 +34,10 @@ import { soundChanged } from '@civ-clone/ui-assets/lib/soundGain';
 import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
-/** The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", and Import assets. */
+/**
+ * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", whether Civ2's map art is complete once any
+ *  is imported (#97), and Import assets.
+ */
 export const assetsRow = (): HTMLElement => {
   const status = s(
       `<span class="status">${t('GameOptions.assets-checking')}</span>`
@@ -48,12 +55,17 @@ export const assetsRow = (): HTMLElement => {
   void assetStore
     .importedCount()
     .then(async (count): Promise<void> => {
-      status.textContent = (await assetStore.hasAllAssets())
-        ? t('GameOptions.assets-imported', {
-            count,
-            tileset: currentTileset().name,
-          })
-        : t('GameOptions.assets-missing');
+      const civ1 = (await assetStore.hasAllAssets())
+          ? t('GameOptions.assets-imported', {
+              count,
+              tileset: currentTileset().name,
+            })
+          : t('GameOptions.assets-missing'),
+        // Civilization II's map art, once any is imported (#97), as the Import assets window says it.
+        civ2 = await civ2Status().catch((): null => null);
+
+      status.textContent =
+        civ2 === null ? civ1 : `${civ1} · ${civ2StatusText(civ2)}`;
     })
     // The store can't be read: there's nothing to say about it, rather than "Checking…" for good.
     .catch((): void => {
@@ -277,11 +289,13 @@ export class GameOptions extends Window {
         s(
           `<label>${t('GameOptions.map-scale')}</label>`,
           (() => {
-            // The scales the map's tileset can be shown at.
-            const { scales } = currentTileset(),
+            // The scales the map's tileset can be shown at: the game's pack's (#97), each pack's kept apart.
+            const tileset = mapTileset(),
+              { scales } = tileset,
+              option = mapScaleOption(tileset),
               current = options.get(
-                'mapScale',
-                portal?.scale() ?? currentTileset().defaultScale
+                option,
+                portal?.scale() ?? tileset.defaultScale
               ),
               select = s<HTMLSelectElement>(
                 `<select>${scales
@@ -298,7 +312,7 @@ export class GameOptions extends Window {
               change: () => {
                 const scale = parseInt(select.value, 10);
 
-                options.set('mapScale', scale);
+                options.set(option, scale);
                 portal?.setScale(scale);
               },
             });

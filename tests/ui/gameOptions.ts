@@ -205,6 +205,33 @@ const memoryStorage = (initial: { [key: string]: string } = {}) => {
   );
 }
 
+{
+  // Each pack's map scale (#97): Civ1's `mapScale` and Civ2's `mapScale.civ2` both registered, at the pack's own
+  //  default, and one the player chose comes back on a reload, as when a save is loaded.
+  const fresh = memoryStorage();
+
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: fresh.storage,
+  });
+
+  setOptionDefaults();
+
+  const before = [options.get('mapScale'), options.get('mapScale.civ2')];
+
+  options.set('mapScale.civ2', 2);
+  setOptionDefaults();
+
+  expect(
+    "each pack's map scale is registered at its default, and a chosen one survives a reload (#97)",
+    [before, [options.get('mapScale'), options.get('mapScale.civ2')]],
+    [
+      [2, 1],
+      [2, 2],
+    ]
+  );
+}
+
 if (failures.length) {
   process.stderr.write(
     `FAIL gameOptions\n${failures

@@ -13,7 +13,7 @@ import {
   allowLeaving,
   guardLeaving,
 } from '@civ-clone/ui-component-window/leaveGuard';
-import { gridName } from '@civ-clone/ui-menus/lib/savedGame';
+import { unsupportedGridMessage } from '@civ-clone/ui-menus/lib/savedGame';
 import { autosaveDue } from '@civ-clone/ui-client/lib/browserSaves';
 import { isSupportedTopology } from '@civ-clone/ui-map/lib/supportedTopologies';
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
@@ -204,7 +204,7 @@ export class GameSession {
     const { topologyId } = this.#gameState.data().player.world;
 
     if (!isSupportedTopology(topologyId)) {
-      window.alert(t('SavedGame.needs-grid', { grid: gridName(topologyId!) }));
+      window.alert(unsupportedGridMessage(topologyId ?? 'square'));
 
       allowLeaving();
       window.location.reload();

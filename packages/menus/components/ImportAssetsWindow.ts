@@ -12,7 +12,10 @@ import {
 } from '@civ-clone/ui-assets/AssetStore';
 import {
   civ2Definition,
+  civ2Files,
   civ2Key,
+  civ2Status,
+  civ2StatusText,
   extractCiv2,
   isCiv2File,
   isCiv2Rules,
@@ -53,6 +56,8 @@ export class ImportAssetsWindow extends Window {
   #chooseButton: HTMLButtonElement;
   #chosen: HTMLSpanElement;
   #progressInformation: HTMLParagraphElement;
+  // Whether Civilization II's map art is complete (#97), when any has been imported.
+  #civ2Status: HTMLParagraphElement;
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
   #replaceExistingInput: HTMLInputElement;
@@ -77,6 +82,9 @@ export class ImportAssetsWindow extends Window {
       progressInformation = s<HTMLParagraphElement>(
         '<p class="loading" hidden></p>'
       ),
+      civ2StatusElement = s<HTMLParagraphElement>(
+        '<p class="civ2-status" aria-live="polite" hidden></p>'
+      ),
       // Said first, above everything else, when nothing imported could be kept (#850).
       storageBlocked = s<HTMLDivElement>(
         '<div class="storage-blocked" role="alert" hidden></div>'
@@ -93,6 +101,8 @@ export class ImportAssetsWindow extends Window {
             : ''
         } ${t('ImportAssetsWindow.optional-sound', {
           file: soundFile,
+        })} ${t('ImportAssetsWindow.optional-civ2', {
+          files: civ2Files(),
         })}</p><div class="brave" ${
           // @ts-ignore
           navigator?.brave ? '' : ' hidden'
@@ -125,7 +135,8 @@ export class ImportAssetsWindow extends Window {
             },
           })
         ),
-        progressInformation
+        progressInformation,
+        civ2StatusElement
       ),
       windowOptions
     );
@@ -135,10 +146,14 @@ export class ImportAssetsWindow extends Window {
     this.#chosen = chosen;
     this.#replaceExistingInput = replaceExistingInput;
     this.#progressInformation = progressInformation;
+    this.#civ2Status = civ2StatusElement;
 
     // A browser that blocks this site's data would keep nothing that was imported (#850): said before any files are
     //  chosen, at the top of the window, and the choosing is put out of reach rather than left to fail.
     this.element().querySelector('.import-assets')?.prepend(storageBlocked);
+
+    // A store that can't be read has nothing to say about it.
+    void this.#showCiv2Status().catch(() => {});
 
     assetStore.usable().then((usable): void => {
       if (usable) {
@@ -251,6 +266,9 @@ export class ImportAssetsWindow extends Window {
 
     let results: ImageMap[], civ2: Civ2Result[];
 
+    // Civilization II's sheets that couldn't be read, left out beside Civilization's own files.
+    const skipped: string[] = [];
+
     try {
       // Every file, read and its sprites extracted: Civilization's by its extractor, Civilization II's by its own
       //  (#97). RULES.TXT is left alone: its units keep their default names for now.
@@ -286,6 +304,8 @@ export class ImportAssetsWindow extends Window {
               }
 
               console.warn(`Could not read ${file.name}, skipping.`, error);
+
+              skipped.push(file.name);
 
               return { sprites: [] };
             })
@@ -324,10 +344,43 @@ export class ImportAssetsWindow extends Window {
 
     this.#progressInformation.innerText = t('ImportAssetsWindow.done');
 
+    // Civilization II's sheets that were chosen (#97): one left out, or the art still incomplete, is said, and the page
+    //  left for the player to reload once they've read it, rather than reloaded from under them.
+    if (civ2Files.length > 0) {
+      const incomplete = await this.#showCiv2Status(skipped);
+
+      if (incomplete) {
+        allowLeaving();
+        this.#chooseAgain();
+
+        return;
+      }
+    }
+
     // We need to reprocess everything and this is the lazy way...
     allowLeaving();
 
     location.reload();
+  }
+
+  /**
+   * Says whether Civilization II's map art is complete (#97), naming the sheets still to import and any of `skipped`,
+   *  the ones chosen that couldn't be read. Says nothing when none of it has been imported or skipped. Resolves with
+   *  whether there was anything wrong to say.
+   */
+  async #showCiv2Status(skipped: string[] = []): Promise<boolean> {
+    const toImport = await civ2Status(),
+      lines = [
+        ...skipped.map((file) =>
+          t('ImportAssetsWindow.civ2-skipped', { file })
+        ),
+        ...(toImport === null ? [] : [civ2StatusText(toImport)]),
+      ];
+
+    this.#civ2Status.textContent = lines.join(' ');
+    this.#civ2Status.toggleAttribute('hidden', lines.length === 0);
+
+    return skipped.length > 0 || (toImport !== null && toImport.length > 0);
   }
 
   /**
@@ -539,6 +592,11 @@ export class ImportAssetsWindow extends Window {
     this.#progressInformation.classList.add('failed');
     this.#progressInformation.innerText = message;
 
+    this.#chooseAgain();
+  }
+
+  /** Lets the player choose files again: after a failed import, or one that left Civilization II's art incomplete. */
+  #chooseAgain(): void {
     // Chosen before the browser was found to keep nothing: there is no trying again.
     if (!this.#blocked) {
       this.#fileInput.removeAttribute('disabled');

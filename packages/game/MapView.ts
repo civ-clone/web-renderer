@@ -1,7 +1,9 @@
 import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import { CityOpener } from '@civ-clone/ui-hud/lib/cityOpeners';
 import { off, on } from '@dom111/element';
-import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
+import ActiveUnit, {
+  RingColours,
+} from '@civ-clone/ui-map/components/Map/ActiveUnit';
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import cityLabels, {
   CityLabels,
@@ -19,8 +21,12 @@ import UnitMarker, {
 import Units from '@civ-clone/ui-map/components/Map/Units';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
-import currentTileset, {
+import {
+  mapScaleOption,
+  mapTileset,
   nativeTileSize,
+  scaleFor,
+  setMapGrid,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import { GridMinimap, overviewFor } from '@civ-clone/ui-map/lib/projectionFor';
 
@@ -53,6 +59,22 @@ export type MapViewDeps = {
   playerId: string;
   transport: Transport;
   world: WorldData;
+};
+
+// The ring's colours as the theme gives them (`--ui-unit-ring`, `--ui-unit-ring-halo`), for the ring drawn on the map
+//  (#97): white over a dark halo where the page can't say.
+const ringColours = (): RingColours => {
+  const style =
+      typeof getComputedStyle === 'function'
+        ? getComputedStyle(document.documentElement)
+        : null,
+    property = (name: string, fallback: string): string =>
+      style?.getPropertyValue(name).trim() || fallback;
+
+  return {
+    colour: property('--ui-unit-ring', '#fff'),
+    halo: property('--ui-unit-ring-halo', 'rgba(0, 0, 0, 0.5)'),
+  };
 };
 
 export class MapView {
@@ -130,7 +152,8 @@ export class MapView {
 
     const world = new World(worldData),
       intervalHandler = new IntervalHandler(),
-      tileset = currentTileset(),
+      // The pack for the world's grid (#97), which the windows' units are drawn with too.
+      tileset = mapTileset(world.topologyId()),
       overview = overviewFor(tileset),
       portal = new GamePortal(
         world,
@@ -140,7 +163,11 @@ export class MapView {
           cityOpener,
           lockVerticalEdges: options.get('lockVerticalEdges', false),
           playerId,
-          scale: options.get('mapScale', tileset.defaultScale),
+          // The pack's own scale option: Civ1's 3× is not one of Civ2's.
+          scale: scaleFor(
+            tileset,
+            options.get(mapScaleOption(tileset), tileset.defaultScale)
+          ),
           tileSize: nativeTileSize(tileset),
         },
         Landscape,
@@ -149,14 +176,19 @@ export class MapView {
         overview.layer,
         Fog,
         Yields,
-        Units,
-        Cities,
+        // A pack whose cities are taller than their tile (Civ2's 64 × 48, #97) has its units drawn over them, so a unit
+        //  in a city stands in front of it, as in Civ2; Civ1's box cities are drawn over their units.
+        ...(tileset.cities.mode === 'styles'
+          ? [Cities, Units]
+          : [Units, Cities]),
         // The banners, which the classic theme draws as these labels, or the classic labels (#747).
         this.#cityLabels.layer,
         ActiveUnit
       ),
       overviewMap = portal.getLayer(overview.layer)!,
       activeUnitsMap = portal.getLayer(ActiveUnit) as ActiveUnit;
+
+    setMapGrid(world.topologyId());
 
     this.world = world;
     this.#intervalHandler = intervalHandler;
@@ -280,7 +312,18 @@ export class MapView {
       this.#mode !== 'blink' &&
       this.activeUnitLayer.hasActiveUnit();
 
-    this.#marker.place(this.activeUnitLayer.squares(), shown);
+    // On a grid whose tiles have a shape of their own (the isometric grid's diamonds, #97), the ring is drawn on the
+    //  map under the unit, which is taller than its tile, rather than over the map, where it would cut through it.
+    const underUnit = this.activeUnitLayer.outline() !== null;
+
+    this.#marker.place(this.activeUnitLayer.squares(), shown && !underUnit);
+
+    if (
+      underUnit &&
+      this.activeUnitLayer.setRing(shown ? ringColours() : null)
+    ) {
+      this.portal.render();
+    }
 
     // The unit's square alone: whether it's blinked out is the tick's, which redraws the minimap for it.
     const tile = shown ? this.#activeUnit()?.tile ?? null : null,

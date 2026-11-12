@@ -20,7 +20,7 @@ import parseBooleanParam from '@civ-clone/ui-client/lib/parseBooleanParam';
 import appElements from './app/elements';
 import initI18n from './app/i18n';
 import { setCursor, setTilesetSizes } from './app/assets';
-import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import installPacks from '@civ-clone/ui-assets/lib/installPacks';
 import setOptionDefaults from './app/options';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import {
@@ -97,8 +97,9 @@ export class Renderer {
     let gameStarted = false;
 
     setTilesetSizes();
-    // Every sprite of the tileset in use, decoded before anything is drawn from them (#730).
-    await assetStore.load();
+    // Every sprite of the tilesets there are, decoded before anything is drawn from them (#730), and the ones whose
+    //  sprites have all been imported installed, so their grids are offered (#97).
+    await installPacks();
     await setCursor();
     await initI18n();
     // Silent without an ASOUND.CVL; with one, waits for the player's first key or click (#126).
