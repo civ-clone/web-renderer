@@ -1,7 +1,8 @@
 // The asset store loads the sprites of the tileset in use, and only those, decoded before anything is drawn from them
 //  (#730): the map's lookups find each one there, or the placeholder, reported once. A sprite that will not decode is
 //  left out rather than holding the game up, and one imported before #730, as a data URI, is kept as its PNG from then
-//  on. The interface's URL for a sprite at a size is made once.
+//  on. The interface's URL for a sprite at a size is made once. Another pack, such as the map's (#97), is loaded beside
+//  the interface's, with what its import said about its sprites, and is complete or not on its own.
 
 // Must stay first: it gives the store a `document`, and an `indexedDB` that never opens.
 import './lib/dom';
@@ -13,7 +14,11 @@ import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import getPreloadedImage, {
   onPreloadedImagesChanged,
 } from '@civ-clone/ui-assets/lib/getPreloadedImage';
-import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { AssetPack, metadataKey } from '@civ-clone/ui-assets/lib/packs';
+import {
+  TilesetDescriptor,
+  spriteKey,
+} from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,
@@ -97,14 +102,16 @@ onPreloadedImagesChanged(() => changed++);
   await store.ready;
 
   expect(
-    "only the tileset's own sprites are read, every one it lists",
+    "only the tileset's own sprites are read, every one it lists, and no record of anchors, which Civ1's import doesn't keep",
     [
       asked.length,
+      asked.includes(metadataKey(tileset)),
       asked.every((name) => name.startsWith(tileset.storage.prefix)),
       asked.includes('./assets/other/city/food.png'),
     ],
     [
       tileset.assets.required.length + tileset.assets.optional.length,
+      false,
       true,
       false,
     ]
@@ -250,6 +257,142 @@ onPreloadedImagesChanged(() => changed++);
     (getPreloadedImage('city/food') as any).text,
     'newer'
   );
+
+  // Two packs (#97): the interface's tileset and another, each keeping its sprites under its own prefix. Both are drawn
+  //  from, the other's with what its import said about its sprites, and each is complete or not on its own.
+  {
+    const other: AssetPack = {
+        id: 'other',
+        storage: { prefix: './assets/other/', ext: '.png' },
+        assets: {
+          required: ['city/food', 'city/wall'],
+          optional: ['city/extra'],
+          ui: [],
+        },
+        metadata: true,
+      },
+      // `getPreloadedImage` looks a sprite up by its pack's storage alone.
+      otherTileset = other as unknown as TilesetDescriptor,
+      anchors = { 'city/food': { flag: { x: 3, y: 4 } } },
+      keys = Store.prototype.keys;
+
+    records.set(metadataKey(other), {
+      name: metadataKey(other),
+      blob: new Blob([JSON.stringify({ anchors, colours: {} })], {
+        type: 'application/json',
+      }),
+    });
+    Store.prototype.keys = async () => [...records.keys()];
+
+    const both = new AssetStore(tileset, [other, other]);
+
+    await both.load();
+
+    expect(
+      "two packs: the interface's first, and each only once",
+      both.packs.map(({ id }) => id),
+      [tileset.id, 'other']
+    );
+    expect(
+      "two packs: each pack's sprite of the same name is drawn from its own",
+      [
+        (getPreloadedImage('city/food') as any).text,
+        (getPreloadedImage('city/food', otherTileset) as any).text,
+      ],
+      ['newer', 'other']
+    );
+    expect(
+      "two packs: the other's import says where its sprites' anchors are; the interface's said nothing",
+      [both.metadata(other), both.metadata(tileset)],
+      [{ anchors, colours: {} }, null]
+    );
+    expect(
+      'two packs: each is complete or not on its own, the interface by default',
+      [
+        await both.hasAllAssets(),
+        await both.hasAllAssets(other),
+        await both.missingAssets(other),
+        await both.importedCount(other),
+        (await both.missingAssets()).length,
+      ],
+      [
+        false,
+        false,
+        ['./assets/other/city/wall.png'],
+        1,
+        tileset.assets.required.filter((name) => !records.has(key(name)))
+          .length,
+      ]
+    );
+
+    records.set('./assets/other/city/wall.png', {
+      name: './assets/other/city/wall.png',
+      blob: png('wall'),
+    });
+
+    expect(
+      'two packs: one is complete once its required sprites are in',
+      await both.hasAllAssets(other),
+      true
+    );
+
+    const added = new AssetStore(tileset);
+
+    added.addPack(other);
+    added.addPack(other);
+    await added.load();
+
+    expect(
+      'a pack added later is loaded from the next load on, once',
+      [
+        added.packs.map(({ id }) => id),
+        (getPreloadedImage('city/wall', otherTileset) as any).text,
+      ],
+      [[tileset.id, 'other'], 'wall']
+    );
+
+    // A record of anchors that can't be read: the sprites are still drawn, without it, and an import is told so.
+    records.set(metadataKey(other), {
+      name: metadataKey(other),
+      blob: new Blob(['{"anchors":'], { type: 'application/json' }),
+    });
+    logged.length = 0;
+    await added.load();
+
+    expect(
+      "a record of anchors that can't be read: the pack is drawn without it, and the load says so",
+      [
+        added.metadata(other),
+        (getPreloadedImage('city/wall', otherTileset) as any).text,
+        logged.includes(`Could not read ${metadataKey(other)}.`),
+      ],
+      [null, 'wall', true]
+    );
+    expect(
+      "a record of anchors that can't be read is refused when it's asked for, not taken for nothing",
+      await added.readMetadata(other).then(
+        () => 'resolved',
+        () => 'rejected'
+      ),
+      'rejected'
+    );
+
+    records.set(metadataKey(other), {
+      name: metadataKey(other),
+      blob: new Blob(['{"anchors":{}}'], { type: 'application/json' }),
+    });
+
+    expect(
+      'nor is one that is not a record of anchors and colours',
+      await added.readMetadata(other).then(
+        () => 'resolved',
+        () => 'rejected'
+      ),
+      'rejected'
+    );
+
+    Store.prototype.keys = keys;
+  }
 
   // The interface's URL for a sprite at a size, made once.
   let made = 0;

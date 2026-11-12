@@ -22,6 +22,10 @@ Without imported assets, gameplay options are hidden and import is the primary o
     it is not imported as an engine plugin.
   - `extract-data.json` holds the sprite definitions: per source file, per asset path, rows of sprites with their
     rectangles, over `defaults` of 16×16 and a transparent colour of `rgb(0, 170, 170)`.
+- `@civ-clone/civ2-asset-extractor` (#97)
+  - Cuts the map's sprites from a player's own Civilization II sheets (`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF`,
+    `CITIES.GIF`), with each unit's and city's anchors and the flags' colours. A GitHub dependency excluded from the
+    plugins like Civ1's. `packages/menus/lib/civ2Import.ts` drives it for the import window.
 
 ## Asset import flow
 
@@ -42,6 +46,28 @@ Without imported assets, gameplay options are hidden and import is the primary o
    `assetStore.missingAssets()` and the file input is enabled again.
 6. On success, page reloads to reinitialize UI with assets present (`allowLeaving()` first, so the leave guard does
    not ask).
+
+### Civilization II's sheets (#97)
+
+The same window takes Civ2's four sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
+sprites are in, on their own (as `ASOUND.CVL` is). Nothing draws them yet, and the window's text doesn't mention them.
+
+- Each sheet's bytes go to the Civ2 extractor's `extractSprites`, by its definition in that extractor's
+  `extract-data.json`; without "replace existing", a grid whose every sprite is stored is left out, unless it has
+  markers and the stored record lacks the anchors of any of its sprites (or can't be read at all), and a sheet with
+  nothing left isn't read. The flags' colours are read again only when the record lacks them, after checking that
+  the sheet has 256 colours and every flag inside it, and refused unless every flag's colours come out.
+- A sheet that can't be read stops the import, naming it, when only Civ2's sheets were chosen. Among Civ1's files it
+  is left out with a console warning, and Civ1's are imported.
+- Each sprite's RGBA is put on a canvas and stored as its PNG (`toBlob`) under Civ2's pack's key, `spriteKey(civ2Pack,
+  name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/packs.ts`) is the pack's id, `civ2`,
+  and its storage; the descriptor that says which sprites it requires is bundled separately.
+- The anchors and the flags' colours go in one record beside the sprites, `./assets/civ2/metadata.json`
+  (`metadataKey`), as a JSON `blob` shaped as the extractor's `metadata.json`: `{ anchors: SpriteAnchors, colours }`.
+  An import of some of the sheets is put over what the record held, so the others' anchors are kept; a record that
+  can't be read is replaced by what this import cut.
+- `RULES.TXT` is taken and left alone: units keep the extractor's default names for now.
+- The import still ends on Civ1's check: it is done when Civ1's required sprites are all in.
 
 ## Sprite overlays
 
@@ -72,7 +98,14 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
 - The required sprites (286 for Civ1) as the runtime readiness check, and the optional ones. Both lists come from the
   tileset descriptor's `assets` (`packages/assets/tilesets/civ1.json`, through `currentTileset()` in
   `packages/assets/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's.
-- `load()`: reads the tileset's own required and optional sprites, and no other pack's, decodes each with
+- More packs beside that one (#97): `new AssetStore(tileset, packs)` or `addPack(pack)`, each an `AssetPack` (a
+  descriptor's `id`, `storage` and `assets`, and `metadata: true` for a pack whose import keeps a record of its
+  sprites' anchors, as Civ2's does), such as the map's when it isn't the interface's. `hasAllAssets(pack)`,
+  `missingAssets(pack)` and `importedCount(pack)` say how far each one is imported; without a pack they mean the store's
+  own tileset, which is what start-up waits for.
+- `load()`: reads its packs' required and optional sprites, and no other's, into the one lookup (their keys never
+  collide), with the import metadata of each pack that has some (`metadata(pack)`; `readMetadata(pack)` rejects for a
+  record that can't be read), and decodes each sprite with
   `createImageBitmap` (or, if a bitmap hasn't come within 5 seconds, loads it as an `<img>`, whose `load` event comes
   in a background tab too: `decodeSprite`), and hands them to the map's lookup (`setSprites`). A sprite that will not decode, or an old record
   that cannot be read, is reported and left out, so it is drawn as missing rather than holding the game up. `load`

@@ -12,6 +12,9 @@
 //  so a sheet that decodes is cut up as in the browser, logging each sprite, and one that doesn't throws as it would.
 //  The sheet that decodes is made here: a palette chunk, then an image chunk of one literal and a run of the run-length
 //  flag, LZW-coded with the growing code width the extractor reads.
+//
+// Civilization II's sheets (#97) are GIFs made here too, by the Civ2 extractor's own test encoder, laid out as its
+//  `extract-data.json` says, with marker pixels and flags painted in: no Civilization II art is needed.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads. Imported for its globals alone: a binding nothing
 //  uses would be dropped from the bundle, and the shim with it.
@@ -22,6 +25,9 @@ import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindo
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
+import { Colour, encodeGif } from './lib/encodeGif';
+import { civ2Pack, metadataKey } from '@civ-clone/ui-assets/lib/packs';
+import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import i18next from 'i18next';
 import { readFileSync } from 'fs';
@@ -124,10 +130,19 @@ const fakeCanvas = (): HTMLCanvasElement => {
         height,
       };
     },
-    putImageData: () => {},
+    createImageData: (width: number, height: number) => ({
+      data: new Uint8ClampedArray(width * height * 4),
+      width,
+      height,
+    }),
+    putImageData: (image: { data: Uint8ClampedArray }) => {
+      drawn = image.data;
+    },
   };
 
-  return {
+  let drawn: Uint8ClampedArray = new Uint8ClampedArray(4);
+
+  const canvas = {
     width: 0,
     height: 0,
     getContext: () => context,
@@ -136,11 +151,24 @@ const fakeCanvas = (): HTMLCanvasElement => {
 
       return 'data:image/png;base64,';
     },
-  } as unknown as HTMLCanvasElement;
+    // A Civ2 sprite's "PNG": its size and its first pixel, from what was put on the canvas.
+    toBlob: (callback: (blob: Blob | null) => void, type: string) => {
+      civ2Encoded++;
+      callback(
+        new Blob(
+          [`${canvas.width}x${canvas.height} ${Array.from(drawn.slice(0, 4))}`],
+          { type }
+        )
+      );
+    },
+  };
+
+  return canvas as unknown as HTMLCanvasElement;
 };
 
-// How many sprites the extractor has cut out: each one is read back as a data URL.
-let spritesCut = 0;
+// How many sprites the extractor has cut out: each one is read back as a data URL. Civ2's are encoded as PNGs instead.
+let spritesCut = 0,
+  civ2Encoded = 0;
 
 const createElement = document.createElement.bind(document);
 
@@ -242,6 +270,7 @@ const storeWorks = (): void => {
   store.missingAssets = async (): Promise<string[]> => [
     './assets/units/warrior.png',
   ];
+  store.readMetadata = async (): Promise<null> => null;
 };
 
 storeWorks();
@@ -825,6 +854,573 @@ const run = async (): Promise<void> => {
 
     store.setAll = setAll;
     store.hasAllAssets = hasAllAssets;
+    delete (globalThis as any).location;
+  }
+
+  // Civilization II's sheets (#97): recognised by name, whatever its case, and cut up by the Civ2 extractor. Each sprite
+  //  is kept as its PNG under Civ2's pack's key, and the anchors and flag colours in one record beside them. RULES.TXT
+  //  is taken and left alone: its units keep their default names. Nothing else changes for a Civ1 import.
+  {
+    type GridDefinition = {
+      path: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      columns: number;
+      stepX?: number;
+      stepY?: number;
+      names: (string | null)[];
+    };
+    type FileDefinition = {
+      grids: GridDefinition[];
+      flags?: {
+        x: number;
+        width: number;
+        height: number;
+        count: number;
+        stepX?: number;
+        rows: { name: string; y: number }[];
+      };
+    };
+
+    const definitions = (
+        civ2ExtractData as unknown as {
+          files: { [file: string]: FileDefinition };
+        }
+      ).files,
+      SHIELD = 1,
+      SIZE = 2,
+      POLE = 10,
+      // A palette laid out like Civ2's: the last three are "transparent 1, border, transparent 2". The markers are
+      //  the extractor's own colours.
+      palette: Colour[] = Array.from({ length: 256 }, (_, i): Colour => {
+        switch (i) {
+          case SHIELD:
+            return [0, 0, 255];
+          case SIZE:
+            return [255, 155, 0];
+          case 253:
+            return [255, 0, 255];
+          case 254:
+            return [0, 255, 0];
+          case 255:
+            return [255, 0, 254];
+          default:
+            return [i, (i * 7) % 256, (i * 13) % 256];
+        }
+      }),
+      // Every cell of `file` as the extractor will cut it, and the flags, on a sheet just big enough for them. The
+      //  sheet is a pattern, so every sprite has something in it and the GIF's dictionary stays small; the first unit
+      //  and the first city have marker pixels on their borders, and the flags have a pole every flag shares and
+      //  colours of their own.
+      civ2Sheet = (file: string, name: string = file): File => {
+        const { grids, flags } = definitions[file]!,
+          right = Math.max(
+            ...grids.map(
+              ({ x, width, columns, names, stepX = width + 1 }) =>
+                x + (Math.min(columns, names.length) - 1) * stepX + width
+            ),
+            flags
+              ? flags.x +
+                  (flags.count - 1) * (flags.stepX ?? flags.width + 1) +
+                  flags.width
+              : 0
+          ),
+          bottom = Math.max(
+            ...grids.map(
+              ({ y, height, columns, names, stepY = height + 1 }) =>
+                y + (Math.ceil(names.length / columns) - 1) * stepY + height
+            ),
+            ...(flags?.rows ?? []).map(({ y }) => y + flags!.height)
+          ),
+          width = right + 1,
+          height = bottom + 1,
+          pixels = new Uint8Array(width * height),
+          set = (x: number, y: number, index: number) => {
+            pixels[y * width + x] = index;
+          };
+
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            set(x, y, 30 + ((x * 7 + y * 11) % 200));
+          }
+        }
+
+        if (file === 'UNITS.GIF') {
+          // units/settlers, at (1, 1): its shield at (12, 20).
+          set(1 + 12, 0, SHIELD);
+          set(0, 1 + 20, SHIELD);
+        }
+
+        if (file === 'CITIES.GIF') {
+          // The first city, at (1, 39): its flag at (5, 7) and its size at (30, 31).
+          set(1 + 5, 38, SHIELD);
+          set(0, 39 + 7, SHIELD);
+          set(1 + 30, 38, SIZE);
+          set(0, 39 + 31, SIZE);
+        }
+
+        flags?.rows.forEach(({ y }) => {
+          for (let flag = 0; flag < flags.count; flag++) {
+            const x = flags.x + flag * (flags.stepX ?? flags.width + 1);
+
+            for (let dy = 0; dy < flags.height; dy++) {
+              for (let dx = 0; dx < flags.width; dx++) {
+                set(
+                  x + dx,
+                  y + dy,
+                  dx < 3 && dy < 3
+                    ? 40 + flag
+                    : dx < 9 && dy < 9
+                    ? 20 + flag
+                    : POLE
+                );
+              }
+            }
+          }
+        });
+
+        return new File(
+          [Uint8Array.from(encodeGif({ width, height, palette, pixels }))],
+          name
+        );
+      },
+      sheets = Object.fromEntries(
+        Object.keys(definitions).map((file) => [file, civ2Sheet(file)])
+      ),
+      allSprites = Object.values(definitions).flatMap(({ grids }) =>
+        grids.flatMap(({ path, names }) =>
+          names.flatMap((name) => (name === null ? [] : [path + name]))
+        )
+      ),
+      civ2Key = (name: string): string =>
+        `${civ2Pack.storage.prefix}${name}${civ2Pack.storage.ext}`,
+      written: { name: string; blob?: Blob }[] = [],
+      warned: unknown[][] = [],
+      { setAll, hasAllAssets, keys } = store,
+      consoleWarn = console.warn,
+      importWith = async (
+        files: File[],
+        hasAssets = true,
+        replace = true
+      ): Promise<string> => {
+        const window = new ImportAssetsWindow();
+
+        written.length = 0;
+        spritesCut = 0;
+        civ2Encoded = 0;
+        store.hasAllAssets = async (): Promise<boolean> => hasAssets;
+        (
+          window
+            .element()
+            .querySelector('input[type="checkbox"]') as HTMLInputElement
+        ).checked = replace;
+        await upload(window, files);
+        window.close();
+
+        return progress(window).innerText;
+      },
+      writtenNames = () => written.map(({ name }) => name),
+      metadata = async () => {
+        const record = written.find(
+          ({ name }) => name === metadataKey(civ2Pack)
+        );
+
+        return record?.blob ? JSON.parse(await record.blob.text()) : null;
+      };
+
+    store.setAll = async (assets: { name: string; blob?: Blob }[]) => {
+      written.push(...assets);
+    };
+    console.warn = (...args: unknown[]) => warned.push(args);
+    (globalThis as any).location = { reload: () => {} };
+
+    expect(
+      'Civ2: the four sheets the extractor cuts up, and 289 sprites in them',
+      [Object.keys(definitions).sort(), allSprites.length],
+      [['CITIES.GIF', 'TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF'], 289]
+    );
+
+    const done = await importWith([
+      ...Object.values(sheets),
+      new File(['@UNITS\nSettlers, 0\n'], 'RULES.TXT'),
+    ]);
+
+    expect(
+      "Civ2's sheets alone, with Civ1's sprites already in: every sprite is kept under Civ2's key, as its PNG, and nothing of Civ1's",
+      [
+        done,
+        writtenNames()
+          .filter((name) => name !== metadataKey(civ2Pack))
+          .sort(),
+        written.every(({ blob }) => blob instanceof Blob),
+        civ2Encoded,
+        spritesCut,
+      ],
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        allSprites.map(civ2Key).sort(),
+        true,
+        289,
+        0,
+      ]
+    );
+    expect(
+      'Civ2: the river mouths, the flags and the shield are among them',
+      [
+        'terrain/river-mouth/ne',
+        'terrain/river-mouth/se',
+        'terrain/river-mouth/sw',
+        'terrain/river-mouth/nw',
+        'city/flag',
+        'city/flag-2',
+        'units/shield',
+      ].every((name) => writtenNames().includes(civ2Key(name))),
+      true
+    );
+
+    const settlers = written.find(
+      ({ name }) => name === civ2Key('units/settlers')
+    );
+
+    expect(
+      "Civ2: a sprite's PNG is drawn from the pixels cut from the sheet",
+      await settlers?.blob?.text(),
+      // The pattern's index at (1, 1), 48, is the colour (48, 80, 112).
+      '64x48 48,80,112,255'
+    );
+
+    const stored = await metadata();
+
+    expect(
+      "Civ2: the anchors are kept by sprite name, each unit's and city's, with the flags' colours",
+      [
+        stored?.anchors['units/settlers'],
+        stored?.anchors['units/engineers'],
+        stored?.anchors['city/stone-bronze/0'],
+        stored?.anchors['terrain/desert/base-0'],
+        stored?.colours.flag.length,
+        stored?.colours.flag[0],
+        stored?.colours['flag-2'][1],
+      ],
+      [
+        { shield: { x: 12, y: 20 } },
+        {},
+        { flag: { x: 5, y: 7 }, size: { x: 30, y: 31 } },
+        undefined,
+        9,
+        {
+          primary: palette[20],
+          secondary: palette[40],
+        },
+        {
+          primary: palette[21],
+          secondary: palette[41],
+        },
+      ]
+    );
+    expect(
+      'Civ2: RULES.TXT is taken without a word, and not cut up',
+      warned,
+      []
+    );
+
+    expect(
+      "Civ2: a sheet's name in any case",
+      [
+        await importWith([civ2Sheet('UNITS.GIF', 'units.gif')]),
+        writtenNames().includes(civ2Key('units/settlers')),
+      ],
+      ['Done! Please reload the page to utilize the fresh assets.', true]
+    );
+
+    expect(
+      "Civ2's sheets before Civ1's sprites: Civ1's files are asked for, and nothing is written",
+      [
+        (await importWith([sheets['UNITS.GIF']!], false)).startsWith(
+          'Please provide all files'
+        ),
+        written.length,
+      ],
+      [true, 0]
+    );
+
+    await importWith([
+      sheet('SP257.PIC'),
+      sheet('TER257.PIC'),
+      sheets['UNITS.GIF']!,
+    ]);
+
+    expect(
+      "Civ2's sheets with Civ1's files: both are written, together",
+      [
+        writtenNames().includes('./assets/units/warrior.png'),
+        writtenNames().includes(civ2Key('units/settlers')),
+        writtenNames().includes(metadataKey(civ2Pack)),
+      ],
+      [true, true, true]
+    );
+
+    // An import of some of the sheets keeps what an earlier one said about the others.
+    store.readMetadata = async () => ({
+      anchors: {
+        'city/stone-bronze/0': { flag: { x: 1, y: 2 } },
+        'units/settlers': { shield: { x: 0, y: 0 } },
+      },
+      colours: { flag: [{ primary: [1, 2, 3], secondary: [4, 5, 6] }] },
+    });
+
+    await importWith([sheets['UNITS.GIF']!]);
+
+    const merged = await metadata();
+
+    expect(
+      "Civ2: a later import of one sheet keeps the others' anchors and colours, and replaces its own",
+      [
+        merged?.anchors['city/stone-bronze/0'],
+        merged?.anchors['units/settlers'],
+        merged?.colours.flag,
+      ],
+      [
+        { flag: { x: 1, y: 2 } },
+        { shield: { x: 12, y: 20 } },
+        [{ primary: [1, 2, 3], secondary: [4, 5, 6] }],
+      ]
+    );
+
+    store.readMetadata = async (): Promise<null> => null;
+
+    // Not replacing: a grid of sprites already imported, with their anchors, isn't cut again, and a sheet with nothing
+    //  new isn't read.
+    const units = definitions['UNITS.GIF']!.grids[0]!.names.flatMap((name) =>
+        name === null ? [] : [civ2Key(`units/${name}`)]
+      ),
+      full = stored,
+      without = (change: (metadata: any) => void): (() => Promise<unknown>) => {
+        const metadata = JSON.parse(JSON.stringify(full));
+
+        change(metadata);
+
+        return async () => metadata;
+      };
+
+    store.readMetadata = async () => full;
+    store.keys = async (): Promise<string[]> => units;
+
+    await importWith([sheets['UNITS.GIF']!], true, false);
+
+    expect(
+      'Civ2, not replacing: the units already imported are skipped, the shields cut',
+      [
+        writtenNames().some((name) => units.includes(name)),
+        writtenNames().includes(civ2Key('units/shield')),
+      ],
+      [false, true]
+    );
+
+    store.keys = async (): Promise<string[]> => allSprites.map(civ2Key);
+
+    await importWith([sheets['UNITS.GIF']!], true, false);
+
+    expect(
+      'Civ2, not replacing, with everything in: nothing is written, not even the anchors',
+      [written.length, civ2Encoded],
+      [0, 0]
+    );
+
+    // A unit's anchors missing from the record: the units are cut again for them, and the rest kept.
+    store.readMetadata = without((metadata) => {
+      delete metadata.anchors['units/settlers'];
+    });
+
+    await importWith([sheets['UNITS.GIF']!], true, false);
+
+    const recut = await metadata();
+
+    expect(
+      "Civ2, not replacing: a grid whose anchors the record hasn't got is cut again, and only that one",
+      [
+        writtenNames().includes(civ2Key('units/settlers')),
+        writtenNames().includes(civ2Key('units/shield')),
+        recut?.anchors['units/settlers'],
+        recut?.anchors['city/stone-bronze/0'],
+      ],
+      [
+        true,
+        false,
+        { shield: { x: 12, y: 20 } },
+        { flag: { x: 5, y: 7 }, size: { x: 30, y: 31 } },
+      ]
+    );
+
+    // The flags' colours missing: they are read again, and no sprite cut.
+    store.readMetadata = without((metadata) => {
+      delete metadata.colours['flag-2'];
+    });
+
+    await importWith([sheets['CITIES.GIF']!], true, false);
+
+    expect(
+      "Civ2, not replacing: colours the record hasn't got are read again, without cutting a sprite",
+      [writtenNames(), (await metadata())?.colours['flag-2']?.length],
+      [[metadataKey(civ2Pack)], 9]
+    );
+
+    // Only the colours wanted, from a sheet that isn't laid out as Civ2's: refused by name, as a sheet whose sprites
+    //  are cut would be, rather than its empty flags stored as colours.
+    for (const [description, palette] of [
+      [
+        'two colours',
+        [
+          [0, 0, 0],
+          [255, 255, 255],
+        ] as Colour[],
+      ],
+      [
+        '256 colours, one pixel',
+        Array.from({ length: 256 }, (): Colour => [0, 0, 0]),
+      ],
+    ] as const) {
+      const tiny = new File(
+        [
+          Uint8Array.from(
+            encodeGif({ width: 1, height: 1, palette, pixels: [0] })
+          ),
+        ],
+        'CITIES.GIF'
+      );
+
+      expect(
+        `Civ2, only the colours wanted, from a one-pixel GIF (${description}): refused by name, nothing written`,
+        [
+          (await importWith([tiny], true, false)).startsWith(
+            "CITIES.GIF doesn't look like a supported Civilization file"
+          ),
+          written.length,
+        ],
+        [true, 0]
+      );
+    }
+
+    // Colours already kept and a city sprite missing: the sprite is cut, and the kept colours aren't read again from
+    //  this sheet, whose flags (left as they are) they might not match.
+    const keptColours = Object.fromEntries(
+      Object.entries(full.colours).map(([row, flags]) => [
+        row,
+        (flags as unknown[]).map(() => ({
+          primary: [1, 2, 3],
+          secondary: [4, 5, 6],
+        })),
+      ])
+    );
+
+    store.readMetadata = without((metadata) => {
+      metadata.colours = keptColours;
+    });
+    store.keys = async (): Promise<string[]> =>
+      allSprites
+        .map(civ2Key)
+        .filter((key) => key !== civ2Key('city/stone-bronze/0'));
+
+    await importWith([sheets['CITIES.GIF']!], true, false);
+
+    expect(
+      'Civ2, not replacing, colours kept: a missing city is cut, and the colours are left as they were',
+      [
+        writtenNames().includes(civ2Key('city/stone-bronze/0')),
+        writtenNames().includes(civ2Key('city/flag')),
+        (await metadata())?.colours,
+      ],
+      [true, false, keptColours]
+    );
+
+    store.keys = async (): Promise<string[]> => allSprites.map(civ2Key);
+
+    // A record that can't be read: every grid with anchors in the sheets chosen is cut again, rather than a part of the
+    //  record written over it.
+    store.readMetadata = async () => {
+      throw new SyntaxError('Unexpected end of JSON input');
+    };
+
+    await importWith(
+      [sheets['UNITS.GIF']!, sheets['CITIES.GIF']!],
+      true,
+      false
+    );
+
+    const rewritten = await metadata();
+
+    expect(
+      "Civ2, not replacing: a record that can't be read has every grid with anchors cut again, and only those",
+      [
+        writtenNames().includes(civ2Key('units/settlers')),
+        writtenNames().includes(civ2Key('city/stone-bronze/0')),
+        writtenNames().includes(civ2Key('units/shield')),
+        writtenNames().includes(civ2Key('map/fortify')),
+        rewritten?.anchors['units/settlers'],
+        rewritten?.anchors['city/modern-alt/walled-3'],
+        rewritten?.colours.flag.length,
+      ],
+      [true, true, false, false, { shield: { x: 12, y: 20 } }, {}, 9]
+    );
+
+    store.readMetadata = async (): Promise<null> => null;
+    store.keys = keys;
+
+    expect(
+      'Civ2: a file named as a sheet that is not one is refused by name, and nothing is written',
+      [
+        (await importWith([new File(['not a GIF'], 'UNITS.GIF')])).startsWith(
+          "UNITS.GIF doesn't look like a supported Civilization file"
+        ),
+        written.length,
+      ],
+      [true, 0]
+    );
+
+    const whole = await sheets['UNITS.GIF']!.arrayBuffer(),
+      truncated = () =>
+        new File([whole.slice(0, whole.byteLength / 2)], 'UNITS.GIF');
+
+    expect(
+      'Civ2: a sheet cut short is refused by name, and nothing is written',
+      [
+        (await importWith([truncated()])).startsWith(
+          "UNITS.GIF doesn't look like a supported Civilization file"
+        ),
+        written.length,
+      ],
+      [true, 0]
+    );
+
+    warned.length = 0;
+
+    const mixed = await importWith([
+      sheet('SP257.PIC'),
+      sheet('TER257.PIC'),
+      truncated(),
+    ]);
+
+    expect(
+      "Civ2: a bad sheet among Civ1's files is left out, with a warning, and Civ1's are imported",
+      [
+        mixed,
+        writtenNames().includes('./assets/units/warrior.png'),
+        writtenNames().some((name) => name.startsWith(civ2Pack.storage.prefix)),
+        warned.map(([message]) => message),
+      ],
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        true,
+        false,
+        ['Could not read UNITS.GIF, skipping.'],
+      ]
+    );
+
+    store.setAll = setAll;
+    store.hasAllAssets = hasAllAssets;
+    console.warn = consoleWarn;
     delete (globalThis as any).location;
   }
 

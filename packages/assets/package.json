@@ -15,6 +15,7 @@
     "./lib/getPreloadedImage": "./lib/getPreloadedImage.ts",
     "./lib/groupIcons": "./lib/groupIcons.ts",
     "./lib/imageSize": "./lib/imageSize.ts",
+    "./lib/packs": "./lib/packs.ts",
     "./lib/renderUnit": "./lib/renderUnit.ts",
     "./lib/replaceColours": "./lib/replaceColours.ts",
     "./lib/scaledCanvases": "./lib/scaledCanvases.ts",
