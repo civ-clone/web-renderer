@@ -364,6 +364,16 @@ checksum (`81c20b4c` → `a12b897c`), state hash (`8c184339` → `58a00551`) and
   the state; 2,862 `BuildItem` and 2,862 `BuildCost` ids in the DTO, which is
   231 bytes shorter as the ids are lower). With each `Type-id` renumbered by its
   first appearance, state and DTO are equal to main's.
+- Turns 1 and 10 do not move because the first `revalidate()` in this game is
+  at turn 15: until then both sides number their objects alike.
+- The state hash alone could not show this: it holds what a city is building
+  only as `#BuildItem-n`, so a renumbered comparison of the state cannot see
+  which item that is. The DTO carries the item itself, and an independent
+  review (web-renderer#977) also dumped every `BuildItem`, `BuildCost` and
+  `BuildProgress` reachable from the state and compared every city's build,
+  progress, cost and queue and the random-call count at each of the 50 turn
+  starts: all identical. If this checksum moves again, repeat that comparison
+  rather than trusting the state hash.
 
 None of this says the new rules are right: no city's build is cancelled for
 any reason in this game's 50 turns, on main or here, so it exercises none of
