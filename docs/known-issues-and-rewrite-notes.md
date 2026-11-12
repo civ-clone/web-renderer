@@ -29,7 +29,7 @@ marked as such, with the commit or issue that fixed them.
 ## Medium priority
 
 - **Hardcoded UI behavior and theme parameters**
-  - Map scale and tile size used to be hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). The tile size, the scales offered and the label fonts now come from the tileset descriptor (`packages/assets/tilesets/civ1.json`, read through `packages/assets/lib/tilesets.ts`, #56); choosing between several tilesets waits for a second one (#152).
+  - Map scale and tile size used to be hardcoded in `Renderer`. Map scale is now an option, 1× to 4× (f781358, #13). The tile size, the scales offered and the label fonts now come from the tileset descriptor (`packages/tileset-civ1/civ1.json`, read through `packages/assets/lib/tilesets.ts`, #56); choosing between several tilesets waits for a second one (#152).
   - Some options are local in-memory defaults only (`GameOptionsRegistry`) and not persisted. Still true: `packages/game/app/options.ts` sets them on every page load.
 - **Plugin/translation generation portability**
   - Generated import files use absolute filesystem paths, potentially brittle across environments.
@@ -37,7 +37,7 @@ marked as such, with the commit or issue that fixed them.
 - **Asset readiness is strict and static**
   - Required asset list is a large hardcoded path list in `AssetStore`.
   - Any naming/version mismatch blocks gameplay entry.
-  - The list is no longer hard-coded: `AssetStore` reads it from the tileset descriptor's `assets.required` (`packages/assets/tilesets/civ1.json`, #56). Still true that any missing required sprite blocks gameplay entry.
+  - The list is no longer hard-coded: `AssetStore` reads it from the tileset descriptor's `assets.required` (`packages/tileset-civ1/civ1.json`, #56). Still true that any missing required sprite blocks gameplay entry.
 
 ## Lower priority / UX defects (already noted upstream)
 

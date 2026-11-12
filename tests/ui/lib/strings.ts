@@ -10,4 +10,5 @@ import '@civ-clone/ui-menus/translations/en';
 import '@civ-clone/ui-platform/translations/en';
 import '@civ-clone/ui-protocol/translations/en';
 import '@civ-clone/ui-reports/translations/en';
+import '@civ-clone/ui-tileset-civ1/translations/en';
 import '@civ-clone/ui-widgets/translations/en';

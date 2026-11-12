@@ -17,7 +17,7 @@ The application is split into two JavaScript runtimes:
 ## Entry points and boot sequence
 
 1. Browser loads `index.html` and starts `dist/frontend.js`.
-2. `src/js/frontend.ts` creates `Renderer(new WorkerTransport(new Worker('dist/backend.js')))` (from `packages/game/bootstrap.ts`) and calls `init()`.
+2. `src/js/frontend.ts` loads the art packs, Civ1's first (`packages/tileset-civ1`, which registers its tileset and its import, #97), then the interfaces and the grids, creates `Renderer(new WorkerTransport(new Worker('dist/backend.js')))` (from `packages/game/bootstrap.ts`) and calls `init()`.
 3. Worker starts from `src/js/backend.ts` and creates `Game(new ParentTransport())`.
 4. For a new game, the setup windows (`askPlayerCount` in `components/newGame.ts`, or `GameSetupWindow`) send `setOptions` as a request, wait for its acknowledgement, then send `start`.
 5. Backend binds engine events, starts the engine, and loads the plugins `backend.ts` handed it (civ.one's: the generated `src/js/plugins.ts`).

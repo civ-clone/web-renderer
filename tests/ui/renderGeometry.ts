@@ -10,6 +10,7 @@
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, askedFor, preloadImage, preloaded } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import * as fs from 'fs';
 import * as os from 'os';

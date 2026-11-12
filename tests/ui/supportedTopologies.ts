@@ -10,6 +10,7 @@ import { document } from './lib/dom';
 import './lib/grids';
 import './lib/interfaces';
 import './lib/classicInterface';
+import './lib/artPacks';
 
 import topologyFor, {
   TopologyId,
@@ -35,7 +36,7 @@ import Request from '@civ-clone/core-data-client/Request';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import StaggeredIsoTopology from '@civ-clone/core-world/StaggeredIsoTopology';
 import Transport from '@civ-clone/ui-client/Transport';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import { PackMetadata } from '@civ-clone/ui-assets/lib/packs';
 import i18next from 'i18next';
 import { drawableGrids } from '@civ-clone/ui-map/lib/projectionFor';
@@ -43,6 +44,7 @@ import {
   installTilesets,
   installedTilesets,
   mapTileset,
+  registerTileset,
 } from '@civ-clone/ui-assets/lib/tilesets';
 import validateDescriptor from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
@@ -752,6 +754,22 @@ const text = (element: Element | null): string =>
 
   isoSetup.close();
   closeAll();
+
+  // A bundled pack that keeps no record of its sprites is installed on its sprites alone.
+  registerTileset({
+    ...validateDescriptor(civ1Json),
+    id: 'no-record',
+    grid: 'hex-odd-r',
+  });
+
+  expect(
+    'a complete pack that keeps no record of its sprites is installed without one',
+    installTilesets({ 'no-record': { complete: true, metadata: null } }).map(
+      ({ id }) => id
+    ),
+    ['civ1', 'no-record']
+  );
+
   installTilesets({});
 
   finished = true;

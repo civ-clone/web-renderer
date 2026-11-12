@@ -325,6 +325,9 @@ importers:
       '@civ-clone/ui-rules-civ1':
         specifier: workspace:*
         version: link:packages/rules-civ1
+      '@civ-clone/ui-tileset-civ1':
+        specifier: workspace:*
+        version: link:packages/tileset-civ1
       '@civ-clone/ui-widgets':
         specifier: workspace:*
         version: link:packages/widgets
@@ -821,6 +824,12 @@ importers:
       '@civ-clone/ui-worker-client':
         specifier: workspace:*
         version: link:../worker-client
+
+  packages/tileset-civ1:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
 
   packages/widgets:
     dependencies:

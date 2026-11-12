@@ -7,6 +7,7 @@
 // Must stay first: it gives the layers a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import Map from '@civ-clone/ui-map/components/Map';
 import Portal from '@civ-clone/ui-map/components/Portal';

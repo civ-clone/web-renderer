@@ -12,6 +12,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import GamePortal from '@civ-clone/ui-game/GamePortal';
 import World from '@civ-clone/ui-map/components/World';

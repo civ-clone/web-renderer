@@ -12,6 +12,7 @@
 // here means what it means in a browser.
 
 import './lib/grids';
+import './lib/artPacks';
 import { failStore, resetStore, storedRecords } from './lib/FakeStore';
 import {
   fileName,

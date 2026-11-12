@@ -6,6 +6,7 @@
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { City, Player } from '@civ-clone/ui-protocol/types';
 import Portal from '@civ-clone/ui-map/components/Portal';

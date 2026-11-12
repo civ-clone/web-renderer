@@ -10,6 +10,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import ChoiceHandler from '@civ-clone/ui-game/app/ChoiceHandler';
 import ChooseGovernment from '@civ-clone/ui-hud/components/Actions/ChooseGovernment';

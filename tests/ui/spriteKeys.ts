@@ -10,6 +10,7 @@
 // Must stay first: it gives the test a `document`.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,7 +25,7 @@ import validateDescriptor, {
   spriteKey,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import {
@@ -67,7 +68,7 @@ const civ1 = currentTileset(),
   lower = (name: string): string => name.toLowerCase();
 
 // What the import stores: `./assets/<path><name>.png` for every sprite the extractor cuts out
-//  (`ImportAssetsWindow`), whichever list of the tileset's it is on.
+//  (Civ1's import, `tileset-civ1/lib/civ1Import.ts`), whichever list of the tileset's it is on.
 const imported: string[] = [];
 
 Object.values((extractData as any).files).forEach((definitions: any) =>
@@ -402,7 +403,7 @@ expect(
 const handBuilt = frontendSources()
   .filter(
     (file) =>
-      !file.endsWith('ImportAssetsWindow.ts') &&
+      !file.endsWith(path.join('tileset-civ1', 'lib', 'civ1Import.ts')) &&
       !file.endsWith(path.join('assets', 'lib', 'packs.ts'))
   )
   .flatMap((file) =>
@@ -425,7 +426,8 @@ expect('no sprite key is built by hand', handBuilt, []);
 const readsUri = frontendSources()
   .filter(
     (file) =>
-      !file.endsWith('AssetStore.ts') && !file.endsWith('ImportAssetsWindow.ts')
+      !file.endsWith('AssetStore.ts') &&
+      !file.endsWith(path.join('tileset-civ1', 'lib', 'civ1Import.ts'))
   )
   .filter((file) => /\.uri\b/.test(fs.readFileSync(file, 'utf8')))
   .map((file) => path.relative(process.cwd(), file));

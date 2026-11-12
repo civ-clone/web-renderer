@@ -13,6 +13,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import City from '@civ-clone/ui-city/components/City';
 import classicCityLayout from '@civ-clone/ui-interface-classic/components/classicCityLayout';

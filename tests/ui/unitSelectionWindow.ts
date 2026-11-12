@@ -11,6 +11,7 @@
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';

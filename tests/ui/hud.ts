@@ -8,6 +8,7 @@
 import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
+import './lib/artPacks';
 
 import {
   GameData,

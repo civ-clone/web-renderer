@@ -7,6 +7,7 @@
 // Must stay first: the components read `document` as they load.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { GameData, Player, PlayerAction } from '@civ-clone/ui-protocol/types';
 import Dismissals from '@civ-clone/ui-client/lib/dismissals';

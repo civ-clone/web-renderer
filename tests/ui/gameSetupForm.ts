@@ -8,6 +8,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';

@@ -12,6 +12,7 @@
 // Must stay first: it gives the layers a `document` and a canvas to draw with.
 import { Call, FakeImage, fakeCanvas } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -24,7 +25,7 @@ import projectionFor from '@civ-clone/ui-map/lib/projectionFor';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import validateDescriptor from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const update = process.argv.includes('--update'),

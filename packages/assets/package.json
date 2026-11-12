@@ -17,6 +17,7 @@
     "./lib/groupIcons": "./lib/groupIcons.ts",
     "./lib/imageSize": "./lib/imageSize.ts",
     "./lib/installPacks": "./lib/installPacks.ts",
+    "./lib/packImports": "./lib/packImports.ts",
     "./lib/packs": "./lib/packs.ts",
     "./lib/renderUnit": "./lib/renderUnit.ts",
     "./lib/replaceColours": "./lib/replaceColours.ts",

@@ -4,6 +4,7 @@
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { FakeImage, fakeCanvas, preloadImage } from './lib/fakeCanvas';
+import './lib/artPacks';
 
 import i18next from 'i18next';
 import { drawUnitActionIcon } from '@civ-clone/ui-assets/lib/unitActionIcon';

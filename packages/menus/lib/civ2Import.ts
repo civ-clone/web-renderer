@@ -15,6 +15,14 @@ import {
   metadataKey,
 } from '@civ-clone/ui-assets/lib/packs';
 import { Asset, assetStore } from '@civ-clone/ui-assets/AssetStore';
+import {
+  ImportOptions,
+  PackImport,
+  PackImportResult,
+  PackImportStatus,
+  registerPackImport,
+  unsupportedFile,
+} from '@civ-clone/ui-assets/lib/packImports';
 import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import { packFor } from '@civ-clone/ui-assets/lib/installPacks';
 import { t } from 'i18next';
@@ -281,3 +289,143 @@ export const civ2StatusText = (toImport: string[]): string =>
   toImport.length === 0
     ? t('ImportAssetsWindow.civ2-complete')
     : t('ImportAssetsWindow.civ2-incomplete', { files: toImport });
+
+/** What `extractFile` cuts out of one of Civilization II's sheets. */
+type Civ2Result = { sprites: Sprite[]; colours?: FlagColours };
+
+/**
+ * Reads `file`, one of Civilization II's sheets (#97), and cuts out the sprites it holds that are wanted, as Civ1's
+ *  import does Civilization's. Rejects, naming the file, when it can't be read, and resolves with nothing once the file
+ *  is no longer `wanted`.
+ */
+const extractFile = async (
+  file: File,
+  { existingKeys, replaceExisting, progress, wanted }: ImportOptions,
+  stored: StoredMetadata
+): Promise<Civ2Result> => {
+  const definition = civ2Definition(
+      file,
+      existingKeys,
+      replaceExisting,
+      stored
+    ),
+    nothing: Civ2Result = { sprites: [] };
+
+  if (definition === null) {
+    return nothing;
+  }
+
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+
+    // The import failed on another file while this one was being read.
+    if (!wanted()) {
+      return nothing;
+    }
+
+    return extractCiv2(bytes, definition, progress);
+  } catch (cause) {
+    throw unsupportedFile(
+      file.name,
+      `Could not extract sprites from ${file.name}`,
+      cause
+    );
+  }
+};
+
+/**
+ * The Civilization II sprites cut out, as the records to store: each as its PNG under Civ2's pack's key for it, and
+ *  their anchors and the flag colours in one record beside them, over what an earlier import kept there (`stored`).
+ */
+const civ2Assets = async (
+  results: Civ2Result[],
+  stored: StoredMetadata
+): Promise<Asset[]> => {
+  const sprites = results.flatMap(({ sprites }) => sprites),
+    colours = results.flatMap(({ colours }) =>
+      colours === undefined ? [] : [colours]
+    );
+
+  if (sprites.length === 0 && colours.length === 0) {
+    return [];
+  }
+
+  return [
+    ...(await Promise.all(
+      sprites.map(
+        async (sprite): Promise<Asset> => ({
+          name: civ2Key(sprite.name),
+          blob: await spritePng(sprite),
+        })
+      )
+    )),
+    metadataAsset(
+      mergeMetadata(stored === 'unreadable' ? null : stored, sprites, colours)
+    ),
+  ];
+};
+
+/**
+ * Civ2's import (#97): its four sheets, optional, as Civilization's own files are all a game needs, and importable on
+ *  their own once those are in. RULES.TXT is taken and left alone.
+ */
+export const civ2Import: PackImport = {
+  id: civ2Pack.id,
+  requiredFiles: [],
+  accepts: isCiv2File,
+  ignores: isCiv2Rules,
+  instructions: (): string =>
+    t('ImportAssetsWindow.optional-civ2', { files: civ2Files() }),
+  import: async (
+    files: File[],
+    options: ImportOptions
+  ): Promise<PackImportResult> => {
+    // What an earlier import said about Civilization II's sprites, read first: a grid whose anchors it hasn't got is
+    //  cut again, and the rest are kept beside the new ones. One that can't be read is cut again in full, rather than
+    //  kept in part.
+    const stored: StoredMetadata = await assetStore
+        .readMetadata(civ2Pack)
+        .catch((error) => {
+          console.error(error);
+
+          return 'unreadable' as const;
+        }),
+      // Civilization II's sheets that couldn't be read, left out beside Civilization's own files.
+      skipped: string[] = [],
+      results = await Promise.all(
+        files.map((file) =>
+          extractFile(file, options, stored).catch((error): Civ2Result => {
+            if (!options.skipUnreadable) {
+              throw error;
+            }
+
+            console.warn(`Could not read ${file.name}, skipping.`, error);
+
+            skipped.push(file.name);
+
+            return { sprites: [] };
+          })
+        )
+      );
+
+    return { assets: await civ2Assets(results, stored), skipped };
+  },
+  // Whether Civilization II's map art is complete, naming the sheets still to import and any of `skipped`, the ones
+  //  chosen that couldn't be read. Nothing when none of it has been imported or skipped.
+  status: async (skipped: string[]): Promise<PackImportStatus> => {
+    const toImport = await civ2Status();
+
+    return {
+      lines: [
+        ...skipped.map((file) =>
+          t('ImportAssetsWindow.civ2-skipped', { file })
+        ),
+        ...(toImport === null ? [] : [civ2StatusText(toImport)]),
+      ],
+      incomplete:
+        skipped.length > 0 || (toImport !== null && toImport.length > 0),
+    };
+  },
+};
+
+registerPackImport(civ2Import);

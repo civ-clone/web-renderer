@@ -38,6 +38,7 @@
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import {
   Pixels,

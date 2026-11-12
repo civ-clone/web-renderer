@@ -131,7 +131,8 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts                                                                                                                      | protocol                                                              |
 | `rules-civ1`        | What the worker client needs that only Civ1's rules have, which the plugin list hands it                                                                                                    | worker-client                                                         |
 | `client`            | The game as the page holds it, drawing nothing: transport, state, saves                                                                                                                     | protocol, platform                                                    |
-| `assets`            | Sprites, tilesets and sounds, and drawing a sprite                                                                                                                                          | protocol, platform                                                    |
+| `assets`            | Sprites, tilesets and sounds, and drawing a sprite; the registries the art packs register their tilesets and imports with                                                                   | protocol, platform                                                    |
+| `tileset-civ1`      | Civ1's art pack: its tileset, the square map's and the interface's, and importing it from the player's copy                                                                                 | assets                                                                |
 | `component-*`       | One token-driven component each, with its styles: `button`, `controls`, `window`, `choice-window`, `selection-window`, `report-table`, `tooltip`, `popup-menu`, `progress-bar`, `stat-pill` | each other, `widgets`, platform                                       |
 | `widgets`           | The small helpers the components share (markup, filtering, contrast, dragging), the sliders and the sidebar section                                                                         | platform                                                              |
 | `map`               | Drawing the world on any grid, through a `Projection`                                                                                                                                       | protocol, platform, client, assets                                    |
@@ -161,7 +162,11 @@ for a tile, on whatever grid. The grid is always named in full: the square grid.
 `Projection`, and anything true of the square grid alone lives in `map-square`, of the staggered isometric grid alone
 in `map-isometric` (#97). A hexagonal grid gets a package of its own beside them (`map-hex`, #94). `map` names no grid:
 each grid registers its projection with `registerGrid` (`@civ-clone/ui-map/lib/projectionFor`), and the page loads the
-grids it draws, as `frontend.ts` loads `map-square` and `map-isometric`. A grid is offered for a new game only once an
+grids it draws, as `frontend.ts` loads `map-square` and `map-isometric`. The art packs are loaded the same way (#97):
+`assets` names no pack but Civ2's, which is still to be made a package of its own, and each pack's package registers its tileset (`registerTileset`) and its import
+(`registerPackImport`) as it is loaded, as `frontend.ts` loads `tileset-civ1` first, the interface's pack, which every
+part that draws takes its icons from through `interfaceTileset()`. Suites that draw anything, or ask the asset store
+anything, import `tests/ui/lib/artPacks.ts`. A grid is offered for a new game only once an
 installed tileset is drawn on it (`supportedTopologies`), so isometric is offered once Civ2's art has been imported
 (`installPacks`, see `asset-system.md`), and the map of a game is drawn with the pack for its world's grid
 (`mapTileset`). Each grid brings
