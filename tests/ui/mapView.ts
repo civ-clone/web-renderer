@@ -761,7 +761,7 @@ expect(
 //  brought out from under it as from an edge.
 {
   const { portal } = mapView,
-    size = portal.tileSize(),
+    size = portal.tileSize().width,
     // Six tiles square, smaller than the eight-tile world, so each tile is shown once.
     side = size * 6;
 

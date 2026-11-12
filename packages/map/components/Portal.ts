@@ -8,7 +8,7 @@ import {
   rectArea,
 } from '../lib/viewport';
 import Map from './Map';
-import { Projection } from '../lib/projection';
+import { Projection, Size } from '../lib/projection';
 import Transport from '@civ-clone/ui-client/Transport';
 import World from './World';
 import { s } from '@dom111/element';
@@ -34,6 +34,7 @@ export interface IPortal {
   getLayers(LayerType: typeof Map): Map[];
   isVisible(x: number, y: number, margin?: number): boolean;
   lockVerticalEdges(): boolean;
+  nativeTileSize(): Size;
   openCity(city: CityData): boolean;
   playerId(): string | null;
   render(): void;
@@ -43,7 +44,7 @@ export interface IPortal {
   setCovered(covered: Rect[]): void;
   setLockVerticalEdges(lock: boolean): void;
   setScale(scale: number): void;
-  tileSize(): number;
+  tileSize(): Size;
   transport(): Transport;
   visibleBounds(): [number, number, number, number];
   visibleRange(): [Coordinate, Coordinate];
@@ -56,7 +57,8 @@ export interface PortalSettings {
   lockVerticalEdges: boolean;
   playerId: string | null;
   scale: number;
-  tileSize: number;
+  // The tileset's native tile, across and down, before the scale.
+  tileSize: Size;
 }
 
 type PortalOptions = {
@@ -118,7 +120,7 @@ export class Portal
   // whenever the scale or the vertical wrap changes.
   #projection: Projection;
   #scale: number;
-  #tileSize: number;
+  #tileSize: Size;
   #transport: Transport;
   #viewport: Rect = { x: 0, y: 0, width: -1, height: -1 };
   #world: World;
@@ -144,7 +146,7 @@ export class Portal
     this.#cityOpener = settings.cityOpener;
     this.#lockVerticalEdges = settings.lockVerticalEdges;
     this.#playerId = settings.playerId;
-    this.#tileSize = settings.tileSize;
+    this.#tileSize = { ...settings.tileSize };
     this.#scale = settings.scale;
     this.#transport = transport;
     this.#projection = this.#createProjection();
@@ -711,8 +713,17 @@ export class Portal
     return this.#projection;
   }
 
-  tileSize(): number {
-    return this.#tileSize * this.#scale;
+  /** One tile on screen, across and down: the native tile at this portal's scale. */
+  tileSize(): Size {
+    return {
+      width: this.#tileSize.width * this.#scale,
+      height: this.#tileSize.height * this.#scale,
+    };
+  }
+
+  /** The native tile, across and down, as the portal was given it: `tileSize()` before the scale. */
+  nativeTileSize(): Size {
+    return { ...this.#tileSize };
   }
 
   transport(): Transport {

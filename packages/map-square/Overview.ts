@@ -1,5 +1,5 @@
 import { Attribute, Tile } from '@civ-clone/ui-protocol/types';
-import { Projection } from '@civ-clone/ui-map/lib/projection';
+import { Projection, Size } from '@civ-clone/ui-map/lib/projection';
 import SquareProjection from './SquareProjection';
 import { Map } from '@civ-clone/ui-map/components/Map';
 
@@ -70,7 +70,7 @@ export class Overview extends Map {
   // Squares at the overview's own tile size, whatever projection the map has.
   protected override projection(): Projection {
     if (this.#projection === null) {
-      this.#projection = new SquareProjection(this.tileSize(), this.world());
+      this.#projection = new SquareProjection(this.#size(), this.world());
     }
 
     return this.#projection;
@@ -95,7 +95,14 @@ export class Overview extends Map {
 
   // Deliberately ignores the portal's scale and tile size: the minimap is an
   // overview at its own fixed size, not a scaled view of the map.
-  override tileSize(): number {
+  override tileSize(): Size {
+    const size = this.#size();
+
+    return { width: size, height: size };
+  }
+
+  // One side of the overview's square tiles.
+  #size(): number {
     return Math.max(1, Math.trunc(OVERVIEW_WIDTH / this.world().width()));
   }
 
@@ -104,7 +111,7 @@ export class Overview extends Map {
     offsetX: number,
     offsetY: number
   ): void {
-    const size = this.tileSize(),
+    const size = this.#size(),
       context = this.context();
 
     // Unexplored draws nothing rather than a default colour, so how much of the

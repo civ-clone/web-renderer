@@ -26,6 +26,7 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
+import projectionFor from '@civ-clone/ui-map/lib/projectionFor';
 import {
   AssetStore,
   assetStore,
@@ -832,18 +833,28 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
   expect(
     "the map is drawn with Civ1's tileset, 16px tiles, at 2× to start",
     [tileset.id, nativeTileSize(tileset), tileset.defaultScale],
-    ['civ1', 16, 2]
+    ['civ1', { width: 16, height: 16 }, 2]
+  );
+  // A tile's size is across and down (#97), and its grid says whether it can be drawn: a square grid's are square.
+  const tall = validateDescriptor(
+    civ1With({ id: 'tall', tile: { width: 16, height: 24 } })
+  );
+
+  expect(
+    'a tileset whose tiles are not square gives its tile across and down',
+    nativeTileSize(tall),
+    { width: 16, height: 24 }
   );
   expect(
-    'a tileset whose tiles are not square cannot be drawn yet',
+    'and a square grid still refuses to draw it',
     thrown(() =>
-      nativeTileSize(
-        validateDescriptor(
-          civ1With({ id: 'tall', tile: { width: 16, height: 24 } })
-        )
+      projectionFor(
+        tall,
+        new World({ width: 5, height: 3, tiles: [] } as any),
+        { width: 32, height: 48 }
       )
     ),
-    'Tileset "tall": its 16 × 24 tiles are not square, and only square tiles can be drawn yet.'
+    'Tileset "tall": a square grid\'s tiles are as far apart as they are wide and tall, and no row is shifted, not 16 × 24 tiles 16 × 16 apart with odd rows 0 across.'
   );
 
   setOptionDefaults();
@@ -1053,14 +1064,20 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       record(stub32, 1, [5, 3], [100, 60], false)[0],
     ].map((step: any) => [step.tileSize, step.footprint]),
     [
-      [32, { width: 32, height: 32 }],
-      [32, { width: 32, height: 32 }],
+      [
+        { width: 32, height: 32 },
+        { width: 32, height: 32 },
+      ],
+      [
+        { width: 32, height: 32 },
+        { width: 32, height: 32 },
+      ],
     ]
   );
   expect(
     'while the 32px tileset at 2× draws 64px tiles, so the comparison can fail',
     (record(stub32, 2, [5, 3], [100, 60], false)[0] as any).tileSize,
-    64
+    { width: 64, height: 64 }
   );
   expect(
     "a portal not told its tile size or scale takes the tileset's: Civ1's 16px at 2×",
@@ -1071,7 +1088,25 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         blankCanvas(100, 60)
       ),
     ].map((portal) => [portal.scale(), portal.tileSize()]),
-    [[2, 32]]
+    [[2, { width: 32, height: 32 }]]
+  );
+  expect(
+    "a portal on the square grid told a tile wider than it is tall is refused, as the square grid's steps would disagree with the layers'",
+    (() => {
+      try {
+        new Portal(
+          new World({ width: 5, height: 3, tiles: [] } as any),
+          {} as any,
+          blankCanvas(100, 60),
+          { playerId: null, scale: 2, tileSize: { width: 32, height: 16 } }
+        );
+
+        return null;
+      } catch (error) {
+        return (error as Error).message;
+      }
+    })(),
+    `Tileset "civ1": a square grid's tiles are drawn as tall as they are wide, not 64 × 32.`
   );
 
   // The sizes the interface shows the tileset's sprites at outside the map (#729).

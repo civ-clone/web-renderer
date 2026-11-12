@@ -147,7 +147,12 @@ const happy = preloadImage('city/people_happy_m', 8, 16),
 
     TestCityBanners.form = form;
 
-    const layer = new TestCityBanners(world(cities), scale, 16, canvas);
+    const layer = new TestCityBanners(
+      world(cities),
+      scale,
+      { width: 16, height: 16 },
+      canvas
+    );
 
     layer.setViewport(0, 0, 320, 320);
     calls.length = 0;
@@ -203,7 +208,7 @@ const sizeInk = (colours: string[]) => {
       },
     }),
     2,
-    16,
+    { width: 16, height: 16 },
     canvas
   );
 

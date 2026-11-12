@@ -400,7 +400,7 @@ let gameData: any = null;
 // row.
 class TestUnits extends Units {
   protected placements(tile: Tile): [number, number][] {
-    return [[tile.x * this.tileSize(), 0]];
+    return [[tile.x * this.tileSize().width, 0]];
   }
 
   protected renderUnit(unit: any): CanvasImageSource {
@@ -419,7 +419,7 @@ class TestUnits extends Units {
 
 class TestActiveUnit extends ActiveUnit {
   protected placements(tile: Tile): [number, number][] {
-    return [[tile.x * this.tileSize(), 0]];
+    return [[tile.x * this.tileSize().width, 0]];
   }
 
   protected renderUnit(unit: any): CanvasImageSource {
@@ -439,7 +439,12 @@ const topology = topologyFor({ width: 10, height: 1 }),
 
     return {
       calls,
-      layer: new Layer(world as any, 2, 16, canvas) as InstanceType<T>,
+      layer: new Layer(
+        world as any,
+        2,
+        { width: 16, height: 16 },
+        canvas
+      ) as InstanceType<T>,
     };
   },
   unitsLayer = layer(TestUnits),

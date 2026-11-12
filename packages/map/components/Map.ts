@@ -1,5 +1,5 @@
 import { City, NeighbourDirection, Tile } from '@civ-clone/ui-protocol/types';
-import { Placement, Projection, Reach } from '../lib/projection';
+import { Placement, Projection, Reach, Size } from '../lib/projection';
 import {
   Rect,
   mergeRects,
@@ -20,7 +20,7 @@ export interface IMap {
   context(): CanvasRenderingContext2D;
   render(...args: any[]): void;
   scale(): number;
-  tileSize(): number;
+  tileSize(): Size;
   world(): World;
 }
 
@@ -78,18 +78,19 @@ export class Map implements IMap {
   #wrapVertical: boolean = true;
   #visible: boolean = true;
   #scale: number;
-  #tileSize: number;
+  // The tileset's native tile, across and down, before the scale.
+  #tileSize: Size;
   #world: World;
 
   constructor(
     world: World,
     scale: number = 2,
-    tileSize: number = 16,
+    tileSize: Size = { width: 16, height: 16 },
     canvas: HTMLCanvasElement = s<HTMLCanvasElement>('<canvas></canvas>')
   ) {
     this.#canvas = canvas;
     this.#world = world;
-    this.#tileSize = tileSize;
+    this.#tileSize = { ...tileSize };
     this.#scale = scale;
 
     this.#context = this.#canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -248,8 +249,17 @@ export class Map implements IMap {
     this.scrollTo(originX, originY);
   }
 
-  tileSize(): number {
-    return this.#tileSize * this.#scale;
+  /** The native tile, across and down, as the layer was given it: `tileSize()` before the scale. */
+  protected nativeTileSize(): Size {
+    return { ...this.#tileSize };
+  }
+
+  /** One tile on screen, across and down: the native tile at this layer's scale. */
+  tileSize(): Size {
+    return {
+      width: this.#tileSize.width * this.#scale,
+      height: this.#tileSize.height * this.#scale,
+    };
   }
 
   /** The tileset this layer draws with: where its tiles go, and the sprites and how they are put together (#56). */
@@ -360,13 +370,15 @@ export class Map implements IMap {
    * How far past a tile's own square, in px, this layer's drawing can reach, so
    * a tile just off the canvas that still draws on to it is not culled.
    *
-   * A whole tile by default. Not one sprite in the tileset reaches that far —
+   * A whole tile by default, the longer of its sides. Not one sprite in the tileset reaches that far —
    * the worst is a yield icon about nine pixels over at scale 2 — but the
    * margin is a ring of tiles at the edge of the viewport rather than anything
    * per-frame, and it means a theme that moves a sprite cannot quietly clip it.
    */
   protected overhang(): number {
-    return this.tileSize();
+    const { width, height } = this.tileSize();
+
+    return Math.max(width, height);
   }
 
   /**

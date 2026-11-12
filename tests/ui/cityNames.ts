@@ -37,7 +37,12 @@ const unhappy = preloadImage('city/people_unhappy_m', 8, 16),
     civilDisorder = civilDisorderDeclared
   ) => {
     const { calls, canvas } = fakeCanvas(320, 320),
-      layer = new TestCityNames({} as any, 2, 16, canvas),
+      layer = new TestCityNames(
+        {} as any,
+        2,
+        { width: 16, height: 16 },
+        canvas
+      ),
       tile = {
         x: 0,
         y: 0,

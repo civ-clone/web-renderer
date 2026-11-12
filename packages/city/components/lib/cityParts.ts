@@ -421,7 +421,7 @@ export const renderMap = (
       {
         playerId: city.player.id,
         scale: portal.scale(),
-        tileSize: portal.tileSize() / portal.scale(),
+        tileSize: portal.nativeTileSize(),
       },
       Landscape,
       Fog,

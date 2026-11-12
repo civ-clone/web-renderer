@@ -1,5 +1,6 @@
 import {
   Colouring,
+  Size,
   TilesetDescriptor,
   expandName,
 } from '../tilesets/TilesetDescriptor';
@@ -58,7 +59,8 @@ export const playerColours = (player: UnitData['player']): string[] =>
 /**
  * Writes a busy unit's letter onto `context`, over the unit drawn at
  * `offsetX`/`offsetY` and `scale` times its size (#352), on a tile `tileSize`
- * native px across, where `tileset` puts it.
+ * native px across and down, where `tileset` puts it: its `x` is a part of the
+ * tile's width and its baseline of its height.
  *
  * It is written at the size it is shown at, as the city labels are, rather than
  * into the sprite, which is then enlarged pixel by pixel.
@@ -69,7 +71,7 @@ export const drawUnitStatus = (
   offsetX: number,
   offsetY: number,
   scale: number,
-  tileSize: number = nativeTileSize(currentTileset()),
+  tileSize: Size = nativeTileSize(currentTileset()),
   tileset: TilesetDescriptor = currentTileset()
 ): void => {
   const status = unitStatus(unit);
@@ -80,8 +82,8 @@ export const drawUnitStatus = (
 
   // if (unit.busy._ === 'Sleeping') {} // TODO: fade the unit like in Civ 1
   const { x, baseline: down, fontSize: size } = tileset.units.status,
-    centreX = offsetX + tileSize * scale * x,
-    baseline = offsetY + tileSize * scale * down,
+    centreX = offsetX + tileSize.width * scale * x,
+    baseline = offsetY + tileSize.height * scale * down,
     fontSize = size * scale;
 
   context.font = `bold ${fontSize}px sans-serif`;

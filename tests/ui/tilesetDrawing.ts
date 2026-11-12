@@ -366,7 +366,8 @@ const drawn = (
   tileset: TilesetDescriptor,
   world: World,
   x: number,
-  y: number
+  y: number,
+  tileSize = { width: 16, height: 16 }
 ): string[] => {
   const { calls, canvas } = recordingCanvas(200, 200),
     sprites: string[] = [];
@@ -396,7 +397,7 @@ const drawn = (
     }
   }
 
-  new Recording(world, 2, 16, canvas).draw(world.get(x, y));
+  new Recording(world, 2, tileSize, canvas).draw(world.get(x, y));
 
   // A sprite that is not loaded draws nothing, so only the dots and the coast reach the canvas.
   return [
@@ -699,6 +700,26 @@ expect(
 );
 
 expect(
+  'on a tile wider than it is tall, the dot is in the middle across and down',
+  drawn(
+    Landscape,
+    civ1,
+    makeWorld(5, 5, { '2,2': { improvements: ['Road'] } }),
+    2,
+    2,
+    { width: 32, height: 16 }
+  ),
+  [
+    'terrain/land@0,0',
+    'terrain/grassland_nesw@0,0',
+    'fillStyle=#8c5828',
+    'beginPath()',
+    'rect(30,14,4,4)',
+    'fill()',
+  ]
+);
+
+expect(
   "and a lone railroad is Civ1's 2px black dot, or the stub's sprite",
   both(
     Landscape,
@@ -896,7 +917,7 @@ expect(
     return new Reaching(
       stackWorld(),
       2,
-      16,
+      { width: 16, height: 16 },
       recordingCanvas(200, 200).canvas
     ).reachNow();
   }),

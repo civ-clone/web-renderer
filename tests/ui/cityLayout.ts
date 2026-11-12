@@ -171,7 +171,8 @@ const emitted: [string, unknown][] = [],
   portal = {
     emit: (event: string, value: unknown) => emitted.push([event, value]),
     scale: () => 1,
-    tileSize: () => 16,
+    tileSize: () => ({ width: 16, height: 16 }),
+    nativeTileSize: () => ({ width: 16, height: 16 }),
   } as unknown as Portal;
 
 let sent: { name: string; id: string }[] = [];

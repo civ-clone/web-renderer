@@ -137,7 +137,7 @@ const portal = new GamePortal(
   {
     playerId: 'Player-1',
     scale: 1,
-    tileSize: 16,
+    tileSize: { width: 16, height: 16 },
     cityOpener: {
       opens: (city) => city.player.id === 'Player-1',
       open: (city) => opened.push(city.name),

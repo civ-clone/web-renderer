@@ -89,7 +89,7 @@ const { canvas } = fakeCanvas(48, 48),
     new World({ width: size, height: size, tiles } as any),
     {} as any,
     canvas,
-    { playerId: null, scale: 1, tileSize: 16 },
+    { playerId: null, scale: 1, tileSize: { width: 16, height: 16 } },
     Broken,
     Throws,
     After

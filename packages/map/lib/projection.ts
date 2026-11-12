@@ -1,9 +1,8 @@
 import { Rect } from './viewport';
+import type { Size } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
-export type Size = {
-  width: number;
-  height: number;
-};
+// One size, across and down, for tiles, footprints and worlds alike: the descriptor's, re-exported for the map.
+export type { Size };
 
 /** How far, in px, a sprite may reach past its tile's sprite box on each side. */
 export type Reach = {

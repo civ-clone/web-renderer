@@ -154,7 +154,7 @@ const portal = new GamePortal(
   new World({ width: 8, height: 8, tiles } as any),
   {} as any,
   canvas,
-  { playerId: 'Player-1', scale: 1, tileSize: 16 }
+  { playerId: 'Player-1', scale: 1, tileSize: { width: 16, height: 16 } }
 );
 
 portal.on('tile-clicked', (x: number, y: number) => clicked.push(`${x},${y}`));
