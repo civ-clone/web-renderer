@@ -192,9 +192,13 @@ export class DataTransferClient extends Client implements IClient {
 
     // Famine (#400). A city shrinks for many reasons, most of them told some other way or not at all (Settlers built,
     //  no Aqueduct), so a shrinking city has no notice of its own. `city:shrink` carries its cause (the Settlers, the
-    //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one.
-    on('city:food-storage-exhausted', (city: City) => {
-      this.#context.cityNews.of(city).famine = true;
+    //  Attack lost, `Aqueduct`, `FoodExhausted`, `Captured`) for any that should have one. The famine comes with the
+    //  unit it costs the city, if the engine says one (#969): "Settlers lost." in place of "Famine feared.".
+    on('city:food-storage-exhausted', (city: City, unit?: Unit) => {
+      const news = this.#context.cityNews.of(city);
+
+      news.famine = true;
+      news.famineUnitLost = unit ?? null;
     });
 
     this.#disposers.push(

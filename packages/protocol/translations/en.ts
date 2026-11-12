@@ -125,8 +125,10 @@ i18next.addResources('en', 'notification', {
   'City.unit-unsupported.title': 'Unit not supported!',
   'City.improvement-unsupported.body': `{{- city, cityName}} cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
   'City.improvement-unsupported.title': 'Improvement not supported!',
-  'City.food-storage-exhausted.body': `Food storage exhausted in {{- city, cityName}}.`,
+  'City.food-storage-exhausted.body': `Food storage exhausted in {{- city, cityName}}! Famine feared.`,
   'City.food-storage-exhausted.title': 'Food storage exhausted!',
+  'City.food-storage-exhausted.unit-lost.body': `Food storage exhausted in {{- city, cityName}}! $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) lost.`,
+  'City.food-storage-exhausted.unit-lost.title': 'Food storage exhausted!',
   'CityImprovement.obsolete.body':
     'Development of $t({{advance._}}.name, { "defaultValue": "{{advance._}}", "ns": "science" }) makes existing $t(Improvement.{{improvement}}.name, { "defaultValue": "{{improvement}}", "ns": "city" }) obsolete.',
   'CityImprovement.obsolete.title': 'Improvement obsolete',

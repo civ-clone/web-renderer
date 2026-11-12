@@ -455,6 +455,17 @@ const expect = (description: string, actual: string, expected: string) => {
         { city: toronto },
         'Civil disorder in Toronto. Mayor flees in panic!',
       ],
+      // #969: a famine says what it cost, the unit the engine names or else the fear of famine.
+      [
+        'City.food-storage-exhausted',
+        { city: toronto },
+        'Food storage exhausted in Toronto! Famine feared.',
+      ],
+      [
+        'City.food-storage-exhausted.unit-lost',
+        { city: toronto, unit: { _: 'Settlers' } },
+        'Food storage exhausted in Toronto! Settlers lost.',
+      ],
       // #60
       [
         'Wonder.obsolete',

@@ -233,8 +233,12 @@ expect(
 );
 expect(
   'civil disorder and famine',
-  [tune('City.civil-disorder'), tune('City.food-storage-exhausted')],
-  [36, 36]
+  [
+    tune('City.civil-disorder'),
+    tune('City.food-storage-exhausted'),
+    tune('City.food-storage-exhausted.unit-lost'),
+  ],
+  [36, 36, 36]
 );
 expect(
   'a unit, an improvement, a spaceship part built',

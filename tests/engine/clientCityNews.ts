@@ -12,6 +12,7 @@ import { DataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter'
 import Notification from '@civ-clone/ui-protocol/Notification';
 import Notifier from '@civ-clone/ui-worker-client/Client/Notifier';
 import Player from '@civ-clone/core-player/Player';
+import Unit from '@civ-clone/core-unit/Unit';
 import { standalone } from '@civ-clone/ui-worker-client/Client/refs';
 
 const failures: string[] = [];
@@ -41,6 +42,7 @@ process.on('exit', (code: number): void => {
 // Only who they are is read, so a name each is enough.
 const us = { name: 'us' } as unknown as Player,
   rival = { name: 'rival' } as unknown as Player,
+  settlers = { name: 'Settlers' } as unknown as Unit,
   other = { name: 'other' } as unknown as Player,
   city = (name: string) => ({ name } as unknown as City),
   news = (overrides: Partial<CityNews>): CityNews => ({
@@ -50,6 +52,7 @@ const us = { name: 'us' } as unknown as Player,
     destroyed: false,
     destroyedBy: null,
     famine: false,
+    famineUnitLost: null,
     abandoned: false,
     ...overrides,
   }),
@@ -137,6 +140,25 @@ const us = { name: 'us' } as unknown as Player,
     ['City.food-storage-exhausted', false, { city: 'Rome' }],
   ]);
 
+  // With the unit it cost (#969): "Settlers lost." in place of "Famine feared.".
+  expect(
+    'a city of ours starving that loses a unit',
+    outcome(news({ famine: true, famineUnitLost: settlers })),
+    [
+      [
+        'City.food-storage-exhausted.unit-lost',
+        false,
+        { city: 'Rome', unit: 'Settlers' },
+      ],
+    ]
+  );
+
+  expect(
+    "a rival's city starving that loses a unit tells us nothing",
+    outcome(news({ ours: false, famine: true, famineUnitLost: settlers })),
+    []
+  );
+
   expect(
     'a city of ours starving and captured: the capture is told',
     outcome(news({ famine: true, capturedBy: rival, capturedFrom: us })),
@@ -206,11 +228,14 @@ const us = { name: 'us' } as unknown as Player,
       (notification) => told.push(describe(notification))
     );
 
-  // One engine call: Rome starves and is captured, Veii (a rival's) starves, Antium starves.
+  // One engine call: Rome starves and is captured, Veii (a rival's) starves, Antium starves and loses its Settlers.
   collector.of(rome).famine = true;
   Object.assign(collector.of(rome), { capturedBy: rival, capturedFrom: us });
   collector.of(veii).famine = true;
-  collector.of(antium).famine = true;
+  Object.assign(collector.of(antium), {
+    famine: true,
+    famineUnitLost: settlers,
+  });
 
   expect('nothing is told while the engine call is under way', told, []);
 
@@ -222,7 +247,11 @@ const us = { name: 'us' } as unknown as Player,
       true,
       { city: 'Rome', capturingPlayer: 'rival', originalPlayer: 'us' },
     ],
-    ['City.food-storage-exhausted', false, { city: 'Antium' }],
+    [
+      'City.food-storage-exhausted.unit-lost',
+      false,
+      { city: 'Antium', unit: 'Settlers' },
+    ],
   ]);
 
   told.splice(0);
