@@ -12,7 +12,8 @@
 //  T5. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
 //      them.
 // Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule (which the
-//  build list and the queue name too), and on King a size-1 city with others is removed by its Settlers, which stand on its square.
+//  build list and the queue name too, and whose wait is told once, and again once the Settlers are chosen afresh), and
+//  on King a size-1 city with others is removed by its Settlers, which stand on its square.
 // And, on the same game, "Bribed and defecting units stay veteran" (#960): off to start with, then ticked.
 //
 // This is also the only guard against two copies of `@civ-clone/core-city-build` being installed: `CityBuild#held()`
@@ -437,6 +438,38 @@ const originals = async (): Promise<void> => {
       null,
       false,
       1,
+    ]
+  );
+
+  // Told once per wait, on the real engine (#970): the `check()` above waited and told; another waits and doesn't; the
+  //  Settlers chosen afresh, paid for, wait anew and are told again.
+  const toldOfOther = () =>
+      heldNotices().filter(([, , cityId]) => cityId === other.id()),
+    afterFirst = toldOfOther();
+
+  otherBuild.check();
+
+  const afterSecond = toldOfOther();
+
+  otherBuild.build(Settlers);
+  otherBuild.add(new Production(otherBuild.cost().value()));
+  otherBuild.check();
+
+  expect(
+    "the human's city on Chieftain: told once that its Settlers wait, by the original's rule; not again while they wait; again once chosen afresh",
+    [afterFirst, afterSecond.length, toldOfOther().length],
+    [
+      [
+        [
+          'City.building-held.unit',
+          true,
+          other.id(),
+          'Settlers',
+          [CHIEFTAIN_SETTLERS_RULE],
+        ],
+      ],
+      1,
+      2,
     ]
   );
 
