@@ -103,9 +103,9 @@ export type WondersDependencies = CityKnowledgeDependencies & {
 export const wondersEntries = (
   player: Player,
   built: BuiltWonder[],
-  { playerWorlds, hasMet, owns }: WondersDependencies
+  { hasSeen, hasMet, owns }: WondersDependencies
 ): WondersEntry[] => {
-  const knowledge = cityKnowledge(player, { playerWorlds, hasMet });
+  const knowledge = cityKnowledge({ hasSeen, hasMet });
 
   return built.map(({ wonder, standing }) => {
     if (standing === null) {

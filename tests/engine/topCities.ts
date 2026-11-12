@@ -194,21 +194,17 @@ const checkEntries = (): void => {
       city('Lost', met, met, seenTile, 0, [], [], ['Colossus'], true),
     ],
     asked: string[] = [],
+    seenAsked: object[] = [],
     dependencies = {
       cities: { entries: () => cities },
       cityGrowths: { getByCity: (city: any) => city.growth },
       specialists: { getByCity: (city: any) => city.specialists },
       wonders: { getByCity: (city: any) => city.wonders },
-      playerWorlds: {
-        getByPlayer: (owner: Player) => {
-          if (owner !== reader) {
-            fail("topCitiesEntries read a world other than the reader's");
-          }
+      // What the view has seen, asked once for each city.
+      hasSeen: (tile: object) => {
+        seenAsked.push(tile);
 
-          return {
-            getByTile: (tile: object) => (tile === seenTile ? tile : null),
-          };
-        },
+        return tile === seenTile;
       },
       hasMet: (other: Player) => {
         asked.push(other.civilization().sourceClass().name);
@@ -271,6 +267,11 @@ const checkEntries = (): void => {
         entries
       )}, expected ${JSON.stringify(expected)}`
     );
+  }
+
+  // Asked once for each standing city: four.
+  if (seenAsked.length !== 4) {
+    fail(`hasSeen was asked ${seenAsked.length} times, not once per city`);
   }
 
   if (asked.join(',') !== 'Babylonian,Roman,Zulu') {

@@ -20,8 +20,23 @@ import {
 import {
   Colossus,
   GreatLibrary,
+  GreatWall,
+  Oracle,
   Pyramids,
 } from '@civ-clone/civ1-wonder/Wonders';
+import {
+  RequestsContext,
+  topCities as topCitiesFor,
+  wonders as wondersFor,
+} from '@civ-clone/ui-worker-client/Client/requests';
+import { View, playerView } from '@civ-clone/ui-worker-client/Client/View';
+import {
+  unionView,
+  worldView,
+} from '@civ-clone/ui-worker-client/ObserverViews';
+import Tile from '@civ-clone/core-world/Tile';
+import registries from '@civ-clone/ui-worker-client/Client/registries';
+import { instance as interactionRegistryInstance } from '@civ-clone/core-diplomacy/InteractionRegistry';
 import {
   setWorkerRules,
   workerRules,
@@ -247,17 +262,13 @@ const checkEntries = (): void => {
       { wonder: 'Oracle', standing: null },
     ],
     asked: string[] = [],
+    seenAsked: object[] = [],
     dependencies = {
-      playerWorlds: {
-        getByPlayer: (owner: Player) => {
-          if (owner !== reader) {
-            fail("wondersEntries read a world other than the reader's");
-          }
+      // What the view has seen, asked once for each city.
+      hasSeen: (tile: object) => {
+        seenAsked.push(tile);
 
-          return {
-            getByTile: (tile: object) => (tile === seenTile ? tile : null),
-          };
-        },
+        return tile === seenTile;
       },
       hasMet: (other: Player) => {
         asked.push(other.civilization().sourceClass().name);
@@ -316,6 +327,11 @@ const checkEntries = (): void => {
       },
       { wonder: 'Oracle', city: null },
     ] as WondersEntry[]
+  );
+  expect(
+    "hasSeen is asked once for each standing Wonder's city",
+    seenAsked.length,
+    4
   );
   expect('hasMet is asked once per owner, never about the reader', asked, [
     'Roman',
@@ -487,6 +503,139 @@ const run = async (): Promise<void> => {
       ['Colossus', false, true, null, null],
       ['GreatLibrary', true, false, ownCity!.name(), civilization],
     ]
+  );
+
+  // A rival's standing Wonder, the Oracle, in a city nobody on our side has seen, of a rival we haven't met; and one of
+  //  the other player's (the Great Wall), whose Wonder is "own" only to a view that owns that player.
+  const humanWorld = playerWorldRegistryInstance.getByPlayer(humanPlayer!),
+    memberWorld = playerWorldRegistryInstance.getByPlayer(captor!),
+    taken = new Set<unknown>(),
+    freeLand = (unseen: boolean) =>
+      ownCity!
+        .tile()
+        .map()
+        .entries()
+        .find(
+          (tile) =>
+            !taken.has(tile) &&
+            !tile.isWater() &&
+            cityRegistryInstance.getByTile(tile) === null &&
+            (!unseen ||
+              (humanWorld.getByTile(tile) === null &&
+                memberWorld.getByTile(tile) === null))
+        ),
+    rivalSite = freeLand(true);
+
+  taken.add(rivalSite);
+
+  const groupSite = freeLand(false);
+
+  if (!rivalSite || !groupSite) {
+    fail('no land for the rival and group cities');
+  }
+
+  const rivalCity = new City(rival!, rivalSite!, 'Rivalton'),
+    groupCity = new City(captor!, groupSite!, 'Groupton'),
+    rivalCivilization = rival!.civilization().sourceClass().name;
+
+  wonderRegistryInstance.register(
+    new Oracle(rivalCity),
+    new GreatWall(groupCity)
+  );
+
+  const oracleRow = (rows: WondersRow[]) => {
+    const row = rows.find(({ wonder }) => wonder === 'Oracle');
+
+    return [row?.city?.name ?? null, row?.owner?.civilization ?? null];
+  };
+
+  wondersHandler!(null);
+  await settle();
+
+  expect(
+    "over the transport: a rival's Wonder in a city we haven't seen, of a rival we haven't met, names neither",
+    oracleRow(wondersSent),
+    [null, null]
+  );
+
+  // Each view, asked as the requests ask: the player's own, a watched group (us and the other player), the whole map.
+  const viewDependencies = {
+      interactions: interactionRegistryInstance,
+      cities: cityRegistryInstance,
+      playerWorlds: playerWorldRegistryInstance,
+    },
+    contextOf = (view: View) =>
+      ({
+        ...registries,
+        player: () => view.primary(),
+        view,
+        hasMet: (other: Player) => view.hasMet(other),
+        hasSeen: (tile: Tile) => view.hasSeen(tile),
+      } as unknown as RequestsContext),
+    asked = (view: View) => {
+      const ctx = contextOf(view);
+
+      return {
+        oracle: oracleRow(wondersFor(ctx)),
+        greatWallOwn:
+          wondersFor(ctx).find(({ wonder }) => wonder === 'GreatWall')?.own ??
+          null,
+        rivalton: topCitiesFor(ctx, 100).some(
+          (row) => row.city?.name === 'Rivalton'
+        ),
+      };
+    },
+    own = playerView(() => humanPlayer!, viewDependencies);
+
+  expect(
+    "the player's own view: the unseen city and unmet rival unnamed in both reports, the other player's Wonder not ours",
+    asked(own),
+    { oracle: [null, null], greatWallOwn: false, rivalton: false }
+  );
+
+  const whole = worldView(humanPlayer!, viewDependencies);
+
+  expect(
+    "the whole map: every city named, in both reports, and nobody's Wonder its own",
+    asked(whole.view),
+    {
+      oracle: ['Rivalton', rivalCivilization],
+      greatWallOwn: false,
+      rivalton: true,
+    }
+  );
+  whole.dispose();
+
+  // The other member has seen the rival's city (and so met the rival); we haven't.
+  memberWorld.register(rivalSite!);
+
+  const group = unionView([humanPlayer!, captor!], viewDependencies);
+
+  expect(
+    "a group: a city only another member has seen is named in both reports, and that member's Wonder is the view's own",
+    asked(group.view),
+    {
+      oracle: ['Rivalton', rivalCivilization],
+      greatWallOwn: true,
+      rivalton: true,
+    }
+  );
+  group.dispose();
+
+  expect('and the player alone still has not seen it', asked(own).oracle, [
+    null,
+    null,
+  ]);
+
+  // Seeing the city's square names it, and (as for alerts, #59) counts as meeting its owner.
+  humanWorld.register(rivalSite!);
+  wondersHandler!(null);
+  await settle();
+
+  expect(
+    'over the transport, once we have seen the city: it and its owner are named',
+    oracleRow(wondersSent),
+    ['Rivalton', rivalCivilization]
   );
 
   console.log(`PASS wonders (${checks} checks)`);

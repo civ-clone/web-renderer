@@ -4,7 +4,7 @@ import City from '@civ-clone/core-city/City';
 import { CityGrowthRegistry } from '@civ-clone/core-city-growth/CityGrowthRegistry';
 import { CityRegistry } from '@civ-clone/core-city/CityRegistry';
 import Player from '@civ-clone/core-player/Player';
-import { PlayerWorldRegistry } from '@civ-clone/core-player-world/PlayerWorldRegistry';
+import Tile from '@civ-clone/core-world/Tile';
 import { SpecialistRegistry } from '@civ-clone/core-city/SpecialistRegistry';
 import { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
@@ -83,7 +83,8 @@ export type TopCitiesDependencies = {
   cityGrowths: Pick<CityGrowthRegistry, 'getByCity'>;
   specialists: SpecialistRegistry;
   wonders: Pick<WonderRegistry, 'getByCity'>;
-  playerWorlds: Pick<PlayerWorldRegistry, 'getByPlayer'>;
+  // What the view has seen and met: the player's own, a watched group's, or the whole map's (#613).
+  hasSeen: (tile: Tile) => boolean;
   hasMet: (player: Player) => boolean;
 };
 
@@ -104,22 +105,32 @@ export const civilizationOf = (
 
 export type CityKnowledgeDependencies = Pick<
   TopCitiesDependencies,
-  'playerWorlds' | 'hasMet'
+  'hasSeen' | 'hasMet'
 >;
 
 /**
- * What `player` knows of a city, as the reports that name other civilizations' cities tell it (#124, #992): whether
- *  it has seen the city's tile, and whether it has met the city's owner. `met` asks about each owner once (#503).
+ * What the view knows of a city, as the reports that name other civilizations' cities tell it (#124, #992): whether
+ *  it has seen the city's tile, and whether it has met the city's owner, as the view says (a watched group's or the
+ *  whole map's, #613). `seen` asks about each city once, `met` about each owner once (#503).
  */
-export const cityKnowledge = (
-  player: Player,
-  { playerWorlds, hasMet }: CityKnowledgeDependencies
-): { seen: (city: City) => boolean; met: (owner: Player) => boolean } => {
-  const playerWorld = playerWorlds.getByPlayer(player),
+export const cityKnowledge = ({
+  hasSeen,
+  hasMet,
+}: CityKnowledgeDependencies): {
+  seen: (city: City) => boolean;
+  met: (owner: Player) => boolean;
+} => {
+  const seenCities = new Map<City, boolean>(),
     metPlayers = new Map<Player, boolean>();
 
   return {
-    seen: (city: City): boolean => playerWorld.getByTile(city.tile()) !== null,
+    seen: (city: City): boolean => {
+      if (!seenCities.has(city)) {
+        seenCities.set(city, hasSeen(city.tile()));
+      }
+
+      return seenCities.get(city)!;
+    },
     met: (owner: Player): boolean => {
       if (!metPlayers.has(owner)) {
         metPlayers.set(owner, hasMet(owner));
@@ -139,11 +150,11 @@ export const topCitiesEntries = (
     cityGrowths,
     specialists,
     wonders,
-    playerWorlds,
+    hasSeen,
     hasMet,
   }: TopCitiesDependencies
 ): TopCitiesEntry[] => {
-  const knowledge = cityKnowledge(player, { playerWorlds, hasMet });
+  const knowledge = cityKnowledge({ hasSeen, hasMet });
 
   return cities
     .entries()

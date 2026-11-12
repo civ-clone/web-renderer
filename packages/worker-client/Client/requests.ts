@@ -5,6 +5,7 @@
 //  `civilizationScore` for the ending window (`gameEnd.ts`).
 
 import Player from '@civ-clone/core-player/Player';
+import Tile from '@civ-clone/core-world/Tile';
 import CityBuildItem from '@civ-clone/core-city-build/CityBuild';
 import { ObjectMap } from '@civ-clone/core-data-object/DataObject';
 import Transport, {
@@ -39,8 +40,9 @@ export type RequestsContext = Pick<
   | 'player'
   // Which players are our own.
   | 'view'
-  // Whether we have met a player, which says what the reports may show of them.
+  // Whether the view has met a player and seen a square, which say what the reports may show of them.
   | 'hasMet'
+  | 'hasSeen'
   // What the player may see, which a city's build list and a unit's actions go through.
   | 'dataFilter'
   // The unit the UI has the actions of (#323), which `unitActions` changes.
@@ -78,7 +80,7 @@ export const topCities = (
       cityGrowths: ctx.cityGrowths,
       specialists: ctx.specialists,
       wonders: ctx.wonders,
-      playerWorlds: ctx.playerWorlds,
+      hasSeen: (tile: Tile) => ctx.hasSeen(tile),
       hasMet: (player: Player) => ctx.hasMet(player),
     }),
     Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
@@ -94,7 +96,7 @@ export const wonders = (ctx: RequestsContext): WondersRow[] =>
         cityImprovements: ctx.cityImprovements,
       }),
       {
-        playerWorlds: ctx.playerWorlds,
+        hasSeen: (tile: Tile) => ctx.hasSeen(tile),
         hasMet: (player: Player) => ctx.hasMet(player),
         owns: (player: Player) => ctx.view.owns(player),
       }
