@@ -182,7 +182,7 @@ const civ1 = currentTileset(),
       coast: {
         ...civ1.families.coast,
         strip: { sprite: 'ground/shore', cell: 16, quarter: 8 },
-        order: [...civ1.families.coast.order].reverse(),
+        order: [...civ1.families.coast.order!].reverse(),
       },
       riverMouth: {
         method: 'edges',
@@ -753,6 +753,21 @@ expect(
     2
   ),
   [['map/fog_n@0,0', 'map/fog_w@0,0'], ['fog/nw@0,0']]
+);
+expect(
+  'and a tileset with no fog draws none there (Civ2 has none)',
+  drawn(
+    Fog,
+    { ...civ1, families: { ...civ1.families, fog: undefined } },
+    makeWorld(5, 5, {
+      '2,1': { terrain: 'Unknown' },
+      '1,2': { terrain: 'Unknown' },
+      '1,1': { terrain: 'Unknown' },
+    }),
+    2,
+    2
+  ),
+  []
 );
 
 // On another grid the directions are that grid's: a hexagonal world's six, in the order its topology gives them. River

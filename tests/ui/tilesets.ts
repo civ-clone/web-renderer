@@ -17,6 +17,8 @@ import * as Units from '@civ-clone/civ1-unit/Units';
 import validateDescriptor, {
   TilesetDescriptor,
   expandName,
+  notDrawnYet,
+  readDescriptor,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import currentTileset, {
   nativeTileSize,
@@ -38,6 +40,7 @@ import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry'
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
+import isoJson from './fixtures/iso-tileset.json';
 
 const failures: string[] = [];
 let checks = 0,
@@ -248,7 +251,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     'a river mouth and fog for each edge, a road and a railroad for every neighbour',
     [
       edgeSprites(families.riverMouth, edges),
-      edgeSprites(families.fog, edges),
+      edgeSprites(families.fog!, edges),
       edgeSprites(families.road, all),
       edgeSprites(families.railroad, all),
     ].map((sprites) => [sprites.length, missing(sprites)]),
@@ -265,7 +268,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       families.terrain.neighbours,
       families.coast.neighbours,
       families.riverMouth.neighbours,
-      families.fog.neighbours,
+      families.fog!.neighbours,
       families.road.neighbours,
       families.railroad.neighbours,
     ],
@@ -538,19 +541,28 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       'Tileset "civ1": families.coast.strip.cell must be two quarters, 16 px, not undefined.',
     ]
   );
+  const namedQuarters = {
+    method: 'corners',
+    neighbours: 'all',
+    sprite: 'terrain/coast/{corner}-{bits}',
+    corners: {
+      nw: { at: { x: 0, y: 0 }, neighbours: ['w', 'nw', 'n'] },
+      ne: { at: { x: 8, y: 0 }, neighbours: ['n', 'ne', 'e'] },
+      se: { at: { x: 8, y: 8 }, neighbours: ['e', 'se', 's'] },
+      sw: { at: { x: 0, y: 8 }, neighbours: ['s', 'sw', 'w'] },
+    },
+  };
+
   expect(
-    'and so is a corners coast of named quarter sprites, which cannot be drawn yet',
-    thrown(() =>
-      validateDescriptor(
-        withCoast({
-          method: 'corners',
-          neighbours: 'all',
-          sprite: 'terrain/coast/{corner}-{bits}',
-          corners: ['n', 'e', 's', 'w'],
-        })
-      )
-    ),
-    'Tileset "civ1": families.coast must have a strip: only a coast cut from one strip can be drawn yet.'
+    'a corners coast of named quarter sprites is read, but cannot be drawn yet',
+    [
+      thrown(() => readDescriptor(withCoast(namedQuarters))),
+      thrown(() => validateDescriptor(withCoast(namedQuarters))),
+    ],
+    [
+      null,
+      'Tileset "civ1": families.coast must have a strip: only a coast cut from one strip can be drawn yet.',
+    ]
   );
   const withFamily = (key: string, family: unknown) =>
     civ1With({ families: { ...civ1.families, [key]: family } });
@@ -578,7 +590,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       validateDescriptor(
         withCoast({
           ...civ1.families.coast,
-          order: [...civ1.families.coast.order].reverse(),
+          order: [...civ1.families.coast.order!].reverse(),
         })
       )
     ),
@@ -588,7 +600,6 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     'a map family the map cannot draw is refused',
     [
       civ1With({ families: { ...civ1.families, base: { land: 'x' } } }),
-      withFamily('fog', undefined),
       withFamily('hut', { sprite: '' }),
       withFamily('terrain', { ...civ1.families.terrain, method: 'corners' }),
       withFamily('road', { ...civ1.families.road, method: 'dither' }),
@@ -603,7 +614,6 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
     ].map((json) => thrown(() => validateDescriptor(json))),
     [
       'Tileset "civ1": families.base must name the land and ocean sprites.',
-      'Tileset "civ1": families.fog must be an object.',
       'Tileset "civ1": families.hut.sprite must name a sprite.',
       'Tileset "civ1": families.terrain.method "corners" cannot be drawn yet (#92).',
       'Tileset "civ1": families.road.method "dither" cannot be drawn yet (#92).',
@@ -733,8 +743,8 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         colouring: {
           mode: 'overlay',
           sprite: 'units/shield',
-          key: '#f00',
-          anchor: 'sprite',
+          keys: ['#f00'],
+          anchor: 'shield',
         },
       }),
       withUnits({
@@ -754,7 +764,8 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         ...civ1.units,
         status: { ...civ1.units.status, baseline: '0.75' },
       }),
-      withCities({ ...civ1.cities, mode: 'styles' }),
+      // Styles cities, at the tile's corner as Civ1's tiles have no room above them.
+      withCities({ ...isoJson.cities, anchor: undefined }),
       withCities({ ...civ1.cities, sprite: 'map/{size}' }),
       withCities({ ...civ1.cities, inset: -1 }),
       withCities({ ...civ1.cities, occupied: '' }),
@@ -821,6 +832,292 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       null,
     ]
   );
+  // A pack shaped like Civ2's (#152): a staggered-iso grid of 64 × 32 tiles, a base per terrain with forest, hills,
+  //  mountains and river over grassland's, a coast of named quarters, roads over all eight neighbours with an isolated
+  //  sprite, no fog, shields over units at each sprite's own anchor with a back-shield for stacks, and cities by style,
+  //  size and walls, taller than their tile. Its sprite names are in the Civ2 extractor's style; there are no sprites, and no
+  //  Civ2 art or text is in the tests.
+  const iso = readDescriptor(isoJson),
+    isoWith = (changes: { [key: string]: unknown }): unknown => ({
+      ...JSON.parse(JSON.stringify(isoJson)),
+      ...changes,
+    }),
+    isoFamily = (key: string, family: unknown) =>
+      isoWith({ families: { ...isoJson.families, [key]: family } }),
+    isoCoast = (changes: { [key: string]: unknown }) =>
+      isoFamily('coast', { ...isoJson.families.coast, ...changes }),
+    isoCorner = (corner: unknown) =>
+      isoCoast({ corners: { ...isoJson.families.coast.corners, n: corner } }),
+    isoUnits = (changes: { [key: string]: unknown }) =>
+      isoWith({ units: { ...isoJson.units, ...changes } }),
+    isoColouring = (changes: { [key: string]: unknown }) =>
+      isoUnits({ colouring: { ...isoJson.units.colouring, ...changes } }),
+    isoCities = (changes: { [key: string]: unknown }) =>
+      isoWith({ cities: { ...isoJson.cities, ...changes } }),
+    isoStyles = (changes: { [key: string]: unknown }) =>
+      isoCities({ styles: { ...isoJson.cities.styles, ...changes } });
+
+  expect(
+    "a descriptor shaped like Civ2's is read, with no fog and with Civ1's interface sizes",
+    [iso.grid, iso.tile, iso.families.fog, iso.ui],
+    [
+      'staggered-iso',
+      { width: 64, height: 32 },
+      undefined,
+      { icon: 14, citizen: { width: 16, step: 12 }, cursor: 26 },
+    ]
+  );
+  expect(
+    'but cannot be drawn yet, saying the first thing the map cannot draw',
+    thrown(() => validateDescriptor(isoJson)),
+    'Tileset "iso-test": families.base cannot be drawn yet with a land sprite per terrain: only one under all land.'
+  );
+
+  // Each thing the map cannot draw yet, on Civ1's descriptor, which it can.
+  const civ1Read = (changes: { [key: string]: unknown }) =>
+    notDrawnYet(readDescriptor(civ1With(changes)));
+
+  expect(
+    'what the map cannot draw yet is each named, and Civ1 has none of it',
+    [
+      notDrawnYet(civ1),
+      civ1Read({
+        families: {
+          ...civ1.families,
+          base: { ...civ1.families.base, land: 'terrain/{terrain}' },
+        },
+      }),
+      civ1Read({ families: { ...civ1.families, coast: namedQuarters } }),
+      civ1Read({
+        units: { ...civ1.units, colouring: isoJson.units.colouring },
+      }),
+      civ1Read({ units: { ...isoJson.units, anchor: undefined } }),
+      civ1Read({ cities: { ...isoJson.cities, anchor: undefined } }),
+      civ1Read({
+        cities: { ...civ1.cities, colouring: isoJson.cities.colouring },
+      }),
+      civ1Read({
+        cities: {
+          ...civ1.cities,
+          labels: { ...civ1.cities.labels, size: 'size' },
+        },
+      }),
+      civ1Read({
+        geometry: {
+          ...civ1.geometry,
+          overhang: { ...civ1.geometry.overhang, top: 4 },
+        },
+        units: { ...civ1.units, anchor: { x: 0, y: -4 } },
+      }),
+    ],
+    [
+      null,
+      'families.base cannot be drawn yet with a land sprite per terrain: only one under all land.',
+      'families.coast must have a strip: only a coast cut from one strip can be drawn yet.',
+      'units.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
+      'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.',
+      'cities.mode "styles" cannot be drawn yet: only box.',
+      'cities.colouring.mode "overlay" cannot be drawn yet: only replaceColours.',
+      'cities.labels.size cannot be drawn yet: only x and sizeBaseline.',
+      "units.anchor cannot be drawn yet: only a sprite at the tile's top-left corner.",
+    ]
+  );
+  expect(
+    'a pack with no fog is drawn without fog edges, so Civ1 without its fog can be drawn',
+    thrown(() => validateDescriptor(withFamily('fog', undefined))),
+    null
+  );
+
+  expect(
+    "a coast is a strip or named quarters, each quarter's neighbours on the descriptor's own grid, within the tile",
+    [
+      isoCoast({
+        strip: civ1.families.coast.strip,
+        order: civ1.families.coast.order,
+      }),
+      isoCoast({
+        strip: civ1.families.coast.strip,
+        order: civ1.families.coast.order,
+        corners: undefined,
+      }),
+      isoCoast({ sprite: undefined }),
+      isoCoast({ order: ['n'] }),
+      isoCoast({ sprite: 'terrain/coast/{corner}' }),
+      isoCoast({ sprite: 'terrain/coast/{corner}-{bits}-{dir}' }),
+      isoCoast({ corners: {} }),
+      isoCorner({ at: { x: 16, y: 0 }, neighbours: ['nw', 'up', 'ne'] }),
+      isoCorner({ at: { x: 16, y: 0 }, neighbours: ['nw', 'nw', 'ne'] }),
+      isoCorner({ at: { x: 64, y: 0 }, neighbours: ['nw', 'n', 'ne'] }),
+      isoCorner({ at: { x: 16, y: 0 }, neighbours: [] }),
+      isoCorner({ at: { x: 16.5, y: 0 }, neighbours: ['n'] }),
+      // `n` is a neighbour on a staggered-iso grid, and not on a hex one.
+      isoWith({ grid: 'hex-odd-r' }),
+    ].map((json) => thrown(() => readDescriptor(json))),
+    [
+      'Tileset "iso-test": families.coast has a strip and named corners: it must have one or the other.',
+      'Tileset "iso-test": families.coast has a strip and a quarter sprite: it must have one or the other.',
+      'Tileset "iso-test": families.coast must have a strip, or a sprite and the corners it is named for.',
+      'Tileset "iso-test": families.coast.order is for a strip: named corners give each quarter\'s own neighbours.',
+      'Tileset "iso-test": families.coast.sprite must have {corner} and {bits}, so that each quarter and each mix of its neighbours has a sprite of its own.',
+      'Tileset "iso-test": families.coast.sprite has {dir}, but the map fills only {corner}, {bits} here.',
+      'Tileset "iso-test": families.coast.corners must name at least one corner.',
+      'Tileset "iso-test": families.coast.corners.n.neighbours must list neighbours on the staggered-iso grid (n, ne, e, se, s, sw, w, nw), each once.',
+      'Tileset "iso-test": families.coast.corners.n.neighbours must list neighbours on the staggered-iso grid (n, ne, e, se, s, sw, w, nw), each once.',
+      'Tileset "iso-test": families.coast.corners.n.at must be within the tile.',
+      'Tileset "iso-test": families.coast.corners must give each corner an at, a whole x and y in px, and the neighbours it is picked by.',
+      'Tileset "iso-test": families.coast.corners.n.at must have a whole x and y in px.',
+      'Tileset "iso-test": families.coast.corners.n.neighbours must list neighbours on the hex-odd-r grid (ne, e, se, sw, w, nw), each once.',
+    ]
+  );
+  expect(
+    'a base per terrain has only {terrain}, and only a base per terrain says what is under another terrain',
+    [
+      isoFamily('base', {
+        ...isoJson.families.base,
+        land: 'terrain/{terrain}/{dirs}',
+      }),
+      isoFamily('base', { ...isoJson.families.base, land: 'terrain/land' }),
+      isoFamily('base', { ...isoJson.families.base, under: { River: 1 } }),
+      isoFamily('base', {
+        ...isoJson.families.base,
+        under: { Forest: 'Forest' },
+      }),
+      isoFamily('base', {
+        ...isoJson.families.base,
+        under: { River: 'Forest', Forest: 'Grassland' },
+      }),
+      isoFamily('base', {
+        land: 'terrain/land',
+        ocean: 'terrain/ocean/base-0',
+      }),
+    ].map((json) => thrown(() => readDescriptor(json))),
+    [
+      'Tileset "iso-test": families.base.land has {dirs}, but the map fills only {terrain} here.',
+      'Tileset "iso-test": families.base.under needs {terrain} in families.base.land: with one land sprite, every terrain is over the same one.',
+      'Tileset "iso-test": families.base.under must map engine names to words in sprite names.',
+      'Tileset "iso-test": families.base.under.Forest is "Forest", which is drawn over another terrain\'s base itself: name a terrain with a base of its own.',
+      'Tileset "iso-test": families.base.under.River is "Forest", which is drawn over another terrain\'s base itself: name a terrain with a base of its own.',
+      null,
+    ]
+  );
+  expect(
+    'a shield goes on at a point or a named anchor of each sprite, with a back-shield for stacks, and tall sprites have room above',
+    [
+      isoColouring({ anchor: { x: 12, y: 12 } }),
+      isoColouring({ stack: undefined }),
+      isoUnits({
+        stackOffset: { x: -1, y: -1 },
+        colouring: { ...isoJson.units.colouring, stack: undefined },
+      }),
+      isoColouring({ anchor: undefined }),
+      isoColouring({ anchor: { x: 12 } }),
+      isoColouring({ anchor: '' }),
+      isoColouring({ sprite: 'units/{unit}-shield' }),
+      isoColouring({ stack: { sprite: 'units/shield-back' } }),
+      isoColouring({ colours: [0, 1] }),
+      isoColouring({ mode: 'shield' }),
+      isoUnits({
+        colouring: { mode: 'replaceColours', keys: ['#f00'], anchor: 'shield' },
+      }),
+      isoUnits({ anchor: { x: 0, y: -32 } }),
+      isoUnits({ anchor: { x: -1, y: 0 } }),
+    ].map((json) => thrown(() => readDescriptor(json))),
+    [
+      null,
+      'Tileset "iso-test": units must show a stack: a stackOffset for a copy of the unit, or an overlay colouring\'s stack.',
+      null,
+      'Tileset "iso-test": units.colouring must name the sprite an overlay draws, and its anchor.',
+      'Tileset "iso-test": units.colouring.anchor must have a whole x and y in px, or name an anchor each sprite has.',
+      'Tileset "iso-test": units.colouring.anchor must have a whole x and y in px, or name an anchor each sprite has.',
+      'Tileset "iso-test": units.colouring.sprite has {unit}, but the map fills none here.',
+      'Tileset "iso-test": units.colouring.stack.offset must have a whole x and y in px.',
+      'Tileset "iso-test": units.colouring.colours must give a player\'s colour, by whole index, for each key.',
+      'Tileset "iso-test": units.colouring.mode must be "replaceColours" or "overlay", not "shield".',
+      'Tileset "iso-test": units.colouring.anchor is for an overlay: replaceColours recolours the sprite itself.',
+      'Tileset "iso-test": units.anchor reaches 32 px above the tile and 0 px left of it, but geometry.overhang leaves room for 16 above and 0 left.',
+      'Tileset "iso-test": units.anchor reaches 0 px above the tile and 1 px left of it, but geometry.overhang leaves room for 16 above and 0 left.',
+    ]
+  );
+  expect(
+    "a styles city has a style per civilization, size buckets and walls, and a flag over it, and not a box city's fields",
+    [
+      isoCities({ mode: 'tiles' }),
+      isoCities({ colouring: undefined }),
+      isoCities({
+        colouring: { ...isoJson.cities.colouring, anchor: { x: 50, y: 21 } },
+      }),
+      isoCities({ styles: undefined }),
+      isoCities({ inset: 1 }),
+      isoCities({ colouring: civ1.cities.colouring }),
+      isoCities({
+        colouring: {
+          ...isoJson.cities.colouring,
+          stack: isoJson.units.colouring.stack,
+        },
+      }),
+      isoCities({ sprite: 'city/{style}/{unit}' }),
+      isoCities({ sprite: 'city/{walls}{size}' }),
+      isoCities({ sprite: 'city/{style}/{walls}' }),
+      isoCities({ sprite: 'city/{style}/{size}' }),
+      // A placeholder that tells no two sprites apart may be left out.
+      isoWith({
+        cities: {
+          ...isoJson.cities,
+          sprite: 'city/{size}',
+          styles: {
+            ...isoJson.cities.styles,
+            names: ['ancient'],
+            civilizations: {},
+            walls: { plain: '', walled: '' },
+          },
+        },
+      }),
+      isoStyles({ names: ['ancient', 'ancient'] }),
+      isoStyles({ default: 'modern' }),
+      isoStyles({ civilizations: { English: 'modern' } }),
+      isoStyles({ sizes: [1, 8, 4] }),
+      isoStyles({ sizes: [0, 4] }),
+      isoStyles({ walls: { plain: '' } }),
+      isoWith({ cities: { ...civ1.cities, styles: isoJson.cities.styles } }),
+      isoWith({ cities: { ...civ1.cities, inset: undefined } }),
+    ].map((json) => thrown(() => readDescriptor(json))),
+    [
+      'Tileset "iso-test": cities.mode must be "box" or "styles", not "tiles".',
+      'Tileset "iso-test": cities.colouring must say how player colours go on.',
+      null,
+      'Tileset "iso-test": cities.styles must say which sprite each civilization, size and walls have.',
+      'Tileset "iso-test": cities.inset is for box cities: a styles city shows its player by its flag.',
+      'Tileset "iso-test": cities.colouring must be an overlay for styles cities: the flag, drawn over the city in its player\'s colours.',
+      'Tileset "iso-test": cities.colouring.stack is for units: a city is never one of a stack.',
+      'Tileset "iso-test": cities.sprite has {unit}, but the map fills only {style}, {size}, {walls} here.',
+      'Tileset "iso-test": cities.sprite must have {style}, as there is more than one style.',
+      'Tileset "iso-test": cities.sprite must have {size}, as there is more than one size bucket.',
+      'Tileset "iso-test": cities.sprite must have {walls}, as walled cities have a word of their own.',
+      null,
+      'Tileset "iso-test": cities.styles.names must list each style once.',
+      'Tileset "iso-test": cities.styles.default "modern" is not one of cities.styles.names.',
+      'Tileset "iso-test": cities.styles.civilizations.English "modern" is not one of cities.styles.names.',
+      'Tileset "iso-test": cities.styles.sizes must list the size each bucket starts at, smallest first, each once.',
+      'Tileset "iso-test": cities.styles must list its style names, a default, a style by civilization, the sizes each bucket starts at, and the plain and walled words.',
+      'Tileset "iso-test": cities.styles must list its style names, a default, a style by civilization, the sizes each bucket starts at, and the plain and walled words.',
+      'Tileset "iso-test": cities.styles is for styles cities: a box city has one sprite, in its player\'s colour.',
+      'Tileset "iso-test": cities.inset must be a whole number of px, 0 or more.',
+    ]
+  );
+  expect(
+    'a fallback is another tileset, and special resources may be named by whole words with a slash',
+    [
+      thrown(() => readDescriptor(isoWith({ fallback: 'iso-test' }))),
+      expandName(iso.families.special.sprite, {
+        special: iso.names.special['Arctic:Seal']!,
+      }),
+    ],
+    [
+      'Tileset "iso-test": fallback names the tileset itself: another tileset\'s id, or null.',
+      'terrain/glacier/ivory',
+    ]
+  );
+
   expect(
     'a placeholder only takes a value it was given',
     thrown(() => expandName('{constructor}', {})),

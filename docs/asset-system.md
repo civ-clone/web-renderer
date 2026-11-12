@@ -108,21 +108,81 @@ pack points it at `https://civ.one/dist/tileset.schema.json`, where the build pu
 editor is told which schema the pack's descriptor has (VS Code's `json.schemas` setting). The game ignores `$schema`,
 and the build leaves the schema's titles and descriptions out of the game's bundle (`esbuild.js`).
 
-`validateDescriptor` (`packages/assets/tilesets/TilesetDescriptor.ts`) checks a descriptor against the same schema first,
+`readDescriptor` (`packages/assets/tilesets/TilesetDescriptor.ts`) checks a descriptor against the same schema first,
 with the small checker in `packages/assets/lib/jsonSchema.ts`, which knows only the keywords the schema uses and refuses
 a schema with any other. Its `x-message` annotations (ignored by other validators) are the sentences a refused pack is
 told, such as `Tileset "civ1": families.road.method "dither" cannot be drawn yet (#92).`. Then it checks what a schema
 cannot say:
 
 - the grid is one the engine knows (the engine's list, so a new grid needs no change to the schema);
-- `defaultScale` is one of `scales`, and no sprite is listed twice across `assets.required` and `assets.optional`;
-- the coast strip's `cell` is two `quarter`s, and its `order` names each of a square tile's eight neighbours once;
-- each sprite name has only the placeholders the map fills there (`{terrain}`, `{dirs}` for a `bitmask` family, `{dir}`
-  for `edges`, `{unit}`, …);
-- a colouring's `colours` has one entry per key, and a city's `disorderIcon` is within the tile.
+- `defaultScale` is one of `scales`, no sprite is listed twice across `assets.required` and `assets.optional`, and
+  `fallback` is not the tileset's own id;
+- the coast is a strip or named quarters, not both. A strip's `cell` is two `quarter`s, and its `order` names each of a
+  square tile's eight neighbours once. Named quarters have `{corner}` and `{bits}` in their `sprite`, and each corner's
+  `neighbours` are directions on the descriptor's own grid (`createTopology(grid)`), each once, with its `at` within the
+  tile;
+- each sprite name has only the placeholders the map fills there (`{terrain}` in `families.base.land` and the terrain
+  family, `{dirs}` for a `bitmask` family, `{dir}` for `edges`, `{unit}`, `{corner}` and `{bits}` for the coast, `{style}`,
+  `{size}` and `{walls}` for a `styles` city, …), and `families.base.under` only comes with a base per terrain, each
+  terrain in it over one with a base of its own (not itself, and not one that is over another in turn);
+- a colouring's `colours` has one entry per key, an `overlay` has a `sprite` and an `anchor` (and `replaceColours` has
+  neither), only a unit's overlay has a `stack`, units show a stack somehow (a `stackOffset`, or an overlay's `stack`),
+  and a city's `disorderIcon` is within the tile;
+- a `box` city has an `inset` and an `occupied` colour, and no `styles`; a `styles` city has `styles` and an `overlay`
+  colouring (its flag), and neither of a box's. Its style names are each listed once, the default and each civilization's
+  are among them, its size buckets go up, and its `sprite` has each of `{style}`, `{size}` and `{walls}` that tells two
+  sprites apart;
+- a units or cities `anchor` above or left of the tile is within `geometry.overhang`.
 
-So a descriptor the schema accepts can still be refused; one it refuses always is. What the format names but the map cannot
-draw yet (a `corners` or `dither` map family, an `overlay` colouring, `styles` cities) is refused by the schema too.
+So a descriptor the schema accepts can still be refused; one it refuses always is. Neither checks whether the map can
+draw the descriptor's grid at its tile size: that is for the map as it takes the tileset (`nativeTileSize` in
+`packages/assets/lib/tilesets.ts`, and the grid's projection, registered with `registerGrid`).
+
+### What the format says, and what the map draws
+
+The format can say what a pack shaped like Civ2's needs (#152), so its descriptor can be written and checked before the
+map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in the Civ2 extractor's style, with no sprites):
+
+- **A base per terrain.** `families.base.land` with `{terrain}` (`terrain/{terrain}/base-0`), and `under` for a
+  terrain drawn over another's base: Forest, Hills, Mountains and River over Grassland. The overlays (forest, hills,
+  mountains, river) are the terrain family as a `bitmask` over the grid's edge neighbours, joined with `-`. Only one base
+  variant per terrain is used: Civ2's `base-1` alternatives are left out.
+- **Roads and railroads over all eight neighbours**, with an `isolated` sprite rather than a dot.
+- **A coast of named quarters.** `sprite: "terrain/coast/{corner}-{bits}"` and `corners`, each with its top-left `at`
+  in the tile and its `neighbours` in the order `{bits}` writes them, one digit each, `1` for land: Civ2's top quarter
+  `n` is picked by `nw`, `n` and `ne`, so `n-011` has land to the N and NE.
+- **River mouths by direction.** `families.riverMouth` is `edges` with `{dir}`: the Civ2 extractor names its four mouths
+  `terrain/river-mouth/ne`, `se`, `sw` and `nw` (civ-clone/civ2-asset-extractor#1), the river bitmask's edge order.
+- **No fog.** `families.fog` may be left out; the edge of what a player has seen is then drawn without one. Nor do
+  cursor or dither sprites have to be listed.
+- **Shields.** An `overlay` colouring: `sprite` (the shield) drawn over the unit with its `keys` swapped for the
+  player's colours, its top-left corner at `anchor`, and `stack.sprite` (the back-shield) drawn behind it, `stack.offset`
+  from it, for a unit in a stack. `units.stackOffset`, Civ1's copy of the whole unit behind a stack, may then be left
+  out.
+- **Anchors per sprite.** An `anchor` is a point in native px, or the name of an anchor each sprite carries, such as
+  `"shield"`. Those come with the pack's sprites, not its descriptor: `SpriteAnchors`, by sprite and then anchor name
+  (`{ "units/settlers": { "shield": { "x": 12, "y": 12 } } }`), as the Civ2 extractor's `metadata.json` gives them from
+  marker pixels in the player's own copy.
+- **City styles.** `cities.mode: "styles"` with `sprite: "city/{style}/{walls}{size}"`, `styles` (the style names, a
+  default, a style by civilization as the engine names it, the city size each `{size}` bucket starts at, and the
+  `{walls}` words), and `labels.size`, where the size is written. The player's flag is the cities' `overlay` colouring:
+  `{ "mode": "overlay", "sprite": "city/flag", "keys": [...], "anchor": "flag" }`, the flag sprite (which the Civ2
+  extractor cuts from the first, red, flag) with its two colours as the keys, swapped for the player's, at each city
+  sprite's own `flag` anchor.
+- **Not yet: a city style by era.** Civ2 changes a civilization's city style as it reaches later ages. The format has one
+  style per civilization (M1's decision D4); a style by era needs the engine to send something the renderer can key it
+  on, as the renderer knows no rules, so it is not in the format.
+- **Tall sprites.** `units.anchor` and `cities.anchor` put a sprite's top-left corner above the tile (`{ x: 0, y: -16 }`
+  for a 64 × 48 sprite on a 64 × 32 tile), with `geometry.overhang.top` leaving room for it.
+- **Fallback.** `fallback` names the tileset the sprites this one leaves out come from: interface art under `assets.ui`
+  prefixes it does not have, and missing optional sprites. Nothing looks sprites up there yet.
+
+`validateDescriptor` is `readDescriptor` and then `notDrawnYet`, which names the first thing in a descriptor that the map
+cannot draw yet: a base per terrain, named quarters, a units descriptor without `stackOffset`, an `overlay` colouring,
+`styles` cities, `labels.size`, and a units or cities `anchor` off the tile's corner. Every tileset the game uses goes
+through `validateDescriptor`, so the layers that take a colouring as `replaceColours`, or read a box city's `inset`, can
+rely on it. Each of those leaves the list as the map learns to draw it. What the format itself refuses (a `corners` or
+`dither` family other than the coast) is refused by the schema.
 
 ## Runtime usage patterns
 
@@ -144,6 +204,8 @@ draw yet (a `corners` or `dither` map family, an `overlay` colouring, `styles` c
   window when `navigator.brave` is present).
 - The required list is large, so any mismatch in naming/path conventions fails readiness. `npm run test:tilesets`
   checks that the extractor cuts out every sprite the tileset lists, and no other.
+- `npm run test:tilesets` also reads the Civ2-shaped fixture, and checks each way a descriptor in that format is
+  refused and each thing `notDrawnYet` names.
 - `npm run test:json-schema` checks the schema checker keyword by keyword, and that it refuses a schema with a keyword
   it doesn't know.
 - An image that fails to load is not cached, so a later import can replace it.

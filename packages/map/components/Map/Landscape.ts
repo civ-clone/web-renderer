@@ -167,7 +167,8 @@ export class Landscape extends TerrainAbstract {
       // Build a bit mask of all 8 surrounding tiles, setting the bit if the tile is not an
       // ocean tile, in the order the tileset gives, least significant first. Civ1's starts
       // with the tile to the left and goes clockwise, as its coast sprite is laid out.
-      bitmask = order.reduce(
+      // A strip has its order: `validateDescriptor` says so, and refuses named quarters (#152).
+      bitmask = order!.reduce(
         (bitmask: number, direction: string, bit: number): number =>
           this.world().getNeighbour(tile, direction as NeighbourDirection)
             .isLand

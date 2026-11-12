@@ -13,6 +13,11 @@ export class Fog extends TerrainAbstract {
 
     const { fog } = this.tileset().families;
 
+    // A tileset with no fog sprites draws the edge of what a player has seen without one.
+    if (fog === undefined) {
+      return;
+    }
+
     this.drawFamily(
       fog,
       this.filterNeighbours(

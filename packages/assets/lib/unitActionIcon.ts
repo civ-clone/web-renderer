@@ -258,7 +258,9 @@ export const drawUnitActionIcon = (
     if (layer.type === 'city') {
       // As the map does (`Cities`): the civilization's first colour behind the city, inset as the tileset says, and
       //  the city's colour keys swapped for the ones the tileset names. Only colour keys can be drawn yet (#152).
-      const { sprite, inset, colouring } = currentTileset().cities,
+      const { sprite, colouring } = currentTileset().cities,
+        // A box city's: `validateDescriptor` refuses the others.
+        inset = currentTileset().cities.inset!,
         replaceKeys = colouring as Extract<
           Colouring,
           { mode: 'replaceColours' }
