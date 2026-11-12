@@ -6,6 +6,7 @@
 // Must stay first: modules read `document` as they load.
 import { document } from './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import {
   applyUiTheme,

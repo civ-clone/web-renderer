@@ -7,6 +7,7 @@
 // Must stay first: it gives the store a `document`, and an `indexedDB` that never opens.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { AssetStore, decodeSprite } from '@civ-clone/ui-assets/AssetStore';
 import { Store } from '@civ-clone/ui-platform/Store';

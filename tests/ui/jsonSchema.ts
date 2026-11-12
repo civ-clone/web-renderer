@@ -6,7 +6,7 @@ import firstFailure, {
   Schema,
   pathName,
 } from '@civ-clone/ui-assets/lib/jsonSchema';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import tilesetSchema from '@civ-clone/ui-assets/tilesets/tileset.schema.json';
 
 const failures: string[] = [];
@@ -535,9 +535,9 @@ expect(
   [null, null]
 );
 expect(
-  'and Civ1 names the schema, for editors',
+  'and Civ1 names the schema, for editors, where it is beside its package (#97)',
   (civ1Json as { $schema?: string }).$schema,
-  './tileset.schema.json'
+  '../assets/tilesets/tileset.schema.json'
 );
 
 finished = true;

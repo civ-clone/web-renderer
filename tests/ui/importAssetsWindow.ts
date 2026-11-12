@@ -20,8 +20,16 @@
 //  uses would be dropped from the bundle, and the shim with it.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
-import ImportAssetsWindow from '@civ-clone/ui-menus/components/ImportAssetsWindow';
+import ImportAssetsWindow, {
+  takesFile,
+} from '@civ-clone/ui-menus/components/ImportAssetsWindow';
+import {
+  packImportFor,
+  packImports,
+} from '@civ-clone/ui-assets/lib/packImports';
+import { bundledTilesets } from '@civ-clone/ui-assets/lib/tilesets';
 import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
@@ -637,6 +645,47 @@ const run = async (): Promise<void> => {
     open.close();
 
     assetStore.usable = usable;
+  }
+
+  // The window names no pack (#97): it takes the files the registered packs' imports read, Civ1's (its package,
+  //  `tileset-civ1`) and Civ2's, and the music's, and no other. Each pack is registered beside its tileset.
+  {
+    const civ1Files = Object.keys(extractData.files),
+      civ2Files = Object.keys(civ2ExtractData.files);
+
+    expect(
+      "the registry finds Civ1's and Civ2's tilesets and imports, the interface's (Civ1's) first",
+      [
+        bundledTilesets().map(({ id }) => id),
+        packImports().map(({ id }) => id),
+      ],
+      [
+        ['civ1', 'civ2'],
+        ['civ1', 'civ2'],
+      ]
+    );
+    expect(
+      "each of Civ1's and Civ2's files goes to its own pack's import, whatever the case of its name",
+      [
+        ...civ1Files.map((name) => packImportFor({ name })?.id),
+        ...civ2Files.map(
+          (name) => packImportFor({ name: name.toLowerCase() })?.id
+        ),
+      ],
+      [...civ1Files.map(() => 'civ1'), ...civ2Files.map(() => 'civ2')]
+    );
+    expect(
+      "the window takes the union of the packs' files, RULES.TXT, which Civ2's leaves alone, and ASOUND.CVL, and nothing else",
+      [
+        [...civ1Files, ...civ2Files, 'RULES.TXT', 'asound.cvl'].every((name) =>
+          takesFile({ name })
+        ),
+        packImportFor({ name: 'RULES.TXT' }),
+        takesFile({ name: 'README.TXT' }),
+        takesFile({ name: 'TER257.PIC.bak' }),
+      ],
+      [true, undefined, false, false]
+    );
   }
 
   // SP299.PIC, the improvement and Wonder icons, is optional (#64): the instructions say so, an import goes ahead
@@ -1445,7 +1494,7 @@ const run = async (): Promise<void> => {
       statusOf = (window: ImportAssetsWindow): string | null => {
         const element = window
           .element()
-          .querySelector('p.civ2-status') as HTMLElement;
+          .querySelector('p.pack-status') as HTMLElement;
 
         return element.hasAttribute('hidden') ? null : element.textContent;
       },

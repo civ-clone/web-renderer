@@ -11,6 +11,7 @@
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
 import { FakeImage, askedFor, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
 import CityNames from '@civ-clone/ui-map/components/Map/CityNames';

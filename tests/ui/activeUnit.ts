@@ -22,6 +22,7 @@
 // with.
 import { FakeImage, fakeCanvas } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import {
   UnitActionsRequest,

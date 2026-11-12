@@ -10,6 +10,7 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
+import './lib/artPacks';
 
 import { Tile, Unit, World as WorldData } from '@civ-clone/ui-protocol/types';
 import CityBanners from '@civ-clone/ui-interface-modern/components/CityBanners';

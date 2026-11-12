@@ -2,34 +2,102 @@ import validateDescriptor, {
   Size,
   TilesetDescriptor,
 } from '../tilesets/TilesetDescriptor';
-import { PackMetadata, isFlagRow } from './packs';
+import { PackMetadata, civ2Pack, isFlagRow } from './packs';
 import type { TopologyId } from '@civ-clone/core-world/topologies';
-import civ1 from '../tilesets/civ1.json';
 import civ2 from '../tilesets/civ2.json';
 
-// The tilesets the map can be drawn with (#56): Civ1's, on the square grid, and Civ2's, on the staggered isometric
-//  grid (#97, #152), drawn with the sprites the player imports from their own copy of Civilization II. Both are bundled,
-//  but a pack is only installed once its sprites have been imported (`installTilesets`), so the grids a game can be on
-//  are the ones the player can see drawn. One pack per grid: the world's grid picks the pack, with no choosing.
+// The tilesets the map can be drawn with (#56), as their packages register them (#97): Civ1's
+//  (`@civ-clone/ui-tileset-civ1`), on the square grid and the interface's, and Civ2's, on the staggered isometric grid
+//  (#152), drawn with the sprites the player imports from their own copy of Civilization II. Each is bundled, but a
+//  pack is only installed once its sprites have been imported (`installTilesets`), so the grids a game can be on are
+//  the ones the player can see drawn. One pack per grid: the world's grid picks the pack, with no choosing.
 
-const civ1Tileset = validateDescriptor(civ1),
-  civ2Tileset = validateDescriptor(civ2);
+/** What a pack's package says of it as it registers it (`registerTileset`), besides its descriptor. */
+export interface TilesetOptions {
+  /**
+   * Whether the interface's own art comes from it (`interfaceTileset`): then it is always installed, and the asset
+   *  store is ready, and the game can start, only once every sprite it requires has been imported. One pack is.
+   */
+  interface?: boolean;
+  /** Whether its import keeps a record of its sprites beside them (`PackMetadata`): Civ2's does, Civ1's doesn't. */
+  metadata?: boolean;
+}
 
-/** Every tileset this renderer comes with, installed or not: Civ1's first, as the interface's. */
-export const bundledTilesets = (): TilesetDescriptor[] => [
-  civ1Tileset,
-  civ2Tileset,
-];
-
-// Civ1's is always installed: the game can't start without its sprites, which the interface is drawn with too.
-let installed: TilesetDescriptor[] = [civ1Tileset];
+const registered: { tileset: TilesetDescriptor; options: TilesetOptions }[] =
+  [];
 
 /**
- * The tilesets there are to draw the map with: the grids a game can be on are theirs (`supportedTopologies`). Civ1's,
- *  and each other bundled pack whose sprites have been imported, as `installTilesets` found them at start-up, so this
- *  stays synchronous.
+ * Bundles `tileset` (#97): its package calls this as it is loaded, before anything is drawn, as the page loads it
+ *  (`src/js/frontend.ts`). Throws for a second pack with the same id, or a second interface pack.
  */
-export const installedTilesets = (): TilesetDescriptor[] => [...installed];
+export const registerTileset = (
+  tileset: TilesetDescriptor,
+  options: TilesetOptions = {}
+): TilesetDescriptor => {
+  if (registered.some(({ tileset: { id } }) => id === tileset.id)) {
+    throw new Error(`Tileset "${tileset.id}" is registered already.`);
+  }
+
+  if (
+    options.interface &&
+    registered.some(({ options }) => options.interface)
+  ) {
+    throw new Error(
+      `Tileset "${tileset.id}" can't be the interface's: "${
+        interfaceTileset().id
+      }" is.`
+    );
+  }
+
+  registered.push({ tileset, options });
+
+  return tileset;
+};
+
+/** Whether `tileset`'s import keeps a record of its sprites beside them (`TilesetOptions.metadata`). */
+export const keepsMetadata = ({ id }: Pick<TilesetDescriptor, 'id'>): boolean =>
+  registered.some(
+    ({ tileset, options }) => tileset.id === id && options.metadata === true
+  );
+
+/**
+ * The tileset the interface's own art comes from, wherever it is drawn: the yields, citizens and other icons the map's
+ *  layers draw over its tiles as well as the windows' (#97, #152). Civ1's, which every game has imported, whatever pack
+ *  the map is drawn with: a map pack need not have any interface art of its own. Throws when no package has registered
+ *  one.
+ */
+export const interfaceTileset = (): TilesetDescriptor => {
+  const tileset = registered.find(({ options }) => options.interface)?.tileset;
+
+  if (tileset === undefined) {
+    throw new Error(
+      'No interface tileset is registered: load its package (such as @civ-clone/ui-tileset-civ1) before anything is drawn.'
+    );
+  }
+
+  return tileset;
+};
+
+/** Every tileset this renderer comes with, installed or not: the interface's first. */
+export const bundledTilesets = (): TilesetDescriptor[] => [
+  interfaceTileset(),
+  ...registered
+    .filter(({ options }) => !options.interface)
+    .map(({ tileset }) => tileset),
+];
+
+// The interface's is always installed: the game can't start without its sprites. Null until `installTilesets` has
+//  found which others are, at start-up.
+let installed: TilesetDescriptor[] | null = null;
+
+/**
+ * The tilesets there are to draw the map with: the grids a game can be on are theirs (`supportedTopologies`). The
+ *  interface's, and each other bundled pack whose sprites have been imported, as `installTilesets` found them at
+ *  start-up, so this stays synchronous.
+ */
+export const installedTilesets = (): TilesetDescriptor[] => [
+  ...(installed ?? [interfaceTileset()]),
+];
 
 /**
  * What each bundled pack needs to be installed, by id: whether every sprite it requires has been imported, and what
@@ -82,23 +150,29 @@ export const withImportedKeys = (
 };
 
 /**
- * Installs the bundled packs whose `states` say they are complete (Civ1's always is), each as its import says it is
- *  drawn (`withImportedKeys`). A pack that keeps a record of its sprites (`metadata`) is only complete with one: its
- *  units' shields and its cities' flags go where it says, and would be left out without it; and one whose record can't
- *  be drawn from (`withImportedKeys` refuses it) is left out too. Called once the asset store has loaded, at start-up
- *  and after an import.
+ * Installs the bundled packs whose `states` say they are complete (the interface's always is), each as its import
+ *  says it is drawn (`withImportedKeys`). A pack that keeps a record of its sprites (`metadata`) is only complete with
+ *  one: its units' shields and its cities' flags go where it says, and would be left out without it; and one whose
+ *  record can't be drawn from (`withImportedKeys` refuses it) is left out too. Called once the asset store has
+ *  loaded, at start-up and after an import.
  */
 export const installTilesets = (states: {
   [id: string]: PackState | undefined;
 }): TilesetDescriptor[] => {
+  const interfaceId = interfaceTileset().id;
+
   installed = bundledTilesets().flatMap((tileset) => {
-    if (tileset === civ1Tileset) {
+    if (tileset.id === interfaceId) {
       return [tileset];
     }
 
     const state = states[tileset.id];
 
-    if (!state?.complete || state.metadata === null) {
+    // A pack that keeps no record of its sprites (`metadata` not set as it registered) needs only its sprites.
+    if (
+      !state?.complete ||
+      (keepsMetadata(tileset) && state.metadata === null)
+    ) {
       return [];
     }
 
@@ -124,7 +198,7 @@ export const mapTileset = (
   topologyId: TopologyId | string = currentGrid
 ): TilesetDescriptor => {
   const tileset =
-    installed.find(({ grid }) => grid === topologyId) ??
+    installedTilesets().find(({ grid }) => grid === topologyId) ??
     bundledTilesets().find(({ grid }) => grid === topologyId);
 
   if (tileset === undefined) {
@@ -149,14 +223,7 @@ export const setMapGrid = (
  * The tileset the square map is drawn with, and the interface's (`interfaceTileset`): Civ1's. What the map draws with
  *  follows the world's grid (`mapTileset`).
  */
-export const currentTileset = (): TilesetDescriptor => civ1Tileset;
-
-/**
- * The tileset the interface's own art comes from, wherever it is drawn: the yields, citizens and other icons the map's
- *  layers draw over its tiles as well as the windows' (#97, #152). Civ1's, which every game has imported, whatever pack
- *  the map is drawn with: a map pack need not have any interface art of its own.
- */
-export const interfaceTileset = (): TilesetDescriptor => civ1Tileset;
+export const currentTileset = (): TilesetDescriptor => interfaceTileset();
 
 /**
  * `tileset`'s native tile size in px, across and down, as the map takes it: the map scales both by its scale. A grid
@@ -171,7 +238,7 @@ export const nativeTileSize = ({
  *  another pack's its own, as its scales are its own (Civ2's 64 px tile at 1× is Civ1's at 4×).
  */
 export const mapScaleOption = ({ id }: TilesetDescriptor): string =>
-  id === civ1Tileset.id ? 'mapScale' : `mapScale.${id}`;
+  id === interfaceTileset().id ? 'mapScale' : `mapScale.${id}`;
 
 /** `scale` if `tileset` can be shown at it, its default scale if not (a scale kept from before, or another pack's). */
 export const scaleFor = (tileset: TilesetDescriptor, scale: unknown): number =>
@@ -185,8 +252,11 @@ export const scaleFor = (tileset: TilesetDescriptor, scale: unknown): number =>
  *  shown at their own size rather than twice it.
  */
 export const shownScale = (scale: number, tileset: TilesetDescriptor): number =>
-  tileset.tile.width > civ1Tileset.tile.width
+  tileset.tile.width > interfaceTileset().tile.width
     ? Math.min(scale, tileset.defaultScale)
     : scale;
+
+// Civ2's, bundled here until it is a package of its own, as Civ1's is.
+registerTileset(validateDescriptor(civ2), { metadata: civ2Pack.metadata });
 
 export default currentTileset;

@@ -115,55 +115,57 @@ export class AssetStore extends Store<{
   #cachedURLs = new Map<string, string>();
   #loaded = new Map<string, CanvasImageSource>();
   #metadata = new Map<string, PackMetadata>();
-  #optionalAssets: string[];
   #loads = 0;
-  #packs: AssetPack[];
+  // The packs loaded beside the store's own tileset.
+  #others: AssetPack[] = [];
   #ready: Promise<void> = Promise.resolve();
-  #requiredAssets: string[];
-  #tileset: TilesetDescriptor;
+  // Undefined until it is first asked for, for the store made as the page loads (`assetStore`): the interface's
+  //  tileset, which its package registers once this module has been loaded (`registerTileset`).
+  #tileset: TilesetDescriptor | undefined;
 
   /**
    * The store for `tileset`'s sprites: it is ready when every sprite the tileset requires has been imported, and keeps
    * each under the tileset's key for it (`spriteKey`). `packs` are loaded beside it (#97), such as the pack the map is
    * drawn with when that isn't the interface's: their sprites are drawn when they are there, and the store is ready
-   * without them.
+   * without them. Without a `tileset`, the interface's (`currentTileset`), as it is when the store is first used.
    */
-  constructor(
-    tileset: TilesetDescriptor = currentTileset(),
-    packs: AssetPack[] = []
-  ) {
+  constructor(tileset?: TilesetDescriptor, packs: AssetPack[] = []) {
     super('civ-clone-assets', 'assets', {
       keyPath: 'name',
     });
 
     this.#tileset = tileset;
-    this.#packs = [tileset];
-    this.#requiredAssets = requiredKeys(tileset);
-    this.#optionalAssets = optionalKeys(tileset);
 
     packs.forEach((pack) => this.addPack(pack));
   }
 
+  /** The store's own tileset: the one it was made for, or the interface's. */
+  #ownTileset(): TilesetDescriptor {
+    this.#tileset ??= currentTileset();
+
+    return this.#tileset;
+  }
+
   /** The packs `load` decodes the sprites of: the store's own tileset first. */
   get packs(): AssetPack[] {
-    return [...this.#packs];
+    return [this.#ownTileset(), ...this.#others];
   }
 
   /** Loads `pack`'s sprites as well from the next `load` on (#97), once: the same pack again is left as it is. */
   addPack(pack: AssetPack): void {
-    if (!this.#packs.some(({ id }) => id === pack.id)) {
-      this.#packs.push(pack);
+    if (!this.packs.some(({ id }) => id === pack.id)) {
+      this.#others.push(pack);
     }
   }
 
   /** The keys of the sprites the store cannot be used without, in the order the tileset lists them. */
   get requiredAssets(): string[] {
-    return [...this.#requiredAssets];
+    return requiredKeys(this.#ownTileset());
   }
 
   /** The keys of the sprites drawn when there, which an import from before they existed may not have. */
   get optionalAssets(): string[] {
-    return [...this.#optionalAssets];
+    return optionalKeys(this.#ownTileset());
   }
 
   /** Settles once the last `load` has decoded every sprite it could: until then, nothing is drawn from them. */
@@ -190,7 +192,7 @@ export class AssetStore extends Store<{
     const load = ++this.#loads,
       // Each pack's keys are its own (`spriteKey`), so the sprites of all of them are drawn from the one lookup.
       keys = new Set(
-        this.#packs.flatMap((pack) => [
+        this.packs.flatMap((pack) => [
           ...requiredKeys(pack),
           ...optionalKeys(pack),
         ])
@@ -237,7 +239,7 @@ export class AssetStore extends Store<{
         }
       }),
       // Only a pack whose import keeps a record of its sprites' anchors has one to read: Civ1's doesn't.
-      ...this.#packs
+      ...this.packs
         .filter(({ metadata }) => metadata === true)
         .map(async (pack) => {
           try {
@@ -422,7 +424,7 @@ export class AssetStore extends Store<{
    * How many of `pack`'s sprites, required or optional, are imported: for Options to say of the store's own tileset
    *  (#749).
    */
-  async importedCount(pack: AssetPack = this.#tileset): Promise<number> {
+  async importedCount(pack: AssetPack = this.#ownTileset()): Promise<number> {
     const dbAssets = new Set(await this.#imported());
 
     return [...requiredKeys(pack), ...optionalKeys(pack)].filter((asset) =>
@@ -451,12 +453,12 @@ export class AssetStore extends Store<{
    * Whether every sprite `pack` requires has been imported: by default the store's own tileset, without which the game
    *  doesn't start. Another pack is complete or not on its own (#97).
    */
-  async hasAllAssets(pack: AssetPack = this.#tileset): Promise<boolean> {
+  async hasAllAssets(pack: AssetPack = this.#ownTileset()): Promise<boolean> {
     return (await this.missingAssets(pack)).length === 0;
   }
 
   /** The keys of the sprites `pack` requires that haven't been imported: by default, the store's own tileset's. */
-  async missingAssets(pack: AssetPack = this.#tileset): Promise<string[]> {
+  async missingAssets(pack: AssetPack = this.#ownTileset()): Promise<string[]> {
     const dbAssets = new Set(await this.#imported());
 
     return requiredKeys(pack).filter(

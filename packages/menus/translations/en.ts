@@ -111,13 +111,8 @@ i18next.addResources('en', 'default', {
     'Done! Please reload the page to utilize the fresh assets.',
   'ImportAssetsWindow.failed':
     'Importing the assets failed ({{error}}). Try again, and check that the browser lets this site store data.',
-  'ImportAssetsWindow.instructions':
-    'Upload {{files, list}} from the original Civilization files to extract assets (these will be stored locally). This only takes a moment.',
   'ImportAssetsWindow.missing-files': `Please provide all files to generate assets: {{files, list}}.`,
   'ImportAssetsWindow.none-chosen': 'No files chosen',
-  // After the instructions, the files an import takes when they're chosen (#64).
-  'ImportAssetsWindow.optional':
-    'Add {{files, list}} as well for the improvement and Wonder icons.',
   'ImportAssetsWindow.optional-sound': 'Add {{file}} for the music.',
   // Civilization II's sheets, for its isometric map (#97): optional, as Civilization's own files are all a game needs.
   'ImportAssetsWindow.optional-civ2':

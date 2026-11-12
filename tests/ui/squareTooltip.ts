@@ -8,6 +8,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import { City, Tile, Yield } from '@civ-clone/ui-protocol/types';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';

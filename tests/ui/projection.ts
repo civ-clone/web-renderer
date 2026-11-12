@@ -5,6 +5,7 @@
 //  And the same of the staggered isometric grid's diamonds (#97), whose boxes do overlap.
 
 import './lib/grids';
+import './lib/artPacks';
 import { Placement, tileBounds } from '@civ-clone/ui-map/lib/projection';
 import { Map as MapLayer } from '@civ-clone/ui-map/components/Map';
 import IsoMinimap from '@civ-clone/ui-map-isometric/Minimap';
@@ -15,7 +16,7 @@ import Minimap from '@civ-clone/ui-map-square/Minimap';
 import Overview from '@civ-clone/ui-map-square/Overview';
 import SquareProjection from '@civ-clone/ui-map-square/SquareProjection';
 import { tileRange, wrapIndices } from '@civ-clone/ui-map/lib/viewport';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import projectionFor, {
   GridOverview,

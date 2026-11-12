@@ -10,6 +10,7 @@ import './lib/dom';
 import './lib/interfaces';
 import './lib/classicInterface';
 import './lib/grids';
+import './lib/artPacks';
 
 import { DataPatch } from '@civ-clone/ui-protocol/types';
 import i18next from 'i18next';

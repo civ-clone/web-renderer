@@ -11,13 +11,20 @@ Without imported assets, gameplay options are hidden and import is the primary o
 ## Main components
 
 - `packages/menus/components/ImportAssetsWindow.ts`
-  - UI flow for selecting source files and triggering extraction.
+  - UI flow for selecting source files and triggering extraction. It names no pack: it asks each registered pack's
+    import (`packages/assets/lib/packImports.ts`, #97) which files it reads, which the import needs, what to say of
+    them, and to read them. The music's `ASOUND.CVL` is the window's own (the `audio` package decodes it): it is no
+    pack's art.
+- `packages/tileset-civ1` (`@civ-clone/ui-tileset-civ1`, #97)
+  - Civ1's art pack: its descriptor (`civ1.json`) and its import (`lib/civ1Import.ts`), which loading the package
+    registers (`registerTileset`, as the interface's, and `registerPackImport`). `src/js/frontend.ts` loads it before
+    anything else.
 - `packages/assets/AssetStore.ts`
   - IndexedDB-backed storage of extracted assets, and the loader that decodes the tileset in use (#730).
 - `packages/assets/lib/getPreloadedImage.ts`
   - The decoded sprites the map layers look up, by key, as `AssetStore.load` leaves them.
 - `@civ-clone/civ1-asset-extractor`
-  - External package that performs sprite extraction from source files.
+  - External package that performs sprite extraction from source files, for `tileset-civ1`.
   - A GitHub dependency (`github:civ-clone/civ1-asset-extractor`), listed in `package.json["civ-clone"].excludes` so
     it is not imported as an engine plugin.
   - `extract-data.json` holds the sprite definitions: per source file, per asset path, rows of sprites with their
@@ -30,17 +37,18 @@ Without imported assets, gameplay options are hidden and import is the primary o
 ## Asset import flow
 
 1. User opens **Import Assets** from main menu, or under the modern interface from Options' Assets row (#749).
-2. UI checks that every file named in the extractor definitions (`extract-data.json`) is among the selected files,
-   matching names case-insensitively.
-3. For each file:
+2. UI checks that every file the import needs (a pack's `requiredFiles`: Civ1's, those in the extractor definitions,
+   `extract-data.json`, but its optional ones) is among the selected files, matching names case-insensitively.
+3. Each file goes to the pack whose import `accepts` it, and each pack's import reads its own files, side by side. A
+   file no pack reads is left out, with a console warning. For each of Civ1's files (`tileset-civ1/lib/civ1Import.ts`):
    - Picks the definitions for that file. A group of sprites (an asset path such as `city/people`) whose every sprite
      is already stored is skipped, unless "replace existing" is set. So a re-import picks up sprites added to the
      extractor since the last one without re-extracting the rest.
    - Reads binary string via `FileReader`.
    - Runs `extractSprites(...)` with matching definitions.
    - Receives records `{ name, uri }`: `name` is the asset path (`./assets/<path><name>.png`), `uri` a PNG data URL.
-4. Each is turned into `{ name, blob }`, the PNG as a `Blob` (`assetFromURI`), and they are persisted via
-   `assetStore.setAll(records)`, in a single transaction, into IndexedDB database `civ-clone-assets` (object store
+4. Each is turned into `{ name, blob }`, the PNG as a `Blob` (`assetFromURI`), and every pack's records, then the
+   music's, are persisted via `assetStore.setAll(records)`, in a single transaction, into IndexedDB database `civ-clone-assets` (object store
    `assets`).
 5. `assetStore.hasAllAssets()` validates required set. If anything is missing, the window lists
    `assetStore.missingAssets()` and the file input is enabled again.
@@ -50,7 +58,8 @@ Without imported assets, gameplay options are hidden and import is the primary o
 ### Civilization II's sheets (#97)
 
 The same window takes Civ2's four sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
-sprites are in, on their own (as `ASOUND.CVL` is). The instructions name them as optional, for the isometric map; once
+sprites are in, on their own (as `ASOUND.CVL` is): its import (`civ2Import` in `packages/menus/lib/civ2Import.ts`,
+registered there until Civ2's pack is a package of its own) has no `requiredFiles`. The instructions name them as optional, for the isometric map; once
 any are imported, the window says whether Civ2's art is complete or which sheets are still to import
 (`civ2FilesToImport`: those holding a sprite `civ2.json` requires that isn't stored, or whose anchors or flag colours the
 stored record lacks, flag colours that aren't a flag's being lacking). Options' Assets row says the same (`civ2Status`).
@@ -79,11 +88,12 @@ name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`packages/assets/lib/pac
 
 ## Installed packs (#97)
 
-Both tilesets are bundled (`bundledTilesets()` in `packages/assets/lib/tilesets.ts`): Civ1's `civ1.json` on the square
-grid and Civ2's `civ2.json` on the staggered isometric grid. A pack is _installed_ once its sprites are imported:
+Both tilesets are bundled (`bundledTilesets()` in `packages/assets/lib/tilesets.ts`, the interface's first): Civ1's
+`civ1.json` on the square grid, which `tileset-civ1` registers as the interface's, and Civ2's `civ2.json` on the
+staggered isometric grid, which `tilesets.ts` registers itself for now (`registerTileset(tileset, { metadata: true })`). A pack is _installed_ once its sprites are imported:
 
 - At start-up `installPacks()` (`packages/assets/lib/installPacks.ts`) adds every bundled pack to the asset store
-  (`packFor`: Civ2's with `metadata: true`), loads them, sets each pack's sprite anchors from its import's record
+  (`packFor`: Civ2's with `metadata: true`, as it was registered), loads them, sets each pack's sprite anchors from its import's record
   (`setSpriteAnchors`), and installs (`installTilesets`) Civ1's and each pack that has every required sprite and a
   readable record whose flags' colours pass `isFlagRow`. A pack that fails any of that, or a store that fails, is
   left uninstalled, and the game still starts with Civ1's. The import reloads the page, which runs it again.
@@ -100,7 +110,9 @@ grid and Civ2's `civ2.json` on the staggered isometric grid. A pack is _installe
   makes it the default for the windows' units (`hud/Unit`, the unit card), which follow the map's pack, at no more than
   its own default scale (`shownScale`), and for Options' map scale. Each pack keeps its own scale option
   (`mapScaleOption`: Civ1's `mapScale`, Civ2's `mapScale.civ2`).
-- The interface's art keeps coming from `interfaceTileset()`, Civ1's; `currentTileset()` is the same Civ1 tileset.
+- The interface's art keeps coming from `interfaceTileset()`, Civ1's, the pack registered with `interface: true`;
+  `currentTileset()` is the same Civ1 tileset. Until a package registers one, both throw, naming what to load; the
+  asset store made as the page loads (`assetStore`) asks for its tileset only when it is first used.
 - A save on a grid whose bundled pack isn't installed is refused naming the pack to import (`SavedGame.needs-import`,
   `tilesetToImport`).
 
@@ -157,7 +169,7 @@ Code that draws an optional sprite falls back to an older one. `assetStore.first
 - Persistent storage (`idb`) keyed by asset `name`. A record holds the sprite's PNG as `blob`. Imports from before #730
   hold a data URI in `uri` instead; `load` turns each into a `blob` the first time it reads it, and writes it back.
 - The required sprites (286 for Civ1) as the runtime readiness check, and the optional ones. Both lists come from the
-  tileset descriptor's `assets` (`packages/assets/tilesets/civ1.json`, through `currentTileset()` in
+  tileset descriptor's `assets` (`packages/tileset-civ1/civ1.json`, through `currentTileset()` in
   `packages/assets/lib/tilesets.ts`, #56); `new AssetStore(tileset)` reads another one's. Civ2's pack is loaded beside
   it (see Installed packs).
 - More packs beside that one (#97): `new AssetStore(tileset, packs)` or `addPack(pack)`, each an `AssetPack` (a
@@ -194,11 +206,12 @@ through `onPreloadedImagesChanged` on each load.
 
 ## Tileset descriptor and its schema
 
-A tileset pack describes itself in a JSON descriptor (Civ1's is `packages/assets/tilesets/civ1.json`): its grid, tile
+A tileset pack describes itself in a JSON descriptor (Civ1's is `packages/tileset-civ1/civ1.json`): its grid, tile
 size and map scales, the sprites it has, how each kind of thing's sprites are named and put together, and how player
 colours go on. `packages/assets/tilesets/tileset.schema.json` is a JSON Schema (draft 2020-12) for it, with a title or
 description on each field, so a pack author's editor can complete and explain the fields and flag a wrong one as it is
-typed (#869). A descriptor names it with `"$schema"`, as Civ1's does (`"./tileset.schema.json"`, beside it); another
+typed (#869). A descriptor names it with `"$schema"`, as Civ1's does (`"../assets/tilesets/tileset.schema.json"`, from
+its package beside `assets`) and Civ2's (`"./tileset.schema.json"`, beside it); another
 pack points it at `https://civ.one/dist/tileset.schema.json`, where the build puts a copy (the schema's `$id`), or the
 editor is told which schema the pack's descriptor has (VS Code's `json.schemas` setting). The game ignores `$schema`,
 and the build leaves the schema's titles and descriptions out of the game's bundle (`esbuild.js`).

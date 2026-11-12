@@ -6,6 +6,7 @@
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
+import './lib/artPacks';
 
 import IsoMinimap from '@civ-clone/ui-map-isometric/Minimap';
 import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';

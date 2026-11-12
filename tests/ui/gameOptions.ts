@@ -6,6 +6,7 @@
 //  `interface` option its default.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import GameOptionsRegistry, {
   OptionStorage,

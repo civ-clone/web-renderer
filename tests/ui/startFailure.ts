@@ -5,6 +5,7 @@
 // Must stay first: modules read `document` as they load.
 import './lib/dom';
 import './lib/interfaces';
+import './lib/artPacks';
 
 import { AssetStore } from '@civ-clone/ui-assets/AssetStore';
 import { Store } from '@civ-clone/ui-platform/Store';

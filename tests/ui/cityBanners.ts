@@ -7,6 +7,7 @@
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
+import './lib/artPacks';
 
 import CityBanners, {
   BannerStyle,

@@ -10,6 +10,7 @@
 import './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';
@@ -38,7 +39,7 @@ import { setTilesetSizes } from '@civ-clone/ui-game/app/assets';
 import i18next from 'i18next';
 import { instance as options } from '@civ-clone/ui-platform/GameOptionsRegistry';
 import setOptionDefaults from '@civ-clone/ui-game/app/options';
-import civ1Json from '@civ-clone/ui-assets/tilesets/civ1.json';
+import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import isoJson from './fixtures/iso-tileset.json';
 import civ2Json from '@civ-clone/ui-assets/tilesets/civ2.json';

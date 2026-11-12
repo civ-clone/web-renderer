@@ -10,6 +10,7 @@
 import { document } from './lib/dom';
 import './lib/interfaces';
 import './lib/grids';
+import './lib/artPacks';
 
 import TitleMenu, {
   continueDetail,
