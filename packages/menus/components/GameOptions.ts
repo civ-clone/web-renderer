@@ -10,9 +10,9 @@ import { IPortal } from '@civ-clone/ui-map/components/Portal';
 import Transport from '@civ-clone/ui-client/Transport';
 import { UNIT_MARKER_CHOICES } from '@civ-clone/ui-map/components/Map/UnitMarker';
 import ImportAssetsWindow from './ImportAssetsWindow';
-import { civ2Status, civ2StatusText } from '../lib/civ2Import';
 import Window from '@civ-clone/ui-component-window/Window';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
+import { packImports } from '@civ-clone/ui-assets/lib/packImports';
 import { button } from '@civ-clone/ui-component-button/button';
 import currentTileset, {
   mapScaleOption,
@@ -35,8 +35,8 @@ import forgetVisitParam from '@civ-clone/ui-platform/lib/forgetVisitParam';
 import { t } from 'i18next';
 
 /**
- * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", whether Civ2's map art is complete once any
- *  is imported (#97), and Import assets.
+ * The Assets row: "Civ1 assets imported · 289 sprites" or "Not imported", what each other pack says of its import, such
+ *  as whether its map art is complete once any is imported (#97), and Import assets.
  */
 export const assetsRow = (): HTMLElement => {
   const status = s(
@@ -61,11 +61,16 @@ export const assetsRow = (): HTMLElement => {
               tileset: currentTileset().name,
             })
           : t('GameOptions.assets-missing'),
-        // Civilization II's map art, once any is imported (#97), as the Import assets window says it.
-        civ2 = await civ2Status().catch((): null => null);
+        // What each pack has to say of its import (#97), as the Import assets window says it as it opens: nothing
+        //  from a pack whose status can't be read.
+        packs = await Promise.all(
+          packImports().map(
+            async (pack): Promise<string[]> =>
+              (await pack.status?.([]).catch((): null => null))?.lines ?? []
+          )
+        );
 
-      status.textContent =
-        civ2 === null ? civ1 : `${civ1} · ${civ2StatusText(civ2)}`;
+      status.textContent = [civ1, ...packs.flat()].join(' · ');
     })
     // The store can't be read: there's nothing to say about it, rather than "Checking…" for good.
     .catch((): void => {

@@ -524,6 +524,24 @@ expect(
     .map((path) => relative(root, path)),
   []
 );
+// The art packs are their packages (#97): what draws and what imports, the asset store and the menus, ask the packs
+//  registered (`registerTileset`, `registerPackImport`) and import none of them, nor any game's extractor.
+expect(
+  'the assets and the menus import no art pack, and no extractor: each pack’s package brings its own (#97)',
+  ['assets', 'menus'].flatMap((name) =>
+    sourcesUnder(join(packagesRoot, name))
+      .filter((path) =>
+        specifiersOf(readFileSync(path, 'utf8')).some(
+          (specifier) =>
+            specifier.startsWith(`${scope}tileset-`) ||
+            /^@civ-clone\/civ\d+-asset-extractor(\/|$)/.test(specifier) ||
+            /\/civ\d+(Import|\.json)$/.test(specifier)
+        )
+      )
+      .map((path) => relative(root, path))
+  ),
+  []
+);
 expect(
   'the worker starts from `backend.ts`, which uses only the worker client, the protocol and civ.one’s plugins',
   [

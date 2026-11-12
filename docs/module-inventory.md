@@ -86,6 +86,7 @@ Each path below is inside one of the workspace packages under `packages/` (see `
 - `AssetStore.ts`: IndexedDB + image caches.
 - `lib/tilesets.ts`, `lib/packImports.ts` (in `assets`): the tilesets and their imports, as each art pack's package registers them (#97).
 - `index.ts`, `civ1.json`, `lib/civ1Import.ts` (in `tileset-civ1`): Civ1's art pack, its descriptor and its import from Civilization's own files.
+- `index.ts`, `civ2.json`, `lib/civ2Import.ts` (in `tileset-civ2`): Civ2's art pack, its descriptor and its import from Civilization II's sheets.
 - `Store.ts`: generic IndexedDB wrapper.
 - `GameOptionsRegistry.ts`: in-memory UI options.
 - `LocaleProvider.ts`: locale-aware number, percentage, list and relative-time formatting.

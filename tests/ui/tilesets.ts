@@ -22,8 +22,10 @@ import validateDescriptor, {
   readDescriptor,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import currentTileset, {
+  keepsMetadata,
   nativeTileSize,
 } from '@civ-clone/ui-assets/lib/tilesets';
+import { metadataKey } from '@civ-clone/ui-assets/lib/packs';
 import GameOptions from '@civ-clone/ui-menus/components/GameOptions';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import SquareTopology from '@civ-clone/core-world/SquareTopology';
@@ -42,12 +44,12 @@ import setOptionDefaults from '@civ-clone/ui-game/app/options';
 import civ1Json from '@civ-clone/ui-tileset-civ1/civ1.json';
 import extractData from '@civ-clone/civ1-asset-extractor/extract-data.json';
 import isoJson from './fixtures/iso-tileset.json';
-import civ2Json from '@civ-clone/ui-assets/tilesets/civ2.json';
+import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
 import civ2ExtractData from '@civ-clone/civ2-asset-extractor/extract-data.json';
 import * as Civilizations from '@civ-clone/civ1-civilization/Civilizations';
 import * as WorldCivilizations from '@civ-clone/civ1-world-civilizations/Civilizations';
 import { Barbarian } from '@civ-clone/base-civilization-barbarian/Barbarian';
-import { civ2Pack } from '@civ-clone/ui-assets/lib/packs';
+import { civ2Pack } from '@civ-clone/ui-tileset-civ2/lib/civ2Import';
 import { createTopology } from '@civ-clone/core-world/topologies';
 
 const failures: string[] = [];
@@ -1672,10 +1674,27 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         Barbarian.name,
       ];
 
+    // The keys a player's earlier import is kept under (#97): moving the pack to its own package keeps them.
     expect(
-      "Civ2's pack is the one the import stores: the same id, kept under the same prefix and extension, with a record of its sprites' anchors",
-      [civ2.id, civ2.storage, civ2Pack.metadata],
-      [civ2Pack.id, civ2Pack.storage, true]
+      "Civ2's pack is the one the import stores: the same id, kept under the same prefix and extension, with a record of its sprites' anchors beside them, as its package registers it",
+      [
+        civ2.id,
+        civ2.storage,
+        civ2Pack,
+        metadataKey(civ2Pack),
+        keepsMetadata(civ2),
+      ],
+      [
+        'civ2',
+        { prefix: './assets/civ2/', ext: '.png' },
+        {
+          id: 'civ2',
+          storage: { prefix: './assets/civ2/', ext: '.png' },
+          metadata: true,
+        },
+        './assets/civ2/metadata.json',
+        true,
+      ]
     );
     expect(
       "Civ2's pack: every sprite it lists is one the Civ2 extractor cuts",

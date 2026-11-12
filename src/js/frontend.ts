@@ -1,6 +1,7 @@
 // What civ.one is made of (#825): the art packs it draws with, the interfaces it offers, and the grids its map draws.
-//  The interface's art pack first: everything drawn takes its art from it (#97).
+//  The interface's art pack first: everything drawn takes its art from it (#97). Then the isometric map's.
 import '@civ-clone/ui-tileset-civ1';
+import '@civ-clone/ui-tileset-civ2';
 import './interfaces.ts';
 import '@civ-clone/ui-map-square';
 // Isometric is drawable, but offered only once an isometric tileset is installed, and none is yet (#97).

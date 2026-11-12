@@ -1,0 +1,17 @@
+{
+  "name": "@civ-clone/ui-tileset-civ2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Civilization II's art pack: its tileset, the staggered isometric map's, and importing its sprites from the player's own copy of Civilization II. Loading it registers both.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-assets": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/civ2-asset-extractor": "*",
+    "i18next": "^26.4.3"
+  }
+}

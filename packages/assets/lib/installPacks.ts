@@ -15,7 +15,7 @@ export const packFor = (tileset: TilesetDescriptor): AssetPack => ({
   id: tileset.id,
   storage: tileset.storage,
   assets: tileset.assets,
-  // Civ2's, whose units' shields and cities' flags go where the player's own copy marks them (#97).
+  // One whose units' shields and cities' flags go where the player's own copy marks them (#97).
   metadata: keepsMetadata(tileset),
 });
 

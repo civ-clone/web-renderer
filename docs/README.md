@@ -66,5 +66,6 @@ GitHub issues.
 - Backend data bridge: `packages/worker-client/DataTransferClient.ts`
 - Frontend start-up: `packages/game/bootstrap.ts` (page scope) and `packages/game/GameSession.ts` (one game)
 - Asset import UI: `packages/menus/components/ImportAssetsWindow.ts`, asking each art pack's import
-  (`packages/assets/lib/packImports.ts`; Civ1's in `packages/tileset-civ1/lib/civ1Import.ts`)
+  (`packages/assets/lib/packImports.ts`; Civ1's in `packages/tileset-civ1/lib/civ1Import.ts`, Civ2's in
+  `packages/tileset-civ2/lib/civ2Import.ts`)
 - Asset storage/cache: `packages/assets/AssetStore.ts`

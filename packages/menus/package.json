@@ -34,7 +34,6 @@
     "./lib/setupStart": "./lib/setupStart.ts"
   },
   "peerDependencies": {
-    "@civ-clone/civ2-asset-extractor": "*",
     "@civ-clone/core-data-client": "^0.1.2",
     "@dom111/element": "^0.2.0",
     "i18next": "^26.4.3",

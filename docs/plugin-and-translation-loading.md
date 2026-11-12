@@ -12,7 +12,7 @@ The project uses generated import lists rather than dynamic runtime discovery in
 - Reads `package.json["civ-clone"]` config.
   - `paths` defaults to `node_modules/@civ-clone/*`.
   - `excludes` can remove packages from generated imports. It currently holds `civ1-asset-extractor` and
-    `civ2-asset-extractor`, which are used by the asset import window, not the engine.
+    `civ2-asset-extractor`, which are used by the art packs' imports (`tileset-civ1`, `tileset-civ2`), not the engine.
 - For each candidate package:
   - Uses package `main` if available and accessible.
   - Falls back to `index.js`.

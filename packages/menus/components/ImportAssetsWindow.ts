@@ -20,8 +20,6 @@ import { button } from '@civ-clone/ui-component-button/button';
 import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s, t as textNode } from '@dom111/element';
 import { t } from 'i18next';
-// Civilization II's import, registered as it is loaded, until it is a package of its own as Civ1's is (#97).
-import '../lib/civ2Import';
 
 // Civilization's AdLib sound driver, kept as it is for the music (#126) rather than cut up.
 const soundFile = 'ASOUND.CVL',
@@ -47,7 +45,7 @@ export class ImportAssetsWindow extends Window {
   #chooseButton: HTMLButtonElement;
   #chosen: HTMLSpanElement;
   #progressInformation: HTMLParagraphElement;
-  // What the packs have to say of their imports (#97), such as whether Civilization II's map art is complete.
+  // What the packs have to say of their imports (#97), such as whether a map pack's art is complete.
   #packStatus: HTMLParagraphElement;
   // Read when the files arrive, not copied on change: a copy started out of
   // step with the box as drawn (#341).
@@ -173,7 +171,7 @@ export class ImportAssetsWindow extends Window {
       expectedFilenames = requiredFiles(),
       expectedMatches = expectedFilenames.map((key) => new RegExp(key, 'i')),
       // ASOUND.CVL alone is enough once the sprites are in (#126): the music can be added later. So are the files of a
-      //  pack the import doesn't need, such as Civilization II's sheets (#97), for its map.
+      //  pack the import doesn't need (#97), such as another grid's map art.
       adding =
         files.some(
           (file) =>
@@ -244,7 +242,7 @@ export class ImportAssetsWindow extends Window {
     const sound = await this.#sound(files.find(isSoundFile));
 
     // Each pack's files, read by its own import (#97). A file no pack reads is left out; one a pack takes and leaves
-    //  alone (Civilization II's RULES.TXT, whose units keep their default names for now) isn't read at all.
+    //  alone (`ignores`) isn't read at all.
     const byPack = new Map<PackImport, File[]>();
 
     files
@@ -311,8 +309,8 @@ export class ImportAssetsWindow extends Window {
 
     this.#progressInformation.innerText = t('ImportAssetsWindow.done');
 
-    // A pack with something to say whose files were chosen (#97), such as Civilization II's: a sheet left out, or its
-    //  art still incomplete, is said, and the page left for the player to reload once they've read it, rather than
+    // A pack whose files were chosen and that has something to say (#97): a file of its that was left out, or its art
+    //  still incomplete, is said, and the page left for the player to reload once they've read it, rather than
     //  reloaded from under them.
     const telling = chosen.filter((pack) => pack.status !== undefined);
 
@@ -340,7 +338,7 @@ export class ImportAssetsWindow extends Window {
 
   /**
    * Says what each of `packs` has to say of its import (#97), naming the files of its that were `skipped`, the ones
-   *  chosen that couldn't be read: whether Civilization II's map art is complete, or the sheets still to import. Says
+   *  chosen that couldn't be read: whether its art is complete, say, or the files still to import. Says
    *  nothing for a pack with nothing to say. Resolves with whether any is still to be finished.
    */
   async #showStatus(
