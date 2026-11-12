@@ -105,6 +105,8 @@ const seating: Role[] = supplied.seating ?? [];
 const verbose: boolean = supplied.verbose ?? false;
 // `--earth`: the Earth map for the size asked for, every civilization on its own start tile.
 const earth: boolean = supplied.earth ?? false;
+// `--grid`: the grid the world is laid out on, core-world's `TopologyId`.
+const grid: string = supplied.grid ?? 'square';
 // `--civilizations`: the civilization each of the first seats plays, by class name, so that one can be watched.
 const civilizations: string[] = supplied.civilizations ?? [];
 const { baseline, candidate }: { baseline: Variant; candidate: Variant } =
@@ -1174,6 +1176,18 @@ if (earth) {
     }
   });
 }
+
+// Only set for another grid, so a square game's options are what they always were.
+if (grid !== 'square') {
+  engine.setOption('topologyId', grid);
+}
+
+// A grid that didn't take would quietly play a square game instead.
+engine.on('world:built', (world: World): void => {
+  if (world.topologyId() !== grid || world.topology().id() !== grid) {
+    fail(`the world is on the '${world.topology().id()}' grid, not '${grid}'`);
+  }
+});
 
 engine.setOption('players', config.players);
 engine.setOption('height', config.height);

@@ -25,6 +25,9 @@ const END = 'arena>>>';
 // last constructor argument, and so the first that can be given strategies of
 // its own rather than the game-wide registry's.
 const MINIMUM = 'd660d9b';
+// The grids a world can be laid out on, core-world's `TopologyId`. All but the
+// square grid wrap north to south, so they need an even height.
+const GRIDS = ['square', 'staggered-iso', 'hex-odd-r'];
 const WORKING_TREE = 'working-tree';
 // The sizes there is an Earth map for, with the number of civilizations New
 // Game offers on each (packages/client/lib/worldSizes.ts).
@@ -141,6 +144,8 @@ const usage = `usage: node tools/arena.js [options]
   --height <n>           (default: 40; on Earth, 50)
   --earth                play on the Earth map; --width and --height pick its
                          size: 80x50, 104x65 or 128x80
+  --grid <id>            the grid the world is laid out on: ${GRIDS.join(', ')}
+                         (default: square; the others need an even --height)
   --civilizations <a,b,...>
                          seat 0 plays the first, seat 1 the second, ... by
                          class name (English, Japanese); other seats choose
@@ -172,6 +177,7 @@ const parseArguments = (argv) => {
     width: null,
     height: null,
     earth: false,
+    grid: 'square',
     civilizations: null,
     jobs: defaultJobs(),
     timeout: 600,
@@ -280,6 +286,23 @@ const parseArguments = (argv) => {
   options.players ??= 4;
   options.width ??= 60;
   options.height ??= 40;
+
+  if (!GRIDS.includes(options.grid)) {
+    throw new Error(
+      `--grid takes one of ${GRIDS.join(', ')}, not ${options.grid}`
+    );
+  }
+
+  // Earth's maps are square data (civ1-world refuses them on another grid).
+  if (options.earth && options.grid !== 'square') {
+    throw new Error(`--earth is only played on the square grid`);
+  }
+
+  if (options.grid !== 'square' && options.height % 2 === 1) {
+    throw new Error(
+      `--grid ${options.grid} wraps north to south, so --height must be even, not ${options.height}`
+    );
+  }
 
   if ((options.civilizations?.length ?? 0) > options.players) {
     throw new Error(`--civilizations names more than ${options.players} seats`);
@@ -723,6 +746,7 @@ const play = (outfile, game, options, checkpoints = []) =>
         ARENA_CONFIG: JSON.stringify({
           civilizations: options.civilizations,
           earth: options.earth,
+          grid: options.grid,
           seating: game.seating,
           verbose: options.verbose,
         }),
@@ -1048,6 +1072,8 @@ const conformanceCheck = async (outfile, options) => {
       width,
       height,
       earth: false,
+      // The fixture is a square game.
+      grid: 'square',
       civilizations: null,
     },
     checkpoints
@@ -1155,6 +1181,7 @@ const main = async () => {
         width: options.width,
         height: options.height,
         earth: options.earth,
+        grid: options.grid,
         civilizations: options.civilizations,
       },
       bundle: bundled,
@@ -1196,7 +1223,7 @@ const main = async () => {
         options.players
       } players, ${options.width}x${options.height}${
         options.earth ? ' Earth' : ''
-      }${
+      }${options.grid === 'square' ? '' : ` on the ${options.grid} grid`}${
         options.civilizations
           ? ` (${options.civilizations.join(', ')} in seats 0–${
               options.civilizations.length - 1
