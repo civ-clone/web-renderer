@@ -1,5 +1,6 @@
 import { City, GameData, PlayerAction } from '@civ-clone/ui-protocol/types';
 import { Notification } from './Notifications';
+import { heldNoticeStands } from '@civ-clone/ui-client/components/lib/cityBuild';
 
 export interface Notice {
   city: City | null;
@@ -39,6 +40,13 @@ export class Notices {
   }
 
   actions(data: GameData): PlayerAction<Notice>[] {
+    // One that no longer holds, as a build no longer waiting (#970), is withdrawn: the data it is rebuilt from says so.
+    this.#notices.forEach((notification, id) => {
+      if (!heldNoticeStands(notification, data.player.cities)) {
+        this.#notices.delete(id);
+      }
+    });
+
     return Array.from(this.#notices, ([id, notification]) => ({
       _: 'Notice',
       __: ['Notice'],

@@ -42,6 +42,7 @@ import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import Notifications from '@civ-clone/ui-hud/components/Notifications';
+import Notices from '@civ-clone/ui-hud/components/Notices';
 import { noticeText } from '@civ-clone/ui-hud/components/Actions/Notice';
 import { openCityBuild } from '@civ-clone/ui-city/components/choices';
 
@@ -491,10 +492,31 @@ const run = async (): Promise<void> => {
       ['Temple', 'Temple (Cost: 40 / 14 turns)'],
     ]
   );
+  // A city building a Warrior with 42 shields stored, which would pay for Settlers at once: they aren't chosen, so they
+  //  can't be completed, not "waiting".
+  const covered = {
+    ...now,
+    build: {
+      ...now.build,
+      building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+      cost: { value: 10 },
+      remaining: -32,
+      held: [],
+    },
+  } as unknown as CityData;
+
   expect(
-    'classic menu, 42 shields stored: Settlers would wait at once, said in place of their turns',
+    'classic menu, building the paid-for, waiting Settlers: said in place of their turns',
     menuSays('classic', now)[0],
     ['Settlers', 'Settlers (Cost: 40 / Waiting until the city is size 2)']
+  );
+  expect(
+    'classic menu, 42 shields stored but building a Warrior: Settlers can’t be completed, after their turn, not "waiting"',
+    menuSays('classic', covered)[0],
+    [
+      'Settlers',
+      'Settlers (Cost: 40 / 1 turn) – Can’t be completed until the city is size 2',
+    ]
   );
   expect(
     'modern menu, 12 shields stored: Settlers say it under their name, and still count their turns',
@@ -510,10 +532,45 @@ const run = async (): Promise<void> => {
     ]
   );
   expect(
-    'modern menu, 42 shields stored: Settlers would wait at once, so no turns are promised',
+    'modern menu, building the paid-for, waiting Settlers: no turns are promised',
     menuSays('modern', now)[0],
     ['Settlers', 'Waiting until the city is size 2', ['Cost in shields']]
   );
+  expect(
+    'modern menu, 42 shields stored but building a Warrior: Settlers can’t be completed, with their turn, not "waiting"',
+    menuSays('modern', covered)[0],
+    [
+      'Settlers',
+      'Can’t be completed until the city is size 2',
+      ['Cost in shields', 'Turns'],
+    ]
+  );
+
+  // The pane beside the modern list says it for the highlighted item, at once, before its Civilopedia entry (which
+  //  never comes here); nothing for an item nothing would hold.
+  {
+    applyInterface('modern', null);
+
+    const menu = openCityBuild(will.build, offered, transport),
+      pane = () =>
+        text(menu.element().querySelector('.ui-choice-details .held-note')),
+      rows = Array.from(menu.element().querySelectorAll('.ui-choice-row'));
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const onSettlers = pane();
+
+    click(rows[1]!);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(
+      'modern menu: the pane beside the list gives the reason for highlighted Settlers, and none for a Warrior',
+      [onSettlers, pane()],
+      ['Can’t be completed until the city is size 2', null]
+    );
+
+    menu.close();
+  }
 
   // --- the sidebar's list --------------------------------------------------------------------------------------------
   const element = document.createElement('div'),
@@ -679,6 +736,58 @@ const run = async (): Promise<void> => {
         'Production of Settlers in Kish is paid for. Waiting until the city is size 2.'
       ),
       true
+    );
+
+    // Beside End Turn, it stands while the city's build is the same item, paid for and held, and is withdrawn once it
+    //  isn't, as the data the notices are rebuilt from says, rather than going on saying something untrue.
+    const notices = new Notices(),
+      dataWith = (cities: CityData[]) =>
+        ({ player: { ...player, cities } } as unknown as GameData),
+      waitingNotice = (city: CityData) => ({
+        key: 'City.building-held.unit',
+        bubble: true,
+        data: { city: { id: city.id }, item: { _: 'Settlers' }, held: [WAIT] },
+      }),
+      shown = (cities: CityData[]) =>
+        notices
+          .actions(dataWith(cities))
+          .map(({ value }) => value.notification.data.city.id),
+      completed = {
+        ...now,
+        build: {
+          ...now.build,
+          building: null,
+          remaining: undefined,
+          held: [],
+          progress: { value: 0 },
+        },
+      } as unknown as CityData,
+      changed = {
+        ...now,
+        build: {
+          ...now.build,
+          building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+          held: [],
+        },
+      } as unknown as CityData,
+      sabotaged = {
+        ...now,
+        build: { ...now.build, progress: { value: 0 }, remaining: 40 },
+      } as unknown as CityData;
+
+    [now, now, now, now].forEach((city) => notices.add(waitingNotice(city)));
+
+    expect(
+      'the notice stands while its build waits, and is withdrawn once it completes, changes, or loses its shields',
+      [
+        shown([now]),
+        shown([completed]),
+        (notices.add(waitingNotice(now)), shown([changed])),
+        (notices.add(waitingNotice(now)), shown([sabotaged])),
+        (notices.add(waitingNotice(now)), shown([now]).length),
+        shown([]).length,
+      ],
+      [['City-2', 'City-2', 'City-2', 'City-2'], [], [], [], 1, 1]
     );
   }
 

@@ -6,8 +6,8 @@ i18next.addResources('en', 'default', {
     '{{- item}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
   'City.Build.build-unit':
     '{{- item}} {{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} }))',
-  // An item a rule would hold (#970): `held` says so after its turns, or, `waiting`, when the shields stored already pay
-  //  for it, in their place.
+  // An item a rule would hold (#970): `held` says so after its turns, or, `waiting`, for the build the city is already
+  //  waiting on, paid for, in their place.
   'City.Build.build-item_held':
     '{{- item}} (Cost: {{cost, number}} / $t(Progress.turns, {"count": {{turns}} })) – {{- held}}',
   'City.Build.build-item_waiting':

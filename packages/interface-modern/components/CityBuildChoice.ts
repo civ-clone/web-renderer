@@ -45,8 +45,8 @@ const unitFacts = (stats: NonNullable<BuildItem['stats']>): ChoiceFact[] =>
 /**
  * One thing the city can build, as a row: its sprite where it's a unit, or its icon where it's an improvement or a Wonder
  *  (#64), its numbers, its cost and how long it takes. One a rule would hold says so under its name before it is chosen
- *  (#970), as the city screen does for its build: beside its turns, or, when the shields stored already pay for it and
- *  it would wait at once, in their place.
+ *  (#970), as the city screen does for its build: beside its turns, or, for the build the city is already waiting on,
+ *  paid for, in their place.
  */
 export const buildRow = (
   cityBuild: CityBuild,
@@ -127,6 +127,13 @@ export class CityBuildChoice extends ChoiceWindow {
     additionalActions: ActionWindowActions = {}
   ) {
     const cleared = getClearedLabel(cityBuild),
+      // What would hold each item, for the pane beside the list (#970).
+      holds = new Map(
+        available.map((buildItem) => [
+          buildItem.item._,
+          offeredHold(cityBuild, buildItem),
+        ])
+      ),
       intro = cleared === null ? null : s('<p class="build-cleared"></p>');
 
     if (intro !== null) {
@@ -154,13 +161,28 @@ export class CityBuildChoice extends ChoiceWindow {
         autoChooseSingle: false,
         chosen: cityBuild.building?.item._ ?? null,
         intro,
-        describe: (row) =>
-          entryDetails(transport, row.value, [
-            'unit',
-            'improvement',
-            'wonder',
-            'spaceship',
-          ]),
+        // Its Civilopedia entry, after what would hold it (#970), which is there at once.
+        describe: (row) => {
+          const details = entryDetails(transport, row.value, [
+              'unit',
+              'improvement',
+              'wonder',
+              'spaceship',
+            ]),
+            hold = holds.get(row.value) ?? null;
+
+          if (hold === null) {
+            return details;
+          }
+
+          const note = s('<p class="held-note"></p>'),
+            pane = s('<div class="build-details"></div>', note);
+
+          note.textContent = heldText(hold);
+          details.then((entry) => entry && pane.append(entry));
+
+          return pane;
+        },
         actions: {
           ...additionalActions,
           // What's chosen, after what the city is building now (#774). Building nothing, choosing starts it.

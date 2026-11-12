@@ -60,14 +60,25 @@ export const buildHold = (build: CityBuild): BuildHold | null =>
     : null;
 
 /**
- * What would hold an item a city's build list offers (#970), from the ids sent with it: waiting `now` when the shields
- *  the city has stored already pay for it, as the list counts its turns. For the city as it is now.
+ * What would hold an item a city's build list offers (#970), from the ids sent with it, for the city as it is now. Only
+ *  the item the city is building, paid for and held, is waiting `now`; any other, even one the stored shields would
+ *  pay for at once, is one that can't be completed yet, as it isn't chosen.
  */
 export const offeredHold = (
   cityBuild: CityBuild,
   buildItem: BuildItem
-): BuildHold | null =>
-  holdOf(buildItem.held, buildItem.cost.value - cityBuild.progress.value);
+): BuildHold | null => {
+  const hold = holdOf(buildItem.held, Infinity);
+
+  return hold === null
+    ? null
+    : {
+        ...hold,
+        now:
+          cityBuild.building?.item?._ === buildItem.item._ &&
+          buildHold(cityBuild)?.now === true,
+      };
+};
 
 /**
  * What would hold the queued item at `index` (#970), from the ids sent for the queue. Queued items are counted from no

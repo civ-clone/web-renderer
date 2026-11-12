@@ -1,7 +1,12 @@
 import i18next, { t } from 'i18next';
-import { BuildItem, CityBuild, Entity } from '@civ-clone/ui-protocol/types';
+import {
+  BuildItem,
+  City,
+  CityBuild,
+  Entity,
+} from '@civ-clone/ui-protocol/types';
 import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
-import { BuildHold } from '../../lib/cityTurns';
+import { BuildHold, buildHold } from '../../lib/cityTurns';
 import Transport from '../../Transport';
 
 export const getLabelForBuildable = (buildable: BuildItem | null): string =>
@@ -70,6 +75,32 @@ export const heldNoticeData = (notification: {
         }),
       }
     : {};
+
+/**
+ * Whether a notice that a paid-for build is waiting (#970) is still true of `cities`, as the engine last sent them: its
+ *  city's build is the same item, paid for and held (`buildHold`). Once it isn't (completed, cancelled, changed, or its
+ *  shields lost), the notice is withdrawn rather than left saying so. Any other notice, or one whose city isn't among
+ *  `cities` to say, stands.
+ */
+export const heldNoticeStands = (
+  notification: {
+    key: string;
+    data?: { city?: { id?: string }; item?: { _?: string } };
+  },
+  cities: City[]
+): boolean => {
+  if (!notification.key.startsWith('City.building-held.')) {
+    return true;
+  }
+
+  const city = cities.find(({ id }) => id === notification.data?.city?.id);
+
+  return (
+    city === undefined ||
+    (buildHold(city.build)?.now === true &&
+      city.build.building?.item?._ === notification.data?.item?._)
+  );
+};
 
 // Why a city building nothing is asked what to build (#716), or `null` when it is building something, the reason isn't
 //  known (an older save), or it's one with no words here.

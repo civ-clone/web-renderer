@@ -34,8 +34,8 @@ export class CityBuildSelectionWindow extends SelectionWindow {
         city: cityBuild.city,
       }),
       // In the engine's order, a heading over each section (#432), and a unit's numbers on its line (#381). One a rule
-      //  would hold says so on its line (#970): after its turns, or, when the shields stored already pay for it, in their
-      //  place.
+      //  would hold says so on its line (#970): after its turns, or, for the build the city is already waiting on, paid for,
+      //  in their place.
       available.map((buildItem) => {
         const hold = offeredHold(cityBuild, buildItem);
 
