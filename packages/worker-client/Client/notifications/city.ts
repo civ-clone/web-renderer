@@ -97,47 +97,50 @@ const queueDropped = (
   );
 };
 
-// The paid-for builds each client has told its player are waiting (#970), by the item as it was chosen: the engine says
-//  so every turn one waits, and it is told once. Choosing an item makes a new one, even the same item again, so a build
-//  that completes, is cancelled or changes item is forgotten with it, and the next wait is told afresh; a held build
-//  waits until it completes, so one is never told twice for a wait that ends any other way. Nothing is saved, and a
-//  loaded game's builds are new, so a build still waiting is told once more after loading.
-const toldWaiting: WeakMap<
+// The waits each client has seen (#970): for each city build, the item it last waited on and the turn it last did. The
+//  engine says a paid-for build is waiting on every turn's check while it waits, so a wait is a run of consecutive turns
+//  with the event for the same build and item: told on the first, and not while it goes on, however the item is chosen
+//  again in the meantime. A turn without the event ends it, whatever the reason (completed, cancelled, changed, or its
+//  shields lost to sabotage), and the next wait is told afresh. Nothing is saved: after loading a game the builds are
+//  new and none has been seen, so a build still waiting is told once more.
+const waitsSeen: WeakMap<
   NotificationContext,
-  WeakSet<object>
+  WeakMap<CityBuildItem, { Item: Function; turn: number }>
 > = new WeakMap();
 
 // Our build, paid for and waiting, as `Hold` rules hold it (#970): what it is and the ids of the rules, which the page
-//  words as the city screen does. A bubble, as it asks nothing, opening the city.
+//  words as the city screen does. A bubble, as it asks nothing, opening the city; the page withdraws it once the city's
+//  build is no longer waiting.
 const buildingHeld = (
   ctx: NotificationContext,
   cityBuild: CityBuildItem,
-  item: Function,
+  Item: Function,
   held: (string | null)[]
 ): Notification | null => {
-  const building = cityBuild.building();
-
-  if (!ctx.view.owns(cityBuild.city().player()) || building === null) {
+  if (!ctx.view.owns(cityBuild.city().player())) {
     return null;
   }
 
-  if (!toldWaiting.has(ctx)) {
-    toldWaiting.set(ctx, new WeakSet());
+  if (!waitsSeen.has(ctx)) {
+    waitsSeen.set(ctx, new WeakMap());
   }
 
-  const told = toldWaiting.get(ctx)!;
+  const seen = waitsSeen.get(ctx)!,
+    last = seen.get(cityBuild),
+    turn = ctx.turn.value();
 
-  if (told.has(building)) {
+  seen.set(cityBuild, { Item, turn });
+
+  // The same wait, seen this turn or the one before.
+  if (last !== undefined && last.Item === Item && last.turn >= turn - 1) {
     return null;
   }
-
-  told.add(building);
 
   return new Notification(
-    'City.building-held.' + buildingCompleteKind(item.prototype),
+    'City.building-held.' + buildingCompleteKind(Item.prototype),
     {
       city: cityBuild.city(),
-      item: { _: item.name },
+      item: { _: Item.name },
       held,
     },
     true

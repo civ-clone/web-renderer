@@ -291,90 +291,90 @@ const contextOf = ({
     expect(`the kind of ${kind}`, buildingCompleteKind(build), kind);
   });
 
-  // A build paid for and waiting, which the engine says every turn it waits (#970): told once for each item as chosen,
-  //  only in our cities, by kind, as a bubble, with the city, the item and the ids the page words it from.
+  // A build paid for and waiting, which the engine says on every turn's check while it waits (#970): a wait is a run of
+  //  consecutive turns with the event for the same build and item, told on its first turn only, whatever is chosen in
+  //  between; only in our cities, by kind, as a bubble, with the city, the item and the ids the page words it from.
   {
     const WAIT = 'civ1-enhanced:city/hold/settlers-until-size-two',
-      ctx = contextOf(),
+      clock = { turn: 1 },
+      // A client's context, with the turn the engine is on.
+      clientContext = () =>
+        ({
+          ...contextOf(),
+          turn: { value: () => clock.turn },
+        } as unknown as NotificationContext),
+      ctx = clientContext(),
       heldHandler = handlerOf(cityNotifications, 'city:building-held'),
-      // A build of `item`, chosen once: each choice is a new `BuildItem`.
-      chosen = (item: Function) => ({ item: () => item }),
-      waiting = (build: unknown, item: Function, context = ctx) => {
-        const notification = heldHandler(context, build, item, [WAIT]);
+      waiting = (build: unknown, Item: Function, context = ctx) => {
+        const notification = heldHandler(context, build, Item, [WAIT]);
 
         if (notification !== null && !Array.isArray(notification)) {
           keysMade.add(notification.key());
         }
 
         return describe(notification as Notification | null);
-      };
+      },
+      // Whether each turn's event, from `from` on, is told.
+      toldOver = (build: unknown, Item: Function, turns: number) =>
+        Array.from({ length: turns }, () => {
+          clock.turn++;
 
-    let building: unknown = chosen(Settlers);
-
-    const ourBuild = named('build', {
-        city: () => ourCity,
-        building: () => building,
-      }),
-      told = [waiting(ourBuild, Settlers), waiting(ourBuild, Settlers)];
+          return waiting(build, Item) !== null;
+        }),
+      ourBuild = named('build', { city: () => ourCity }),
+      rivalBuild = named('build', { city: () => rivalCity });
 
     expect(
-      'our Settlers paid for and waiting: told once, however many turns they wait',
-      [...told, waiting(ourBuild, Settlers)],
+      'our Settlers paid for and waiting: told on the first turn, as a bubble with the city, the item and the ids',
+      waiting(ourBuild, Settlers),
       [
-        [
-          'City.building-held.unit',
-          true,
-          { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT] },
-        ],
-        null,
-        null,
+        'City.building-held.unit',
+        true,
+        { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT] },
       ]
     );
-
-    // Completed, and chosen again, they wait again: a new wait, told again; and once more after loading a game, whose
-    //  objects are all new, and for another client.
-    building = chosen(Settlers);
-
     expect(
-      'Settlers chosen again after the first are completed, waiting again: told again, once',
-      [waiting(ourBuild, Settlers), waiting(ourBuild, Settlers)].map(
-        (notification) => notification?.[0] ?? null
-      ),
-      ['City.building-held.unit', null]
+      'and not on the turns they go on waiting, nor again on a turn checked twice',
+      [...toldOver(ourBuild, Settlers, 3), waiting(ourBuild, Settlers)],
+      [false, false, false, null]
     );
 
-    // Changed to something else and back, even within the turn: a new choice, told again.
-    building = chosen(Barracks);
-    building = chosen(Settlers);
+    // A turn without the event (completed, cancelled, changed, or its shields lost to sabotage) ends the wait.
+    clock.turn++;
 
     expect(
-      'changed away and back to Settlers, still waiting: told again',
-      waiting(ourBuild, Settlers)?.[0],
-      'City.building-held.unit'
+      'after a turn without waiting, waiting again: a new wait, told once',
+      toldOver(ourBuild, Settlers, 2),
+      [true, false]
     );
     expect(
-      'the same wait, for another client: told to it too',
-      waiting(ourBuild, Settlers, contextOf())?.[0],
-      'City.building-held.unit'
+      'waiting on another item the turn after: a new wait, told',
+      toldOver(ourBuild, Barracks, 1),
+      [true]
     );
     expect(
-      "a computer player's city waiting: not told",
-      waiting(
-        named('build', {
-          city: () => rivalCity,
-          building: () => chosen(Settlers),
-        }),
-        Settlers
-      ),
+      'the same wait, for another client (as after loading a game, whose builds are all new): told once there too',
+      [
+        waiting(ourBuild, Barracks, clientContext())?.[0],
+        waiting(named('build', { city: () => ourCity }), Barracks)?.[0],
+      ],
+      [
+        'City.building-held.city-improvement',
+        'City.building-held.city-improvement',
+      ]
+    );
+    expect(
+      "a computer player's city waiting, to a client for a human player: not told",
+      waiting(rivalBuild, Settlers),
       null
     );
-
-    building = chosen(Pyramids);
 
     expect(
       'a Wonder waiting, by kind, with the plain words for no rule of its own',
       describe(
-        heldHandler(ctx, ourBuild, Pyramids, [null]) as Notification | null
+        heldHandler(ctx, named('build', { city: () => ourCity }), Pyramids, [
+          null,
+        ]) as Notification | null
       ),
       [
         'City.building-held.wonder',
@@ -385,10 +385,13 @@ const contextOf = ({
 
     keysMade.add('City.building-held.wonder');
 
-    [Barracks, Structural, named('Coinage')].forEach((Item: any) => {
-      building = chosen(Item);
-
-      const notification = heldHandler(ctx, ourBuild, Item, []) as Notification;
+    [Structural, named('Coinage')].forEach((Item: any) => {
+      const notification = heldHandler(
+        ctx,
+        named('build', { city: () => ourCity }),
+        Item,
+        []
+      ) as Notification;
 
       keysMade.add(notification.key());
     });

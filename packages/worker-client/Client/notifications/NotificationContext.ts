@@ -17,6 +17,8 @@ export type NotificationContext = Pick<
   | 'unitsOn'
   // A player's government, which says how its collapse is told.
   | 'government'
+  // The turn, which says whether a waiting build was already waiting the turn before (#970).
+  | 'turn'
 >;
 
 // An engine event's arguments as the notice it is told as, or `null` for none. A build complete can be two: the
