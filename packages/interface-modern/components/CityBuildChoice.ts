@@ -175,7 +175,7 @@ export class CityBuildChoice extends ChoiceWindow {
             return details;
           }
 
-          const note = s('<p class="held-note"></p>'),
+          const note = s('<p class="ui-choice-note"></p>'),
             pane = s('<div class="build-details"></div>', note);
 
           note.textContent = heldText(hold);

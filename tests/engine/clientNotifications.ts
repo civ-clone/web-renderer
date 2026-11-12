@@ -325,12 +325,12 @@ const contextOf = ({
       rivalBuild = named('build', { city: () => rivalCity });
 
     expect(
-      'our Settlers paid for and waiting: told on the first turn, as a bubble with the city, the item and the ids',
+      'our Settlers paid for and waiting: told on the first turn, as a bubble with the city, the item, the ids and the turn',
       waiting(ourBuild, Settlers),
       [
         'City.building-held.unit',
         true,
-        { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT] },
+        { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT], turn: 1 },
       ]
     );
     expect(
@@ -379,7 +379,12 @@ const contextOf = ({
       [
         'City.building-held.wonder',
         true,
-        { city: 'Rome', item: { _: 'Pyramids' }, held: [null] },
+        {
+          city: 'Rome',
+          item: { _: 'Pyramids' },
+          held: [null],
+          turn: clock.turn,
+        },
       ]
     );
 

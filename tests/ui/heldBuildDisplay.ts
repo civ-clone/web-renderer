@@ -456,10 +456,14 @@ const run = async (): Promise<void> => {
         cost: { value: 40 },
       },
     ] as unknown as BuildItem[],
-    menuSays = (mode: 'classic' | 'modern', city: CityData) => {
+    menuSays = (
+      mode: 'classic' | 'modern',
+      city: CityData,
+      items: BuildItem[] = offered
+    ) => {
       applyInterface(mode, null);
 
-      const menu = openCityBuild(city.build, offered, transport),
+      const menu = openCityBuild(city.build, items, transport),
         said =
           mode === 'classic'
             ? Array.from(menu.element().querySelectorAll('option')).map(
@@ -546,6 +550,30 @@ const run = async (): Promise<void> => {
     ]
   );
 
+  // Building the paid-for, waiting Settlers, with a Temple a rule would hold too: only the Settlers are "waiting".
+  const alsoHeld = offered.map((buildItem) =>
+    buildItem.item._ === 'Temple' ? { ...buildItem, held: [WAIT] } : buildItem
+  ) as BuildItem[];
+
+  expect(
+    'both menus, building the waiting Settlers: another item a rule holds says it can’t be completed, not "waiting"',
+    [
+      menuSays('classic', now, alsoHeld)[2],
+      menuSays('modern', now, alsoHeld)[2],
+    ],
+    [
+      [
+        'Temple',
+        'Temple (Cost: 40 / 1 turn) – Can’t be completed until the city is size 2',
+      ],
+      [
+        'Temple',
+        'Can’t be completed until the city is size 2',
+        ['Cost in shields', 'Turns'],
+      ],
+    ]
+  );
+
   // The pane beside the modern list says it for the highlighted item, at once, before its Civilopedia entry (which
   //  never comes here); nothing for an item nothing would hold.
   {
@@ -553,7 +581,9 @@ const run = async (): Promise<void> => {
 
     const menu = openCityBuild(will.build, offered, transport),
       pane = () =>
-        text(menu.element().querySelector('.ui-choice-details .held-note')),
+        text(
+          menu.element().querySelector('.ui-choice-details .ui-choice-note')
+        ),
       rows = Array.from(menu.element().querySelectorAll('.ui-choice-row'));
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -739,55 +769,120 @@ const run = async (): Promise<void> => {
     );
 
     // Beside End Turn, it stands while the city's build is the same item, paid for and held, and is withdrawn once it
-    //  isn't, as the data the notices are rebuilt from says, rather than going on saying something untrue.
-    const notices = new Notices(),
-      dataWith = (cities: CityData[]) =>
-        ({ player: { ...player, cities } } as unknown as GameData),
-      waitingNotice = (city: CityData) => ({
+    //  isn't, as the data the notices are rebuilt from says, rather than going on saying something untrue: but only data
+    //  for the notice's own turn or later says so.
+    const dataWith = (cities: CityData[], turn = 5) =>
+        ({
+          player: { ...player, cities },
+          turn: { value: turn },
+        } as unknown as GameData),
+      waitingNotice = (city: CityData, turn = 5) => ({
         key: 'City.building-held.unit',
         bubble: true,
-        data: { city: { id: city.id }, item: { _: 'Settlers' }, held: [WAIT] },
+        data: {
+          city: { id: city.id },
+          item: { _: 'Settlers' },
+          held: [WAIT],
+          turn,
+        },
       }),
-      shown = (cities: CityData[]) =>
-        notices
-          .actions(dataWith(cities))
-          .map(({ value }) => value.notification.data.city.id),
-      completed = {
-        ...now,
-        build: {
-          ...now.build,
-          building: null,
-          remaining: undefined,
-          held: [],
-          progress: { value: 0 },
-        },
-      } as unknown as CityData,
-      changed = {
-        ...now,
-        build: {
-          ...now.build,
-          building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
-          held: [],
-        },
-      } as unknown as CityData,
-      sabotaged = {
-        ...now,
-        build: { ...now.build, progress: { value: 0 }, remaining: 40 },
-      } as unknown as CityData;
+      // A fresh set of notices holding `notice`, and what each data shown in turn leaves of it.
+      shownOver = (notice: object, ...data: GameData[]) => {
+        const notices = new Notices();
 
-    [now, now, now, now].forEach((city) => notices.add(waitingNotice(city)));
+        notices.add(notice as any);
+
+        return data.map(
+          (game) =>
+            notices.actions(game).map(({ value }) => value.notification.key)
+              .length
+        );
+      },
+      withBuild = (build: object) =>
+        ({ ...now, build: { ...now.build, ...build } } as unknown as CityData),
+      completed = withBuild({
+        building: null,
+        remaining: undefined,
+        held: [],
+        progress: { value: 0 },
+      }),
+      changed = withBuild({
+        building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+        held: [],
+      }),
+      // Changed to another item a rule holds too, paid for: still "waiting", but not on what the notice said.
+      changedToHeld = withBuild({
+        building: { item: { _: 'Warrior', __: ['Warrior', 'Buildable'] } },
+        held: [WAIT],
+        cost: { value: 10 },
+        remaining: -32,
+      }),
+      sabotaged = withBuild({ progress: { value: 0 }, remaining: 40 }),
+      // The turn before, as a watcher has it when the notice comes: still being paid for.
+      payingLastTurn = withBuild({ progress: { value: 38 }, remaining: 2 });
 
     expect(
-      'the notice stands while its build waits, and is withdrawn once it completes, changes, or loses its shields',
+      'the notice stands while its build waits, and is withdrawn once it completes, changes item (even to another held one), or loses its shields',
       [
-        shown([now]),
-        shown([completed]),
-        (notices.add(waitingNotice(now)), shown([changed])),
-        (notices.add(waitingNotice(now)), shown([sabotaged])),
-        (notices.add(waitingNotice(now)), shown([now]).length),
-        shown([]).length,
+        shownOver(waitingNotice(now), dataWith([now]), dataWith([now])),
+        shownOver(waitingNotice(now), dataWith([completed])),
+        shownOver(waitingNotice(now), dataWith([changed])),
+        shownOver(waitingNotice(now), dataWith([changedToHeld])),
+        shownOver(waitingNotice(now), dataWith([sabotaged])),
       ],
-      [['City-2', 'City-2', 'City-2', 'City-2'], [], [], [], 1, 1]
+      [[1, 1], [0], [0], [0], [0]]
+    );
+    expect(
+      "a watcher's notice, which comes before its turn's data: the turn before's, still paying, leaves it; its own turn's judges it",
+      [
+        shownOver(
+          waitingNotice(now, 5),
+          dataWith([payingLastTurn], 4),
+          dataWith([now], 5)
+        ),
+        shownOver(
+          waitingNotice(now, 5),
+          dataWith([payingLastTurn], 4),
+          dataWith([now], 5),
+          dataWith([completed], 6)
+        ),
+      ],
+      [
+        [1, 1],
+        [1, 1, 0],
+      ]
+    );
+    expect(
+      'its city lost (captured, destroyed, given away) after being ours: withdrawn; a city never in the data (a watched civilisation other than the one shown) leaves it standing',
+      [
+        shownOver(waitingNotice(now), dataWith([now]), dataWith([])),
+        shownOver(waitingNotice(now), dataWith([]), dataWith([])),
+        shownOver(waitingNotice(now, 5), dataWith([now], 4), dataWith([], 5)),
+      ],
+      [
+        [1, 0],
+        [1, 1],
+        [1, 0],
+      ]
+    );
+    expect(
+      'any other notice is untouched by it: one about a city whose build is not waiting, and one about no city',
+      [
+        shownOver(
+          {
+            key: 'City.polluted',
+            bubble: true,
+            data: { city: { id: completed.id } },
+          },
+          dataWith([completed]),
+          dataWith([])
+        ),
+        shownOver(
+          { key: 'Game.retirement-warning', bubble: true, data: {} },
+          dataWith([completed])
+        ),
+      ],
+      [[1, 1], [1]]
     );
   }
 

@@ -1,6 +1,6 @@
 import { City, GameData, PlayerAction } from '@civ-clone/ui-protocol/types';
 import { Notification } from './Notifications';
-import { heldNoticeStands } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { judgeHeldNotice } from '@civ-clone/ui-client/components/lib/cityBuild';
 
 export interface Notice {
   city: City | null;
@@ -16,6 +16,8 @@ export class Notices {
   #fromBeforeLastRoll = new Set<string>();
   #nextId = 0;
   #notices = new Map<string, Notification>();
+  // The notices whose city has been among the view's own in the data (#970).
+  #citySeen = new Set<string>();
 
   constructor() {
     // A notice that arrives after the turn has ended (during another player's turn) is still there for the next one.
@@ -26,6 +28,7 @@ export class Notices {
   //  the game's turn moves on.
   clear(): void {
     this.#notices.clear();
+    this.#citySeen.clear();
   }
 
   // The watched turn's data comes after what the turn told of, so a turn's notices are kept until the turn after it has
@@ -41,9 +44,22 @@ export class Notices {
 
   actions(data: GameData): PlayerAction<Notice>[] {
     // One that no longer holds, as a build no longer waiting (#970), is withdrawn: the data it is rebuilt from says so.
+    //  Whether its city has been among ours is kept, so a city lost since withdraws it.
     this.#notices.forEach((notification, id) => {
-      if (!heldNoticeStands(notification, data.player.cities)) {
+      const { stands, citySeen } = judgeHeldNotice(
+        notification,
+        data.player.cities,
+        data.turn?.value,
+        this.#citySeen.has(id)
+      );
+
+      if (citySeen) {
+        this.#citySeen.add(id);
+      }
+
+      if (!stands) {
         this.#notices.delete(id);
+        this.#citySeen.delete(id);
       }
     });
 

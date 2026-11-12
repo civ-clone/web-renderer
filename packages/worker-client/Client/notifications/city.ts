@@ -110,7 +110,7 @@ const waitsSeen: WeakMap<
 
 // Our build, paid for and waiting, as `Hold` rules hold it (#970): what it is and the ids of the rules, which the page
 //  words as the city screen does. A bubble, as it asks nothing, opening the city; the page withdraws it once the city's
-//  build is no longer waiting.
+//  build is no longer waiting (`judgeHeldNotice`).
 const buildingHeld = (
   ctx: NotificationContext,
   cityBuild: CityBuildItem,
@@ -142,6 +142,8 @@ const buildingHeld = (
       city: cityBuild.city(),
       item: { _: Item.name },
       held,
+      // The turn it waits from: the page judges whether it still waits only on data for this turn or later.
+      turn,
     },
     true
   );
