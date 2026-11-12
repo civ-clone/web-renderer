@@ -395,4 +395,41 @@
     outline: var(--ui-focus-outline);
     outline-offset: -2px;
   }
+
+  // Clipped to its square's outline, a diamond on an isometric map (#97), which would clip an outline away to its
+  //  corners: a ring as wide as the outline is drawn inside the outline instead (`--focus-ring`, set with the clip).
+  //  Nothing is stacked: each button takes clicks only inside its own square.
+  &.outlined {
+    --ring: 2px;
+  }
+
+  &.outlined:focus-visible {
+    // The ring below shows the focus instead.
+    outline: none;
+
+    &::before {
+      // The modern set's colour, else the system's highlight, which every browser has a name for.
+      background: var(--ui-focus, Highlight);
+      clip-path: var(--focus-ring);
+      content: '';
+      inset: 0;
+      position: absolute;
+    }
+  }
+
+  // The classic set's colour is the browser's own focus colour, which only Chrome and Safari have a name for; used
+  //  where it can be, as in the form controls.
+  @supports (background-color: -webkit-focus-ring-color) {
+    &.outlined:focus-visible::before {
+      background: var(--ui-focus-colour, Highlight);
+    }
+  }
+
+  // With the system's colours forced, the ring is the system's highlight rather than a background it would take away.
+  @media (forced-colors: active) {
+    &.outlined:focus-visible::before {
+      background: Highlight;
+      forced-color-adjust: none;
+    }
+  }
 }

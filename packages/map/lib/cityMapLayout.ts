@@ -22,10 +22,16 @@ export type CityMapLayout = {
  * Where the city screen's map puts a city's squares (#88): each one next to the city, in a small world of their own,
  * so the map's canvases are the size of the city's squares rather than of the whole world. A square is put where it
  * is nearest the city, across a wrap where the world's topology has one. The small world is the box around the
- * squares the engine says the city has, so the renderer needn't know the city's radius, with a square's border all
- * round. The border, and the corners of the box that aren't the city's, are the squares there as the player knows them
- * (#685), so a square at the edge has its real neighbours for coasts, fog and terrain joins, rather than unknown ones
- * or the squares on the far side of the small world.
+ * squares the engine says the city has, so the renderer needn't know the city's radius, with a border all round as
+ * deep as a square's neighbours are away: a square on the square grid, and on a staggered isometric grid a column
+ * across and two rows down, where the corner neighbours `n` and `s` are (#97). The border, and the corners of the box
+ * that aren't the city's, are the squares there as the player knows them (#685), so a square at the edge has its real
+ * neighbours for coasts, fog and terrain joins, rather than unknown ones or the squares on the far side of the small
+ * world.
+ *
+ * On a grid whose neighbours depend on the row, as the staggered isometric grid's do on whether it is shifted, the
+ * city's square is on a row of the same parity as its own, so every square has the neighbours there it has in the
+ * world; and the small world is an even number of rows, as such a grid has to be to wrap over the poles.
  */
 export const cityMapLayout = (city: City): CityMapLayout => {
   const { height, width } = city.player.world,
@@ -49,14 +55,36 @@ export const cityMapLayout = (city: City): CityMapLayout => {
     right = Math.max(0, ...offsets.map(({ x }) => x)),
     top = Math.min(0, ...offsets.map(({ y }) => y)),
     bottom = Math.max(0, ...offsets.map(({ y }) => y)),
-    center = { x: 1 - left, y: 1 - top },
+    // How far a square's neighbours are, across and down, from a row of either parity: the border's depth.
+    steps = topology
+      .directions()
+      .flatMap((direction) => [
+        topology.offset(direction, 0, 0),
+        topology.offset(direction, 0, 1),
+      ]),
+    borderX = Math.max(...steps.map(([dx]) => Math.abs(dx))),
+    borderY = Math.max(...steps.map(([, dy]) => Math.abs(dy))),
+    // Whether a square's neighbours depend on the parity of its row.
+    staggered = topology
+      .directions()
+      .some(
+        (direction) =>
+          topology.offset(direction, 0, 0).join() !==
+          topology.offset(direction, 0, 1).join()
+      ),
+    centerY =
+      borderY -
+      top +
+      (staggered && (borderY - top - city.tile.y) % 2 !== 0 ? 1 : 0),
+    center = { x: borderX - left, y: centerY },
     toLocal = (tile: PlayerTile): PlayerTile => {
       const { x, y } = offset(tile);
 
       return { ...tile, x: center.x + x, y: center.y + y };
     },
-    localWidth = right - left + 3,
-    localHeight = bottom - top + 3,
+    localWidth = center.x + right + borderX + 1,
+    rows = center.y + bottom + borderY + 1,
+    localHeight = staggered && rows % 2 !== 0 ? rows + 1 : rows,
     tiles = city.tiles.map(toLocal),
     // Where a square of the small world is in the real one: across a wrap where the axis has one, and nowhere past an
     //  edge that doesn't.

@@ -5,7 +5,9 @@
 //  the production card, "Nothing in production" with Choose, Buy with its price asking first and pressed by B; the
 //  units in the city as buttons that make one active (#482); Previous, Rename and Next in the window's footer, still
 //  there after a step (#676, #678); Enter on a focused button not closing it (#484); and a rival's city, read-only,
-//  with nothing to press (#58). The behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
+//  with nothing to press (#58). The city's map on a staggered isometric world (#97): its squares placed with their
+//  real neighbours across both seams, buttons clipped to diamonds, and arrow keys that reach every square. The
+//  behaviour itself is `City`'s, checked with the classic layout in `cityWindow`.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -25,6 +27,15 @@ import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
 import { turnsLeft } from '@civ-clone/ui-client/lib/cityTurns';
 import { turnsText } from '@civ-clone/ui-city/components/lib/cityYields';
+import { PlayerTile } from '@civ-clone/ui-protocol/types';
+import { Projection } from '@civ-clone/ui-map/lib/projection';
+import World from '@civ-clone/ui-map/components/World';
+import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
+import isoJson from './fixtures/iso-tileset.json';
+import projectionFor from '@civ-clone/ui-map/lib/projectionFor';
+import { readDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import { renderMap } from '@civ-clone/ui-city/components/lib/cityParts';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 
 const failures: string[] = [];
 let checks = 0,
@@ -1030,6 +1041,15 @@ const run = async (): Promise<void> => {
       ],
       [[33, 33, 33, 33], [67, 33, 33, 33], [33, 0, 33, 33], true]
     );
+    expect(
+      'on the square grid each is its whole box: not clipped to a shape',
+      squares().some(
+        (button) =>
+          button.style.getPropertyValue('clip-path') !== '' ||
+          button.classList.contains('outlined')
+      ),
+      false
+    );
 
     const pressed = new MouseEvent('mousedown', {
       bubbles: true,
@@ -1257,6 +1277,326 @@ const run = async (): Promise<void> => {
     );
 
     looked.close();
+  }
+
+  // The city's map on a staggered isometric world (#97), for cities on even and odd rows and across both seams. The
+  //  small world it is drawn in keeps the city's row parity, has an even number of rows, and gives each of the city's
+  //  21 squares the neighbours it has in the world. Drawn with the synthetic isometric test pack, each square's button
+  //  is clipped to its diamond, and the arrow keys walk the squares that share an edge, reaching every one.
+  {
+    const isoTileset = readDescriptor(isoJson),
+      // The city portal, drawn with the test pack rather than Civ1's, and kept to look at.
+      made: Portal[] = [];
+
+    class IsoPortal extends Portal {
+      protected override createProjection(): Projection {
+        return projectionFor(
+          isoTileset,
+          this.world(),
+          this.tileSize(),
+          !this.lockVerticalEdges()
+        );
+      }
+    }
+
+    const isoPortal = {
+        ...portal,
+        scale: () => 1,
+        tileSize: () => ({ width: 64, height: 32 }),
+        nativeTileSize: () => ({ width: 64, height: 32 }),
+      } as unknown as Portal,
+      width = 10,
+      height = 8,
+      tile = (x: number, y: number): PlayerTile =>
+        ({
+          _: 'PlayerTile',
+          id: `Tile-${x}-${y}`,
+          x,
+          y,
+          city: null,
+          goodyHut: null,
+          improvements: [],
+          isCoast: false,
+          isLand: true,
+          isWater: false,
+          terrain: {
+            _: (x + y) % 2 ? 'Plains' : 'Grassland',
+            __: ['Terrain'],
+            features: [],
+          },
+          units: [],
+          workedBy: null,
+          yields: [],
+        } as unknown as PlayerTile),
+      worldTiles = Array.from({ length: width * height }, (_, index) =>
+        tile(index % width, Math.floor(index / width))
+      ),
+      worldData = {
+        _: 'World',
+        id: 'World-Iso',
+        width,
+        height,
+        topologyId: 'staggered-iso',
+        tiles: worldTiles,
+      },
+      real = new World(worldData as any),
+      topology = real.topology(),
+      at = (x: number, y: number): PlayerTile => worldTiles[y * width + x]!,
+      // The engine's 21: the logical 5 × 5 round the city, without its corners.
+      cityAt = (x: number, y: number): CityData => {
+        const tiles = topology
+          .area(x, y, 2)
+          .filter(([tx, ty]) => {
+            const [a, b] = topology.logicalDelta(x, y, tx, ty)!;
+
+            return !(Math.abs(a) === 2 && Math.abs(b) === 2);
+          })
+          .map(([tx, ty]) => at(tx, ty));
+
+        return cityData(`City-${x}-${y}`, `Iso ${x},${y}`, {
+          player: { ...player, world: worldData },
+          tile: at(x, y),
+          tiles,
+          tilesWorked: [at(x, y)],
+        });
+      },
+      makeIsoPortal = (...args: ConstructorParameters<typeof Portal>) => {
+        const [world, cityTransport, canvas, options] = args,
+          cityPortal = new IsoPortal(world, cityTransport, canvas, options);
+
+        made.push(cityPortal);
+
+        return cityPortal;
+      };
+
+    // linkedom has no focus: tracked by hand, as above.
+    let focused = null as Element | null;
+
+    Object.defineProperty(document, 'activeElement', {
+      configurable: true,
+      get: () => focused,
+    });
+
+    const focus = HTMLElement.prototype.focus;
+
+    HTMLElement.prototype.focus = function (this: HTMLElement) {
+      focused = this;
+      this.dispatchEvent(new Event('focusin', { bubbles: true }));
+    };
+
+    (
+      [
+        ['in the middle, on an even row', 5, 4],
+        ['in the middle, on an odd row', 5, 3],
+        ['on the west seam, on an even row', 0, 4],
+        ['on the west seam, on an odd row', 0, 3],
+        ['on the east seam, on an odd row', 9, 5],
+        ['on the north seam, on an even row', 4, 0],
+        ['on the north seam, on an odd row', 4, 1],
+        ['on the south seam, on an odd row', 6, 7],
+        ['in the corner, across both seams', 9, 7],
+        ['in the other corner, across both seams', 0, 0],
+      ] as [string, number, number][]
+    ).forEach(([where, cityX, cityY]) => {
+      const city = cityAt(cityX, cityY),
+        layout = cityMapLayout(city),
+        small = new World(
+          {
+            ...worldData,
+            width: layout.width,
+            height: layout.height,
+            tiles: layout.tiles,
+          } as any,
+          layout.context
+        ),
+        byId = new Map(worldTiles.map((square) => [square.id, square]));
+
+      expect(
+        `an iso city ${where}: its 21 squares placed apart, on a row of its own row's parity, in an even number of rows`,
+        [
+          layout.tiles.length,
+          new Set(layout.tiles.map(({ x, y }) => `${x},${y}`)).size,
+          layout.center.y % 2 === cityY % 2,
+          layout.height % 2,
+          layout.tiles.find(({ id }) => id === city.tile.id) &&
+            [
+              layout.tiles.find(({ id }) => id === city.tile.id)!.x,
+              layout.tiles.find(({ id }) => id === city.tile.id)!.y,
+            ].join() === [layout.center.x, layout.center.y].join(),
+        ],
+        [21, 21, true, 0, true]
+      );
+
+      expect(
+        `an iso city ${where}: each of its squares has the neighbours it has in the world, every way`,
+        layout.tiles.flatMap((local) =>
+          topology
+            .directions()
+            .filter(
+              (direction) =>
+                small.getNeighbour(local, direction).id !==
+                real.getNeighbour(byId.get(local.id)!, direction).id
+            )
+            .map((direction) => `${local.id} ${direction}`)
+        ),
+        []
+      );
+
+      made.length = 0;
+
+      const map = renderMap(
+          isoPortal,
+          city,
+          transport,
+          false,
+          makeIsoPortal
+        ) as HTMLElement,
+        cityPortal = made[0]!,
+        canvas = map.querySelector('canvas') as HTMLCanvasElement,
+        buttons = Array.from(
+          map.querySelectorAll('.city-square')
+        ) as HTMLButtonElement[],
+        // Where a button is on the canvas, in its px, from its share of it.
+        boxOf = (button: HTMLButtonElement) => {
+          const share = (side: string) =>
+            parseFloat(button.style.getPropertyValue(side)) / 100;
+
+          return {
+            x: share('left') * canvas.width,
+            y: share('top') * canvas.height,
+            width: share('width') * canvas.width,
+            height: share('height') * canvas.height,
+          };
+        },
+        clip = buttons.map((button) =>
+          button.style.getPropertyValue('clip-path')
+        ),
+        // A model of what the browser does with a click: the buttons whose box and diamond (`clip-path`) the pixel's
+        //  centre is in. linkedom has no layout, so this reads the button's own numbers back.
+        hit = (px: number, py: number): HTMLButtonElement[] =>
+          buttons.filter((button) => {
+            const box = boxOf(button),
+              x = (px + 0.5 - box.x) / box.width,
+              y = (py + 0.5 - box.y) / box.height;
+
+            return Math.abs(x - 0.5) + Math.abs(y - 0.5) < 0.5;
+          }),
+        squareAt = (px: number, py: number): string | null => {
+          const square = cityPortal.tileAt(px, py);
+
+          return square === null ||
+            !city.tiles.some(({ id }) => id === square.id)
+            ? null
+            : `${square.x},${square.y}`;
+        },
+        misses: string[] = [];
+
+      expect(
+        `an iso city ${where}: a button over each of its squares, each clipped to its diamond, with a focus ring inside it`,
+        [
+          buttons.length,
+          clip.every(
+            (value) => value === 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)'
+          ),
+          buttons.every((button) => button.classList.contains('outlined')),
+          buttons.every(
+            (button) =>
+              button.style.getPropertyValue('--focus-ring') ===
+              'polygon(evenodd, 50% 0%, 100% 50%, 50% 100%, 0% 50%, 50% 0%, calc(50%) calc(0% + var(--ring) * 1.12), calc(100% - var(--ring) * 2.24) calc(50%), calc(50%) calc(100% - var(--ring) * 1.12), calc(0% + var(--ring) * 2.24) calc(50%), calc(50%) calc(0% + var(--ring) * 1.12))'
+          ),
+        ],
+        [21, true, true, true]
+      );
+
+      for (let py = 0; py < canvas.height; py++) {
+        for (let px = 0; px < canvas.width; px++) {
+          const under = hit(px, py).map(
+              ({ dataset }) => `${dataset.x},${dataset.y}`
+            ),
+            square = squareAt(px, py);
+
+          if (under.join('|') !== (square ?? '')) {
+            misses.push(`${px},${py}: ${under.join('|')} not ${square}`);
+          }
+        }
+      }
+
+      const own = buttons.find(({ dataset }) => dataset.own === 'true')!,
+        ownBox = boxOf(own),
+        [nwX, nwY] = cityPortal
+          .world()
+          .topology()
+          .neighbour(layout.center.x, layout.center.y, 'nw')!;
+
+      expect(
+        `an iso city ${where}: every pixel of the canvas picks the one square under it, and none off the city's squares; the city's box's top left corner is its north-west neighbour's`,
+        [
+          misses.slice(0, 5),
+          hit(Math.ceil(ownBox.x) + 1, Math.ceil(ownBox.y) + 1).map(
+            ({ dataset }) => `${dataset.x},${dataset.y}`
+          ),
+        ],
+        [[], [`${nwX},${nwY}`]]
+      );
+
+      // The arrow keys from the city's own square: Up is the square up and to the right, its north-east neighbour,
+      //  and between them the four reach every one of the city's squares.
+      const press = (from: HTMLButtonElement, arrow: string): string => {
+          focused = null;
+          from.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              bubbles: true,
+              cancelable: true,
+              key: `Arrow${arrow}`,
+            })
+          );
+
+          const to = (focused ?? from) as HTMLButtonElement;
+
+          return `${to.dataset.x},${to.dataset.y}`;
+        },
+        [neX, neY] = cityPortal
+          .world()
+          .topology()
+          .neighbour(layout.center.x, layout.center.y, 'ne')!,
+        reached = new Set([`${own.dataset.x},${own.dataset.y}`]),
+        queue = [own];
+
+      while (queue.length > 0) {
+        const from = queue.shift()!;
+
+        ['Up', 'Right', 'Down', 'Left'].forEach((arrow) => {
+          const to = press(from, arrow);
+
+          if (!reached.has(to)) {
+            reached.add(to);
+            queue.push(
+              buttons.find(({ dataset }) => `${dataset.x},${dataset.y}` === to)!
+            );
+          }
+        });
+      }
+
+      expect(
+        `an iso city ${where}: Up from its square is its north-east neighbour, and the arrow keys reach all 21`,
+        [press(own, 'Up'), reached.size],
+        [`${neX},${neY}`, 21]
+      );
+    });
+
+    HTMLElement.prototype.focus = focus;
+    delete (document as any).activeElement;
+
+    // The whole screen for a city on an isometric world opens, its map drawn with whichever tileset is current.
+    const isoScreen = openCity(cityAt(5, 3), portal, transport);
+
+    expect(
+      'the city screen opens for a city on an isometric world, a button over each of its 21 squares',
+      isoScreen.element().querySelectorAll('.city-square').length,
+      21
+    );
+
+    isoScreen.close();
   }
 
   // The classic layout, given to `City` as the classic interface's slot gives it (#861).

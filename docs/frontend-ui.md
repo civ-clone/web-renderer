@@ -230,7 +230,11 @@ What surrounds the map in play (the actions, notices, details, sidebar lists, un
   interface-modern's `CityLayout.ts` (#746), or under `?interface=classic` the
   page of interface-classic's `classicCityLayout.ts`. The behaviour is `City`'s whichever layout draws
   it; the parts both draw, the yield bars and the map, are in
-  `packages/city/components/lib/cityParts.ts`. The new layout's production card lists the
+  `packages/city/components/lib/cityParts.ts`. The map is a small world of the
+  city's squares (`cityMapLayout`), bordered by their neighbours and, on a staggered
+  isometric grid, on a row of the city's own parity; each square's button is clipped
+  to the projection's `outline()` where it has one (a diamond), and the arrow keys
+  step by the grid's edge directions (#97). The new layout's production card lists the
   city's build queue (core-city-build's `CityBuild#queue`, #774), each with
   Up, Down and Remove; the build list's Add to queue lines up the chosen item.
   Both send a `queue` edit on the city's `CityBuild`/`ChangeProduction` action
