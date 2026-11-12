@@ -474,3 +474,18 @@ rise from 1124 to 1126 (`FoodExhausted` 2 → 4) and nothing else moves: the
 engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
 counts and the DTO hashes are unchanged. `client-transcript.json` passes
 unchanged and is not re-recorded.
+
+## Accepted change: rule counts, celebration growth and a captured city's status (#1010)
+
+civ1-city-happiness 0.1.4 grows a celebrating city only as v474.05 does: under a
+Republic or Democracy, from its second turn of celebration, with food to spare
+after its Settlers are fed, and past size 10 only with an Aqueduct, leaving its
+food store alone. The growth rule, already counted under `TurnStart`, now has an
+id, `civ1-city-happiness:player/turn-start/celebration-growth`. No city
+celebrates under Anarchy, and `civ1-city-happiness:city/captured/forget-status`
+is new: a captured or incited city loses its celebration and disorder records.
+The rule totals at turns 1, 10 and 50 rise from 1126 to 1127 (`Captured` 18 → 19)
+and nothing else moves: the engine-state checksums (`a7518c6d / d3c8debf /
+a12b897c`), the random-call counts and the DTO hashes are unchanged, so the
+conformance game's 50 turns play as before. `client-transcript.json` passes
+unchanged and is not re-recorded.
