@@ -93,6 +93,7 @@
     "test:improvement-obsolete": "node tools/run-suite.js engine improvementObsolete",
     "test:sell-improvement": "node tools/run-suite.js engine sellImprovement",
     "test:held-build": "node tools/run-suite.js engine heldBuild",
+    "test:abandoned-city": "node tools/run-suite.js engine abandonedCity",
     "test:held-build-display": "node tools/run-suite.js ui heldBuildDisplay",
     "test:lost-wonders": "node tools/lost-wonders.js",
     "test:obsolete-builds": "node tools/run-suite.js engine obsoleteBuilds",
