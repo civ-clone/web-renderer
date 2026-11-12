@@ -281,6 +281,7 @@ const run = async (): Promise<void> => {
     'a notice tinted by what it is about',
     [
       'City.captured-from-us',
+      'City.abandoned',
       'Barbarians.uprising.guerrilla',
       'Barbarians.ransom',
       'Diplomat.advance-stolen',
@@ -292,6 +293,7 @@ const run = async (): Promise<void> => {
       'City.building-complete.unit',
     ].map(categoryOf),
     [
+      'military',
       'military',
       'military',
       'gold',

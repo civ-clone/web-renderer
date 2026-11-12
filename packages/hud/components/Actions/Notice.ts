@@ -15,6 +15,7 @@ import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 import { spriteKey } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const cityNotices = [
+  'City.abandoned',
   'City.captured-from-us',
   'City.destroyed',
   'City.destroyed-by',

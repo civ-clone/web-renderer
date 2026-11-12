@@ -15,6 +15,7 @@ import {
   Nuclear,
   Settlers,
   Trireme,
+  Warrior,
 } from '@civ-clone/civ1-unit/Units';
 import {
   NotificationContext,
@@ -137,6 +138,8 @@ type World = {
   seen: unknown[];
   unitsOn: Record<string, unknown[]>;
   government: unknown;
+  // The cities abandoned in the engine call under way (#969).
+  abandoned: unknown[];
 };
 
 const contextOf = ({
@@ -144,6 +147,7 @@ const contextOf = ({
     seen = [],
     unitsOn = {},
     government = Anarchy,
+    abandoned = [],
   }: Partial<World> = {}): NotificationContext =>
     ({
       player: () => us,
@@ -154,6 +158,7 @@ const contextOf = ({
       government: () => ({
         is: (Government: unknown) => Government === government,
       }),
+      cityNews: { abandoned: (city: unknown) => abandoned.includes(city) },
     } as unknown as NotificationContext),
   handlerOf = (table: NotificationTable, event: string) => {
     const entries = table.filter(([tableEvent]) => tableEvent === event);
@@ -290,6 +295,36 @@ const contextOf = ({
     );
     expect(`the kind of ${kind}`, buildingCompleteKind(build), kind);
   });
+
+  // A city of ours that its Settlers abandon (#969): its news says so, once, so neither the Settlers nor what its queue
+  //  dropped is told; a rival's abandoned city tells us nothing either, and one of ours not abandoned is told as ever.
+  expect(
+    'our city abandoned by its Settlers: no build complete, nor what its queue dropped',
+    city(
+      'city:building-complete',
+      [buildOf(ourCity, null, [Warrior]), unitOf(us)],
+      { abandoned: [ourCity] }
+    ),
+    null
+  );
+  expect(
+    "a rival's city abandoned by its Settlers",
+    city('city:building-complete', [buildOf(rivalCity), unitOf(rival)], {
+      abandoned: [rivalCity],
+    }),
+    null
+  );
+  expect(
+    'our Settlers built while another city is abandoned',
+    city('city:building-complete', [buildOf(ourCity), unitOf(us)], {
+      abandoned: [rivalCity],
+    }),
+    [
+      'City.building-complete.unit',
+      false,
+      { cityBuild: 'build', build: 'Settlers of us' },
+    ]
+  );
 
   // A build paid for and waiting, which the engine says on every turn's check while it waits (#970): a wait is a run of
   //  consecutive turns with the event for the same build and item, told on its first turn only, whatever is chosen in

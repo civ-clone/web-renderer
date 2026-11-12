@@ -41,7 +41,7 @@ export type PatchEventsContext = Pick<
   }> & {
     // Whether this is our turn, automated, read as each event happens: automation is turned on and off mid-game.
     automation: Pick<Automation, 'automatedTurn'>;
-    // What happened to each city during the engine call under way: a city captured from us, or destroyed.
+    // What happened to each city during the engine call under way: a city captured from us, destroyed or abandoned.
     cityNews: Pick<CityNewsCollector, 'of'>;
   };
 
@@ -260,6 +260,12 @@ export const registerPatchEvents = (
       )
     )
   );
+
+  // A size 1 city that its own Settlers are about to remove (#969). The engine says so before it announces the build
+  //  and destroys the city, all in one engine call, so the build isn't told and the city's news says it once.
+  on('city:abandoned', (city: City) => {
+    ctx.cityNews.of(city).abandoned = true;
+  });
 
   on('city:destroyed', (city: City, player: Player | null) => {
     cityChanged(city, true, true);

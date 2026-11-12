@@ -36,6 +36,7 @@ const categories: [NoticeCategory, string[]][] = [
     'military',
     [
       'Barbarians',
+      'City.abandoned',
       'City.captured-by-us',
       'City.captured-from-us',
       'City.destroyed',

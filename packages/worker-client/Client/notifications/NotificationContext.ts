@@ -2,6 +2,7 @@
 //  on, so that each handler can be checked with plain data.
 
 import { ClientContext } from '../ClientContext';
+import { CityNewsCollector } from '../cityNews';
 import Notification from '@civ-clone/ui-protocol/Notification';
 
 export type NotificationContext = Pick<
@@ -19,7 +20,10 @@ export type NotificationContext = Pick<
   | 'government'
   // The turn, which says whether a waiting build was already waiting the turn before (#970).
   | 'turn'
->;
+> & {
+  // Whether a city was abandoned in the engine call under way, whose Settlers aren't told as a build complete (#969).
+  cityNews: Pick<CityNewsCollector, 'abandoned'>;
+};
 
 // An engine event's arguments as the notice it is told as, or `null` for none. A build complete can be two: the
 //  completion, and what the queue dropped on its way to the next item (#774).
