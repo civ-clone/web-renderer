@@ -97,6 +97,53 @@ const queueDropped = (
   );
 };
 
+// The paid-for builds each client has told its player are waiting (#970), by the item as it was chosen: the engine says
+//  so every turn one waits, and it is told once. Choosing an item makes a new one, even the same item again, so a build
+//  that completes, is cancelled or changes item is forgotten with it, and the next wait is told afresh; a held build
+//  waits until it completes, so one is never told twice for a wait that ends any other way. Nothing is saved, and a
+//  loaded game's builds are new, so a build still waiting is told once more after loading.
+const toldWaiting: WeakMap<
+  NotificationContext,
+  WeakSet<object>
+> = new WeakMap();
+
+// Our build, paid for and waiting, as `Hold` rules hold it (#970): what it is and the ids of the rules, which the page
+//  words as the city screen does. A bubble, as it asks nothing, opening the city.
+const buildingHeld = (
+  ctx: NotificationContext,
+  cityBuild: CityBuildItem,
+  item: Function,
+  held: (string | null)[]
+): Notification | null => {
+  const building = cityBuild.building();
+
+  if (!ctx.view.owns(cityBuild.city().player()) || building === null) {
+    return null;
+  }
+
+  if (!toldWaiting.has(ctx)) {
+    toldWaiting.set(ctx, new WeakSet());
+  }
+
+  const told = toldWaiting.get(ctx)!;
+
+  if (told.has(building)) {
+    return null;
+  }
+
+  told.add(building);
+
+  return new Notification(
+    'City.building-held.' + buildingCompleteKind(item.prototype),
+    {
+      city: cityBuild.city(),
+      item: { _: item.name },
+      held,
+    },
+    true
+  );
+};
+
 export const cityNotifications: NotificationTable = [
   // Our capture of a city. Losing one is the city's news (`Client/cityNews.ts`).
   [
@@ -158,6 +205,9 @@ export const cityNotifications: NotificationTable = [
         : notifications;
     },
   ],
+
+  // Told once while it waits (#970).
+  ['city:building-held', buildingHeld],
 
   [
     'wonder:obsolete',

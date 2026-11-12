@@ -52,6 +52,25 @@ export const heldText = ({ now, held }: BuildHold): string =>
 export const heldPurchaseText = ({ held }: BuildHold, item: string): string =>
   heldSentence('purchase', held, { item });
 
+/**
+ * What a notice that a paid-for build is waiting (#970, `City.building-held.*`) is worded with besides what it was
+ *  sent: `reason`, from the ids of the rules holding it, in the words the city screen has for a build waiting now
+ *  ("Waiting until the city is size 2"). Nothing for any other notice. Every place that words a notice adds it.
+ */
+export const heldNoticeData = (notification: {
+  key: string;
+  data?: { held?: unknown };
+}): { reason?: string } =>
+  notification.key.startsWith('City.building-held.') &&
+  Array.isArray(notification.data?.held)
+    ? {
+        reason: heldText({
+          now: true,
+          held: notification.data!.held as (string | null)[],
+        }),
+      }
+    : {};
+
 // Why a city building nothing is asked what to build (#716), or `null` when it is building something, the reason isn't
 //  known (an older save), or it's one with no words here.
 export const getClearedLabel = (cityBuild: CityBuild): string | null => {

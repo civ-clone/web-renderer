@@ -291,6 +291,109 @@ const contextOf = ({
     expect(`the kind of ${kind}`, buildingCompleteKind(build), kind);
   });
 
+  // A build paid for and waiting, which the engine says every turn it waits (#970): told once for each item as chosen,
+  //  only in our cities, by kind, as a bubble, with the city, the item and the ids the page words it from.
+  {
+    const WAIT = 'civ1-enhanced:city/hold/settlers-until-size-two',
+      ctx = contextOf(),
+      heldHandler = handlerOf(cityNotifications, 'city:building-held'),
+      // A build of `item`, chosen once: each choice is a new `BuildItem`.
+      chosen = (item: Function) => ({ item: () => item }),
+      waiting = (build: unknown, item: Function, context = ctx) => {
+        const notification = heldHandler(context, build, item, [WAIT]);
+
+        if (notification !== null && !Array.isArray(notification)) {
+          keysMade.add(notification.key());
+        }
+
+        return describe(notification as Notification | null);
+      };
+
+    let building: unknown = chosen(Settlers);
+
+    const ourBuild = named('build', {
+        city: () => ourCity,
+        building: () => building,
+      }),
+      told = [waiting(ourBuild, Settlers), waiting(ourBuild, Settlers)];
+
+    expect(
+      'our Settlers paid for and waiting: told once, however many turns they wait',
+      [...told, waiting(ourBuild, Settlers)],
+      [
+        [
+          'City.building-held.unit',
+          true,
+          { city: 'Rome', item: { _: 'Settlers' }, held: [WAIT] },
+        ],
+        null,
+        null,
+      ]
+    );
+
+    // Completed, and chosen again, they wait again: a new wait, told again; and once more after loading a game, whose
+    //  objects are all new, and for another client.
+    building = chosen(Settlers);
+
+    expect(
+      'Settlers chosen again after the first are completed, waiting again: told again, once',
+      [waiting(ourBuild, Settlers), waiting(ourBuild, Settlers)].map(
+        (notification) => notification?.[0] ?? null
+      ),
+      ['City.building-held.unit', null]
+    );
+
+    // Changed to something else and back, even within the turn: a new choice, told again.
+    building = chosen(Barracks);
+    building = chosen(Settlers);
+
+    expect(
+      'changed away and back to Settlers, still waiting: told again',
+      waiting(ourBuild, Settlers)?.[0],
+      'City.building-held.unit'
+    );
+    expect(
+      'the same wait, for another client: told to it too',
+      waiting(ourBuild, Settlers, contextOf())?.[0],
+      'City.building-held.unit'
+    );
+    expect(
+      "a computer player's city waiting: not told",
+      waiting(
+        named('build', {
+          city: () => rivalCity,
+          building: () => chosen(Settlers),
+        }),
+        Settlers
+      ),
+      null
+    );
+
+    building = chosen(Pyramids);
+
+    expect(
+      'a Wonder waiting, by kind, with the plain words for no rule of its own',
+      describe(
+        heldHandler(ctx, ourBuild, Pyramids, [null]) as Notification | null
+      ),
+      [
+        'City.building-held.wonder',
+        true,
+        { city: 'Rome', item: { _: 'Pyramids' }, held: [null] },
+      ]
+    );
+
+    keysMade.add('City.building-held.wonder');
+
+    [Barracks, Structural, named('Coinage')].forEach((Item: any) => {
+      building = chosen(Item);
+
+      const notification = heldHandler(ctx, ourBuild, Item, []) as Notification;
+
+      keysMade.add(notification.key());
+    });
+  }
+
   // A unit built again without asking (#690) isn't told of; another unit next, or a unit chosen by hand, still is.
   {
     const unit = unitOf(us, Trireme.prototype),
@@ -859,6 +962,11 @@ const contextOf = ({
     'City.building-complete.spaceship-part',
     'City.building-complete.unit',
     'City.building-complete.wonder',
+    'City.building-held.city-improvement',
+    'City.building-held.other',
+    'City.building-held.spaceship-part',
+    'City.building-held.unit',
+    'City.building-held.wonder',
     'City.captured-by-us',
     'City.civil-disorder',
     'City.improvement-unsupported',
@@ -1005,6 +1113,7 @@ const contextOf = ({
       'city:incited',
       'unit:bribed',
       'city:building-complete',
+      'city:building-held',
       'player:research-complete',
       'wonder:obsolete',
       'city-improvement:obsolete',

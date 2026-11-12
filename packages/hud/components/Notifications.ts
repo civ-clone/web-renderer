@@ -1,4 +1,5 @@
 import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
+import { heldNoticeData } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { t } from 'i18next';
 
 // TODO: add in key specifically
@@ -80,11 +81,13 @@ export class Notifications {
   private publish(notification: Notification): void {
     const message = t(`${notification.key}.body`, {
         ...notification.data,
+        ...heldNoticeData(notification),
         ns: 'notification',
         skipOnVariables: false,
       }) as unknown as string,
       title = t(`${notification.key}.title`, {
         ...notification.data,
+        ...heldNoticeData(notification),
         defaultValue: t('Notification.title'),
         ns: 'notification',
         skipOnVariables: false,

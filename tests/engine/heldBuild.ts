@@ -5,9 +5,11 @@
 //      (#970), and nothing else with any; it chooses them: `held` names that rule with shields still to pay (it will
 //      wait), and again once they are paid for (it is waiting), with nothing to buy; more Settlers queued behind them
 //      are sent with the same id, and a queued Warrior with none (`queueHeld`);
-//  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up;
-//  T3. the turn it grows to size 2 it completes them, and is size 1 again;
-//  T4. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
+//  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up, and the
+//      player is told so once (#970);
+//  T3. still waiting, and not told again;
+//  T4. the turn it grows to size 2 it completes them, and is size 1 again;
+//  T5. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
 //      them.
 // Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule (which the
 //  build list and the queue name too), and on King a size-1 city with others is removed by its Settlers, which stand on its square.
@@ -58,6 +60,8 @@ let humanPlayer: Player | null = null,
   // The worker's answer to the build list's `cityBuildAvailable` (#970), and what it last sent.
   buildListHandler: ((cityBuildId: string) => unknown) | null = null,
   buildListSent: any = null,
+  // Every notification sent to the human, as the page gets it.
+  noticesSent: any[] = [],
   pendingChoice: ((value: any) => void) | null = null,
   city: City | null = null,
   // The human turns played so far, and the shields stored when the last one ended.
@@ -158,6 +162,18 @@ const offeredHeld = (of: City): Record<string, unknown> => {
     ])
   );
 };
+
+// The notices sent that a build is waiting (#970), since the game began: key, bubble, city, item and ids.
+const heldNotices = () =>
+  noticesSent
+    .filter((notice) => notice.key.startsWith('City.building-held.'))
+    .map((notice) => [
+      notice.key,
+      notice.bubble,
+      notice.data.city?.id,
+      notice.data.item?._,
+      notice.data.held,
+    ]);
 
 const ourSettlers = (): number =>
   unitRegistryInstance
@@ -303,13 +319,40 @@ const playTurn = async (): Promise<void> => {
         true,
       ]
     );
+    expect(
+      'T2: and the player is told so once, as a notice beside End Turn that opens the city, in the words of the rule',
+      heldNotices(),
+      [
+        [
+          'City.building-held.unit',
+          true,
+          city!.id(),
+          'Settlers',
+          [SETTLERS_WAIT_RULE],
+        ],
+      ]
+    );
+
+    return;
+  }
+
+  if (turnsPlayed === 3) {
+    expect(
+      'T3: still waiting a turn later, and not told again',
+      [
+        shape(buildInPatches(city!))?.waiting,
+        sizeOf(city!),
+        heldNotices().length,
+      ],
+      [true, 1, 1]
+    );
 
     growNextTurn(city!);
 
     return;
   }
 
-  if (turnsPlayed === 3) {
+  if (turnsPlayed === 4) {
     const settlers = unitRegistryInstance
       .getByTile(city!.tile())
       .filter(
@@ -318,7 +361,7 @@ const playTurn = async (): Promise<void> => {
 
     // Food is processed before production at the start of a turn, so the city grows and completes them in one.
     expect(
-      'T3: the turn it grows to size 2 it completes the Settlers, on its square, and is size 1 again',
+      'T4: the turn it grows to size 2 it completes the Settlers, on its square, and is size 1 again',
       [settlers.length, turnCompleted === turnInstance.value(), sizeOf(city!)],
       [1, true, 1]
     );
@@ -330,11 +373,11 @@ const playTurn = async (): Promise<void> => {
     return;
   }
 
-  if (turnsPlayed === 4) {
+  if (turnsPlayed === 5) {
     const sent = buildInPatches(city!);
 
     expect(
-      'T4: a city that grows before its Settlers are paid for is no longer held, as the turn sent it',
+      'T5: a city that grows before its Settlers are paid for is no longer held, as the turn sent it',
       [
         sizeOf(city!),
         cityBuild.building()?.item() === Settlers,
@@ -344,7 +387,7 @@ const playTurn = async (): Promise<void> => {
       [2, true, [], true]
     );
     expect(
-      'T4: and the build list of the city at size 2 says nothing would hold Settlers',
+      'T5: and the build list of the city at size 2 says nothing would hold Settlers',
       offeredHeld(city!).Settlers,
       []
     );
@@ -479,7 +522,7 @@ const report = (): void => {
   }
 
   console.log(
-    `PASS heldBuild (${checks} checks: a size-1 city's Settlers are held from the moment they are chosen, paid for and waiting, completed the turn it grows to 2, and not held once it grows first; unticked, held on Chieftain by the original's rule, and on King the city is removed and its Settlers live; a veteran that defects stays one only with the box ticked)`
+    `PASS heldBuild (${checks} checks: a size-1 city's Settlers are held from the moment they are chosen, said so in the build list and the queue, paid for and waiting, told once, completed the turn it grows to 2, and not held once it grows first; unticked, held on Chieftain by the original's rule, and on King the city is removed and its Settlers live; a veteran that defects stays one only with the box ticked)`
   );
 
   process.exit(0);
@@ -530,6 +573,28 @@ const transport = {
   send: (channel: string, data: any): void => {
     if (channel === 'cityBuildAvailable') {
       buildListSent = data;
+
+      return;
+    }
+
+    if (channel === 'gameNotification') {
+      const { hierarchy, objects } = JSON.parse(JSON.stringify(data)),
+        // One level of references resolved, as the page reads them: the notice, and the objects in its data.
+        deref = (value: any): any =>
+          value && typeof value === 'object' && '#ref' in value
+            ? objects[value['#ref']]
+            : value,
+        notice = deref(hierarchy);
+
+      noticesSent.push({
+        ...notice,
+        data: Object.fromEntries(
+          Object.entries(notice.data ?? {}).map(([key, value]) => [
+            key,
+            deref(value),
+          ])
+        ),
+      });
 
       return;
     }

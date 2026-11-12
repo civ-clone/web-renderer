@@ -4,7 +4,7 @@
 //  it has none for; the city screen under both interfaces, waiting now (the reason in place of the turns, the figures
 //  still "42 / 40", no Buy) and waiting once paid for (the turns, the reason beneath them, Buy pointing to it and its
 //  confirmation saying so); the sidebar's list, with a marker in place of "1 turn", its words as its tooltip and for a
-//  screen reader, sorted after the builds that will be done; the map banner's tooltip; the queue, and both build menus (#970), which
+//  screen reader, sorted after the builds that will be done; the map banner's tooltip; the queue, both build menus and the notice that a build is waiting (#970), which
 //  say an item would wait before it is chosen, beside its turns or, when the shields stored pay for it, in their place.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -38,8 +38,11 @@ import {
 import CityStatus from '@civ-clone/ui-interface-classic/components/CityStatus';
 import { cityStatusColumns } from '@civ-clone/ui-interface-modern/components/CityStatusTable';
 import i18next from 'i18next';
+import addFormatters from '@civ-clone/ui-game/app/i18nFormatters';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
+import Notifications from '@civ-clone/ui-hud/components/Notifications';
+import { noticeText } from '@civ-clone/ui-hud/components/Actions/Notice';
 import { openCityBuild } from '@civ-clone/ui-city/components/choices';
 
 const failures: string[] = [];
@@ -231,6 +234,8 @@ const words = () => [
 
 const run = async (): Promise<void> => {
   await i18next.init({ ...i18nOptions, lng: 'en' });
+  // City names, as the notices word them.
+  addFormatters(i18next);
   await import('./lib/strings');
   // The rules' own sentences are their packages' text, loaded with the rest of them.
   await import('../../translations/civ1-enhanced/en');
@@ -623,6 +628,57 @@ const run = async (): Promise<void> => {
       '12 / 40 · 14 turns',
     ]
   );
+
+  // --- the notice that a paid-for build is waiting (#970) --------------------------------------------------------------
+  // As the worker sends it, worded in both places a notice is: its window, and the notice beside End Turn.
+  {
+    const notice = (held: (string | null)[]) => ({
+        key: 'City.building-held.unit',
+        bubble: true,
+        data: {
+          city: { name: 'Kish', originalPlayer: player },
+          item: { _: 'Settlers' },
+          held,
+        },
+      }),
+      windowSays = (held: (string | null)[]) => {
+        const container = document.createElement('div');
+
+        document.body.append(container);
+        new Notifications(container).receive(notice(held));
+
+        const window = document.querySelector('.notificationWindow'),
+          said = text(window);
+
+        window?.remove();
+        container.remove();
+
+        return said;
+      };
+
+    expect(
+      'the notice beside End Turn: its title, and its body worded from the rule, as the city screen words a build waiting now',
+      [
+        noticeText(notice([WAIT]), 'title', true),
+        noticeText(notice([WAIT]), 'body', true),
+        noticeText(notice([CHIEFTAIN]), 'body', true),
+        noticeText(notice([null]), 'body', true),
+      ],
+      [
+        'Production waiting',
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.',
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.',
+        'Production of Settlers in Kish is paid for. Waiting.',
+      ]
+    );
+    expect(
+      'and its window says the same',
+      windowSays([WAIT])?.includes(
+        'Production of Settlers in Kish is paid for. Waiting until the city is size 2.'
+      ),
+      true
+    );
+  }
 
   // --- en-GB ---------------------------------------------------------------------------------------------------------
   // Nothing here is spelt differently: the British page reads the same, through its fallback to en.
