@@ -386,8 +386,8 @@ re-recorded.
 
 civ1-wonder 0.1.12 makes `once` refuse a Wonder that has ever been built, lost
 with its city or not, and adds `civ1-wonder:city/process-yield/drop-built-wonder`
-(a `ProcessYield`), which drops a game saved before #971 that is building a lost
-Wonder again, its shields kept. civ1-spaceship 0.1.6 and core-city-improvement
+(a `ProcessYield`): in a game saved before #971, a city building a lost Wonder
+again has that build dropped, its shields kept. civ1-spaceship 0.1.6 and core-city-improvement
 0.1.8 come with it. The rule totals at turns 1, 10 and 50 rise from 1120 to
 1121 (`ProcessYield` 8 → 9) and nothing else moves: the engine-state checksums
 (`a7518c6d / d3c8debf / a12b897c`), the random-call counts and the DTO hashes
