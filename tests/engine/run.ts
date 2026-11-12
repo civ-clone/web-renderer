@@ -112,7 +112,13 @@ const finish = (): void => {
           'take ids, so entities created after it are numbered differently. ' +
           'Random calls and entity and field counts are unchanged. #459 ' +
           "shrinks the DTO: a player's units no longer include its " +
-          'destroyed ones. Play does not change.',
+          'destroyed ones. Play does not change. #965 changes no play ' +
+          "either, though turn 50's checksum, state hash and DTO move: the " +
+          'rule dropping obsolete builds at a discovery no longer lists ' +
+          'everything each city could build, and those items took ids, so ' +
+          'entities created after it are numbered differently. Random ' +
+          'calls and entity and field counts are unchanged ' +
+          '(tests/engine/fixtures/NOTES.md).',
         checksums,
         snapshots,
       },

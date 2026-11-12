@@ -10,6 +10,7 @@
 import './lib/seed';
 
 import { BridgeBuilding, Gunpowder } from '@civ-clone/civ1-science/Advances';
+import { HOOVER_DAM_PLANT_RULE_PREFIX } from '@civ-clone/civ1-wonder/RuleIds';
 import { Musketman } from '@civ-clone/civ1-unit/Units';
 import CityBuild from '@civ-clone/core-city-build/CityBuild';
 import PlayerResearch from '@civ-clone/core-science/PlayerResearch';
@@ -146,6 +147,36 @@ const check = async (): Promise<void> => {
     [
       'civ1-science:research/requirements/Railroad',
       'civ1-world:tile-improvement/available/bridge/Road',
+    ]
+  );
+  // The Hoover Dam's plant rules have entries of their own (#965), which the page words by their ids: the ids it has
+  //  wording for (`translations/civ1-wonder/en.ts`) are these.
+  const hooverIds = ['PowerPlant', 'HydroPlant', 'NuclearPlant'].map(
+    (plant) => `${HOOVER_DAM_PLANT_RULE_PREFIX}/${plant}`
+  );
+
+  expect(
+    "the Hoover Dam rules out each plant, by the ids of the plant rules, and each plant's page names it",
+    [
+      hooverIds.map((id) => {
+        const sent = requirements.find((requirement) => requirement.id === id);
+
+        return sent && [sent.subject, sent.relation, sent.targets, sent.range];
+      }),
+      entry('HooverDam')?.leadsTo.filter((id) => hooverIds.includes(id)),
+      ['PowerPlant', 'HydroPlant', 'NuclearPlant'].map((plant) =>
+        entry(plant)?.requires.filter((id) => hooverIds.includes(id))
+      ),
+    ],
+    [
+      ['PowerPlant', 'HydroPlant', 'NuclearPlant'].map((plant) => [
+        plant,
+        'excludedBy',
+        [{ class: 'HooverDam' }],
+        'player',
+      ]),
+      hooverIds,
+      hooverIds.map((id) => [id]),
     ]
   );
   expect(
