@@ -11,6 +11,7 @@
     "./Client/actions/ActionContext": "./Client/actions/ActionContext.ts",
     "./Client/actions/city": "./Client/actions/city.ts",
     "./Game": "./Game.ts",
+    "./Plugins": "./Plugins.ts",
     "./answer": "./answer.ts",
     "./workerRules": "./workerRules.ts"
   },

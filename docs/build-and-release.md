@@ -90,7 +90,8 @@ Notable options:
 
 ## Generated files in normal workflow
 
-- `src/js/plugins.ts` (plugin imports and the `plugins` name-to-version manifest)
+- `src/js/plugins.ts` (the default plugin set's imports and its `plugins` name-to-version manifest)
+- `src/js/pluginSets.ts` (a loader per plugin, and each plugin set's plugins, worker rules and manifest, #668)
 - `src/js/translations.ts`
 - `build.json`
 
@@ -286,3 +287,7 @@ Build first, on the commit being released. `update.sh` copies over the old
 - Replace absolute import generation with relative manifest generation.
 - Add a dedicated dev server workflow (if moving to a framework bundler).
 - Keep changelog format if in-app release window remains a feature.
+
+## Adding an engine package
+
+Every installed `@civ-clone/*` plugin must belong to a plugin set (#668). A package that a set's plugins depend on, however indirectly, joins that set by itself. A standalone package must be named in a set in `package.json`'s `civ-clone.sets`, or listed in `civ-clone.excludes`. Otherwise `buildPluginList.js` stops the build, naming the package. It also stops if a set reaches an engine package that isn't installed at the root `node_modules/@civ-clone`.

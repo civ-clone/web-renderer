@@ -17,10 +17,23 @@ The project uses generated import lists rather than dynamic runtime discovery in
   - Uses package `main` if available and accessible.
   - Falls back to `index.js`.
   - Packages with neither are skipped silently.
-- Writes `src/js/plugins.ts`, which has:
-  - one static import per package,
-  - then an import of the rule set's worker rules, the package `package.json`'s `civ-clone.rules` names (#865), and
-  - an exported `plugins` manifest: package name to installed version, sorted by name.
+- Works out the **plugin sets** (#668) from `civ-clone.sets` (`tools/lib/pluginSets.js`). A set names the plugins it
+  starts from (`plugins`), optionally a set it adds to (`extends`), and its worker rules (`rules`, #865: its own or the
+  extended set's). Its plugins are those it names and every installed plugin they depend on, however indirectly
+  (`dependencies` and `peerDependencies`, followed through libraries too), in package name order (#474). civ.one's are
+  `civ1`, Civ1's own plugins, and `civ1-enhanced`, which adds `civ1-enhanced` and, through it, the world
+  civilizations: every plugin installed. The generator stops, saying why, when a set names a plugin that isn't
+  installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's own `package.json`), a plugin
+  installed is in no set, a set extends a set that doesn't exist (or itself), a set has no `rules`, or
+  `defaultSet` or `setForSavesWithoutOne` names no set.
+- `civ-clone.defaultSet` is the set a new game is played with (`civ1-enhanced`), and `civ-clone.setForSavesWithoutOne`
+  the set a save that names none loads with (`civ1-enhanced`, as every save made before there were sets was played with
+  every plugin).
+- Writes `src/js/pluginSets.ts`: a loader per plugin (`() => import(...)`), and for each set its plugins in order, its
+  worker rules and its manifest (package name to installed version, sorted by name). Importing it runs nothing.
+- Writes `src/js/plugins.ts`, the default set imported: one static import per plugin, then its worker rules, and its
+  `plugins` manifest. The engine suites, the conformance game's harness aside, and the arena import it, so they play
+  civ1-enhanced as civ.one always has.
 
 Observed behavior:
 
@@ -32,11 +45,21 @@ Observed behavior:
 
 ## Runtime plugin activation
 
-The worker client knows no ruleset of its own (#825). civ.one's worker entry, `src/js/backend.ts`, imports the
-`plugins` manifest statically, so the plugin modules run, and register their rules, as soon as the worker script loads,
-and hands `Game` a `Plugins` (`packages/worker-client/Plugins.ts`): the manifest, and `load`, which imports them.
-`Game` and `restoreGame` take everything plugin-related from it, so another build or a test can hand in other rules.
-Suites hand in civ.one's with `tests/engine/lib/plugins.ts`.
+The worker client knows no ruleset of its own (#825). civ.one's worker entry, `src/js/backend.ts`, imports
+`pluginSets.ts` and hands `Game` a `Plugins` (`packages/worker-client/Plugins.ts`, `pluginsFrom`): the sets, each with
+its manifest and a `load` that imports its plugins one at a time, in order, then its worker rules. Nothing runs when
+the worker script loads. The worker is a classic script, so every plugin is in `backend.js`, but each is behind its
+loader, and a plugin no loaded set names is never run. `Game` and `restoreGame` take everything plugin-related from
+it, so another build or a test can hand in other rules. Suites that play the default set hand in civ.one's with
+`tests/engine/lib/plugins.ts`; `tests/engine/pluginSets.ts` plays the others.
+
+**One set per worker** (#668). Plugins register their rules into the engine's registries as they are imported and
+can't be taken out, so the first thing that needs the plugins fixes the set (`Game.#choose`): the default for the
+setup's requests and a new game, or the save's for a load. Another set asked for afterwards is refused, not loaded on
+top. A save records its set as `pluginSet` at the top of the file, beside what `core-save-game` writes, and a load
+loads that set before anything else; a save without one loads with `setForSavesWithoutOne`. The manifest a game
+registers, and so saves, is its set's, not every plugin installed, so `hydrate` refuses a save that needs a plugin the
+set lacks.
 
 What the worker client needs that only one rule set has, it asks of that rule set's worker rules (#865,
 `packages/worker-client/workerRules.ts`): its own player actions and their handlers, the classes a save can name,
@@ -49,14 +72,14 @@ that never imports the plugin list imports `@civ-clone/ui-rules-civ1` itself.
 
 In `Game.start()` (a new game):
 
-- Registers `engine:start` handlers that call `engine.registerPlugins(plugins)` and register the save-game classes
+- Registers `engine:start` handlers that call `engine.registerPlugins(set.manifest)` and register the save-game classes
   (`registerClasses`, `registerDiplomacyClasses`), then create the players and their clients.
 - Calls `engine.start()`.
-- Imports `../plugins` again; once that resolves, emits `plugins:load:end` for engine lifecycle progression.
+- Loads the set again (already in); once that resolves, emits `plugins:load:end` for engine lifecycle progression.
 
 In `Game.load(file)` (a saved game):
 
-- Imports `../plugins` and then calls `loadGame`, which registers the manifest itself. `engine.start()` is never
+- Loads the save's set and then calls `loadGame`, which registers the set's manifest itself. `engine.start()` is never
   called, so `engine:start` never fires and the rules that build a world and place settlers do not run.
 
 Because the plugins' rules close over the singleton registries, a game cannot be loaded over one in progress. Loading

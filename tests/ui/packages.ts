@@ -220,21 +220,27 @@ expect(
 // And what it offers (#862): its `exports` are the modules other packages and civ.one's own code import from it, each
 //  one there, and no other. The builds find the packages by path (below), so nothing else holds a package to them: a
 //  module newly imported from another package is added here on purpose. The suites may reach into any package.
-// The generated plugin list (`src/js/plugins.ts`, git-ignored) is left out, whether or not it has been written yet:
-//  what it imports from the frontend is the rule set's worker rules, which `package.json`'s `civ-clone.rules` names.
-const rulesPackage = (
-    rootManifest as Manifest & { 'civ-clone'?: { rules?: string } }
-  )['civ-clone']?.rules,
+// The generated plugin lists (`src/js/plugins.ts` and `src/js/pluginSets.ts`, git-ignored) are left out, whether or not
+//  they have been written yet: what they import from the frontend is each plugin set's worker rules, which
+//  `package.json`'s `civ-clone.sets` names (#668).
+const generated = ['src/js/plugins.ts', 'src/js/pluginSets.ts'],
+  rulesPackages = Object.values(
+    (
+      rootManifest as Manifest & {
+        'civ-clone'?: { sets?: { [id: string]: { rules?: string } } };
+      }
+    )['civ-clone']?.sets ?? {}
+  ).map(({ rules }) => rules),
   importedFrom = (name: string): string[] =>
     Array.from(
       new Set([
-        ...(rulesPackage === `${scope}${name}` ? ['.'] : []),
+        ...(rulesPackages.includes(`${scope}${name}`) ? ['.'] : []),
         ...[
           ...names
             .filter((other) => other !== name)
             .flatMap((other) => sourcesUnder(join(packagesRoot, other))),
           ...sourcesUnder(join(root, 'src')).filter(
-            (path) => path !== join(root, 'src/js/plugins.ts')
+            (path) => !generated.some((file) => path === join(root, file))
           ),
         ].flatMap((path) =>
           specifiersOf(readFileSync(path, 'utf8'))
@@ -469,13 +475,14 @@ const outside = [
 //  other (#825), over `@civ-clone/worker-transport`. The worker never runs the page's code, nor the page the
 //  worker's.
 const backend = join(root, 'src/js/backend.ts'),
-  // civ.one's choice of rules, which the entry hands the worker client: every installed plugin (`src/js/plugins`
-  //  until `buildPluginList.js` has written it, as it's git-ignored).
+  // civ.one's choice of rules, which the entry hands the worker client: its plugin sets (#668, `src/js/pluginSets`
+  //  until `buildPluginList.js` has written it, as it's git-ignored). Never `src/js/plugins`, which would run every
+  //  plugin in the default set whichever set a game is played with.
   backendMayUse = [
     'worker-client',
     'protocol',
-    'src/js/plugins.ts',
-    'src/js/plugins',
+    'src/js/pluginSets.ts',
+    'src/js/pluginSets',
   ];
 
 expect(
@@ -509,7 +516,7 @@ expect(
       .map((path) => relative(root, path))
       // The engine suites play Civ1, as civ.one does.
       .filter((path) => !path.startsWith('tests/engine/'))
-      .filter((path) => path !== 'src/js/plugins.ts'),
+      .filter((path) => !generated.includes(path)),
   ],
   [[], []]
 );
@@ -543,7 +550,7 @@ expect(
   []
 );
 expect(
-  'the worker starts from `backend.ts`, which uses only the worker client, the protocol and civ.one’s plugins',
+  'the worker starts from `backend.ts`, which uses only the worker client, the protocol and civ.one’s plugin sets',
   [
     importsOf(backend).some((target) => packageOf(target) === 'worker-client'),
     importsOf(backend)

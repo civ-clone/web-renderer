@@ -35,12 +35,19 @@ const transport: any = {
 };
 
 new Game(transport, {
-  manifest: {},
-  load: () => {
-    loads++;
+  sets: [
+    {
+      id: 'lazy',
+      manifest: {},
+      load: () => {
+        loads++;
 
-    return import('../../src/js/plugins');
-  },
+        return import('../../src/js/plugins');
+      },
+    },
+  ],
+  default: 'lazy',
+  withoutOne: 'lazy',
 });
 
 engine.on('game:start', (): void => {

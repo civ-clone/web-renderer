@@ -6,7 +6,7 @@ Quick reference map of key code areas.
 
 - `index.html`: static shell with map/sidebar/menu containers.
 - `esbuild.js`: bundling config and watch/dev flags.
-- `buildPluginList.js`: generates `src/js/plugins.ts` import list.
+- `buildPluginList.js`: works out the plugin sets (#668, `tools/lib/pluginSets.js`) and generates `src/js/pluginSets.ts` (a loader per plugin) and `src/js/plugins.ts` (the default set's import list).
 - `buildTranslationList.js`: generates `src/js/translations.ts` import list.
 - `build.json`: generated version metadata used by UI.
 - `generate-changelog.mjs`: builds the release notes in `changelog/` from commit messages.
