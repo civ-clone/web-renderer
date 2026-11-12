@@ -5,8 +5,8 @@
 //  order, or drawing something see-through twice, shows too.
 //
 // It models what the layers use: `drawImage` in all three forms (nearest neighbour, as the layers draw with smoothing
-//  off), `clearRect`, `fillRect`, `fillText` (a box the size `measureText` gives), `beginPath`/`rect`/`fill`, a clip of
-//  one rectangle at a time, `save`/`restore`, and the `copy` composite that `scrollTo` blits with. A pixel belongs to a
+//  off), `clearRect`, `fillRect`, `fillText` (a box the size `measureText` gives), `beginPath`/`rect`/`fill`, a polygon
+//  of `moveTo`/`lineTo`/`closePath` filled (an isometric tile's diamond), a clip of one rectangle at a time, `save`/`restore`, and the `copy` composite that `scrollTo` blits with. A pixel belongs to a
 //  shape when its centre does, as it does on a real canvas without anti-aliasing. Anything else a layer calls is not a
 //  function here, so a new kind of drawing fails loudly rather than drawing nothing.
 
@@ -223,7 +223,9 @@ const blend = (
 
 export class SoftwareContext {
   #canvas: SoftwareCanvas;
+  // A path's rectangles, and its polygons, each the corners `moveTo` and `lineTo` gave it.
   #path: Rect[] = [];
+  #polygons: [number, number][][] = [];
   #stack: State[] = [];
   #state: State = SoftwareContext.#initialState();
 
@@ -320,6 +322,31 @@ export class SoftwareContext {
   beginPath(): void {
     this.#count('beginPath');
     this.#path = [];
+    this.#polygons = [];
+  }
+
+  moveTo(x: number, y: number): void {
+    this.#count('moveTo');
+    this.#polygons.push([[x, y]]);
+  }
+
+  lineTo(x: number, y: number): void {
+    this.#count('lineTo');
+
+    const polygon = this.#polygons[this.#polygons.length - 1];
+
+    if (polygon === undefined) {
+      this.moveTo(x, y);
+
+      return;
+    }
+
+    polygon.push([x, y]);
+  }
+
+  // Every polygon is closed when it is filled, so this only counts.
+  closePath(): void {
+    this.#count('closePath');
   }
 
   rect(x: number, y: number, width: number, height: number): void {
@@ -330,7 +357,7 @@ export class SoftwareContext {
   clip(): void {
     this.#count('clip');
 
-    if (this.#path.length !== 1) {
+    if (this.#path.length !== 1 || this.#polygons.length > 0) {
       throw new Error(
         `a clip of ${this.#path.length} rectangles is not modelled`
       );
@@ -364,6 +391,7 @@ export class SoftwareContext {
     const [id, alpha] = parseColour(this.#state.fillStyle);
 
     this.#path.forEach((rect) => this.#paintRect(rect, id, alpha));
+    this.#polygons.forEach((polygon) => this.#paintPolygon(polygon, id, alpha));
   }
 
   clearRect(x: number, y: number, width: number, height: number): void {
@@ -531,6 +559,60 @@ export class SoftwareContext {
     for (let py = firstY; py < lastY; py++) {
       for (let px = firstX; px < lastX; px++) {
         painted += blend(canvas.ids, canvas.alpha, py * stride + px, id, alpha);
+      }
+    }
+
+    canvas.counters.paintedPixels += painted;
+  }
+
+  // The pixels whose centres are inside `polygon` (by the even-odd rule, an edge's lower end in and its upper end out,
+  //  so a centre on an edge two polygons share is in exactly one of them), within the clip and the canvas.
+  #paintPolygon(polygon: [number, number][], id: number, alpha: number): void {
+    if (this.#state.globalCompositeOperation === 'copy') {
+      throw new Error('only drawImage is modelled with copy');
+    }
+
+    const xs = polygon.map(([x]) => x),
+      ys = polygon.map(([, y]) => y),
+      left = Math.min(...xs),
+      top = Math.min(...ys),
+      [firstX, lastX, firstY, lastY] = this.#bounds({
+        x: left,
+        y: top,
+        width: Math.max(...xs) - left,
+        height: Math.max(...ys) - top,
+      }),
+      canvas = this.#canvas,
+      stride = canvas.width;
+
+    let painted = 0;
+
+    for (let py = firstY; py < lastY; py++) {
+      for (let px = firstX; px < lastX; px++) {
+        const cx = px + 0.5,
+          cy = py + 0.5;
+        let inside = false;
+
+        polygon.forEach(([x1, y1], index) => {
+          const [x2, y2] = polygon[(index + 1) % polygon.length]!;
+
+          if (
+            y1 > cy !== y2 > cy &&
+            cx < x1 + ((cy - y1) * (x2 - x1)) / (y2 - y1)
+          ) {
+            inside = !inside;
+          }
+        });
+
+        if (inside) {
+          painted += blend(
+            canvas.ids,
+            canvas.alpha,
+            py * stride + px,
+            id,
+            alpha
+          );
+        }
       }
     }
 

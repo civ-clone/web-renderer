@@ -17,7 +17,7 @@ import schema from './tileset.schema.json';
 //
 // `tileset.schema.json` describes the JSON, field by field, for pack authors and their editors as well as for
 //  `readDescriptor`, which checks it first and then what a schema cannot say. The format says more than the map draws
-//  yet (Civ2's shields and city styles, #152): `validateDescriptor` refuses those, saying which.
+//  yet (a box city's flag, #152): `validateDescriptor` refuses that, saying so.
 
 /**
  * The one descriptor format this renderer reads, the schema's `schema` too. Any other number is refused, so a newer
@@ -344,9 +344,6 @@ const descriptorName = (json: unknown): string => {
 
   return typeof id === 'string' && id !== '' ? `"${id}"` : 'descriptor';
 };
-
-const isOrigin = ({ x, y }: Point = { x: 0, y: 0 }): boolean =>
-  x === 0 && y === 0;
 
 /**
  * `json` as a tileset descriptor, in the format this renderer reads, whether or not it can draw all of it yet (see
@@ -799,37 +796,22 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
 
 /**
  * What in `descriptor` the map cannot draw yet, said as `validateDescriptor` refuses it, or `null` when it can draw it
- * all. The format says more than the map draws (#152): Civ2's shields and city styles, and sprites taller than their
- * tile. Each goes from this list as the map learns to draw it (Civ2's base per terrain and named coast quarters have).
+ * all. The format says more than the map draws (#152): a box city's flag, and a box city's anchor. Each goes from
+ * this list as the map learns to draw it (Civ2's base per terrain, named coast quarters, shields, city styles and tall
+ * sprites have).
  */
-export const notDrawnYet = ({
-  units,
-  cities,
-}: TilesetDescriptor): string | null => {
-  if (units.stackOffset === undefined) {
-    return 'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.';
+export const notDrawnYet = ({ cities }: TilesetDescriptor): string | null => {
+  if (cities.mode === 'box' && cities.colouring.mode !== 'replaceColours') {
+    return `cities.colouring.mode "${cities.colouring.mode}" cannot be drawn yet for box cities: only replaceColours.`;
   }
 
-  if (units.colouring.mode !== 'replaceColours') {
-    return `units.colouring.mode "${units.colouring.mode}" cannot be drawn yet: only replaceColours.`;
-  }
-
-  if (cities.mode !== 'box') {
-    return `cities.mode "${cities.mode}" cannot be drawn yet: only box.`;
-  }
-
-  if (cities.colouring.mode !== 'replaceColours') {
-    return `cities.colouring.mode "${cities.colouring.mode}" cannot be drawn yet: only replaceColours.`;
-  }
-
-  if (cities.labels.size !== undefined) {
-    return 'cities.labels.size cannot be drawn yet: only x and sizeBaseline.';
-  }
-
-  for (const section of ['units', 'cities'] as const) {
-    if (!isOrigin({ units, cities }[section].anchor)) {
-      return `${section}.anchor cannot be drawn yet: only a sprite at the tile's top-left corner.`;
-    }
+  // A box city's sprite goes `inset` in from the tile's corner: only a styles city is drawn at its anchor.
+  if (
+    cities.mode === 'box' &&
+    cities.anchor !== undefined &&
+    (cities.anchor.x !== 0 || cities.anchor.y !== 0)
+  ) {
+    return "cities.anchor cannot be drawn yet for box cities: only a sprite at the tile's corner, inset as they say.";
   }
 
   return null;
@@ -837,8 +819,8 @@ export const notDrawnYet = ({
 
 /**
  * `json` as a tileset descriptor, once it is one this renderer can draw from: one `readDescriptor` reads, with nothing
- * `notDrawnYet` names. Throws an `Error` saying what is wrong otherwise. The map, and every layer that casts a
- * colouring to `replaceColours` or reads a box city's fields, can rely on that. Whether the map can draw its grid and
+ * `notDrawnYet` names. Throws an `Error` saying what is wrong otherwise. The map, and every layer that casts a box
+ * city's colouring to `replaceColours`, can rely on that. Whether the map can draw its grid and
  * its tile size is not checked here: that is for the map as it takes the tileset (`nativeTileSize` in
  * `lib/tilesets.ts`, and the grid's projection, `registerGrid`).
  */

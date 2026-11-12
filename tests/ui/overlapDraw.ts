@@ -24,7 +24,8 @@
 //  - "isometric": the staggered isometric grid's own projection (#97), rows half a tile apart, every other one shifted
 //    half a tile across, with diamond sprites so the tiles behind show through the corners of the ones in front;
 //  - "tall": the square grid, with sprites half a tile taller than the box, reaching into the row above, as mountains
-//    and cities do in many tilesets.
+//    and cities do in many tilesets. Units half a tile taller than the box, drawn up by the tileset's anchor, are
+//    checked on "isometric", whose projection reaches nowhere itself, so their layer's own reach has to cover them.
 //
 // A full render also has to put the tile in front on top, which a test layer of one sprite per tile checks against
 //  the sprites drawn back to front here. And each of four mistakes the region path could make (drawing in the wrong
@@ -69,6 +70,8 @@ import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
 import World from '@civ-clone/ui-map/components/World';
 import Yields from '@civ-clone/ui-map/components/Map/Yields';
 import i18next from 'i18next';
+import { TilesetDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
+import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
 
 useSoftwareCanvases();
 
@@ -480,6 +483,25 @@ class TestActiveUnit extends ActiveUnit {
   }
 }
 
+// Units half a tile taller than the box, drawn half a tile up as the tileset's anchor says, as Civ2's 64 × 48 units are
+//  16 px above a 64 × 32 tile (#97), with Civ1's copy behind a stack. On a projection that reaches nowhere itself, the
+//  layer's own reach has to cover them.
+const tallUnitsTileset: TilesetDescriptor = {
+  ...currentTileset(),
+  id: 'tall-units',
+  units: { ...currentTileset().units, anchor: { x: 0, y: -8 } },
+};
+
+class TallUnits extends Units {
+  protected override tileset(): TilesetDescriptor {
+    return tallUnitsTileset;
+  }
+
+  protected override renderUnit(unit: any): CanvasImageSource {
+    return new FakeImage(`units/${unit._.toLowerCase()}`, 16, 24) as any;
+  }
+}
+
 // One sprite a tile, half a tile taller than the box, reaching into the row above.
 class TallPlain extends Map {
   protected drawTile(tile: Tile, offsetX: number, offsetY: number): void {
@@ -662,6 +684,28 @@ const layerSpecs: LayerSpec[] = [
       { name: 'no units', apply: swap('units', () => []) },
     ],
     squareStrip: (scale) => ({ top: scale, right: 0, bottom: 0, left: scale }),
+  },
+  {
+    name: 'TallUnits',
+    Type: TallUnits,
+    projections: ['isometric'],
+    mutations: [
+      {
+        name: 'a stack',
+        apply: swap('units', (tile) => [
+          makeUnit(`Added-${tile.x}-${tile.y}-a`, tile.x, tile.y),
+          makeUnit(`Added-${tile.x}-${tile.y}-b`, tile.x, tile.y, 2),
+        ]),
+      },
+      { name: 'no units', apply: swap('units', () => []) },
+    ],
+    // Half a tile up, and the copy behind a stack a scale step further up and left.
+    squareStrip: (scale) => ({
+      top: 9 * scale,
+      right: 0,
+      bottom: 0,
+      left: scale,
+    }),
   },
   {
     name: 'Cities',

@@ -23,10 +23,10 @@ export class Yields extends Map {
   ): void {
     const { width, height } = this.projection().footprint();
 
-    // Each icon's place is a fraction of the tile's box.
+    // Each icon's place is a fraction of the tile's box. The icons are the interface's, whatever the map is drawn with.
     tileYieldIcons(tile.yields).forEach(({ _, x, y }) =>
       this.putImage(
-        this.getPreloadedImage(`city/${_.toLowerCase()}`),
+        this.getInterfaceImage(`city/${_.toLowerCase()}`),
         offsetX + width * x,
         offsetY + height * y
       )

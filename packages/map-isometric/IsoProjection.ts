@@ -12,6 +12,14 @@ import { Rect } from '@civ-clone/ui-map/lib/viewport';
 // The staggered isometric grid's own code (#97): diamonds in rows, every odd row shifted half a tile right, as the
 //  engine's `StaggeredIsoTopology` stores them and Civ2 draws them.
 
+// A tile's diamond in its box, as fractions of the box across and down: the middles of its four sides.
+const diamond: readonly (readonly [number, number])[] = Object.freeze([
+  Object.freeze([0.5, 0] as const),
+  Object.freeze([1, 0.5] as const),
+  Object.freeze([0.5, 1] as const),
+  Object.freeze([0, 0.5] as const),
+]);
+
 /**
  * Diamond tiles `width` × `height` px, in rows half a tile apart, every odd row shifted half a tile across:
  *
@@ -63,6 +71,11 @@ export class IsoProjection implements Projection {
 
   footprint(): Size {
     return this.#footprint;
+  }
+
+  // The diamond: the middles of the box's four sides. A pixel whose centre is inside it is this tile's.
+  outline(): readonly (readonly [number, number])[] {
+    return diamond;
   }
 
   // Every box overlaps its four edge neighbours' at the corners.

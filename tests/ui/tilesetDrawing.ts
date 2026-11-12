@@ -9,7 +9,7 @@
 //  tests/ui/renderGeometry.ts's to prove; it leaves out the units' and cities' colours, which these checks cover.
 
 // Must stay first: it gives the layers a `document` and the preloaded images to draw with.
-import { FakeImage, preloadImage } from './lib/fakeCanvas';
+import { FakeImage, askedFor, preloadImage } from './lib/fakeCanvas';
 import './lib/grids';
 
 import Cities from '@civ-clone/ui-map/components/Map/Cities';
@@ -27,6 +27,16 @@ import replaceColours from '@civ-clone/ui-assets/lib/replaceColours';
 import { setSprites } from '@civ-clone/ui-assets/lib/getPreloadedImage';
 import { createTopology } from '@civ-clone/core-world/topologies';
 import currentTileset from '@civ-clone/ui-assets/lib/tilesets';
+import ActiveUnit from '@civ-clone/ui-map/components/Map/ActiveUnit';
+import HudUnit, { unitBox } from '@civ-clone/ui-hud/components/Unit';
+import Unworkable from '@civ-clone/ui-map/components/Map/Unworkable';
+import Yields from '@civ-clone/ui-map/components/Map/Yields';
+import isoJson from './fixtures/iso-tileset.json';
+import {
+  clearSpriteAnchors,
+  setSpriteAnchors,
+} from '@civ-clone/ui-assets/lib/spriteAnchors';
+import { validateDescriptor } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 
 const failures: string[] = [];
 let checks = 0,
@@ -912,11 +922,11 @@ const isoTileset: TilesetDescriptor =
   ): string[] => drawn(Layer, tileset, world, 2, 4, isoTile);
 
 expect(
-  "the isometric fixture is read, and what the map can't draw yet is only its units' and cities'",
+  'the isometric fixture is read, and the map can draw all of it, its units and cities too',
   require('@civ-clone/ui-assets/tilesets/TilesetDescriptor').notDrawnYet(
     isoTileset
   ),
-  'units.stackOffset must be given: a stack shown by its colouring alone cannot be drawn yet.'
+  null
 );
 
 expect(
@@ -1520,6 +1530,538 @@ expect(
     ['drawImage(city/people_unhappy_m,4,6,6,6)'],
   ]
 );
+
+// Units and cities on the isometric grid (#97, R7): a Civ2-shaped descriptor's units and cities, with Civ1's terrain,
+//  which this block doesn't draw. Synthetic sprites only: a unit 64 × 48 drawn 16 px above its 64 × 32 tile, a
+//  shield and a back-shield over it at the unit's own anchor, and cities by style, size and walls with a flag at each
+//  sprite's own anchor, in the player's colours.
+{
+  const isoTileset: TilesetDescriptor = {
+      ...JSON.parse(JSON.stringify(isoJson)),
+      id: 'iso-units',
+      storage: { prefix: './assets/iso-units/', ext: '.png' },
+      families: JSON.parse(JSON.stringify(civ1.families)),
+      ui: civ1.ui,
+    },
+    // Two pixels of colour key and one left alone, for the overlays; the unit and cities are left as they are.
+    isoSprites: [string, number, number, string[]][] = [
+      ['units/settlers', 64, 48, []],
+      ['units/shield', 3, 1, ['#ff0000', '#ff0000', '#123456']],
+      ['units/shield-back', 3, 1, ['#ff0000', '#123456', '#123456']],
+      ['city/ancient/0', 64, 48, []],
+      ['city/medieval/walled-1', 64, 48, []],
+      ['units/legion', 64, 48, []],
+      ['city/ancient/2', 64, 48, []],
+      ['city/flag', 3, 1, ['#ff0000', '#800000', '#123456']],
+    ],
+    isoPlayer = (colours: string[], civilization = 'Babylonian') => ({
+      ...player,
+      civilization: {
+        _: civilization,
+        attributes: [{ name: 'colors', value: colours }],
+      },
+    }),
+    // What the canvases a draw made had put on them, of this pack's sprites: each sprite drawn, and each recolouring.
+    isoDraws = (draw: () => unknown): string[] => {
+      madeCanvases.length = 0;
+
+      draw();
+
+      return madeCanvases
+        .flat()
+        .filter(
+          (call) =>
+            call.startsWith('putImageData') ||
+            /^drawImage\((iso-units\/|object)/.test(call)
+        );
+    };
+
+  isoSprites.forEach(([path, width, height, colours]) => {
+    preloadImage(`iso-units/${path}`, width, height);
+    pixels[`iso-units/${path}`] = colours;
+  });
+
+  const isoAnchors = {
+    'units/settlers': { shield: { x: 5, y: 3 } },
+    'city/ancient/0': { flag: { x: 40, y: 6 }, size: { x: 2, y: 20 } },
+    'city/medieval/walled-1': { flag: { x: 7, y: 2 }, size: { x: 1, y: 4 } },
+  };
+
+  setSpriteAnchors('iso-units', isoAnchors);
+
+  expect(
+    'a Civ2-shaped pack with Civ1’s terrain is one the map can draw: its shields, styles cities and tall sprites',
+    (() => {
+      try {
+        validateDescriptor(isoTileset);
+
+        return null;
+      } catch (error) {
+        return (error as Error).message;
+      }
+    })(),
+    null
+  );
+
+  expect(
+    "a unit with an overlay: the sprite as it is, and the shield over it at the unit's own anchor, its key swapped for the player's first colour",
+    isoDraws(() =>
+      renderUnit(
+        {
+          _: 'Settlers',
+          player: isoPlayer(['#00ff00', '#ffff00']),
+          improvements: [],
+        } as any,
+        isoTileset
+      )
+    ),
+    [
+      'drawImage(iso-units/units/settlers,0,0)',
+      'drawImage(object,5,3)',
+      'drawImage(iso-units/units/shield,0,0,3,1)',
+      'putImageData(#00ff00,#00ff00,#123456)',
+    ]
+  );
+
+  expect(
+    'and one of a stack: the back-shield behind the shield, where the colouring moves it from the anchor',
+    isoDraws(() =>
+      renderUnit(
+        {
+          _: 'Settlers',
+          player: isoPlayer(['#0000ff', '#ffff00']),
+          improvements: [],
+        } as any,
+        isoTileset,
+        true
+      )
+    ),
+    [
+      'drawImage(iso-units/units/settlers,0,0)',
+      'drawImage(object,1,-1)',
+      'drawImage(object,5,3)',
+      'drawImage(iso-units/units/shield-back,0,0,3,1)',
+      'putImageData(#0000ff,#123456,#123456)',
+      'drawImage(iso-units/units/shield,0,0,3,1)',
+      'putImageData(#0000ff,#0000ff,#123456)',
+    ]
+  );
+
+  expect(
+    'a unit whose sprite has no anchor for its shield is drawn without one, rather than at its corner',
+    isoDraws(() =>
+      renderUnit(
+        {
+          _: 'Warriors',
+          player: isoPlayer(['#00ffff']),
+          improvements: [],
+        } as any,
+        isoTileset
+      )
+    ).filter((call) => call.includes('shield')),
+    []
+  );
+
+  const isoWorld = (changes: { [at: string]: TileChanges }) =>
+      makeWorld(4, 4, changes, 'staggered-iso'),
+    isoDrawn = (
+      Layer: typeof Units | typeof Cities | typeof CityNames,
+      world: World
+    ) => drawn(Layer, isoTileset, world, 1, 1, { width: 64, height: 32 });
+
+  expect(
+    'on the map, a stack is its top unit 16 px above the tile at 2×, with no copy behind it, and its letter on the tile',
+    isoDrawn(
+      Units,
+      isoWorld({
+        '1,1': {
+          units: [{ _: 'Settlers', busy: 'Fortified' }, { _: 'Settlers' }],
+        },
+      })
+    ),
+    [
+      'drawImage(object,0,-32,128,96)',
+      'font=bold 16px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,66,48)',
+      'fillStyle=white',
+      'fillText(string,64,46)',
+    ]
+  );
+
+  // A city of your own, which the page is told the walls of, and a rival's, which it isn't.
+  const cityAt = (
+    city: { size: number; disorder?: boolean },
+    owner: ReturnType<typeof isoPlayer>,
+    improvements: string[] | undefined
+  ): World => {
+    const world = isoWorld({ '1,1': { city } }),
+      tile = world.get(1, 1);
+
+    Object.assign(tile.city!, {
+      player: owner,
+      improvements: improvements?.map((_) => ({ _ })),
+    });
+
+    return world;
+  };
+
+  madeCanvases.length = 0;
+
+  expect(
+    "a styles city: the sprite for its civilization's style, its size's bucket and its walls, 16 px up, with no box, and its flag at the sprite's own anchor",
+    [
+      isoDrawn(
+        Cities,
+        cityAt({ size: 5 }, isoPlayer(['#00ff00', '#008000'], 'English'), [
+          'CityWalls',
+        ])
+      ),
+      isoDrawn(
+        Cities,
+        cityAt({ size: 3 }, isoPlayer(['#ffff00', '#808000']), undefined)
+      ),
+    ],
+    [
+      [
+        'city/medieval/walled-1@0,-32',
+        'city/flag@14,-28',
+        'drawImage(iso-units/city/medieval/walled-1,0,-32,128,96)',
+        'drawImage(object,14,-28,6,2)',
+      ],
+      [
+        'city/ancient/0@0,-32',
+        'city/flag@80,-20',
+        'drawImage(iso-units/city/ancient/0,0,-32,128,96)',
+        'drawImage(object,80,-20,6,2)',
+      ],
+    ]
+  );
+  expect(
+    "with the flag's keys swapped for the player's colours",
+    madeCanvases.flat().filter((call) => call.startsWith('putImageData')),
+    [
+      'putImageData(#00ff00,#008000,#123456)',
+      'putImageData(#ffff00,#808000,#123456)',
+    ]
+  );
+
+  expect(
+    "a styles city's size is written from its sprite's own anchor for it, and its name centred below the tile",
+    isoDrawn(
+      CityNames,
+      cityAt({ size: 5 }, isoPlayer(['#00ff00'], 'English'), ['CityWalls'])
+    ),
+    [
+      'font=bold 16px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,66,102.4)',
+      'fillStyle=white',
+      'fillText(string,64,100.4)',
+      'textAlign=left',
+      'fillStyle=black',
+      'fillText(string,4,-8)',
+      'fillStyle=white',
+      'fillText(string,2,-10)',
+    ]
+  );
+
+  expect(
+    "the interface's art over the map comes from the interface's tileset, not the map's: a city's unhappy citizen and the yields",
+    (() => {
+      const before = askedFor().length,
+        { canvas } = recordingCanvas(200, 200),
+        world = isoWorld({});
+
+      isoDrawn(
+        CityNames,
+        cityAt({ size: 5, disorder: true }, isoPlayer(['#00ff00']), [])
+      );
+
+      class IsoYields extends Yields {
+        override tileset(): TilesetDescriptor {
+          return isoTileset;
+        }
+
+        draw(tile: Tile): void {
+          this.drawTile(tile, 0, 0);
+        }
+      }
+
+      new IsoYields(world, 2, { width: 64, height: 32 }, canvas).draw({
+        ...world.get(1, 1),
+        yields: [{ _: 'Food', value: 1 }],
+      } as unknown as Tile);
+
+      return [...new Set(askedFor().slice(before))];
+    })(),
+    ['./assets/city/people_unhappy_m.png', './assets/city/food.png']
+  );
+
+  expect(
+    "a square the city can't work is filled as the tile's diamond, not its box",
+    (() => {
+      const { calls, canvas } = recordingCanvas(200, 200),
+        world = isoWorld({});
+
+      class IsoUnworkable extends Unworkable {
+        override tileset(): TilesetDescriptor {
+          return isoTileset;
+        }
+
+        draw(tile: Tile): void {
+          this.drawTile(tile, 0, 0);
+        }
+      }
+
+      const layer = new IsoUnworkable(
+        world,
+        2,
+        { width: 64, height: 32 },
+        canvas
+      );
+
+      layer.setCity({ id: 'City-mine' } as any);
+      layer.draw({
+        ...world.get(1, 1),
+        workedBy: { id: 'City-theirs' },
+      } as unknown as Tile);
+
+      return calls;
+    })(),
+    [
+      'fillStyle=rgba(200, 64, 64, 0.5)',
+      'beginPath()',
+      'moveTo(64,0)',
+      'lineTo(128,32)',
+      'lineTo(64,64)',
+      'lineTo(0,32)',
+      'closePath()',
+      'fill()',
+    ]
+  );
+
+  expect(
+    'the active unit is drawn, and ringed, 16 px above its tile',
+    (() => {
+      const { canvas } = recordingCanvas(400, 400),
+        world = isoWorld({ '1,2': { units: [{ _: 'Settlers' }] } });
+
+      class IsoActiveUnit extends ActiveUnit {
+        override tileset(): TilesetDescriptor {
+          return isoTileset;
+        }
+      }
+
+      const layer = new IsoActiveUnit(
+        world,
+        2,
+        { width: 64, height: 32 },
+        canvas
+      );
+
+      // One copy of the tile, on a world that stops at the poles.
+      layer.setWrapVertical(false);
+      // The world's units don't say their tile: it's given as the tile the unit is moving to.
+      layer.setActiveUnit(world.get(1, 2).units[0]!, { x: 1, y: 2 });
+      layer.render();
+
+      return layer.squares();
+    })(),
+    // Tile 1,2's box is at 128,64 at 2×, odd rows half a tile across and each row half a tile down.
+    [{ x: 128, y: 32, width: 128, height: 96 }]
+  );
+
+  expect(
+    "a window's unit is shown whole, on its tile and the room above it its sprite takes: 64 × 48 for Civ2's",
+    (() => {
+      madeCanvases.length = 0;
+
+      const unit = new HudUnit(
+        {
+          _: 'Settlers',
+          player: isoPlayer(['#ff00ff']),
+          improvements: [],
+          busy: null,
+        } as any,
+        2,
+        isoTileset
+      ).element();
+
+      return [
+        unitBox(isoTileset),
+        unitBox(civ1),
+        [unit.width, unit.height],
+        madeCanvases[0]!.filter((call) => call.startsWith('drawImage')),
+      ];
+    })(),
+    [
+      { width: 64, height: 48, tileX: 0, tileY: 16 },
+      { width: 16, height: 16, tileX: 0, tileY: 0 },
+      [128, 96],
+      ['drawImage(object,0,0,128,96)'],
+    ]
+  );
+
+  expect(
+    "a unit drawn before its sprite's anchors are set is kept without its shield, until they are, and then drawn with it",
+    (() => {
+      const legion = {
+          _: 'Legion',
+          player: isoPlayer(['#ff8800']),
+          improvements: [],
+        } as any,
+        first = renderUnit(legion, isoTileset),
+        again = renderUnit(legion, isoTileset);
+
+      setSpriteAnchors('iso-units', {
+        ...isoAnchors,
+        'units/legion': { shield: { x: 30, y: 4 } },
+      });
+
+      const drawn = isoDraws(() => renderUnit(legion, isoTileset));
+
+      return [
+        again === first,
+        drawn.filter((call) => call.startsWith('drawImage')),
+      ];
+    })(),
+    [
+      true,
+      [
+        'drawImage(iso-units/units/legion,0,0)',
+        'drawImage(object,30,4)',
+        'drawImage(iso-units/units/shield,0,0,3,1)',
+      ],
+    ]
+  );
+
+  // Size 8, in the third bucket: a sprite with no anchors yet.
+  const bigCity = () =>
+    cityAt({ size: 8 }, isoPlayer(['#ff8800', '#884400']), undefined);
+
+  expect(
+    "a styles city's sprite without a size anchor has its size centred on the tile, where the labels' x and sizeBaseline put it",
+    isoDrawn(CityNames, bigCity()),
+    [
+      'font=bold 16px sans-serif',
+      'textAlign=center',
+      'fillStyle=black',
+      'fillText(string,66,48)',
+      'fillText(string,66,102.4)',
+      'fillStyle=white',
+      'fillText(string,64,46)',
+      'fillText(string,64,100.4)',
+    ]
+  );
+
+  setSpriteAnchors('iso-units', {
+    ...isoAnchors,
+    'city/ancient/2': { flag: { x: 62, y: 0 } },
+  });
+
+  expect(
+    "a flag reaching past its city's sprite is cut off at the sprite's edge, as far as the layer's reach leaves room for",
+    isoDrawn(Cities, bigCity()),
+    [
+      'city/ancient/2@0,-32',
+      'city/flag@124,-32',
+      'drawImage(iso-units/city/ancient/2,0,-32,128,96)',
+      'save()',
+      'beginPath()',
+      'rect(0,-32,128,96)',
+      'clip()',
+      'drawImage(object,124,-32,6,2)',
+      'restore()',
+    ]
+  );
+
+  expect(
+    "a box city's size written at a point of its own is from its sprite, which is inset from the tile's corner",
+    drawn(
+      CityNames,
+      {
+        ...stub,
+        id: 'box-size',
+        cities: {
+          ...stub.cities,
+          labels: { ...stub.cities.labels, size: { x: 1, y: 2 } },
+        },
+      },
+      cityWorld(),
+      2,
+      2
+    ).filter(
+      (call) => call.startsWith('fillText') || call.startsWith('textAlign')
+    ),
+    [
+      'textAlign=center',
+      'fillText(string,10,40)',
+      'fillText(string,8,38)',
+      'textAlign=left',
+      'fillText(string,10,22)',
+      'fillText(string,8,20)',
+    ]
+  );
+
+  expect(
+    'a unit drawn right and down of its tile, with a copy behind a stack up and left of it, reaches as far as the unit does',
+    (() => {
+      const tileset: TilesetDescriptor = {
+        ...stub,
+        id: 'units-down-right',
+        units: {
+          ...stub.units,
+          anchor: { x: 2, y: 2 },
+          stackOffset: { x: -1, y: -1 },
+        },
+      };
+
+      class Reaching extends Units {
+        override tileset(): TilesetDescriptor {
+          return tileset;
+        }
+
+        reachNow() {
+          return this.reach();
+        }
+      }
+
+      return new Reaching(
+        stackWorld(),
+        1,
+        { width: 16, height: 16 },
+        recordingCanvas(200, 200).canvas
+      ).reachNow();
+    })(),
+    { top: 1, right: 2, bottom: 2, left: 1 }
+  );
+
+  expect(
+    "a window's unit whose sprite isn't there draws nothing rather than throwing",
+    (() => {
+      madeCanvases.length = 0;
+
+      new HudUnit(
+        {
+          _: 'Musketeers',
+          player: isoPlayer(['#ff00ff']),
+          improvements: [],
+          busy: null,
+        } as any,
+        2,
+        isoTileset
+      );
+
+      return madeCanvases[0]!.filter((call) => call.startsWith('drawImage'));
+    })(),
+    []
+  );
+
+  clearSpriteAnchors();
+}
 
 // The sprites are bitmaps since #730, not `<img>`s: a recoloured one is still drawn once and then taken from the cache,
 //  until a load replaces the sprites.

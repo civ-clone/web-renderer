@@ -12,6 +12,7 @@
     "./AssetStore": "./AssetStore.ts",
     "./components/lib/buildingIcon": "./components/lib/buildingIcon.ts",
     "./components/lib/corruptionIcon": "./components/lib/corruptionIcon.ts",
+    "./lib/citySprite": "./lib/citySprite.ts",
     "./lib/getPreloadedImage": "./lib/getPreloadedImage.ts",
     "./lib/groupIcons": "./lib/groupIcons.ts",
     "./lib/imageSize": "./lib/imageSize.ts",
@@ -20,6 +21,7 @@
     "./lib/replaceColours": "./lib/replaceColours.ts",
     "./lib/scaledCanvases": "./lib/scaledCanvases.ts",
     "./lib/soundGain": "./lib/soundGain.ts",
+    "./lib/spriteAnchors": "./lib/spriteAnchors.ts",
     "./lib/tilesets": "./lib/tilesets.ts",
     "./lib/unitActionIcon": "./lib/unitActionIcon.ts",
     "./tilesets/TilesetDescriptor": "./tilesets/TilesetDescriptor.ts"

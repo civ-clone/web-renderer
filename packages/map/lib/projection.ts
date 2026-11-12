@@ -74,6 +74,14 @@ export interface Projection {
   footprint(): Size;
 
   /**
+   * The tile's own shape in its sprite box, where that isn't the whole box: the corners of a polygon, each as fractions
+   *  of the footprint across and down, the pixels inside it the ones `pixelToTile` gives back the tile for. The city
+   *  screen clips each square's button to it, so a click lands on the square under it where boxes overlap (#97). Left
+   *  out on a grid whose tiles fill their boxes, as the square grid's do.
+   */
+  outline?(): readonly (readonly [number, number])[];
+
+  /**
    * How far apart, in px, one column is from the next in the same row (`x`), and one row from the next (`y`): what
    *  the portal counts tiles by when it says how many fit across and down its canvas, and how many tiles in from its
    *  edge one is. On the square grid both are the footprint. On a staggered isometric grid a column is a tile's

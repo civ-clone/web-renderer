@@ -15,6 +15,13 @@ export const installedTilesets = (): TilesetDescriptor[] => [civ1Tileset];
 export const currentTileset = (): TilesetDescriptor => civ1Tileset;
 
 /**
+ * The tileset the interface's own art comes from, wherever it is drawn: the yields, citizens and other icons the map's
+ *  layers draw over its tiles as well as the windows' (#97, #152). Civ1's, which every game has imported, whatever pack
+ *  the map is drawn with: a map pack need not have any interface art of its own.
+ */
+export const interfaceTileset = (): TilesetDescriptor => civ1Tileset;
+
+/**
  * `tileset`'s native tile size in px, across and down, as the map takes it: the map scales both by its scale. A grid
  * draws only the sizes its projection can lay out, and refuses the rest when it is asked for one (`projectionFor`).
  */

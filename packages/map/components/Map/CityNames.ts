@@ -5,6 +5,8 @@ import { Rect } from '../../lib/viewport';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { imageSize } from '@civ-clone/ui-assets/lib/imageSize';
+import citySprite from '@civ-clone/ui-assets/lib/citySprite';
+import { resolveAnchor } from '@civ-clone/ui-assets/lib/spriteAnchors';
 
 const disorderIconPath = 'city/people_unhappy_m';
 
@@ -71,14 +73,26 @@ export class CityNames extends Map {
   //  than the font size, and to fall two below its baseline, with a pixel more each way for rounding, so the region
   //  never crops a glyph. The unhappy citizen in place of the size, a citizen no taller than the tile drawn a scale
   //  step down, ends well above the name; its image isn't looked at here, as it is only drawn for a city in disorder.
+  //  A size written at its city sprite's own anchor (Civ2's) starts somewhere on the sprite, which is no higher than
+  //  the sprite's top and no lower than the tile's bottom, and hangs a font size below that.
   protected override reach(): Reach {
     const reach = super.reach(),
       overhang = this.overhang(),
       scale = this.scale(),
+      fontSize = this.#fontSize(),
       { height } = this.projection().footprint(),
       { digitBaseline, nameBaseline } = this.#anchor(0, 0),
-      top = digitBaseline - this.#fontSize() - scale * 3,
-      bottom = Math.max(nameBaseline + scale * 2, height + scale);
+      spriteTop = Math.min(0, (this.tileset().cities.anchor?.y ?? 0) * scale),
+      [top, bottom] =
+        this.tileset().cities.labels.size === undefined
+          ? [
+              digitBaseline - fontSize - scale * 3,
+              Math.max(nameBaseline + scale * 2, height + scale),
+            ]
+          : [
+              Math.min(digitBaseline - fontSize, spriteTop) - scale * 3,
+              Math.max(nameBaseline + scale * 2, height + fontSize + scale * 2),
+            ];
 
     return {
       top: reach.top + Math.max(0, Math.ceil(-top) + 1),
@@ -94,7 +108,7 @@ export class CityNames extends Map {
   #disorderIcon(offsetX: number, offsetY: number): Rect {
     const scale = this.scale(),
       { x, y } = this.tileset().cities.labels.disorderIcon,
-      [width, height] = imageSize(this.getPreloadedImage(disorderIconPath)).map(
+      [width, height] = imageSize(this.getInterfaceImage(disorderIconPath)).map(
         (dimension) => dimension * scale
       );
 
@@ -110,18 +124,23 @@ export class CityNames extends Map {
     const scale = this.scale(),
       city = tile.city!,
       { centreX, digitBaseline, nameBaseline } = this.#anchor(offsetX, offsetY),
+      sizeAt = this.#sizeAt(tile, offsetX, offsetY),
       sizeText = localeProvider.number(city.growth.size),
       name = cityName(city);
 
-    // In civil disorder the size gives way to an unhappy citizen.
+    // In civil disorder the size gives way to an unhappy citizen. Centred on the tile with the name, or from where its
+    //  city sprite has it (`#sizeAt`).
     const lines: [string, number][] = [[name, nameBaseline]];
+    let sizeLine: [string, number, number] | null = null;
 
     if (city.civilDisorderDeclared) {
       const { x, y } = this.#disorderIcon(offsetX, offsetY);
 
-      this.putImage(this.getPreloadedImage(disorderIconPath), x, y);
-    } else {
+      this.putImage(this.getInterfaceImage(disorderIconPath), x, y);
+    } else if (sizeAt === null) {
       lines.unshift([sizeText, digitBaseline]);
+    } else {
+      sizeLine = [sizeText, sizeAt.x, sizeAt.y + this.#fontSize()];
     }
 
     this.#applyFont();
@@ -134,6 +153,51 @@ export class CityNames extends Map {
     lines.forEach(([text, baseline]) =>
       this.context().fillText(text, centreX, baseline - scale)
     );
+
+    if (sizeLine !== null) {
+      const [text, x, baseline] = sizeLine;
+
+      this.context().textAlign = 'left';
+      this.context().fillStyle = 'black';
+      this.context().fillText(text, x + scale, baseline);
+      this.context().fillStyle = 'white';
+      this.context().fillText(text, x, baseline - scale);
+    }
+  }
+
+  // Where a city's size starts, top left, for a tileset whose city sprites each say where theirs goes (`labels.size`,
+  //  Civ2's): the sprite's anchor, from where the city's sprite is drawn. `null` for one that writes the size at a part
+  //  of the tile (Civ1's), or a sprite without the anchor, whose size is written there too.
+  #sizeAt(
+    tile: Tile,
+    offsetX: number,
+    offsetY: number
+  ): { x: number; y: number } | null {
+    const tileset = this.tileset(),
+      { anchor = { x: 0, y: 0 }, labels } = tileset.cities;
+
+    if (labels.size === undefined) {
+      return null;
+    }
+
+    const at = resolveAnchor(
+      tileset,
+      citySprite(tileset, tile.city!),
+      labels.size
+    );
+
+    if (at === null) {
+      return null;
+    }
+
+    // A box city's sprite is drawn `inset` in from the tile's corner; a styles city's at its anchor alone.
+    const scale = this.scale(),
+      inset = tileset.cities.mode === 'box' ? tileset.cities.inset ?? 0 : 0;
+
+    return {
+      x: offsetX + (anchor.x + inset + at.x) * scale,
+      y: offsetY + (anchor.y + inset + at.y) * scale,
+    };
   }
 
   // Where a label goes on the tile's box, as parts of it, where the tileset says: Civ1's are centred across it, the
