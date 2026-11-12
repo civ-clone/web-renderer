@@ -6,7 +6,9 @@
 // Every turn it checks that each city works the 21 tiles of a fat cross, distinct and within two steps of it, and
 //  every `unit:moved` goes to the tile itself or one of its neighbours. At the end, that cities and units stood on
 //  both odd and even rows, that units moved in all eight directions, that no unit had to be skipped for a move that
-//  threw (the AI logs those and carries on) and that nothing reached `Math.random`.
+//  threw (the AI logs those and carries on) and that nothing reached `Math.random`. Every ten turns and at the end,
+//  that Civ1's distance between every two cities, and from each city to its capital (corruption's), is measured over
+//  the grid's logical axes.
 //
 // `CONFORMANCE_CONFIG='{"topologyId":"square"}'` plays the same seed on the square grid, to compare by hand.
 
@@ -23,7 +25,9 @@ import Tile from '@civ-clone/core-world/Tile';
 import Unit from '@civ-clone/core-unit/Unit';
 import World from '@civ-clone/core-world/World';
 import civ1Distance from '@civ-clone/civ1-world/lib/civ1Distance';
+import { Palace } from '@civ-clone/library-city/CityImprovements';
 import { instance as cityGrowthRegistryInstance } from '@civ-clone/core-city-growth/CityGrowthRegistry';
+import { instance as cityImprovementRegistryInstance } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import { instance as clientRegistryInstance } from '@civ-clone/core-client/ClientRegistry';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
@@ -230,15 +234,90 @@ const checkCities = (): void => {
   });
 };
 
-// Civ1's own distance (corruption, trade routes, start spacing) measured on the logical grid, the longer axis plus
-//  half the shorter. `steps` is the longer axis, and `distance` the straight line, so the shorter is what is left.
-const logicalCiv1Distance = (from: Tile, to: Tile): number => {
+// Civ1's distance (corruption, trade routes, start spacing) between two tiles, from the grid's logical axes: the longer
+//  gap plus half the shorter, rounded down. The gaps are checked against `steps` (the longer) and `distance` (the
+//  straight line), so a `logicalDelta` that isn't the grid's would fail here rather than agree with itself.
+const civ1DistanceProblem = (from: Tile, to: Tile): string | null => {
   const topology = world!.topology(),
-    longer = topology.steps(from.x(), from.y(), to.x(), to.y()),
-    straight = topology.distance(from.x(), from.y(), to.x(), to.y()),
-    shorter = Math.round(Math.sqrt(Math.max(0, straight ** 2 - longer ** 2)));
+    delta = topology.logicalDelta(from.x(), from.y(), to.x(), to.y());
 
-  return longer + Math.floor(shorter / 2);
+  if (delta === null) {
+    return `no logical axes on the ${topologyId} grid`;
+  }
+
+  const a = Math.abs(delta[0]),
+    b = Math.abs(delta[1]),
+    steps = topology.steps(from.x(), from.y(), to.x(), to.y()),
+    straight = topology.distance(from.x(), from.y(), to.x(), to.y()),
+    expected = Math.max(a, b) + Math.floor(Math.min(a, b) / 2),
+    actual = civ1Distance(from, to);
+
+  if (Math.max(a, b) !== steps || Math.hypot(a, b) !== straight) {
+    return `logicalDelta ${JSON.stringify(
+      delta
+    )} disagrees with steps ${steps} or distance ${straight}`;
+  }
+
+  return actual === expected
+    ? null
+    : `civ1Distance is ${actual}, not ${expected} (logicalDelta ${JSON.stringify(
+        delta
+      )})`;
+};
+
+// Each player's capital, the city with its live Palace, as corruption finds it.
+const capitalOf = (player: Player): City | null =>
+  cityImprovementRegistryInstance
+    .filter(
+      (improvement) =>
+        improvement instanceof Palace &&
+        !improvement.destroyed() &&
+        improvement.city().player() === player
+    )
+    .map((improvement) => improvement.city())[0] ?? null;
+
+const civ1Distances = { pairs: 0, capitals: 0 };
+
+const checkCiv1Distances = (): void => {
+  const cities = liveCities();
+
+  cities.forEach((city, index): void => {
+    cities.slice(index + 1).forEach((other): void => {
+      const problem = civ1DistanceProblem(city.tile(), other.tile());
+
+      checks++;
+      civ1Distances.pairs++;
+
+      if (problem !== null) {
+        failure(
+          "Civ1's distance between two cities is not measured over the grid's logical axes",
+          `${city.name()} ${at(city.tile())} to ${other.name()} ${at(
+            other.tile()
+          )}: ${problem}`
+        );
+      }
+    });
+
+    const capital = capitalOf(city.player());
+
+    if (capital === null || capital === city) {
+      return;
+    }
+
+    const problem = civ1DistanceProblem(capital.tile(), city.tile());
+
+    checks++;
+    civ1Distances.capitals++;
+
+    if (problem !== null) {
+      failure(
+        "Civ1's distance from a city to its capital is not measured over the grid's logical axes",
+        `${capital.name()} ${at(capital.tile())} to ${city.name()} ${at(
+          city.tile()
+        )}: ${problem}`
+      );
+    }
+  });
 };
 
 const summary = (): string[] => {
@@ -258,13 +337,6 @@ const summary = (): string[] => {
           )
       )
     ),
-    pairs = cities.flatMap((city, index) =>
-      cities.slice(index + 1).map((other) => ({
-        civ1: civ1Distance(city.tile(), other.tile()),
-        logical: logicalCiv1Distance(city.tile(), other.tile()),
-      }))
-    ),
-    differ = pairs.filter(({ civ1, logical }) => civ1 !== logical),
     living = playerRegistryInstance
       .entries()
       .filter(
@@ -292,17 +364,14 @@ const summary = (): string[] => {
     `moves ${moves}, by direction ${JSON.stringify(directions)}`,
     `city-turns on even/odd rows ${cityRows.even}/${cityRows.odd}, unit-turns ${unitRows.even}/${unitRows.odd}`,
     `loop guard hits ${loopGuardHits.count}, console errors ${errorsLogged.length}`,
-    `civ1Distance differs from the logical grid's for ${differ.length} of ${
-      pairs.length
-    } city pairs, by up to ${Math.max(
-      0,
-      ...differ.map(({ civ1, logical }) => Math.abs(civ1 - logical))
-    )}`,
+    `civ1Distance checked between ${civ1Distances.pairs} pairs of cities and from ${civ1Distances.capitals} cities to their capital`,
   ];
 };
 
 const finish = (): void => {
   stopped = true;
+
+  checkCiv1Distances();
 
   const expect = (description: string, ok: boolean, detail: string): void => {
     checks++;
@@ -313,6 +382,11 @@ const finish = (): void => {
   };
 
   expect('some cities were founded', citiesSeen.size > 0, `${citiesSeen.size}`);
+  expect(
+    "Civ1's distance was checked from some city to its capital",
+    civ1Distances.capitals > 0,
+    `${civ1Distances.capitals}`
+  );
   expect(
     'cities stood on both even and odd rows',
     cityRows.even > 0 && cityRows.odd > 0,
@@ -389,6 +463,11 @@ engine.on('turn:start', (turn: number): void => {
   }
 
   checkCities();
+
+  // Every ten turns, and at the end: capitals fall as the game goes on, so the end alone may have none.
+  if (turn % 10 === 0 && turn < turns) {
+    checkCiv1Distances();
+  }
 
   if (turn >= turns) {
     finish();
