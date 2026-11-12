@@ -138,13 +138,16 @@ export const cityBuildAvailable = (
     object === cityBuild ? available : filter(object)
   );
 
-  // Each item's section and a unit's numbers (#381), added here rather than as `AdditionalData` on `BuildItem`, which
-  //  would add them to the `building` in every `CityBuild` patch too.
+  // Each item's section and a unit's numbers (#381), and the ids of the rules that would hold it in this city as it is
+  //  now (#970), so the list can say an item would wait before it is chosen. Added here rather than as
+  //  `AdditionalData` on `BuildItem`, which would add them to the `building` in every `CityBuild` patch too.
   available.forEach((buildItem) => {
     const plainObject = objectMap.objects[buildItem.id()];
 
     if (plainObject) {
-      Object.assign(plainObject, buildListDetails(buildItem.item(), rules));
+      Object.assign(plainObject, buildListDetails(buildItem.item(), rules), {
+        held: cityBuild.heldFor(buildItem.item()),
+      });
     }
   });
 

@@ -4,7 +4,8 @@
 //  it has none for; the city screen under both interfaces, waiting now (the reason in place of the turns, the figures
 //  still "42 / 40", no Buy) and waiting once paid for (the turns, the reason beneath them, Buy pointing to it and its
 //  confirmation saying so); the sidebar's list, with a marker in place of "1 turn", its words as its tooltip and for a
-//  screen reader, sorted after the builds that will be done; and the map banner's tooltip.
+//  screen reader, sorted after the builds that will be done; the map banner's tooltip; and both build menus (#970), which
+//  say an item would wait before it is chosen, beside its turns or, when the shields stored pay for it, in their place.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -18,6 +19,7 @@ import {
   buildTurnsOrder,
 } from '@civ-clone/ui-client/lib/cityTurns';
 import {
+  BuildItem,
   City as CityData,
   GameData,
   Player,
@@ -38,6 +40,7 @@ import { cityStatusColumns } from '@civ-clone/ui-interface-modern/components/Cit
 import i18next from 'i18next';
 import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import openCity from '@civ-clone/ui-city/components/openCity';
+import { openCityBuild } from '@civ-clone/ui-city/components/choices';
 
 const failures: string[] = [];
 let checks = 0,
@@ -364,6 +367,91 @@ const run = async (): Promise<void> => {
       [null, false, true]
     );
   });
+
+  // --- the build menus, both interfaces (#970) -----------------------------------------------------------------------
+  // What a city could build, with the ids the worker sends with each: Settlers would wait, a Warrior wouldn't, and one
+  //  sent without them (an older worker) is like the Warrior.
+  const offered = [
+      {
+        _: 'BuildItem',
+        id: 'Offer-1',
+        item: { _: 'Settlers', __: ['Settlers', 'Buildable'] },
+        cost: { value: 40 },
+        held: [WAIT],
+      },
+      {
+        _: 'BuildItem',
+        id: 'Offer-2',
+        item: { _: 'Warrior', __: ['Warrior', 'Buildable'] },
+        cost: { value: 10 },
+        held: [],
+      },
+      {
+        _: 'BuildItem',
+        id: 'Offer-3',
+        item: { _: 'Temple', __: ['Temple', 'Buildable'] },
+        cost: { value: 40 },
+      },
+    ] as unknown as BuildItem[],
+    menuSays = (mode: 'classic' | 'modern', city: CityData) => {
+      applyInterface(mode, null);
+
+      const menu = openCityBuild(city.build, offered, transport),
+        said =
+          mode === 'classic'
+            ? Array.from(menu.element().querySelectorAll('option')).map(
+                (option) => [option.value, text(option)]
+              )
+            : Array.from(menu.element().querySelectorAll('.ui-choice-row')).map(
+                (row) => [
+                  text(row.querySelector('.ui-choice-name')),
+                  text(row.querySelector('.ui-choice-meta')),
+                  Array.from(row.querySelectorAll('.ui-choice-fact')).map(
+                    (fact) => fact.getAttribute('title')
+                  ),
+                ]
+              );
+
+      menu.close();
+
+      return said;
+    };
+
+  expect(
+    'classic menu, 12 shields stored: Settlers say they can’t be completed until size 2 after their turns; the others are as they were',
+    menuSays('classic', will),
+    [
+      [
+        'Settlers',
+        'Settlers (Cost: 40 / 14 turns) – Can’t be completed until the city is size 2',
+      ],
+      ['Warrior', 'Warrior (Cost: 10 / 1 turn)'],
+      ['Temple', 'Temple (Cost: 40 / 14 turns)'],
+    ]
+  );
+  expect(
+    'classic menu, 42 shields stored: Settlers would wait at once, said in place of their turns',
+    menuSays('classic', now)[0],
+    ['Settlers', 'Settlers (Cost: 40 / Waiting until the city is size 2)']
+  );
+  expect(
+    'modern menu, 12 shields stored: Settlers say it under their name, and still count their turns',
+    menuSays('modern', will),
+    [
+      [
+        'Settlers',
+        'Can’t be completed until the city is size 2',
+        ['Cost in shields', 'Turns'],
+      ],
+      ['Warrior', null, ['Cost in shields', 'Turns']],
+      ['Temple', null, ['Cost in shields', 'Turns']],
+    ]
+  );
+  expect(
+    'modern menu, 42 shields stored: Settlers would wait at once, so no turns are promised',
+    menuSays('modern', now)[0],
+    ['Settlers', 'Waiting until the city is size 2', ['Cost in shields']]
+  );
 
   // --- the sidebar's list --------------------------------------------------------------------------------------------
   const element = document.createElement('div'),

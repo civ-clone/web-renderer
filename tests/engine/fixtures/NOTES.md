@@ -411,3 +411,15 @@ counts and the DTO hashes are unchanged. In its 50 turns this game holds no
 paid-for build, so the new rule never fires; it is played through the full
 plugin set by `tests/engine/heldBuild.ts`. `client-transcript.json` passes
 unchanged and is not re-recorded.
+
+## Accepted change: the build list says what would hold each item (#970)
+
+Each item a city's build list offers (the worker's answer to `cityBuildAvailable`)
+now carries `held`, the ids `CityBuild#heldFor` gives for it: the rules that would
+hold the city's build of it as the city is now. `baseline.json` doesn't move: the
+list isn't part of any entity's DTO. In `client-transcript.json` only the two
+`cityBuildAvailable` answers change, ten rows between them, each a size-1 city's,
+whose Settlers carry `["civ1-enhanced:city/hold/settlers-until-size-two"]` and the
+other eight `[]`. With `held` taken back out of every `BuildItem` in the
+transcript, all 263 messages, every channel hash and the sequence hash match the
+previous fixture.

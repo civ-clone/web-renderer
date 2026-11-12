@@ -1,13 +1,15 @@
 // A held build (#959): a city of size 1 doesn't complete Settlers until it is size 2, and the page is told why with the
 //  build's `held`, the ids of the rules holding the item, from the moment it is chosen. With the plugins the game is
 //  built with and the rule sets as they start, through a human `DataTransferClient`, checking what the page is sent:
-//  T1. a new city of size 1 chooses Settlers: `held` names `civ1-enhanced`'s rule with shields still to pay (it will
+//  T1. a new city of size 1 is offered Settlers with the id of `civ1-enhanced`'s rule beside them in its build list
+//      (#970), and nothing else with any; it chooses them: `held` names that rule with shields still to pay (it will
 //      wait), and again once they are paid for (it is waiting), with nothing to buy;
 //  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up;
 //  T3. the turn it grows to size 2 it completes them, and is size 1 again;
-//  T4. a city that grows before its Settlers are paid for is no longer held.
-// Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule, and on King a
-//  size-1 city with others is removed by its Settlers, which stand on its square.
+//  T4. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
+//      them.
+// Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule (which the
+//  build list names too), and on King a size-1 city with others is removed by its Settlers, which stand on its square.
 // And, on the same game, "Bribed and defecting units stay veteran" (#960): off to start with, then ticked.
 //
 // This is also the only guard against two copies of `@civ-clone/core-city-build` being installed: `CityBuild#held()`
@@ -52,6 +54,9 @@ let humanPlayer: Player | null = null,
   humanClient: DataTransferClient | null = null,
   helper: SimpleAIClient | null = null,
   actionHandler: ((action: any) => unknown) | null = null,
+  // The worker's answer to the build list's `cityBuildAvailable` (#970), and what it last sent.
+  buildListHandler: ((cityBuildId: string) => unknown) | null = null,
+  buildListSent: any = null,
   pendingChoice: ((value: any) => void) | null = null,
   city: City | null = null,
   // The human turns played so far, and the shields stored when the last one ended.
@@ -140,6 +145,19 @@ const shape = (build: any) =>
         spendCost: build.spendCost.length,
       };
 
+// The ids sent with each item the build list offers `of` (#970), by name: the rules that would hold it there now.
+const offeredHeld = (of: City): Record<string, unknown> => {
+  buildListSent = null;
+  buildListHandler!(cityBuildRegistryInstance.getByCity(of).id());
+
+  return Object.fromEntries(
+    (buildListSent.hierarchy as { '#ref': string }[]).map(({ '#ref': id }) => [
+      buildListSent.objects[id].item._,
+      buildListSent.objects[id].held,
+    ])
+  );
+};
+
 const ourSettlers = (): number =>
   unitRegistryInstance
     .getByPlayer(humanPlayer!)
@@ -202,7 +220,20 @@ const firstTurn = async (): Promise<void> => {
     fail('the starting Settlers could not found a city');
   }
 
-  const cityBuild = cityBuildRegistryInstance.getByCity(city!);
+  const cityBuild = cityBuildRegistryInstance.getByCity(city!),
+    offered = offeredHeld(city!);
+
+  expect(
+    "T1: the build list of a city of size 1 says, before they are chosen, that Settlers would wait, by civ1-enhanced's rule, and that nothing else would",
+    [
+      offered.Settlers,
+      Object.entries(offered)
+        .filter(([name]) => name !== 'Settlers')
+        .every(([, held]) => JSON.stringify(held) === '[]'),
+      Object.keys(offered).length > 1,
+    ],
+    [[SETTLERS_WAIT_RULE], true, true]
+  );
 
   cityBuild.build(Settlers);
 
@@ -297,6 +328,11 @@ const playTurn = async (): Promise<void> => {
       ],
       [2, true, [], true]
     );
+    expect(
+      'T4: and the build list of the city at size 2 says nothing would hold Settlers',
+      offeredHeld(city!).Settlers,
+      []
+    );
 
     await originals();
 
@@ -317,13 +353,21 @@ const originals = async (): Promise<void> => {
   gameDifficultyRegistryInstance.set(Chieftain);
 
   const onChieftain = shape(buildAsSent(other)),
+    offeredOnChieftain = offeredHeld(other).Settlers,
     completed = otherBuild.check();
 
   expect(
     "unticked, on Chieftain: a city of size 1 holds paid-for Settlers by the original's rule, and completes nothing",
-    [onChieftain, completed, other.destroyed(), sizeOf(other)],
+    [
+      onChieftain,
+      offeredOnChieftain,
+      completed,
+      other.destroyed(),
+      sizeOf(other),
+    ],
     [
       { held: [CHIEFTAIN_SETTLERS_RULE], waiting: true, spendCost: 0 },
+      [CHIEFTAIN_SETTLERS_RULE],
       null,
       false,
       1,
@@ -445,6 +489,10 @@ const transport = {
       actionHandler = handler;
     }
 
+    if (channel === 'cityBuildAvailable') {
+      buildListHandler = handler;
+    }
+
     return () => false;
   },
   receiveOnce: (channel: string, handler: (value: any) => void) => {
@@ -457,6 +505,12 @@ const transport = {
     };
   },
   send: (channel: string, data: any): void => {
+    if (channel === 'cityBuildAvailable') {
+      buildListSent = data;
+
+      return;
+    }
+
     if (channel === 'gameDataPatch') {
       collectObjects(JSON.parse(JSON.stringify(data)));
 

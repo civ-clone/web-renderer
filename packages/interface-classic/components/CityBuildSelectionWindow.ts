@@ -7,8 +7,10 @@ import {
   getAutoLabel,
   getClearedLabel,
   getLabelForBuildable,
+  heldText,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { offeredHold } from '@civ-clone/ui-client/lib/cityTurns';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
@@ -31,26 +33,38 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       t('Actions.CityBuildSelectionWindow.title', {
         city: cityBuild.city,
       }),
-      // In the engine's order, a heading over each section (#432), and a unit's numbers on its line (#381).
-      available.map((buildItem) => ({
-        ...(buildItem.group
-          ? { group: t(`City.Build.group.${buildItem.group}`) as string }
-          : {}),
-        label: t(
-          buildItem.stats ? 'City.Build.build-unit' : 'City.Build.build-item',
-          {
-            item: getLabelForBuildable(buildItem),
-            cost: buildItem.cost.value,
-            turns: turnsLeft(
-              { ...cityBuild, ...buildItem } as unknown as CityBuild,
-              cityBuild.city.yields,
-              'Production'
-            ),
-            ...(buildItem.stats ?? {}),
-          }
-        ) as string,
-        value: buildItem.item._,
-      })),
+      // In the engine's order, a heading over each section (#432), and a unit's numbers on its line (#381). One a rule
+      //  would hold says so on its line (#970): after its turns, or, when the shields stored already pay for it, in their
+      //  place.
+      available.map((buildItem) => {
+        const hold = offeredHold(cityBuild, buildItem);
+
+        return {
+          ...(buildItem.group
+            ? { group: t(`City.Build.group.${buildItem.group}`) as string }
+            : {}),
+          label: t(
+            buildItem.stats ? 'City.Build.build-unit' : 'City.Build.build-item',
+            {
+              item: getLabelForBuildable(buildItem),
+              cost: buildItem.cost.value,
+              turns: turnsLeft(
+                { ...cityBuild, ...buildItem } as unknown as CityBuild,
+                cityBuild.city.yields,
+                'Production'
+              ),
+              ...(buildItem.stats ?? {}),
+              ...(hold
+                ? {
+                    context: hold.now ? 'waiting' : 'held',
+                    held: heldText(hold),
+                  }
+                : {}),
+            }
+          ) as string,
+          value: buildItem.item._,
+        };
+      }),
       (selection) => {
         if (!selection) {
           return;

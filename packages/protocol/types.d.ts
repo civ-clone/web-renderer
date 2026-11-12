@@ -74,6 +74,10 @@ export interface BuildItem extends EntityInstance<'BuildItem'> {
     movement: number;
     visibility: number;
   } | null;
+  // Only in a city's build list (`CityBuildAvailable`): the ids of the rules that would hold the city's build of the
+  //  item (#970), for the city as it is now, `null` for a rule without one, as a build's `held` is for the item being
+  //  built. Empty when nothing would. Read through `offeredHold` (`ui-client/lib/cityTurns`).
+  held?: (string | null)[];
 }
 
 export interface CityBuild extends EntityInstance<'CityBuild'> {

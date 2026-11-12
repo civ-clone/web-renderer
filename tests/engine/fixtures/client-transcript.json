@@ -2,7 +2,7 @@
   "turns": 21,
   "sequence": {
     "count": 263,
-    "hash": "93d59231d7b5defd446f7700e80fcabb4ed13149750dd3aa6d32a73424d09ef1"
+    "hash": "8fe92aa88f7691c8db1419abbd22a657922937a7229202726a74d574e58d90ab"
   },
   "channels": {
     "actionHandled": {
@@ -15,7 +15,7 @@
     },
     "cityBuildAvailable": {
       "count": 2,
-      "hash": "28e365710c05af0644ae809dea2c0bc8c9c3b0a3b39bd011db310dd7f7ad9311"
+      "hash": "1bdbf36ae42307ca5cf395cdb28d24c528215da050254e42e08e3b4a2f3ed548"
     },
     "civilizationScore": {
       "count": 2,
@@ -85,7 +85,7 @@
     "gameDataPatch e219559de3d9 add PlayerWorld-1[tiles[9]], add PlayerWorld-1[tiles[10]], add PlayerWorld-1[tiles[11]], add PlayerWorld-1[tiles[12]], add PlayerWorld-1[tiles[13]], add PlayerWorld-1[tiles[14]], and 1186 more",
     "gameDataPatch b22d6d502da4 add PlayerTreasury-1",
     "gameDataPatch 98d7fe39f665 update PlayerTile-5, update Warrior-1, update Player-1[units], update Player-1[actions], update Player-1[mandatoryActions]",
-    "cityBuildAvailable 966190b5dc20 {\"data\":{\"hierarchy\":[{\"#ref\":\"BuildItem-1w\"},{\"#ref\":\"BuildItem-1x\"},{\"#ref\"...",
+    "cityBuildAvailable 2cdae49964e9 {\"data\":{\"hierarchy\":[{\"#ref\":\"BuildItem-1w\"},{\"#ref\":\"BuildItem-1x\"},{\"#ref\"...",
     "gameDataPatch 90f6cea9a429 update CityBuild-1",
     "actionHandled cdad16fd10bf {\"name\":\"ChangeProduction\",\"id\":\"CityBuild-1\",\"unitAction\":\"[undefined]\",\"tar...",
     "gameDataPatch bd1a73ed46f9 update PlayerTradeRates-1, update City-1",
@@ -102,7 +102,7 @@
     "topCities f3eaa331e389 {\"data\":[{\"rank\":1,\"size\":1,\"citizens\":{\"happy\":0,\"content\":1,\"unhappy\":0,\"sp...",
     "civilizationScore b1f47c71a7bb {\"data\":{\"terms\":[{\"term\":\"citizens\",\"value\":1},{\"term\":\"wonders\",\"value\":0},...",
     "intelligence 1dfcaf123676 {\"data\":[{\"civilization\":\"German\",\"colors\":[\"#FFCC00\",\"#000000\"],\"leader\":\"Fr...",
-    "cityBuildAvailable 9c1a94b1c02f {\"data\":{\"hierarchy\":[{\"#ref\":\"BuildItem-2k\"},{\"#ref\":\"BuildItem-2l\"},{\"#ref\"...",
+    "cityBuildAvailable 933e862654c1 {\"data\":{\"hierarchy\":[{\"#ref\":\"BuildItem-2k\"},{\"#ref\":\"BuildItem-2l\"},{\"#ref\"...",
     "gameDataPatch bc5d2c9f8e90 update Warrior-1",
     "gameDataPatch be1b370ca214 update PlayerTile-7, update PlayerTile-g3, update Warrior-1, update Player-1[actions], update Player-1[mandatoryActions]",
     "actionHandled ffd348f9dc03 {\"name\":\"ActiveUnit\",\"id\":\"Warrior-1\",\"unitAction\":\"Move\",\"target\":\"PlayerTil...",

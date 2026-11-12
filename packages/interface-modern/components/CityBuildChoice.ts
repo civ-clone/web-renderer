@@ -14,8 +14,10 @@ import {
   getAutoLabel,
   getClearedLabel,
   getLabelForBuildable,
+  heldText,
   toggleAuto,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
+import { offeredHold } from '@civ-clone/ui-client/lib/cityTurns';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
@@ -42,7 +44,9 @@ const unitFacts = (stats: NonNullable<BuildItem['stats']>): ChoiceFact[] =>
 
 /**
  * One thing the city can build, as a row: its sprite where it's a unit, or its icon where it's an improvement or a Wonder
- *  (#64), its numbers, its cost and how long it takes.
+ *  (#64), its numbers, its cost and how long it takes. One a rule would hold says so under its name before it is chosen
+ *  (#970), as the city screen does for its build: beside its turns, or, when the shields stored already pay for it and
+ *  it would wait at once, in their place.
  */
 export const buildRow = (
   cityBuild: CityBuild,
@@ -53,11 +57,13 @@ export const buildRow = (
       { ...cityBuild, ...buildItem } as unknown as CityBuild,
       cityBuild.city.yields,
       'Production'
-    );
+    ),
+    hold = offeredHold(cityBuild, buildItem);
 
   return {
     value: buildItem.item._,
     label: item,
+    meta: hold ? heldText(hold) : null,
     ...(buildItem.group
       ? { group: t(`ChoiceWindow.Build.group.${buildItem.group}`) as string }
       : {}),
@@ -87,10 +93,14 @@ export const buildRow = (
         label: t('ChoiceWindow.Build.cost'),
         value: localeProvider.number(buildItem.cost.value),
       },
-      {
-        label: t('ChoiceWindow.turns'),
-        value: t('Progress.turns', { count: turns }),
-      },
+      ...(hold?.now
+        ? []
+        : [
+            {
+              label: t('ChoiceWindow.turns'),
+              value: t('Progress.turns', { count: turns }),
+            },
+          ]),
     ],
     primary: t('ChoiceWindow.Build.build', {
       item,
