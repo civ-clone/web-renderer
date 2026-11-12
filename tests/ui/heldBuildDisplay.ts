@@ -3,7 +3,7 @@
 //  place asks (`buildOutlook`, `buildHold`, `buildTurnsOrder`); the words for a rule's id, and the plain ones for a rule
 //  it has none for; the city screen under both interfaces, waiting now (the reason in place of the turns, the figures
 //  still "42 / 40", no Buy) and waiting once paid for (the turns, the reason beneath them, Buy pointing to it and its
-//  confirmation saying so); the sidebar's list, with a marker in place of "1 turn", its words as its tooltip and for a
+//  confirmation saying so); the sidebar's list, with the hold glyph (#970) in place of "1 turn", its words as its tooltip and for a
 //  screen reader, sorted after the builds that will be done; the map banner's tooltip; the queue, both build menus and the notice that a build is waiting (#970), which
 //  say an item would wait before it is chosen, beside its turns or, when the shields stored pay for it, in their place.
 
@@ -539,14 +539,16 @@ const run = async (): Promise<void> => {
     ['Kish', 'Uruk', 'Ur', 'Eridu']
   );
   expect(
-    'the one waiting now has a marker, not "1 turn", with the words as its tooltip and for a screen reader',
+    'the one waiting now has the hold glyph (#970), not "1 turn" or "…", with the words as its tooltip and for a screen reader',
     [
-      held?.querySelector('[aria-hidden="true"]')?.textContent,
+      held?.querySelector('svg.glyph-hold use')?.getAttribute('href'),
+      held?.querySelector('svg.glyph-hold')?.getAttribute('aria-hidden'),
       held?.querySelector('.visually-hidden')?.textContent,
       held?.getAttribute('title'),
     ],
     [
-      '…',
+      '#g-hold',
+      'true',
       'Waiting until the city is size 2',
       'Waiting until the city is size 2',
     ]
@@ -575,7 +577,7 @@ const run = async (): Promise<void> => {
     expect(
       'a build paid for in the list goes from "1 turn" to waiting, drawn again',
       [before, turnsShown()],
-      ['1 turn', '…Waiting until the city is size 2']
+      ['1 turn', 'Waiting until the city is size 2']
     );
   }
 

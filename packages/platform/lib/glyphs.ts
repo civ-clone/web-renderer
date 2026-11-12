@@ -4,6 +4,16 @@
 // Most shapes are Feather's (https://feathericons.com, MIT, © 2013-2023 Cole Bemis), on its 24-unit grid with a
 //  2-unit round stroke, as the interface drew them before.
 
+// Feather's pause-circle, for a build a rule holds, waiting (#970): in place of a number of turns where only a mark fits.
+//  The map's banners draw it on a canvas (`drawHoldGlyph`), from this same shape.
+const holdShape = {
+  circle: { cx: 12, cy: 12, r: 10 },
+  bars: [
+    [10, 15, 10, 9],
+    [14, 15, 14, 9],
+  ],
+} as const;
+
 const glyphs = {
   close:
     '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
@@ -35,6 +45,14 @@ const glyphs = {
   // Feather's map pin, by a square's coordinates.
   location:
     '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+  hold: `<circle cx="${holdShape.circle.cx}" cy="${holdShape.circle.cy}" r="${
+    holdShape.circle.r
+  }"/>${holdShape.bars
+    .map(
+      ([x1, y1, x2, y2]) =>
+        `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`
+    )
+    .join('')}`,
   veteran:
     '<polyline points="17 11 12 6 7 11"/><polyline points="17 18 12 13 7 18"/>',
 };
@@ -65,6 +83,36 @@ export const installGlyphs = (doc: Document = document): void => {
     .join('')}</svg>`;
 
   doc.body.prepend(holder.firstElementChild!);
+};
+
+/**
+ * The hold glyph drawn on a canvas, fitted to the square `size` at `x`, `y`, in `colour`, as the stylesheet draws a
+ *  glyph (a 2-unit round stroke on the 24-unit grid): for the map's banners (#970), which are drawn, not laid out.
+ */
+export const drawHoldGlyph = (
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  colour: string
+): void => {
+  const { circle, bars } = holdShape;
+
+  context.save();
+  context.translate(x, y);
+  context.scale(size / 24, size / 24);
+  context.strokeStyle = colour;
+  context.lineWidth = 2;
+  context.lineCap = 'round';
+  context.lineJoin = 'round';
+  context.beginPath();
+  context.arc(circle.cx, circle.cy, circle.r, 0, Math.PI * 2);
+  bars.forEach(([x1, y1, x2, y2]) => {
+    context.moveTo(x1, y1);
+    context.lineTo(x2, y2);
+  });
+  context.stroke();
+  context.restore();
 };
 
 export default glyph;

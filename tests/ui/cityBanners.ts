@@ -1,8 +1,9 @@
 // The cities on the map under the new interface (#747), drawn on a recording canvas: the theme's `--ui-city-banner`
 //  choosing the classic label or the banner; your own city's banner with its size, name, the turns to finish what it's
-//  building (a dash for nothing) and a food bar, red when it's starving; the disorder and celebration flags; a rival's
-//  with its size and name only; the size and name alone at scale 1; the widest within what an update clears; and a click on a
-//  banner finding its city, the one on top where two overlap, which a click on the city's own square doesn't.
+//  building (a dash for nothing, the hold glyph for a build a rule holds once paid for, #970) and a food bar, red when
+//  it's starving; the disorder and celebration flags; a rival's with its size and name only; the size and name alone at
+//  scale 1; the widest within what an update clears; and a click on a banner finding its city, the one on top where two
+//  overlap, which a click on the city's own square doesn't.
 
 // Must stay first: it gives the layer a canvas and a `document` to draw with.
 import { fakeCanvas, preloadImage } from './lib/fakeCanvas';
@@ -144,7 +145,11 @@ const happy = preloadImage('city/people_happy_m', 8, 16),
     };
     context.roundRect = (...args: any[]) => calls.push(['roundRect', ...args]);
     context.fill = () => calls.push(['fill']);
-    context.stroke = () => calls.push(['stroke']);
+    context.stroke = () => calls.push(['stroke', context.strokeStyle]);
+    // The hold glyph's strokes (#970).
+    ['translate', 'scale', 'arc', 'moveTo', 'lineTo'].forEach((name) => {
+      context[name] = (...args: any[]) => calls.push([name, ...args]);
+    });
 
     TestCityBanners.form = form;
 
@@ -176,6 +181,27 @@ const happy = preloadImage('city/people_happy_m', 8, 16),
             ? 'unhappy'
             : 'other'
         ),
+      // Where the Production icon and the turns after it are drawn, for where the hold glyph goes in their place.
+      productionX: calls.find(
+        ([name, image]) => name === 'drawImage' && image === production
+      )?.[2] as number | undefined,
+      turnsX: calls.filter(([name]) => name === 'fillText')[2]?.[2] as
+        | number
+        | undefined,
+      // Where the hold glyph is drawn (#970): its square's corner and its stroke's colour.
+      holds: calls.flatMap(([name], index) =>
+        name === 'arc'
+          ? [
+              [
+                calls[index - 3]?.[0] === 'translate'
+                  ? calls[index - 3]!.slice(1)
+                  : null,
+                calls.slice(index).find(([later]) => later === 'stroke')?.[1] ??
+                  null,
+              ],
+            ]
+          : []
+      ),
       pills: calls
         .filter(([name]) => name === 'roundRect')
         .map(([, x, y, width, height]) => ({ x, y, width, height })),
@@ -271,6 +297,49 @@ expect('building nothing: a dash for the turns', nothing.texts, [
   'Babylon',
   '–',
 ]);
+
+// A build a rule holds once paid for (#959): the hold glyph in place of the turns (#970), which the banner's tooltip
+//  words, on a banner as wide as an icon there makes it.
+const waiting = draw({
+  '2,2': ownCity({
+    build: {
+      building: { item: { _: 'Settlers' } },
+      progress: { value: 42 },
+      cost: { value: 40 },
+      remaining: -2,
+      held: ['civ1-enhanced:city/hold/settlers-until-size-two'],
+    },
+  }),
+});
+
+expect(
+  "waiting now: no number of turns, but the hold glyph after the Production icon, in the banner's ink",
+  [waiting.texts, waiting.images, waiting.holds.length, waiting.holds[0]?.[1]],
+  [['3', 'Babylon'], ['production'], 1, 'parchment']
+);
+expect(
+  'where the turns were: as far after the Production icon as the turns are',
+  [
+    (waiting.holds[0]?.[0]?.[0] as number) - waiting.productionX!,
+    own.turnsX! - own.productionX!,
+  ].reduce((a, b) => a - b),
+  0
+);
+expect(
+  'a build that will wait, still being paid for, keeps its turns',
+  draw({
+    '2,2': ownCity({
+      build: {
+        building: { item: { _: 'Settlers' } },
+        progress: { value: 0 },
+        cost: { value: 20 },
+        remaining: 20,
+        held: ['civ1-enhanced:city/hold/settlers-until-size-two'],
+      },
+    }),
+  }).texts,
+  ['3', 'Babylon', '5']
+);
 
 const starving = draw({
   '2,2': ownCity({

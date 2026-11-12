@@ -19,6 +19,7 @@ import watchPlayer, {
 } from '@civ-clone/ui-reports/components/lib/watchPlayer';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { cityName } from '@civ-clone/ui-client/components/lib/city';
+import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
 import { reduceKnownYield } from '@civ-clone/ui-client/lib/yieldMap';
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
@@ -228,15 +229,13 @@ export class CitiesList extends Element {
       const turns = button.querySelector<HTMLElement>('.turns')!;
 
       if (build.hold?.now) {
-        // Only a marker fits (#959): the words are its tooltip, and what a screen reader says.
+        // Only a mark fits (#959): the hold glyph (#970), with the words as its tooltip, and what a screen reader says.
         const words = heldText(build.hold),
-          marker = s('<span aria-hidden="true"></span>'),
           said = s('<span class="visually-hidden"></span>');
 
-        marker.textContent = text('City.Build.Held.marker');
         said.textContent = words;
         turns.title = words;
-        turns.append(marker, said);
+        turns.append(s(glyph('hold')), said);
       } else {
         turns.textContent = turnsText(build.turns);
       }
