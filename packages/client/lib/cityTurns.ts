@@ -70,6 +70,22 @@ export const offeredHold = (
   holdOf(buildItem.held, buildItem.cost.value - cityBuild.progress.value);
 
 /**
+ * What would hold the queued item at `index` (#970), from the ids sent for the queue. Queued items are counted from no
+ *  shields, so one is never waiting `now`; and the ids are for the city as it is now, not as it will be when the item
+ *  is reached, so they say what holds it as things stand.
+ */
+export const queuedHold = (
+  cityBuild: CityBuild,
+  index: number
+): BuildHold | null => {
+  const buildItem = cityBuild.queue?.[index];
+
+  return buildItem === undefined
+    ? null
+    : holdOf(cityBuild.queueHeld?.[index], buildItem.cost.value);
+};
+
+/**
  * A city's build as every place that shows its turns should: the turns it takes, and what holds it (#959). While
  *  `hold.now`, the turns (1, as it is paid for) would mislead, and are shown as the hold instead; a build that will
  *  wait still takes `turns` to pay for.

@@ -423,3 +423,19 @@ whose Settlers carry `["civ1-enhanced:city/hold/settlers-until-size-two"]` and t
 other eight `[]`. With `held` taken back out of every `BuildItem` in the
 transcript, all 263 messages, every channel hash and the sequence hash match the
 previous fixture.
+
+## Accepted change: every city build sends what would hold its queue (#970)
+
+The worker's own `queueHeld` AdditionalData on `CityBuild` (in
+`packages/worker-client/AdditionalData/`) adds, to every city build it sends, the
+ids `CityBuild#heldFor` gives for each queued item, by its place in the queue.
+`baseline.json` doesn't move: the conformance game is played by computer players
+alone and never loads the worker's AdditionalData, so its DTOs are what they were
+(checksums `a7518c6d / d3c8debf / a12b897c`, the DTO hashes and the random-call
+counts unchanged). In `client-transcript.json` 33 of the 263 messages change (31
+`gameDataPatch`es, the one `gameNotification` and the one `investigateCity`
+answer, each carrying a city's build, as for `held` in #959): each of the 40
+builds sent gains `"queueHeld":[]`, nothing being queued in that game. With
+`queueHeld` taken back out of every `CityBuild` in the transcript, all 263
+messages, every channel hash and the sequence hash match the previous fixture,
+so no id moved: `heldFor` makes no `DataObject`.

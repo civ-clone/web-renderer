@@ -3,13 +3,14 @@
 //  built with and the rule sets as they start, through a human `DataTransferClient`, checking what the page is sent:
 //  T1. a new city of size 1 is offered Settlers with the id of `civ1-enhanced`'s rule beside them in its build list
 //      (#970), and nothing else with any; it chooses them: `held` names that rule with shields still to pay (it will
-//      wait), and again once they are paid for (it is waiting), with nothing to buy;
+//      wait), and again once they are paid for (it is waiting), with nothing to buy; more Settlers queued behind them
+//      are sent with the same id, and a queued Warrior with none (`queueHeld`);
 //  T2. the turn after, still waiting: the city is there at size 1, no Settlers, the shields still adding up;
 //  T3. the turn it grows to size 2 it completes them, and is size 1 again;
 //  T4. a city that grows before its Settlers are paid for is no longer held, and its build list says none would hold
 //      them.
 // Then, with "Settlers wait for size 2" unticked, the original's: held on Chieftain by `civ1-unit`'s rule (which the
-//  build list names too), and on King a size-1 city with others is removed by its Settlers, which stand on its square.
+//  build list and the queue name too), and on King a size-1 city with others is removed by its Settlers, which stand on its square.
 // And, on the same game, "Bribed and defecting units stay veteran" (#960): off to start with, then ticked.
 //
 // This is also the only guard against two copies of `@civ-clone/core-city-build` being installed: `CityBuild#held()`
@@ -248,6 +249,20 @@ const firstTurn = async (): Promise<void> => {
     [1, [SETTLERS_WAIT_RULE], false, true]
   );
 
+  // Queued behind them, more Settlers and a Warrior: each queued item's ids go with the build, by its place (#970).
+  cityBuild.enqueue(Settlers);
+  cityBuild.enqueue(Warrior);
+
+  expect(
+    "T1: queued, more Settlers are sent with civ1-enhanced's rule beside them, and a Warrior with none",
+    buildAsSent(city!)?.queueHeld,
+    [[SETTLERS_WAIT_RULE], []]
+  );
+
+  cityBuild.clearQueue();
+
+  expect('T1: with nothing queued, none', buildAsSent(city!)?.queueHeld, []);
+
   cityBuild.add(new Production(cityBuild.cost().value()));
 
   expect(
@@ -352,15 +367,22 @@ const originals = async (): Promise<void> => {
   otherBuild.add(new Production(otherBuild.cost().value()));
   gameDifficultyRegistryInstance.set(Chieftain);
 
+  otherBuild.enqueue(Settlers);
+
   const onChieftain = shape(buildAsSent(other)),
     offeredOnChieftain = offeredHeld(other).Settlers,
-    completed = otherBuild.check();
+    queuedOnChieftain = buildAsSent(other)?.queueHeld;
+
+  otherBuild.clearQueue();
+
+  const completed = otherBuild.check();
 
   expect(
     "unticked, on Chieftain: a city of size 1 holds paid-for Settlers by the original's rule, and completes nothing",
     [
       onChieftain,
       offeredOnChieftain,
+      queuedOnChieftain,
       completed,
       other.destroyed(),
       sizeOf(other),
@@ -368,6 +390,7 @@ const originals = async (): Promise<void> => {
     [
       { held: [CHIEFTAIN_SETTLERS_RULE], waiting: true, spendCost: 0 },
       [CHIEFTAIN_SETTLERS_RULE],
+      [[CHIEFTAIN_SETTLERS_RULE]],
       null,
       false,
       1,

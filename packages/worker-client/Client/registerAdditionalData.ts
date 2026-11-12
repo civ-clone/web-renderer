@@ -4,6 +4,7 @@
 
 import actionResult from '../AdditionalData/actionResult';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
+import queueHeld from '../AdditionalData/queueHeld';
 import researchCosts from '../AdditionalData/researchCosts';
 import tradeRoutes from '../AdditionalData/tradeRoutes';
 
@@ -18,6 +19,7 @@ export const register = (): void => {
 
   additionalDataRegistryInstance.register(
     actionResult(),
+    queueHeld(),
     researchCosts(),
     tradeRoutes()
   );

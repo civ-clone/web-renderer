@@ -4,7 +4,7 @@
 //  it has none for; the city screen under both interfaces, waiting now (the reason in place of the turns, the figures
 //  still "42 / 40", no Buy) and waiting once paid for (the turns, the reason beneath them, Buy pointing to it and its
 //  confirmation saying so); the sidebar's list, with a marker in place of "1 turn", its words as its tooltip and for a
-//  screen reader, sorted after the builds that will be done; the map banner's tooltip; and both build menus (#970), which
+//  screen reader, sorted after the builds that will be done; the map banner's tooltip; the queue, and both build menus (#970), which
 //  say an item would wait before it is chosen, beside its turns or, when the shields stored pay for it, in their place.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
@@ -367,6 +367,63 @@ const run = async (): Promise<void> => {
       [null, false, true]
     );
   });
+
+  // --- the queue (#970) ------------------------------------------------------------------------------------------------
+  // Only the modern city screen draws the queue. Each queued item's ids come by its place; an older worker sends none.
+  {
+    applyInterface('modern', null);
+
+    const queuedItems = [
+        {
+          item: { _: 'Settlers', __: ['Settlers', 'Buildable'] },
+          cost: { value: 40 },
+        },
+        {
+          item: { _: 'Warrior', __: ['Warrior', 'Buildable'] },
+          cost: { value: 10 },
+        },
+      ],
+      queueSays = (queueHeld?: (string | null)[][]) => {
+        const city = {
+            ...free,
+            build: {
+              ...free.build,
+              queue: queuedItems,
+              ...(queueHeld ? { queueHeld } : {}),
+            },
+          } as unknown as CityData,
+          screen = openCity(city, portal, transport),
+          rows = Array.from(
+            screen.element().querySelectorAll('.ui-city-queued')
+          ).map((row) => [
+            text(row.querySelector('.name')),
+            text(row.querySelector('.held')),
+            text(row.querySelector('.turns')),
+          ]);
+
+        screen.close();
+
+        return rows;
+      };
+
+    expect(
+      "the queue: queued Settlers say what would hold them as the city is now, under their name, in the menu's words, and keep their turns; a Warrior says nothing",
+      queueSays([[WAIT], []]),
+      [
+        [
+          'Then: Settlers',
+          'Can’t be completed until the city is size 2',
+          '20 turns',
+        ],
+        ['Then: Warrior', null, '5 turns'],
+      ]
+    );
+    expect(
+      'the queue from a worker that sends no ids says nothing of holds',
+      queueSays(undefined).map(([, held]) => held),
+      [null, null]
+    );
+  }
 
   // --- the build menus, both interfaces (#970) -----------------------------------------------------------------------
   // What a city could build, with the ids the worker sends with each: Settlers would wait, a Warrior wouldn't, and one

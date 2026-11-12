@@ -311,6 +311,19 @@
     white-space: nowrap;
   }
 
+  // A queued item's name with what would hold it beneath (#970), taking the name's room in the row.
+  .ui-city-queued-text {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .held {
+    color: var(--ui-fg-muted);
+    font-size: var(--type-detail-size);
+  }
+
   // As tall as the row's text.
   .btn-icon {
     min-height: 0;
