@@ -703,6 +703,26 @@ expect('no unit awaiting orders, no ring', rings(), []);
 unitMarker = 'theme';
 mapView.activeUnitLayer.setVisible(true);
 
+// Dragged a few pixels, within the tile it's centred on: no focus changes, but the minimap's box moves with the map,
+//  so the render redraws the minimap, once, and a render that moves nothing doesn't.
+{
+  const centred = { ...portal.center() };
+
+  counted();
+  portal.scrollBy(3, 2);
+  portal.render();
+
+  const dragged = counted();
+
+  portal.render();
+
+  expect(
+    'a drag within a tile redraws the minimap once, and a render after it with nothing moved does not',
+    [portal.center(), dragged[1], counted()[1]],
+    [centred, 1, 0]
+  );
+}
+
 // Resizing, and the teardown.
 
 const parent = mapPortal.parentElement as HTMLElement;

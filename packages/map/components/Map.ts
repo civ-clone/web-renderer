@@ -374,11 +374,15 @@ export class Map implements IMap {
    * the worst is a yield icon about nine pixels over at scale 2 — but the
    * margin is a ring of tiles at the edge of the viewport rather than anything
    * per-frame, and it means a theme that moves a sprite cannot quietly clip it.
+   *
+   * And at least as far as the projection's own sprites reach on any side, as an isometric tileset's tall cities
+   *  might reach further up than a tile is wide (#97). The square grid's reach nothing.
    */
   protected overhang(): number {
-    const { width, height } = this.tileSize();
+    const { width, height } = this.tileSize(),
+      { top, right, bottom, left } = this.projection().reach();
 
-    return Math.max(width, height);
+    return Math.max(width, height, top, right, bottom, left);
   }
 
   /**

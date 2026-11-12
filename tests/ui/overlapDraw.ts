@@ -21,8 +21,8 @@
 //  projections go that way, and on each of them the three properties above hold exactly, for every layer:
 //
 //  - "square, through the overlap path": the square grid, drawn as if it overlapped, for every layer;
-//  - "brick": rows half a tile apart, every other one shifted half a tile across, as a staggered isometric map is,
-//    with diamond sprites so the tiles behind show through the corners of the ones in front;
+//  - "isometric": the staggered isometric grid's own projection (#97), rows half a tile apart, every other one shifted
+//    half a tile across, with diamond sprites so the tiles behind show through the corners of the ones in front;
 //  - "tall": the square grid, with sprites half a tile taller than the box, reaching into the row above, as mountains
 //    and cities do in many tilesets.
 //
@@ -58,9 +58,9 @@ import {
   Placement,
   Projection,
   Reach,
-  TileSpan,
   WorldDimensions,
 } from '@civ-clone/ui-map/lib/projection';
+import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
 import SquareProjection from '@civ-clone/ui-map-square/SquareProjection';
 import { Rect, mergeRects, rectArea } from '@civ-clone/ui-map/lib/viewport';
 import { Tile } from '@civ-clone/ui-protocol/types';
@@ -791,92 +791,14 @@ class Tall extends OverlappingSquare {
   }
 }
 
-// Rows half a tile apart, every other one shifted half a tile across: a staggered isometric map's boxes. The world
-//  has to be an even number of rows high to wrap over the poles.
-class Brick implements Projection {
-  #size: number;
-  #step: { x: number; y: number };
-  #world: WorldDimensions;
-  #wrapVertical: boolean;
+// The isometric grid's own projection (#97) at the layers' 16px tile: rows half a tile apart, every other one shifted
+//  half a tile across, so each box overlaps its neighbours'. The world has to be an even number of rows high to wrap
+//  over the poles.
+const isometric = (layer: any): IsoProjection =>
+  new IsoProjection(layer.tileSize(), layer.world(), layer.wraps());
 
-  constructor(size: number, world: WorldDimensions, wrapVertical: boolean) {
-    this.#size = size;
-    this.#step = { x: size, y: size / 2 };
-    this.#world = world;
-    this.#wrapVertical = wrapVertical;
-  }
-
-  compareDrawOrder(a: Placement, b: Placement): number {
-    return a.py - b.py || a.px - b.px || a.y - b.y || a.x - b.x;
-  }
-
-  footprint() {
-    return { width: this.#size, height: this.#size };
-  }
-
-  overlapsNeighbours(): boolean {
-    return true;
-  }
-
-  pixelToTile(px: number, py: number): [number, number] {
-    const row = Math.floor(py / (this.#size / 2));
-
-    return [
-      Math.floor((px - (row % 2 === 0 ? 0 : this.#size / 2)) / this.#size),
-      row,
-    ];
-  }
-
-  reach(): Reach {
-    return noReach;
-  }
-
-  tileSpan({ x, y, width, height }: Rect, overhang: number): TileSpan {
-    const size = this.#size,
-      step = size / 2;
-
-    return {
-      // Odd rows start half a tile across.
-      columns: [
-        Math.floor((x - overhang - step) / size),
-        Math.ceil((x + width + overhang) / size),
-      ],
-      // A row's boxes are a whole tile high, so the row a tile above still reaches down into the rectangle.
-      rows: [
-        Math.floor((y - overhang - size) / step) + 1,
-        Math.ceil((y + height + overhang) / step),
-      ],
-    };
-  }
-
-  tileStep() {
-    return this.#step;
-  }
-
-  tileToPixel(x: number, y: number): [number, number] {
-    return [
-      x * this.#size + (y % 2 === 0 ? 0 : this.#size / 2),
-      (y * this.#size) / 2,
-    ];
-  }
-
-  worldSize() {
-    return {
-      width: this.#world.width() * this.#size + this.#size / 2,
-      height: ((this.#world.height() + 1) * this.#size) / 2,
-    };
-  }
-
-  wrapPeriod() {
-    return {
-      x: this.#world.width() * this.#size,
-      y: this.#wrapVertical ? (this.#world.height() * this.#size) / 2 : null,
-    };
-  }
-}
-
-// Brick, drawn column by column as the square grid used to be.
-class BrickByColumn extends Brick {
+// The isometric grid, drawn column by column as the square grid used to be.
+class IsometricByColumn extends IsoProjection {
   compareDrawOrder(a: Placement, b: Placement): number {
     return a.px - b.px || a.py - b.py || a.x - b.x || a.y - b.y;
   }
@@ -885,7 +807,7 @@ class BrickByColumn extends Brick {
 // Every sprite has a scattering of see-through pixels, as real ones do, so what is under it shows.
 const scatteredMask = (path: string, x: number, y: number): number =>
     mix(stringHash(path), x, y) % 5 === 0 ? 0 : 1,
-  // And, on the brick grid, is a diamond, as an isometric tile is.
+  // And, on the isometric grid, is a diamond, as an isometric tile is.
   diamondMask = (
     path: string,
     x: number,
@@ -924,9 +846,8 @@ const projectionSpecs: ProjectionSpec[] = [
     mask: scatteredMask,
   },
   {
-    name: 'brick',
-    make: (layer) =>
-      new Brick(layer.tileSize().width, layer.world(), layer.wraps()),
+    name: 'isometric',
+    make: isometric,
     mask: diamondMask,
   },
   {
@@ -938,9 +859,9 @@ const projectionSpecs: ProjectionSpec[] = [
 ];
 
 const brokenOrder: ProjectionSpec = {
-  name: 'brick, drawn column by column',
+  name: 'isometric, drawn column by column',
   make: (layer) =>
-    new BrickByColumn(layer.tileSize().width, layer.world(), layer.wraps()),
+    new IsometricByColumn(layer.tileSize(), layer.world(), layer.wraps()),
   mask: diamondMask,
 };
 
@@ -1624,20 +1545,20 @@ const plain = layerSpecs.find(({ name }) => name === 'Plain')!,
   tallPlain = layerSpecs.find(({ name }) => name === 'TallPlain')!,
   units = layerSpecs.find(({ name }) => name === 'Units')!,
   square = projectionSpecs.find(({ name }) => name === 'square')!,
-  brick = projectionSpecs.find(({ name }) => name === 'brick')!,
+  iso = projectionSpecs.find(({ name }) => name === 'isometric')!,
   tall = projectionSpecs.find(({ name }) => name === 'tall')!;
 
 // The mistakes made on purpose aren't any one projection's: checked once, with the first part.
 if (part === null || part.k === 1) {
   caught(
-    'drawing brick tiles column by column',
+    'drawing isometric tiles column by column',
     brokenOrder,
     plain,
     'a full render draws back to front'
   );
   caught(
-    "clearing each brick tile's box before drawing it",
-    brick,
+    "clearing each isometric tile's box before drawing it",
+    iso,
     { ...plain, name: 'ClearsEachTile', Type: ClearsEachTile },
     'a full render draws back to front'
   );

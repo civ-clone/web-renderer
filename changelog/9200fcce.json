@@ -1,0 +1,1 @@
+{"version":"0.1.0@9200fcce","date":"2026-11-12T08:15:01.000Z","localChanges":["refactor: the map scrolls and culls by asking its projection, not by stepping a square tile (#97) (#985)"],"externalChanges":{}}

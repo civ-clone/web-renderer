@@ -28,6 +28,7 @@
     "./lib/cityMapLayout": "./lib/cityMapLayout.ts",
     "./lib/projection": "./lib/projection.ts",
     "./lib/projectionFor": "./lib/projectionFor.ts",
+    "./lib/overview": "./lib/overview.ts",
     "./lib/reducedMotion": "./lib/reducedMotion.ts",
     "./lib/supportedTopologies": "./lib/supportedTopologies.ts",
     "./lib/viewport": "./lib/viewport.ts"

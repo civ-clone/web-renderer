@@ -1,6 +1,8 @@
 // What civ.one is made of (#825): the interfaces it offers, and the grids its map draws.
 import './interfaces.ts';
 import '@civ-clone/ui-map-square';
+// Isometric is drawable, but offered only once an isometric tileset is installed, and none is yet (#97).
+import '@civ-clone/ui-map-isometric';
 import Renderer from '@civ-clone/ui-game/bootstrap';
 import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';
 import { setBuild } from '@civ-clone/ui-client/lib/build';

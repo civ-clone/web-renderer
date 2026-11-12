@@ -79,6 +79,13 @@ export class MapView {
   #mode: UnitMarkerMode;
   // Where the minimap's marker was last drawn for the ring: the unit's square, not the ring's place on screen.
   #minimapMarked: string | null = null;
+  // Where on the world the map's window was when the minimap last drew its box: a drag within one tile moves the window
+  //  but changes no focus, so the render after it redraws the minimap.
+  #minimapViewport: string | null = null;
+  // How many renders there have been, and which one last redrew the minimap itself, so a caller that renders and then
+  //  redraws the minimap doesn't draw it twice.
+  #renders = 0;
+  #minimapRedrawnAt = -1;
   #activeUnit: () => Unit | null;
   #measureHandler = (): void => this.measureCovered();
   #resizeHandler = (): void => this.#resize();
@@ -181,8 +188,11 @@ export class MapView {
 
     this.yieldsLayer.setVisible(false);
 
-    portal.on('focus-changed', () => this.minimap.update());
-    portal.on('rendered', () => this.#placeMarker());
+    portal.on('focus-changed', () => this.#updateMinimap());
+    portal.on('rendered', () => {
+      this.#renders++;
+      this.#placeMarker();
+    });
     portal.on('activate-unit', (unit) => activateUnit(unit));
 
     intervalHandler.on(() => this.#tick());
@@ -239,7 +249,7 @@ export class MapView {
     this.portal.setCenter(tile.x, tile.y);
 
     this.portal.render();
-    this.minimap.update();
+    this.#minimapAfterRender();
   }
 
   dispose(): void {
@@ -276,10 +286,36 @@ export class MapView {
     const tile = shown ? this.#activeUnit()?.tile ?? null : null,
       marked = tile === null ? null : `${tile.x},${tile.y}`;
 
-    if (marked !== this.#minimapMarked) {
+    // The window moved without the focus changing (a drag within a tile), or the unit marked is another.
+    if (
+      marked !== this.#minimapMarked ||
+      this.#viewport() !== this.#minimapViewport
+    ) {
       this.#minimapMarked = marked;
-      this.minimap.update();
+      this.#updateMinimap();
+      this.#minimapRedrawnAt = this.#renders;
     }
+  }
+
+  /** Draws the minimap again after a render, unless the render already did. */
+  #minimapAfterRender(): void {
+    if (this.#minimapRedrawnAt !== this.#renders) {
+      this.#updateMinimap();
+    }
+  }
+
+  // Where the map's window is on the world, and its size: a tile's place on the canvas is its world px less the window's.
+  #viewport(): string {
+    const { x, y } = this.portal.boxOf({ x: 0, y: 0 }),
+      { width, height } = this.portal.canvas();
+
+    return `${x},${y},${width},${height}`;
+  }
+
+  /** Draws the minimap again, noting where the map's window was for it. */
+  #updateMinimap(): void {
+    this.minimap.update();
+    this.#minimapViewport = this.#viewport();
   }
 
   /** Builds the tiles released so far, then composites the map and updates the minimap. */
@@ -288,7 +324,7 @@ export class MapView {
     this.portal.build(this.takeTiles());
     this.portal.render();
 
-    this.minimap.update();
+    this.#minimapAfterRender();
   }
 
   /** A tile a patch has changed: drawn once `releaseTiles` says the world has it. */
@@ -337,7 +373,7 @@ export class MapView {
     this.portal.render();
     // Its marker steady while they're hidden, and blinking again once they're not: in the blink, nothing else would
     //  redraw it.
-    this.minimap.update();
+    this.#minimapAfterRender();
   }
 
   /** Shows or hides the yields (`y`). */
@@ -416,7 +452,7 @@ export class MapView {
     // The layers are the size of the portal, so resizing them is
     // part of rendering now.
     this.portal.render();
-    this.minimap.update();
+    this.#minimapAfterRender();
   }
 
   // The banners read the theme's tokens again, and are drawn with them and the fonts loaded now.
@@ -469,7 +505,7 @@ export class MapView {
 
     if (blinking || hasTilesToRender) {
       this.portal.render();
-      this.minimap.update();
+      this.#minimapAfterRender();
     }
   }
 }

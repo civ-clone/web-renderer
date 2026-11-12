@@ -10,7 +10,9 @@
 //    shifted row is half a column along.
 //  - A layer places every tile whose box reaches the canvas, and no other, across both seams.
 //
-// The grid is a stand-in (`lib/staggered.ts`), with diamonds twice as wide as they are tall, as Civ2's are.
+// The grid is a stand-in (`lib/staggered.ts`), with diamonds twice as wide as they are tall, as Civ2's are; with
+//  `--iso` it is the isometric grid's own projection (`map-isometric`'s `IsoProjection`) instead, which `npm test` runs
+//  as well.
 
 // Must stay first: it gives the layers a canvas and a `document` to draw with.
 import { fakeCanvas } from './lib/fakeCanvas';
@@ -19,9 +21,16 @@ import './lib/grids';
 import Map from '@civ-clone/ui-map/components/Map';
 import Portal from '@civ-clone/ui-map/components/Portal';
 import { Projection } from '@civ-clone/ui-map/lib/projection';
+import IsoProjection from '@civ-clone/ui-map-isometric/IsoProjection';
 import Staggered from './lib/staggered';
 import { Tile } from '@civ-clone/ui-protocol/types';
 import World from '@civ-clone/ui-map/components/World';
+
+// The stand-in, or with `--iso` the real thing.
+const Grid = process.argv.includes('--iso') ? IsoProjection : Staggered,
+  suite = process.argv.includes('--iso')
+    ? 'staggeredPortal --iso'
+    : 'staggeredPortal';
 
 const failures: string[] = [];
 let checks = 0,
@@ -40,9 +49,7 @@ const expect = (description: string, actual: unknown, expected: unknown) => {
 // A run that stops before it reports has checked nothing (#473).
 process.on('exit', (code: number): void => {
   if (code === 0 && !finished) {
-    process.stderr.write(
-      'FAIL staggeredPortal: stopped before the checks ran\n'
-    );
+    process.stderr.write(`FAIL ${suite}: stopped before the checks ran\n`);
     process.exitCode = 1;
   }
 });
@@ -64,7 +71,7 @@ class Layer extends Map {
   protected drawTile(): void {}
 
   protected override projection(): Projection {
-    return new Staggered(this.tileSize(), this.world(), this.#wrapVertical);
+    return new Grid(this.tileSize(), this.world(), this.#wrapVertical);
   }
 
   override setWrapVertical(wrap: boolean): void {
@@ -92,11 +99,7 @@ class Layer extends Map {
 
 class StaggeredPortal extends Portal {
   protected override createProjection(): Projection {
-    return new Staggered(
-      this.tileSize(),
-      this.world(),
-      !this.lockVerticalEdges()
-    );
+    return new Grid(this.tileSize(), this.world(), !this.lockVerticalEdges());
   }
 }
 
@@ -153,9 +156,9 @@ const world = new World({
 // The stand-in keeps to the rules the portal leans on: a tile's middle is its own, everywhere, rows above and below
 //  the world included.
 {
-  const projection = new Staggered(tile, world, true),
+  const projection = new Grid(tile, world, true),
     // An odd-sized tile too, whose middle is a half pixel off its diamond's, as the portal takes it (`Math.trunc`).
-    odd = new Staggered({ width: 33, height: 17 }, world, true),
+    odd = new Grid({ width: 33, height: 17 }, world, true),
     wrong: string[] = [];
 
   [projection, odd].forEach((grid) => {
@@ -187,11 +190,13 @@ const world = new World({
     for (let px = 0; px < tile.width * 2; px++) {
       const [x, y] = projection.pixelToTile(px, py),
         [left, top] = projection.tileToPixel(x, y),
-        distance =
-          Math.abs(px - (left + tile.width / 2)) / (tile.width / 2) +
-          Math.abs(py - (top + tile.height / 2)) / (tile.height / 2);
+        // How far a point is from the diamond's middle, in half diagonals: within 1 is in it.
+        distance = (atX: number, atY: number) =>
+          Math.abs(atX - (left + tile.width / 2)) / (tile.width / 2) +
+          Math.abs(atY - (top + tile.height / 2)) / (tile.height / 2);
 
-      if (distance > 1) {
+      // The pixel's corner (the stand-in's test) or its middle (`IsoProjection`'s, which `--iso` runs) is in it.
+      if (distance(px, py) > 1 && distance(px + 0.5, py + 0.5) > 1) {
         outside.push(`${px},${py} -> ${x},${y}`);
       }
     }
@@ -532,7 +537,7 @@ const pixels = (count: number, step: [number, number]): [number, number][] =>
 //  other, wherever the view is.
 {
   const { portal, layer } = makePortal(),
-    projection = new Staggered(tile, world, true),
+    projection = new Grid(tile, world, true),
     period = projection.wrapPeriod(),
     reach = layer.reachesFrom(),
     expected = () => {
@@ -600,11 +605,9 @@ finished = true;
 
 if (failures.length) {
   process.stderr.write(
-    `FAIL staggeredPortal\n${failures
-      .map((failure) => `  ${failure}`)
-      .join('\n')}\n`
+    `FAIL ${suite}\n${failures.map((failure) => `  ${failure}`).join('\n')}\n`
   );
   process.exit(1);
 }
 
-console.log(`PASS staggeredPortal (${checks} checks)`);
+console.log(`PASS ${suite} (${checks} checks)`);

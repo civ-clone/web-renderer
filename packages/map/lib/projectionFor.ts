@@ -10,9 +10,9 @@ import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 //  geometry says how far apart the tiles are. The rest of the renderer asks the projection, so a tileset on another
 //  grid needs a projection registered here and nothing else to change.
 //
-// Each grid's own code registers its projection (#825): the square grid's is `map-square`, and hexagonal and isometric
-//  grids register theirs beside it (#94, #97). The map knows none of them by name, so the page chooses which grids it
-//  draws by which it loads.
+// Each grid's own code registers its projection (#825): the square grid's is `map-square`, the staggered isometric
+//  grid's `map-isometric` (#97), and a hexagonal grid will register its own beside them (#94). The map knows none of
+//  them by name, so the page chooses which grids it draws by which it loads.
 //
 // A grid brings its own minimap too (#867): the overview layer the whole world is drawn into, a few pixels a tile, and
 //  the minimap that shows it, so the game asks for them here and names neither.
@@ -106,12 +106,12 @@ export const overviewFor = (tileset: TilesetDescriptor): GridOverview =>
 const registered = (tileset: TilesetDescriptor) => {
   const grid = grids.get(tileset.grid);
 
-  // A grid nothing has registered: one there is no code for yet (isometric comes with #97, hex with #94), or one whose
-  //  code the page, or a suite, has not loaded.
+  // A grid nothing has registered: one there is no code for yet (hex comes with #94), or one whose code the page, or a
+  //  suite, has not loaded.
   if (grid === undefined) {
     return refuse(
       tileset,
-      `no projection is loaded for the ${tileset.grid} grid (isometric comes with #97, hex with #94).`
+      `no projection is loaded for the ${tileset.grid} grid (hex comes with #94).`
     );
   }
 

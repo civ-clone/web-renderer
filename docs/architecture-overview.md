@@ -45,8 +45,8 @@ Loading a saved game takes a different path. The player picks a file, `packages/
 - `packages/menus/components/*`, `packages/hud/components/*`, and the components every window is built from, `packages/component-*/` (`Window`, the
   button, the choice and selection windows, the report table, …)
   - Window and UI primitives for reports, city/unit views, menu flows, and overlays.
-- `packages/map/components/Map/*`, `Portal.ts`, `packages/game/GamePortal.ts`, and `packages/map-square/Minimap.ts`
-  - Canvas layer renderers (terrain, units, cities, fog, improvements, etc.). Each layer's canvas is the size of the portal, not the world, and the portal composites only the regions the layers changed. The minimap draws from a layer of its own (`Map/Overview.ts`).
+- `packages/map/components/Map/*`, `Portal.ts`, `packages/game/GamePortal.ts`, and each grid's `Minimap.ts` (`packages/map-square/`, `packages/map-isometric/`)
+  - Canvas layer renderers (terrain, units, cities, fog, improvements, etc.). Each layer's canvas is the size of the portal, not the world, and the portal composites only the regions the layers changed. The minimap draws from a layer of its own, its grid's `Overview.ts`.
 
 ## State and rendering model
 

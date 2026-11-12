@@ -307,6 +307,9 @@ importers:
       '@civ-clone/ui-map':
         specifier: workspace:*
         version: link:packages/map
+      '@civ-clone/ui-map-isometric':
+        specifier: workspace:*
+        version: link:packages/map-isometric
       '@civ-clone/ui-map-square':
         specifier: workspace:*
         version: link:packages/map-square
@@ -709,6 +712,18 @@ importers:
       '@civ-clone/ui-platform':
         specifier: workspace:*
         version: link:../platform
+      '@civ-clone/ui-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
+  packages/map-isometric:
+    dependencies:
+      '@civ-clone/ui-assets':
+        specifier: workspace:*
+        version: link:../assets
+      '@civ-clone/ui-map':
+        specifier: workspace:*
+        version: link:../map
       '@civ-clone/ui-protocol':
         specifier: workspace:*
         version: link:../protocol
