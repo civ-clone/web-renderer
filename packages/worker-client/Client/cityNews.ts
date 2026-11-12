@@ -1,6 +1,8 @@
 // What happened to each city during one engine call, told to the player once it is over (#400, #420, #449), moved out
 //  of `DataTransferClient`: a city lost or starved gets one notice. Capturing a size 1 city destroys it before
 //  `city:captured` is emitted, and by then it is the capturer's, so neither event alone says that we lost it, or how.
+//  A size 1 city that its own Settlers remove is said to be abandoned, once, rather than to have built Settlers and
+//  then been destroyed (#969).
 
 import City from '@civ-clone/core-city/City';
 import Notification from '@civ-clone/ui-protocol/Notification';
@@ -15,6 +17,8 @@ export type CityNews = {
   destroyed: boolean;
   destroyedBy: Player | null;
   famine: boolean;
+  // Removed by its own Settlers (#969): the engine says so before the build is announced and the city destroyed.
+  abandoned: boolean;
 };
 
 // A lost city waits beside End Turn, as an improvement going obsolete does (#420). Famine stops play, as in Civ1.
@@ -29,7 +33,15 @@ export const cityNewsNotifications = (
   entries.forEach(
     ([
       city,
-      { ours, capturedBy, capturedFrom, destroyed, destroyedBy, famine },
+      {
+        ours,
+        capturedBy,
+        capturedFrom,
+        destroyed,
+        destroyedBy,
+        famine,
+        abandoned,
+      },
     ]) => {
       if (capturedFrom !== null && owns(capturedFrom)) {
         notifications.push(
@@ -54,6 +66,13 @@ export const cityNewsNotifications = (
       }
 
       if (!ours) {
+        return;
+      }
+
+      // Removed by its own Settlers: told once, here, as the Settlers it built aren't (`Client/notifications/city.ts`).
+      if (destroyed && abandoned && destroyedBy === null) {
+        notifications.push(new Notification('City.abandoned', { city }, true));
+
         return;
       }
 
@@ -111,6 +130,7 @@ export class CityNewsCollector {
         destroyed: false,
         destroyedBy: null,
         famine: false,
+        abandoned: false,
       });
     }
 
@@ -122,6 +142,11 @@ export class CityNewsCollector {
     }
 
     return this.#news.get(city)!;
+  }
+
+  // Whether `city` was abandoned in the engine call under way (#969), without making news of it.
+  abandoned(city: City): boolean {
+    return this.#news.get(city)?.abandoned ?? false;
   }
 
   #send(): void {

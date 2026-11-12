@@ -419,6 +419,11 @@ const expect = (description: string, actual: string, expected: string) => {
         'We have captured Asansol from the Aztec Empire',
       ],
       [
+        'City.abandoned',
+        { city: asansol },
+        'Asansol has been abandoned as its Settlers set out.',
+      ],
+      [
         'City.destroyed-by',
         { city: asansol, player: barbarians },
         'Our city Asansol has been destroyed by Barbarians!',

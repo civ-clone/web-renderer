@@ -50,6 +50,7 @@ const us = { name: 'us' } as unknown as Player,
     destroyed: false,
     destroyedBy: null,
     famine: false,
+    abandoned: false,
     ...overrides,
   }),
   // A notification as a list: its key, whether it is a bubble, and its data with each object named.
@@ -105,6 +106,31 @@ const us = { name: 'us' } as unknown as Player,
     'a city of ours destroyed by no one',
     outcome(news({ destroyed: true })),
     [['City.destroyed', true, { city: 'Rome' }]]
+  );
+
+  // Removed by its own Settlers (#969): told once that it was abandoned, not that it was destroyed.
+  expect(
+    'a city of ours abandoned by its Settlers',
+    outcome(news({ abandoned: true, destroyed: true })),
+    [['City.abandoned', true, { city: 'Rome' }]]
+  );
+
+  expect(
+    'a city of ours abandoned and starving: the abandoning is told',
+    outcome(news({ abandoned: true, destroyed: true, famine: true })),
+    [['City.abandoned', true, { city: 'Rome' }]]
+  );
+
+  expect(
+    'a city of ours said to be abandoned, but standing, tells nothing of it',
+    outcome(news({ abandoned: true })),
+    []
+  );
+
+  expect(
+    "a rival's city abandoned by its Settlers tells us nothing",
+    outcome(news({ ours: false, abandoned: true, destroyed: true })),
+    []
   );
 
   expect('a city of ours starving', outcome(news({ famine: true })), [
@@ -212,6 +238,29 @@ const us = { name: 'us' } as unknown as Player,
   expect('the next engine call is news afresh', told, [
     ['City.destroyed', true, { city: 'Antium' }],
   ]);
+
+  told.splice(0);
+
+  // Abandoned (#969): read during the engine call without making news of it, then told once it is over.
+  const readBefore = collector.abandoned(antium);
+
+  await tick();
+
+  const nothingMade = told.length;
+
+  collector.of(antium).abandoned = true;
+
+  const readDuring = collector.abandoned(antium);
+
+  collector.of(antium).destroyed = true;
+
+  await Promise.resolve();
+
+  expect(
+    'whether a city was abandoned is read without making news, and told once the call is over',
+    [readBefore, nothingMade, readDuring, told, collector.abandoned(antium)],
+    [false, 0, true, [['City.abandoned', true, { city: 'Antium' }]], false]
+  );
 
   told.splice(0);
 

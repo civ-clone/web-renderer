@@ -439,3 +439,21 @@ builds sent gains `"queueHeld":[]`, nothing being queued in that game. With
 `queueHeld` taken back out of every `CityBuild` in the transcript, all 263
 messages, every channel hash and the sequence hash match the previous fixture,
 so no id moved: `heldFor` makes no `DataObject`.
+
+## Accepted change: rule counts, an abandoned city and a destroyed city's ships (#969)
+
+civ1-unit 0.1.28 adds `civ1-unit:city/building-complete/abandoned`, which emits
+the `city:abandoned` engine event just before a size-1 city that has built
+Settlers is removed (only with "Settlers wait for size 2" off), and civ1-city
+0.1.12 adds `civ1-city:city/destroyed/destroy-ships-and-aircraft`, which
+destroys the ships and aircraft standing in a city when it is destroyed. They
+also keep a size-1 city that a Diplomat incites, home its defectors in it and
+leave Settlers from a city removed beside a foreign one without a home, on
+core-unit 0.1.30's `Unit#setCity(null)`. The rule totals at turns 1, 10 and 50
+rise from 1122 to 1124 (`BuildingComplete` 10 → 11, `Destroyed` 20 → 21) and
+nothing else moves: the engine-state checksums (`a7518c6d / d3c8debf /
+a12b897c`), the random-call counts and the DTO hashes are unchanged. In its 50
+turns no city is abandoned, incited or destroyed with ships in it, so neither
+new rule fires; the abandoned city and the size-1 incite are played by
+`tests/engine/abandonedCity.ts`. `client-transcript.json` passes unchanged and
+is not re-recorded.

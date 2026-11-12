@@ -192,10 +192,18 @@ export const cityNotifications: NotificationTable = [
           }),
   ],
 
-  // A rival's wonder, or anything we build, and what our queue dropped on its way to the next item (#774).
+  // A rival's wonder, or anything we build, and what our queue dropped on its way to the next item (#774). Nothing for
+  //  a city of ours that its Settlers abandon: its news says so, once (`Client/cityNews.ts`, #969).
   [
     'city:building-complete',
     (ctx: NotificationContext, cityBuild: CityBuildItem, build: unknown) => {
+      if (
+        ctx.view.owns(cityBuild.city().player()) &&
+        ctx.cityNews.abandoned(cityBuild.city())
+      ) {
+        return null;
+      }
+
       const notifications = [
         buildingComplete(ctx, cityBuild, build),
         queueDropped(ctx, cityBuild),

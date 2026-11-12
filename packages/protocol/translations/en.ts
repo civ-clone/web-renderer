@@ -101,6 +101,9 @@ i18next.addResources('en', 'notification', {
   'City.captured-from-us.body':
     'Our city {{- city, cityName}} has been captured by $t(Generic.civilization-name.nation, { "civilization": "{{capturingPlayer.civilization._}}", "ns": "default" })!',
   'City.captured-from-us.title': 'City captured!',
+  'City.abandoned.body':
+    '{{- city, cityName}} has been abandoned as its Settlers set out.',
+  'City.abandoned.title': 'City abandoned!',
   'City.destroyed.body': `{{- city, cityName}} has been destroyed!`,
   'City.destroyed.title': 'City destroyed!',
   'City.destroyed-by.body':
