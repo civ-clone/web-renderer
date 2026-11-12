@@ -396,3 +396,18 @@ which decide something only once a Wonder has been lost or an old save is
 loaded. `client-transcript.json` passes
 unchanged and is not re-recorded. The rules are played through the full plugin
 set, a save and a load by `tests/engine/lostWonders.ts`.
+
+## Accepted change: rule counts, a paid-for build that waits is said (#970)
+
+core-city-build 0.1.22 adds `CityBuild#heldFor(item)`, the ids of the `Hold`
+rules that would hold a city's build of any item as the city is now, and the
+`BuildingHeld` rule type, processed each time `check()` declines to complete a
+paid-for build because it is held. civ1-city 0.1.11 turns it into the
+`city:building-held` engine event (`civ1-city:city/building-held/emit`), and
+civ1-enhanced 0.1.6 takes the new core-city-build. The rule totals at turns 1,
+10 and 50 rise from 1121 to 1122 (`BuildingHeld` 0 → 1) and nothing else moves:
+the engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
+counts and the DTO hashes are unchanged. In its 50 turns this game holds no
+paid-for build, so the new rule never fires; it is played through the full
+plugin set by `tests/engine/heldBuild.ts`. `client-transcript.json` passes
+unchanged and is not re-recorded.
