@@ -36,8 +36,9 @@ Without imported assets, gameplay options are hidden and import is the primary o
     rectangles, over `defaults` of 16×16 and a transparent colour of `rgb(0, 170, 170)`.
 - `@civ-clone/civ2-asset-extractor` (#97)
   - Cuts the map's sprites from a player's own Civilization II sheets (`TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF`,
-    `CITIES.GIF`), with each unit's and city's anchors and the flags' colours. A GitHub dependency excluded from the
-    plugins like Civ1's. `tileset-civ2/lib/civ2Import.ts` drives it for the import window.
+    `CITIES.GIF`), with each unit's and city's anchors and the flags' colours, and the yield icons from `ICONS.GIF`,
+    a sheet its `extract-data.json` marks `optional` (#999). A GitHub dependency excluded from the plugins like
+    Civ1's. `tileset-civ2/lib/civ2Import.ts` drives it for the import window.
 
 ## Asset import flow
 
@@ -62,13 +63,16 @@ Without imported assets, gameplay options are hidden and import is the primary o
 
 ### Civilization II's sheets (#97)
 
-The same window takes Civ2's four sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
+The same window takes Civ2's sheets, recognised by name whatever its case, alongside Civ1's files or, once Civ1's
 sprites are in, on their own (as `ASOUND.CVL` is): its import (`civ2Import` in
-`packages/tileset-civ2/lib/civ2Import.ts`) has no `requiredFiles`. The instructions name them as optional, for the isometric map; once
+`packages/tileset-civ2/lib/civ2Import.ts`) has no `requiredFiles`. The instructions name the map's four
+(`civ2MapFiles`) as optional, for the isometric map, and, in a sentence of their own (`TilesetCiv2.import-icons`), the
+sheets the extractor marks `optional` (`civ2OptionalFiles`: `ICONS.GIF`, Civ2's own yield icons for that map, #999). Once
 any are imported, the window says whether Civ2's art is complete or which sheets are still to import
-(`civ2FilesToImport`: those holding a sprite `civ2.json` requires that isn't stored, or whose anchors or flag colours the
-stored record lacks, flag colours that aren't a flag's being lacking). Options' Assets row says the same: it asks each
-pack's import for its `status`, as the window does.
+(`civ2FilesToImport`: those of the map's holding a sprite `civ2.json` requires that isn't stored, or whose anchors or
+flag colours the stored record lacks, flag colours that aren't a flag's being lacking). `ICONS.GIF` is never among them:
+its icons are under `assets.optional`, so the pack is complete, and installed, without it. Options' Assets row says the
+same: it asks each pack's import for its `status`, as the window does.
 Flag colours are held to one rule wherever they're read (`isFlagRow` in `packages/assets/lib/packs.ts`): the import
 cuts the flags again for a record that fails it, the window lists CITIES.GIF for it, and the installer leaves the pack
 out.
@@ -86,7 +90,8 @@ name)`: `./assets/civ2/units/settlers.png`. `civ2Pack` (`tileset-civ2/lib/civ2Im
 - The anchors and the flags' colours go in one record beside the sprites, `./assets/civ2/metadata.json`
   (`metadataKey`), as a JSON `blob` shaped as the extractor's `metadata.json`: `{ anchors: SpriteAnchors, colours }`.
   An import of some of the sheets is put over what the record held, so the others' anchors are kept; a record that
-  can't be read is replaced by what this import cut.
+  can't be read is replaced by what this import cut. An import that cut nothing from the map's sheets (`ICONS.GIF`
+  alone) leaves the record as it is: it has nothing to add to it.
 - `RULES.TXT` is taken and left alone: units keep the extractor's default names for now.
 - The import still ends on Civ1's check: it is done when Civ1's required sprites are all in. When Civ2's sheets were
   among the files and one was left out or Civ2's art is still incomplete, the page is not reloaded, so the window's
@@ -147,6 +152,11 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
   square grid keeps its pulsing ring over the map.
 - A choice list fits a tall unit's icon in its square (`object-fit: contain`). A stack shows `units/shield-back` 4 px
   up and left of the shield.
+- Yield icons (#999): `yields` names the small 10 × 10 icons, `icons/small/{yield}`, Food `food`, Production `shield`,
+  Trade `trade` (and Luxuries, Gold and Research, which no square yields yet), all under `assets.optional`, so the map
+  needs no `ICONS.GIF`. Its `area` is the diamond's middle half across and five eighths down (32 × 20 of the 64 × 32
+  tile): a square's usual two-by-two of icons sits inside the diamond, two rows of 10 px don't overlap, and five or
+  more icons reach no more than a pixel or two past its slanted edges at the corners.
 
 ## Sprite overlays
 
@@ -246,7 +256,9 @@ cannot say:
   colouring (its flag), and neither of a box's. Its style names are each listed once, the default and each civilization's
   are among them, its size buckets go up, and its `sprite` has each of `{style}`, `{size}` and `{walls}` that tells two
   sprites apart;
-- a units or cities `anchor` above or left of the tile is within `geometry.overhang`.
+- a units or cities `anchor` above or left of the tile is within `geometry.overhang`;
+- a pack's `yields.sprite` has `{yield}` and no other placeholder, each icon its `names` give is listed in `assets`, and
+  its `area` is within the tile.
 
 So a descriptor the schema accepts can still be refused; one it refuses always is. Neither checks whether the map can
 draw the descriptor's grid at its tile size: that is for the map as it takes the tileset (`nativeTileSize` in
@@ -298,8 +310,13 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
   on, as the renderer knows no rules, so it is not in the format.
 - **Tall sprites.** `units.anchor` and `cities.anchor` put a sprite's top-left corner above the tile (`{ x: 0, y: -16 }`
   for a 64 × 48 sprite on a 64 × 32 tile), with `geometry.overhang.top` leaving room for it.
+- **Yield icons.** `yields` gives the pack's own icons for a worked square's yields on the map (#999): `sprite` with
+  `{yield}` filled from `names`, by yield as the engine names it (`{ "Food": "food", "Production": "shield", … }`), and
+  the `area` of the tile, as parts of its width and height, that they are laid out in. Left out, the map draws the
+  interface's `city/<yield>` icons from the top-left corner of the tile's box, as Civ1's map always has.
 - **Fallback.** `fallback` names the tileset the sprites this one leaves out come from: interface art under `assets.ui`
-  prefixes it does not have, and missing optional sprites. Nothing looks sprites up there yet.
+  prefixes it does not have, and missing optional sprites. Nothing looks sprites up there yet (the yields' fallback is
+  the interface's pack, by the `Yields` layer itself).
 
 `validateDescriptor` is `readDescriptor` and then `notDrawnYet`, which names the first thing in a descriptor that the map
 cannot draw yet: a `box` city with an `overlay` colouring, or with an `anchor` (its sprite goes `inset` in from the
@@ -315,7 +332,12 @@ rival's city is drawn without walls, as the page is not told its improvements, #
 the sprite's `labels.size` anchor, left-aligned; and `Unworkable` fills the projection's `outline()`, a diamond on the
 isometric grid, rather than the tile's box. The interface's own art the map draws over its tiles (the yields, a city's
 unhappy citizen, the banners' icons, the action buttons' pictures) comes from `interfaceTileset()`, Civ1's, whatever the
-map is drawn with, through `Map.getInterfaceImage`. What the format itself refuses (a `corners` or
+map is drawn with, through `Map.getInterfaceImage`; except the yields of a pack that declares its own (`yields`, #999),
+which `Yields` takes from the map's pack, icon by icon, wherever that icon is imported (`hasPreloadedImage`), and from
+the interface's where not. It lays those out in a block centred in the pack's `area`, one row or two of
+`tileYieldGrid`'s columns, each icon its own size apart or closer, so the block fits the area while an icon does; the
+largest icon drawn sets the spacing. A pack without `yields` is drawn as before, each icon at `tileYieldIcons`' fraction
+of the tile's box. What the format itself refuses (a `corners` or
 `dither` family other than the coast) is refused by the schema.
 
 ## Runtime usage patterns

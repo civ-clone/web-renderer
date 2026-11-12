@@ -266,6 +266,29 @@ export interface TilesetUi {
   cursor: number;
 }
 
+/**
+ * A part of the tile, as parts of its width and height from its top-left corner: `{ x: 0, y: 0, width: 1, height: 1 }`
+ * is the whole tile.
+ */
+export interface TileArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * The pack's own icons for a worked square's yields on the map (#999), in place of the interface's `city/<yield>`:
+ * `sprite` with `{yield}` filled from `names`, by yield as the engine names it (`Food`, `Production`, `Trade`). A yield
+ * `names` leaves out, or whose icon isn't imported, is drawn with the interface's. The icons are laid out in `area`,
+ * centred, closer together the more there are; the whole tile when it is left out.
+ */
+export interface TilesetYields {
+  sprite: string;
+  names: { [yieldName: string]: string };
+  area?: TileArea;
+}
+
 /** Civ1's sizes, its 7px icons, 8px citizens and 13px torch doubled: what a tileset without `ui` is shown at. */
 export const defaultUi: TilesetUi = {
   icon: 14,
@@ -311,6 +334,11 @@ export interface TilesetDescriptor {
   families: TilesetFamilies;
   units: TilesetUnits;
   cities: TilesetCities;
+  /**
+   * The pack's own yield icons for the map. Left out, the map draws the interface's (`city/<yield>`) from the top-left
+   * corner of the tile's box, as Civ1's always has.
+   */
+  yields?: TilesetYields;
   /** Optional in the JSON: `validateDescriptor` fills in Civ1's sizes for any it leaves out. */
   ui: TilesetUi;
 }
@@ -773,6 +801,37 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
     refuse(
       'cities.labels.disorderIcon must have a whole x and y in px, within the tile.'
     );
+  }
+
+  // The pack's own yield icons: one per yield, each a sprite it lists, laid out within the tile.
+  if (descriptor.yields !== undefined) {
+    const { sprite, names: yieldNames, area } = descriptor.yields;
+
+    fills('yields.sprite', sprite, ['yield']);
+
+    if (!placeholders(sprite).includes('yield')) {
+      refuse(
+        'yields.sprite must have {yield}, so that each yield has an icon of its own.'
+      );
+    }
+
+    Object.values(yieldNames).forEach((word) => {
+      const icon = expandName(sprite, { yield: word });
+
+      if (!seen.has(icon)) {
+        refuse(
+          `yields names the icon "${icon}", which is not in assets.required or assets.optional.`
+        );
+      }
+    });
+
+    if (
+      area !== undefined &&
+      // A little leeway for parts of the tile that don't add up exactly in floating point.
+      (area.x + area.width > 1 + 1e-9 || area.y + area.height > 1 + 1e-9)
+    ) {
+      refuse('yields.area must be within the tile.');
+    }
   }
 
   // Civ1's size for each one `ui` leaves out, all of them when there is none. A new object each time, so no two

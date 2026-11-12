@@ -14,7 +14,8 @@ Civilization (1991), and `SP299.PIC` as well for the improvement and Wonder
 icons: the graphics are read from those files and kept in your browser's
 storage. Nothing is uploaded anywhere. To play on an isometric map, import
 `TERRAIN1.GIF`, `TERRAIN2.GIF`, `UNITS.GIF` and `CITIES.GIF` from Civilization II
-as well (optional), then choose the grid when starting a game.
+as well (optional), then choose the grid when starting a game; `ICONS.GIF` too
+gives that map Civilization II's own yield icons (also optional).
 
 On Brave, put Shields down while importing and playing, or the images come out
 wrong (Brave "farbles" canvas reads as a fingerprinting defence).

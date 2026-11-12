@@ -36,6 +36,9 @@ import i18nOptions from '@civ-clone/ui-game/app/i18nOptions';
 import { Colour, encodeGif } from './lib/encodeGif';
 import {
   civ2Definition,
+  civ2FilesToImport,
+  civ2MapFiles,
+  civ2OptionalFiles,
   civ2Pack,
 } from '@civ-clone/ui-tileset-civ2/lib/civ2Import';
 import civ2Json from '@civ-clone/ui-tileset-civ2/civ2.json';
@@ -700,7 +703,7 @@ const run = async (): Promise<void> => {
     expect(
       'the instructions ask for the required files, and the icons as well',
       window.element().querySelector('.import-assets p')?.textContent,
-      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional).'
+      'Upload SP257.PIC and TER257.PIC from the original Civilization files to extract assets (these will be stored locally). This only takes a moment. Add SP299.PIC as well for the improvement and Wonder icons. Add ASOUND.CVL for the music. To play on an isometric map, add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF from Civilization II as well (optional). Add ICONS.GIF too for Civilization II’s own food, shield and trade icons on that map (optional).'
     );
 
     await upload(window, [sheet('SP257.PIC')]);
@@ -928,6 +931,7 @@ const run = async (): Promise<void> => {
       names: (string | null)[];
     };
     type FileDefinition = {
+      optional?: boolean;
       grids: GridDefinition[];
       flags?: {
         x: number;
@@ -1092,9 +1096,21 @@ const run = async (): Promise<void> => {
     (globalThis as any).location = { reload: () => {} };
 
     expect(
-      'Civ2: the four sheets the extractor cuts up, and 289 sprites in them',
-      [Object.keys(definitions).sort(), allSprites.length],
-      [['CITIES.GIF', 'TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF'], 289]
+      "Civ2: the sheets the extractor cuts up, the map's four and the ones it marks optional, ICONS.GIF's yield icons among them (#999)",
+      [
+        civ2MapFiles().sort(),
+        civ2OptionalFiles(),
+        Object.keys(definitions).filter(
+          (file) => definitions[file]!.optional === true
+        ),
+        Object.keys(definitions).length,
+      ],
+      [
+        ['CITIES.GIF', 'TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF'],
+        ['ICONS.GIF'],
+        ['ICONS.GIF'],
+        5,
+      ]
     );
 
     const done = await importWith([
@@ -1117,7 +1133,7 @@ const run = async (): Promise<void> => {
         'Done! Please reload the page to utilize the fresh assets.',
         allSprites.map(civ2Key).sort(),
         true,
-        289,
+        allSprites.length,
         0,
       ]
     );
@@ -1283,6 +1299,62 @@ const run = async (): Promise<void> => {
       [written.length, civ2Encoded],
       [0, 0]
     );
+
+    // ICONS.GIF, the yield icons (#999): optional, so imported on its own it stores its icons and nothing else, and
+    //  isn't read again once they're in.
+    const icons = definitions['ICONS.GIF']!.grids.flatMap(({ path, names }) =>
+      names.flatMap((name) => (name === null ? [] : [civ2Key(path + name)]))
+    );
+
+    store.readMetadata = async (): Promise<null> => null;
+    store.keys = async (): Promise<string[]> =>
+      allSprites.map(civ2Key).filter((name) => !icons.includes(name));
+
+    const iconsDone = await importWith([sheets['ICONS.GIF']!], true, false);
+
+    expect(
+      "Civ2: ICONS.GIF on its own, not replacing, with the map's sprites in: its 12 icons are stored, and no record of anchors, as it has none to give",
+      [iconsDone, writtenNames().sort(), civ2Encoded],
+      [
+        'Done! Please reload the page to utilize the fresh assets.',
+        [...icons].sort(),
+        12,
+      ]
+    );
+    expect(
+      'Civ2: the icons are the 14 px ones and the small 10 px ones, by the names the yields take',
+      icons.map((name) => name.slice(civ2Pack.storage.prefix.length, -4)),
+      [
+        'icons/food',
+        'icons/shield',
+        'icons/trade',
+        'icons/luxury',
+        'icons/gold',
+        'icons/science',
+        'icons/small/food',
+        'icons/small/shield',
+        'icons/small/trade',
+        'icons/small/luxury',
+        'icons/small/gold',
+        'icons/small/science',
+      ]
+    );
+    expect(
+      "Civ2, not replacing: ICONS.GIF is wanted only while its icons aren't all in",
+      [
+        civ2Definition({ name: 'icons.gif' }, allSprites.map(civ2Key), false),
+        civ2Definition(
+          { name: 'ICONS.GIF' },
+          allSprites
+            .map(civ2Key)
+            .filter((name) => name !== civ2Key('icons/small/trade')),
+          false
+        )?.grids.map(({ path }) => path),
+      ],
+      [null, ['icons/small/']]
+    );
+
+    store.keys = async (): Promise<string[]> => allSprites.map(civ2Key);
 
     // A unit's anchors missing from the record: the units are cut again for them, and the rest kept.
     store.readMetadata = without((metadata) => {
@@ -1524,12 +1596,31 @@ const run = async (): Promise<void> => {
       null
     );
 
+    // ICONS.GIF alone (#999): some of Civ2's art is in, so the window says the map's sheets are still to import, and
+    //  not ICONS.GIF.
+    civ2State(civ2Json.assets.optional.length, civ2Required, null);
+
+    expect(
+      "Civ2 status: with only ICONS.GIF's icons in, the map's four sheets are still to import",
+      await opened(),
+      'Civilization II’s map art is not complete yet: add TERRAIN1.GIF, TERRAIN2.GIF, UNITS.GIF, and CITIES.GIF to play on the isometric map.'
+    );
+
     civ2State(civ2Required.length, [], fullMetadata);
 
     expect(
       'Civ2 status: with every sprite and the record of their anchors, it is complete',
       await opened(),
       'Civilization II’s map art is imported: new games can be played on the isometric map.'
+    );
+    expect(
+      'Civ2 status: ICONS.GIF is never a sheet still to import, as the map can do without it (#999): not with everything the map needs in, nor with nothing in',
+      [
+        civ2FilesToImport([], fullMetadata as any),
+        civ2FilesToImport(civ2Required, null),
+        civ2Json.assets.optional.every((name) => name.startsWith('icons/')),
+      ],
+      [[], ['TERRAIN1.GIF', 'TERRAIN2.GIF', 'UNITS.GIF', 'CITIES.GIF'], true]
     );
 
     civ2State(
