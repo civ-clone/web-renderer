@@ -854,7 +854,11 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
 
     document.body.append(holder);
 
-    const transport = { send: () => {} } as any,
+    const transport = {
+        send: () => {},
+        // The reports ask, and wait.
+        request: () => new Promise(() => {}),
+      } as any,
       gameMenu = new GameMenu(
         holder,
         () => ({ civilization: { _: 'Roman' } } as any),
@@ -916,6 +920,7 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
           ['Happiness Report', 'F4', false],
           ['Trade Report', 'F5', false],
           ['Science Report', 'F6', false],
+          ['Wonders of the World', 'F7', false],
           ['Top Cities in the World', 'F8', false],
           ['Civilization Score', 'F9', false],
           ['Find City', '/', false],
@@ -960,6 +965,29 @@ const menuOf = (options: Partial<UiMenuOptions> = {}, ran: string[] = []) =>
       ['Reveal Map', 'Grant Advance', 'Create Unit', 'Grant Gold']
     );
     openMenu()!.close();
+
+    // The Wonders of the World (#992), beside Top Cities: chosen, it opens its report.
+    click(1);
+
+    const wondersRow = rows(openMenu()!).find(
+      (row) =>
+        row.querySelector('.ui-menu-label')!.textContent ===
+        'Wonders of the World'
+    )!;
+
+    underPointer = wondersRow;
+    pointer('pointermove');
+    pointer('pointerdown', wondersRow);
+    pointer('pointerup', wondersRow);
+
+    const wondersReport = document.querySelector('dialog.wonders-report');
+
+    expect(
+      'Wonders of the World opens its report, and the menu closes',
+      [wondersReport !== null, openMenu()],
+      [true, null]
+    );
+    wondersReport?.remove();
 
     holder.remove();
   }

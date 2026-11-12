@@ -7,6 +7,7 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
+  openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
 import ConfirmationWindow from '@civ-clone/ui-component-window/ConfirmationWindow';
@@ -214,6 +215,13 @@ export class GameMenu extends Element {
           key: windowKey('science-report'),
           action: () => {
             new ScienceReport(this.#getPlayer());
+          },
+        },
+        {
+          label: t('GameMenu.wonders-report'),
+          key: windowKey('wonders-report'),
+          action: () => {
+            openWondersReport(this.#getPlayer(), this.#portal, this.#transport);
           },
         },
         {

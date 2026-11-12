@@ -11,6 +11,7 @@ import {
   CivilizationPowerRow,
   GameOverDetails,
   TopCitiesRow,
+  WondersRow,
 } from './reports';
 import { RequirementData } from './requirements';
 import { CivilopediaEntry, UnavailableBuildItem } from './civilopedia';
@@ -208,6 +209,8 @@ declare global {
     saveFailed: TransportData<{ message: string }, never>;
     // The Top Cities in the World report (#124): the UI asks for up to this many rows.
     topCities: TransportData<TopCitiesRow[], number>;
+    // The Wonders of the World report (#992): every Wonder built, in the Wonders' own order.
+    wonders: TransportData<WondersRow[], null>;
     // The worker has accepted `EndTurn`: nothing the UI sends is listened for until `turnStarted`.
     turnEnded: TransportData<null, never>;
     // The new turn is in the UI's data and the worker is listening for actions again.

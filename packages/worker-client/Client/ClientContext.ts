@@ -66,7 +66,7 @@ export interface ClientRegistries {
   turn: Turn;
   unitLosses: Pick<UnitLossRegistry, 'getByPlayer'>;
   units: Pick<UnitRegistry, 'getBy' | 'getByPlayer' | 'getByTile'>;
-  wonders: Pick<WonderRegistry, 'getByCity'>;
+  wonders: Pick<WonderRegistry, 'entries' | 'getByCity'>;
   year: Year;
 }
 

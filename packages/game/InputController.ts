@@ -9,6 +9,7 @@ import {
   openMilitaryReport,
   openTopCities,
   openTradeReport,
+  openWondersReport,
 } from '@civ-clone/ui-reports/components/reports';
 import Civilopedia from '@civ-clone/ui-reports/components/Civilopedia';
 import GamePortal from './GamePortal';
@@ -28,7 +29,7 @@ const withoutCapsLock = (key: string, event: KeyboardEvent): string =>
       : key.toLowerCase()
     : key;
 
-// The game's keyboard: the leader screens (F1/F3/F4/F5/F6/F8/F9), the Civilopedia (`?`), a key passed on to a modal
+// The game's keyboard: the leader screens (F1 to F9), the Civilopedia (`?`), a key passed on to a modal
 //  window, Shift+S to save, the unit keys, Escape, Enter to end the turn, Tab to the first action, `c`/`w`/`t`/`y`,
 //  `+`/`-` for the trade rates, and the Shift+5, Shift+6 cheat sequence.
 //
@@ -100,10 +101,10 @@ export class InputController {
       F4: () => openHappinessReport(data().player, portal, transport),
       F5: () => openTradeReport(data().player, portal, transport),
       F6: () => new ScienceReport(data().player),
+      F7: () => openWondersReport(data().player, portal, transport),
       F8: () => openTopCities(data().player, portal, transport),
       F9: () => openCivilizationScore(transport),
-      // Civ1 opened its Civilopedia from the menu alone (#183). F7 is free, but it is Civ1's Wonders of the World,
-      //  still to come.
+      // Civ1 opened its Civilopedia from the menu alone (#183).
       '?': () => Civilopedia.open(transport),
     };
 

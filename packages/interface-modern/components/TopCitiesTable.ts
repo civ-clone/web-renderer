@@ -50,27 +50,33 @@ const wonderName = (wonder: string): string =>
   t(`${wonder}.name`, { defaultValue: wonder, ns: 'wonder' });
 
 /**
- * One of your own cities, for a row: the rows carry no ids (a city you haven't seen can't be matched to anything), so
- *  it's found by its name and its founder among your cities, and only when you own it. Two of yours with the same
- *  name and founder are told apart by their size; when that doesn't settle it, there's no match rather than a guess.
+ * One of your own cities, by its name and its founder (a report's rows carry no ids: a city you haven't seen can't be
+ *  matched to anything). Two of yours with the same name and founder are told apart by `size`, when it's given; when
+ *  that doesn't settle it, there's no match rather than a guess.
  */
-export const ownCity = (row: TopCitiesRow, player: Player): CityData | null => {
-  if (row.city === null || row.owner?.civilization !== player.civilization._) {
-    return null;
-  }
-
-  const named = player.cities.filter(
+export const ownCityNamed = (
+  named: { name: string; civilization: string },
+  player: Player,
+  size: number | null = null
+): CityData | null => {
+  const found = player.cities.filter(
       (city) =>
-        city.name === row.city!.name &&
-        city.originalPlayer.civilization._ === row.city!.civilization
+        city.name === named.name &&
+        city.originalPlayer.civilization._ === named.civilization
     ),
     candidates =
-      named.length > 1
-        ? named.filter((city) => city.growth.size === row.size)
-        : named;
+      found.length > 1 && size !== null
+        ? found.filter((city) => city.growth.size === size)
+        : found;
 
   return candidates.length === 1 ? candidates[0]! : null;
 };
+
+/** One of your own cities, for a row, and only when you own it (see `ownCityNamed`). */
+export const ownCity = (row: TopCitiesRow, player: Player): CityData | null =>
+  row.city === null || row.owner?.civilization !== player.civilization._
+    ? null
+    : ownCityNamed(row.city, player, row.size);
 
 /**
  * Top Cities in the World (F8) under the new interface (#744): the ten best cities by Civ1's reckoning, with their

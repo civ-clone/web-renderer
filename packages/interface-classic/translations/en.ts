@@ -30,6 +30,13 @@ i18next.addResources('en', 'default', {
   'MilitaryReport.stats':
     '({{attack, number}}/{{defence, number}}/{{movement, number}}/{{visibility, number}})',
   'TopCitiesReport.row': '{{rank, number}}. {{city}} ({{civilization}})',
+  // As Civ1 words them (#992): "Hoover Dam in Washington. (American)", "Hoover Dam (Destroyed)". The Wonders that
+  //  take "The … of" ("The Pyramids of Thebes.") say so in their own translations, by the Wonder as the context:
+  //  `WondersReport.wonder_Pyramids`, `WondersReport.place_Pyramids`.
+  'WondersReport.wonder': '{{- wonder}}',
+  'WondersReport.place': '{{- wonder}} in {{- city}}',
+  'WondersReport.standing': '{{- place}}. ({{- civilization}})',
+  'WondersReport.destroyed': '{{- wonder}} (Destroyed)',
   'TradeReport.ImprovementList.cost': '{{- icon}} {{total, number}}',
   'TradeReport.ImprovementList.item': '{{count, number}} &times; {{name}}',
   'TradeReport.ImprovementList.income-title': 'Total income',

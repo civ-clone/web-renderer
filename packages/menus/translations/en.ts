@@ -34,6 +34,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.civilization-score': 'Civilization Score',
   'GameMenu.civilopedia': 'Civilopedia',
   'GameMenu.trade-report': 'Trade Report',
+  'GameMenu.wonders-report': 'Wonders of the World',
   'GameOptions.title': '$t(GameMenu.options)',
   'GameOptions.auto-end-turn': 'Auto End of Turn?',
   // The new interface's Assets row (#749): whether the tileset's sprites are imported, and the import.

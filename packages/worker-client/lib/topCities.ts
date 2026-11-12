@@ -87,6 +87,49 @@ export type TopCitiesDependencies = {
   hasMet: (player: Player) => boolean;
 };
 
+// A civilization as the reports name it: its type name and its colours, if it has any.
+export const civilizationOf = (
+  player: Player
+): { civilization: string; colors: [string, string] | null } => {
+  const colors = player
+    .civilization()
+    .attributes()
+    .find((attribute) => attribute.name() === 'colors');
+
+  return {
+    civilization: typeNameOf(player.civilization().sourceClass()),
+    colors: colors ? (colors.value() as [string, string]) : null,
+  };
+};
+
+export type CityKnowledgeDependencies = Pick<
+  TopCitiesDependencies,
+  'playerWorlds' | 'hasMet'
+>;
+
+/**
+ * What `player` knows of a city, as the reports that name other civilizations' cities tell it (#124, #992): whether
+ *  it has seen the city's tile, and whether it has met the city's owner. `met` asks about each owner once (#503).
+ */
+export const cityKnowledge = (
+  player: Player,
+  { playerWorlds, hasMet }: CityKnowledgeDependencies
+): { seen: (city: City) => boolean; met: (owner: Player) => boolean } => {
+  const playerWorld = playerWorlds.getByPlayer(player),
+    metPlayers = new Map<Player, boolean>();
+
+  return {
+    seen: (city: City): boolean => playerWorld.getByTile(city.tile()) !== null,
+    met: (owner: Player): boolean => {
+      if (!metPlayers.has(owner)) {
+        metPlayers.set(owner, hasMet(owner));
+      }
+
+      return metPlayers.get(owner)!;
+    },
+  };
+};
+
 // What `player` knows about every city in the world, in founding order, ready for `topCitiesRows` to rank.
 export const topCitiesEntries = (
   player: Player,
@@ -99,8 +142,7 @@ export const topCitiesEntries = (
     hasMet,
   }: TopCitiesDependencies
 ): TopCitiesEntry[] => {
-  const playerWorld = playerWorlds.getByPlayer(player),
-    metPlayers = new Map<Player, boolean>();
+  const knowledge = cityKnowledge(player, { playerWorlds, hasMet });
 
   return cities.entries().map((city: City) => {
     const owner = city.player(),
@@ -108,25 +150,14 @@ export const topCitiesEntries = (
       [unhappy, content, happy] = workerRules().citizenMoods(
         cityGrowth,
         specialists
-      ),
-      colors = owner
-        .civilization()
-        .attributes()
-        .find((attribute) => attribute.name() === 'colors');
-
-    if (!metPlayers.has(owner)) {
-      metPlayers.set(owner, hasMet(owner));
-    }
+      );
 
     return {
       name: city.name(),
       originalCivilization: typeNameOf(
         city.originalPlayer().civilization().sourceClass()
       ),
-      owner: {
-        civilization: typeNameOf(owner.civilization().sourceClass()),
-        colors: colors ? (colors.value() as [string, string]) : null,
-      },
+      owner: civilizationOf(owner),
       size: cityGrowths.getByCity(city).size(),
       citizens: {
         happy,
@@ -139,8 +170,8 @@ export const topCitiesEntries = (
       wonders: wonders
         .getByCity(city)
         .map((wonder) => typeNameOf(wonder.sourceClass())),
-      seen: playerWorld.getByTile(city.tile()) !== null,
-      met: metPlayers.get(owner)!,
+      seen: knowledge.seen(city),
+      met: knowledge.met(owner),
     };
   });
 };

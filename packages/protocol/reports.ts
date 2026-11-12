@@ -117,6 +117,28 @@ export type TopCitiesRow = {
   } | null;
 };
 
+// One row of the Wonders of the World report (#992), in the Wonders' own order. Like a Top Cities row, nothing in it
+//  identifies a city or a player beyond what is shown.
+export type WondersRow = {
+  // The Wonder's type name.
+  wonder: string;
+  // Lost with its city: it then has no city and no owner.
+  destroyed: boolean;
+  // The view's own (#607).
+  own: boolean;
+  // Only for a city whose tile the player has seen.
+  city: {
+    name: string;
+    // The founder's civilization, whose list the name comes from (`Generic.city-name`).
+    civilization: string;
+  } | null;
+  // The city's owner now, only for a civilization the player has met.
+  owner: {
+    civilization: string;
+    colors: [string, string] | null;
+  } | null;
+};
+
 // How the game ended, for the player's ending window (#176): worked out in the worker, so the UI only draws it.
 
 // A civilization as the window names it: its civilization and leader, by type name, for the UI to translate.

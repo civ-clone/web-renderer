@@ -1,5 +1,5 @@
-// What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities and intelligence reports,
-//  the Civilization Score and the sidebar's Power list (#701, #708), what a city can and can't build and a unit's actions, each
+// What the UI asks the worker for (#449), moved out of `DataTransferClient`: the Top Cities, Wonders (#992) and
+//  intelligence reports, the Civilization Score and the sidebar's Power list (#701, #708), what a city can and can't build and a unit's actions, each
 //  answered on the channel it was asked on.
 //  The client's `topCities` and `civilizationScore` are two of these: `topCities` for its test (`topCities.ts`), and
 //  `civilizationScore` for the ending window (`gameEnd.ts`).
@@ -19,7 +19,14 @@ import {
   TopCitiesRow,
   CivilizationScore,
   CivilizationPowerRow,
+  WondersRow,
 } from '@civ-clone/ui-protocol/reports';
+import {
+  builtWonders,
+  wonderOrder,
+  wondersEntries,
+  wondersRows,
+} from '../lib/wonders';
 import { civilizationScore as civilizationScoreOf } from '../lib/civilizationScore';
 import { civilizationPowerRows } from '../lib/civilizationPower';
 import { ClientContext, Registries } from './ClientContext';
@@ -44,7 +51,7 @@ export type RequestsContext = Pick<
   // The unit the UI has the actions of (#323), which `unitActions` changes.
   | 'actions'
   | 'patches'
-  // Each handed whole to the Top Cities report or the Civilization Score.
+  // Each handed whole to the Top Cities report, the Wonders report or the Civilization Score.
   | 'cities'
   | 'cityGrowths'
   | 'gameResults'
@@ -54,7 +61,7 @@ export type RequestsContext = Pick<
   | 'rules'
   | 'specialists'
   | 'wonders'
-  // The Military report's (#405).
+  // The Military report's (#405), and the Wonders' order (#992).
   | 'availableCityBuildItems'
 > &
   Registries<{
@@ -78,6 +85,17 @@ export const topCities = (
       hasMet: (player: Player) => ctx.hasMet(player),
     }),
     Number.isInteger(limit) && limit > 0 ? limit : defaultTopCitiesLimit
+  );
+
+// Every Wonder built (#992), in the order the game gives the Wonders.
+export const wonders = (ctx: RequestsContext): WondersRow[] =>
+  wondersRows(
+    wondersEntries(ctx.player(), builtWonders({ wonders: ctx.wonders }), {
+      playerWorlds: ctx.playerWorlds,
+      hasMet: (player: Player) => ctx.hasMet(player),
+      owns: (player: Player) => ctx.view.owns(player),
+    }),
+    wonderOrder(ctx.availableCityBuildItems)
   );
 
 export const civilizationScore = (ctx: RequestsContext): CivilizationScore =>
@@ -139,6 +157,9 @@ export const registerRequests = (
   disposers.push(
     answer(transport, 'topCities', (limit) => topCities(ctx, limit))
   );
+
+  // The Wonders of the World (F7, #992), worked out here for the same reason.
+  disposers.push(answer(transport, 'wonders', () => wonders(ctx)));
 
   // The engine's `Score` rules add it up (#149).
   disposers.push(
