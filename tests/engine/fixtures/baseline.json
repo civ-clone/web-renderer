@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1127,
+        "total": 1162,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -221,6 +221,7 @@
           "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
+          "UnitTraits": 35,
           "Unsupported": 2,
           "Updated": 1,
           "ValidateMove": 2,
@@ -362,7 +363,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1127,
+        "total": 1162,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -469,6 +470,7 @@
           "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
+          "UnitTraits": 35,
           "Unsupported": 2,
           "Updated": 1,
           "ValidateMove": 2,
@@ -803,7 +805,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1127,
+        "total": 1162,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -910,6 +912,7 @@
           "TurnStart": 13,
           "Unit": 1,
           "UnitBribed": 1,
+          "UnitTraits": 35,
           "Unsupported": 2,
           "Updated": 1,
           "ValidateMove": 2,
