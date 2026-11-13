@@ -3,7 +3,7 @@
 //  browser.
 //
 //   sets: { [id]: { plugins: string[], extends?: string, rules?: string } }
-//   plugins: [{ name, dependencies: string[], conflicts: string[] }], every plugin installed
+//   plugins: [{ name, dependencies: string[], conflicts: string[], importsOnly?: string[] }], every plugin installed
 //   dependenciesOf: (name) => string[] | null, any other installed package's, or null for one that isn't installed
 //
 // A set's plugins are those it names, the ones the set it `extends` names, and every installed plugin any of them
@@ -11,6 +11,11 @@
 //  entry point, such as `library-civilization`, which brings in the civilizations), but never through a package left
 //  out by `excludes`. They load in package name order (#474): rules at the same
 //  priority run in the order they were registered, so the order is part of how the game plays.
+//
+// A package's `civ-clone.importsOnly` lists dependencies it only imports modules from, and doesn't need loaded as
+//  plugins: the walk doesn't follow them from that package. That keeps a plugin shared between sets, such as an AI
+//  that imports one rule set's units to reason about them, from bringing that rule set into every set it's in. Only
+//  that one step is skipped: a package listed there is still in a set that names it, or reaches it some other way.
 //
 // Anything wrong is a problem, and the plugin list isn't written: a set naming a plugin that isn't installed, two
 //  plugins in one set where one says it conflicts with the other (`civ-clone.conflicts` in its `package.json`), a set
@@ -24,6 +29,10 @@ const byName = (a, b) => {
 
   return x < y ? -1 : x > y ? 1 : 0;
 };
+
+// The dependencies a set's walk follows from a package: all of them, but those it only imports.
+const followedDependencies = ({ dependencies = [], importsOnly = [] }) =>
+  dependencies.filter((name) => !importsOnly.includes(name));
 
 const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
   const installed = new Map(plugins.map((plugin) => [plugin.name, plugin])),
@@ -85,7 +94,7 @@ const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
 
       if (installed.has(name)) {
         members.add(name);
-        queue.push(...installed.get(name).dependencies);
+        queue.push(...followedDependencies(installed.get(name)));
 
         continue;
       }
@@ -121,4 +130,4 @@ const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
   return { sets: resolved, problems };
 };
 
-module.exports = { byName, resolvePluginSets };
+module.exports = { byName, followedDependencies, resolvePluginSets };

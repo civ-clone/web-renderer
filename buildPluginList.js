@@ -1,7 +1,11 @@
 const fsModule = require('fs');
 const globModule = require('glob');
 const path = require('path');
-const { byName, resolvePluginSets } = require('./tools/lib/pluginSets');
+const {
+  byName,
+  followedDependencies,
+  resolvePluginSets,
+} = require('./tools/lib/pluginSets');
 
 // Each package's plugin entry point, sorted by package directory name.
 //
@@ -57,6 +61,8 @@ const getScriptEntrypoints = (glob = globModule, fs = fsModule) => {
               ...(packageDetails.peerDependencies ?? {}),
             }),
             conflicts: (packageDetails['civ-clone'] ?? {}).conflicts ?? [],
+            // Those of them it only imports modules from, which a set doesn't load for it.
+            importsOnly: (packageDetails['civ-clone'] ?? {}).importsOnly ?? [],
           });
 
         if (typeof packageDetails.main === 'string') {
@@ -108,7 +114,8 @@ const unreadable = new Set();
 
 const config = require('./package.json')['civ-clone'] ?? {},
   excluded = new Set(config.excludes ?? []),
-  // A library's dependencies, followed to the plugins beyond it; never an excluded package's.
+  // A library's dependencies, followed to the plugins beyond it, but not those it only imports; never an excluded
+  //  package's.
   dependenciesOf = (name) => {
     const directory = name.replace(/^@civ-clone\//, '');
 
@@ -130,9 +137,12 @@ const config = require('./package.json')['civ-clone'] ?? {},
         )
       );
 
-      return Object.keys({
-        ...(details.dependencies ?? {}),
-        ...(details.peerDependencies ?? {}),
+      return followedDependencies({
+        dependencies: Object.keys({
+          ...(details.dependencies ?? {}),
+          ...(details.peerDependencies ?? {}),
+        }),
+        importsOnly: (details['civ-clone'] ?? {}).importsOnly ?? [],
       });
     } catch (e) {
       // An engine package a set reaches but that isn't installed at the root (pnpm hoists every `@civ-clone/*` there)

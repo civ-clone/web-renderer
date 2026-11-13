@@ -28,7 +28,10 @@ import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegis
 import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
-const { resolvePluginSets } = require('../../tools/lib/pluginSets');
+const {
+  followedDependencies,
+  resolvePluginSets,
+} = require('../../tools/lib/pluginSets');
 
 type Report = {
   loaded: boolean;
@@ -323,6 +326,85 @@ if (scenario !== null) {
       "set two extends none, which there isn't",
       'set two has no worker rules (`rules`)',
       '@x/b is installed, but no set loads it: add it to a set, or to `excludes`',
+    ]
+  );
+
+  // What a package only imports (`civ-clone.importsOnly`) isn't followed from it, but is still loaded when named or
+  //  reached another way.
+  const importer = (
+      name: string,
+      dependencies: string[],
+      importsOnly: string[]
+    ) => ({ ...plugin(name, dependencies), importsOnly }),
+    importing = [
+      importer('@x/ai', ['@x/shared', '@x/rules-a-unit'], ['@x/rules-a-unit']),
+      plugin('@x/shared'),
+      plugin('@x/rules-a-unit', ['@x/rules-a-world']),
+      plugin('@x/rules-a-world'),
+      plugin('@x/through-library'),
+      plugin('@x/only-imported-by-library'),
+    ],
+    importingLibraries = (name: string) =>
+      name === '@x/library'
+        ? followedDependencies({
+            dependencies: ['@x/through-library', '@x/only-imported-by-library'],
+            importsOnly: ['@x/only-imported-by-library'],
+          })
+        : null,
+    setsOf = (sets: { [id: string]: { plugins: string[] } }) =>
+      resolvePluginSets(
+        Object.fromEntries(
+          Object.entries(sets).map(([id, set]) => [
+            id,
+            { rules: '@x/rules', ...set },
+          ])
+        ),
+        [
+          ...importing,
+          importer('@x/importing-library-user', ['@x/library'], []),
+          importer('@x/plain', ['@x/rules-a-unit'], []),
+        ],
+        importingLibraries
+      ).sets.map(({ id, plugins }: any) => [id, plugins]);
+
+  expect(
+    'a dependency a plugin only imports is not loaded with it, nor what that dependency depends on',
+    setsOf({ b: { plugins: ['@x/ai'] } }),
+    [['b', ['@x/ai', '@x/shared']]]
+  );
+  expect(
+    'but it is when the set names it, or another plugin in the set depends on it',
+    setsOf({
+      a: { plugins: ['@x/ai', '@x/rules-a-unit'] },
+      plain: { plugins: ['@x/ai', '@x/plain'] },
+    }),
+    [
+      ['a', ['@x/ai', '@x/rules-a-unit', '@x/rules-a-world', '@x/shared']],
+      [
+        'plain',
+        [
+          '@x/ai',
+          '@x/plain',
+          '@x/rules-a-unit',
+          '@x/rules-a-world',
+          '@x/shared',
+        ],
+      ],
+    ]
+  );
+  expect(
+    'and a library that only imports a package does not bring it in either',
+    setsOf({ library: { plugins: ['@x/importing-library-user'] } }),
+    [['library', ['@x/importing-library-user', '@x/through-library']]]
+  );
+  expect(
+    'and a package only some other package imports is still a plugin no set loads',
+    resolvePluginSets(
+      { b: { rules: '@x/rules', plugins: ['@x/ai'] } },
+      importing.slice(0, 3)
+    ).problems,
+    [
+      '@x/rules-a-unit is installed, but no set loads it: add it to a set, or to `excludes`',
     ]
   );
 
