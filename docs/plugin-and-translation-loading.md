@@ -20,7 +20,10 @@ The project uses generated import lists rather than dynamic runtime discovery in
 - Works out the **plugin sets** (#668) from `civ-clone.sets` (`tools/lib/pluginSets.js`). A set names the plugins it
   starts from (`plugins`), optionally a set it adds to (`extends`), and its worker rules (`rules`, #865: its own or the
   extended set's). Its plugins are those it names and every installed plugin they depend on, however indirectly
-  (`dependencies` and `peerDependencies`, followed through libraries too), in package name order (#474). civ.one's are
+  (`dependencies` and `peerDependencies`, followed through libraries too), in package name order (#474). A package's
+  `civ-clone.importsOnly` lists the dependencies it only imports modules from: they aren't followed from that package,
+  so a plugin shared between sets (such as `simple-ai-client`, which imports Civ1's units) doesn't bring another rule
+  set's plugins with it; one that a set names, or reaches another way, is still in it. civ.one's are
   `civ1`, Civ1's own plugins, and `civ1-enhanced`, which adds `civ1-enhanced` and, through it, the world
   civilizations: every plugin installed. The generator stops, saying why, when a set names a plugin that isn't
   installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's own `package.json`), a plugin
