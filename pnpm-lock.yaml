@@ -99,7 +99,7 @@ importers:
         version: https://codeload.github.com/civ-clone/civ1-game-year/tar.gz/97805ad0c70d909eb6a3ace0170490602fdb249a
       '@civ-clone/civ1-goody-hut':
         specifier: github:civ-clone/civ1-goody-hut
-        version: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/c09e416dca8585c9de1edadd15b2627a62e3952d
+        version: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/ad521a2d4e642a9b055d120eb18298de58049a22
       '@civ-clone/civ1-government':
         specifier: github:civ-clone/civ1-government
         version: https://codeload.github.com/civ-clone/civ1-government/tar.gz/2899bb858c670c110ddc3f69d5c862b81504024a
@@ -257,8 +257,8 @@ importers:
         specifier: ^0.1.2
         version: 0.1.2
       '@civ-clone/library-science':
-        specifier: ^0.1.0
-        version: 0.1.0
+        specifier: ^0.1.1
+        version: 0.1.1
       '@civ-clone/library-unit':
         specifier: ^0.1.15
         version: 0.1.15
@@ -1113,6 +1113,9 @@ packages:
   '@civ-clone/base-goody-hut-advance@0.1.3':
     resolution: {integrity: sha512-CXeutPlCUUdsmvYASzCOf2TpnDIJ9ascM49Ro7VR1YkAb+gNH61ECTzg9RM815zfdYEglB5SqjEM8G8ewDQCUQ==}
 
+  '@civ-clone/base-goody-hut-barbarians@0.1.0':
+    resolution: {integrity: sha512-rer20mEbN0vEWK+M8+PVJkSkxrpLlscM/fQJJv9kVuD9Rm5RrhUm9L2+bErfcnKs1C3Wz/DU+3+eTuSRBkQBag==}
+
   '@civ-clone/base-goody-hut-city@0.1.2':
     resolution: {integrity: sha512-/DtBHGQzMcIha5uq0PdyS9RwToMP4Bs4hyCwA5BCxj29tgeuF+rzbL8ZlU4dl9wpVNlpY/Sdu7OrNnSErln6NQ==}
 
@@ -1181,6 +1184,9 @@ packages:
 
   '@civ-clone/base-player-action-choose-government@0.1.0':
     resolution: {integrity: sha512-+qdopIDONK+n/7NAjh4baiQvNdrFA+WGRw92TQEuSEhVX7GkmDyRWondgVcp4o/04vNanqHygWP8gVdIyKk+yQ==}
+
+  '@civ-clone/base-player-action-choose-research@0.1.0':
+    resolution: {integrity: sha512-JAhNIYodyFka+RXASqTMVKdnfTmtf12JBCuVonKGLLQCJKot0D0K2ga7ydUQ+TDQJftR95+NykBD2XVNnfJpAA==}
 
   '@civ-clone/base-player-action-end-turn@0.1.0':
     resolution: {integrity: sha512-4vbzFxn6SLl08ERj7T8trYpIjCixr50goXcNqGH1tGfDW8ockgfGhyy4XbTiBRKMXqwED9KjaxybYTfcRIoIEg==}
@@ -1961,9 +1967,9 @@ packages:
     resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ1-game/tar.gz/dcc9c748b2fbf86e01a118c6dda3ff6c717c35ec}
     version: 0.1.1
 
-  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/c09e416dca8585c9de1edadd15b2627a62e3952d':
-    resolution: {gitHosted: true, integrity: sha512-RZ50a5obPQOJgAkVVby26QIVprYbei4GtAmFJAjAly3yWFqBv+4hYC/6DVCah3Rroe68CkrQSpL+16PEwDCIjw==, tarball: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/c09e416dca8585c9de1edadd15b2627a62e3952d}
-    version: 0.1.7
+  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/ad521a2d4e642a9b055d120eb18298de58049a22':
+    resolution: {gitHosted: true, integrity: sha512-xhJE68j0LjTsJF9cLUxGBRKqdKFpWSbGDUTpPCDBF7rZmjLMSCCBBzPMHfdkh/ninZ+j8sb4USDKKwc+gv5waQ==, tarball: https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/ad521a2d4e642a9b055d120eb18298de58049a22}
+    version: 0.1.8
 
   '@civ-clone/civ1-government@https://codeload.github.com/civ-clone/civ1-government/tar.gz/2899bb858c670c110ddc3f69d5c862b81504024a':
     resolution: {gitHosted: true, integrity: sha512-ynvMUPGyB2FmalLSppGUMz9RWT9Kr1bKD6ucbwhw6vY1SG1DuSR0ilZF0s6JPc/jmYqTbLzAK/HfNrAjgsC0Bw==, tarball: https://codeload.github.com/civ-clone/civ1-government/tar.gz/2899bb858c670c110ddc3f69d5c862b81504024a}
@@ -2168,8 +2174,8 @@ packages:
   '@civ-clone/library-government@0.1.2':
     resolution: {integrity: sha512-wX6uqxjglPKBaALcmpSvovbaqO2XZDvNdBe8k83sA6ttvLlRDZ91nNETK/3k8d6wEGMUbUeGvsZvuUHUlHLF2g==}
 
-  '@civ-clone/library-science@0.1.0':
-    resolution: {integrity: sha512-4nBw38Wa64HniBNKmGtVPQMALeDQzRkjvI2C6nyfHjrQf1jHo8LQWlJBuCDXZ6JCz+JNsXJPskD3qQ2PBbELyg==}
+  '@civ-clone/library-science@0.1.1':
+    resolution: {integrity: sha512-Rsk55zJPeBWvrr4cwe9o0mBgTaxoD5GCQyW5ykN31zgjUyZxgqUvBL29UdBWf1z7uwMN/penwTHMSgXrBgglmw==}
 
   '@civ-clone/library-unit@0.1.15':
     resolution: {integrity: sha512-LayVGqRsxEtrD0+9JP0HSkZT7zk/sMESC/TyxSGjlMCnl9CLnNOdgZA39IVd6K7NnN7vQRbujTIrUodkApLEbQ==}
@@ -3432,6 +3438,12 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
       '@civ-clone/core-unit': 0.1.31
 
+  '@civ-clone/base-goody-hut-barbarians@0.1.0':
+    dependencies:
+      '@civ-clone/core-goody-hut': 0.1.7
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-unit': 0.1.31
+
   '@civ-clone/base-goody-hut-city@0.1.2':
     dependencies:
       '@civ-clone/core-city': 0.1.24
@@ -3574,6 +3586,10 @@ snapshots:
   '@civ-clone/base-player-action-choose-government@0.1.0':
     dependencies:
       '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-player': 0.1.10
+
+  '@civ-clone/base-player-action-choose-research@0.1.0':
+    dependencies:
       '@civ-clone/core-player': 0.1.10
 
   '@civ-clone/base-player-action-end-turn@0.1.0':
@@ -4910,7 +4926,7 @@ snapshots:
       '@civ-clone/base-unit-action-embark': 0.1.6
       '@civ-clone/base-unit-type-naval-transport': 0.1.3
       '@civ-clone/civ1-difficulty': https://codeload.github.com/civ-clone/civ1-difficulty/tar.gz/c9035b7909ec2169598c905de909d8344913ee5b
-      '@civ-clone/civ1-goody-hut': https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/c09e416dca8585c9de1edadd15b2627a62e3952d
+      '@civ-clone/civ1-goody-hut': https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/ad521a2d4e642a9b055d120eb18298de58049a22
       '@civ-clone/civ1-government': https://codeload.github.com/civ-clone/civ1-government/tar.gz/2899bb858c670c110ddc3f69d5c862b81504024a
       '@civ-clone/civ1-player': https://codeload.github.com/civ-clone/civ1-player/tar.gz/a291b9696ca09287bb2a2306c567d6fae661c2ca
       '@civ-clone/civ1-unit': https://codeload.github.com/civ-clone/civ1-unit/tar.gz/835709d974903a34e3dd8d22bcc01776fe831b30
@@ -5221,11 +5237,12 @@ snapshots:
       - encoding
       - supports-color
 
-  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/c09e416dca8585c9de1edadd15b2627a62e3952d':
+  '@civ-clone/civ1-goody-hut@https://codeload.github.com/civ-clone/civ1-goody-hut/tar.gz/ad521a2d4e642a9b055d120eb18298de58049a22':
     dependencies:
       '@civ-clone/base-civilization-barbarian': 0.1.1
       '@civ-clone/base-goody-hut': 0.1.0
       '@civ-clone/base-goody-hut-advance': 0.1.3
+      '@civ-clone/base-goody-hut-barbarians': 0.1.0
       '@civ-clone/base-goody-hut-city': 0.1.2
       '@civ-clone/base-goody-hut-gold': 0.1.4
       '@civ-clone/base-goody-hut-unit': 0.1.8
@@ -5264,7 +5281,7 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
       '@civ-clone/core-turn-based-game': 0.1.10
       '@civ-clone/library-government': 0.1.2
-      '@civ-clone/library-science': 0.1.0
+      '@civ-clone/library-science': 0.1.1
 
   '@civ-clone/civ1-player@https://codeload.github.com/civ-clone/civ1-player/tar.gz/a291b9696ca09287bb2a2306c567d6fae661c2ca':
     dependencies:
@@ -5330,7 +5347,7 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
       '@civ-clone/core-turn-based-game': 0.1.10
       '@civ-clone/core-yield': 0.1.6
-      '@civ-clone/library-science': 0.1.0
+      '@civ-clone/library-science': 0.1.1
 
   '@civ-clone/civ1-score@https://codeload.github.com/civ-clone/civ1-score/tar.gz/3442c9b929db567299b90aba91ca2e000ad63fed':
     dependencies:
@@ -5542,7 +5559,7 @@ snapshots:
       '@civ-clone/library-city': 0.1.4
       '@civ-clone/library-diplomacy': 0.1.4
       '@civ-clone/library-government': 0.1.2
-      '@civ-clone/library-science': 0.1.0
+      '@civ-clone/library-science': 0.1.1
       '@civ-clone/library-unit': 0.1.15
     transitivePeerDependencies:
       - encoding
@@ -5647,7 +5664,7 @@ snapshots:
       '@civ-clone/core-world-generator': 0.1.7
       '@civ-clone/core-yield': 0.1.6
       '@civ-clone/library-government': 0.1.2
-      '@civ-clone/library-science': 0.1.0
+      '@civ-clone/library-science': 0.1.1
       '@civ-clone/library-world': 0.1.0
     transitivePeerDependencies:
       - encoding
@@ -6135,9 +6152,10 @@ snapshots:
       '@civ-clone/base-player-action-choose-government': 0.1.0
       '@civ-clone/base-player-action-revolution': 0.1.1
 
-  '@civ-clone/library-science@0.1.0':
+  '@civ-clone/library-science@0.1.1':
     dependencies:
       '@civ-clone/base-city-yield-research': 0.1.1
+      '@civ-clone/base-player-action-choose-research': 0.1.0
       '@civ-clone/base-science-advance-advancedflight': 0.1.0
       '@civ-clone/base-science-advance-alphabet': 0.1.0
       '@civ-clone/base-science-advance-astronomy': 0.1.0
