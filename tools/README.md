@@ -99,6 +99,7 @@ to the renderer's `tsc` and `prettier` by path, which needs no symlink at all.
 | `npm run test:conformance` | A seeded 4-player game to turn 50 produces the same state checksums at turns 1, 10 and 50. This is the regression net for all 62 packages at once. |
 | `npm run test:conformance -- --twice` | The run is deterministic. |
 | `npm run arena -- --self-check` | The AI arena changes no play: two copies of the baseline AI, seated alternately, reproduce the conformance fixture, and every seat plays the same whichever copy sat in it. Not part of `npm test`; `npm run arena -- --candidate <ref>` is the comparison itself (`docs/arena.md`). |
+| `npm run test:soak` | `tools/soak.js` plays whole games of any plugin set, grid and players and reports them truthfully: Civ1 with end-turn players to turn 20 and to the game's end, and a forbidden rule id prefix fails the game. `npm run soak -- …` is the tool itself (`docs/soak.md`). |
 | `civ duplicates` | No `@civ-clone` package is installed twice. Two copies are two classes, so `instanceof` across them is false and nothing reports it. Run it after any install, before trusting a conformance result. |
 | `npm run test:transient` | The `transient` declarations take effect — names are real fields, `allTransient()` stays additive across the prototype chain, state survives, and `stateKeys()` is narrower than `Object.keys()` at all. |
 | `civ typecheck` | Every checkout still compiles. The only gate here that is not per-package, and the only one that could have caught core-data-object@0.1.14 breaking 22 of them. |

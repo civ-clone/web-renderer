@@ -37,6 +37,7 @@ this repo, is planned and recorded in
 14. [`arena.md`](./arena.md)
 15. [`asound-cvl-format.md`](./asound-cvl-format.md): the Civ1 AdLib sound driver and its music bytecode
 16. [`asound-cvl-reverse-engineering.md`](./asound-cvl-reverse-engineering.md): how it was decoded, verification, tools (issue #126)
+17. [`soak.md`](./soak.md): whole headless games of any plugin set, grid and players
 
 The two dated reports (12 and 13) keep their original findings, with a status
 note at the top. Outstanding work is listed in [`TODO.md`](./TODO.md) and

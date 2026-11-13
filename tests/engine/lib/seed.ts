@@ -24,6 +24,54 @@ export const config: Config = {
   width: supplied.width ?? 60,
 };
 
+// Who plays: civ.one's computer players, or players that end every turn without doing anything, to show that a rule
+//  set's own rules can run a game on their own.
+export type Clients = 'end-turn' | 'simple-ai';
+
+// How `run.ts` plays, beyond the game itself (civ-clone/web-renderer#1008): `tools/soak.js` sets these. They are kept
+//  out of `config` because `config` is part of the result document, which the conformance fixture compares whole.
+export type Options = {
+  clients: Clients;
+  // Rule ids with any of these prefixes must not be registered once the set has loaded.
+  forbidPrefixes: string[];
+  // A topology id (core-world's `TopologyId`), or `null` for the engine's default, the square grid.
+  grid: string | null;
+  // Whether the result document carries a `run` report: how the game ended, how long it took, what went wrong. On
+  //  whenever any option here is given, so that the default run's document is the fixture's.
+  report: boolean;
+  // A plugin set's id from `src/js/pluginSets.ts`, or `null` for its default.
+  set: string | null;
+  // Play until the game has a result, with `config.turns` as a limit, rather than to `config.turns`.
+  untilGameOver: boolean;
+};
+
+const CLIENTS: Clients[] = ['end-turn', 'simple-ai'],
+  OPTIONS = [
+    'clients',
+    'forbidPrefixes',
+    'grid',
+    'report',
+    'set',
+    'untilGameOver',
+  ];
+
+export const options: Options = {
+  clients: supplied.clients ?? 'simple-ai',
+  forbidPrefixes: supplied.forbidPrefixes ?? [],
+  grid: supplied.grid ?? null,
+  report: OPTIONS.some((option) => option in supplied),
+  set: supplied.set ?? null,
+  untilGameOver: supplied.untilGameOver === true,
+};
+
+if (!CLIENTS.includes(options.clients)) {
+  throw new TypeError(
+    `unknown clients '${options.clients}': expected one of ${CLIENTS.join(
+      ', '
+    )}`
+  );
+}
+
 // This module exists so the seeding lands before any `@civ-clone` module is
 // evaluated. `import` declarations are hoisted, so doing it inline in `run.ts`
 // would seed the generator only after every package had already been imported.
