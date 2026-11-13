@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1162,
+        "total": 1165,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -211,6 +211,7 @@
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 2,
+          "TerrainChanged": 3,
           "TileReassigned": 1,
           "TileReleased": 1,
           "Tiles": 1,
@@ -363,7 +364,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1162,
+        "total": 1165,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -460,6 +461,7 @@
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 2,
+          "TerrainChanged": 3,
           "TileReassigned": 1,
           "TileReleased": 1,
           "Tiles": 1,
@@ -805,7 +807,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1162,
+        "total": 1165,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -902,6 +904,7 @@
           "Stowed": 1,
           "Strength": 1,
           "TechnologyStolen": 2,
+          "TerrainChanged": 3,
           "TileReassigned": 1,
           "TileReleased": 1,
           "Tiles": 1,

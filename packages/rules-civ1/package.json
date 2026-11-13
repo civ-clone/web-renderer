@@ -11,19 +11,20 @@
     ".": "./index.ts"
   },
   "peerDependencies": {
+    "@civ-clone/base-diplomacy": "^0.1.1",
+    "@civ-clone/base-player-action-choose-government": "^0.1.0",
+    "@civ-clone/base-treasury": "^0.1.1",
     "@civ-clone/civ1-city": "*",
     "@civ-clone/civ1-city-happiness": "*",
     "@civ-clone/civ1-difficulty": "*",
-    "@civ-clone/civ1-diplomacy": "*",
     "@civ-clone/civ1-game-end": "*",
     "@civ-clone/civ1-government": "*",
-    "@civ-clone/civ1-treasury": "*",
     "@civ-clone/civ1-unit": "*",
     "@civ-clone/civ1-wonder": "*",
     "@civ-clone/core-city": "^0.1.24",
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-government": "^0.1.6",
     "@civ-clone/core-terrain": "^0.1.4",
-    "@civ-clone/library-government": "^0.1.1"
+    "@civ-clone/library-government": "^0.1.2"
   }
 }

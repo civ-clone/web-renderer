@@ -43,7 +43,7 @@
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-requirement": "^0.1.3",
     "@civ-clone/core-save-game": "^0.1.22",
-    "@civ-clone/core-world": "^0.1.23",
+    "@civ-clone/core-world": "^0.1.24",
     "i18next": "^26.4.3"
   }
 }

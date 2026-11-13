@@ -10,14 +10,10 @@ import {
   ChangeProduction,
   CityBuild,
 } from '@civ-clone/core-city-build/PlayerActions';
-import {
-  ChooseGovernment,
-  Revolution,
-} from '@civ-clone/civ1-government/PlayerActions';
-import {
-  CompleteProduction,
-  SellImprovement,
-} from '@civ-clone/civ1-treasury/PlayerActions';
+import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
+import CompleteProduction from '@civ-clone/base-treasury/PlayerActions/CompleteProduction';
+import { Revolution } from '@civ-clone/library-government/PlayerActions';
+import SellImprovement from '@civ-clone/base-treasury/PlayerActions/SellImprovement';
 import {
   actionHandlers,
   findPlayerAction,
