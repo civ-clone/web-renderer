@@ -3,10 +3,6 @@
 //  registers Civ1's AdditionalData, as a plugin registers its own when it is imported.
 
 import {
-  CompleteProduction,
-  SellImprovement,
-} from '@civ-clone/civ1-treasury/PlayerActions';
-import {
   FAMOUS_LEADERS,
   famousLeader,
   rating,
@@ -28,9 +24,11 @@ import {
   terrainDefenceBonus,
   terrainMoveCost,
 } from './AdditionalData/terrainRules';
-import AdvanceTaken from '@civ-clone/civ1-diplomacy/Dialogues/AdvanceTaken';
-import { ChooseGovernment } from '@civ-clone/civ1-government/PlayerActions';
+import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
+import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
+import CompleteProduction from '@civ-clone/base-treasury/PlayerActions/CompleteProduction';
 import { Revolution } from '@civ-clone/library-government/PlayerActions';
+import SellImprovement from '@civ-clone/base-treasury/PlayerActions/SellImprovement';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { aircraftRange } from '@civ-clone/civ1-unit/Rules/Player/turnEnd';
 import anarchyTurns from './AdditionalData/anarchyTurns';

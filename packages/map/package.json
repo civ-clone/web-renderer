@@ -35,7 +35,7 @@
   },
   "peerDependencies": {
     "@civ-clone/core-registry": "^0.1.6",
-    "@civ-clone/core-world": "^0.1.23",
+    "@civ-clone/core-world": "^0.1.24",
     "@dom111/element": "^0.2.0",
     "@dom111/typed-event-emitter": "^0.1.2"
   }

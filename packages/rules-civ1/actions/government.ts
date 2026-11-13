@@ -1,7 +1,7 @@
 // Civ1's revolution (#865), moved out of the worker client's player actions: a revolution starts Anarchy, and the new
 //  government is chosen once it is over.
 
-import { ChooseGovernment } from '@civ-clone/civ1-government/PlayerActions';
+import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
 import {
   chooseGovernment,
   revolution,
