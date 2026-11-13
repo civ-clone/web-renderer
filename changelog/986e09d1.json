@@ -1,0 +1,1 @@
+{"version":"0.1.0@986e09d1","date":"2026-11-13T17:02:10.000Z","localChanges":["chore: a plugin can mark dependencies it only imports, so a rule set doesn't load them (#1033)"],"externalChanges":{}}
