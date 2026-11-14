@@ -139,6 +139,12 @@ importers:
       '@civ-clone/civ2-asset-extractor':
         specifier: github:civ-clone/civ2-asset-extractor
         version: https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/8f95e9890c6ea3a7709e580fd1314664b6297dea
+      '@civ-clone/civ2-city':
+        specifier: github:civ-clone/civ2-city
+        version: https://codeload.github.com/civ-clone/civ2-city/tar.gz/7349fa483b5d1711745754697b993391c7384fd2
+      '@civ-clone/civ2-city-happiness':
+        specifier: github:civ-clone/civ2-city-happiness
+        version: https://codeload.github.com/civ-clone/civ2-city-happiness/tar.gz/fd2c20df091d51b73b3bab6b2d9b7359a7e717e6
       '@civ-clone/civ2-civilization':
         specifier: github:civ-clone/civ2-civilization
         version: https://codeload.github.com/civ-clone/civ2-civilization/tar.gz/d5a59a531a64a4ab815aed86bd76f58afedc1a0e
@@ -151,21 +157,30 @@ importers:
       '@civ-clone/civ2-game-year':
         specifier: github:civ-clone/civ2-game-year
         version: https://codeload.github.com/civ-clone/civ2-game-year/tar.gz/420dc7882b704a2825028ecbb717135e5b2486dd
+      '@civ-clone/civ2-government':
+        specifier: github:civ-clone/civ2-government
+        version: https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43
       '@civ-clone/civ2-player':
         specifier: github:civ-clone/civ2-player
-        version: https://codeload.github.com/civ-clone/civ2-player/tar.gz/54040de1a9ba14f026fe269dbe2af951e12566c5
+        version: https://codeload.github.com/civ-clone/civ2-player/tar.gz/08d899c501a6aea86822c9782dac2a260936aa30
       '@civ-clone/civ2-power':
         specifier: github:civ-clone/civ2-power
         version: https://codeload.github.com/civ-clone/civ2-power/tar.gz/606ed5d9d458602a33a5c770ab8dcd23d50ba59b
       '@civ-clone/civ2-rules':
         specifier: github:civ-clone/civ2-rules
         version: https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/civ2-science':
+        specifier: github:civ-clone/civ2-science
+        version: https://codeload.github.com/civ-clone/civ2-science/tar.gz/188cfd6748a9a35a29ebd06d06d1e0fe0f2cefb6
       '@civ-clone/civ2-trade-rate':
         specifier: github:civ-clone/civ2-trade-rate
         version: https://codeload.github.com/civ-clone/civ2-trade-rate/tar.gz/a481673fd9e07a1beee38b91fef5789eaf065b38
+      '@civ-clone/civ2-unit':
+        specifier: github:civ-clone/civ2-unit
+        version: https://codeload.github.com/civ-clone/civ2-unit/tar.gz/4bc3d669e0d7172ff92b8f880aae93c5eef97d04
       '@civ-clone/civ2-world':
         specifier: github:civ-clone/civ2-world
-        version: https://codeload.github.com/civ-clone/civ2-world/tar.gz/d6727d9910d1757182162d4c3c1b05ca59116846
+        version: https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925
       '@civ-clone/core-ai-client':
         specifier: ^0.1.3
         version: 0.1.3
@@ -912,8 +927,8 @@ packages:
   '@civ-clone/base-city-growth-limit@0.1.0':
     resolution: {integrity: sha512-h7NiI6xS8XuqH9E+d+AHIZEeYUIq80h7joMxCmpK4zIHArtAh9wGqyZBVhGzz75RlGA8hLkVvefatw7Z3Hm6kQ==}
 
-  '@civ-clone/base-city-happiness-status@0.1.0':
-    resolution: {integrity: sha512-qwLWy+UJQ2SwJlBOp4J8yw0nQR+jGwJkZSMnlTquBO9W/ZXAWzVRz8+GO53Q3oB/ZhLB1FN2Q4epoToupNa24Q==}
+  '@civ-clone/base-city-happiness-status@0.1.1':
+    resolution: {integrity: sha512-DyVN5hYNA1bTRGltIvHtMbX3fhdk6JmNyPcey0fNGXFbQUGLNgrpQf70AELvxW+/HXLLXzB2hphWLUjHiMpvYw==}
 
   '@civ-clone/base-city-happiness@0.1.1':
     resolution: {integrity: sha512-ubJALIa2udDkFQuFuJuv0LOzCq2CF7Fj+579NXR9JUwMU/yeDn9q8erIL+GlBQA9BiTs56bWstcxFi9+5izOmQ==}
@@ -981,11 +996,20 @@ packages:
   '@civ-clone/base-city-improvement-university@0.1.0':
     resolution: {integrity: sha512-OTYqc9ujSvkBP2pmP415d0H2PvLr7l9zN3/7DhljE+dbkEClmmTahVDJhT6ZLX/NZBrfxW6HzNQdgwObeagmzQ==}
 
-  '@civ-clone/base-city-lifecycle@0.1.0':
-    resolution: {integrity: sha512-+nNGn/LIw9IWzyEbJectbwdew/SmumpeKoyFBPG6ZviUcerdbVFIcy5I9K2536Np7ncDdiukzf6W6Di6iWexPw==}
+  '@civ-clone/base-city-lifecycle@0.1.1':
+    resolution: {integrity: sha512-PgVRQMNdL/Gv0GdqdxSQ/UzxW9hJrKApe8m9+jRhRlRiC6Rl0CGeutrlX8dBSfWDWBpzq/ojRCWVg77APKxUAQ==}
 
   '@civ-clone/base-city-pollution@0.1.0':
     resolution: {integrity: sha512-r5fBxwjwUWqh80xu1R6e/AOpTxIs/oUfByBXLP2RcjrGqO/WcCwOLiTqABy20ahiI2vWUIrjhi99xgt0tJuxKg==}
+
+  '@civ-clone/base-city-specialist-entertainer@0.1.0':
+    resolution: {integrity: sha512-EmvTSRGtM2TI+APBYKEJl2FE8pPK27LCIW3oO5RUZoIw9iQ/EGHR6BL6lCjCJ/spAQ9osticoMcgigImft4/pg==}
+
+  '@civ-clone/base-city-specialist-scientist@0.1.0':
+    resolution: {integrity: sha512-jnz7a9VMm9zJh/5aCeEj1IbkICBs1ZifLZw6wegrsGFvtUsOucknACV+C7BrRO2i8ykKyr3Xq302nVExUX+ODw==}
+
+  '@civ-clone/base-city-specialist-taxcollector@0.1.0':
+    resolution: {integrity: sha512-vqPWaR7v9+2Q5VU2QgDrwhxCFZFvLkj4cFi7SsvmyuHXs1FCMPA6Fs0J2eE56gGywvUyzsmQOK9LheuJOtxpsw==}
 
   '@civ-clone/base-city-tiles-fat-cross@0.1.0':
     resolution: {integrity: sha512-kou/2J7lgv6m7AiQxtzClyrJWfJdi6kjcAo/4QKt1P7tAYXJvvbGq9fm8Hg8qwgPC0F4D3waUhfZgEGbTOyugA==}
@@ -1185,6 +1209,9 @@ packages:
   '@civ-clone/base-government-despotism@0.1.0':
     resolution: {integrity: sha512-MzBJWOVW9XzIMc8mWfySP60zoJl9vq9GMXMd1wxcaGZC4U7aNuVFfGiAM/d5C+N2RDd5IUALGMjpywtDorRaPA==}
 
+  '@civ-clone/base-government-fundamentalism@0.1.0':
+    resolution: {integrity: sha512-+YAiq9Ya2YDZ7IbIo8ZTYn/mZZ0JhXkDbo/zojh4xWxNHFkEZstt8akvkP9kblu13L+yMZ8lHQCQMpm4qUTtNA==}
+
   '@civ-clone/base-government-martial-law@0.1.0':
     resolution: {integrity: sha512-vPQlKn4IAkldgnZxBn5GJMyPzhBSKjNRAfSl7O65WIqPD6gPXjxVul/rQY6pmwrSRYBJJuu+ClnYv/WyFSMHdw==}
 
@@ -1254,6 +1281,9 @@ packages:
   '@civ-clone/base-science-advance-alphabet@0.1.0':
     resolution: {integrity: sha512-BgZECP4W2E0RTXcretXOfH008fCXth9WyKF20JldF461iP+PX/9VsFkOumbhL2p+7Is1fL7pEXORpUw6qayNvg==}
 
+  '@civ-clone/base-science-advance-amphibiouswarfare@0.1.0':
+    resolution: {integrity: sha512-I197iuooFHxHMmlllbXjNAGEsWVGuftgAjp7y5yyz/5ywBz8XlXfN4LOoq7Q6PXLeN0GHN7Daup39BnJRA0BQw==}
+
   '@civ-clone/base-science-advance-astronomy@0.1.0':
     resolution: {integrity: sha512-6fthX+LGtcig1+Gxx9bxfufou6pakhyt1/vlM3ACpObE+yT05JYGnh3XM8+SovlcMbc2ndv4eLJbCuamojAkHA==}
 
@@ -1284,6 +1314,9 @@ packages:
   '@civ-clone/base-science-advance-codeoflaws@0.1.0':
     resolution: {integrity: sha512-YG5FWSXilrYaMVbMEctwqQL3qt8Q5lJtqb15eUpQtnS23NQ8YNt46cRV/mZMzHJxg8h6ePTQOlsiQoA0Dd7sAg==}
 
+  '@civ-clone/base-science-advance-combinedarms@0.1.0':
+    resolution: {integrity: sha512-wDDmN84MbsjFZ+zCelXk0qzOBqhFeMoTh072RZbZ96XyxVtEZze0RZ7MQ7HfvkopD2Q4yvXknRmk56lAJuBiwQ==}
+
   '@civ-clone/base-science-advance-combustion@0.1.0':
     resolution: {integrity: sha512-r553rLRz50tGMcphZMv3FyLRVcWH6RJh6UmyJEXF8FnY3Z4u0qFEdYMLI+QGC2epxaX1rLsLRbi945TEB/5Bqg==}
 
@@ -1308,6 +1341,9 @@ packages:
   '@civ-clone/base-science-advance-democracy@0.1.1':
     resolution: {integrity: sha512-WtM5iovgzb3FOsLLCd3rFAjqWv5zU43/vXwHbvyp5DU/I9hUXHxKShn7KM2MChAUo7zKTaceP32/bbhsGkddgg==}
 
+  '@civ-clone/base-science-advance-economics@0.1.0':
+    resolution: {integrity: sha512-7wN8okm8SGMIHgBR5661JFieTqJIUhe0lt3RbbHTeQiy1O0WiqGYMPK5m11MjR83ijC+kNzf7P302D1i95egxw==}
+
   '@civ-clone/base-science-advance-electricity@0.1.0':
     resolution: {integrity: sha512-iZ9FHBkmce1mhigRndc3Ri5whc+TlGfEhWINckiQcxZBesSd0rH+S+6O+4sSYz4E++5RQLj7FfPev6GUheNfiA==}
 
@@ -1316,6 +1352,12 @@ packages:
 
   '@civ-clone/base-science-advance-engineering@0.1.0':
     resolution: {integrity: sha512-GbfGzVJxqQZEmeioJ+SI5KYwEvUbPHVAhD5PztzzQhWXo0rLAU2cdSss6XREEd+3JBJod7iOr+skT24aHZlD6g==}
+
+  '@civ-clone/base-science-advance-environmentalism@0.1.0':
+    resolution: {integrity: sha512-aP+b/Kj+zFL8x14fsdC0epf+vRVyMSVUoOi7bcXCaVOYM+koBIrC/5cgJN7seMymfjvWIwRds3xDSbyT6lxgdA==}
+
+  '@civ-clone/base-science-advance-espionage@0.1.0':
+    resolution: {integrity: sha512-c6CgiOUBmRIXxruSVUQAsFNBrrH5F39ok2KDQhSvtd9hAuoBhP3rXjVSkDCVj4lJNVDqoAnpMr4SS8+GpQ8Uxw==}
 
   '@civ-clone/base-science-advance-explosives@0.1.0':
     resolution: {integrity: sha512-G19P8/NQSx5ansKThkE66LSCtYcWECR9ptEX4wlb8oRl5opI5hPhCbSaHi/RfvBEgeLBWZGUuqOrNBtztavZQQ==}
@@ -1326,6 +1368,9 @@ packages:
   '@civ-clone/base-science-advance-flight@0.1.0':
     resolution: {integrity: sha512-Zi9WUkB9c9wOJGFJfP2BW5/ugYILDpLWksMbPZ+6GbpT1XAjBeCKn00Bf5BOXLBBY4OWMgxEjA7M3COj5OLNtw==}
 
+  '@civ-clone/base-science-advance-fundamentalism@0.1.0':
+    resolution: {integrity: sha512-C1P0fmczGGPdu2+JoaRceuA18H13AMcDwWgAOULFabSnm4ZQOjACN2VrWsriiziswtv/40+nLY6rNvFBKKZOpg==}
+
   '@civ-clone/base-science-advance-fusionpower@0.1.0':
     resolution: {integrity: sha512-D7ZHOXFXk9jLaGqR6QlTkfw5Qt1j7knTcJBv+5FRZPE0tzJSHwHJ4DVJndSGylT5D2IS19LVA7NxSv8OoB2ZNQ==}
 
@@ -1334,6 +1379,9 @@ packages:
 
   '@civ-clone/base-science-advance-geneticengineering@0.1.0':
     resolution: {integrity: sha512-kGdqYoQH1Et0o796rF6oV2ldv2LCiYqJzZFsR2iOhSoZHEYMjuOKBHJGcQ6upE65df6tQUv8C18PVDAiJ9Qecw==}
+
+  '@civ-clone/base-science-advance-guerrillawarfare@0.1.0':
+    resolution: {integrity: sha512-p8OXdHdwzzzCysST5GZV1XP4ewGDWST46G7PzGex73VWggwN73Lo7VS4QhdmYG+Lc+4d4oSyLAAiGaOJ/pPEoA==}
 
   '@civ-clone/base-science-advance-gunpowder@0.1.0':
     resolution: {integrity: sha512-An/Zozl2t1yPfnV88IuTErloHGWNl1Z4HqGffFHCLcTtIry04/EqJasu1n5Zm+UGAoAEHZuBiHC1jw55JdTZwQ==}
@@ -1353,8 +1401,17 @@ packages:
   '@civ-clone/base-science-advance-laborunion@0.1.0':
     resolution: {integrity: sha512-/1a6ciSXgWzCibPlFCkXbP0JBAR32Vyzobn3YRwoe+ixkWsFWAEGRXLRgww3Ho4tlLdULe2p3ETAH3hPrfUTpw==}
 
+  '@civ-clone/base-science-advance-laser@0.1.0':
+    resolution: {integrity: sha512-wiIVLQePTWOfqjUkDZmbS3/glqzii6ZrR1njFqmS0kgMuqKP2lyal/uLKbmPDIA4zQ7lT90rU9z60McAEnz/SQ==}
+
+  '@civ-clone/base-science-advance-leadership@0.1.0':
+    resolution: {integrity: sha512-6oom86x6LH1/VZCYO9Y4N6P9X2ZJ7deMkblWy/hzXedbq7sBctOdH+sbwZvx8H0oKYSRsqJRbw4jL4xjgoCFBA==}
+
   '@civ-clone/base-science-advance-literacy@0.1.0':
     resolution: {integrity: sha512-+niBNOlbLgYnTK4M4z34Jep78l9FJb9Q/COE0imYH65KOT4Eq1l2bnY6A726yN7yidorjTUeY4lHKc79hKHyZg==}
+
+  '@civ-clone/base-science-advance-machinetools@0.1.0':
+    resolution: {integrity: sha512-wguIaIcCw1T9EHfcUPeijrnbljKcQlQQyacwYAKKVBmeS4M2K+kCmOg8prA+CdAaM/Rj6L45bOvhkecMDyURsw==}
 
   '@civ-clone/base-science-advance-magnetism@0.1.0':
     resolution: {integrity: sha512-Rnxc23s/MpsH4/L8aIrEb+gLO+dC2SBPH3r1JJO5jleTwqe6VggC8KGZBk/8LfhQwaJydlNkiH489ij1ScZyLw==}
@@ -1377,8 +1434,17 @@ packages:
   '@civ-clone/base-science-advance-metallurgy@0.1.0':
     resolution: {integrity: sha512-aftUC5Y11U2xgbR8xC8AxIB8VOZPg4GZrp9o/rBkxW22r9esfoFYVjDogIzCiEPCxjLPNEc/NZvNbQsSXTzNYw==}
 
+  '@civ-clone/base-science-advance-miniaturization@0.1.0':
+    resolution: {integrity: sha512-5H54qpHGkdCHALqcfn4cdj6eRC+lkLsXrqemcxmuE7A0kSriehetpNAxXdJlK/XSU7DOp5Q003SCyuB4mzrpXg==}
+
+  '@civ-clone/base-science-advance-mobilewarfare@0.1.0':
+    resolution: {integrity: sha512-y22r5gJ9p5aRdpDQ71gLOFknjDQ059kJuqi/agWmYAad29z9mr7/tI/0tyCz2Ki5Ayx6VRyI3jlVm1V71GhGTQ==}
+
   '@civ-clone/base-science-advance-monarchy@0.1.1':
     resolution: {integrity: sha512-CVZ/Pj9fWi9SxC4ufWu0tGMF1etAXwBsh/+14S4FdKDZmlADkjdQv6nlDV7V3hUi75XfdibcMRmq6xwbuxA3QA==}
+
+  '@civ-clone/base-science-advance-monotheism@0.1.0':
+    resolution: {integrity: sha512-RY2i3ioZ6CTyshzBkVzgpeZSrGYOTFThas6BU1ljTaiJrtOVh5hg8Q9hliQSSD6L2shf4kVARfCswnRf8sncqw==}
 
   '@civ-clone/base-science-advance-mysticism@0.1.0':
     resolution: {integrity: sha512-DY7E5KxvOTh4toBkMiXuqwp+WlvPeP/UkqsFprDRcF7gwu2UV50lzFIFV3ABikOjyAoXMA5hmxOKB7pekcBk3g==}
@@ -1401,8 +1467,17 @@ packages:
   '@civ-clone/base-science-advance-plastics@0.1.0':
     resolution: {integrity: sha512-h0/RKpbJaVNH0b0ZS65ay8eANA3JCu3S8IyyCFf26RvmnZxRiR8D6tJN79WhoTLjMlNkkVZXu84B/YQBciPH4g==}
 
+  '@civ-clone/base-science-advance-plumbing@0.1.0':
+    resolution: {integrity: sha512-adMlS+lVLFu6rABA3xoEf620GUrEjQB/QphQ4gFU6ffG/9iFD9+lvhrfEDtqnRsxJHuKyHPKDArDCo9JKZUiiw==}
+
+  '@civ-clone/base-science-advance-polytheism@0.1.0':
+    resolution: {integrity: sha512-jnyhu2AnCyeO8Il8Jchh0VPg4+QFYfha/HxQSmhKWSK2gBAmqoVSAHCA7SUb/2wkvBsi4rcQMrBDHsR1IJgNMg==}
+
   '@civ-clone/base-science-advance-pottery@0.1.0':
     resolution: {integrity: sha512-4GvXgnknPiSNWL3qmnoTimgp9cLcuiV9+a9lPVxoyU0Bly3JREvP9bo/sXpdvXxatBIWp5pQug+n82K2SRJiNQ==}
+
+  '@civ-clone/base-science-advance-radio@0.1.0':
+    resolution: {integrity: sha512-Q/0ylOagA+ydzx081X/DN0ynBOS14/kNSbYicprfK4ozu+99JQeRxKbcd4B7O2KqvehsX4EugkKai8CmjMAAsw==}
 
   '@civ-clone/base-science-advance-railroad@0.1.1':
     resolution: {integrity: sha512-7FmRXiOtKSvjJ3DMCFBm3KMyK9fGZoVF/iADpC6NqJVyZNbqxCymZgL7p4j6rGRxW6qi2id75Ox9Q773V4KY9Q==}
@@ -1413,6 +1488,9 @@ packages:
   '@civ-clone/base-science-advance-refining@0.1.0':
     resolution: {integrity: sha512-RPeXXajI8VXMWsd1GW7sVt5Qqwtd6LNd03atNFNna7jHRvwjvbgANqlfgkRj/gU6mQGn3w8pfYuCd78GTd4kWA==}
 
+  '@civ-clone/base-science-advance-refrigeration@0.1.0':
+    resolution: {integrity: sha512-jMi3fxXSnqwgqQa2RyF7XmnB5c6sxd6QSne0ttba1JGgvIJRKLYk4RO60mFzzjtg06r5endQtFXjk3v/g9IOxQ==}
+
   '@civ-clone/base-science-advance-religion@0.1.0':
     resolution: {integrity: sha512-oEg7+rwB67gKxrDOtGbb0lUEfN/3jWkUg8s7wN5s166hWMD7VjCSMYkNJ3/MJEUdVdglxjB74Q8bqruD2qORLA==}
 
@@ -1422,8 +1500,17 @@ packages:
   '@civ-clone/base-science-advance-rocketry@0.1.0':
     resolution: {integrity: sha512-DTFSh7oC1MVC41/PZkxhi3t9X6MmMFqajDtm8Vepv7Rx6KeDHN/AL9z5Q0MUP12EJxZtSIqh8VOcdG+zOva9Qw==}
 
+  '@civ-clone/base-science-advance-sanitation@0.1.0':
+    resolution: {integrity: sha512-97M7QB4SJTcIh2vkKvM3TrpQtrrujgcta7o1oigs/D5AXrwsg0cCHoYaqT/cFxTQsbHHHbXpec7zD8D+NHF2bw==}
+
+  '@civ-clone/base-science-advance-seafaring@0.1.0':
+    resolution: {integrity: sha512-P81G0Ha7nBqZOszpsswrCqaibeNIVlz6RhJbRwTa82CwgsQgRnTPVt5Yw3KIgutt6dk6AMxg6CIO4jXNSwAC9A==}
+
   '@civ-clone/base-science-advance-spaceflight@0.1.0':
     resolution: {integrity: sha512-30XpJA05ZK5gFr3+rKizdygfdMo4NxbNRjG+yifb7IHzvkcaa3qPq4AhomEn4aW+LGYfvfjOo1NWQLApPclFPg==}
+
+  '@civ-clone/base-science-advance-stealth@0.1.0':
+    resolution: {integrity: sha512-TaDCApHAeuvyqRrAjEff6rKMEmtlDdvIa7vtI5BDLNyGzPiSphmtYhX0D4MevfF+1uFAz5hFqijhCjHC2G/90A==}
 
   '@civ-clone/base-science-advance-steamengine@0.1.0':
     resolution: {integrity: sha512-PZPdpyH9X0Pi+bcsr1igCG5mKfVdU5cq35xI9zvuO4dH4ygvs9QDelH4mmio1qyuu+i9YgHOTkJ3KQiiWQr/RQ==}
@@ -1433,6 +1520,12 @@ packages:
 
   '@civ-clone/base-science-advance-superconductor@0.1.0':
     resolution: {integrity: sha512-oZyOGbVtBABNuFWebYs6cqfwrNZLEJe93nsU6DY47+eZiLc9VghqkzEWFL3KOqcLD17Po6PCipOdXNELRR5CoA==}
+
+  '@civ-clone/base-science-advance-tactics@0.1.0':
+    resolution: {integrity: sha512-kW4DGfL75BcbK5KsdYyq26a/ou6vwufhoaATGmD6LYbALragsCJlQH6KdRQ0+x2P0HF1dXGFegdmbqorUmqv3g==}
+
+  '@civ-clone/base-science-advance-theology@0.1.0':
+    resolution: {integrity: sha512-77BV9PjEgyimv7mMt8ZbUVUIQD26wgzzBouPZx/xJMMZeXhjrg5dxeXi8WubfHb7z5TwcNK3xURTrTIdbOTnLA==}
 
   '@civ-clone/base-science-advance-theoryofgravity@0.1.0':
     resolution: {integrity: sha512-mgpOShF5fAe7EIgb68whfrQUHab9/IEwTXpn0fQfNJ01vEV6eEVmYf4PB5NQK8pHaImD91uSffVszaIcQkuL2w==}
@@ -1448,6 +1541,9 @@ packages:
 
   '@civ-clone/base-science-advance-university@0.1.1':
     resolution: {integrity: sha512-BYn8Scc0fl272D8fEKFhBt+LeHU3O7l7AGCG6wzMzO6Xa+lvMzFMCQUELh5HBmRG0Ce7SM4QsGJJAeE0CHRn4A==}
+
+  '@civ-clone/base-science-advance-warriorcode@0.1.0':
+    resolution: {integrity: sha512-P1WvIDpKN2TsLNs+zy2bjiZdKuzBinM1Su0SECT0JUK19mTUgFiYe0nCnuyLns9qU+p1u5FLawpgPGEqnsI+MQ==}
 
   '@civ-clone/base-science-advance-writing@0.1.0':
     resolution: {integrity: sha512-K+MB8yjYBZNjSUgJ0jUEh1EJG9EWg5/K1YO4J5EEVB3W02TxSjUiSo3ZC7BkKBT3a0azJ+U8yPP8JXNTI1RUKA==}
@@ -1779,6 +1875,12 @@ packages:
   '@civ-clone/base-unit-action-unload@0.1.2':
     resolution: {integrity: sha512-8WCQXlVf+1Xo7AzzxJcsIebi86n9PCZKFkx4Iq1ab5Og6rxbYSH690izImlfc9WKxVzhhQd02EXXjuX7wZtuuA==}
 
+  '@civ-clone/base-unit-alpinetrooper@0.1.0':
+    resolution: {integrity: sha512-v0gtovvggSHE2oPD2auwycbko7W5x4lFEXJXvnaN20qBwiZSGEnNXJZ8M8XWiO6KSdESWAHINOQSN7/n3PCB4A==}
+
+  '@civ-clone/base-unit-archer@0.1.0':
+    resolution: {integrity: sha512-LCyFuJDhTcfaLcIK14krgd9pHlMwpcB8ZIAOsaOUc0okNSs3H9WT98fgx1Ly0pPc+5z0TDKCvCDQUmSmQ1Cofw==}
+
   '@civ-clone/base-unit-artillery@0.1.0':
     resolution: {integrity: sha512-srJlvpiBos31YYgAzS9C4fgQEDTVmZpQaKXfk2k3ylWmnFXKLm/238/YAYBHwGUQE9HDtN570iWYxzBFG245oQ==}
 
@@ -1787,6 +1889,9 @@ packages:
 
   '@civ-clone/base-unit-bomber@0.1.1':
     resolution: {integrity: sha512-ddIbl+dsKthCacgzJqOQzrCZMwB4m7a8cx4SX2GJKXg9otoyrLbqRivR/VWKQbEN0u6oFt+uyc+kAlYvdjCnbw==}
+
+  '@civ-clone/base-unit-build@0.1.0':
+    resolution: {integrity: sha512-iffKxCVPOer+bCyoa7ly85azPwtl6rczJt4lhHaD7QcPf5Nq7Ia0IJYka4tDUSzxBWS54+3pE6tOpI0LD+OUbA==}
 
   '@civ-clone/base-unit-cannon@0.1.0':
     resolution: {integrity: sha512-eWDWGcLCFUMFf7ppLofScIdkJmiohv+A5ZiiaB1InsfR703liIK/E6BhakJ55+kgGIZPOGv3gnzA62tCKUL7rw==}
@@ -1800,23 +1905,62 @@ packages:
   '@civ-clone/base-unit-catapult@0.1.0':
     resolution: {integrity: sha512-IsXjawSw0PmoAyfksy8BAEueGXlIcY7Z1R9BpqE4/U6zDpnWORuk7D0V51SQAtArBBLY9M5G5gA/rM5zZk5VeQ==}
 
+  '@civ-clone/base-unit-cavalry@0.1.0':
+    resolution: {integrity: sha512-ATf3GHZlPp4U7P+6fmzTYNXKMx8nqQ+JSb9YoyoYSSOWl9ia4RrRgCP8UQImj2CG2a9phz+nDTt9NPiQpdlcLg==}
+
   '@civ-clone/base-unit-chariot@0.1.0':
     resolution: {integrity: sha512-sKi0p5LHiZhOpvbVnNFoPkUK4dRQ2CT3T/JTlOLRCBmI0TP2raokP9ZuC+2d1dyz9RH2ar3jhS+O7Mwda/leqg==}
+
+  '@civ-clone/base-unit-cruisemissile@0.1.0':
+    resolution: {integrity: sha512-oNOX2kdUBuFgt3kycurDG/BPx2JPN0rqNy2FDuhAo0fzuHDXL7LfDVfQcSaCpA601C4qzyBz5BrBbB4pWPxzrQ==}
 
   '@civ-clone/base-unit-cruiser@0.1.1':
     resolution: {integrity: sha512-Kjq5Z3WOA0LPElP5ltL4DJIzZ8KbDUSNJbL1JV2MoX3eeClyUNBg58j8ZuEfomLycpEomQBKpKdDCpHDpkEXgA==}
 
+  '@civ-clone/base-unit-crusader@0.1.0':
+    resolution: {integrity: sha512-2Vgxdh5+w0h7etjEHOC/Am5NKS7qLyYlIKIX5YYUCeRCjHlzhQS0WVYY0DvJHmchbO7YWYfPKFhBTX7cDmfVog==}
+
+  '@civ-clone/base-unit-destroyer@0.1.0':
+    resolution: {integrity: sha512-FVJiwRz8btFQWRd7ta6RxOGD9jcBp9E3pSU1dNEwpMOejl0Rb7qAYBEbQJPKr7n8h0cNnGgsHcUKEpZSgqFcEQ==}
+
   '@civ-clone/base-unit-diplomat@0.1.1':
     resolution: {integrity: sha512-t4FEAcDMwWEeiYNq+jL5fo/hwKdj56UEpRQ9YrBt3q68LPnvvOccNsDcVAcMtAMISlF3IMMpLEyZd6IaYOg0eQ==}
+
+  '@civ-clone/base-unit-dragoon@0.1.0':
+    resolution: {integrity: sha512-aiZ66j7e4Kbju2b6YxTtCfZICpXPt3EdlenzRqQvZyYlK6d0GcjH/0YWIbonKb0WI4q8vomoy24bi15p5YbNUg==}
+
+  '@civ-clone/base-unit-elephant@0.1.0':
+    resolution: {integrity: sha512-qbB5nYfWfFCQlQzZb7Q6FOXMrodE03jw4rBZKTC2ltWgEUKyOC7Frb5OyfH6cH2YvlLxbAqkprcsuoClnZs5sA==}
+
+  '@civ-clone/base-unit-engineer@0.1.0':
+    resolution: {integrity: sha512-WwJE92BvCub5KeihrVQmLXxfJLsX1/6UNsBTos194s3asfl3qsE4ab7t8znvGreWh5WFP0F/iZs/FddNLtVlZg==}
+
+  '@civ-clone/base-unit-explorer@0.1.0':
+    resolution: {integrity: sha512-9I8nQCrBnL2XQ+gYbGQx98YHXGle4u2PjJMBjYAn8vptWRWT3A5wK9ZWwXlvkbWVGBejutu9Ro4nPCppZazyGA==}
+
+  '@civ-clone/base-unit-fanatic@0.1.0':
+    resolution: {integrity: sha512-N3FK3OEDvIWxdk5lxeZaP46xFuDvjO5m21YcTbZJ67+Oah76c906/kbwBxTdodLwDZFVJ8CWIpwtc6ld3LiZHg==}
 
   '@civ-clone/base-unit-fighter@0.1.1':
     resolution: {integrity: sha512-zyMyVhxnBwYU4O8QI3qm/ngeMp0hnFYHh50xGXTCa4V/WpxOJIObCeCr/wJMvZCgY1RGkFrwdX6JRmoSXju2jw==}
 
+  '@civ-clone/base-unit-freight@0.1.0':
+    resolution: {integrity: sha512-yjMvftEtVTmBdvnaoeV1UY8VANuS+whREN+64/pIh+pec1xqNr8kHu0wFwxT5TyhDcCzrwgy0RnWUHGMM82Svw==}
+
   '@civ-clone/base-unit-frigate@0.1.2':
     resolution: {integrity: sha512-XmShKi9mjFx1bZZ4EsawpcKetl0IAWf0P6ddkjMOLZvi5sXCQNEYoFqpTE2mOp2K9ba6Q1Ph3UfNNEvzDh/cUA==}
 
+  '@civ-clone/base-unit-galleon@0.1.0':
+    resolution: {integrity: sha512-iVET+HhnY7UDYNMU28dciNpXPXvsTh1BDoGhg+abMrkUyxGBFfi4V2epm8nBJz35Ygkv/IImT7hkbuNMH3j6gw==}
+
+  '@civ-clone/base-unit-helicopter@0.1.0':
+    resolution: {integrity: sha512-7HpHjAvOq4XjkTxThbM7kqPPChhNRCXKPY7fdSsOI5laXvsMElvR1ISp+/gzO4TwRfGBnBrkao9IQZG2eFxlIA==}
+
   '@civ-clone/base-unit-horseman@0.1.0':
     resolution: {integrity: sha512-8mXjjjyier+gkDswwCIV2yPkIekgDMQVbgv6rTiRxxiYu8M2PCZpc4tYAc2ipG4m4vnD6HMvnJDNapcEUzwbiQ==}
+
+  '@civ-clone/base-unit-howitzer@0.1.0':
+    resolution: {integrity: sha512-GUnVgBAqFICk2JI/MZ4muZkDH33sJi8gfR2sufazaDDtjZj1cJMXkmdzWmvYlNAmpEVk5/twkWRoIpZJqBI9gQ==}
 
   '@civ-clone/base-unit-improvement-fortified@0.1.0':
     resolution: {integrity: sha512-jt6+Pk0cclShBKvRo7BoB61V3mebyVjQXr/nc4jHBQguv2JVM3GnfhhNB7FVcK8nShEQyLY+xfvSaJjxEn6/mw==}
@@ -1830,11 +1974,20 @@ packages:
   '@civ-clone/base-unit-knight@0.1.0':
     resolution: {integrity: sha512-LVhADX0ozE4g6RSmiRgJWrVA+nkC6iHI253i+T9iOkbbGm+y2qFyn7CXmgRxg36F2gQgGQgLKJr4K+nZtGIppQ==}
 
-  '@civ-clone/base-unit-lifecycle@0.1.0':
-    resolution: {integrity: sha512-eHHrXyc9oGy83Zzz80/kW2a1EbJzdN9zzFxlMntI6x6BIdVWKwElxwZc9DO7r/36BwvjWpTY1avQUknDBW+yEg==}
+  '@civ-clone/base-unit-lifecycle@0.1.1':
+    resolution: {integrity: sha512-Ocbf+Ly2kwNKz5ZGheAfAvyGIiB/jdmT1gEDj2PDZ1H/nCgyYory6O0W7c28s9b2DB064xt/Ra2sCboyjl6A7g==}
+
+  '@civ-clone/base-unit-marine@0.1.0':
+    resolution: {integrity: sha512-zrVBf+cxU4N0Dl58VqVhohF9yqRN4jCxNS4+qi0QpGptG5pgAKJ5slwzwN8tUUslICxUj1pItO0egoDQimaT3Q==}
 
   '@civ-clone/base-unit-mechanizedinfantry@0.1.0':
     resolution: {integrity: sha512-RriRfgqcV68TBWmmL9fiBeEDoKSGb4/QVE8pdSziYY6+5dtOgAPIRT7qrTLeJKpXEod7yvL/sDOpYDFBBj94qA==}
+
+  '@civ-clone/base-unit-missilecruiser@0.1.0':
+    resolution: {integrity: sha512-Mqhur00839GY4XN+Zw1sMbP1SAhf0nUzQpsgJtUaL6T6pfpAy5mbugU/BTbnJaFg+IAVqUbHyqxg7kh9QBUghA==}
+
+  '@civ-clone/base-unit-movement@0.1.0':
+    resolution: {integrity: sha512-A9JfDFMP6a5iCL5XSuMjWDtYTgUURhwMBktaautPv92JGQ2W6h+9yKNg9Uj3VlRuz0DtZXzOqFCIPVvWcr7xwQ==}
 
   '@civ-clone/base-unit-musketman@0.1.0':
     resolution: {integrity: sha512-sHDxCy5LBrCHdkkxPiV7ro13QulGcHTNu/iI4kfSUd6gJAvasJF6EPvJE325nVskIMoQGMDFZYAYfQsiCWytsA==}
@@ -1842,8 +1995,20 @@ packages:
   '@civ-clone/base-unit-nuclear@0.1.1':
     resolution: {integrity: sha512-8w2qckqbgj4+8WYwkpLiOe2JbTSAPbHCYhZ1hkYpYj/gTaMTjLgbgWZ7Ydz8KNVRMIY9ORuQBD2MpyK2J9ahDw==}
 
+  '@civ-clone/base-unit-paratrooper@0.1.0':
+    resolution: {integrity: sha512-yjjnIRU8+dHscUkof1cFIntrvtZEKZqg4G322B0M6fD4IeEIPdpWr5bLL9UvxiH7XsithmsnDpjD2zGMOp9CLg==}
+
+  '@civ-clone/base-unit-partisan@0.1.0':
+    resolution: {integrity: sha512-kAvy3pa//CV3YNkal14sRp3LbmRcVuMjCppbBeS1MIpjWFl1Gnrw0Yxq1E2Qt9lNWLtbMVBFxtQBm+EIxdRhaA==}
+
+  '@civ-clone/base-unit-pikeman@0.1.0':
+    resolution: {integrity: sha512-MQ7PPxYXdwnW4pukwrxgLFVg7EFFPiSuH/e5Z6PWeXIq3NnX5RMcVhH89RNyyFyo0F+C/HzMXTPKTiPazI8FDw==}
+
   '@civ-clone/base-unit-rifleman@0.1.0':
     resolution: {integrity: sha512-WtCOyivWRttHg6sGaZOfVC6iA/P7lywm7hH3To2JbOHrG92ifC/zYxNOyL+plKHVrKBz6c1GQow5TGfMy1GSVw==}
+
+  '@civ-clone/base-unit-role@0.1.0':
+    resolution: {integrity: sha512-ZfpMmH0AMJcAeUU7KSEx4O366h4f2kVrvq9YFkX8bVSUAmy9H8GukdeXGLypFa9TarI2mZUOaCpQo/nn7l0Kqw==}
 
   '@civ-clone/base-unit-sail@0.1.1':
     resolution: {integrity: sha512-p4PpLaq3KGGVQlbosDK7bNW+oqlNf9YGRxHEMt56mJ5QZxDJu4cUtAUsgDzU4PPK0Nq6zohd1GYIwNRFEpvHaw==}
@@ -1854,6 +2019,15 @@ packages:
   '@civ-clone/base-unit-spearman@0.1.0':
     resolution: {integrity: sha512-qwClv2aR6zXP4BQCTvPDLdKOHLwUCvpkLA/HLVdVnJXS7gidnerok+xolQA3bjRdAQCwG+BDePbVwoOOlXEK2g==}
 
+  '@civ-clone/base-unit-spy@0.1.0':
+    resolution: {integrity: sha512-u/soKqk8Ai2Pcuj90RVl3adB7u4U9FLiPVvh37+7zvydZx5OEBmj9gU4lfeqSJKWIgNT30ccEPsdSsZzhWO69g==}
+
+  '@civ-clone/base-unit-stealthbomber@0.1.0':
+    resolution: {integrity: sha512-VxCqh1rYpfvyFRM3t9DjjzY0rKAFG0rVJYq8Xk8SoBL1f34A7zi7JHWRCJgVfbinsuR10jiC/9O5guj8oRJttA==}
+
+  '@civ-clone/base-unit-stealthfighter@0.1.0':
+    resolution: {integrity: sha512-/B2/hxL+s4dQ9TPTArZFisyIb5WxYzgP2wHgrcSCBTm0wpVMy1GSgAW1X2svJboFjZDBKjOAy8z5ChNQVGEXzg==}
+
   '@civ-clone/base-unit-submarine@0.1.1':
     resolution: {integrity: sha512-h5VSytWnlfBkVqHxmuGMioE2mJ0ssk5mBgrCC7MCrk2YFqUiuiHAOa5oPDLAzPPJxSkZmSneFojAaSQel3Bhvw==}
 
@@ -1863,6 +2037,9 @@ packages:
   '@civ-clone/base-unit-tank@0.1.0':
     resolution: {integrity: sha512-rGjnwvC04AWBq2aJyAhB1MfeCYZxKgD1hnBEKLisJA90IUqQuhyTr9EXo1z5prwRb1t6Aj0zCrYOM7WKSb09mQ==}
 
+  '@civ-clone/base-unit-trait-amphibious@0.1.0':
+    resolution: {integrity: sha512-NMjg8BqYOsE5hkLPgw8Q1p1qUy4SXp3GjPx+oDPUZhpAV4dyBAC/D1sbZZHfrKMUdXnrJ5ZZovMPGmRd17LqJw==}
+
   '@civ-clone/base-unit-trait-attack-ends-turn@0.1.0':
     resolution: {integrity: sha512-iadHbxzwsStyK3fKvhe+iiSlF25vIQscwTIlmLWN6zRDjaThw/oOtdyLiUwe9LNheHbVbSk7h1i67J3QqI9Ylw==}
 
@@ -1871,6 +2048,18 @@ packages:
 
   '@civ-clone/base-unit-trait-coast-bound@0.1.0':
     resolution: {integrity: sha512-MyYskk1sfoZS9aNyNcStJe6SDaAw1Z3olb6/k3NtmkXsa/E0JNe64IorNnucMQAxvz4BjictfLohW+AXHSg/dw==}
+
+  '@civ-clone/base-unit-trait-covert@0.1.0':
+    resolution: {integrity: sha512-pAZos5vUFPMihN3rQll5fknTMpwS/0d4YHeMMzx5vqmpKBySmO+ug0fYecvZBN8swg+XpiiV5T1j/ev3yd/itQ==}
+
+  '@civ-clone/base-unit-trait-defence-bonus-vs-air@0.1.0':
+    resolution: {integrity: sha512-7MMioTUmrr0Dhy/kdnkXK6CNM89+W3rqWCaTuyavXV8QQL33umno5xb47+hZg3zC0XyW4/rgPNB8wtQSbBefhg==}
+
+  '@civ-clone/base-unit-trait-defence-bonus-vs-mounted@0.1.0':
+    resolution: {integrity: sha512-XIBm/LLqPVvP6TZUXfUnkAvLa0Q91Q6Din+GcP/W8kjPrjKifAGWjT+VmbxjcBZHHeVUhPW8PFXTuih9196e/w==}
+
+  '@civ-clone/base-unit-trait-detects-submerged@0.1.0':
+    resolution: {integrity: sha512-/wiOlt60snQMAokVcYHC5wmznCeRHpFfKQYzsHE1ZStNl+oU4yBH8UyoebBHVRdl8W40ylwMasc+/BloTcKaxQ==}
 
   '@civ-clone/base-unit-trait-detonates@0.1.0':
     resolution: {integrity: sha512-0Y0e4rgsPcPXTge+KQqsNj3zmWhSBsLt/T4IygDJwOAT6oH59AxSlqqdgSAVJdO9WyTmNAlgYj+mYxl7nOcJTQ==}
@@ -1896,11 +2085,23 @@ packages:
   '@civ-clone/base-unit-trait-non-combatant@0.1.0':
     resolution: {integrity: sha512-F4SwuNtIMl9BlG4tkPI2a5/h9ME8femTusNBfHOi67YLqw92LOYVZGfSt0KS9G9f1fdKuuP/F7E0XTDpS3iePQ==}
 
+  '@civ-clone/base-unit-trait-paradrop@0.1.0':
+    resolution: {integrity: sha512-x896T+QtPbPnnmJ+3wxf9iFIi5+Bs/vzyKBaRex2YWFM64uYkoOfXnB5onXi2bgBFI4j4nf42z2fXFc+au5LXw==}
+
+  '@civ-clone/base-unit-trait-single-use@0.1.0':
+    resolution: {integrity: sha512-3Iay21kfZy6RDILvLWCPvQ69lyAssQlnWuFpV8qCBXoC3CewiaONggMovFtFoRDYKHkdTKdBLsskHVgaPQ2WLQ==}
+
   '@civ-clone/base-unit-trait-submerged@0.1.0':
     resolution: {integrity: sha512-zKr2xcetApgbgQSZkywAYUdQq/zFmjSgPrClquPe4l8kINpb1bArnYryij//Mk6y4GH79StEe/no/COREfV0YA==}
 
+  '@civ-clone/base-unit-trait-support-exempt-under@0.1.0':
+    resolution: {integrity: sha512-fGs0DWTrICQmO2r2bkyOATYU5WJDmAki++Te6uC9/+F3MIjmkG0Djp3eN4UVtIhrVnvy//l3oZtUQjyzIxW4lA==}
+
   '@civ-clone/base-unit-trait-terraforms@0.1.0':
     resolution: {integrity: sha512-riwRRo7TMgmonNTfME2hDRC+xfNQYqFr1aWEnB5uu1hilQbsG2510NTR3fr+ZLuTuFFYc5K+eVixshagcYDF1g==}
+
+  '@civ-clone/base-unit-trait-terrain-as-road@0.1.0':
+    resolution: {integrity: sha512-jYvcsb1AR0tnNHJz+N630KJVtvgUcm0wPrQullR5h8Jhy1irAEMc3HfiPkJDJvKWcJHqxu01UOlW+kzeQXlTaA==}
 
   '@civ-clone/base-unit-trait-trade-missions@0.1.0':
     resolution: {integrity: sha512-uL7DZL05vTkXYHtIyPcnXS2kW1LdZ06sSOtMUNYvqD81aLpZhq0cPBqx89VY/hlW5cdLWaGZsMLB47zTZBqRoQ==}
@@ -1934,6 +2135,9 @@ packages:
 
   '@civ-clone/base-unit-warrior@0.1.0':
     resolution: {integrity: sha512-88Bjouiwd2LzeEOSOL7YH0qHYLB2WjO2NDdHjEsk5DzjD9BNS9XjItxclu4BBEFwUgqX2MVkoGas3KLJBWERQQ==}
+
+  '@civ-clone/base-unit-yield@0.1.0':
+    resolution: {integrity: sha512-o3hgZRnQqKd4eeba56rxonG/tfy/DRbibNjyfTV39j0oDayghURmh4EWTwtaocKk//mxeV7yFMT9Cagv84wn9A==}
 
   '@civ-clone/base-wonder-apolloprogram@0.1.1':
     resolution: {integrity: sha512-KR1hvS+BvBwnrRKiQMthy9VnjdlNYgaQEawIlyO++cVgZCvaoQVXr0wQ+f00nfLffNEbp8xB7ozYQNJ0CkE+tw==}
@@ -2120,6 +2324,14 @@ packages:
     version: 0.1.2
     hasBin: true
 
+  '@civ-clone/civ2-city-happiness@https://codeload.github.com/civ-clone/civ2-city-happiness/tar.gz/fd2c20df091d51b73b3bab6b2d9b7359a7e717e6':
+    resolution: {gitHosted: true, integrity: sha512-LPvauhtwsjaZSulbQALC5xGaFPCyqLzVy41gBGHYVin04EZ2X1aov9iSHvzICjxhSa5dLdU+BQ8HYIsIkFcfKA==, tarball: https://codeload.github.com/civ-clone/civ2-city-happiness/tar.gz/fd2c20df091d51b73b3bab6b2d9b7359a7e717e6}
+    version: 0.1.0
+
+  '@civ-clone/civ2-city@https://codeload.github.com/civ-clone/civ2-city/tar.gz/7349fa483b5d1711745754697b993391c7384fd2':
+    resolution: {gitHosted: true, integrity: sha512-L9sMEsw7wDWD4+FlQ23RN8YM78BJfqttGpyDUNODK/gsqeXwjrVg3bMl0hmMoWmi/UicsLFtkSlcHe+rgKlvKg==, tarball: https://codeload.github.com/civ-clone/civ2-city/tar.gz/7349fa483b5d1711745754697b993391c7384fd2}
+    version: 0.1.0
+
   '@civ-clone/civ2-civilization@https://codeload.github.com/civ-clone/civ2-civilization/tar.gz/d5a59a531a64a4ab815aed86bd76f58afedc1a0e':
     resolution: {gitHosted: true, integrity: sha512-MrPDiq6NrRhtldqer1M6vJGCo7KkBweL1JUJqgnfBnCNq78aJzAGUechnbIu5mP1kq+Q9digzIcQh+re13yC/Q==, tarball: https://codeload.github.com/civ-clone/civ2-civilization/tar.gz/d5a59a531a64a4ab815aed86bd76f58afedc1a0e}
     version: 0.1.0
@@ -2136,9 +2348,13 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-uD+yXaFijmNclvyeUnePpjcPI2nOwTqKc5yGG0b+N2vA3zbCoPf0H74a8URTOWBjP2r9BUUxudH43gXI5bHDuw==, tarball: https://codeload.github.com/civ-clone/civ2-game-year/tar.gz/420dc7882b704a2825028ecbb717135e5b2486dd}
     version: 0.1.0
 
-  '@civ-clone/civ2-player@https://codeload.github.com/civ-clone/civ2-player/tar.gz/54040de1a9ba14f026fe269dbe2af951e12566c5':
-    resolution: {gitHosted: true, integrity: sha512-Fm7QN8AZGFgOP6l39U0g87eXIwcnNui9KunbyVJVsO0sntjSWr58kPR+nGlL9J5vsjyWL8R+ZzVoV4rkHOhPTA==, tarball: https://codeload.github.com/civ-clone/civ2-player/tar.gz/54040de1a9ba14f026fe269dbe2af951e12566c5}
-    version: 0.1.0
+  '@civ-clone/civ2-government@https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43}
+    version: 0.1.1
+
+  '@civ-clone/civ2-player@https://codeload.github.com/civ-clone/civ2-player/tar.gz/08d899c501a6aea86822c9782dac2a260936aa30':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ2-player/tar.gz/08d899c501a6aea86822c9782dac2a260936aa30}
+    version: 0.1.1
 
   '@civ-clone/civ2-power@https://codeload.github.com/civ-clone/civ2-power/tar.gz/606ed5d9d458602a33a5c770ab8dcd23d50ba59b':
     resolution: {gitHosted: true, integrity: sha512-FhYVG6G83P+jcI+6+8fjuiO6a5FYC8WWL0FniKcOmPQZ1zFG5CXTXiT365I0C8IiZJmJoAcHhH/Hmj3oF8M8Ig==, tarball: https://codeload.github.com/civ-clone/civ2-power/tar.gz/606ed5d9d458602a33a5c770ab8dcd23d50ba59b}
@@ -2148,13 +2364,21 @@ packages:
     resolution: {gitHosted: true, integrity: sha512-zpDgKr0DU9jMEZ6/R7C7p5wiaWuNZiyBw/Bz3rQnguFmMnDOnyF4xBkQtlSPiVoeBRHTOYT/zPk/wugRG0tvpw==, tarball: https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267}
     version: 0.1.0
 
+  '@civ-clone/civ2-science@https://codeload.github.com/civ-clone/civ2-science/tar.gz/188cfd6748a9a35a29ebd06d06d1e0fe0f2cefb6':
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/civ-clone/civ2-science/tar.gz/188cfd6748a9a35a29ebd06d06d1e0fe0f2cefb6}
+    version: 0.1.1
+
   '@civ-clone/civ2-trade-rate@https://codeload.github.com/civ-clone/civ2-trade-rate/tar.gz/a481673fd9e07a1beee38b91fef5789eaf065b38':
     resolution: {gitHosted: true, integrity: sha512-0qPcqddFAUao7ao7poyv8VugD0+r/AW7KtYM/xGb6rH6HmlXpd1v9pFVQgHVmYz1KptZ34tAlkd0021uvl20IQ==, tarball: https://codeload.github.com/civ-clone/civ2-trade-rate/tar.gz/a481673fd9e07a1beee38b91fef5789eaf065b38}
     version: 0.1.0
 
-  '@civ-clone/civ2-world@https://codeload.github.com/civ-clone/civ2-world/tar.gz/d6727d9910d1757182162d4c3c1b05ca59116846':
-    resolution: {gitHosted: true, integrity: sha512-Z4xdN3grWHQ5qG2l+sw+FWJQtDhSDeS9JGd9AhOVjQQiReVfGvv7mlZnJh8yqtbOwNK5VtFHSAehmHmxOsLTjA==, tarball: https://codeload.github.com/civ-clone/civ2-world/tar.gz/d6727d9910d1757182162d4c3c1b05ca59116846}
+  '@civ-clone/civ2-unit@https://codeload.github.com/civ-clone/civ2-unit/tar.gz/4bc3d669e0d7172ff92b8f880aae93c5eef97d04':
+    resolution: {gitHosted: true, integrity: sha512-XNFMQzDfZirFU9mCiwsakKmzZptIbjVAtXGpA/VleCIFsEu1RwEWx+LL9rkIOH4VN1BhlotSwXF1zzf4zhNHTg==, tarball: https://codeload.github.com/civ-clone/civ2-unit/tar.gz/4bc3d669e0d7172ff92b8f880aae93c5eef97d04}
     version: 0.1.0
+
+  '@civ-clone/civ2-world@https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925':
+    resolution: {gitHosted: true, integrity: sha512-wcJCI6mrUscHwU0pfQkSuojUeeilJ7y08c7HKEW+9kc6QDWtQaIdtCRDllKqRHSlNhMz4ZaP8/J8TMAQM/NWDg==, tarball: https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925}
+    version: 0.1.1
 
   '@civ-clone/core-ai-client@0.1.3':
     resolution: {integrity: sha512-SeXH1KbHM2vSrM+R2e65PMFq+IW5oCTDmKVJbec+2YwYEi5QknzfTA6KgEpuaq94dNqmheD7r+V8/nu59Yn2rA==}
@@ -3183,11 +3407,14 @@ snapshots:
       '@civ-clone/core-city-improvement': 0.1.8
       '@civ-clone/core-data-object': 0.1.19
 
-  '@civ-clone/base-city-happiness-status@0.1.0':
+  '@civ-clone/base-city-happiness-status@0.1.1':
     dependencies:
       '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-happiness': 0.1.2
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-pending-effect': 0.1.2
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-yield': 0.1.6
 
   '@civ-clone/base-city-happiness@0.1.1':
     dependencies:
@@ -3283,14 +3510,18 @@ snapshots:
     dependencies:
       '@civ-clone/core-city-improvement': 0.1.8
 
-  '@civ-clone/base-city-lifecycle@0.1.0':
+  '@civ-clone/base-city-lifecycle@0.1.1':
     dependencies:
+      '@civ-clone/base-terrain-yield-food': 0.1.0
+      '@civ-clone/base-terrain-yield-production': 0.1.0
+      '@civ-clone/base-terrain-yield-trade': 0.1.0
       '@civ-clone/core-city': 0.1.24
       '@civ-clone/core-city-build': 0.1.22
       '@civ-clone/core-city-growth': 0.1.6
       '@civ-clone/core-city-happiness': 0.1.2
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-player-world': 0.1.14
       '@civ-clone/core-rule': 0.1.9
       '@civ-clone/core-unit': 0.1.31
       '@civ-clone/core-world': 0.1.24
@@ -3307,6 +3538,18 @@ snapshots:
       '@civ-clone/core-tile-improvement': 0.1.6
       '@civ-clone/core-world': 0.1.24
       '@civ-clone/core-yield': 0.1.6
+
+  '@civ-clone/base-city-specialist-entertainer@0.1.0':
+    dependencies:
+      '@civ-clone/core-city': 0.1.24
+
+  '@civ-clone/base-city-specialist-scientist@0.1.0':
+    dependencies:
+      '@civ-clone/core-city': 0.1.24
+
+  '@civ-clone/base-city-specialist-taxcollector@0.1.0':
+    dependencies:
+      '@civ-clone/core-city': 0.1.24
 
   '@civ-clone/base-city-tiles-fat-cross@0.1.0':
     dependencies:
@@ -3655,6 +3898,10 @@ snapshots:
     dependencies:
       '@civ-clone/core-government': 0.1.6
 
+  '@civ-clone/base-government-fundamentalism@0.1.0':
+    dependencies:
+      '@civ-clone/core-government': 0.1.6
+
   '@civ-clone/base-government-martial-law@0.1.0':
     dependencies:
       '@civ-clone/base-city-yield-martial-law-content': 0.1.2
@@ -3798,6 +4045,10 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-amphibiouswarfare@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-astronomy@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
@@ -3838,6 +4089,10 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-combinedarms@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-combustion@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
@@ -3872,6 +4127,10 @@ snapshots:
       '@civ-clone/core-data-object': 0.1.19
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-economics@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-electricity@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
@@ -3881,6 +4140,14 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
 
   '@civ-clone/base-science-advance-engineering@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-environmentalism@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-espionage@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -3896,6 +4163,10 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-fundamentalism@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-fusionpower@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
@@ -3905,6 +4176,10 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
 
   '@civ-clone/base-science-advance-geneticengineering@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-guerrillawarfare@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -3932,7 +4207,19 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-laser@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-leadership@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-literacy@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-machinetools@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -3964,9 +4251,21 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-miniaturization@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-mobilewarfare@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-monarchy@0.1.1':
     dependencies:
       '@civ-clone/core-data-object': 0.1.19
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-monotheism@0.1.0':
+    dependencies:
       '@civ-clone/core-science': 0.1.9
 
   '@civ-clone/base-science-advance-mysticism@0.1.0':
@@ -3997,7 +4296,19 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-plumbing@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-polytheism@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-pottery@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-radio@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -4014,6 +4325,10 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-refrigeration@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-religion@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
@@ -4026,7 +4341,19 @@ snapshots:
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
+  '@civ-clone/base-science-advance-sanitation@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-seafaring@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
   '@civ-clone/base-science-advance-spaceflight@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-stealth@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -4039,6 +4366,14 @@ snapshots:
       '@civ-clone/core-science': 0.1.9
 
   '@civ-clone/base-science-advance-superconductor@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-tactics@0.1.0':
+    dependencies:
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-theology@0.1.0':
     dependencies:
       '@civ-clone/core-science': 0.1.9
 
@@ -4061,6 +4396,10 @@ snapshots:
   '@civ-clone/base-science-advance-university@0.1.1':
     dependencies:
       '@civ-clone/core-data-object': 0.1.19
+      '@civ-clone/core-science': 0.1.9
+
+  '@civ-clone/base-science-advance-warriorcode@0.1.0':
+    dependencies:
       '@civ-clone/core-science': 0.1.9
 
   '@civ-clone/base-science-advance-writing@0.1.0':
@@ -4797,6 +5136,14 @@ snapshots:
       '@civ-clone/core-unit': 0.1.31
       '@civ-clone/core-unit-transport': 0.1.10
 
+  '@civ-clone/base-unit-alpinetrooper@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-archer@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
   '@civ-clone/base-unit-artillery@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
@@ -4808,6 +5155,25 @@ snapshots:
   '@civ-clone/base-unit-bomber@0.1.1':
     dependencies:
       '@civ-clone/base-unit-type-air': 0.1.0
+
+  '@civ-clone/base-unit-build@0.1.0':
+    dependencies:
+      '@civ-clone/base-civilization-barbarian': 0.1.1
+      '@civ-clone/base-unit-trait-founds-cities': 0.1.0
+      '@civ-clone/base-unit-trait-non-combatant': 0.1.0
+      '@civ-clone/base-unit-type-naval': 0.1.0
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-build': 0.1.22
+      '@civ-clone/core-city-growth': 0.1.6
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-registry': 0.1.6
+      '@civ-clone/core-requirement': 0.1.3
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-science': 0.1.9
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-unit-improvement': 0.1.3
+      '@civ-clone/core-world': 0.1.24
 
   '@civ-clone/base-unit-cannon@0.1.0':
     dependencies:
@@ -4827,11 +5193,27 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
 
+  '@civ-clone/base-unit-cavalry@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
   '@civ-clone/base-unit-chariot@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
 
+  '@civ-clone/base-unit-cruisemissile@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-air': 0.1.0
+
   '@civ-clone/base-unit-cruiser@0.1.1':
+    dependencies:
+      '@civ-clone/base-unit-type-naval': 0.1.0
+
+  '@civ-clone/base-unit-crusader@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-destroyer@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-naval': 0.1.0
 
@@ -4839,17 +5221,53 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-diplomatic': 0.1.0
 
+  '@civ-clone/base-unit-dragoon@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-elephant@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-engineer@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-explorer@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-fanatic@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
   '@civ-clone/base-unit-fighter@0.1.1':
     dependencies:
       '@civ-clone/base-unit-type-air': 0.1.0
+
+  '@civ-clone/base-unit-freight@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
 
   '@civ-clone/base-unit-frigate@0.1.2':
     dependencies:
       '@civ-clone/base-unit-type-naval-transport': 0.1.3
 
+  '@civ-clone/base-unit-galleon@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-naval-transport': 0.1.3
+
+  '@civ-clone/base-unit-helicopter@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-air': 0.1.0
+
   '@civ-clone/base-unit-horseman@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
+
+  '@civ-clone/base-unit-howitzer@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
 
   '@civ-clone/base-unit-improvement-fortified@0.1.0':
     dependencies:
@@ -4871,25 +5289,64 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
 
-  '@civ-clone/base-unit-lifecycle@0.1.0':
+  '@civ-clone/base-unit-lifecycle@0.1.1':
     dependencies:
       '@civ-clone/base-unit-action-embark': 0.1.6
+      '@civ-clone/base-unit-action-establish-embassy': 0.1.0
+      '@civ-clone/base-unit-action-goto': 0.1.9
+      '@civ-clone/base-unit-action-investigate-city': 0.1.0
+      '@civ-clone/base-unit-action-meet-with-leader': 0.1.0
+      '@civ-clone/base-unit-action-nuclear-attack': 0.1.0
       '@civ-clone/base-unit-action-rules': 0.1.5
       '@civ-clone/base-unit-action-sleep': 0.1.5
+      '@civ-clone/base-unit-trait-attack-ends-turn': 0.1.0
       '@civ-clone/base-unit-trait-carries': 0.1.0
+      '@civ-clone/base-unit-trait-coast-bound': 0.1.0
+      '@civ-clone/base-unit-trait-non-combatant': 0.1.0
+      '@civ-clone/base-unit-type-air': 0.1.0
+      '@civ-clone/base-unit-type-land': 0.1.0
+      '@civ-clone/base-unit-type-naval-transport': 0.1.3
       '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-growth': 0.1.6
+      '@civ-clone/core-diplomacy': 0.1.8
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-random': 0.1.2
       '@civ-clone/core-rule': 0.1.9
       '@civ-clone/core-terrain': 0.1.4
+      '@civ-clone/core-tile-improvement': 0.1.6
+      '@civ-clone/core-turn-based-game': 0.1.10
       '@civ-clone/core-unit': 0.1.31
       '@civ-clone/core-unit-improvement': 0.1.3
       '@civ-clone/core-unit-transport': 0.1.10
       '@civ-clone/core-world': 0.1.24
+      '@civ-clone/core-world-path': 0.1.3
+      '@civ-clone/library-diplomacy': 0.1.4
+
+  '@civ-clone/base-unit-marine@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
 
   '@civ-clone/base-unit-mechanizedinfantry@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
+
+  '@civ-clone/base-unit-missilecruiser@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-naval': 0.1.0
+
+  '@civ-clone/base-unit-movement@0.1.0':
+    dependencies:
+      '@civ-clone/base-terrain-properties': 0.1.0
+      '@civ-clone/base-unit-type-air': 0.1.0
+      '@civ-clone/base-unit-type-land': 0.1.0
+      '@civ-clone/base-unit-type-naval': 0.1.0
+      '@civ-clone/base-unit-type-naval-transport': 0.1.3
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-terrain': 0.1.4
+      '@civ-clone/core-tile-improvement': 0.1.6
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-unit-transport': 0.1.10
 
   '@civ-clone/base-unit-musketman@0.1.0':
     dependencies:
@@ -4899,9 +5356,26 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-air': 0.1.0
 
+  '@civ-clone/base-unit-paratrooper@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-partisan@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-pikeman@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
   '@civ-clone/base-unit-rifleman@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
+
+  '@civ-clone/base-unit-role@0.1.0':
+    dependencies:
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-unit': 0.1.31
 
   '@civ-clone/base-unit-sail@0.1.1':
     dependencies:
@@ -4915,6 +5389,18 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
 
+  '@civ-clone/base-unit-spy@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-land': 0.1.0
+
+  '@civ-clone/base-unit-stealthbomber@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-air': 0.1.0
+
+  '@civ-clone/base-unit-stealthfighter@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-type-air': 0.1.0
+
   '@civ-clone/base-unit-submarine@0.1.1':
     dependencies:
       '@civ-clone/base-unit-type-naval': 0.1.0
@@ -4927,6 +5413,10 @@ snapshots:
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
 
+  '@civ-clone/base-unit-trait-amphibious@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
   '@civ-clone/base-unit-trait-attack-ends-turn@0.1.0':
     dependencies:
       '@civ-clone/core-unit': 0.1.31
@@ -4937,6 +5427,22 @@ snapshots:
       '@civ-clone/core-unit': 0.1.31
 
   '@civ-clone/base-unit-trait-coast-bound@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-covert@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-defence-bonus-vs-air@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-defence-bonus-vs-mounted@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-detects-submerged@0.1.0':
     dependencies:
       '@civ-clone/core-unit': 0.1.31
 
@@ -4972,11 +5478,28 @@ snapshots:
     dependencies:
       '@civ-clone/core-unit': 0.1.31
 
+  '@civ-clone/base-unit-trait-paradrop@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-single-use@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
   '@civ-clone/base-unit-trait-submerged@0.1.0':
     dependencies:
       '@civ-clone/core-unit': 0.1.31
 
+  '@civ-clone/base-unit-trait-support-exempt-under@0.1.0':
+    dependencies:
+      '@civ-clone/core-registry': 0.1.6
+      '@civ-clone/core-unit': 0.1.31
+
   '@civ-clone/base-unit-trait-terraforms@0.1.0':
+    dependencies:
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/base-unit-trait-terrain-as-road@0.1.0':
     dependencies:
       '@civ-clone/core-unit': 0.1.31
 
@@ -5029,6 +5552,20 @@ snapshots:
   '@civ-clone/base-unit-warrior@0.1.0':
     dependencies:
       '@civ-clone/base-unit-type-fortifiable': 0.1.0
+
+  '@civ-clone/base-unit-yield@0.1.0':
+    dependencies:
+      '@civ-clone/base-unit-trait-ignores-fortifications': 0.1.0
+      '@civ-clone/base-unit-type-air': 0.1.0
+      '@civ-clone/base-unit-type-naval': 0.1.0
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-improvement': 0.1.8
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-unit-improvement': 0.1.3
+      '@civ-clone/core-unit-transport': 0.1.10
+      '@civ-clone/core-world': 0.1.24
+      '@civ-clone/core-yield': 0.1.6
 
   '@civ-clone/base-wonder-apolloprogram@0.1.1':
     dependencies:
@@ -5184,7 +5721,7 @@ snapshots:
     dependencies:
       '@civ-clone/base-city-celebration-yields': 0.1.0
       '@civ-clone/base-city-happiness': 0.1.1
-      '@civ-clone/base-city-happiness-status': 0.1.0
+      '@civ-clone/base-city-happiness-status': 0.1.1
       '@civ-clone/base-city-yield-city-improvement-content': 0.1.2
       '@civ-clone/base-city-yield-happiness': 0.1.0
       '@civ-clone/base-city-yield-luxuries': 0.1.0
@@ -5263,7 +5800,7 @@ snapshots:
 
   '@civ-clone/civ1-city@https://codeload.github.com/civ-clone/civ1-city/tar.gz/0c90e5d350aa9ac45c3c1f7b7b6c4deefe608a32':
     dependencies:
-      '@civ-clone/base-city-lifecycle': 0.1.0
+      '@civ-clone/base-city-lifecycle': 0.1.1
       '@civ-clone/base-city-tiles-fat-cross': 0.1.0
       '@civ-clone/base-city-yield-population-support-food': 0.1.1
       '@civ-clone/base-government-unit-support': 0.1.0
@@ -5737,7 +6274,7 @@ snapshots:
       '@civ-clone/base-unit-action-rules': 0.1.5
       '@civ-clone/base-unit-action-sleep': 0.1.5
       '@civ-clone/base-unit-action-steal-technology': 0.1.0
-      '@civ-clone/base-unit-lifecycle': 0.1.0
+      '@civ-clone/base-unit-lifecycle': 0.1.1
       '@civ-clone/base-unit-trait-attack-ends-turn': 0.1.0
       '@civ-clone/base-unit-trait-carries': 0.1.0
       '@civ-clone/base-unit-trait-coast-bound': 0.1.0
@@ -5902,6 +6439,93 @@ snapshots:
 
   '@civ-clone/civ2-asset-extractor@https://codeload.github.com/civ-clone/civ2-asset-extractor/tar.gz/8f95e9890c6ea3a7709e580fd1314664b6297dea': {}
 
+  '@civ-clone/civ2-city-happiness@https://codeload.github.com/civ-clone/civ2-city-happiness/tar.gz/fd2c20df091d51b73b3bab6b2d9b7359a7e717e6':
+    dependencies:
+      '@civ-clone/base-city-celebration-yields': 0.1.0
+      '@civ-clone/base-city-happiness': 0.1.1
+      '@civ-clone/base-city-happiness-status': 0.1.1
+      '@civ-clone/base-city-yield-happiness': 0.1.0
+      '@civ-clone/base-city-yield-luxuries': 0.1.0
+      '@civ-clone/base-city-yield-luxury-happiness': 0.1.0
+      '@civ-clone/base-city-yield-martial-law-content': 0.1.2
+      '@civ-clone/base-city-yield-military-unhappiness': 0.1.2
+      '@civ-clone/base-city-yield-population-unhappiness': 0.1.0
+      '@civ-clone/base-city-yield-unhappiness': 0.1.1
+      '@civ-clone/base-government-martial-law': 0.1.0
+      '@civ-clone/base-government-military-unhappiness': 0.1.0
+      '@civ-clone/base-tile-improvement-fortress': 0.1.0
+      '@civ-clone/base-tile-improvement-pollution': 0.1.0
+      '@civ-clone/base-unit-role': 0.1.0
+      '@civ-clone/base-unit-type-air': 0.1.0
+      '@civ-clone/civ2-city': https://codeload.github.com/civ-clone/civ2-city/tar.gz/7349fa483b5d1711745754697b993391c7384fd2
+      '@civ-clone/civ2-difficulty': https://codeload.github.com/civ-clone/civ2-difficulty/tar.gz/1002f1fdd3d031ed6d84766e4122adbb9800eb2c
+      '@civ-clone/civ2-government': https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43
+      '@civ-clone/civ2-rules': https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/civ2-world': https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-growth': 0.1.6
+      '@civ-clone/core-city-happiness': 0.1.2
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-data-object': 0.1.19
+      '@civ-clone/core-difficulty': 0.1.0
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-game': 0.1.17
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-pending-effect': 0.1.2
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-tile-improvement': 0.1.6
+      '@civ-clone/core-turn-based-game': 0.1.10
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-world': 0.1.24
+      '@civ-clone/core-yield': 0.1.6
+
+  '@civ-clone/civ2-city@https://codeload.github.com/civ-clone/civ2-city/tar.gz/7349fa483b5d1711745754697b993391c7384fd2':
+    dependencies:
+      '@civ-clone/base-city-improvement-palace': 0.1.0
+      '@civ-clone/base-city-lifecycle': 0.1.1
+      '@civ-clone/base-city-specialist-entertainer': 0.1.0
+      '@civ-clone/base-city-specialist-scientist': 0.1.0
+      '@civ-clone/base-city-specialist-taxcollector': 0.1.0
+      '@civ-clone/base-city-tiles-fat-cross': 0.1.0
+      '@civ-clone/base-city-yield-corruption': 0.1.1
+      '@civ-clone/base-city-yield-gold': 0.1.1
+      '@civ-clone/base-city-yield-luxuries': 0.1.0
+      '@civ-clone/base-city-yield-population-support-food': 0.1.1
+      '@civ-clone/base-city-yield-research': 0.1.1
+      '@civ-clone/base-city-yield-unit-support-food': 0.1.2
+      '@civ-clone/base-city-yield-unit-support-production': 0.1.2
+      '@civ-clone/base-government-unit-support': 0.1.0
+      '@civ-clone/base-terrain-yield-food': 0.1.0
+      '@civ-clone/base-terrain-yield-production': 0.1.0
+      '@civ-clone/base-terrain-yield-trade': 0.1.0
+      '@civ-clone/base-tile-improvement-irrigation': 0.1.0
+      '@civ-clone/base-tile-improvement-road': 0.1.0
+      '@civ-clone/base-unit-action-attack': 0.1.9
+      '@civ-clone/base-unit-action-incite-revolt': 0.1.0
+      '@civ-clone/base-unit-fanatic': 0.1.0
+      '@civ-clone/base-unit-role': 0.1.0
+      '@civ-clone/civ2-difficulty': https://codeload.github.com/civ-clone/civ2-difficulty/tar.gz/1002f1fdd3d031ed6d84766e4122adbb9800eb2c
+      '@civ-clone/civ2-government': https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43
+      '@civ-clone/civ2-rules': https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-build': 0.1.22
+      '@civ-clone/core-city-growth': 0.1.6
+      '@civ-clone/core-city-improvement': 0.1.8
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-difficulty': 0.1.0
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-game': 0.1.17
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-player-world': 0.1.14
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-terrain': 0.1.4
+      '@civ-clone/core-tile-improvement': 0.1.6
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-world': 0.1.24
+      '@civ-clone/core-yield': 0.1.6
+
   '@civ-clone/civ2-civilization@https://codeload.github.com/civ-clone/civ2-civilization/tar.gz/d5a59a531a64a4ab815aed86bd76f58afedc1a0e':
     dependencies:
       '@civ-clone/base-civilization-american': 0.1.3
@@ -5969,23 +6593,66 @@ snapshots:
       '@civ-clone/core-rule': 0.1.9
       '@civ-clone/core-spaceship': 0.1.10
 
-  '@civ-clone/civ2-player@https://codeload.github.com/civ-clone/civ2-player/tar.gz/54040de1a9ba14f026fe269dbe2af951e12566c5':
+  '@civ-clone/civ2-government@https://codeload.github.com/civ-clone/civ2-government/tar.gz/079a39afc42f360a738d36be36ba7446d9296a43':
     dependencies:
+      '@civ-clone/base-government-anarchy': 0.1.0
+      '@civ-clone/base-government-change': 0.1.0
+      '@civ-clone/base-government-communism': 0.1.0
+      '@civ-clone/base-government-democracy': 0.1.0
+      '@civ-clone/base-government-despotism': 0.1.0
+      '@civ-clone/base-government-fundamentalism': 0.1.0
+      '@civ-clone/base-government-martial-law': 0.1.0
+      '@civ-clone/base-government-military-unhappiness': 0.1.0
+      '@civ-clone/base-government-monarchy': 0.1.0
+      '@civ-clone/base-government-republic': 0.1.0
+      '@civ-clone/base-player-action-choose-government': 0.1.0
+      '@civ-clone/base-player-action-revolution': 0.1.1
+      '@civ-clone/base-science-advance-communism': 0.1.1
+      '@civ-clone/base-science-advance-democracy': 0.1.1
+      '@civ-clone/base-science-advance-fundamentalism': 0.1.0
+      '@civ-clone/base-science-advance-monarchy': 0.1.1
+      '@civ-clone/base-science-advance-therepublic': 0.1.0
+      '@civ-clone/civ2-rules': https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-game': 0.1.17
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-pending-effect': 0.1.2
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-player-world': 0.1.14
+      '@civ-clone/core-requirement': 0.1.3
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-science': 0.1.9
+      '@civ-clone/core-turn-based-game': 0.1.10
+      '@civ-clone/core-unit': 0.1.31
+
+  '@civ-clone/civ2-player@https://codeload.github.com/civ-clone/civ2-player/tar.gz/08d899c501a6aea86822c9782dac2a260936aa30':
+    dependencies:
+      '@civ-clone/base-city-tiles-fat-cross': 0.1.0
       '@civ-clone/base-civilization-barbarian': 0.1.1
+      '@civ-clone/base-difficulty': 0.1.0
+      '@civ-clone/base-leader-trait-militarism': 0.1.1
       '@civ-clone/base-player': 0.1.2
       '@civ-clone/base-player-action-end-turn': 0.1.0
+      '@civ-clone/base-terrain-feature-river': 0.1.0
+      '@civ-clone/base-terrain-grassland': 0.1.0
       '@civ-clone/base-terrain-yield-food': 0.1.0
       '@civ-clone/base-terrain-yield-production': 0.1.0
       '@civ-clone/base-terrain-yield-trade': 0.1.0
       '@civ-clone/base-unit-settlers': 0.1.0
+      '@civ-clone/civ2-difficulty': https://codeload.github.com/civ-clone/civ2-difficulty/tar.gz/1002f1fdd3d031ed6d84766e4122adbb9800eb2c
+      '@civ-clone/civ2-science': https://codeload.github.com/civ-clone/civ2-science/tar.gz/188cfd6748a9a35a29ebd06d06d1e0fe0f2cefb6
       '@civ-clone/core-city': 0.1.24
       '@civ-clone/core-civilization': 0.1.8
       '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-difficulty': 0.1.0
       '@civ-clone/core-engine': 0.1.6
       '@civ-clone/core-game': 0.1.17
       '@civ-clone/core-player': 0.1.10
       '@civ-clone/core-player-world': 0.1.14
+      '@civ-clone/core-random': 0.1.2
       '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-science': 0.1.9
+      '@civ-clone/core-terrain-feature': 0.1.5
       '@civ-clone/core-tile-improvement': 0.1.6
       '@civ-clone/core-unit': 0.1.31
       '@civ-clone/core-world': 0.1.24
@@ -6006,6 +6673,122 @@ snapshots:
       '@civ-clone/core-unit': 0.1.31
 
   '@civ-clone/civ2-rules@https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267': {}
+
+  '@civ-clone/civ2-science@https://codeload.github.com/civ-clone/civ2-science/tar.gz/188cfd6748a9a35a29ebd06d06d1e0fe0f2cefb6':
+    dependencies:
+      '@civ-clone/base-city-happiness': 0.1.1
+      '@civ-clone/base-civilization-barbarian': 0.1.1
+      '@civ-clone/base-difficulty': 0.1.0
+      '@civ-clone/base-government-anarchy': 0.1.0
+      '@civ-clone/base-government-change': 0.1.0
+      '@civ-clone/base-player-action-choose-research': 0.1.0
+      '@civ-clone/base-science-advance-advancedflight': 0.1.0
+      '@civ-clone/base-science-advance-alphabet': 0.1.0
+      '@civ-clone/base-science-advance-amphibiouswarfare': 0.1.0
+      '@civ-clone/base-science-advance-astronomy': 0.1.0
+      '@civ-clone/base-science-advance-atomictheory': 0.1.0
+      '@civ-clone/base-science-advance-automobile': 0.1.0
+      '@civ-clone/base-science-advance-banking': 0.1.0
+      '@civ-clone/base-science-advance-bridgebuilding': 0.1.0
+      '@civ-clone/base-science-advance-bronzeworking': 0.1.0
+      '@civ-clone/base-science-advance-ceremonialburial': 0.1.0
+      '@civ-clone/base-science-advance-chemistry': 0.1.0
+      '@civ-clone/base-science-advance-chivalry': 0.1.0
+      '@civ-clone/base-science-advance-codeoflaws': 0.1.0
+      '@civ-clone/base-science-advance-combinedarms': 0.1.0
+      '@civ-clone/base-science-advance-combustion': 0.1.0
+      '@civ-clone/base-science-advance-communism': 0.1.1
+      '@civ-clone/base-science-advance-computers': 0.1.0
+      '@civ-clone/base-science-advance-conscription': 0.1.0
+      '@civ-clone/base-science-advance-construction': 0.1.0
+      '@civ-clone/base-science-advance-corporation': 0.1.0
+      '@civ-clone/base-science-advance-currency': 0.1.0
+      '@civ-clone/base-science-advance-democracy': 0.1.1
+      '@civ-clone/base-science-advance-economics': 0.1.0
+      '@civ-clone/base-science-advance-electricity': 0.1.0
+      '@civ-clone/base-science-advance-electronics': 0.1.0
+      '@civ-clone/base-science-advance-engineering': 0.1.0
+      '@civ-clone/base-science-advance-environmentalism': 0.1.0
+      '@civ-clone/base-science-advance-espionage': 0.1.0
+      '@civ-clone/base-science-advance-explosives': 0.1.0
+      '@civ-clone/base-science-advance-feudalism': 0.1.0
+      '@civ-clone/base-science-advance-flight': 0.1.0
+      '@civ-clone/base-science-advance-fundamentalism': 0.1.0
+      '@civ-clone/base-science-advance-fusionpower': 0.1.0
+      '@civ-clone/base-science-advance-future-technology': 0.1.0
+      '@civ-clone/base-science-advance-geneticengineering': 0.1.0
+      '@civ-clone/base-science-advance-guerrillawarfare': 0.1.0
+      '@civ-clone/base-science-advance-gunpowder': 0.1.0
+      '@civ-clone/base-science-advance-horsebackriding': 0.1.0
+      '@civ-clone/base-science-advance-industrialization': 0.1.0
+      '@civ-clone/base-science-advance-invention': 0.1.0
+      '@civ-clone/base-science-advance-ironworking': 0.1.0
+      '@civ-clone/base-science-advance-laborunion': 0.1.0
+      '@civ-clone/base-science-advance-laser': 0.1.0
+      '@civ-clone/base-science-advance-leadership': 0.1.0
+      '@civ-clone/base-science-advance-literacy': 0.1.0
+      '@civ-clone/base-science-advance-machinetools': 0.1.0
+      '@civ-clone/base-science-advance-magnetism': 0.1.0
+      '@civ-clone/base-science-advance-mapmaking': 0.1.0
+      '@civ-clone/base-science-advance-masonry': 0.1.0
+      '@civ-clone/base-science-advance-massproduction': 0.1.0
+      '@civ-clone/base-science-advance-mathematics': 0.1.0
+      '@civ-clone/base-science-advance-medicine': 0.1.0
+      '@civ-clone/base-science-advance-metallurgy': 0.1.0
+      '@civ-clone/base-science-advance-miniaturization': 0.1.0
+      '@civ-clone/base-science-advance-mobilewarfare': 0.1.0
+      '@civ-clone/base-science-advance-monarchy': 0.1.1
+      '@civ-clone/base-science-advance-monotheism': 0.1.0
+      '@civ-clone/base-science-advance-mysticism': 0.1.0
+      '@civ-clone/base-science-advance-navigation': 0.1.0
+      '@civ-clone/base-science-advance-nuclearfission': 0.1.0
+      '@civ-clone/base-science-advance-nuclearpower': 0.1.0
+      '@civ-clone/base-science-advance-philosophy': 0.1.0
+      '@civ-clone/base-science-advance-physics': 0.1.0
+      '@civ-clone/base-science-advance-plastics': 0.1.0
+      '@civ-clone/base-science-advance-plumbing': 0.1.0
+      '@civ-clone/base-science-advance-polytheism': 0.1.0
+      '@civ-clone/base-science-advance-pottery': 0.1.0
+      '@civ-clone/base-science-advance-radio': 0.1.0
+      '@civ-clone/base-science-advance-railroad': 0.1.1
+      '@civ-clone/base-science-advance-recycling': 0.1.0
+      '@civ-clone/base-science-advance-refining': 0.1.0
+      '@civ-clone/base-science-advance-refrigeration': 0.1.0
+      '@civ-clone/base-science-advance-robotics': 0.1.0
+      '@civ-clone/base-science-advance-rocketry': 0.1.0
+      '@civ-clone/base-science-advance-sanitation': 0.1.0
+      '@civ-clone/base-science-advance-seafaring': 0.1.0
+      '@civ-clone/base-science-advance-spaceflight': 0.1.0
+      '@civ-clone/base-science-advance-stealth': 0.1.0
+      '@civ-clone/base-science-advance-steamengine': 0.1.0
+      '@civ-clone/base-science-advance-steel': 0.1.0
+      '@civ-clone/base-science-advance-superconductor': 0.1.0
+      '@civ-clone/base-science-advance-tactics': 0.1.0
+      '@civ-clone/base-science-advance-theology': 0.1.0
+      '@civ-clone/base-science-advance-theoryofgravity': 0.1.0
+      '@civ-clone/base-science-advance-therepublic': 0.1.0
+      '@civ-clone/base-science-advance-thewheel': 0.1.0
+      '@civ-clone/base-science-advance-trade': 0.1.0
+      '@civ-clone/base-science-advance-university': 0.1.1
+      '@civ-clone/base-science-advance-warriorcode': 0.1.0
+      '@civ-clone/base-science-advance-writing': 0.1.0
+      '@civ-clone/base-science-research': 0.1.0
+      '@civ-clone/civ2-difficulty': https://codeload.github.com/civ-clone/civ2-difficulty/tar.gz/1002f1fdd3d031ed6d84766e4122adbb9800eb2c
+      '@civ-clone/civ2-rules': https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-difficulty': 0.1.0
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-game': 0.1.17
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-player-world': 0.1.14
+      '@civ-clone/core-random': 0.1.2
+      '@civ-clone/core-requirement': 0.1.3
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-science': 0.1.9
+      '@civ-clone/core-turn-based-game': 0.1.10
+      '@civ-clone/core-yield': 0.1.6
 
   '@civ-clone/civ2-trade-rate@https://codeload.github.com/civ-clone/civ2-trade-rate/tar.gz/a481673fd9e07a1beee38b91fef5789eaf065b38':
     dependencies:
@@ -6028,13 +6811,213 @@ snapshots:
       '@civ-clone/core-trade-rate': 0.1.6
       '@civ-clone/core-yield': 0.1.6
 
-  '@civ-clone/civ2-world@https://codeload.github.com/civ-clone/civ2-world/tar.gz/d6727d9910d1757182162d4c3c1b05ca59116846':
+  '@civ-clone/civ2-unit@https://codeload.github.com/civ-clone/civ2-unit/tar.gz/4bc3d669e0d7172ff92b8f880aae93c5eef97d04':
+    dependencies:
+      '@civ-clone/base-city-improvement-citywalls': 0.1.0
+      '@civ-clone/base-civilization-barbarian': 0.1.1
+      '@civ-clone/base-difficulty': 0.1.0
+      '@civ-clone/base-government-fundamentalism': 0.1.0
+      '@civ-clone/base-player-action-active-unit': 0.1.1
+      '@civ-clone/base-player-action-inactive-unit': 0.1.1
+      '@civ-clone/base-science-advance-advancedflight': 0.1.0
+      '@civ-clone/base-science-advance-amphibiouswarfare': 0.1.0
+      '@civ-clone/base-science-advance-automobile': 0.1.0
+      '@civ-clone/base-science-advance-bronzeworking': 0.1.0
+      '@civ-clone/base-science-advance-chivalry': 0.1.0
+      '@civ-clone/base-science-advance-combinedarms': 0.1.0
+      '@civ-clone/base-science-advance-combustion': 0.1.0
+      '@civ-clone/base-science-advance-conscription': 0.1.0
+      '@civ-clone/base-science-advance-corporation': 0.1.0
+      '@civ-clone/base-science-advance-electricity': 0.1.0
+      '@civ-clone/base-science-advance-espionage': 0.1.0
+      '@civ-clone/base-science-advance-explosives': 0.1.0
+      '@civ-clone/base-science-advance-feudalism': 0.1.0
+      '@civ-clone/base-science-advance-flight': 0.1.0
+      '@civ-clone/base-science-advance-fundamentalism': 0.1.0
+      '@civ-clone/base-science-advance-guerrillawarfare': 0.1.0
+      '@civ-clone/base-science-advance-gunpowder': 0.1.0
+      '@civ-clone/base-science-advance-horsebackriding': 0.1.0
+      '@civ-clone/base-science-advance-industrialization': 0.1.0
+      '@civ-clone/base-science-advance-ironworking': 0.1.0
+      '@civ-clone/base-science-advance-laborunion': 0.1.0
+      '@civ-clone/base-science-advance-leadership': 0.1.0
+      '@civ-clone/base-science-advance-machinetools': 0.1.0
+      '@civ-clone/base-science-advance-magnetism': 0.1.0
+      '@civ-clone/base-science-advance-mapmaking': 0.1.0
+      '@civ-clone/base-science-advance-mathematics': 0.1.0
+      '@civ-clone/base-science-advance-metallurgy': 0.1.0
+      '@civ-clone/base-science-advance-mobilewarfare': 0.1.0
+      '@civ-clone/base-science-advance-monotheism': 0.1.0
+      '@civ-clone/base-science-advance-navigation': 0.1.0
+      '@civ-clone/base-science-advance-nuclearfission': 0.1.0
+      '@civ-clone/base-science-advance-polytheism': 0.1.0
+      '@civ-clone/base-science-advance-railroad': 0.1.1
+      '@civ-clone/base-science-advance-robotics': 0.1.0
+      '@civ-clone/base-science-advance-rocketry': 0.1.0
+      '@civ-clone/base-science-advance-seafaring': 0.1.0
+      '@civ-clone/base-science-advance-stealth': 0.1.0
+      '@civ-clone/base-science-advance-steamengine': 0.1.0
+      '@civ-clone/base-science-advance-steel': 0.1.0
+      '@civ-clone/base-science-advance-tactics': 0.1.0
+      '@civ-clone/base-science-advance-thewheel': 0.1.0
+      '@civ-clone/base-science-advance-trade': 0.1.0
+      '@civ-clone/base-science-advance-warriorcode': 0.1.0
+      '@civ-clone/base-science-advance-writing': 0.1.0
+      '@civ-clone/base-terrain-properties': 0.1.0
+      '@civ-clone/base-unit-action-activate': 0.1.0
+      '@civ-clone/base-unit-action-attack': 0.1.9
+      '@civ-clone/base-unit-action-automate': 0.1.0
+      '@civ-clone/base-unit-action-build-irrigation': 0.1.4
+      '@civ-clone/base-unit-action-build-mine': 0.1.4
+      '@civ-clone/base-unit-action-build-railroad': 0.1.4
+      '@civ-clone/base-unit-action-build-road': 0.1.4
+      '@civ-clone/base-unit-action-build-route': 0.1.1
+      '@civ-clone/base-unit-action-capture-city': 0.1.2
+      '@civ-clone/base-unit-action-clean-pollution': 0.1.0
+      '@civ-clone/base-unit-action-clear-forest': 0.1.9
+      '@civ-clone/base-unit-action-clear-jungle': 0.1.8
+      '@civ-clone/base-unit-action-clear-swamp': 0.1.8
+      '@civ-clone/base-unit-action-disband': 0.1.2
+      '@civ-clone/base-unit-action-disembark': 0.1.2
+      '@civ-clone/base-unit-action-embark': 0.1.6
+      '@civ-clone/base-unit-action-establish-embassy': 0.1.0
+      '@civ-clone/base-unit-action-explore': 0.1.0
+      '@civ-clone/base-unit-action-fortify': 0.1.7
+      '@civ-clone/base-unit-action-found-city': 0.1.4
+      '@civ-clone/base-unit-action-goto': 0.1.9
+      '@civ-clone/base-unit-action-investigate-city': 0.1.0
+      '@civ-clone/base-unit-action-join-city': 0.1.1
+      '@civ-clone/base-unit-action-land-aircraft': 0.1.0
+      '@civ-clone/base-unit-action-move': 0.1.2
+      '@civ-clone/base-unit-action-no-orders': 0.1.0
+      '@civ-clone/base-unit-action-nuclear-attack': 0.1.0
+      '@civ-clone/base-unit-action-pillage': 0.1.6
+      '@civ-clone/base-unit-action-plant-forest': 0.1.10
+      '@civ-clone/base-unit-action-rules': 0.1.5
+      '@civ-clone/base-unit-action-sleep': 0.1.5
+      '@civ-clone/base-unit-action-unload': 0.1.2
+      '@civ-clone/base-unit-alpinetrooper': 0.1.0
+      '@civ-clone/base-unit-archer': 0.1.0
+      '@civ-clone/base-unit-artillery': 0.1.0
+      '@civ-clone/base-unit-battleship': 0.1.1
+      '@civ-clone/base-unit-bomber': 0.1.1
+      '@civ-clone/base-unit-build': 0.1.0
+      '@civ-clone/base-unit-cannon': 0.1.0
+      '@civ-clone/base-unit-caravan': 0.1.1
+      '@civ-clone/base-unit-carrier': 0.1.2
+      '@civ-clone/base-unit-catapult': 0.1.0
+      '@civ-clone/base-unit-cavalry': 0.1.0
+      '@civ-clone/base-unit-chariot': 0.1.0
+      '@civ-clone/base-unit-cruisemissile': 0.1.0
+      '@civ-clone/base-unit-cruiser': 0.1.1
+      '@civ-clone/base-unit-crusader': 0.1.0
+      '@civ-clone/base-unit-destroyer': 0.1.0
+      '@civ-clone/base-unit-diplomat': 0.1.1
+      '@civ-clone/base-unit-dragoon': 0.1.0
+      '@civ-clone/base-unit-elephant': 0.1.0
+      '@civ-clone/base-unit-engineer': 0.1.0
+      '@civ-clone/base-unit-explorer': 0.1.0
+      '@civ-clone/base-unit-fanatic': 0.1.0
+      '@civ-clone/base-unit-fighter': 0.1.1
+      '@civ-clone/base-unit-freight': 0.1.0
+      '@civ-clone/base-unit-frigate': 0.1.2
+      '@civ-clone/base-unit-galleon': 0.1.0
+      '@civ-clone/base-unit-helicopter': 0.1.0
+      '@civ-clone/base-unit-horseman': 0.1.0
+      '@civ-clone/base-unit-howitzer': 0.1.0
+      '@civ-clone/base-unit-improvement-fortified': 0.1.0
+      '@civ-clone/base-unit-improvement-veteran': 0.1.0
+      '@civ-clone/base-unit-ironclad': 0.1.1
+      '@civ-clone/base-unit-knight': 0.1.0
+      '@civ-clone/base-unit-lifecycle': 0.1.1
+      '@civ-clone/base-unit-marine': 0.1.0
+      '@civ-clone/base-unit-mechanizedinfantry': 0.1.0
+      '@civ-clone/base-unit-missilecruiser': 0.1.0
+      '@civ-clone/base-unit-movement': 0.1.0
+      '@civ-clone/base-unit-musketman': 0.1.0
+      '@civ-clone/base-unit-nuclear': 0.1.1
+      '@civ-clone/base-unit-paratrooper': 0.1.0
+      '@civ-clone/base-unit-partisan': 0.1.0
+      '@civ-clone/base-unit-pikeman': 0.1.0
+      '@civ-clone/base-unit-rifleman': 0.1.0
+      '@civ-clone/base-unit-role': 0.1.0
+      '@civ-clone/base-unit-sail': 0.1.1
+      '@civ-clone/base-unit-settlers': 0.1.0
+      '@civ-clone/base-unit-spearman': 0.1.0
+      '@civ-clone/base-unit-spy': 0.1.0
+      '@civ-clone/base-unit-stealthbomber': 0.1.0
+      '@civ-clone/base-unit-stealthfighter': 0.1.0
+      '@civ-clone/base-unit-submarine': 0.1.1
+      '@civ-clone/base-unit-swordman': 0.1.0
+      '@civ-clone/base-unit-tank': 0.1.0
+      '@civ-clone/base-unit-trait-amphibious': 0.1.0
+      '@civ-clone/base-unit-trait-carries': 0.1.0
+      '@civ-clone/base-unit-trait-coast-bound': 0.1.0
+      '@civ-clone/base-unit-trait-covert': 0.1.0
+      '@civ-clone/base-unit-trait-defence-bonus-vs-air': 0.1.0
+      '@civ-clone/base-unit-trait-defence-bonus-vs-mounted': 0.1.0
+      '@civ-clone/base-unit-trait-detects-submerged': 0.1.0
+      '@civ-clone/base-unit-trait-detonates': 0.1.0
+      '@civ-clone/base-unit-trait-diplomatic-missions': 0.1.0
+      '@civ-clone/base-unit-trait-fortifies': 0.1.0
+      '@civ-clone/base-unit-trait-founds-cities': 0.1.0
+      '@civ-clone/base-unit-trait-ignores-fortifications': 0.1.0
+      '@civ-clone/base-unit-trait-ignores-zone-of-control': 0.1.0
+      '@civ-clone/base-unit-trait-interceptor': 0.1.0
+      '@civ-clone/base-unit-trait-non-combatant': 0.1.0
+      '@civ-clone/base-unit-trait-paradrop': 0.1.0
+      '@civ-clone/base-unit-trait-single-use': 0.1.0
+      '@civ-clone/base-unit-trait-submerged': 0.1.0
+      '@civ-clone/base-unit-trait-support-exempt-under': 0.1.0
+      '@civ-clone/base-unit-trait-terraforms': 0.1.0
+      '@civ-clone/base-unit-trait-terrain-as-road': 0.1.0
+      '@civ-clone/base-unit-trait-trade-missions': 0.1.0
+      '@civ-clone/base-unit-transport': 0.1.2
+      '@civ-clone/base-unit-trireme': 0.1.1
+      '@civ-clone/base-unit-type-air': 0.1.0
+      '@civ-clone/base-unit-type-land': 0.1.0
+      '@civ-clone/base-unit-type-naval-transport': 0.1.3
+      '@civ-clone/base-unit-warrior': 0.1.0
+      '@civ-clone/base-unit-yield': 0.1.0
+      '@civ-clone/base-zone-of-control': 0.1.0
+      '@civ-clone/civ2-rules': https://codeload.github.com/civ-clone/civ2-rules/tar.gz/3ed07aaa74788140306d7f8a5c31f9d0960ef267
+      '@civ-clone/civ2-world': https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925
+      '@civ-clone/core-city': 0.1.24
+      '@civ-clone/core-city-build': 0.1.22
+      '@civ-clone/core-city-growth': 0.1.6
+      '@civ-clone/core-city-improvement': 0.1.8
+      '@civ-clone/core-civilization': 0.1.8
+      '@civ-clone/core-client': 0.1.4
+      '@civ-clone/core-diplomacy': 0.1.8
+      '@civ-clone/core-engine': 0.1.6
+      '@civ-clone/core-game': 0.1.17
+      '@civ-clone/core-government': 0.1.6
+      '@civ-clone/core-player': 0.1.10
+      '@civ-clone/core-registry': 0.1.6
+      '@civ-clone/core-requirement': 0.1.3
+      '@civ-clone/core-rule': 0.1.9
+      '@civ-clone/core-science': 0.1.9
+      '@civ-clone/core-strategy': 0.1.6
+      '@civ-clone/core-terrain': 0.1.4
+      '@civ-clone/core-terrain-feature': 0.1.5
+      '@civ-clone/core-tile-improvement': 0.1.6
+      '@civ-clone/core-turn-based-game': 0.1.10
+      '@civ-clone/core-unit': 0.1.31
+      '@civ-clone/core-unit-improvement': 0.1.3
+      '@civ-clone/core-unit-transport': 0.1.10
+      '@civ-clone/core-world': 0.1.24
+      '@civ-clone/core-world-path': 0.1.3
+      '@civ-clone/library-diplomacy': 0.1.4
+      '@civ-clone/library-unit': 0.1.15
+
+  '@civ-clone/civ2-world@https://codeload.github.com/civ-clone/civ2-world/tar.gz/b719f4d811da7fcc68971fd77851dac2d18bd925':
     dependencies:
       '@civ-clone/base-goody-hut': 0.1.0
       '@civ-clone/base-government-anarchy': 0.1.0
       '@civ-clone/base-government-communism': 0.1.0
       '@civ-clone/base-government-democracy': 0.1.0
       '@civ-clone/base-government-despotism': 0.1.0
+      '@civ-clone/base-government-fundamentalism': 0.1.0
       '@civ-clone/base-government-monarchy': 0.1.0
       '@civ-clone/base-government-republic': 0.1.0
       '@civ-clone/base-government-tile-penalty': 0.1.0
