@@ -114,7 +114,7 @@
       "randomCalls": 8600,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1166,
+        "total": 1167,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -197,6 +197,7 @@
           "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
+          "RevolutionTerms": 1,
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
@@ -364,7 +365,7 @@
       "randomCalls": 8643,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1166,
+        "total": 1167,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -447,6 +448,7 @@
           "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
+          "RevolutionTerms": 1,
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
@@ -807,7 +809,7 @@
       "randomCalls": 8902,
       "mathRandomCalls": 0,
       "rules": {
-        "total": 1166,
+        "total": 1167,
         "byType": {
           "Action": 74,
           "ActionPerformed": 1,
@@ -890,6 +892,7 @@
           "Requirements": 61,
           "Resolved": 6,
           "RevoltIncited": 1,
+          "RevolutionTerms": 1,
           "ScienceBias": 2,
           "Score": 6,
           "Sell": 1,
