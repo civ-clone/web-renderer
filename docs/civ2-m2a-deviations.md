@@ -2,7 +2,7 @@
 
 This is the first playable Civilization II (M2a): Civ2's units, advances, governments, improvements, wonders and tribes on the shared rules, drawn on the isometric grid with the art you import yourself. It is a **preview**. Many Civ2 behaviours are not modelled yet, and a few differ on purpose. This page lists them, for players who know Civ2 and for developers picking up the next phase.
 
-Each entry says what differs, which package owns it (all `civ-clone/civ2-*` unless noted), and whether it is **planned** (a later phase, M2b to M2f, see `docs/civ2-plan.md` and `docs/civ2-m2a-plan.md`) or **by design**. "Not scheduled" means it is wanted but has no phase yet.
+Each entry says what differs, which package owns it (all `civ-clone/civ2-*` unless noted), and whether it is **planned** (a later phase, M2b to M2f, see the roadmap in #1007) or **by design**. "Not scheduled" means it is wanted but has no phase yet.
 
 Where the numbers are Civ2's, they come from a hand-written table checked against your own copy of the game (`CIV2_PATH`); no game text or art is in the repository. The Civilopedia is empty for Civ2 classes.
 
@@ -12,7 +12,7 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 
 ## Map
 
-- **Interim world.** The map comes from the shared generator with Glacier at the poles and a simple downhill river walk afterwards, not Civ2's own generator. Start positions are simple, plus Civ2's start balancing (extra Settlers or advances for poor starts). Only staggered-iso grids are offered. (civ2-world, civ2-player.) Planned: Civ2's generator and the Earth map (M4).
+- **Interim world.** The map comes from the shared generator with Glacier at the poles and a simple downhill river walk afterwards, not Civ2's own generator. Start positions are simple, plus Civ2's start balancing (extra Settlers or advances for poor starts). Only staggered-iso grids are offered. (civ2-world, civ2-player.) Planned: Civ2's own generator (M2f).
 - **Rivers** give +1 trade, a source of water for irrigation and a river-side site bonus, but Civ2's river movement and display rules are approximated. (civ2-world.) Not scheduled.
 - **Farmland is inert.** It can be built, but gives no food, so the Supermarket does nothing yet. (civ2-world, civ2-city-improvement.) Planned.
 - **No commodities, no city-context yields.** Squares yield what the terrain and special say; nothing depends on the city working them. (civ2-world.) Planned.
@@ -57,7 +57,7 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 
 - **No maximum rate.** Every government allows any tax, luxury and science split. Civ2 caps them (60% to 100%). (civ2-trade-rate.) Planned (M2d).
 - **Fundamentalism is only partly there:** it has its unit support and no unhappy citizens, but the tithes, science penalty and the rest of its rules are only partly in, and Fanatics are not restricted to it. (civ2-government, civ2-city-improvement.) Planned.
-- **Revolutions:** Anarchy lasts 1 to 4 turns, to the next turn that is a multiple of 4. Not yet: changing back without Anarchy in the turn you chose, the revolution offer on discovering a government's advance, and leader titles. (civ2-government.) Planned.
+- **Revolutions:** a chosen revolution's Anarchy lasts 1 to 4 turns, to the next turn that is a multiple of 4; a Democracy that falls in civil disorder waits 4 turns more (5 to 8). Not yet: changing back without Anarchy in the turn you chose, the revolution offer on discovering a government's advance, and leader titles. (civ2-government.) Planned.
 - **Senate:** none, see Units and Diplomacy. Planned (M2d).
 
 ## Improvements and wonders
@@ -73,7 +73,7 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 
 - **Baseline diplomacy only:** contact, peace, tribute, cancelled treaties, shared knowledge, war, and the vendetta after a nuclear strike. No ceasefire, no alliance, and the computer players negotiate by Civ1's numbers. (civ2-diplomacy.) Planned.
 - **No Senate**, see above. Planned (M2d).
-- **Leaders:** each tribe's temper at a meeting comes from its Civ2 attitude; the other two attitudes (settling and production preferences) are read by nothing yet, and leader names are the shared ones. (civ2-civilization.) Planned.
+- **Leaders:** each tribe's temper at a meeting comes from its Civ2 aggression attitude, and its civilised attitude weights the free advances given for a poor start; the expansion attitude is read by nothing yet, and leader names are the shared ones. (civ2-civilization.) Planned.
 - **One tribe per colour** is not enforced, and a destroyed civilization does not return. A game can therefore end by conquest sooner than in Civ2. (civ2-civilization, civ2-game-end.) Planned.
 
 ## Huts
@@ -91,7 +91,7 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 The AI is Civ1's (`simple-ai-client`), running against Civ2's rules. It plays 8 games to 2020 with no errors, but nothing was tuned for Civ2.
 
 - **Civ1 policies.** Its strategies for expansion, defence, production and research are Civ1's, so it plays Civ1's game with Civ2's units. Its wonder and government choices assume Civ1's numbers. Planned.
-- **Government flips.** It reconsiders its government on a fixed policy, but at most once every 40 turns, so it can leave a government that Civ2 would suit better, and spend turns in Anarchy each time (1 to 4 here; the longest seen is 4). It picks among Monarchy, Communism, the Republic and Democracy by Civ1's preference, and never picks Fundamentalism. Seen in soak games: most end under the Republic or Monarchy. Planned.
+- **Government flips.** It reconsiders its government on a fixed policy, but at most once every 40 turns, so it can leave a government that Civ2 would suit better, and spend 1 to 4 turns in Anarchy each time it chooses to (the longest seen is 4). It picks among Monarchy, Communism, the Republic and Democracy by Civ1's preference, and never picks Fundamentalism. Seen in soak games: most end under the Republic or Monarchy. Planned.
 - **Revolutions** are started through whichever rules are loaded (simple-ai-client 0.1.30). If those rules offer no revolution terms, the AI never revolts. (simple-ai-client#82.)
 - **Rebuying a lost defender** now works without a Gold treasury (simple-ai-client#81).
 
