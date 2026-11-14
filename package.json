@@ -186,6 +186,7 @@
     "test:lazy-plugins": "node tools/run-suite.js engine lazyPlugins",
     "test:plugin-sets": "node tools/run-suite.js engine pluginSets",
     "test:civ2-isolation": "node tools/run-suite.js engine civ2Isolation",
+    "test:civ2-worker-rules": "node tools/run-suite.js engine civ2WorkerRules",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:save-seats": "node tools/run-suite.js engine saveSeats",
     "test:respawn": "node tools/run-suite.js engine respawn",
