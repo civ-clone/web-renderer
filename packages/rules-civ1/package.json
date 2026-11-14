@@ -11,7 +11,7 @@
     ".": "./index.ts"
   },
   "peerDependencies": {
-    "@civ-clone/base-diplomacy": "^0.1.1",
+    "@civ-clone/base-diplomacy": "^0.1.2",
     "@civ-clone/base-player-action-choose-government": "^0.1.0",
     "@civ-clone/base-treasury": "^0.1.2",
     "@civ-clone/civ1-city": "*",
