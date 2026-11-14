@@ -20,10 +20,13 @@ export const civ2Rules: WorkerRules = {
   civilDisorder: (): boolean => false,
   // A city on Auto keeps what it is building until Civ2 has a choice of its own to make.
   autoBuild: (): void => {},
-  // Every citizen content until Civ2's happiness is in.
-  citizenMoods: (cityGrowth): [number, number, number] => [
+  // Every working citizen content until Civ2's happiness is in: the specialists are counted apart.
+  citizenMoods: (cityGrowth, specialists): [number, number, number] => [
     0,
-    cityGrowth.size(),
+    Math.max(
+      0,
+      cityGrowth.size() - specialists.getByCity(cityGrowth.city()).length
+    ),
     0,
   ],
   // No score yet, so nothing for conquest either.
