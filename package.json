@@ -195,6 +195,7 @@
     "test:military": "node tools/run-suite.js engine military",
     "test:trade-routes": "node tools/run-suite.js engine tradeRoutes",
     "test:translations": "node tools/run-suite.js ui translations",
+    "pretest:engine-names": "npm run -s build:generate-translations-ts",
     "test:engine-names": "node tools/run-suite.js ui engineNames",
     "test:transport-requests": "node tools/run-suite.js engine transportRequests",
     "test:request-ids": "node tools/run-suite.js engine requestIds",
