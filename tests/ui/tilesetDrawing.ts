@@ -1009,6 +1009,90 @@ expect(
   ['terrain/grassland/base-0@0,0', 'terrain/river/se-nw@0,0']
 );
 
+// Civ2's River is a terrain feature on any land (M2a, #1008), where Civ1's is a terrain: Civ2's pack draws it with the
+//  terrain family, over the square's own terrain (over its hills, as Civ2 draws it), joined to a river beside it,
+//  feature or terrain, and to water, and never as a special. Its mouths are by the edge a river is on, either kind.
+{
+  const civ2 = validateDescriptor(civ2Json),
+    civ2Drawn = (world: World): string[] => isoDrawn(Landscape, world, civ2),
+    ocean = Object.fromEntries(
+      ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'].map((direction) => [
+        direction,
+        { terrain: 'Ocean' },
+      ])
+    );
+
+  expect(
+    "Civ2's River feature: on grassland's base, joined over the edges to a River feature, Civ1's River and water, with its shield still a special",
+    [
+      civ2Drawn(
+        isoWorld(
+          { terrain: 'Grassland', features: ['River', 'Shield'] },
+          {
+            se: { terrain: 'Plains', features: ['River'] },
+            nw: { terrain: 'Ocean' },
+            sw: { terrain: 'River' },
+            ne: { terrain: 'Grassland' },
+            // A corner neighbour is not a join.
+            s: { terrain: 'Plains', features: ['River'] },
+          }
+        )
+      ),
+      civ2Drawn(
+        isoWorld(
+          { terrain: 'Hills', features: ['River'] },
+          { ne: { terrain: 'Hills' } }
+        )
+      ),
+      civ2Drawn(isoWorld({ terrain: 'Plains', features: ['River', 'Wheat'] })),
+    ],
+    [
+      [
+        'terrain/grassland/base-0@0,0',
+        'terrain/river/se-sw-nw@0,0',
+        'terrain/grassland/resources@0,0',
+      ],
+      [
+        'terrain/hills/base-0@0,0',
+        'terrain/hills/ne@0,0',
+        'terrain/river/isolated@0,0',
+      ],
+      [
+        'terrain/plains/base-0@0,0',
+        'terrain/river/isolated@0,0',
+        'terrain/plains/wheat@0,0',
+      ],
+    ]
+  );
+
+  expect(
+    "Civ2's River feature: a river mouth on the ocean by the edge it is on, as for Civ1's River",
+    civ2Drawn(
+      isoWorld(
+        { terrain: 'Ocean' },
+        { ...ocean, ne: { terrain: 'Desert', features: ['River'] } }
+      )
+    ).filter((name) => name.startsWith('terrain/river-mouth/')),
+    ['terrain/river-mouth/ne@0,0']
+  );
+
+  expect(
+    "Civ2's Glacier is its base alone, and its specials are each terrain's own, Oil as Desert's or Glacier's",
+    [
+      civ2Drawn(isoWorld({ terrain: 'Glacier' })),
+      civ2Drawn(isoWorld({ terrain: 'Glacier', features: ['Oil'] })),
+      civ2Drawn(isoWorld({ terrain: 'Desert', features: ['Oil'] })),
+      civ2Drawn(isoWorld({ terrain: 'Ocean', features: ['Whales'] })),
+    ],
+    [
+      ['terrain/glacier/base-0@0,0'],
+      ['terrain/glacier/base-0@0,0', 'terrain/glacier/glacier-oil@0,0'],
+      ['terrain/desert/base-0@0,0', 'terrain/desert/desert-oil@0,0'],
+      ['terrain/ocean/base-0@0,0', 'terrain/ocean/whales@0,0'],
+    ]
+  );
+}
+
 // The coast's quarters, loaded under the fixture's own prefix so they can be drawn. Coast tiles are cached by tileset
 //  and the bits each quarter was picked by, so each set of neighbours below is drawn here and nowhere else.
 [

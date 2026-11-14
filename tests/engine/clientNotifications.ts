@@ -9,6 +9,7 @@ import {
   Gold as GoldHut,
   Unit as UnitHut,
 } from '@civ-clone/civ1-goody-hut/GoodyHuts';
+import { Nomads as NomadsHut } from '@civ-clone/base-goody-hut-nomads/Nomads';
 import {
   Bomber,
   Fighter,
@@ -652,7 +653,7 @@ const contextOf = ({
 
   const hut = named('hut', { tile: () => 'hut tile' });
 
-  [AdvanceHut, CityHut, GoldHut, UnitHut].forEach((Action) => {
+  [AdvanceHut, CityHut, GoldHut, NomadsHut, UnitHut].forEach((Action) => {
     const action = named(Action.name, {}, Action.prototype);
 
     expect(
@@ -667,6 +668,21 @@ const contextOf = ({
       ]
     );
   });
+  expect(
+    'our unit finds gold: how much, as the hut says (M2a, #1008: 50 in Civilization, 25 to 200 in Civilization II)',
+    unit(
+      'goody-hut:action-performed',
+      [hut, named('Gold', { _amount: 100 }, GoldHut.prototype)],
+      {
+        unitsOn: { 'hut tile': [unitOf(us)] },
+      }
+    ),
+    [
+      'GoodyHut.action-performed.Gold',
+      false,
+      { goodyHut: 'hut', action: 'Gold', amount: 100 },
+    ]
+  );
   expect(
     "a rival's unit finds a hut",
     unit(
@@ -1038,6 +1054,7 @@ const contextOf = ({
     'GoodyHut.action-performed.Advance',
     'GoodyHut.action-performed.City',
     'GoodyHut.action-performed.Gold',
+    'GoodyHut.action-performed.Nomads',
     'GoodyHut.action-performed.Unit',
     'Player.declaration-broken',
     'Player.declaration-expired',

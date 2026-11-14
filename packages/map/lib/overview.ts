@@ -16,6 +16,8 @@ export const landColour = '#58a038',
     Arctic: '#f0f0f0',
     Desert: '#e0c070',
     Forest: '#286028',
+    // Civ2's Arctic.
+    Glacier: '#f0f0f0',
     Grassland: landColour,
     Hills: '#889040',
     Jungle: '#386828',

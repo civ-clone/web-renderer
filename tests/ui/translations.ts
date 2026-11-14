@@ -36,6 +36,7 @@
 
 import * as Civ1Civilizations from '@civ-clone/civ1-civilization/Civilizations';
 import * as WorldCivilizations from '@civ-clone/civ1-world-civilizations/Civilizations';
+import * as Civ2Civilizations from '@civ-clone/civ2-civilization/Civilizations';
 import {
   Aztec,
   Babylonian,
@@ -112,6 +113,7 @@ const expect = (description: string, actual: string, expected: string) => {
   await import('../../translations/civ1-world/en');
   await import('../../translations/civ1-world-civilizations/en');
   await import('../../translations/base-civilization-barbarian/en');
+  await import('../../translations/civ2-civilization/en');
 
   expect('Generic.ok (fr-FR)', t('Generic.ok'), 'OK');
 
@@ -870,8 +872,12 @@ const expect = (description: string, actual: string, expected: string) => {
   // #359: every civilization opens a sentence with a capital, and keeps its own article later in the same sentence.
   //  The barbarians are never the ones defeated.
   const civilizations = [
-    ...Object.values(Civ1Civilizations),
-    ...Object.values(WorldCivilizations),
+    ...new Set([
+      ...Object.values(Civ1Civilizations),
+      ...Object.values(WorldCivilizations),
+      // Civilization II's (M2a, #1008).
+      ...Object.values(Civ2Civilizations),
+    ]),
     Barbarian,
   ];
 

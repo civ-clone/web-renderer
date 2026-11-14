@@ -141,9 +141,14 @@ i18next.addResources('en', 'notification', {
   'GoodyHut.action-performed.City.body':
     'You have discovered an advanced tribe...',
   'GoodyHut.action-performed.City.title': 'Exploration',
+  // `amount` is the hut's gold: always 50 in Civilization, 25, 50 or 100, and later twice that, in Civilization II.
   'GoodyHut.action-performed.Gold.body':
-    'You have discovered valuable treasure worth 50 Gold.',
+    'You have discovered valuable treasure worth {{amount, number}} Gold.',
   'GoodyHut.action-performed.Gold.title': 'Exploration',
+  // Civilization II's: a tribe that can't found a city joins you as a unit.
+  'GoodyHut.action-performed.Nomads.body':
+    'Nomads from the hut have joined your civilization.',
+  'GoodyHut.action-performed.Nomads.title': 'Exploration',
   'GoodyHut.action-performed.Unit.body':
     'You have discovered a friendly tribe of skilled mercenaries...',
   'GoodyHut.action-performed.Unit.title': 'Exploration',

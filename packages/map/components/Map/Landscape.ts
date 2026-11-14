@@ -219,11 +219,13 @@ export class Landscape extends TerrainAbstract {
       this.renderCoastCorners(tile, offsetX, offsetY);
     }
 
+    // By the edges with a river beside them: Civ1's River terrain, or Civ2's River feature on any land.
     this.drawFamily(
       riverMouth,
       this.filterNeighbours(
         tile,
-        (tile: Tile): boolean => tile.terrain._ === 'River',
+        (tile: Tile): boolean =>
+          this.isTerrain(tile, 'River', tileset.families.terrain.features),
         this.familyDirections(riverMouth)
       ),
       {},
@@ -343,16 +345,34 @@ export class Landscape extends TerrainAbstract {
   }
 
   protected renderTerrain(tile: Tile, offsetX: number, offsetY: number): void {
-    const {
-        families: { terrain },
-        names,
-      } = this.tileset(),
+    const { terrain } = this.tileset().families,
       name = tile.terrain._;
 
     // The terrains the base and the coast already draw (Civ1's Ocean): drawn again here, they would hide the coastline.
-    if (terrain.skip?.includes(name)) {
-      return;
+    if (!terrain.skip?.includes(name)) {
+      this.renderTerrainNamed(tile, name, offsetX, offsetY);
     }
+
+    // Then the features the tileset draws as terrain of their own, over the square's (Civ2's River, a feature on any
+    //  land: over its forest, hills or mountains, as Civ2 draws it).
+    terrain.features?.forEach((feature) => {
+      if (this.hasFeature(tile, feature)) {
+        this.renderTerrainNamed(tile, feature, offsetX, offsetY);
+      }
+    });
+  }
+
+  /** The terrain family's sprite for `name` on `tile`, joined to the neighbours that match it. */
+  protected renderTerrainNamed(
+    tile: Tile,
+    name: string,
+    offsetX: number,
+    offsetY: number
+  ): void {
+    const {
+      families: { terrain },
+      names,
+    } = this.tileset();
 
     // What joins up with this terrain: the same terrain, unless the tileset says otherwise (`@water` is any water).
     const matches = terrain.matches?.[name] ?? [name];
@@ -365,13 +385,33 @@ export class Landscape extends TerrainAbstract {
           matches.some((match) =>
             match === '@water'
               ? adjoiningTile.isWater
-              : adjoiningTile.terrain._ === match
+              : this.isTerrain(adjoiningTile, match, terrain.features)
           ),
         this.familyDirections(terrain)
       ),
       { terrain: names.terrain[name] ?? name.toLowerCase() },
       offsetX,
       offsetY
+    );
+  }
+
+  /** Whether `tile` has the terrain feature `name`. */
+  protected hasFeature(tile: Tile, name: string): boolean {
+    return (tile.terrain.features ?? []).some(({ _ }) => _ === name);
+  }
+
+  /**
+   * Whether `tile` is `name` to the terrain family: its terrain, or one of `features`, those the tileset draws as a
+   *  terrain (Civ2's River). Civ1's tileset draws no feature that way, so to it this is the terrain alone.
+   */
+  protected isTerrain(
+    tile: Tile,
+    name: string,
+    features: readonly string[] | undefined
+  ): boolean {
+    return (
+      tile.terrain._ === name ||
+      (features?.includes(name) === true && this.hasFeature(tile, name))
     );
   }
 
@@ -479,11 +519,16 @@ export class Landscape extends TerrainAbstract {
 
   protected renderFeatures(tile: Tile, offsetX: number, offsetY: number): void {
     const {
-      families: { special },
+      families: { special, terrain },
       names,
     } = this.tileset();
 
     tile.terrain.features.forEach((feature) => {
+      // A feature drawn as terrain (Civ2's River) is not a special.
+      if (terrain.features?.includes(feature._)) {
+        return;
+      }
+
       // Civ1 gives Forest and Tundra the same special, Game, but draws it as a doe on Forest and an antlered beast on
       //  Tundra (#69): the tileset names the ones not named after the feature, by `Terrain:Feature`.
       const anchor = special.anchors?.[feature._];
