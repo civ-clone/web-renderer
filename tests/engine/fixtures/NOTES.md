@@ -510,3 +510,18 @@ first differs at turn 289, and in turn 204 in seed 44, first differing at turn
 232. Before those turns every turn's checksum is identical. The other 14 games
 convert no terrain in 300 turns. `client-transcript.json`
 passes unchanged and is not re-recorded.
+
+## Accepted change: rule counts, which revolution the ruleset plays
+
+base-government-change 0.1.1 adds the `RevolutionTerms` rule: which handler key
+and interim government a ruleset's revolutions use, so a computer player can
+start and finish a revolution as the loaded ruleset does rather than through
+civ1-government directly (in Civ2 they started Civ1's revolution and stayed in
+Anarchy for good). civ1-government 0.1.5 registers
+`civ1-government:player/revolution-terms`, naming its own key and Anarchy, and
+simple-ai-client 0.1.30 revolts through it. The rule totals at turns 1, 10 and
+50 rise from 1166 to 1167 (`RevolutionTerms` 0 → 1) and nothing else moves: the
+engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
+counts and the DTO hashes are unchanged, and the 16 seeds (1–8, 41–48) are
+identical at turns 150 and 300. `client-transcript.json` passes unchanged and is
+not re-recorded.
