@@ -269,6 +269,7 @@ const run = async (): Promise<void> => {
   await import('../../translations/civ1-world/en');
   await import('../../translations/civ1-unit/en');
   await import('../../translations/civ1-civilization/en');
+  await import('../../translations/civ2-world/en');
 
   // What it says.
   expect(
@@ -357,6 +358,41 @@ const run = async (): Promise<void> => {
       )
     ).rows.map(([label]) => label),
     ['Yields', 'Defense', 'Improvements']
+  );
+  expect(
+    "Civilization II's (M2a, #1008): a river is one of the square's features, beside its special, and Farmland and a Fortress are improvements",
+    plain(
+      squareTooltip(
+        {
+          ...grassland,
+          terrain: terrain('Plains', 1, 1, ['River', 'Wheat']),
+          improvements: [entity('Farmland'), entity('Fortress')],
+          workedBy: null,
+        } as unknown as Tile,
+        'Player-1'
+      )
+    ),
+    {
+      title: 'Plains, River, Wheat',
+      rows: [
+        ['Yields', 'Food: 2, Trade: 1'],
+        ['Movement cost', '1'],
+        ['Improvements', 'Farmland, Fortress'],
+      ],
+    }
+  );
+  expect(
+    'and a Glacier is named as one',
+    plain(
+      squareTooltip(
+        {
+          ...hills,
+          terrain: terrain('Glacier', 1, 2, ['Ivory']),
+        } as unknown as Tile,
+        'Player-1'
+      )
+    ).title,
+    'Glacier, Ivory'
   );
   expect(
     'a square never seen has none',

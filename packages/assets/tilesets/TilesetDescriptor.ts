@@ -91,6 +91,12 @@ export interface SpriteFamily {
   skip?: string[];
   /** For each terrain, what counts as a match beside it when not the same terrain; `@water` is any water. */
   matches?: { [terrain: string]: string[] };
+  /**
+   * For the terrain family: terrain features drawn as a terrain of their own, over the square's terrain and joined as
+   *  that terrain would be (Civ2's River, a feature on any land, where Civ1's is a terrain). A square has one when its
+   *  terrain or one of its features has the name.
+   */
+  features?: string[];
   /** Where sprites smaller than a tile go in it, by engine name. */
   anchors?: { [name: string]: Point };
   /** Drawn over the terrain instead of under it: irrigation, for a tileset whose terrain covers the land. */

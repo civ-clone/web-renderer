@@ -132,13 +132,22 @@ staggered isometric grid, which `tileset-civ2` registers (`registerTileset(tiles
 `civ2.json` names only sprites the Civ2 extractor cuts, under its names, and requires every one the map can ask it for
 (`npm run test:tilesets` checks both). Its choices:
 
-- Terrains by their own name lower-cased, with Arctic as `glacier`; River is drawn on grassland's base with the river
-  overlay; Forest, Hills and Mountains on their own `base-0` with their 16-way overlays. No `base-1`, no dither,
-  no fog (Civ2 has none). Irrigation is drawn over the terrain.
-- Specials: as each terrain's Civ2 resource, with `Swamp:Oil` as `swamp/peat` (Civ2's swamp has no oil).
+- Terrains by their own name lower-cased, with Arctic as `glacier`; Civ1's River is drawn on grassland's base with the
+  river overlay; Forest, Hills and Mountains on their own `base-0` with their 16-way overlays; Glacier (Civ2's own) is
+  its base alone. No `base-1`, no dither, no fog (Civ2 has none). Irrigation is drawn over the terrain.
+- Civ2's River is a terrain feature on any land, not a terrain (M2a, #1008): `families.terrain.features` has the terrain
+  family draw it over the square's own terrain, after its forest, hills or mountains and before irrigation, as Civ2
+  does, joined to a river beside it of either kind and to water. It has river mouths as Civ1's River has, and is never
+  drawn as a special.
+- Specials: as each terrain's Civ2 resource, by `Terrain:Feature`. Civ2's two a terrain as its rules place them (Oil is
+  `desert/desert-oil` on Desert and `glacier/glacier-oil` on Glacier, and Grassland's Shield `grassland/resources`), and
+  Civ1's by the nearest, with `Swamp:Oil` as `swamp/peat` (Civ2's swamp has no oil).
 - Units by the MGE default names (RULES.TXT is ignored): Horseman `horsemen`, Knight `knights`, MechanizedInfantry
   `mech-inf`, Musketman `musketeers`, Nuclear `nuclear-msl`, Rifleman `riflemen`, Sail `caravel`, Spearman `phalanx`,
-  Swordman `legion`, Tank `armor`, Warrior `warriors`, the rest their own name.
+  Swordman `legion`, Tank `armor`, Warrior `warriors`; of Civ2's own, AlpineTrooper `alpine-troops`, CruiseMissile
+  `cruise-msl`, MissileCruiser `aegis-cruiser`, StealthBomber `stlth-bmbr`, StealthFighter `stlth-ftr` and the plural
+  for Archer, Crusader, Dragoon, Engineer, Fanatic, Marine, Paratrooper, Partisan and Pikeman; the rest their own name.
+- No improvements or Wonders: the Civ2 extractor cuts none, so the city screen names them without a picture.
 - Cities by style per civilization, fixed for the game: Civ2's own style for the civilizations it has (`@LEADERS`),
   and one by region for the rest, `ancient-classical` for any other. Sizes 1–3, 4–7, 8–11 and 12 and over; walls
   from `walled-`.
@@ -283,6 +292,9 @@ map draws it (`tests/ui/fixtures/iso-tileset.json` is one, its sprite names in t
   with no land beside them (`n-000`) too, as a coast quarter's water is not the open ocean's (Civ1's coast square has its
   open-water quarters the same way); the open ocean is its base alone. Each tile put together is cached by tileset and
   the quarters' bits.
+- **Features drawn as terrain.** `families.terrain.features` lists terrain features the terrain family draws as a
+  terrain of their own, over the square's terrain and joined as `matches` says (Civ2's River). A square is that terrain
+  to its neighbours, and to the river mouths, when its terrain or one of its features has the name.
 - **River mouths by direction.** `families.riverMouth` is `edges` with `{dir}`: the Civ2 extractor names its four mouths
   `terrain/river-mouth/ne`, `se`, `sw` and `nw` (civ-clone/civ2-asset-extractor#1), the river bitmask's edge order.
 - **No fog.** `families.fog` may be left out; the edge of what a player has seen is then drawn without one, a hard edge

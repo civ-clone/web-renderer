@@ -15,6 +15,13 @@ import './lib/artPacks';
 import * as TerrainFeatures from '@civ-clone/civ1-world/TerrainFeatures';
 import * as Terrains from '@civ-clone/civ1-world/Terrains';
 import * as Units from '@civ-clone/civ1-unit/Units';
+import * as Civ2Civilizations from '@civ-clone/civ2-civilization/Civilizations';
+import * as Civ2Terrains from '@civ-clone/civ2-world/Terrains';
+import * as Civ2Units from '@civ-clone/civ2-unit/Units';
+import {
+  specialTypes as civ2SpecialTypes,
+  terrainTypes as civ2TerrainTypes,
+} from '@civ-clone/civ2-world/lib/terrainTable';
 import validateDescriptor, {
   TilesetDescriptor,
   expandName,
@@ -1662,7 +1669,17 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       ),
       required = new Set(civ2.assets.required),
       { families, names, units, cities } = civ2,
-      terrainNames = Object.keys(Terrains),
+      // Civilization's and Civilization II's (M2a, #1008), and the features drawn as terrain (Civ2's River).
+      terrainNames = [
+        ...new Set([
+          ...Object.keys(Terrains),
+          ...Object.keys(Civ2Terrains),
+          ...(families.terrain.features ?? []),
+        ]),
+      ],
+      unitNames = [
+        ...new Set([...Object.keys(Units), ...Object.keys(Civ2Units)]),
+      ],
       edgeDirections = createTopology('staggered-iso', 2, 2).edgeDirections(),
       allDirections = createTopology('staggered-iso', 2, 2).directions(),
       // Every non-empty set of the edges, in the topology's order, as the bitmask names them.
@@ -1723,7 +1740,7 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         ...Object.values(names.special).map((special) =>
           expandName(families.special.sprite, { special })
         ),
-        ...Object.keys(Units).map((unit) =>
+        ...unitNames.map((unit) =>
           expandName(units.sprite, {
             unit: names.unit[unit] ?? unit.toLowerCase(),
           })
@@ -1759,10 +1776,22 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
         'Arctic:Seal',
         'Grassland:Shield',
         'River:Shield',
-      ],
+        // And as Civilization II's place them (civ2-world's `lib/terrainTable`): two a terrain, Grassland's shield
+        //  aside (M2a, #1008).
+        ...civ2SpecialTypes.flatMap((row) =>
+          row.flatMap((Special, index) =>
+            Special === null
+              ? []
+              : [`${civ2TerrainTypes[index]!.name}:${Special.name}`]
+          )
+        ),
+      ].filter((special, index, all) => all.indexOf(special) === index),
       civilizations = [
-        ...Object.keys(Civilizations),
-        ...Object.keys(WorldCivilizations),
+        ...new Set([
+          ...Object.keys(Civilizations),
+          ...Object.keys(WorldCivilizations),
+          ...Object.keys(Civ2Civilizations),
+        ]),
         Barbarian.name,
       ];
 
@@ -1832,9 +1861,9 @@ const civ1With = (changes: { [key: string]: unknown }): unknown => ({
       ]
     );
     expect(
-      "Civ2's pack: each of Civilization's units, terrains' specials and civilizations has a Civ2 sprite or style of its own",
+      "Civ2's pack: each of Civilization's and Civilization II's units, terrains' specials and civilizations has a Civ2 sprite or style of its own",
       [
-        Object.keys(Units).filter((unit) => names.unit[unit] === undefined),
+        unitNames.filter((unit) => names.unit[unit] === undefined),
         specials.filter((special) => names.special[special] === undefined),
         Object.keys(names.special).filter(
           (special) => !specials.includes(special)

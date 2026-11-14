@@ -9,6 +9,15 @@ import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import { workerRules } from '../../workerRules';
 
+// How much a hut's outcome gave, for one that says (its gold, by `amount()`): the action itself is a plain object, sent
+//  field by field, so the notice is given the figure rather than reading the action's own.
+const amountOf = (action: object): { amount?: number } => {
+  const { amount } = action as { amount?: unknown },
+    value: unknown = typeof amount === 'function' ? amount.call(action) : null;
+
+  return typeof value === 'number' ? { amount: value } : {};
+};
+
 export const unitNotifications: NotificationTable = [
   // A nuclear detonation (#129), told to everyone but the player who set it off.
   [
@@ -79,6 +88,7 @@ export const unitNotifications: NotificationTable = [
             {
               goodyHut,
               action,
+              ...amountOf(action),
             }
           )
         : null,
