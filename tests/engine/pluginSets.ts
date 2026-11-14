@@ -1,6 +1,7 @@
 // A game's set of plugins (#668). How `buildPluginList.js` works a set out from the plugins it names and what they
 //  depend on; that civ.one's three sets are Civ1's own plugins, those with civ1-enhanced, which is every plugin
-//  installed but Civ2's, and Civ2's (hidden, and sharing no Civ1 plugin: `civ2Isolation.ts` checks what it loads);
+//  installed but Civ2's (its own plugins and the traits only its units use), and Civ2's (hidden, and sharing no
+//  Civ1 plugin: `civ2Isolation.ts` checks what it loads);
 //  and, through the worker's own receivers as the page drives them, that a game played with civ1 runs none of
 //  civ1-enhanced's code, saves which set it was, and loads with it again, while a save that names no set loads as
 //  civ1-enhanced, as every save did before there were sets. Each game is a process of its own, as each is a worker:
@@ -63,6 +64,19 @@ const EXTRA_CIVILIZATIONS = [
     'Sioux',
     'Viking',
   ],
+  // Shared unit traits only Civ2's units declare so far. Each package's `main` is its trait class, so they count as
+  //  plugins, and only civ2 reaches them.
+  CIV2_ONLY_TRAITS = [
+    'amphibious',
+    'covert',
+    'defence-bonus-vs-air',
+    'defence-bonus-vs-mounted',
+    'detects-submerged',
+    'paradrop',
+    'single-use',
+    'support-exempt-under',
+    'terrain-as-road',
+  ].map((trait) => `@civ-clone/base-unit-trait-${trait}`),
   scenarioIndex = process.argv.indexOf('--scenario'),
   scenario = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 1],
   file = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 2];
@@ -488,6 +502,7 @@ if (scenario !== null) {
     civ2Packages = installed.filter((name) =>
       name.startsWith('@civ-clone/civ2-')
     ),
+    civ2Only = [...civ2Packages, ...CIV2_ONLY_TRAITS].sort(byPackageName),
     config = require('../../package.json')['civ-clone'];
 
   expect(
@@ -515,9 +530,9 @@ if (scenario !== null) {
     ]
   );
   expect(
-    'civ1-enhanced is every plugin installed but the civ2 packages, as every game was played with before there were sets',
+    'civ1-enhanced is every plugin installed but the civ2 packages and the traits only Civ2 uses, as every game was played with before there were sets',
     enhanced.plugins,
-    installed.filter((name) => !civ2Packages.includes(name)).sort(byPackageName)
+    installed.filter((name) => !civ2Only.includes(name)).sort(byPackageName)
   );
   expect(
     'civ1 is the same but civ1-enhanced, the world civilizations, and their twelve civilizations',
@@ -529,12 +544,14 @@ if (scenario !== null) {
     ].sort()
   );
   expect(
-    'civ2 has the eight civ2 plugins and shares the rest with civ1-enhanced: no civ1 plugin and no library aggregate',
+    'civ2 has the civ2 plugins and the traits only it uses, and shares the rest with civ1-enhanced: no civ1 plugin and no library aggregate',
     [
-      civ2.plugins.filter((name) => !enhanced.plugins.includes(name)),
+      civ2.plugins
+        .filter((name) => !enhanced.plugins.includes(name))
+        .sort(byPackageName),
       civ2.plugins.filter((name) => /^@civ-clone\/(civ1|library)-/.test(name)),
     ],
-    [civ2Packages, []]
+    [civ2Only, []]
   );
   expect(
     'and neither Civ1 set has a civ2 plugin',
