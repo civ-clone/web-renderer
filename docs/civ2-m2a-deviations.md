@@ -65,7 +65,7 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 - **In place:** 34 improvements and 28 wonders with Civ2's costs, upkeep and requirements, the Palace rules, veterans, defences, pollution, and Civ2's growth caps.
 - **No spaceship parts or Capitalization.** (civ2-city-improvement.) Planned.
 - **Wonders with no effect yet:** Marco Polo's Embassy, the Eiffel Tower, the United Nations, the Great Wall's diplomatic effect, the Manhattan Project's reputation cost, the Apollo Program's revealed map. (civ2-wonder.) Planned.
-- **Superhighways, Harbour and Offshore Platform** add to the city's totals, not to each square, so they apply before the government's square penalty rather than after. (civ2-city-improvement.) Not scheduled.
+- **Superhighways, Harbour and Offshore Platform** add to the city's totals, not to each square. Superhighways' bonus also comes after pollution and leaves out the celebration and Colossus bonuses, where Civ2 adds it to the square first. (civ2-city-improvement.) Not scheduled.
 - **Palace escape** after a capital falls is offered only to computer players and ignores land masses. (civ2-city-improvement.) Not scheduled.
 - **Treasury:** a bankruptcy sale leaves a few gold less than Civ2, a purchase is not offered once the box is already covered, and there is no 30,000 gold cap. (civ2-treasury.) Not scheduled.
 
@@ -97,7 +97,7 @@ The AI is Civ1's (`simple-ai-client`), running against Civ2's rules. It plays 8 
 
 ## Interface
 
-- **Hidden until playable.** The Civ2 choice only appears when the `civ2` set is installed and you have imported the Civ2 tileset. (web-renderer, #1039, #1042, #1045, #1046 install the set; the picker is the next stage.)
+- **Hidden until playable.** The Civ2 choice only appears when the `civ2` set is installed and you have imported the Civ2 tileset. (web-renderer: #1039, #1042, #1045 and #1046 install the set; #1049 adds the choice to New Game and the game setup.)
 - **Isometric grid only.** Starting a Civ2 game forces the staggered-iso layout.
 - **Six difficulty levels** (Chieftain to Deity) replace Civ1's, with their own calendars: 2020 arrives on turn 421 to 571 depending on the level and map size.
 - **The Civ1 interface is reused.** No Civ2 windows, sounds or sidebar yet. (Track F, M3.)
