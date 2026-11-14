@@ -514,6 +514,29 @@ const civ2Metadata: PackMetadata = {
       ['size:normal', '40', '100']
     );
 
+    // What each level means, in the modern form: the toughest is the last the rules send, whatever it's called.
+    if (name === 'modern') {
+      const difficulty = element.querySelector(
+          'select[name=difficulty]'
+        ) as HTMLSelectElement,
+        hint = (level: string): string => {
+          difficulty.value = level;
+          difficulty.dispatchEvent(new Event('change'));
+
+          return text(element.querySelector('.ui-field-hint'));
+        };
+
+      expect(
+        'modern: under Civ2 the toughest is Deity, and Emperor is only very hard; Chieftain is still the easiest',
+        [hint('Chieftain'), hint('Emperor'), hint('Deity')],
+        [
+          'The easiest level, for learning the game.',
+          'A very hard game, for an expert player.',
+          'The toughest level, for experts.',
+        ]
+      );
+    }
+
     log.length = 0;
 
     games!.value = 'civ1-enhanced';
@@ -540,6 +563,21 @@ const civ2Metadata: PackMetadata = {
       ],
       [['pluginSets', 'replace'], 1, 'civ1-enhanced', true, 5]
     );
+
+    if (name === 'modern') {
+      const difficulty = reopened[0]!.querySelector(
+        'select[name=difficulty]'
+      ) as HTMLSelectElement;
+
+      difficulty.value = 'Emperor';
+      difficulty.dispatchEvent(new Event('change'));
+
+      expect(
+        "modern: under Civ1's rules Emperor is the toughest, as it always said",
+        text(reopened[0]!.querySelector('.ui-field-hint')),
+        'The toughest level, for experts.'
+      );
+    }
 
     closeAll();
   }

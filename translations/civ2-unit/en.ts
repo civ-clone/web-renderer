@@ -27,3 +27,10 @@ i18next.addResources('en', 'unit', {
   'StealthBomber.name': 'Stealth Bomber',
   'StealthFighter.name': 'Stealth Fighter',
 });
+
+// The rule sets Civilization II's units register (#158), by id with `:` and `/` as `.`: as Civilization's do.
+i18next.addResources('en', 'ruleset', {
+  'civ2-unit.obsolescence.name': '$t(civ1-unit.obsolescence.name)',
+  'civ2-unit.obsolescence.description':
+    '$t(civ1-unit.obsolescence.description)',
+});

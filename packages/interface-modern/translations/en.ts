@@ -28,16 +28,20 @@ i18next.addResources('en', 'default', {
   'CityWindow.upkeep-total': 'Upkeep each turn',
   'CityWindow.wonders': 'Wonders',
   'CityWindow.yields': 'Yields',
-  // The new interface's form (#750): what each level means, in a line, by the level's name; the map list's groups;
-  //  the Advanced fields' units; and what a game with no human seat is.
-  'GameSetup.difficulty-summary.Chieftain':
+  // The new interface's form (#750): what each level means, in a line: the easiest and the toughest the rules have,
+  //  and any other by the level's name; the map list's groups; the Advanced fields' units; and what a game with no
+  //  human seat is.
+  'GameSetup.difficulty-summary.easiest':
     'The easiest level, for learning the game.',
+  'GameSetup.difficulty-summary.toughest': 'The toughest level, for experts.',
   'GameSetup.difficulty-summary.Warlord':
     'An easy game, with room for mistakes.',
   'GameSetup.difficulty-summary.Prince': 'A fair game for a practiced player.',
   'GameSetup.difficulty-summary.King':
     'A hard game, for an experienced player.',
-  'GameSetup.difficulty-summary.Emperor': 'The toughest level, for experts.',
+  // Where it isn't the toughest (Civ2 has one beyond it).
+  'GameSetup.difficulty-summary.Emperor':
+    'A very hard game, for an expert player.',
   'GameSetup.map-group.custom': 'Custom',
   'GameSetup.map-group.earth': 'Earth',
   'GameSetup.map-group.size': 'Generated',

@@ -400,12 +400,27 @@ export class GameSetupForm extends Window {
   }
 
   // What the chosen level is, in a line: nothing for a level the translations don't describe.
+  // What the level chosen means: the easiest and the toughest of those the rules send say so, as the level's label
+  //  does, whatever they are called (Civ2 has one beyond Emperor); any other has its own line, if it has one.
   #renderDifficulty(): void {
-    const name = this.#difficultySelect.value;
+    const name = this.#difficultySelect.value,
+      levels = [...this.#setup.data.difficulties].sort(
+        (a, b) => a.level - b.level
+      ),
+      position =
+        levels.length < 2
+          ? null
+          : levels[0]!.name === name
+          ? 'easiest'
+          : levels[levels.length - 1]!.name === name
+          ? 'toughest'
+          : null;
 
-    this.#difficultyHint.textContent = name
-      ? t(`GameSetup.difficulty-summary.${name}`, { defaultValue: '' })
-      : '';
+    this.#difficultyHint.textContent = !name
+      ? ''
+      : position !== null
+      ? t(`GameSetup.difficulty-summary.${position}`, { defaultValue: '' })
+      : t(`GameSetup.difficulty-summary.${name}`, { defaultValue: '' });
     this.#difficultyHint.hidden = this.#difficultyHint.textContent === '';
   }
 
