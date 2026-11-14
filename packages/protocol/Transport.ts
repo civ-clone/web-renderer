@@ -4,6 +4,7 @@ import { CivilizationOption } from './Requests/Civilizations';
 import { ObserverState, ObserverChoice } from './observer';
 import { DifficultyOption } from './Requests/Difficulties';
 import { RuleSetsAnswer, RuleSetsQuery } from './Requests/RuleSets';
+import { PluginSetsAnswer } from './Requests/PluginSets';
 import {
   IntelligenceRow,
   MilitaryReport,
@@ -125,6 +126,10 @@ declare global {
     difficulties: TransportData<DifficultyOption[], null>;
     // The rule sets a new game can switch (#158): as they start, or as they are with some choices and a change made.
     ruleSets: TransportData<RuleSetsAnswer, RuleSetsQuery | null>;
+    // The sets of plugins a new game can be played with (#668), for the art packs the page has imported, and the one
+    //  loaded; and loading one, which fixes the worker's set.
+    pluginSets: TransportData<PluginSetsAnswer, string[]>;
+    choosePluginSet: TransportData<string, string>;
     // A Diplomat has established an embassy (#58): the civilization it's with, to open the intelligence report on.
     embassyEstablished: TransportData<string, never>;
     // Keep playing after the game has ended (#176).

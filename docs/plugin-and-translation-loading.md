@@ -28,11 +28,14 @@ The project uses generated import lists rather than dynamic runtime discovery in
   civilizations (every plugin installed but Civ2's), and `civ2`, Civ2's packages with the shared plugins and worker
   rules of its own (`@civ-clone/ui-rules-civ2`, `packages/rules-civ2`), sharing no Civ1 package (M2a, #1008). A set
   marked `hidden` can be played and saved with, but isn't offered (`offeredSets` in
-  `packages/worker-client/Plugins.ts`): `civ2` is, until Civ2's art can be imported. The generator stops, saying why,
+  `packages/worker-client/Plugins.ts`), unless it names the art pack its games are drawn with (`tileset`, a tileset's
+  id) and the page says the player has imported it: `civ2` is hidden and names `civ2`, so New Game offers it only once
+  Civ2's art is imported (#668). A set with a `tileset` is played on that pack's grid. The generator stops, saying why,
   when a set names a plugin that isn't installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's
   own `package.json`, or in the root's `civ-clone.conflicts` by plugin name, where each civ2 package conflicts with its
   Civ1 twin), a plugin installed is in no set, a set extends a set that doesn't exist (or itself), a set has no
-  `rules`, or `defaultSet` or `setForSavesWithoutOne` names no set, or a hidden one. `tests/engine/civ2Isolation.ts`
+  `rules`, a `tileset` isn't a string, or `defaultSet` or `setForSavesWithoutOne` names no set, a hidden one or one
+  with a `tileset`. `tests/engine/civ2Isolation.ts`
   loads `civ2` and checks that nothing of Civ1's is registered (no `civ1-` rule, no Religion, no Arctic or River
   terrain) and that its content is what its packages have.
 - `civ-clone.defaultSet` is the set a new game is played with (`civ1-enhanced`), and `civ-clone.setForSavesWithoutOne`
@@ -64,8 +67,19 @@ it, so another build or a test can hand in other rules. Suites that play the def
 
 **One set per worker** (#668). Plugins register their rules into the engine's registries as they are imported and
 can't be taken out, so the first thing that needs the plugins fixes the set (`Game.#choose`): the default for the
-setup's requests and a new game, or the save's for a load. Another set asked for afterwards is refused, not loaded on
-top. A save records its set as `pluginSet` at the top of the file, beside what `core-save-game` writes, and a load
+setup's requests and a new game, the one the page chose (`choosePluginSet`), or the save's for a load. Another set
+asked for afterwards is refused, not loaded on top, and a refusal never names a set the page doesn't offer without its
+art.
+
+**Choosing the game** (#668, `packages/menus/lib/pluginSets.ts`). Once the player has imported art beyond the
+interface's, New Game asks the worker which sets there are for the art imported (`pluginSets`, which loads nothing and
+says which set, if any, is fixed), and offers the default and each set with art of its own: "Which game?" in New
+Game, and a Game select in both interfaces' setup. Without such art nothing is asked, and New Game, Earth and the setup
+are as they were. A game other than the one the worker has fixed gets a new worker: the page's transport is a
+`ReplaceableTransport` (`packages/client`), which ends the old worker and starts another, and everything listening on
+the transport goes on listening, to the new one; what the page sent on `setOption` is sent to it again. A game with a
+`tileset` (Civ2's) is played on that pack's grid, with no grid question and no Earth, and the setup asks the new set
+for its levels, civilizations, rule sets and AI clients. Earth is always the default set's. A save records its set as `pluginSet` at the top of the file, beside what `core-save-game` writes, and a load
 loads that set before anything else; a save without one loads with `setForSavesWithoutOne`. The manifest a game
 registers, and so saves, is its set's, not every plugin installed, so `hydrate` refuses a save that needs a plugin the
 set lacks.

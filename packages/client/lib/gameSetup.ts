@@ -32,10 +32,24 @@ import { unlessRequestFailed } from './unlessRequestFailed';
 
 export type FinishedHandler = () => void | Promise<void>;
 
-/** What the setup opens with: Earth selected, or the Advanced section open, as Customize World. */
+/**
+ * What the setup opens with: Earth selected, or the Advanced section open, as Customize World, and the game chosen
+ *  (#668), by its set's id.
+ */
 export type GameSetupPreset = {
   advanced?: boolean;
   earth?: boolean;
+  pluginSet?: string;
+};
+
+/** Which game the setup is for (#668), when there is more than one to choose from. */
+export type GameChoice = {
+  /** The set chosen, which the worker has loaded, or will load first. */
+  id: string;
+  /** Every set the setup offers, the default first. */
+  games: string[];
+  /** The only grid its games are played on, drawn with its own art (Civ2's), or null for any. */
+  grid: TopologyId | null;
 };
 
 export type SeatKind = 'human' | 'computer';
@@ -57,6 +71,8 @@ export type SetupData = {
   existing: { [key: string]: any };
   /** The rule sets a new game can switch (#158), as they start. None, from a worker that offers none. */
   ruleSets?: RuleSetsAnswer;
+  /** The game it is (#668), and the others there are, when the page offers more than one. */
+  game?: GameChoice;
 };
 
 /** The world's land, as the Advanced section sets it. */
@@ -137,7 +153,10 @@ export class GameSetup {
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
-    if (preset.earth) {
+    // A game with a grid of its own (Civ2's) is on it, and never on Earth, whose maps are square.
+    if (this.fixedGrid() !== null) {
+      this.topologyId = this.fixedGrid()!;
+    } else if (preset.earth) {
       this.earth = true;
     }
 
@@ -186,6 +205,11 @@ export class GameSetup {
     );
   }
 
+  /** The only grid the game can be on, when it has one of its own (#668), or null when the player picks it. */
+  fixedGrid(): TopologyId | null {
+    return this.data.game?.grid ?? null;
+  }
+
   sizes(): WorldSize[] {
     return this.earth ? earthWorldSizes : worldSizesFor(this.topologyId);
   }
@@ -213,7 +237,8 @@ export class GameSetup {
           group: 'size',
         })
       ),
-      ...earthWorldSizes.map(
+      // Earth's maps are square: not for a game with a grid of its own.
+      ...(this.fixedGrid() === null ? earthWorldSizes : []).map(
         (size): MapChoice => ({
           value: `earth:${size.key}`,
           label: t('GameSetup.earth', { size: label(size) }),
@@ -238,7 +263,7 @@ export class GameSetup {
   chooseMap(value: string): void {
     const [kind, key] = value.split(':');
 
-    this.earth = kind === 'earth';
+    this.earth = kind === 'earth' && this.fixedGrid() === null;
     this.size = this.sizes().find((size) => size.key === key) ?? null;
 
     if (this.size) {
@@ -251,7 +276,7 @@ export class GameSetup {
 
   /** The same size on the new grid has its own width and height. */
   chooseGrid(topologyId: TopologyId): void {
-    this.topologyId = topologyId;
+    this.topologyId = this.fixedGrid() ?? topologyId;
 
     if (this.size) {
       this.size =

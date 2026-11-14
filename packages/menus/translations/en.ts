@@ -82,6 +82,8 @@ i18next.addResources('en', 'default', {
   'GameSetup.ai': 'AI',
   'GameSetup.civilization': 'Civilization',
   'GameSetup.computer': 'Computer',
+  // Which game the setup is for (#668), shown once there is more than one.
+  'GameSetup.game': 'Game',
   'GameSetup.difficulty': '$t(DifficultyWindow.title)',
   'GameSetup.grid': 'Map grid',
   'GameSetup.human': 'Human',
@@ -141,11 +143,17 @@ i18next.addResources('en', 'default', {
   'MandatorySelection.default-body': '$t(SelectionWindow.default-body)',
   'NewGameWindow.number-of-players': 'How many players?',
   'NewGameWindow.map-grid': 'Which map grid?',
+  // New Game's first question once there is more than one game to play (#668).
+  'NewGameWindow.game': 'Which game?',
   'NewGameWindow.world-size': 'How big a world?',
   // New Game's first row under the new interface (#749): the game setup, for everything the questions don't ask.
   'NewGameWindow.customize': 'Customize…',
   'NewGameWindow.customize-meta':
     'Choose the civilizations, seats, rules and the exact world',
+  // The games a new game can be (#668), by plugin set: titles, spelled as the games are in every English. Civ2's rules
+  //  are a preview, and its saves may not load once more of them is in.
+  'PluginSet.civ1-enhanced': 'Civilization',
+  'PluginSet.civ2': 'Civilization II (preview)',
   'ReleaseWindow.behind-the-scenes': 'Behind the scenes',
   'ReleaseWindow.external-changes': 'External changes',
   'ReleaseWindow.failed': 'The release notes could not be loaded.',

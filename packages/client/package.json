@@ -9,6 +9,7 @@
     "@civ-clone/ui-protocol": "workspace:*"
   },
   "exports": {
+    "./ReplaceableTransport": "./ReplaceableTransport.ts",
     "./Transport": "./Transport.ts",
     "./components/lib/city": "./components/lib/city.ts",
     "./components/lib/cityBuild": "./components/lib/cityBuild.ts",

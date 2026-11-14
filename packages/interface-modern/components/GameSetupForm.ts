@@ -5,15 +5,17 @@ import GameSetup, {
   SeatKind,
   SeatState,
   SetupData,
-  requestSetupData,
 } from '@civ-clone/ui-client/lib/gameSetup';
 import {
   cell,
   civilizationName,
+  gameSelect,
   leaderName,
   option,
   select,
 } from '@civ-clone/ui-menus/lib/setupControls';
+import { requestGameSetupData } from '@civ-clone/ui-menus/lib/pluginSets';
+import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import {
   difficultyLabels,
   preselectedDifficulty,
@@ -127,7 +129,10 @@ export class GameSetupForm extends Window {
     cancelStartOnClose(this, this.#setup);
   }
 
-  /** Asks the worker what there is to choose from, then shows the form. */
+  /**
+   * Asks the worker what there is to choose from, for the game `preset` names when there is more than one (#668), then
+   *  shows the form.
+   */
   static async ask(
     transport: Transport,
     onFinished?: FinishedHandler,
@@ -135,7 +140,7 @@ export class GameSetupForm extends Window {
   ): Promise<GameSetupForm> {
     return new GameSetupForm(
       transport,
-      await requestSetupData(transport),
+      await requestGameSetupData(transport, preset),
       onFinished,
       preset
     );
@@ -160,7 +165,9 @@ export class GameSetupForm extends Window {
 
     const setup = this.#setup,
       data = setup.data,
-      grids = supportedTopologies(),
+      // A game with a grid of its own (Civ2's) is on that one.
+      fixedGrid = setup.fixedGrid(),
+      grids = fixedGrid === null ? supportedTopologies() : [fixedGrid],
       advanced = s<HTMLDetailsElement>(
         `<details class="ui-game-setup-advanced"${
           preset.advanced ? ' open' : ''
@@ -318,11 +325,27 @@ export class GameSetupForm extends Window {
       )
     );
 
+    // Which game (#668), once there is more than one: another is another form, with that game's civilizations and
+    //  levels, in this one's place.
+    const games =
+      data.game === undefined
+        ? null
+        : gameSelect(data.game, (pluginSet) => {
+            this.close();
+
+            GameSetupForm.ask(this.#transport, this.#onFinished, {
+              ...preset,
+              advanced: advanced.open,
+              pluginSet,
+            }).catch(unlessRequestFailed);
+          });
+
     this.update(
       s(
         '<div class="ui-game-setup"></div>',
         s(
           '<section class="ui-game-setup-world"></section>',
+          ...(games === null ? [] : [field(t('GameSetup.game'), games)]),
           ...(grids.length > 1
             ? [field(t('GameSetup.grid'), this.#gridSelect)]
             : []),
