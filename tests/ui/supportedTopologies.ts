@@ -583,6 +583,13 @@ const text = (element: Element | null): string =>
             return Promise.resolve(['SimpleAIClient']);
           case 'difficulties':
             return Promise.resolve([{ name: 'Prince', level: 2 }]);
+          // Civ1's rules only, so there's no other game to choose with Civ2's art imported (#668).
+          case 'pluginSets':
+            return Promise.resolve({
+              sets: [{ id: 'civ1-enhanced', tileset: null }],
+              default: 'civ1-enhanced',
+              chosen: null,
+            });
           default:
             return Promise.resolve({});
         }

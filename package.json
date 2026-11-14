@@ -185,6 +185,7 @@
     "test:seats": "node tools/run-suite.js engine seats",
     "test:lazy-plugins": "node tools/run-suite.js engine lazyPlugins",
     "test:plugin-sets": "node tools/run-suite.js engine pluginSets",
+    "test:plugin-set-choice": "node tools/run-suite.js ui pluginSetChoice",
     "test:civ2-isolation": "node tools/run-suite.js engine civ2Isolation",
     "test:civ2-worker-rules": "node tools/run-suite.js engine civ2WorkerRules",
     "test:observer": "node tools/run-suite.js engine observer",
@@ -300,6 +301,7 @@
       "civ2": {
         "rules": "@civ-clone/ui-rules-civ2",
         "hidden": true,
+        "tileset": "civ2",
         "plugins": [
           "@civ-clone/base-civilization-barbarian",
           "@civ-clone/base-strategy-victory",

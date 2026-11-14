@@ -5,7 +5,6 @@ import GameSetup, {
   SeatKind,
   SeatState,
   SetupData,
-  requestSetupData,
 } from '@civ-clone/ui-client/lib/gameSetup';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -22,10 +21,16 @@ import startFromSetup, {
 import {
   cell,
   civilizationName,
+  gameSelect,
+  holdControls,
   leaderName,
   option,
   select,
 } from '@civ-clone/ui-menus/lib/setupControls';
+import {
+  requestGameSetupData,
+  switchSetupGame,
+} from '@civ-clone/ui-menus/lib/pluginSets';
 import { s } from '@dom111/element';
 import { supportedTopologies } from '@civ-clone/ui-map/lib/supportedTopologies';
 import { glyph } from '@civ-clone/ui-platform/lib/glyphs';
@@ -68,6 +73,8 @@ const numberInput = (
 export class GameSetupWindow extends Window {
   #setup: GameSetup;
   #onFinished?: FinishedHandler;
+  // Switching to another game's setup (#668): until this one is closed, nothing more is sent from it.
+  #switching: boolean = false;
   #transport: Transport;
 
   #mapSelect!: HTMLSelectElement;
@@ -100,7 +107,10 @@ export class GameSetupWindow extends Window {
     cancelStartOnClose(this, this.#setup);
   }
 
-  /** Asks the worker what there is to choose from, then shows the window. */
+  /**
+   * Asks the worker what there is to choose from, for the game `preset` names when there is more than one (#668), then
+   *  shows the window.
+   */
   static async ask(
     transport: Transport,
     onFinished?: FinishedHandler,
@@ -108,7 +118,7 @@ export class GameSetupWindow extends Window {
   ): Promise<GameSetupWindow> {
     return new GameSetupWindow(
       transport,
-      await requestSetupData(transport),
+      await requestGameSetupData(transport, preset),
       onFinished,
       preset
     );
@@ -132,7 +142,9 @@ export class GameSetupWindow extends Window {
 
     const setup = this.#setup,
       data = setup.data,
-      grids = supportedTopologies(),
+      // A game with a grid of its own (Civ2's) is on that one.
+      fixedGrid = setup.fixedGrid(),
+      grids = fixedGrid === null ? supportedTopologies() : [fixedGrid],
       difficultySelect = select(
         'difficulty',
         difficultyLabels(data.difficulties).map(({ label, value }) =>
@@ -275,11 +287,55 @@ export class GameSetupWindow extends Window {
       )
     );
 
+    // Which game (#668), once there is more than one: another is another setup, with that game's civilizations and
+    //  levels, in this one's place.
+    const games =
+      data.game === undefined
+        ? null
+        : gameSelect(data.game, (pluginSet) => {
+            // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
+            //  way to another game.
+            if (this.#switching) {
+              return;
+            }
+
+            this.#switching = true;
+            holdControls(this.element());
+
+            const seats = this.#setup.seats.map(({ kind, name }) => ({
+              kind,
+              name,
+            }));
+
+            void switchSetupGame(
+              (game) =>
+                GameSetupWindow.ask(this.#transport, this.#onFinished, {
+                  ...preset,
+                  advanced: advanced.open,
+                  pluginSet: game,
+                  seats,
+                }),
+              data.game!.id,
+              pluginSet,
+              () => this.close()
+            );
+          });
+
     this.update(
       s(
         '<div class="game-setup"></div>',
         s(
           '<div class="world"></div>',
+          ...(games === null
+            ? []
+            : [
+                s(
+                  `<div class="option"><label for="${elementId(games)}">${t(
+                    'GameSetup.game'
+                  )}</label></div>`,
+                  games
+                ),
+              ]),
           ...(grids.length > 1
             ? [
                 s(
@@ -516,7 +572,11 @@ export class GameSetupWindow extends Window {
 
   async #start(difficulty: string): Promise<void> {
     // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
-    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
+    if (
+      this.#switching ||
+      this.#setup.ruleSetsBlockStart() ||
+      this.#setup.starting()
+    ) {
       return;
     }
 

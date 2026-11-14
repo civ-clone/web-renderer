@@ -7,6 +7,7 @@ import '@civ-clone/ui-map-square';
 // Isometric is drawable, but offered only once an isometric tileset is installed, and none is yet (#97).
 import '@civ-clone/ui-map-isometric';
 import Renderer from '@civ-clone/ui-game/bootstrap';
+import ReplaceableTransport from '@civ-clone/ui-client/ReplaceableTransport';
 import WorkerTransport from '@civ-clone/worker-transport/WorkerTransport';
 import { setBuild } from '@civ-clone/ui-client/lib/build';
 import { version } from '../../build.json';
@@ -22,11 +23,23 @@ setBuild({
   musicWorkletUrl: versioned('musicWorklet.js'),
 });
 
+// One worker plays one set of plugins (#668): a new game with another set gets a new worker, in this one's place, and
+//  is told again what the page told this one (`setOption`: the debug panel's automation).
 const renderer = new Renderer(
-  new WorkerTransport(
-    new Worker(versioned('backend.js')),
-    // The game data is rebuilt incrementally by the page itself (#333).
-    { rawChannels: ['gameData'] }
+  new ReplaceableTransport(
+    () => {
+      const worker = new Worker(versioned('backend.js'));
+
+      return {
+        transport: new WorkerTransport(
+          worker,
+          // The game data is rebuilt incrementally by the page itself (#333).
+          { rawChannels: ['gameData'] }
+        ),
+        end: () => worker.terminate(),
+      };
+    },
+    { replay: ['setOption'] }
   )
 );
 

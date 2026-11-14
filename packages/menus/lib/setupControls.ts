@@ -1,6 +1,9 @@
 // The controls the game setup (#605) and the resume window (#608) share: a civilization or leader named for the
-//  page, and a select made of options whose text is set as text, so a name with a quote or a bracket is safe (#3).
+//  page, a select made of options whose text is set as text, so a name with a quote or a bracket is safe (#3), and the
+//  setup's choice of game (#668).
 
+import { GameChoice } from '@civ-clone/ui-client/lib/gameSetup';
+import { gameName } from './pluginSets';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 
@@ -44,3 +47,43 @@ export const cell = (...children: Node[]): HTMLTableCellElement => {
 
   return element;
 };
+
+/**
+ * Which game the setup is for (#668), when there is more than one: each by its name, the one it is selected. A change
+ *  is another setup, with that game's civilizations and levels, so `onChange` is given the game chosen to open it for.
+ */
+export const gameSelect = (
+  { id, games }: GameChoice,
+  onChange: (pluginSet: string) => void
+): HTMLSelectElement => {
+  const element = select(
+    'pluginSet',
+    games.map((game) => option(game, gameName(game), { selected: game === id }))
+  );
+
+  element.addEventListener('change', (): void => {
+    if (element.value !== id) {
+      onChange(element.value);
+    }
+  });
+
+  return element;
+};
+
+/**
+ * Holds every control in `root` but its title bar's (Close) while the setup switches games (#668): nothing it sends
+ *  would reach the worker it was made for.
+ */
+export const holdControls = (root: Element): void =>
+  root
+    .querySelectorAll<
+      | HTMLButtonElement
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+    >('button, input, select, textarea')
+    .forEach((control) => {
+      if (control.closest('header') === null) {
+        control.disabled = true;
+      }
+    });

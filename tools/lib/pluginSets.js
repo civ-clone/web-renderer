@@ -2,7 +2,7 @@
 //  `package.json`, and everything they depend on. Worked out here, when the plugin list is written, and nowhere in the
 //  browser.
 //
-//   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean } }
+//   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean, tileset?: string } }
 //   plugins: [{ name, dependencies: string[], conflicts: string[], importsOnly?: string[] }], every plugin installed
 //   dependenciesOf: (name) => string[] | null, any other installed package's, or null for one that isn't installed
 //   conflicts: { [name]: string[] }, conflicts declared for plugins beside their own (`civ-clone.conflicts` in the root
@@ -132,14 +132,53 @@ const resolvePluginSets = (
       );
     }
 
+    // The art pack a set's games are drawn with, by its tileset id: a page offers the set only once the player has
+    //  imported it. A name, or nothing.
+    if (
+      'tileset' in sets[id] &&
+      (typeof sets[id].tileset !== 'string' || sets[id].tileset === '')
+    ) {
+      problems.push(
+        `set ${id} has \`tileset\` ${JSON.stringify(
+          sets[id].tileset
+        )}, which isn't a tileset's id`
+      );
+    }
+
+    // A set built on one drawn with an art pack of its own is drawn with art too, and says which: one that didn't
+    //  would be offered to a player without that art.
+    if (!('tileset' in sets[id])) {
+      const seen = new Set([id]);
+
+      for (
+        let ancestor = sets[id].extends;
+        typeof ancestor === 'string' &&
+        sets[ancestor] !== undefined &&
+        !seen.has(ancestor);
+        ancestor = sets[ancestor].extends
+      ) {
+        seen.add(ancestor);
+
+        if (typeof sets[ancestor].tileset === 'string') {
+          problems.push(
+            `set ${id} extends ${ancestor}, which is drawn with the ${sets[ancestor].tileset} art, but names no \`tileset\` of its own`
+          );
+
+          break;
+        }
+      }
+    }
+
     members.forEach((name) => loaded.add(name));
-    // A hidden set is one a game can be played with that the page doesn't offer yet: its own setting, not the one it
-    //  extends, so a set built on a hidden one is offered unless it says otherwise.
+    // A hidden set is one a game can be played with that the page doesn't offer yet, unless the player has imported
+    //  the art pack it names (`tileset`). Both its own settings, not the one it extends', so a set built on a hidden
+    //  one is offered unless it says otherwise.
     resolved.push({
       id,
       plugins: [...members].sort(byName),
       rules,
       hidden: sets[id].hidden === true,
+      tileset: typeof sets[id].tileset === 'string' ? sets[id].tileset : null,
     });
   });
 
@@ -166,7 +205,8 @@ const resolvePluginSets = (
 };
 
 // What's wrong with the sets a game gets without asking (`civ-clone.defaultSet` and `setForSavesWithoutOne`), given the
-//  resolved sets: each must be a set, and not a hidden one, which the page doesn't offer.
+//  resolved sets: each must be a set, not a hidden one, which the page doesn't offer, and not one that needs art the
+//  player may not have imported.
 const defaultSetProblems = (config, sets) =>
   [
     ['defaultSet', 'the set a new game is played with'],
@@ -185,11 +225,20 @@ const defaultSetProblems = (config, sets) =>
       ];
     }
 
-    return set.hidden
+    if (set.hidden) {
+      return [
+        `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
+          config[key]
+        )}, which is hidden`,
+      ];
+    }
+
+    // A game without the player's art would have nothing to draw it with.
+    return typeof set.tileset === 'string'
       ? [
           `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
             config[key]
-          )}, which is hidden`,
+          )}, which needs the ${set.tileset} art imported`,
         ]
       : [];
   });

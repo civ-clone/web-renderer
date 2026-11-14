@@ -11,6 +11,9 @@
 //   --scenario load <file>             load <file> where civ1-enhanced is the default, and save again
 //   --scenario load-without <file>     the same, with the file's set taken out, as a save from before sets
 //   --scenario load-unknown <file>     the same, with the file naming a set this build doesn't have
+//   --scenario civ2 <file>             ask which sets there are (#668), with and without Civ2's art, choose civ2, start
+//                                      a game on the isometric grid, play two turns and save to <file>
+//   --scenario load-civ2 <file>        load <file> where civ1-enhanced is the default, and save again
 //
 // Imports `src/js/pluginSets.ts`, never `src/js/plugins.ts`, which would run every plugin in the default set.
 
@@ -24,7 +27,11 @@ import { execFileSync } from 'child_process';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { join } from 'path';
 import pluginSets from '../../src/js/pluginSets';
-import { offeredSets, pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
+import {
+  isOffered,
+  offeredSets,
+  pluginsFrom,
+} from '@civ-clone/ui-worker-client/Plugins';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
@@ -48,6 +55,12 @@ type Report = {
   refused: string | null;
   // And asking for a hidden one (civ2).
   refusedHidden: string | null;
+  // Rule ids of Civ1's own packages registered (civ2 must have none).
+  civ1Rules: number;
+  // The saved world's grid.
+  topologyId: string | null;
+  // What the page's requests were answered (#668), where the scenario asks them.
+  protocol: { [request: string]: unknown } | null;
 };
 
 const EXTRA_CIVILIZATIONS = [
@@ -82,8 +95,9 @@ const EXTRA_CIVILIZATIONS = [
   file = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 2];
 
 const play = (name: string, path: string): void => {
-  const receivers = new Map<string, (data: any) => void>(),
+  const receivers = new Map<string, (data: any, meta?: any) => void>(),
     sent: { channel: string; data: any }[] = [],
+    replies: { channel: string; data: any; id: number }[] = [],
     transport: any = {
       receive: (channel: string, handler: (data: any) => void) => {
         receivers.set(channel, handler);
@@ -91,7 +105,9 @@ const play = (name: string, path: string): void => {
         return () => {};
       },
       receiveOnce: () => () => {},
-      reply: () => {},
+      reply: (channel: string, data: any, id: number) => {
+        replies.push({ channel, data, id });
+      },
       request: () => new Promise(() => {}),
       send: (channel: string, data: any) => {
         sent.push({ channel, data });
@@ -133,10 +149,37 @@ const play = (name: string, path: string): void => {
       sent
         .filter(({ channel }) => channel === 'loadFailed')
         .map(({ data }) => data?.message ?? ''),
+    // A request as the page makes one: answered with a reply carrying its id, or refused with a `requestFailed`.
+    ask = async (channel: string, data: unknown): Promise<any> => {
+      const id = 1000 + replies.length + sent.length;
+
+      receivers.get(channel)!(data, { id });
+
+      for (let i = 0; i < 3000; i++) {
+        const reply = replies.find((candidate) => candidate.id === id),
+          failure = sent.find(
+            (candidate) =>
+              candidate.channel === 'requestFailed' && candidate.data?.id === id
+          );
+
+        if (reply) {
+          return reply.data;
+        }
+
+        if (failure) {
+          throw new Error(failure.data.message);
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      throw new Error(`${channel} was never answered`);
+    },
     report = (
       written: any,
       refused: string | null = null,
-      refusedHidden: string | null = null
+      refusedHidden: string | null = null,
+      protocol: { [request: string]: unknown } | null = null
     ): never => {
       process.stdout.write(
         JSON.stringify({
@@ -169,6 +212,13 @@ const play = (name: string, path: string): void => {
           ruleSets: defaultGame.ruleSets.describe().map(({ id }) => id),
           refused,
           refusedHidden,
+          civ1Rules: ruleRegistryInstance
+            .entries()
+            .filter((rule) => (rule.id() ?? '').startsWith('civ1-')).length,
+          topologyId:
+            written?.entities?.find(({ type }: any) => type === 'World')?.state
+              ?._topologyId ?? null,
+          protocol,
         } as Report) + '\n'
       );
       process.exit(0);
@@ -238,6 +288,66 @@ const play = (name: string, path: string): void => {
       return;
     }
 
+    if (name === 'civ2') {
+      // What the page asks before New Game (#668): which sets, with no art beyond Civ1's and with Civ2's. Neither
+      //  loads anything.
+      const protocol: { [request: string]: unknown } = {
+        withoutArt: await ask('pluginSets', ['civ1']),
+        withArt: await ask('pluginSets', ['civ1', 'civ2']),
+      };
+
+      protocol.loadedRules = ruleRegistryInstance.entries().length;
+      // The game chosen: civ2, loaded, and so what the setup asks next comes from it.
+      protocol.chosen = await ask('choosePluginSet', 'civ2');
+      protocol.after = await ask('pluginSets', ['civ1', 'civ2']);
+      protocol.difficulties = (await ask('difficulties', null)).map(
+        ({ name }: { name: string }) => name
+      );
+      protocol.aiClients = await ask('aiClients', null);
+
+      // Another game now is refused: the page starts another worker for it.
+      try {
+        await ask('choosePluginSet', 'civ1-enhanced');
+        protocol.refusedOther = null;
+      } catch (error) {
+        protocol.refusedOther = (error as Error).message;
+      }
+
+      Object.entries({
+        topologyId: 'staggered-iso',
+        width: 40,
+        height: 32,
+        difficulty: 'Chieftain',
+        seats: [{ kind: 'human' }, { kind: 'computer' }, { kind: 'computer' }],
+      }).forEach(([option, value]) =>
+        receivers.get('setOption')!({ name: option, value })
+      );
+
+      receivers.get('start')!(null);
+
+      if (!(await until(() => turns >= 2))) {
+        throw new Error(
+          `the civ2 game never reached its second turn: ${JSON.stringify(
+            sent.filter(({ channel }) => channel === 'workerError')
+          )}`
+        );
+      }
+
+      const written = saved();
+
+      writeFileSync(path, JSON.stringify(written));
+
+      report(written, null, null, protocol);
+
+      return;
+    }
+
+    if (name === 'civ1-ai') {
+      report(null, null, null, { aiClients: await ask('aiClients', null) });
+
+      return;
+    }
+
     const read = JSON.parse(readFileSync(path, 'utf8'));
 
     if (name === 'load-without') {
@@ -248,13 +358,22 @@ const play = (name: string, path: string): void => {
       read.pluginSet = 'civ9';
     }
 
+    // Before the load, what a page reloaded to load it asks: which sets there are, which fixes none.
+    const before =
+      name === 'load-civ2' ? await ask('pluginSets', ['civ1', 'civ2']) : null;
+
     receivers.get('load')!({ data: JSON.stringify(read) });
 
     if (!(await until(loadFinished))) {
       throw new Error('the load never finished');
     }
 
-    report(loadFailure() === null ? saved() : null);
+    report(
+      loadFailure() === null ? saved() : null,
+      null,
+      null,
+      before === null ? null : { before }
+    );
   })().catch((error: any): void => {
     process.stderr.write(`${error?.stack ?? error}\n`);
     process.exit(1);
@@ -263,7 +382,15 @@ const play = (name: string, path: string): void => {
 
 if (scenario !== null) {
   if (
-    !['civ1', 'load', 'load-without', 'load-unknown'].includes(scenario) ||
+    ![
+      'civ1',
+      'civ1-ai',
+      'load',
+      'load-without',
+      'load-unknown',
+      'civ2',
+      'load-civ2',
+    ].includes(scenario) ||
     !file
   ) {
     process.stderr.write(`FAIL pluginSets: bad scenario '${scenario}'\n`);
@@ -407,6 +534,85 @@ if (scenario !== null) {
     ]
   );
 
+  // A set drawn with an art pack of its own (`tileset`, #668): offered only to a page with that art, and never a set a
+  //  game gets without asking.
+  expect(
+    'a set names its art pack by tileset id, or none; anything else is a problem',
+    [
+      resolvePluginSets(
+        {
+          one: { rules: '@x/rules', plugins: ['@x/a'], tileset: 'pack' },
+          two: { rules: '@x/rules', plugins: ['@x/b'] },
+        },
+        [plugin('@x/a'), plugin('@x/b')]
+      ).sets.map(({ id, tileset }: any) => [id, tileset]),
+      resolvePluginSets(
+        { one: { rules: '@x/rules', plugins: ['@x/a'], tileset: 2 } },
+        [plugin('@x/a')]
+      ).problems,
+    ],
+    [
+      [
+        ['one', 'pack'],
+        ['two', null],
+      ],
+      ["set one has `tileset` 2, which isn't a tileset's id"],
+    ]
+  );
+  expect(
+    'a set built on one with art of its own must name its art too, however far down, or it is a problem',
+    [
+      resolvePluginSets(
+        {
+          art: { rules: '@x/rules', plugins: ['@x/a'], tileset: 'pack' },
+          child: { extends: 'art', plugins: ['@x/b'] },
+          grandchild: { extends: 'child', plugins: [] },
+          named: { extends: 'art', plugins: [], tileset: 'pack' },
+        },
+        [plugin('@x/a'), plugin('@x/b')]
+      ).problems,
+    ],
+    [
+      [
+        'set child extends art, which is drawn with the pack art, but names no `tileset` of its own',
+        'set grandchild extends art, which is drawn with the pack art, but names no `tileset` of its own',
+      ],
+    ]
+  );
+  expect(
+    'the sets a game gets without asking need no art of their own',
+    defaultSetProblems({ defaultSet: 'art', setForSavesWithoutOne: 'art' }, [
+      {
+        id: 'art',
+        plugins: [],
+        rules: '@x/rules',
+        hidden: false,
+        tileset: 'pack',
+      },
+    ]),
+    [
+      '`civ-clone.defaultSet`, the set a new game is played with, is "art", which needs the pack art imported',
+      '`civ-clone.setForSavesWithoutOne`, the set a save made before there were sets loads with, is "art", which needs the pack art imported',
+    ]
+  );
+  expect(
+    'a set with art of its own is offered once that art is imported, hidden or not; any other unless it is hidden',
+    [
+      [true, false].flatMap((hidden) =>
+        [[], ['pack'], ['other']].map((tilesets) =>
+          isOffered({ hidden, tileset: 'pack' }, tilesets)
+        )
+      ),
+      [true, false].map((hidden) =>
+        isOffered({ hidden, tileset: null }, ['pack'])
+      ),
+    ],
+    [
+      [false, true, false, false, true, false],
+      [false, true],
+    ]
+  );
+
   // What a package only imports (`civ-clone.importsOnly`) isn't followed from it, but is still loaded when named or
   //  reached another way.
   const importer = (
@@ -530,6 +736,23 @@ if (scenario !== null) {
     ]
   );
   expect(
+    'and it is drawn with Civ2’s art, so a page that has imported it is offered civ2 too',
+    [
+      pluginSets.sets.map(({ id, tileset }) => [id, tileset]),
+      offeredSets(pluginsFrom(pluginSets), ['civ1', 'civ2']).map(
+        ({ id }) => id
+      ),
+    ],
+    [
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'civ2'],
+      ],
+      ['civ1', 'civ1-enhanced', 'civ2'],
+    ]
+  );
+  expect(
     'civ1-enhanced is every plugin installed but the civ2 packages and the traits only Civ2 uses, as every game was played with before there were sets',
     enhanced.plugins,
     installed.filter((name) => !civ2Only.includes(name)).sort(byPackageName)
@@ -597,11 +820,11 @@ if (scenario !== null) {
 
   const directory = mkdtempSync(join(tmpdir(), 'plugin-sets-')),
     path = join(directory, 'civ1.json'),
-    run = (name: string): Report => {
+    run = (name: string, file: string = path): Report => {
       try {
         const output = execFileSync(
           process.execPath,
-          [process.argv[1], '--scenario', name, path],
+          [process.argv[1], '--scenario', name, file],
           {
             encoding: 'utf8',
             env: process.env,
@@ -696,6 +919,94 @@ if (scenario !== null) {
       /civ2/.test(unknown.failed ?? ''),
     ],
     [false, true, true, false]
+  );
+
+  // Civ2, chosen in New Game (#668): offered only to a page with Civ2's art, played on the isometric grid, saved as
+  //  civ2 and loaded as civ2 by a worker whose default is civ1-enhanced.
+  const civ2Path = join(directory, 'civ2.json'),
+    civ2Game = run('civ2', civ2Path),
+    protocol = civ2Game.protocol as any,
+    sets = (answer: any): unknown =>
+      answer?.sets?.map(({ id, tileset }: any) => [id, tileset]);
+
+  expect(
+    'asked which sets there are, the worker offers civ2 only to a page with Civ2’s art, and has loaded none',
+    [
+      sets(protocol.withoutArt),
+      protocol.withoutArt.default,
+      protocol.withoutArt.chosen,
+      sets(protocol.withArt),
+      protocol.withArt.chosen,
+    ],
+    [
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+      ],
+      'civ1-enhanced',
+      null,
+      [
+        ['civ1', null],
+        ['civ1-enhanced', null],
+        ['civ2', 'civ2'],
+      ],
+      null,
+    ]
+  );
+  expect(
+    'and asking loads nothing: no rule was registered before civ2 was chosen',
+    protocol.loadedRules,
+    0
+  );
+  expect(
+    'choosing civ2 loads it, and the setup then gets its six levels',
+    [protocol.chosen, protocol.after.chosen, protocol.difficulties],
+    [
+      'civ2',
+      'civ2',
+      ['Chieftain', 'Warlord', 'Prince', 'King', 'Emperor', 'Deity'],
+    ]
+  );
+  expect(
+    'once civ2 is loaded, another game is refused, for the page to start another worker, without naming civ2',
+    [
+      /other rules are loaded here already, and the civ1-enhanced rules can't be loaded on top/.test(
+        protocol.refusedOther ?? ''
+      ),
+      /civ2/.test(protocol.refusedOther ?? ''),
+    ],
+    [true, false]
+  );
+  expect(
+    'a civ2 game on the isometric grid runs no Civ1 rule, and saves as civ2 with only civ2’s plugins',
+    [
+      civ2Game.failed,
+      civ2Game.civ1Rules,
+      civ2Game.topologyId,
+      civ2Game.set,
+      civ2Game.manifest.sort(),
+    ],
+    [null, 0, 'staggered-iso', 'civ2', [...civ2.plugins].sort()]
+  );
+  expect(
+    'its computer seats are offered the same AI clients as civ1-enhanced’s, which the resume window asks the page’s worker for',
+    protocol.aiClients,
+    run('civ1-ai').protocol?.aiClients
+  );
+
+  const civ2Loaded = run('load-civ2', civ2Path);
+
+  expect(
+    'loaded where civ1-enhanced is the default, the civ2 save loads as civ2, with no Civ1 rule, and saves as civ2 again',
+    [
+      (civ2Loaded.protocol as any)?.before?.chosen,
+      civ2Loaded.failed,
+      civ2Loaded.set,
+      civ2Loaded.civ1Rules,
+      civ2Loaded.topologyId,
+      civ2Loaded.manifest.sort(),
+    ],
+    [null, null, 'civ2', 0, 'staggered-iso', [...civ2.plugins].sort()]
   );
 
   finished = true;

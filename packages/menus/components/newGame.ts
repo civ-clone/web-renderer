@@ -21,12 +21,68 @@ import { openChoice } from '@civ-clone/ui-hud/components/choiceList';
 import supportedTopologies from '@civ-clone/ui-map/lib/supportedTopologies';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import {
+  askGameChoices,
+  gameFailed,
+  gameGrid,
+  gameName,
+  mayOfferOtherGames,
+  playGame,
+  preselectedGame,
+} from '../lib/pluginSets';
 
-// The questions New Game asks, each one answered before the next (#745): which grid (#89), how big a world, the
-//  difficulty level (#173), then how many civilizations (#55). Each is over everything else, and Cancel or Escape
-//  backs out of New Game.
+// The questions New Game asks, each one answered before the next (#745): which game, once there is more than one to
+//  play (#668), which grid (#89), how big a world, the difficulty level (#173), then how many civilizations (#55).
+//  Each is over everything else, and Cancel or Escape backs out of New Game.
 
 export type FinishedHandler = () => void;
+
+/** The game setup, for the game chosen (`pluginSet`, a set's id, or none for the default), as Customize… opens it. */
+export type CustomiseHandler = (pluginSet?: string) => void;
+
+/**
+ * Which game (#668): civ.one's own, or another game's rules drawn with that game's art (Civ2's), offered only once the
+ *  player has imported that art. With only one game to play, as without it, nothing is asked. The worker plays the
+ *  game chosen from then on, a new worker if it had another loaded already, and `onChoose` is told the grid that game
+ *  is played on, or null for one on any.
+ */
+export const askGame = (
+  transport: Transport,
+  onChoose: (pluginSet: string | undefined, grid: TopologyId | null) => void
+): void => {
+  // Without art for another game there's none to offer, and nothing to ask the worker: the default it is.
+  if (!mayOfferOtherGames()) {
+    onChoose(undefined, null);
+
+    return;
+  }
+
+  askGameChoices(transport)
+    .then((choices) => {
+      const play = (id: string): void => {
+        playGame(transport, id, choices)
+          .then(() =>
+            onChoose(id, gameGrid(choices.games.find((game) => game.id === id)))
+          )
+          // Not answered, the player has been told (#580); anything else is said: nothing more is asked.
+          .catch(gameFailed);
+      };
+
+      if (choices.games.length < 2) {
+        play(choices.default);
+
+        return;
+      }
+
+      ask(
+        t('NewGameWindow.game'),
+        choices.games.map(({ id }) => ({ label: gameName(id), value: id })),
+        preselectedGame(choices),
+        play
+      );
+    })
+    .catch(unlessRequestFailed);
+};
 
 const ask = (
   title: string,
@@ -217,35 +273,60 @@ export const askWorldSize = (
 };
 
 /**
- * New Game: the map's grid, then the sizes there are on it. With `customise`, the sizes are offered beside
- *  Customise…, which it answers instead (#749).
+ * New Game: which game, then the map's grid, unless the game has its own (Civ2's), then the sizes there are on it. With
+ *  `customise`, the sizes are offered beside Customise…, which opens the game setup for the game chosen instead
+ *  (#749).
  */
 export const askNewGame = (
   transport: Transport,
   onFinished?: FinishedHandler,
-  customise: (() => void) | null = null
+  customise: CustomiseHandler | null = null
 ): void =>
-  askMapGrid((topologyId) =>
-    askWorldSize(
-      transport,
-      onFinished,
-      worldSizesFor(topologyId),
-      {
-        topologyId,
-      },
-      customise
-    )
-  );
+  askGame(transport, (pluginSet, grid) => {
+    const sizes = (topologyId: TopologyId): void =>
+      askWorldSize(
+        transport,
+        onFinished,
+        worldSizesFor(topologyId),
+        {
+          topologyId,
+        },
+        customise === null ? null : () => customise(pluginSet)
+      );
+
+    if (grid !== null) {
+      sizes(grid);
+
+      return;
+    }
+
+    askMapGrid(sizes);
+  });
 
 /**
  * A new game on Earth: the same questions as New Game, offering only the sizes there is an Earth map for. Earth's maps
- *  are square, so it never asks which grid (#89).
+ *  are square, so it never asks which grid (#89), and are civ.one's own game's, so it never asks which game either: one
+ *  chosen before on this page is put back first.
  */
 export const askEarth = (
   transport: Transport,
   onFinished?: FinishedHandler
-): void =>
-  askWorldSize(transport, onFinished, earthWorldSizes, {
-    earth: true,
-    topologyId: 'square',
-  });
+): void => {
+  const sizes = (): void =>
+    askWorldSize(transport, onFinished, earthWorldSizes, {
+      earth: true,
+      topologyId: 'square',
+    });
+
+  if (!mayOfferOtherGames()) {
+    sizes();
+
+    return;
+  }
+
+  askGameChoices(transport)
+    .then((choices) => playGame(transport, choices.default, choices))
+    .then(sizes)
+    // Not answered: the player has been told, and the main menu is still there (#580).
+    .catch(unlessRequestFailed);
+};

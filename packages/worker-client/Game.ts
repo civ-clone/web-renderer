@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { PluginSet, Plugins, offeredSets } from './Plugins';
+import { PluginSet, Plugins, isOffered, offeredSets } from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -114,9 +114,9 @@ export class Game implements IGame {
     }
 
     if (this.#set !== null && this.#set !== set) {
-      // A hidden set isn't one the page offers, so it is never named to the player.
-      const named = ({ id, hidden }: PluginSet): string =>
-        hidden ? 'other' : id;
+      // A set the page doesn't offer without its art isn't one a player without it is told of.
+      const named = (set: PluginSet): string =>
+        isOffered(set) ? set.id : 'other';
 
       throw new Error(
         `The ${named(this.#set)} rules are loaded here already, and the ${named(
@@ -315,9 +315,29 @@ export class Game implements IGame {
     this.load(file, seats ?? {});
   }
 
-  // What the game setup asks of the rules before a game starts: the levels, the civilizations, the rule sets and the
-  //  AI clients.
+  // What the game setup asks of the rules before a game starts: which set of plugins, the levels, the civilizations, the
+  //  rule sets and the AI clients.
   #answerSetup(): void {
+    // The sets a new game can be played with (#668), for the art packs the page says the player has imported, and the
+    //  one fixed already, if any: answered without loading anything, so asking fixes nothing. A page that is reloaded
+    //  to load a save asks nothing first, so the save's set is still free to load.
+    answer(this.#transport, 'pluginSets', (tilesets: unknown) => ({
+      sets: offeredSets(
+        this.#plugins,
+        Array.isArray(tilesets)
+          ? tilesets.filter((id): id is string => typeof id === 'string')
+          : []
+      ).map(({ id, tileset }) => ({ id, tileset })),
+      default: this.#plugins.default,
+      chosen: this.#set?.id ?? null,
+    }));
+
+    // The set a new game is played with, loaded: everything the setup asks for next comes from it. Refused once
+    //  another set is fixed, as `#choose` refuses it: the page plays that set in a worker of its own.
+    answer(this.#transport, 'choosePluginSet', (id: unknown) =>
+      this.#load(id).then(({ id }) => id)
+    );
+
     // The levels come from the rules rather than a list here, so a ruleset with other levels needs no change to the menu
     //  (#173). The plugins are imported for it, as a load does, before the game has started. A failure is answered as
     //  the request's (`answer`), so the menu hears of it rather than waiting for good (#470).

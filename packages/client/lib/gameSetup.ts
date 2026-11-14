@@ -32,10 +32,29 @@ import { unlessRequestFailed } from './unlessRequestFailed';
 
 export type FinishedHandler = () => void | Promise<void>;
 
-/** What the setup opens with: Earth selected, or the Advanced section open, as Customize World. */
+/**
+ * What the setup opens with: Earth selected, or the Advanced section open, as Customize World, and the game chosen
+ *  (#668), by its set's id.
+ */
 export type GameSetupPreset = {
   advanced?: boolean;
   earth?: boolean;
+  pluginSet?: string;
+  /**
+   * The seats a setup for another game had (#668): who plays each, and a person's name. Their civilizations and AI
+   *  are that game's, so they are left to chance and the default here.
+   */
+  seats?: Pick<SeatState, 'kind' | 'name'>[];
+};
+
+/** Which game the setup is for (#668), when there is more than one to choose from. */
+export type GameChoice = {
+  /** The set chosen, which the worker has loaded, or will load first. */
+  id: string;
+  /** Every set the setup offers, the default first. */
+  games: string[];
+  /** The only grid its games are played on, drawn with its own art (Civ2's), or null for any. */
+  grid: TopologyId | null;
 };
 
 export type SeatKind = 'human' | 'computer';
@@ -57,6 +76,8 @@ export type SetupData = {
   existing: { [key: string]: any };
   /** The rule sets a new game can switch (#158), as they start. None, from a worker that offers none. */
   ruleSets?: RuleSetsAnswer;
+  /** The game it is (#668), and the others there are, when the page offers more than one. */
+  game?: GameChoice;
 };
 
 /** The world's land, as the Advanced section sets it. */
@@ -137,15 +158,38 @@ export class GameSetup {
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
-    if (preset.earth) {
+    // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, and never on Earth,
+    //  whose maps are square.
+    const fixedGrid = this.fixedGrid();
+
+    if (fixedGrid !== null) {
+      const size =
+        worldSizesFor(fixedGrid).find(({ key }) => key === this.size?.key) ??
+        null;
+
+      this.topologyId = fixedGrid;
+      this.size = size;
+      this.width = size?.width ?? this.width;
+      this.height = size?.height ?? this.height;
+    } else if (preset.earth) {
       this.earth = true;
     }
 
-    // Customize World opens on the world last set: one of the sizes, or a custom one.
+    // Customize World opens on the world last set: one of the sizes, or a custom one. On a grid of the game's own, only
+    //  one of that grid's sizes: a size set before is another grid's.
     const width = Number(data.existing.width),
-      height = Number(data.existing.height);
+      height = Number(data.existing.height),
+      existingSize =
+        worldSizesFor(this.topologyId).find(
+          (size) => size.width === width && size.height === height
+        ) ?? null;
 
-    if (preset.advanced && width > 0 && height > 0) {
+    if (
+      preset.advanced &&
+      width > 0 &&
+      height > 0 &&
+      (fixedGrid === null || existingSize !== null)
+    ) {
       this.size =
         worldSizesFor(this.topologyId).find(
           (size) => size.width === width && size.height === height
@@ -159,6 +203,23 @@ export class GameSetup {
       .map((value: 0, index: number) =>
         this.#newSeat(index === 0 ? 'human' : 'computer')
       );
+
+    // Another game's seats, kept as far as this one has room: who plays each, and the names typed. Where there's no
+    //  room for them all, the human's is kept, in place of the last that fits.
+    const carried = preset.seats ?? [],
+      room = this.maxSeats(),
+      human = carried.findIndex(({ kind }) => kind === 'human'),
+      kept =
+        human >= room && room > 0
+          ? [...carried.slice(0, room - 1), carried[human]!]
+          : carried.slice(0, room);
+
+    if (kept.length > 0) {
+      this.seats = kept.map(({ kind, name }) => ({
+        ...this.#newSeat(kind),
+        name,
+      }));
+    }
   }
 
   #newSeat(kind: SeatKind): SeatState {
@@ -184,6 +245,11 @@ export class GameSetup {
       this.size?.maxPlayers ?? this.data.civilizations.length,
       this.data.civilizations.length
     );
+  }
+
+  /** The only grid the game can be on, when it has one of its own (#668), or null when the player picks it. */
+  fixedGrid(): TopologyId | null {
+    return this.data.game?.grid ?? null;
   }
 
   sizes(): WorldSize[] {
@@ -213,7 +279,8 @@ export class GameSetup {
           group: 'size',
         })
       ),
-      ...earthWorldSizes.map(
+      // Earth's maps are square: not for a game with a grid of its own.
+      ...(this.fixedGrid() === null ? earthWorldSizes : []).map(
         (size): MapChoice => ({
           value: `earth:${size.key}`,
           label: t('GameSetup.earth', { size: label(size) }),
@@ -238,7 +305,7 @@ export class GameSetup {
   chooseMap(value: string): void {
     const [kind, key] = value.split(':');
 
-    this.earth = kind === 'earth';
+    this.earth = kind === 'earth' && this.fixedGrid() === null;
     this.size = this.sizes().find((size) => size.key === key) ?? null;
 
     if (this.size) {
@@ -251,7 +318,7 @@ export class GameSetup {
 
   /** The same size on the new grid has its own width and height. */
   chooseGrid(topologyId: TopologyId): void {
-    this.topologyId = topologyId;
+    this.topologyId = this.fixedGrid() ?? topologyId;
 
     if (this.size) {
       this.size =

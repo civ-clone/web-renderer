@@ -112,9 +112,11 @@ const civilizations = [
     { name: 'Mongol', leaders: ['GenghisKhan'] },
     { name: 'English', leaders: ['Elizabeth'] },
   ],
+  // Prince in the middle: the easiest and the toughest say so instead of their own line.
   difficulties = [
     { name: 'Chieftain', level: 0 },
     { name: 'Prince', level: 2 },
+    { name: 'King', level: 3 },
   ];
 
 type Sent = { channel: string; args: unknown[] };

@@ -5,15 +5,20 @@ import GameSetup, {
   SeatKind,
   SeatState,
   SetupData,
-  requestSetupData,
 } from '@civ-clone/ui-client/lib/gameSetup';
 import {
   cell,
   civilizationName,
+  gameSelect,
+  holdControls,
   leaderName,
   option,
   select,
 } from '@civ-clone/ui-menus/lib/setupControls';
+import {
+  requestGameSetupData,
+  switchSetupGame,
+} from '@civ-clone/ui-menus/lib/pluginSets';
 import {
   difficultyLabels,
   preselectedDifficulty,
@@ -91,6 +96,8 @@ export const civilizationSwatch = (colours: string[] | null): HTMLElement => {
  */
 export class GameSetupForm extends Window {
   #onFinished?: FinishedHandler;
+  // Switching to another game's setup (#668): until this one is closed, nothing more is sent from it.
+  #switching: boolean = false;
   #setup: GameSetup;
   #transport: Transport;
 
@@ -127,7 +134,10 @@ export class GameSetupForm extends Window {
     cancelStartOnClose(this, this.#setup);
   }
 
-  /** Asks the worker what there is to choose from, then shows the form. */
+  /**
+   * Asks the worker what there is to choose from, for the game `preset` names when there is more than one (#668), then
+   *  shows the form.
+   */
   static async ask(
     transport: Transport,
     onFinished?: FinishedHandler,
@@ -135,7 +145,7 @@ export class GameSetupForm extends Window {
   ): Promise<GameSetupForm> {
     return new GameSetupForm(
       transport,
-      await requestSetupData(transport),
+      await requestGameSetupData(transport, preset),
       onFinished,
       preset
     );
@@ -160,7 +170,9 @@ export class GameSetupForm extends Window {
 
     const setup = this.#setup,
       data = setup.data,
-      grids = supportedTopologies(),
+      // A game with a grid of its own (Civ2's) is on that one.
+      fixedGrid = setup.fixedGrid(),
+      grids = fixedGrid === null ? supportedTopologies() : [fixedGrid],
       advanced = s<HTMLDetailsElement>(
         `<details class="ui-game-setup-advanced"${
           preset.advanced ? ' open' : ''
@@ -318,11 +330,46 @@ export class GameSetupForm extends Window {
       )
     );
 
+    // Which game (#668), once there is more than one: another is another form, with that game's civilizations and
+    //  levels, in this one's place.
+    const games =
+      data.game === undefined
+        ? null
+        : gameSelect(data.game, (pluginSet) => {
+            // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
+            //  way to another game.
+            if (this.#switching) {
+              return;
+            }
+
+            this.#switching = true;
+            holdControls(this.element());
+
+            const seats = this.#setup.seats.map(({ kind, name }) => ({
+              kind,
+              name,
+            }));
+
+            void switchSetupGame(
+              (game) =>
+                GameSetupForm.ask(this.#transport, this.#onFinished, {
+                  ...preset,
+                  advanced: advanced.open,
+                  pluginSet: game,
+                  seats,
+                }),
+              data.game!.id,
+              pluginSet,
+              () => this.close()
+            );
+          });
+
     this.update(
       s(
         '<div class="ui-game-setup"></div>',
         s(
           '<section class="ui-game-setup-world"></section>',
+          ...(games === null ? [] : [field(t('GameSetup.game'), games)]),
           ...(grids.length > 1
             ? [field(t('GameSetup.grid'), this.#gridSelect)]
             : []),
@@ -377,12 +424,27 @@ export class GameSetupForm extends Window {
   }
 
   // What the chosen level is, in a line: nothing for a level the translations don't describe.
+  // What the level chosen means: the easiest and the toughest of those the rules send say so, as the level's label
+  //  does, whatever they are called (Civ2 has one beyond Emperor); any other has its own line, if it has one.
   #renderDifficulty(): void {
-    const name = this.#difficultySelect.value;
+    const name = this.#difficultySelect.value,
+      levels = [...this.#setup.data.difficulties].sort(
+        (a, b) => a.level - b.level
+      ),
+      position =
+        levels.length < 2
+          ? null
+          : levels[0]!.name === name
+          ? 'easiest'
+          : levels[levels.length - 1]!.name === name
+          ? 'toughest'
+          : null;
 
-    this.#difficultyHint.textContent = name
-      ? t(`GameSetup.difficulty-summary.${name}`, { defaultValue: '' })
-      : '';
+    this.#difficultyHint.textContent = !name
+      ? ''
+      : position !== null
+      ? t(`GameSetup.difficulty-summary.${position}`, { defaultValue: '' })
+      : t(`GameSetup.difficulty-summary.${name}`, { defaultValue: '' });
     this.#difficultyHint.hidden = this.#difficultyHint.textContent === '';
   }
 
@@ -625,7 +687,11 @@ export class GameSetupForm extends Window {
 
   async #start(): Promise<void> {
     // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
-    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
+    if (
+      this.#switching ||
+      this.#setup.ruleSetsBlockStart() ||
+      this.#setup.starting()
+    ) {
       return;
     }
 
