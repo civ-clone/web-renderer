@@ -2,9 +2,11 @@
 //  `package.json`, and everything they depend on. Worked out here, when the plugin list is written, and nowhere in the
 //  browser.
 //
-//   sets: { [id]: { plugins: string[], extends?: string, rules?: string } }
+//   sets: { [id]: { plugins: string[], extends?: string, rules?: string, hidden?: boolean } }
 //   plugins: [{ name, dependencies: string[], conflicts: string[], importsOnly?: string[] }], every plugin installed
 //   dependenciesOf: (name) => string[] | null, any other installed package's, or null for one that isn't installed
+//   conflicts: { [name]: string[] }, conflicts declared for plugins beside their own (`civ-clone.conflicts` in the root
+//    `package.json`): for plugins that don't declare them themselves yet, such as Civ2's against their Civ1 twins
 //
 // A set's plugins are those it names, the ones the set it `extends` names, and every installed plugin any of them
 //  depends on (`dependencies` and `peerDependencies`), however indirectly: through a library too (a package with no
@@ -18,9 +20,9 @@
 //  that one step is skipped: a package listed there is still in a set that names it, or reaches it some other way.
 //
 // Anything wrong is a problem, and the plugin list isn't written: a set naming a plugin that isn't installed, two
-//  plugins in one set where one says it conflicts with the other (`civ-clone.conflicts` in its `package.json`), a set
-//  that extends one that isn't there or extends itself, a set with no worker rules, and a plugin installed that no set
-//  loads, which would otherwise be left out of every game without a word.
+//  plugins in one set where one says it conflicts with the other (`civ-clone.conflicts` in its `package.json`, or the
+//  root's for it), a set that extends one that isn't there or extends itself, a set with no worker rules, and a plugin
+//  installed that no set loads, which would otherwise be left out of every game without a word.
 
 // Plugins are ordered and looked up by package name (#474), which today is always the package's folder name too: an
 //  aliased install whose name differs from its folder would sort differently from main's directory order.
@@ -34,7 +36,12 @@ const byName = (a, b) => {
 const followedDependencies = ({ dependencies = [], importsOnly = [] }) =>
   dependencies.filter((name) => !importsOnly.includes(name));
 
-const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
+const resolvePluginSets = (
+  sets,
+  plugins,
+  dependenciesOf = () => null,
+  conflicts = {}
+) => {
   const installed = new Map(plugins.map((plugin) => [plugin.name, plugin])),
     problems = [],
     resolved = [],
@@ -105,7 +112,8 @@ const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
     members.forEach((name) =>
       installed
         .get(name)
-        .conflicts.filter((other) => members.has(other))
+        .conflicts.concat(conflicts[name] ?? [])
+        .filter((other) => members.has(other))
         .forEach((other) =>
           problems.push(`set ${id} has ${name}, which conflicts with ${other}`)
         )
@@ -116,7 +124,14 @@ const resolvePluginSets = (sets, plugins, dependenciesOf = () => null) => {
     }
 
     members.forEach((name) => loaded.add(name));
-    resolved.push({ id, plugins: [...members].sort(byName), rules });
+    // A hidden set is one a game can be played with that the page doesn't offer yet: its own setting, not the one it
+    //  extends, so a set built on a hidden one is offered unless it says otherwise.
+    resolved.push({
+      id,
+      plugins: [...members].sort(byName),
+      rules,
+      hidden: sets[id].hidden === true,
+    });
   });
 
   plugins

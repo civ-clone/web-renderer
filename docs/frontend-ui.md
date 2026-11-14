@@ -118,8 +118,8 @@ through `@civ-clone/ui-client/lib/build`. The generated `src/js/pluginSets.ts` i
 sets (#668), which `backend.ts` hands the worker client. The test lists what's left, and the list only shrinks.
 
 The worker (`worker-client`, which `backend.ts` starts) shares only `protocol` with the page: it imports no other
-package, and no package imports from it but a rule set's worker rules (`rules-civ1`, #865), which the plugin list
-imports. Under them are two packages in repositories of their own, with nothing of
+package, and no package imports from it but a rule set's worker rules (`rules-civ1`, #865, and `rules-civ2`), which
+the plugin list imports. Under them are two packages in repositories of their own, with nothing of
 civ.one's in them: `@civ-clone/core-data-client` (the transport contract, requests and their replies, and data
 patches and rebuilding them) and `@civ-clone/worker-transport` (both ends of a transport over a web worker's
 messages, which `frontend.ts` and `backend.ts` start, telling the page's end that `gameData` arrives raw).
@@ -130,6 +130,7 @@ messages, which `frontend.ts` and `backend.ts` start, telling the page's end tha
 | `platform`          | What the interface stands on, knowing nothing of the game: options, storage, the locale's formatting, the interfaces and their slots, the glyphs                                            | nothing else                                                          |
 | `worker-client`     | The game as the worker runs it for the page, which `backend.ts` starts                                                                                                                      | protocol                                                              |
 | `rules-civ1`        | What the worker client needs that only Civ1's rules have, which the plugin list hands it                                                                                                    | worker-client                                                         |
+| `rules-civ2`        | What the worker client needs that only Civ2's rules have, which the plugin list hands it                                                                                                    | worker-client                                                         |
 | `client`            | The game as the page holds it, drawing nothing: transport, state, saves                                                                                                                     | protocol, platform                                                    |
 | `assets`            | Sprites, tilesets and sounds, and drawing a sprite; the registries the art packs register their tilesets and imports with                                                                   | protocol, platform                                                    |
 | `tileset-civ1`      | Civ1's art pack: its tileset, the square map's and the interface's, and importing it from the player's copy                                                                                 | assets                                                                |

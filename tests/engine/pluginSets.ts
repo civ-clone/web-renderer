@@ -1,7 +1,8 @@
 // A game's set of plugins (#668). How `buildPluginList.js` works a set out from the plugins it names and what they
-//  depend on; that civ.one's two sets are Civ1's own plugins, and those with civ1-enhanced, which is every plugin
-//  installed; and, through the worker's own receivers as the page drives them, that a game played with civ1 runs none
-//  of civ1-enhanced's code, saves which set it was, and loads with it again, while a save that names no set loads as
+//  depend on; that civ.one's three sets are Civ1's own plugins, those with civ1-enhanced, which is every plugin
+//  installed but Civ2's, and Civ2's (hidden, and sharing no Civ1 plugin: `civ2Isolation.ts` checks what it loads);
+//  and, through the worker's own receivers as the page drives them, that a game played with civ1 runs none of
+//  civ1-enhanced's code, saves which set it was, and loads with it again, while a save that names no set loads as
 //  civ1-enhanced, as every save did before there were sets. Each game is a process of its own, as each is a worker:
 //  the plugins can't be unloaded.
 //
@@ -22,7 +23,7 @@ import { execFileSync } from 'child_process';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { join } from 'path';
 import pluginSets from '../../src/js/pluginSets';
-import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
+import { offeredSets, pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
@@ -411,29 +412,49 @@ if (scenario !== null) {
   // civ.one's sets, as `buildPluginList.js` wrote them.
   const civ1 = pluginSets.sets.find(({ id }) => id === 'civ1')!,
     enhanced = pluginSets.sets.find(({ id }) => id === 'civ1-enhanced')!,
+    civ2 = pluginSets.sets.find(({ id }) => id === 'civ2')!,
     installed = Object.keys(pluginSets.loaders).filter(
       (name) => !pluginSets.sets.some(({ rules }) => rules === name)
     ),
+    byPackageName = (a: string, b: string): number =>
+      a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '') ? -1 : 1,
     extras = EXTRA_CIVILIZATIONS.map(
       (civilization) =>
         `@civ-clone/base-civilization-${civilization.toLowerCase()}`
-    );
+    ),
+    civ2Packages = installed.filter((name) =>
+      name.startsWith('@civ-clone/civ2-')
+    ),
+    config = require('../../package.json')['civ-clone'];
 
   expect(
-    'civ.one has civ1 and civ1-enhanced, and plays civ1-enhanced, as are saves from before sets',
+    'civ.one has civ1, civ1-enhanced and civ2, and plays civ1-enhanced, as are saves from before sets',
     [
       pluginSets.sets.map(({ id }) => id),
       pluginSets.default,
       pluginSets.withoutOne,
     ],
-    [['civ1', 'civ1-enhanced'], 'civ1-enhanced', 'civ1-enhanced']
+    [['civ1', 'civ1-enhanced', 'civ2'], 'civ1-enhanced', 'civ1-enhanced']
   );
   expect(
-    'civ1-enhanced is every plugin installed, as every game was played with before there were sets',
+    'civ2 is hidden, so the page offers only the two Civ1 sets until Civ2’s art can be imported',
+    [
+      pluginSets.sets.map(({ id, hidden }) => [id, hidden]),
+      offeredSets(pluginsFrom(pluginSets)).map(({ id }) => id),
+    ],
+    [
+      [
+        ['civ1', false],
+        ['civ1-enhanced', false],
+        ['civ2', true],
+      ],
+      ['civ1', 'civ1-enhanced'],
+    ]
+  );
+  expect(
+    'civ1-enhanced is every plugin installed but the civ2 packages, as every game was played with before there were sets',
     enhanced.plugins,
-    [...installed].sort((a, b) =>
-      a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '') ? -1 : 1
-    )
+    installed.filter((name) => !civ2Packages.includes(name)).sort(byPackageName)
   );
   expect(
     'civ1 is the same but civ1-enhanced, the world civilizations, and their twelve civilizations',
@@ -445,12 +466,53 @@ if (scenario !== null) {
     ].sort()
   );
   expect(
+    'civ2 has the eight civ2 plugins and shares the rest with civ1-enhanced: no civ1 plugin and no library aggregate',
+    [
+      civ2.plugins.filter((name) => !enhanced.plugins.includes(name)),
+      civ2.plugins.filter((name) => /^@civ-clone\/(civ1|library)-/.test(name)),
+    ],
+    [civ2Packages, []]
+  );
+  expect(
+    'and neither Civ1 set has a civ2 plugin',
+    [civ1, enhanced].map(({ plugins }) =>
+      plugins.filter((name) => name.startsWith('@civ-clone/civ2-'))
+    ),
+    [[], []]
+  );
+  expect(
+    'each civ2 plugin conflicts with its Civ1 twin (`civ-clone.conflicts`), so a set with both is refused',
+    resolvePluginSets(
+      {
+        both: {
+          rules: '@x/rules',
+          plugins: civ2Packages.flatMap((name) => [
+            name,
+            name.replace('/civ2-', '/civ1-'),
+          ]),
+        },
+      },
+      civ2Packages
+        .flatMap((name) => [name, name.replace('/civ2-', '/civ1-')])
+        .map((name) => plugin(name)),
+      () => null,
+      config.conflicts
+    ).problems,
+    civ2Packages.map(
+      (name) =>
+        `set both has ${name}, which conflicts with ${name.replace(
+          '/civ2-',
+          '/civ1-'
+        )}`
+    )
+  );
+  expect(
     'and each set saves the versions of its own plugins, and no others',
-    [civ1, enhanced].map(({ plugins, manifest }) => [
+    [civ1, enhanced, civ2].map(({ plugins, manifest }) => [
       Object.keys(manifest).sort(),
       Object.values(manifest).every((version) => typeof version === 'string'),
     ]),
-    [civ1, enhanced].map(({ plugins }) => [[...plugins].sort(), true])
+    [civ1, enhanced, civ2].map(({ plugins }) => [[...plugins].sort(), true])
   );
 
   const directory = mkdtempSync(join(tmpdir(), 'plugin-sets-')),

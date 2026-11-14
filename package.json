@@ -185,6 +185,7 @@
     "test:seats": "node tools/run-suite.js engine seats",
     "test:lazy-plugins": "node tools/run-suite.js engine lazyPlugins",
     "test:plugin-sets": "node tools/run-suite.js engine pluginSets",
+    "test:civ2-isolation": "node tools/run-suite.js engine civ2Isolation",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:save-seats": "node tools/run-suite.js engine saveSeats",
     "test:respawn": "node tools/run-suite.js engine respawn",
@@ -292,7 +293,58 @@
         "plugins": [
           "@civ-clone/civ1-enhanced"
         ]
+      },
+      "civ2": {
+        "rules": "@civ-clone/ui-rules-civ2",
+        "hidden": true,
+        "plugins": [
+          "@civ-clone/base-civilization-barbarian",
+          "@civ-clone/base-strategy-victory",
+          "@civ-clone/base-unit-action-automate",
+          "@civ-clone/base-unit-action-build-route",
+          "@civ-clone/base-unit-action-establish-embassy",
+          "@civ-clone/base-unit-action-explore",
+          "@civ-clone/base-unit-action-steal-technology",
+          "@civ-clone/civ2-civilization",
+          "@civ-clone/civ2-difficulty",
+          "@civ-clone/civ2-game-end",
+          "@civ-clone/civ2-game-year",
+          "@civ-clone/civ2-player",
+          "@civ-clone/civ2-power",
+          "@civ-clone/civ2-trade-rate",
+          "@civ-clone/civ2-world",
+          "@civ-clone/core-save-game",
+          "@civ-clone/simple-ai-client",
+          "@civ-clone/simple-world-generator",
+          "@civ-clone/simple-world-path"
+        ]
       }
+    },
+    "conflicts": {
+      "@civ-clone/civ2-civilization": [
+        "@civ-clone/civ1-civilization"
+      ],
+      "@civ-clone/civ2-difficulty": [
+        "@civ-clone/civ1-difficulty"
+      ],
+      "@civ-clone/civ2-game-end": [
+        "@civ-clone/civ1-game-end"
+      ],
+      "@civ-clone/civ2-game-year": [
+        "@civ-clone/civ1-game-year"
+      ],
+      "@civ-clone/civ2-player": [
+        "@civ-clone/civ1-player"
+      ],
+      "@civ-clone/civ2-power": [
+        "@civ-clone/civ1-power"
+      ],
+      "@civ-clone/civ2-trade-rate": [
+        "@civ-clone/civ1-trade-rate"
+      ],
+      "@civ-clone/civ2-world": [
+        "@civ-clone/civ1-world"
+      ]
     },
     "defaultSet": "civ1-enhanced",
     "setForSavesWithoutOne": "civ1-enhanced"

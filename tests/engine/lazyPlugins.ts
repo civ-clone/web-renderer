@@ -39,6 +39,7 @@ new Game(transport, {
     {
       id: 'lazy',
       manifest: {},
+      hidden: false,
       load: () => {
         loads++;
 

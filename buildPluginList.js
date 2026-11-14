@@ -155,7 +155,8 @@ const config = require('./package.json')['civ-clone'] ?? {},
   { sets, problems } = resolvePluginSets(
     config.sets ?? {},
     entrypoints,
-    dependenciesOf
+    dependenciesOf,
+    config.conflicts ?? {}
   ),
   setIds = sets.map(({ id }) => id);
 
@@ -177,6 +178,17 @@ unreadable.forEach((name) =>
       `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
         config[key]
       )}, which isn't a set`
+    );
+
+    return;
+  }
+
+  // A hidden set isn't offered, so it can't be what a game gets without asking either.
+  if (sets.find(({ id }) => id === config[key]).hidden) {
+    problems.push(
+      `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
+        config[key]
+      )}, which is hidden`
     );
   }
 });
@@ -263,12 +275,14 @@ const sets: {
   id: string;
   plugins: string[];
   rules: string;
+  hidden: boolean;
   manifest: { [name: string]: string };
 }[] = ${JSON.stringify(
-    sets.map(({ id, plugins, rules }) => ({
+    sets.map(({ id, plugins, rules, hidden }) => ({
       id,
       plugins,
       rules,
+      hidden,
       manifest: manifestOf(plugins),
     })),
     null,

@@ -10,6 +10,11 @@ export type PluginSet = {
   id: string;
   /** The set's plugins and their versions, which a game played with it saves, and a load checks against. */
   manifest: PluginManifest;
+  /**
+   * A set a game can be played with, and a save can name, that the page doesn't offer yet (civ.one's `civ2`, until
+   *  Civ2's art can be imported).
+   */
+  hidden: boolean;
   /** Imports the set's plugins, which registers their rules: resolves once they are all in. Once is enough. */
   load: () => Promise<unknown>;
 };
@@ -34,6 +39,8 @@ export type PluginSetData = {
     plugins: string[];
     /** The set's worker rules (#865), loaded after its plugins, as they register AdditionalData for their classes. */
     rules: string;
+    /** Not offered by the page (`civ-clone.sets.<id>.hidden`); offered when left out. */
+    hidden?: boolean;
     manifest: PluginManifest;
   }[];
   default: string;
@@ -46,12 +53,13 @@ export type PluginSetData = {
  *  how the game plays. Only what is loaded runs: a plugin in no set chosen is never imported.
  */
 export const pluginsFrom = (data: PluginSetData): Plugins => ({
-  sets: data.sets.map(({ id, plugins, rules, manifest }): PluginSet => {
+  sets: data.sets.map(({ id, plugins, rules, hidden, manifest }): PluginSet => {
     let loading: Promise<unknown> | null = null;
 
     return {
       id,
       manifest,
+      hidden: hidden === true,
       load: (): Promise<unknown> => {
         if (loading === null) {
           loading = [...plugins, rules].reduce(
@@ -78,3 +86,7 @@ export const pluginsFrom = (data: PluginSetData): Plugins => ({
   default: data.default,
   withoutOne: data.withoutOne,
 });
+
+/** The sets the page may offer for a new game: every one that isn't hidden, in their order. */
+export const offeredSets = (plugins: Plugins): PluginSet[] =>
+  plugins.sets.filter(({ hidden }) => !hidden);

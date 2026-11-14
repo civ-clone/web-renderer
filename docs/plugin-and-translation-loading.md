@@ -24,11 +24,17 @@ The project uses generated import lists rather than dynamic runtime discovery in
   `civ-clone.importsOnly` lists the dependencies it only imports modules from: they aren't followed from that package,
   so a plugin shared between sets (such as `simple-ai-client`, which imports Civ1's units) doesn't bring another rule
   set's plugins with it; one that a set names, or reaches another way, is still in it. civ.one's are
-  `civ1`, Civ1's own plugins, and `civ1-enhanced`, which adds `civ1-enhanced` and, through it, the world
-  civilizations: every plugin installed. The generator stops, saying why, when a set names a plugin that isn't
-  installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's own `package.json`), a plugin
-  installed is in no set, a set extends a set that doesn't exist (or itself), a set has no `rules`, or
-  `defaultSet` or `setForSavesWithoutOne` names no set.
+  `civ1`, Civ1's own plugins, `civ1-enhanced`, which adds `civ1-enhanced` and, through it, the world
+  civilizations (every plugin installed but Civ2's), and `civ2`, Civ2's packages with the shared plugins and worker
+  rules of its own (`@civ-clone/ui-rules-civ2`, `packages/rules-civ2`), sharing no Civ1 package (M2a, #1008). A set
+  marked `hidden` can be played and saved with, but isn't offered (`offeredSets` in
+  `packages/worker-client/Plugins.ts`): `civ2` is, until Civ2's art can be imported. The generator stops, saying why,
+  when a set names a plugin that isn't installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's
+  own `package.json`, or in the root's `civ-clone.conflicts` by plugin name, where each civ2 package conflicts with its
+  Civ1 twin), a plugin installed is in no set, a set extends a set that doesn't exist (or itself), a set has no
+  `rules`, or `defaultSet` or `setForSavesWithoutOne` names no set, or a hidden one. `tests/engine/civ2Isolation.ts`
+  loads `civ2` and checks that nothing of Civ1's is registered (no `civ1-` rule, no Religion, no Arctic or River
+  terrain) and that its content is what its packages have.
 - `civ-clone.defaultSet` is the set a new game is played with (`civ1-enhanced`), and `civ-clone.setForSavesWithoutOne`
   the set a save that names none loads with (`civ1-enhanced`, as every save made before there were sets was played with
   every plugin).
@@ -69,7 +75,9 @@ What the worker client needs that only one rule set has, it asks of that rule se
 whether a city is in civil disorder, choosing an Auto city's build, citizens' moods, the conquest bonus, the
 difficulty's level, the final rating and famous leader, and which units need fuel. civ.one's are Civ1's,
 `@civ-clone/ui-rules-civ1` (`packages/rules-civ1`), which also registers Civ1's AdditionalData (`anarchyTurns`,
-`civilDisorderDeclared`, a terrain's `defence` and `movementCost`). The plugin list imports it after the plugins, and
+`civilDisorderDeclared`, a terrain's `defence` and `movementCost`), and Civ2's, `@civ-clone/ui-rules-civ2`
+(`packages/rules-civ2`), so far only its difficulty level, every other answer as a game without that part of the
+rules would give. The plugin list imports it after the plugins, and
 it hands itself in with `setWorkerRules`. The client asks for them only once a game is under way; an engine suite
 that never imports the plugin list imports `@civ-clone/ui-rules-civ1` itself.
 
