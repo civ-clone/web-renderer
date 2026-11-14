@@ -145,6 +145,30 @@ const resolvePluginSets = (
       );
     }
 
+    // A set built on one drawn with an art pack of its own is drawn with art too, and says which: one that didn't
+    //  would be offered to a player without that art.
+    if (!('tileset' in sets[id])) {
+      const seen = new Set([id]);
+
+      for (
+        let ancestor = sets[id].extends;
+        typeof ancestor === 'string' &&
+        sets[ancestor] !== undefined &&
+        !seen.has(ancestor);
+        ancestor = sets[ancestor].extends
+      ) {
+        seen.add(ancestor);
+
+        if (typeof sets[ancestor].tileset === 'string') {
+          problems.push(
+            `set ${id} extends ${ancestor}, which is drawn with the ${sets[ancestor].tileset} art, but names no \`tileset\` of its own`
+          );
+
+          break;
+        }
+      }
+    }
+
     members.forEach((name) => loaded.add(name));
     // A hidden set is one a game can be played with that the page doesn't offer yet, unless the player has imported
     //  the art pack it names (`tileset`). Both its own settings, not the one it extends', so a set built on a hidden

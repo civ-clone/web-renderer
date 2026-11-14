@@ -34,7 +34,7 @@ The project uses generated import lists rather than dynamic runtime discovery in
   when a set names a plugin that isn't installed, two plugins in a set conflict (`civ-clone.conflicts` in a plugin's
   own `package.json`, or in the root's `civ-clone.conflicts` by plugin name, where each civ2 package conflicts with its
   Civ1 twin), a plugin installed is in no set, a set extends a set that doesn't exist (or itself), a set has no
-  `rules`, a `tileset` isn't a string, or `defaultSet` or `setForSavesWithoutOne` names no set, a hidden one or one
+  `rules`, a `tileset` isn't a string, a set extends one with a `tileset` but names none itself, or `defaultSet` or `setForSavesWithoutOne` names no set, a hidden one or one
   with a `tileset`. `tests/engine/civ2Isolation.ts`
   loads `civ2` and checks that nothing of Civ1's is registered (no `civ1-` rule, no Religion, no Arctic or River
   terrain) and that its content is what its packages have.
@@ -77,7 +77,9 @@ says which set, if any, is fixed), and offers the default and each set with art 
 Game, and a Game select in both interfaces' setup. Without such art nothing is asked, and New Game, Earth and the setup
 are as they were. A game other than the one the worker has fixed gets a new worker: the page's transport is a
 `ReplaceableTransport` (`packages/client`), which ends the old worker and starts another, and everything listening on
-the transport goes on listening, to the new one; what the page sent on `setOption` is sent to it again. A game with a
+the transport goes on listening, to the new one; what the page sent on `setOption` is sent to it again, and a request
+still waiting on the old worker is rejected as one the page has been told of. Should the setup for another game fail,
+the setup for the game it was opens again; should that fail too, the player is told why. A game with a
 `tileset` (Civ2's) is played on that pack's grid, with no grid question and no Earth, and the setup asks the new set
 for its levels, civilizations, rule sets and AI clients. Earth is always the default set's. A save records its set as `pluginSet` at the top of the file, beside what `core-save-game` writes, and a load
 loads that set before anything else; a save without one loads with `setForSavesWithoutOne`. The manifest a game

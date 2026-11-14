@@ -23,6 +23,7 @@ import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
 import {
   askGameChoices,
+  gameFailed,
   gameGrid,
   gameName,
   mayOfferOtherGames,
@@ -63,8 +64,8 @@ export const askGame = (
           .then(() =>
             onChoose(id, gameGrid(choices.games.find((game) => game.id === id)))
           )
-          // Not answered: the player has been told, and nothing more is asked (#580).
-          .catch(unlessRequestFailed);
+          // Not answered, the player has been told (#580); anything else is said: nothing more is asked.
+          .catch(gameFailed);
       };
 
       if (choices.games.length < 2) {

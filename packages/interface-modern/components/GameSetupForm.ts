@@ -14,8 +14,10 @@ import {
   option,
   select,
 } from '@civ-clone/ui-menus/lib/setupControls';
-import { requestGameSetupData } from '@civ-clone/ui-menus/lib/pluginSets';
-import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import {
+  requestGameSetupData,
+  switchSetupGame,
+} from '@civ-clone/ui-menus/lib/pluginSets';
 import {
   difficultyLabels,
   preselectedDifficulty,
@@ -331,13 +333,23 @@ export class GameSetupForm extends Window {
       data.game === undefined
         ? null
         : gameSelect(data.game, (pluginSet) => {
-            this.close();
+            const seats = this.#setup.seats.map(({ kind, name }) => ({
+              kind,
+              name,
+            }));
 
-            GameSetupForm.ask(this.#transport, this.#onFinished, {
-              ...preset,
-              advanced: advanced.open,
+            void switchSetupGame(
+              (game) =>
+                GameSetupForm.ask(this.#transport, this.#onFinished, {
+                  ...preset,
+                  advanced: advanced.open,
+                  pluginSet: game,
+                  seats,
+                }),
+              data.game!.id,
               pluginSet,
-            }).catch(unlessRequestFailed);
+              () => this.close()
+            );
           });
 
     this.update(

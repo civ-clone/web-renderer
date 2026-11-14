@@ -40,6 +40,11 @@ export type GameSetupPreset = {
   advanced?: boolean;
   earth?: boolean;
   pluginSet?: string;
+  /**
+   * The seats a setup for another game had (#668): who plays each, and a person's name. Their civilizations and AI
+   *  are that game's, so they are left to chance and the default here.
+   */
+  seats?: Pick<SeatState, 'kind' | 'name'>[];
 };
 
 /** Which game the setup is for (#668), when there is more than one to choose from. */
@@ -198,6 +203,16 @@ export class GameSetup {
       .map((value: 0, index: number) =>
         this.#newSeat(index === 0 ? 'human' : 'computer')
       );
+
+    // Another game's seats, kept as far as this one has room: who plays each, and the names typed.
+    const kept = (preset.seats ?? []).slice(0, this.maxSeats());
+
+    if (kept.length > 0) {
+      this.seats = kept.map(({ kind, name }) => ({
+        ...this.#newSeat(kind),
+        name,
+      }));
+    }
   }
 
   #newSeat(kind: SeatKind): SeatState {

@@ -1,3 +1,7 @@
+import {
+  RequestFailed,
+  disposedMessage,
+} from '@civ-clone/core-data-client/AbstractTransport';
 import Request, { RequestReturn } from '@civ-clone/core-data-client/Request';
 import {
   RequestId,
@@ -45,8 +49,13 @@ type Listener = {
 
 /**
  * The page's transport to its worker, which `replace` swaps for a new worker's: each `receive` and `receiveOnce` not yet
- *  stopped listens to the new one, and the messages on the `replay` channels are sent to it again. Requests still
- *  waiting on the old worker are rejected, as a disposed transport rejects them, and the old worker is ended.
+ *  stopped listens to the new one, and the messages on the `replay` channels are sent to it again.
+ *
+ * Requests still waiting on the old worker are rejected here, with a `RequestFailed` as a disposed transport's are
+ *  (`unlessRequestFailed` passes over it), whether or not the old transport can be disposed of. Then the old transport
+ *  is disposed of when it can be (`WorkerTransport` can: that stops its silence timer and what it listens to), and the
+ *  old worker is ended. What an old transport that can't be disposed of might still say, it says to its own worker,
+ *  which nothing on the page listens to any more.
  */
 export class ReplaceableTransport<DataMap extends TransportDataMap>
   implements Transport<DataMap>, Replaceable
@@ -54,6 +63,8 @@ export class ReplaceableTransport<DataMap extends TransportDataMap>
   #connect: () => Connection<DataMap>;
   #connection: Connection<DataMap>;
   #listeners: Listener[] = [];
+  // Requests asked and not yet settled, each with what rejects it.
+  #pending = new Set<{ channel: string; reject: (error: Error) => void }>();
   #replay: ReadonlySet<PropertyKey>;
   #replayed: { channel: keyof DataMap; data: any }[] = [];
 
@@ -68,7 +79,13 @@ export class ReplaceableTransport<DataMap extends TransportDataMap>
 
   /** Ends the worker, and starts another, which everything listening hears from from now on. */
   replace(): void {
-    const previous = this.#connection;
+    const previous = this.#connection,
+      pending = [...this.#pending];
+
+    this.#pending.clear();
+    pending.forEach(({ channel, reject }) =>
+      reject(new RequestFailed(channel, disposedMessage))
+    );
 
     this.#listeners.forEach((listener) => listener.stop());
 
@@ -135,7 +152,25 @@ export class ReplaceableTransport<DataMap extends TransportDataMap>
   request<RequestType extends Request>(
     request: RequestType
   ): Promise<RequestReturn<RequestType>> {
-    return this.#connection.transport.request(request);
+    return new Promise<RequestReturn<RequestType>>((resolve, reject) => {
+      const entry = { channel: String(request.channel()), reject };
+
+      this.#pending.add(entry);
+
+      // Settled only while still waiting: one `replace` has rejected is over.
+      this.#connection.transport.request(request).then(
+        (value) => {
+          if (this.#pending.delete(entry)) {
+            resolve(value);
+          }
+        },
+        (error) => {
+          if (this.#pending.delete(entry)) {
+            reject(error);
+          }
+        }
+      );
+    });
   }
 
   reply<Channel extends keyof DataMap>(

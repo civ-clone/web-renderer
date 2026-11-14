@@ -16,6 +16,7 @@ import ChoosePluginSet from '@civ-clone/ui-protocol/Requests/ChoosePluginSet';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import { isReplaceable } from '@civ-clone/ui-client/ReplaceableTransport';
+import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import { t } from 'i18next';
 
 // Which game a new game is (#668): civ.one's own rules, or another game's played with that game's art, which the
@@ -147,4 +148,48 @@ export const requestGameSetupData = async (
           grid: gameGrid(choices.games.find((game) => game.id === id)),
         },
       };
+};
+
+/**
+ * The setup for another game (#668), in place of the one open (`close`): `open` asks for it and shows it. Should that
+ *  fail, the setup for the game it was is opened again, with the worker put back to that game, so the player isn't left
+ *  with nothing; should that fail too, the setup is closed and the player is told why (a request the worker couldn't
+ *  answer has been said already, #470).
+ */
+export const switchSetupGame = async (
+  open: (pluginSet: string) => Promise<unknown>,
+  current: string,
+  next: string,
+  close: () => void
+): Promise<void> => {
+  for (const pluginSet of [next, current]) {
+    try {
+      await open(pluginSet);
+
+      close();
+
+      return;
+    } catch (error) {
+      if (pluginSet === current) {
+        close();
+        gameFailed(error);
+      }
+    }
+  }
+};
+
+/**
+ * What a game that couldn't be chosen says (#668): nothing more for a request the worker couldn't answer, which the
+ *  player has been told of (#470), and why for anything else, rather than leaving New Game with nothing open.
+ */
+export const gameFailed = (error: unknown): void => {
+  if (error instanceof RequestFailed) {
+    return;
+  }
+
+  window.alert(
+    t('GameSetup.game-failed', {
+      error: (error as Error)?.message ?? String(error),
+    })
+  );
 };

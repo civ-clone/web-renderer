@@ -560,6 +560,26 @@ if (scenario !== null) {
     ]
   );
   expect(
+    'a set built on one with art of its own must name its art too, however far down, or it is a problem',
+    [
+      resolvePluginSets(
+        {
+          art: { rules: '@x/rules', plugins: ['@x/a'], tileset: 'pack' },
+          child: { extends: 'art', plugins: ['@x/b'] },
+          grandchild: { extends: 'child', plugins: [] },
+          named: { extends: 'art', plugins: [], tileset: 'pack' },
+        },
+        [plugin('@x/a'), plugin('@x/b')]
+      ).problems,
+    ],
+    [
+      [
+        'set child extends art, which is drawn with the pack art, but names no `tileset` of its own',
+        'set grandchild extends art, which is drawn with the pack art, but names no `tileset` of its own',
+      ],
+    ]
+  );
+  expect(
     'the sets a game gets without asking need no art of their own',
     defaultSetProblems({ defaultSet: 'art', setForSavesWithoutOne: 'art' }, [
       {

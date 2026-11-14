@@ -19,6 +19,10 @@ import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import { PackMetadata } from '@civ-clone/ui-assets/lib/packs';
+import {
+  RequestFailed,
+  disposedMessage,
+} from '@civ-clone/core-data-client/AbstractTransport';
 import ReplaceableTransport from '@civ-clone/ui-client/ReplaceableTransport';
 import Request from '@civ-clone/core-data-client/Request';
 import Transport from '@civ-clone/ui-client/Transport';
@@ -107,7 +111,13 @@ const text = (element: Element | null): string =>
  */
 const fakeWorkers = () => {
   const log: [string, unknown][] = [],
-    worker = { chosen: null as string | null },
+    // `refuse` names a set `choosePluginSet` fails for, as a worker that can't load it answers; `broken` makes every
+    //  request throw, as a page that can't reach its worker would.
+    worker = {
+      chosen: null as string | null,
+      refuse: null as string | null,
+      broken: false,
+    },
     sets = [
       { id: 'civ1', tileset: null },
       { id: 'civ1-enhanced', tileset: null },
@@ -129,6 +139,10 @@ const fakeWorkers = () => {
 
         log.push([request.channel(), args]);
 
+        if (worker.broken) {
+          throw new Error('no worker');
+        }
+
         switch (request.channel()) {
           case 'pluginSets':
             return Promise.resolve({
@@ -141,6 +155,12 @@ const fakeWorkers = () => {
               chosen: worker.chosen,
             });
           case 'choosePluginSet':
+            if (worker.refuse === args) {
+              return Promise.reject(
+                new RequestFailed('choosePluginSet', 'could not load')
+              );
+            }
+
             if (worker.chosen !== null && worker.chosen !== args) {
               return Promise.reject(new Error('loaded already'));
             }
@@ -198,7 +218,8 @@ const civ2Metadata: PackMetadata = {
   await i18next.init({ lng: 'en', defaultNS: 'default', ns: ['default'] });
   await import('./lib/strings');
 
-  // ReplaceableTransport: a new worker in the old one's place, heard from as the old one was.
+  // ReplaceableTransport: a new worker in the old one's place, heard from as the old one was. The workers' transports
+  //  here have no `dispose`, so what is rejected on `replace` is rejected by the replaceable transport itself.
   {
     type Message = { channel: string; data: unknown };
 
@@ -206,14 +227,12 @@ const civ2Metadata: PackMetadata = {
         sent: Message[];
         listeners: Map<string, TransportReceiveHandler<any>[]>;
         ended: boolean;
-        disposed: boolean;
       }[] = [],
       connect = () => {
         const worker = {
           sent: [] as Message[],
           listeners: new Map<string, TransportReceiveHandler<any>[]>(),
           ended: false,
-          disposed: false,
         };
 
         workers.push(worker);
@@ -244,13 +263,14 @@ const civ2Metadata: PackMetadata = {
 
               return stop;
             },
-            request: () => Promise.resolve(workers.indexOf(worker)),
+            // A request on `hang` is never answered: the worker has gone quiet.
+            request: (request: Request) =>
+              request.channel() === 'hang'
+                ? new Promise(() => {})
+                : Promise.resolve(workers.indexOf(worker)),
             reply: () => {},
             send: (channel: string, data: unknown) =>
               worker.sent.push({ channel, data }),
-            dispose: () => {
-              worker.disposed = true;
-            },
           } as any,
           end: () => {
             worker.ended = true;
@@ -273,10 +293,22 @@ const civ2Metadata: PackMetadata = {
     );
 
     replaceable.receiveOnce('workerError', (data) => heard.push(`e:${data}`));
+    replaceable.receiveOnce('alive', (data) => heard.push(`a:${data}`));
     replaceable.send('setOption', { name: 'automateLocalPlayer', value: true });
     replaceable.send('action', 'not replayed');
 
+    // Waiting on the old worker as it is replaced.
+    const hanging = replaceable.request(new Request('hang', null)).then(
+      () => 'answered',
+      (error: Error) =>
+        `${error instanceof RequestFailed ? 'RequestFailed' : 'Error'}: ${
+          error.message
+        }`
+    );
+
     say(0, 'notification', 'one');
+    // A once that has fired before the replacement isn't listened to again.
+    say(0, 'alive', 'before');
     stop();
     say(0, 'gameData', 'stopped');
 
@@ -285,24 +317,23 @@ const civ2Metadata: PackMetadata = {
     say(0, 'notification', 'from the old worker');
     say(1, 'notification', 'two');
     say(1, 'gameData', 'still stopped');
+    say(1, 'alive', 'after');
     say(1, 'workerError', 'once');
     say(1, 'workerError', 'twice');
 
     expect(
-      'replaced, the old worker is disposed of and ended, and everything still listening hears the new one, a once only once',
+      'replaced, the old worker is ended, and everything still listening hears the new one, a once only once, and one that had fired not again',
       [
-        workers.map(({ ended, disposed }) => [ended, disposed]),
+        workers.map(({ ended }) => ended),
         heard,
         await replaceable.request(new Request('anything', null)),
       ],
-      [
-        [
-          [true, true],
-          [false, false],
-        ],
-        ['n:one', 'n:two', 'e:once'],
-        1,
-      ]
+      [[true, false], ['n:one', 'a:before', 'n:two', 'e:once'], 1]
+    );
+    expect(
+      'a request still waiting on the old worker is rejected, as a request the page has been told of, though its transport has no dispose',
+      await hanging,
+      `RequestFailed: ${disposedMessage}`
     );
     expect(
       'and the new worker is told again what the page told the old one on the replayed channels, and nothing else',
@@ -578,6 +609,112 @@ const civ2Metadata: PackMetadata = {
         'The toughest level, for experts.'
       );
     }
+
+    closeAll();
+  }
+
+  // Choosing another game in the setup: the seats go with it; a game that can't be set up leaves the setup for the one
+  //  it was; and with nothing to be set up at all, the player is told.
+  {
+    const { log, transport, worker } = fakeWorkers(),
+      setups = () =>
+        openDialogs().filter((dialog) =>
+          dialog.classList.contains('game-setup-window')
+        ),
+      switchTo = async (pluginSet: string): Promise<void> => {
+        const games = setups()[0]!.querySelector(
+          'select[name=pluginSet]'
+        ) as HTMLSelectElement;
+
+        games.value = pluginSet;
+        games.dispatchEvent(new Event('change'));
+
+        for (let index = 0; index < 5; index++) {
+          await settle();
+        }
+      },
+      alerts: string[] = [];
+
+    (globalThis as any).window.alert = (message: string) =>
+      alerts.push(message);
+
+    closeAll();
+    await GameSetupForm.ask(transport, () => {});
+
+    // Civ1's own levels: Chieftain is still the easiest.
+    const difficulty = setups()[0]!.querySelector(
+      'select[name=difficulty]'
+    ) as HTMLSelectElement;
+
+    difficulty.value = 'Chieftain';
+    difficulty.dispatchEvent(new Event('change'));
+
+    expect(
+      "modern: under Civ1's rules Chieftain is the easiest",
+      text(setups()[0]!.querySelector('.ui-field-hint')),
+      'The easiest level, for learning the game.'
+    );
+
+    const name = setups()[0]!.querySelector(
+      'input[name="name"]'
+    ) as HTMLInputElement;
+
+    name.value = 'Dom';
+    name.dispatchEvent(new Event('input', { bubbles: true }));
+
+    await switchTo('civ2');
+
+    expect(
+      'switching to Civ2 keeps the seats: the name typed is still there',
+      [
+        setups().length,
+        (
+          setups()[0]?.querySelector(
+            'select[name=pluginSet] option[selected]'
+          ) as HTMLOptionElement | null
+        )?.value,
+        (
+          setups()[0]?.querySelector(
+            'input[name="name"]'
+          ) as HTMLInputElement | null
+        )?.value,
+      ],
+      [1, 'civ2', 'Dom']
+    );
+
+    // Back, then Civ2 again with the worker refusing it.
+    await switchTo('civ1-enhanced');
+    worker.refuse = 'civ2';
+    log.length = 0;
+
+    await switchTo('civ2');
+
+    expect(
+      "a game the worker can't load leaves the setup for the game it was, the worker put back to it",
+      [
+        setups().length,
+        (
+          setups()[0]?.querySelector(
+            'select[name=pluginSet] option[selected]'
+          ) as HTMLOptionElement | null
+        )?.value,
+        channels(log).filter((channel) =>
+          ['replace', 'choosePluginSet'].includes(channel)
+        ),
+        alerts,
+      ],
+      [1, 'civ1-enhanced', ['replace', 'choosePluginSet'], []]
+    );
+
+    worker.broken = true;
+
+    await switchTo('civ2');
+
+    expect(
+      'and with nothing to be set up at all, the setup closes and the player is told why',
+      [setups().length, alerts],
+      [0, ['That game couldn’t be set up: no worker']]
+    );
 
     closeAll();
   }
