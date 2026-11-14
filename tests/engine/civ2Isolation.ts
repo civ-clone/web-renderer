@@ -12,11 +12,13 @@
 //
 // The lists are what the civ2 packages have now: a later stage that adds content updates them, in the same change.
 //
-// The control loads a deliberately broken set, civ2's plugins with civ1-world added, which a conflict would stop the
-//  plugin list from ever being written: it has to fail.
+// The controls load deliberately broken sets, civ2's plugins with civ1-world added (which a conflict would stop the
+//  plugin list from ever being written), and with Civ1's improvements, science and units added: each has to fail,
+//  the second on Religion and on what can be built, so that every part of the probe is shown to fire.
 //
 //   --scenario civ2                 load the civ2 set and print what it registered
 //   --scenario civ2-with-civ1       the same, with civ1-world added
+//   --scenario civ2-with-civ1-content   the same, with civ1-city-improvement, civ1-science and civ1-unit added
 //   --print                         print what the civ2 set registers, to update the lists below from
 //
 // Imports `src/js/pluginSets.ts`, never `src/js/plugins.ts`, which would run every plugin in the default set.
@@ -121,7 +123,15 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
   difficulties: ['Chieftain', 'Deity', 'Emperor', 'King', 'Prince', 'Warlord'],
 };
 
-const CIV1_WORLD = '@civ-clone/civ1-world',
+// Each control's Civ1 plugins, added to civ2's: Civ1's world, then Civ1's content.
+const CONTROLS: { [scenario: string]: string[] } = {
+    'civ2-with-civ1': ['@civ-clone/civ1-world'],
+    'civ2-with-civ1-content': [
+      '@civ-clone/civ1-city-improvement',
+      '@civ-clone/civ1-science',
+      '@civ-clone/civ1-unit',
+    ],
+  },
   scenarioIndex = process.argv.indexOf('--scenario'),
   scenario = scenarioIndex === -1 ? null : process.argv[scenarioIndex + 1];
 
@@ -151,7 +161,7 @@ const inventory = (): Inventory => {
 if (scenario !== null) {
   const civ2 = pluginSets.sets.find(({ id }) => id === 'civ2');
 
-  if (!civ2 || !['civ2', 'civ2-with-civ1'].includes(scenario)) {
+  if (!civ2 || !['civ2', ...Object.keys(CONTROLS)].includes(scenario)) {
     process.stderr.write(`FAIL civ2Isolation: bad scenario '${scenario}'\n`);
     process.exit(1);
   }
@@ -165,10 +175,11 @@ if (scenario !== null) {
               {
                 ...civ2,
                 id: 'civ2',
-                plugins: [...civ2.plugins, CIV1_WORLD].sort((a, b) =>
-                  a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '')
-                    ? -1
-                    : 1
+                plugins: [...civ2.plugins, ...CONTROLS[scenario]!].sort(
+                  (a, b) =>
+                    a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '')
+                      ? -1
+                      : 1
                 ),
               },
             ],
@@ -271,21 +282,39 @@ if (scenario !== null) {
     [true, true, true]
   );
 
+  const content = run('civ2-with-civ1-content');
+
+  expect(
+    'as is civ2 with Civ1’s improvements, science and units added: Civ1 rules, Religion, and units and improvements that civ2 has none of',
+    [
+      problems(content).some((problem) => problem.startsWith('rule civ1-')),
+      problems(content).includes('advance Religion'),
+      problems(content).includes('build item Settlers'),
+      problems(content).includes('build item Granary'),
+    ],
+    [true, true, true, true]
+  );
+
   if (failures.length > 0) {
     process.stderr.write(`FAIL civ2Isolation\n${failures.join('\n')}\n`);
     process.exit(1);
   }
 
-  const refused = problems(broken);
+  const summary = (refused: string[]): string =>
+    `${refused.length} (${
+      refused.filter((problem) => problem.startsWith('rule ')).length
+    } civ1- rules, ${
+      refused.filter((problem) => problem.startsWith('build item ')).length
+    } build items, ${refused
+      .filter((problem) => /^(advance|terrain) /.test(problem))
+      .join(', ')})`;
 
   process.stdout.write(
     `PASS civ2Isolation (${checks} checks; civ2 loads ${
       civ2.rules
-    } rules; the control was refused for ${refused.length}: ${refused
-      .filter((problem) => !problem.startsWith('rule '))
-      .join(', ')} and ${
-      refused.filter((problem) => problem.startsWith('rule ')).length
-    } civ1- rules)\n`
+    } rules; refused: civ2 with civ1-world for ${summary(
+      problems(broken)
+    )}, civ2 with Civ1's content for ${summary(problems(content))})\n`
   );
   process.exit(0);
 }

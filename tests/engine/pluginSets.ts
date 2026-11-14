@@ -598,9 +598,14 @@ if (scenario !== null) {
   const unknown = run('load-unknown');
 
   expect(
-    'a save naming a set this build does not have is refused, saying which',
-    [unknown.loaded, /civ9/.test(unknown.failed ?? '')],
-    [false, true]
+    'a save naming a set this build does not have is refused, saying which, and naming only the sets offered (not civ2)',
+    [
+      unknown.loaded,
+      /civ9/.test(unknown.failed ?? ''),
+      /civ1, civ1-enhanced\./.test(unknown.failed ?? ''),
+      /civ2/.test(unknown.failed ?? ''),
+    ],
+    [false, true, true, false]
   );
 
   finished = true;

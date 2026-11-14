@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { PluginSet, Plugins } from './Plugins';
+import { PluginSet, Plugins, offeredSets } from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -107,7 +107,7 @@ export class Game implements IGame {
       throw new Error(
         `There are no ${JSON.stringify(
           id
-        )} rules here: the rules here are ${this.#plugins.sets
+        )} rules here: the rules here are ${offeredSets(this.#plugins)
           .map(({ id }) => id)
           .join(', ')}.`
       );
