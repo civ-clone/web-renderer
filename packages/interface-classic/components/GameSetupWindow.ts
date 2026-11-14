@@ -22,6 +22,7 @@ import {
   cell,
   civilizationName,
   gameSelect,
+  holdControls,
   leaderName,
   option,
   select,
@@ -72,6 +73,8 @@ const numberInput = (
 export class GameSetupWindow extends Window {
   #setup: GameSetup;
   #onFinished?: FinishedHandler;
+  // Switching to another game's setup (#668): until this one is closed, nothing more is sent from it.
+  #switching: boolean = false;
   #transport: Transport;
 
   #mapSelect!: HTMLSelectElement;
@@ -290,6 +293,15 @@ export class GameSetupWindow extends Window {
       data.game === undefined
         ? null
         : gameSelect(data.game, (pluginSet) => {
+            // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
+            //  way to another game.
+            if (this.#switching) {
+              return;
+            }
+
+            this.#switching = true;
+            holdControls(this.element());
+
             const seats = this.#setup.seats.map(({ kind, name }) => ({
               kind,
               name,
@@ -560,7 +572,11 @@ export class GameSetupWindow extends Window {
 
   async #start(difficulty: string): Promise<void> {
     // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
-    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
+    if (
+      this.#switching ||
+      this.#setup.ruleSetsBlockStart() ||
+      this.#setup.starting()
+    ) {
       return;
     }
 

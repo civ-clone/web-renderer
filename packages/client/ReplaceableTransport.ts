@@ -155,10 +155,13 @@ export class ReplaceableTransport<DataMap extends TransportDataMap>
     return new Promise<RequestReturn<RequestType>>((resolve, reject) => {
       const entry = { channel: String(request.channel()), reject };
 
+      // Asked first: a transport that throws at once leaves nothing waiting here (the promise rejects with it).
+      const asked = this.#connection.transport.request(request);
+
       this.#pending.add(entry);
 
       // Settled only while still waiting: one `replace` has rejected is over.
-      this.#connection.transport.request(request).then(
+      asked.then(
         (value) => {
           if (this.#pending.delete(entry)) {
             resolve(value);
@@ -186,6 +189,15 @@ export class ReplaceableTransport<DataMap extends TransportDataMap>
     data: TransportSendArgs<DataMap[Channel]>
   ): void {
     if (this.#replay.has(channel)) {
+      // The last value sent wins: for a message that names what it sets (`setOption`'s `name`), per name.
+      const name = (data as { name?: unknown } | null)?.name;
+
+      if (typeof name === 'string') {
+        this.#replayed = this.#replayed.filter(
+          (sent) => sent.channel !== channel || sent.data?.name !== name
+        );
+      }
+
       this.#replayed.push({ channel, data });
     }
 

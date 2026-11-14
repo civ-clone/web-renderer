@@ -85,6 +85,7 @@ i18next.addResources('en', 'default', {
   // Which game the setup is for (#668), shown once there is more than one.
   'GameSetup.game': 'Game',
   'GameSetup.game-failed': 'That game couldn’t be set up: {{- error}}',
+  'GameSetup.game-failed-title': 'Couldn’t set up the game',
   'GameSetup.difficulty': '$t(DifficultyWindow.title)',
   'GameSetup.grid': 'Map grid',
   'GameSetup.human': 'Human',

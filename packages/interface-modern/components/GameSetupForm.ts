@@ -10,6 +10,7 @@ import {
   cell,
   civilizationName,
   gameSelect,
+  holdControls,
   leaderName,
   option,
   select,
@@ -95,6 +96,8 @@ export const civilizationSwatch = (colours: string[] | null): HTMLElement => {
  */
 export class GameSetupForm extends Window {
   #onFinished?: FinishedHandler;
+  // Switching to another game's setup (#668): until this one is closed, nothing more is sent from it.
+  #switching: boolean = false;
   #setup: GameSetup;
   #transport: Transport;
 
@@ -333,6 +336,15 @@ export class GameSetupForm extends Window {
       data.game === undefined
         ? null
         : gameSelect(data.game, (pluginSet) => {
+            // One switch at a time: a second change, or a start, while one is on its way would reach a worker part
+            //  way to another game.
+            if (this.#switching) {
+              return;
+            }
+
+            this.#switching = true;
+            holdControls(this.element());
+
             const seats = this.#setup.seats.map(({ kind, name }) => ({
               kind,
               name,
@@ -675,7 +687,11 @@ export class GameSetupForm extends Window {
 
   async #start(): Promise<void> {
     // Held, and said why, in the Rules section (#954), and while a start is already on its way: Enter is held too.
-    if (this.#setup.ruleSetsBlockStart() || this.#setup.starting()) {
+    if (
+      this.#switching ||
+      this.#setup.ruleSetsBlockStart() ||
+      this.#setup.starting()
+    ) {
       return;
     }
 

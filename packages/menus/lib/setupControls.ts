@@ -69,3 +69,21 @@ export const gameSelect = (
 
   return element;
 };
+
+/**
+ * Holds every control in `root` but its title bar's (Close) while the setup switches games (#668): nothing it sends
+ *  would reach the worker it was made for.
+ */
+export const holdControls = (root: Element): void =>
+  root
+    .querySelectorAll<
+      | HTMLButtonElement
+      | HTMLInputElement
+      | HTMLSelectElement
+      | HTMLTextAreaElement
+    >('button, input, select, textarea')
+    .forEach((control) => {
+      if (control.closest('header') === null) {
+        control.disabled = true;
+      }
+    });

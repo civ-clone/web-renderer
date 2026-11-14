@@ -16,6 +16,7 @@ import ChoosePluginSet from '@civ-clone/ui-protocol/Requests/ChoosePluginSet';
 import { TopologyId } from '@civ-clone/ui-client/lib/topologyFor';
 import Transport from '@civ-clone/ui-client/Transport';
 import { isReplaceable } from '@civ-clone/ui-client/ReplaceableTransport';
+import NotificationWindow from '@civ-clone/ui-component-window/NotificationWindow';
 import { RequestFailed } from '@civ-clone/core-data-client/AbstractTransport';
 import { t } from 'i18next';
 
@@ -154,7 +155,7 @@ export const requestGameSetupData = async (
  * The setup for another game (#668), in place of the one open (`close`): `open` asks for it and shows it. Should that
  *  fail, the setup for the game it was is opened again, with the worker put back to that game, so the player isn't left
  *  with nothing; should that fail too, the setup is closed and the player is told why (a request the worker couldn't
- *  answer has been said already, #470).
+ *  answer has been said already, #470). The open setup is closed once, whatever happens, after the new one is open.
  */
 export const switchSetupGame = async (
   open: (pluginSet: string) => Promise<unknown>,
@@ -162,34 +163,47 @@ export const switchSetupGame = async (
   next: string,
   close: () => void
 ): Promise<void> => {
+  let failure: unknown = null;
+
   for (const pluginSet of [next, current]) {
     try {
       await open(pluginSet);
 
-      close();
+      failure = null;
 
-      return;
+      break;
     } catch (error) {
-      if (pluginSet === current) {
-        close();
-        gameFailed(error);
-      }
+      failure = error;
     }
+  }
+
+  // A setup that won't close is said in the console: the one now open is the player's.
+  try {
+    close();
+  } catch (error) {
+    console.error(error);
+  }
+
+  if (failure !== null) {
+    gameFailed(failure);
   }
 };
 
 /**
  * What a game that couldn't be chosen says (#668): nothing more for a request the worker couldn't answer, which the
- *  player has been told of (#470), and why for anything else, rather than leaving New Game with nothing open.
+ *  player has been told of (#470), and why, in a window, for anything else, rather than leaving New Game with nothing
+ *  open.
  */
 export const gameFailed = (error: unknown): void => {
   if (error instanceof RequestFailed) {
     return;
   }
 
-  window.alert(
-    t('GameSetup.game-failed', {
-      error: (error as Error)?.message ?? String(error),
-    })
-  );
+  const body = document.createElement('p');
+
+  body.textContent = t('GameSetup.game-failed', {
+    error: (error as Error)?.message ?? String(error),
+  });
+
+  new NotificationWindow(t('GameSetup.game-failed-title'), body).display();
 };

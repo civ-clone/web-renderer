@@ -16,6 +16,7 @@ import {
   TransportReceiveHandler,
 } from '@civ-clone/core-data-client/Transport';
 import { askEarth, askNewGame } from '@civ-clone/ui-menus/components/newGame';
+import GameSetup from '@civ-clone/ui-client/lib/gameSetup';
 import GameSetupForm from '@civ-clone/ui-interface-modern/components/GameSetupForm';
 import GameSetupWindow from '@civ-clone/ui-interface-classic/components/GameSetupWindow';
 import { PackMetadata } from '@civ-clone/ui-assets/lib/packs';
@@ -117,6 +118,8 @@ const fakeWorkers = () => {
       chosen: null as string | null,
       refuse: null as string | null,
       broken: false,
+      // `choosePluginSet` waits on it, when given.
+      hold: null as Promise<void> | null,
     },
     sets = [
       { id: 'civ1', tileset: null },
@@ -167,7 +170,7 @@ const fakeWorkers = () => {
 
             worker.chosen = args as string;
 
-            return Promise.resolve(args);
+            return (worker.hold ?? Promise.resolve()).then(() => args);
           case 'difficulties':
             return Promise.resolve(
               levels[load()]!.map((name, level) => ({ name, level }))
@@ -264,10 +267,16 @@ const civ2Metadata: PackMetadata = {
               return stop;
             },
             // A request on `hang` is never answered: the worker has gone quiet.
-            request: (request: Request) =>
-              request.channel() === 'hang'
+            // `throw` throws as it is asked.
+            request: (request: Request) => {
+              if (request.channel() === 'throw') {
+                throw new Error('thrown at once');
+              }
+
+              return request.channel() === 'hang'
                 ? new Promise(() => {})
-                : Promise.resolve(workers.indexOf(worker)),
+                : Promise.resolve(workers.indexOf(worker));
+            },
             reply: () => {},
             send: (channel: string, data: unknown) =>
               worker.sent.push({ channel, data }),
@@ -295,7 +304,21 @@ const civ2Metadata: PackMetadata = {
     replaceable.receiveOnce('workerError', (data) => heard.push(`e:${data}`));
     replaceable.receiveOnce('alive', (data) => heard.push(`a:${data}`));
     replaceable.send('setOption', { name: 'automateLocalPlayer', value: true });
+    replaceable.send('setOption', { name: 'other', value: 1 });
+    replaceable.send('setOption', {
+      name: 'automateLocalPlayer',
+      value: false,
+    });
     replaceable.send('action', 'not replayed');
+
+    // A request whose transport throws as it's asked rejects with that, and isn't left waiting for `replace`.
+    const thrown = await replaceable.request(new Request('throw', null)).then(
+      () => 'answered',
+      (error: Error) =>
+        `${error instanceof RequestFailed ? 'RequestFailed' : 'Error'}: ${
+          error.message
+        }`
+    );
 
     // Waiting on the old worker as it is replaced.
     const hanging = replaceable.request(new Request('hang', null)).then(
@@ -331,17 +354,18 @@ const civ2Metadata: PackMetadata = {
       [[true, false], ['n:one', 'a:before', 'n:two', 'e:once'], 1]
     );
     expect(
-      'a request still waiting on the old worker is rejected, as a request the page has been told of, though its transport has no dispose',
-      await hanging,
-      `RequestFailed: ${disposedMessage}`
+      'a request still waiting on the old worker is rejected, as a request the page has been told of, though its transport has no dispose; one that threw at once rejected with its own error',
+      [await hanging, thrown],
+      [`RequestFailed: ${disposedMessage}`, 'Error: thrown at once']
     );
     expect(
-      'and the new worker is told again what the page told the old one on the replayed channels, and nothing else',
+      'and the new worker is told again the last value of each option the page sent the old one, and nothing else',
       workers[1]!.sent,
       [
+        { channel: 'setOption', data: { name: 'other', value: 1 } },
         {
           channel: 'setOption',
-          data: { name: 'automateLocalPlayer', value: true },
+          data: { name: 'automateLocalPlayer', value: false },
         },
       ]
     );
@@ -633,10 +657,16 @@ const civ2Metadata: PackMetadata = {
           await settle();
         }
       },
-      alerts: string[] = [];
-
-    (globalThis as any).window.alert = (message: string) =>
-      alerts.push(message);
+      told = (): string[] =>
+        openDialogs()
+          .filter((dialog) => dialog.classList.contains('notificationWindow'))
+          .map(
+            (dialog) =>
+              `${text(dialog.querySelector('header')).replace(
+                /Close$/,
+                ''
+              )} / ${text(dialog.querySelector('p'))}`
+          );
 
     closeAll();
     await GameSetupForm.ask(transport, () => {});
@@ -701,22 +731,114 @@ const civ2Metadata: PackMetadata = {
         channels(log).filter((channel) =>
           ['replace', 'choosePluginSet'].includes(channel)
         ),
-        alerts,
+        told(),
       ],
       [1, 'civ1-enhanced', ['replace', 'choosePluginSet'], []]
     );
 
-    worker.broken = true;
+    // A second change, and Start, while a switch is on its way: neither goes anywhere.
+    worker.refuse = null;
 
-    await switchTo('civ2');
+    let release = (): void => {};
+
+    worker.hold = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const before = setups()[0]!,
+      games = before.querySelector(
+        'select[name=pluginSet]'
+      ) as HTMLSelectElement;
+
+    games.value = 'civ2';
+    games.dispatchEvent(new Event('change'));
+    await settle();
+
+    const held = [
+      games.disabled,
+      (before.querySelector('.start') as HTMLButtonElement).disabled,
+      (before.querySelector('select[name=difficulty]') as HTMLSelectElement)
+        .disabled,
+    ];
+
+    // Back to the game it is, and to Civ2 again: with two games, the second switch a held setup would otherwise start.
+    games.value = 'civ1-enhanced';
+    games.dispatchEvent(new Event('change'));
+    games.value = 'civ2';
+    games.dispatchEvent(new Event('change'));
+    (before.querySelector('.start') as HTMLButtonElement).click();
+    before.dispatchEvent(
+      new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' })
+    );
+    release();
+
+    for (let index = 0; index < 10; index++) {
+      await settle();
+    }
 
     expect(
-      'and with nothing to be set up at all, the setup closes and the player is told why',
-      [setups().length, alerts],
-      [0, ['That game couldn’t be set up: no worker']]
+      'while a switch is on its way the setup is held, and a second change or a start does nothing: one setup, for the game shown, and the worker on it',
+      [
+        held,
+        setups().length,
+        (
+          setups()[0]?.querySelector(
+            'select[name=pluginSet] option[selected]'
+          ) as HTMLOptionElement | null
+        )?.value,
+        worker.chosen,
+        channels(log).filter((channel) =>
+          ['setOptions', 'start'].includes(channel)
+        ),
+      ],
+      [[true, true, true], 1, 'civ2', 'civ2', []]
+    );
+
+    worker.broken = true;
+
+    await switchTo('civ1-enhanced');
+
+    expect(
+      'and with nothing to be set up at all, the setup closes and the player is told why, in a window',
+      [setups().length, told()],
+      [
+        0,
+        ['Couldn’t set up the game / That game couldn’t be set up: no worker'],
+      ]
     );
 
     closeAll();
+  }
+
+  // Another game's seats where this one has less room: the human's is kept.
+  {
+    const setup = new GameSetup(
+      {
+        aiClients: ['SimpleAIClient'],
+        civilizations: [
+          { name: 'Babylonian', leaders: ['Hammurabi'] },
+          { name: 'Roman', leaders: ['JuliusCaesar'] },
+          { name: 'Zulu', leaders: ['Shaka'] },
+        ],
+        difficulties: [],
+        existing: {},
+      } as any,
+      {
+        seats: [
+          { kind: 'computer', name: '' },
+          { kind: 'computer', name: '' },
+          { kind: 'computer', name: '' },
+          { kind: 'computer', name: '' },
+          { kind: 'human', name: 'Dom' },
+        ],
+      }
+    );
+
+    expect(
+      "carried seats beyond the new game's room keep the human's, in place of the last that fits",
+      setup.seats.map(({ kind, name }) => `${kind}:${name}`),
+      ['computer:', 'computer:', 'human:Dom']
+    );
   }
 
   finished = true;

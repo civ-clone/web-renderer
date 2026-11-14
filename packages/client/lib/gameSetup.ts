@@ -204,8 +204,15 @@ export class GameSetup {
         this.#newSeat(index === 0 ? 'human' : 'computer')
       );
 
-    // Another game's seats, kept as far as this one has room: who plays each, and the names typed.
-    const kept = (preset.seats ?? []).slice(0, this.maxSeats());
+    // Another game's seats, kept as far as this one has room: who plays each, and the names typed. Where there's no
+    //  room for them all, the human's is kept, in place of the last that fits.
+    const carried = preset.seats ?? [],
+      room = this.maxSeats(),
+      human = carried.findIndex(({ kind }) => kind === 'human'),
+      kept =
+        human >= room && room > 0
+          ? [...carried.slice(0, room - 1), carried[human]!]
+          : carried.slice(0, room);
 
     if (kept.length > 0) {
       this.seats = kept.map(({ kind, name }) => ({
