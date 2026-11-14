@@ -489,3 +489,24 @@ and nothing else moves: the engine-state checksums (`a7518c6d / d3c8debf /
 a12b897c`), the random-call counts and the DTO hashes are unchanged, so the
 conformance game's 50 turns play as before. `client-transcript.json` passes
 unchanged and is not re-recorded.
+
+## Accepted change: rule counts, a converted square's special and yields (#1038)
+
+civ1-world 0.1.11 fixes what follows a square when Settlers clear Forest, Jungle
+or Swamp or plant Forest: the features the new terrain rolled as it was made are
+taken off before the old terrain's special is carried over, so a square without
+a special stays without one and a square with one keeps exactly one, and
+Grassland made from Jungle or Swamp rolls its Shield once, at 50%. The new
+`civ1-world:terrain-changed/clear-yield-cache` rule makes the square work out
+its yields again after any terrain change. The rule totals at turns 1, 10 and 50
+rise from 1165 to 1166 (`TerrainChanged` 3 → 4) and nothing else moves: the
+engine-state checksums (`a7518c6d / d3c8debf / a12b897c`), the random-call
+counts and the DTO hashes are unchanged, as no terrain is converted in this
+game's 50 turns. Longer games do change: of seeds 1–8 and 41–48, all 16 are
+unchanged at turn 150, and at turn 300 seeds 43 and 44 move. Each has one
+conversion in 300 turns, a Forest without a special cleared to Plains that used
+to keep the Horse the new Plains rolled: in turn 286 in seed 43, whose state
+first differs at turn 289, and in turn 204 in seed 44, first differing at turn
+232. Before those turns every turn's checksum is identical. The other 14 games
+convert no terrain in 300 turns. `client-transcript.json`
+passes unchanged and is not re-recorded.
