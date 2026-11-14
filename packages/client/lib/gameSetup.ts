@@ -153,18 +153,38 @@ export class GameSetup {
     this.ruleSetChoices = data.ruleSets?.choices ?? [];
     this.ruleSetProblems = data.ruleSets?.problems ?? [];
 
-    // A game with a grid of its own (Civ2's) is on it, and never on Earth, whose maps are square.
-    if (this.fixedGrid() !== null) {
-      this.topologyId = this.fixedGrid()!;
+    // A game with a grid of its own (Civ2's) is on it, with that grid's size of the same name, and never on Earth,
+    //  whose maps are square.
+    const fixedGrid = this.fixedGrid();
+
+    if (fixedGrid !== null) {
+      const size =
+        worldSizesFor(fixedGrid).find(({ key }) => key === this.size?.key) ??
+        null;
+
+      this.topologyId = fixedGrid;
+      this.size = size;
+      this.width = size?.width ?? this.width;
+      this.height = size?.height ?? this.height;
     } else if (preset.earth) {
       this.earth = true;
     }
 
-    // Customize World opens on the world last set: one of the sizes, or a custom one.
+    // Customize World opens on the world last set: one of the sizes, or a custom one. On a grid of the game's own, only
+    //  one of that grid's sizes: a size set before is another grid's.
     const width = Number(data.existing.width),
-      height = Number(data.existing.height);
+      height = Number(data.existing.height),
+      existingSize =
+        worldSizesFor(this.topologyId).find(
+          (size) => size.width === width && size.height === height
+        ) ?? null;
 
-    if (preset.advanced && width > 0 && height > 0) {
+    if (
+      preset.advanced &&
+      width > 0 &&
+      height > 0 &&
+      (fixedGrid === null || existingSize !== null)
+    ) {
       this.size =
         worldSizesFor(this.topologyId).find(
           (size) => size.width === width && size.height === height

@@ -504,6 +504,15 @@ const civ2Metadata: PackMetadata = {
       ],
       [true, false, 6]
     );
+    expect(
+      `${name}: its map starts on the isometric grid's Normal size, which is what its inputs hold`,
+      [
+        (element.querySelector('select[name=map]') as HTMLSelectElement).value,
+        (element.querySelector('input[name=width]') as HTMLInputElement).value,
+        (element.querySelector('input[name=height]') as HTMLInputElement).value,
+      ],
+      ['size:normal', '40', '100']
+    );
 
     log.length = 0;
 
