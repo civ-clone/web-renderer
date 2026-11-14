@@ -13,12 +13,13 @@
 // The lists are what the civ2 packages have now: a later stage that adds content updates them, in the same change.
 //
 // The controls load deliberately broken sets, civ2's plugins with civ1-world added (which a conflict would stop the
-//  plugin list from ever being written), and with Civ1's improvements, science and units added: each has to fail,
-//  the second on Religion and on what can be built, so that every part of the probe is shown to fire.
+//  plugin list from ever being written), and with Civ1's improvements, science, spaceship and units added: each has
+//  to fail, the second on Religion and on what can be built, so that every part of the probe is shown to fire.
 //
 //   --scenario civ2                 load the civ2 set and print what it registered
 //   --scenario civ2-with-civ1       the same, with civ1-world added
-//   --scenario civ2-with-civ1-content   the same, with civ1-city-improvement, civ1-science and civ1-unit added
+//   --scenario civ2-with-civ1-content   the same, with civ1-city-improvement, civ1-science, civ1-spaceship and civ1-unit
+//                                       added
 //   --print                         print what the civ2 set registers, to update the lists below from
 //
 // Imports `src/js/pluginSets.ts`, never `src/js/plugins.ts`, which would run every plugin in the default set.
@@ -49,8 +50,8 @@ type Inventory = {
   difficulties: string[];
 };
 
-// What the civ2 set registers now (M2a C): Civ2's 90 advances, 51 units and 7 governments. Its improvements and
-//  Wonders come with a later stage (D).
+// What the civ2 set registers now (M2a D): Civ2's 90 advances, 51 units, 34 improvements, 28 Wonders, 7 governments
+//  and 21 civilizations. No spaceship parts: Civ2's spaceship is not in M2a.
 const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
   advances: [
     'AdvancedFlight',
@@ -191,57 +192,119 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Road',
   ],
   buildItems: [
+    'AdamSmithsTradingCompany',
+    'Airport',
     'AlpineTrooper',
+    'ApolloProgram',
+    'Aqueduct',
     'Archer',
     'Artillery',
+    'Bank',
+    'Barracks',
     'Battleship',
     'Bomber',
     'Cannon',
     'Caravan',
     'Carrier',
     'Catapult',
+    'Cathedral',
     'Cavalry',
     'Chariot',
+    'CityWalls',
+    'CoastalFortress',
+    'Colosseum',
+    'Colossus',
+    'CopernicusObservatory',
+    'Courthouse',
     'CruiseMissile',
     'Cruiser',
     'Crusader',
+    'CureForCancer',
+    'DarwinsVoyage',
     'Destroyer',
     'Diplomat',
     'Dragoon',
+    'EiffelTower',
     'Elephant',
     'Engineer',
     'Explorer',
+    'Factory',
     'Fanatic',
     'Fighter',
     'Freight',
     'Frigate',
     'Galleon',
+    'Granary',
+    'GreatLibrary',
+    'GreatWall',
+    'HangingGardens',
+    'Harbour',
     'Helicopter',
+    'HooverDam',
     'Horseman',
     'Howitzer',
+    'HydroPlant',
     'Ironclad',
+    'IsaacNewtonsCollege',
+    'JsBachsCathedral',
+    'KingRichardsCrusade',
     'Knight',
+    'LeonardosWorkshop',
+    'Library',
+    'Lighthouse',
+    'MagellansExpedition',
+    'ManhattanProject',
+    'ManufacturingPlant',
+    'MarcoPolosEmbassy',
     'Marine',
+    'Marketplace',
+    'MassTransit',
     'MechanizedInfantry',
+    'MichelangelosChapel',
     'MissileCruiser',
     'Musketman',
     'Nuclear',
+    'NuclearPlant',
+    'OffshorePlatform',
+    'Oracle',
+    'Palace',
     'Paratrooper',
     'Partisan',
     'Pikeman',
+    'PoliceStation',
+    'PortFacility',
+    'PowerPlant',
+    'Pyramids',
+    'RecyclingCenter',
+    'ResearchLab',
     'Rifleman',
     'Sail',
+    'SamMissileBattery',
+    'SdiDefence',
+    'SetiProgram',
     'Settlers',
+    'SewerSystem',
+    'ShakespearesTheatre',
+    'SolarPlant',
     'Spearman',
     'Spy',
+    'StatueOfLiberty',
     'StealthBomber',
     'StealthFighter',
+    'StockExchange',
     'Submarine',
+    'SunTzusWarAcademy',
+    'Superhighways',
+    'Supermarket',
     'Swordman',
     'Tank',
+    'Temple',
     'Transport',
     'Trireme',
+    'UnitedNations',
+    'University',
     'Warrior',
+    'WomensSuffrage',
   ],
   governments: [
     'Anarchy',
@@ -256,6 +319,8 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'American',
     'Aztec',
     'Babylonian',
+    'Carthaginian',
+    'Celtic',
     'Chinese',
     'Egyptian',
     'English',
@@ -265,9 +330,11 @@ const EXPECTED: Omit<Inventory, 'rules' | 'civ1Rules'> = {
     'Indian',
     'Japanese',
     'Mongol',
+    'Persian',
     'Roman',
     'Russian',
     'Sioux',
+    'Spanish',
     'Viking',
     'Zulu',
   ],
@@ -280,6 +347,7 @@ const CONTROLS: { [scenario: string]: string[] } = {
     'civ2-with-civ1-content': [
       '@civ-clone/civ1-city-improvement',
       '@civ-clone/civ1-science',
+      '@civ-clone/civ1-spaceship',
       '@civ-clone/civ1-unit',
     ],
   },
@@ -436,12 +504,12 @@ if (scenario !== null) {
   const content = run('civ2-with-civ1-content');
 
   expect(
-    'as is civ2 with Civ1’s improvements, science and units added: Civ1 rules, Religion, and improvements that civ2 has none of yet (Civ1’s units are base classes civ2 builds too)',
+    'as is civ2 with Civ1’s improvements, science, spaceship and units added: Civ1 rules, Religion, and the spaceship parts civ2 has none of (Civ1’s units, improvements and Wonders are base classes civ2 builds too)',
     [
       problems(content).some((problem) => problem.startsWith('rule civ1-')),
       problems(content).includes('advance Religion'),
-      problems(content).includes('build item Barracks'),
-      problems(content).includes('build item Granary'),
+      problems(content).includes('build item Structural'),
+      problems(content).includes('build item Habitation'),
     ],
     [true, true, true, true]
   );
