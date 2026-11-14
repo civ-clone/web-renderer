@@ -114,10 +114,14 @@ export class Game implements IGame {
     }
 
     if (this.#set !== null && this.#set !== set) {
+      // A hidden set isn't one the page offers, so it is never named to the player.
+      const named = ({ id, hidden }: PluginSet): string =>
+        hidden ? 'other' : id;
+
       throw new Error(
-        `The ${this.#set.id} rules are loaded here already, and the ${
-          set.id
-        } rules can't be loaded on top of them: they need the page loaded again.`
+        `The ${named(this.#set)} rules are loaded here already, and the ${named(
+          set
+        )} rules can't be loaded on top of them: they need the page loaded again.`
       );
     }
 

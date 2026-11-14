@@ -30,6 +30,7 @@ import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 const {
+  defaultSetProblems,
   followedDependencies,
   resolvePluginSets,
 } = require('../../tools/lib/pluginSets');
@@ -44,6 +45,8 @@ type Report = {
   ruleSets: string[];
   // What asking for another set, once one is loaded, was answered.
   refused: string | null;
+  // And asking for a hidden one (civ2).
+  refusedHidden: string | null;
 };
 
 const EXTRA_CIVILIZATIONS = [
@@ -112,7 +115,15 @@ const play = (name: string, path: string): void => {
     loadFailure = (): string | null =>
       sent.find(({ channel }) => channel === 'loadFailed')?.data?.message ??
       null,
-    report = (written: any, refused: string | null = null): never => {
+    loadFailures = (): string[] =>
+      sent
+        .filter(({ channel }) => channel === 'loadFailed')
+        .map(({ data }) => data?.message ?? ''),
+    report = (
+      written: any,
+      refused: string | null = null,
+      refusedHidden: string | null = null
+    ): never => {
       process.stdout.write(
         JSON.stringify({
           loaded: written !== null,
@@ -143,6 +154,7 @@ const play = (name: string, path: string): void => {
             .length,
           ruleSets: defaultGame.ruleSets.describe().map(({ id }) => id),
           refused,
+          refusedHidden,
         } as Report) + '\n'
       );
       process.exit(0);
@@ -200,7 +212,14 @@ const play = (name: string, path: string): void => {
 
       await until(loadFinished);
 
-      report(written, loadFailure());
+      // And for a hidden one: refused too, without naming it.
+      receivers.get('load')!({
+        data: JSON.stringify({ ...written, pluginSet: 'civ2' }),
+      });
+
+      await until(() => loadFailures().length >= 2);
+
+      report(written, loadFailure(), loadFailures()[1] ?? null);
 
       return;
     }
@@ -327,6 +346,50 @@ if (scenario !== null) {
       "set two extends none, which there isn't",
       'set two has no worker rules (`rules`)',
       '@x/b is installed, but no set loads it: add it to a set, or to `excludes`',
+    ]
+  );
+
+  expect(
+    'as are a set whose `hidden` is not true or false, and a conflict (`civ-clone.conflicts`) naming something that is not an installed plugin',
+    resolvePluginSets(
+      {
+        one: { rules: '@x/rules', plugins: ['@x/a'], hidden: 'yes' },
+        two: { rules: '@x/rules', plugins: ['@x/b'], hidden: false },
+      },
+      [plugin('@x/a'), plugin('@x/b')],
+      () => null,
+      { '@x/a': ['@x/b', '@x/typo'], '@x/missing': ['@x/a'] }
+    ).problems,
+    [
+      'set one has `hidden` "yes", which isn\'t true or false',
+      "`civ-clone.conflicts` names @x/typo, which isn't an installed plugin",
+      "`civ-clone.conflicts` names @x/missing, which isn't an installed plugin",
+    ]
+  );
+
+  const madeSets = [
+    { id: 'shown', plugins: [], rules: '@x/rules', hidden: false },
+    { id: 'hidden', plugins: [], rules: '@x/rules', hidden: true },
+  ];
+
+  expect(
+    'the sets a game gets without asking must be sets, and not hidden ones',
+    [
+      defaultSetProblems(
+        { defaultSet: 'shown', setForSavesWithoutOne: 'shown' },
+        madeSets
+      ),
+      defaultSetProblems(
+        { defaultSet: 'hidden', setForSavesWithoutOne: 'none' },
+        madeSets
+      ),
+    ],
+    [
+      [],
+      [
+        '`civ-clone.defaultSet`, the set a new game is played with, is "hidden", which is hidden',
+        '`civ-clone.setForSavesWithoutOne`, the set a save made before there were sets loads with, is "none", which isn\'t a set',
+      ],
     ]
   );
 
@@ -565,6 +628,16 @@ if (scenario !== null) {
       civ1Game.refused ?? ''
     ),
     true
+  );
+  expect(
+    'as is civ2, which is hidden, so the refusal names it only as other rules',
+    [
+      /civ1 rules are loaded here already, and the other rules can't be loaded on top/.test(
+        civ1Game.refusedHidden ?? ''
+      ),
+      /civ2/.test(civ1Game.refusedHidden ?? ''),
+    ],
+    [true, false]
   );
 
   const loaded = run('load');

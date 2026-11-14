@@ -3,6 +3,7 @@ const globModule = require('glob');
 const path = require('path');
 const {
   byName,
+  defaultSetProblems,
   followedDependencies,
   resolvePluginSets,
 } = require('./tools/lib/pluginSets');
@@ -157,8 +158,7 @@ const config = require('./package.json')['civ-clone'] ?? {},
     entrypoints,
     dependenciesOf,
     config.conflicts ?? {}
-  ),
-  setIds = sets.map(({ id }) => id);
+  );
 
 unreadable.forEach((name) =>
   problems.push(
@@ -166,32 +166,7 @@ unreadable.forEach((name) =>
   )
 );
 
-[
-  ['defaultSet', 'the set a new game is played with'],
-  [
-    'setForSavesWithoutOne',
-    'the set a save made before there were sets loads with',
-  ],
-].forEach(([key, what]) => {
-  if (!setIds.includes(config[key])) {
-    problems.push(
-      `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
-        config[key]
-      )}, which isn't a set`
-    );
-
-    return;
-  }
-
-  // A hidden set isn't offered, so it can't be what a game gets without asking either.
-  if (sets.find(({ id }) => id === config[key]).hidden) {
-    problems.push(
-      `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
-        config[key]
-      )}, which is hidden`
-    );
-  }
-});
+problems.push(...defaultSetProblems(config, sets));
 
 if (problems.length > 0) {
   console.error(

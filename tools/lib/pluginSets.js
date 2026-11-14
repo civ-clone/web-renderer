@@ -123,6 +123,15 @@ const resolvePluginSets = (
       problems.push(`set ${id} has no worker rules (\`rules\`)`);
     }
 
+    // Anything but true or false would otherwise read as "offered".
+    if ('hidden' in sets[id] && typeof sets[id].hidden !== 'boolean') {
+      problems.push(
+        `set ${id} has \`hidden\` ${JSON.stringify(
+          sets[id].hidden
+        )}, which isn't true or false`
+      );
+    }
+
     members.forEach((name) => loaded.add(name));
     // A hidden set is one a game can be played with that the page doesn't offer yet: its own setting, not the one it
     //  extends, so a set built on a hidden one is offered unless it says otherwise.
@@ -133,6 +142,17 @@ const resolvePluginSets = (
       hidden: sets[id].hidden === true,
     });
   });
+
+  // A conflict declared for a name that isn't an installed plugin guards nothing, so a misspelt one is said.
+  Object.entries(conflicts).forEach(([name, others]) =>
+    [name, ...others]
+      .filter((other) => !installed.has(other))
+      .forEach((other) =>
+        problems.push(
+          `\`civ-clone.conflicts\` names ${other}, which isn't an installed plugin`
+        )
+      )
+  );
 
   plugins
     .filter(({ name }) => !loaded.has(name))
@@ -145,4 +165,38 @@ const resolvePluginSets = (
   return { sets: resolved, problems };
 };
 
-module.exports = { byName, followedDependencies, resolvePluginSets };
+// What's wrong with the sets a game gets without asking (`civ-clone.defaultSet` and `setForSavesWithoutOne`), given the
+//  resolved sets: each must be a set, and not a hidden one, which the page doesn't offer.
+const defaultSetProblems = (config, sets) =>
+  [
+    ['defaultSet', 'the set a new game is played with'],
+    [
+      'setForSavesWithoutOne',
+      'the set a save made before there were sets loads with',
+    ],
+  ].flatMap(([key, what]) => {
+    const set = sets.find(({ id }) => id === config[key]);
+
+    if (set === undefined) {
+      return [
+        `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
+          config[key]
+        )}, which isn't a set`,
+      ];
+    }
+
+    return set.hidden
+      ? [
+          `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
+            config[key]
+          )}, which is hidden`,
+        ]
+      : [];
+  });
+
+module.exports = {
+  byName,
+  defaultSetProblems,
+  followedDependencies,
+  resolvePluginSets,
+};
