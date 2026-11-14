@@ -1,0 +1,16 @@
+{
+  "name": "@civ-clone/ui-rules-civ2",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Civ2's part of the worker client: what it acts on, shows and scores that only Civ2's rules have, handed to the client when the plugins are loaded.",
+  "license": "MIT",
+  "dependencies": {
+    "@civ-clone/ui-worker-client": "workspace:*"
+  },
+  "exports": {
+    ".": "./index.ts"
+  },
+  "peerDependencies": {
+    "@civ-clone/civ2-difficulty": "*"
+  }
+}

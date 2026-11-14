@@ -1,7 +1,8 @@
 // A game's set of plugins (#668). How `buildPluginList.js` works a set out from the plugins it names and what they
-//  depend on; that civ.one's two sets are Civ1's own plugins, and those with civ1-enhanced, which is every plugin
-//  installed; and, through the worker's own receivers as the page drives them, that a game played with civ1 runs none
-//  of civ1-enhanced's code, saves which set it was, and loads with it again, while a save that names no set loads as
+//  depend on; that civ.one's three sets are Civ1's own plugins, those with civ1-enhanced, which is every plugin
+//  installed but Civ2's, and Civ2's (hidden, and sharing no Civ1 plugin: `civ2Isolation.ts` checks what it loads);
+//  and, through the worker's own receivers as the page drives them, that a game played with civ1 runs none of
+//  civ1-enhanced's code, saves which set it was, and loads with it again, while a save that names no set loads as
 //  civ1-enhanced, as every save did before there were sets. Each game is a process of its own, as each is a worker:
 //  the plugins can't be unloaded.
 //
@@ -22,13 +23,14 @@ import { execFileSync } from 'child_process';
 import { instance as engine } from '@civ-clone/core-engine/Engine';
 import { join } from 'path';
 import pluginSets from '../../src/js/pluginSets';
-import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
+import { offeredSets, pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 import { instance as playerRegistryInstance } from '@civ-clone/core-player/PlayerRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
 const {
+  defaultSetProblems,
   followedDependencies,
   resolvePluginSets,
 } = require('../../tools/lib/pluginSets');
@@ -43,6 +45,8 @@ type Report = {
   ruleSets: string[];
   // What asking for another set, once one is loaded, was answered.
   refused: string | null;
+  // And asking for a hidden one (civ2).
+  refusedHidden: string | null;
 };
 
 const EXTRA_CIVILIZATIONS = [
@@ -111,7 +115,15 @@ const play = (name: string, path: string): void => {
     loadFailure = (): string | null =>
       sent.find(({ channel }) => channel === 'loadFailed')?.data?.message ??
       null,
-    report = (written: any, refused: string | null = null): never => {
+    loadFailures = (): string[] =>
+      sent
+        .filter(({ channel }) => channel === 'loadFailed')
+        .map(({ data }) => data?.message ?? ''),
+    report = (
+      written: any,
+      refused: string | null = null,
+      refusedHidden: string | null = null
+    ): never => {
       process.stdout.write(
         JSON.stringify({
           loaded: written !== null,
@@ -142,6 +154,7 @@ const play = (name: string, path: string): void => {
             .length,
           ruleSets: defaultGame.ruleSets.describe().map(({ id }) => id),
           refused,
+          refusedHidden,
         } as Report) + '\n'
       );
       process.exit(0);
@@ -199,7 +212,14 @@ const play = (name: string, path: string): void => {
 
       await until(loadFinished);
 
-      report(written, loadFailure());
+      // And for a hidden one: refused too, without naming it.
+      receivers.get('load')!({
+        data: JSON.stringify({ ...written, pluginSet: 'civ2' }),
+      });
+
+      await until(() => loadFailures().length >= 2);
+
+      report(written, loadFailure(), loadFailures()[1] ?? null);
 
       return;
     }
@@ -329,6 +349,50 @@ if (scenario !== null) {
     ]
   );
 
+  expect(
+    'as are a set whose `hidden` is not true or false, and a conflict (`civ-clone.conflicts`) naming something that is not an installed plugin',
+    resolvePluginSets(
+      {
+        one: { rules: '@x/rules', plugins: ['@x/a'], hidden: 'yes' },
+        two: { rules: '@x/rules', plugins: ['@x/b'], hidden: false },
+      },
+      [plugin('@x/a'), plugin('@x/b')],
+      () => null,
+      { '@x/a': ['@x/b', '@x/typo'], '@x/missing': ['@x/a'] }
+    ).problems,
+    [
+      'set one has `hidden` "yes", which isn\'t true or false',
+      "`civ-clone.conflicts` names @x/typo, which isn't an installed plugin",
+      "`civ-clone.conflicts` names @x/missing, which isn't an installed plugin",
+    ]
+  );
+
+  const madeSets = [
+    { id: 'shown', plugins: [], rules: '@x/rules', hidden: false },
+    { id: 'hidden', plugins: [], rules: '@x/rules', hidden: true },
+  ];
+
+  expect(
+    'the sets a game gets without asking must be sets, and not hidden ones',
+    [
+      defaultSetProblems(
+        { defaultSet: 'shown', setForSavesWithoutOne: 'shown' },
+        madeSets
+      ),
+      defaultSetProblems(
+        { defaultSet: 'hidden', setForSavesWithoutOne: 'none' },
+        madeSets
+      ),
+    ],
+    [
+      [],
+      [
+        '`civ-clone.defaultSet`, the set a new game is played with, is "hidden", which is hidden',
+        '`civ-clone.setForSavesWithoutOne`, the set a save made before there were sets loads with, is "none", which isn\'t a set',
+      ],
+    ]
+  );
+
   // What a package only imports (`civ-clone.importsOnly`) isn't followed from it, but is still loaded when named or
   //  reached another way.
   const importer = (
@@ -411,29 +475,49 @@ if (scenario !== null) {
   // civ.one's sets, as `buildPluginList.js` wrote them.
   const civ1 = pluginSets.sets.find(({ id }) => id === 'civ1')!,
     enhanced = pluginSets.sets.find(({ id }) => id === 'civ1-enhanced')!,
+    civ2 = pluginSets.sets.find(({ id }) => id === 'civ2')!,
     installed = Object.keys(pluginSets.loaders).filter(
       (name) => !pluginSets.sets.some(({ rules }) => rules === name)
     ),
+    byPackageName = (a: string, b: string): number =>
+      a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '') ? -1 : 1,
     extras = EXTRA_CIVILIZATIONS.map(
       (civilization) =>
         `@civ-clone/base-civilization-${civilization.toLowerCase()}`
-    );
+    ),
+    civ2Packages = installed.filter((name) =>
+      name.startsWith('@civ-clone/civ2-')
+    ),
+    config = require('../../package.json')['civ-clone'];
 
   expect(
-    'civ.one has civ1 and civ1-enhanced, and plays civ1-enhanced, as are saves from before sets',
+    'civ.one has civ1, civ1-enhanced and civ2, and plays civ1-enhanced, as are saves from before sets',
     [
       pluginSets.sets.map(({ id }) => id),
       pluginSets.default,
       pluginSets.withoutOne,
     ],
-    [['civ1', 'civ1-enhanced'], 'civ1-enhanced', 'civ1-enhanced']
+    [['civ1', 'civ1-enhanced', 'civ2'], 'civ1-enhanced', 'civ1-enhanced']
   );
   expect(
-    'civ1-enhanced is every plugin installed, as every game was played with before there were sets',
+    'civ2 is hidden, so the page offers only the two Civ1 sets until Civ2’s art can be imported',
+    [
+      pluginSets.sets.map(({ id, hidden }) => [id, hidden]),
+      offeredSets(pluginsFrom(pluginSets)).map(({ id }) => id),
+    ],
+    [
+      [
+        ['civ1', false],
+        ['civ1-enhanced', false],
+        ['civ2', true],
+      ],
+      ['civ1', 'civ1-enhanced'],
+    ]
+  );
+  expect(
+    'civ1-enhanced is every plugin installed but the civ2 packages, as every game was played with before there were sets',
     enhanced.plugins,
-    [...installed].sort((a, b) =>
-      a.replace('@civ-clone/', '') < b.replace('@civ-clone/', '') ? -1 : 1
-    )
+    installed.filter((name) => !civ2Packages.includes(name)).sort(byPackageName)
   );
   expect(
     'civ1 is the same but civ1-enhanced, the world civilizations, and their twelve civilizations',
@@ -445,12 +529,53 @@ if (scenario !== null) {
     ].sort()
   );
   expect(
+    'civ2 has the eight civ2 plugins and shares the rest with civ1-enhanced: no civ1 plugin and no library aggregate',
+    [
+      civ2.plugins.filter((name) => !enhanced.plugins.includes(name)),
+      civ2.plugins.filter((name) => /^@civ-clone\/(civ1|library)-/.test(name)),
+    ],
+    [civ2Packages, []]
+  );
+  expect(
+    'and neither Civ1 set has a civ2 plugin',
+    [civ1, enhanced].map(({ plugins }) =>
+      plugins.filter((name) => name.startsWith('@civ-clone/civ2-'))
+    ),
+    [[], []]
+  );
+  expect(
+    'each civ2 plugin conflicts with its Civ1 twin (`civ-clone.conflicts`), so a set with both is refused',
+    resolvePluginSets(
+      {
+        both: {
+          rules: '@x/rules',
+          plugins: civ2Packages.flatMap((name) => [
+            name,
+            name.replace('/civ2-', '/civ1-'),
+          ]),
+        },
+      },
+      civ2Packages
+        .flatMap((name) => [name, name.replace('/civ2-', '/civ1-')])
+        .map((name) => plugin(name)),
+      () => null,
+      config.conflicts
+    ).problems,
+    civ2Packages.map(
+      (name) =>
+        `set both has ${name}, which conflicts with ${name.replace(
+          '/civ2-',
+          '/civ1-'
+        )}`
+    )
+  );
+  expect(
     'and each set saves the versions of its own plugins, and no others',
-    [civ1, enhanced].map(({ plugins, manifest }) => [
+    [civ1, enhanced, civ2].map(({ plugins, manifest }) => [
       Object.keys(manifest).sort(),
       Object.values(manifest).every((version) => typeof version === 'string'),
     ]),
-    [civ1, enhanced].map(({ plugins }) => [[...plugins].sort(), true])
+    [civ1, enhanced, civ2].map(({ plugins }) => [[...plugins].sort(), true])
   );
 
   const directory = mkdtempSync(join(tmpdir(), 'plugin-sets-')),
@@ -504,6 +629,16 @@ if (scenario !== null) {
     ),
     true
   );
+  expect(
+    'as is civ2, which is hidden, so the refusal names it only as other rules',
+    [
+      /civ1 rules are loaded here already, and the other rules can't be loaded on top/.test(
+        civ1Game.refusedHidden ?? ''
+      ),
+      /civ2/.test(civ1Game.refusedHidden ?? ''),
+    ],
+    [true, false]
+  );
 
   const loaded = run('load');
 
@@ -536,9 +671,14 @@ if (scenario !== null) {
   const unknown = run('load-unknown');
 
   expect(
-    'a save naming a set this build does not have is refused, saying which',
-    [unknown.loaded, /civ9/.test(unknown.failed ?? '')],
-    [false, true]
+    'a save naming a set this build does not have is refused, saying which, and naming only the sets offered (not civ2)',
+    [
+      unknown.loaded,
+      /civ9/.test(unknown.failed ?? ''),
+      /civ1, civ1-enhanced\./.test(unknown.failed ?? ''),
+      /civ2/.test(unknown.failed ?? ''),
+    ],
+    [false, true, true, false]
   );
 
   finished = true;

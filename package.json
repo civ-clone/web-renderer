@@ -185,6 +185,7 @@
     "test:seats": "node tools/run-suite.js engine seats",
     "test:lazy-plugins": "node tools/run-suite.js engine lazyPlugins",
     "test:plugin-sets": "node tools/run-suite.js engine pluginSets",
+    "test:civ2-isolation": "node tools/run-suite.js engine civ2Isolation",
     "test:observer": "node tools/run-suite.js engine observer",
     "test:save-seats": "node tools/run-suite.js engine saveSeats",
     "test:respawn": "node tools/run-suite.js engine respawn",
@@ -292,7 +293,58 @@
         "plugins": [
           "@civ-clone/civ1-enhanced"
         ]
+      },
+      "civ2": {
+        "rules": "@civ-clone/ui-rules-civ2",
+        "hidden": true,
+        "plugins": [
+          "@civ-clone/base-civilization-barbarian",
+          "@civ-clone/base-strategy-victory",
+          "@civ-clone/base-unit-action-automate",
+          "@civ-clone/base-unit-action-build-route",
+          "@civ-clone/base-unit-action-establish-embassy",
+          "@civ-clone/base-unit-action-explore",
+          "@civ-clone/base-unit-action-steal-technology",
+          "@civ-clone/civ2-civilization",
+          "@civ-clone/civ2-difficulty",
+          "@civ-clone/civ2-game-end",
+          "@civ-clone/civ2-game-year",
+          "@civ-clone/civ2-player",
+          "@civ-clone/civ2-power",
+          "@civ-clone/civ2-trade-rate",
+          "@civ-clone/civ2-world",
+          "@civ-clone/core-save-game",
+          "@civ-clone/simple-ai-client",
+          "@civ-clone/simple-world-generator",
+          "@civ-clone/simple-world-path"
+        ]
       }
+    },
+    "conflicts": {
+      "@civ-clone/civ2-civilization": [
+        "@civ-clone/civ1-civilization"
+      ],
+      "@civ-clone/civ2-difficulty": [
+        "@civ-clone/civ1-difficulty"
+      ],
+      "@civ-clone/civ2-game-end": [
+        "@civ-clone/civ1-game-end"
+      ],
+      "@civ-clone/civ2-game-year": [
+        "@civ-clone/civ1-game-year"
+      ],
+      "@civ-clone/civ2-player": [
+        "@civ-clone/civ1-player"
+      ],
+      "@civ-clone/civ2-power": [
+        "@civ-clone/civ1-power"
+      ],
+      "@civ-clone/civ2-trade-rate": [
+        "@civ-clone/civ1-trade-rate"
+      ],
+      "@civ-clone/civ2-world": [
+        "@civ-clone/civ1-world"
+      ]
     },
     "defaultSet": "civ1-enhanced",
     "setForSavesWithoutOne": "civ1-enhanced"
@@ -353,6 +405,15 @@
     "@civ-clone/civ1-world": "github:civ-clone/civ1-world",
     "@civ-clone/civ1-world-civilizations": "github:civ-clone/civ1-world-civilizations",
     "@civ-clone/civ2-asset-extractor": "github:civ-clone/civ2-asset-extractor",
+    "@civ-clone/civ2-civilization": "github:civ-clone/civ2-civilization",
+    "@civ-clone/civ2-difficulty": "github:civ-clone/civ2-difficulty",
+    "@civ-clone/civ2-game-end": "github:civ-clone/civ2-game-end",
+    "@civ-clone/civ2-game-year": "github:civ-clone/civ2-game-year",
+    "@civ-clone/civ2-player": "github:civ-clone/civ2-player",
+    "@civ-clone/civ2-power": "github:civ-clone/civ2-power",
+    "@civ-clone/civ2-rules": "github:civ-clone/civ2-rules",
+    "@civ-clone/civ2-trade-rate": "github:civ-clone/civ2-trade-rate",
+    "@civ-clone/civ2-world": "github:civ-clone/civ2-world",
     "@civ-clone/core-ai-client": "^0.1.3",
     "@civ-clone/core-city": "^0.1.24",
     "@civ-clone/core-city-build": "^0.1.22",
@@ -366,7 +427,7 @@
     "@civ-clone/core-diplomacy": "^0.1.8",
     "@civ-clone/core-engine": "^0.1.6",
     "@civ-clone/core-game": "^0.1.17",
-    "@civ-clone/core-game-year": "^0.1.3",
+    "@civ-clone/core-game-year": "^0.1.6",
     "@civ-clone/core-goody-hut": "^0.1.6",
     "@civ-clone/core-government": "^0.1.6",
     "@civ-clone/core-player": "^0.1.10",
@@ -418,6 +479,7 @@
     "@civ-clone/ui-menus": "workspace:*",
     "@civ-clone/ui-protocol": "workspace:*",
     "@civ-clone/ui-rules-civ1": "workspace:*",
+    "@civ-clone/ui-rules-civ2": "workspace:*",
     "@civ-clone/ui-tileset-civ1": "workspace:*",
     "@civ-clone/ui-tileset-civ2": "workspace:*",
     "@civ-clone/ui-widgets": "workspace:*",

@@ -17,7 +17,7 @@ import {
   seatFromDescriptor,
 } from '@civ-clone/ui-protocol/lib/savedSeats';
 import Observer from './Observer';
-import { PluginSet, Plugins } from './Plugins';
+import { PluginSet, Plugins, offeredSets } from './Plugins';
 import { registerDiplomacyClasses } from './diplomacy';
 import { registerBarbarianClasses } from './barbarians';
 import BarbarianClient from '@civ-clone/simple-ai-client/BarbarianClient';
@@ -107,17 +107,21 @@ export class Game implements IGame {
       throw new Error(
         `There are no ${JSON.stringify(
           id
-        )} rules here: the rules here are ${this.#plugins.sets
+        )} rules here: the rules here are ${offeredSets(this.#plugins)
           .map(({ id }) => id)
           .join(', ')}.`
       );
     }
 
     if (this.#set !== null && this.#set !== set) {
+      // A hidden set isn't one the page offers, so it is never named to the player.
+      const named = ({ id, hidden }: PluginSet): string =>
+        hidden ? 'other' : id;
+
       throw new Error(
-        `The ${this.#set.id} rules are loaded here already, and the ${
-          set.id
-        } rules can't be loaded on top of them: they need the page loaded again.`
+        `The ${named(this.#set)} rules are loaded here already, and the ${named(
+          set
+        )} rules can't be loaded on top of them: they need the page loaded again.`
       );
     }
 

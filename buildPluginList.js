@@ -3,6 +3,7 @@ const globModule = require('glob');
 const path = require('path');
 const {
   byName,
+  defaultSetProblems,
   followedDependencies,
   resolvePluginSets,
 } = require('./tools/lib/pluginSets');
@@ -155,9 +156,9 @@ const config = require('./package.json')['civ-clone'] ?? {},
   { sets, problems } = resolvePluginSets(
     config.sets ?? {},
     entrypoints,
-    dependenciesOf
-  ),
-  setIds = sets.map(({ id }) => id);
+    dependenciesOf,
+    config.conflicts ?? {}
+  );
 
 unreadable.forEach((name) =>
   problems.push(
@@ -165,21 +166,7 @@ unreadable.forEach((name) =>
   )
 );
 
-[
-  ['defaultSet', 'the set a new game is played with'],
-  [
-    'setForSavesWithoutOne',
-    'the set a save made before there were sets loads with',
-  ],
-].forEach(([key, what]) => {
-  if (!setIds.includes(config[key])) {
-    problems.push(
-      `\`civ-clone.${key}\`, ${what}, is ${JSON.stringify(
-        config[key]
-      )}, which isn't a set`
-    );
-  }
-});
+problems.push(...defaultSetProblems(config, sets));
 
 if (problems.length > 0) {
   console.error(
@@ -263,12 +250,14 @@ const sets: {
   id: string;
   plugins: string[];
   rules: string;
+  hidden: boolean;
   manifest: { [name: string]: string };
 }[] = ${JSON.stringify(
-    sets.map(({ id, plugins, rules }) => ({
+    sets.map(({ id, plugins, rules, hidden }) => ({
       id,
       plugins,
       rules,
+      hidden,
       manifest: manifestOf(plugins),
     })),
     null,
