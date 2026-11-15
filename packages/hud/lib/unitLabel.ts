@@ -13,9 +13,19 @@ export const unitName = (unit: Pick<Unit, '_'>): string =>
     ns: 'unit',
   });
 
+// Improvements the engine keeps on a unit as marks for its rules, not as anything it has earned or is doing (M2b):
+//  that it moved this turn (for healing), its turns out of fuel (`Aloft`, which the card shows as fuel), and that it
+//  has paradropped this turn.
+export const hiddenMarks: readonly string[] = [
+  'Aloft',
+  'MovedThisTurn',
+  'Paradropped',
+];
+
 /**
  * What the unit is doing and what it has earned, each once (#694): its activity (`Sleeping`, `Building road`), then
- *  its improvements (`Fortified`, `Veteran`), in the order the engine sends them.
+ *  its improvements (`Fortified`, `Veteran`), in the order the engine sends them, less the rules' marks
+ *  (`hiddenMarks`).
  */
 export const unitStates = (
   unit: Pick<Unit, 'busy' | 'improvements'>
@@ -29,12 +39,14 @@ export const unitStates = (
           }),
         ]
       : []),
-    ...unit.improvements.map((improvement) =>
-      text(`Improvement.${improvement._}.name`, {
-        defaultValue: improvement._,
-        ns: 'unit',
-      })
-    ),
+    ...unit.improvements
+      .filter((improvement) => !hiddenMarks.includes(improvement._))
+      .map((improvement) =>
+        text(`Improvement.${improvement._}.name`, {
+          defaultValue: improvement._,
+          ns: 'unit',
+        })
+      ),
   ];
 
   return states.filter((state, index) => states.indexOf(state) === index);

@@ -32,6 +32,7 @@ import { Barracks } from '@civ-clone/civ1-city-improvement/CityImprovements';
 import CityImprovement from '@civ-clone/core-city-improvement/CityImprovement';
 import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
+import Action from '@civ-clone/core-unit/Action';
 import Unit from '@civ-clone/core-unit/Unit';
 import Notification from '@civ-clone/ui-protocol/Notification';
 import { stubView } from './lib/view';
@@ -619,6 +620,128 @@ const contextOf = ({
     null
   );
 
+  // M2b (#1007): Civ2's fuel, airlifts, promotions, missile defence and a city's lost defender.
+  expect(
+    'our aircraft out of fuel, as the engine says',
+    unit('unit:out-of-fuel', [unitOf(us, Fighter.prototype)]),
+    ['Unit.out-of-fuel', false, { unit: 'Fighter of us' }]
+  );
+  expect(
+    "a rival's aircraft out of fuel",
+    unit('unit:out-of-fuel', [unitOf(rival, Fighter.prototype)]),
+    null
+  );
+  expect(
+    'our airlift shot down by a rival we have met',
+    unit('unit:airlift-shot-down', [unitOf(us, Warrior.prototype), rival], {
+      met: [rival],
+    }),
+    [
+      'Unit.airlift-shot-down',
+      false,
+      { unit: 'Warrior of us', player: 'rival' },
+    ]
+  );
+  expect(
+    'our airlift shot down by a rival we have not met',
+    unit('unit:airlift-shot-down', [unitOf(us, Warrior.prototype), rival]),
+    ['Unit.airlift-shot-down.unmet', false, { unit: 'Warrior of us' }]
+  );
+  expect(
+    "a rival's airlift shot down",
+    unit('unit:airlift-shot-down', [unitOf(rival, Warrior.prototype), us]),
+    null
+  );
+  expect(
+    'our unit promoted, as news that needn’t stop play',
+    unit('unit:promoted', [unitOf(us, Warrior.prototype)]),
+    ['Unit.promoted', true, { unit: 'Warrior of us' }]
+  );
+  expect(
+    "a rival's unit promoted",
+    unit('unit:promoted', [unitOf(rival, Warrior.prototype)]),
+    null
+  );
+
+  const ourMissile = unitOf(us, Nuclear.prototype),
+    rivalMissile = unitOf(rival, Nuclear.prototype);
+
+  expect(
+    'our nuclear attack stopped by a missile defence',
+    unit('unit:nuclear-stopped', [ourMissile, 'tile']),
+    ['Unit.nuclear-stopped.ours', false, { unit: 'Nuclear of us' }]
+  );
+  expect(
+    "a rival's nuclear attack stopped",
+    unit('unit:nuclear-stopped', [rivalMissile, 'tile']),
+    ['Unit.nuclear-stopped', false, { player: 'rival' }]
+  );
+  expect(
+    "and its detonation isn't told as nuclear weapons used",
+    unit('unit:nuclear-detonation', [rivalMissile, 'tile']),
+    null
+  );
+
+  const attackOn = (city: { tile: () => unknown }, by: unknown) =>
+      named(
+        `attack by ${by}`,
+        { to: () => city.tile(), unit: () => by },
+        Action.prototype
+      ),
+    rivalAttacker = unitOf(rival, Warrior.prototype),
+    attack = attackOn(ourCity, rivalAttacker);
+
+  expect(
+    'our city shrinks as its defender loses an attack',
+    unit('city:shrink', [ourCity, attack]),
+    ['City.shrink-defender-lost', true, { city: 'Rome' }]
+  );
+  expect(
+    'and once only for the attack, by whichever rule shrinks it again',
+    unit('city:shrink', [ourCity, attack]),
+    null
+  );
+
+  const secondAttack = attackOn(ourCity, rivalAttacker);
+
+  expect(
+    'a battle won is recorded, telling nothing',
+    unit('unit:defeated', [
+      unitOf(us, Warrior.prototype),
+      rivalAttacker,
+      secondAttack,
+    ]),
+    null
+  );
+  expect(
+    'our city shrinks for the unit that won (Civ2)',
+    unit('city:shrink', [ourCity, rivalAttacker]),
+    ['City.shrink-defender-lost', true, { city: 'Rome' }]
+  );
+  expect(
+    'and the attack itself is told no more',
+    unit('city:shrink', [ourCity, secondAttack]),
+    null
+  );
+  expect(
+    'a unit that won no battle here (a nuclear detonation)',
+    unit('city:shrink', [ourCity, rivalMissile]),
+    null
+  );
+  expect(
+    'our city shrinks from famine',
+    unit('city:shrink', [ourCity, 'FoodExhausted']),
+    null
+  );
+  expect(
+    "a rival's city shrinks as its defender loses",
+    unit('city:shrink', [
+      rivalCity,
+      attackOn(rivalCity, unitOf(us, Warrior.prototype)),
+    ]),
+    null
+  );
+
   expect(
     'our city cannot support a unit',
     unit('unit:unsupported', [ourCity, unitOf(us)]),
@@ -1039,6 +1162,7 @@ const contextOf = ({
     'City.queue-dropped.unit',
     'City.queue-dropped.wonder',
     'City.sdi-protected',
+    'City.shrink-defender-lost',
     'City.unit-unsupported',
     'CityImprovement.obsolete',
     'Diplomat.advance-stolen',
@@ -1072,9 +1196,14 @@ const contextOf = ({
     'Spaceship.part-built',
     'Spaceship.part-built.unmet',
     'Spaceship.returned',
+    'Unit.airlift-shot-down',
+    'Unit.airlift-shot-down.unmet',
     'Unit.lost-at-sea',
     'Unit.nuclear-attack',
+    'Unit.nuclear-stopped',
+    'Unit.nuclear-stopped.ours',
     'Unit.out-of-fuel',
+    'Unit.promoted',
     'Unit.trade-route-established',
     'Wonder.building-complete.other-player.known',
     'Wonder.building-complete.other-player.unknown',
@@ -1165,6 +1294,12 @@ const contextOf = ({
       'city:polluted',
       'city:sdi-protected',
       'unit:lost-at-sea',
+      'unit:nuclear-stopped',
+      'unit:out-of-fuel',
+      'unit:airlift-shot-down',
+      'unit:promoted',
+      'unit:defeated',
+      'city:shrink',
       'unit:unsupported',
       'city:unsupported-improvement',
       'unit:trade-route-established',

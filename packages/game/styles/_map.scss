@@ -9,6 +9,11 @@
     // scroll or a zoom of the page.
     touch-action: none;
     width: 100%;
+
+    // Choosing a square for a long-range order (M2b).
+    &.picking-tile {
+      cursor: crosshair;
+    }
   }
 }
 
@@ -72,4 +77,15 @@
   .status:empty {
     display: none;
   }
+}
+
+// The window that asks for a square for a long-range order (M2b): at the top, out of the way of the squares round the
+//  unit, which is what the map is centred on, and only as wide as what it says.
+.window.pick-tile.position-auto {
+  align-self: start;
+  margin-top: 1rem;
+}
+
+.window.pick-tile.size-auto {
+  min-width: 0;
 }

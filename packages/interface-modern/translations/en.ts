@@ -171,10 +171,14 @@ i18next.addResources('en', 'default', {
     '+{{bonus, number(style: percent; maximumFractionDigits: 0)}} defense',
   'UnitCard.defence-bonus.title': 'Defense bonus',
   'UnitCard.square.parts': '{{parts, list(type: unit)}}',
+  // An aircraft's turns of fuel left, of its range (M2b).
+  'UnitCard.fuel': '{{turnsLeft, number}}/{{range, number}}',
   'UnitCard.group.orders': 'Orders',
   'UnitCard.group.others': 'Also here',
   'UnitCard.group.special': 'Special',
   'UnitCard.group.terrain': 'Terrain',
+  // A unit's hit points left, of its most (M2b).
+  'UnitCard.hit-points': '{{current, number}}/{{max, number}}',
   'UnitCard.key': 'Key',
   'UnitCard.more': '+{{count, number}}',
   'UnitCard.multiplier': '×{{value, number}}',

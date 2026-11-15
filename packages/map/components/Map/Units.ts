@@ -1,6 +1,7 @@
 import { Coordinate, Tile, Unit } from '@civ-clone/ui-protocol/types';
 import { Map, IMap } from '../Map';
 import renderUnit, {
+  drawUnitHitPoints,
   drawUnitStatus,
 } from '@civ-clone/ui-assets/lib/renderUnit';
 import { Reach } from '../../lib/projection';
@@ -71,8 +72,18 @@ export class Units extends Map implements IMap {
     return this.tileset().units.stackOffset !== undefined;
   }
 
-  /** Writes `unit`'s busy letter over it, drawn at `offsetX`/`offsetY`. */
+  /** Writes `unit`'s busy letter over it, drawn at `offsetX`/`offsetY`, and a damaged unit's hit points (M2b). */
   protected drawStatus(unit: Unit, offsetX: number, offsetY: number): void {
+    drawUnitHitPoints(
+      this.context(),
+      unit,
+      offsetX,
+      offsetY,
+      this.scale(),
+      this.nativeTileSize(),
+      this.tileset()
+    );
+
     drawUnitStatus(
       this.context(),
       unit,

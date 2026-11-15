@@ -1,7 +1,9 @@
 import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import {
   hasUnitActions,
+  targetedActions,
   unitActions,
+  withoutDistantOrders,
 } from '@civ-clone/ui-client/lib/unitActions';
 import distantActions from '@civ-clone/ui-client/lib/distantActions';
 import { nameOf, performWithPrompts } from './unitActionPrompts';
@@ -37,11 +39,17 @@ export const unitMenuActions = (
   );
 
   if (neighbour) {
-    [direction, actions] = neighbour;
+    direction = neighbour[0];
+    actions = withoutDistantOrders(unit, neighbour[1]);
   }
 
-  if (tile !== unit.tile && !neighbour?.[1].length) {
+  if (tile !== unit.tile && !actions.length) {
     actions = distantActions(unit, tile);
+  }
+
+  // A long-range order that reaches the square (M2b's Paradrop and Airlift), first: it's what the square is for.
+  if (tile !== unit.tile) {
+    actions = [...targetedActions(unit, tile), ...actions];
   }
 
   // Calling off a move onto a treaty partner's land is the Cancel of the window its move opens (#287), and an action a
@@ -65,6 +73,8 @@ export const unitMenuActions = (
               id: unit.id,
               unitAction: chosen._,
               target: chosen.to.id,
+              // What the player chose for it, if it offered a choice (M2b).
+              ...(chosen.choice === undefined ? {} : { choice: chosen.choice }),
             })
           ),
       })),

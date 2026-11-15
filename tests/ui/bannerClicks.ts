@@ -15,6 +15,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import GamePortal from '@civ-clone/ui-game/GamePortal';
 import Map from '@civ-clone/ui-map/components/Map';
 import World from '@civ-clone/ui-map/components/World';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0,
@@ -241,6 +242,78 @@ const run = async (): Promise<void> => {
     'with no banner, a click on an empty square centres on it, as before',
     click(5, 4, null),
     { opened: [], clicked: ['5,4'], centre: { x: 5, y: 4 } }
+  );
+
+  // Choosing a square for a long-range order (M2b): only a square it takes is taken, and the click does nothing else.
+  const picked: string[] = [],
+    pickWindow = () => document.querySelectorAll('dialog.pick-tile').length;
+
+  portal.setCenter(4, 4);
+  portal.pickTile(
+    (tile) => ['3,3', '5,4'].includes(`${tile.x},${tile.y}`),
+    (tile) => picked.push(`${tile.x},${tile.y}`),
+    'Paradrop: click the square to go to.'
+  );
+
+  expect(
+    'picking: a window says what for, and the cursor is a crosshair',
+    [pickWindow(), canvas.classList.contains('picking-tile')],
+    [1, true]
+  );
+  expect(
+    "picking: a square it doesn't take is ignored, the map doesn't move",
+    [click(6, 6, null), picked],
+    [{ opened: [], clicked: ['6,6'], centre: { x: 4, y: 4 } }, []]
+  );
+  expect(
+    "picking: a city's square it takes is picked, not opened, and the picking ends",
+    [
+      click(3, 3, null).opened,
+      picked,
+      pickWindow(),
+      canvas.classList.contains('picking-tile'),
+    ],
+    [[], ['3,3'], 0, false]
+  );
+  expect('after picking, a click is a click again', click(3, 3, null).opened, [
+    'Ur',
+  ]);
+
+  portal.pickTile(
+    () => true,
+    (tile) => picked.push(`${tile.x},${tile.y}`),
+    'Paradrop: click the square to go to.'
+  );
+  (
+    document.querySelector('dialog.pick-tile footer button') as HTMLElement
+  ).dispatchEvent(new Event('click', { bubbles: true }));
+
+  expect(
+    'cancelling gives up: the window goes, and a click opens the city as before',
+    [pickWindow(), click(3, 3, null).opened, picked],
+    [0, ['Ur'], ['3,3']]
+  );
+
+  // The unit's menu is another way to give orders: opening it gives up choosing a square (M2b). Under the new
+  //  interface, whose menu a right-click opens.
+  applyInterface('modern', null, document.documentElement as HTMLElement);
+  portal.setActiveUnit(unit('Unit-1', 'Player-1') as any);
+  portal.pickTile(
+    () => true,
+    (tile) => picked.push(`${tile.x},${tile.y}`),
+    'Paradrop: click the square to go to.'
+  );
+
+  {
+    const [px, py] = at(4, 4);
+
+    pointer('contextmenu', px, py);
+  }
+
+  expect(
+    "opening the unit's menu gives up choosing a square",
+    [portal.picking(), pickWindow()],
+    [false, 0]
   );
 
   finished = true;

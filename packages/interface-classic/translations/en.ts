@@ -87,6 +87,13 @@ i18next.addResources('en', 'default', {
   // The active unit's card in the sidebar (#699).
   'UnitDetails.attack': 'A',
   'UnitDetails.defence': 'D',
+  // Civ2's firepower, fuel and hit points (M2b), shortened as attack and defense are, then the figures: the turns of
+  //  fuel left of the range, and the hit points left of the most.
+  'UnitDetails.firepower': 'FP',
+  'UnitDetails.fuel': 'FU',
+  'UnitDetails.fuel-value': '{{turnsLeft, number}}/{{range, number}}',
+  'UnitDetails.hit-points': 'HP',
+  'UnitDetails.hit-points-value': '{{current, number}}/{{max, number}}',
   'UnitDetails.moves':
     '{{remaining, number(minimumFractionDigits: 0; maximumFractionDigits: 2)}} / {{total, number}} moves',
   'UnitDetails.tile':

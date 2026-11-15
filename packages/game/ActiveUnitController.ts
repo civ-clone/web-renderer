@@ -18,9 +18,14 @@ import { openArrivalWindow } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import {
   UnitActionsRequest,
+  distantOrders,
   hasUnitActions,
+  targetedActions,
   unitActions,
 } from '@civ-clone/ui-client/lib/unitActions';
+import chooseDistantTarget, {
+  PickTile,
+} from '@civ-clone/ui-hud/lib/distantOrders';
 import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
 import playUnitKey, { PlayedKey } from './lib/playUnitKey';
@@ -62,6 +67,10 @@ export type ActiveUnitControllerDeps = {
   data: () => GameData;
   haltedUnits: HaltedUnits;
   options: { get(key: string, defaultValue?: any): any };
+  // Lets the player click a square on the map for a long-range order (M2b), and gives that up: the map's portal, where
+  //  there is one.
+  pickTile?: PickTile;
+  endPickTile?: () => void;
   // The tests keep their own, to look at what is kept. Otherwise made here.
   pendingMove?: PendingMove<Tile>;
   portal: ActiveUnitPortal;
@@ -71,7 +80,11 @@ export type ActiveUnitControllerDeps = {
   transport: Pick<Transport, 'send'>;
   unitsLayer: ActiveUnitUnitsLayer;
   // `topology` for the keys that move a unit: one per direction the world has (#88).
-  world: { get(x: number, y: number): Tile; topology(): Topology };
+  world: {
+    get(x: number, y: number): Tile;
+    tiles(): Tile[];
+    topology(): Topology;
+  };
 };
 
 export class ActiveUnitController {
@@ -80,6 +93,9 @@ export class ActiveUnitController {
   // outgoing unit — by the time the coalesced `render` runs, `lastUnit` has
   // already been pointed at the incoming one.
   #activeUnitTiles = new ActiveUnitTiles();
+  // Which square-picking for a long-range order is current (M2b): each one started, a change of active unit and the end
+  //  of the turn move it on, and a square picked for any earlier one is ignored.
+  #picking = 0;
   #deps: ActiveUnitControllerDeps;
   #lastUnit: Unit | null = null;
   // A move drawn before the engine has answered it, and the keys typed
@@ -115,7 +131,7 @@ export class ActiveUnitController {
    * waited for as any order is (#543). Nothing when the button was drawn for a unit that is no longer active, or while
    * a move or an order is answered or keys are kept: the button was drawn for the unit as it was before them.
    */
-  act(unitId: string, actionName: string): boolean {
+  act(unitId: string, actionName: string, choice?: string): boolean {
     const unit = this.#activeUnit,
       pendingMove = this.#pendingMove;
 
@@ -133,12 +149,60 @@ export class ActiveUnitController {
     );
 
     if (!action) {
+      // A long-range order's button (M2b): where it goes is asked first.
+      if (distantOrders(unit).includes(actionName)) {
+        this.chooseTarget(unit, actionName);
+
+        return true;
+      }
+
       return false;
     }
 
-    this.#send(unit.id, action);
+    this.#send(unit.id, choice === undefined ? action : { ...action, choice });
 
     return true;
+  }
+
+  /**
+   * Asks where `unit`'s long-range order `actionName` goes (M2b: a list of cities, or a square on the map), then sends
+   *  it there, as an order towards a square, if `unit` is still the active unit and nothing is being answered.
+   */
+  chooseTarget(unit: Unit, actionName: string): void {
+    const picking = ++this.#picking;
+
+    chooseDistantTarget(
+      unit,
+      actionName,
+      this.#deps.world.tiles(),
+      this.#deps.pickTile ?? null,
+      (action) => {
+        const pendingMove = this.#pendingMove,
+          activeUnit = this.#activeUnit;
+
+        // Only for the unit it was asked for, this turn, still able to go there as the latest data has it.
+        if (
+          picking !== this.#picking ||
+          this.#waiting ||
+          activeUnit?.id !== unit.id ||
+          !targetedActions(activeUnit, action.to).some(
+            ({ _ }) => _ === actionName
+          ) ||
+          pendingMove.pending() ||
+          pendingMove.queued()
+        ) {
+          return;
+        }
+
+        this.#send(unit.id, action, true);
+      }
+    );
+  }
+
+  /** Gives up choosing a square for a long-range order, if one is being chosen. */
+  endChoosingTarget(): void {
+    this.#picking++;
+    this.#deps.endPickTile?.();
   }
 
   active(): Unit | null {
@@ -201,6 +265,11 @@ export class ActiveUnitController {
 
     // The keys kept for one unit were meant for it, not the next (#326).
     pendingMove.activate(unit?.id ?? null);
+
+    // A square being chosen for the last one's long-range order isn't this one's (M2b).
+    if (unit?.id !== this.#activeUnit?.id) {
+      this.endChoosingTarget();
+    }
 
     // While its move is answered, the unit is drawn on the tile it is
     // moving to.
@@ -286,6 +355,11 @@ export class ActiveUnitController {
   next(actions: PlayerAction[], waiting: boolean): void {
     const { haltedUnits, portal } = this.#deps,
       unitQueue = this.#unitQueue;
+
+    // The turn ended, or the next has started: a square being chosen was for the turn before (M2b).
+    if (waiting !== this.#waiting) {
+      this.endChoosingTarget();
+    }
 
     this.#waiting = waiting;
 
@@ -420,6 +494,9 @@ export class ActiveUnitController {
    * waited for, and no key kept (#543).
    */
   turnStarted(): void {
+    // A square still being chosen from the turn before is given up: its answer would be for last turn's order.
+    this.endChoosingTarget();
+
     this.#waiting = false;
     this.#unloaded = null;
     this.#upNext = [];
@@ -448,6 +525,7 @@ export class ActiveUnitController {
 
     return playUnitKey(key, this.#activeUnit, {
       apply: (unit) => this.apply(unit),
+      chooseTarget: (unit, actionName) => this.chooseTarget(unit, actionName),
       pendingMove: this.#pendingMove,
       scheduleRender,
       send: (unitId, action, towardsTile) =>
@@ -469,7 +547,12 @@ export class ActiveUnitController {
   #send(unitId: string, action: UnitAction, towardsTile = false): void {
     const order = { id: unitId, unitAction: action._, target: action.to.id };
 
-    this.#deps.transport.send('action', { name: 'ActiveUnit', ...order });
+    this.#deps.transport.send('action', {
+      name: 'ActiveUnit',
+      ...order,
+      // What the player chose for it, if it offered a choice (M2b).
+      ...(action.choice === undefined ? {} : { choice: action.choice }),
+    });
 
     if (action._ === 'Unload') {
       const { x, y } = action.from;

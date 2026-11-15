@@ -32,6 +32,13 @@ export const registrationOrder: string[] = [
   'city:polluted',
   'city:sdi-protected',
   'unit:lost-at-sea',
+  // M2b's (#1007), after the ones they sit beside: `unit:defeated` before `city:shrink`, which reads what it recorded.
+  'unit:nuclear-stopped',
+  'unit:out-of-fuel',
+  'unit:airlift-shot-down',
+  'unit:promoted',
+  'unit:defeated',
+  'city:shrink',
   'unit:unsupported',
   'city:unsupported-improvement',
   'unit:trade-route-established',

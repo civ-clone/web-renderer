@@ -9,6 +9,9 @@ i18next.addResources('en-GB', 'default', {
 i18next.addResources('en-GB', 'notification', {
   'City.leader-celebration-ended.body': `Leader celebration cancelled in {{- city, cityName}}!`,
   'City.sdi-protected.title': 'SDI Defence',
+  'Unit.nuclear-stopped.body':
+    'A nuclear attack by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) was stopped by SDI Defence.',
+  'Unit.nuclear-stopped.ours.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was stopped by SDI Defence and lost.`,
   'Player.declaration-expired.body':
     'Our $t(Declaration.{{declaration._}}, { "defaultValue": "{{declaration._}}", "ns": "diplomacy" }) with $t(Generic.civilization-name.nation, { "civilization": "{{enemy.civilization._}}", "ns": "default" }) has been cancelled!',
   'Barbarians.uprising.body':

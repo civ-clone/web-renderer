@@ -9,7 +9,9 @@ import generateInheritance from '@civ-clone/core-data-object/lib/generateInherit
 // What a stand-in reports as its class, so that `toPlainObject` finds no additional data for it: see below.
 class UnitWithoutActions {}
 
-const omitted = ['actions', 'actionsForNeighbours'],
+// `actionTargets` too, an AdditionalData key (the distant squares a rule set's long-range orders reach, M2b): the same
+//  kind of answer as `actions`, asked of every square in range.
+const omitted = ['actions', 'actionsForNeighbours', 'actionTargets'],
   standIns: WeakMap<Unit, Unit> = new WeakMap(),
   isStandIn: WeakSet<Unit> = new WeakSet();
 
@@ -37,7 +39,9 @@ export const unitWithoutActions = (
   const keys = (unit.keys() as string[]).filter(
       (key) => !omitted.includes(key)
     ),
-    additionalData = additionalDataRegistry.getByType(unit.sourceClass()),
+    additionalData = additionalDataRegistry
+      .getByType(unit.sourceClass())
+      .filter((additionalData) => !omitted.includes(additionalData.key())),
     value = (read: () => unknown) => ({ value: read });
 
   const standIn: Unit = Object.create(unit, {

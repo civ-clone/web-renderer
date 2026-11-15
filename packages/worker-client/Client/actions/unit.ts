@@ -9,13 +9,24 @@ import { Activate } from '@civ-clone/library-unit/Actions';
 import Unit from '@civ-clone/core-unit/Unit';
 import UnitAction from '@civ-clone/core-unit/Action';
 import { ActionHandler } from './ActionContext';
+import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
+
+// The choices an action offers the player, as the rules registered say (`targets`, AdditionalData): none for most.
+const offeredChoices = (action: UnitAction): unknown[] => {
+  const data = additionalDataRegistryInstance
+      .getByType(action.sourceClass())
+      .find((additionalData) => additionalData.key() === 'targets'),
+    targets = data?.data(action);
+
+  return Array.isArray(targets) ? targets : [];
+};
 
 export const handleActiveUnit: ActionHandler<ActiveUnit> = async (
   ctx,
   action,
   playerAction
 ) => {
-  const { unitAction, target } = action,
+  const { unitAction, target, choice } = action,
     unit: Unit = playerAction.value(),
     [playerTile] = ctx.view.world().filter((tile) => tile.id() === target);
 
@@ -47,7 +58,16 @@ export const handleActiveUnit: ActionHandler<ActiveUnit> = async (
     ctx.patches.unit(previous)
   );
 
-  actionToPerform!.perform();
+  // What the player chose for an action that offers a choice, such as which improvement to pillage, by its type name.
+  //  Only one the action offers (its `targets`) is passed on; without one it is performed as it always was.
+  if (
+    choice !== undefined &&
+    offeredChoices(actionToPerform!).includes(choice)
+  ) {
+    actionToPerform!.perform(choice);
+  } else {
+    actionToPerform!.perform();
+  }
 
   await ctx.talks.pending;
 

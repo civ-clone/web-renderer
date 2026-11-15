@@ -239,6 +239,8 @@ declare global {
       id: string;
       unitAction: string;
       target: string;
+      // What the player chose for an action that offers a choice (M2b): the improvement to pillage, by type name.
+      choice?: string;
     };
     AdjustTradeRates: {
       id: string;

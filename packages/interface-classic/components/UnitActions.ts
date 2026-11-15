@@ -3,7 +3,7 @@ import {
   drawUnitActionIcon,
   unitActionIconLayers,
 } from '@civ-clone/ui-assets/lib/unitActionIcon';
-import { Tile, Unit } from '@civ-clone/ui-protocol/types';
+import { Tile, Unit, UnitAction } from '@civ-clone/ui-protocol/types';
 import { Element, s } from '@dom111/element';
 import ScaledCanvases from '@civ-clone/ui-assets/lib/scaledCanvases';
 import { keyForAction } from '@civ-clone/ui-client/lib/unitActionKeys';
@@ -12,7 +12,24 @@ import {
   performWithPrompts,
 } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import { t } from 'i18next';
-import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
+import {
+  distantOrders,
+  unitActions,
+} from '@civ-clone/ui-client/lib/unitActions';
+
+// The unit's own actions, then a button each for its long-range orders (M2b), which ask where when pressed.
+const buttonActions = (unit: Unit): UnitAction[] => [
+  ...unitActions(unit),
+  ...distantOrders(unit).map(
+    (name): UnitAction => ({
+      _: name,
+      __: [],
+      id: '',
+      from: unit.tile,
+      to: unit.tile,
+    })
+  ),
+];
 
 const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 
@@ -20,14 +37,14 @@ const keyName = (key: string): string => (key === ' ' ? 'Space' : key);
 //  actions do without knowing the keys. A click asks for the action as the key would, through `act`: the active unit's
 //  controller, which sends it and keeps the keys typed after it until it is answered (#543).
 export class UnitActions extends Element {
-  #act: (unitId: string, unitAction: string) => void;
+  #act: (unitId: string, unitAction: string, choice?: string) => void;
   #canvases = new ScaledCanvases();
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
 
   constructor(
     container: HTMLElement,
-    act: (unitId: string, unitAction: string) => void,
+    act: (unitId: string, unitAction: string, choice?: string) => void,
     draw: (
       canvas: HTMLCanvasElement,
       layers: IconLayer[]
@@ -43,7 +60,7 @@ export class UnitActions extends Element {
    * @param tile The unit's tile as the world holds it, for the city and the cargo on it.
    */
   build(unit: Unit | null, tile: Tile | null): void {
-    const actions = unit ? unitActions(unit) : [],
+    const actions = unit ? buttonActions(unit) : [],
       layers =
         unit === null
           ? []
@@ -63,7 +80,8 @@ export class UnitActions extends Element {
         unit?.id,
         unit?.player?.civilization?._,
         // The target too: a unit that moved keeps the same actions, aimed at its new tile.
-        actions.map((action) => [action._, action.to?.id]),
+        // And what each offers to choose from (M2b): a pillage's improvements change with the square.
+        actions.map((action) => [action._, action.to?.id, action.targets]),
         layers.map((actionLayers) =>
           actionLayers.map((layer) =>
             layer.type === 'unit'
@@ -103,7 +121,7 @@ export class UnitActions extends Element {
       // Through the same windows as the keys: pillaging a treaty partner's land asks first (#287).
       button.addEventListener('click', () =>
         performWithPrompts(unit, action, actions, (chosen) =>
-          this.#act(unit.id, chosen._)
+          this.#act(unit.id, chosen._, chosen.choice)
         )
       );
 

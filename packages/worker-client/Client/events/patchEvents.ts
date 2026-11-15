@@ -108,6 +108,37 @@ export const registerPatchEvents = (
     });
   });
 
+  // The winner of a battle in rounds (M2b) comes out of it damaged: its square goes again, with its hit points, and the
+  //  unit itself if it's ours. Only a unit with damage: a game without it (Civ1) sends what it always did.
+  on('unit:defeated', (loser: Unit, winner?: Unit) => {
+    if (!winner || winner.destroyed() || winner.damage() === 0) {
+      return;
+    }
+
+    const playerTile = ctx.view.tile(winner.tile());
+
+    if (!playerTile) {
+      return;
+    }
+
+    ctx.patches.tile(playerTile);
+
+    if (ctx.view.owns(winner.player())) {
+      ctx.patches.unit(winner);
+    }
+  });
+
+  // A unit of ours promoted after a win (M2b, `unit:promoted`, which only rules that promote emit), damaged or not: it
+  //  goes again as a veteran, with its square. In an AI's turn nothing else sends it until the next hand-over.
+  on('unit:promoted', (unit: Unit) => {
+    if (!ctx.view.owns(unit.player())) {
+      return;
+    }
+
+    ctx.patches.tile(ctx.view.tile(unit.tile()));
+    ctx.patches.unit(unit);
+  });
+
   ['unit:destroyed'].forEach((event) => {
     on(event, (unit: Unit) => {
       // A disbanded or destroyed unit leaves its square, whoever's it was (#138).

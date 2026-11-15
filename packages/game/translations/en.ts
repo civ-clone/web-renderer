@@ -2,6 +2,8 @@
 import i18next from 'i18next';
 
 i18next.addResources('en', 'default', {
+  // Choosing a square on the map for a long-range order, such as a paradrop (M2b).
+  'DistantOrder.square.title': 'Choose a square',
   'GameMenu.cheat.enabled': 'Cheat mode enabled',
   'JoinCity.too-large.body':
     '{{- city}} is too large for Settlers to join. Only cities smaller than size {{size}} can be joined.',

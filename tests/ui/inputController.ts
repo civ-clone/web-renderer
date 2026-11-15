@@ -85,6 +85,10 @@ let nextTurnButton: {
   skip(): void;
 } | null = null;
 
+// Choosing a square for a long-range order (M2b): whether one is being chosen, and what gave it up.
+const portal: { picking?: () => boolean; endPicking?: () => void } = {},
+  pickingEnded: string[] = [];
+
 const actionArea = document.createElement('div');
 
 document.body.append(actionArea);
@@ -126,7 +130,7 @@ const controller = new InputController({
       shown.push(html);
     },
   },
-  portal: {} as GamePortal,
+  portal: portal as unknown as GamePortal,
   transport: {
     // The leader screens ask the worker for what they show; never answered here.
     request: () => new Promise(() => {}),
@@ -136,6 +140,9 @@ const controller = new InputController({
   } as unknown as Transport,
   unitController: {
     active: () => activeUnit,
+    endChoosingTarget: (): void => {
+      pickingEnded.push('controller');
+    },
     pressKey: (key: string): boolean => {
       pressed.push(key);
 
@@ -437,6 +444,49 @@ const run = async (): Promise<void> => {
   press({ key: 'Escape' });
 
   expect('Escape blurs what has the focus', blurred, 1);
+
+  // Choosing a square for a paradrop (M2b): Escape gives it up, wherever the focus is, and blurs nothing.
+  let picking = true;
+
+  portal.picking = () => picking;
+  portal.endPicking = (): void => {
+    pickingEnded.push('portal');
+    picking = false;
+  };
+  blurred = 0;
+  press({ key: 'Escape' });
+
+  expect(
+    'Escape gives up choosing a square, in the controller and the map, and only that',
+    [pickingEnded, blurred, picking],
+    [['controller', 'portal'], 0, false]
+  );
+
+  press({ key: 'Escape' });
+
+  expect('with nothing being chosen, Escape blurs again', blurred, 1);
+
+  // A modal window opened over the map while a square is being chosen answers Escape first.
+  const overMap = document.createElement('dialog');
+
+  overMap.className = 'window modal';
+  overMap.setAttribute('open', '');
+  document.body.append(overMap);
+  picking = true;
+  pickingEnded.length = 0;
+  press({ key: 'Escape' });
+
+  expect(
+    'over a modal window, Escape leaves the square being chosen',
+    [pickingEnded, picking],
+    [[], true]
+  );
+
+  overMap.remove();
+  picking = false;
+
+  delete portal.picking;
+  delete portal.endPicking;
 
   focused = document.body;
 

@@ -202,6 +202,11 @@ export interface Unit extends EntityInstance {
   actionsForNeighbours?: {
     [key: string]: UnitAction[];
   };
+  // The distant squares each of the unit's long-range orders reaches (Paradrop, Airlift), by the action's name. Only for
+  //  the unit the UI has asked about, as `actions` are, and only from rules that have such orders.
+  actionTargets?: {
+    [action: string]: Tile[];
+  } | null;
   active: boolean;
   attack: Yield;
   busy: Entity | null;
@@ -213,6 +218,14 @@ export interface Unit extends EntityInstance {
     multiplier: number;
     sources: { name: string; multiplier: number }[];
   } | null;
+  // An aircraft's fuel (Civ2): its range in turns away from a refuelling point, and the turns of it left, this one
+  //  included. Not sent by rules without fuel, `null` for a unit that needs none.
+  fuel?: { range: number; turnsLeft: number } | null;
+  // The damage a unit deals each round of a battle it wins (Civ2). Not sent by rules without it.
+  firepower?: number | null;
+  // The hit points a unit has left and its most (Civ2): a unit hurt in battle keeps its damage until it heals. Not
+  //  sent by rules without them.
+  hitPoints?: { current: number; max: number } | null;
   improvements: EntityInstance[];
   // Why the engine won't let this unit join the city it stands in (#279).
   joinCityRefusal?: { reason: string; [detail: string]: unknown } | null;
@@ -231,6 +244,10 @@ export interface UnitAction<Types = string> extends EntityInstance<Types> {
   from: Tile;
   // The terrain the action leaves behind, for those that change it (#348).
   result?: string | null;
+  // What a Pillage can take from its square, by type name, when the rules let the player choose (Civ2).
+  targets?: string[];
+  // Which of its `targets` the player chose, set by the page as the action is sent (M2b).
+  choice?: string;
   to: Tile;
 }
 

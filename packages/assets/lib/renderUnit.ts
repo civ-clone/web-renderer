@@ -100,6 +100,51 @@ export const drawUnitStatus = (
 };
 
 /**
+ * Draws a damaged unit's hit points as a small bar over it (M2b): green while it has more than two thirds of its most,
+ * yellow down to a third, then red, on a dark ground the width of the whole. A unit at full strength, or one whose rules
+ * send no hit points (Civ1's), has none. Drawn at the size it is shown at, as `drawUnitStatus` writes the busy letter,
+ * and never into `renderUnit`'s cached sprite, which would then need one for every number of hit points. It is centred
+ * where the letter is and above it, as wide as two letters or three quarters of the tile, whichever is less.
+ */
+export const drawUnitHitPoints = (
+  context: CanvasRenderingContext2D,
+  unit: Pick<UnitData, 'hitPoints'>,
+  offsetX: number,
+  offsetY: number,
+  scale: number,
+  tileSize: Size = nativeTileSize(currentTileset()),
+  tileset: TilesetDescriptor = currentTileset()
+): void => {
+  const hitPoints = unit.hitPoints;
+
+  if (!hitPoints || hitPoints.max <= 0 || hitPoints.current >= hitPoints.max) {
+    return;
+  }
+
+  const { x, baseline: down, fontSize: size } = tileset.units.status,
+    share = Math.max(0, hitPoints.current) / hitPoints.max,
+    width = Math.round(Math.min(tileSize.width * 0.75, size * 2) * scale),
+    height = Math.max(2, Math.round(size / 4)) * scale,
+    // The dark edge round the lit share: a screen pixel or so, however large the map is drawn.
+    edge = Math.max(1, Math.round(scale / 2)),
+    left = Math.round(offsetX + tileSize.width * scale * x - width / 2),
+    top = Math.round(
+      offsetY + tileSize.height * scale * down - (size + 3) * scale - height
+    );
+
+  context.fillStyle = 'black';
+  context.fillRect(left, top, width, height);
+  context.fillStyle =
+    share > 2 / 3 ? '#20c020' : share > 1 / 3 ? '#e0c000' : '#e02020';
+  context.fillRect(
+    left + edge,
+    top + edge,
+    Math.max(0, Math.round((width - 2 * edge) * share)),
+    height - 2 * edge
+  );
+};
+
+/**
  * Renders `unit` with its civilization's colours and any fortified overlay, as `tileset` draws them: its colour keys
  * swapped for the player's (Civ1's), or its overlay (Civ2's shield) swapped so and drawn over it at its anchor, with
  * the overlay's `stack` sprite behind that when the unit is `stacked`, one of several on its square. The overlay and

@@ -19,7 +19,9 @@ import Portal from '@civ-clone/ui-map/components/Portal';
 import { Rect } from '@civ-clone/ui-map/lib/viewport';
 import prefersReducedMotion from '@civ-clone/ui-map/lib/reducedMotion';
 import mapMenus from '@civ-clone/ui-menus/components/mapMenus';
+import ActionWindow from '@civ-clone/ui-component-window/ActionWindow';
 import { on } from '@dom111/element';
+import { t } from 'i18next';
 
 // How far, in px, a press has to move before it is a drag rather than a click
 // or a long press. Enough to absorb a wobbling finger.
@@ -67,13 +69,80 @@ type Hover = {
   timer: number | null;
 };
 
+// A square being chosen for a long-range order (M2b): which squares it takes, what is done with the one clicked, and the
+//  window that says so, whose closing gives up.
+type Picking = {
+  accept: (tile: Tile) => boolean;
+  onPick: (tile: Tile) => void;
+  window: ActionWindow | null;
+};
+
 export class GamePortal extends Portal {
   #activeUnit: Unit | null = null;
+  #picking: Picking | null = null;
   #drag: Drag | null = null;
   #hover: Hover | null = null;
   #inertiaFrame: number | null = null;
   #showActionMenuTimeout: number | null = null;
   #waiting = false;
+
+  /**
+   * Takes the next click on a square `accept` allows for `onPick` (a long-range order's target, M2b), instead of what a
+   *  click does: a window says what for (`prompt`), and closing it, or Escape, gives up. A click on any other square
+   *  does nothing. The map's cursor is a crosshair meanwhile. Choosing again gives up the last.
+   */
+  pickTile(
+    accept: (tile: Tile) => boolean,
+    onPick: (tile: Tile) => void,
+    prompt: string
+  ): void {
+    this.#endPicking();
+
+    const picking: Picking = { accept, onPick, window: null };
+
+    this.#picking = picking;
+    this.canvas().classList.add('picking-tile');
+
+    picking.window = new ActionWindow(t('DistantOrder.square.title'), prompt, {
+      classes: ['actionWindow', 'pick-tile'],
+      actions: {
+        primary: {
+          label: t('Generic.cancel'),
+          cancel: true,
+          action: (window) => window.close(),
+        },
+      },
+    });
+
+    picking.window.on('close', () => {
+      if (this.#picking === picking) {
+        this.#picking = null;
+        this.canvas().classList.remove('picking-tile');
+      }
+    });
+  }
+
+  /** Whether a square is being chosen for a long-range order. */
+  picking(): boolean {
+    return this.#picking !== null;
+  }
+
+  /** Gives up choosing a square, if one is being chosen: the window goes, and a click is a click again. */
+  endPicking(): void {
+    this.#endPicking();
+  }
+
+  #endPicking(): void {
+    const picking = this.#picking;
+
+    if (picking === null) {
+      return;
+    }
+
+    this.#picking = null;
+    this.canvas().classList.remove('picking-tile');
+    picking.window?.close();
+  }
 
   protected override bindEvents(): void {
     // A tooltip goes with anything that moves the map under it, a press, a key, or the mouse leaving.
@@ -126,6 +195,18 @@ export class GamePortal extends Portal {
         this.emit('tile-clicked', tile.x, tile.y);
       }
 
+      // Choosing a square for a long-range order (M2b): the click is for that, and only a square it takes is taken.
+      if (this.#picking !== null) {
+        const picking = this.#picking;
+
+        if (tile !== null && picking.accept(tile)) {
+          this.#endPicking();
+          picking.onPick(tile);
+        }
+
+        return;
+      }
+
       const playerTileUnits = (tile?.units ?? []).filter(
         (unit: Unit) => unit.player.id === this.playerId()
       );
@@ -173,6 +254,9 @@ export class GamePortal extends Portal {
         // moving now would slide the map out from under the menu.
         this.#drag = null;
 
+        // The unit's menu is another way to give it orders: choosing a square for one ends (M2b).
+        this.#endPicking();
+
         // The interface's menu over the press (#808, #860).
         mapMenus
           .current()
@@ -214,6 +298,7 @@ export class GamePortal extends Portal {
       this.clearTimeout();
       this.#drag = null;
       this.endHover();
+      this.#endPicking();
 
       menus.unitMenu(
         this,

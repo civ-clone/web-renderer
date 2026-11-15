@@ -2,17 +2,23 @@ import { Direction, Topology, TopologyName, topologyName } from './topologyFor';
 
 // The keys for a unit's own-tile actions. The first action in a list that the unit can take is the one the key sends,
 //  and the first key an action appears under is the one its button's tooltip shows (#348).
+//
+// Civ2's orders (M2b) take Civ2's keys, after what those keys already did: O transforms, F builds a fortress and E an
+//  airbase (a unit that builds them neither fortifies nor explores), P paradrops (nothing that cleans up pollution
+//  can) and L airlifts. Paradrop and Airlift then ask where (`distantOrders`).
 export const keyToActionsMap: { [key: string]: string[] } = {
   ' ': ['NoOrders'],
   a: ['Automate'],
   b: ['FoundCity', 'JoinCity'],
   D: ['Disband'],
-  e: ['Explore'],
+  e: ['Explore', 'BuildAirbase'],
   f: ['Fortify', 'BuildFortress'],
   h: ['SetHomeCity'],
   i: ['BuildIrrigation', 'ClearForest', 'ClearSwamp', 'ClearJungle'],
+  l: ['Airlift'],
   m: ['BuildMine', 'PlantForest'],
-  p: ['CleanPollution'],
+  o: ['TransformTerrain'],
+  p: ['CleanPollution', 'Paradrop'],
   P: ['Pillage', 'SneakPillage'],
   r: ['BuildRoad', 'BuildRailroad'],
   s: ['Sleep'],
