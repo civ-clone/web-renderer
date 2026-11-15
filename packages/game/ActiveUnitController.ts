@@ -494,6 +494,9 @@ export class ActiveUnitController {
    * waited for, and no key kept (#543).
    */
   turnStarted(): void {
+    // A square still being chosen from the turn before is given up: its answer would be for last turn's order.
+    this.endChoosingTarget();
+
     this.#waiting = false;
     this.#unloaded = null;
     this.#upNext = [];

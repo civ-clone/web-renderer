@@ -141,7 +141,12 @@ export class InputController {
     const key = withoutCapsLock(mappedKeyFromEvent(event), event);
 
     // Escape gives up choosing a square for a long-range order (M2b), wherever the focus is: its window may not have it.
-    if (key === 'Escape' && this.#deps.portal.picking?.()) {
+    //  A modal window opened over the map since (a city, a report) answers Escape first.
+    if (
+      key === 'Escape' &&
+      this.#deps.portal.picking?.() &&
+      document.querySelector('dialog.window.modal[open]') === null
+    ) {
       this.#deps.unitController.endChoosingTarget?.();
       this.#deps.portal.endPicking();
 

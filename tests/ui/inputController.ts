@@ -466,6 +466,25 @@ const run = async (): Promise<void> => {
 
   expect('with nothing being chosen, Escape blurs again', blurred, 1);
 
+  // A modal window opened over the map while a square is being chosen answers Escape first.
+  const overMap = document.createElement('dialog');
+
+  overMap.className = 'window modal';
+  overMap.setAttribute('open', '');
+  document.body.append(overMap);
+  picking = true;
+  pickingEnded.length = 0;
+  press({ key: 'Escape' });
+
+  expect(
+    'over a modal window, Escape leaves the square being chosen',
+    [pickingEnded, picking],
+    [[], true]
+  );
+
+  overMap.remove();
+  picking = false;
+
   delete portal.picking;
   delete portal.endPicking;
 
