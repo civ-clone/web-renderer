@@ -33,6 +33,9 @@ import Unit from '@civ-clone/core-unit/Unit';
 import World from '@civ-clone/core-world/World';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
 import { defaultGame } from '@civ-clone/core-game/defaultGame';
+import { attackSoundOf } from '@civ-clone/ui-worker-client/Client/battleEvents';
+import { battleTune } from '@civ-clone/ui-audio/eventSounds';
+import * as Units from '@civ-clone/civ2-unit/Units';
 import { handleActiveUnit } from '@civ-clone/ui-worker-client/Client/actions/unit';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
@@ -312,6 +315,51 @@ const run = async (): Promise<void> => {
     [null]
   );
   expect('as is none', await pillagedWith(undefined), [null]);
+
+  // Battle sounds: Civ1's three, by Civ1's test on Civ2's table, as the battle events read them.
+
+  const soundOf = (UnitType: typeof Unit) =>
+    attackSoundOf(
+      new UnitType(null, them, world.get(40, 30), defaultGame.rules)
+    );
+
+  expect(
+    "battles sound as Civ1's do: a blade's, a gun's, a bombing run",
+    [
+      Units.Warrior,
+      Units.Knight,
+      Units.Crusader,
+      Units.Musketman,
+      Units.Catapult,
+      Units.Frigate,
+      Units.Ironclad,
+      Units.Bomber,
+      Units.StealthBomber,
+      Units.Spy,
+    ].map((UnitType) => [UnitType.name, soundOf(UnitType)]),
+    [
+      ['Warrior', ['melee']],
+      ['Knight', ['melee']],
+      ['Crusader', ['melee']],
+      ['Musketman', ['gunfire']],
+      ['Catapult', ['gunfire']],
+      ['Frigate', ['melee']],
+      ['Ironclad', ['gunfire']],
+      ['Bomber', ['bombing', 'gunfire']],
+      ['StealthBomber', ['bombing', 'gunfire']],
+      ['Spy', ['melee']],
+    ]
+  );
+  expect(
+    'every Civ2 unit has one, and it has a tune',
+    Object.values(Units)
+      .filter(
+        (UnitType) =>
+          battleTune({ sound: soundOf(UnitType) ?? [], won: true }) === null
+      )
+      .map((UnitType) => UnitType.name),
+    []
+  );
 
   // Promotion.
 

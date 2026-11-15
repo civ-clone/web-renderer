@@ -6,9 +6,9 @@
 //  exchange of knowledge took (civ2-diplomacy, on base-diplomacy), civil disorder (civ2-city-happiness), the citizens'
 //  moods (base-city-happiness's calculator, as civ2-city-happiness uses it), the Wonders report (civ2-wonder), the
 //  difficulty level, the terrain tooltip (civ2-world's tables), and M2b's combat and units: hit points, firepower and
-//  fuel on the unit card, the squares Paradrop and Airlift reach, what Pillage can take, and a notice for a unit
-//  promoted after a win. Still as a game without them would answer: choosing an Auto city's next build, and scoring
-//  and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
+//  fuel on the unit card, what a battle sounds like (with Civ1's sounds), the squares Paradrop and Airlift reach, what
+//  Pillage can take, and a notice for a unit promoted after a win. Still as a game without them would answer: choosing
+//  an Auto city's next build, and scoring and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import {
   calculateCitizenState,
@@ -43,6 +43,7 @@ import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
 import promoted from './Rules/promoted';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import anarchyTurns from './AdditionalData/anarchyTurns';
+import attackSound from './AdditionalData/attackSound';
 import { civilDisorder } from '@civ-clone/civ2-city-happiness/lib/cityStatus';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
@@ -90,6 +91,7 @@ export const register = (): void => {
 
   additionalDataRegistryInstance.register(
     anarchyTurns(),
+    attackSound(),
     civilDisorderDeclared(),
     terrainDefenceBonus(),
     terrainMoveCost(),
