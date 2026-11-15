@@ -385,6 +385,7 @@ export class GameSession {
         options,
         pickTile: (accept, onPick, prompt): void =>
           portal.pickTile(accept, onPick, prompt),
+        endPickTile: (): void => portal.endPicking(),
         portal,
         scheduleRender: (): void => this.#scheduleRender(),
         showUnitDetails: (unit): void => {

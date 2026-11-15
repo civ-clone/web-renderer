@@ -32,7 +32,7 @@ M2b (#1007) brought Civ2's combat and units: hit points and firepower, damage th
 - **No instant heal in an allied city.** A unit heals by Civ2's steps wherever it is, but moving into an ally's city doesn't heal it at once. (civ2-unit.) Not scheduled.
 - **Computer players' aircraft** don't lose the extra turn of fuel Civ2 takes from a computer player's attacker after a win. (civ2-unit.) Not scheduled.
 - **An Airbase is only an airbase.** It refuels and heals aircraft, keeps a stack from dying with its defender, and launches paradrops. Civ2's code also treats it like a city for the square's yields, road and railroad moves and a fortress order; that looks accidental, and isn't followed. (civ2-unit, civ2-world.) By design.
-- **Carriers and Submarines hold 8.** Civ2's code lets a carrier or a submarine hold 20 and doesn't check it on landing; here both hold 8, as the unit table says. (civ2-unit.) By design.
+- **Carriers and Submarines hold 8.** Civ2's code lets a carrier or a submarine hold 20 and doesn't check it on landing, and its unit table gives neither a hold; here both hold 8, Civ1's number. (civ2-unit.) By design.
 - **Airlifts always fly.** An airlift near enemy fighters can be shot down, as in Civ2, but Civ2 asks you to confirm a risky one first. (civ2-unit.) Not scheduled.
 - **No work pooling.** Engineers work at twice the rate, but several workers on one square don't add their work together as in Civ2 (#1059). (civ2-unit.) Planned.
 - **No odds display.** Civ2 doesn't show the odds of a battle, and neither does civ.one yet. (web-renderer.) By design for now.

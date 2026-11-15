@@ -6,6 +6,7 @@ import Airlift from '@civ-clone/base-unit-action-airlift/Airlift';
 import City from '@civ-clone/core-city/City';
 import Paradrop from '@civ-clone/base-unit-action-paradrop/Paradrop';
 import ParadropTrait from '@civ-clone/base-unit-trait-paradrop/Paradrop';
+import Player from '@civ-clone/core-player/Player';
 import Pillage from '@civ-clone/base-unit-action-pillage/Pillage';
 import Tile from '@civ-clone/core-world/Tile';
 import TileImprovement from '@civ-clone/core-tile-improvement/TileImprovement';
@@ -14,7 +15,9 @@ import { cosmic } from '@civ-clone/civ2-rules/data/cosmic';
 import { instance as cityRegistryInstance } from '@civ-clone/core-city/CityRegistry';
 import distance from '@civ-clone/civ2-unit/lib/distance';
 import { pillageable } from '@civ-clone/civ2-unit/Rules/Unit/action';
+import { instance as playerWorldRegistryInstance } from '@civ-clone/core-player-world/PlayerWorldRegistry';
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
+import { instance as unitRegistryInstance } from '@civ-clone/core-unit/UnitRegistry';
 import { instance as tileImprovementRegistryInstance } from '@civ-clone/core-tile-improvement/TileImprovementRegistry';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 
@@ -50,9 +53,44 @@ const offered = (
   return candidates.filter(offers);
 };
 
+/** The squares `player` has discovered, or `null` if it has no map. */
+const discovered = (player: Player): ((tile: Tile) => boolean) | null => {
+  try {
+    const playerWorld = playerWorldRegistryInstance.getByPlayer(player);
+
+    return (tile: Tile): boolean => playerWorld.getByTile(tile) !== null;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * The squares `player` sees now, as the client's battle sounds judge it (`inSight`): within the sight of one of its
+ *  units, or next to one of its cities. Kept small on purpose: a square counted out of sight that isn't only gives
+ *  less away.
+ */
+const inSight = (player: Player): Set<Tile> =>
+  new Set<Tile>([
+    ...unitRegistryInstance
+      .getByPlayer(player)
+      .filter((unit: Unit): boolean => !unit.destroyed())
+      .flatMap((unit: Unit): Tile[] =>
+        unit.tile().getSurroundingArea(unit.visibility().value()).entries()
+      ),
+    ...cityRegistryInstance
+      .getByPlayer(player)
+      .flatMap((city: City): Tile[] =>
+        city.tile().getSurroundingArea(1).entries()
+      ),
+  ]);
+
 /**
  * Where `unit` can paradrop: only asked of a unit that can, with all its moves, in a city or on an airbase, as the
  *  engine's first tests are, so a unit that can't drop costs nothing.
+ *
+ * Only squares its player has discovered, and the engine's answer only for those it sees now: the engine refuses a drop
+ *  onto another player's unit, so asking about a square out of sight would tell the player what is hidden there. A
+ *  discovered square out of sight is offered as if empty, and a drop onto a unit there is refused when it's made.
  */
 const paradropTargets = (unit: Unit): Tile[] => {
   const from = unit.tile();
@@ -68,24 +106,42 @@ const paradropTargets = (unit: Unit): Tile[] => {
     return [];
   }
 
+  const known = discovered(unit.player());
+
+  if (known === null) {
+    return [];
+  }
+
   // Only the land within range is worth asking about: the engine asks the same, and more.
-  return offered(
-    unit,
-    from
+  const candidates = from
       .map()
       .tiles()
       .filter(
         (tile: Tile): boolean =>
           tile !== from &&
+          known(tile) &&
           tile.isLand() &&
           distance(from, tile) <= cosmic.paradropRange
       ),
-    'paradrop',
-    Paradrop
+    seen = inSight(unit.player()),
+    asked = new Set(
+      offered(
+        unit,
+        candidates.filter((tile: Tile): boolean => seen.has(tile)),
+        'paradrop',
+        Paradrop
+      )
+    );
+
+  return candidates.filter(
+    (tile: Tile): boolean => !seen.has(tile) || asked.has(tile)
   );
 };
 
-/** The player's other cities `unit` can be airlifted to, asked only of a unit in one of its player's cities. */
+/**
+ * The player's other cities `unit` can be airlifted to, asked only of a unit in one of its player's cities. All of it is
+ *  the player's own to know (its cities, their Airports, which have airlifted this turn), so the engine is asked.
+ */
 const airliftTargets = (unit: Unit): Tile[] => {
   const city = cityRegistryInstance.getByTile(unit.tile());
 

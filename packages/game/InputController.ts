@@ -76,6 +76,8 @@ export type InputControllerDeps = {
   transport: Transport;
   unitController: {
     active(): Unit | null;
+    // Gives up choosing a square for a long-range order (M2b).
+    endChoosingTarget?(): void;
     pressKey(key: string): boolean;
     wait(): void;
   };
@@ -137,6 +139,16 @@ export class InputController {
     }
 
     const key = withoutCapsLock(mappedKeyFromEvent(event), event);
+
+    // Escape gives up choosing a square for a long-range order (M2b), wherever the focus is: its window may not have it.
+    if (key === 'Escape' && this.#deps.portal.picking?.()) {
+      this.#deps.unitController.endChoosingTarget?.();
+      this.#deps.portal.endPicking();
+
+      event.preventDefault();
+
+      return;
+    }
 
     // The open one on top, the last in the page: a closed one isn't drawn, and shouldn't take the keys (#351).
     const modalWindow = Array.from(

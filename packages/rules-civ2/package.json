@@ -34,6 +34,8 @@
     "@civ-clone/core-data-object": "^0.1.19",
     "@civ-clone/core-engine": "^0.1.6",
     "@civ-clone/core-government": "^0.1.6",
+    "@civ-clone/core-player": "^0.1.10",
+    "@civ-clone/core-player-world": "^0.1.14",
     "@civ-clone/core-rule": "^0.1.9",
     "@civ-clone/core-terrain": "^0.1.4",
     "@civ-clone/core-tile-improvement": "^0.1.6",

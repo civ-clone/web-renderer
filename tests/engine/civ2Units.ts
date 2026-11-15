@@ -164,6 +164,33 @@ const run = async (): Promise<void> => {
 
   // Paradrop and Airlift.
 
+  // Everything discovered but one square, and two rival units: one next to the city, in sight, and one out of sight.
+  const undiscovered = world.get(10, 18),
+    rivalInSight = new Warrior(
+      null,
+      them,
+      world.get(11, 11),
+      defaultGame.rules
+    ),
+    rivalOutOfSight = new Warrior(
+      null,
+      them,
+      world.get(10, 19),
+      defaultGame.rules
+    );
+
+  defaultGame.playerWorlds
+    .getByPlayer(us)
+    .register(
+      ...world
+        .tiles()
+        .filter(
+          (tile: Tile) =>
+            tile !== undiscovered &&
+            defaultGame.playerWorlds.getByPlayer(us).getByTile(tile) === null
+        )
+    );
+
   // The Ocean nearest the city, within 10 of it.
   const [ocean] = world
       .tiles()
@@ -193,6 +220,45 @@ const run = async (): Promise<void> => {
     ],
     [['Paradrop', 'Airlift'], true, true, false, false, false]
   );
+  expect(
+    "the player's map only: a square not yet discovered isn't offered, though in range",
+    reaches(undiscovered),
+    false
+  );
+  expect(
+    "a rival's unit in sight: refused, as the engine does; out of sight: offered as if empty, so nothing hidden shows",
+    [reaches(rivalInSight.tile()), reaches(rivalOutOfSight.tile())],
+    [false, true]
+  );
+
+  {
+    // A drop onto it is refused when it's made, and answered like any action the engine doesn't offer: nothing done.
+    const dropper = fullMoves(
+        new Paratrooper(null, us, home.tile(), defaultGame.rules)
+      ),
+      target = rivalOutOfSight.tile(),
+      answer = await handleActiveUnit(
+        {
+          view: {
+            world: () => [{ id: () => target.id(), tile: () => target }],
+          },
+          actions: new ActionsState(),
+          patches: { unit: () => {}, city: () => {}, onTiles: () => {} },
+          talks: {
+            pending: Promise.resolve(),
+            talkToPlayersMet: async () => {},
+          },
+        } as any,
+        { unitAction: 'Paradrop', target: target.id() },
+        { value: () => dropper } as any
+      );
+
+    expect(
+      'a drop onto a hidden unit is refused when made: answered, the Paratrooper still at home',
+      [answer, dropper.tile() === home.tile()],
+      [false, true]
+    );
+  }
   {
     // What working the targets out costs, on the client's every patch of the unit: printed, not checked.
     const started = process.hrtime.bigint();
@@ -247,8 +313,7 @@ const run = async (): Promise<void> => {
 
   // As the client sends them: through its filter, the squares as the player's own, the ids the page knows them by.
   {
-    const playerWorld = defaultGame.playerWorlds.getByPlayer(us),
-      view = playerView(() => us, {
+    const view = playerView(() => us, {
         cities: defaultGame.cities,
         interactions: defaultGame.interactions,
         playerWorlds: defaultGame.playerWorlds,
@@ -260,7 +325,6 @@ const run = async (): Promise<void> => {
         actions
       )((object: any) => (object instanceof Player ? { _: 'Player' } : object));
 
-    playerWorld.register(...world.tiles());
     actions.setUnitWithActions(musketman, () => {});
 
     const { hierarchy, objects } = musketman.toPlainObject(filter) as any,

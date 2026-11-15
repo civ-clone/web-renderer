@@ -15,6 +15,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import GamePortal from '@civ-clone/ui-game/GamePortal';
 import Map from '@civ-clone/ui-map/components/Map';
 import World from '@civ-clone/ui-map/components/World';
+import { applyInterface } from '@civ-clone/ui-platform/lib/interfaceMode';
 
 const failures: string[] = [];
 let checks = 0,
@@ -291,6 +292,28 @@ const run = async (): Promise<void> => {
     'cancelling gives up: the window goes, and a click opens the city as before',
     [pickWindow(), click(3, 3, null).opened, picked],
     [0, ['Ur'], ['3,3']]
+  );
+
+  // The unit's menu is another way to give orders: opening it gives up choosing a square (M2b). Under the new
+  //  interface, whose menu a right-click opens.
+  applyInterface('modern', null, document.documentElement as HTMLElement);
+  portal.setActiveUnit(unit('Unit-1', 'Player-1') as any);
+  portal.pickTile(
+    () => true,
+    (tile) => picked.push(`${tile.x},${tile.y}`),
+    'Paradrop: click the square to go to.'
+  );
+
+  {
+    const [px, py] = at(4, 4);
+
+    pointer('contextmenu', px, py);
+  }
+
+  expect(
+    "opening the unit's menu gives up choosing a square",
+    [portal.picking(), pickWindow()],
+    [false, 0]
   );
 
   finished = true;

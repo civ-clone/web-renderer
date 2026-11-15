@@ -26,6 +26,10 @@ const stoppedNuclearAttacks = new WeakSet<Unit>(),
   //  the defender lost, however many of the rules shrink the city for it, by the attack or by the unit that won it.
   lastWin = new WeakMap<Unit, Action>(),
   toldShrinks = new WeakSet<Action>();
+// These are the module's, so every client in the worker shares them. That's sound as they stand: they record engine
+//  events, which are the same for every client, and only a client that owns the city reaches `toldShrinks`, so a
+//  second client's notice isn't lost to the first's. A client that could own a city another also owns (an observer of
+//  several players) would need them keyed by client.
 
 // The attack a city shrank for (`city:shrink`'s cause), if it shrank because its defender lost one: the attack itself, or
 //  the unit that won it, as the rules give it. `null` for any other cause (famine, a nuclear detonation, Settlers built).

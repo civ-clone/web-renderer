@@ -20,6 +20,7 @@ import {
   UnitActionsRequest,
   distantOrders,
   hasUnitActions,
+  targetedActions,
   unitActions,
 } from '@civ-clone/ui-client/lib/unitActions';
 import chooseDistantTarget, {
@@ -66,8 +67,10 @@ export type ActiveUnitControllerDeps = {
   data: () => GameData;
   haltedUnits: HaltedUnits;
   options: { get(key: string, defaultValue?: any): any };
-  // Lets the player click a square on the map for a long-range order (M2b): the map's portal, where there is one.
+  // Lets the player click a square on the map for a long-range order (M2b), and gives that up: the map's portal, where
+  //  there is one.
   pickTile?: PickTile;
+  endPickTile?: () => void;
   // The tests keep their own, to look at what is kept. Otherwise made here.
   pendingMove?: PendingMove<Tile>;
   portal: ActiveUnitPortal;
@@ -90,6 +93,9 @@ export class ActiveUnitController {
   // outgoing unit — by the time the coalesced `render` runs, `lastUnit` has
   // already been pointed at the incoming one.
   #activeUnitTiles = new ActiveUnitTiles();
+  // Which square-picking for a long-range order is current (M2b): each one started, a change of active unit and the end
+  //  of the turn move it on, and a square picked for any earlier one is ignored.
+  #picking = 0;
   #deps: ActiveUnitControllerDeps;
   #lastUnit: Unit | null = null;
   // A move drawn before the engine has answered it, and the keys typed
@@ -163,16 +169,25 @@ export class ActiveUnitController {
    *  it there, as an order towards a square, if `unit` is still the active unit and nothing is being answered.
    */
   chooseTarget(unit: Unit, actionName: string): void {
+    const picking = ++this.#picking;
+
     chooseDistantTarget(
       unit,
       actionName,
       this.#deps.world.tiles(),
       this.#deps.pickTile ?? null,
       (action) => {
-        const pendingMove = this.#pendingMove;
+        const pendingMove = this.#pendingMove,
+          activeUnit = this.#activeUnit;
 
+        // Only for the unit it was asked for, this turn, still able to go there as the latest data has it.
         if (
-          this.#activeUnit?.id !== unit.id ||
+          picking !== this.#picking ||
+          this.#waiting ||
+          activeUnit?.id !== unit.id ||
+          !targetedActions(activeUnit, action.to).some(
+            ({ _ }) => _ === actionName
+          ) ||
           pendingMove.pending() ||
           pendingMove.queued()
         ) {
@@ -182,6 +197,12 @@ export class ActiveUnitController {
         this.#send(unit.id, action, true);
       }
     );
+  }
+
+  /** Gives up choosing a square for a long-range order, if one is being chosen. */
+  endChoosingTarget(): void {
+    this.#picking++;
+    this.#deps.endPickTile?.();
   }
 
   active(): Unit | null {
@@ -244,6 +265,11 @@ export class ActiveUnitController {
 
     // The keys kept for one unit were meant for it, not the next (#326).
     pendingMove.activate(unit?.id ?? null);
+
+    // A square being chosen for the last one's long-range order isn't this one's (M2b).
+    if (unit?.id !== this.#activeUnit?.id) {
+      this.endChoosingTarget();
+    }
 
     // While its move is answered, the unit is drawn on the tile it is
     // moving to.
@@ -329,6 +355,11 @@ export class ActiveUnitController {
   next(actions: PlayerAction[], waiting: boolean): void {
     const { haltedUnits, portal } = this.#deps,
       unitQueue = this.#unitQueue;
+
+    // The turn ended, or the next has started: a square being chosen was for the turn before (M2b).
+    if (waiting !== this.#waiting) {
+      this.endChoosingTarget();
+    }
 
     this.#waiting = waiting;
 

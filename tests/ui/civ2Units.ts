@@ -543,6 +543,7 @@ const run = async (): Promise<void> => {
   {
     const sent: unknown[] = [],
       picked: ((tile: Tile) => void)[] = [],
+      ended: number[] = [],
       layer = { render() {}, setActiveUnit() {}, setVisible() {}, update() {} },
       controller = new ActiveUnitController({
         activeUnitLayer: layer,
@@ -553,6 +554,7 @@ const run = async (): Promise<void> => {
           get: (key: string, defaultValue: any = null) => defaultValue,
         },
         pickTile: (accept, onPick) => picked.push(onPick),
+        endPickTile: () => ended.push(picked.length),
         portal: {
           isVisible: () => true,
           render: () => {},
@@ -594,6 +596,51 @@ const run = async (): Promise<void> => {
         target: far.id,
       },
     ]);
+
+    // The picking ends with its unit and its turn, and a square picked for an earlier one goes nowhere.
+    const other = unit({ id: 'Unit-2', actions: [], actionsForNeighbours: {} }),
+      activate = (chosen: Unit) =>
+        controller.next([{ _: 'ActiveUnit', value: chosen } as any], false);
+
+    sent.length = 0;
+    ended.length = 0;
+    controller.act('Unit-1', 'Paradrop');
+    activate(other);
+
+    expect('another unit made active ends the picking', ended.length > 0, true);
+
+    picked[picked.length - 1]!(far);
+    activate(paratrooper);
+    picked[picked.length - 1]!(far);
+
+    expect(
+      'and a square picked for it is ignored, even with the unit active again',
+      sent,
+      []
+    );
+
+    ended.length = 0;
+    controller.act('Unit-1', 'Paradrop');
+    controller.next([], true);
+
+    expect('the end of the turn ends the picking', ended.length > 0, true);
+
+    activate(paratrooper);
+    picked[picked.length - 1]!(far);
+
+    expect('and a square picked for that turn is ignored', sent, []);
+
+    controller.act('Unit-1', 'Paradrop');
+    paratrooper.actionTargets = { Paradrop: [near] };
+    picked[picked.length - 1]!(far);
+
+    expect(
+      'a square the unit no longer reaches, as the latest data has it, is ignored',
+      sent,
+      []
+    );
+
+    paratrooper.actionTargets = { Paradrop: [near, far] };
   }
 
   // Pillage, with a choice.

@@ -122,6 +122,16 @@ export class GamePortal extends Portal {
     });
   }
 
+  /** Whether a square is being chosen for a long-range order. */
+  picking(): boolean {
+    return this.#picking !== null;
+  }
+
+  /** Gives up choosing a square, if one is being chosen: the window goes, and a click is a click again. */
+  endPicking(): void {
+    this.#endPicking();
+  }
+
   #endPicking(): void {
     const picking = this.#picking;
 
@@ -244,6 +254,9 @@ export class GamePortal extends Portal {
         // moving now would slide the map out from under the menu.
         this.#drag = null;
 
+        // The unit's menu is another way to give it orders: choosing a square for one ends (M2b).
+        this.#endPicking();
+
         // The interface's menu over the press (#808, #860).
         mapMenus
           .current()
@@ -285,6 +298,7 @@ export class GamePortal extends Portal {
       this.clearTimeout();
       this.#drag = null;
       this.endHover();
+      this.#endPicking();
 
       menus.unitMenu(
         this,
