@@ -53,9 +53,17 @@ export const classLink = (key: string, entries: EntriesByKey): string =>
       )}</a>`
     : escape(className(key, entries));
 
-// A condition a rule decides (`civ1-unit:coastal-city`). i18next reads `:` as a namespace, so the key has `.` instead.
+// A condition a rule decides (`civ1-unit:coastal-city`): its rule set's own wording if it has one, and otherwise the
+//  wording every rule set shares, by the name after the prefix (`coastal-city`, #1051). i18next reads `:` as a
+//  namespace, so the keys have `.` instead.
 export const conditionText = (id: string): string =>
-  t(`Civilopedia.condition.${id.replace(/:/g, '.')}`, { defaultValue: id });
+  t(
+    [
+      `Civilopedia.condition.${id.replace(/:/g, '.')}`,
+      `Civilopedia.condition.${id.replace(/^[^:]*:/, '').replace(/:/g, '.')}`,
+    ],
+    { defaultValue: id }
+  );
 
 /**
  * The key of an entry's own wording, as its subject (`subject`) or as one of its targets (`target`) reads it, for an

@@ -57,17 +57,24 @@ i18next.addResources('en', 'default', {
   'Civilopedia.class.CityImprovement': 'city improvements',
   'Civilopedia.class.Naval': 'ships',
   'Civilopedia.class.Part': 'spaceship parts',
-  'Civilopedia.condition.civ1-unit.coastal-city': 'a coastal city',
-  'Civilopedia.condition.civ1-unit.water-nearby': 'water nearby',
-  'Civilopedia.condition.civ1-city-improvement.not-in-city':
-    'a city that hasn’t built one already',
-  'Civilopedia.condition.civ1-city-improvement.mountains-or-river-nearby':
+  // A condition a rule decides, by its name without the rule set's prefix, so every rule set that has one shares its
+  //  wording (#1051). One rule set's own wording goes under its full id (`civ1-unit.coastal-city`), which comes first.
+  'Civilopedia.condition.coastal-city': 'a coastal city',
+  'Civilopedia.condition.water-nearby': 'water nearby',
+  'Civilopedia.condition.not-in-city': 'a city that hasn’t built one already',
+  'Civilopedia.condition.mountains-or-river-nearby':
     'Mountains or a River next to the city',
   // The Hydro Plant's site with the enhanced rule on (#954), which counts the city's own square.
-  'Civilopedia.condition.civ1-enhanced.mountains-or-river-on-or-nearby':
+  'Civilopedia.condition.mountains-or-river-on-or-nearby':
     'Mountains or a River on or next to the city',
-  'Civilopedia.condition.civ1-spaceship.unlaunched-spaceship':
+  'Civilopedia.condition.unlaunched-spaceship':
     'a spaceship that hasn’t been launched',
+  // Where Civilization II's tile improvements can go.
+  'Civilopedia.condition.irrigation-source':
+    'water, a River or Irrigation on or next to the square',
+  'Civilopedia.condition.river': 'a River on the square',
+  'Civilopedia.condition.no-river': 'a square without a River',
+  'Civilopedia.condition.no-fortress': 'a square without a Fortress',
   'ScienceReport.progress_notresearching': '',
   'ScienceReport.progress_researching':
     '$t(Progress.body, { "progress": {{progress}}, "total": {{total}}, "turns": {{turns }} })',
