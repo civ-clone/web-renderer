@@ -10,9 +10,9 @@ import { ChoiceList, openChoice } from '../components/choiceList';
 import Window from '@civ-clone/ui-component-window/Window';
 import { t } from 'i18next';
 
-// The windows a unit action can need before it's sent: a sneak attack's confirmation, a treaty partner's land (#287),
-//  a Caravan's "Will you?" (#57), a Diplomat's arrival, incite and bribe windows (#58). Shared by the arrow keys and
-//  the unit action menu.
+// The windows a unit action can need before it's sent: a sneak attack's confirmation, an attack with part of a move
+//  left, a treaty partner's land (#287), a Caravan's "Will you?" (#57), a Diplomat's arrival, incite and bribe windows
+//  (#58). Shared by the arrow keys and the unit action menu.
 
 type Perform = (action: UnitAction) => void;
 
@@ -33,6 +33,9 @@ const sneakActions = [
   // Onto, or pillaging, a treaty partner's land (#287).
   treatyActions = ['SneakMove', 'SneakPillage'],
   caravanActions = ['EstablishTradeRoute', 'HelpBuildWonder'],
+  // The attacks the engine makes at the strength of the moves left, at most one (`base-unit-action-attack`'s `Attack`,
+  //  which `SneakAttack` extends). A nuclear attack isn't weakened, so it doesn't ask.
+  attackActions = ['Attack', 'SneakAttack'],
   inciteActions = ['InciteRevolt', 'SneakInciteRevolt', 'SubvertCity'],
   // The Diplomat's arrival popup, in Civ1's order, each option standing for the actions that do it.
   diplomatOptions: [string, string[]][] = [
@@ -88,7 +91,9 @@ export const goldOf = (player: Player): number =>
 const confirmSneak = (action: UnitAction, perform: Perform): void => {
   const { _: name, enemy } = asked(action) as EnemyAction;
 
-  new ConfirmationWindow(
+  // Closed before the treaty is broken: breaking it can open the part-of-a-move question, and closing this window after
+  //  that would take the focus back from it, so a second Enter dismissed it without attacking.
+  const confirmation: ConfirmationWindow = new ConfirmationWindow(
     t('SneakAttack.title'),
     ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? t('Diplomat.peace-treaty', {
@@ -100,7 +105,11 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
             ns: 'civilization',
           }),
         }),
-    () => breakTreaty(action, perform),
+    () => {
+      confirmation.close();
+
+      breakTreaty(action, perform);
+    },
     ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? {
           okLabel: 'Diplomat.break-treaty',
@@ -250,18 +259,43 @@ const bribeWindow = (
   );
 };
 
+// Sends an attack with less than a full move left only once the player says so, as Civ1 and Civ2 ask: the engine
+//  scales the attack by the moves left. Anything else, and an `Overruled` sneak attack (which attacks nobody), is
+//  sent as it is. A GoTo never attacks (it stops short, #357), so only an order the player gives comes through here.
+// Within a rounding error of a full move counts as one: moves are kept as fractions such as thirds.
+const confirmPartialMove =
+  (unit: UnitData, perform: Perform): Perform =>
+  (chosen: UnitAction): void => {
+    if (!attackActions.includes(chosen._) || unit.moves.value >= 1 - 1e-9) {
+      perform(chosen);
+
+      return;
+    }
+
+    new ConfirmationWindow(
+      t('PartialMoveAttack.title'),
+      t('PartialMoveAttack.body', {
+        unit: t(`${unit._}.name`, { defaultValue: unit._, ns: 'unit' }),
+      }),
+      () => perform(chosen),
+      { okLabel: 'PartialMoveAttack.attack' }
+    );
+  };
+
 /**
  * Sends `action`, after whatever window it needs: a confirmation for anything that would break a peace treaty, the
- * incite window for inciting or subverting, the bribe window for a bribe. `actionsOnTile` are all the unit's actions
+ * incite window for inciting or subverting, the bribe window for a bribe, and a confirmation for an attack with part of
+ * a move left (after the treaty's, for a sneak attack). `actionsOnTile` are all the unit's actions
  * for the same tile, which the incite window needs to offer subverting.
  */
 export const performWithPrompts = (
   unit: UnitData,
   action: UnitAction,
   actionsOnTile: UnitAction[],
-  perform: Perform
+  performAsIs: Perform
 ): void => {
-  const name = nameOf(action);
+  const name = nameOf(action),
+    perform = confirmPartialMove(unit, performAsIs);
 
   // Read only for the windows that offer a price: the own-tile keys come through here too (#287).
   if (inciteActions.includes(name)) {

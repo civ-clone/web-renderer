@@ -17,6 +17,14 @@ import CityBuildUnavailableWindow, {
   reasons,
 } from '@civ-clone/ui-reports/components/CityBuildUnavailableWindow';
 import { CivilopediaEntry } from '@civ-clone/ui-protocol/civilopedia';
+import { Condition } from '@civ-clone/core-requirement/Requirement';
+import * as Civ1CityImprovementRequirements from '@civ-clone/civ1-city-improvement/Requirements';
+import * as Civ1EnhancedRequirements from '@civ-clone/civ1-enhanced/Requirements';
+import * as Civ1SpaceshipRequirements from '@civ-clone/civ1-spaceship/Requirements';
+import * as Civ1UnitRequirements from '@civ-clone/civ1-unit/Requirements';
+import * as Civ2CityImprovementRequirements from '@civ-clone/civ2-city-improvement/Requirements';
+import * as Civ2WorldRequirements from '@civ-clone/civ2-world/Requirements';
+import { conditionText } from '@civ-clone/ui-reports/components/lib/requirements';
 import { HOOVER_DAM_PLANT_RULE_PREFIX } from '@civ-clone/civ1-wonder/RuleIds';
 import { RequirementData } from '@civ-clone/ui-protocol/requirements';
 import i18next from 'i18next';
@@ -425,6 +433,56 @@ const run = async (): Promise<void> => {
         .querySelector('.entry')
         ?.getAttribute('data-key'),
     'Musketman'
+  );
+
+  // Every condition the rule sets name is worded, Civ2's by the name it shares with Civ1 or its own (#1051), and
+  //  Civ1's wording is as it was.
+  const conditions = [
+    Civ1CityImprovementRequirements,
+    Civ1EnhancedRequirements,
+    Civ1SpaceshipRequirements,
+    Civ1UnitRequirements,
+    Civ2CityImprovementRequirements,
+    Civ2WorldRequirements,
+  ]
+    .flatMap((module) => Object.values(module))
+    .filter((value): value is Condition => value instanceof Condition)
+    .map((condition) => condition.id);
+
+  expect(
+    'the conditions are found',
+    [
+      'civ1-unit:coastal-city',
+      'civ2-city-improvement:not-in-city',
+      'civ2-world:no-fortress',
+    ].every((id) => conditions.includes(id)),
+    true
+  );
+  expect(
+    'every condition is worded',
+    conditions.filter((id) => conditionText(id) === id),
+    []
+  );
+  expect(
+    'Civ2 shares Civ1’s wording',
+    [
+      conditionText('civ1-city-improvement:not-in-city'),
+      conditionText('civ2-city-improvement:not-in-city'),
+    ],
+    [
+      'a city that hasn’t built one already',
+      'a city that hasn’t built one already',
+    ]
+  );
+  expect(
+    'Civ2’s own',
+    conditionText('civ2-world:no-river'),
+    'a square without a River'
+  );
+  expect(
+    'and an unknown one is its id',
+    conditionText('civ3-unit:somewhere'),
+    'civ3-unit:somewhere'
   );
 
   finished = true;

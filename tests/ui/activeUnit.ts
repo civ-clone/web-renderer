@@ -345,6 +345,8 @@ const place = (
     _: id.split('-')[0],
     id,
     tile: tileRef(x),
+    // A full move: with less, an attack asks first.
+    moves: { value: 1 },
     ...(actions === null
       ? {}
       : {
