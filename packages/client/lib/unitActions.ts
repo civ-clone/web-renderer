@@ -31,7 +31,7 @@ export const neighbourActions = (unit: Unit, direction: string): UnitAction[] =>
 /** The long-range orders that reach `tile`, as actions aimed at it, as the engine would offer them. */
 export const targetedActions = (unit: Unit, tile: Tile): UnitAction[] =>
   Object.entries(unit.actionTargets ?? {})
-    .filter(([, tiles]) => tiles.includes(tile.id))
+    .filter(([, tiles]) => tiles.some((target) => target.id === tile.id))
     .map(
       ([name]): UnitAction => ({
         _: name,

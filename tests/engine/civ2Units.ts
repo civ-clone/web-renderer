@@ -37,6 +37,10 @@ import { attackSoundOf } from '@civ-clone/ui-worker-client/Client/battleEvents';
 import { battleTune } from '@civ-clone/ui-audio/eventSounds';
 import * as Units from '@civ-clone/civ2-unit/Units';
 import { handleActiveUnit } from '@civ-clone/ui-worker-client/Client/actions/unit';
+import { makeDataFilter } from '@civ-clone/ui-worker-client/Client/visibilityFilter';
+import { playerView } from '@civ-clone/ui-worker-client/Client/View';
+import { registerPatchEvents } from '@civ-clone/ui-worker-client/Client/events/patchEvents';
+import { unknownUnitOf } from '@civ-clone/ui-worker-client/Client/standIns';
 import pluginSets from '../../src/js/pluginSets';
 import { pluginsFrom } from '@civ-clone/ui-worker-client/Plugins';
 import unitWithoutActions from '@civ-clone/ui-worker-client/lib/unitWithoutActions';
@@ -172,9 +176,9 @@ const run = async (): Promise<void> => {
       new Paratrooper(null, us, home.tile(), defaultGame.rules)
     ),
     targets = additional(paratrooper, 'actionTargets') as {
-      [action: string]: string[];
+      [action: string]: Tile[];
     },
-    reaches = (tile: Tile) => targets.Paradrop!.includes(tile.id());
+    reaches = (tile: Tile) => targets.Paradrop!.includes(tile);
 
   expect(
     'a Paratrooper in a city with an Airport reaches land within 10, its own square and water not, and nothing farther (and can be airlifted)',
@@ -235,9 +239,125 @@ const run = async (): Promise<void> => {
 
   expect(
     'a Musketman in a city with an Airport is airlifted to the other',
-    additional(musketman, 'actionTargets'),
-    { Airlift: [other.tile().id()] }
+    (additional(musketman, 'actionTargets') as { Airlift: Tile[] }).Airlift.map(
+      (tile) => tile.id()
+    ),
+    [other.tile().id()]
   );
+
+  // As the client sends them: through its filter, the squares as the player's own, the ids the page knows them by.
+  {
+    const playerWorld = defaultGame.playerWorlds.getByPlayer(us),
+      view = playerView(() => us, {
+        cities: defaultGame.cities,
+        interactions: defaultGame.interactions,
+        playerWorlds: defaultGame.playerWorlds,
+      } as any),
+      actions = new ActionsState(),
+      // Our player as a name: what it holds isn't what this is about, and its actions want a whole game.
+      filter = makeDataFilter(
+        () => view,
+        actions
+      )((object: any) => (object instanceof Player ? { _: 'Player' } : object));
+
+    playerWorld.register(...world.tiles());
+    actions.setUnitWithActions(musketman, () => {});
+
+    const { hierarchy, objects } = musketman.toPlainObject(filter) as any,
+      sent = objects[hierarchy['#ref']].actionTargets.Airlift.map(
+        (ref: any) => ref['#ref']
+      );
+
+    expect(
+      "the targets go as the player's squares, by the ids the page has for them",
+      sent,
+      [view.tile(other.tile())!.id()]
+    );
+
+    const enemy = new Warrior(null, them, world.get(41, 30), defaultGame.rules);
+
+    enemy.setDamage(3);
+
+    // As the filter sends it (`unknownUnitOf`), its player and square left as names: they aren't what this is about.
+    const { hierarchy: enemyRef, objects: enemyObjects } = unknownUnitOf(
+        enemy
+      ).toPlainObject((object: any) =>
+        object instanceof Player || object instanceof Tile
+          ? { _: object.constructor.name }
+          : object
+      ) as any,
+      plainEnemy = enemyObjects[enemyRef['#ref']];
+
+    expect(
+      "another player's unit goes as what it is, where, whose, and its hit points, for its bar",
+      [Object.keys(plainEnemy).sort(), plainEnemy.hitPoints],
+      [
+        ['_', '__', 'hitPoints', 'id', 'player', 'tile'],
+        { current: 7, max: 10 },
+      ]
+    );
+
+    // What the client patches after a battle: a damaged winner, and a promoted unit of ours however whole it is.
+    const listeners: { [event: string]: ((...args: any[]) => void)[] } = {},
+      patched: string[] = [],
+      dispose = registerPatchEvents(
+        {
+          on: (event: string, listener: (...args: any[]) => void) =>
+            (listeners[event] = [...(listeners[event] ?? []), listener]),
+          off: () => {},
+        } as any,
+        {
+          view,
+          patches: {
+            tile: (tile: any) => tile && patched.push(`tile ${tile.id()}`),
+            unit: (unit: Unit) => patched.push(`unit ${unit.id()}`),
+            city: () => {},
+            playerKey: () => {},
+          },
+        } as any
+      ),
+      emit = (event: string, ...args: unknown[]) => {
+        patched.length = 0;
+        listeners[event]!.forEach((listener) => listener(...args));
+
+        return [...patched];
+      },
+      winner = new Warrior(null, us, world.get(42, 30), defaultGame.rules),
+      loser = new Warrior(null, them, world.get(43, 30), defaultGame.rules);
+
+    expect(
+      'an undamaged winner: only the loser’s square, as before',
+      emit('unit:defeated', loser, winner, null),
+      [`tile ${view.tile(loser.tile())!.id()}`]
+    );
+
+    winner.setDamage(2);
+
+    expect(
+      'a damaged winner of ours: its square and itself too',
+      emit('unit:defeated', loser, winner, null),
+      [
+        `tile ${view.tile(loser.tile())!.id()}`,
+        `tile ${view.tile(winner.tile())!.id()}`,
+        `unit ${winner.id()}`,
+      ]
+    );
+
+    winner.setDamage(0);
+
+    expect(
+      'a promoted unit of ours, whole: its square and itself',
+      emit('unit:promoted', winner, loser),
+      [`tile ${view.tile(winner.tile())!.id()}`, `unit ${winner.id()}`]
+    );
+    expect(
+      "a rival's promotion: nothing",
+      emit('unit:promoted', loser, winner),
+      []
+    );
+
+    dispose();
+  }
   expect(
     'a unit without the actions the interface asked for carries no targets, but its hit points',
     ['actionTargets', 'hitPoints'].map((key) =>

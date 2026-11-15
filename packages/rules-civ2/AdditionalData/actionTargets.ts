@@ -22,6 +22,8 @@ import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
 //  another of the player's cities. The engine offers an action for any square it's asked about, and the client asks
 //  only about the unit's own and its neighbours, so these say which distant squares the engine offers each for.
 //  `unitWithoutActions` leaves the key out of every unit but the one the UI has the actions of, as it does `actions`.
+//  They go as the squares themselves, so the client's filter sends each as the player's own square (a `PlayerTile`
+//  ref), as it does an action's `to`: the engine's tile ids aren't the ones the client knows.
 
 /**
  * The squares among `candidates` that `unit` is offered an `ActionType` for. Asking only civ2-unit's own rule for it
@@ -34,7 +36,7 @@ const offered = (
   candidates: Tile[],
   name: string,
   ActionType: typeof Action
-): string[] => {
+): Tile[] => {
   const rule = ruleRegistryInstance.getById(`civ2-unit:unit/action/${name}`),
     from = unit.tile(),
     offers: (tile: Tile) => boolean =
@@ -45,14 +47,14 @@ const offered = (
               .actions(tile)
               .some((action: Action) => action instanceof ActionType);
 
-  return candidates.filter(offers).map((tile: Tile): string => tile.id());
+  return candidates.filter(offers);
 };
 
 /**
  * Where `unit` can paradrop: only asked of a unit that can, with all its moves, in a city or on an airbase, as the
  *  engine's first tests are, so a unit that can't drop costs nothing.
  */
-const paradropTargets = (unit: Unit): string[] => {
+const paradropTargets = (unit: Unit): Tile[] => {
   const from = unit.tile();
 
   if (
@@ -84,7 +86,7 @@ const paradropTargets = (unit: Unit): string[] => {
 };
 
 /** The player's other cities `unit` can be airlifted to, asked only of a unit in one of its player's cities. */
-const airliftTargets = (unit: Unit): string[] => {
+const airliftTargets = (unit: Unit): Tile[] => {
   const city = cityRegistryInstance.getByTile(unit.tile());
 
   if (city === null || city.player() !== unit.player()) {
@@ -107,13 +109,13 @@ export const actionTargets = (): AdditionalData =>
   new AdditionalData(
     Unit,
     'actionTargets',
-    (unit: Unit): { [action: string]: string[] } | null => {
+    (unit: Unit): { [action: string]: Tile[] } | null => {
       const targets = Object.fromEntries(
         (
           [
             ['Paradrop', paradropTargets(unit)],
             ['Airlift', airliftTargets(unit)],
-          ] as [string, string[]][]
+          ] as [string, Tile[]][]
         ).filter(([, tiles]) => tiles.length > 0)
       );
 

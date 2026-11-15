@@ -38,7 +38,7 @@ export const chooseDistantTarget = (
   pickTile: PickTile | null,
   perform: (action: UnitAction) => void
 ): ChoiceList | null => {
-  const ids = new Set(unit.actionTargets?.[name] ?? []),
+  const ids = new Set((unit.actionTargets?.[name] ?? []).map(({ id }) => id)),
     reached = tiles.filter((tile) => ids.has(tile.id)),
     aimedAt = (tile: Tile): UnitAction | null =>
       targetedActions(unit, tile).find((action) => action._ === name) ?? null;

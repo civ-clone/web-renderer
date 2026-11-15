@@ -202,10 +202,10 @@ export interface Unit extends EntityInstance {
   actionsForNeighbours?: {
     [key: string]: UnitAction[];
   };
-  // The distant squares each of the unit's long-range orders reaches (Paradrop, Airlift), by the action's name, as tile
-  //  ids. Only for the unit the UI has asked about, as `actions` are, and only from rules that have such orders.
+  // The distant squares each of the unit's long-range orders reaches (Paradrop, Airlift), by the action's name. Only for
+  //  the unit the UI has asked about, as `actions` are, and only from rules that have such orders.
   actionTargets?: {
-    [action: string]: string[];
+    [action: string]: Tile[];
   } | null;
   active: boolean;
   attack: Yield;

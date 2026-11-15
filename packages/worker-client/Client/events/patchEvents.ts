@@ -128,6 +128,17 @@ export const registerPatchEvents = (
     }
   });
 
+  // A unit of ours promoted after a win (M2b, `unit:promoted`, which only rules that promote emit), damaged or not: it
+  //  goes again as a veteran, with its square. In an AI's turn nothing else sends it until the next hand-over.
+  on('unit:promoted', (unit: Unit) => {
+    if (!ctx.view.owns(unit.player())) {
+      return;
+    }
+
+    ctx.patches.tile(ctx.view.tile(unit.tile()));
+    ctx.patches.unit(unit);
+  });
+
   ['unit:destroyed'].forEach((event) => {
     on(event, (unit: Unit) => {
       // A disbanded or destroyed unit leaves its square, whoever's it was (#138).

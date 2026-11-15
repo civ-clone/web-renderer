@@ -358,7 +358,7 @@ const run = async (): Promise<void> => {
     actionsForNeighbours: {
       e: [action('Move', near), action('Paradrop', near)],
     },
-    actionTargets: { Paradrop: [near.id, far.id] },
+    actionTargets: { Paradrop: [near, far] },
   });
 
   expect('the long-range orders', distantOrders(paratrooper), ['Paradrop']);
@@ -473,7 +473,7 @@ const run = async (): Promise<void> => {
         _: 'Musketman',
         actions: [],
         actionsForNeighbours: {},
-        actionTargets: { Airlift: [veii.id, antium.id] },
+        actionTargets: { Airlift: [veii, antium] },
       }),
       performed: string[] = [],
       picked: unknown[] = [];
