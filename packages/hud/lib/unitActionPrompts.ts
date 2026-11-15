@@ -262,10 +262,11 @@ const bribeWindow = (
 // Sends an attack with less than a full move left only once the player says so, as Civ1 and Civ2 ask: the engine
 //  scales the attack by the moves left. Anything else, and an `Overruled` sneak attack (which attacks nobody), is
 //  sent as it is. A GoTo never attacks (it stops short, #357), so only an order the player gives comes through here.
+// Within a rounding error of a full move counts as one: moves are kept as fractions such as thirds.
 const confirmPartialMove =
   (unit: UnitData, perform: Perform): Perform =>
   (chosen: UnitAction): void => {
-    if (!attackActions.includes(chosen._) || unit.moves.value >= 1) {
+    if (!attackActions.includes(chosen._) || unit.moves.value >= 1 - 1e-9) {
       perform(chosen);
 
       return;

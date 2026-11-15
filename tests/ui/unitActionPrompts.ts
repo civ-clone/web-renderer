@@ -541,6 +541,14 @@ const latest = () => {
   expect('a full move attacks at once', sent.slice(-1), ['Attack']);
   expect('with no window', sent.length, sentBeforeCancel + 1);
 
+  chooseUnitAction(attacker(1 - 1e-12), [attack], perform);
+
+  expect(
+    'a full move short by a rounding error attacks at once',
+    sent.length,
+    sentBeforeCancel + 2
+  );
+
   // A sneak attack asks about the treaty, then about the part of a move.
   performWithPrompts(
     attacker(0.5),
