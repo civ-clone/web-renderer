@@ -80,7 +80,8 @@ export class UnitActions extends Element {
         unit?.id,
         unit?.player?.civilization?._,
         // The target too: a unit that moved keeps the same actions, aimed at its new tile.
-        actions.map((action) => [action._, action.to?.id]),
+        // And what each offers to choose from (M2b): a pillage's improvements change with the square.
+        actions.map((action) => [action._, action.to?.id, action.targets]),
         layers.map((actionLayers) =>
           actionLayers.map((layer) =>
             layer.type === 'unit'

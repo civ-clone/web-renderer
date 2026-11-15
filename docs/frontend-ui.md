@@ -378,9 +378,10 @@ Moving around the map:
   actions it tries in turn, and the first the active unit has is sent. `e` is
   Explore and `a` Automate (#198, #200): standing orders the engine carries on
   at the start of each turn until it hands the unit back. Civ2's orders (M2b)
-  take Civ2's keys where they're free: `o` Transform, `f` Build Fortress (after
-  Fortify, which a unit that builds one can't do), `l` Airlift and `p` Paradrop
-  (after Clean Up Pollution). `e` is Explore, so Build Airbase is `Shift+E`.
+  take Civ2's keys, after what those keys already did: `o` Transform, `f` Build
+  Fortress (after Fortify) and `e` Build Airbase (after Explore), as Civ2's
+  Settlers and Engineers neither fortify nor explore, `p` Paradrop (after Clean
+  Up Pollution) and `l` Airlift.
 - Long-range orders (Paradrop, Airlift) come with the squares they reach, as
   the unit's `actionTargets`. Their key or button asks where: a list of cities
   when every square is a city's, and otherwise the next click on the map, which

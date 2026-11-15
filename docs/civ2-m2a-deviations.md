@@ -27,10 +27,11 @@ M2b (#1007) brought Civ2's combat and units: hit points and firepower, damage th
 - **No barbarians.** Nothing raises them, so a hut that would release a horde gives mercenaries instead, and the Great Wall's effect on them is absent. Civ2's own odds for battles with barbarians aren't in either. (civ2-goody-hut, civ2-wonder, civ2-unit.) Planned (M2e).
 - **Zones of control** and the Civ2 move and defence rows are in; City Walls and the Great Wall triple land defence as Civ2 does. (civ2-unit.)
 - **No Senate rows.** Under the Republic and Democracy nothing stops you declaring war or breaking a treaty. (civ2-unit, civ2-diplomacy.) Planned (M2d).
-- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. A Spy's only mission against a unit is Sabotage Unit, and against a city none of Civ2's yet. (civ2-unit, civ2-city.) Planned (M2d).
+- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. A Diplomat or Spy can establish an embassy and investigate a city, and a Spy's only mission against a unit is Sabotage Unit. (civ2-unit, civ2-city.) Planned (M2d).
 - **No ×2 sneak attack.** Civ2 doubles an attack that breaks a treaty; here it fights at its normal strength. (civ2-unit.) Not scheduled.
 - **No instant heal in an allied city.** A unit heals by Civ2's steps wherever it is, but moving into an ally's city doesn't heal it at once. (civ2-unit.) Not scheduled.
 - **Computer players' aircraft** don't lose the extra turn of fuel Civ2 takes from a computer player's attacker after a win. (civ2-unit.) Not scheduled.
+- **An Airbase is only an airbase.** It refuels and heals aircraft, keeps a stack from dying with its defender, and launches paradrops. Civ2's code also treats it like a city for the square's yields, road and railroad moves and a fortress order; that looks accidental, and isn't followed. (civ2-unit, civ2-world.) By design.
 - **Carriers and Submarines hold 8.** Civ2's code lets a carrier or a submarine hold 20 and doesn't check it on landing; here both hold 8, as the unit table says. (civ2-unit.) By design.
 - **Airlifts always fly.** An airlift near enemy fighters can be shot down, as in Civ2, but Civ2 asks you to confirm a risky one first. (civ2-unit.) Not scheduled.
 - **No work pooling.** Engineers work at twice the rate, but several workers on one square don't add their work together as in Civ2 (#1059). (civ2-unit.) Planned.

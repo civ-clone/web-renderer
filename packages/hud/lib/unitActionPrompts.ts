@@ -287,9 +287,9 @@ const confirmPartialMove =
     );
   };
 
-// Sends an action that offers a choice (its `targets`, such as what a Pillage takes, M2b) with the player's: asked when
-//  there's more than one, and sent with the only one there is otherwise, as the engine would take it. An action that
-//  offers none, or one asked for in another's place (`Overruled`), is sent as it is.
+// Sends an action that offers a choice (its `targets`, such as what a Pillage takes, M2b) with the player's, asked when
+//  there's more than one. With one or none it is sent as it is, and the engine takes what there is, as it does for an
+//  action that offers no choice or one asked for in another's place (`Overruled`).
 const chooseTarget =
   (perform: Perform): Perform =>
   (chosen: UnitAction): void => {

@@ -26,7 +26,10 @@ import {
   openArrivalWindow,
   performWithPrompts,
 } from '@civ-clone/ui-hud/lib/unitActionPrompts';
+import ActiveUnitController from '@civ-clone/ui-game/ActiveUnitController';
+import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import Transport from '@civ-clone/ui-client/Transport';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
 import UnitCard from '@civ-clone/ui-interface-modern/components/UnitCard';
 import UnitCardActions from '@civ-clone/ui-interface-modern/components/UnitCardActions';
 import UnitDetails from '@civ-clone/ui-interface-classic/components/UnitDetails';
@@ -336,7 +339,7 @@ const run = async (): Promise<void> => {
   // The keys.
 
   expect(
-    "the new orders' keys: Civ2's where they're free, Shift+E for the airbase",
+    "the new orders' keys: Civ2's, after what each key already did",
     [
       'TransformTerrain',
       'BuildFortress',
@@ -345,7 +348,7 @@ const run = async (): Promise<void> => {
       'Airlift',
       'Pillage',
     ].map(keyForAction),
-    ['o', 'f', 'E', 'p', 'l', 'P']
+    ['o', 'f', 'e', 'p', 'l', 'P']
   );
 
   // Paradrop and Airlift.
@@ -531,6 +534,65 @@ const run = async (): Promise<void> => {
 
     expect('which asks the controller for it', acted, [
       ['Unit-1', 'Paradrop', undefined],
+    ]);
+  }
+
+  // The active unit's controller: a paradrop's button asks for a square, and the order goes for the one picked; a
+  //  pillage chosen on a button goes with its choice.
+
+  {
+    const sent: unknown[] = [],
+      picked: ((tile: Tile) => void)[] = [],
+      layer = { render() {}, setActiveUnit() {}, setVisible() {}, update() {} },
+      controller = new ActiveUnitController({
+        activeUnitLayer: layer,
+        arrivalClosed: () => {},
+        data: () => ({ player: { units: [paratrooper] } } as any),
+        haltedUnits: new HaltedUnits(),
+        options: {
+          get: (key: string, defaultValue: any = null) => defaultValue,
+        },
+        pickTile: (accept, onPick) => picked.push(onPick),
+        portal: {
+          isVisible: () => true,
+          render: () => {},
+          setActiveUnit: () => {},
+          setCenter: () => {},
+        },
+        scheduleRender: () => {},
+        showUnitDetails: () => {},
+        transport: {
+          send: ((name: string, message: unknown) => {
+            if (name === 'action') {
+              sent.push(message);
+            }
+          }) as any,
+        },
+        unitsLayer: layer,
+        world: {
+          get: (x: number) => tiles.find((tile) => tile.x === x)!,
+          tiles: () => tiles,
+          topology: () => topologyFor({ width: 21, height: 1 }),
+        },
+      });
+
+    controller.next([{ _: 'ActiveUnit', value: paratrooper } as any], false);
+
+    expect(
+      "the paradrop's button asks for a square, and sends nothing yet",
+      [controller.act('Unit-1', 'Paradrop'), picked.length, sent],
+      [true, 1, []]
+    );
+
+    picked[0]!(far);
+
+    expect('the square picked: the paradrop goes there', sent, [
+      {
+        name: 'ActiveUnit',
+        id: 'Unit-1',
+        unitAction: 'Paradrop',
+        target: far.id,
+      },
     ]);
   }
 

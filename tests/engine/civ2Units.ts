@@ -68,22 +68,22 @@ const additional = (object: any, key: string): unknown =>
     ?.data(object);
 
 const run = async (): Promise<void> => {
-  // A 30 × 30 square world of Grassland with a column of Ocean, built before the rules are in, as are the cities, so
+  // A 60 × 40 square world (the soak's size) of Grassland with a column of Ocean, built before the rules are in, as are the cities, so
   //  nothing here needs what a whole game sets up.
   class Map extends FillGenerator {
     generate() {
       return Promise.resolve(
-        new Array(30 * 30)
+        new Array(60 * 40)
           .fill(0)
           .map((value, index) =>
-            index % 30 === 5 ? new Ocean() : new Grassland()
+            index % 60 === 5 ? new Ocean() : new Grassland()
           )
       );
     }
   }
 
   const world = await new World(
-      new Map(30, 30, Grassland),
+      new Map(60, 40, Grassland),
       defaultGame.rules,
       defaultGame.landMasses
     ).build(),
@@ -157,7 +157,15 @@ const run = async (): Promise<void> => {
 
   // Paradrop and Airlift.
 
-  const paratrooper = fullMoves(
+  // The Ocean nearest the city, within 10 of it.
+  const [ocean] = world
+      .tiles()
+      .filter((tile: Tile) => tile.terrain() instanceof Ocean)
+      .sort(
+        (a: Tile, b: Tile) =>
+          a.distanceFrom(home.tile()) - b.distanceFrom(home.tile())
+      ),
+    paratrooper = fullMoves(
       new Paratrooper(null, us, home.tile(), defaultGame.rules)
     ),
     targets = additional(paratrooper, 'actionTargets') as {
@@ -172,11 +180,40 @@ const run = async (): Promise<void> => {
       reaches(world.get(11, 10)),
       reaches(world.get(10, 20)),
       reaches(world.get(10, 10)),
-      reaches(world.get(5, 10)),
+      reaches(ocean!),
       // civ2-unit's `map_distance` is the isometric map's, by half-steps: 15 here.
       reaches(world.get(25, 10)),
     ],
     [['Paradrop', 'Airlift'], true, true, false, false, false]
+  );
+  {
+    // What working the targets out costs, on the client's every patch of the unit: printed, not checked.
+    const started = process.hrtime.bigint();
+
+    for (let i = 0; i < 10; i++) {
+      additional(paratrooper, 'actionTargets');
+    }
+
+    process.stdout.write(
+      `a Paratrooper's targets on a 60 × 40 map: ${(
+        Number(process.hrtime.bigint() - started) / 1e7
+      ).toFixed(1)} ms each\n`
+    );
+  }
+
+  const onAirbase = world.get(30, 30);
+
+  defaultGame.tileImprovements.register(new Airbase(onAirbase));
+
+  expect(
+    'a Paratrooper on an Airbase reaches land too',
+    Object.keys(
+      (additional(
+        fullMoves(new Paratrooper(null, us, onAirbase, defaultGame.rules)),
+        'actionTargets'
+      ) ?? {}) as object
+    ),
+    ['Paradrop']
   );
   expect(
     'a Paratrooper out of a city reaches nothing',
