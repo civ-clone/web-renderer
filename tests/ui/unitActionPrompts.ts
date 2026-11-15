@@ -2,6 +2,8 @@
 //
 // `chooseUnitAction` (the arrow keys) and `performWithPrompts` (the unit action menu) are given actions as the UI
 // holds them, and `perform` records what would be sent.
+//
+// An attack with less than a full move left asks first, as Civ1 and Civ2 do, from the keys and the unit menu alike.
 
 // Must stay first: `Window.ts` reads `document.body` as it loads.
 import { document } from './lib/dom';
@@ -15,6 +17,9 @@ import {
 } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import { Unit as UnitData, UnitAction } from '@civ-clone/ui-protocol/types';
 import playUnitKey from '@civ-clone/ui-game/lib/playUnitKey';
+import { directionKeys } from '@civ-clone/ui-client/lib/unitActionKeys';
+import topologyFor from '@civ-clone/ui-client/lib/topologyFor';
+import unitMenuActions from '@civ-clone/ui-hud/lib/unitMenuActions';
 import i18next from 'i18next';
 
 const failures: string[] = [];
@@ -496,6 +501,152 @@ const latest = () => {
 
   expect('dismissing it says it closed', closed, 1);
   expect('and sends nothing', sent.length, sentBefore);
+
+  // An attack with less than a full move left asks first: the engine makes it at reduced strength.
+  const enemyTile = { ...unitTile, id: 'tile-enemy' },
+    attacker = (moves: number, actions: UnitAction[] = []) =>
+      ({
+        ...roman(0),
+        _: 'Chariot',
+        moves: { value: moves },
+        actions: [],
+        actionsForNeighbours: { e: actions },
+      } as unknown as UnitData),
+    attack = action('Attack', {}, enemyTile),
+    sentBeforeAttacks = sent.length;
+
+  chooseUnitAction(attacker(1 / 3), [attack], perform);
+
+  expect('an attack with a third of a move asks first', shown(), {
+    title: 'Attack with part of a move?',
+    body: 'Your Chariot has only part of a move left, so it will attack at reduced strength.',
+    options: [],
+    buttons: ['Attack', 'Cancel'],
+  });
+  expect('and sends nothing yet', sent.length, sentBeforeAttacks);
+
+  press('Attack');
+
+  expect('Attack sends the attack', sent.slice(-1), ['Attack']);
+
+  const sentBeforeCancel = sent.length;
+
+  chooseUnitAction(attacker(0.5), [attack], perform);
+  press('Cancel');
+
+  expect('Cancel sends nothing', sent.length, sentBeforeCancel);
+
+  chooseUnitAction(attacker(1), [attack], perform);
+
+  expect('a full move attacks at once', sent.slice(-1), ['Attack']);
+  expect('with no window', sent.length, sentBeforeCancel + 1);
+
+  // A sneak attack asks about the treaty, then about the part of a move.
+  performWithPrompts(
+    attacker(0.5),
+    action('SneakAttack', { enemy: babylonian }, enemyTile),
+    [],
+    perform
+  );
+
+  expect(
+    'a sneak attack asks about the treaty first',
+    shown().title,
+    'Sneak attack?'
+  );
+
+  press('OK');
+
+  expect(
+    'then about the part of a move',
+    shown().title,
+    'Attack with part of a move?'
+  );
+
+  press('Attack');
+
+  expect('then sends SneakAttack', sent.slice(-1), ['SneakAttack']);
+
+  // Overruled by a Senate, it attacks nobody, so there's nothing to weaken.
+  performWithPrompts(
+    attacker(0.5),
+    action(
+      'Overruled',
+      { action: { _: 'SneakAttack', enemy: babylonian }, moves: 0 },
+      enemyTile
+    ),
+    [],
+    perform
+  );
+  press('OK');
+
+  expect(
+    'an overruled sneak attack is only overruled',
+    shown().title,
+    'The Senate'
+  );
+  expect('and sends Overruled', sent.slice(-1), ['Overruled']);
+
+  // The arrow keys, and the long press menu.
+  const topology = topologyFor({ width: 3, height: 3 }),
+    [eastKey] = Object.entries(directionKeys(topology)).find(
+      ([, direction]) => direction === 'e'
+    )!,
+    attackKeySent: string[] = [],
+    attackKeyContext = {
+      apply: () => {},
+      pendingMove: { start: () => {} },
+      scheduleRender: () => {},
+      send: (unitId: string, chosen: UnitAction) =>
+        attackKeySent.push(chosen._),
+      transport: { send: () => {} },
+      world: { get: () => ({}), topology: () => topology },
+    };
+
+  expect(
+    'the arrow key asks first with part of a move',
+    [
+      playUnitKey(eastKey!, attacker(0.5, [attack]), attackKeyContext as any),
+      shown().title,
+      attackKeySent,
+    ],
+    ['prompted', 'Attack with part of a move?', []]
+  );
+
+  press('Attack');
+
+  expect('and Attack sends it', attackKeySent, ['Attack']);
+  expect(
+    'and attacks at once with a full move',
+    [
+      playUnitKey(eastKey!, attacker(2, [attack]), attackKeyContext as any),
+      attackKeySent,
+    ],
+    ['sent', ['Attack', 'Attack']]
+  );
+
+  const menuSent: string[] = [],
+    menuTransport = {
+      send: (_: string, order: { unitAction: string }) =>
+        menuSent.push(order.unitAction),
+    },
+    [menuAttack] = unitMenuActions(
+      enemyTile as any,
+      attacker(0.5, [attack]),
+      menuTransport as any
+    ).actions;
+
+  menuAttack!.run();
+
+  expect(
+    'the long press menu asks first too',
+    [shown().title, menuSent],
+    ['Attack with part of a move?', []]
+  );
+
+  press('Attack');
+
+  expect('and Attack sends it', menuSent, ['Attack']);
 
   if (failures.length > 0) {
     process.stderr.write(

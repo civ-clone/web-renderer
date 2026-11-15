@@ -127,6 +127,11 @@ i18next.addResources('en', 'default', {
   // The sidebar's Power list (#701, #708).
   'PowerList.empty': 'No rankings yet.',
   'PowerList.power': '{{power, number}}',
+  // Attacking with less than a full move left, which the engine makes at reduced strength, as Civ1 and Civ2 ask.
+  'PartialMoveAttack.title': 'Attack with part of a move?',
+  'PartialMoveAttack.body':
+    'Your {{unit}} has only part of a move left, so it will attack at reduced strength.',
+  'PartialMoveAttack.attack': 'Attack',
   'PowerList.rank': '{{rank, number}}.',
   'PowerList.show-all': 'Show all ({{count, number}})',
   'PowerList.show-fewer': 'Show fewer',
