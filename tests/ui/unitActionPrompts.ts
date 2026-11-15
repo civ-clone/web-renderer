@@ -567,6 +567,48 @@ const latest = () => {
 
   expect('then sends SneakAttack', sent.slice(-1), ['SneakAttack']);
 
+  // The treaty window closes before the part-of-a-move question opens. Closed after it, it took the focus back from the
+  //  question, so a second Enter dismissed the question without attacking. linkedom can't move focus, so this checks
+  //  the order: the treaty window has closed when the question is shown.
+  const DialogPrototype = Object.getPrototypeOf(
+      document.createElement('dialog')
+    ),
+    showModal = DialogPrototype.showModal,
+    show = DialogPrototype.show,
+    openAtShow: number[] = [],
+    record = (original: (this: HTMLElement) => void) =>
+      function (this: HTMLElement) {
+        openAtShow.push(document.querySelectorAll('dialog[open]').length);
+
+        original.call(this);
+      };
+
+  performWithPrompts(
+    attacker(0.5),
+    action('SneakAttack', { enemy: babylonian }, enemyTile),
+    [],
+    perform
+  );
+
+  // Earlier checks leave their windows open in linkedom, so count from here.
+  const openBefore = document.querySelectorAll('dialog[open]').length;
+
+  DialogPrototype.showModal = record(showModal);
+  DialogPrototype.show = record(show);
+
+  press('OK');
+
+  DialogPrototype.showModal = showModal;
+  DialogPrototype.show = show;
+
+  expect(
+    'the treaty window is closed when the part-of-a-move question opens',
+    openAtShow,
+    [openBefore - 1]
+  );
+
+  press('Attack');
+
   // Overruled by a Senate, it attacks nobody, so there's nothing to weaken.
   performWithPrompts(
     attacker(0.5),

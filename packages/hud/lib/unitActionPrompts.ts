@@ -91,7 +91,9 @@ export const goldOf = (player: Player): number =>
 const confirmSneak = (action: UnitAction, perform: Perform): void => {
   const { _: name, enemy } = asked(action) as EnemyAction;
 
-  new ConfirmationWindow(
+  // Closed before the treaty is broken: breaking it can open the part-of-a-move question, and closing this window after
+  //  that would take the focus back from it, so a second Enter dismissed it without attacking.
+  const confirmation: ConfirmationWindow = new ConfirmationWindow(
     t('SneakAttack.title'),
     ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? t('Diplomat.peace-treaty', {
@@ -103,7 +105,11 @@ const confirmSneak = (action: UnitAction, perform: Perform): void => {
             ns: 'civilization',
           }),
         }),
-    () => breakTreaty(action, perform),
+    () => {
+      confirmation.close();
+
+      breakTreaty(action, perform);
+    },
     ['SneakStealTechnology', 'SneakInciteRevolt'].includes(name)
       ? {
           okLabel: 'Diplomat.break-treaty',
