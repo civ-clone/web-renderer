@@ -115,7 +115,9 @@ export const notificationTune = (
     case 'City.building-complete.spaceship-part':
       return tunes.buildingComplete;
 
+    // One a missile defence stopped is a nuclear attack all the same (M2b), to everyone but the player who made it.
     case 'Unit.nuclear-attack':
+    case 'Unit.nuclear-stopped':
       return tunes.nuclearAttack;
   }
 

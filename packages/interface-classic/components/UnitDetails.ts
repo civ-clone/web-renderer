@@ -40,16 +40,62 @@ const movePips = (unit: UnitData): HTMLElement => {
   return pips;
 };
 
-// Attack, defence and visibility, each a letter and its value, named in full for the tooltip and a screen reader.
+// Attack, defence and visibility, each a letter and its value, named in full for the tooltip and a screen reader. Then,
+//  for the rules that send them (M2b), hit points left of the most, firepower, and fuel left of the range.
 const stats = (unit: UnitData): HTMLElement => {
   const row = s('<p class="stats"></p>');
 
   (
     [
-      ['attack', 'Attack', unit.attack.value],
-      ['defence', 'Defence', unit.defence.value],
-      ['visibility', 'Visibility', unit.visibility.value],
-    ] as [string, string, number][]
+      [
+        'attack',
+        'Attack',
+        text('UnitDetails.value', { value: unit.attack.value }),
+      ],
+      [
+        'defence',
+        'Defence',
+        text('UnitDetails.value', { value: unit.defence.value }),
+      ],
+      [
+        'visibility',
+        'Visibility',
+        text('UnitDetails.value', { value: unit.visibility.value }),
+      ],
+      ...(unit.hitPoints
+        ? [
+            [
+              'hit-points',
+              'HitPoints',
+              text('UnitDetails.hit-points-value', {
+                current: unit.hitPoints.current,
+                max: unit.hitPoints.max,
+              }),
+            ],
+          ]
+        : []),
+      ...(typeof unit.firepower === 'number'
+        ? [
+            [
+              'firepower',
+              'Firepower',
+              text('UnitDetails.value', { value: unit.firepower }),
+            ],
+          ]
+        : []),
+      ...(unit.fuel
+        ? [
+            [
+              'fuel',
+              'Fuel',
+              text('UnitDetails.fuel-value', {
+                turnsLeft: unit.fuel.turnsLeft,
+                range: unit.fuel.range,
+              }),
+            ],
+          ]
+        : []),
+    ] as [string, string, string][]
   ).forEach(([className, yieldName, value]) => {
     const stat = s(
         `<span class="stat ${className}"><abbr aria-hidden="true"></abbr><span class="visually-hidden"></span><span class="value"></span></span>`
@@ -62,9 +108,7 @@ const stats = (unit: UnitData): HTMLElement => {
     stat.title = name;
     stat.querySelector('abbr')!.textContent = text(`UnitDetails.${className}`);
     stat.querySelector('.visually-hidden')!.textContent = `${name}: `;
-    stat.querySelector('.value')!.textContent = text('UnitDetails.value', {
-      value,
-    });
+    stat.querySelector('.value')!.textContent = value;
 
     row.append(stat);
   });
@@ -116,6 +160,9 @@ const shown = (unit: UnitData | null): string =>
         unit.attack.value,
         unit.defence.value,
         unit.visibility.value,
+        unit.hitPoints ?? null,
+        unit.firepower ?? null,
+        unit.fuel ?? null,
         unit.city?.id,
         unit.city?.name,
         unit.tile.x,

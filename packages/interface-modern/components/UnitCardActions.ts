@@ -16,7 +16,24 @@ import {
   nameOf,
   performWithPrompts,
 } from '@civ-clone/ui-hud/lib/unitActionPrompts';
-import { unitActions } from '@civ-clone/ui-client/lib/unitActions';
+import {
+  distantOrders,
+  unitActions,
+} from '@civ-clone/ui-client/lib/unitActions';
+
+// The unit's own actions, then a button each for its long-range orders (M2b), which ask where when pressed.
+const buttonActions = (unit: Unit): UnitAction[] => [
+  ...unitActions(unit),
+  ...distantOrders(unit).map(
+    (name): UnitAction => ({
+      _: name,
+      __: [],
+      id: '',
+      from: unit.tile,
+      to: unit.tile,
+    })
+  ),
+];
 
 // Every string here is set as text, not markup, so i18next's HTML escaping would show a name with `&` or `'` in it as
 //  `&amp;` or `&#39;` (#704).
@@ -29,6 +46,7 @@ export type ActionGroup = 'orders' | 'terrain' | 'special';
 //  a city, a caravan's or a diplomat's errands). An action not named here is special.
 const groupOf: { [name: string]: ActionGroup } = {
   Activate: 'orders',
+  Airlift: 'orders',
   Automate: 'orders',
   Disband: 'orders',
   Disembark: 'orders',
@@ -36,9 +54,11 @@ const groupOf: { [name: string]: ActionGroup } = {
   Explore: 'orders',
   Fortify: 'orders',
   NoOrders: 'orders',
+  Paradrop: 'orders',
   SetHomeCity: 'orders',
   Sleep: 'orders',
   Unload: 'orders',
+  BuildAirbase: 'terrain',
   BuildFortress: 'terrain',
   BuildIrrigation: 'terrain',
   BuildMine: 'terrain',
@@ -51,6 +71,7 @@ const groupOf: { [name: string]: ActionGroup } = {
   Pillage: 'terrain',
   PlantForest: 'terrain',
   SneakPillage: 'terrain',
+  TransformTerrain: 'terrain',
 };
 
 export const actionGroup = (action: UnitAction): ActionGroup =>
@@ -65,7 +86,7 @@ const groups: ActionGroup[] = ['orders', 'terrain', 'special'];
  *  the key would, through `act`, the active unit's controller (#543).
  */
 export class UnitCardActions extends Element {
-  #act: (unitId: string, unitAction: string) => void;
+  #act: (unitId: string, unitAction: string, choice?: string) => void;
   #canvases = new ScaledCanvases();
   #draw: (canvas: HTMLCanvasElement, layers: IconLayer[]) => void;
   #signature = '';
@@ -73,7 +94,7 @@ export class UnitCardActions extends Element {
 
   constructor(
     container: HTMLElement,
-    act: (unitId: string, unitAction: string) => void,
+    act: (unitId: string, unitAction: string, choice?: string) => void,
     draw: (
       canvas: HTMLCanvasElement,
       layers: IconLayer[]
@@ -89,7 +110,7 @@ export class UnitCardActions extends Element {
    * @param tile The unit's tile as the world holds it, for the city and the cargo on it.
    */
   build(unit: Unit | null, tile: Tile | null): void {
-    const actions = unit ? unitActions(unit) : [],
+    const actions = unit ? buttonActions(unit) : [],
       layers =
         unit === null
           ? []
@@ -188,7 +209,7 @@ export class UnitCardActions extends Element {
         // Through the same windows as the keys: pillaging a treaty partner's land asks first (#287).
         actionButton.addEventListener('click', () =>
           performWithPrompts(unit, action, actions, (chosen) =>
-            this.#act(unit.id, chosen._)
+            this.#act(unit.id, chosen._, chosen.choice)
           )
         );
 

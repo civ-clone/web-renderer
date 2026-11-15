@@ -37,6 +37,11 @@ const sneakActions = [
   //  which `SneakAttack` extends). A nuclear attack isn't weakened, so it doesn't ask.
   attackActions = ['Attack', 'SneakAttack'],
   inciteActions = ['InciteRevolt', 'SneakInciteRevolt', 'SubvertCity'],
+  // A Spy's arrival beside another player's unit (M2b): Civ2's missions against a unit, each standing for its action.
+  unitMissionOptions: [string, string][] = [
+    ['bribe-unit', 'BribeUnit'],
+    ['sabotage-unit', 'SabotageUnit'],
+  ],
   // The Diplomat's arrival popup, in Civ1's order, each option standing for the actions that do it.
   diplomatOptions: [string, string[]][] = [
     ['establish-embassy', ['EstablishEmbassy']],
@@ -282,6 +287,39 @@ const confirmPartialMove =
     );
   };
 
+// Sends an action that offers a choice (its `targets`, such as what a Pillage takes, M2b) with the player's: asked when
+//  there's more than one, and sent with the only one there is otherwise, as the engine would take it. An action that
+//  offers none, or one asked for in another's place (`Overruled`), is sent as it is.
+const chooseTarget =
+  (perform: Perform): Perform =>
+  (chosen: UnitAction): void => {
+    const targets = chosen.targets ?? [];
+
+    if (targets.length < 2) {
+      perform(chosen);
+
+      return;
+    }
+
+    openChoice(
+      t('ChooseTarget.title', {
+        action: t(`Action.${chosen._}.name`, {
+          defaultValue: chosen._,
+          ns: 'unit',
+        }),
+      }),
+      targets.map((target) => ({
+        label: t(`Improvement.${target}.name`, {
+          defaultValue: target,
+          ns: 'world',
+        }),
+        value: target,
+      })),
+      (choice) => perform({ ...chosen, choice }),
+      { canClose: true }
+    );
+  };
+
 /**
  * Sends `action`, after whatever window it needs: a confirmation for anything that would break a peace treaty, the
  * incite window for inciting or subverting, the bribe window for a bribe, and a confirmation for an attack with part of
@@ -295,7 +333,7 @@ export const performWithPrompts = (
   performAsIs: Perform
 ): void => {
   const name = nameOf(action),
-    perform = confirmPartialMove(unit, performAsIs);
+    perform = confirmPartialMove(unit, chooseTarget(performAsIs));
 
   // Read only for the windows that offer a price: the own-tile keys come through here too (#287).
   if (inciteActions.includes(name)) {
@@ -346,6 +384,9 @@ export const openArrivalWindow = (
     caravan = actionsOnTile.filter((action) =>
       caravanActions.includes(action._)
     ),
+    missions = unitMissionOptions.filter(([, name]) =>
+      actionsOnTile.some((action) => action._ === name)
+    ),
     diplomat = diplomatOptions.filter(([, names]) =>
       actionsOnTile.some((action) => names.includes(nameOf(action)))
     );
@@ -374,6 +415,36 @@ export const openArrivalWindow = (
 
         performWithPrompts(unit, action, actionsOnTile, perform);
       }
+    );
+  }
+
+  // A Spy beside a lone unit of another player (M2b), when it can sabotage it: what to do to it, or nothing. A bribe
+  //  offered alone keeps its own window (`bribeWindow`), as before.
+  if (missions.some(([, name]) => name === 'SabotageUnit')) {
+    const [target] = actionsOnTile[0]!.to.units;
+
+    return openChoice(
+      t('Spy.arrives-unit', {
+        nation: civilization(unit.player, 'name'),
+        unit: t(`${unit._}.name`, { defaultValue: unit._, ns: 'unit' }),
+        targetNation: target ? civilization(target.player, 'name') : '',
+        target: target
+          ? t(`${target._}.name`, { defaultValue: target._, ns: 'unit' })
+          : '',
+      }),
+      missions.map(([option]) => ({
+        label: t(`Spy.${option}`),
+        value: option,
+        // The button says what the Spy will do.
+        primary: t(`Spy.${option}`),
+      })),
+      (choice) => {
+        const [, name] = missions.find(([option]) => option === choice)!,
+          action = actionsOnTile.find((action) => action._ === name)!;
+
+        performWithPrompts(unit, action, actionsOnTile, perform);
+      },
+      { canClose: true }
     );
   }
 

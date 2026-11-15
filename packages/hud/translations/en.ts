@@ -124,6 +124,17 @@ i18next.addResources('en', 'default', {
   'Diplomat.bribe.body':
     '{{nation}} {{unit}} will desert for {{cost, number}} coins. Our treasury currently contains {{gold, number}} coins.',
   'Diplomat.bribe.bribe': 'Bribe unit',
+  // A Spy's arrival beside another player's unit (M2b).
+  'Spy.arrives-unit':
+    '{{nation}} {{unit}} reaches the {{targetNation}} {{target}}',
+  'Spy.bribe-unit': 'Bribe unit',
+  'Spy.sabotage-unit': 'Sabotage unit',
+  // An order that offers a choice, such as what to pillage (M2b).
+  'ChooseTarget.title': '{{action}}: which one?',
+  // Where a long-range order goes (M2b): a city for an airlift, a square on the map for a paradrop.
+  'DistantOrder.city.title': '{{action}} to which city?',
+  'DistantOrder.square.prompt':
+    '{{action}}: click the square to go to. Squares out of reach are ignored.',
   // The sidebar's Power list (#701, #708).
   'PowerList.empty': 'No rankings yet.',
   'PowerList.power': '{{power, number}}',

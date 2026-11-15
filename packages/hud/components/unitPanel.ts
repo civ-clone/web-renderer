@@ -14,8 +14,9 @@ export type UnitPanelDeps = {
   transport: Transport;
   // Makes the unit chosen in the stack window the active one, as choosing it from the map does (#482).
   setActiveUnit: (unit: Unit) => void;
-  // A unit's action button clicked: the active unit's controller sends it, as its key would (#543).
-  unitAction: (unitId: string, unitAction: string) => void;
+  // A unit's action button clicked: the active unit's controller sends it, as its key would (#543), with what the player
+  //  chose for it, for one that offers a choice (M2b).
+  unitAction: (unitId: string, unitAction: string, choice?: string) => void;
 };
 
 export type UnitPanelAreas = {

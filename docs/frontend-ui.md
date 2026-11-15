@@ -377,7 +377,19 @@ Moving around the map:
   Unit commands are `keyToActionsMap` in `lib/unitActionKeys.ts`: each key names the
   actions it tries in turn, and the first the active unit has is sent. `e` is
   Explore and `a` Automate (#198, #200): standing orders the engine carries on
-  at the start of each turn until it hands the unit back.
+  at the start of each turn until it hands the unit back. Civ2's orders (M2b)
+  take Civ2's keys where they're free: `o` Transform, `f` Build Fortress (after
+  Fortify, which a unit that builds one can't do), `l` Airlift and `p` Paradrop
+  (after Clean Up Pollution). `e` is Explore, so Build Airbase is `Shift+E`.
+- Long-range orders (Paradrop, Airlift) come with the squares they reach, as
+  the unit's `actionTargets`. Their key or button asks where: a list of cities
+  when every square is a city's, and otherwise the next click on the map, which
+  takes only a square in the list. The long press menu offers them on those
+  squares too. The engine also offers them for the unit's neighbours, which
+  the arrow keys leave out (`withoutDistantOrders`).
+- An action that offers a choice lists it as its `targets` (Civ2's Pillage,
+  what to pillage). With more than one, the player chooses, and the choice
+  goes with the order as `choice`.
 - `mappedKeyFromEvent` normalizes key handling.
 - Some UX paths depend on modal dialog focus forwarding.
 - Pointer events drive the map, so mouse and touch share one path; a press held

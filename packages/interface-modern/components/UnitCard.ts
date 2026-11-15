@@ -91,6 +91,53 @@ const stats = (unit: UnitData): HTMLElement =>
     )
   );
 
+// Hit points left of the most, firepower and fuel left of the range (M2b), as pills on a line of their own, for the rules
+//  that send them: Civ1's send none, and its card has no such line.
+const combatStats = (unit: UnitData): HTMLElement | null => {
+  const pills = (
+    [
+      unit.hitPoints
+        ? [
+            'hit-points',
+            'HitPoints',
+            text('UnitCard.hit-points', {
+              current: unit.hitPoints.current,
+              max: unit.hitPoints.max,
+            }),
+          ]
+        : null,
+      typeof unit.firepower === 'number'
+        ? [
+            'firepower',
+            'Firepower',
+            text('UnitCard.value', { value: unit.firepower }),
+          ]
+        : null,
+      unit.fuel
+        ? [
+            'fuel',
+            'Fuel',
+            text('UnitCard.fuel', {
+              turnsLeft: unit.fuel.turnsLeft,
+              range: unit.fuel.range,
+            }),
+          ]
+        : null,
+    ].filter((pill) => pill !== null) as [string, string, string][]
+  ).map(([className, name, value]) =>
+    statPill({
+      className: `ui-unit-card-stat ui-unit-card-stat-${className}`,
+      label: yieldName(name),
+      value,
+      before: [s(glyph(`stat-${className}` as GlyphName))],
+    })
+  );
+
+  return pills.length
+    ? s('<div class="ui-unit-card-stats ui-unit-card-combat"></div>', ...pills)
+    : null;
+};
+
 // What gives a defence bonus, as the engine names it (#743): a terrain, City Walls or Fortified.
 const sourceName = (name: string): string =>
   t(
@@ -206,6 +253,9 @@ const shown = (unit: UnitData | null): string =>
         unit.attack.value,
         unit.defence.value,
         unit.defenceBonus ?? null,
+        unit.hitPoints ?? null,
+        unit.firepower ?? null,
+        unit.fuel ?? null,
         unit.visibility.value,
         unit.city?.id,
         unit.city?.name,
@@ -392,6 +442,12 @@ export class UnitCard extends Element {
 
     element.insertBefore(header, this.#actions);
     element.insertBefore(stats(unit), this.#actions);
+
+    const combat = combatStats(unit);
+
+    if (combat) {
+      element.insertBefore(combat, this.#actions);
+    }
     // No moves at all (a unit that can't move): no empty row of pips.
     if (unit.movement.value > 0) {
       element.insertBefore(movePips(unit), this.#actions);

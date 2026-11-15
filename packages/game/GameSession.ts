@@ -362,8 +362,8 @@ export class GameSession {
 
             unitController.set(unit);
           },
-          unitAction: (unitId, unitAction): void =>
-            void unitController.act(unitId, unitAction),
+          unitAction: (unitId, unitAction, choice): void =>
+            void unitController.act(unitId, unitAction, choice),
         }
       ),
       // The sidebar's cities (#700), following them through `dataChanges`, and power (#701, #708), told the turn by the HUD.
@@ -383,6 +383,8 @@ export class GameSession {
         data: () => gameState.data(),
         haltedUnits,
         options,
+        pickTile: (accept, onPick, prompt): void =>
+          portal.pickTile(accept, onPick, prompt),
         portal,
         scheduleRender: (): void => this.#scheduleRender(),
         showUnitDetails: (unit): void => {

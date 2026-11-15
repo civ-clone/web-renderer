@@ -1,5 +1,5 @@
 import { Unit, UnitAction } from '@civ-clone/ui-protocol/types';
-import { hasUnitActions } from './unitActions';
+import { hasUnitActions, withoutDistantOrders } from './unitActions';
 
 export type Halt = { target: string; unit: string };
 
@@ -49,10 +49,12 @@ export class HaltedUnits {
 
       this.#halts.shift();
 
-      const actions =
+      const actions = withoutDistantOrders(
+        unit,
         Object.values(unit.actionsForNeighbours ?? {}).find(
           ([action]) => action?.to.id === halt.target
-        ) ?? [];
+        ) ?? []
+      );
 
       return { unit, actions };
     }

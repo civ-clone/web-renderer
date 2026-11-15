@@ -95,7 +95,11 @@ let arrivalsClosed = 0;
         }) as any,
       },
       unitsLayer: layer,
-      world: { get: (x: number) => tiles[x], topology: () => topology },
+      world: {
+        get: (x: number) => tiles[x],
+        tiles: () => tiles,
+        topology: () => topology,
+      },
     }),
     // A rebuild during the turn, the Caravan up, or while waiting for the next one.
     rebuild = (waiting: boolean) =>

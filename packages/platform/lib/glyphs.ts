@@ -40,6 +40,12 @@ const glyphs = {
     '<polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/>',
   'stat-visibility':
     '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>',
+  // Civ2's hit points, firepower and fuel (M2b): Feather's heart, zap and droplet.
+  'stat-hit-points':
+    '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+  'stat-firepower':
+    '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  'stat-fuel': '<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/>',
   // Feather's flag, by a city in civil disorder in a report (#744).
   flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>',
   // Feather's map pin, by a square's coordinates.

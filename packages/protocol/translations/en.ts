@@ -125,6 +125,9 @@ i18next.addResources('en', 'notification', {
   'City.unit-unsupported.title': 'Unit not supported!',
   'City.improvement-unsupported.body': `{{- city, cityName}} cannot support $t(Improvement.{{cityImprovement._}}.name, { "defaultValue": "{{cityImprovement._}}", "ns": "city" }).`,
   'City.improvement-unsupported.title': 'Improvement not supported!',
+  // A city that lost a citizen as its defender lost (M2b).
+  'City.shrink-defender-lost.body': `{{- city, cityName}} lost population when its defender was defeated.`,
+  'City.shrink-defender-lost.title': 'Population lost',
   'City.food-storage-exhausted.body': `Food storage exhausted in {{- city, cityName}}! Famine feared.`,
   'City.food-storage-exhausted.title': 'Food storage exhausted!',
   'City.food-storage-exhausted.unit-lost.body': `Food storage exhausted in {{- city, cityName}}! $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) lost.`,
@@ -232,6 +235,19 @@ i18next.addResources('en', 'notification', {
   'Diplomat.sabotaged.production.spaceship-part.title': 'Industrial sabotage!',
   'Diplomat.unit-bribed.body': `$t({{previousOwner.civilization._}}.name, { "defaultValue": "{{previousOwner.civilization._}}", "ns": "civilization" }) $t({{unit}}.name, { "defaultValue": "{{unit}}", "ns": "unit" }) unit bribed by $t({{briber.civilization._}}.plural, { "defaultValue": "{{briber.civilization._}}", "ns": "civilization" })!`,
   'Diplomat.unit-bribed.title': 'Unit bribed!',
+  // M2b's (#1007): an airlift shot down, by a player met or not (#59), a missile defense's stop told to the missile's
+  //  player and to everyone else, and a unit promoted after a win.
+  'Unit.airlift-shot-down.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was shot down by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) while being airlifted.`,
+  'Unit.airlift-shot-down.title': 'Airlift shot down!',
+  'Unit.airlift-shot-down.unmet.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was shot down while being airlifted.`,
+  'Unit.airlift-shot-down.unmet.title': 'Airlift shot down!',
+  'Unit.nuclear-stopped.body':
+    'A nuclear attack by $t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) was stopped by SDI Defense.',
+  'Unit.nuclear-stopped.title': 'Nuclear attack stopped',
+  'Unit.nuclear-stopped.ours.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was stopped by SDI Defense and lost.`,
+  'Unit.nuclear-stopped.ours.title': 'Nuclear attack stopped',
+  'Unit.promoted.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) has been promoted to veteran.`,
+  'Unit.promoted.title': 'Promoted to veteran',
   'Unit.lost-at-sea.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) was lost at sea.`,
   'Unit.lost-at-sea.title': 'Unit lost at sea!',
   'Unit.trade-route-established.body': `$t(TradeRoute.goods.{{goods}}, { "defaultValue": "{{goods}}", "ns": "default" }) caravan from {{- home, cityName}} arrives in {{- city, cityName}}. The goods sold for {{bonus, number}} coins.`,

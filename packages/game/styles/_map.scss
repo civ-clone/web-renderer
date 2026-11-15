@@ -9,6 +9,11 @@
     // scroll or a zoom of the page.
     touch-action: none;
     width: 100%;
+
+    // Choosing a square for a long-range order (M2b).
+    &.picking-tile {
+      cursor: crosshair;
+    }
   }
 }
 

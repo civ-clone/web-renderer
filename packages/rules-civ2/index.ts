@@ -5,9 +5,10 @@
 // Civ2's own: buying and selling (civ2-treasury, on base-treasury's actions), the revolution (civ2-government), what an
 //  exchange of knowledge took (civ2-diplomacy, on base-diplomacy), civil disorder (civ2-city-happiness), the citizens'
 //  moods (base-city-happiness's calculator, as civ2-city-happiness uses it), the Wonders report (civ2-wonder), the
-//  difficulty level, and the terrain tooltip (civ2-world's tables). Still as a game without them would answer, as M2a
-//  has none of them: choosing an Auto city's next build, scoring and conquest, and fuel. It imports nothing of
-//  Civ1's (the civ2 set's isolation suite checks that none of it loads).
+//  difficulty level, the terrain tooltip (civ2-world's tables), and M2b's combat and units: hit points, firepower and
+//  fuel on the unit card, the squares Paradrop and Airlift reach, what Pillage can take, and a notice for a unit
+//  promoted after a win. Still as a game without them would answer: choosing an Auto city's next build, and scoring
+//  and conquest. It imports nothing of Civ1's (the civ2 set's isolation suite checks that none of it loads).
 
 import {
   calculateCitizenState,
@@ -22,16 +23,25 @@ import {
   setWorkerRules,
   WorkerRules,
 } from '@civ-clone/ui-worker-client/workerRules';
+import { actionTargets, pillageTargets } from './AdditionalData/actionTargets';
 import {
   terrainDefenceBonus,
   terrainMoveCost,
 } from './AdditionalData/terrainRules';
+import {
+  unitFirepower,
+  unitFuel,
+  unitHitPoints,
+} from './AdditionalData/unitCombat';
 import AdvanceTaken from '@civ-clone/base-diplomacy/Dialogues/AdvanceTaken';
 import ChooseGovernment from '@civ-clone/base-player-action-choose-government/ChooseGovernment';
 import CompleteProduction from '@civ-clone/base-treasury/PlayerActions/CompleteProduction';
 import Revolution from '@civ-clone/base-player-action-revolution/Revolution';
 import SellImprovement from '@civ-clone/base-treasury/PlayerActions/SellImprovement';
 import { instance as additionalDataRegistryInstance } from '@civ-clone/core-data-object/AdditionalDataRegistry';
+import { instance as engineInstance } from '@civ-clone/core-engine/Engine';
+import promoted from './Rules/promoted';
+import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import anarchyTurns from './AdditionalData/anarchyTurns';
 import { civilDisorder } from '@civ-clone/civ2-city-happiness/lib/cityStatus';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
@@ -59,7 +69,7 @@ export const civ2Rules: WorkerRules = {
   conquestBonus: (): null => null,
   difficultyLevel: (difficulties) => levelOf(difficulties),
   rating: () => ({ rating: 0, famousLeader: null }),
-  // No fuel in M2a.
+  // A unit that runs out of fuel says so itself (`unit:out-of-fuel`), so nothing lost at sea is a fuel loss.
   needsFuel: (): boolean => false,
   // Standing or lost, in RULES.TXT's order, for the Wonders of the World report.
   wonderHistory: (wonders, cityImprovements) =>
@@ -82,8 +92,15 @@ export const register = (): void => {
     anarchyTurns(),
     civilDisorderDeclared(),
     terrainDefenceBonus(),
-    terrainMoveCost()
+    terrainMoveCost(),
+    unitHitPoints(),
+    unitFirepower(),
+    unitFuel(),
+    actionTargets(),
+    pillageTargets()
   );
+
+  ruleRegistryInstance.register(promoted(engineInstance));
 };
 
 register();

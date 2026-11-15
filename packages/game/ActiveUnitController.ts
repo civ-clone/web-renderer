@@ -18,9 +18,13 @@ import { openArrivalWindow } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import HaltedUnits from '@civ-clone/ui-client/lib/haltedUnits';
 import {
   UnitActionsRequest,
+  distantOrders,
   hasUnitActions,
   unitActions,
 } from '@civ-clone/ui-client/lib/unitActions';
+import chooseDistantTarget, {
+  PickTile,
+} from '@civ-clone/ui-hud/lib/distantOrders';
 import ActiveUnitTiles from '@civ-clone/ui-map/lib/ActiveUnitTiles';
 import PendingMove from '@civ-clone/ui-client/lib/PendingMove';
 import playUnitKey, { PlayedKey } from './lib/playUnitKey';
@@ -62,6 +66,8 @@ export type ActiveUnitControllerDeps = {
   data: () => GameData;
   haltedUnits: HaltedUnits;
   options: { get(key: string, defaultValue?: any): any };
+  // Lets the player click a square on the map for a long-range order (M2b): the map's portal, where there is one.
+  pickTile?: PickTile;
   // The tests keep their own, to look at what is kept. Otherwise made here.
   pendingMove?: PendingMove<Tile>;
   portal: ActiveUnitPortal;
@@ -71,7 +77,11 @@ export type ActiveUnitControllerDeps = {
   transport: Pick<Transport, 'send'>;
   unitsLayer: ActiveUnitUnitsLayer;
   // `topology` for the keys that move a unit: one per direction the world has (#88).
-  world: { get(x: number, y: number): Tile; topology(): Topology };
+  world: {
+    get(x: number, y: number): Tile;
+    tiles(): Tile[];
+    topology(): Topology;
+  };
 };
 
 export class ActiveUnitController {
@@ -115,7 +125,7 @@ export class ActiveUnitController {
    * waited for as any order is (#543). Nothing when the button was drawn for a unit that is no longer active, or while
    * a move or an order is answered or keys are kept: the button was drawn for the unit as it was before them.
    */
-  act(unitId: string, actionName: string): boolean {
+  act(unitId: string, actionName: string, choice?: string): boolean {
     const unit = this.#activeUnit,
       pendingMove = this.#pendingMove;
 
@@ -133,12 +143,45 @@ export class ActiveUnitController {
     );
 
     if (!action) {
+      // A long-range order's button (M2b): where it goes is asked first.
+      if (distantOrders(unit).includes(actionName)) {
+        this.chooseTarget(unit, actionName);
+
+        return true;
+      }
+
       return false;
     }
 
-    this.#send(unit.id, action);
+    this.#send(unit.id, choice === undefined ? action : { ...action, choice });
 
     return true;
+  }
+
+  /**
+   * Asks where `unit`'s long-range order `actionName` goes (M2b: a list of cities, or a square on the map), then sends
+   *  it there, as an order towards a square, if `unit` is still the active unit and nothing is being answered.
+   */
+  chooseTarget(unit: Unit, actionName: string): void {
+    chooseDistantTarget(
+      unit,
+      actionName,
+      this.#deps.world.tiles(),
+      this.#deps.pickTile ?? null,
+      (action) => {
+        const pendingMove = this.#pendingMove;
+
+        if (
+          this.#activeUnit?.id !== unit.id ||
+          pendingMove.pending() ||
+          pendingMove.queued()
+        ) {
+          return;
+        }
+
+        this.#send(unit.id, action, true);
+      }
+    );
   }
 
   active(): Unit | null {
@@ -448,6 +491,7 @@ export class ActiveUnitController {
 
     return playUnitKey(key, this.#activeUnit, {
       apply: (unit) => this.apply(unit),
+      chooseTarget: (unit, actionName) => this.chooseTarget(unit, actionName),
       pendingMove: this.#pendingMove,
       scheduleRender,
       send: (unitId, action, towardsTile) =>
@@ -469,7 +513,12 @@ export class ActiveUnitController {
   #send(unitId: string, action: UnitAction, towardsTile = false): void {
     const order = { id: unitId, unitAction: action._, target: action.to.id };
 
-    this.#deps.transport.send('action', { name: 'ActiveUnit', ...order });
+    this.#deps.transport.send('action', {
+      name: 'ActiveUnit',
+      ...order,
+      // What the player chose for it, if it offered a choice (M2b).
+      ...(action.choice === undefined ? {} : { choice: action.choice }),
+    });
 
     if (action._ === 'Unload') {
       const { x, y } = action.from;

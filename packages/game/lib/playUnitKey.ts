@@ -13,6 +13,7 @@ import {
   performWithPrompts,
 } from '@civ-clone/ui-hud/lib/unitActionPrompts';
 import {
+  distantOrders,
   neighbourActions,
   unitActions,
 } from '@civ-clone/ui-client/lib/unitActions';
@@ -29,6 +30,8 @@ export type PlayedKey = 'sent' | 'prompted' | null;
 export type PlayUnitKeyContext = {
   // Makes the unit active again, so the layers draw it on the tile its move is going to.
   apply: (unit: Unit) => void;
+  // Asks where a long-range order goes, then sends it there (M2b, `chooseDistantTarget`).
+  chooseTarget: (unit: Unit, actionName: string) => void;
   pendingMove: Pick<PendingMove<Tile>, 'start'>;
   scheduleRender: () => void;
   // Sends an order and waits for its answer (#543); `towardsTile` for one behind a direction key.
@@ -45,6 +48,7 @@ export const playUnitKey = (
   unit: Unit | null,
   {
     apply,
+    chooseTarget,
     pendingMove,
     scheduleRender,
     send,
@@ -78,6 +82,16 @@ export const playUnitKey = (
         });
 
         return sent ? 'sent' : 'prompted';
+      }
+
+      // A long-range order (M2b): where it goes is asked first.
+      if (
+        actionName !== undefined &&
+        distantOrders(unit).includes(actionName)
+      ) {
+        chooseTarget(unit, actionName);
+
+        return 'prompted';
       }
     }
   }

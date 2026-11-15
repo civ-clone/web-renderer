@@ -14,20 +14,29 @@ Civ2 saves record that they belong to the `civ2` set and load as civ2, but **the
 
 - **Interim world.** The map comes from the shared generator with Glacier at the poles and a simple downhill river walk afterwards, not Civ2's own generator. Start positions are simple, plus Civ2's start balancing (extra Settlers or advances for poor starts). Only staggered-iso grids are offered. (civ2-world, civ2-player.) Planned: Civ2's own generator (M2f).
 - **Rivers** give +1 trade, a source of water for irrigation and a river-side site bonus, but Civ2's river movement and display rules are approximated. (civ2-world.) Not scheduled.
-- **Farmland is inert.** It can be built, but gives no food, so the Supermarket does nothing yet. (civ2-world, civ2-city-improvement.) Planned.
+- **No Farmland.** It can't be built yet, so the Supermarket does nothing. (civ2-world, civ2-city-improvement.) Planned.
 - **No commodities, no city-context yields.** Squares yield what the terrain and special say; nothing depends on the city working them. (civ2-world.) Planned.
 - **City square.** Irrigation and a road as in Civ1; Civ2's mine bonus where irrigation is impossible and the centre's farmland are not modelled. (civ2-city.) Not scheduled.
 
 ## Units and combat
 
-- **No hit points or firepower.** Battles use Civ1's resolver (one roll per round, a single hit decides) with Civ2's attack, defence and move numbers. This is the biggest difference in play. (civ2-unit.) Planned.
-- **No fuel, no paradrop.** Aircraft are not range-limited and Paratroopers cannot drop. (civ2-unit.) Planned.
+M2b (#1007) brought Civ2's combat and units: hit points and firepower, damage that lasts until a unit heals, veterans after a win, fuel, Paradrop, Airlift, Transform, fortresses and airbases, and pillaging a chosen improvement.
+
+- **In place:** Civ2's rounds of combat, with each unit's hit points and firepower, and the firepower changes for ships, submarines and helicopters; healing and the slower moves of a damaged unit; a winner's chance to become a veteran (always, with Sun Tzu's War Academy); fuel for aircraft, which crash at the end of their range; Paradrop (within 10 squares, from a city or an airbase), Airlift (between two cities with an Airport, once a city a turn) and Sabotage Unit; SDI Defense stopping nuclear attacks within 3 squares; Triremes that are never lost with the Lighthouse; and the combat handicaps by difficulty level, which a game can switch off. (civ2-unit, civ2-wonder, civ2-city-improvement, civ2-difficulty.)
 - **Generic unit names.** Units that Civ1 also has use its names (Spearman, not Civ2's); Civ2's own names will come with a later import. (base-unit-\* packages.) Planned.
-- **No barbarians.** Nothing raises them, so a hut that would release a horde gives mercenaries instead, and the Great Wall's effect on them is absent. (civ2-goody-hut, civ2-wonder.) Planned.
+- **No barbarians.** Nothing raises them, so a hut that would release a horde gives mercenaries instead, and the Great Wall's effect on them is absent. Civ2's own odds for battles with barbarians aren't in either. (civ2-goody-hut, civ2-wonder, civ2-unit.) Planned (M2e).
 - **Zones of control** and the Civ2 move and defence rows are in; City Walls and the Great Wall triple land defence as Civ2 does. (civ2-unit.)
 - **No Senate rows.** Under the Republic and Democracy nothing stops you declaring war or breaking a treaty. (civ2-unit, civ2-diplomacy.) Planned (M2d).
-- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. (civ2-unit, civ2-city.) Planned.
-- **Not modelled:** Leonardo's upgrades, the Lighthouse's safe Triremes, Sun Tzu's veterans after a win, SDI Defense against nuclear attack, Airport airlifts, and Communism's veteran Diplomats. (civ2-wonder, civ2-city-improvement, civ2-unit.) Not scheduled.
+- **No incite, bribe or trade routes.** Inciting a city, bribing a unit and setting up a trade route are not offered. A Spy's only mission against a unit is Sabotage Unit, and against a city none of Civ2's yet. (civ2-unit, civ2-city.) Planned (M2d).
+- **No ×2 sneak attack.** Civ2 doubles an attack that breaks a treaty; here it fights at its normal strength. (civ2-unit.) Not scheduled.
+- **No instant heal in an allied city.** A unit heals by Civ2's steps wherever it is, but moving into an ally's city doesn't heal it at once. (civ2-unit.) Not scheduled.
+- **Computer players' aircraft** don't lose the extra turn of fuel Civ2 takes from a computer player's attacker after a win. (civ2-unit.) Not scheduled.
+- **Carriers and Submarines hold 8.** Civ2's code lets a carrier or a submarine hold 20 and doesn't check it on landing; here both hold 8, as the unit table says. (civ2-unit.) By design.
+- **Airlifts always fly.** An airlift near enemy fighters can be shot down, as in Civ2, but Civ2 asks you to confirm a risky one first. (civ2-unit.) Not scheduled.
+- **No work pooling.** Engineers work at twice the rate, but several workers on one square don't add their work together as in Civ2 (#1059). (civ2-unit.) Planned.
+- **No odds display.** Civ2 doesn't show the odds of a battle, and neither does civ.one yet. (web-renderer.) By design for now.
+- **Where Civ2's code and its description differ, the code is followed:** a city loses a citizen when its defender loses unless the attacker fought from the sea, which the code judges by the attacker's square, not the city's; and the difficulty handicaps apply to any attacker that isn't a barbarian. (civ2-unit, civ2-difficulty.) By design.
+- **Not modelled:** Leonardo's upgrades and Communism's veteran Diplomats. (civ2-wonder, civ2-unit.) Planned (M2c).
 
 ## Cities
 

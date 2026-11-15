@@ -41,6 +41,7 @@
     "./components/turnControls": "./components/turnControls.ts",
     "./components/unitPanel": "./components/unitPanel.ts",
     "./lib/cityOpeners": "./lib/cityOpeners.ts",
+    "./lib/distantOrders": "./lib/distantOrders.ts",
     "./lib/unitActionPrompts": "./lib/unitActionPrompts.ts",
     "./lib/unitLabel": "./lib/unitLabel.ts",
     "./lib/unitMenuActions": "./lib/unitMenuActions.ts"
