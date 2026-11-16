@@ -36,10 +36,7 @@ import { instance as playerRegistryInstance } from '@civ-clone/core-player/Playe
 import { instance as ruleRegistryInstance } from '@civ-clone/core-rule/RuleRegistry';
 import { tmpdir } from 'os';
 import { typeNameOf } from '@civ-clone/core-data-object/DataObject';
-import {
-  Alliance,
-  Ceasefire,
-} from '@civ-clone/library-diplomacy/Declarations';
+import { Alliance, Ceasefire } from '@civ-clone/library-diplomacy/Declarations';
 import {
   AskAlly,
   CancelAlliance,
@@ -896,7 +893,9 @@ if (scenario !== null) {
     'civ2-enhanced is civ2 and civ2-enhanced',
     civ2Enhanced.plugins
       .filter((name) => !civ2.plugins.includes(name))
-      .concat(civ2.plugins.filter((name) => !civ2Enhanced.plugins.includes(name))),
+      .concat(
+        civ2.plugins.filter((name) => !civ2Enhanced.plugins.includes(name))
+      ),
     ['@civ-clone/civ2-enhanced']
   );
   expect(

@@ -65,7 +65,9 @@ const civilization = (_: string, leader: string) => ({
       civilization: 'German',
       colors: ['#ff0000', '#ffffff'],
       leader: 'FrederickTheGreat',
-      atPeace: false,
+      leaderTitle: null,
+      treaty: 'war',
+      attitude: null,
       theirEmbassy: false,
       firstMet: -3000,
       details: {
@@ -77,6 +79,7 @@ const civilization = (_: string, leader: string) => ({
         units: 9,
         foreignAffairs: [],
         advances: [],
+        reputation: null,
       },
     },
   ];

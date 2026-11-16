@@ -171,6 +171,11 @@ i18next.addResources('en', 'default', {
   'HappinessReport.title': 'Happiness report',
   'IntelligenceReport.at-peace': 'At PEACE with {{nation}}.',
   'IntelligenceReport.at-war': 'At WAR with {{nation}}.',
+  // Civ2's treaties beyond peace and war (M2d), and a civilization's reputation.
+  'IntelligenceReport.at-alliance': 'ALLIED with {{nation}}.',
+  'IntelligenceReport.at-ceasefire': 'At CEASEFIRE with {{nation}}.',
+  'IntelligenceReport.at-contact': 'No treaty with {{nation}}.',
+  'IntelligenceReport.reputation': 'Reputation: {{- reputation}}',
   // Already escaped by `Generic.city-name`.
   'IntelligenceReport.capital': 'Capital: {{- city}}',
   'IntelligenceReport.empty': 'We have not met any other civilizations yet.',

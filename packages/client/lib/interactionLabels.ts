@@ -6,6 +6,7 @@ import {
   Resolution,
 } from '@civ-clone/ui-protocol/types';
 import instanceOf from './instanceOf';
+import { titledLeader } from './relations';
 import { t } from 'i18next';
 
 /** A line of the talks: who said it (`null` for the scene, said by nobody), what they said, and whether it's ours. */
@@ -101,13 +102,16 @@ export const interactionContext = (
     instanceOf(interaction, 'AdvanceTaken') ||
     (instanceOf(interaction, 'Dialogue') &&
       (interaction as Dialogue).key === 'handover'),
-  /** A player as the talks name them: their leader, or failing one, their nation. */
+  /** A player as the talks name them: their leader, with their title under rules with titles, or failing one, their nation. */
   playerName = (player: Player): string =>
     player.civilization?.leader
-      ? t('Generic.leader-name', {
-          leader: player.civilization.leader._,
-          player,
-        })
+      ? titledLeader(
+          t('Generic.leader-name', {
+            leader: player.civilization.leader._,
+            player,
+          }),
+          player.civilization.leaderTitle
+        )
       : t('Generic.civilization-name.plural', {
           civilization: player.civilization?._,
           player,

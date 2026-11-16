@@ -57,6 +57,8 @@ import {
   setAutoMode,
 } from '@civ-clone/civ2-city/lib/autoMode';
 import cityStyle from './lib/cityStyle';
+import { attitude, leaderTitle, reputation, treaty } from './lib/relations';
+import leaderTitleData from './AdditionalData/leaderTitle';
 import stagedHappiness from '@civ-clone/civ2-city-happiness/lib/stagedHappiness';
 import civilDisorderDeclared from './AdditionalData/civilDisorderDeclared';
 import { levelOf } from '@civ-clone/civ2-difficulty/level';
@@ -106,6 +108,13 @@ export const civ2Rules: WorkerRules = {
   },
   // Rapture growth is told, as a city's growth.
   celebrationGrowthNotice: true,
+  // Seeing a city isn't meeting its owner: the Apollo Program shows every city, and makes no contact (#1067).
+  seenCityMeets: false,
+  // M2d's relations: the treaty with a ceasefire and an alliance, a computer player's feelings, reputation and titles.
+  treaty,
+  attitude,
+  reputation,
+  leaderTitle,
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
   cityStyle: (city) => cityStyle(city),
   // No score in M2a, so nothing for conquest either.
@@ -142,6 +151,7 @@ export const register = (): void => {
     unitFuel(),
     actionTargets(),
     pillageTargets(),
+    leaderTitleData(),
     ...cities()
   );
 

@@ -24,3 +24,15 @@ i18next.addResources('en', 'civilization', {
   'Leader.IsabellaI.name': 'Isabella I',
   'Leader.XerxesI.name': 'Xerxes I',
 });
+
+// What a leader is called under each government (civ2-civilization's `LeaderTitle` rules, M2d), in our own words,
+//  wherever the leader is named.
+i18next.addResources('en', 'civilization', {
+  'LeaderTitle.civ2.Anarchy': 'Rebel Leader',
+  'LeaderTitle.civ2.Despotism': 'Tyrant',
+  'LeaderTitle.civ2.Monarchy': 'Sovereign',
+  'LeaderTitle.civ2.Communism': 'Chairman',
+  'LeaderTitle.civ2.Fundamentalism': 'Supreme Guide',
+  'LeaderTitle.civ2.Republic': 'First Citizen',
+  'LeaderTitle.civ2.Democracy': 'Prime Minister',
+});

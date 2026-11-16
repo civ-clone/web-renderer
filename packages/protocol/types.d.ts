@@ -173,6 +173,8 @@ export interface Attribute extends EntityInstance<'Attribute'> {
 export interface Civilization extends EntityInstance {
   attributes: Attribute[];
   leader: Leader;
+  // What the leader is called under their government, as a translation key, under rules with titles (Civ2's, M2d).
+  leaderTitle?: string | null;
 }
 
 export interface Leader extends EntityInstance {

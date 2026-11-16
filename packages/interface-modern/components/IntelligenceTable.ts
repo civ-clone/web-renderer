@@ -11,6 +11,12 @@ import { cityNameText } from '@civ-clone/ui-client/components/lib/city';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import {
+  attitudeName,
+  reputationName,
+  titledLeader,
+  treatyRank,
+} from '@civ-clone/ui-client/lib/relations';
 
 const plural = (civilization: string): string =>
   t(`${civilization}.plural`, {
@@ -18,10 +24,28 @@ const plural = (civilization: string): string =>
     ns: 'civilization',
   });
 
-const leaderName = (leader: string | null): string =>
+const leaderName = (
+  leader: string | null,
+  title: string | null = null
+): string =>
   leader === null
     ? t('IntelligenceReport.unknown')
-    : t(`Leader.${leader}.name`, { defaultValue: leader, ns: 'civilization' });
+    : titledLeader(
+        t(`Leader.${leader}.name`, {
+          defaultValue: leader,
+          ns: 'civilization',
+        }),
+        title
+      );
+
+// The treaty between us, and how they feel toward us where the rules keep it (Civ2's).
+const relations = ({ treaty, attitude }: IntelligenceRow): string =>
+  attitude === null
+    ? t(`ReportTable.Intelligence.${treaty}`)
+    : t('ReportTable.Intelligence.relations-attitude', {
+        treaty: t(`ReportTable.Intelligence.${treaty}`),
+        attitude: attitudeName(attitude),
+      });
 
 const governmentName = (row: IntelligenceRow): string =>
   row.details?.government
@@ -67,7 +91,7 @@ const leader = (row: IntelligenceRow): HTMLElement => {
 
   return s(
     '<span></span>',
-    leaderName(row.leader),
+    leaderName(row.leader, row.leaderTitle),
     ...(traits.length === 0
       ? []
       : [
@@ -105,7 +129,17 @@ const embassyDetails = ({
   capital,
   foreignAffairs,
   advances,
+  reputation,
 }: IntelligenceDetails): HTMLElement[] => [
+  ...(reputation === null
+    ? []
+    : [
+        line(
+          t('IntelligenceReport.reputation', {
+            reputation: reputationName(reputation),
+          })
+        ),
+      ]),
   line(
     capital === null
       ? t('IntelligenceReport.no-capital')
@@ -123,9 +157,9 @@ const embassyDetails = ({
     s('<h4></h4>', t('IntelligenceReport.foreign-affairs')),
     ...(foreignAffairs.length === 0
       ? [line(t('IntelligenceReport.no-foreign-affairs'))]
-      : foreignAffairs.map(({ civilization, atPeace }) =>
+      : foreignAffairs.map(({ civilization, treaty }) =>
           line(
-            t(`IntelligenceReport.${atPeace ? 'at-peace' : 'at-war'}`, {
+            t(`IntelligenceReport.at-${treaty}`, {
               nation:
                 civilization === null
                   ? t('Generic.unknown-civilization')
@@ -188,16 +222,16 @@ export class IntelligenceTable extends FilterableWindow {
           key: 'leader',
           heading: t('ReportTable.Intelligence.leader'),
           cell: leader,
-          sortValue: ({ leader }) => leaderName(leader),
+          sortValue: ({ leader, leaderTitle }) =>
+            leaderName(leader, leaderTitle),
         },
         {
           key: 'relations',
           heading: t('ReportTable.Intelligence.relations'),
-          cell: ({ atPeace }) =>
-            t(`ReportTable.Intelligence.${atPeace ? 'peace' : 'war'}`),
-          sortValue: ({ atPeace }) => (atPeace ? 1 : 0),
+          cell: relations,
+          sortValue: ({ treaty }) => treatyRank(treaty),
           sortFirst: 'ascending',
-          tone: ({ atPeace }) => (atPeace ? null : 'negative'),
+          tone: ({ treaty }) => (treaty === 'war' ? 'negative' : null),
         },
         {
           key: 'embassy',

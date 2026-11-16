@@ -138,7 +138,9 @@ const run = async (): Promise<void> => {
       civilization: 'Mongol',
       colors: null,
       leader: null,
-      atPeace: true,
+      leaderTitle: null,
+      treaty: 'peace',
+      attitude: null,
       theirEmbassy: false,
       firstMet: null,
       details: {
@@ -150,6 +152,7 @@ const run = async (): Promise<void> => {
         units: 0,
         foreignAffairs: [],
         advances: [],
+        reputation: null,
       },
     }).querySelectorAll('p')
   ).find((line) => line.textContent?.startsWith('Treasury'));

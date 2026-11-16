@@ -86,6 +86,11 @@ i18next.addResources('en', 'default', {
   'IntelligenceReport.military_other': 'Military: {{count, number}} Units.',
   'IntelligenceReport.relations-peace': 'We are at PEACE with them.',
   'IntelligenceReport.relations-war': 'We are at WAR with them.',
+  // Civ2's treaties beyond peace and war (M2d), and how they feel toward us.
+  'IntelligenceReport.relations-alliance': 'We are ALLIED with them.',
+  'IntelligenceReport.relations-ceasefire': 'We have a CEASEFIRE with them.',
+  'IntelligenceReport.relations-contact': 'We have no treaty with them.',
+  'IntelligenceReport.attitude': 'Their attitude toward us: {{- attitude}}.',
   'MilitaryReport.active_one': '{{count, number}} active',
   'MilitaryReport.active_other': '{{count, number}} active',
   'MilitaryReport.in-production_one': '{{count, number}} in production',

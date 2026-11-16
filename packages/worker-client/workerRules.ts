@@ -20,8 +20,21 @@ import type Unit from '@civ-clone/core-unit/Unit';
 import type Wonder from '@civ-clone/core-wonder/Wonder';
 import type { WonderRegistry } from '@civ-clone/core-wonder/WonderRegistry';
 import type { CityImprovementRegistry } from '@civ-clone/core-city-improvement/CityImprovementRegistry';
+import type { InteractionRegistry } from '@civ-clone/core-diplomacy/InteractionRegistry';
+import type { PlayerGovernmentRegistry } from '@civ-clone/core-government/PlayerGovernmentRegistry';
+import type { Treaty } from '@civ-clone/ui-protocol/reports';
+import type Turn from '@civ-clone/core-turn-based-game/Turn';
 
 export type PlayerActionType = new (...args: any[]) => PlayerAction;
+
+export type { Treaty };
+
+/** The registries the relations between players are read from. */
+export type RelationRegistries = {
+  interactionRegistry: InteractionRegistry;
+  ruleRegistry: RuleRegistry;
+  turn: Turn;
+};
 
 /** A Wonder as the rule set's history of them gives it: standing (in `city`, `owner`'s), lost with its city, or never built. */
 export type WonderStatus = {
@@ -82,6 +95,38 @@ export type WorkerRules = {
   celebrationGrowthNotice?: boolean;
   /** How a city is drawn, for a rival's city, which goes without the rule set's own city data. None by default. */
   cityStyle?: (city: City) => object | null;
+  /**
+   * Whether having seen a city a player holds or founded counts as meeting them, for naming them (`hasMet`). Yes by
+   *  default, as the client has always had it (Civ1); Civ2's rules say no, as the Apollo Program shows every city
+   *  without making contact (#1067).
+   */
+  seenCityMeets?: boolean;
+  /**
+   * Where `player` and `other` stand, for the reports and the talks. By default at peace while a `Peace` is in force
+   *  between them, and otherwise at war, as v474.05 has it for any two who have met.
+   */
+  treaty?: (
+    player: Player,
+    other: Player,
+    registries: RelationRegistries
+  ) => Treaty;
+  /** How `holder` feels toward `toward`, as one of nine bands (0 the warmest), or `null` with no feeling kept. None by default. */
+  attitude?: (
+    holder: Player,
+    toward: Player,
+    registries: RelationRegistries
+  ) => number | null;
+  /** `player`'s reputation, 0 the best to 7 the worst, or `null`. None by default. */
+  reputation?: (
+    player: Player,
+    registries: RelationRegistries
+  ) => number | null;
+  /** What `player`'s leader is called under their government, as a translation key, or `null`. None by default. */
+  leaderTitle?: (
+    player: Player,
+    rules: RuleRegistry,
+    playerGovernments: PlayerGovernmentRegistry
+  ) => string | null;
 };
 
 let current: WorkerRules | null = null;
@@ -90,6 +135,9 @@ let current: WorkerRules | null = null;
 export const setWorkerRules = (rules: WorkerRules): void => {
   current = rules;
 };
+
+/** The rules the game is played with, or `null` before any are loaded: for what may be asked before a game, too. */
+export const currentWorkerRules = (): WorkerRules | null => current;
 
 /** The rules the game is played with: the client asks for them only once a game is under way, after they're in. */
 export const workerRules = (): WorkerRules => {

@@ -10,6 +10,11 @@ import { yieldIcon } from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import {
+  attitudeName,
+  reputationName,
+  titledLeader,
+} from '@civ-clone/ui-client/lib/relations';
 
 // The intelligence report (F3, #58), after v474.05's (`Overlay_14.cs` `F14_0000_1164`): every civilization you've
 //  met, with what an embassy tells you about it.
@@ -24,17 +29,21 @@ const line = (html: string): HTMLElement => s(`<p>${html}</p>`);
 
 const leaderLine = (
   leader: string | null,
-  traits: string[] = []
+  traits: string[] = [],
+  title: string | null = null
 ): HTMLElement =>
   line(
     t('IntelligenceReport.leader', {
       leader:
         leader === null
           ? t('IntelligenceReport.unknown')
-          : t(`Leader.${leader}.name`, {
-              defaultValue: leader,
-              ns: 'civilization',
-            }),
+          : titledLeader(
+              t(`Leader.${leader}.name`, {
+                defaultValue: leader,
+                ns: 'civilization',
+              }),
+              title
+            ),
       context: traits.length > 0 ? 'traits' : undefined,
       traits: traits
         .map((trait) =>
@@ -52,6 +61,7 @@ const renderDetails = ({
   units,
   foreignAffairs,
   advances,
+  reputation,
 }: IntelligenceDetails): HTMLElement[] => [
   line(
     capital === null
@@ -74,15 +84,25 @@ const renderDetails = ({
   // The Gold icon after the amount, rather than a `$` (#683).
   s(`<p>${t('IntelligenceReport.treasury', { gold })} </p>`, yieldIcon('Gold')),
   line(t('IntelligenceReport.military', { count: units })),
+  // Under rules that keep one (Civ2's).
+  ...(reputation === null
+    ? []
+    : [
+        line(
+          t('IntelligenceReport.reputation', {
+            reputation: reputationName(reputation),
+          })
+        ),
+      ]),
   s(
     `<div class="foreign-affairs"><h4>${t(
       'IntelligenceReport.foreign-affairs'
     )}</h4></div>`,
     ...(foreignAffairs.length === 0
       ? [line(t('IntelligenceReport.no-foreign-affairs'))]
-      : foreignAffairs.map(({ civilization, atPeace }) =>
+      : foreignAffairs.map(({ civilization, treaty }) =>
           line(
-            t(`IntelligenceReport.${atPeace ? 'at-peace' : 'at-war'}`, {
+            t(`IntelligenceReport.at-${treaty}`, {
               nation:
                 civilization === null
                   ? t('Generic.unknown-civilization')
@@ -112,8 +132,18 @@ export const renderIntelligenceRow = (row: IntelligenceRow): HTMLElement => {
       nation: plural(row.civilization),
     })}</h3></section>`,
     // What you know of anyone you've met, embassy or not (#419).
-    leaderLine(row.leader, row.details?.traits),
-    line(t(`IntelligenceReport.relations-${row.atPeace ? 'peace' : 'war'}`)),
+    leaderLine(row.leader, row.details?.traits, row.leaderTitle),
+    line(t(`IntelligenceReport.relations-${row.treaty}`)),
+    // How they feel toward us, where the rules keep it (Civ2's).
+    ...(row.attitude === null
+      ? []
+      : [
+          line(
+            t('IntelligenceReport.attitude', {
+              attitude: attitudeName(row.attitude),
+            })
+          ),
+        ]),
     ...(row.theirEmbassy ? [line(t('IntelligenceReport.their-embassy'))] : []),
     ...(row.details === null
       ? [line(t('IntelligenceReport.no-embassy'))]

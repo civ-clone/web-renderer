@@ -139,6 +139,7 @@ i18next.addResources('en', 'default', {
   'GameMenu.section.reports': 'Reports',
   'GameOptions.theme-choice.slate': 'Slate and brass',
   // The meeting window under the new interface (#752): who they are and what the player knows of them, then the replies.
+  'Meeting.attitude': 'Attitude',
   'Meeting.cities': 'Cities',
   'Meeting.count': '{{count, number}}',
   'Meeting.first-met': 'First met',
@@ -175,6 +176,12 @@ i18next.addResources('en', 'default', {
   'ReportTable.Intelligence.embassy-theirs': 'Theirs',
   'ReportTable.Intelligence.peace': 'Peace',
   'ReportTable.Intelligence.war': 'War',
+  // Civ2's treaties beyond peace and war (M2d), and how they feel toward us beside the treaty.
+  'ReportTable.Intelligence.alliance': 'Alliance',
+  'ReportTable.Intelligence.ceasefire': 'Ceasefire',
+  'ReportTable.Intelligence.contact': 'No treaty',
+  'ReportTable.Intelligence.relations-attitude':
+    '{{- treaty}} ({{- attitude}})',
   // The active unit's card under the new interface (#743).
   'UnitCard.coordinates': 'Coordinates',
   'UnitCard.defence-bonus':

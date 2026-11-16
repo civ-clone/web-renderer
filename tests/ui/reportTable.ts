@@ -136,6 +136,7 @@ const run = async (): Promise<void> => {
   await import('./lib/strings');
   await import('../../translations/civ1-city/en');
   await import('../../translations/civ1-city-improvement/en');
+  await import('../../translations/civ2-civilization/en');
 
   // The component on its own.
   const opened: string[] = [],
@@ -850,7 +851,9 @@ const run = async (): Promise<void> => {
         civilization: 'Babylonian',
         colors: ['#ff0000', '#ffffff'] as [string, string],
         leader: 'Hammurabi',
-        atPeace: false,
+        leaderTitle: null,
+        treaty: 'war' as const,
+        attitude: null,
         theirEmbassy: true,
         firstMet: null,
         details: {
@@ -860,15 +863,18 @@ const run = async (): Promise<void> => {
           gold: 1234,
           cities: 0,
           units: 12,
-          foreignAffairs: [{ civilization: null, atPeace: true }],
+          foreignAffairs: [{ civilization: null, treaty: 'peace' as const }],
           advances: [],
+          reputation: null,
         },
       },
       {
         civilization: 'Zulu',
         colors: null,
         leader: null,
-        atPeace: true,
+        leaderTitle: null,
+        treaty: 'peace' as const,
+        attitude: null,
         theirEmbassy: false,
         firstMet: null,
         details: null,
@@ -955,6 +961,70 @@ const run = async (): Promise<void> => {
   );
 
   embassy.close();
+
+  // Civ2's rules (M2d, #1007): a leader's title, the treaty beyond peace and war, how they feel toward us and, with an
+  //  embassy, their reputation.
+  const civ2Intelligence = new IntelligenceTable(pending);
+
+  civ2Intelligence.show([
+    {
+      ...intelligenceRows[0]!,
+      leaderTitle: 'LeaderTitle.civ2.Monarchy',
+      treaty: 'ceasefire' as const,
+      attitude: 2,
+      details: {
+        ...intelligenceRows[0]!.details!,
+        foreignAffairs: [{ civilization: null, treaty: 'alliance' as const }],
+        reputation: 4,
+      },
+    },
+  ]);
+
+  const civ2Table = civ2Intelligence.table().element();
+
+  expect(
+    'Intelligence under Civ2’s rules: the leader by title, the ceasefire with how they feel toward us, not coloured as war',
+    [
+      Array.from(civ2Table.querySelectorAll('tbody tr td')).map(
+        (cell) => cell.textContent
+      ),
+      civ2Table
+        .querySelector('tbody tr [data-column="relations"]')
+        ?.classList.contains('ui-report-table-negative'),
+    ],
+    [
+      [
+        'Sovereign Hammurabi (Aggressive)',
+        'Ceasefire (Friendly)',
+        'Both',
+        'Monarchy',
+        '1,234',
+        '12',
+      ],
+      false,
+    ]
+  );
+
+  (civ2Table.querySelector('tbody tr') as HTMLElement).click();
+
+  expect(
+    'Intelligence under Civ2’s rules: the embassy tells us their reputation, and their alliances',
+    Array.from(
+      civ2Intelligence
+        .element()
+        .querySelectorAll('.ui-report-details p, .ui-report-details h4')
+    )
+      .map((line) => line.textContent)
+      .slice(0, 4),
+    [
+      'Reputation: Unreliable',
+      "Capital: Xi'an",
+      'Foreign Affairs:',
+      'ALLIED with an unknown civilization.',
+    ]
+  );
+
+  civ2Intelligence.close();
 
   // Happiness: each city's citizens and their counts, a View button that opens the city, and a row that shows why.
   const happyCities = [

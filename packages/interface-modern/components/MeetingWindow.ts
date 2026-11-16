@@ -6,6 +6,7 @@ import { h } from '@civ-clone/ui-widgets/lib/html';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { unlessRequestFailed } from '@civ-clone/ui-client/lib/unlessRequestFailed';
+import { attitudeName } from '@civ-clone/ui-client/lib/relations';
 
 /** Who the player is meeting, already translated, set as text. */
 export interface MeetingNation {
@@ -61,13 +62,19 @@ const fact = (label: string, value: string, tone: string | null = null) => {
   return item;
 };
 
-/** What the player knows of them: peace or war, when they met, and with an embassy their government, cities and gold. */
+/**
+ * What the player knows of them: the treaty between us, how they feel toward us where the rules keep it, when they met,
+ *  and with an embassy their government, cities and gold.
+ */
 const facts = (row: IntelligenceRow): HTMLElement[] => [
   fact(
     t('Meeting.relations'),
-    t(`ReportTable.Intelligence.${row.atPeace ? 'peace' : 'war'}`),
-    row.atPeace ? null : 'negative'
+    t(`ReportTable.Intelligence.${row.treaty}`),
+    row.treaty === 'war' ? 'negative' : null
   ),
+  ...(row.attitude === null
+    ? []
+    : [fact(t('Meeting.attitude'), attitudeName(row.attitude))]),
   ...(row.firstMet === null
     ? []
     : [fact(t('Meeting.first-met'), year(row.firstMet))]),
