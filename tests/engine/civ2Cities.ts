@@ -409,6 +409,22 @@ const run = async (): Promise<void> => {
     'any'
   );
 
+  // Taken off Auto, it forgets its mode, so a later Auto doesn't take it up again.
+  workerRules().autoBuild(build, defaultGame.rules, 'units');
+  build.setAuto(false);
+  workerRules().autoBuildStopped!(build);
+
+  expect(
+    'off Auto: no mode, and none kept',
+    [
+      additional(build, 'autoMode'),
+      defaultGame.pendingEffects
+        .getByTarget(inland)
+        .some((effect: any) => effect.handler() === 'civ2-city:auto-mode'),
+    ],
+    [null, false]
+  );
+
   finished = true;
 
   if (failures.length) {

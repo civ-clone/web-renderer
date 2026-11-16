@@ -20,6 +20,12 @@ import PlayerAction from '@civ-clone/core-player/PlayerAction';
 import { workerRules } from '../../workerRules';
 import type { QueueEdit } from '@civ-clone/ui-protocol/cityBuild';
 
+// Takes a city off Auto, and, under rules with Auto modes (Civ2's, M2c), forgets its mode.
+const takeOffAuto = (cityBuild: CityBuildItem): void => {
+  cityBuild.setAuto(false);
+  workerRules().autoBuildStopped?.(cityBuild);
+};
+
 // Not one of the player's actions, so looked for by name alone, before them.
 // TODO: a proper action for this probably...
 export const handleReassignWorkers = async (
@@ -101,7 +107,7 @@ export const editQueue = (cityBuild: CityBuildItem, edit: QueueEdit): void => {
 
     if (cityBuild.building() === null) {
       cityBuild.choose(buildItem.item());
-      cityBuild.setAuto(false);
+      takeOffAuto(cityBuild);
 
       return;
     }
@@ -145,15 +151,18 @@ export const handleCityBuild: ActionHandler<
 
   // Auto: the city chooses its improvements itself, starting now if it's building nothing (#194).
   if (typeof auto === 'boolean') {
-    cityBuild.setAuto(auto);
+    if (!auto) {
+      takeOffAuto(cityBuild);
 
-    if (auto) {
-      workerRules().autoBuild(
-        cityBuild,
-        ctx.rules,
-        typeof autoMode === 'string' ? autoMode : undefined
-      );
+      return false;
     }
+
+    cityBuild.setAuto(true);
+    workerRules().autoBuild(
+      cityBuild,
+      ctx.rules,
+      typeof autoMode === 'string' ? autoMode : undefined
+    );
 
     return false;
   }
@@ -177,7 +186,7 @@ export const handleCityBuild: ActionHandler<
   // The player's choice: the first queued item, if it's that, leaves the queue (#774).
   cityBuild.choose(buildItem.item());
   // Choosing a build by hand takes the city off Auto.
-  cityBuild.setAuto(false);
+  takeOffAuto(cityBuild);
 
   return false;
 };

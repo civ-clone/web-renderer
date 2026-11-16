@@ -122,7 +122,13 @@ export const splitYield = (
  *  square or working it. Only a city of one's own has the figures; any other square is as the engine sends it.
  */
 export const squareYields = (
-  tile: { x: number; y: number; yields?: Yield[] },
+  tile: {
+    x: number;
+    y: number;
+    yields?: Yield[];
+    // Set on a square already given its city's figures, whose x and y aren't the world's (the city map's copies).
+    squareYieldsApplied?: boolean;
+  },
   city?: {
     squareYields?: {
       x: number;
@@ -131,8 +137,10 @@ export const squareYields = (
     }[];
   } | null
 ): Pick<Yield<string>, '_' | 'value'>[] =>
-  city?.squareYields?.find(({ x, y }) => x === tile.x && y === tile.y)
-    ?.yields ??
+  (tile.squareYieldsApplied
+    ? undefined
+    : city?.squareYields?.find(({ x, y }) => x === tile.x && y === tile.y)
+        ?.yields) ??
   tile.yields ??
   [];
 

@@ -44,6 +44,7 @@ import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { autoModeChoices } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { buildRow } from '@civ-clone/ui-interface-modern/components/CityBuildChoice';
 import { changeLoss } from '@civ-clone/ui-client/lib/cityTurns';
+import { squareCity, squareYields } from '@civ-clone/ui-client/lib/yieldMap';
 import cityMapLayout from '@civ-clone/ui-map/lib/cityMapLayout';
 import citySprite from '@civ-clone/ui-assets/lib/citySprite';
 import civ2 from '@civ-clone/ui-tileset-civ2/civ2.json';
@@ -349,6 +350,60 @@ const run = async (): Promise<void> => {
     "the city's map: a square at its place in the small world, with what it yields the city",
     mapped.tiles.map(({ yields }) => yields.map(({ _, value }) => [_, value])),
     [[['Food', 1]], [['Food', 2]]]
+  );
+
+  // A city in the world's top-left corner: its squares' small-map coordinates are other world squares' coordinates, so
+  //  the figures already given each copy must not be looked up again by them.
+  const cornerCity = {
+      ...city(),
+      squareYields: [
+        [0, 0, 5],
+        [1, 1, 6],
+        [2, 1, 7],
+        [1, 2, 8],
+      ].map(([x, y, food]) => ({
+        x,
+        y,
+        yields: [{ _: 'Food', value: food }],
+      })),
+    } as unknown as City,
+    cornerSquare = (x: number, y: number): Tile =>
+      ({
+        ...square(x, y),
+        id: `Corner-${x}-${y}`,
+        workedBy: cornerCity,
+      } as unknown as Tile),
+    cornerTiles = [
+      cornerSquare(1, 1),
+      cornerSquare(0, 0),
+      cornerSquare(2, 1),
+      cornerSquare(1, 2),
+    ];
+
+  Object.assign(cornerCity, {
+    tile: cornerTiles[0],
+    tiles: cornerTiles,
+    tilesWorked: cornerTiles,
+    player: {
+      ...player,
+      world: { width: 40, height: 40, topologyId: 'square', tiles: [] },
+    },
+  });
+
+  const corner = cityMapLayout(cornerCity);
+
+  expect(
+    "a corner city's map: each square with the city's figure for it, as the map's layers read it",
+    corner.tiles.map((tile) => [
+      tile.id,
+      squareYields(tile, squareCity(tile)).map(({ value }) => value),
+    ]),
+    [
+      ['Corner-1-1', [6]],
+      ['Corner-0-0', [5]],
+      ['Corner-2-1', [7]],
+      ['Corner-1-2', [8]],
+    ]
   );
 
   // City styles by era.

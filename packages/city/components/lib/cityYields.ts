@@ -65,9 +65,10 @@ const peopleKeys = (face: string, era: string | undefined): string[] => {
 
   const { sprite, small } = pack.people!;
 
+  // The small faces first: they fit the citizens' row, where the era's large ones are shrunk past reading.
   return [
-    spriteKey(pack, expandName(sprite, { era: era!, face })),
     ...(small ? [spriteKey(pack, expandName(small, { face }))] : []),
+    spriteKey(pack, expandName(sprite, { era: era!, face })),
   ];
 };
 

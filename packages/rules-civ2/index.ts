@@ -84,6 +84,10 @@ export const civ2Rules: WorkerRules = {
   // What changing to an item would leave the build with: civ2-city's change penalty, asked of its rules.
   buildItemDetails: (cityBuild, Item, rules) =>
     buildItemDetails(cityBuild, Item, rules),
+  // Taken off Auto, it forgets its mode.
+  autoBuildStopped: (cityBuild) => {
+    setAutoMode(cityBuild, null);
+  },
   // Rapture growth is told, as a city's growth.
   celebrationGrowthNotice: true,
   // How a rival's city is drawn, from its owner's advances, as one's own is (`style`).
