@@ -8,6 +8,7 @@ import { Element, s } from '@dom111/element';
 import Transport from '@civ-clone/ui-client/Transport';
 import { confirmRevolution } from './Actions/Revolution';
 import isAnarchy from '@civ-clone/ui-client/lib/government';
+import { titledLeader } from '@civ-clone/ui-client/lib/relations';
 import { openTradeRates, tradeRatesKey } from './Actions/AdjustTradeRates';
 import { reduceKnownYields } from '@civ-clone/ui-client/lib/yieldMap';
 import { researchingName } from '@civ-clone/ui-client/lib/advances';
@@ -135,10 +136,14 @@ export class PlayerDetails extends Element {
       heading = s('<h3 class="nation"></h3>');
 
     heading.textContent = text('PlayerDetails.header', {
-      leader: t(`Leader.${civilization.leader._}.name`, {
-        defaultValue: civilization.leader._,
-        ns: 'civilization',
-      }),
+      // With the title their government gives them, under rules with titles (Civ2's, M2d).
+      leader: titledLeader(
+        t(`Leader.${civilization.leader._}.name`, {
+          defaultValue: civilization.leader._,
+          ns: 'civilization',
+        }),
+        civilization.leaderTitle
+      ),
       nation: t(`${civilization._}.plural`, {
         defaultValue: civilization._,
         ns: 'civilization',
