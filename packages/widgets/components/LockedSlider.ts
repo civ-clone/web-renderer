@@ -48,19 +48,41 @@ export class LockedSlider extends Element {
     this.#range.setAttribute('aria-label', label);
     this.#number.setAttribute('aria-label', label);
 
-    // A maximum below 100 is said, and the number box stops at it as the slider does.
-    if (this.#max < 100) {
-      const maximum = document.createElement('small');
+    this.#showMax();
+    this.build();
+  }
 
-      maximum.className = 'locked-slider-max';
-      maximum.textContent = t('LockedSlider.max', { max: this.#max });
-      this.#number.setAttribute('max', String(this.#max));
-      // The track ends at the maximum: its thumb at the end is the most the rate can be.
-      this.#range.setAttribute('max', String(this.#max));
-      this.element().querySelector('legend')!.append(' ', maximum);
+  // A maximum below 100 is said, and the number box stops at it as the slider does; the track ends at it, so its thumb
+  //  at the end is the most the rate can be.
+  #showMax(): void {
+    const legend = this.element().querySelector('legend')!;
+
+    legend.querySelector('.locked-slider-max')?.remove();
+
+    if (this.#max >= 100) {
+      this.#number.removeAttribute('max');
+      this.#range.setAttribute('max', '100');
+
+      return;
     }
 
-    this.build();
+    const maximum = document.createElement('small');
+
+    maximum.className = 'locked-slider-max';
+    maximum.textContent = t('LockedSlider.max', { max: this.#max });
+    this.#number.setAttribute('max', String(this.#max));
+    this.#range.setAttribute('max', String(this.#max));
+    legend.append(maximum);
+  }
+
+  /**
+   * A new maximum (the government changed while the window is open): said, and the value brought within it, which
+   *  rebalances the others as moving it does.
+   */
+  setMax(max: number): void {
+    this.#max = Math.min(Math.max(max, 0), 100);
+    this.#showMax();
+    this.set(String(this.value()));
   }
 
   build(): void {

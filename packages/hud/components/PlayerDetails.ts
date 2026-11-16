@@ -9,7 +9,11 @@ import Transport from '@civ-clone/ui-client/Transport';
 import { confirmRevolution } from './Actions/Revolution';
 import isAnarchy from '@civ-clone/ui-client/lib/government';
 import { titledLeader } from '@civ-clone/ui-client/lib/relations';
-import { openTradeRates, tradeRatesKey } from './Actions/AdjustTradeRates';
+import {
+  openTradeRates,
+  refreshTradeRates,
+  tradeRatesKey,
+} from './Actions/AdjustTradeRates';
 import { reduceKnownYields } from '@civ-clone/ui-client/lib/yieldMap';
 import { researchingName } from '@civ-clone/ui-client/lib/advances';
 import { TOptions, t } from 'i18next';
@@ -359,6 +363,9 @@ export class PlayerDetails extends Element {
     button.addEventListener('click', () =>
       openTradeRates(tradeRates, transport)
     );
+
+    // An Adjust trade rates window open across a change (of government, say) takes the rates' new limits (M2d).
+    refreshTradeRates(tradeRates);
 
     return button;
   }
