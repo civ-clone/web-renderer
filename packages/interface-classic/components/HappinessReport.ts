@@ -20,7 +20,10 @@ import { cityName } from '@civ-clone/ui-client/components/lib/city';
 import { getLabelForBuildableEntity } from '@civ-clone/ui-client/components/lib/cityBuild';
 import { escape, h } from '@civ-clone/ui-widgets/lib/html';
 import { instance as localeProvider } from '@civ-clone/ui-platform/LocaleProvider';
-import { renderPopulation } from '@civ-clone/ui-city/components/lib/cityYields';
+import {
+  renderHappinessStages,
+  renderPopulation,
+} from '@civ-clone/ui-city/components/lib/cityYields';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import watchPlayer, {
@@ -72,7 +75,12 @@ const buildCityRow = async (
     )
   );
 
-  const reasonWrapper = s('<div class="reasons hidden"></div>', ...reasons);
+  // Under rules that work happiness out in stages (Civ2, M2c), the stages, as its city screen lists them.
+  const stages = renderHappinessStages(city),
+    reasonWrapper = s(
+      '<div class="reasons hidden"></div>',
+      ...(stages !== null ? [stages] : reasons)
+    );
 
   return h(
     s(

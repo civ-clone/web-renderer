@@ -305,7 +305,62 @@
       "icons/small/trade",
       "icons/small/luxury",
       "icons/small/gold",
-      "icons/small/science"
+      "icons/small/science",
+      "people/ancient/happy-male",
+      "people/ancient/happy-female",
+      "people/ancient/content-male",
+      "people/ancient/content-female",
+      "people/ancient/unhappy-male",
+      "people/ancient/unhappy-female",
+      "people/ancient/angry-male",
+      "people/ancient/angry-female",
+      "people/ancient/entertainer",
+      "people/ancient/tax-collector",
+      "people/ancient/scientist",
+      "people/renaissance/happy-male",
+      "people/renaissance/happy-female",
+      "people/renaissance/content-male",
+      "people/renaissance/content-female",
+      "people/renaissance/unhappy-male",
+      "people/renaissance/unhappy-female",
+      "people/renaissance/angry-male",
+      "people/renaissance/angry-female",
+      "people/renaissance/entertainer",
+      "people/renaissance/tax-collector",
+      "people/renaissance/scientist",
+      "people/industrial/happy-male",
+      "people/industrial/happy-female",
+      "people/industrial/content-male",
+      "people/industrial/content-female",
+      "people/industrial/unhappy-male",
+      "people/industrial/unhappy-female",
+      "people/industrial/angry-male",
+      "people/industrial/angry-female",
+      "people/industrial/entertainer",
+      "people/industrial/tax-collector",
+      "people/industrial/scientist",
+      "people/modern/happy-male",
+      "people/modern/happy-female",
+      "people/modern/content-male",
+      "people/modern/content-female",
+      "people/modern/unhappy-male",
+      "people/modern/unhappy-female",
+      "people/modern/angry-male",
+      "people/modern/angry-female",
+      "people/modern/entertainer",
+      "people/modern/tax-collector",
+      "people/modern/scientist",
+      "people/small/happy-male",
+      "people/small/happy-female",
+      "people/small/content-male",
+      "people/small/content-female",
+      "people/small/unhappy-male",
+      "people/small/unhappy-female",
+      "people/small/angry-male",
+      "people/small/angry-female",
+      "people/small/entertainer",
+      "people/small/tax-collector",
+      "people/small/scientist"
     ],
     "ui": []
   },
@@ -571,10 +626,18 @@
         "Viking": "medieval",
         "Barbarian": "stone-bronze"
       },
-      "sizes": [1, 4, 8, 12],
+      "sizes": [1, 4, 6, 8],
       "walls": {
         "plain": "",
         "walled": "walled-"
+      },
+      "eras": {
+        "industrial": "early-industrial",
+        "modern": "modern"
+      },
+      "sizesByStyle": {
+        "early-industrial": [1, 5, 8, 11],
+        "modern": [1, 5, 11, 19]
       }
     },
     "colouring": {
@@ -594,6 +657,10 @@
       },
       "size": "size"
     }
+  },
+  "people": {
+    "sprite": "people/{era}/{face}",
+    "small": "people/small/{face}"
   },
   "yields": {
     "sprite": "icons/small/{yield}",

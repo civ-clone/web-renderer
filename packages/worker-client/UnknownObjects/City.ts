@@ -16,6 +16,8 @@ export class City extends DataObject {
     size: 0,
   };
   #tile: Tile;
+  // How the city is drawn, under rules that say (M2c, Civ2's era rows), as last seen.
+  #style: object | null = null;
 
   constructor(
     name: string,
@@ -49,10 +51,29 @@ export class City extends DataObject {
     );
   }
 
+  // Under rules that say how a city is drawn (M2c), and only then, so a Civ1 rival's city goes as it always has.
+  #setStyle(city: CoreCity): void {
+    const styleOf = workerRules().cityStyle;
+
+    if (styleOf === undefined) {
+      return;
+    }
+
+    if (this.#style === null) {
+      this.addKey('style');
+    }
+
+    this.#style = styleOf(city);
+  }
+
+  style(): object | null {
+    return this.#style;
+  }
+
   static fromCity(city: CoreCity): City {
     const cityGrowth = cityGrowthRegistryInstance.getByCity(city);
 
-    return new City(
+    const unknownCity = new City(
       city.name(),
       city.tile(),
       city.player(),
@@ -60,6 +81,10 @@ export class City extends DataObject {
       city.originalPlayer(),
       workerRules().civilDisorder(city)
     );
+
+    unknownCity.#setStyle(city);
+
+    return unknownCity;
   }
 
   _(): string {
@@ -99,6 +124,7 @@ export class City extends DataObject {
     this.#player = city.player();
     this.#growth.size = cityGrowth.size();
     this.#civilDisorderDeclared = workerRules().civilDisorder(city);
+    this.#setStyle(city);
   }
 }
 

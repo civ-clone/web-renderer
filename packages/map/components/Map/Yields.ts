@@ -3,6 +3,8 @@ import {
   expandName,
 } from '@civ-clone/ui-assets/tilesets/TilesetDescriptor';
 import {
+  squareCity,
+  squareYields,
   tileYieldGrid,
   tileYieldIcons,
 } from '@civ-clone/ui-client/lib/yieldMap';
@@ -57,12 +59,13 @@ export class Yields extends Map {
 
     // The interface's icons, as Civ1's map has always had them: each icon's place a fraction of the tile's box.
     if (own === undefined) {
-      tileYieldIcons(tile.yields).forEach(({ _, x, y }) =>
-        this.putImage(
-          this.getInterfaceImage(`city/${_.toLowerCase()}`),
-          offsetX + width * x,
-          offsetY + height * y
-        )
+      tileYieldIcons(squareYields(tile, squareCity(tile))).forEach(
+        ({ _, x, y }) =>
+          this.putImage(
+            this.getInterfaceImage(`city/${_.toLowerCase()}`),
+            offsetX + width * x,
+            offsetY + height * y
+          )
       );
 
       return;
@@ -71,7 +74,9 @@ export class Yields extends Map {
     // The map's pack has icons of its own (#999): each one it has, the interface's for the rest, laid out in a block
     //  centred in the part of the tile it gives, a diamond's middle, closer together the more there are, so they stay
     //  within it rather than reaching into the neighbours' tiles.
-    const { columns, icons } = tileYieldGrid(tile.yields);
+    const { columns, icons } = tileYieldGrid(
+      squareYields(tile, squareCity(tile))
+    );
 
     if (icons.length === 0) {
       return;

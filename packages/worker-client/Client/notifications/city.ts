@@ -11,6 +11,8 @@ import Part from '@civ-clone/core-spaceship/Part';
 import Player from '@civ-clone/core-player/Player';
 import Unit from '@civ-clone/core-unit/Unit';
 import Wonder from '@civ-clone/core-wonder/Wonder';
+import CelebrateLeader from '@civ-clone/core-city-happiness/Rules/CelebrateLeader';
+import { workerRules } from '../../workerRules';
 
 // What kind of thing a city has built, which says where its name is translated.
 export const buildingCompleteKind = (build: unknown): string =>
@@ -149,6 +151,20 @@ const buildingHeld = (
   );
 };
 
+// The rules' growth while a city celebrates (Civ2's rapture growth, M2c): the engine grows the city with the celebration
+//  as the cause (`CelebrateLeader`). Told only under rules that ask for it (`celebrationGrowthNotice`), so Civ1's own
+//  growth while celebrating goes untold, as it always has.
+const celebrationGrowth = (
+  ctx: NotificationContext,
+  city: City,
+  cause: unknown
+): Notification | null =>
+  cause === CelebrateLeader &&
+  workerRules().celebrationGrowthNotice === true &&
+  ctx.view.owns(city.player())
+    ? new Notification('City.celebration-growth', { city }, true)
+    : null;
+
 export const cityNotifications: NotificationTable = [
   // Our capture of a city. Losing one is the city's news (`Client/cityNews.ts`).
   [
@@ -266,6 +282,66 @@ export const cityNotifications: NotificationTable = [
   ['city:leader-celebration', ours('City.leader-celebration')],
 
   ['city:leader-celebration-ended', ours('City.leader-celebration-ended')],
+
+  ['city:grow', celebrationGrowth],
+
+  // Civ2's plunder (M2c): the gold a captured city's loser gave up to its captor, told to both.
+  [
+    'city:plundered',
+    (
+      ctx: NotificationContext,
+      city: City,
+      captor: Player,
+      loser: Player,
+      amount: number
+    ) =>
+      ctx.view.owns(captor)
+        ? new Notification('City.plundered-by-us', { city, amount }, true)
+        : ctx.view.owns(loser)
+        ? new Notification('City.plundered', { city, amount }, true)
+        : null,
+  ],
+
+  // Civ2's Partisans (M2c), rising in a city its loser has just lost: told to both.
+  [
+    'city:partisans',
+    (
+      ctx: NotificationContext,
+      city: City,
+      loser: Player,
+      partisans: Unit[],
+      captor: Player
+    ) =>
+      ctx.view.owns(loser)
+        ? new Notification('City.partisans', {
+            city,
+            count: partisans.length,
+          })
+        : ctx.view.owns(captor)
+        ? new Notification('City.partisans-against-us', {
+            city,
+            count: partisans.length,
+          })
+        : null,
+  ],
+
+  // Civ2's Nuclear Plant meltdown (M2c), in a city of ours in disorder.
+  ['city:nuclear-meltdown', ours('City.nuclear-meltdown')],
+
+  // Civ2's Apollo Program (M2c), which shows every player the whole map: told to everyone, its builder named only once
+  //  met (#59). Seeing a city of theirs on the revealed map isn't contact, as it isn't in Civ2.
+  [
+    'wonder:apollo-revealed',
+    (ctx: NotificationContext, wonder: Wonder, city: City) =>
+      ctx.view.owns(city.player())
+        ? new Notification('Wonder.apollo-revealed.ours', { city, wonder })
+        : ctx.hasMet(city.player())
+        ? new Notification('Wonder.apollo-revealed', {
+            wonder,
+            player: city.player(),
+          })
+        : new Notification('Wonder.apollo-revealed.unmet', { wonder }),
+  ],
 ];
 
 export default cityNotifications;

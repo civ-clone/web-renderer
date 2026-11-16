@@ -157,13 +157,34 @@ export const getAutoLabel = (cityBuild: CityBuild): string =>
   t(cityBuild.auto ? 'City.Build.auto-stop' : 'City.Build.auto');
 
 // Puts a city on Auto, where it chooses its own improvements, or takes it off and leaves its build as it is (#194). It
-//  answers the city's `CityBuild` action while it builds nothing, and its `ChangeProduction` action otherwise.
-export const toggleAuto = (cityBuild: CityBuild, transport: Transport): void =>
+//  answers the city's `CityBuild` action while it builds nothing, and its `ChangeProduction` action otherwise. `mode`,
+//  under rules with a choice of what it chooses from (Civ2's, M2c), is that.
+export const toggleAuto = (
+  cityBuild: CityBuild,
+  transport: Transport,
+  mode?: string
+): void =>
   transport.send('action', {
     name: cityBuild.building === null ? 'CityBuild' : 'ChangeProduction',
     id: cityBuild.id,
     auto: !cityBuild.auto,
+    ...(mode !== undefined && !cityBuild.auto ? { autoMode: mode } : {}),
   });
+
+/**
+ * The other ways a city can be put on Auto, under rules with a choice of what it chooses from (Civ2's units only and
+ *  improvements only, M2c): each mode with its label. None while it's on Auto, which the one button takes it off, or
+ *  under rules without the choice (Civ1).
+ */
+export const autoModeChoices = (
+  cityBuild: CityBuild
+): { mode: string; label: string }[] =>
+  cityBuild.autoMode === undefined || cityBuild.auto
+    ? []
+    : ['units', 'improvements'].map((mode) => ({
+        mode,
+        label: t(`City.Build.auto-${mode}`),
+      }));
 
 /**
  * Edits what a city builds after its current item (#774): adds `chosen` (or starts it, if the city builds nothing),

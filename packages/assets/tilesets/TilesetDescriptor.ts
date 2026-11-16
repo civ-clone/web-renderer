@@ -224,6 +224,26 @@ export interface CityStyles {
    */
   sizes: number[];
   walls: { plain: string; walled: string };
+  /**
+   * The style a city of a later era is drawn in, whatever its civilization's, by the era the engine sends (Civ2's
+   * `industrial` and `modern`, M2c). A city of an era left out, or under rules that send none, is drawn in its
+   * civilization's.
+   */
+  eras?: { [era: string]: string };
+  /** A style's own size buckets, where they differ from `sizes` (Civ2's industrial and modern rows). */
+  sizesByStyle?: { [style: string]: number[] };
+}
+
+/**
+ * The pack's own citizens (Civ2's people, M2c), in place of the interface's `city/people_<mood>_<f|m>`, for a city whose
+ * rules send its citizens' era: `sprite` with `{era}` and `{face}`, and `small` with `{face}` for a pack whose era rows
+ * aren't imported. `{face}` is `<mood>-<male|female>` for a working citizen (happy, content, unhappy, angry), and
+ * `entertainer`, `tax-collector` or `scientist` for a specialist. A face that isn't imported is drawn with the
+ * interface's.
+ */
+export interface TilesetPeople {
+  sprite: string;
+  small?: string;
 }
 
 export interface TilesetCities {
@@ -345,6 +365,8 @@ export interface TilesetDescriptor {
    * corner of the tile's box, as Civ1's always has.
    */
   yields?: TilesetYields;
+  /** The pack's own citizens, for the city screen (M2c). Left out, the interface's are drawn. */
+  people?: TilesetPeople;
   /** Optional in the JSON: `validateDescriptor` fills in Civ1's sizes for any it leaves out. */
   ui: TilesetUi;
 }
@@ -790,15 +812,40 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
       }
     });
 
-    if (
-      styles.sizes.some(
-        (size, index) => index > 0 && size <= styles.sizes[index - 1]!
-      )
-    ) {
+    const ascending = (sizes: number[]): boolean =>
+      !sizes.some((size, index) => index > 0 && size <= sizes[index - 1]!);
+
+    if (!ascending(styles.sizes)) {
       refuse(
         'cities.styles.sizes must list the size each bucket starts at, smallest first, each once.'
       );
     }
+
+    Object.entries(styles.eras ?? {}).forEach(([era, style]) => {
+      if (!styles.names.includes(style)) {
+        refuse(
+          `cities.styles.eras.${era} ${JSON.stringify(
+            style
+          )} is not one of cities.styles.names.`
+        );
+      }
+    });
+
+    Object.entries(styles.sizesByStyle ?? {}).forEach(([style, sizes]) => {
+      if (!styles.names.includes(style)) {
+        refuse(
+          `cities.styles.sizesByStyle names ${JSON.stringify(
+            style
+          )}, which is not one of cities.styles.names.`
+        );
+      }
+
+      if (sizes.length !== styles.sizes.length || !ascending(sizes)) {
+        refuse(
+          `cities.styles.sizesByStyle.${style} must list as many buckets as cities.styles.sizes, smallest first, each once.`
+        );
+      }
+    });
   }
 
   const icon = cities.labels.disorderIcon;
@@ -837,6 +884,17 @@ export const readDescriptor = (json: unknown): TilesetDescriptor => {
       (area.x + area.width > 1 + 1e-9 || area.y + area.height > 1 + 1e-9)
     ) {
       refuse('yields.area must be within the tile.');
+    }
+  }
+
+  // The pack's own citizens: each face it can be, a sprite it lists.
+  if (descriptor.people !== undefined) {
+    const { sprite, small } = descriptor.people;
+
+    fills('people.sprite', sprite, ['era', 'face']);
+
+    if (small !== undefined) {
+      fills('people.small', small, ['face']);
     }
   }
 

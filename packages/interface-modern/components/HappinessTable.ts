@@ -9,6 +9,7 @@ import {
 } from '@civ-clone/ui-protocol/types';
 import {
   citizenFace,
+  renderHappinessStages,
   renderPopulation,
 } from '@civ-clone/ui-city/components/lib/cityYields';
 import { groupIcons } from '@civ-clone/ui-assets/lib/groupIcons';
@@ -22,6 +23,7 @@ import SupportedUnit from '@civ-clone/ui-hud/components/SupportedUnit';
 import Unit from '@civ-clone/ui-hud/components/Unit';
 import { assetStore } from '@civ-clone/ui-assets/AssetStore';
 import { citizenMoods } from '@civ-clone/ui-client/lib/citizens';
+import { hasCiv2CityColumns } from './CityStatusTable';
 import {
   cityName,
   viewCityText,
@@ -82,12 +84,16 @@ const reasonLabel = (
 
 /** Why a city's citizens are as they are, step by step, under the table for the city chosen in it. */
 export const renderHappinessDetails = (city: CityData): HTMLElement => {
-  const causes = city.citizens?.causes ?? [];
+  const causes = city.citizens?.causes ?? [],
+    // Under rules that work happiness out in stages (Civ2, M2c), the stages, as its city screen lists them.
+    stages = renderHappinessStages(city);
 
   return s(
     '<section class="ui-report-details"></section>',
     s('<h3 class="ui-report-details-title"></h3>', cityName(city)),
-    ...(causes.length === 0
+    ...(stages !== null
+      ? [stages]
+      : causes.length === 0
       ? [s('<p></p>', t('ReportTable.Happiness.no-causes'))]
       : causes.map((cause) =>
           s(
@@ -119,6 +125,7 @@ const reasonsShown = (city: CityData): string =>
     cityName(city),
     reduceKnownYield(city.yields, 'Luxuries'),
     (city.specialists ?? []).map(({ _ }) => _),
+    city.citizens?.stages ?? null,
     (city.citizens?.causes ?? []).map(({ moods, yield: cause }) => [
       cause._,
       (cause as { cityImprovement?: { _: string } }).cityImprovement?._,
@@ -203,7 +210,15 @@ export class HappinessTable extends FilterableWindow {
           heading: t('ReportTable.Happiness.citizens'),
           cell: (city) => renderPopulation(city),
         },
-        ...(['happy', 'content', 'unhappy'] as CitizenMood[]).map((mood) => ({
+        // And the angry, under rules that have them (Civ2, M2c).
+        ...(
+          [
+            'happy',
+            'content',
+            'unhappy',
+            ...(hasCiv2CityColumns(player.cities) ? ['angry'] : []),
+          ] as CitizenMood[]
+        ).map((mood) => ({
           key: mood,
           heading: t(`ReportTable.CityStatus.${mood}`),
           icon: () => citizenFace(mood),

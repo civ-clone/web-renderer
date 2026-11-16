@@ -28,6 +28,16 @@ i18next.addResources('en', 'default', {
   'City.trade-routes': 'Trade routes',
   'City.trade-route': '{{city}}: +{{trade, number}}',
   'City.Specialist.change': 'Change {{- specialist}}',
+  // A build that turns the city's shields into gold (Capitalization, M2c).
+  'City.Build.gold-per-turn_one': '{{count, number}} gold per turn',
+  'City.Build.gold-per-turn_other': '{{count, number}} gold per turn',
+  // Civ2's stages of happiness (M2c), each a row of the city's citizens as the stage leaves them.
+  'City.Happiness.title': 'Happiness',
+  'City.Happiness.stage.base': 'To begin with',
+  'City.Happiness.stage.luxuries': 'Luxuries',
+  'City.Happiness.stage.buildings': 'Buildings',
+  'City.Happiness.stage.units': 'Martial law and units',
+  'City.Happiness.stage.wonders': 'Wonders',
   'City.Yield.summary':
     '{{- yield}}: {{made, number}}, {{used, number}} used, {{spare, number}} spare',
   'City.Yield.summary_made': '{{- yield}}: {{made, number}}',

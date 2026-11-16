@@ -9,8 +9,13 @@ import {
   getLabelForBuildable,
   heldText,
   toggleAuto,
+  autoModeChoices,
 } from '@civ-clone/ui-client/components/lib/cityBuild';
-import { offeredHold } from '@civ-clone/ui-client/lib/cityTurns';
+import {
+  changeLoss,
+  offeredHold,
+  offeredProgress,
+} from '@civ-clone/ui-client/lib/cityTurns';
 import { s } from '@dom111/element';
 import { t } from 'i18next';
 import { turnsLeft } from '@civ-clone/ui-city/components/lib/cityYields';
@@ -36,32 +41,52 @@ export class CityBuildSelectionWindow extends SelectionWindow {
       // In the engine's order, a heading over each section (#432), and a unit's numbers on its line (#381). One a rule
       //  would hold says so on its line (#970): after its turns, or, for the build the city is already waiting on, paid for,
       //  in their place.
+      //  An item that makes gold in place of completing (Capitalization, M2c) says how much, and one a change to would
+      //  lose shields (Civ2's change penalty) says how many, as the engine says it.
       available.map((buildItem) => {
-        const hold = offeredHold(cityBuild, buildItem);
+        const hold = offeredHold(cityBuild, buildItem),
+          loss = changeLoss(cityBuild, buildItem),
+          label =
+            buildItem.goldPerTurn !== undefined
+              ? t('City.Build.build-gold', {
+                  item: getLabelForBuildable(buildItem),
+                  count: buildItem.goldPerTurn,
+                })
+              : t(
+                  buildItem.stats
+                    ? 'City.Build.build-unit'
+                    : 'City.Build.build-item',
+                  {
+                    item: getLabelForBuildable(buildItem),
+                    cost: buildItem.cost.value,
+                    turns: turnsLeft(
+                      {
+                        ...cityBuild,
+                        ...buildItem,
+                        progress: {
+                          value: offeredProgress(cityBuild, buildItem),
+                        },
+                      } as unknown as CityBuild,
+                      cityBuild.city.yields,
+                      'Production'
+                    ),
+                    ...(buildItem.stats ?? {}),
+                    ...(hold
+                      ? {
+                          context: hold.now ? 'waiting' : 'held',
+                          held: heldText(hold),
+                        }
+                      : {}),
+                  }
+                );
 
         return {
           ...(buildItem.group
             ? { group: t(`City.Build.group.${buildItem.group}`) as string }
             : {}),
-          label: t(
-            buildItem.stats ? 'City.Build.build-unit' : 'City.Build.build-item',
-            {
-              item: getLabelForBuildable(buildItem),
-              cost: buildItem.cost.value,
-              turns: turnsLeft(
-                { ...cityBuild, ...buildItem } as unknown as CityBuild,
-                cityBuild.city.yields,
-                'Production'
-              ),
-              ...(buildItem.stats ?? {}),
-              ...(hold
-                ? {
-                    context: hold.now ? 'waiting' : 'held',
-                    held: heldText(hold),
-                  }
-                : {}),
-            }
-          ) as string,
+          label: (loss > 0
+            ? t('City.Build.change-loses', { label, count: loss })
+            : label) as string,
           value: buildItem.item._,
         };
       }),
@@ -104,6 +129,20 @@ export class CityBuildSelectionWindow extends SelectionWindow {
               (window as CityBuildSelectionWindow).close(true);
             },
           },
+          // Under rules with a choice of what an Auto city chooses from (Civ2's, M2c), the other two ways.
+          ...Object.fromEntries(
+            autoModeChoices(cityBuild).map(({ mode, label }) => [
+              `auto-${mode}`,
+              {
+                label,
+                action: (window) => {
+                  toggleAuto(cityBuild, transport, mode);
+
+                  (window as CityBuildSelectionWindow).close(true);
+                },
+              },
+            ])
+          ),
           // What the city can't build, and why (#183). The list stays open behind it.
           unavailable: {
             label: t('City.Build.unavailable'),

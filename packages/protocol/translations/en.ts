@@ -111,6 +111,20 @@ i18next.addResources('en', 'notification', {
   'City.destroyed-by.title': 'City destroyed!',
   'City.civil-disorder.body': `Civil disorder in {{- city, cityName}}. Mayor flees in panic!`,
   'City.civil-disorder.title': 'Civil disorder',
+  // M2c's (#1007): a celebrating city that grows (Civ2's rapture growth), a captured city's plunder and Partisans, a
+  //  Nuclear Plant's meltdown.
+  'City.celebration-growth.body': `{{- city, cityName}} celebrates, and grows!`,
+  'City.celebration-growth.title': 'City grows',
+  'City.plundered.body': `{{amount, number}} gold was plundered from our treasury when {{- city, cityName}} was captured.`,
+  'City.plundered.title': 'Treasury plundered',
+  'City.plundered-by-us.body': `We plundered {{amount, number}} gold when we captured {{- city, cityName}}.`,
+  'City.plundered-by-us.title': 'Gold plundered',
+  'City.partisans.body': `Partisans rise up around {{- city, cityName}} to resist its capture!`,
+  'City.partisans.title': 'Partisans',
+  'City.partisans-against-us.body': `Partisans rise up around {{- city, cityName}} to resist our capture of it!`,
+  'City.partisans-against-us.title': 'Partisans',
+  'City.nuclear-meltdown.body': `The Nuclear Plant in {{- city, cityName}} has melted down in the civil disorder! The land around it is contaminated.`,
+  'City.nuclear-meltdown.title': 'Nuclear meltdown!',
   'City.leader-celebration.body': `Leader celebration in {{- city, cityName}}!`,
   'City.leader-celebration.title': 'Leader celebration',
   'City.leader-celebration-ended.body': `Leader celebration canceled in {{- city, cityName}}!`,
@@ -257,6 +271,9 @@ i18next.addResources('en', 'notification', {
   'Unit.nuclear-attack.title': 'Nuclear attack!',
   'Unit.out-of-fuel.body': `Our $t({{unit._}}.name, { "defaultValue": "{{unit._}}", "ns": "unit" }) ran out of fuel and crashed.`,
   'Unit.out-of-fuel.title': 'Out of fuel!',
+  // M2c's (#1007): units upgraded in place, one notice for each old type.
+  'Unit.upgraded.body': `Our $t({{from._}}.name, { "defaultValue": "{{from._}}", "ns": "unit" }) units have been upgraded to $t({{to._}}.name, { "defaultValue": "{{to._}}", "ns": "unit" }).`,
+  'Unit.upgraded.title': 'Units upgraded',
   'Wonder.building-complete.other-player.known.body':
     '{{- city, cityName}} has completed work on $t({{build._}}.name, { "defaultValue": "{{build._}}", "ns": "wonder" })!',
   'Wonder.building-complete.other-player.known.title': 'Wonder completed',
@@ -266,4 +283,14 @@ i18next.addResources('en', 'notification', {
   'Wonder.obsolete.body':
     '$t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in {{- city, cityName}} is now obsolete.',
   'Wonder.obsolete.title': 'Wonder obsolete',
+  // M2c's (#1007): a Wonder that shows every player the whole map, ours, a met player's or an unmet one's.
+  'Wonder.apollo-revealed.body':
+    '$t(Generic.civilization-name.nation, { "civilization": "{{player.civilization._}}", "ns": "default" }) $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) has revealed the whole world to every civilization.',
+  'Wonder.apollo-revealed.title': 'The world revealed',
+  'Wonder.apollo-revealed.ours.body':
+    'Our $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) in {{- city, cityName}} has revealed the whole world to every civilization.',
+  'Wonder.apollo-revealed.ours.title': 'The world revealed',
+  'Wonder.apollo-revealed.unmet.body':
+    'A far away civilization’s $t({{wonder._}}.name, { "defaultValue": "{{wonder._}}", "ns": "wonder" }) has revealed the whole world to every civilization.',
+  'Wonder.apollo-revealed.unmet.title': 'The world revealed',
 });

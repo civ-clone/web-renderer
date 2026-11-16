@@ -39,6 +39,9 @@ i18next.addResources('en', 'default', {
     'Negotiation between $t(Generic.civilization-name.nation, { "civilization": "{{data.players.0.civilization._}}", "ns": "default" }) and $t(Generic.civilization-name.nation, { "civilization": "{{data.players.1.civilization._}}", "ns": "default" })',
   'City.Build.auto': 'Auto',
   'City.Build.auto-stop': 'Stop Auto',
+  // Civ2's other two ways to put a city on Auto (M2c).
+  'City.Build.auto-improvements': 'Auto: improvements only',
+  'City.Build.auto-units': 'Auto: units only',
   'City.Build.buy': 'Buy',
   // Why the production picker has opened (#716).
   'City.Build.cleared.cancelled': 'Production cancelled: {{- item}}',
@@ -66,6 +69,9 @@ i18next.addResources('en', 'default', {
   'City.Citizens.content_other': '{{count, number}} content',
   'City.Citizens.unhappy_one': '{{count, number}} unhappy',
   'City.Citizens.unhappy_other': '{{count, number}} unhappy',
+  // Civ2's angry citizens (M2c).
+  'City.Citizens.angry_one': '{{count, number}} angry',
+  'City.Citizens.angry_other': '{{count, number}} angry',
   'City.Citizens.Specialist.Entertainer_one': '{{count, number}} Entertainer',
   'City.Citizens.Specialist.Entertainer_other':
     '{{count, number}} Entertainers',

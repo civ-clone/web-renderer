@@ -30,6 +30,39 @@ export const citizenSprites = (moods: CitizenMood[], seed: string): string[] =>
   );
 
 /**
+ * The sprites to try for each mood, in order: the mood's own, then, for an angry citizen (Civ2's, M2c), the unhappy
+ *  face, which the interface's art has where it has no angry one.
+ */
+export const citizenSpriteChoices = (
+  moods: CitizenMood[],
+  seed: string
+): string[][] =>
+  citizenSprites(moods, seed).map((sprite, index) =>
+    moods[index] === 'angry'
+      ? [sprite, sprite.replace('people_angry_', 'people_unhappy_')]
+      : [sprite]
+  );
+
+/**
+ * A pack's own face for each mood (Civ2's people, M2c): `<mood>-<male|female>`, men and women in turn from the first
+ *  citizen, a man, as Civ2 draws them, `offset` citizens along.
+ */
+export const peopleFaces = (
+  moods: CitizenMood[],
+  offset: number = 0
+): string[] =>
+  moods.map(
+    (mood, index) => `${mood}-${(index + offset) % 2 === 0 ? 'male' : 'female'}`
+  );
+
+/** A pack's own face for a specialist, by its type name (Civ2's people, M2c). */
+export const specialistFaces: { [specialist: string]: string } = {
+  Entertainer: 'entertainer',
+  TaxCollector: 'tax-collector',
+  Scientist: 'scientist',
+};
+
+/**
  * The sprites to try for each specialist (by its sprite name, e.g. `tax`), carrying the seed's mask on after the
  * `workers` (#334). A woman's sprite comes with the man's after it, for assets imported before the women were added.
  */
@@ -53,7 +86,7 @@ export const citizenSummary = (
 ): string => {
   const count = <T>(list: T[], value: T): number =>
       list.filter((item) => item === value).length,
-    moodParts = (['happy', 'content', 'unhappy'] as CitizenMood[])
+    moodParts = (['happy', 'content', 'unhappy', 'angry'] as CitizenMood[])
       .filter((mood) => count(moods, mood) > 0)
       .map((mood) => t(`City.Citizens.${mood}`, { count: count(moods, mood) })),
     specialistParts = specialists

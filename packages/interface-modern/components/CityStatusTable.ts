@@ -83,10 +83,28 @@ const moodColumn = (mood: CitizenMood): ReportColumn<CityData> => ({
   cell: (city) => moodCount(city, mood),
   sortValue: (city) => moodCount(city, mood),
   tone: (city) =>
-    mood === 'unhappy' && city.civilDisorder ? 'negative' : null,
+    (mood === 'unhappy' || mood === 'angry') && city.civilDisorder
+      ? 'negative'
+      : null,
 });
 
-export const cityStatusColumns = (): ReportColumn<CityData>[] => [
+/**
+ * Whether the rules the cities are under have Civ2's angry citizens and shield waste (M2c): they send the stages of
+ *  happiness, or a city wastes shields. Civ1's cities send neither, so its report has the columns it always had.
+ */
+export const hasCiv2CityColumns = (cities: CityData[]): boolean =>
+  cities.some(
+    (city) =>
+      city.citizens?.stages !== undefined ||
+      reduceKnownYield(city.yields, 'Waste') !== 0
+  );
+
+const wasteOf = (city: CityData): number =>
+  Math.abs(reduceKnownYield(city.yields, 'Waste'));
+
+export const cityStatusColumns = (
+  cities: CityData[] = []
+): ReportColumn<CityData>[] => [
   {
     key: 'city',
     heading: t('ReportTable.city'),
@@ -184,7 +202,27 @@ export const cityStatusColumns = (): ReportColumn<CityData>[] => [
     cell: (city) => Math.abs(reduceKnownYield(city.yields, 'Corruption')),
     sortValue: (city) => Math.abs(reduceKnownYield(city.yields, 'Corruption')),
   },
-  ...(['happy', 'content', 'unhappy'] as CitizenMood[]).map(moodColumn),
+  // The shields a city wastes (Civ2's waste, M2c), beside the trade it loses to corruption.
+  ...(hasCiv2CityColumns(cities)
+    ? [
+        {
+          key: 'waste',
+          heading: t('ReportTable.CityStatus.waste'),
+          icon: () => yieldIcon('Production'),
+          kind: 'number' as const,
+          cell: wasteOf,
+          sortValue: wasteOf,
+        },
+      ]
+    : []),
+  ...(
+    [
+      'happy',
+      'content',
+      'unhappy',
+      ...(hasCiv2CityColumns(cities) ? ['angry'] : []),
+    ] as CitizenMood[]
+  ).map(moodColumn),
 ];
 
 /**
@@ -205,7 +243,7 @@ export class CityStatusTable extends FilterableWindow {
 
     this.#cities = player.cities;
     this.#table = new ReportTable({
-      columns: cityStatusColumns(),
+      columns: cityStatusColumns(player.cities),
       label: t('CityStatus.title'),
       rowKey: (city) => city.id,
       open: (city) => portal.openCity(city),

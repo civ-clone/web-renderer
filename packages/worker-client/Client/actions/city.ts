@@ -132,7 +132,7 @@ export const handleCityBuild: ActionHandler<
   CityBuild | ChangeProduction
 > = async (ctx, action, playerAction) => {
   const cityBuild = playerAction.value() as CityBuildItem,
-    { auto, chosen, queue } = action;
+    { auto, autoMode, chosen, queue } = action;
 
   // What the city is building, which is all a choice changes (#411).
   ctx.patches.cityBuild(cityBuild);
@@ -148,7 +148,11 @@ export const handleCityBuild: ActionHandler<
     cityBuild.setAuto(auto);
 
     if (auto) {
-      workerRules().autoBuild(cityBuild, ctx.rules);
+      workerRules().autoBuild(
+        cityBuild,
+        ctx.rules,
+        typeof autoMode === 'string' ? autoMode : undefined
+      );
     }
 
     return false;

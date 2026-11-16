@@ -7,6 +7,7 @@ import type { ActionHandler } from './Client/actions/ActionContext';
 import type City from '@civ-clone/core-city/City';
 import type CityGrowth from '@civ-clone/core-city-growth/CityGrowth';
 import type CityBuild from '@civ-clone/core-city-build/CityBuild';
+import type { IBuildable as Buildable } from '@civ-clone/core-city-build/Buildable';
 import type { GameDifficultyRegistry } from '@civ-clone/core-difficulty/GameDifficultyRegistry';
 import type { GameResultRegistry } from '@civ-clone/core-turn-based-game/GameResultRegistry';
 import type Player from '@civ-clone/core-player/Player';
@@ -37,8 +38,8 @@ export type WorkerRules = {
   saveableClasses: SaveableClass[];
   /** Whether the rules have declared `city` in civil disorder, which only changes at the start of a turn. */
   civilDisorder: (city: City) => boolean;
-  /** A city on Auto chooses its next build. */
-  autoBuild: (cityBuild: CityBuild, rules: RuleRegistry) => void;
+  /** A city on Auto chooses its next build: from `mode`'s items, under rules with a choice of them (M2c). */
+  autoBuild: (cityBuild: CityBuild, rules: RuleRegistry, mode?: string) => void;
   /** The city's citizens as `[unhappy, content, happy]`, its specialists left out. */
   citizenMoods: (
     cityGrowth: CityGrowth,
@@ -64,6 +65,19 @@ export type WorkerRules = {
     wonders: WonderRegistry,
     cityImprovements: CityImprovementRegistry
   ) => WonderStatus[];
+  /**
+   * Anything the rule set adds to an item in a city's build list (M2c): what changing the build to it would leave as
+   *  progress (`progressAfterChange`), for rules that take part of it. None by default.
+   */
+  buildItemDetails?: (
+    cityBuild: CityBuild,
+    Item: Buildable,
+    rules: RuleRegistry
+  ) => { progressAfterChange?: number; goldPerTurn?: number };
+  /** Whether a city that grows while it celebrates is told so (Civ2's rapture growth). Not by default. */
+  celebrationGrowthNotice?: boolean;
+  /** How a city is drawn, for a rival's city, which goes without the rule set's own city data. None by default. */
+  cityStyle?: (city: City) => object | null;
 };
 
 let current: WorkerRules | null = null;

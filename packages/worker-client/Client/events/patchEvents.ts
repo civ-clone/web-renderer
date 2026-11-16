@@ -139,6 +139,16 @@ export const registerPatchEvents = (
     ctx.patches.unit(unit);
   });
 
+  // A unit of ours upgraded in place (M2c, `unit:upgraded`): it goes again as its new type, with its square.
+  on('unit:upgraded', (unit: Unit) => {
+    if (!ctx.view.owns(unit.player())) {
+      return;
+    }
+
+    ctx.patches.tile(ctx.view.tile(unit.tile()));
+    ctx.patches.unit(unit);
+  });
+
   ['unit:destroyed'].forEach((event) => {
     on(event, (unit: Unit) => {
       // A disbanded or destroyed unit leaves its square, whoever's it was (#138).
@@ -366,6 +376,16 @@ export const registerPatchEvents = (
         )
       );
     }
+  });
+
+  // A Nuclear Plant's meltdown (M2c): the city loses the plant, and the squares around it what the blast took, which
+  //  each go as they're removed; the city goes again too.
+  on('city:nuclear-meltdown', (city: City) => {
+    [city.tile(), ...city.tile().getNeighbours()].forEach((tile) =>
+      ctx.patches.tile(tile)
+    );
+
+    cityChanged(city);
   });
 
   // Both cities' trade changes (#411). The player is told of it in `Client/notifications/unit.ts`.

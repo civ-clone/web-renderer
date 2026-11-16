@@ -59,6 +59,13 @@ export const registrationOrder: string[] = [
   'player:government:collapsed',
   'city:leader-celebration',
   'city:leader-celebration-ended',
+  // M2c's (#1007).
+  'city:grow',
+  'city:plundered',
+  'city:partisans',
+  'city:nuclear-meltdown',
+  'wonder:apollo-revealed',
+  'unit:upgraded',
   'player:respawned',
   'player:spaceship:part-built',
   'player:spaceship:lost',

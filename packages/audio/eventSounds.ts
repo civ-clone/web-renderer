@@ -118,6 +118,8 @@ export const notificationTune = (
     // One a missile defence stopped is a nuclear attack all the same (M2b), to everyone but the player who made it.
     case 'Unit.nuclear-attack':
     case 'Unit.nuclear-stopped':
+    // A Nuclear Plant's meltdown (M2c) is a nuclear blast over the city.
+    case 'City.nuclear-meltdown':
       return tunes.nuclearAttack;
   }
 

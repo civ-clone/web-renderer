@@ -17,6 +17,8 @@ const categories: [NoticeCategory, string[]][] = [
     'gold',
     [
       'Barbarians.ransom',
+      'City.plundered',
+      'City.plundered-by-us',
       'City.improvement-unsupported',
       'GoodyHut.action-performed.Gold',
       'Unit.trade-route-established',
@@ -41,6 +43,9 @@ const categories: [NoticeCategory, string[]][] = [
       'City.captured-from-us',
       'City.destroyed',
       'City.destroyed-by',
+      'City.nuclear-meltdown',
+      'City.partisans',
+      'City.partisans-against-us',
       'City.sdi-protected',
       'City.shrink-defender-lost',
       'Diplomat',
@@ -52,12 +57,14 @@ const categories: [NoticeCategory, string[]][] = [
       'Unit.nuclear-stopped',
       'Unit.out-of-fuel',
       'Unit.promoted',
+      'Unit.upgraded',
     ],
   ],
   [
     'civics',
     [
       'City.building-complete.wonder',
+      'City.celebration-growth',
       'City.civil-disorder',
       'City.leader-celebration',
       'City.leader-celebration-ended',
