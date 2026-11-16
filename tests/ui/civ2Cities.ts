@@ -467,6 +467,9 @@ const run = async (): Promise<void> => {
     'Wonder.apollo-revealed.unmet',
   ];
 
+  await import('./lib/strings-en-GB');
+  await import('../../translations/civ2-city-improvement/en-GB');
+
   for (const lng of ['en', 'en-GB']) {
     await i18next.changeLanguage(lng);
 
@@ -482,6 +485,21 @@ const run = async (): Promise<void> => {
       []
     );
   }
+
+  expect(
+    'British spellings where they differ',
+    [
+      i18next.t('Wonder.apollo-revealed.unmet.body', {
+        ns: 'notification',
+        wonder: { _: 'ApolloProgram' },
+      }),
+      i18next.t('Improvement.Capitalization.name', { ns: 'city' }),
+    ],
+    [
+      'A far away civilisation’s ApolloProgram has revealed the whole world to every civilisation.',
+      'Capitalisation',
+    ]
+  );
 
   finished = true;
 

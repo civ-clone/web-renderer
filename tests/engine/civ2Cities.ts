@@ -38,6 +38,8 @@ import Player from '@civ-clone/core-player/Player';
 import PlayerWorld from '@civ-clone/core-player-world/PlayerWorld';
 import Tile from '@civ-clone/core-world/Tile';
 import { Greek, Roman } from '@civ-clone/civ2-civilization/Civilizations';
+import { Gold, Production } from '@civ-clone/civ2-city/Yields';
+import processCityYields from '@civ-clone/base-player/lib/processCityYields';
 import Added from '@civ-clone/core-player/Rules/Added';
 import UnknownCity from '@civ-clone/ui-worker-client/UnknownObjects/City';
 import World from '@civ-clone/core-world/World';
@@ -363,6 +365,26 @@ const run = async (): Promise<void> => {
     'building Capitalization, its gold per turn, which is what the build list said',
     additional(build, 'goldPerTurn'),
     details(Capitalization).goldPerTurn
+  );
+
+  // The engine's own production step pays it: what the treasury gains is what was shown.
+  const treasury = defaultGame.playerTreasuries.getByPlayerAndType(us, Gold),
+    shown = additional(build, 'goldPerTurn'),
+    before = treasury.value();
+
+  processCityYields(
+    us,
+    [Production],
+    {
+      getByPlayer: () => [inland],
+    } as any,
+    defaultGame.rules
+  );
+
+  expect(
+    "the gold shown is what the city's production step pays, and the box is kept",
+    [shown > 0, treasury.value() - before],
+    [true, shown]
   );
 
   // Auto modes.
