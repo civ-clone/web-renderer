@@ -156,7 +156,7 @@ export const renderIntelligenceRow = (
 
   if (row.talks && onTalks !== null) {
     const talks = s(
-      `<button type="button" class="send-emissary">${t(
+      `<button type="button" class="btn-secondary send-emissary">${t(
         'IntelligenceReport.talks'
       )}</button>`
     );

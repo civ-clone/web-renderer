@@ -131,9 +131,13 @@ export class Talks {
 
   handOver(): void {
     // Anyone met by a GoTo carried on at the start of the turn, then the audiences computer players asked for.
+    //  With none asked for, no more than before, so the hand-over's talks settle as soon as they always have (#503).
     this.#talks = this.#talks
-      .then(() => this.talkToPlayersMet())
-      .then(() => this.holdAudiences())
+      .then(() =>
+        this.#audiences.size === 0
+          ? this.talkToPlayersMet()
+          : this.talkToPlayersMet().then(() => this.holdAudiences())
+      )
       .catch((error) => console.error(error));
 
     this.#countUntilSettled();

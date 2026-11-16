@@ -5,9 +5,7 @@ import i18next from 'i18next';
 //  computer player's own proposals and the person's replies to them, and the computer player's lines
 //  (`Dialogue.civ2.*`). Keys only: what Civ1's talks already say (`civ1-diplomacy`) is theirs, and isn't changed here.
 //  `interaction.for.0` is the player a proposal is made to.
-const nation =
-    '$t(Generic.civilization-name.nation, { "civilization": "{{interaction.for.0.civilization._}}", "ns": "default" })',
-  advance = (path: string): string =>
+const advance = (path: string): string =>
     `$t({{${path}._}}.name, { "defaultValue": "{{${path}._}}", "ns": "science" })`,
   unit = (path: string): string =>
     `$t({{${path}._}}.name, { "defaultValue": "{{${path}._}}", "ns": "unit" })`,
@@ -16,7 +14,8 @@ const nation =
 
 i18next.addResources('en', 'diplomacy', {
   // Our emissary, in talks we open from the Foreign Advisor.
-  Initiate_own: `You send an emissary to ${nation}.`,
+  Initiate_own:
+    'You send an emissary to $t(Generic.civilization-name.nation, { "civilization": "{{interaction.for.0.civilization._}}", "ns": "default" }).',
 
   // What we may propose, the menu's first level.
   ProposeAlliance_own: 'Propose an alliance.',

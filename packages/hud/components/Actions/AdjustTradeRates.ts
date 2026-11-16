@@ -82,8 +82,11 @@ export const openTradeRates = (
       .sliders()
       .map((slider): [string, number] => [slider.key(), slider.value()]);
 
-    // Rates that don't come to 100 can't be set: they're left as they were.
-    if (!sliderGroup.balanced()) {
+    // Rates held by their maximums that can't come to 100 can't be set: they're left as they were.
+    if (
+      Object.keys(tradeRates.maxRates ?? {}).length > 0 &&
+      !sliderGroup.balanced()
+    ) {
       return;
     }
 
